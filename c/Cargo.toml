@@ -1,0 +1,15 @@
+[package]
+name = "foxglove_c"
+version = "0.2.1"
+edition = "2021"
+publish = false
+
+[lib]
+name = "foxglove_c"
+crate-type = ["staticlib", "cdylib"]
+
+[dependencies]
+foxglove = { path = "../rust/foxglove", features = ["unstable"] }
+
+[build-dependencies]
+cbindgen = "0.28.0"

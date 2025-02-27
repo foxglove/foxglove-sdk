@@ -1,0 +1,103 @@
+name: C/C++
+
+on:
+  push:
+    branches: [main]
+    tags: ["**"]
+  pull_request: {}
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: make lint
+        working-directory: cpp
+
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            target: aarch64-unknown-linux-gnu
+            staticlib_name: libfoxglove_c.a
+            cdylib_name: libfoxglove_c.so
+            staticlib_artifact_name: libfoxglove_c-aarch64-unknown-linux-gnu.a
+            cdylib_artifact_name: libfoxglove_c-aarch64-unknown-linux-gnu.so
+            cross: true
+          - runner: ubuntu-24.04
+            target: x86_64-unknown-linux-gnu
+            staticlib_name: libfoxglove_c.a
+            cdylib_name: libfoxglove_c.so
+            staticlib_artifact_name: libfoxglove_c-x86_64-unknown-linux-gnu.a
+            cdylib_artifact_name: libfoxglove_c-x86_64-unknown-linux-gnu.so
+            cross: false
+          - runner: macos-15
+            target: aarch64-apple-darwin
+            staticlib_name: libfoxglove_c.a
+            cdylib_name: libfoxglove_c.dylib
+            staticlib_artifact_name: libfoxglove_c-aarch64-apple-darwin.a
+            cdylib_artifact_name: libfoxglove_c-aarch64-apple-darwin.dylib
+            cross: false
+          - runner: macos-15
+            target: x86_64-apple-darwin
+            staticlib_name: libfoxglove_c.a
+            cdylib_name: libfoxglove_c.dylib
+            staticlib_artifact_name: libfoxglove_c-x86_64-apple-darwin.a
+            cdylib_artifact_name: libfoxglove_c-x86_64-apple-darwin.dylib
+            cross: true
+          - runner: windows-2025
+            target: x86_64-pc-windows-msvc
+            staticlib_name: foxglove_c.lib
+            cdylib_name: foxglove_c.dll
+            staticlib_artifact_name: foxglove_c-x86_64-pc-windows-msvc.lib
+            cdylib_artifact_name: foxglove_c-x86_64-pc-windows-msvc.dll
+            cross: false
+          - runner: windows-2025
+            target: aarch64-pc-windows-msvc
+            staticlib_name: foxglove_c.lib
+            cdylib_name: foxglove_c.dll
+            staticlib_artifact_name: foxglove_c-aarch64-pc-windows-msvc.lib
+            cdylib_artifact_name: foxglove_c-aarch64-pc-windows-msvc.dll
+            cross: true
+
+    name: build (${{ matrix.target }})
+    runs-on: ${{ matrix.runner }}
+
+    env:
+      CARGO_BUILD_TARGET: ${{ matrix.target }}
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          target: ${{ matrix.target }}
+
+      - run: sudo apt-get install gcc-aarch64-linux-gnu
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
+      - run: echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
+
+      - name: Build C library for ${{ matrix.target }}
+        run: cargo build --release
+        working-directory: c
+      - name: Ensure generated files are up to date
+        run: git diff --exit-code
+
+      - name: Build C++ library and run tests
+        if: ${{ !fromJson(matrix.cross) }}
+        run: make test
+        working-directory: cpp
+
+      - name: Upload static library to artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.staticlib_artifact_name }}
+          path: target/${{ matrix.target }}/release/${{ matrix.staticlib_name }}
+
+      - name: Upload shared library to artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.cdylib_artifact_name }}
+          path: target/${{ matrix.target }}/release/${{ matrix.cdylib_name }}
