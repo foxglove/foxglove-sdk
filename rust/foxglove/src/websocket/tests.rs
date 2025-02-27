@@ -14,7 +14,8 @@ use super::{create_server, send_lossy, SendLossyResult, ServerOptions, SUBPROTOC
 use crate::testutil::RecordingServerListener;
 use crate::websocket::service::{CallId, Service, ServiceId, ServiceSchema};
 use crate::websocket::{
-    Capability, ClientChannelId, Parameter, ParameterType, ParameterValue, Status, StatusLevel,
+    Capability, ClientChannelId, ConnectionGraph, Parameter, ParameterType, ParameterValue, Status,
+    StatusLevel,
 };
 use crate::{
     collection, Channel, ChannelBuilder, FoxgloveError, LogContext, LogSink, Metadata, Schema,
@@ -1263,6 +1264,90 @@ async fn test_services() {
         })
         .to_string()
     );
+}
+
+#[traced_test]
+#[tokio::test]
+async fn test_update_connection_graph() {
+    let recording_listener = Arc::new(RecordingServerListener::new());
+
+    let server = create_server(ServerOptions {
+        capabilities: Some(HashSet::from([Capability::ConnectionGraph])),
+        listener: Some(recording_listener.clone()),
+        ..Default::default()
+    });
+    let addr = server
+        .start("127.0.0.1", 0)
+        .await
+        .expect("Failed to start server");
+
+    let mut initial_graph = ConnectionGraph::new();
+    initial_graph.set_published_topic("topic1", ["publisher1".to_string()]);
+    initial_graph.set_subscribed_topic("topic1", ["subscriber1".to_string()]);
+    initial_graph.set_advertised_service("service1", ["provider1".to_string()]);
+    server
+        .replace_connection_graph(initial_graph)
+        .expect("failed to update connection graph");
+
+    let mut ws_client = connect_client(addr).await;
+
+    ws_client
+        .send(Message::text(r#"{"op": "subscribeConnectionGraph"}"#))
+        .await
+        .expect("Failed to send get parameters");
+
+    _ = ws_client.next().await.expect("No serverInfo sent");
+
+    // FG-10395 replace this with something more precise
+    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+
+    let msg = ws_client.next().await.expect("No message received");
+    let msg = msg.expect("Failed to parse message");
+    let text = msg.into_text().expect("Failed to get message text");
+    let msg: Value = serde_json::from_str(&text).expect("Failed to parse message");
+    assert_eq!(msg["op"], "connectionGraphUpdate");
+    assert_eq!(msg["publishedTopics"][0]["name"], "topic1");
+    assert_eq!(msg["publishedTopics"][0]["publisherIds"][0], "publisher1");
+    assert_eq!(msg["subscribedTopics"][0]["name"], "topic1");
+    assert_eq!(
+        msg["subscribedTopics"][0]["subscriberIds"][0],
+        "subscriber1"
+    );
+    assert_eq!(msg["advertisedServices"][0]["name"], "service1");
+    assert_eq!(msg["advertisedServices"][0]["providerIds"][0], "provider1");
+    assert_eq!(msg["removedTopics"], json!([]));
+    assert_eq!(msg["removedServices"], json!([]));
+
+    // FG-10395 replace this with something more precise
+    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+
+    let mut graph = ConnectionGraph::new();
+    // Update publisher for topic1
+    graph.set_published_topic("topic1", ["publisher2".to_string()]);
+    // Add topic2, remove topic1
+    graph.set_subscribed_topic("topic2", ["subscriber2".to_string()]);
+    // Delete service1
+    server
+        .replace_connection_graph(graph)
+        .expect("failed to update connection graph");
+
+    let msg = ws_client.next().await.expect("No message received");
+    let msg = msg.expect("Failed to parse message");
+    let text = msg.into_text().expect("Failed to get message text");
+    let msg: Value = serde_json::from_str(&text).expect("Failed to parse message");
+    assert_eq!(msg["op"], "connectionGraphUpdate");
+    assert_eq!(msg["publishedTopics"][0]["name"], "topic1");
+    assert_eq!(msg["publishedTopics"][0]["publisherIds"][0], "publisher2");
+    assert_eq!(msg["subscribedTopics"][0]["name"], "topic2");
+    assert_eq!(
+        msg["subscribedTopics"][0]["subscriberIds"][0],
+        "subscriber2"
+    );
+    assert_eq!(msg["advertisedServices"], json!([]));
+    assert_eq!(msg["removedTopics"], json!([]));
+    assert_eq!(msg["removedServices"], json!(["service1"]));
+
+    server.stop().await;
 }
 
 /// Connect to a server, ensuring the protocol header is set, and return the client WS stream

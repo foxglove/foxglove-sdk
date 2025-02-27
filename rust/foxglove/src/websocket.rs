@@ -33,8 +33,10 @@ use tokio_tungstenite::{
 };
 use tokio_util::sync::CancellationToken;
 
+mod connection_graph;
 mod protocol;
 pub mod service;
+pub use connection_graph::ConnectionGraph;
 #[cfg(test)]
 mod tests;
 #[cfg(all(test, feature = "unstable"))]
@@ -59,6 +61,8 @@ pub enum Capability {
     Time,
     /// Allow clients to call services.
     Services,
+    /// Allow clients to subscribe and make connection graph updates
+    ConnectionGraph,
 }
 
 /// Identifies a client connection. Unique for the duration of the server's lifetime.
@@ -183,6 +187,12 @@ pub(crate) struct Server {
     subscribed_parameters: parking_lot::Mutex<HashSet<String>>,
     /// Encodings server can accept from clients. Ignored unless the "clientPublish" capability is set.
     supported_encodings: HashSet<String>,
+    /// The current connection graph, unused unless the "connectionGraph" capability is set.
+    /// see https://github.com/foxglove/ws-protocol/blob/main/docs/spec.md#connection-graph-update
+    connection_graph: parking_lot::Mutex<ConnectionGraph>,
+    /// The number of clients subscribed to the connection graph
+    /// This is a mutex, not an atomic, as it's used to synchronize calls to on_connection_graph_subscribe/unsubscribe
+    connection_graph_subscriber_count: parking_lot::Mutex<u32>,
     /// Token for cancelling all tasks
     cancellation_token: CancellationToken,
     /// Registered services.
@@ -244,6 +254,10 @@ pub trait ServerListener: Send + Sync {
     /// Callback invoked when the last client unsubscribes from the named parameters.
     /// Requires [`Capability::Parameters`].
     fn on_parameters_unsubscribe(&self, _param_names: Vec<String>) {}
+    /// Callback invoked when the first client subscribes to the connection graph. Requires [`Capability::ConnectionGraph`].
+    fn on_connection_graph_subscribe(&self) {}
+    /// Callback invoked when the last client unsubscribes from the connection graph. Requires [`Capability::ConnectionGraph`].
+    fn on_connection_graph_unsubscribe(&self) {}
 }
 
 /// A connected client session with the websocket server.
@@ -267,6 +281,10 @@ pub(crate) struct ConnectedClient {
     /// Optional callback handler for a server implementation
     server_listener: Option<Arc<dyn ServerListener>>,
     server: Weak<Server>,
+    /// Whether this client is subscribed to the connection graph
+    /// This is updated only with the connection_graph mutex held in on_connection_graph_subscribe and unsubscribe.
+    /// It's read with the connection_graph mutex held, when sending connection graph updates to clients.
+    subscribed_to_connection_graph: AtomicBool,
 }
 
 impl ConnectedClient {
@@ -274,6 +292,10 @@ impl ConnectedClient {
         self.weak_self
             .upgrade()
             .expect("client cannot be dropped while in use")
+    }
+
+    fn is_subscribed_to_connection_graph(&self) -> bool {
+        self.subscribed_to_connection_graph.load(Relaxed)
     }
 
     /// Handle a text or binary message sent from the client.
@@ -326,6 +348,10 @@ impl ConnectedClient {
                 self.on_parameters_unsubscribe(server, msg.parameter_names)
             }
             ClientMessage::ServiceCallRequest(msg) => self.on_service_call(msg),
+            ClientMessage::SubscribeConnectionGraph => self.on_connection_graph_subscribe(server),
+            ClientMessage::UnsubscribeConnectionGraph => {
+                self.on_connection_graph_unsubscribe(server)
+            }
             _ => {
                 tracing::error!("Unsupported message from {}: {}", self.addr, msg.op());
                 self.send_error(format!("Unsupported message: {}", msg.op()));
@@ -797,14 +823,87 @@ impl ConnectedClient {
         self.send_control_msg(msg);
     }
 
+    fn on_connection_graph_subscribe(&self, server: Arc<Server>) {
+        if !server.capabilities.contains(&Capability::ConnectionGraph) {
+            self.send_error("Server does not support connection graph capability".to_string());
+            return;
+        }
+
+        let is_subscribed = self.subscribed_to_connection_graph.load(Relaxed);
+        if is_subscribed {
+            tracing::debug!(
+                "Client {} is already subscribed to connection graph updates",
+                self.addr
+            );
+            return;
+        }
+
+        {
+            let mut subscriber_count = server.connection_graph_subscriber_count.lock();
+            let is_first_subscriber = *subscriber_count == 0;
+            *subscriber_count += 1;
+
+            // We hold the lock over the call to the listener so that subscribe and unsubscribe
+            // calls are correctly ordered relative to each other.
+            if is_first_subscriber {
+                if let Some(listener) = server.listener.as_ref() {
+                    listener.on_connection_graph_subscribe();
+                }
+            }
+        }
+
+        // We hold the connection_graph lock over updating self.subscribed_to_connection_graph
+        // and sending the initial update message, so it's synchronized with unsubscribe and
+        // with server.connection_graph_update.
+        let mut connection_graph = server.connection_graph.lock();
+        // Take the graph and replace it with an empty default
+        let current_graph = std::mem::take(&mut *connection_graph);
+        // Update the empty default with the current graph, setting it back to where it was,
+        // and generating the full diff in the process.
+        let json_diff = connection_graph.update(current_graph);
+        // Send the full diff to the client as the starting state
+        self.send_control_msg(Message::text(json_diff));
+        self.subscribed_to_connection_graph.store(true, Relaxed);
+    }
+
+    fn on_connection_graph_unsubscribe(&self, server: Arc<Server>) {
+        if !server.capabilities.contains(&Capability::ConnectionGraph) {
+            self.send_error("Server does not support connection graph capability".to_string());
+            return;
+        }
+
+        let is_subscribed = self.is_subscribed_to_connection_graph();
+        if !is_subscribed {
+            self.send_error("Client is not subscribed to connection graph updates".to_string());
+            return;
+        }
+
+        {
+            let mut subscriber_count = server.connection_graph_subscriber_count.lock();
+            *subscriber_count -= 1;
+
+            if *subscriber_count == 0 {
+                if let Some(listener) = server.listener.as_ref() {
+                    listener.on_connection_graph_unsubscribe();
+                }
+            }
+        }
+
+        // Acquire the lock to sychronize with subscribe and with server.connection_graph_update.
+        let _guard = server.connection_graph.lock();
+        self.subscribed_to_connection_graph.store(false, Relaxed);
+    }
+
     /// Send an ad hoc error status message to the client, with the given message.
     fn send_error(&self, message: String) {
+        tracing::debug!("{}", message);
         self.send_status(Status::new(StatusLevel::Error, message));
     }
 
     /// Send an ad hoc warning status message to the client, with the given message.
     #[allow(dead_code)]
     fn send_warning(&self, message: String) {
+        tracing::debug!("{}", message);
         self.send_status(Status::new(StatusLevel::Warning, message));
     }
 
@@ -874,6 +973,8 @@ impl Server {
             subscribed_parameters: parking_lot::Mutex::new(HashSet::new()),
             capabilities,
             supported_encodings,
+            connection_graph: parking_lot::Mutex::new(ConnectionGraph::new()),
+            connection_graph_subscriber_count: parking_lot::Mutex::new(0),
             cancellation_token: CancellationToken::new(),
             services: parking_lot::RwLock::new(ServiceMap::from_iter(opts.services.into_values())),
         }
@@ -1003,7 +1104,7 @@ impl Server {
 
     /// Publish the current timestamp to all clients.
     #[cfg(feature = "unstable")]
-    pub async fn broadcast_time(&self, timestamp_nanos: u64) {
+    pub fn broadcast_time(&self, timestamp_nanos: u64) {
         if !self.capabilities.contains(&Capability::Time) {
             tracing::error!("Server does not support time capability");
             return;
@@ -1121,6 +1222,7 @@ impl Server {
             parameter_subscriptions: parking_lot::Mutex::new(HashSet::new()),
             server_listener: self.listener.clone(),
             server: self.weak_self.clone(),
+            subscribed_to_connection_graph: AtomicBool::new(false),
         });
 
         self.register_client_and_advertise(new_client.clone()).await;
@@ -1351,6 +1453,28 @@ impl Server {
     // Looks up a service by ID.
     fn get_service(&self, id: ServiceId) -> Option<Arc<Service>> {
         self.services.read().get_by_id(id)
+    }
+
+    /// Sends a connection graph update to all clients.
+    pub(crate) fn replace_connection_graph(
+        &self,
+        replacement_graph: ConnectionGraph,
+    ) -> Result<(), FoxgloveError> {
+        // Make sure that the server supports connection graph.
+        if !self.capabilities.contains(&Capability::ConnectionGraph) {
+            return Err(FoxgloveError::ConnectionGraphNotSupported);
+        }
+
+        // Hold the lock while sending to synchronize with subscribe and unsubscribe.
+        let mut connection_graph = self.connection_graph.lock();
+        let json_diff = connection_graph.update(replacement_graph);
+        let msg = Message::text(json_diff);
+        for client in self.clients.get().iter() {
+            if client.is_subscribed_to_connection_graph() {
+                client.send_control_msg(msg.clone());
+            }
+        }
+        Ok(())
     }
 }
 

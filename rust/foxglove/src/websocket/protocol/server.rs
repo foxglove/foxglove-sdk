@@ -131,9 +131,7 @@ impl Status {
 }
 
 #[derive(Serialize)]
-#[serde(tag = "op")]
-#[serde(rename = "removeStatus")]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", rename = "removeStatus", tag = "op")]
 pub struct RemoveStatus {
     pub status_ids: Vec<String>,
 }
@@ -340,6 +338,54 @@ pub(crate) fn service_call_failure(
         "message": message,
     })
     .to_string()
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NewPublishedTopic<'a> {
+    pub name: &'a str,
+    pub publisher_ids: &'a HashSet<String>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NewSubscribedTopic<'a> {
+    pub name: &'a str,
+    pub subscriber_ids: &'a HashSet<String>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NewAdvertisedService<'a> {
+    pub name: &'a str,
+    pub provider_ids: &'a HashSet<String>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase", rename = "connectionGraphUpdate", tag = "op")]
+pub struct ConnectionGraphDiff<'a> {
+    pub published_topics: Vec<NewPublishedTopic<'a>>,
+    pub subscribed_topics: Vec<NewSubscribedTopic<'a>>,
+    pub advertised_services: Vec<NewAdvertisedService<'a>>,
+    pub removed_topics: HashSet<String>,
+    pub removed_services: Vec<String>,
+}
+
+impl ConnectionGraphDiff<'_> {
+    pub fn new() -> Self {
+        Self {
+            published_topics: Vec::new(),
+            subscribed_topics: Vec::new(),
+            advertised_services: Vec::new(),
+            removed_topics: HashSet::new(),
+            removed_services: Vec::new(),
+        }
+    }
+
+    pub fn to_json(&self) -> String {
+        // This shouldn't fail, see serde docs
+        serde_json::to_string(self).unwrap()
+    }
 }
 
 #[cfg(test)]
@@ -658,5 +704,53 @@ mod tests {
             })
             .to_string()
         );
+    }
+
+    #[test]
+    fn test_connection_graph_diff_to_json() {
+        let mut published = HashSet::new();
+        published.insert("pub1".to_string());
+
+        let mut subscribed = HashSet::new();
+        subscribed.insert("sub1".to_string());
+
+        let mut providers = HashSet::new();
+        providers.insert("provider1".to_string());
+
+        let mut diff = ConnectionGraphDiff::new();
+        diff.published_topics = vec![NewPublishedTopic {
+            name: "/topic1",
+            publisher_ids: &published,
+        }];
+        diff.subscribed_topics = vec![NewSubscribedTopic {
+            name: "/topic2",
+            subscriber_ids: &subscribed,
+        }];
+        diff.advertised_services = vec![NewAdvertisedService {
+            name: "/service1",
+            provider_ids: &providers,
+        }];
+        diff.removed_topics.insert("/old_topic".to_string());
+        diff.removed_services.push("/old_service".to_string());
+
+        let json = serde_json::from_str::<serde_json::Value>(&diff.to_json()).unwrap();
+        let expected = json!({
+            "op": "connectionGraphUpdate",
+            "publishedTopics": [{
+                "name": "/topic1",
+                "publisherIds": ["pub1"]
+            }],
+            "subscribedTopics": [{
+                "name": "/topic2",
+                "subscriberIds": ["sub1"]
+            }],
+            "advertisedServices": [{
+                "name": "/service1",
+                "providerIds": ["provider1"]
+            }],
+            "removedTopics": ["/old_topic"],
+            "removedServices": ["/old_service"]
+        });
+        assert_eq!(json, expected);
     }
 }

@@ -228,6 +228,9 @@ pub enum FoxgloveError {
     /// Services are not supported on this server instance.
     #[error("Services are not supported on this server instance")]
     ServicesNotSupported,
+    /// Connection graph is not supported on this server instance.
+    #[error("Connection graph is not supported on this server instance")]
+    ConnectionGraphNotSupported,
     /// An I/O error.
     #[error(transparent)]
     IoError(#[from] std::io::Error),
