@@ -36,7 +36,7 @@ impl PyClient {
     }
 }
 
-impl From<Client<'_>> for PyClient {
+impl From<Client> for PyClient {
     fn from(value: Client) -> Self {
         Self {
             id: value.id().into(),

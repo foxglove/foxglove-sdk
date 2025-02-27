@@ -5,9 +5,8 @@ use std::sync::Arc;
 use bytes::Bytes;
 use tokio_tungstenite::tungstenite::Message;
 
-use super::semaphore::SemaphoreGuard;
 use super::{CallId, ServiceId};
-use crate::websocket::{protocol, ConnectedClient};
+use crate::websocket::{protocol, ConnectedClient, SemaphoreGuard};
 
 /// A handle for completing a service call.
 ///

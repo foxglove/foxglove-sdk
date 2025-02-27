@@ -310,8 +310,8 @@ impl ServiceCallRequest {
 #[derive(Debug, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct FetchAsset {
-    uri: String,
-    request_id: u32,
+    pub uri: String,
+    pub request_id: u32,
 }
 
 #[cfg(test)]

@@ -1,5 +1,5 @@
 use assert_matches::assert_matches;
-use bytes::{BufMut, BytesMut};
+use bytes::{BufMut, Bytes, BytesMut};
 use futures_util::{FutureExt, SinkExt, StreamExt};
 use serde::Deserialize;
 use serde_json::{json, Value};
@@ -14,7 +14,8 @@ use super::{create_server, send_lossy, SendLossyResult, ServerOptions, SUBPROTOC
 use crate::testutil::RecordingServerListener;
 use crate::websocket::service::{CallId, Service, ServiceId, ServiceSchema};
 use crate::websocket::{
-    Capability, ClientChannelId, Parameter, ParameterType, ParameterValue, Status, StatusLevel,
+    BlockingAssetHandlerFn, Capability, ClientChannelId, Parameter, ParameterType, ParameterValue,
+    Status, StatusLevel,
 };
 use crate::{
     collection, Channel, ChannelBuilder, FoxgloveError, LogContext, LogSink, Metadata, Schema,
@@ -1263,6 +1264,72 @@ async fn test_services() {
         })
         .to_string()
     );
+}
+
+#[tokio::test]
+async fn test_fetch_asset() {
+    let server = create_server(ServerOptions {
+        capabilities: Some(HashSet::from([Capability::Assets])),
+        fetch_asset_handler: Some(Arc::new(BlockingAssetHandlerFn(|_client, uri: String| {
+            if uri.ends_with("error") {
+                Err("test error".to_string())
+            } else {
+                Ok(Bytes::from_static(b"test data"))
+            }
+        }))),
+        ..Default::default()
+    });
+    let addr = server
+        .start("127.0.0.1", 0)
+        .await
+        .expect("Failed to start server");
+
+    let mut ws_client = connect_client(addr).await;
+    let _ = ws_client.next().await.expect("No serverInfo sent");
+
+    let fetch_asset = json!({
+        "op": "fetchAsset",
+        "uri": "https://example.com/asset.png",
+        "requestId": 1,
+    });
+    ws_client
+        .send(Message::text(fetch_asset.to_string()))
+        .await
+        .expect("Failed to send fetch asset");
+    let fetch_asset_err = json!({
+        "op": "fetchAsset",
+        "uri": "https://example.com/error",
+        "requestId": 2,
+    });
+    ws_client
+        .send(Message::text(fetch_asset_err.to_string()))
+        .await
+        .expect("Failed to send fetch asset");
+
+    // FG-10395 replace this with something more precise
+    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+
+    let result = ws_client.next().await.unwrap();
+    let msg = result.expect("Failed to parse message");
+    let data = msg.into_data();
+    println!("data: {:?}", data);
+    assert_eq!(data[0], 0x04); // fetch asset opcode
+    assert_eq!(u32::from_le_bytes(data[1..5].try_into().unwrap()), 1);
+    assert_eq!(data[5], 0); // 0 for success
+    assert_eq!(u32::from_le_bytes(data[6..10].try_into().unwrap()), 0);
+    assert_eq!(&data[10..], b"test data");
+
+    let result = ws_client.next().await.unwrap();
+    let msg = result.expect("Failed to parse message");
+    let data = msg.into_data();
+    assert_eq!(data[0], 0x04); // fetch asset opcode
+    assert_eq!(u32::from_le_bytes(data[1..5].try_into().unwrap()), 2);
+    assert_eq!(data[5], 1); // 1 for error
+    assert_eq!(
+        u32::from_le_bytes(data[6..10].try_into().unwrap()),
+        b"test error".len() as u32
+    );
+    assert_eq!(&data[10..], b"test error");
 }
 
 /// Connect to a server, ensuring the protocol header is set, and return the client WS stream

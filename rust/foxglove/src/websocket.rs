@@ -33,8 +33,13 @@ use tokio_tungstenite::{
 };
 use tokio_util::sync::CancellationToken;
 
+mod fetch_asset;
+pub use fetch_asset::{AssetHandler, AssetResponder, FetchAssetResult};
+pub(crate) use fetch_asset::{AsyncAssetHandlerFn, BlockingAssetHandlerFn};
 mod protocol;
+mod semaphore;
 pub mod service;
+pub(crate) use semaphore::{Semaphore, SemaphoreGuard};
 #[cfg(test)]
 mod tests;
 #[cfg(all(test, feature = "unstable"))]
@@ -59,6 +64,8 @@ pub enum Capability {
     Time,
     /// Allow clients to call services.
     Services,
+    /// Allow clients to request assets.
+    Assets,
 }
 
 /// Identifies a client connection. Unique for the duration of the server's lifetime.
@@ -72,13 +79,40 @@ impl From<ClientId> for u32 {
 }
 
 /// A connected client session with the websocket server.
-#[derive(Debug)]
-pub struct Client<'a>(&'a ConnectedClient);
+#[derive(Debug, Clone)]
+pub struct Client {
+    id: ClientId,
+    client: Weak<ConnectedClient>,
+}
 
-impl Client<'_> {
+impl Client {
+    pub(crate) fn new(client: &ConnectedClient) -> Self {
+        Self {
+            id: client.id,
+            client: client.weak_self.clone(),
+        }
+    }
+
     /// Returns the client ID.
     pub fn id(&self) -> ClientId {
-        self.0.id
+        self.id
+    }
+
+    /// Send a status message to this client. Does nothing if client is disconnected.
+    pub fn send_status(&self, status: Status) {
+        if let Some(client) = self.client.upgrade() {
+            client.send_status(status);
+        }
+    }
+
+    /// Send a fetch asset response to the client. Does nothing if client is disconnected.
+    pub(crate) fn send_asset_response(&self, result: FetchAssetResult, request_id: u32) {
+        if let Some(client) = self.client.upgrade() {
+            match result {
+                Ok(asset) => client.send_asset_response(&asset, request_id),
+                Err(err) => client.send_asset_error(&err.to_string(), request_id),
+            }
+        }
     }
 }
 
@@ -129,6 +163,7 @@ type WebsocketSender = SplitSink<WebSocketStream<TcpStream>, Message>;
 const DEFAULT_MESSAGE_BACKLOG_SIZE: usize = 1024;
 const DEFAULT_CONTROL_PLANE_BACKLOG_SIZE: usize = 64;
 const DEFAULT_SERVICE_CALLS_PER_CLIENT: usize = 32;
+const DEFAULT_FETCH_ASSET_CALLS_PER_CLIENT: usize = 32;
 
 #[derive(Error, Debug)]
 enum WSError {
@@ -146,6 +181,7 @@ pub(crate) struct ServerOptions {
     pub services: HashMap<String, Service>,
     pub supported_encodings: Option<HashSet<String>>,
     pub runtime: Option<Handle>,
+    pub fetch_asset_handler: Option<Arc<dyn AssetHandler>>,
 }
 
 impl std::fmt::Debug for ServerOptions {
@@ -155,6 +191,8 @@ impl std::fmt::Debug for ServerOptions {
             .field("name", &self.name)
             .field("message_backlog_size", &self.message_backlog_size)
             .field("services", &self.services)
+            .field("capabilities", &self.capabilities)
+            .field("supported_encodings", &self.supported_encodings)
             .finish()
     }
 }
@@ -187,6 +225,8 @@ pub(crate) struct Server {
     cancellation_token: CancellationToken,
     /// Registered services.
     services: parking_lot::RwLock<ServiceMap>,
+    /// Handler for fetch asset requests
+    fetch_asset_handler: Option<Arc<dyn AssetHandler>>,
 }
 
 /// Provides a mechanism for registering callbacks for handling client message events.
@@ -257,7 +297,8 @@ pub(crate) struct ConnectedClient {
     data_plane_rx: flume::Receiver<Message>,
     control_plane_tx: flume::Sender<Message>,
     control_plane_rx: flume::Receiver<Message>,
-    service_call_sem: service::Semaphore,
+    service_call_sem: Semaphore,
+    fetch_asset_sem: Semaphore,
     /// Subscriptions from this client
     subscriptions: parking_lot::Mutex<BiHashMap<ChannelId, SubscriptionId>>,
     /// Channels advertised by this client
@@ -326,6 +367,7 @@ impl ConnectedClient {
                 self.on_parameters_unsubscribe(server, msg.parameter_names)
             }
             ClientMessage::ServiceCallRequest(msg) => self.on_service_call(msg),
+            ClientMessage::FetchAsset(msg) => self.on_fetch_asset(server, msg.uri, msg.request_id),
             _ => {
                 tracing::error!("Unsupported message from {}: {}", self.addr, msg.op());
                 self.send_error(format!("Unsupported message: {}", msg.op()));
@@ -401,7 +443,7 @@ impl ConnectedClient {
         // Call the handler after releasing the advertised_channels lock
         if let Some(handler) = self.server_listener.as_ref() {
             handler.on_message_data(
-                Client(self),
+                Client::new(self),
                 ClientChannelView {
                     id: client_channel.id,
                     topic: &client_channel.topic,
@@ -436,7 +478,7 @@ impl ConnectedClient {
         if let Some(handler) = self.server_listener.as_ref() {
             for (id, client_channel) in channel_ids.iter().cloned().zip(client_channels) {
                 handler.on_client_unadvertise(
-                    Client(self),
+                    Client::new(self),
                     ClientChannelView {
                         id,
                         topic: &client_channel.topic,
@@ -474,7 +516,7 @@ impl ConnectedClient {
             // Call the handler after releasing the advertised_channels lock
             if let Some(handler) = self.server_listener.as_ref() {
                 handler.on_client_advertise(
-                    Client(self),
+                    Client::new(self),
                     ClientChannelView {
                         id: client_channel.id,
                         topic: &client_channel.topic,
@@ -515,7 +557,7 @@ impl ConnectedClient {
         // Finally call the handler for each channel
         for channel in unsubscribed_channels {
             handler.on_unsubscribe(
-                Client(self),
+                Client::new(self),
                 ChannelView {
                     id: channel.id,
                     topic: &channel.topic,
@@ -581,7 +623,7 @@ impl ConnectedClient {
             );
             if let Some(handler) = self.server_listener.as_ref() {
                 handler.on_subscribe(
-                    Client(self),
+                    Client::new(self),
                     ChannelView {
                         id: channel.id,
                         topic: &channel.topic,
@@ -604,7 +646,7 @@ impl ConnectedClient {
 
         if let Some(handler) = self.server_listener.as_ref() {
             let request_id = request_id.as_deref();
-            let parameters = handler.on_get_parameters(Client(self), param_names, request_id);
+            let parameters = handler.on_get_parameters(Client::new(self), param_names, request_id);
             let message = protocol::server::parameters_json(&parameters, request_id);
             let _ = self.control_plane_tx.try_send(Message::text(message));
         }
@@ -624,7 +666,7 @@ impl ConnectedClient {
         let updated_parameters = if let Some(handler) = self.server_listener.as_ref() {
             let request_id = request_id.as_deref();
             let updated_parameters =
-                handler.on_set_parameters(Client(self), parameters, request_id);
+                handler.on_set_parameters(Client::new(self), parameters, request_id);
             // Send all the updated_parameters back to the client if request_id is provided.
             // This is the behavior of the reference Python server implementation.
             if request_id.is_some() {
@@ -797,6 +839,25 @@ impl ConnectedClient {
         self.send_control_msg(msg);
     }
 
+    fn on_fetch_asset(&self, server: Arc<Server>, uri: String, request_id: u32) {
+        if !server.capabilities.contains(&Capability::Assets) {
+            self.send_error("Server does not support assets capability".to_string());
+            return;
+        }
+
+        let Some(guard) = self.fetch_asset_sem.try_acquire() else {
+            self.send_asset_error("Too many concurrent fetch asset requests", request_id);
+            return;
+        };
+
+        if let Some(handler) = server.fetch_asset_handler.clone() {
+            let asset_responder = AssetResponder::new(Client::new(self), request_id, guard);
+            handler.fetch(uri, asset_responder);
+        } else {
+            self.send_asset_error("Server does not have a fetch asset handler", request_id);
+        }
+    }
+
     /// Send an ad hoc error status message to the client, with the given message.
     fn send_error(&self, message: String) {
         self.send_status(Status::new(StatusLevel::Error, message));
@@ -819,6 +880,32 @@ impl ConnectedClient {
                 self.send_control_msg(message);
             }
         }
+    }
+
+    /// Send a fetch asset error to the client.
+    fn send_asset_error(&self, error: &str, request_id: u32) {
+        // https://github.com/foxglove/ws-protocol/blob/main/docs/spec.md#fetch-asset-response
+        let mut buf = Vec::with_capacity(10 + error.len());
+        buf.put_u8(protocol::server::BinaryOpcode::FetchAssetResponse as u8);
+        buf.put_u32_le(request_id);
+        buf.put_u8(1); // 1 for error
+        buf.put_u32_le(error.len() as u32);
+        buf.put(error.as_bytes());
+        let message = Message::binary(buf);
+        self.send_control_msg(message);
+    }
+
+    /// Send a fetch asset response to the client.
+    fn send_asset_response(&self, response: &[u8], request_id: u32) {
+        // https://github.com/foxglove/ws-protocol/blob/main/docs/spec.md#fetch-asset-response
+        let mut buf = Vec::with_capacity(10 + response.len());
+        buf.put_u8(protocol::server::BinaryOpcode::FetchAssetResponse as u8);
+        buf.put_u32_le(request_id);
+        buf.put_u8(0); // 0 for success
+        buf.put_u32_le(0); // error length, 0 for no error
+        buf.put(response);
+        let message = Message::binary(buf);
+        self.send_control_msg(message);
     }
 }
 
@@ -857,6 +944,11 @@ impl Server {
             );
         }
 
+        // If the server was declared with fetch asset handler, automatically add the "assets" capability
+        if opts.fetch_asset_handler.is_some() {
+            capabilities.insert(Capability::Assets);
+        }
+
         Server {
             weak_self,
             started: AtomicBool::new(false),
@@ -876,6 +968,7 @@ impl Server {
             supported_encodings,
             cancellation_token: CancellationToken::new(),
             services: parking_lot::RwLock::new(ServiceMap::from_iter(opts.services.into_values())),
+            fetch_asset_handler: opts.fetch_asset_handler,
         }
     }
 
@@ -1115,7 +1208,8 @@ impl Server {
             data_plane_rx: data_rx,
             control_plane_tx: ctrl_tx,
             control_plane_rx: ctrl_rx,
-            service_call_sem: service::Semaphore::new(DEFAULT_SERVICE_CALLS_PER_CLIENT),
+            service_call_sem: Semaphore::new(DEFAULT_SERVICE_CALLS_PER_CLIENT),
+            fetch_asset_sem: Semaphore::new(DEFAULT_FETCH_ASSET_CALLS_PER_CLIENT),
             subscriptions: parking_lot::Mutex::new(BiHashMap::new()),
             advertised_channels: parking_lot::Mutex::new(HashMap::new()),
             parameter_subscriptions: parking_lot::Mutex::new(HashSet::new()),
