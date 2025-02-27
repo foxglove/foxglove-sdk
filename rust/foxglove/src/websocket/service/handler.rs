@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::{fmt::Display, future::Future, sync::Arc};
 
 use bytes::Bytes;
 
@@ -17,20 +17,6 @@ pub trait Handler: Send + Sync {
     /// The implementation is responsible for completing the request with [`Responder::respond`],
     /// otherwise no response will be sent to the client.
     fn call(&self, request: Request, responder: Responder);
-}
-
-/// A wrapper around a function that serves as a service call handler.
-pub(crate) struct HandlerFn<F>(pub F)
-where
-    F: Fn(Request, Responder) + Send + Sync;
-
-impl<F> Handler for HandlerFn<F>
-where
-    F: Fn(Request, Responder) + Send + Sync,
-{
-    fn call(&self, request: Request, responder: Responder) {
-        self.0(request, responder);
-    }
 }
 
 /// A synchronous service call handler.
@@ -56,20 +42,62 @@ impl<T: SyncHandler> Handler for T {
     }
 }
 
-/// A wrapper around a function that serves as a synchronous service call handler.
-pub(crate) struct SyncHandlerFn<F, E>(pub F)
+/// A wrapper around a function that serves as a service call handler.
+pub(crate) struct HandlerFn<F, E>(pub F)
 where
     F: Fn(Request) -> Result<Bytes, E> + Send + Sync,
-    E: Display + 'static;
+    E: Display;
 
-impl<F, E> SyncHandler for SyncHandlerFn<F, E>
+impl<F, E> SyncHandler for HandlerFn<F, E>
 where
     F: Fn(Request) -> Result<Bytes, E> + Send + Sync,
-    E: Display + 'static,
+    E: Display,
 {
     type Error = E;
 
     fn call(&self, request: Request) -> Result<Bytes, Self::Error> {
         self.0(request)
+    }
+}
+
+/// A wrapper around a blocking function that serves as a service call handler.
+pub(crate) struct BlockingHandlerFn<F, E>(pub Arc<F>)
+where
+    F: Fn(Request) -> Result<Bytes, E> + Send + Sync + 'static,
+    E: Display;
+
+impl<F, E> Handler for BlockingHandlerFn<F, E>
+where
+    F: Fn(Request) -> Result<Bytes, E> + Send + Sync + 'static,
+    E: Display,
+{
+    fn call(&self, request: Request, responder: Responder) {
+        let func = self.0.clone();
+        tokio::task::spawn_blocking(move || {
+            let result = (func)(request);
+            responder.respond(result.map_err(|e| e.to_string()));
+        });
+    }
+}
+
+/// A wrapper around a async function that serves as a service call handler.
+pub(crate) struct AsyncHandlerFn<F, Fut, E>(pub Arc<F>)
+where
+    F: Fn(Request) -> Fut + Send + Sync,
+    Fut: Future<Output = Result<Bytes, E>> + Send + 'static,
+    E: Display;
+
+impl<F, Fut, E> Handler for AsyncHandlerFn<F, Fut, E>
+where
+    F: Fn(Request) -> Fut + Send + Sync + 'static,
+    Fut: Future<Output = Result<Bytes, E>> + Send,
+    E: Display + Send,
+{
+    fn call(&self, request: Request, responder: Responder) {
+        let func = self.0.clone();
+        tokio::task::spawn(async move {
+            let result = (func)(request).await;
+            responder.respond(result.map_err(|e| e.to_string()));
+        });
     }
 }

@@ -558,7 +558,7 @@ mod tests {
         let s1_schema = ServiceSchema::new("std_srvs/Empty");
         let s1 = Service::builder("foo", s1_schema)
             .with_id(ServiceId::new(1))
-            .sync_handler_fn(|_| Err("not implemented"));
+            .handler_fn(|_| Err("not implemented"));
 
         let s2_schema = ServiceSchema::new("std_srvs/SetBool")
             .with_request(
@@ -575,7 +575,7 @@ mod tests {
             );
         let s2 = Service::builder("set_bool", s2_schema)
             .with_id(ServiceId::new(2))
-            .sync_handler_fn(|_| Err("not implemented"));
+            .handler_fn(|_| Err("not implemented"));
 
         let adv = advertise_services(&[s1, s2]);
         assert_eq!(

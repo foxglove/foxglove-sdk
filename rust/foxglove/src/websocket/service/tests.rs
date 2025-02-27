@@ -1,15 +1,9 @@
-use bytes::Bytes;
-
-use super::{Request, Service, ServiceId, ServiceMap, ServiceSchema};
-
-fn handler(_: Request) -> Result<Bytes, &'static str> {
-    Err("")
-}
+use super::{Service, ServiceId, ServiceMap, ServiceSchema};
 
 fn make_service(name: &str, id: u32) -> Service {
     Service::builder(name, ServiceSchema::new("schema"))
         .with_id(ServiceId::new(id))
-        .sync_handler_fn(handler)
+        .handler_fn(|_| Err(""))
 }
 
 #[test]

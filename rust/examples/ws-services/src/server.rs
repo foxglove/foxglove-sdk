@@ -25,25 +25,20 @@ pub async fn main(config: Config) -> Result<()> {
     // Simple services can be implemented with a closure.
     server
         .add_services([
-            Service::builder("/empty", empty_schema())
-                .sync_handler_fn(|_| anyhow::Ok(Bytes::new())),
+            Service::builder("/empty", empty_schema()).handler_fn(|_| anyhow::Ok(Bytes::new())),
             Service::builder("/echo", echo_schema())
-                .sync_handler_fn(|req| anyhow::Ok(req.into_payload())),
+                .handler_fn(|req| anyhow::Ok(req.into_payload())),
         ])
         .context("Failed to register services")?;
 
-    // Services that need to sleep (or do heavy computation) should use `tokio::spawn()`
-    // (or `tokio::task::spawn_blocking()`) to avoid blocking the client's main event loop.
-    // Unlike the `SyncHandler` implementations, the generic `Handler` is responsible for
-    // invoking `resp.respond()` to complete the request.
+    // Services that need to do more heavy lifting should be handled asynchronously, either as an
+    // async task, or a blocking task.
     server
         .add_services([
-            Service::builder("/sleep", empty_schema()).handler_fn(|_, resp| {
-                tokio::spawn(async move {
-                    tokio::time::sleep(Duration::from_secs(1)).await;
-                    resp.respond(Ok(Bytes::new()))
-                });
-            }),
+            // Async handlers will be spawned using `tokio::spawn`.
+            Service::builder("/sleep", empty_schema()).async_handler_fn(sleep_handler),
+            // Blocking handlers will be spawned using `tokio::task::spawn_blocking`.
+            Service::builder("/blocking", empty_schema()).blocking_handler_fn(blocking_handler),
         ])
         .context("Failed to register services")?;
 
@@ -52,9 +47,7 @@ pub async fn main(config: Config) -> Result<()> {
         .add_services(
             ["/IntBin/add", "/IntBin/sub", "/IntBin/mul", "/IntBin/mod"]
                 .into_iter()
-                .map(|name| {
-                    Service::builder(name, int_bin_schema()).sync_handler_fn(int_bin_handler)
-                }),
+                .map(|name| Service::builder(name, int_bin_schema()).handler_fn(int_bin_handler)),
         )
         .context("Failed to register services")?;
 
@@ -97,6 +90,16 @@ fn set_bool_schema() -> ServiceSchema {
     ServiceSchema::new("/std_srvs/SetBool")
         .with_request("json", Schema::json_schema::<SetBoolRequest>())
         .with_response("json", Schema::json_schema::<SetBoolResponse>())
+}
+
+async fn sleep_handler(_: Request) -> Result<Bytes, String> {
+    tokio::time::sleep(Duration::from_secs(1)).await;
+    Ok(Bytes::new())
+}
+
+fn blocking_handler(_: Request) -> Result<Bytes, String> {
+    std::thread::sleep(Duration::from_secs(1));
+    Ok(Bytes::new())
 }
 
 /// A stateless handler function.
