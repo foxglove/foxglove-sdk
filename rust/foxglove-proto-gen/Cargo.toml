@@ -3,6 +3,9 @@ name = "foxglove-proto-gen"
 edition = "2021"
 publish = false
 
+[lints]
+workspace = true
+
 [dependencies]
 anyhow = "1.0.95"
 prost.workspace = true

@@ -3,6 +3,9 @@ name = "example-ws-stream-mcap"
 edition = "2021"
 publish = false
 
+[lints]
+workspace = true
+
 [dependencies]
 anyhow = "1.0"
 bytes = "1.9"

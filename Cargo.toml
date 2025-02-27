@@ -1,11 +1,11 @@
 [workspace]
 resolver = "2"
 members = [
-    "rust/foxglove",
-    "rust/foxglove-proto-gen",
-    "rust/examples/*",
-    "rust/examples-unstable/*",
-    "python/foxglove-sdk",
+  "rust/foxglove",
+  "rust/foxglove-proto-gen",
+  "rust/examples/*",
+  "rust/examples-unstable/*",
+  "python/foxglove-sdk",
 ]
 
 [workspace.dependencies]
@@ -20,3 +20,6 @@ tokio = { version = "1.40", features = ["macros", "rt-multi-thread", "signal", "
 tokio-tungstenite = "0.26"
 tokio-util = { version = "0.7", features = ["rt"] }
 tracing = { version = "0.1", features = ["log"] }
+
+[workspace.lints.rust]
+rust-2024-compatibility = "warn"

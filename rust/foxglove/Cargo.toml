@@ -11,6 +11,9 @@ default = []
 chrono = ["dep:chrono"]
 unstable = []
 
+[lints]
+workspace = true
+
 [dependencies]
 arc-swap = "1.7.1"
 base64 = "0.22.1"
