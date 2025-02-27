@@ -13,13 +13,22 @@ Visit [Foxglove Docs](https://docs.foxglove.dev/) to get started.
 <tbody>
 <tr><td><strong>Python</strong></td><td></td><td></td></tr>
 <tr>
+<td>foxglove-sdk</td>
+<td>
+
+[![pypi version](https://shields.io/pypi/v/foxglove-sdk)](https://pypi.org/project/foxglove-sdk/)
+
+</td>
+<td>Python SDK</td>
+</tr>
+<tr>
 <td>foxglove-schemas-flatbuffer</td>
 <td>
 
 [![pypi version](https://shields.io/pypi/v/foxglove-schemas-flatbuffer)](https://pypi.org/project/foxglove-schemas-flatbuffer/)
 
 </td>
-<td>Compiled flatbuffers</td>
+<td>Precompiled flatbuffers</td>
 </tr>
 <tr>
 <td>foxglove-schemas-protobuf</td>
@@ -28,20 +37,7 @@ Visit [Foxglove Docs](https://docs.foxglove.dev/) to get started.
 [![pypi version](https://shields.io/pypi/v/foxglove-schemas-protobuf)](https://pypi.org/project/foxglove-schemas-protobuf/)
 
 </td>
-<td>Compiled protocol buffers</td>
-</tr>
-<tr>
-<td>foxglove-websocket</td>
-<td>
-
-[![pypi version](https://shields.io/pypi/v/foxglove-websocket)](https://pypi.org/project/foxglove-websocket/)
-
-</td>
-<td>
-
-Python implementation of the WebSocket protocol<br/>Repo: [foxglove/ws-protocol](https://github.com/foxglove/ws-protocol/tree/main/python)
-
-</td>
+<td>Precompiled protocol buffers</td>
 </tr>
 <tr><td><strong>C++</strong></td><td></td><td></td></tr>
 <tr>
@@ -57,6 +53,16 @@ C++ implementation of the WebSocket protocol<br/>
 Repo: [foxglove/ws-protocol](https://github.com/foxglove/ws-protocol/tree/main/cpp)
 
 </td>
+</tr>
+<tr><td><strong>Rust</strong></td><td></td><td></td></tr>
+<tr>
+<td>foxglove</td>
+<td>
+
+[![conan version](https://img.shields.io/crates/v/foxglove)](https://crates.io/crates/foxglove)
+
+</td>
+<td>Rust SDK</td>
 </tr>
 <tr><td><strong>ROS</strong></td><td></td><td></td></tr>
 <tr>
