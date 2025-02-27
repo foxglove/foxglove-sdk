@@ -627,7 +627,7 @@ export function generateChannelClasses(messageSchemas: FoxgloveMessageSchema[]):
     return `
 /// A channel for logging :py:class:\`foxglove.schemas.${schemaClass}\` messages.
 #[pyclass(module = "foxglove.channels")]
-struct ${channelClass}(TypedChannel<foxglove::schemas::${schemaClass}>);
+struct ${channelClass}(Option<TypedChannel<foxglove::schemas::${schemaClass}>>);
 
 #[pymethods]
 impl ${channelClass} {
@@ -637,7 +637,17 @@ impl ${channelClass} {
     #[new]
     fn new(topic: &str) -> PyResult<Self> {
         let base = TypedChannel::new(topic).map_err(PyFoxgloveError::from)?;
-        Ok(Self(base))
+        Ok(Self(Some(base)))
+    }
+
+    /// Close the channel.
+    ///
+    /// You do not need to call this unless you explicitly want to remove advertisements from live
+    /// visualization clients. Destroying all references to the channel will also close it.
+    ///
+    /// It is an error to call :py:meth:\`log\` after closing the channel.
+    fn close(&mut self) {
+        self.0 = None;
     }
 
     /// Log a :py:class:\`foxglove.schemas.${schemaClass}\` message to the channel.
@@ -660,11 +670,19 @@ impl ${channelClass} {
         sequence: Option<u32>,
     ) {
         let metadata = PartialMetadata{ log_time, publish_time, sequence };
-        self.0.log_with_meta(&msg.0, metadata);
+        if let Some(channel) = &self.0 {
+          channel.log_with_meta(&msg.0, metadata);
+        } else {
+          tracing::debug!("Cannot log() on a closed ${channelClass}");
+        }
     }
 
     fn __repr__(&self) -> String {
-        format!("${channelClass}(topic='{}')", self.0.topic()).to_string()
+        if let Some(channel) = &self.0 {
+            format!("${channelClass}(topic='{}')", channel.topic()).to_string()
+        } else {
+            "${channelClass} (closed)".to_string()
+        }
     }
 }
 `;
@@ -698,6 +716,7 @@ export function generatePyChannelStub(messageSchemas: FoxgloveMessageSchema[]): 
         `        cls,`,
         `        topic: str,`,
         `    ) -> "${channelClass}": ...\n`,
+        `    def close(self) -> None: ...`,
         `    def log(`,
         `        self,`,
         `        message: "${schemaClass}",`,

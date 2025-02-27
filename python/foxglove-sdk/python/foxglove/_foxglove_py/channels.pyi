@@ -41,6 +41,7 @@ class CameraCalibrationChannel:
         cls,
         topic: str,
     ) -> "CameraCalibrationChannel": ...
+    def close(self) -> None: ...
     def log(
         self,
         message: "CameraCalibration",
@@ -58,6 +59,7 @@ class CircleAnnotationChannel:
         cls,
         topic: str,
     ) -> "CircleAnnotationChannel": ...
+    def close(self) -> None: ...
     def log(
         self,
         message: "CircleAnnotation",
@@ -75,6 +77,7 @@ class ColorChannel:
         cls,
         topic: str,
     ) -> "ColorChannel": ...
+    def close(self) -> None: ...
     def log(
         self,
         message: "Color",
@@ -92,6 +95,7 @@ class CompressedImageChannel:
         cls,
         topic: str,
     ) -> "CompressedImageChannel": ...
+    def close(self) -> None: ...
     def log(
         self,
         message: "CompressedImage",
@@ -109,6 +113,7 @@ class CompressedVideoChannel:
         cls,
         topic: str,
     ) -> "CompressedVideoChannel": ...
+    def close(self) -> None: ...
     def log(
         self,
         message: "CompressedVideo",
@@ -126,6 +131,7 @@ class FrameTransformChannel:
         cls,
         topic: str,
     ) -> "FrameTransformChannel": ...
+    def close(self) -> None: ...
     def log(
         self,
         message: "FrameTransform",
@@ -143,6 +149,7 @@ class FrameTransformsChannel:
         cls,
         topic: str,
     ) -> "FrameTransformsChannel": ...
+    def close(self) -> None: ...
     def log(
         self,
         message: "FrameTransforms",
@@ -160,6 +167,7 @@ class GeoJsonChannel:
         cls,
         topic: str,
     ) -> "GeoJsonChannel": ...
+    def close(self) -> None: ...
     def log(
         self,
         message: "GeoJson",
@@ -177,6 +185,7 @@ class GridChannel:
         cls,
         topic: str,
     ) -> "GridChannel": ...
+    def close(self) -> None: ...
     def log(
         self,
         message: "Grid",
@@ -194,6 +203,7 @@ class ImageAnnotationsChannel:
         cls,
         topic: str,
     ) -> "ImageAnnotationsChannel": ...
+    def close(self) -> None: ...
     def log(
         self,
         message: "ImageAnnotations",
@@ -211,6 +221,7 @@ class KeyValuePairChannel:
         cls,
         topic: str,
     ) -> "KeyValuePairChannel": ...
+    def close(self) -> None: ...
     def log(
         self,
         message: "KeyValuePair",
@@ -228,6 +239,7 @@ class LaserScanChannel:
         cls,
         topic: str,
     ) -> "LaserScanChannel": ...
+    def close(self) -> None: ...
     def log(
         self,
         message: "LaserScan",
@@ -245,6 +257,7 @@ class LocationFixChannel:
         cls,
         topic: str,
     ) -> "LocationFixChannel": ...
+    def close(self) -> None: ...
     def log(
         self,
         message: "LocationFix",
@@ -262,6 +275,7 @@ class LogChannel:
         cls,
         topic: str,
     ) -> "LogChannel": ...
+    def close(self) -> None: ...
     def log(
         self,
         message: "Log",
@@ -279,6 +293,7 @@ class PackedElementFieldChannel:
         cls,
         topic: str,
     ) -> "PackedElementFieldChannel": ...
+    def close(self) -> None: ...
     def log(
         self,
         message: "PackedElementField",
@@ -296,6 +311,7 @@ class Point2Channel:
         cls,
         topic: str,
     ) -> "Point2Channel": ...
+    def close(self) -> None: ...
     def log(
         self,
         message: "Point2",
@@ -313,6 +329,7 @@ class Point3Channel:
         cls,
         topic: str,
     ) -> "Point3Channel": ...
+    def close(self) -> None: ...
     def log(
         self,
         message: "Point3",
@@ -330,6 +347,7 @@ class PointCloudChannel:
         cls,
         topic: str,
     ) -> "PointCloudChannel": ...
+    def close(self) -> None: ...
     def log(
         self,
         message: "PointCloud",
@@ -347,6 +365,7 @@ class PointsAnnotationChannel:
         cls,
         topic: str,
     ) -> "PointsAnnotationChannel": ...
+    def close(self) -> None: ...
     def log(
         self,
         message: "PointsAnnotation",
@@ -364,6 +383,7 @@ class PoseChannel:
         cls,
         topic: str,
     ) -> "PoseChannel": ...
+    def close(self) -> None: ...
     def log(
         self,
         message: "Pose",
@@ -381,6 +401,7 @@ class PoseInFrameChannel:
         cls,
         topic: str,
     ) -> "PoseInFrameChannel": ...
+    def close(self) -> None: ...
     def log(
         self,
         message: "PoseInFrame",
@@ -398,6 +419,7 @@ class PosesInFrameChannel:
         cls,
         topic: str,
     ) -> "PosesInFrameChannel": ...
+    def close(self) -> None: ...
     def log(
         self,
         message: "PosesInFrame",
@@ -415,6 +437,7 @@ class QuaternionChannel:
         cls,
         topic: str,
     ) -> "QuaternionChannel": ...
+    def close(self) -> None: ...
     def log(
         self,
         message: "Quaternion",
@@ -432,6 +455,7 @@ class RawImageChannel:
         cls,
         topic: str,
     ) -> "RawImageChannel": ...
+    def close(self) -> None: ...
     def log(
         self,
         message: "RawImage",
@@ -449,6 +473,7 @@ class SceneEntityChannel:
         cls,
         topic: str,
     ) -> "SceneEntityChannel": ...
+    def close(self) -> None: ...
     def log(
         self,
         message: "SceneEntity",
@@ -466,6 +491,7 @@ class SceneEntityDeletionChannel:
         cls,
         topic: str,
     ) -> "SceneEntityDeletionChannel": ...
+    def close(self) -> None: ...
     def log(
         self,
         message: "SceneEntityDeletion",
@@ -483,6 +509,7 @@ class SceneUpdateChannel:
         cls,
         topic: str,
     ) -> "SceneUpdateChannel": ...
+    def close(self) -> None: ...
     def log(
         self,
         message: "SceneUpdate",
@@ -500,6 +527,7 @@ class TextAnnotationChannel:
         cls,
         topic: str,
     ) -> "TextAnnotationChannel": ...
+    def close(self) -> None: ...
     def log(
         self,
         message: "TextAnnotation",
@@ -517,6 +545,7 @@ class Vector2Channel:
         cls,
         topic: str,
     ) -> "Vector2Channel": ...
+    def close(self) -> None: ...
     def log(
         self,
         message: "Vector2",
@@ -534,6 +563,7 @@ class Vector3Channel:
         cls,
         topic: str,
     ) -> "Vector3Channel": ...
+    def close(self) -> None: ...
     def log(
         self,
         message: "Vector3",
