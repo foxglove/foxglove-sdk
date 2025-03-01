@@ -111,6 +111,43 @@ impl Duration {
     fn into_prost(self) -> prost_types::Duration {
         self.into()
     }
+
+    /// Creates a `Duration` from `f64` seconds, or fails if the value is unrepresentable.
+    pub fn try_from_secs_f64(secs: f64) -> Result<Self, RangeError> {
+        if secs < i32::MIN as f64 {
+            Err(RangeError::LowerBound)
+        } else if secs > i32::MAX as f64 {
+            if secs < (i32::MAX as f64 + 1.0) {
+                let sec = i32::MAX;
+                let nsec = ((secs - sec as f64) * 1e9) as u32;
+                Ok(Self { sec, nsec })
+            } else {
+                Err(RangeError::UpperBound)
+            }
+        } else {
+            let mut sec = secs as i32;
+            let mut nsec = ((secs - sec as f64) * 1e9) as i32;
+            if nsec < 0 {
+                sec -= 1;
+                nsec += 1_000_000_000;
+            }
+            Ok(Self {
+                sec,
+                nsec: u32::try_from(nsec).unwrap_or_else(|e| {
+                    panic!("expected {nsec} to be within [0, 1_000_000_000): {e}")
+                }),
+            })
+        }
+    }
+
+    /// Saturating `Duration` from `f64` seconds.
+    pub fn saturating_from_secs_f64(secs: f64) -> Self {
+        match Self::try_from_secs_f64(secs) {
+            Ok(d) => d,
+            Err(RangeError::LowerBound) => Duration::MIN,
+            Err(RangeError::UpperBound) => Duration::MAX,
+        }
+    }
 }
 
 impl From<Duration> for prost_types::Duration {
@@ -241,6 +278,35 @@ impl Timestamp {
 
     fn into_prost(self) -> prost_types::Timestamp {
         self.into()
+    }
+
+    /// Creates a `Timestamp` from seconds since epoch as an `f64`, or fails if the value is
+    /// unrepresentable.
+    pub fn try_from_epoch_secs_f64(secs: f64) -> Result<Self, RangeError> {
+        if secs < 0.0 {
+            Err(RangeError::LowerBound)
+        } else if secs > u32::MAX as f64 {
+            if secs < (u32::MAX as f64 + 1.0) {
+                let sec = u32::MAX;
+                let nsec = ((secs - sec as f64) * 1e9) as u32;
+                Ok(Self { sec, nsec })
+            } else {
+                Err(RangeError::UpperBound)
+            }
+        } else {
+            let sec = secs as u32;
+            let nsec = ((secs - sec as f64) * 1e9) as u32;
+            Ok(Self { sec, nsec })
+        }
+    }
+
+    /// Saturating `Timestamp` from seconds since epoch as an `f64`.
+    pub fn saturating_from_epoch_secs_f64(secs: f64) -> Self {
+        match Self::try_from_epoch_secs_f64(secs) {
+            Ok(d) => d,
+            Err(RangeError::LowerBound) => Timestamp::MIN,
+            Err(RangeError::UpperBound) => Timestamp::MAX,
+        }
     }
 }
 

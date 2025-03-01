@@ -1,3 +1,4 @@
+import datetime
 import json
 import logging
 import math
@@ -27,6 +28,7 @@ from foxglove.schemas import (
     RawImage,
     SceneEntity,
     SceneUpdate,
+    Timestamp,
     Vector3,
 )
 
@@ -162,7 +164,8 @@ def main() -> None:
                         SceneEntity(
                             frame_id="box",
                             id="box_1",
-                            lifetime=Duration(sec=10),
+                            timestamp=Timestamp.from_datetime(datetime.datetime.now()),
+                            lifetime=Duration.from_secs(1.2345),
                             cubes=[
                                 CubePrimitive(
                                     pose=Pose(
