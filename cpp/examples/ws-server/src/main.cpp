@@ -1,3 +1,4 @@
+#include <foxglove/channel.hpp>
 #include <foxglove/server.hpp>
 
 #include <atomic>
@@ -31,8 +32,27 @@ int main(int argc, const char* argv[]) {
     done = true;
   };
 
+  foxglove::Schema schema;
+  schema.name = "Test";
+  schema.encoding = "jsonschema";
+  std::string schemaData = R"({
+    "type": "object",
+    "properties": {
+      "val": { "type": "number" }
+    }
+  })";
+  schema.data = reinterpret_cast<const std::byte*>(schemaData.data());
+  schema.dataLen = schemaData.size();
+  foxglove::Channel channel{"example", "json", std::move(schema)};
+
+  uint32_t i = 0;
   while (!done) {
-    std::this_thread::sleep_for(10ms);
+    std::this_thread::sleep_for(100ms);
+    std::string msg = "{\"val\": " + std::to_string(i) + "}";
+    auto now =
+      std::chrono::nanoseconds(std::chrono::system_clock::now().time_since_epoch()).count();
+    channel.log(reinterpret_cast<const std::byte*>(msg.data()), msg.size(), now, now, i);
+    ++i;
   }
 
   std::cerr << "Done" << std::endl;

@@ -11,10 +11,29 @@
 
 #include <stdarg.h>
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
 
+#ifndef FOXGLOVE_NONNULL
+#if defined(__clang__) || defined(__GNUC__)
+#define FOXGLOVE_NONNULL __attribute__((nonnull))
+#else
+#define FOXGLOVE_NONNULL
+#endif
+#endif
+
+
+typedef struct foxglove_channel foxglove_channel;
+
 typedef struct foxglove_websocket_server foxglove_websocket_server;
+
+typedef struct foxglove_schema {
+  const char *name;
+  const char *encoding;
+  const uint8_t *data;
+  size_t data_len;
+} foxglove_schema;
 
 #ifdef __cplusplus
 extern "C" {
@@ -33,11 +52,6 @@ struct foxglove_websocket_server *foxglove_server_start(const char *name,
                                                         uint16_t port);
 
 /**
- * Get the port on which the server is listening.
- */
-uint16_t foxglove_server_get_port(const struct foxglove_websocket_server *server);
-
-/**
  * Free a server created via `foxglove_server_start`.
  *
  * If the server has not already been stopped, it will be stopped automatically.
@@ -45,9 +59,45 @@ uint16_t foxglove_server_get_port(const struct foxglove_websocket_server *server
 void foxglove_server_free(struct foxglove_websocket_server *server);
 
 /**
+ * Get the port on which the server is listening.
+ */
+uint16_t foxglove_server_get_port(const struct foxglove_websocket_server *server);
+
+/**
  * Stop and shut down a server.
  */
 void foxglove_server_stop(struct foxglove_websocket_server *server);
+
+/**
+ * Create a new channel. The channel must later be freed with `foxglove_channel_free`.
+ *
+ * # Safety
+ * `topic` and `message_encoding` must be null-terminated strings with valid UTF8. `schema` is an
+ * optional pointer to a schema. The schema and the data it points to need only remain alive for
+ * the duration of this function call (they will be copied).
+ */
+struct foxglove_channel *foxglove_channel_create(const char *topic,
+                                                 const char *message_encoding,
+                                                 const struct foxglove_schema *schema);
+
+/**
+ * Free a channel created via `foxglove_channel_create`.
+ */
+void foxglove_channel_free(struct foxglove_channel *channel);
+
+/**
+ * Log a message on a channel.
+ *
+ * # Safety
+ * `data` must be non-null, and the range `[data, data + data_len)` must contain initialized data
+ * contained within a single allocated object.
+ */
+void foxglove_channel_log(struct foxglove_channel *channel,
+                          const uint8_t *data,
+                          size_t data_len,
+                          uint64_t log_time,
+                          uint64_t publish_time,
+                          uint32_t sequence);
 
 #ifdef __cplusplus
 }  // extern "C"

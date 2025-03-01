@@ -12,5 +12,23 @@ header = """
  */
 """
 
+usize_is_size_t = true
+
+after_includes = """
+
+#ifndef FOXGLOVE_NONNULL
+#if defined(__clang__) || defined(__GNUC__)
+#define FOXGLOVE_NONNULL __attribute__((nonnull))
+#else
+#define FOXGLOVE_NONNULL
+#endif
+#endif
+"""
+
+[ptr]
+non_null_attribute = "FOXGLOVE_NONNULL"
+
 [export.rename]
-"FoxgloveWebSocketServer" = "foxglove_websocket_server"
+FoxgloveWebSocketServer = "foxglove_websocket_server"
+FoxgloveChannel = "foxglove_channel"
+FoxgloveSchema = "foxglove_schema"
