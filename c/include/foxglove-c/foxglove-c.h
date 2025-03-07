@@ -1753,25 +1753,68 @@ typedef struct foxglove_raw_image {
    */
   struct foxglove_string frame_id;
   /**
-   * Image width
+   * Image width in pixels
    */
   uint32_t width;
   /**
-   * Image height
+   * Image heigh in pixels
    */
   uint32_t height;
   /**
-   * Encoding of the raw image data
-   *
-   * Supported values: `8UC1`, `8UC3`, `16UC1` (little endian), `32FC1` (little endian), `bayer_bggr8`, `bayer_gbrg8`, `bayer_grbg8`, `bayer_rggb8`, `bgr8`, `bgra8`, `mono8`, `mono16`, `rgb8`, `rgba8`, `uyvy` or `yuv422`, `yuyv` or `yuv422_yuy2`
+   * Encoding of the raw image data. See the `data` field description for supported values.
    */
   struct foxglove_string encoding;
   /**
-   * Byte length of a single row
+   * Byte length of a single row. This is usually some multiple of `width` depending on the encoding, but can be greater to incorporate padding.
    */
   uint32_t step;
   /**
-   * Raw image data
+   * Raw image data.
+   *
+   * The requirements for each `encoding` value are:
+   * - `yuv422`,  `uyvy`:
+   *   - 8-bit [Y'UV](https://en.wikipedia.org/wiki/Y%E2%80%B2UV).
+   *   - U and V values are shared between horizontal pairs of pixels. Each pair of output pixels is encoded as [U, Y1, V, Y2].
+   *   - `step` must be greater than or equal to `width` * 2.
+   * - `yuv422_yuy2`,  `yuyv`:
+   *   - 8-Bit [Y'UV](https://en.wikipedia.org/wiki/Y%E2%80%B2UV).
+   *   - U and V values are shared between horizontal pairs of pixels. Each pair of output pixels is encoded as [Y1, U, Y2, V].
+   *   - `step` must be greater than or equal to `width` * 2.
+   * - `rgb8`:
+   *   - 8-bit RGB.
+   *   - Each output pixel is encoded as [R, G, B].
+   *   - `step` must be greater than or equal to `width` * 3.
+   * - `rgba8`:
+   *   - 8-bit RGB + Alpha.
+   *   - Each output pixel is encoded as [R, G, B, Alpha].
+   *   - `step` must be greater than or equal to `width` * 4.
+   * - `bgr8`:
+   *   - RGB, one byte per component.
+   *   - Each output pixel is encoded as [B, G, R].
+   *   - `step` must be greater than or equal to `width` * 3.
+   * - `bgra8`, `8UC3`:
+   *   - RGB + Alpha, one byte per component.
+   *   - Each output pixel is encoded as [B, G, R, Alpha].
+   *   - `step` must be greater than or equal to `width` * 4.
+   * - `32FC1`:
+   *   - 32-bit little-endian IEEE754 float brightness values, from 0.0 (black) to 1.0 (white).
+   *   - `step` must be greater than or equal to `width` * 4.
+   * - `bayer_rggb8`, `bayer_bggr8`, `bayer_rggb8`, `bayer_gbrg8`, `bayer_grgb8`:
+   *   - 8-bit Bayer filter pattern RGB values.
+   *   - The order of the four letters after `bayer_` determine the layout, so for `bayer_wxyz8` the pattern is:
+   *   ```plaintext
+   *   w | x
+   *   - | -
+   *   y | z
+   *   ```
+   *   - `step` must be greater than or equal to `width`.
+   * - `mono8`, `8UC1`:
+   *   - 8-bit brightness values from 0 (black) to 255 (white).
+   *   - `step` must be greater than or equal to `width`.
+   * - `mono16`, `16UC1`:
+   *   - 16-bit abstract per-pixel values. Rendering of these values is controlled in [Image panel color mode settings](https://docs.foxglove.dev/docs/visualization/panels/image#general).
+   *   - `step` must be greater than or equal to `width` * 2.
+   *
    */
   const unsigned char *data;
   size_t data_len;
