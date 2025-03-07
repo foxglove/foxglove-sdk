@@ -4702,26 +4702,26 @@ export const RawImage = {
     "width": {
       "type": "integer",
       "minimum": 0,
-      "description": "Image width"
+      "description": "Image width in pixels"
     },
     "height": {
       "type": "integer",
       "minimum": 0,
-      "description": "Image height"
+      "description": "Image heigh in pixels"
     },
     "encoding": {
       "type": "string",
-      "description": "Encoding of the raw image data\n\nSupported values: `8UC1`, `8UC3`, `16UC1` (little endian), `32FC1` (little endian), `bayer_bggr8`, `bayer_gbrg8`, `bayer_grbg8`, `bayer_rggb8`, `bgr8`, `bgra8`, `mono8`, `mono16`, `rgb8`, `rgba8`, `uyvy` or `yuv422`, `yuyv` or `yuv422_yuy2`"
+      "description": "Encoding of the raw image data"
     },
     "step": {
       "type": "integer",
       "minimum": 0,
-      "description": "Byte length of a single row"
+      "description": "Byte length of a single row. This is usually some multiple of `width` depending on the encoding, but can be greater to incorporate padding."
     },
     "data": {
       "type": "string",
       "contentEncoding": "base64",
-      "description": "Raw image data"
+      "description": "Raw image data.\n\nPixels should be encoded in one of the supported encodings:\n- `yuv422`,  `uyvy`: [Y'UV](https://en.wikipedia.org/wiki/Y%E2%80%B2UV), one byte per component.\n  U and V values are shared between horizontal pairs of pixels. Each pair of output pixels is encoded as [U, Y1, V, Y2].\n  `step` must be greater than or equal to `width` * 2.\n- `yuv422_yuy2`,  `yuyv`: [Y'UV](https://en.wikipedia.org/wiki/Y%E2%80%B2UV), one byte per component.\n  U and V values are shared between horizontal pairs of pixels. Each pair of output pixels is encoded as [Y1, U, Y2, V].\n  `step` must be greater than or equal to `width` * 2.\n- `rgb8`: 8-bit RGB. Each output pixel is encoded as [R, G, B].\n  `step` must be greater than or equal to `width` * 3.\n- `rgba8`: 8-bit RGB + Alpha. Each output pixel is encoded as [R, G, B, Alpha].\n  `step` must be greater than or equal to `width` * 4.\n- `bgr8`: RGB, one byte per component. Each output pixel is encoded as [B, G, R].\n  `step` must be greater than or equal to `width` * 3.\n- `bgra8`, `8UC3`: RGB + Alpha, one byte per component. Each output pixel is encoded as [B, G, R, Alpha].\n  `step` must be greater than or equal to `width` * 4.\n- `32FC1`: 32-bit little-endian IEEE754 float brightness values, from 0.0 (black) to 1.0 (white).\n  `step` must be greater than or equal to `width` * 4.\n- `bayer_rggb8`, `bayer_bggr8`, `bayer_rggb8`, `bayer_gbrg8`, `bayer_grgb8`: 8-bit RGB 2x2 Bayer pattern.\n  The order of the four letters after `bayer_` determine the layout, so for `bayer_wxyz8` the pattern is:\n  w | x\n  - | -\n  y | z\n  `step` must be greater than or equal to `width`.\n- `mono8`, `8UC1`: 8-bit brightness values from 0 (black) to 255 (white).\n  `step` must be greater than or equal to `width`.\n- `mono16`, `16UC1`: 16-bit values whose effect is determined in [Image panel color mode settings](https://docs.foxglove.dev/docs/visualization/panels/image#general).\n  `step` must be greater than or equal to `width` * 2.\n"
     }
   }
 };

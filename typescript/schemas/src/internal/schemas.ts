@@ -906,7 +906,7 @@ const RawImage: FoxgloveMessageSchema = {
       name: "encoding",
       type: { type: "primitive", name: "string" },
       description:
-        "Encoding of the raw image data\n\nSupported values: `8UC1`, `8UC3`, `16UC1` (little endian), `32FC1` (little endian), `bayer_bggr8`, `bayer_gbrg8`, `bayer_grbg8`, `bayer_rggb8`, `bgr8`, `bgra8`, `mono8`, `mono16`, `rgb8`, `rgba8`, `uyvy` or `yuv422`, `yuyv` or `yuv422_yuy2`",
+        "Encoding of the raw image data"
     },
     {
       name: "step",
@@ -936,10 +936,10 @@ Pixels should be encoded in one of the supported encodings:
 - \`32FC1\`: 32-bit little-endian IEEE754 float brightness values, from 0.0 (black) to 1.0 (white).
   \`step\` must be greater than or equal to \`width\` * 4.
 - \`bayer_rggb8\`, \`bayer_bggr8\`, \`bayer_rggb8\`, \`bayer_gbrg8\`, \`bayer_grgb8\`: 8-bit RGB 2x2 Bayer pattern.
-  The order of the four letters after \`bayer_\` determine the layout through their order:
-  1 | 2
+  The order of the four letters after \`bayer_\` determine the layout, so for \`bayer_wxyz8\` the pattern is:
+  w | x
   - | -
-  3 | 4
+  y | z
   \`step\` must be greater than or equal to \`width\`.
 - \`mono8\`, \`8UC1\`: 8-bit brightness values from 0 (black) to 255 (white).
   \`step\` must be greater than or equal to \`width\`.
