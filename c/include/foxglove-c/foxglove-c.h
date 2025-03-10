@@ -16,7 +16,7 @@
 #include <stdlib.h>
 
 #ifndef FOXGLOVE_NONNULL
-#if defined(__clang__) || defined(__GNUC__)
+#if defined(__clang__)
 #define FOXGLOVE_NONNULL __attribute__((nonnull))
 #else
 #define FOXGLOVE_NONNULL

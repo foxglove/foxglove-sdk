@@ -6,19 +6,18 @@ namespace foxglove {
 Channel::Channel(
   const std::string& topic, const std::string& messageEncoding, std::optional<Schema> schema
 )
-    : _impl(
-        foxglove_channel_create(
-          topic.data(), messageEncoding.data(),
-          schema ? &((const foxglove_schema&)foxglove_schema{
-                     schema->name.data(),
-                     schema->encoding.data(),
-                     reinterpret_cast<const uint8_t*>(schema->data),
-                     schema->dataLen,
-                   })
-                 : nullptr
-        ),
-        foxglove_channel_free
-      ) {}
+    : _impl(nullptr, foxglove_channel_free) {
+  foxglove_schema cSchema = {};
+  if (schema) {
+    cSchema.name = schema->name.data();
+    cSchema.encoding = schema->encoding.data();
+    cSchema.data = reinterpret_cast<const uint8_t*>(schema->data);
+    cSchema.data_len = schema->dataLen;
+  }
+  _impl.reset(
+    foxglove_channel_create(topic.data(), messageEncoding.data(), schema ? &cSchema : nullptr)
+  );
+}
 
 uint64_t Channel::id() const {
   return foxglove_channel_get_id(_impl.get());
