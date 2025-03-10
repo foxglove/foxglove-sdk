@@ -84,8 +84,8 @@ set_property(TARGET tests PROPERTY CXX_STANDARD_REQUIRED True)
 target_link_libraries(tests PRIVATE foxglove_cpp_static Catch2::Catch2WithMain)
 catch_discover_tests(tests)
 if(MSVC)
-  # Auto-detection of C++11 support is not working on the windows-2025 runner in GitHub actions for some reason
-  target_compile_definitions(tests PRIVATE _WEBSOCKETPP_CPP11_STL_)
+  # Auto-detection of C++11 support is not working on the windows-2025 runner with default settings
+  target_compile_options(tests PRIVATE /Zc:__cplusplus)
 endif()
 
 ### Examples
