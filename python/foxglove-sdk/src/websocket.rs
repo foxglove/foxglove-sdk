@@ -1,4 +1,4 @@
-use crate::errors::PyFoxgloveError;
+use crate::{errors::PyFoxgloveError, PySchema};
 use bytes::Bytes;
 use foxglove::{
     websocket::{
@@ -735,44 +735,6 @@ impl PyMessageSchema {
     }
 }
 
-/// A Schema is a description of the data format of messages or service calls.
-///
-/// :param name: The name of the schema.
-/// :type name: str
-/// :param encoding: The encoding of the schema.
-/// :type encoding: str
-/// :param data: Schema data.
-/// :type data: bytes
-#[pyclass(name = "Schema", module = "foxglove", get_all, set_all)]
-#[derive(Clone)]
-pub struct PySchema {
-    /// The name of the schema.
-    name: String,
-    /// The encoding of the schema.
-    encoding: String,
-    /// Schema data.
-    data: Vec<u8>,
-}
-
-#[pymethods]
-impl PySchema {
-    #[new]
-    #[pyo3(signature = (*, name, encoding, data))]
-    fn new(name: String, encoding: String, data: Vec<u8>) -> Self {
-        Self {
-            name,
-            encoding,
-            data,
-        }
-    }
-}
-
-impl From<PySchema> for foxglove::Schema {
-    fn from(value: PySchema) -> Self {
-        foxglove::Schema::new(value.name, value.encoding, value.data)
-    }
-}
-
 /// A parameter type.
 #[pyclass(name = "ParameterType", module = "foxglove", eq, eq_int)]
 #[derive(Clone, PartialEq)]
@@ -958,4 +920,32 @@ impl From<PyConnectionGraph> for foxglove::websocket::ConnectionGraph {
     fn from(value: PyConnectionGraph) -> Self {
         value.0
     }
+}
+
+pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
+    let module = PyModule::new(parent_module.py(), "websocket")?;
+
+    module.add_class::<PyWebSocketServer>()?;
+    module.add_class::<PyCapability>()?;
+    module.add_class::<PyClient>()?;
+    module.add_class::<PyChannelView>()?;
+    module.add_class::<PyParameter>()?;
+    module.add_class::<PyParameterType>()?;
+    module.add_class::<PyParameterValue>()?;
+    module.add_class::<PyStatusLevel>()?;
+    module.add_class::<PyConnectionGraph>()?;
+    // Services
+    module.add_class::<PyService>()?;
+    module.add_class::<PyServiceRequest>()?;
+    module.add_class::<PyServiceSchema>()?;
+    module.add_class::<PyMessageSchema>()?;
+
+    // Define as a package
+    // https://github.com/PyO3/pyo3/issues/759
+    let py = parent_module.py();
+    py.import("sys")?
+        .getattr("modules")?
+        .set_item("foxglove._foxglove_py.websocket", &module)?;
+
+    parent_module.add_submodule(&module)
 }

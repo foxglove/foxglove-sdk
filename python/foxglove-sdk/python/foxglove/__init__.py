@@ -10,27 +10,29 @@ import logging
 from typing import Callable, List, Optional, Protocol, Union
 
 from ._foxglove_py import (
-    Capability,
-    ChannelView,
-    Client,
-    ConnectionGraph,
     MCAPWriter,
-    MessageSchema,
-    Parameter,
-    ParameterType,
-    ParameterValue,
     Schema,
-    Service,
-    ServiceRequest,
-    ServiceSchema,
-    StatusLevel,
-    WebSocketServer,
     enable_logging,
     open_mcap,
     shutdown,
 )
 from ._foxglove_py import start_server as _start_server
 from .channel import Channel, log
+from .websocket import (
+    Capability,
+    ChannelView,
+    Client,
+    ConnectionGraph,
+    MessageSchema,
+    Parameter,
+    ParameterType,
+    ParameterValue,
+    Service,
+    ServiceRequest,
+    ServiceSchema,
+    StatusLevel,
+    WebSocketServer,
+)
 
 atexit.register(shutdown)
 
