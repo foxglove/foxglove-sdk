@@ -1150,23 +1150,22 @@ impl Server {
     }
 
     fn advertise_channel(&self, channel: &Arc<Channel>) {
-        if channel.schema.is_none() {
-            tracing::error!(
-                "Ignoring advertise channel for {} because a schema is required",
-                channel.topic
-            );
-            return;
-        }
-
-        self.channels.write().insert(channel.id, channel.clone());
-
         let message = match protocol::server::advertisement(channel) {
             Ok(message) => message,
+            Err(FoxgloveError::SchemaRequired) => {
+                tracing::error!(
+                    "Ignoring advertise channel for {} because a schema is required",
+                    channel.topic
+                );
+                return;
+            }
             Err(err) => {
-                tracing::error!("Error creating advertise channel message to client: {err}");
+                tracing::error!("Error advertising channel to client: {err}");
                 return;
             }
         };
+
+        self.channels.write().insert(channel.id, channel.clone());
 
         let clients = self.clients.get();
         for client in clients.iter() {

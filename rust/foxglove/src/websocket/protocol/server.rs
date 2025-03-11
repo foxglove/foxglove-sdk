@@ -178,30 +178,44 @@ pub fn server_info(
     .to_string()
 }
 
+// A `schema` in the channel is optional if the message_encoding is "json", since Foxglove supports
+// schemaless JSON messages.
 // https://github.com/foxglove/ws-protocol/blob/main/docs/spec.md#advertise
-// Caller must check that the channel has a schema, otherwise this will panic.
 pub fn advertisement(channel: &Channel) -> Result<String, FoxgloveError> {
-    let schema = &channel
-        .schema
-        .as_ref()
-        .ok_or_else(|| FoxgloveError::SchemaRequired)?;
+    let schema = channel.schema.as_ref();
 
-    let schema_data = match schema.encoding.as_str() {
-        "protobuf" => BASE64_STANDARD.encode(&schema.data),
-        _ => String::from_utf8(schema.data.to_vec())
-            .map_err(|e| FoxgloveError::Unspecified(e.into()))?,
-    };
+    if schema.is_none() && channel.message_encoding != "json" {
+        return Err(FoxgloveError::SchemaRequired);
+    }
 
-    Ok(json!({
-        "op": "advertise",
-        "channels": [Advertisement{
+    let advertisement = if let Some(schema) = schema {
+        let schema_data = match schema.encoding.as_str() {
+            "protobuf" => BASE64_STANDARD.encode(&schema.data),
+            _ => String::from_utf8(schema.data.to_vec())
+                .map_err(|e| FoxgloveError::Unspecified(e.into()))?,
+        };
+        Ok::<Advertisement, FoxgloveError>(Advertisement {
             id: channel.id,
             topic: &channel.topic,
             encoding: &channel.message_encoding,
             schema_name: &schema.name,
             schema: schema_data,
             schema_encoding: Some(&schema.encoding),
-        }],
+        })
+    } else {
+        Ok(Advertisement {
+            id: channel.id,
+            topic: &channel.topic,
+            encoding: &channel.message_encoding,
+            schema_name: "",
+            schema: "".to_string(),
+            schema_encoding: None,
+        })
+    }?;
+
+    Ok(json!({
+        "op": "advertise",
+        "channels": [advertisement],
     })
     .to_string())
 }
