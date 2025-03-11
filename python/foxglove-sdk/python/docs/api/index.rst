@@ -71,7 +71,7 @@ Parameters
 
 Used with the parameter service during live visualization. Requires the :py:data:`Capability.Parameters` capability.
 
-.. autoclass:: foxglove.ParameterType
+.. autoclass:: foxglove.websocket.ParameterType
 
    .. py:data:: ByteArray
 
@@ -85,7 +85,7 @@ Used with the parameter service during live visualization. Requires the :py:data
 
       An array of decimal or integer values that can be represented as 64-bit floating point numbers.
 
-.. autoclass:: foxglove.ParameterValue
+.. autoclass:: foxglove.websocket.ParameterValue
 
    .. py:class:: Number(value: float)
 
