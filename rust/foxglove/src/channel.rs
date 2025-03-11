@@ -188,7 +188,7 @@ mod test {
     use crate::channel_builder::ChannelBuilder;
     use crate::collection::collection;
     use crate::log_sink_set::ERROR_LOGGING_MESSAGE;
-    use crate::testutil::{GlobalContextTest, RecordingSink};
+    use crate::testutil::RecordingSink;
     use crate::{Channel, Context};
     use std::sync::Arc;
     use tracing_test::traced_test;
@@ -217,7 +217,7 @@ mod test {
 
     #[test]
     fn test_channel_new() {
-        let _cleanup = GlobalContextTest::new();
+        let ctx = Context::new();
         let topic = "topic";
         let message_encoding = "message_encoding";
         let schema = Schema::new("schema_name", "schema_encoding", &[1, 2, 3]);
@@ -227,6 +227,7 @@ mod test {
             .message_encoding(message_encoding)
             .schema(schema.clone())
             .metadata(metadata.clone())
+            .context(&ctx)
             .build()
             .expect("Failed to create channel");
         assert!(u64::from(channel.id) > 0);
@@ -234,10 +235,7 @@ mod test {
         assert_eq!(channel.message_encoding, message_encoding);
         assert_eq!(channel.schema, Some(schema));
         assert_eq!(channel.metadata, metadata);
-        assert_eq!(
-            Context::get_default().get_channel_by_topic(topic),
-            Some(channel)
-        );
+        assert_eq!(ctx.get_channel_by_topic(topic), Some(channel));
     }
 
     #[test]
