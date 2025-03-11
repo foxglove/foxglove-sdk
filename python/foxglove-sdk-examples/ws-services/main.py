@@ -10,8 +10,8 @@ import logging
 
 from foxglove import (
     Capability,
-    Request,
     Service,
+    ServiceRequest,
     ServiceSchema,
     start_server,
 )
@@ -19,7 +19,7 @@ from foxglove import (
 
 # A handler can also be a bare function.
 def logging_handler(
-    request: Request,
+    request: ServiceRequest,
 ) -> bytes:
     """
     A handler for the service, adhering to the `ServiceHandler` type.
@@ -34,13 +34,13 @@ def logging_handler(
 class EchoService:
     def __call__(
         self,
-        request: Request,
+        request: ServiceRequest,
     ) -> bytes:
         log_request(request)
         return request.payload
 
 
-def log_request(r: Request):
+def log_request(r: ServiceRequest):
     logging.debug(
         f"[{r.service_name}] "
         f"client {r.client_id} call {r.call_id}: "

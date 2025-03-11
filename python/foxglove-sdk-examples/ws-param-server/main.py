@@ -38,7 +38,7 @@ class ParameterStore(foxglove.ServerListener):
         self,
         client: foxglove.Client,
         parameters: list[foxglove.Parameter],
-        request_id: str | None = None,
+        request_id: Optional[str] = None,
     ) -> list[foxglove.Parameter]:
         logging.debug(f"on_set_parameters: {parameters}, {client.id}, {request_id}")
         for changed_param in parameters:
