@@ -22,21 +22,21 @@ async function main({ timeout }: { timeout: string }) {
   }
 }
 
-async function runExample(name: string, timeoutMillis: number = 5000) {
+async function runExample(name: string, timeoutMillis = 5000) {
   const dir = path.join(pyExamplesDir, name);
   const args = await extraArgs(name);
-  return new Promise((resolve, reject) => {
+  return await new Promise((resolve, reject) => {
     const child = spawn("poetry", ["run", "python", "main.py", ...args], {
       cwd: dir,
     });
-    child.stderr.on("data", (data) => {
+    child.stderr.on("data", (data: Buffer | string) => {
       console.debug(data.toString());
     });
     child.on("exit", (code, signal) => {
       if (code === 0 || signal === "SIGTERM") {
         resolve(undefined);
       } else {
-        const signalOrCode = code ? `code ${code}` : signal;
+        const signalOrCode = code != undefined ? `code ${code}` : (signal ?? "unknown");
         reject(new Error(`Example ${name} exited with ${signalOrCode}`));
       }
     });
@@ -48,14 +48,14 @@ async function runExample(name: string, timeoutMillis: number = 5000) {
 
 async function installDependencies(name: string) {
   const dir = path.join(pyExamplesDir, name);
-  return new Promise((resolve, reject) => {
+  return await new Promise((resolve, reject) => {
     const child = spawn("poetry", ["install"], {
       cwd: dir,
     });
-    child.stdout.on("data", (data) => {
+    child.stdout.on("data", (data: Buffer | string) => {
       console.debug(data.toString());
     });
-    child.stderr.on("data", (data) => {
+    child.stderr.on("data", (data: Buffer | string) => {
       console.error(data.toString());
     });
     child.on("close", (code) => {
@@ -69,7 +69,7 @@ async function installDependencies(name: string) {
 }
 
 async function newTempFile() {
-  const prefix = `${tmpdir}${path.sep}`;
+  const prefix = `${tmpdir()}${path.sep}`;
   const dir = await mkdtemp(prefix);
   return path.join(dir, "test.mcap");
 }
