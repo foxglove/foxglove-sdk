@@ -187,9 +187,9 @@ mod tests {
     #[test]
     fn test_add_and_remove_sink() {
         let ctx = Context::new();
-        let sink = Arc::new(MockSink);
-        let sink2 = Arc::new(MockSink);
-        let sink3 = Arc::new(MockSink);
+        let sink = Arc::new(MockSink::default());
+        let sink2 = Arc::new(MockSink::default());
+        let sink3 = Arc::new(MockSink::default());
 
         // Test adding a sink
         assert!(ctx.add_sink(sink.clone()));
@@ -257,7 +257,7 @@ mod tests {
     #[test]
     fn test_log_calls_other_sinks_after_error() {
         let ctx = Context::new();
-        let error_sink = Arc::new(ErrorSink);
+        let error_sink = Arc::new(ErrorSink::default());
         let recording_sink = Arc::new(RecordingSink::new());
 
         assert!(ctx.add_sink(error_sink.clone()));
