@@ -5,10 +5,9 @@ from foxglove import (
     Capability,
     ServerListener,
     Service,
-    ServiceSchema,
-    StatusLevel,
     start_server,
 )
+from foxglove.websocket import ServiceSchema, StatusLevel
 
 
 class TestServer(unittest.TestCase):

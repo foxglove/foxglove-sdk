@@ -8,18 +8,18 @@ https://docs.foxglove.dev/docs/visualization/panels/service-call
 import argparse
 import logging
 
-from foxglove import (
+import foxglove
+from foxglove.websocket import (
     Capability,
-    Request,
     Service,
+    ServiceRequest,
     ServiceSchema,
-    start_server,
 )
 
 
 # A handler can also be a bare function.
 def logging_handler(
-    request: Request,
+    request: ServiceRequest,
 ) -> bytes:
     """
     A handler for the service, adhering to the `ServiceHandler` type.
@@ -34,13 +34,13 @@ def logging_handler(
 class EchoService:
     def __call__(
         self,
-        request: Request,
+        request: ServiceRequest,
     ) -> bytes:
         log_request(request)
         return request.payload
 
 
-def log_request(r: Request):
+def log_request(r: ServiceRequest):
     logging.debug(
         f"[{r.service_name}] "
         f"client {r.client_id} call {r.call_id}: "
@@ -53,6 +53,8 @@ def main():
     This example demonstrates how to use the Foxglove WebSocket API to implement services which can
     be called from the Foxglove app.
     """
+    foxglove.set_log_level("DEBUG")
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument("--host", type=str, default="127.0.0.1")
@@ -74,7 +76,7 @@ def main():
         handler=EchoService(),
     )
 
-    server = start_server(
+    server = foxglove.start_server(
         name="ws-services-example",
         port=args.port,
         host=args.host,

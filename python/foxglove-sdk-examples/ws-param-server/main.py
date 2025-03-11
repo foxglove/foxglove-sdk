@@ -10,7 +10,13 @@ import time
 from typing import List, Optional
 
 import foxglove
-from foxglove import Capability, Parameter, ParameterType, ParameterValue
+from foxglove.websocket import (
+    Capability,
+    Client,
+    Parameter,
+    ParameterType,
+    ParameterValue,
+)
 
 
 class ParameterStore(foxglove.ServerListener):
@@ -23,7 +29,7 @@ class ParameterStore(foxglove.ServerListener):
     # Foxglove server callback
     def on_get_parameters(
         self,
-        client: foxglove.Client,
+        client: Client,
         param_names: list[str],
         request_id: Optional[str] = None,
     ) -> list[Parameter]:
@@ -36,10 +42,10 @@ class ParameterStore(foxglove.ServerListener):
 
     def on_set_parameters(
         self,
-        client: foxglove.Client,
-        parameters: list[foxglove.Parameter],
+        client: Client,
+        parameters: list[Parameter],
         request_id: str | None = None,
-    ) -> list[foxglove.Parameter]:
+    ) -> list[Parameter]:
         logging.debug(f"on_set_parameters: {parameters}, {client.id}, {request_id}")
         for changed_param in parameters:
             if changed_param.value is None:
