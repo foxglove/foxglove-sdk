@@ -1,15 +1,15 @@
 //! Test utilities.
 
-mod log_context;
-mod log_sink;
+mod namespace;
+mod sink;
 
 use crate::channel::ChannelId;
 use crate::websocket::{
     ChannelView, Client, ClientChannelId, ClientChannelView, ClientId, Parameter, ServerListener,
 };
-pub use log_context::GlobalContextTest;
-pub use log_sink::{ErrorSink, MockSink, RecordingSink};
+pub use namespace::GlobalContextTest;
 use parking_lot::Mutex;
+pub use sink::{ErrorSink, MockSink, RecordingSink};
 
 #[allow(dead_code)]
 pub(crate) struct ClientChannelInfo {

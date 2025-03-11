@@ -6,7 +6,7 @@ use std::path::Path;
 use std::sync::Arc;
 use std::{fmt::Debug, io::Write};
 
-use crate::{FoxgloveError, LogContext, LogSink};
+use crate::{FoxgloveError, Namespace, Sink};
 use mcap::WriteOptions;
 
 mod mcap_sink;
@@ -50,7 +50,7 @@ impl McapWriter {
         W: Write + Seek + Send + 'static,
     {
         let writer = McapSink::new(writer, self.0)?;
-        LogContext::global().add_sink(writer.clone());
+        Namespace::get_default().add_sink(writer.clone());
         Ok(McapWriterHandle(writer))
     }
 
@@ -96,8 +96,8 @@ impl<W: Write + Seek + Send + 'static> McapWriterHandle<W> {
     }
 
     fn finish(&self) -> Result<Option<W>, FoxgloveError> {
-        let sink = self.0.clone() as Arc<dyn LogSink>;
-        LogContext::global().remove_sink(&sink);
+        let sink = self.0.clone() as Arc<dyn Sink>;
+        Namespace::get_default().remove_sink(&sink);
         self.0.finish()
     }
 }

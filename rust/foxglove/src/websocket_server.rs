@@ -9,7 +9,7 @@ use crate::websocket::{
     create_server, AssetHandler, AsyncAssetHandlerFn, BlockingAssetHandlerFn, Capability, Client,
     ConnectionGraph, Parameter, Server, ServerOptions, Status,
 };
-use crate::{get_runtime_handle, FoxgloveError, LogContext, LogSink};
+use crate::{get_runtime_handle, FoxgloveError, Namespace, Sink};
 use bytes::Bytes;
 use tokio::runtime::Handle;
 use tracing::warn;
@@ -175,7 +175,7 @@ impl WebSocketServer {
     pub async fn start(self) -> Result<WebSocketServerHandle, FoxgloveError> {
         let server = create_server(self.options);
         server.start(&self.host, self.port).await?;
-        LogContext::global().add_sink(server.clone());
+        Namespace::get_default().add_sink(server.clone());
         Ok(WebSocketServerHandle(server))
     }
 
@@ -285,8 +285,8 @@ impl WebSocketServerHandle {
 
     /// Gracefully shutdown the websocket server.
     pub async fn stop(self) {
-        let sink = self.0.clone() as Arc<dyn LogSink>;
-        LogContext::global().remove_sink(&sink);
+        let sink = self.0.clone() as Arc<dyn Sink>;
+        Namespace::get_default().remove_sink(&sink);
         self.0.stop().await;
     }
 }

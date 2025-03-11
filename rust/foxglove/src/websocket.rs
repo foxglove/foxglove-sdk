@@ -8,7 +8,7 @@ pub(crate) use crate::websocket::protocol::client::{
 pub use crate::websocket::protocol::server::{
     Parameter, ParameterType, ParameterValue, Status, StatusLevel,
 };
-use crate::{get_runtime_handle, Channel, FoxgloveError, LogSink, Metadata};
+use crate::{get_runtime_handle, Channel, FoxgloveError, Metadata, Sink};
 use bimap::BiHashMap;
 use bytes::{BufMut, Bytes, BytesMut};
 use flume::TrySendError;
@@ -1642,7 +1642,7 @@ fn send_lossy(
     }
 }
 
-impl LogSink for Server {
+impl Sink for Server {
     fn log(&self, channel: &Channel, msg: &[u8], metadata: &Metadata) -> Result<(), FoxgloveError> {
         let clients = self.clients.get();
         for client in clients.iter() {

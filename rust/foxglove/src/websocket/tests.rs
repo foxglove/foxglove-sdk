@@ -18,7 +18,7 @@ use crate::websocket::{
     ParameterValue, Status, StatusLevel,
 };
 use crate::{
-    collection, Channel, ChannelBuilder, FoxgloveError, LogContext, LogSink, Metadata, Schema,
+    collection, Channel, ChannelBuilder, FoxgloveError, Metadata, Namespace, Schema, Sink,
 };
 
 fn make_message(id: usize) -> Message {
@@ -74,7 +74,7 @@ fn test_send_lossy() {
     assert_eq!(received, ((TOTAL - BACKLOG)..TOTAL).collect::<Vec<_>>());
 }
 
-fn new_channel(topic: &str, ctx: &LogContext) -> Arc<Channel> {
+fn new_channel(topic: &str, namespace: &Namespace) -> Arc<Channel> {
     ChannelBuilder::new(topic)
         .message_encoding("message_encoding")
         .schema(Schema::new(
@@ -83,7 +83,7 @@ fn new_channel(topic: &str, ctx: &LogContext) -> Arc<Channel> {
             b"schema_data",
         ))
         .metadata(collection! {"key".to_string() => "value".to_string()})
-        .with_context(ctx)
+        .namespace(namespace)
         .build()
         .expect("Failed to create channel")
 }
@@ -199,8 +199,8 @@ async fn test_advertise_to_client() {
         ..Default::default()
     });
 
-    let ctx = LogContext::new();
-    ctx.add_sink(server.clone());
+    let ns = Namespace::new();
+    ns.add_sink(server.clone());
 
     let addr = server
         .start("127.0.0.1", 0)
@@ -213,7 +213,7 @@ async fn test_advertise_to_client() {
     let msg = client_receiver.next().await.expect("No serverInfo sent");
     msg.expect("Invalid serverInfo");
 
-    let ch = new_channel("/foo", &ctx);
+    let ch = new_channel("/foo", &ns);
     let metadata = Metadata::default();
 
     server.log(&ch, b"foo bar", &metadata).unwrap();
@@ -291,13 +291,13 @@ async fn test_log_only_to_subscribers() {
         ..Default::default()
     });
 
-    let ctx = LogContext::new();
+    let ns = Namespace::new();
 
-    ctx.add_sink(server.clone());
+    ns.add_sink(server.clone());
 
-    let ch1 = new_channel("/foo", &ctx);
-    let ch2 = new_channel("/bar", &ctx);
-    let ch3 = new_channel("/baz", &ctx);
+    let ch1 = new_channel("/foo", &ns);
+    let ch2 = new_channel("/bar", &ns);
+    let ch3 = new_channel("/baz", &ns);
 
     let addr = server
         .start("127.0.0.1", 0)
