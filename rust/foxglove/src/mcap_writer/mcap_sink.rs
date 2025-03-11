@@ -5,6 +5,7 @@ use mcap::WriteOptions;
 use parking_lot::Mutex;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
+use std::fmt::Debug;
 use std::io::{Seek, Write};
 use std::sync::Arc;
 
@@ -72,6 +73,13 @@ impl<W: Write + Seek> WriterState<W> {
 pub struct McapSink<W: Write + Seek> {
     sink_id: SinkId,
     inner: Mutex<Option<WriterState<W>>>,
+}
+impl<W: Write + Seek> Debug for McapSink<W> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("McapSink")
+            .field("sink_id", &self.sink_id)
+            .finish()
+    }
 }
 
 impl<W: Write + Seek> McapSink<W> {
