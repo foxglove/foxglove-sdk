@@ -1160,6 +1160,9 @@ impl Server {
                 return;
             }
             Err(err) => {
+                // If an advertisement fails for an unknown reason, assume it may succeed for other
+                // clients.
+                self.channels.write().insert(channel.id, channel.clone());
                 tracing::error!("Error advertising channel to client: {err}");
                 return;
             }
