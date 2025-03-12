@@ -283,6 +283,71 @@ async fn test_advertise_to_client() {
 
 #[traced_test]
 #[tokio::test]
+async fn test_advertise_schemaless_channels() {
+    let recording_listener = Arc::new(RecordingServerListener::new());
+
+    let server = create_server(ServerOptions {
+        listener: Some(recording_listener.clone()),
+        ..Default::default()
+    });
+
+    let ctx = LogContext::new();
+    ctx.add_sink(server.clone());
+
+    let addr = server
+        .start("127.0.0.1", 0)
+        .await
+        .expect("Failed to start server");
+
+    let mut client_stream = connect_client(addr).await;
+
+    let msg = client_stream.next().await.expect("No serverInfo sent");
+    msg.expect("Invalid serverInfo");
+
+    // Client receives the correct advertisement for schemaless JSON
+    let json_chan = ChannelBuilder::new("/schemaless_json")
+        .message_encoding("json")
+        .with_context(&ctx)
+        .build()
+        .expect("Failed to create channel");
+
+    server
+        .log(&json_chan, b"{\"a\": 1}", &Metadata::default())
+        .unwrap();
+
+    let result = client_stream.next().await.expect("No advertisement sent");
+    let advertisement = result.expect("Failed to parse advertisement");
+    let text = advertisement.into_text().expect("Invalid advertisement");
+    let msg: Value = serde_json::from_str(&text).expect("Failed to advertisement");
+    assert_eq!(msg["op"], "advertise");
+    assert_eq!(
+        msg["channels"][0]["id"].as_u64().unwrap(),
+        u64::from(json_chan.id())
+    );
+
+    // Client receives no advertisements for other schemaless channels (not supported)
+    let invalid_chan = ChannelBuilder::new("/schemaless_other")
+        .message_encoding("protobuf")
+        .with_context(&ctx)
+        .build()
+        .expect("Failed to create channel");
+
+    server
+        .log(&invalid_chan, b"1", &Metadata::default())
+        .unwrap();
+
+    let msg = client_stream.next().now_or_never();
+    assert!(msg.is_none());
+
+    assert!(logs_contain(
+        "Ignoring advertise channel for /schemaless_other because a schema is required"
+    ));
+
+    server.stop().await;
+}
+
+#[traced_test]
+#[tokio::test]
 async fn test_log_only_to_subscribers() {
     let recording_listener = Arc::new(RecordingServerListener::new());
 

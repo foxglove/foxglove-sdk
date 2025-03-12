@@ -38,9 +38,9 @@ impl<'a> ChannelBuilder<'a> {
     }
 
     /// Set the message encoding for the channel.
-    /// This is required for Channel, but not for [`TypedChannel`].
-    /// (it's provided by the [`Encode`] trait for [`TypedChannel`].)
-    /// The [well-known message encodings](https://mcap.dev/spec/registry#well-known-message-encodings) are preferred.
+    /// This is required for Channel, but not for [`TypedChannel`] (it's provided by the [`Encode`]
+    /// trait for [`TypedChannel`].) Foxglove supports several well-known message encodings:
+    /// https://docs.foxglove.dev/docs/visualization/message-schemas/introduction
     pub fn message_encoding(mut self, encoding: &str) -> Self {
         self.message_encoding = Some(encoding.to_string());
         self
@@ -66,7 +66,7 @@ impl<'a> ChannelBuilder<'a> {
     }
 
     /// Build the channel and return it in an [`Arc`] as a Result.
-    /// Returns FoxgloveError::DuplicateChannel if a channel with the same topic already exists.
+    /// Returns [`FoxgloveError::DuplicateChannel`] if a channel with the same topic already exists.
     pub fn build(self) -> Result<Arc<Channel>, FoxgloveError> {
         static CHANNEL_ID: AtomicU64 = AtomicU64::new(1);
         let channel = Arc::new(Channel {
@@ -88,7 +88,7 @@ impl<'a> ChannelBuilder<'a> {
 
     /// Build the channel and return it as a [`TypedChannel`] as a Result.
     /// `T` must implement [`Encode`].
-    /// Returns FoxgloveError::DuplicateChannel if a channel with the same topic already exists.
+    /// Returns [`FoxgloveError::DuplicateChannel`] if a channel with the same topic already exists.
     pub fn build_typed<T: Encode>(mut self) -> Result<TypedChannel<T>, FoxgloveError> {
         if self.message_encoding.is_none() {
             self.message_encoding = Some(<T as Encode>::get_message_encoding());
