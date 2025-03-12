@@ -5,7 +5,7 @@ description = "Example of writing to an mcap file"
 authors = [{ name = "Foxglove", email = "support@foxglove.dev" }]
 readme = "README.md"
 requires-python = ">=3.9"
-dependencies = ["foxglove-sdk>=0.3.0", "mcap>=1.2"]
+dependencies = ["foxglove-sdk @ file:../../foxglove-sdk/", "mcap>=1.2"]
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]

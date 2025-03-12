@@ -5,7 +5,7 @@ description = "Example of implementing websocket services"
 authors = [{ name = "Foxglove", email = "support@foxglove.dev" }]
 readme = "README.md"
 requires-python = ">=3.9"
-dependencies = ["foxglove-sdk>=0.3.0"]
+dependencies = ["foxglove-sdk @ file:../../foxglove-sdk/"]
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
