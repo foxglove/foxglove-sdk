@@ -1,0 +1,2 @@
+[use-of-uninitialized-value]
+src:*/catch2/internal/catch_unique_ptr.hpp

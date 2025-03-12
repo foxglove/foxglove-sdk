@@ -3,7 +3,8 @@ all: build
 
 BUILD_DIR=build
 ifdef SANITIZE
-BUILD_DIR=build-sanitize-$(SANITIZE)
+comma:=,
+BUILD_DIR=build-sanitize-$(subst $(comma),-,$(SANITIZE))
 $(info Using sanitizer: $(SANITIZE))
 endif
 
