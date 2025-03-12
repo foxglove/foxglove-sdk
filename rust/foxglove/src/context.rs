@@ -181,42 +181,42 @@ mod tests {
 
     #[test]
     fn test_add_and_remove_sink() {
-        let ns = Context::new();
+        let ctx = Context::new();
         let sink = Arc::new(MockSink);
         let sink2 = Arc::new(MockSink);
         let sink3 = Arc::new(MockSink);
 
         // Test adding a sink
-        assert!(ns.add_sink(sink.clone()));
+        assert!(ctx.add_sink(sink.clone()));
         // Can't add it twice
-        assert!(!ns.add_sink(sink.clone()));
-        assert!(ns.add_sink(sink2.clone()));
+        assert!(!ctx.add_sink(sink.clone()));
+        assert!(ctx.add_sink(sink2.clone()));
 
         // Test removing a sink
         let sink: Arc<dyn Sink> = sink;
-        assert!(ns.remove_sink(&sink));
+        assert!(ctx.remove_sink(&sink));
 
         // Try to remove a sink that doesn't exist
         let sink3: Arc<dyn Sink> = sink3;
-        assert!(!ns.remove_sink(&sink3));
+        assert!(!ctx.remove_sink(&sink3));
 
         // Test removing the last sink
         let sink2: Arc<dyn Sink> = sink2;
-        assert!(ns.remove_sink(&sink2));
+        assert!(ctx.remove_sink(&sink2));
     }
 
     #[traced_test]
     #[test]
     fn test_log_calls_sinks() {
-        let ns = Context::new();
+        let ctx = Context::new();
         let sink1 = Arc::new(RecordingSink::new());
         let sink2 = Arc::new(RecordingSink::new());
 
-        assert!(ns.add_sink(sink1.clone()));
-        assert!(ns.add_sink(sink2.clone()));
+        assert!(ctx.add_sink(sink1.clone()));
+        assert!(ctx.add_sink(sink2.clone()));
 
         let channel = new_test_channel(1);
-        ns.add_channel(channel.clone()).unwrap();
+        ctx.add_channel(channel.clone()).unwrap();
         let msg = b"test_message";
 
         let now = nanoseconds_since_epoch();
@@ -251,16 +251,16 @@ mod tests {
     #[traced_test]
     #[test]
     fn test_log_calls_other_sinks_after_error() {
-        let ns = Context::new();
+        let ctx = Context::new();
         let error_sink = Arc::new(ErrorSink);
         let recording_sink = Arc::new(RecordingSink::new());
 
-        assert!(ns.add_sink(error_sink.clone()));
-        assert!(!ns.add_sink(error_sink.clone()));
-        assert!(ns.add_sink(recording_sink.clone()));
+        assert!(ctx.add_sink(error_sink.clone()));
+        assert!(!ctx.add_sink(error_sink.clone()));
+        assert!(ctx.add_sink(recording_sink.clone()));
 
         let channel = new_test_channel(1);
-        ns.add_channel(channel.clone()).unwrap();
+        ctx.add_channel(channel.clone()).unwrap();
         let msg = b"test_message";
         let opts = PartialMetadata {
             sequence: Some(1),

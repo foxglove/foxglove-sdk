@@ -197,8 +197,8 @@ async fn test_advertise_to_client() {
         ..Default::default()
     });
 
-    let ns = Context::new();
-    ns.add_sink(server.clone());
+    let ctx = Context::new();
+    ctx.add_sink(server.clone());
 
     let addr = server
         .start("127.0.0.1", 0)
@@ -211,7 +211,7 @@ async fn test_advertise_to_client() {
     let msg = client_receiver.next().await.expect("No serverInfo sent");
     msg.expect("Invalid serverInfo");
 
-    let ch = new_channel("/foo", &ns);
+    let ch = new_channel("/foo", &ctx);
     let metadata = Metadata::default();
 
     server.log(&ch, b"foo bar", &metadata).unwrap();
@@ -289,13 +289,13 @@ async fn test_log_only_to_subscribers() {
         ..Default::default()
     });
 
-    let ns = Context::new();
+    let ctx = Context::new();
 
-    ns.add_sink(server.clone());
+    ctx.add_sink(server.clone());
 
-    let ch1 = new_channel("/foo", &ns);
-    let ch2 = new_channel("/bar", &ns);
-    let ch3 = new_channel("/baz", &ns);
+    let ch1 = new_channel("/foo", &ctx);
+    let ch2 = new_channel("/bar", &ctx);
+    let ch3 = new_channel("/baz", &ctx);
 
     let addr = server
         .start("127.0.0.1", 0)

@@ -259,13 +259,13 @@ mod test {
     #[traced_test]
     #[test]
     fn test_log_msg_success() {
-        let ns = Context::new();
+        let ctx = Context::new();
         let recording_sink = Arc::new(RecordingSink::new());
 
-        assert!(ns.add_sink(recording_sink.clone()));
+        assert!(ctx.add_sink(recording_sink.clone()));
 
         let channel = new_test_channel(1);
-        ns.add_channel(channel.clone()).unwrap();
+        ctx.add_channel(channel.clone()).unwrap();
         let msg = b"test_message";
 
         channel.log(msg);
