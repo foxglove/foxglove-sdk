@@ -14,7 +14,7 @@ pub struct Context {
 
 impl Context {
     /// Instantiates a new context.
-    #[allow(clippy::new_without_default)]
+    #[allow(clippy::new_without_default)] // avoid confusion with Context::get_default()
     pub fn new() -> Self {
         Self {
             channels: RwLock::new(HashMap::new()),
