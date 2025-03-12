@@ -1,2 +1,1 @@
-[use-of-uninitialized-value]
-src:*/catch2/internal/catch_unique_ptr.hpp
+# Docs: https://clang.llvm.org/docs/SanitizerSpecialCaseList.html

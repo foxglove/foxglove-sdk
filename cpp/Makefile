@@ -19,7 +19,7 @@ clean:
 .PHONY: build
 build:
 	cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo $(if $(SANITIZE),-DSANITIZE=$(SANITIZE),) -B $(BUILD_DIR)
-	cmake --build $(BUILD_DIR) -j 8 --config RelWithDebInfo
+	cmake --build $(BUILD_DIR) -j 8 --config RelWithDebInfo --verbose
 
 .PHONY: test
 test: build

@@ -128,11 +128,6 @@ TEST_CASE("Subscribe and unsubscribe callbacks") {
   clientThread.join();
 }
 
-TEST_CASE("MemSan") {
-  int x;
-  std::cout << "Forbidden value is: " << x << std::endl;
-}
-
 TEST_CASE("ASan heap") {
   int* array = new int[100];
   delete[] array;
