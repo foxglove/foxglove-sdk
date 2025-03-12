@@ -6,9 +6,6 @@
 #include <websocketpp/client.hpp>
 #include <websocketpp/config/asio_no_tls_client.hpp>
 
-#include <chrono>
-
-using namespace std::chrono_literals;
 using Catch::Matchers::Equals;
 
 using WebSocketClient = websocketpp::client<websocketpp::config::asio_client>;
@@ -126,35 +123,4 @@ TEST_CASE("Subscribe and unsubscribe callbacks") {
   UNSCOPED_INFO(ec.message());
   REQUIRE(!ec);
   clientThread.join();
-}
-
-TEST_CASE("ASan heap") {
-  int* array = new int[100];
-  delete[] array;
-  std::cout << "Forbidden value is: " << array[1] << std::endl;
-}
-
-TEST_CASE("ASan stack") {
-  int volatile* a;
-  {
-    int b = 3;
-    a = &b;
-  }
-  std::cout << "Forbidden value is: " << *a << std::endl;
-}
-
-TEST_CASE("UBSan overflow") {
-  int k = 0x7fffffff;
-  k += 2;
-  std::cout << "Forbidden value is: " << k << std::endl;
-}
-
-TEST_CASE("TSan") {
-  int x;
-  std::thread t1([&] {
-    x = 1;
-  });
-  x = 2;
-  std::cout << "Forbidden value is: " << x << std::endl;
-  t1.join();
 }
