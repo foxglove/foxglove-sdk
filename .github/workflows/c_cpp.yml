@@ -112,6 +112,7 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           toolchain: nightly
+          components: rust-src
 
       - run: make SANITIZE=address,undefined test
         working-directory: cpp
@@ -126,6 +127,7 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           toolchain: nightly
+          components: rust-src
 
       - run: make SANITIZE=thread test
         working-directory: cpp
@@ -140,6 +142,7 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           toolchain: nightly
+          components: rust-src
 
       - run: make SANITIZE=memory test
         working-directory: cpp
