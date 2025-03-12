@@ -188,9 +188,8 @@ mod test {
     use crate::channel_builder::ChannelBuilder;
     use crate::collection::collection;
     use crate::log_sink_set::ERROR_LOGGING_MESSAGE;
-    use crate::namespace::Namespace;
     use crate::testutil::{GlobalContextTest, RecordingSink};
-    use crate::Channel;
+    use crate::{Channel, Context};
     use std::sync::Arc;
     use tracing_test::traced_test;
 
@@ -236,7 +235,7 @@ mod test {
         assert_eq!(channel.schema, Some(schema));
         assert_eq!(channel.metadata, metadata);
         assert_eq!(
-            Namespace::get_default().get_channel_by_topic(topic),
+            Context::get_default().get_channel_by_topic(topic),
             Some(channel)
         );
     }
@@ -260,7 +259,7 @@ mod test {
     #[traced_test]
     #[test]
     fn test_log_msg_success() {
-        let ns = Namespace::new();
+        let ns = Context::new();
         let recording_sink = Arc::new(RecordingSink::new());
 
         assert!(ns.add_sink(recording_sink.clone()));

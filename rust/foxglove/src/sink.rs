@@ -13,16 +13,16 @@ pub trait Sink: Send + Sync {
     /// Metadata contains optional message metadata that may be used by some sink implementations.
     fn log(&self, channel: &Channel, msg: &[u8], metadata: &Metadata) -> Result<(), FoxgloveError>;
 
-    /// Called when a new channel is made available within the [`Namespace`][crate::Namespace].
+    /// Called when a new channel is made available within the [`Context`][crate::Context].
     ///
     /// Sinks can track channels seen, and do new channel-related things the first time they see a
     /// channel, rather than in this method. The choice is up to the implementor.
     ///
-    /// When the sink is first registered with a namespace, this callback is automatically invoked
-    /// with each of the channels registered to that namespace.
+    /// When the sink is first registered with a context, this callback is automatically invoked
+    /// with each of the channels registered to that context.
     fn add_channel(&self, _channel: &Arc<Channel>) {}
 
-    /// Called when a channel is unregistered from the [`Namespacde`][crate::Namespace].
+    /// Called when a channel is unregistered from the [`Context`][crate::Context].
     ///
     /// Sinks can clean up any channel-related state they have or take other actions.
     fn remove_channel(&self, _channel: &Channel) {}

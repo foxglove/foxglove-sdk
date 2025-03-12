@@ -1,6 +1,6 @@
 use parking_lot::{Mutex, MutexGuard};
 
-use crate::Namespace;
+use crate::Context;
 
 static GLOBAL_CONTEXT_TEST_LOCK: Mutex<()> = Mutex::new(());
 
@@ -16,7 +16,7 @@ impl GlobalContextTest<'_> {
 
 impl Drop for GlobalContextTest<'_> {
     fn drop(&mut self) {
-        Namespace::get_default().clear();
+        Context::get_default().clear();
     }
 }
 

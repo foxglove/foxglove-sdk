@@ -1,13 +1,13 @@
 //! Test utilities.
 
-mod namespace;
+mod context;
 mod sink;
 
 use crate::channel::ChannelId;
 use crate::websocket::{
     ChannelView, Client, ClientChannelId, ClientChannelView, ClientId, Parameter, ServerListener,
 };
-pub use namespace::GlobalContextTest;
+pub use context::GlobalContextTest;
 use parking_lot::Mutex;
 pub use sink::{ErrorSink, MockSink, RecordingSink};
 
