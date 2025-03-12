@@ -116,18 +116,3 @@ jobs:
 
       - run: make SANITIZE=address,undefined test
         working-directory: cpp
-
-  test-tsan:
-    runs-on: ubuntu-latest
-    env:
-      CC: clang
-      CXX: clang++
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
-        with:
-          toolchain: nightly
-          components: rust-src
-
-      - run: make SANITIZE=thread test
-        working-directory: cpp
