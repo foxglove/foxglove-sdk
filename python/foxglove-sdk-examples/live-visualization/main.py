@@ -8,7 +8,7 @@ from math import cos, sin
 
 import foxglove
 import numpy as np
-from foxglove import Capability, Schema
+from foxglove import Channel, Schema
 from foxglove.channels import (
     FrameTransformsChannel,
     PointCloudChannel,
@@ -31,6 +31,7 @@ from foxglove.schemas import (
     Timestamp,
     Vector3,
 )
+from foxglove.websocket import Capability, ChannelView, Client, ServerListener
 
 any_schema = {
     "type": "object",
@@ -46,7 +47,7 @@ plot_schema = {
 }
 
 
-class ExampleListener(foxglove.ServerListener):
+class ExampleListener(ServerListener):
     def __init__(self) -> None:
         self.subscribers: set[int] = set()
 
@@ -55,8 +56,8 @@ class ExampleListener(foxglove.ServerListener):
 
     def on_subscribe(
         self,
-        client: foxglove.Client,
-        channel: foxglove.ChannelView,
+        client: Client,
+        channel: ChannelView,
     ) -> None:
         """
         Called by the server when a client subscribes to a channel.
@@ -67,8 +68,8 @@ class ExampleListener(foxglove.ServerListener):
 
     def on_unsubscribe(
         self,
-        client: foxglove.Client,
-        channel: foxglove.ChannelView,
+        client: Client,
+        channel: ChannelView,
     ) -> None:
         """
         Called by the server when a client unsubscribes from a channel.
@@ -78,8 +79,8 @@ class ExampleListener(foxglove.ServerListener):
 
     def on_message_data(
         self,
-        client: foxglove.Client,
-        channel: foxglove.ChannelView,
+        client: Client,
+        channel: ChannelView,
         data: bytes,
     ) -> None:
         """
@@ -108,10 +109,10 @@ def main() -> None:
     point_chan = PointCloudChannel("/pointcloud")
 
     # Log dicts using JSON encoding
-    json_chan = foxglove.Channel(topic="/json", schema=plot_schema)
+    json_chan = Channel(topic="/json", schema=plot_schema)
 
     # Log messages with a custom schema and any encoding
-    sin_chan = foxglove.Channel(
+    sin_chan = Channel(
         topic="/sine",
         message_encoding="json",
         schema=Schema(

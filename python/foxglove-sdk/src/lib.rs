@@ -11,16 +11,50 @@ use std::fs::File;
 use std::io::BufWriter;
 use std::path::PathBuf;
 use std::sync::Arc;
-use websocket_server::{
-    start_server, PyCapability, PyChannelView, PyClient, PyConnectionGraph, PyMessageSchema,
-    PyParameter, PyParameterType, PyParameterValue, PySchema, PyService, PyServiceRequest,
-    PyServiceSchema, PyStatusLevel, PyWebSocketServer,
-};
+use websocket::start_server;
 
 mod errors;
 mod generated;
 mod schemas_wkt;
-mod websocket_server;
+mod websocket;
+
+/// A Schema is a description of the data format of messages or service calls.
+///
+/// :param name: The name of the schema.
+/// :type name: str
+/// :param encoding: The encoding of the schema.
+/// :type encoding: str
+/// :param data: Schema data.
+/// :type data: bytes
+#[pyclass(name = "Schema", module = "foxglove", get_all, set_all)]
+#[derive(Clone)]
+pub struct PySchema {
+    /// The name of the schema.
+    name: String,
+    /// The encoding of the schema.
+    encoding: String,
+    /// Schema data.
+    data: Vec<u8>,
+}
+
+#[pymethods]
+impl PySchema {
+    #[new]
+    #[pyo3(signature = (*, name, encoding, data))]
+    fn new(name: String, encoding: String, data: Vec<u8>) -> Self {
+        Self {
+            name,
+            encoding,
+            data,
+        }
+    }
+}
+
+impl From<PySchema> for foxglove::Schema {
+    fn from(value: PySchema) -> Self {
+        foxglove::Schema::new(value.name, value.encoding, value.data)
+    }
+}
 
 #[pyclass(module = "foxglove")]
 struct BaseChannel(Option<Arc<Channel>>);
@@ -189,28 +223,11 @@ fn _foxglove_py(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(get_channel_for_topic, m)?)?;
     m.add_class::<BaseChannel>()?;
     m.add_class::<PyMcapWriter>()?;
-
-    // Websocket server classes
-    m.add_class::<PyWebSocketServer>()?;
-    m.add_class::<PyCapability>()?;
-    m.add_class::<PyClient>()?;
-    m.add_class::<PyChannelView>()?;
-    m.add_class::<PyParameter>()?;
-    m.add_class::<PyParameterType>()?;
-    m.add_class::<PyParameterValue>()?;
-    m.add_class::<PyStatusLevel>()?;
-    m.add_class::<PyConnectionGraph>()?;
-    // Services
-    m.add_class::<PyService>()?;
-    m.add_class::<PyServiceRequest>()?;
-    m.add_class::<PyServiceSchema>()?;
-    m.add_class::<PyMessageSchema>()?;
     m.add_class::<PySchema>()?;
 
-    // Register the schema & channel modules
-    // A declarative submodule is created in generated/schemas_module.rs, but this is currently
-    // easier to work with and function modules haven't yet been deprecated.
+    // Register nested modules.
     schemas::register_submodule(m)?;
     channels::register_submodule(m)?;
+    websocket::register_submodule(m)?;
     Ok(())
 }

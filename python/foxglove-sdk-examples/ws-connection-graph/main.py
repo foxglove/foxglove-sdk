@@ -1,7 +1,8 @@
 import logging
 import time
 
-from foxglove import Capability, ConnectionGraph, ServerListener, start_server
+import foxglove
+from foxglove.websocket import Capability, ConnectionGraph, ServerListener
 
 
 class SubscriptionWatcher(ServerListener):
@@ -22,6 +23,8 @@ class SubscriptionWatcher(ServerListener):
 
 
 def main() -> None:
+    foxglove.set_log_level("DEBUG")
+
     graph = ConnectionGraph()
     graph.set_published_topic("/example-topic", ["1", "2"])
     graph.set_subscribed_topic("/subscribed-topic", ["3", "4"])
@@ -29,7 +32,7 @@ def main() -> None:
 
     logging.debug(graph)
 
-    server = start_server(
+    server = foxglove.start_server(
         server_listener=SubscriptionWatcher(),
         capabilities=[Capability.ConnectionGraph],
     )

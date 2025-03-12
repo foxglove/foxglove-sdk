@@ -1,0 +1,189 @@
+from collections.abc import Callable
+from typing import List, Optional, Protocol
+
+from ._foxglove_py.websocket import (
+    Capability,
+    ChannelView,
+    Client,
+    ConnectionGraph,
+    MessageSchema,
+    Parameter,
+    ParameterType,
+    ParameterValue,
+    Service,
+    ServiceRequest,
+    ServiceSchema,
+    StatusLevel,
+    WebSocketServer,
+)
+
+# Redefine types from the stub interface so they're available for documentation.
+ServiceHandler = Callable[["ServiceRequest"], bytes]
+AssetHandler = Callable[[str], Optional[bytes]]
+
+
+class ServerListener(Protocol):
+    """
+    A mechanism to register callbacks for handling client message events.
+    """
+
+    def on_subscribe(self, client: Client, channel: ChannelView) -> None:
+        """
+        Called by the server when a client subscribes to a channel.
+
+        :param client: The client (id) that sent the message.
+        :type client: :py:class:`Client`
+        :param channel: The channel (id, topic) that the message was sent on.
+        :type channel: :py:class:`ChannelView`
+        """
+        return None
+
+    def on_unsubscribe(self, client: Client, channel: ChannelView) -> None:
+        """
+        Called by the server when a client unsubscribes from a channel.
+
+        :param client: The client (id) that sent the message.
+        :type client: :py:class:`Client`
+        :param channel: The channel (id, topic) that the message was sent on.
+        :type channel: :py:class:`ChannelView`
+        """
+        return None
+
+    def on_client_advertise(self, client: Client, channel: ChannelView) -> None:
+        """
+        Called by the server when a client advertises a channel.
+
+        :param client: The client (id) that sent the message.
+        :type client: :py:class:`Client`
+        :param channel: The channel (id, topic) that the message was sent on.
+        :type channel: :py:class:`ChannelView`
+        """
+        return None
+
+    def on_client_unadvertise(self, client: Client, channel: ChannelView) -> None:
+        """
+        Called by the server when a client unadvertises a channel.
+
+        :param client: The client (id) that sent the message.
+        :type client: :py:class:`Client`
+        :param channel: The channel (id, topic) that the message was sent on.
+        :type channel: :py:class:`ChannelView`
+        """
+        return None
+
+    def on_message_data(
+        self, client: Client, channel: ChannelView, data: bytes
+    ) -> None:
+        """
+        Called by the server when a message is received from a client.
+
+        :param client: The client (id) that sent the message.
+        :type client: :py:class:`Client`
+        :param channel: The channel (id, topic) that the message was sent on.
+        :type channel: :py:class:`ChannelView`
+        :param data: The message data.
+        :type data: bytes
+        """
+        return None
+
+    def on_get_parameters(
+        self,
+        client: Client,
+        param_names: List[str],
+        request_id: Optional[str] = None,
+    ) -> List["Parameter"]:
+        """
+        Called by the server when a client requests parameters.
+
+        Requires :py:data:`Capability.Parameters`.
+
+        :param client: The client (id) that sent the message.
+        :type client: :py:class:`Client`
+        :param param_names: The names of the parameters to get.
+        :type param_names: list[str]
+        :param request_id: An optional request id.
+        :type request_id: Optional[str]
+        """
+        return []
+
+    def on_set_parameters(
+        self,
+        client: Client,
+        parameters: List["Parameter"],
+        request_id: Optional[str] = None,
+    ) -> List["Parameter"]:
+        """
+        Called by the server when a client sets parameters.
+        Note that only `parameters` which have changed are included in the callback, but the return
+        value must include all parameters.
+
+        Requires :py:data:`Capability.Parameters`.
+
+        :param client: The client (id) that sent the message.
+        :type client: :py:class:`Client`
+        :param parameters: The parameters to set.
+        :type parameters: list[:py:class:`Parameter`]
+        :param request_id: An optional request id.
+        :type request_id: Optional[str]
+        """
+        return parameters
+
+    def on_parameters_subscribe(
+        self,
+        param_names: List[str],
+    ) -> None:
+        """
+        Called by the server when a client subscribes to one or more parameters for the first time.
+
+        Requires :py:data:`Capability.Parameters`.
+
+        :param param_names: The names of the parameters to subscribe to.
+        :type param_names: list[str]
+        """
+        return None
+
+    def on_parameters_unsubscribe(
+        self,
+        param_names: List[str],
+    ) -> None:
+        """
+        Called by the server when the last client subscription to one or more parameters has been
+        removed.
+
+        Requires :py:data:`Capability.Parameters`.
+
+        :param param_names: The names of the parameters to unsubscribe from.
+        :type param_names: list[str]
+        """
+        return None
+
+    def on_connection_graph_subscribe(self) -> None:
+        """
+        Called by the server when the first client subscribes to the connection graph.
+        """
+        return None
+
+    def on_connection_graph_unsubscribe(self) -> None:
+        """
+        Called by the server when the last client unsubscribes from the connection graph.
+        """
+        return None
+
+
+__all__ = [
+    "Capability",
+    "ChannelView",
+    "Client",
+    "ConnectionGraph",
+    "MessageSchema",
+    "Parameter",
+    "ParameterType",
+    "ParameterValue",
+    "ServerListener",
+    "Service",
+    "ServiceHandler",
+    "ServiceRequest",
+    "ServiceSchema",
+    "StatusLevel",
+    "WebSocketServer",
+]

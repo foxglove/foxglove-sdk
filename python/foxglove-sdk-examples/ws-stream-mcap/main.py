@@ -3,16 +3,12 @@ import logging
 import time
 from typing import Optional
 
+import foxglove
 import mcap
 import mcap.reader
 import mcap.records
-from foxglove import (
-    Capability,
-    Channel,
-    Schema,
-    WebSocketServer,
-    start_server,
-)
+from foxglove import Channel, Schema
+from foxglove.websocket import Capability, WebSocketServer
 
 channels: dict[str, Channel] = {}
 
@@ -26,7 +22,7 @@ def main():
 
     file_name = args.file
 
-    server = start_server(
+    server = foxglove.start_server(
         name=file_name, port=args.port, host=args.host, capabilities=[Capability.Time]
     )
 
