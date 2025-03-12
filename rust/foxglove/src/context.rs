@@ -139,12 +139,6 @@ impl Drop for Context {
     }
 }
 
-impl Default for Context {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use crate::channel::ChannelId;
