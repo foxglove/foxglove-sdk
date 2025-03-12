@@ -101,3 +101,36 @@ jobs:
         with:
           name: ${{ matrix.cdylib_artifact_name }}
           path: target/${{ matrix.target }}/release/${{ matrix.cdylib_name }}
+
+  test-asan-ubsan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: nightly
+
+      - run: make SANITIZE=address,undefined test
+        working-directory: cpp
+
+  test-tsan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: nightly
+
+      - run: make SANITIZE=thread test
+        working-directory: cpp
+
+  test-msan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: nightly
+
+      - run: make SANITIZE=memory test
+        working-directory: cpp

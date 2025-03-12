@@ -39,9 +39,30 @@ FetchContent_Declare(asio
 )
 FetchContent_MakeAvailable(asio)
 
+if(DEFINED SANITIZE)
+  if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    message(FATAL_ERROR "Sanitizers are only supported with Clang")
+  endif()
+  set(SANITIZER_COMPILE_OPTIONS -fsanitize=${SANITIZE} -fno-omit-frame-pointer -fno-sanitize-recover=all)
+  set(SANITIZER_LINK_OPTIONS -fsanitize=${SANITIZE})
+  set(SANITIZER_CARGO_FLAGS -Zbuild-std)
+endif()
+
 ### C
 
-corrosion_import_crate(MANIFEST_PATH ../c/Cargo.toml CRATES foxglove_c)
+corrosion_import_crate(
+  MANIFEST_PATH ../c/Cargo.toml
+  CRATES foxglove_c
+  FLAGS ${SANITIZER_CARGO_FLAGS}
+)
+if(DEFINED SANITIZE)
+  # Rust does not have flags for certain sanitizers so we strip them out
+  string(REGEX REPLACE undefined "" rust_sanitizers ${SANITIZE})
+  string(REGEX REPLACE ,, , rust_sanitizers ${rust_sanitizers})
+  string(REGEX REPLACE ,$ "" rust_sanitizers ${rust_sanitizers})
+  message(WARNING "Enabling -Zsanitizer=${rust_sanitizers} for Rust")
+  corrosion_add_target_rustflags(foxglove -Zsanitizer=${rust_sanitizers} -Cforce-frame-pointers=yes)
+endif()
 
 if(WIN32)
   target_link_libraries(foxglove-static INTERFACE Bcrypt)
@@ -60,6 +81,8 @@ add_library(foxglove_cpp_obj OBJECT "${foxglove_cpp_srcs}")
 set_property(TARGET foxglove_cpp_obj PROPERTY CXX_STANDARD 17)
 set_property(TARGET foxglove_cpp_obj PROPERTY CXX_STANDARD_REQUIRED True)
 target_include_directories(foxglove_cpp_obj PUBLIC foxglove/include ${CMAKE_CURRENT_SOURCE_DIR}/../c/include)
+target_compile_options(foxglove_cpp_obj PUBLIC ${SANITIZER_COMPILE_OPTIONS})
+target_link_options(foxglove_cpp_obj PUBLIC ${SANITIZER_LINK_OPTIONS})
 
 add_library(foxglove_cpp_static STATIC)
 add_library(foxglove_cpp_shared SHARED)
@@ -77,6 +100,8 @@ file(GLOB_RECURSE foxglove_test_srcs CONFIGURE_DEPENDS
 )
 add_executable(tests "${foxglove_test_srcs}")
 target_compile_definitions(tests PRIVATE ASIO_STANDALONE)
+target_compile_options(tests PUBLIC ${SANITIZER_COMPILE_OPTIONS})
+target_link_options(tests PUBLIC ${SANITIZER_LINK_OPTIONS})
 target_include_directories(tests SYSTEM PRIVATE ${asio_SOURCE_DIR}/asio/include)
 target_include_directories(tests SYSTEM PRIVATE ${websocketpp_SOURCE_DIR})
 set_property(TARGET tests PROPERTY CXX_STANDARD 17)
@@ -91,6 +116,8 @@ endif()
 ### Examples
 
 add_executable(example_server examples/ws-server/src/main.cpp)
+target_compile_options(example_server PUBLIC ${SANITIZER_COMPILE_OPTIONS})
+target_link_options(example_server PUBLIC ${SANITIZER_LINK_OPTIONS})
 set_property(TARGET example_server PROPERTY CXX_STANDARD 17)
 set_property(TARGET example_server PROPERTY CXX_STANDARD_REQUIRED True)
 target_link_libraries(example_server foxglove_cpp_static)

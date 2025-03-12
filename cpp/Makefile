@@ -1,19 +1,25 @@
 .PHONY: all
 all: build
 
+BUILD_DIR=build
+ifdef SANITIZE
+BUILD_DIR=build-sanitize-$(SANITIZE)
+$(info Using sanitizer: $(SANITIZE))
+endif
+
 .PHONY: lint
 lint:
-	find . -path ./build -prune -name '*.h' -o -name '*.hpp' -o -name '*.cpp' | xargs clang-format --dry-run -Werror --color=1
+	find . -path './build*' -prune -name '*.h' -o -name '*.hpp' -o -name '*.cpp' | xargs clang-format --dry-run -Werror --color=1
 
 .PHONY: clean
 clean:
-	rm -rf build
+	rm -rf $(BUILD_DIR)
 
 .PHONY: build
 build:
-	cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -B build
-	cmake --build build -j 8 --config RelWithDebInfo
+	cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo $(if $(SANITIZE),-DSANITIZE=$(SANITIZE),) -B $(BUILD_DIR)
+	cmake --build $(BUILD_DIR) -j 8 --config RelWithDebInfo
 
 .PHONY: test
 test: build
-	cd build && ctest
+	cd $(BUILD_DIR) && ctest --verbose
