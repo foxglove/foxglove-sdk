@@ -32,7 +32,7 @@ class Channel:
             encoding is presumed to be "json".
         :param schema: A definition of your schema. Pass a :py:class:`Schema`
             for full control. If a dictionary is passed, it will be treated as a
-            JSON schema.
+            JSON schema. If not provided, the message_encoding must be "json".
 
         :raises KeyError: if a channel already exists for the given topic.
         """
@@ -109,7 +109,7 @@ def log(topic: str, message: Any) -> None:
 
 def _normalize_schema(
     message_encoding: Optional[str],
-    schema: Union[JsonSchema, Schema, None],
+    schema: Union[JsonSchema, Schema, None] = None,
 ) -> tuple[str, Optional[Schema]]:
     if isinstance(schema, Schema) or schema is None:
         if message_encoding is None:

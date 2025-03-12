@@ -108,7 +108,7 @@ def main() -> None:
     tf_chan = FrameTransformsChannel("/tf")
     point_chan = PointCloudChannel("/pointcloud")
 
-    # Log dicts using JSON encoding
+    # Log dicts using JSON encoding. You can omit a schema if you specify message_encoding="json".
     json_chan = Channel(topic="/json", schema=plot_schema)
 
     # Log messages with a custom schema and any encoding
