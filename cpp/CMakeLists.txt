@@ -13,6 +13,7 @@ FetchContent_Declare(
   Catch2
   GIT_REPOSITORY https://github.com/catchorg/Catch2.git
   GIT_TAG        v3.8.0
+  SYSTEM
 )
 FetchContent_MakeAvailable(Catch2)
 list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)
@@ -46,6 +47,10 @@ if(DEFINED SANITIZE)
   set(SANITIZER_COMPILE_OPTIONS -fsanitize=${SANITIZE} -fsanitize-ignorelist=${CMAKE_CURRENT_SOURCE_DIR}/sanitize-ignorelist.txt -fno-omit-frame-pointer -fno-sanitize-recover=all)
   set(SANITIZER_LINK_OPTIONS -fsanitize=${SANITIZE})
   set(SANITIZER_CARGO_FLAGS -Zbuild-std)
+endif()
+
+if(DEFINED CLANG_TIDY)
+  set(CMAKE_CXX_CLANG_TIDY clang-tidy)
 endif()
 
 ### C

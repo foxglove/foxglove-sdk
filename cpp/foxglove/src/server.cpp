@@ -3,7 +3,7 @@
 
 namespace foxglove {
 
-WebSocketServer::WebSocketServer(WebSocketServerOptions options)
+WebSocketServer::WebSocketServer(const WebSocketServerOptions& options)
     : _callbacks(options.callbacks)
     , _impl(nullptr, foxglove_server_free) {
   foxglove_server_callbacks cCallbacks = {};
