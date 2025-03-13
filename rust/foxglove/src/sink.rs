@@ -45,6 +45,18 @@ pub trait Sink: Send + Sync {
     ///
     /// Sinks can clean up any channel-related state they have or take other actions.
     fn remove_channel(&self, _channel: &Channel) {}
+
+    /// Indicates whether this sink automatically subscribes to all channels.
+    ///
+    /// The default implementation returns true.
+    ///
+    /// A sink implementation may return false to indicate that it intends to manage its
+    /// subscriptions dynamically using
+    /// [`Context::subscribe_channels`][crate::Context::subscribe_channels] and
+    /// [`Context::unsubscribe_channels`][crate::Context::unsubscribe_channels].
+    fn auto_subscribe(&self) -> bool {
+        true
+    }
 }
 
 /// A small group of sinks.
