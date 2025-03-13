@@ -5,10 +5,11 @@ use crate::{
     channel::ChannelId,
     websocket::service::{CallId, ServiceId},
 };
+use base64::{prelude::BASE64_STANDARD, Engine};
 use bytes::{Buf, Bytes};
 use serde::{Deserialize, Serialize};
 
-use super::server::Parameter;
+use super::{is_known_binary_schema_encoding, server::Parameter};
 
 #[derive(Debug, thiserror::Error)]
 pub(crate) enum ParseError {
@@ -20,6 +21,8 @@ pub(crate) enum ParseError {
     Utf8(#[from] std::str::Utf8Error),
     #[error(transparent)]
     Json(#[from] serde_json::Error),
+    #[error(transparent)]
+    Base64(#[from] base64::DecodeError),
 }
 
 #[derive(Debug, PartialEq)]
@@ -41,7 +44,7 @@ pub(crate) enum ClientMessage {
 impl ClientMessage {
     pub fn parse_json(json: &str) -> Result<Self, ParseError> {
         let msg = serde_json::from_str::<JsonMessage>(json)?;
-        Ok(Self::from(msg))
+        Self::try_from(msg)
     }
 
     pub fn parse_binary(mut data: Bytes) -> Result<Option<Self>, ParseError> {
@@ -68,7 +71,7 @@ impl ClientMessage {
 enum JsonMessage {
     Subscribe(Subscribe),
     Unsubscribe(Unsubscribe),
-    Advertise(ClientAdvertise),
+    Advertise(JsonClientAdvertise),
     Unadvertise(ClientUnadvertise),
     GetParameters(GetParameters),
     SetParameters(SetParameters),
@@ -79,24 +82,27 @@ enum JsonMessage {
     FetchAsset(FetchAsset),
 }
 
-impl From<JsonMessage> for ClientMessage {
-    fn from(m: JsonMessage) -> Self {
+impl TryFrom<JsonMessage> for ClientMessage {
+    type Error = ParseError;
+    fn try_from(m: JsonMessage) -> Result<Self, ParseError> {
         match m {
-            JsonMessage::Subscribe(m) => ClientMessage::Subscribe(m),
-            JsonMessage::Unsubscribe(m) => ClientMessage::Unsubscribe(m),
-            JsonMessage::Advertise(m) => ClientMessage::Advertise(m),
-            JsonMessage::Unadvertise(m) => ClientMessage::Unadvertise(m),
-            JsonMessage::GetParameters(m) => ClientMessage::GetParameters(m),
-            JsonMessage::SetParameters(m) => ClientMessage::SetParameters(m),
+            JsonMessage::Subscribe(m) => Ok(ClientMessage::Subscribe(m)),
+            JsonMessage::Unsubscribe(m) => Ok(ClientMessage::Unsubscribe(m)),
+            JsonMessage::Advertise(m) => Ok(ClientMessage::Advertise(m.try_into()?)),
+            JsonMessage::Unadvertise(m) => Ok(ClientMessage::Unadvertise(m)),
+            JsonMessage::GetParameters(m) => Ok(ClientMessage::GetParameters(m)),
+            JsonMessage::SetParameters(m) => Ok(ClientMessage::SetParameters(m)),
             JsonMessage::SubscribeParameterUpdates(m) => {
-                ClientMessage::SubscribeParameterUpdates(m)
+                Ok(ClientMessage::SubscribeParameterUpdates(m))
             }
             JsonMessage::UnsubscribeParameterUpdates(m) => {
-                ClientMessage::UnsubscribeParameterUpdates(m)
+                Ok(ClientMessage::UnsubscribeParameterUpdates(m))
             }
-            JsonMessage::SubscribeConnectionGraph => ClientMessage::SubscribeConnectionGraph,
-            JsonMessage::UnsubscribeConnectionGraph => ClientMessage::UnsubscribeConnectionGraph,
-            JsonMessage::FetchAsset(m) => ClientMessage::FetchAsset(m),
+            JsonMessage::SubscribeConnectionGraph => Ok(ClientMessage::SubscribeConnectionGraph),
+            JsonMessage::UnsubscribeConnectionGraph => {
+                Ok(ClientMessage::UnsubscribeConnectionGraph)
+            }
+            JsonMessage::FetchAsset(m) => Ok(ClientMessage::FetchAsset(m)),
         }
     }
 }
@@ -182,19 +188,78 @@ pub(crate) struct Unsubscribe {
 // https://github.com/foxglove/ws-protocol/blob/main/docs/spec.md#client-advertise
 #[derive(Debug, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
+pub(crate) struct JsonClientAdvertise {
+    pub channels: Vec<JsonClientChannel>,
+}
+
+#[derive(Debug, PartialEq)]
 pub(crate) struct ClientAdvertise {
     pub channels: Vec<ClientChannel>,
 }
 
+impl TryFrom<JsonClientAdvertise> for ClientAdvertise {
+    type Error = ParseError;
+    fn try_from(msg: JsonClientAdvertise) -> Result<Self, ParseError> {
+        Ok(ClientAdvertise {
+            channels: msg
+                .channels
+                .into_iter()
+                .map(ClientChannel::try_from)
+                .collect::<Result<_, _>>()?,
+        })
+    }
+}
+
 #[derive(Debug, Clone, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
+pub(crate) struct JsonClientChannel {
+    pub id: ClientChannelId,
+    pub topic: String,
+    pub encoding: String,
+    pub schema_name: String,
+    pub schema_encoding: Option<String>,
+    /// May be base64-encoded depending on the schema_encoding.
+    pub schema: Option<String>,
+}
+
+#[derive(Debug, PartialEq)]
 pub(crate) struct ClientChannel {
     pub id: ClientChannelId,
     pub topic: String,
     pub encoding: String,
     pub schema_name: String,
     pub schema_encoding: Option<String>,
-    pub schema: Option<String>,
+    /// May or may not be a UTF-8 string depending on the schema_encoding.
+    pub schema: Option<Vec<u8>>,
+}
+
+impl TryFrom<JsonClientChannel> for ClientChannel {
+    type Error = ParseError;
+    fn try_from(channel: JsonClientChannel) -> Result<Self, ParseError> {
+        let schema = channel
+            .schema
+            .map(|schema| {
+                if channel
+                    .schema_encoding
+                    .as_ref()
+                    .map(|enc| is_known_binary_schema_encoding(enc.as_str()))
+                    .unwrap_or(false)
+                {
+                    BASE64_STANDARD.decode(schema).map_err(ParseError::Base64)
+                } else {
+                    Ok(schema.into_bytes())
+                }
+            })
+            .transpose()?;
+        Ok(ClientChannel {
+            id: channel.id,
+            topic: channel.topic,
+            encoding: channel.encoding,
+            schema_name: channel.schema_name,
+            schema_encoding: channel.schema_encoding,
+            schema,
+        })
+    }
 }
 
 // https://github.com/foxglove/ws-protocol/blob/main/docs/spec.md#client-unadvertise
@@ -361,6 +426,22 @@ mod tests {
                     "topic": "/test",
                     "encoding": "json",
                     "schemaName": "test",
+                },
+                {
+                    "id": 2,
+                    "topic": "/test",
+                    "encoding": "json",
+                    "schemaName": "test",
+                    "schemaEncoding": "unknown",
+                    "schema": "abc",
+                },
+                {
+                    "id": 3,
+                    "topic": "/test",
+                    "encoding": "json",
+                    "schemaName": "test",
+                    "schemaEncoding": "protobuf",
+                    "schema": BASE64_STANDARD.encode("abc"),
                 }
             ]
         })
@@ -370,15 +451,64 @@ mod tests {
         assert_eq!(
             parsed,
             ClientMessage::Advertise(ClientAdvertise {
-                channels: vec![ClientChannel {
-                    id: ClientChannelId::new(1),
-                    topic: "/test".to_string(),
-                    encoding: "json".to_string(),
-                    schema_name: "test".to_string(),
-                    schema: None,
-                    schema_encoding: None,
-                }],
+                channels: vec![
+                    ClientChannel {
+                        id: ClientChannelId::new(1),
+                        topic: "/test".to_string(),
+                        encoding: "json".to_string(),
+                        schema_name: "test".to_string(),
+                        schema_encoding: None,
+                        schema: None,
+                    },
+                    ClientChannel {
+                        id: ClientChannelId::new(2),
+                        topic: "/test".to_string(),
+                        encoding: "json".to_string(),
+                        schema_name: "test".to_string(),
+                        schema_encoding: Some("unknown".to_string()),
+                        schema: Some(b"abc".to_vec()),
+                    },
+                    ClientChannel {
+                        id: ClientChannelId::new(3),
+                        topic: "/test".to_string(),
+                        encoding: "json".to_string(),
+                        schema_name: "test".to_string(),
+                        schema_encoding: Some("protobuf".to_string()),
+                        schema: Some(b"abc".to_vec()),
+                    },
+                ],
             }),
+        );
+    }
+
+    #[test]
+    fn test_parse_advertise_fail() {
+        let msg = json!({
+            "op": "advertise",
+            "channels": [
+                {
+                    "id": 1,
+                    "topic": "/test",
+                    "encoding": "json",
+                    "schemaName": "test",
+                },
+                {
+                    "id": 2,
+                    "topic": "/test",
+                    "encoding": "json",
+                    "schemaName": "test",
+                    "schemaEncoding": "protobuf",
+                    "schema": "~~~invalid base64~~~",
+                },
+            ]
+        })
+        .to_string();
+
+        assert_matches!(
+            ClientMessage::parse_json(&msg),
+            Err(ParseError::Base64(base64::DecodeError::InvalidByte(
+                0, b'~'
+            )))
         );
     }
 
