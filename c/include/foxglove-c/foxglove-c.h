@@ -38,11 +38,40 @@ typedef struct foxglove_server_callbacks {
   void (*on_unsubscribe)(uint64_t channel_id, const void *context);
 } foxglove_server_callbacks;
 
+typedef struct FoxgloveServerCapability {
+  uint8_t bits;
+} FoxgloveServerCapability;
+/**
+ * Allow clients to advertise channels to send data messages to the server.
+ */
+#define FoxgloveServerCapability_ClientPublish (FoxgloveServerCapability){ .bits = (uint8_t)(1 << 0) }
+/**
+ * Allow clients to subscribe and make connection graph updates
+ */
+#define FoxgloveServerCapability_ConnectionGraph (FoxgloveServerCapability){ .bits = (uint8_t)(1 << 1) }
+/**
+ * Allow clients to get & set parameters.
+ */
+#define FoxgloveServerCapability_Parameters (FoxgloveServerCapability){ .bits = (uint8_t)(1 << 2) }
+/**
+ * Inform clients about the latest server time.
+ *
+ * This allows accelerated, slowed, or stepped control over the progress of time. If the
+ * server publishes time data, then timestamps of published messages must originate from the
+ * same time source.
+ */
+#define FoxgloveServerCapability_Time (FoxgloveServerCapability){ .bits = (uint8_t)(1 << 3) }
+/**
+ * Allow clients to call services.
+ */
+#define FoxgloveServerCapability_Services (FoxgloveServerCapability){ .bits = (uint8_t)(1 << 4) }
+
 typedef struct foxglove_server_options {
   const char *name;
   const char *host;
   uint16_t port;
   const struct foxglove_server_callbacks *callbacks;
+  struct FoxgloveServerCapability capabilities;
 } foxglove_server_options;
 
 typedef struct foxglove_schema {

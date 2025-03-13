@@ -1,6 +1,8 @@
 #include <foxglove-c/foxglove-c.h>
 #include <foxglove/server.hpp>
 
+#include <type_traits>
+
 namespace foxglove {
 
 WebSocketServer::WebSocketServer(const WebSocketServerOptions& options)
@@ -27,6 +29,8 @@ WebSocketServer::WebSocketServer(const WebSocketServerOptions& options)
   cOptions.host = options.host.c_str();
   cOptions.port = options.port;
   cOptions.callbacks = hasAnyCallbacks ? &cCallbacks : nullptr;
+  cOptions.capabilities.bits =
+    static_cast<std::underlying_type_t<decltype(options.capabilities)>>(options.capabilities);
   _impl.reset(foxglove_server_start(&cOptions));
 }
 
