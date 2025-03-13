@@ -8,7 +8,7 @@ pub(crate) use crate::websocket::protocol::client::{
 pub use crate::websocket::protocol::server::{
     Parameter, ParameterType, ParameterValue, Status, StatusLevel,
 };
-use crate::{get_runtime_handle, Channel, FoxgloveError, Metadata, Sink, SinkId};
+use crate::{get_runtime_handle, Channel, Context, FoxgloveError, Metadata, Sink, SinkId};
 use bimap::BiHashMap;
 use bytes::{BufMut, Bytes, BytesMut};
 use flume::TrySendError;
@@ -21,6 +21,7 @@ use std::sync::atomic::{AtomicBool, AtomicU16, AtomicU32};
 use std::sync::Weak;
 use std::time::{SystemTime, UNIX_EPOCH};
 use std::{collections::HashMap, net::SocketAddr, sync::Arc};
+use subscription::SubscriptionAggregator;
 use thiserror::Error;
 use tokio::runtime::Handle;
 use tokio::{
@@ -40,6 +41,7 @@ mod connection_graph;
 mod protocol;
 mod semaphore;
 pub mod service;
+mod subscription;
 pub use connection_graph::ConnectionGraph;
 pub(crate) use semaphore::{Semaphore, SemaphoreGuard};
 #[cfg(test)]
@@ -76,7 +78,12 @@ pub enum Capability {
 /// Identifies a client connection. Unique for the duration of the server's lifetime.
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub struct ClientId(u32);
-
+impl ClientId {
+    #[cfg(test)]
+    fn new(id: u32) -> Self {
+        Self(id)
+    }
+}
 impl From<ClientId> for u32 {
     fn from(client: ClientId) -> Self {
         client.0
@@ -212,6 +219,7 @@ pub(crate) struct Server {
     weak_self: Weak<Self>,
     started: AtomicBool,
     sink_id: SinkId,
+    sub_agg: SubscriptionAggregator,
     /// Local port the server is listening on, once it has been started
     port: AtomicU16,
     message_backlog_size: u32,
@@ -575,6 +583,11 @@ impl ConnectedClient {
             }
         }
 
+        // Propagate client unsubscriptions to the context.
+        server
+            .sub_agg
+            .unsubscribe_channels(self.id, unsubscribed_channel_ids.iter().copied());
+
         // If we don't have a ServerListener, we're done.
         let Some(handler) = self.server_listener.as_ref() else {
             return;
@@ -627,6 +640,11 @@ impl ConnectedClient {
                 i += 1
             }
         }
+
+        // Propagate client subscriptions requests to the context.
+        server
+            .sub_agg
+            .subscribe_channels(self.id, subscribed_channels.iter().map(|c| c.id));
 
         for (subscription, channel) in subscriptions.into_iter().zip(subscribed_channels) {
             // Using a limited scope here to avoid holding the lock on subscriptions while calling on_subscribe
@@ -1039,7 +1057,7 @@ impl Server {
             .unwrap_or_default()
     }
 
-    pub fn new(weak_self: Weak<Self>, opts: ServerOptions) -> Self {
+    pub fn new(weak_self: Weak<Self>, ctx: &Arc<Context>, opts: ServerOptions) -> Self {
         let mut capabilities = opts.capabilities.unwrap_or_default();
         let mut supported_encodings = opts.supported_encodings.unwrap_or_default();
 
@@ -1059,11 +1077,13 @@ impl Server {
             capabilities.insert(Capability::Assets);
         }
 
+        let sink_id = SinkId::next();
         Server {
             weak_self,
             port: AtomicU16::new(0),
             started: AtomicBool::new(false),
-            sink_id: SinkId::next(),
+            sink_id,
+            sub_agg: SubscriptionAggregator::new(Arc::downgrade(ctx), sink_id),
             message_backlog_size: opts
                 .message_backlog_size
                 .unwrap_or(DEFAULT_MESSAGE_BACKLOG_SIZE) as u32,
@@ -1683,10 +1703,15 @@ impl Sink for Server {
         let server = self.arc();
         server.unadvertise_channel(channel.id());
     }
+
+    /// The websocket manages channel subscriptions dynamically based on client demand.
+    fn auto_subscribe(&self) -> bool {
+        false
+    }
 }
 
-pub(crate) fn create_server(opts: ServerOptions) -> Arc<Server> {
-    Arc::new_cyclic(|weak_self| Server::new(weak_self.clone(), opts))
+pub(crate) fn create_server(ctx: &Arc<Context>, opts: ServerOptions) -> Arc<Server> {
+    Arc::new_cyclic(|weak_self| Server::new(weak_self.clone(), ctx, opts))
 }
 
 // Spawn a new task for each incoming connection

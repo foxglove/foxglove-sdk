@@ -182,7 +182,7 @@ impl WebSocketServer {
     /// Returns a handle that can optionally be used to gracefully shutdown the server. The caller
     /// can safely drop the handle, and the server will run forever.
     pub async fn start(self) -> Result<WebSocketServerHandle, FoxgloveError> {
-        let server = create_server(self.options);
+        let server = create_server(&self.context, self.options);
         server.start(&self.host, self.port).await?;
         self.context.add_sink(server.clone());
         Ok(WebSocketServerHandle {
