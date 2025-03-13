@@ -1,7 +1,7 @@
 import { program } from "commander";
 import { spawn } from "node:child_process";
 import { SIGTERM } from "node:constants";
-import { mkdtemp, readdir } from "node:fs/promises";
+import { mkdtemp, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -14,6 +14,8 @@ import path from "node:path";
  */
 
 const pyExamplesDir = path.resolve(__dirname, "../python/foxglove-sdk-examples");
+
+const tempFiles: string[] = [];
 
 async function main({ timeout }: { timeout: string }) {
   for (const example of await readdir(pyExamplesDir)) {
@@ -68,10 +70,25 @@ async function installDependencies(name: string) {
   });
 }
 
-async function newTempFile() {
+async function newTempFile(name = "test.mcap") {
   const prefix = `${tmpdir()}${path.sep}`;
   const dir = await mkdtemp(prefix);
-  return path.join(dir, "test.mcap");
+  const file = path.join(dir, name);
+  tempFiles.push(file);
+  return file;
+}
+
+async function removeTempFiles() {
+  for (const file of tempFiles) {
+    try {
+      await rm(file);
+    } catch (err) {
+      if (err instanceof Error && "code" in err && err.code === "ENOENT") {
+        continue;
+      }
+      throw err;
+    }
+  }
 }
 
 async function extraArgs(example: string) {
@@ -88,4 +105,5 @@ async function extraArgs(example: string) {
 program
   .option("--timeout [duration]", "timeout for each example in milliseconds", "5000")
   .action(main)
+  .hook("postAction", removeTempFiles)
   .parse();
