@@ -18,7 +18,7 @@ int main(int argc, const char* argv[]) {
     if (sigintHandler) sigintHandler();
   });
 
-  foxglove::WebSocketServerOptions options;
+  foxglove::WebSocketServerOptions options = {};
   options.name = "ws-demo-cpp";
   options.host = "127.0.0.1";
   options.port = 8765;

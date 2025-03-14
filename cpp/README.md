@@ -7,7 +7,7 @@ The Foxglove C++ SDK is a higher-level wrapper around the [C library](../c). To 
 Build the library and examples:
 
 ```
-make build
+make
 ```
 
 Build and run tests:
