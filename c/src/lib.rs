@@ -2,6 +2,7 @@
 #![warn(unsafe_op_in_unsafe_fn)]
 #![warn(unsafe_attr_outside_unsafe)]
 
+use mcap::WriteOptions;
 use std::ffi::{c_char, c_void, CStr};
 use std::fs::File;
 use std::io::BufWriter;
@@ -103,6 +104,34 @@ pub struct FoxgloveMcapOptions {
     pub repeat_schemas: bool,
 }
 
+impl FoxgloveMcapOptions {
+    unsafe fn to_write_options(&self) -> WriteOptions {
+        let profile = std::str::from_utf8(unsafe {
+            std::slice::from_raw_parts(self.profile as *const u8, self.profile_len)
+        })
+        .expect("profile is invalid");
+        let library = std::str::from_utf8(unsafe {
+            std::slice::from_raw_parts(self.library as *const u8, self.library_len)
+        })
+        .expect("library is invalid");
+
+        WriteOptions::default()
+            .profile(profile)
+            .library(library)
+            .chunk_size(Some(self.chunk_size).filter(|size| *size > 0))
+            .use_chunks(self.use_chunks)
+            .disable_seeking(self.disable_seeking)
+            .emit_statistics(self.emit_statistics)
+            .emit_summary_offsets(self.emit_summary_offsets)
+            .emit_message_indexes(self.emit_message_indexes)
+            .emit_chunk_indexes(self.emit_chunk_indexes)
+            .emit_attachment_indexes(self.emit_attachment_indexes)
+            .emit_metadata_indexes(self.emit_metadata_indexes)
+            .repeat_channels(self.repeat_channels)
+            .repeat_schemas(self.repeat_schemas)
+    }
+}
+
 pub struct FoxgloveMcapWriter(Option<foxglove::McapWriterHandle<BufWriter<File>>>);
 
 /// Create or open an MCAP file for writing. Must later be freed with `foxglove_mcap_close`.
@@ -118,13 +147,17 @@ pub unsafe extern "C" fn foxglove_mcap_open(
         std::slice::from_raw_parts(options.path as *const u8, options.path_len)
     })
     .expect("path is invalid");
+
+    // Safety: this is safe if the options struct contains valid strings
+    let mcap_options = unsafe { options.to_write_options() };
+
     let file = File::options()
         .write(true)
         .create(options.create)
         .truncate(options.truncate)
         .open(path)
         .expect("Failed to open file");
-    let writer = foxglove::McapWriter::new()
+    let writer = foxglove::McapWriter::with_options(mcap_options)
         .create(BufWriter::new(file))
         .expect("Failed to create writer");
     Box::into_raw(Box::new(FoxgloveMcapWriter(Some(writer))))

@@ -9,6 +9,19 @@ namespace foxglove {
 
 struct McapWriterOptions {
   std::string_view path;
+  std::string_view profile;
+  std::string_view library;
+  uint64_t chunkSize;
+  bool useChunks;
+  bool disableSeeking;
+  bool emitStatistics;
+  bool emitSummaryOffsets;
+  bool emitMessageIndexes;
+  bool emitChunkIndexes;
+  bool emitAttachmentIndexes;
+  bool emitMetadataIndexes;
+  bool repeatChannels;
+  bool repeatSchemas;
   bool create;
   bool truncate;
 };
