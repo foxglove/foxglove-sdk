@@ -25,20 +25,14 @@ pub struct PyChannelView {
 }
 
 /// Information about a client channel.
-#[pyclass(name = "ClientChannel", module = "foxglove")]
+#[pyclass(name = "ClientChannel", module = "foxglove", get_all)]
 pub struct PyClientChannel {
-    #[pyo3(get)]
     id: u32,
-    #[pyo3(get)]
-    topic: String,
-    #[pyo3(get)]
-    encoding: String,
-    #[pyo3(get)]
-    schema_name: String,
-    #[pyo3(get)]
-    schema_encoding: Option<String>,
-    #[pyo3(get)]
-    schema: Option<String>,
+    topic: Py<PyString>,
+    encoding: Py<PyString>,
+    schema_name: Py<PyString>,
+    schema_encoding: Option<Py<PyString>>,
+    schema: Option<Py<PyString>>,
 }
 
 /// A client connected to a running websocket server.
@@ -98,15 +92,22 @@ impl ServerListener for PyServerListener {
             id: client.id().into(),
         };
 
-        let py_channel = PyClientChannel {
-            id: channel.id.into(),
-            topic: channel.topic.clone(),
-            encoding: channel.encoding.clone(),
-            schema_name: channel.schema_name.clone(),
-            schema_encoding: channel.schema_encoding.clone(),
-            schema: channel.schema.clone(),
-        };
         let result: PyResult<()> = Python::with_gil(|py| {
+            let py_channel = PyClientChannel {
+                id: channel.id.into(),
+                topic: PyString::new(py, channel.topic.as_str()).into(),
+                encoding: PyString::new(py, channel.encoding.as_str()).into(),
+                schema_name: PyString::new(py, channel.schema_name.as_str()).into(),
+                schema_encoding: channel
+                    .schema_encoding
+                    .as_ref()
+                    .map(|enc| PyString::new(py, enc.as_str()).into()),
+                schema: channel
+                    .schema
+                    .as_ref()
+                    .map(|schema| PyString::new(py, schema.as_str()).into()),
+            };
+
             // client, channel
             let args = (client_info, py_channel);
             self.listener
