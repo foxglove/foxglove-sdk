@@ -6,6 +6,7 @@ use std::path::Path;
 use std::sync::Arc;
 use std::{fmt::Debug, io::Write};
 
+use crate::LIBRARY_NAME;
 use crate::{FoxgloveError, LogContext, LogSink};
 use mcap::WriteOptions;
 
@@ -19,7 +20,7 @@ pub struct McapWriter(WriteOptions);
 
 impl From<WriteOptions> for McapWriter {
     fn from(value: WriteOptions) -> Self {
-        Self(value.library(format!("foxglove-sdk-rs-{}", env!("CARGO_PKG_VERSION"))))
+        Self(value.library(&*LIBRARY_NAME))
     }
 }
 
