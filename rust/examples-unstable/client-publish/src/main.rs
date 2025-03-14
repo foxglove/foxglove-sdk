@@ -11,7 +11,7 @@ use clap::Parser;
 use foxglove::convert::SaturatingInto;
 use foxglove::schemas::log::Level;
 use foxglove::schemas::Log;
-use foxglove::websocket::{Capability, Client, ClientChannelView, ServerListener};
+use foxglove::websocket::{Capability, Client, ClientChannel, ServerListener};
 use foxglove::{PartialMetadata, TypedChannel, WebSocketServer};
 use std::sync::Arc;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
@@ -29,10 +29,10 @@ struct Cli {
 
 struct ExampleCallbackHandler;
 impl ServerListener for ExampleCallbackHandler {
-    fn on_message_data(&self, _client: Client, channel: ClientChannelView, message: &[u8]) {
+    fn on_message_data(&self, _client: Client, channel: &ClientChannel, message: &[u8]) {
         let json: serde_json::Value =
             serde_json::from_slice(message).expect("Failed to parse message");
-        println!("Received message on channel {}: {json}", channel.id());
+        println!("Received message on channel {}: {json}", channel.id);
     }
 }
 

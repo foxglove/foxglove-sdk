@@ -186,14 +186,21 @@ pub(crate) struct ClientAdvertise {
     pub channels: Vec<ClientChannel>,
 }
 
+/// Information about a channel advertised by the client
 #[derive(Debug, Clone, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct ClientChannel {
+pub struct ClientChannel {
+    /// An identifier for this channel, assigned by the client
     pub id: ClientChannelId,
+    /// The topic name for this channel
     pub topic: String,
+    /// The encoding of messages on this channel
     pub encoding: String,
+    /// The name of the schema for this channel
     pub schema_name: String,
+    /// The encoding of the schema data
     pub schema_encoding: Option<String>,
+    /// Data describing the schema for this channel (interpretation depends on schema_encoding)
     pub schema: Option<String>,
 }
 

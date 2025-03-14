@@ -5,7 +5,7 @@ mod log_sink;
 
 use crate::channel::ChannelId;
 use crate::websocket::{
-    ChannelView, Client, ClientChannelId, ClientChannelView, ClientId, Parameter, ServerListener,
+    ChannelView, Client, ClientChannel, ClientChannelId, ClientId, Parameter, ServerListener,
 };
 pub use log_context::GlobalContextTest;
 pub use log_sink::{ErrorSink, MockSink, RecordingSink};
@@ -17,11 +17,11 @@ pub(crate) struct ClientChannelInfo {
     pub(crate) topic: String,
 }
 
-impl From<ClientChannelView<'_>> for ClientChannelInfo {
-    fn from(channel: ClientChannelView) -> Self {
+impl From<&ClientChannel> for ClientChannelInfo {
+    fn from(channel: &ClientChannel) -> Self {
         Self {
-            id: channel.id(),
-            topic: channel.topic().to_string(),
+            id: channel.id,
+            topic: channel.topic.to_string(),
         }
     }
 }
@@ -132,7 +132,7 @@ impl RecordingServerListener {
 }
 
 impl ServerListener for RecordingServerListener {
-    fn on_message_data(&self, client: Client, channel: ClientChannelView, payload: &[u8]) {
+    fn on_message_data(&self, client: Client, channel: &ClientChannel, payload: &[u8]) {
         let mut data = self.message_data.lock();
         data.push(MessageData {
             client_id: client.id(),
@@ -151,12 +151,12 @@ impl ServerListener for RecordingServerListener {
         unsubs.push((client.id(), channel.into()));
     }
 
-    fn on_client_advertise(&self, client: Client, channel: ClientChannelView) {
+    fn on_client_advertise(&self, client: Client, channel: &ClientChannel) {
         let mut adverts = self.client_advertise.lock();
         adverts.push((client.id(), channel.into()));
     }
 
-    fn on_client_unadvertise(&self, client: Client, channel: ClientChannelView) {
+    fn on_client_unadvertise(&self, client: Client, channel: &ClientChannel) {
         let mut unadverts = self.client_unadvertise.lock();
         unadverts.push((client.id(), channel.into()));
     }
