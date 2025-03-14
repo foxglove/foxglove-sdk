@@ -32,7 +32,7 @@ impl ServerListener for ExampleCallbackHandler {
     fn on_message_data(&self, _client: Client, channel: &ClientChannel, message: &[u8]) {
         let json: serde_json::Value =
             serde_json::from_slice(message).expect("Failed to parse message");
-        println!("Received message on channel {}: {json}", channel.id());
+        println!("Received message on channel {}: {json}", channel.id);
     }
 }
 
