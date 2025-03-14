@@ -1,7 +1,6 @@
 #include <foxglove-c/foxglove-c.h>
 #include <foxglove/server.hpp>
 
-#include <iostream>
 #include <type_traits>
 
 namespace foxglove {
