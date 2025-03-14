@@ -1,5 +1,7 @@
 use std::collections::HashSet;
 
+use crate::Context;
+
 use super::tests::connect_client;
 use super::{create_server, protocol, Capability, ServerOptions};
 use bytes::Buf;
@@ -8,10 +10,14 @@ use tokio_tungstenite::tungstenite::Message;
 
 #[tokio::test]
 async fn test_broadcast_time() {
-    let server = create_server(ServerOptions {
-        capabilities: Some(HashSet::from([Capability::Time])),
-        ..Default::default()
-    });
+    let ctx = Context::new();
+    let server = create_server(
+        &ctx,
+        ServerOptions {
+            capabilities: Some(HashSet::from([Capability::Time])),
+            ..Default::default()
+        },
+    );
     let addr = server
         .start("127.0.0.1", 0)
         .await

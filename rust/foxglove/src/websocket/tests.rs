@@ -89,11 +89,15 @@ fn new_channel(topic: &str, ctx: &Arc<Context>) -> Arc<Channel> {
 #[traced_test]
 #[tokio::test]
 async fn test_client_connect() {
-    let server = create_server(ServerOptions {
-        session_id: Some("mock_sess_id".to_string()),
-        name: Some("mock_server".to_string()),
-        ..Default::default()
-    });
+    let ctx = Context::new();
+    let server = create_server(
+        &ctx,
+        ServerOptions {
+            session_id: Some("mock_sess_id".to_string()),
+            name: Some("mock_server".to_string()),
+            ..Default::default()
+        },
+    );
     let addr = server
         .start("127.0.0.1", 0)
         .await
@@ -115,7 +119,8 @@ async fn test_client_connect() {
 #[traced_test]
 #[tokio::test]
 async fn test_handshake_with_unknown_subprotocol_fails_on_client() {
-    let server = create_server(ServerOptions::default());
+    let ctx = Context::new();
+    let server = create_server(&ctx, ServerOptions::default());
     let addr = server
         .start("127.0.0.1", 0)
         .await
@@ -141,7 +146,8 @@ async fn test_handshake_with_unknown_subprotocol_fails_on_client() {
 #[traced_test]
 #[tokio::test]
 async fn test_handshake_with_multiple_subprotocols() {
-    let server = create_server(ServerOptions::default());
+    let ctx = Context::new();
+    let server = create_server(&ctx, ServerOptions::default());
     let addr = server
         .start("127.0.0.1", 0)
         .await
@@ -192,12 +198,15 @@ async fn test_handshake_with_multiple_subprotocols() {
 async fn test_advertise_to_client() {
     let recording_listener = Arc::new(RecordingServerListener::new());
 
-    let server = create_server(ServerOptions {
-        listener: Some(recording_listener.clone()),
-        ..Default::default()
-    });
-
     let ctx = Context::new();
+    let server = create_server(
+        &ctx,
+        ServerOptions {
+            listener: Some(recording_listener.clone()),
+            ..Default::default()
+        },
+    );
+
     ctx.add_sink(server.clone());
 
     let addr = server
@@ -282,12 +291,14 @@ async fn test_advertise_to_client() {
 async fn test_log_only_to_subscribers() {
     let recording_listener = Arc::new(RecordingServerListener::new());
 
-    let server = create_server(ServerOptions {
-        listener: Some(recording_listener.clone()),
-        ..Default::default()
-    });
-
     let ctx = Context::new();
+    let server = create_server(
+        &ctx,
+        ServerOptions {
+            listener: Some(recording_listener.clone()),
+            ..Default::default()
+        },
+    );
 
     ctx.add_sink(server.clone());
 
@@ -432,7 +443,8 @@ async fn test_log_only_to_subscribers() {
 #[tokio::test]
 async fn test_error_when_client_publish_unsupported() {
     // Server does not support clientPublish capability by default
-    let server = create_server(ServerOptions::default());
+    let ctx = Context::new();
+    let server = create_server(&ctx, ServerOptions::default());
     let addr = server
         .start("127.0.0.1", 0)
         .await
@@ -476,7 +488,8 @@ async fn test_error_when_client_publish_unsupported() {
 #[traced_test]
 #[tokio::test]
 async fn test_error_status_message() {
-    let server = create_server(ServerOptions::default());
+    let ctx = Context::new();
+    let server = create_server(&ctx, ServerOptions::default());
     let addr = server
         .start("127.0.0.1", 0)
         .await
@@ -544,7 +557,8 @@ async fn test_error_status_message() {
 #[tokio::test]
 async fn test_service_registration_not_supported() {
     // Can't register services if we don't declare support.
-    let server = create_server(ServerOptions::default());
+    let ctx = Context::new();
+    let server = create_server(&ctx, ServerOptions::default());
     let svc = Service::builder("/s", ServiceSchema::new("")).handler_fn(|_| Err(""));
     assert_matches!(
         server.add_services(vec![svc]),
@@ -555,10 +569,14 @@ async fn test_service_registration_not_supported() {
 #[tokio::test]
 async fn test_service_registration_missing_request_encoding() {
     // Can't register a service with no encoding unless we declare global encodings.
-    let server = create_server(ServerOptions {
-        capabilities: Some(HashSet::from([Capability::Services])),
-        ..Default::default()
-    });
+    let ctx = Context::new();
+    let server = create_server(
+        &ctx,
+        ServerOptions {
+            capabilities: Some(HashSet::from([Capability::Services])),
+            ..Default::default()
+        },
+    );
     let svc = Service::builder("/s", ServiceSchema::new("")).handler_fn(|_| Err(""));
     assert_matches!(
         server.add_services(vec![svc]),
@@ -569,13 +587,17 @@ async fn test_service_registration_missing_request_encoding() {
 #[tokio::test]
 async fn test_service_registration_duplicate_name() {
     // Can't register a service with no encoding unless we declare global encodings.
+    let ctx = Context::new();
     let sa1 = Service::builder("/a", ServiceSchema::new("")).handler_fn(|_| Err(""));
-    let server = create_server(ServerOptions {
-        capabilities: Some(HashSet::from([Capability::Services])),
-        services: HashMap::from([(sa1.name().to_string(), sa1)]),
-        supported_encodings: Some(HashSet::from(["ros1msg".into()])),
-        ..Default::default()
-    });
+    let server = create_server(
+        &ctx,
+        ServerOptions {
+            capabilities: Some(HashSet::from([Capability::Services])),
+            services: HashMap::from([(sa1.name().to_string(), sa1)]),
+            supported_encodings: Some(HashSet::from(["ros1msg".into()])),
+            ..Default::default()
+        },
+    );
 
     let sa2 = Service::builder("/a", ServiceSchema::new("")).handler_fn(|_| Err(""));
     assert_matches!(
@@ -594,7 +616,8 @@ async fn test_service_registration_duplicate_name() {
 #[traced_test]
 #[tokio::test]
 async fn test_publish_status_message() {
-    let server = create_server(ServerOptions::default());
+    let ctx = Context::new();
+    let server = create_server(&ctx, ServerOptions::default());
 
     let addr = server
         .start("127.0.0.1", 0)
@@ -638,7 +661,8 @@ async fn test_publish_status_message() {
 #[traced_test]
 #[tokio::test]
 async fn test_remove_status() {
-    let server = create_server(ServerOptions::default());
+    let ctx = Context::new();
+    let server = create_server(&ctx, ServerOptions::default());
     let addr = server
         .start("127.0.0.1", 0)
         .await
@@ -681,12 +705,16 @@ async fn test_remove_status() {
 async fn test_client_advertising() {
     let recording_listener = Arc::new(RecordingServerListener::new());
 
-    let server = create_server(ServerOptions {
-        capabilities: Some(HashSet::from([Capability::ClientPublish])),
-        supported_encodings: Some(HashSet::from(["json".to_string()])),
-        listener: Some(recording_listener.clone()),
-        ..Default::default()
-    });
+    let ctx = Context::new();
+    let server = create_server(
+        &ctx,
+        ServerOptions {
+            capabilities: Some(HashSet::from([Capability::ClientPublish])),
+            supported_encodings: Some(HashSet::from(["json".to_string()])),
+            listener: Some(recording_listener.clone()),
+            ..Default::default()
+        },
+    );
 
     let addr = server
         .start("127.0.0.1", 0)
@@ -790,10 +818,14 @@ async fn test_client_advertising() {
 #[traced_test]
 #[tokio::test]
 async fn test_parameter_values() {
-    let server = create_server(ServerOptions {
-        capabilities: Some(HashSet::from([Capability::Parameters])),
-        ..Default::default()
-    });
+    let ctx = Context::new();
+    let server = create_server(
+        &ctx,
+        ServerOptions {
+            capabilities: Some(HashSet::from([Capability::Parameters])),
+            ..Default::default()
+        },
+    );
     let addr = server
         .start("127.0.0.1", 0)
         .await
@@ -842,11 +874,15 @@ async fn test_parameter_values() {
 async fn test_parameter_unsubscribe_no_updates() {
     let recording_listener = Arc::new(RecordingServerListener::new());
 
-    let server = create_server(ServerOptions {
-        capabilities: Some(HashSet::from([Capability::Parameters])),
-        listener: Some(recording_listener.clone()),
-        ..Default::default()
-    });
+    let ctx = Context::new();
+    let server = create_server(
+        &ctx,
+        ServerOptions {
+            capabilities: Some(HashSet::from([Capability::Parameters])),
+            listener: Some(recording_listener.clone()),
+            ..Default::default()
+        },
+    );
     let addr = server
         .start("127.0.0.1", 0)
         .await
@@ -910,11 +946,15 @@ async fn test_parameter_unsubscribe_no_updates() {
 async fn test_set_parameters() {
     let recording_listener = Arc::new(RecordingServerListener::new());
 
-    let server = create_server(ServerOptions {
-        capabilities: Some(HashSet::from([Capability::Parameters])),
-        listener: Some(recording_listener.clone()),
-        ..Default::default()
-    });
+    let ctx = Context::new();
+    let server = create_server(
+        &ctx,
+        ServerOptions {
+            capabilities: Some(HashSet::from([Capability::Parameters])),
+            listener: Some(recording_listener.clone()),
+            ..Default::default()
+        },
+    );
     let addr = server
         .start("127.0.0.1", 0)
         .await
@@ -1021,11 +1061,15 @@ async fn test_get_parameters() {
         r#type: Some(ParameterType::Float64),
     }]);
 
-    let server = create_server(ServerOptions {
-        capabilities: Some(HashSet::from([Capability::Parameters])),
-        listener: Some(recording_listener.clone()),
-        ..Default::default()
-    });
+    let ctx = Context::new();
+    let server = create_server(
+        &ctx,
+        ServerOptions {
+            capabilities: Some(HashSet::from([Capability::Parameters])),
+            listener: Some(recording_listener.clone()),
+            ..Default::default()
+        },
+    );
     let addr = server
         .start("127.0.0.1", 0)
         .await
@@ -1077,14 +1121,18 @@ async fn test_services() {
             Ok(response.freeze())
         });
 
-    let server = create_server(ServerOptions {
-        services: [ok_svc]
-            .into_iter()
-            .map(|s| (s.name().to_string(), s))
-            .collect(),
-        supported_encodings: Some(HashSet::from(["raw".to_string()])),
-        ..Default::default()
-    });
+    let ctx = Context::new();
+    let server = create_server(
+        &ctx,
+        ServerOptions {
+            services: [ok_svc]
+                .into_iter()
+                .map(|s| (s.name().to_string(), s))
+                .collect(),
+            supported_encodings: Some(HashSet::from(["raw".to_string()])),
+            ..Default::default()
+        },
+    );
 
     let addr = server
         .start("127.0.0.1", 0)
@@ -1263,19 +1311,23 @@ async fn test_services() {
 
 #[tokio::test]
 async fn test_fetch_asset() {
-    let server = create_server(ServerOptions {
-        capabilities: Some(HashSet::from([Capability::Assets])),
-        fetch_asset_handler: Some(Box::new(BlockingAssetHandlerFn(Arc::new(
-            |_client, uri: String| {
-                if uri.ends_with("error") {
-                    Err("test error".to_string())
-                } else {
-                    Ok(Bytes::from_static(b"test data"))
-                }
-            },
-        )))),
-        ..Default::default()
-    });
+    let ctx = Context::new();
+    let server = create_server(
+        &ctx,
+        ServerOptions {
+            capabilities: Some(HashSet::from([Capability::Assets])),
+            fetch_asset_handler: Some(Box::new(BlockingAssetHandlerFn(Arc::new(
+                |_client, uri: String| {
+                    if uri.ends_with("error") {
+                        Err("test error".to_string())
+                    } else {
+                        Ok(Bytes::from_static(b"test data"))
+                    }
+                },
+            )))),
+            ..Default::default()
+        },
+    );
     let addr = server
         .start("127.0.0.1", 0)
         .await
@@ -1334,11 +1386,15 @@ async fn test_fetch_asset() {
 async fn test_update_connection_graph() {
     let recording_listener = Arc::new(RecordingServerListener::new());
 
-    let server = create_server(ServerOptions {
-        capabilities: Some(HashSet::from([Capability::ConnectionGraph])),
-        listener: Some(recording_listener.clone()),
-        ..Default::default()
-    });
+    let ctx = Context::new();
+    let server = create_server(
+        &ctx,
+        ServerOptions {
+            capabilities: Some(HashSet::from([Capability::ConnectionGraph])),
+            listener: Some(recording_listener.clone()),
+            ..Default::default()
+        },
+    );
     let addr = server
         .start("127.0.0.1", 0)
         .await
@@ -1416,10 +1472,14 @@ async fn test_update_connection_graph() {
 #[traced_test]
 #[tokio::test]
 async fn test_slow_client() {
-    let server = create_server(ServerOptions {
-        message_backlog_size: Some(1),
-        ..Default::default()
-    });
+    let ctx = Context::new();
+    let server = create_server(
+        &ctx,
+        ServerOptions {
+            message_backlog_size: Some(1),
+            ..Default::default()
+        },
+    );
     let addr = server
         .start("127.0.0.1", 0)
         .await
