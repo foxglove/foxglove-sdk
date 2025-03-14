@@ -1,73 +1,76 @@
-import unittest
+import random
 
+import pytest
 from foxglove import Schema
 from foxglove.channel import Channel
 from foxglove.channels import LogChannel
 from foxglove.schemas import Log
 
 
-class TestChannel(unittest.TestCase):
-    topic: str
+@pytest.fixture
+def new_topic() -> str:
+    return f"/{random.random()}"
 
-    def setUp(self) -> None:
-        self.topic = unittest.TestCase.id(self)
 
-    def test_prohibits_duplicate_topics(self) -> None:
-        schema = {"type": "object"}
-        _ = Channel("test-duplicate", schema=schema)
-        self.assertRaisesRegex(
-            ValueError, "already exists", Channel, "test-duplicate", schema=schema
-        )
+def test_prohibits_duplicate_topics() -> None:
+    schema = {"type": "object"}
+    _ = Channel("test-duplicate", schema=schema)
+    with pytest.raises(ValueError, match="already exists"):
+        Channel("test-duplicate", schema=schema)
 
-    def test_requires_an_object_schema(self) -> None:
-        schema = {"type": "array"}
-        self.assertRaisesRegex(
-            ValueError,
-            "Only object schemas are supported",
-            Channel,
-            self.topic,
-            schema=schema,
-        )
 
-    def test_log_dict_on_json_channel(self) -> None:
-        channel = Channel(
-            self.topic,
-            schema={"type": "object", "additionalProperties": True},
-        )
-        self.assertEqual(channel.message_encoding, "json")
+def test_requires_an_object_schema(new_topic: str) -> None:
+    schema = {"type": "array"}
+    with pytest.raises(ValueError, match="Only object schemas are supported"):
+        Channel(new_topic, schema=schema)
 
+
+def test_log_dict_on_json_channel(new_topic: str) -> None:
+    channel = Channel(
+        new_topic,
+        schema={"type": "object", "additionalProperties": True},
+    )
+    assert channel.message_encoding == "json"
+
+    channel.log({"test": "test"})
+
+
+def test_log_must_serialize_on_protobuf_channel(new_topic: str) -> None:
+    channel = Channel(
+        new_topic,
+        message_encoding="protobuf",
+        schema=Schema(
+            name="my_schema",
+            encoding="protobuf",
+            data=b"\x01",
+        ),
+    )
+
+    with pytest.raises(ValueError, match="Unsupported message type"):
         channel.log({"test": "test"})
 
-    def test_log_must_serialize_on_protobuf_channel(self) -> None:
-        channel = Channel(
-            self.topic,
-            message_encoding="protobuf",
-            schema=Schema(
-                name="my_schema",
-                encoding="protobuf",
-                data=b"\x01",
-            ),
-        )
+    channel.log(b"\x01")
 
-        self.assertRaisesRegex(
-            ValueError, "Unsupported message type", channel.log, {"test": "test"}
-        )
+
+def test_closed_channel_log(new_topic: str, caplog: pytest.LogCaptureFixture) -> None:
+    channel = Channel(new_topic, schema={"type": "object"})
+    channel.close()
+    with caplog.at_level("DEBUG"):
         channel.log(b"\x01")
 
-    def test_closed_channel_log(self) -> None:
-        channel = Channel(self.topic, schema={"type": "object"})
-        channel.close()
-        with self.assertLogs("foxglove.channels", level="DEBUG") as logs:
-            channel.log(b"\x01")
-            self.assertRegex(logs.output[0], "Cannot log\\(\\) on a closed channel")
-
-    def test_close_typed_channel(self) -> None:
-        channel = LogChannel("/topic")
-        channel.close()
-        with self.assertLogs("foxglove.channels", level="DEBUG") as logs:
-            channel.log(Log())
-            self.assertRegex(logs.output[0], "Cannot log\\(\\) on a closed LogChannel")
+    assert len(caplog.records) == 1
+    for log_name, _, message in caplog.record_tuples:
+        assert log_name == "foxglove.channels"
+        assert message == "Cannot log() on a closed channel"
 
 
-if __name__ == "__main__":
-    unittest.main()
+def test_close_typed_channel(new_topic: str, caplog: pytest.LogCaptureFixture) -> None:
+    channel = LogChannel(new_topic)
+    channel.close()
+    with caplog.at_level("DEBUG"):
+        channel.log(Log())
+
+    assert len(caplog.records) == 1
+    for log_name, _, message in caplog.record_tuples:
+        assert log_name == "foxglove.channels"
+        assert message == "Cannot log() on a closed LogChannel"

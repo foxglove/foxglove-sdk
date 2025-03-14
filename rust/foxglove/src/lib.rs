@@ -162,17 +162,17 @@ use thiserror::Error;
 mod channel;
 mod channel_builder;
 mod collection;
+mod context;
 pub mod convert;
 mod cow_vec;
 mod encode;
-mod log_context;
-mod log_sink;
 mod log_sink_set;
 mod mcap_writer;
 mod metadata;
 mod runtime;
 pub mod schemas;
 mod schemas_wkt;
+mod sink;
 #[cfg(test)]
 mod tests;
 #[cfg(test)]
@@ -183,14 +183,14 @@ mod websocket_server;
 
 pub use channel::{Channel, Schema};
 pub use channel_builder::ChannelBuilder;
-pub use encode::{Encode, TypedChannel};
 #[doc(hidden)]
-pub use log_context::LogContext;
-pub use log_sink::LogSink;
+pub use context::Context;
+pub use encode::{Encode, TypedChannel};
 pub use mcap_writer::{McapWriter, McapWriterHandle};
 pub use metadata::{Metadata, PartialMetadata};
 pub(crate) use runtime::get_runtime_handle;
 pub use runtime::shutdown_runtime;
+pub use sink::Sink;
 pub(crate) use time::nanoseconds_since_epoch;
 pub use websocket_server::{WebSocketServer, WebSocketServerBlockingHandle, WebSocketServerHandle};
 
