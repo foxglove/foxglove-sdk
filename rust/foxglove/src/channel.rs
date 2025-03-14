@@ -1,10 +1,13 @@
-use crate::log_sink_set::LogSinkSet;
-use crate::{nanoseconds_since_epoch, Metadata, PartialMetadata};
+use crate::subscription::SubscriberVec;
+use crate::{nanoseconds_since_epoch, Context, Metadata, PartialMetadata, Sink};
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use std::collections::BTreeMap;
 use std::sync::atomic::AtomicU32;
 use std::sync::atomic::Ordering::Relaxed;
+use std::sync::{Arc, Weak};
+
+pub(crate) static ERROR_LOGGING_MESSAGE: &str = "Error logging message";
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Deserialize, Serialize)]
 pub struct ChannelId(u64);
@@ -87,9 +90,7 @@ impl Schema {
 /// use foxglove::{ChannelBuilder, Schema};
 /// ```
 pub struct Channel {
-    // TODO add public read-only accessors for these for the Rust API.
-    // TODO add a list of contexts here as well (or restrict to one context per channel?)
-    pub(crate) sinks: LogSinkSet,
+    pub(crate) context: Weak<Context>,
     /// id is a unique identifier for the channel inside the process,
     /// it's used to map a channel to a channel_id or subscription_id in log sinks.
     pub(crate) id: ChannelId,
@@ -121,18 +122,44 @@ impl Channel {
         self.message_sequence.fetch_add(1, Relaxed)
     }
 
+    /// Returns true if there's at least one sink subscribed to this channel.
+    pub fn has_subscribers(&self) -> bool {
+        self.context
+            .upgrade()
+            .is_some_and(|c| c.has_subscribers(self.id))
+    }
+
+    /// Returns the set of sinks that are subscribed to this channel.
+    pub(crate) fn get_subscribers(&self) -> SubscriberVec<Arc<dyn Sink>> {
+        self.context
+            .upgrade()
+            .map(|c| c.get_subscribers(self.id))
+            .unwrap_or_default()
+    }
+
     /// Logs a message.
     pub fn log(&self, msg: &[u8]) {
-        self.log_with_meta(msg, PartialMetadata::default());
+        let sinks = self.get_subscribers();
+        if !sinks.is_empty() {
+            self.log_to_sinks(msg, PartialMetadata::default(), sinks);
+        }
     }
 
     /// Logs a message with additional metadata.
-    pub fn log_with_meta(&self, msg: &[u8], opts: PartialMetadata) {
-        // Bail out early if there are no sinks (logging is disabled).
-        if self.sinks.is_empty() {
-            return;
+    pub fn log_with_meta(&self, msg: &[u8], metadata: PartialMetadata) {
+        let sinks = self.get_subscribers();
+        if !sinks.is_empty() {
+            self.log_to_sinks(msg, metadata, sinks);
         }
+    }
 
+    /// Logs a message to the provided sinks.
+    pub(crate) fn log_to_sinks(
+        &self,
+        msg: &[u8],
+        opts: PartialMetadata,
+        sinks: impl IntoIterator<Item = Arc<dyn Sink>>,
+    ) {
         let mut metadata = Metadata {
             sequence: opts.sequence.unwrap_or_else(|| self.next_sequence()),
             log_time: opts.log_time.unwrap_or_else(nanoseconds_since_epoch),
@@ -142,8 +169,11 @@ impl Channel {
         if opts.publish_time.is_none() {
             metadata.publish_time = metadata.log_time
         }
-
-        self.sinks.for_each(|sink| sink.log(self, msg, &metadata));
+        for sink in sinks {
+            if let Err(e) = sink.log(self, msg, &metadata) {
+                tracing::warn!("{ERROR_LOGGING_MESSAGE}: {e}");
+            }
+        }
     }
 }
 
@@ -173,29 +203,19 @@ impl std::fmt::Debug for Channel {
     }
 }
 
-impl Drop for Channel {
-    fn drop(&mut self) {
-        self.sinks.for_each(|sink| {
-            sink.remove_channel(self);
-            Ok(())
-        });
-    }
-}
-
 #[cfg(test)]
 mod test {
     use super::*;
     use crate::channel_builder::ChannelBuilder;
     use crate::collection::collection;
-    use crate::log_sink_set::ERROR_LOGGING_MESSAGE;
     use crate::testutil::RecordingSink;
     use crate::{Channel, Context};
     use std::sync::Arc;
     use tracing_test::traced_test;
 
-    fn new_test_channel(id: u64) -> Arc<Channel> {
+    fn new_test_channel(ctx: &Arc<Context>, id: u64) -> Arc<Channel> {
         Arc::new(Channel {
-            sinks: LogSinkSet::new(),
+            context: Arc::downgrade(ctx),
             id: ChannelId::new(id),
             message_sequence: AtomicU32::new(1),
             topic: "topic".to_string(),
@@ -240,7 +260,8 @@ mod test {
 
     #[test]
     fn test_channel_next_sequence() {
-        let channel = new_test_channel(1);
+        let ctx = Context::new();
+        let channel = new_test_channel(&ctx, 1);
         assert_eq!(channel.next_sequence(), 1);
         assert_eq!(channel.next_sequence(), 2);
     }
@@ -248,7 +269,8 @@ mod test {
     #[traced_test]
     #[test]
     fn test_channel_log_msg() {
-        let channel = Arc::new(new_test_channel(1));
+        let ctx = Context::new();
+        let channel = Arc::new(new_test_channel(&ctx, 1));
         let msg = vec![1, 2, 3];
         channel.log(&msg);
         assert!(!logs_contain(ERROR_LOGGING_MESSAGE));
@@ -262,7 +284,7 @@ mod test {
 
         assert!(ctx.add_sink(recording_sink.clone()));
 
-        let channel = new_test_channel(1);
+        let channel = new_test_channel(&ctx, 1);
         ctx.add_channel(channel.clone()).unwrap();
         let msg = b"test_message";
 
@@ -279,5 +301,53 @@ mod test {
             recorded[0].metadata.publish_time
         );
         assert!(recorded[0].metadata.log_time > 1732847588055322395);
+    }
+
+    #[test]
+    fn test_channel_subscribers() {
+        let ctx = Context::new();
+        let ch = new_test_channel(&ctx, 1);
+        assert!(!ch.has_subscribers());
+        assert!(ch.get_subscribers().is_empty());
+
+        // Add a subscriber with no subscriptions.
+        let s1 = Arc::new(RecordingSink::new().auto_subscribe(false));
+        assert!(ctx.add_sink(s1.clone()));
+        assert!(!ch.has_subscribers());
+        assert!(ch.get_subscribers().is_empty());
+
+        // Subscribe s1.
+        ctx.subscribe_channels(s1.id(), [ch.id()]);
+        assert!(ch.has_subscribers());
+        let subs = ch.get_subscribers();
+        assert_eq!(subs.len(), 1);
+        assert_eq!(Arc::as_ptr(&subs[0]), Arc::as_ptr(&s1));
+
+        // Add a subscriber with auto-subscribe enabled (default).
+        let s2 = Arc::new(RecordingSink::new());
+        assert!(ctx.add_sink(s2.clone()));
+        assert!(ch.has_subscribers());
+        let subs = ch.get_subscribers();
+        assert_eq!(subs.len(), 2);
+
+        // Unsubscribe s1.
+        ctx.unsubscribe_channels(s1.id(), [ch.id()]);
+        assert!(ch.has_subscribers());
+        let subs = ch.get_subscribers();
+        assert_eq!(subs.len(), 1);
+        assert_eq!(Arc::as_ptr(&subs[0]), Arc::as_ptr(&s2));
+
+        // Unsubscribe has no effect for s2, since auto-subscribe was set.
+        ctx.unsubscribe_channels(s2.id(), [ch.id()]);
+        assert!(ch.has_subscribers());
+        let subs = ch.get_subscribers();
+        assert_eq!(subs.len(), 1);
+        assert_eq!(Arc::as_ptr(&subs[0]), Arc::as_ptr(&s2));
+
+        // Unregister sinks.
+        ctx.remove_sink(s1.id());
+        ctx.remove_sink(s2.id());
+        assert!(!ch.has_subscribers());
+        assert!(ch.get_subscribers().is_empty());
     }
 }

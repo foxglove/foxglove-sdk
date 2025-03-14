@@ -1,5 +1,6 @@
-use crate::log_sink_set::LogSinkSet;
-use crate::{Channel, FoxgloveError, Sink};
+use crate::channel::ChannelId;
+use crate::subscription::{SubscriberVec, SubscriptionManager};
+use crate::{Channel, FoxgloveError, Sink, SinkId};
 use parking_lot::RwLock;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
@@ -13,7 +14,8 @@ use std::sync::{Arc, LazyLock};
 pub struct Context {
     /// Map of channels by topic.
     channels: RwLock<HashMap<String, Arc<Channel>>>,
-    sinks: LogSinkSet,
+    sinks: RwLock<HashMap<SinkId, Arc<dyn Sink>>>,
+    sub: SubscriptionManager<SinkId, Arc<dyn Sink>>,
 }
 
 impl Debug for Context {
@@ -28,7 +30,8 @@ impl Context {
     pub fn new() -> Arc<Self> {
         Arc::new(Self {
             channels: RwLock::default(),
-            sinks: LogSinkSet::new(),
+            sinks: RwLock::default(),
+            sub: SubscriptionManager::default(),
         })
     }
 
@@ -57,12 +60,9 @@ impl Context {
             };
             entry.insert(channel.clone());
         }
-        self.sinks.for_each(|sink| {
-            if channel.sinks.add_sink(sink.clone()) {
-                sink.add_channel(&channel);
-            }
-            Ok(())
-        });
+        for sink in self.sinks.read().values() {
+            sink.add_channel(&channel);
+        }
         Ok(())
     }
 
@@ -79,68 +79,83 @@ impl Context {
         };
         let channel = &*channel_by_topic;
 
-        self.sinks.for_each(|sink| {
-            if channel.sinks.remove_sink(sink) {
-                sink.remove_channel(channel);
-            }
-            Ok(())
-        });
+        for sink in self.sinks.read().values() {
+            sink.remove_channel(channel);
+        }
         true
     }
 
     /// Adds a sink to the context.
+    ///
+    /// If [`Sink::auto_subscribe`] returns true, the sink will be automatically subscribed to all
+    /// present and future channels on the context. Otherwise, the sink is expected to manage its
+    /// subscriptions dynamically with [`Context::subscribe_channels`] and
+    /// [`Context::unsubscribe_channels`].
     pub fn add_sink(&self, sink: Arc<dyn Sink>) -> bool {
-        if !self.sinks.add_sink(sink.clone()) {
-            return false;
-        }
-
-        // Add the sink to all existing channels.
-        for channel in self.channels.read().values() {
-            if channel.sinks.add_sink(sink.clone()) {
-                sink.add_channel(channel);
+        let sink_id = sink.id();
+        match self.sinks.write().entry(sink_id) {
+            Entry::Vacant(e) => {
+                if sink.auto_subscribe() {
+                    self.sub.subscribe_global(sink_id, sink.clone());
+                }
+                e.insert(sink);
+                true
             }
+            Entry::Occupied(_) => false,
         }
-
-        true
     }
 
     /// Removes a sink from the context.
-    pub fn remove_sink(&self, sink: &Arc<dyn Sink>) -> bool {
-        if !self.sinks.remove_sink(sink) {
-            return false;
+    pub fn remove_sink(&self, sink_id: SinkId) -> bool {
+        let mut sinks = self.sinks.write();
+        if sinks.remove(&sink_id).is_some() {
+            self.sub.remove_subscriber(&sink_id);
+            true
+        } else {
+            false
         }
+    }
 
-        // TODO this has a bug, if the same sink was added to a channel twice, via two different contexts,
-        // this will remove the sink from the channel, even although they're still associated via the other context.
-        // If we stored the contexts on the channel, and removed the contexts, it would fix it,
-        // But logging would be via an extra indirection to context (slower) and
-        // having it associated with the same sink twice would result in two log calls to the sink,
-        // which is a more serious bug.
-        // I think the solution should be to have both the contexts and the sinks on the channel.
-        // This also fixes the problems with Channel::close().
-        // FG-9893
-
-        // Remove the sink from all existing channels.
-        for channel in self.channels.read().values() {
-            if channel.sinks.remove_sink(sink) {
-                sink.remove_channel(channel);
-            }
+    /// Adds a sink subscription to the specified channels.
+    pub fn subscribe_channels(
+        &self,
+        sink_id: SinkId,
+        channel_ids: impl IntoIterator<Item = ChannelId>,
+    ) {
+        if let Some(sink) = self.sinks.read().get(&sink_id).cloned() {
+            self.sub.subscribe_channels(sink_id, sink, channel_ids);
         }
+    }
 
-        true
+    /// Removes a sink subscription from the specified channels.
+    pub fn unsubscribe_channels(
+        &self,
+        sink_id: SinkId,
+        channel_ids: impl IntoIterator<Item = ChannelId>,
+    ) {
+        self.sub.unsubscribe_channels(&sink_id, channel_ids);
+    }
+
+    /// Returns true if there's at least one sink subscribed to this channel.
+    pub fn has_subscribers(&self, channel_id: ChannelId) -> bool {
+        self.sub.has_subscribers(channel_id)
+    }
+
+    /// Returns the set of sinks that are subscribed to this channel.
+    pub fn get_subscribers(&self, channel_id: ChannelId) -> SubscriberVec<Arc<dyn Sink>> {
+        self.sub.get_subscribers(channel_id)
     }
 
     /// Removes all channels and sinks from the context.
     pub fn clear(&self) {
         let channels: HashMap<_, _> = std::mem::take(&mut self.channels.write());
-        self.sinks.for_each(|sink| {
+        let mut sinks = self.sinks.write();
+        for (_, sink) in sinks.drain() {
             for channel in channels.values() {
                 sink.remove_channel(channel);
-                channel.sinks.clear();
             }
-            Ok(())
-        });
-        self.sinks.clear();
+        }
+        self.sub.clear();
     }
 }
 
@@ -152,19 +167,18 @@ impl Drop for Context {
 
 #[cfg(test)]
 mod tests {
-    use crate::channel::ChannelId;
+    use crate::channel::{ChannelId, ERROR_LOGGING_MESSAGE};
     use crate::collection::collection;
     use crate::context::*;
-    use crate::log_sink_set::ERROR_LOGGING_MESSAGE;
     use crate::testutil::{ErrorSink, MockSink, RecordingSink};
     use crate::{nanoseconds_since_epoch, Channel, PartialMetadata, Schema};
     use std::sync::atomic::AtomicU32;
     use std::sync::Arc;
     use tracing_test::traced_test;
 
-    fn new_test_channel(id: u64) -> Arc<Channel> {
+    fn new_test_channel(ctx: &Arc<Context>, id: u64) -> Arc<Channel> {
         Arc::new(Channel {
-            sinks: LogSinkSet::new(),
+            context: Arc::downgrade(ctx),
             id: ChannelId::new(id),
             message_sequence: AtomicU32::new(1),
             topic: "topic".to_string(),
@@ -198,16 +212,13 @@ mod tests {
         assert!(ctx.add_sink(sink2.clone()));
 
         // Test removing a sink
-        let sink: Arc<dyn Sink> = sink;
-        assert!(ctx.remove_sink(&sink));
+        assert!(ctx.remove_sink(sink.id()));
 
         // Try to remove a sink that doesn't exist
-        let sink3: Arc<dyn Sink> = sink3;
-        assert!(!ctx.remove_sink(&sink3));
+        assert!(!ctx.remove_sink(sink3.id()));
 
         // Test removing the last sink
-        let sink2: Arc<dyn Sink> = sink2;
-        assert!(ctx.remove_sink(&sink2));
+        assert!(ctx.remove_sink(sink2.id()));
     }
 
     #[traced_test]
@@ -220,7 +231,7 @@ mod tests {
         assert!(ctx.add_sink(sink1.clone()));
         assert!(ctx.add_sink(sink2.clone()));
 
-        let channel = new_test_channel(1);
+        let channel = new_test_channel(&ctx, 1);
         ctx.add_channel(channel.clone()).unwrap();
         let msg = b"test_message";
 
@@ -264,7 +275,7 @@ mod tests {
         assert!(!ctx.add_sink(error_sink.clone()));
         assert!(ctx.add_sink(recording_sink.clone()));
 
-        let channel = new_test_channel(1);
+        let channel = new_test_channel(&ctx, 1);
         ctx.add_channel(channel.clone()).unwrap();
         let msg = b"test_message";
         let opts = PartialMetadata {
@@ -290,7 +301,8 @@ mod tests {
     #[traced_test]
     #[test]
     fn test_log_msg_no_sinks() {
-        let channel = Arc::new(new_test_channel(1));
+        let ctx = Context::new();
+        let channel = Arc::new(new_test_channel(&ctx, 1));
         let msg = b"test_message";
 
         channel.log(msg);

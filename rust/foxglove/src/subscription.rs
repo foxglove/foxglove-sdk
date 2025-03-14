@@ -1,7 +1,5 @@
 //! Channel subscription registry
 
-#![allow(dead_code)]
-
 use std::borrow::Borrow;
 use std::hash::Hash;
 use std::sync::Arc;

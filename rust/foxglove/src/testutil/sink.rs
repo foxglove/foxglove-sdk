@@ -32,6 +32,7 @@ pub struct LogCall {
 
 pub struct RecordingSink {
     id: SinkId,
+    auto_subscribe: bool,
     pub recorded: Mutex<Vec<LogCall>>,
 }
 
@@ -39,14 +40,24 @@ impl RecordingSink {
     pub fn new() -> Self {
         Self {
             id: SinkId::next(),
+            auto_subscribe: true,
             recorded: Mutex::new(Vec::new()),
         }
+    }
+
+    pub fn auto_subscribe(mut self, value: bool) -> Self {
+        self.auto_subscribe = value;
+        self
     }
 }
 
 impl Sink for RecordingSink {
     fn id(&self) -> SinkId {
         self.id
+    }
+
+    fn auto_subscribe(&self) -> bool {
+        self.auto_subscribe
     }
 
     fn log(&self, channel: &Channel, msg: &[u8], metadata: &Metadata) -> Result<(), FoxgloveError> {

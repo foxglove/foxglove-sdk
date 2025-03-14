@@ -121,16 +121,15 @@ impl<W: Write + Seek + Send> Sink for McapSink<W> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::log_sink_set::LogSinkSet;
-    use crate::{collection, Metadata, Schema};
+    use crate::{collection, Context, Metadata, Schema};
     use mcap::McapError;
     use std::path::Path;
     use std::sync::atomic::AtomicU32;
     use tempfile::NamedTempFile;
 
-    fn new_test_channel(id: u64, topic: String, name: String) -> Arc<Channel> {
+    fn new_test_channel(ctx: &Arc<Context>, id: u64, topic: String, name: String) -> Arc<Channel> {
         Arc::new(Channel {
-            sinks: LogSinkSet::new(),
+            context: Arc::downgrade(ctx),
             id: ChannelId::new(id),
             message_sequence: AtomicU32::new(1),
             topic,
@@ -165,8 +164,9 @@ mod tests {
     #[test]
     fn test_log_channels() {
         // Create two channels
-        let ch1 = new_test_channel(1, "foo".to_string(), "foo_schema".to_string());
-        let ch2 = new_test_channel(2, "bar".to_string(), "bar_schema".to_string());
+        let ctx = Context::new();
+        let ch1 = new_test_channel(&ctx, 1, "foo".to_string(), "foo_schema".to_string());
+        let ch2 = new_test_channel(&ctx, 2, "bar".to_string(), "bar_schema".to_string());
 
         // Generate a temporary file path without creating the file
         let temp_file = NamedTempFile::new().expect("create tempfile");

@@ -1,6 +1,5 @@
 use crate::channel::ChannelId;
 use crate::encode::TypedChannel;
-use crate::log_sink_set::LogSinkSet;
 use crate::{Channel, Context, Encode, FoxgloveError, Schema};
 use std::collections::BTreeMap;
 use std::sync::atomic::Ordering::Relaxed;
@@ -71,7 +70,7 @@ impl ChannelBuilder {
     pub fn build(self) -> Result<Arc<Channel>, FoxgloveError> {
         static CHANNEL_ID: AtomicU64 = AtomicU64::new(1);
         let channel = Arc::new(Channel {
-            sinks: LogSinkSet::new(),
+            context: Arc::downgrade(&self.context),
             id: ChannelId::new(CHANNEL_ID.fetch_add(1, Relaxed)),
             message_sequence: AtomicU32::new(1),
             topic: self.topic,
