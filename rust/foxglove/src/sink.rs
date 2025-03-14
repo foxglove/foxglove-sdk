@@ -10,7 +10,7 @@ pub struct SinkId(u64);
 impl SinkId {
     /// Allocates the next sink ID.
     pub fn next() -> Self {
-        static NEXT_ID: AtomicU64 = AtomicU64::new(0);
+        static NEXT_ID: AtomicU64 = AtomicU64::new(1);
         let id = NEXT_ID.fetch_add(1, Ordering::Relaxed);
         Self(id)
     }
