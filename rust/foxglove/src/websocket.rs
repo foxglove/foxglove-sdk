@@ -1,19 +1,5 @@
 //! Websocket functionality
 
-use crate::channel::ChannelId;
-use crate::cow_vec::CowVec;
-pub(crate) use crate::websocket::protocol::client::{
-    ClientChannel, ClientChannelId, ClientMessage, Subscription, SubscriptionId,
-};
-pub use crate::websocket::protocol::server::{
-    Parameter, ParameterType, ParameterValue, Status, StatusLevel,
-};
-use crate::{get_runtime_handle, Channel, Context, FoxgloveError, Metadata, Sink, SinkId};
-use bimap::BiHashMap;
-use bytes::{BufMut, Bytes, BytesMut};
-use flume::TrySendError;
-use futures_util::{stream::SplitSink, SinkExt, StreamExt};
-use serde::Serialize;
 use std::collections::hash_map::Entry;
 use std::collections::HashSet;
 use std::sync::atomic::Ordering::{AcqRel, Acquire, Release};
@@ -21,35 +7,44 @@ use std::sync::atomic::{AtomicBool, AtomicU16, AtomicU32};
 use std::sync::Weak;
 use std::time::{SystemTime, UNIX_EPOCH};
 use std::{collections::HashMap, net::SocketAddr, sync::Arc};
-use subscription::SubscriptionAggregator;
+
+use bimap::BiHashMap;
+use bytes::{BufMut, Bytes, BytesMut};
+use flume::TrySendError;
+use futures_util::{stream::SplitSink, SinkExt, StreamExt};
+use serde::Serialize;
 use thiserror::Error;
+use tokio::net::{TcpListener, TcpStream};
 use tokio::runtime::Handle;
-use tokio::{
-    net::{TcpListener, TcpStream},
-    sync::Mutex,
-};
-use tokio_tungstenite::{
-    tungstenite::{self, handshake::server, http::HeaderValue, Message},
-    WebSocketStream,
-};
+use tokio::sync::Mutex;
+use tokio_tungstenite::tungstenite::{self, handshake::server, http::HeaderValue, Message};
+use tokio_tungstenite::WebSocketStream;
 use tokio_util::sync::CancellationToken;
+
+use crate::channel::ChannelId;
+use crate::cow_vec::CowVec;
+use crate::{get_runtime_handle, Channel, Context, FoxgloveError, Metadata, Sink, SinkId};
 
 mod fetch_asset;
 pub use fetch_asset::{AssetHandler, AssetResponder};
 pub(crate) use fetch_asset::{AsyncAssetHandlerFn, BlockingAssetHandlerFn};
 mod connection_graph;
 mod protocol;
+pub(crate) use protocol::client::{
+    ClientChannel, ClientChannelId, ClientMessage, Subscription, SubscriptionId,
+};
+pub use protocol::server::{Parameter, ParameterType, ParameterValue, Status, StatusLevel};
 mod semaphore;
 pub mod service;
+use service::{CallId, Service, ServiceId, ServiceMap};
 mod subscription;
 pub use connection_graph::ConnectionGraph;
 pub(crate) use semaphore::{Semaphore, SemaphoreGuard};
+use subscription::SubscriptionAggregator;
 #[cfg(test)]
 mod tests;
 #[cfg(all(test, feature = "unstable"))]
 mod unstable_tests;
-
-use service::{CallId, Service, ServiceId, ServiceMap};
 
 /// A capability that a websocket server can support.
 #[derive(Debug, Serialize, Eq, PartialEq, Hash, Clone, Copy)]
