@@ -32,7 +32,7 @@ pub struct PyClientChannel {
     encoding: Py<PyString>,
     schema_name: Py<PyString>,
     schema_encoding: Option<Py<PyString>>,
-    schema: Option<Py<PyString>>,
+    schema: Option<Py<PyBytes>>,
 }
 
 /// A client connected to a running websocket server.
@@ -105,7 +105,7 @@ impl ServerListener for PyServerListener {
                 schema: channel
                     .schema
                     .as_ref()
-                    .map(|schema| PyString::new(py, schema.as_str()).into()),
+                    .map(|schema| PyBytes::new(py, schema.as_slice()).into()),
             };
 
             // client, channel

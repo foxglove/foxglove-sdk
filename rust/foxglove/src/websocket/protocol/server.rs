@@ -186,10 +186,10 @@ pub fn advertisement(channel: &Channel) -> Result<String, FoxgloveError> {
         .as_ref()
         .ok_or_else(|| FoxgloveError::SchemaRequired)?;
 
-    let schema_data = match schema.encoding.as_str() {
-        "protobuf" => BASE64_STANDARD.encode(&schema.data),
-        _ => String::from_utf8(schema.data.to_vec())
-            .map_err(|e| FoxgloveError::Unspecified(e.into()))?,
+    let schema_data = if super::is_known_binary_schema_encoding(&schema.encoding) {
+        BASE64_STANDARD.encode(&schema.data)
+    } else {
+        String::from_utf8(schema.data.to_vec()).map_err(|e| FoxgloveError::Unspecified(e.into()))?
     };
 
     Ok(json!({
