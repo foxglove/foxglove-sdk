@@ -1,47 +1,46 @@
-import tempfile
-import unittest
+import os
 from pathlib import Path
+from typing import Generator
 
+import pytest
 from foxglove import open_mcap
 from foxglove.channel import Channel
 
+chan = Channel("test", schema={"type": "object"})
 
-class TestMcap(unittest.TestCase):
-    chan: Channel
-    dir: tempfile.TemporaryDirectory
-    path: Path
 
-    @classmethod
-    def setUpClass(cls) -> None:
-        cls.chan = Channel("test", schema={"type": "object"})
+@pytest.fixture
+def tmp_mcap(tmpdir: os.PathLike[str]) -> Generator[Path, None, None]:
+    dir = Path(tmpdir)
+    mcap = dir / "test.mcap"
+    yield mcap
+    mcap.unlink()
+    dir.rmdir()
 
-    def setUp(self) -> None:
-        self.dir = tempfile.TemporaryDirectory()
-        self.path = Path(self.dir.name) / "test.mcap"
 
-    def tearDown(self) -> None:
-        self.dir.cleanup()
+def test_open_with_str(tmp_mcap: Path) -> None:
+    open_mcap(str(tmp_mcap))
 
-    def test_open_with_str(self) -> None:
-        open_mcap(str(self.path))
 
-    def test_overwrite(self) -> None:
-        self.path.touch()
-        with self.assertRaises(FileExistsError):
-            open_mcap(self.path)
-        open_mcap(self.path, allow_overwrite=True)
+def test_overwrite(tmp_mcap: Path) -> None:
+    tmp_mcap.touch()
+    with pytest.raises(FileExistsError):
+        open_mcap(tmp_mcap)
+    open_mcap(tmp_mcap, allow_overwrite=True)
 
-    def test_explicit_close(self) -> None:
-        mcap = open_mcap(self.path)
+
+def test_explicit_close(tmp_mcap: Path) -> None:
+    mcap = open_mcap(tmp_mcap)
+    for ii in range(20):
+        chan.log({"foo": ii})
+    size_before_close = tmp_mcap.stat().st_size
+    mcap.close()
+    assert tmp_mcap.stat().st_size > size_before_close
+
+
+def test_context_manager(tmp_mcap: Path) -> None:
+    with open_mcap(tmp_mcap):
         for ii in range(20):
-            self.chan.log({"foo": ii})
-        size_before_close = self.path.stat().st_size
-        mcap.close()
-        self.assertGreater(self.path.stat().st_size, size_before_close)
-
-    def test_context_manager(self) -> None:
-        with open_mcap(self.path):
-            for ii in range(20):
-                self.chan.log({"foo": ii})
-            size_before_close = self.path.stat().st_size
-        self.assertGreater(self.path.stat().st_size, size_before_close)
+            chan.log({"foo": ii})
+        size_before_close = tmp_mcap.stat().st_size
+    assert tmp_mcap.stat().st_size > size_before_close
