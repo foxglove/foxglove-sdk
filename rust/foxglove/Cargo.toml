@@ -11,6 +11,13 @@ default = []
 chrono = ["dep:chrono"]
 unstable = []
 
+[[bench]]
+name = "mcap_bench"
+harness = false
+[[bench]]
+name = "websocketserver_bench"
+harness = false
+
 [lints]
 workspace = true
 
@@ -45,3 +52,4 @@ env_logger = "0.11.5"
 futures-util = "0.3.31"
 tempfile = "3.15.0"
 tracing-test = "0.2.5"
+divan = "0.1.17"

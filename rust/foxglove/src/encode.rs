@@ -1,4 +1,4 @@
-use crate::{Channel, ChannelBuilder, FoxgloveError, PartialMetadata, Schema};
+use crate::{channel::ChannelId, Channel, ChannelBuilder, FoxgloveError, PartialMetadata, Schema};
 use bytes::BufMut;
 use schemars::{gen::SchemaSettings, JsonSchema};
 use serde::Serialize;
@@ -79,6 +79,11 @@ impl<T: Encode> TypedChannel<T> {
     /// Returns the topic name of the channel.
     pub fn topic(&self) -> &str {
         &self.inner.topic
+    }
+
+    /// Returns the channel ID.
+    pub fn id(&self) -> ChannelId {
+        self.inner.id
     }
 }
 
