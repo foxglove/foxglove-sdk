@@ -248,8 +248,7 @@ impl TryFrom<JsonClientChannel> for ClientChannel {
                 if channel
                     .schema_encoding
                     .as_ref()
-                    .map(|enc| is_known_binary_schema_encoding(enc.as_str()))
-                    .unwrap_or(false)
+                    .is_some_and(is_known_binary_schema_encoding)
                 {
                     BASE64_STANDARD.decode(schema).map_err(ParseError::Base64)
                 } else {
