@@ -3,7 +3,7 @@
 #![warn(unsafe_attr_outside_unsafe)]
 
 use bitflags::bitflags;
-use std::ffi::{c_char, c_void, CStr};
+use std::ffi::{c_char, c_void, CStr, CString};
 use std::mem::ManuallyDrop;
 use std::sync::Arc;
 
@@ -54,6 +54,19 @@ pub struct FoxgloveServerOptions<'a> {
     pub port: u16,
     pub callbacks: Option<&'a FoxgloveServerCallbacks>,
     pub capabilities: FoxgloveServerCapability,
+    pub supported_encodings: *const *const c_char,
+    pub supported_encodings_count: usize,
+}
+
+#[repr(C)]
+pub struct FoxgloveClientChannel<'a> {
+    pub id: u32,
+    pub topic: &'a c_char,
+    pub encoding: &'a c_char,
+    pub schema_name: &'a c_char,
+    pub schema_encoding: *const c_char,
+    pub schema: *const c_void,
+    pub schema_len: usize,
 }
 
 #[repr(C)]
@@ -63,9 +76,8 @@ pub struct FoxgloveServerCallbacks {
     pub context: *const c_void,
     pub on_subscribe: Option<unsafe extern "C" fn(channel_id: u64, context: *const c_void)>,
     pub on_unsubscribe: Option<unsafe extern "C" fn(channel_id: u64, context: *const c_void)>,
-    pub on_client_advertise: Option<
-        unsafe extern "C" fn(client_channel_id: u32, topic: *const c_char, context: *const c_void),
-    >,
+    pub on_client_advertise:
+        Option<unsafe extern "C" fn(channel: *const FoxgloveClientChannel, context: *const c_void)>,
     pub on_message_data: Option<
         unsafe extern "C" fn(
             client_channel_id: u32,
@@ -88,7 +100,6 @@ unsafe impl Sync for FoxgloveServerCallbacks {}
 
 pub struct FoxgloveWebSocketServer(Option<foxglove::WebSocketServerBlockingHandle>);
 
-use foxglove::websocket::ServerListener;
 // cbindgen does not actually generate a declaration for this, so we manually write one in
 // after_includes
 pub use foxglove::Channel as FoxgloveChannel;
@@ -122,6 +133,23 @@ pub unsafe extern "C" fn foxglove_server_start(
         .name(name)
         .capabilities(options.capabilities.iter_websocket_capabilities())
         .bind(host, options.port);
+    if options.supported_encodings_count > 0 {
+        server = server.supported_encodings(
+            unsafe {
+                std::slice::from_raw_parts(
+                    options.supported_encodings,
+                    options.supported_encodings_count,
+                )
+            }
+            .iter()
+            .map(|&enc| {
+                assert!(!enc.is_null());
+                unsafe { CStr::from_ptr(enc) }
+                    .to_str()
+                    .expect("encoding is invalid")
+            }),
+        );
+    }
     if let Some(callbacks) = options.callbacks {
         server = server.listener(Arc::new(callbacks.clone()))
     }
@@ -255,7 +283,7 @@ pub unsafe extern "C" fn foxglove_channel_log(
     );
 }
 
-impl ServerListener for FoxgloveServerCallbacks {
+impl foxglove::websocket::ServerListener for FoxgloveServerCallbacks {
     fn on_subscribe(
         &self,
         _client: foxglove::websocket::Client,
@@ -279,29 +307,50 @@ impl ServerListener for FoxgloveServerCallbacks {
     fn on_client_advertise(
         &self,
         _client: foxglove::websocket::Client,
-        channel: foxglove::websocket::ClientChannelView,
+        channel: &foxglove::websocket::ClientChannel,
     ) {
-        if let Some(on_client_advertise) = self.on_client_advertise {
-            unsafe {
-                on_client_advertise(
-                    u32::from(channel.id()),
-                    channel.topic() as *const str as *const c_char,
-                    self.context,
-                )
-            };
-        }
+        let Some(on_client_advertise) = self.on_client_advertise else {
+            return;
+        };
+        let topic = CString::new(channel.topic.clone()).unwrap();
+        let encoding = CString::new(channel.encoding.clone()).unwrap();
+        let schema_name = CString::new(channel.schema_name.clone()).unwrap();
+        let schema_encoding = channel
+            .schema_encoding
+            .as_ref()
+            .map(|enc| CString::new(enc.clone()).unwrap());
+        let c_channel = FoxgloveClientChannel {
+            id: channel.id.into(),
+            topic: unsafe { &*topic.as_ptr() },
+            encoding: unsafe { &*encoding.as_ptr() },
+            schema_name: unsafe { &*schema_name.as_ptr() },
+            schema_encoding: schema_encoding
+                .map(|enc| enc.as_ptr())
+                .unwrap_or(std::ptr::null()),
+            schema: channel
+                .schema
+                .as_ref()
+                .map(|schema| schema.as_ptr() as *const c_void)
+                .unwrap_or(std::ptr::null()),
+            schema_len: channel
+                .schema
+                .as_ref()
+                .map(|schema| schema.len())
+                .unwrap_or(0),
+        };
+        unsafe { on_client_advertise(&c_channel, self.context) };
     }
 
     fn on_message_data(
         &self,
         _client: foxglove::websocket::Client,
-        channel: foxglove::websocket::ClientChannelView,
+        channel: &foxglove::websocket::ClientChannel,
         payload: &[u8],
     ) {
         if let Some(on_message_data) = self.on_message_data {
             unsafe {
                 on_message_data(
-                    u32::from(channel.id()),
+                    channel.id.into(),
                     payload.as_ptr(),
                     payload.len(),
                     self.context,
@@ -313,10 +362,10 @@ impl ServerListener for FoxgloveServerCallbacks {
     fn on_client_unadvertise(
         &self,
         _client: foxglove::websocket::Client,
-        channel: foxglove::websocket::ClientChannelView,
+        channel: &foxglove::websocket::ClientChannel,
     ) {
         if let Some(on_client_unadvertise) = self.on_client_unadvertise {
-            unsafe { on_client_unadvertise(u32::from(channel.id()), self.context) };
+            unsafe { on_client_unadvertise(channel.id.into(), self.context) };
         }
     }
 }

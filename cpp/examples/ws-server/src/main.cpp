@@ -26,11 +26,35 @@ int main(int argc, const char* argv[]) {
   options.name = "ws-demo-cpp";
   options.host = "127.0.0.1";
   options.port = 8765;
+  options.capabilities = foxglove::WebSocketServerCapabilities::ClientPublish;
+  options.supportedEncodings = {"json"};
   options.callbacks.onSubscribe = [](uint64_t channel_id) {
     std::cerr << "Subscribed to channel " << channel_id << '\n';
   };
   options.callbacks.onUnsubscribe = [](uint64_t channel_id) {
     std::cerr << "Unsubscribed from channel " << channel_id << '\n';
+  };
+  options.callbacks.onClientAdvertise = [](const foxglove::ClientChannel& channel) {
+    std::cerr << "Client advertised channel:\n";
+    std::cerr << "  ID: " << channel.id << '\n';
+    std::cerr << "  Topic: " << channel.topic << '\n';
+    std::cerr << "  Encoding: " << channel.encoding << '\n';
+    std::cerr << "  Schema name: " << channel.schemaName << '\n';
+    std::cerr << "  Schema encoding: "
+              << (!channel.schemaEncoding.empty() ? channel.schemaEncoding : "(none)") << '\n';
+    std::cerr << "  Schema: "
+              << (channel.schema != nullptr
+                    ? std::string(reinterpret_cast<const char*>(channel.schema), channel.schemaLen)
+                    : "(none)")
+              << '\n';
+  };
+  options.callbacks.onMessageData =
+    [](uint32_t client_channel_id, const std::byte* data, size_t data_len) {
+      std::cerr << "Client published on channel " << client_channel_id << ": "
+                << std::string(reinterpret_cast<const char*>(data), data_len) << '\n';
+    };
+  options.callbacks.onClientUnadvertise = [](uint32_t client_channel_id) {
+    std::cerr << "Client unadvertised channel " << client_channel_id << '\n';
   };
   foxglove::WebSocketServer server{options};
   std::cerr << "Server listening on port " << server.port() << '\n';

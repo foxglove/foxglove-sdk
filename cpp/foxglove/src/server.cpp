@@ -1,6 +1,7 @@
 #include <foxglove-c/foxglove-c.h>
 #include <foxglove/server.hpp>
 
+#include <iostream>
 #include <type_traits>
 
 namespace foxglove {
@@ -23,6 +24,42 @@ WebSocketServer::WebSocketServer(const WebSocketServerOptions& options)
       (reinterpret_cast<const WebSocketServer*>(context))->_callbacks.onUnsubscribe(channel_id);
     };
   }
+  if (options.callbacks.onClientAdvertise) {
+    hasAnyCallbacks = true;
+    cCallbacks.on_client_advertise = [](
+                                       const foxglove_client_channel* channel, const void* context
+                                     ) {
+      ClientChannel cppChannel = {
+        channel->id,
+        channel->topic,
+        channel->encoding,
+        channel->schema_name,
+        channel->schema_encoding == nullptr ? std::string_view{} : channel->schema_encoding,
+        reinterpret_cast<const std::byte*>(channel->schema),
+        channel->schema_len
+      };
+      (reinterpret_cast<const WebSocketServer*>(context))->_callbacks.onClientAdvertise(cppChannel);
+    };
+  }
+  if (options.callbacks.onMessageData) {
+    hasAnyCallbacks = true;
+    cCallbacks.on_message_data =
+      [](
+        uint32_t client_channel_id, const uint8_t* payload, size_t payload_len, const void* context
+      ) {
+        (reinterpret_cast<const WebSocketServer*>(context))
+          ->_callbacks.onMessageData(
+            client_channel_id, reinterpret_cast<const std::byte*>(payload), payload_len
+          );
+      };
+  }
+  if (options.callbacks.onClientUnadvertise) {
+    hasAnyCallbacks = true;
+    cCallbacks.on_client_unadvertise = [](uint32_t client_channel_id, const void* context) {
+      (reinterpret_cast<const WebSocketServer*>(context))
+        ->_callbacks.onClientUnadvertise(client_channel_id);
+    };
+  }
 
   foxglove_server_options cOptions = {};
   cOptions.name = options.name.c_str();
@@ -31,6 +68,13 @@ WebSocketServer::WebSocketServer(const WebSocketServerOptions& options)
   cOptions.callbacks = hasAnyCallbacks ? &cCallbacks : nullptr;
   cOptions.capabilities.bits =
     static_cast<std::underlying_type_t<decltype(options.capabilities)>>(options.capabilities);
+  std::vector<const char*> supportedEncodings;
+  supportedEncodings.reserve(options.supportedEncodings.size());
+  for (const auto& encoding : options.supportedEncodings) {
+    supportedEncodings.push_back(encoding.c_str());
+  }
+  cOptions.supported_encodings = supportedEncodings.data();
+  cOptions.supported_encodings_count = supportedEncodings.size();
   _impl.reset(foxglove_server_start(&cOptions));
 }
 

@@ -14,14 +14,12 @@ header = """
 
 usize_is_size_t = true
 
+# Note: cbindgen applies the nonnull attribute to struct members and function params, but clang only
+# allows it on function params, so we can't actually use it, but can keep it as a hint
 after_includes = """
 
 #ifndef FOXGLOVE_NONNULL
-#if defined(__clang__)
-#define FOXGLOVE_NONNULL __attribute__((nonnull))
-#else
 #define FOXGLOVE_NONNULL
-#endif
 #endif
 
 
@@ -40,3 +38,5 @@ FoxgloveChannel = "foxglove_channel"
 FoxgloveSchema = "foxglove_schema"
 FoxgloveServerCallbacks = "foxglove_server_callbacks"
 FoxgloveServerOptions = "foxglove_server_options"
+FoxgloveServerCapability = "foxglove_server_capability"
+FoxgloveClientChannel = "foxglove_client_channel"

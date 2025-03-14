@@ -8,6 +8,7 @@ Checks:
   - concurrency-*
   - cppcoreguidelines-*
   - -cppcoreguidelines-avoid-magic-numbers
+  - -cppcoreguidelines-pro-bounds-pointer-arithmetic
   - -cppcoreguidelines-pro-type-reinterpret-cast
   - hicpp-*
   - modernize-*

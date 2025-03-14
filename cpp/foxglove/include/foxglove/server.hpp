@@ -9,6 +9,16 @@ struct foxglove_websocket_server;
 
 namespace foxglove {
 
+struct ClientChannel {
+  uint32_t id;
+  std::string_view topic;
+  std::string_view encoding;
+  std::string_view schemaName;
+  std::string_view schemaEncoding;
+  const std::byte* schema;
+  size_t schemaLen;
+};
+
 enum class WebSocketServerCapabilities : uint8_t {
   /// Allow clients to advertise channels to send data messages to the server.
   ClientPublish = 1 << 0,
@@ -26,9 +36,25 @@ enum class WebSocketServerCapabilities : uint8_t {
   Services = 1 << 4,
 };
 
+inline WebSocketServerCapabilities operator|(
+  WebSocketServerCapabilities a, WebSocketServerCapabilities b
+) {
+  return WebSocketServerCapabilities(uint8_t(a) | uint8_t(b));
+}
+
+inline WebSocketServerCapabilities operator&(
+  WebSocketServerCapabilities a, WebSocketServerCapabilities b
+) {
+  return WebSocketServerCapabilities(uint8_t(a) & uint8_t(b));
+}
+
 struct WebSocketServerCallbacks {
-  std::function<void(uint64_t channel_id)> onSubscribe;
-  std::function<void(uint64_t channel_id)> onUnsubscribe;
+  std::function<void(uint64_t channelId)> onSubscribe;
+  std::function<void(uint64_t channelId)> onUnsubscribe;
+  std::function<void(const ClientChannel& channel)> onClientAdvertise;
+  std::function<void(uint32_t clientChannelId, const std::byte* data, size_t dataLen)>
+    onMessageData;
+  std::function<void(uint32_t clientChannelId)> onClientUnadvertise;
 };
 
 struct WebSocketServerOptions {
@@ -37,6 +63,7 @@ struct WebSocketServerOptions {
   uint16_t port;
   WebSocketServerCallbacks callbacks;
   WebSocketServerCapabilities capabilities = WebSocketServerCapabilities(0);
+  std::vector<std::string> supportedEncodings;
 };
 
 class WebSocketServer final {
