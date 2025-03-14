@@ -2,7 +2,7 @@ use crate::{errors::PyFoxgloveError, PySchema};
 use bytes::Bytes;
 use foxglove::{
     websocket::{
-        AssetHandler, ChannelView, Client, ClientChannelView, ServerListener, Status, StatusLevel,
+        AssetHandler, ChannelView, Client, ClientChannel, ServerListener, Status, StatusLevel,
     },
     WebSocketServer, WebSocketServerBlockingHandle,
 };
@@ -76,32 +76,35 @@ impl ServerListener for PyServerListener {
     }
 
     /// Callback invoked when a client advertises a client channel.
-    fn on_client_advertise(&self, client: Client, channel: ClientChannelView) {
-        let channel_id = channel.id().into();
-        self.call_client_channel_method("on_client_advertise", client, channel_id, channel.topic());
+    fn on_client_advertise(&self, client: Client, channel: &ClientChannel) {
+        self.call_client_channel_method(
+            "on_client_advertise",
+            client,
+            channel.id.into(),
+            channel.topic.as_str(),
+        );
     }
 
     /// Callback invoked when a client unadvertises a client channel.
-    fn on_client_unadvertise(&self, client: Client, channel: ClientChannelView) {
-        let channel_id = channel.id().into();
+    fn on_client_unadvertise(&self, client: Client, channel: &ClientChannel) {
         self.call_client_channel_method(
             "on_client_unadvertise",
             client,
-            channel_id,
-            channel.topic(),
+            channel.id.into(),
+            channel.topic.as_str(),
         );
     }
 
     /// Callback invoked when a client message is received.
-    fn on_message_data(&self, client: Client, channel: ClientChannelView, payload: &[u8]) {
+    fn on_message_data(&self, client: Client, channel: &ClientChannel, payload: &[u8]) {
         let client_info = PyClient {
             id: client.id().into(),
         };
 
         let result: PyResult<()> = Python::with_gil(|py| {
             let channel_view = PyChannelView {
-                id: channel.id().into(),
-                topic: PyString::new(py, channel.topic()).into(),
+                id: channel.id.into(),
+                topic: PyString::new(py, channel.topic.as_str()).into(),
             };
 
             // client, channel, data

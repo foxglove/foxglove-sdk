@@ -2,9 +2,8 @@
 
 use crate::channel::ChannelId;
 use crate::cow_vec::CowVec;
-pub(crate) use crate::websocket::protocol::client::{
-    ClientChannel, ClientChannelId, ClientMessage, Subscription, SubscriptionId,
-};
+pub use crate::websocket::protocol::client::{ClientChannel, ClientChannelId};
+pub(crate) use crate::websocket::protocol::client::{ClientMessage, Subscription, SubscriptionId};
 pub use crate::websocket::protocol::server::{
     Parameter, ParameterType, ParameterValue, Status, StatusLevel,
 };
@@ -121,25 +120,6 @@ impl Client {
     }
 }
 
-/// Information about a client channel.
-#[derive(Debug)]
-pub struct ClientChannelView<'a> {
-    id: ClientChannelId,
-    topic: &'a str,
-}
-
-impl ClientChannelView<'_> {
-    /// Returns the client channel ID.
-    pub fn id(&self) -> ClientChannelId {
-        self.id
-    }
-
-    /// Returns the topic of the client channel.
-    pub fn topic(&self) -> &str {
-        self.topic
-    }
-}
-
 /// Information about a channel.
 #[derive(Debug)]
 pub struct ChannelView<'a> {
@@ -249,13 +229,7 @@ pub(crate) struct Server {
 /// [`tokio::task::spawn_blocking`]).
 pub trait ServerListener: Send + Sync {
     /// Callback invoked when a client message is received.
-    fn on_message_data(
-        &self,
-        _client: Client,
-        _client_channel: ClientChannelView,
-        _payload: &[u8],
-    ) {
-    }
+    fn on_message_data(&self, _client: Client, _client_channel: &ClientChannel, _payload: &[u8]) {}
     /// Callback invoked when a client subscribes to a channel.
     /// Only invoked if the channel is associated with the server and isn't already subscribed to by the client.
     fn on_subscribe(&self, _client: Client, _channel: ChannelView) {}
@@ -263,9 +237,9 @@ pub trait ServerListener: Send + Sync {
     /// Only invoked for channels that had an active subscription from the client.
     fn on_unsubscribe(&self, _client: Client, _channel: ChannelView) {}
     /// Callback invoked when a client advertises a client channel. Requires [`Capability::ClientPublish`].
-    fn on_client_advertise(&self, _client: Client, _channel: ClientChannelView) {}
+    fn on_client_advertise(&self, _client: Client, _channel: &ClientChannel) {}
     /// Callback invoked when a client unadvertises a client channel. Requires [`Capability::ClientPublish`].
-    fn on_client_unadvertise(&self, _client: Client, _channel: ClientChannelView) {}
+    fn on_client_unadvertise(&self, _client: Client, _channel: &ClientChannel) {}
     /// Callback invoked when a client requests parameters. Requires [`Capability::Parameters`].
     /// Should return the named paramters, or all paramters if param_names is empty.
     fn on_get_parameters(
@@ -478,14 +452,7 @@ impl ConnectedClient {
         };
         // Call the handler after releasing the advertised_channels lock
         if let Some(handler) = self.server_listener.as_ref() {
-            handler.on_message_data(
-                Client::new(self),
-                ClientChannelView {
-                    id: client_channel.id,
-                    topic: &client_channel.topic,
-                },
-                &payload,
-            );
+            handler.on_message_data(Client::new(self), &client_channel, &payload);
         }
     }
 
@@ -512,14 +479,8 @@ impl ConnectedClient {
         }
         // Call the handler after releasing the advertised_channels lock
         if let Some(handler) = self.server_listener.as_ref() {
-            for (id, client_channel) in channel_ids.iter().copied().zip(client_channels) {
-                handler.on_client_unadvertise(
-                    Client::new(self),
-                    ClientChannelView {
-                        id,
-                        topic: &client_channel.topic,
-                    },
-                );
+            for client_channel in client_channels {
+                handler.on_client_unadvertise(Client::new(self), &client_channel);
             }
         }
     }
@@ -551,13 +512,7 @@ impl ConnectedClient {
 
             // Call the handler after releasing the advertised_channels lock
             if let Some(handler) = self.server_listener.as_ref() {
-                handler.on_client_advertise(
-                    Client::new(self),
-                    ClientChannelView {
-                        id: client_channel.id,
-                        topic: &client_channel.topic,
-                    },
-                );
+                handler.on_client_advertise(Client::new(self), &client_channel);
             }
         }
     }
