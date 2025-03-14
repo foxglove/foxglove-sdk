@@ -1,6 +1,6 @@
 use errors::PyFoxgloveError;
 use foxglove::{
-    Channel, ChannelBuilder, LogContext, McapWriter, McapWriterHandle, PartialMetadata, Schema,
+    Channel, ChannelBuilder, Context, McapWriter, McapWriterHandle, PartialMetadata, Schema,
 };
 use generated::channels;
 use generated::schemas;
@@ -176,7 +176,7 @@ fn open_mcap(path: PathBuf, allow_overwrite: bool) -> PyResult<PyMcapWriter> {
 
 #[pyfunction]
 fn get_channel_for_topic(topic: &str) -> PyResult<Option<BaseChannel>> {
-    let channel = LogContext::global().get_channel_by_topic(topic);
+    let channel = Context::get_default().get_channel_by_topic(topic);
     Ok(channel.map(|chan| BaseChannel(Some(chan))))
 }
 

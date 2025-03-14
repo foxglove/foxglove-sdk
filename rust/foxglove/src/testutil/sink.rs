@@ -1,11 +1,11 @@
 use crate::channel::ChannelId;
-use crate::log_sink::LogSink;
+use crate::sink::Sink;
 use crate::{Channel, FoxgloveError, Metadata};
 use parking_lot::Mutex;
 
 pub struct MockSink;
 
-impl LogSink for MockSink {
+impl Sink for MockSink {
     fn log(
         &self,
         _channel: &Channel,
@@ -34,7 +34,7 @@ impl RecordingSink {
     }
 }
 
-impl LogSink for RecordingSink {
+impl Sink for RecordingSink {
     fn log(&self, channel: &Channel, msg: &[u8], metadata: &Metadata) -> Result<(), FoxgloveError> {
         let mut recorded = self.recorded.lock();
         recorded.push(LogCall {
@@ -57,7 +57,7 @@ impl std::fmt::Display for StrError {
     }
 }
 
-impl LogSink for ErrorSink {
+impl Sink for ErrorSink {
     fn log(
         &self,
         _channel: &Channel,
