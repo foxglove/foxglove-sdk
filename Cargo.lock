@@ -698,6 +698,7 @@ version = "0.3.0"
 dependencies = [
  "cbindgen",
  "foxglove",
+ "mcap",
 ]
 
 [[package]]

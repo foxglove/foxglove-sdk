@@ -27,6 +27,8 @@
 typedef struct foxglove_channel foxglove_channel;
 
 
+typedef struct foxglove_mcap_writer foxglove_mcap_writer;
+
 typedef struct foxglove_websocket_server foxglove_websocket_server;
 
 typedef struct foxglove_server_callbacks {
@@ -44,6 +46,28 @@ typedef struct foxglove_server_options {
   uint16_t port;
   const struct foxglove_server_callbacks *callbacks;
 } foxglove_server_options;
+
+typedef struct foxglove_mcap_options {
+  const char *path;
+  size_t path_len;
+  bool create;
+  bool truncate;
+  const char *profile;
+  size_t profile_len;
+  const char *library;
+  size_t library_len;
+  uint64_t chunk_size;
+  bool use_chunks;
+  bool disable_seeking;
+  bool emit_statistics;
+  bool emit_summary_offsets;
+  bool emit_message_indexes;
+  bool emit_chunk_indexes;
+  bool emit_attachment_indexes;
+  bool emit_metadata_indexes;
+  bool repeat_channels;
+  bool repeat_schemas;
+} foxglove_mcap_options;
 
 typedef struct foxglove_schema {
   const char *name;
@@ -65,6 +89,30 @@ extern "C" {
  * `name` and `host` must be null-terminated strings with valid UTF8.
  */
 struct foxglove_websocket_server *foxglove_server_start(const struct foxglove_server_options *FOXGLOVE_NONNULL options);
+
+/**
+ * Create or open an MCAP file for writing. Must later be freed with `foxglove_mcap_close`.
+ *
+ * # Safety
+ * `path`, `profile`, and `library` must be valid UTF8.
+ */
+struct foxglove_mcap_writer *foxglove_mcap_open(const struct foxglove_mcap_options *FOXGLOVE_NONNULL options);
+
+/**
+ * Close an MCAP file writer created via `foxglove_mcap_open`.
+ *
+ * # Safety
+ * `writer` must be a valid pointer to a `FoxgloveMcapWriter` created via `foxglove_mcap_open`.
+ */
+void foxglove_mcap_close(struct foxglove_mcap_writer *writer);
+
+/**
+ * Free an MCAP file writer created via `foxglove_mcap_open`.
+ *
+ * # Safety
+ * `writer` must be a valid pointer to a `FoxgloveMcapWriter` created via `foxglove_mcap_open`.
+ */
+void foxglove_mcap_free(struct foxglove_mcap_writer *writer);
 
 /**
  * Free a server created via `foxglove_server_start`.

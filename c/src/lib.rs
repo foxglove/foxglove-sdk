@@ -2,7 +2,10 @@
 #![warn(unsafe_op_in_unsafe_fn)]
 #![warn(unsafe_attr_outside_unsafe)]
 
+use mcap::WriteOptions;
 use std::ffi::{c_char, c_void, CStr};
+use std::fs::File;
+use std::io::BufWriter;
 use std::mem::ManuallyDrop;
 use std::sync::Arc;
 
@@ -75,6 +78,119 @@ pub unsafe extern "C" fn foxglove_server_start(
     Box::into_raw(Box::new(FoxgloveWebSocketServer(Some(
         server.start_blocking().expect("Server failed to start"),
     ))))
+}
+
+#[repr(C)]
+pub struct FoxgloveMcapOptions {
+    pub path: *const c_char,
+    pub path_len: usize,
+    pub create: bool,
+    pub truncate: bool,
+    // pub compression: Option<Compression>,
+    pub profile: *const c_char,
+    pub profile_len: usize,
+    pub library: *const c_char,
+    pub library_len: usize,
+    pub chunk_size: u64,
+    pub use_chunks: bool,
+    pub disable_seeking: bool,
+    pub emit_statistics: bool,
+    pub emit_summary_offsets: bool,
+    pub emit_message_indexes: bool,
+    pub emit_chunk_indexes: bool,
+    pub emit_attachment_indexes: bool,
+    pub emit_metadata_indexes: bool,
+    pub repeat_channels: bool,
+    pub repeat_schemas: bool,
+}
+
+impl FoxgloveMcapOptions {
+    unsafe fn to_write_options(&self) -> WriteOptions {
+        let profile = std::str::from_utf8(unsafe {
+            std::slice::from_raw_parts(self.profile as *const u8, self.profile_len)
+        })
+        .expect("profile is invalid");
+        let library = std::str::from_utf8(unsafe {
+            std::slice::from_raw_parts(self.library as *const u8, self.library_len)
+        })
+        .expect("library is invalid");
+
+        WriteOptions::default()
+            .profile(profile)
+            .library(library)
+            .chunk_size(Some(self.chunk_size).filter(|size| *size > 0))
+            .use_chunks(self.use_chunks)
+            .disable_seeking(self.disable_seeking)
+            .emit_statistics(self.emit_statistics)
+            .emit_summary_offsets(self.emit_summary_offsets)
+            .emit_message_indexes(self.emit_message_indexes)
+            .emit_chunk_indexes(self.emit_chunk_indexes)
+            .emit_attachment_indexes(self.emit_attachment_indexes)
+            .emit_metadata_indexes(self.emit_metadata_indexes)
+            .repeat_channels(self.repeat_channels)
+            .repeat_schemas(self.repeat_schemas)
+    }
+}
+
+pub struct FoxgloveMcapWriter(Option<foxglove::McapWriterHandle<BufWriter<File>>>);
+
+/// Create or open an MCAP file for writing. Must later be freed with `foxglove_mcap_close`.
+///
+/// # Safety
+/// `path`, `profile`, and `library` must be valid UTF8.
+#[unsafe(no_mangle)]
+#[must_use]
+pub unsafe extern "C" fn foxglove_mcap_open(
+    options: &FoxgloveMcapOptions,
+) -> *mut FoxgloveMcapWriter {
+    let path = std::str::from_utf8(unsafe {
+        std::slice::from_raw_parts(options.path as *const u8, options.path_len)
+    })
+    .expect("path is invalid");
+
+    // Safety: this is safe if the options struct contains valid strings
+    let mcap_options = unsafe { options.to_write_options() };
+
+    let file = File::options()
+        .write(true)
+        .create(options.create)
+        .truncate(options.truncate)
+        .open(path)
+        .expect("Failed to open file");
+    let writer = foxglove::McapWriter::with_options(mcap_options)
+        .create(BufWriter::new(file))
+        .expect("Failed to create writer");
+    Box::into_raw(Box::new(FoxgloveMcapWriter(Some(writer))))
+}
+
+/// Close an MCAP file writer created via `foxglove_mcap_open`.
+///
+/// # Safety
+/// `writer` must be a valid pointer to a `FoxgloveMcapWriter` created via `foxglove_mcap_open`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_mcap_close(writer: Option<&mut FoxgloveMcapWriter>) {
+    let Some(writer) = writer else {
+        return;
+    };
+    if let Some(handle) = writer.0.take() {
+        handle.close().expect("Failed to close writer");
+    }
+}
+
+/// Free an MCAP file writer created via `foxglove_mcap_open`.
+///
+/// # Safety
+/// `writer` must be a valid pointer to a `FoxgloveMcapWriter` created via `foxglove_mcap_open`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_mcap_free(writer: Option<&mut FoxgloveMcapWriter>) {
+    let Some(writer) = writer else {
+        return;
+    };
+    if let Some(handle) = writer.0.take() {
+        handle.close().expect("Failed to close writer");
+    }
+    // Safety: undoes the into_raw in foxglove_mcap_open
+    drop(unsafe { Box::from_raw(writer) });
 }
 
 /// Free a server created via `foxglove_server_start`.
