@@ -24,6 +24,17 @@ pub struct PyChannelView {
     topic: Py<PyString>,
 }
 
+/// Information about a client channel.
+#[pyclass(name = "ClientChannel", module = "foxglove", get_all)]
+pub struct PyClientChannel {
+    id: u32,
+    topic: Py<PyString>,
+    encoding: Py<PyString>,
+    schema_name: Py<PyString>,
+    schema_encoding: Option<Py<PyString>>,
+    schema: Option<Py<PyString>>,
+}
+
 /// A client connected to a running websocket server.
 #[pyclass(name = "Client", module = "foxglove")]
 pub struct PyClient {
@@ -77,22 +88,59 @@ impl ServerListener for PyServerListener {
 
     /// Callback invoked when a client advertises a client channel.
     fn on_client_advertise(&self, client: Client, channel: &ClientChannel) {
-        self.call_client_channel_method(
-            "on_client_advertise",
-            client,
-            channel.id.into(),
-            channel.topic.as_str(),
-        );
+        let client_info = PyClient {
+            id: client.id().into(),
+        };
+
+        let result: PyResult<()> = Python::with_gil(|py| {
+            let py_channel = PyClientChannel {
+                id: channel.id.into(),
+                topic: PyString::new(py, channel.topic.as_str()).into(),
+                encoding: PyString::new(py, channel.encoding.as_str()).into(),
+                schema_name: PyString::new(py, channel.schema_name.as_str()).into(),
+                schema_encoding: channel
+                    .schema_encoding
+                    .as_ref()
+                    .map(|enc| PyString::new(py, enc.as_str()).into()),
+                schema: channel
+                    .schema
+                    .as_ref()
+                    .map(|schema| PyString::new(py, schema.as_str()).into()),
+            };
+
+            // client, channel
+            let args = (client_info, py_channel);
+            self.listener
+                .bind(py)
+                .call_method("on_client_advertise", args, None)?;
+
+            Ok(())
+        });
+
+        if let Err(err) = result {
+            tracing::error!("Callback failed: {}", err.to_string());
+        }
     }
 
     /// Callback invoked when a client unadvertises a client channel.
     fn on_client_unadvertise(&self, client: Client, channel: &ClientChannel) {
-        self.call_client_channel_method(
-            "on_client_unadvertise",
-            client,
-            channel.id.into(),
-            channel.topic.as_str(),
-        );
+        let client_info = PyClient {
+            id: client.id().into(),
+        };
+
+        let result: PyResult<()> = Python::with_gil(|py| {
+            // client, client_channel_id
+            let args = (client_info, u32::from(channel.id));
+            self.listener
+                .bind(py)
+                .call_method("on_client_unadvertise", args, None)?;
+
+            Ok(())
+        });
+
+        if let Err(err) = result {
+            tracing::error!("Callback failed: {}", err.to_string());
+        }
     }
 
     /// Callback invoked when a client message is received.
@@ -102,13 +150,12 @@ impl ServerListener for PyServerListener {
         };
 
         let result: PyResult<()> = Python::with_gil(|py| {
-            let channel_view = PyChannelView {
-                id: channel.id.into(),
-                topic: PyString::new(py, channel.topic.as_str()).into(),
-            };
-
-            // client, channel, data
-            let args = (client_info, channel_view, PyBytes::new(py, payload));
+            // client, client_channel_id, data
+            let args = (
+                client_info,
+                u32::from(channel.id),
+                PyBytes::new(py, payload),
+            );
             self.listener
                 .bind(py)
                 .call_method("on_message_data", args, None)?;
@@ -931,6 +978,7 @@ pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<PyWebSocketServer>()?;
     module.add_class::<PyCapability>()?;
     module.add_class::<PyClient>()?;
+    module.add_class::<PyClientChannel>()?;
     module.add_class::<PyChannelView>()?;
     module.add_class::<PyParameter>()?;
     module.add_class::<PyParameterType>()?;

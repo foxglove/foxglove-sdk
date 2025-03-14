@@ -41,8 +41,7 @@ jobs:
       - run: poetry install
       - run: poetry run maturin develop
       - run: poetry run mypy .
-      - run: poetry run python -m unittest
-        working-directory: python/foxglove-sdk/python
+      - run: poetry run pytest
 
   schemas:
     runs-on: ubuntu-latest

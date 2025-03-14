@@ -1,4 +1,4 @@
-use crate::{FoxgloveError, LogSink};
+use crate::{FoxgloveError, Sink};
 use parking_lot::RwLock;
 use std::sync::Arc;
 
@@ -9,7 +9,7 @@ pub(crate) const ERROR_LOGGING_MESSAGE: &str = "error logging message";
 //    next: AtomicPtr<Self>,
 // }
 
-pub(crate) struct LogSinkSet(RwLock<Vec<Arc<dyn LogSink>>>);
+pub(crate) struct LogSinkSet(RwLock<Vec<Arc<dyn Sink>>>);
 
 impl LogSinkSet {
     pub const fn new() -> Self {
@@ -24,7 +24,7 @@ impl LogSinkSet {
     }
 
     /// Add a sink to the set. Returns false if the sink was already in the set.
-    pub fn add_sink(&self, sink: Arc<dyn LogSink>) -> bool {
+    pub fn add_sink(&self, sink: Arc<dyn Sink>) -> bool {
         let mut sinks = self.0.write();
         // Check if the sink is already in the set.
         if sinks.iter().any(|s| Arc::ptr_eq(s, &sink)) {
@@ -35,7 +35,7 @@ impl LogSinkSet {
     }
 
     /// Remove a sink from the set. Returns true if the sink was removed.
-    pub fn remove_sink(&self, sink: &Arc<dyn LogSink>) -> bool {
+    pub fn remove_sink(&self, sink: &Arc<dyn Sink>) -> bool {
         let mut sinks = self.0.write();
         let len_before = sinks.len();
         sinks.retain(|s| !Arc::ptr_eq(s, sink));
@@ -46,7 +46,7 @@ impl LogSinkSet {
     /// logging any errors via tracing::warn!().
     pub fn for_each<F>(&self, mut f: F)
     where
-        F: FnMut(&Arc<dyn LogSink>) -> Result<(), FoxgloveError>,
+        F: FnMut(&Arc<dyn Sink>) -> Result<(), FoxgloveError>,
     {
         let sinks = self.0.read();
         for sink in sinks.iter() {
