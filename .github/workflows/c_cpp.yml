@@ -13,6 +13,8 @@ jobs:
       - uses: actions/checkout@v4
       - run: make lint
         working-directory: cpp
+      - run: make CLANG_TIDY=true build
+        working-directory: cpp
 
   build:
     strategy:

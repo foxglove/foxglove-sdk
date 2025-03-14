@@ -1,10 +1,11 @@
 import logging
 import time
+from typing import Optional
 
 import foxglove
 
 
-def asset_handler(uri: str) -> bytes | None:
+def asset_handler(uri: str) -> Optional[bytes]:
     """
     This will respond to "package://" asset requests from Foxglove by reading files from disk.
     This example doesn't do any path validation or upward traversal prevention.

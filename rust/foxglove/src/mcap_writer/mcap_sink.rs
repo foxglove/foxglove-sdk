@@ -1,8 +1,8 @@
-//! [`LogSink`] implementation for an MCAP writer.
+//! [`Sink`] implementation for an MCAP writer.
 use crate::channel::Channel;
 use crate::channel::ChannelId;
-use crate::log_sink::LogSink;
 use crate::metadata::Metadata;
+use crate::sink::Sink;
 use crate::FoxgloveError;
 use mcap::WriteOptions;
 use parking_lot::Mutex;
@@ -75,7 +75,7 @@ impl<W: Write + Seek> WriterState<W> {
 pub struct McapSink<W: Write + Seek>(Mutex<Option<WriterState<W>>>);
 
 impl<W: Write + Seek> McapSink<W> {
-    /// Creates a new MCAP writer log sink.
+    /// Creates a new MCAP writer sink.
     pub fn new(writer: W, options: WriteOptions) -> Result<Arc<McapSink<W>>, FoxgloveError> {
         let mcap_writer = options.create(writer).map_err(FoxgloveError::from)?;
         let writer = Arc::new(Self(Mutex::new(Some(WriterState::new(mcap_writer)))));
@@ -94,7 +94,7 @@ impl<W: Write + Seek> McapSink<W> {
     }
 }
 
-impl<W: Write + Seek + Send> LogSink for McapSink<W> {
+impl<W: Write + Seek + Send> Sink for McapSink<W> {
     fn log(&self, channel: &Channel, msg: &[u8], metadata: &Metadata) -> Result<(), FoxgloveError> {
         _ = metadata;
         let mut guard = self.0.lock();

@@ -10,6 +10,18 @@ Build the library and examples:
 make build
 ```
 
+Run clang-format:
+
+```
+make lint
+```
+
+Run clang-tidy:
+
+```
+make CLANG_TIDY=true build
+```
+
 Build and run tests:
 
 ```

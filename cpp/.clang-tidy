@@ -1,0 +1,19 @@
+---
+WarningsAsErrors: "*"
+UseColor: true
+Checks:
+  - -*
+  - clang-analyzer-*
+  - bugprone-*
+  - concurrency-*
+  - cppcoreguidelines-*
+  - -cppcoreguidelines-avoid-magic-numbers
+  - -cppcoreguidelines-pro-type-reinterpret-cast
+  - hicpp-*
+  - modernize-*
+  - -modernize-use-trailing-return-type
+  - performance-*
+  - portability-*
+  - readability-*
+  - -readability-identifier-length
+  - -readability-magic-numbers

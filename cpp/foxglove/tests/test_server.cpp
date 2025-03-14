@@ -29,9 +29,9 @@ TEST_CASE("Log a message with and without metadata") {
   REQUIRE(server.port() != 0);
 
   foxglove::Channel channel{"example", "json", std::nullopt};
-  const uint8_t data[] = {1, 2, 3};
-  channel.log(reinterpret_cast<const std::byte*>(data), sizeof(data));
-  channel.log(reinterpret_cast<const std::byte*>(data), sizeof(data), 1, 2, 3);
+  const std::array<uint8_t, 3> data = {1, 2, 3};
+  channel.log(reinterpret_cast<const std::byte*>(data.data()), data.size());
+  channel.log(reinterpret_cast<const std::byte*>(data.data()), data.size(), 1, 2, 3);
 }
 
 TEST_CASE("Subscribe and unsubscribe callbacks") {
@@ -100,7 +100,7 @@ TEST_CASE("Subscribe and unsubscribe callbacks") {
   UNSCOPED_INFO(ec.message());
   REQUIRE(!ec);
   cv.wait(lock, [&] {
-    return subscribeCalls.size() > 0;
+    return !subscribeCalls.empty();
   });
   REQUIRE_THAT(subscribeCalls, Equals(std::vector<uint64_t>{1}));
 
@@ -115,7 +115,7 @@ TEST_CASE("Subscribe and unsubscribe callbacks") {
   );
 
   cv.wait(lock, [&] {
-    return unsubscribeCalls.size() > 0;
+    return !unsubscribeCalls.empty();
   });
   REQUIRE_THAT(unsubscribeCalls, Equals(std::vector<uint64_t>{1}));
 
