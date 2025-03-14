@@ -28,6 +28,7 @@ jobs:
       - run: cargo fmt --all --check
       - run: cargo build --verbose
       - run: cargo clippy --no-deps --all-targets --tests -- -D warnings
+      - run: cargo rustdoc -p foxglove -- -D warnings
       - run: cargo test --features unstable --verbose
         timeout-minutes: 10
       - run: cargo publish --package foxglove --dry-run
