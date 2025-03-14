@@ -9,15 +9,15 @@ use std::sync::Arc;
 
 /// ChannelBuilder is a builder for creating a new [`Channel`] or [`TypedChannel`].
 #[must_use]
-pub struct ChannelBuilder<'a> {
+pub struct ChannelBuilder {
     topic: String,
     message_encoding: Option<String>,
     schema: Option<Schema>,
     metadata: BTreeMap<String, String>,
-    context: Option<&'a Context>,
+    context: Arc<Context>,
 }
 
-impl<'a> ChannelBuilder<'a> {
+impl ChannelBuilder {
     /// Creates a new channel builder for the specified topic.
     pub fn new<T: Into<String>>(topic: T) -> Self {
         Self {
@@ -25,7 +25,7 @@ impl<'a> ChannelBuilder<'a> {
             message_encoding: None,
             schema: None,
             metadata: BTreeMap::new(),
-            context: None,
+            context: Context::get_default(),
         }
     }
 
@@ -60,8 +60,8 @@ impl<'a> ChannelBuilder<'a> {
     }
 
     #[doc(hidden)]
-    pub fn context(mut self, ctx: &'a Context) -> Self {
-        self.context = Some(ctx);
+    pub fn context(mut self, ctx: &Arc<Context>) -> Self {
+        self.context = ctx.clone();
         self
     }
 
@@ -80,9 +80,7 @@ impl<'a> ChannelBuilder<'a> {
             schema: self.schema,
             metadata: self.metadata,
         });
-        self.context
-            .unwrap_or_else(|| Context::get_default())
-            .add_channel(channel.clone())?;
+        self.context.add_channel(channel.clone())?;
         Ok(channel)
     }
 

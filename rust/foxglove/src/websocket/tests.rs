@@ -72,7 +72,7 @@ fn test_send_lossy() {
     assert_eq!(received, ((TOTAL - BACKLOG)..TOTAL).collect::<Vec<_>>());
 }
 
-fn new_channel(topic: &str, ctx: &Context) -> Arc<Channel> {
+fn new_channel(topic: &str, ctx: &Arc<Context>) -> Arc<Channel> {
     ChannelBuilder::new(topic)
         .message_encoding("message_encoding")
         .schema(Schema::new(

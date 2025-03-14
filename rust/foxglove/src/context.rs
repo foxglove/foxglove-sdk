@@ -3,31 +3,41 @@ use crate::{Channel, FoxgloveError, Sink};
 use parking_lot::RwLock;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
-use std::sync::{Arc, OnceLock};
+use std::fmt::Debug;
+use std::sync::{Arc, LazyLock};
 
-/// A thread-safe wrapper around one or more Sinks, that writes to all of them.
+/// A context is a collection of channels and sinks.
+///
+/// To obtain a reference to the default context, use [`Context::get_default`]. To construct a new
+/// context, use [`Context::new`].
 pub struct Context {
-    // Map of channels by topic.
+    /// Map of channels by topic.
     channels: RwLock<HashMap<String, Arc<Channel>>>,
     sinks: LogSinkSet,
+}
+
+impl Debug for Context {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Context").finish_non_exhaustive()
+    }
 }
 
 impl Context {
     /// Instantiates a new context.
     #[allow(clippy::new_without_default)] // avoid confusion with Context::get_default()
-    pub fn new() -> Self {
-        Self {
-            channels: RwLock::new(HashMap::new()),
+    pub fn new() -> Arc<Self> {
+        Arc::new(Self {
+            channels: RwLock::default(),
             sinks: LogSinkSet::new(),
-        }
+        })
     }
 
     /// Returns a reference to the default context.
     ///
     /// If there is no default context, this function instantiates one.
-    pub fn get_default() -> &'static Context {
-        static DEFAULT_CONTEXT: OnceLock<Context> = OnceLock::new();
-        DEFAULT_CONTEXT.get_or_init(Context::new)
+    pub fn get_default() -> Arc<Self> {
+        static DEFAULT_CONTEXT: LazyLock<Arc<Context>> = LazyLock::new(Context::new);
+        DEFAULT_CONTEXT.clone()
     }
 
     /// Returns the channel for the specified topic, if there is one.
