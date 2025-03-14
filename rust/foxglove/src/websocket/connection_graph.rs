@@ -6,8 +6,8 @@ use std::collections::{HashMap, HashSet};
 /// A HashMap where the keys are the topic or service name and the value is a set of string ids.
 type MapOfSets = HashMap<String, HashSet<String>>;
 
-/// The connection graph data. Requires capability [`Capability::ConnectionGraph`].
-/// See https://github.com/foxglove/ws-protocol/blob/main/docs/spec.md#connection-graph-update
+/// The connection graph data. Requires capability [`ConnectionGraph`](super::Capability::ConnectionGraph).
+/// See <https://github.com/foxglove/ws-protocol/blob/main/docs/spec.md#connection-graph-update>
 #[derive(Debug, Default, Clone)]
 pub struct ConnectionGraph {
     /// A map of active topic names to the set of string publisher ids.
