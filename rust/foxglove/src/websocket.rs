@@ -8,7 +8,7 @@ pub(crate) use crate::websocket::protocol::client::{
 pub use crate::websocket::protocol::server::{
     Parameter, ParameterType, ParameterValue, Status, StatusLevel,
 };
-use crate::{get_runtime_handle, Channel, FoxgloveError, Metadata, Sink};
+use crate::{get_runtime_handle, Channel, FoxgloveError, Metadata, Sink, SinkId};
 use bimap::BiHashMap;
 use bytes::{BufMut, Bytes, BytesMut};
 use flume::TrySendError;
@@ -211,6 +211,7 @@ pub(crate) struct Server {
     /// It's analogous to the mixin shared_from_this in C++.
     weak_self: Weak<Self>,
     started: AtomicBool,
+    sink_id: SinkId,
     /// Local port the server is listening on, once it has been started
     port: AtomicU16,
     message_backlog_size: u32,
@@ -1062,6 +1063,7 @@ impl Server {
             weak_self,
             port: AtomicU16::new(0),
             started: AtomicBool::new(false),
+            sink_id: SinkId::next(),
             message_backlog_size: opts
                 .message_backlog_size
                 .unwrap_or(DEFAULT_MESSAGE_BACKLOG_SIZE) as u32,
@@ -1643,6 +1645,10 @@ fn send_lossy(
 }
 
 impl Sink for Server {
+    fn id(&self) -> SinkId {
+        self.sink_id
+    }
+
     fn log(&self, channel: &Channel, msg: &[u8], metadata: &Metadata) -> Result<(), FoxgloveError> {
         let clients = self.clients.get();
         for client in clients.iter() {

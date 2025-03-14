@@ -1,11 +1,19 @@
 use crate::channel::ChannelId;
-use crate::sink::Sink;
-use crate::{Channel, FoxgloveError, Metadata};
+use crate::{Channel, FoxgloveError, Metadata, Sink, SinkId};
 use parking_lot::Mutex;
 
-pub struct MockSink;
+pub struct MockSink(SinkId);
+impl Default for MockSink {
+    fn default() -> Self {
+        Self(SinkId::next())
+    }
+}
 
 impl Sink for MockSink {
+    fn id(&self) -> SinkId {
+        self.0
+    }
+
     fn log(
         &self,
         _channel: &Channel,
@@ -23,18 +31,24 @@ pub struct LogCall {
 }
 
 pub struct RecordingSink {
+    id: SinkId,
     pub recorded: Mutex<Vec<LogCall>>,
 }
 
 impl RecordingSink {
     pub fn new() -> Self {
         Self {
+            id: SinkId::next(),
             recorded: Mutex::new(Vec::new()),
         }
     }
 }
 
 impl Sink for RecordingSink {
+    fn id(&self) -> SinkId {
+        self.id
+    }
+
     fn log(&self, channel: &Channel, msg: &[u8], metadata: &Metadata) -> Result<(), FoxgloveError> {
         let mut recorded = self.recorded.lock();
         recorded.push(LogCall {
@@ -46,7 +60,12 @@ impl Sink for RecordingSink {
     }
 }
 
-pub struct ErrorSink;
+pub struct ErrorSink(SinkId);
+impl Default for ErrorSink {
+    fn default() -> Self {
+        Self(SinkId::next())
+    }
+}
 
 #[derive(Debug, thiserror::Error)]
 struct StrError(&'static str);
@@ -58,6 +77,10 @@ impl std::fmt::Display for StrError {
 }
 
 impl Sink for ErrorSink {
+    fn id(&self) -> SinkId {
+        self.0
+    }
+
     fn log(
         &self,
         _channel: &Channel,
