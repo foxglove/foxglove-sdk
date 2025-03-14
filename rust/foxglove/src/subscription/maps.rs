@@ -98,7 +98,7 @@ where
     }
 }
 
-/// A cached map from channel name to a set of interested subscribers.
+/// A cached map from channel ID to a set of interested subscribers.
 ///
 /// This representation is different from the underlying system of record in [`SubscriptionMap`] in
 /// two significant ways:
@@ -109,8 +109,8 @@ where
 pub(crate) struct SubscriberMap<T> {
     /// The set of global subscribers.
     global: SubscriberVec<T>,
-    /// A map from channel name to the set of subscribers interested in that channel, including global
-    /// subscribers.
+    /// A map from channel ID to the set of subscribers interested in that channel, including
+    /// global subscribers.
     channel: HashMap<ChannelId, SubscriberVec<T>>,
 }
 
