@@ -16,5 +16,6 @@ Checks:
   - performance-*
   - portability-*
   - readability-*
+  - -readability-function-cognitive-complexity
   - -readability-identifier-length
   - -readability-magic-numbers

@@ -325,6 +325,7 @@ impl foxglove::websocket::ServerListener for FoxgloveServerCallbacks {
             encoding: unsafe { &*encoding.as_ptr() },
             schema_name: unsafe { &*schema_name.as_ptr() },
             schema_encoding: schema_encoding
+                .as_ref() // FIXME: make it an error to remove this?
                 .map(|enc| enc.as_ptr())
                 .unwrap_or(std::ptr::null()),
             schema: channel
