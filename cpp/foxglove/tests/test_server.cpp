@@ -124,3 +124,120 @@ TEST_CASE("Subscribe and unsubscribe callbacks") {
   REQUIRE(!ec);
   clientThread.join();
 }
+
+TEST_CASE("Client advertise/publish callbacks") {
+  std::mutex mutex;
+  std::condition_variable cv;
+  // the following variables are protected by the mutex:
+  bool connectionOpened = false;
+  bool advertised = false;
+  bool receivedMessage = false;
+
+  std::unique_lock lock{mutex};
+
+  foxglove::WebSocketServerOptions options;
+  options.name = "unit-test";
+  options.host = "127.0.0.1";
+  options.port = 0;
+  options.capabilities = foxglove::WebSocketServerCapabilities::ClientPublish;
+  options.callbacks.onClientAdvertise = [&](const foxglove::ClientChannel& channel) {
+    std::scoped_lock lock{mutex};
+    advertised = true;
+    REQUIRE(channel.id == 100);
+    REQUIRE(channel.topic == "topic");
+    REQUIRE(channel.encoding == "encoding");
+    REQUIRE(channel.schemaName == "schema name");
+    REQUIRE(channel.schemaEncoding == "schema encoding");
+    REQUIRE(
+      std::string_view(reinterpret_cast<const char*>(channel.schema), channel.schemaLen) ==
+      "schema data"
+    );
+    cv.notify_all();
+  };
+  options.callbacks.onMessageData =
+    [&](uint64_t clientChannelId, const std::byte* data, size_t dataLen) {
+      std::scoped_lock lock{mutex};
+      receivedMessage = true;
+      REQUIRE(dataLen == 3);
+      REQUIRE(char(data[0]) == 'a');
+      REQUIRE(char(data[1]) == 'b');
+      REQUIRE(char(data[2]) == 'c');
+      cv.notify_all();
+    };
+  options.callbacks.onClientUnadvertise = [&](uint64_t clientChannelId) {
+    std::scoped_lock lock{mutex};
+    advertised = false;
+    REQUIRE(clientChannelId == 100);
+    cv.notify_all();
+  };
+  foxglove::WebSocketServer server{options};
+  REQUIRE(server.port() != 0);
+
+  WebSocketClient client;
+  client.clear_access_channels(websocketpp::log::alevel::all);
+  client.clear_error_channels(websocketpp::log::elevel::all);
+  client.set_open_handler([&](const auto& hdl) {
+    std::scoped_lock lock{mutex};
+    connectionOpened = true;
+    cv.notify_all();
+  });
+  client.init_asio();
+  std::error_code ec;
+  auto connection = client.get_connection("ws://127.0.0.1:" + std::to_string(server.port()), ec);
+  UNSCOPED_INFO(ec.message());
+  REQUIRE(!ec);
+  client.connect(connection);
+  std::thread clientThread{&WebSocketClient::run, std::ref(client)};
+
+  cv.wait(lock, [&] {
+    return connectionOpened;
+  });
+  client.send(
+    connection,
+    R"({
+      "op": "advertise",
+      "channels": [
+        {
+          "id": 100,
+          "topic": "topic",
+          "encoding": "encoding",
+          "schemaName": "schema name",
+          "schemaEncoding": "schema encoding",
+          "schema": "schema data"
+        }
+      ]
+    })",
+    websocketpp::frame::opcode::text,
+    ec
+  );
+  UNSCOPED_INFO(ec.message());
+  REQUIRE(!ec);
+  cv.wait(lock, [&] {
+    return advertised;
+  });
+
+  // send ClientMessageData message
+  std::array<char, 8> msg = {1, 100, 0, 0, 0, 'a', 'b', 'c'};
+  client.send(connection, msg.data(), msg.size(), websocketpp::frame::opcode::binary, ec);
+  cv.wait(lock, [&] {
+    return receivedMessage;
+  });
+
+  client.send(
+    connection,
+    R"({
+      "op": "unadvertise",
+      "channelIds": [100]
+    })",
+    websocketpp::frame::opcode::text,
+    ec
+  );
+  cv.wait(lock, [&] {
+    return !advertised;
+  });
+
+  client.close(connection, websocketpp::close::status::normal, "", ec);
+  UNSCOPED_INFO(ec.message());
+  REQUIRE(!ec);
+  clientThread.join();
+}

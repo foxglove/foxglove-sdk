@@ -23,7 +23,7 @@ build:
 		$(if $(SANITIZE),-DSANITIZE=$(SANITIZE)) \
 		$(if $(CLANG_TIDY),-DCLANG_TIDY=$(CLANG_TIDY)) \
 		-B $(BUILD_DIR)
-	cmake --build $(BUILD_DIR) -j 8 --config RelWithDebInfo --verbose
+	cmake --build $(BUILD_DIR) -j 8 --config RelWithDebInfo
 
 .PHONY: test
 test: build
