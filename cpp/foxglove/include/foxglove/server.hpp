@@ -51,10 +51,11 @@ inline WebSocketServerCapabilities operator&(
 struct WebSocketServerCallbacks {
   std::function<void(uint64_t channelId)> onSubscribe;
   std::function<void(uint64_t channelId)> onUnsubscribe;
-  std::function<void(const ClientChannel& channel)> onClientAdvertise;
-  std::function<void(uint32_t clientChannelId, const std::byte* data, size_t dataLen)>
+  std::function<void(uint32_t clientId, const ClientChannel& channel)> onClientAdvertise;
+  std::function<
+    void(uint32_t clientId, uint32_t clientChannelId, const std::byte* data, size_t dataLen)>
     onMessageData;
-  std::function<void(uint32_t clientChannelId)> onClientUnadvertise;
+  std::function<void(uint32_t clientId, uint32_t clientChannelId)> onClientUnadvertise;
 };
 
 struct WebSocketServerOptions {

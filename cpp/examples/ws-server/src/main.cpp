@@ -34,9 +34,10 @@ int main(int argc, const char* argv[]) {
   options.callbacks.onUnsubscribe = [](uint64_t channel_id) {
     std::cerr << "Unsubscribed from channel " << channel_id << '\n';
   };
-  options.callbacks.onClientAdvertise = [](const foxglove::ClientChannel& channel) {
-    std::cerr << "Client advertised channel:\n";
-    std::cerr << "  ID: " << channel.id << '\n';
+  options.callbacks.onClientAdvertise = [](
+                                          uint32_t clientId, const foxglove::ClientChannel& channel
+                                        ) {
+    std::cerr << "Client " << clientId << " advertised channel " << channel.id << ":\n";
     std::cerr << "  Topic: " << channel.topic << '\n';
     std::cerr << "  Encoding: " << channel.encoding << '\n';
     std::cerr << "  Schema name: " << channel.schemaName << '\n';
@@ -49,12 +50,12 @@ int main(int argc, const char* argv[]) {
               << '\n';
   };
   options.callbacks.onMessageData =
-    [](uint32_t client_channel_id, const std::byte* data, size_t data_len) {
-      std::cerr << "Client published on channel " << client_channel_id << ": "
-                << std::string(reinterpret_cast<const char*>(data), data_len) << '\n';
+    [](uint32_t clientId, uint32_t clientChannelId, const std::byte* data, size_t dataLen) {
+      std::cerr << "Client " << clientId << " published on channel " << clientChannelId << ": "
+                << std::string(reinterpret_cast<const char*>(data), dataLen) << '\n';
     };
-  options.callbacks.onClientUnadvertise = [](uint32_t client_channel_id) {
-    std::cerr << "Client unadvertised channel " << client_channel_id << '\n';
+  options.callbacks.onClientUnadvertise = [](uint32_t clientId, uint32_t clientChannelId) {
+    std::cerr << "Client " << clientId << " unadvertised channel " << clientChannelId << '\n';
   };
   foxglove::WebSocketServer server{options};
   std::cerr << "Server listening on port " << server.port() << '\n';

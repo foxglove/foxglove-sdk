@@ -1,3 +1,4 @@
+#include <foxglove-c/foxglove-c.h>
 #include <foxglove/channel.hpp>
 #include <foxglove/server.hpp>
 
@@ -6,9 +7,20 @@
 #include <websocketpp/client.hpp>
 #include <websocketpp/config/asio_no_tls_client.hpp>
 
+#include <type_traits>
+
 using Catch::Matchers::Equals;
 
 using WebSocketClient = websocketpp::client<websocketpp::config::asio_client>;
+
+namespace {
+
+template <class T>
+constexpr std::underlying_type_t<T> to_underlying(T e) noexcept {
+  return static_cast<std::underlying_type_t<T>>(e);
+}
+
+}  // namespace
 
 TEST_CASE("Start and stop server") {
   foxglove::WebSocketServerOptions options;
@@ -125,6 +137,13 @@ TEST_CASE("Subscribe and unsubscribe callbacks") {
   clientThread.join();
 }
 
+TEST_CASE("Capability enums") {
+  REQUIRE(
+    to_underlying(foxglove::WebSocketServerCapabilities::ClientPublish) ==
+    foxglove_server_capability_ClientPublish.bits
+  );
+}
+
 TEST_CASE("Client advertise/publish callbacks") {
   std::mutex mutex;
   std::condition_variable cv;
@@ -140,33 +159,37 @@ TEST_CASE("Client advertise/publish callbacks") {
   options.host = "127.0.0.1";
   options.port = 0;
   options.capabilities = foxglove::WebSocketServerCapabilities::ClientPublish;
-  options.callbacks.onClientAdvertise = [&](const foxglove::ClientChannel& channel) {
-    std::scoped_lock lock{mutex};
-    advertised = true;
-    REQUIRE(channel.id == 100);
-    REQUIRE(channel.topic == "topic");
-    REQUIRE(channel.encoding == "encoding");
-    REQUIRE(channel.schemaName == "schema name");
-    REQUIRE(channel.schemaEncoding == "schema encoding");
-    REQUIRE(
-      std::string_view(reinterpret_cast<const char*>(channel.schema), channel.schemaLen) ==
-      "schema data"
-    );
-    cv.notify_all();
-  };
+  options.callbacks.onClientAdvertise =
+    [&](uint32_t clientId, const foxglove::ClientChannel& channel) {
+      std::scoped_lock lock{mutex};
+      advertised = true;
+      REQUIRE(clientId == 1);
+      REQUIRE(channel.id == 100);
+      REQUIRE(channel.topic == "topic");
+      REQUIRE(channel.encoding == "encoding");
+      REQUIRE(channel.schemaName == "schema name");
+      REQUIRE(channel.schemaEncoding == "schema encoding");
+      REQUIRE(
+        std::string_view(reinterpret_cast<const char*>(channel.schema), channel.schemaLen) ==
+        "schema data"
+      );
+      cv.notify_all();
+    };
   options.callbacks.onMessageData =
-    [&](uint64_t clientChannelId, const std::byte* data, size_t dataLen) {
+    [&](uint32_t clientId, uint32_t clientChannelId, const std::byte* data, size_t dataLen) {
       std::scoped_lock lock{mutex};
       receivedMessage = true;
+      REQUIRE(clientId == 1);
       REQUIRE(dataLen == 3);
       REQUIRE(char(data[0]) == 'a');
       REQUIRE(char(data[1]) == 'b');
       REQUIRE(char(data[2]) == 'c');
       cv.notify_all();
     };
-  options.callbacks.onClientUnadvertise = [&](uint64_t clientChannelId) {
+  options.callbacks.onClientUnadvertise = [&](uint32_t clientId, uint32_t clientChannelId) {
     std::scoped_lock lock{mutex};
     advertised = false;
+    REQUIRE(clientId == 1);
     REQUIRE(clientChannelId == 100);
     cv.notify_all();
   };

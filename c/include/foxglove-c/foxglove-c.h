@@ -42,12 +42,15 @@ typedef struct foxglove_server_callbacks {
   const void *context;
   void (*on_subscribe)(uint64_t channel_id, const void *context);
   void (*on_unsubscribe)(uint64_t channel_id, const void *context);
-  void (*on_client_advertise)(const struct foxglove_client_channel *channel, const void *context);
-  void (*on_message_data)(uint32_t client_channel_id,
+  void (*on_client_advertise)(uint32_t client_id,
+                              const struct foxglove_client_channel *channel,
+                              const void *context);
+  void (*on_message_data)(uint32_t client_id,
+                          uint32_t client_channel_id,
                           const uint8_t *payload,
                           size_t payload_len,
                           const void *context);
-  void (*on_client_unadvertise)(uint32_t client_channel_id, const void *context);
+  void (*on_client_unadvertise)(uint32_t client_id, uint32_t client_channel_id, const void *context);
 } foxglove_server_callbacks;
 
 typedef struct foxglove_server_capability {

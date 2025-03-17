@@ -25,39 +25,43 @@ WebSocketServer::WebSocketServer(const WebSocketServerOptions& options)
   }
   if (options.callbacks.onClientAdvertise) {
     hasAnyCallbacks = true;
-    cCallbacks.on_client_advertise = [](
-                                       const foxglove_client_channel* channel, const void* context
-                                     ) {
-      ClientChannel cppChannel = {
-        channel->id,
-        channel->topic,
-        channel->encoding,
-        channel->schema_name,
-        channel->schema_encoding == nullptr ? std::string_view{} : channel->schema_encoding,
-        reinterpret_cast<const std::byte*>(channel->schema),
-        channel->schema_len
+    cCallbacks.on_client_advertise =
+      [](uint32_t client_id, const foxglove_client_channel* channel, const void* context) {
+        ClientChannel cppChannel = {
+          channel->id,
+          channel->topic,
+          channel->encoding,
+          channel->schema_name,
+          channel->schema_encoding == nullptr ? std::string_view{} : channel->schema_encoding,
+          reinterpret_cast<const std::byte*>(channel->schema),
+          channel->schema_len
+        };
+        (reinterpret_cast<const WebSocketServer*>(context))
+          ->_callbacks.onClientAdvertise(client_id, cppChannel);
       };
-      (reinterpret_cast<const WebSocketServer*>(context))->_callbacks.onClientAdvertise(cppChannel);
-    };
   }
   if (options.callbacks.onMessageData) {
     hasAnyCallbacks = true;
-    cCallbacks.on_message_data =
-      [](
-        uint32_t client_channel_id, const uint8_t* payload, size_t payload_len, const void* context
-      ) {
-        (reinterpret_cast<const WebSocketServer*>(context))
-          ->_callbacks.onMessageData(
-            client_channel_id, reinterpret_cast<const std::byte*>(payload), payload_len
-          );
-      };
+    cCallbacks.on_message_data = [](
+                                   uint32_t client_id,
+                                   uint32_t client_channel_id,
+                                   const uint8_t* payload,
+                                   size_t payload_len,
+                                   const void* context
+                                 ) {
+      (reinterpret_cast<const WebSocketServer*>(context))
+        ->_callbacks.onMessageData(
+          client_id, client_channel_id, reinterpret_cast<const std::byte*>(payload), payload_len
+        );
+    };
   }
   if (options.callbacks.onClientUnadvertise) {
     hasAnyCallbacks = true;
-    cCallbacks.on_client_unadvertise = [](uint32_t client_channel_id, const void* context) {
-      (reinterpret_cast<const WebSocketServer*>(context))
-        ->_callbacks.onClientUnadvertise(client_channel_id);
-    };
+    cCallbacks.on_client_unadvertise =
+      [](uint32_t client_id, uint32_t client_channel_id, const void* context) {
+        (reinterpret_cast<const WebSocketServer*>(context))
+          ->_callbacks.onClientUnadvertise(client_id, client_channel_id);
+      };
   }
 
   foxglove_server_options cOptions = {};
