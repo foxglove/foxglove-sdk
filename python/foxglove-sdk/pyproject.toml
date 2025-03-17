@@ -34,6 +34,7 @@ isort = "^6.0.0"
 maturin = "^1.7.4"
 mypy = "^1.13.0"
 pytest = "^8.3.4"
+pytest-benchmark = "^5.1.0"
 sphinx = "^7.0.0"
 
 [tool.mypy]
