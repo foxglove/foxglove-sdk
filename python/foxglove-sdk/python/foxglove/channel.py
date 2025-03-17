@@ -20,7 +20,7 @@ class Channel:
         self,
         topic: str,
         *,
-        schema: Union[JsonSchema, Schema, None],
+        schema: Union[JsonSchema, Schema, None] = None,
         message_encoding: Optional[str] = None,
     ):
         """
