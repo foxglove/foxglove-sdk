@@ -1,6 +1,6 @@
 # Configure pytest to skip tests marked with `benchmark` unless a `--with-benchmarks` flag is
 # provided. The `benchmark` marker is defined by `pytest_benchmark`.
-# - https://docs.pytest.org/en/stable/example/simple.html#control-skipping-of-tests-according-to-command-line-option
+# - https://docs.pytest.org/en/stable/example/simple.html#control-skipping-of-tests-according-to-command-line-option # noqa: E501
 #
 # In order to define the option flag, this file must be in the root of the project.
 
