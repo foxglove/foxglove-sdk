@@ -7,43 +7,64 @@ use std::ffi::{c_char, c_void, CStr, CString};
 use std::mem::ManuallyDrop;
 use std::sync::Arc;
 
+// Easier to get reasonable C output from cbindgen with constants rather than directly exporting the
+#[derive(Clone, Copy)]
+#[repr(transparent)]
+pub struct FoxgloveServerCapability {
+    pub flags: u8,
+}
+impl FoxgloveServerCapability {
+    /// Allow clients to advertise channels to send data messages to the server.
+    pub const CLIENT_PUBLISH: Self = Self { flags: 1 << 0 };
+    /// Allow clients to subscribe and make connection graph updates
+    pub const CONNECTION_GRAPH: Self = Self { flags: 1 << 1 };
+    /// Allow clients to get & set parameters.
+    pub const PARAMETERS: Self = Self { flags: 1 << 2 };
+    /// Inform clients about the latest server time.
+    ///
+    /// This allows accelerated, slowed, or stepped control over the progress of time. If the
+    /// server publishes time data, then timestamps of published messages must originate from the
+    /// same time source.
+    pub const TIME: Self = Self { flags: 1 << 3 };
+    /// Allow clients to call services.
+    pub const SERVICES: Self = Self { flags: 1 << 4 };
+}
+
 bitflags! {
-    #[repr(C)]
     #[derive(Clone, Copy, PartialEq, Eq)]
-    pub struct FoxgloveServerCapability: u8 {
-        /// Allow clients to advertise channels to send data messages to the server.
-        const ClientPublish = 1 << 0;
-        /// Allow clients to subscribe and make connection graph updates
-        const ConnectionGraph = 1 << 1;
-        /// Allow clients to get & set parameters.
-        const Parameters = 1 << 2;
-        /// Inform clients about the latest server time.
-        ///
-        /// This allows accelerated, slowed, or stepped control over the progress of time. If the
-        /// server publishes time data, then timestamps of published messages must originate from the
-        /// same time source.
-        const Time = 1 << 3;
-        /// Allow clients to call services.
-        const Services = 1 << 4;
+    struct FoxgloveServerCapabilityBitFlags: u8 {
+        const ClientPublish = FoxgloveServerCapability::CLIENT_PUBLISH.flags;
+        const ConnectionGraph = FoxgloveServerCapability::CONNECTION_GRAPH.flags;
+        const Parameters = FoxgloveServerCapability::PARAMETERS.flags;
+        const Time = FoxgloveServerCapability::TIME.flags;
+        const Services = FoxgloveServerCapability::SERVICES.flags;
     }
 }
 
-impl FoxgloveServerCapability {
+impl FoxgloveServerCapabilityBitFlags {
     fn iter_websocket_capabilities(self) -> impl Iterator<Item = foxglove::websocket::Capability> {
         self.iter_names().filter_map(|(_s, cap)| match cap {
-            FoxgloveServerCapability::ClientPublish => {
+            FoxgloveServerCapabilityBitFlags::ClientPublish => {
                 Some(foxglove::websocket::Capability::ClientPublish)
             }
-            FoxgloveServerCapability::ConnectionGraph => {
+            FoxgloveServerCapabilityBitFlags::ConnectionGraph => {
                 Some(foxglove::websocket::Capability::ConnectionGraph)
             }
-            FoxgloveServerCapability::Parameters => {
+            FoxgloveServerCapabilityBitFlags::Parameters => {
                 Some(foxglove::websocket::Capability::Parameters)
             }
-            FoxgloveServerCapability::Time => Some(foxglove::websocket::Capability::Time),
-            FoxgloveServerCapability::Services => Some(foxglove::websocket::Capability::Services),
+            FoxgloveServerCapabilityBitFlags::Time => Some(foxglove::websocket::Capability::Time),
+            FoxgloveServerCapabilityBitFlags::Services => {
+                Some(foxglove::websocket::Capability::Services)
+            }
             _ => None,
         })
+    }
+}
+
+impl From<FoxgloveServerCapability> for FoxgloveServerCapabilityBitFlags {
+    fn from(bits: FoxgloveServerCapability) -> Self {
+        Self::from_bits_retain(bits.flags)
     }
 }
 
@@ -138,7 +159,10 @@ pub unsafe extern "C" fn foxglove_server_start(
         .expect("host is invalid");
     let mut server = foxglove::WebSocketServer::new()
         .name(name)
-        .capabilities(options.capabilities.iter_websocket_capabilities())
+        .capabilities(
+            FoxgloveServerCapabilityBitFlags::from(options.capabilities)
+                .iter_websocket_capabilities(),
+        )
         .bind(host, options.port);
     if options.supported_encodings_count > 0 {
         server = server.supported_encodings(

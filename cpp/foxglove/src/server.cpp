@@ -71,7 +71,7 @@ WebSocketServer::WebSocketServer(const WebSocketServerOptions& options)
   cOptions.host = options.host.c_str();
   cOptions.port = options.port;
   cOptions.callbacks = hasAnyCallbacks ? &cCallbacks : nullptr;
-  cOptions.capabilities.bits =
+  cOptions.capabilities =
     static_cast<std::underlying_type_t<decltype(options.capabilities)>>(options.capabilities);
   std::vector<const char*> supportedEncodings;
   supportedEncodings.reserve(options.supportedEncodings.size());

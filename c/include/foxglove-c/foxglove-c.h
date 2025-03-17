@@ -53,21 +53,19 @@ typedef struct foxglove_server_callbacks {
   void (*on_client_unadvertise)(uint32_t client_id, uint32_t client_channel_id, const void *context);
 } foxglove_server_callbacks;
 
-typedef struct foxglove_server_capability {
-  uint8_t bits;
-} foxglove_server_capability;
+typedef uint8_t foxglove_server_capability;
 /**
  * Allow clients to advertise channels to send data messages to the server.
  */
-#define foxglove_server_capability_ClientPublish (foxglove_server_capability){ .bits = (uint8_t)(1 << 0) }
+#define foxglove_server_capability_CLIENT_PUBLISH (1 << 0)
 /**
  * Allow clients to subscribe and make connection graph updates
  */
-#define foxglove_server_capability_ConnectionGraph (foxglove_server_capability){ .bits = (uint8_t)(1 << 1) }
+#define foxglove_server_capability_CONNECTION_GRAPH (1 << 1)
 /**
  * Allow clients to get & set parameters.
  */
-#define foxglove_server_capability_Parameters (foxglove_server_capability){ .bits = (uint8_t)(1 << 2) }
+#define foxglove_server_capability_PARAMETERS (1 << 2)
 /**
  * Inform clients about the latest server time.
  *
@@ -75,18 +73,18 @@ typedef struct foxglove_server_capability {
  * server publishes time data, then timestamps of published messages must originate from the
  * same time source.
  */
-#define foxglove_server_capability_Time (foxglove_server_capability){ .bits = (uint8_t)(1 << 3) }
+#define foxglove_server_capability_TIME (1 << 3)
 /**
  * Allow clients to call services.
  */
-#define foxglove_server_capability_Services (foxglove_server_capability){ .bits = (uint8_t)(1 << 4) }
+#define foxglove_server_capability_SERVICES (1 << 4)
 
 typedef struct foxglove_server_options {
   const char *name;
   const char *host;
   uint16_t port;
   const struct foxglove_server_callbacks *callbacks;
-  struct foxglove_server_capability capabilities;
+  foxglove_server_capability capabilities;
   const char *const *supported_encodings;
   size_t supported_encodings_count;
 } foxglove_server_options;

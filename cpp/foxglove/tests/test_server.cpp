@@ -15,7 +15,7 @@ using WebSocketClient = websocketpp::client<websocketpp::config::asio_client>;
 
 namespace {
 
-template <class T>
+template<class T>
 constexpr std::underlying_type_t<T> to_underlying(T e) noexcept {
   return static_cast<std::underlying_type_t<T>>(e);
 }
@@ -138,16 +138,16 @@ TEST_CASE("Subscribe and unsubscribe callbacks") {
 }
 
 TEST_CASE("Capability enums") {
-#define TEST_CAPABILITY(CAPABILITY) \
+#define TEST_CAPABILITY(CAMEL_CAPABILITY, SNAKE_CAPABILITY) \
   REQUIRE( \
-    to_underlying(foxglove::WebSocketServerCapabilities::CAPABILITY) == \
-    (foxglove_server_capability_##CAPABILITY).bits \
+    to_underlying(foxglove::WebSocketServerCapabilities::CAMEL_CAPABILITY) == \
+    foxglove_server_capability_##SNAKE_CAPABILITY \
   )
-  TEST_CAPABILITY(ClientPublish);
-  TEST_CAPABILITY(ConnectionGraph);
-  TEST_CAPABILITY(Parameters);
-  TEST_CAPABILITY(Time);
-  TEST_CAPABILITY(Services);
+  TEST_CAPABILITY(ClientPublish, CLIENT_PUBLISH);
+  TEST_CAPABILITY(ConnectionGraph, CONNECTION_GRAPH);
+  TEST_CAPABILITY(Parameters, PARAMETERS);
+  TEST_CAPABILITY(Time, TIME);
+  TEST_CAPABILITY(Services, SERVICES);
 #undef TEST_CAPABILITY
 }
 
