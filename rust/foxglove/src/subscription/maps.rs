@@ -13,17 +13,17 @@ pub(crate) struct SubscriptionMap<K, V> {
     /// Global subscriptions (all channels).
     global: HashMap<K, V>,
     /// Per-channel subscriptions.
-    channel: HashMap<ChannelId, HashMap<K, V>>,
+    by_channel: HashMap<ChannelId, HashMap<K, V>>,
 }
-
 impl<K, V> Default for SubscriptionMap<K, V> {
     fn default() -> Self {
         Self {
             global: HashMap::default(),
-            channel: HashMap::default(),
+            by_channel: HashMap::default(),
         }
     }
 }
+
 impl<K, V> SubscriptionMap<K, V>
 where
     K: Eq + Hash + Clone,
@@ -32,7 +32,7 @@ where
     /// Removes all subscriptions.
     pub fn clear(&mut self) {
         self.global.clear();
-        self.channel.clear();
+        self.by_channel.clear();
     }
 
     /// Adds a global subscription to all channels.
@@ -50,7 +50,7 @@ where
         let mut inserted = false;
         for channel_id in channel_ids {
             inserted |= self
-                .channel
+                .by_channel
                 .entry(channel_id)
                 .or_default()
                 .insert(key.clone(), value.clone())
@@ -71,11 +71,11 @@ where
     {
         let mut removed = false;
         for channel_id in channel_ids {
-            if let Some(subs) = self.channel.get_mut(&channel_id) {
+            if let Some(subs) = self.by_channel.get_mut(&channel_id) {
                 if subs.remove(key).is_some() {
                     removed = true;
                     if subs.is_empty() {
-                        self.channel.remove(&channel_id);
+                        self.by_channel.remove(&channel_id);
                     }
                 }
             }
@@ -90,7 +90,7 @@ where
         K: Borrow<Q>,
     {
         let mut removed = self.global.remove(key).is_some();
-        self.channel.retain(|_, subs| {
+        self.by_channel.retain(|_, subs| {
             removed |= subs.remove(key).is_some();
             !subs.is_empty()
         });
@@ -104,21 +104,21 @@ where
 /// two significant ways:
 ///
 ///  - The `channel` map includes global subscribers.
-///  - Subscribers are stored as [`SubscriberSet`]s instead of hashmaps.
+///  - Subscribers are stored as [`SubscriberVec`]s instead of hashmaps.
 ///
 pub(crate) struct SubscriberMap<T> {
     /// The set of global subscribers.
     global: SubscriberVec<T>,
     /// A map from channel ID to the set of subscribers interested in that channel, including
     /// global subscribers.
-    channel: HashMap<ChannelId, SubscriberVec<T>>,
+    by_channel: HashMap<ChannelId, SubscriberVec<T>>,
 }
 
 impl<T> Default for SubscriberMap<T> {
     fn default() -> Self {
         Self {
             global: SubscriberVec::default(),
-            channel: HashMap::default(),
+            by_channel: HashMap::default(),
         }
     }
 }
@@ -130,27 +130,29 @@ where
 {
     fn from(value: &SubscriptionMap<K, V>) -> Self {
         let global = value.global.values().cloned().collect();
-        let mut channel = HashMap::with_capacity(value.channel.len());
-        for (&channel_id, subs) in &value.channel {
-            // Merge in global subscribers.
-            let mut subs = subs.clone();
-            subs.extend(value.global.clone());
-            channel.insert(channel_id, subs.into_values().collect());
-        }
-        Self { global, channel }
+        let by_channel = value
+            .by_channel
+            .iter()
+            .map(|(&channel_id, subs)| {
+                let mut subs = subs.clone();
+                subs.extend(value.global.clone());
+                (channel_id, subs.into_values().collect())
+            })
+            .collect();
+        Self { global, by_channel }
     }
 }
 
 impl<T> SubscriberMap<T> {
     /// Returns true if there is at least one interested subscriber for the channel.
     pub fn has_subscribers(&self, channel_id: ChannelId) -> bool {
-        !self.global.is_empty() || self.channel.contains_key(&channel_id)
+        !self.global.is_empty() || self.by_channel.contains_key(&channel_id)
     }
 
     /// Returns the set of subscribers interested in the channel.
     ///
     /// The set may be empty if there are no global subscriptions.
     pub fn get(&self, channel_id: ChannelId) -> &SubscriberVec<T> {
-        self.channel.get(&channel_id).unwrap_or(&self.global)
+        self.by_channel.get(&channel_id).unwrap_or(&self.global)
     }
 }
