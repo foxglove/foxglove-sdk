@@ -141,7 +141,7 @@ TEST_CASE("Capability enums") {
 #define TEST_CAPABILITY(CAPABILITY) \
   REQUIRE( \
     to_underlying(foxglove::WebSocketServerCapabilities::CAPABILITY) == \
-    foxglove_server_capability_##CAPABILITY.bits \
+    (foxglove_server_capability_##CAPABILITY).bits \
   )
   TEST_CAPABILITY(ClientPublish);
   TEST_CAPABILITY(ConnectionGraph);
@@ -183,6 +183,7 @@ TEST_CASE("Client advertise/publish callbacks") {
       cv.notify_all();
     };
   options.callbacks.onMessageData =
+    // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
     [&](uint32_t clientId, uint32_t clientChannelId, const std::byte* data, size_t dataLen) {
       std::scoped_lock lock{mutex};
       receivedMessage = true;
