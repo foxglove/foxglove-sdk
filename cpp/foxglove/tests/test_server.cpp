@@ -138,10 +138,17 @@ TEST_CASE("Subscribe and unsubscribe callbacks") {
 }
 
 TEST_CASE("Capability enums") {
-  REQUIRE(
-    to_underlying(foxglove::WebSocketServerCapabilities::ClientPublish) ==
-    foxglove_server_capability_ClientPublish.bits
-  );
+#define TEST_CAPABILITY(CAPABILITY) \
+  REQUIRE( \
+    to_underlying(foxglove::WebSocketServerCapabilities::CAPABILITY) == \
+    foxglove_server_capability_##CAPABILITY.bits \
+  )
+  TEST_CAPABILITY(ClientPublish);
+  TEST_CAPABILITY(ConnectionGraph);
+  TEST_CAPABILITY(Parameters);
+  TEST_CAPABILITY(Time);
+  TEST_CAPABILITY(Services);
+#undef TEST_CAPABILITY
 }
 
 TEST_CASE("Client advertise/publish callbacks") {

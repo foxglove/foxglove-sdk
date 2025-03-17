@@ -6,6 +6,7 @@ BasedOnStyle: Google
 AllowShortFunctionsOnASingleLine: Empty
 AllowShortLambdasOnASingleLine: Empty
 AlignAfterOpenBracket: BlockIndent
+AlignEscapedNewlines: DontAlign
 AccessModifierOffset: -2
 TabWidth: 2
 ContinuationIndentWidth: 2
