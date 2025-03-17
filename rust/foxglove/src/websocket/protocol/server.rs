@@ -13,6 +13,9 @@ use serde_repr::Serialize_repr;
 use serde_with::{base64::Base64, serde_as};
 use std::collections::{HashMap, HashSet};
 
+// Message encodings that require a schema.
+const REQUIRING_SCHEMA: [&str; 4] = ["flatbuffer", "protobuf", "ros1", "cdr"];
+
 #[repr(u8)]
 pub enum BinaryOpcode {
     MessageData = 1,
@@ -184,7 +187,7 @@ pub fn server_info(
 pub fn advertisement(channel: &Channel) -> Result<String, FoxgloveError> {
     let schema = channel.schema.as_ref();
 
-    if schema.is_none() && channel.message_encoding != "json" {
+    if schema.is_none() && REQUIRING_SCHEMA.contains(&channel.message_encoding.as_str()) {
         return Err(FoxgloveError::SchemaRequired);
     }
 
