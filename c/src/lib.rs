@@ -7,7 +7,7 @@ use std::ffi::{c_char, c_void, CStr, CString};
 use std::mem::ManuallyDrop;
 use std::sync::Arc;
 
-// Easier to get reasonable C output from cbindgen with constants rather than directly exporting the
+// Easier to get reasonable C output from cbindgen with constants rather than directly exporting the bitflags macro
 #[derive(Clone, Copy)]
 #[repr(transparent)]
 pub struct FoxgloveServerCapability {
