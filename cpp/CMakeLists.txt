@@ -18,6 +18,8 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(Catch2)
 list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)
 include(Catch)
+set_property(TARGET Catch2WithMain PROPERTY CXX_STANDARD 17)
+set_property(TARGET Catch2WithMain PROPERTY CXX_STANDARD_REQUIRED True)
 
 FetchContent_Declare(
   Corrosion
