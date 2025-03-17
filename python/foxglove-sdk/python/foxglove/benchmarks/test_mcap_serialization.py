@@ -1,3 +1,4 @@
+import json
 import math
 import os
 import struct
@@ -7,6 +8,7 @@ from typing import Generator, List
 
 import foxglove
 import pytest
+from foxglove.channel import Channel
 from foxglove.channels import PointCloudChannel, SceneUpdateChannel
 from foxglove.schemas import (
     Color,
@@ -108,6 +110,14 @@ def write_point_cloud_mcap(
             channel.log(point_cloud)
 
 
+def write_untyped_channel_mcap(
+    tmp_mcap: Path, channel: Channel, messages: List[bytes]
+) -> None:
+    with foxglove.open_mcap(tmp_mcap, allow_overwrite=True):
+        for message in messages:
+            channel.log(message)
+
+
 @pytest.mark.benchmark
 @pytest.mark.parametrize("entity_count", [1, 2, 4, 8])
 def test_write_scene_update_mcap(
@@ -131,3 +141,21 @@ def test_write_point_cloud_mcap(
     channel = PointCloudChannel(f"/point_cloud_{point_count}")
     point_cloud = make_point_cloud(point_count)
     benchmark(write_point_cloud_mcap, tmp_mcap, channel, point_cloud)
+
+
+@pytest.mark.benchmark
+@pytest.mark.parametrize("message_count", [10, 100, 1000])
+def test_wite_untyped_channel_mcap(
+    benchmark: BenchmarkFixture,
+    message_count: int,
+    tmp_mcap: Path,
+) -> None:
+    channel = Channel(
+        f"/untyped_{message_count}",
+        schema={"type": "object", "additionalProperties": True},
+    )
+    messages = [
+        json.dumps({"message": f"hello_{i}"}).encode("utf-8")
+        for i in range(message_count)
+    ]
+    benchmark(write_untyped_channel_mcap, tmp_mcap, channel, messages)
