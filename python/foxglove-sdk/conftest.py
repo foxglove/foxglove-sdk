@@ -22,6 +22,8 @@ def pytest_collection_modifyitems(
 ) -> None:
     if config.getoption(option_flag):
         return
+    if config.getoption("-m") == "benchmark":  # running only benchmark tests
+        return
     skip_marker = pytest.mark.skip(reason=f"need {option_flag} option to run")
     for item in items:
         if "benchmark" in item.keywords:

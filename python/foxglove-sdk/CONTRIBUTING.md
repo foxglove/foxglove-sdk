@@ -54,6 +54,16 @@ Run unit tests:
 poetry run pytest
 ```
 
+Benchmark tests should be marked with `@pytest.mark.benchmark`. These are not run by default.
+
+```sh
+# to run with benchmarks
+poetry run pytest --with-benchmarks
+
+# to run only benchmarks
+poetry run pytest -m benchmark
+```
+
 ### Examples
 
 Examples exist in the `foxglove-sdk-examples` directotry. See each example's readme for usage.
