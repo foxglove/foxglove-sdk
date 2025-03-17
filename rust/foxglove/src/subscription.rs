@@ -24,6 +24,15 @@ mod tests;
 pub(crate) type SubscriberVec<T> = SmallVec<[T; 4]>;
 
 /// A structure for tracking and querying channel subscriptions.
+///
+/// This structure is composed of two parts. A system of record for tracking subscriptions
+/// (`subscriptions`) and a cache for fast lookups (`subscribers`). Subscribers (`V`, typically
+/// `Arc<dyn Sink>`) are uniquely identified by a hashable key (`K`, typically `SinkId`).
+///
+/// A subscription may be for a specific channel, or for all channels. When logging a message to a
+/// channel, we need to return the union of subscriptions for that particular channel, and global
+/// subscriptions. Rather than construct (and deduplicate) this union on the fly, the manager
+/// precomputes a cache for handling lookups.
 pub(crate) struct SubscriptionManager<K, V> {
     /// Current subscriptions.
     subscriptions: Mutex<SubscriptionMap<K, V>>,
