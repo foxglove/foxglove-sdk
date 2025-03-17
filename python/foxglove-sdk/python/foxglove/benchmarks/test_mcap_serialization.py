@@ -145,7 +145,7 @@ def test_write_point_cloud_mcap(
 
 @pytest.mark.benchmark
 @pytest.mark.parametrize("message_count", [10, 100, 1000])
-def test_wite_untyped_channel_mcap(
+def test_write_untyped_channel_mcap(
     benchmark: BenchmarkFixture,
     message_count: int,
     tmp_mcap: Path,
