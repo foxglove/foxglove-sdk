@@ -17,3 +17,4 @@
 /typescript/schemas/src/jsonschema/
 node_modules/
 /python/foxglove-sdk/python/docs/_build
+/python/foxglove-sdk-examples/**/poetry.lock

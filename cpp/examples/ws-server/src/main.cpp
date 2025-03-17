@@ -11,11 +11,15 @@
 
 using namespace std::chrono_literals;
 
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 static std::function<void()> sigintHandler;
 
+// NOLINTNEXTLINE(bugprone-exception-escape)
 int main(int argc, const char* argv[]) {
   std::signal(SIGINT, [](int) {
-    if (sigintHandler) sigintHandler();
+    if (sigintHandler) {
+      sigintHandler();
+    }
   });
 
   foxglove::WebSocketServerOptions options;
@@ -23,17 +27,17 @@ int main(int argc, const char* argv[]) {
   options.host = "127.0.0.1";
   options.port = 8765;
   options.callbacks.onSubscribe = [](uint64_t channel_id) {
-    std::cerr << "Subscribed to channel " << channel_id << std::endl;
+    std::cerr << "Subscribed to channel " << channel_id << '\n';
   };
   options.callbacks.onUnsubscribe = [](uint64_t channel_id) {
-    std::cerr << "Unsubscribed from channel " << channel_id << std::endl;
+    std::cerr << "Unsubscribed from channel " << channel_id << '\n';
   };
   foxglove::WebSocketServer server{options};
-  std::cerr << "Server listening on port " << server.port() << std::endl;
+  std::cerr << "Server listening on port " << server.port() << '\n';
 
   std::atomic_bool done = false;
   sigintHandler = [&] {
-    std::cerr << "Shutting down..." << std::endl;
+    std::cerr << "Shutting down...\n";
     server.stop();
     done = true;
   };
@@ -61,6 +65,6 @@ int main(int argc, const char* argv[]) {
     ++i;
   }
 
-  std::cerr << "Done" << std::endl;
+  std::cerr << "Done\n";
   return 0;
 }

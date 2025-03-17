@@ -5,6 +5,7 @@ from ._foxglove_py.websocket import (
     Capability,
     ChannelView,
     Client,
+    ClientChannel,
     ConnectionGraph,
     MessageSchema,
     Parameter,
@@ -49,38 +50,38 @@ class ServerListener(Protocol):
         """
         return None
 
-    def on_client_advertise(self, client: Client, channel: ChannelView) -> None:
+    def on_client_advertise(self, client: Client, channel: ClientChannel) -> None:
         """
         Called by the server when a client advertises a channel.
 
         :param client: The client (id) that sent the message.
         :type client: :py:class:`Client`
-        :param channel: The channel (id, topic) that the message was sent on.
-        :type channel: :py:class:`ChannelView`
+        :param channel: The client channel that is being advertised.
+        :type channel: :py:class:`ClientChannel`
         """
         return None
 
-    def on_client_unadvertise(self, client: Client, channel: ChannelView) -> None:
+    def on_client_unadvertise(self, client: Client, client_channel_id: int) -> None:
         """
         Called by the server when a client unadvertises a channel.
 
-        :param client: The client (id) that sent the message.
+        :param client: The client (id) that is unadvertising the channel.
         :type client: :py:class:`Client`
-        :param channel: The channel (id, topic) that the message was sent on.
-        :type channel: :py:class:`ChannelView`
+        :param client_channel_id: The client channel id that is being unadvertised.
+        :type client_channel_id: int
         """
         return None
 
     def on_message_data(
-        self, client: Client, channel: ChannelView, data: bytes
+        self, client: Client, client_channel_id: int, data: bytes
     ) -> None:
         """
         Called by the server when a message is received from a client.
 
         :param client: The client (id) that sent the message.
         :type client: :py:class:`Client`
-        :param channel: The channel (id, topic) that the message was sent on.
-        :type channel: :py:class:`ChannelView`
+        :param client_channel_id: The client channel id that the message was sent on.
+        :type client_channel_id: int
         :param data: The message data.
         :type data: bytes
         """
@@ -174,6 +175,7 @@ __all__ = [
     "Capability",
     "ChannelView",
     "Client",
+    "ClientChannel",
     "ConnectionGraph",
     "MessageSchema",
     "Parameter",

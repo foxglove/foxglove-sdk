@@ -31,7 +31,13 @@ from foxglove.schemas import (
     Timestamp,
     Vector3,
 )
-from foxglove.websocket import Capability, ChannelView, Client, ServerListener
+from foxglove.websocket import (
+    Capability,
+    ChannelView,
+    Client,
+    ClientChannel,
+    ServerListener,
+)
 
 any_schema = {
     "type": "object",
@@ -77,10 +83,25 @@ class ExampleListener(ServerListener):
         logging.info(f"Client {client} unsubscribed from channel {channel.topic}")
         self.subscribers.remove(client.id)
 
+    def on_client_advertise(
+        self,
+        client: Client,
+        channel: ClientChannel,
+    ) -> None:
+        """
+        Called when a client advertises a new channel.
+        """
+        logging.info(f"Client {client.id} advertised channel: {channel.id}")
+        logging.info(f"  Topic: {channel.topic}")
+        logging.info(f"  Encoding: {channel.encoding}")
+        logging.info(f"  Schema name: {channel.schema_name}")
+        logging.info(f"  Schema encoding: {channel.schema_encoding}")
+        logging.info(f"  Schema: {channel.schema}")
+
     def on_message_data(
         self,
         client: Client,
-        channel: ChannelView,
+        client_channel_id: int,
         data: bytes,
     ) -> None:
         """
@@ -88,8 +109,18 @@ class ExampleListener(ServerListener):
         You can send messages from Foxglove app in the publish panel:
         https://docs.foxglove.dev/docs/visualization/panels/publish
         """
-        logging.info(f"Message from client {client.id} on channel {channel.topic}")
+        logging.info(f"Message from client {client.id} on channel {client_channel_id}")
         logging.info(f"Data: {data!r}")
+
+    def on_client_unadvertise(
+        self,
+        client: Client,
+        client_channel_id: int,
+    ) -> None:
+        """
+        Called when a client unadvertises a new channel.
+        """
+        logging.info(f"Client {client.id} unadvertised channel: {client_channel_id}")
 
 
 def main() -> None:

@@ -51,7 +51,7 @@ poetry run flake8 .
 Run unit tests:
 
 ```sh
-cd python && poetry run python -m unittest
+poetry run pytest
 ```
 
 ### Examples

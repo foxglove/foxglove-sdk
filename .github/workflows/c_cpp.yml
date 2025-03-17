@@ -13,6 +13,8 @@ jobs:
       - uses: actions/checkout@v4
       - run: make lint
         working-directory: cpp
+      - run: make CLANG_TIDY=true build
+        working-directory: cpp
 
   build:
     strategy:
@@ -101,3 +103,18 @@ jobs:
         with:
           name: ${{ matrix.cdylib_artifact_name }}
           path: target/${{ matrix.target }}/release/${{ matrix.cdylib_name }}
+
+  test-asan-ubsan:
+    runs-on: ubuntu-latest
+    env:
+      CC: clang
+      CXX: clang++
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: nightly
+          components: rust-src
+
+      - run: make SANITIZE=address,undefined test
+        working-directory: cpp

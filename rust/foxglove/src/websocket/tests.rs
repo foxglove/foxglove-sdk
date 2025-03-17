@@ -17,9 +17,7 @@ use crate::websocket::{
     BlockingAssetHandlerFn, Capability, ClientChannelId, ConnectionGraph, Parameter, ParameterType,
     ParameterValue, Status, StatusLevel,
 };
-use crate::{
-    collection, Channel, ChannelBuilder, FoxgloveError, LogContext, LogSink, Metadata, Schema,
-};
+use crate::{collection, Channel, ChannelBuilder, Context, FoxgloveError, Metadata, Schema, Sink};
 
 fn make_message(id: usize) -> Message {
     Message::Text(format!("{id}").into())
@@ -74,7 +72,7 @@ fn test_send_lossy() {
     assert_eq!(received, ((TOTAL - BACKLOG)..TOTAL).collect::<Vec<_>>());
 }
 
-fn new_channel(topic: &str, ctx: &LogContext) -> Arc<Channel> {
+fn new_channel(topic: &str, ctx: &Context) -> Arc<Channel> {
     ChannelBuilder::new(topic)
         .message_encoding("message_encoding")
         .schema(Schema::new(
@@ -83,7 +81,7 @@ fn new_channel(topic: &str, ctx: &LogContext) -> Arc<Channel> {
             b"schema_data",
         ))
         .metadata(collection! {"key".to_string() => "value".to_string()})
-        .with_context(ctx)
+        .context(ctx)
         .build()
         .expect("Failed to create channel")
 }
@@ -199,7 +197,7 @@ async fn test_advertise_to_client() {
         ..Default::default()
     });
 
-    let ctx = LogContext::new();
+    let ctx = Context::new();
     ctx.add_sink(server.clone());
 
     let addr = server
@@ -356,7 +354,7 @@ async fn test_log_only_to_subscribers() {
         ..Default::default()
     });
 
-    let ctx = LogContext::new();
+    let ctx = Context::new();
 
     ctx.add_sink(server.clone());
 

@@ -1,19 +1,20 @@
 use crate::log_sink_set::LogSinkSet;
-use crate::{Channel, FoxgloveError, LogSink};
+use crate::{Channel, FoxgloveError, Sink};
 use parking_lot::RwLock;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::sync::{Arc, OnceLock};
 
 /// A thread-safe wrapper around one or more Sinks, that writes to all of them.
-pub struct LogContext {
+pub struct Context {
     // Map of channels by topic.
     channels: RwLock<HashMap<String, Arc<Channel>>>,
     sinks: LogSinkSet,
 }
 
-impl LogContext {
-    /// Instantiates a new log context.
+impl Context {
+    /// Instantiates a new context.
+    #[allow(clippy::new_without_default)] // avoid confusion with Context::get_default()
     pub fn new() -> Self {
         Self {
             channels: RwLock::new(HashMap::new()),
@@ -21,12 +22,12 @@ impl LogContext {
         }
     }
 
-    /// Returns a reference to the global log context.
+    /// Returns a reference to the default context.
     ///
-    /// If there is no global log context, this function instantiates one.
-    pub fn global() -> &'static LogContext {
-        static DEFAULT_CONTEXT: OnceLock<LogContext> = OnceLock::new();
-        DEFAULT_CONTEXT.get_or_init(LogContext::new)
+    /// If there is no default context, this function instantiates one.
+    pub fn get_default() -> &'static Context {
+        static DEFAULT_CONTEXT: OnceLock<Context> = OnceLock::new();
+        DEFAULT_CONTEXT.get_or_init(Context::new)
     }
 
     /// Returns the channel for the specified topic, if there is one.
@@ -35,7 +36,7 @@ impl LogContext {
         channels.get(topic).cloned()
     }
 
-    /// Adds a channel to the log context.
+    /// Adds a channel to the context.
     pub fn add_channel(&self, channel: Arc<Channel>) -> Result<(), FoxgloveError> {
         {
             // Wrapped in a block, so we release the lock immediately.
@@ -77,8 +78,8 @@ impl LogContext {
         true
     }
 
-    /// Adds a sink to the log context.
-    pub fn add_sink(&self, sink: Arc<dyn LogSink>) -> bool {
+    /// Adds a sink to the context.
+    pub fn add_sink(&self, sink: Arc<dyn Sink>) -> bool {
         if !self.sinks.add_sink(sink.clone()) {
             return false;
         }
@@ -93,16 +94,16 @@ impl LogContext {
         true
     }
 
-    /// Removes a sink from the log context.
-    pub fn remove_sink(&self, sink: &Arc<dyn LogSink>) -> bool {
+    /// Removes a sink from the context.
+    pub fn remove_sink(&self, sink: &Arc<dyn Sink>) -> bool {
         if !self.sinks.remove_sink(sink) {
             return false;
         }
 
-        // TODO this has a bug, if the same sink was added to a channel twice, via two different LogContexts,
-        // this will remove the sink from the channel, even although they're still associated via the other LogContext.
+        // TODO this has a bug, if the same sink was added to a channel twice, via two different contexts,
+        // this will remove the sink from the channel, even although they're still associated via the other context.
         // If we stored the contexts on the channel, and removed the contexts, it would fix it,
-        // But logging would be via an extra indirection to LogContext (slower) and
+        // But logging would be via an extra indirection to context (slower) and
         // having it associated with the same sink twice would result in two log calls to the sink,
         // which is a more serious bug.
         // I think the solution should be to have both the contexts and the sinks on the channel.
@@ -119,7 +120,7 @@ impl LogContext {
         true
     }
 
-    /// Removes all channels and sinks from the log context.
+    /// Removes all channels and sinks from the context.
     pub fn clear(&self) {
         let channels: HashMap<_, _> = std::mem::take(&mut self.channels.write());
         self.sinks.for_each(|sink| {
@@ -133,15 +134,9 @@ impl LogContext {
     }
 }
 
-impl Drop for LogContext {
+impl Drop for Context {
     fn drop(&mut self) {
         self.clear();
-    }
-}
-
-impl Default for LogContext {
-    fn default() -> Self {
-        Self::new()
     }
 }
 
@@ -149,7 +144,7 @@ impl Default for LogContext {
 mod tests {
     use crate::channel::ChannelId;
     use crate::collection::collection;
-    use crate::log_context::*;
+    use crate::context::*;
     use crate::log_sink_set::ERROR_LOGGING_MESSAGE;
     use crate::testutil::{ErrorSink, MockSink, RecordingSink};
     use crate::{nanoseconds_since_epoch, Channel, PartialMetadata, Schema};
@@ -181,7 +176,7 @@ mod tests {
 
     #[test]
     fn test_add_and_remove_sink() {
-        let ctx = LogContext::new();
+        let ctx = Context::new();
         let sink = Arc::new(MockSink);
         let sink2 = Arc::new(MockSink);
         let sink3 = Arc::new(MockSink);
@@ -193,22 +188,22 @@ mod tests {
         assert!(ctx.add_sink(sink2.clone()));
 
         // Test removing a sink
-        let sink: Arc<dyn LogSink> = sink;
+        let sink: Arc<dyn Sink> = sink;
         assert!(ctx.remove_sink(&sink));
 
         // Try to remove a sink that doesn't exist
-        let sink3: Arc<dyn LogSink> = sink3;
+        let sink3: Arc<dyn Sink> = sink3;
         assert!(!ctx.remove_sink(&sink3));
 
         // Test removing the last sink
-        let sink2: Arc<dyn LogSink> = sink2;
+        let sink2: Arc<dyn Sink> = sink2;
         assert!(ctx.remove_sink(&sink2));
     }
 
     #[traced_test]
     #[test]
     fn test_log_calls_sinks() {
-        let ctx = LogContext::new();
+        let ctx = Context::new();
         let sink1 = Arc::new(RecordingSink::new());
         let sink2 = Arc::new(RecordingSink::new());
 
@@ -251,7 +246,7 @@ mod tests {
     #[traced_test]
     #[test]
     fn test_log_calls_other_sinks_after_error() {
-        let ctx = LogContext::new();
+        let ctx = Context::new();
         let error_sink = Arc::new(ErrorSink);
         let recording_sink = Arc::new(RecordingSink::new());
 

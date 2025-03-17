@@ -1,7 +1,7 @@
 use crate::channel::ChannelId;
 use crate::encode::TypedChannel;
 use crate::log_sink_set::LogSinkSet;
-use crate::{Channel, Encode, FoxgloveError, LogContext, Schema};
+use crate::{Channel, Context, Encode, FoxgloveError, Schema};
 use std::collections::BTreeMap;
 use std::sync::atomic::Ordering::Relaxed;
 use std::sync::atomic::{AtomicU32, AtomicU64};
@@ -14,7 +14,7 @@ pub struct ChannelBuilder<'a> {
     message_encoding: Option<String>,
     schema: Option<Schema>,
     metadata: BTreeMap<String, String>,
-    context: Option<&'a LogContext>,
+    context: Option<&'a Context>,
 }
 
 impl<'a> ChannelBuilder<'a> {
@@ -60,7 +60,7 @@ impl<'a> ChannelBuilder<'a> {
     }
 
     #[doc(hidden)]
-    pub fn with_context(mut self, ctx: &'a LogContext) -> Self {
+    pub fn context(mut self, ctx: &'a Context) -> Self {
         self.context = Some(ctx);
         self
     }
@@ -81,7 +81,7 @@ impl<'a> ChannelBuilder<'a> {
             metadata: self.metadata,
         });
         self.context
-            .unwrap_or_else(|| LogContext::global())
+            .unwrap_or_else(|| Context::get_default())
             .add_channel(channel.clone())?;
         Ok(channel)
     }

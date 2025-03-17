@@ -181,8 +181,8 @@ pub fn server_info(
     .to_string()
 }
 
-// A `schema` in the channel is optional if the message_encoding is "json", since Foxglove supports
-// schemaless JSON messages.
+// A `schema` in the channel is optional except for message_encodings which require a schema.
+// Currently, Foxglove supports schemaless JSON messages.
 // https://github.com/foxglove/ws-protocol/blob/main/docs/spec.md#advertise
 pub fn advertisement(channel: &Channel) -> Result<String, FoxgloveError> {
     let schema = channel.schema.as_ref();
@@ -192,11 +192,13 @@ pub fn advertisement(channel: &Channel) -> Result<String, FoxgloveError> {
     }
 
     let advertisement = if let Some(schema) = schema {
-        let schema_data = match schema.encoding.as_str() {
-            "protobuf" => BASE64_STANDARD.encode(&schema.data),
-            _ => String::from_utf8(schema.data.to_vec())
-                .map_err(|e| FoxgloveError::Unspecified(e.into()))?,
+        let schema_data = if super::is_known_binary_schema_encoding(&schema.encoding) {
+            BASE64_STANDARD.encode(&schema.data)
+        } else {
+            String::from_utf8(schema.data.to_vec())
+                .map_err(|e| FoxgloveError::Unspecified(e.into()))?
         };
+
         Ok::<Advertisement, FoxgloveError>(Advertisement {
             id: channel.id,
             topic: &channel.topic,

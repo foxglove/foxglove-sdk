@@ -12,6 +12,7 @@
     "generate": "ts-node ./scripts/generate.ts",
     "lint:ci": "eslint --report-unused-disable-directives .",
     "lint": "eslint --report-unused-disable-directives --fix .",
+    "run-python-sdk-examples": "ts-node ./scripts/runPythonSdkExamples.ts",
     "test": "jest"
   },
   "devDependencies": {
