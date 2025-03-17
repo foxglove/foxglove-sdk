@@ -13,9 +13,6 @@ use serde_repr::Serialize_repr;
 use serde_with::{base64::Base64, serde_as};
 use std::collections::{HashMap, HashSet};
 
-// Message encodings that require a schema.
-const REQUIRING_SCHEMA: [&str; 4] = ["flatbuffer", "protobuf", "ros1", "cdr"];
-
 #[repr(u8)]
 pub enum BinaryOpcode {
     MessageData = 1,
@@ -181,13 +178,20 @@ pub fn server_info(
     .to_string()
 }
 
+fn is_schema_required(message_encoding: &str) -> bool {
+    message_encoding == "flatbuffer"
+        || message_encoding == "protobuf"
+        || message_encoding == "ros1"
+        || message_encoding == "cdr"
+}
+
 // A `schema` in the channel is optional except for message_encodings which require a schema.
 // Currently, Foxglove supports schemaless JSON messages.
 // https://github.com/foxglove/ws-protocol/blob/main/docs/spec.md#advertise
 pub fn advertisement(channel: &Channel) -> Result<String, FoxgloveError> {
     let schema = channel.schema.as_ref();
 
-    if schema.is_none() && REQUIRING_SCHEMA.contains(&channel.message_encoding.as_str()) {
+    if schema.is_none() && is_schema_required(channel.message_encoding.as_str()) {
         return Err(FoxgloveError::SchemaRequired);
     }
 
