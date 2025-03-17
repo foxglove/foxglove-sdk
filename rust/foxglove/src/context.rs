@@ -1,10 +1,15 @@
-use crate::log_sink_set::LogSinkSet;
-use crate::{Channel, FoxgloveError, Sink};
-use parking_lot::RwLock;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::sync::{Arc, LazyLock};
+
+use parking_lot::RwLock;
+
+#[allow(dead_code)]
+mod subscriptions;
+
+use crate::log_sink_set::LogSinkSet;
+use crate::{Channel, FoxgloveError, Sink};
 
 /// A context is a collection of channels and sinks.
 ///

@@ -173,7 +173,6 @@ mod runtime;
 pub mod schemas;
 mod schemas_wkt;
 mod sink;
-mod subscription;
 #[cfg(test)]
 mod tests;
 #[cfg(test)]
