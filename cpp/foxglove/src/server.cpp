@@ -43,6 +43,7 @@ WebSocketServer::WebSocketServer(const WebSocketServerOptions& options)
   if (options.callbacks.onMessageData) {
     hasAnyCallbacks = true;
     cCallbacks.on_message_data = [](
+                                   // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
                                    uint32_t client_id,
                                    uint32_t client_channel_id,
                                    const uint8_t* payload,
@@ -58,6 +59,7 @@ WebSocketServer::WebSocketServer(const WebSocketServerOptions& options)
   if (options.callbacks.onClientUnadvertise) {
     hasAnyCallbacks = true;
     cCallbacks.on_client_unadvertise =
+      // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
       [](uint32_t client_id, uint32_t client_channel_id, const void* context) {
         (reinterpret_cast<const WebSocketServer*>(context))
           ->_callbacks.onClientUnadvertise(client_id, client_channel_id);
