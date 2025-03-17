@@ -289,7 +289,7 @@ async fn test_advertise_schemaless_channels() {
         ..Default::default()
     });
 
-    let ctx = LogContext::new();
+    let ctx = Context::new();
     ctx.add_sink(server.clone());
 
     let addr = server
@@ -305,7 +305,7 @@ async fn test_advertise_schemaless_channels() {
     // Client receives the correct advertisement for schemaless JSON
     let json_chan = ChannelBuilder::new("/schemaless_json")
         .message_encoding("json")
-        .with_context(&ctx)
+        .context(&ctx)
         .build()
         .expect("Failed to create channel");
 
@@ -326,7 +326,7 @@ async fn test_advertise_schemaless_channels() {
     // Client receives no advertisements for other schemaless channels (not supported)
     let invalid_chan = ChannelBuilder::new("/schemaless_other")
         .message_encoding("protobuf")
-        .with_context(&ctx)
+        .context(&ctx)
         .build()
         .expect("Failed to create channel");
 
