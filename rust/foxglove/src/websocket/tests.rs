@@ -17,7 +17,7 @@ use crate::websocket::{
     BlockingAssetHandlerFn, Capability, ClientChannelId, ConnectionGraph, Parameter, ParameterType,
     ParameterValue, Status, StatusLevel,
 };
-use crate::{collection, Channel, ChannelBuilder, Context, FoxgloveError, Metadata, Schema, Sink};
+use crate::{collection, Channel, ChannelBuilder, Context, FoxgloveError, PartialMetadata, Schema};
 
 fn make_message(id: usize) -> Message {
     Message::Text(format!("{id}").into())
@@ -72,7 +72,7 @@ fn test_send_lossy() {
     assert_eq!(received, ((TOTAL - BACKLOG)..TOTAL).collect::<Vec<_>>());
 }
 
-fn new_channel(topic: &str, ctx: &Context) -> Arc<Channel> {
+fn new_channel(topic: &str, ctx: &Arc<Context>) -> Arc<Channel> {
     ChannelBuilder::new(topic)
         .message_encoding("message_encoding")
         .schema(Schema::new(
@@ -212,9 +212,7 @@ async fn test_advertise_to_client() {
     msg.expect("Invalid serverInfo");
 
     let ch = new_channel("/foo", &ctx);
-    let metadata = Metadata::default();
-
-    server.log(&ch, b"foo bar", &metadata).unwrap();
+    ch.log(b"foo bar");
 
     let subscription_id = 1;
     let result = client_receiver.next().await.expect("No advertisement sent");
@@ -250,7 +248,7 @@ async fn test_advertise_to_client() {
     // FG-10395 replace this with something more precise
     tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
-    server.log(&ch, b"{\"a\":1}", &metadata).unwrap();
+    ch.log(b"{\"a\":1}");
 
     let result = client_receiver.next().await.unwrap();
     let msg = result.expect("Failed to parse message");
@@ -463,13 +461,13 @@ async fn test_log_only_to_subscribers() {
     assert_eq!(unsubscriptions[0].1.topic, ch1.topic);
     assert_eq!(unsubscriptions[1].1.topic, ch2.topic);
 
-    let metadata = Metadata {
-        log_time: 123456,
-        ..Metadata::default()
+    let metadata = PartialMetadata {
+        log_time: Some(123456),
+        ..PartialMetadata::default()
     };
-    server.log(&ch1, b"channel1", &metadata).unwrap();
-    server.log(&ch2, b"channel2", &metadata).unwrap();
-    server.log(&ch3, b"channel3", &metadata).unwrap();
+    ch1.log_with_meta(b"channel1", metadata);
+    ch2.log_with_meta(b"channel2", metadata);
+    ch3.log_with_meta(b"channel3", metadata);
 
     // Receive the message for client1 and client2
     let result = client1.next().await.unwrap();

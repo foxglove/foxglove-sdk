@@ -1,5 +1,4 @@
-use crate::testutil::GlobalContextTest;
-use crate::{ChannelBuilder, McapWriter, Schema, WebSocketServer};
+use crate::{ChannelBuilder, Context, McapWriter, Schema, WebSocketServer};
 use futures_util::{FutureExt, SinkExt, StreamExt};
 use serde_json::json;
 use std::{
@@ -11,7 +10,7 @@ use tokio_tungstenite::tungstenite::{client::IntoClientRequest, http::HeaderValu
 
 #[tokio::test]
 async fn test_logging_to_file_and_live_sinks() {
-    let _cleanup = GlobalContextTest::new();
+    let ctx = Context::new();
 
     // Configure mcap output
     let mut file = NamedTempFile::new().expect("Create tempfile");
@@ -20,6 +19,7 @@ async fn test_logging_to_file_and_live_sinks() {
     let port = 9998;
     let server = WebSocketServer::new()
         .bind("127.0.0.1", port)
+        .context(&ctx)
         .start()
         .await
         .expect("Failed to start server");
@@ -54,6 +54,7 @@ async fn test_logging_to_file_and_live_sinks() {
               "additionalProperties": true
             }"#,
         ))
+        .context(&ctx)
         .build()
         .expect("Failed to create channel");
 
@@ -118,6 +119,7 @@ async fn test_logging_to_file_and_live_sinks() {
 
         // must hold a reference so file is not dropped
         let handle = McapWriter::new()
+            .context(&ctx)
             .create(BufWriter::new(file))
             .expect("Failed to record file");
 
