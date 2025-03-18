@@ -307,9 +307,7 @@ async fn test_advertise_schemaless_channels() {
         .build()
         .expect("Failed to create channel");
 
-    server
-        .log(&json_chan, b"{\"a\": 1}", &Metadata::default())
-        .unwrap();
+    json_chan.log(b"{\"a\": 1}");
 
     let result = client_stream.next().await.expect("No advertisement sent");
     let advertisement = result.expect("Failed to parse advertisement");
@@ -328,9 +326,7 @@ async fn test_advertise_schemaless_channels() {
         .build()
         .expect("Failed to create channel");
 
-    server
-        .log(&invalid_chan, b"1", &Metadata::default())
-        .unwrap();
+    invalid_chan.log(b"1");
 
     let msg = client_stream.next().now_or_never();
     assert!(msg.is_none());
