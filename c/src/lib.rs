@@ -134,7 +134,7 @@ impl FoxgloveMcapOptions {
 
 pub struct FoxgloveMcapWriter(Option<foxglove::McapWriterHandle<BufWriter<File>>>);
 
-/// Create or open an MCAP file for writing. Must later be freed with `foxglove_mcap_close`.
+/// Create or open an MCAP file for writing. Must later be freed with `foxglove_mcap_free`.
 ///
 /// # Safety
 /// `path`, `profile`, and `library` must be valid UTF8.
