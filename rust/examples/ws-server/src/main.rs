@@ -1,7 +1,8 @@
 use clap::Parser;
 use foxglove::convert::SaturatingInto;
 use foxglove::schemas::{
-    Color, CubePrimitive, FrameTransform, Pose, Quaternion, SceneEntity, SceneUpdate, Vector3,
+    Color, CubePrimitive, FrameTransform, Pose, Quaternion, SceneEntity, SceneUpdate,
+    SpherePrimitive, Vector3,
 };
 use foxglove::{static_typed_channel, Channel, ChannelBuilder};
 use schemars::JsonSchema;
@@ -23,6 +24,7 @@ struct Message {
     count: u32,
 }
 
+static_typed_channel!(pub SPHERE_CHANNEL, "/sphere", SceneUpdate);
 static_typed_channel!(pub BOX_CHANNEL, "/boxes", SceneUpdate);
 static_typed_channel!(pub TF_CHANNEL, "/tf", FrameTransform);
 static_typed_channel!(pub MSG_CHANNEL, "/msg", Message);
@@ -124,6 +126,40 @@ async fn main() {
         .start()
         .await
         .expect("Server failed to start");
+
+    // Log a static message, which is stored on the channel, and immediately sent to clients when
+    // they first subscribe to the channel. This way, we don't need to repeatedly log the same
+    // message at a regular interval.
+    SPHERE_CHANNEL.log_static(&SceneUpdate {
+        deletions: vec![],
+        entities: vec![SceneEntity {
+            frame_id: "world".into(),
+            id: "sphere_1".into(),
+            lifetime: None,
+            spheres: vec![SpherePrimitive {
+                pose: Some(Pose {
+                    position: Some(Vector3 {
+                        x: 0.0,
+                        y: 0.0,
+                        z: -2.0,
+                    }),
+                    orientation: None,
+                }),
+                size: Some(Vector3 {
+                    x: 1.0,
+                    y: 1.0,
+                    z: 1.0,
+                }),
+                color: Some(Color {
+                    r: 0.0,
+                    g: 1.0,
+                    b: 0.0,
+                    a: 1.0,
+                }),
+            }],
+            ..Default::default()
+        }],
+    });
 
     tokio::task::spawn(log_forever(args.fps));
     tokio::signal::ctrl_c().await.ok();

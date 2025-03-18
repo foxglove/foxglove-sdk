@@ -148,9 +148,38 @@ impl<T: Encode> TypedChannel<T> {
                 let mut buf = Vec::with_capacity(size);
                 if let Err(err) = msg.encode(&mut buf) {
                     tracing::error!("failed to encode message: {:?}", err);
+                } else {
+                    self.inner.log_to_sinks(&buf, metadata);
                 }
-                self.inner.log_to_sinks(&buf, metadata);
             }
+        }
+    }
+
+    /// Logs a static message.
+    ///
+    /// Unlike regular messages, static messages are stored on the channel. A channel may have at
+    /// most one static message at a time; subsequent calls to this method replace the previous
+    /// static message. When a sink subscribes to the channel, a copy of the static message is
+    /// logged immediately.
+    pub fn log_static(&self, msg: &T) {
+        self.log_static_with_meta(msg, PartialMetadata::default());
+    }
+
+    /// Logs a static message with additional metadata.
+    ///
+    /// Unlike regular messages, static messages are stored on the channel. A channel may have at
+    /// most one static message at a time; subsequent calls to this method replace the previous
+    /// static message. When a sink subscribes to the channel, a copy of the static message is
+    /// logged immediately.
+    pub fn log_static_with_meta(&self, msg: &T, metadata: PartialMetadata) {
+        let mut buf = msg
+            .encoded_len()
+            .map(Vec::with_capacity)
+            .unwrap_or_default();
+        if let Err(err) = msg.encode(&mut buf) {
+            tracing::error!("failed to encode message: {:?}", err);
+        } else {
+            self.inner.log_static_with_meta(buf, metadata);
         }
     }
 }

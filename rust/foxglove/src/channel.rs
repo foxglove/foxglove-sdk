@@ -4,6 +4,7 @@ use std::sync::atomic::Ordering::Relaxed;
 use std::sync::atomic::{AtomicU32, AtomicU64};
 use std::sync::Arc;
 
+use arc_swap::ArcSwapOption;
 use serde::{Deserialize, Serialize};
 
 use crate::log_sink_set::LogSinkSet;
@@ -79,6 +80,29 @@ impl Schema {
     }
 }
 
+/// A static message for a channel.
+///
+/// Unlike regular messages, static messages are stored on the channel. A channel may have at most
+/// one static message at a time. When a sink subscribes to the channel, a copy of the static
+/// message is logged immediately.
+pub(crate) struct StaticMessage {
+    data: Vec<u8>,
+    metadata: Metadata,
+}
+impl StaticMessage {
+    fn new(data: Vec<u8>, metadata: Metadata) -> Self {
+        Self { data, metadata }
+    }
+
+    pub fn data(&self) -> &[u8] {
+        &self.data
+    }
+
+    pub fn metadata(&self) -> &Metadata {
+        &self.metadata
+    }
+}
+
 /// A log channel that can be used to log binary messages.
 ///
 /// A "channel" is conceptually the same as a [MCAP channel]: it is a stream of messages which all
@@ -105,6 +129,7 @@ pub struct Channel {
     metadata: BTreeMap<String, String>,
     message_sequence: AtomicU32,
     sinks: LogSinkSet,
+    static_message: ArcSwapOption<StaticMessage>,
 }
 
 impl Channel {
@@ -122,6 +147,7 @@ impl Channel {
             metadata,
             message_sequence: AtomicU32::new(1),
             sinks: LogSinkSet::new(),
+            static_message: ArcSwapOption::default(),
         })
     }
 
@@ -184,25 +210,57 @@ impl Channel {
     }
 
     /// Logs a message with additional metadata.
-    pub fn log_with_meta(&self, msg: &[u8], opts: PartialMetadata) {
+    pub fn log_with_meta(&self, msg: &[u8], metadata: PartialMetadata) {
         if self.has_sinks() {
-            self.log_to_sinks(msg, opts);
+            self.log_to_sinks(msg, metadata);
         }
     }
 
     /// Logs a message with additional metadata.
-    pub(crate) fn log_to_sinks(&self, msg: &[u8], opts: PartialMetadata) {
-        let mut metadata = Metadata {
-            sequence: opts.sequence.unwrap_or_else(|| self.next_sequence()),
-            log_time: opts.log_time.unwrap_or_else(nanoseconds_since_epoch),
-            publish_time: opts.publish_time.unwrap_or_default(),
-        };
-        // If publish_time is not set, use log_time.
-        if opts.publish_time.is_none() {
-            metadata.publish_time = metadata.log_time
-        }
-
+    pub(crate) fn log_to_sinks(&self, msg: &[u8], metadata: PartialMetadata) {
+        let metadata = self.complete_metadata(metadata);
         self.sinks.for_each(|sink| sink.log(self, msg, &metadata));
+    }
+
+    /// Logs a static message.
+    ///
+    /// Unlike regular messages, static messages are stored on the channel. A channel may have at
+    /// most one static message at a time; subsequent calls to this method replace the previous
+    /// static message. When a sink subscribes to the channel, a copy of the static message is
+    /// logged immediately.
+    pub fn log_static(&self, msg: Vec<u8>) {
+        self.log_static_with_meta(msg, PartialMetadata::default());
+    }
+
+    /// Logs a static message with additional metadata.
+    ///
+    /// Unlike regular messages, static messages are stored on the channel. A channel may have at
+    /// most one static message at a time; subsequent calls to this method replace the previous
+    /// static message. When a sink subscribes to the channel, a copy of the static message is
+    /// logged immediately.
+    pub fn log_static_with_meta(&self, msg: Vec<u8>, metadata: PartialMetadata) {
+        let metadata = self.complete_metadata(metadata);
+        let static_message = Arc::new(StaticMessage::new(msg, metadata));
+        self.static_message.store(Some(static_message.clone()));
+        if self.has_sinks() {
+            self.sinks
+                .for_each(|sink| sink.log(self, static_message.data(), static_message.metadata()));
+        }
+    }
+
+    pub(crate) fn static_message(&self) -> Option<Arc<StaticMessage>> {
+        self.static_message.load_full()
+    }
+
+    fn complete_metadata(&self, partial: PartialMetadata) -> Metadata {
+        let sequence = partial.sequence.unwrap_or_else(|| self.next_sequence());
+        let log_time = partial.log_time.unwrap_or_else(nanoseconds_since_epoch);
+        let publish_time = partial.publish_time.unwrap_or(log_time);
+        Metadata {
+            sequence,
+            log_time,
+            publish_time,
+        }
     }
 }
 
