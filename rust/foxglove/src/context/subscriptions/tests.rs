@@ -24,16 +24,16 @@ fn chid(id: u64) -> ChannelId {
 
 #[test]
 fn test_subscriptions() {
-    let s1 = Arc::new(MockSink::default());
-    let s2 = Arc::new(MockSink::default());
-    let s3 = Arc::new(MockSink::default());
+    let s1 = Arc::new(MockSink::default()) as Arc<dyn Sink>;
+    let s2 = Arc::new(MockSink::default()) as Arc<dyn Sink>;
+    let s3 = Arc::new(MockSink::default()) as Arc<dyn Sink>;
 
     let mut subs = Subscriptions::default();
     assert_subscribers!(subs.get_subscribers(chid(99)), []);
 
     // Per-topic subscriptions.
-    assert!(subs.subscribe_channels(s1.clone(), &[chid(1), chid(2)]));
-    assert!(subs.subscribe_channels(s2.clone(), &[chid(2), chid(3)]));
+    assert!(subs.subscribe_channels(&s1, &[chid(1), chid(2)]));
+    assert!(subs.subscribe_channels(&s2, &[chid(2), chid(3)]));
     assert_subscribers!(subs.get_subscribers(chid(1)), [s1.id()]);
     assert_subscribers!(subs.get_subscribers(chid(2)), [s1.id(), s2.id()]);
     assert_subscribers!(subs.get_subscribers(chid(3)), [s2.id()]);
@@ -48,7 +48,7 @@ fn test_subscriptions() {
 
     // Add a per-topic subscription for an existing global subscriber. This should be a no-op. The
     // subscriber should only appear once in the set of subscribers for the topic.
-    assert!(!subs.subscribe_channels(s3.clone(), &[chid(3)]));
+    assert!(!subs.subscribe_channels(&s3, &[chid(3)]));
     assert_subscribers!(subs.get_subscribers(chid(1)), [s1.id(), s3.id()]);
 
     // Removing a topic subscription for a global subscriber is a no-op, and doesn't remove the
@@ -68,7 +68,7 @@ fn test_subscriptions() {
     assert!(!subs.unsubscribe_channels(s1.id(), &[chid(2)]));
 
     // Add a global subscription after a per-topic subscription. No duplicate subscribers!
-    assert!(subs.subscribe_channels(s1.clone(), &[chid(1)]));
+    assert!(subs.subscribe_channels(&s1, &[chid(1)]));
     assert_subscribers!(subs.get_subscribers(chid(1)), [s1.id(), s3.id()]);
     assert_subscribers!(subs.get_subscribers(chid(2)), [s2.id(), s3.id()]);
     assert_subscribers!(subs.get_subscribers(chid(3)), [s2.id(), s3.id()]);

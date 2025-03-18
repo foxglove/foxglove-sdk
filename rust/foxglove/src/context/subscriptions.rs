@@ -56,7 +56,7 @@ impl Subscriptions {
     /// Adds subscriptions to the specified channels.
     ///
     /// Has no effect if the subscriber has a global subscription.
-    pub fn subscribe_channels(&mut self, sink: Arc<dyn Sink>, channel_ids: &[ChannelId]) -> bool {
+    pub fn subscribe_channels(&mut self, sink: &Arc<dyn Sink>, channel_ids: &[ChannelId]) -> bool {
         let sink_id = sink.id();
         if self.global.contains_key(&sink_id) {
             return false;
