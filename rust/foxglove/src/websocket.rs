@@ -554,8 +554,8 @@ impl ConnectedClient {
             handler.on_unsubscribe(
                 Client::new(self),
                 ChannelView {
-                    id: channel.id,
-                    topic: &channel.topic,
+                    id: channel.id(),
+                    topic: channel.topic(),
                 },
             );
         }
@@ -623,8 +623,8 @@ impl ConnectedClient {
                 handler.on_subscribe(
                     Client::new(self),
                     ChannelView {
-                        id: channel.id,
-                        topic: &channel.topic,
+                        id: channel.id(),
+                        topic: channel.topic(),
                     },
                 );
             }
@@ -991,7 +991,7 @@ impl ConnectedClient {
             Err(FoxgloveError::SchemaRequired) => {
                 tracing::error!(
                     "Ignoring advertise channel for {} because a schema is required",
-                    channel.topic
+                    channel.topic()
                 );
                 return;
             }
@@ -1006,8 +1006,8 @@ impl ConnectedClient {
         if self.send_control_msg(Message::text(message.clone())) {
             tracing::debug!(
                 "Advertised channel {} with id {} to client {}",
-                channel.topic,
-                channel.id,
+                channel.topic(),
+                channel.id(),
                 self.addr
             );
         }
@@ -1587,7 +1587,7 @@ impl Sink for ConnectedClient {
 
     fn log(&self, channel: &Channel, msg: &[u8], metadata: &Metadata) -> Result<(), FoxgloveError> {
         let subscriptions = self.subscriptions.lock();
-        let Some(subscription_id) = subscriptions.get_by_left(&channel.id).copied() else {
+        let Some(subscription_id) = subscriptions.get_by_left(&channel.id()).copied() else {
             return Ok(());
         };
 
