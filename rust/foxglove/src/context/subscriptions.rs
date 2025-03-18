@@ -56,17 +56,13 @@ impl Subscriptions {
     /// Adds subscriptions to the specified channels.
     ///
     /// Has no effect if the subscriber has a global subscription.
-    pub fn subscribe_channels(
-        &mut self,
-        sink: Arc<dyn Sink>,
-        channel_ids: impl IntoIterator<Item = ChannelId>,
-    ) -> bool {
+    pub fn subscribe_channels(&mut self, sink: Arc<dyn Sink>, channel_ids: &[ChannelId]) -> bool {
         let sink_id = sink.id();
         if self.global.contains_key(&sink_id) {
             return false;
         }
         let mut inserted = false;
-        for channel_id in channel_ids {
+        for &channel_id in channel_ids {
             inserted |= self
                 .by_channel
                 .entry(channel_id)
@@ -80,13 +76,9 @@ impl Subscriptions {
     /// Removes subscriptions to the specified channels.
     ///
     /// Has no effect if the subscriber has a global subscription.
-    pub fn unsubscribe_channels(
-        &mut self,
-        sink_id: SinkId,
-        channel_ids: impl IntoIterator<Item = ChannelId>,
-    ) -> bool {
+    pub fn unsubscribe_channels(&mut self, sink_id: SinkId, channel_ids: &[ChannelId]) -> bool {
         let mut removed = false;
-        for channel_id in channel_ids {
+        for &channel_id in channel_ids {
             if let Some(subs) = self.by_channel.get_mut(&channel_id) {
                 if subs.remove(&sink_id).is_some() {
                     removed = true;
@@ -99,6 +91,11 @@ impl Subscriptions {
         removed
     }
 
+    /// Remove all per-channel subscriptions for the specified channel.
+    pub fn remove_channel_subscriptions(&mut self, channel_id: ChannelId) -> bool {
+        self.by_channel.remove(&channel_id).is_some()
+    }
+
     /// Remove all global and per-channel subscriptions for a particular subscriber.
     pub fn remove_subscriber(&mut self, sink_id: SinkId) -> bool {
         let mut removed = self.global.remove(&sink_id).is_some();
@@ -107,11 +104,6 @@ impl Subscriptions {
             !subs.is_empty()
         });
         removed
-    }
-
-    /// Returns true if there is at least one subscriber for the channel.
-    pub fn has_subscribers(&self, channel_id: ChannelId) -> bool {
-        !self.global.is_empty() || self.by_channel.contains_key(&channel_id)
     }
 
     /// Returns the set of subscribers for the channel.
