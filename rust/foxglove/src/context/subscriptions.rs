@@ -98,12 +98,16 @@ impl Subscriptions {
 
     /// Remove all global and per-channel subscriptions for a particular subscriber.
     pub fn remove_subscriber(&mut self, sink_id: SinkId) -> bool {
-        let mut removed = self.global.remove(&sink_id).is_some();
-        self.by_channel.retain(|_, subs| {
-            removed |= subs.remove(&sink_id).is_some();
-            !subs.is_empty()
-        });
-        removed
+        if self.global.remove(&sink_id).is_some() {
+            true
+        } else {
+            let mut removed = false;
+            self.by_channel.retain(|_, subs| {
+                removed |= subs.remove(&sink_id).is_some();
+                !subs.is_empty()
+            });
+            removed
+        }
     }
 
     /// Returns the set of subscribers for the channel.
