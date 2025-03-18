@@ -13,31 +13,29 @@ use std::sync::Arc;
 pub struct FoxgloveServerCapability {
     pub flags: u8,
 }
-impl FoxgloveServerCapability {
-    /// Allow clients to advertise channels to send data messages to the server.
-    pub const CLIENT_PUBLISH: Self = Self { flags: 1 << 0 };
-    /// Allow clients to subscribe and make connection graph updates
-    pub const CONNECTION_GRAPH: Self = Self { flags: 1 << 1 };
-    /// Allow clients to get & set parameters.
-    pub const PARAMETERS: Self = Self { flags: 1 << 2 };
-    /// Inform clients about the latest server time.
-    ///
-    /// This allows accelerated, slowed, or stepped control over the progress of time. If the
-    /// server publishes time data, then timestamps of published messages must originate from the
-    /// same time source.
-    pub const TIME: Self = Self { flags: 1 << 3 };
-    /// Allow clients to call services.
-    pub const SERVICES: Self = Self { flags: 1 << 4 };
-}
+/// Allow clients to advertise channels to send data messages to the server.
+pub const FOXGLOVE_SERVER_CAPABILITY_CLIENT_PUBLISH: u8 = 1 << 0;
+/// Allow clients to subscribe and make connection graph updates
+pub const FOXGLOVE_SERVER_CAPABILITY_CONNECTION_GRAPH: u8 = 1 << 1;
+/// Allow clients to get & set parameters.
+pub const FOXGLOVE_SERVER_CAPABILITY_PARAMETERS: u8 = 1 << 2;
+/// Inform clients about the latest server time.
+///
+/// This allows accelerated, slowed, or stepped control over the progress of time. If the
+/// server publishes time data, then timestamps of published messages must originate from the
+/// same time source.
+pub const FOXGLOVE_SERVER_CAPABILITY_TIME: u8 = 1 << 3;
+/// Allow clients to call services.
+pub const FOXGLOVE_SERVER_CAPABILITY_SERVICES: u8 = 1 << 4;
 
 bitflags! {
     #[derive(Clone, Copy, PartialEq, Eq)]
     struct FoxgloveServerCapabilityBitFlags: u8 {
-        const ClientPublish = FoxgloveServerCapability::CLIENT_PUBLISH.flags;
-        const ConnectionGraph = FoxgloveServerCapability::CONNECTION_GRAPH.flags;
-        const Parameters = FoxgloveServerCapability::PARAMETERS.flags;
-        const Time = FoxgloveServerCapability::TIME.flags;
-        const Services = FoxgloveServerCapability::SERVICES.flags;
+        const ClientPublish = FOXGLOVE_SERVER_CAPABILITY_CLIENT_PUBLISH;
+        const ConnectionGraph = FOXGLOVE_SERVER_CAPABILITY_CONNECTION_GRAPH;
+        const Parameters = FOXGLOVE_SERVER_CAPABILITY_PARAMETERS;
+        const Time = FOXGLOVE_SERVER_CAPABILITY_TIME;
+        const Services = FOXGLOVE_SERVER_CAPABILITY_SERVICES;
     }
 }
 

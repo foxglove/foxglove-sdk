@@ -141,7 +141,7 @@ TEST_CASE("Capability enums") {
 #define TEST_CAPABILITY(CAMEL_CAPABILITY, SNAKE_CAPABILITY) \
   REQUIRE( \
     to_underlying(foxglove::WebSocketServerCapabilities::CAMEL_CAPABILITY) == \
-    foxglove_server_capability_##SNAKE_CAPABILITY \
+    FOXGLOVE_SERVER_CAPABILITY_##SNAKE_CAPABILITY \
   )
   TEST_CAPABILITY(ClientPublish, CLIENT_PUBLISH);
   TEST_CAPABILITY(ConnectionGraph, CONNECTION_GRAPH);
