@@ -1,8 +1,11 @@
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Arc;
+
+use smallvec::SmallVec;
+
 use crate::channel::Channel;
 use crate::metadata::Metadata;
 use crate::FoxgloveError;
-use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::Arc;
 
 /// Uniquely identifies a [`Sink`] in the context of this program.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -43,3 +46,9 @@ pub trait Sink: Send + Sync {
     /// Sinks can clean up any channel-related state they have or take other actions.
     fn remove_channel(&self, _channel: &Channel) {}
 }
+
+/// A small group of sinks.
+///
+/// We use a [`SmallVec`] to improve cache locality and reduce heap allocations when working with a
+/// small number of sinks, which is typically the case.
+pub(crate) type SmallSinkVec = SmallVec<[Arc<dyn Sink>; 6]>;

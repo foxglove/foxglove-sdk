@@ -3,19 +3,12 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use smallvec::SmallVec;
-
 use crate::channel::ChannelId;
+use crate::sink::SmallSinkVec;
 use crate::{Sink, SinkId};
 
 #[cfg(test)]
 mod tests;
-
-/// A set of distinct subscribers.
-///
-/// We use a [`SmallVec`] to avoid heap allocations for lookups, when the number of concurrent
-/// subscribers is reasonably small.
-pub(crate) type SubscriberVec = SmallVec<[Arc<dyn Sink>; 6]>;
 
 /// A collection of sink subscriptions on channels.
 ///
@@ -129,8 +122,8 @@ impl Subscriptions {
     /// Returns the set of subscribers for the channel.
     ///
     /// The set will be empty if there are no subscribers.
-    pub fn get_subscribers(&self, channel_id: ChannelId) -> SubscriberVec {
-        let mut result: SubscriberVec = self.global.values().cloned().collect();
+    pub fn get_subscribers(&self, channel_id: ChannelId) -> SmallSinkVec {
+        let mut result: SmallSinkVec = self.global.values().cloned().collect();
         if let Some(subs) = self.by_channel.get(&channel_id) {
             result.extend(subs.values().cloned());
         }
