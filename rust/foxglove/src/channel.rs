@@ -1,11 +1,13 @@
-use crate::log_sink_set::LogSinkSet;
-use crate::{nanoseconds_since_epoch, Metadata, PartialMetadata, Sink};
-use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use std::collections::BTreeMap;
 use std::sync::atomic::AtomicU32;
 use std::sync::atomic::Ordering::Relaxed;
-use std::sync::Arc;
+
+use serde::{Deserialize, Serialize};
+
+use crate::log_sink_set::LogSinkSet;
+use crate::sink::SmallSinkVec;
+use crate::{nanoseconds_since_epoch, Metadata, PartialMetadata};
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Deserialize, Serialize)]
 pub struct ChannelId(u64);
@@ -122,7 +124,7 @@ impl Channel {
     }
 
     /// Updates the set of sinks that are subscribed to this channel.
-    pub(crate) fn update_sinks(&self, sinks: Vec<Arc<dyn Sink>>) {
+    pub(crate) fn update_sinks(&self, sinks: SmallSinkVec) {
         self.sinks.store(sinks);
     }
 

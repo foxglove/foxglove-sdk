@@ -41,7 +41,7 @@ impl ContextInner {
 
         // Connect channel sinks.
         let sinks = self.subs.get_subscribers(channel.id());
-        channel.update_sinks(sinks.to_vec());
+        channel.update_sinks(sinks);
 
         Ok(())
     }
@@ -118,7 +118,7 @@ impl ContextInner {
     fn update_all_channel_sinks(&self) {
         for (id, channel) in &self.channels {
             let sinks = self.subs.get_subscribers(*id);
-            channel.update_sinks(sinks.to_vec());
+            channel.update_sinks(sinks);
         }
     }
 
@@ -127,7 +127,7 @@ impl ContextInner {
         for id in channel_ids {
             if let Some(channel) = self.channels.get(id) {
                 let sinks = self.subs.get_subscribers(*id);
-                channel.update_sinks(sinks.to_vec());
+                channel.update_sinks(sinks);
             }
         }
     }

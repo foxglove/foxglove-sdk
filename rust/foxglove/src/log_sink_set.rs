@@ -2,12 +2,13 @@ use std::sync::Arc;
 
 use arc_swap::ArcSwap;
 
+use crate::sink::SmallSinkVec;
 use crate::{FoxgloveError, Sink};
 
 pub(crate) const ERROR_LOGGING_MESSAGE: &str = "error logging message";
 
 #[derive(Default)]
-pub(crate) struct LogSinkSet(ArcSwap<Vec<Arc<dyn Sink>>>);
+pub(crate) struct LogSinkSet(ArcSwap<SmallSinkVec>);
 
 impl LogSinkSet {
     pub fn new() -> Self {
@@ -20,7 +21,7 @@ impl LogSinkSet {
     }
 
     /// Replaces the set of sinks in the set.
-    pub fn store(&self, sinks: Vec<Arc<dyn Sink>>) {
+    pub fn store(&self, sinks: SmallSinkVec) {
         self.0.store(Arc::new(sinks));
     }
 
