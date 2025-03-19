@@ -24,6 +24,7 @@ impl SinkId {
 /// Sinks are thread-safe and can be shared between threads. Usually you'd use our implementations
 /// like [`McapWriter`](crate::McapWriter) or [`WebSocketServer`](crate::WebSocketServer).
 ///
+#[doc(hidden)]
 pub trait Sink: Send + Sync {
     /// Returns the sink's unique ID.
     fn id(&self) -> SinkId;
