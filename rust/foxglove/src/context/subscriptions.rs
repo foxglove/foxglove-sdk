@@ -44,18 +44,27 @@ impl Subscriptions {
     /// Adds a global subscription to all channels.
     ///
     /// Removes any existing per-channel subscriptions for this subscriber.
+    ///
+    /// Returns false if the subscribe already has a global subscription.
     pub fn subscribe_global(&mut self, sink: Arc<dyn Sink>) -> bool {
         let sink_id = sink.id();
-        self.by_channel.retain(|_, subs| {
-            subs.remove(&sink_id);
-            !subs.is_empty()
-        });
-        self.global.insert(sink_id, sink).is_none()
+        if self.global.insert(sink_id, sink).is_none() {
+            self.by_channel.retain(|_, subs| {
+                subs.remove(&sink_id);
+                !subs.is_empty()
+            });
+            true
+        } else {
+            false
+        }
     }
 
     /// Adds subscriptions to the specified channels.
     ///
     /// Has no effect if the subscriber has a global subscription.
+    ///
+    /// Returns false if the subscriber already has subscriptions to all of the channels, has a
+    /// global subscription, or the list of channels is empty.
     pub fn subscribe_channels(&mut self, sink: &Arc<dyn Sink>, channel_ids: &[ChannelId]) -> bool {
         let sink_id = sink.id();
         if self.global.contains_key(&sink_id) {
@@ -76,6 +85,9 @@ impl Subscriptions {
     /// Removes subscriptions to the specified channels.
     ///
     /// Has no effect if the subscriber has a global subscription.
+    ///
+    /// Returns false if the subscriber is not subscribed to any of the channels, has a global
+    /// subscription, or if the list of channels is empty.
     pub fn unsubscribe_channels(&mut self, sink_id: SinkId, channel_ids: &[ChannelId]) -> bool {
         let mut removed = false;
         for &channel_id in channel_ids {
@@ -92,11 +104,15 @@ impl Subscriptions {
     }
 
     /// Remove all per-channel subscriptions for the specified channel.
+    ///
+    /// Returns false if there were no per-channel subscriptions for the channel.
     pub fn remove_channel_subscriptions(&mut self, channel_id: ChannelId) -> bool {
         self.by_channel.remove(&channel_id).is_some()
     }
 
     /// Remove all global and per-channel subscriptions for a particular subscriber.
+    ///
+    /// Returns false if the subscriber did not have any subscriptions.
     pub fn remove_subscriber(&mut self, sink_id: SinkId) -> bool {
         if self.global.remove(&sink_id).is_some() {
             true

@@ -5,8 +5,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
 /// Uniquely identifies a [`Sink`] in the context of this program.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[cfg_attr(test, derive(PartialOrd, Ord))]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct SinkId(u64);
 impl SinkId {
     /// Allocates the next sink ID.
