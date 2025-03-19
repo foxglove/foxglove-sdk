@@ -1630,9 +1630,10 @@ impl Sink for Server {
     }
 
     /// Server has an available channel. Advertise to all clients.
-    fn add_channel(&self, channel: &Arc<Channel>) {
+    fn add_channel(&self, channel: &Arc<Channel>) -> bool {
         let server = self.arc();
         server.advertise_channel(channel);
+        false
     }
 
     /// A channel is being removed. Unadvertise to all clients.

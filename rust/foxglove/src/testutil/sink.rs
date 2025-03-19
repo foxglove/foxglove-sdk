@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::channel::ChannelId;
 use crate::{Channel, FoxgloveError, Metadata, Sink, SinkId};
 use parking_lot::Mutex;
@@ -33,6 +35,7 @@ pub struct LogCall {
 pub struct RecordingSink {
     id: SinkId,
     auto_subscribe: bool,
+    add_channel_rval: bool,
     pub recorded: Mutex<Vec<LogCall>>,
 }
 
@@ -41,8 +44,14 @@ impl RecordingSink {
         Self {
             id: SinkId::next(),
             auto_subscribe: true,
+            add_channel_rval: false,
             recorded: Mutex::new(Vec::new()),
         }
+    }
+
+    pub fn add_channel_rval(mut self, value: bool) -> Self {
+        self.add_channel_rval = value;
+        self
     }
 
     pub fn auto_subscribe(mut self, value: bool) -> Self {
@@ -58,6 +67,10 @@ impl Sink for RecordingSink {
 
     fn auto_subscribe(&self) -> bool {
         self.auto_subscribe
+    }
+
+    fn add_channel(&self, _channel: &Arc<Channel>) -> bool {
+        self.add_channel_rval
     }
 
     fn log(&self, channel: &Channel, msg: &[u8], metadata: &Metadata) -> Result<(), FoxgloveError> {
