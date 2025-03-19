@@ -89,8 +89,8 @@ pub struct FoxgloveMcapOptions {
     // pub compression: Option<Compression>,
     pub profile: *const c_char,
     pub profile_len: usize,
-    pub library: *const c_char,
-    pub library_len: usize,
+    // The library option is not provided here, because it is ignored by our Rust SDK
+    /// chunk_size of 0 is treated as if it was omitted (None)
     pub chunk_size: u64,
     pub use_chunks: bool,
     pub disable_seeking: bool,
@@ -110,15 +110,14 @@ impl FoxgloveMcapOptions {
             std::slice::from_raw_parts(self.profile as *const u8, self.profile_len)
         })
         .expect("profile is invalid");
-        let library = std::str::from_utf8(unsafe {
-            std::slice::from_raw_parts(self.library as *const u8, self.library_len)
-        })
-        .expect("library is invalid");
 
         WriteOptions::default()
             .profile(profile)
-            .library(library)
-            .chunk_size(Some(self.chunk_size).filter(|size| *size > 0))
+            .chunk_size(if self.chunk_size > 0 {
+                Some(self.chunk_size)
+            } else {
+                None
+            })
             .use_chunks(self.use_chunks)
             .disable_seeking(self.disable_seeking)
             .emit_statistics(self.emit_statistics)

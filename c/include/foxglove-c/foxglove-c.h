@@ -91,7 +91,7 @@ extern "C" {
 struct foxglove_websocket_server *foxglove_server_start(const struct foxglove_server_options *FOXGLOVE_NONNULL options);
 
 /**
- * Create or open an MCAP file for writing. Must later be freed with `foxglove_mcap_close`.
+ * Create or open an MCAP file for writing. Must later be freed with `foxglove_mcap_free`.
  *
  * # Safety
  * `path`, `profile`, and `library` must be valid UTF8.
