@@ -31,6 +31,9 @@ typedef struct foxglove_channel foxglove_channel;
 [ptr]
 non_null_attribute = "FOXGLOVE_NONNULL"
 
+[enum]
+prefix_with_name = true
+
 [export.rename]
 FoxgloveWebSocketServer = "foxglove_websocket_server"
 FoxgloveChannel = "foxglove_channel"

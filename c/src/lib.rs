@@ -2,7 +2,7 @@
 #![warn(unsafe_op_in_unsafe_fn)]
 #![warn(unsafe_attr_outside_unsafe)]
 
-use mcap::WriteOptions;
+use mcap::{Compression, WriteOptions};
 use std::ffi::{c_char, c_void, CStr};
 use std::fs::File;
 use std::io::BufWriter;
@@ -80,13 +80,20 @@ pub unsafe extern "C" fn foxglove_server_start(
     ))))
 }
 
+#[repr(u8)]
+pub enum FoxgloveMcapCompression {
+    None,
+    Zstd,
+    Lz4,
+}
+
 #[repr(C)]
 pub struct FoxgloveMcapOptions {
     pub path: *const c_char,
     pub path_len: usize,
     pub create: bool,
     pub truncate: bool,
-    // pub compression: Option<Compression>,
+    pub compression: FoxgloveMcapCompression,
     pub profile: *const c_char,
     pub profile_len: usize,
     // The library option is not provided here, because it is ignored by our Rust SDK
@@ -111,8 +118,15 @@ impl FoxgloveMcapOptions {
         })
         .expect("profile is invalid");
 
+        let compression = match self.compression {
+            FoxgloveMcapCompression::None => None,
+            FoxgloveMcapCompression::Zstd => Some(Compression::Zstd),
+            FoxgloveMcapCompression::Lz4 => Some(Compression::Lz4),
+        };
+
         WriteOptions::default()
             .profile(profile)
+            .compression(compression)
             .chunk_size(if self.chunk_size > 0 {
                 Some(self.chunk_size)
             } else {

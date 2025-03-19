@@ -27,6 +27,19 @@
 typedef struct foxglove_channel foxglove_channel;
 
 
+enum FoxgloveMcapCompression
+#ifdef __cplusplus
+  : uint8_t
+#endif // __cplusplus
+ {
+  FoxgloveMcapCompression_None,
+  FoxgloveMcapCompression_Zstd,
+  FoxgloveMcapCompression_Lz4,
+};
+#ifndef __cplusplus
+typedef uint8_t FoxgloveMcapCompression;
+#endif // __cplusplus
+
 typedef struct foxglove_mcap_writer foxglove_mcap_writer;
 
 typedef struct foxglove_websocket_server foxglove_websocket_server;
@@ -52,10 +65,12 @@ typedef struct foxglove_mcap_options {
   size_t path_len;
   bool create;
   bool truncate;
+  FoxgloveMcapCompression compression;
   const char *profile;
   size_t profile_len;
-  const char *library;
-  size_t library_len;
+  /**
+   * chunk_size of 0 is treated as if it was omitted (None)
+   */
   uint64_t chunk_size;
   bool use_chunks;
   bool disable_seeking;

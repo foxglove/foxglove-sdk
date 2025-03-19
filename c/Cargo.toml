@@ -13,7 +13,7 @@ workspace = true
 
 [dependencies]
 foxglove = { path = "../rust/foxglove", features = ["unstable"] }
-mcap = "0.14.1"
+mcap.workspace = true
 
 [build-dependencies]
 cbindgen = "0.28.0"

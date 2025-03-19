@@ -3,6 +3,8 @@
 #include <memory>
 #include <string>
 
+#include "foxglove-c/foxglove-c.h"
+
 struct foxglove_mcap_writer;
 
 namespace foxglove {
@@ -10,8 +12,8 @@ namespace foxglove {
 struct McapWriterOptions {
   std::string_view path;
   std::string_view profile;
-  std::string_view library;
   uint64_t chunkSize = 0;
+  FoxgloveMcapCompression compression = FoxgloveMcapCompression_None;
   bool useChunks = false;
   bool disableSeeking = false;
   bool emitStatistics = false;

@@ -10,8 +10,7 @@ McapWriter::McapWriter(McapWriterOptions options)
   cOptions.path_len = options.path.length();
   cOptions.profile = options.profile.data();
   cOptions.profile_len = options.profile.length();
-  cOptions.library = options.library.data();
-  cOptions.library_len = options.library.length();
+  cOptions.compression = options.compression;
   cOptions.chunk_size = options.chunkSize;
   cOptions.use_chunks = options.useChunks;
   cOptions.disable_seeking = options.disableSeeking;

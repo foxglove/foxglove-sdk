@@ -83,6 +83,65 @@ TEST_CASE("specify profile") {
   std::ifstream file("test.mcap", std::ios::binary);
   REQUIRE(file.is_open());
   std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-  printf("content: %d\n", content.size());
   REQUIRE_THAT(content, ContainsSubstring("test_profile"));
+}
+
+TEST_CASE("zstd compression") {
+  FileCleanup cleanup("test.mcap");
+
+  foxglove::McapWriterOptions options = {};
+  options.path = "test.mcap";
+  options.create = true;
+  options.compression = FoxgloveMcapCompression_Zstd;
+  options.chunkSize = 10000;
+  options.useChunks = true;
+  foxglove::McapWriter writer(options);
+
+  // Write message
+  foxglove::Schema schema;
+  schema.name = "ExampleSchema";
+  foxglove::Channel channel{"example", "json", schema};
+  std::string data = "Hello, world!";
+  channel.log(reinterpret_cast<const std::byte*>(data.data()), data.size());
+
+  writer.close();
+
+  // Check if test.mcap file exists
+  REQUIRE(std::filesystem::exists("test.mcap"));
+
+  // Check that it contains the word "zstd"
+  std::ifstream file("test.mcap", std::ios::binary);
+  REQUIRE(file.is_open());
+  std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+  REQUIRE_THAT(content, ContainsSubstring("zstd"));
+}
+
+TEST_CASE("lz4 compression") {
+  FileCleanup cleanup("test.mcap");
+
+  foxglove::McapWriterOptions options = {};
+  options.path = "test.mcap";
+  options.create = true;
+  options.compression = FoxgloveMcapCompression_Lz4;
+  options.chunkSize = 10000;
+  options.useChunks = true;
+  foxglove::McapWriter writer(options);
+
+  // Write message
+  foxglove::Schema schema;
+  schema.name = "ExampleSchema";
+  foxglove::Channel channel{"example", "json", schema};
+  std::string data = "Hello, world!";
+  channel.log(reinterpret_cast<const std::byte*>(data.data()), data.size());
+
+  writer.close();
+
+  // Check if test.mcap file exists
+  REQUIRE(std::filesystem::exists("test.mcap"));
+
+  // Check that it contains the word "lz4"
+  std::ifstream file("test.mcap", std::ios::binary);
+  REQUIRE(file.is_open());
+  std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+  REQUIRE_THAT(content, ContainsSubstring("lz4"));
 }
