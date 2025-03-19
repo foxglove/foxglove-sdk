@@ -128,6 +128,11 @@ impl Channel {
         self.sinks.store(sinks);
     }
 
+    /// Clears the set of subscribed sinks.
+    pub(crate) fn clear_sinks(&self) {
+        self.sinks.clear();
+    }
+
     /// Returns true if at least one sink is subscribed to this channel.
     pub fn has_sinks(&self) -> bool {
         !self.sinks.is_empty()

@@ -57,7 +57,7 @@ impl ContextInner {
         self.subs.remove_channel_subscriptions(channel.id());
 
         // Disconnect channel sinks.
-        channel.sinks.clear();
+        channel.clear_sinks();
 
         // Notify sinks of removed channel.
         for sink in self.sinks.values() {
@@ -82,7 +82,7 @@ impl ContextInner {
 
         // Auto-subscribe sink to all channels, if requested.
         if sink.auto_subscribe() && self.subs.subscribe_global(sink.clone()) {
-            self.update_all_channel_sinks();
+            self.update_channel_sinks(self.channels.values());
         }
 
         true
@@ -92,7 +92,7 @@ impl ContextInner {
     fn remove_sink(&mut self, sink_id: SinkId) -> bool {
         // Remove sink's subscriptions. If this wasn't a no-op, update channel sinks.
         if self.subs.remove_subscriber(sink_id) {
-            self.update_all_channel_sinks();
+            self.update_channel_sinks(self.channels.values());
         }
 
         self.sinks.remove(&sink_id).is_some()
@@ -102,7 +102,8 @@ impl ContextInner {
     fn subscribe_channels(&mut self, sink_id: SinkId, channel_ids: &[ChannelId]) {
         if let Some(sink) = self.sinks.get(&sink_id) {
             if self.subs.subscribe_channels(sink, channel_ids) {
-                self.update_channel_sinks(channel_ids);
+                let channels = channel_ids.iter().filter_map(|id| self.channels.get(id));
+                self.update_channel_sinks(channels);
             }
         }
     }
@@ -110,25 +111,17 @@ impl ContextInner {
     /// Unsubscribes a sink from the specified channels.
     fn unsubscribe_channels(&mut self, sink_id: SinkId, channel_ids: &[ChannelId]) {
         if self.subs.unsubscribe_channels(sink_id, channel_ids) {
-            self.update_channel_sinks(channel_ids);
-        }
-    }
-
-    /// Updates the set of connected sinks on all channels.
-    fn update_all_channel_sinks(&self) {
-        for (id, channel) in &self.channels {
-            let sinks = self.subs.get_subscribers(*id);
-            channel.update_sinks(sinks);
+            let channels = channel_ids.iter().filter_map(|id| self.channels.get(id));
+            self.update_channel_sinks(channels);
         }
     }
 
     /// Updates the set of connected sinks on the specified channels.
-    fn update_channel_sinks(&self, channel_ids: &[ChannelId]) {
-        for id in channel_ids {
-            if let Some(channel) = self.channels.get(id) {
-                let sinks = self.subs.get_subscribers(*id);
-                channel.update_sinks(sinks);
-            }
+    fn update_channel_sinks(&self, channels: impl IntoIterator<Item = impl AsRef<Channel>>) {
+        for channel in channels {
+            let channel = channel.as_ref();
+            let sinks = self.subs.get_subscribers(channel.id());
+            channel.update_sinks(sinks);
         }
     }
 
