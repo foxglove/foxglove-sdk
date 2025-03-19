@@ -138,6 +138,12 @@ impl Channel {
         !self.sinks.is_empty()
     }
 
+    /// Returns the count of sinks subscribed to this channel.
+    #[cfg(test)]
+    pub(crate) fn num_sinks(&self) -> usize {
+        self.sinks.len()
+    }
+
     /// Logs a message.
     pub fn log(&self, msg: &[u8]) {
         if self.has_sinks() {
