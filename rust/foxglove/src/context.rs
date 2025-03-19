@@ -89,10 +89,10 @@ impl ContextInner {
         }
 
         // Add requested subscriptions.
-        if auto_subscribe && self.subs.subscribe_global(sink.clone()) {
-            self.update_channel_sinks(self.channels.values());
-        } else if !auto_subscribe && self.subs.subscribe_channels(&sink, &sub_channel_ids) {
+        if !sub_channel_ids.is_empty() && self.subs.subscribe_channels(&sink, &sub_channel_ids) {
             self.update_channel_sinks_by_ids(&sub_channel_ids);
+        } else if auto_subscribe && self.subs.subscribe_global(sink.clone()) {
+            self.update_channel_sinks(self.channels.values());
         }
 
         true
