@@ -214,9 +214,13 @@ impl TryFrom<JsonClientAdvertise> for ClientAdvertise {
 #[serde(rename_all = "camelCase")]
 pub(crate) struct JsonClientChannel {
     pub id: ClientChannelId,
+    /// The topic name for this channel
     pub topic: String,
+    /// The encoding of messages on this channel
     pub encoding: String,
+    /// The name of the schema for this channel
     pub schema_name: String,
+    /// The encoding of the schema data
     pub schema_encoding: Option<String>,
     /// May be base64-encoded depending on the schema_encoding.
     pub schema: Option<String>,

@@ -6,6 +6,7 @@ BasedOnStyle: Google
 AllowShortFunctionsOnASingleLine: Empty
 AllowShortLambdasOnASingleLine: Empty
 AlignAfterOpenBracket: BlockIndent
+AlignEscapedNewlines: DontAlign
 AccessModifierOffset: -2
 TabWidth: 2
 ContinuationIndentWidth: 2
@@ -19,6 +20,7 @@ FixNamespaceComments: true
 PointerAlignment: Left
 ReflowComments: true
 SortIncludes: true
+SpaceAfterTemplateKeyword: false
 
 IncludeCategories:
   - Regex: "^<foxglove"

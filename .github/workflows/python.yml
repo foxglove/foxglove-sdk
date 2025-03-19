@@ -41,7 +41,7 @@ jobs:
       - run: poetry install
       - run: poetry run maturin develop
       - run: poetry run mypy .
-      - run: poetry run pytest
+      - run: poetry run pytest --with-benchmarks
 
   schemas:
     runs-on: ubuntu-latest

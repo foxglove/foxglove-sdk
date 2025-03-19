@@ -6,6 +6,9 @@
 cmake_minimum_required(VERSION 3.25)
 project(foxglove-sdk)
 
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED True)
+
 include(CTest)
 include(FetchContent)
 
@@ -83,8 +86,6 @@ file(GLOB_RECURSE foxglove_cpp_srcs CONFIGURE_DEPENDS
 )
 
 add_library(foxglove_cpp_obj OBJECT "${foxglove_cpp_srcs}")
-set_property(TARGET foxglove_cpp_obj PROPERTY CXX_STANDARD 17)
-set_property(TARGET foxglove_cpp_obj PROPERTY CXX_STANDARD_REQUIRED True)
 set_property(TARGET foxglove_cpp_obj PROPERTY POSITION_INDEPENDENT_CODE True)
 target_include_directories(foxglove_cpp_obj PUBLIC foxglove/include ${CMAKE_CURRENT_SOURCE_DIR}/../c/include)
 target_compile_options(foxglove_cpp_obj PUBLIC ${SANITIZER_COMPILE_OPTIONS})
@@ -110,8 +111,6 @@ target_compile_options(tests PUBLIC ${SANITIZER_COMPILE_OPTIONS})
 target_link_options(tests PUBLIC ${SANITIZER_LINK_OPTIONS})
 target_include_directories(tests SYSTEM PRIVATE ${asio_SOURCE_DIR}/asio/include)
 target_include_directories(tests SYSTEM PRIVATE ${websocketpp_SOURCE_DIR})
-set_property(TARGET tests PROPERTY CXX_STANDARD 17)
-set_property(TARGET tests PROPERTY CXX_STANDARD_REQUIRED True)
 target_link_libraries(tests PRIVATE foxglove_cpp_static Catch2::Catch2WithMain)
 catch_discover_tests(tests)
 if(MSVC)
@@ -124,8 +123,6 @@ endif()
 add_executable(example_server examples/ws-server/src/main.cpp)
 target_compile_options(example_server PUBLIC ${SANITIZER_COMPILE_OPTIONS})
 target_link_options(example_server PUBLIC ${SANITIZER_LINK_OPTIONS})
-set_property(TARGET example_server PROPERTY CXX_STANDARD 17)
-set_property(TARGET example_server PROPERTY CXX_STANDARD_REQUIRED True)
 target_link_libraries(example_server foxglove_cpp_static)
 
 add_executable(example_mcap examples/mcap/src/main.cpp)

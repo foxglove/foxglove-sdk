@@ -16,16 +16,41 @@
 #include <stdlib.h>
 
 #ifndef FOXGLOVE_NONNULL
-#if defined(__clang__)
-#define FOXGLOVE_NONNULL __attribute__((nonnull))
-#else
 #define FOXGLOVE_NONNULL
-#endif
 #endif
 
 
 typedef struct foxglove_channel foxglove_channel;
 
+
+/**
+ * Allow clients to advertise channels to send data messages to the server.
+ */
+#define FOXGLOVE_SERVER_CAPABILITY_CLIENT_PUBLISH (1 << 0)
+
+/**
+ * Allow clients to subscribe and make connection graph updates
+ */
+#define FOXGLOVE_SERVER_CAPABILITY_CONNECTION_GRAPH (1 << 1)
+
+/**
+ * Allow clients to get & set parameters.
+ */
+#define FOXGLOVE_SERVER_CAPABILITY_PARAMETERS (1 << 2)
+
+/**
+ * Inform clients about the latest server time.
+ *
+ * This allows accelerated, slowed, or stepped control over the progress of time. If the
+ * server publishes time data, then timestamps of published messages must originate from the
+ * same time source.
+ */
+#define FOXGLOVE_SERVER_CAPABILITY_TIME (1 << 3)
+
+/**
+ * Allow clients to call services.
+ */
+#define FOXGLOVE_SERVER_CAPABILITY_SERVICES (1 << 4)
 
 enum FoxgloveMcapCompression
 #ifdef __cplusplus
@@ -44,6 +69,16 @@ typedef struct foxglove_mcap_writer foxglove_mcap_writer;
 
 typedef struct foxglove_websocket_server foxglove_websocket_server;
 
+typedef struct foxglove_client_channel {
+  uint32_t id;
+  const char *FOXGLOVE_NONNULL topic;
+  const char *FOXGLOVE_NONNULL encoding;
+  const char *FOXGLOVE_NONNULL schema_name;
+  const char *schema_encoding;
+  const void *schema;
+  size_t schema_len;
+} foxglove_client_channel;
+
 typedef struct foxglove_server_callbacks {
   /**
    * A user-defined value that will be passed to callback functions
@@ -51,13 +86,27 @@ typedef struct foxglove_server_callbacks {
   const void *context;
   void (*on_subscribe)(uint64_t channel_id, const void *context);
   void (*on_unsubscribe)(uint64_t channel_id, const void *context);
+  void (*on_client_advertise)(uint32_t client_id,
+                              const struct foxglove_client_channel *channel,
+                              const void *context);
+  void (*on_message_data)(uint32_t client_id,
+                          uint32_t client_channel_id,
+                          const uint8_t *payload,
+                          size_t payload_len,
+                          const void *context);
+  void (*on_client_unadvertise)(uint32_t client_id, uint32_t client_channel_id, const void *context);
 } foxglove_server_callbacks;
+
+typedef uint8_t foxglove_server_capability;
 
 typedef struct foxglove_server_options {
   const char *name;
   const char *host;
   uint16_t port;
   const struct foxglove_server_callbacks *callbacks;
+  foxglove_server_capability capabilities;
+  const char *const *supported_encodings;
+  size_t supported_encodings_count;
 } foxglove_server_options;
 
 typedef struct foxglove_mcap_options {

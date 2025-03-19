@@ -20,7 +20,7 @@ class Channel:
         self,
         topic: str,
         *,
-        schema: Union[JsonSchema, Schema, None],
+        schema: Union[JsonSchema, Schema, None] = None,
         message_encoding: Optional[str] = None,
     ):
         """
@@ -109,7 +109,7 @@ def log(topic: str, message: Any) -> None:
 
 def _normalize_schema(
     message_encoding: Optional[str],
-    schema: Union[JsonSchema, Schema, None],
+    schema: Union[JsonSchema, Schema, None] = None,
 ) -> tuple[str, Optional[Schema]]:
     if isinstance(schema, Schema) or schema is None:
         if message_encoding is None:

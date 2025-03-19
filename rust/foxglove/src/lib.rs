@@ -190,7 +190,7 @@ pub use mcap_writer::{McapWriter, McapWriterHandle};
 pub use metadata::{Metadata, PartialMetadata};
 pub(crate) use runtime::get_runtime_handle;
 pub use runtime::shutdown_runtime;
-pub use sink::Sink;
+pub use sink::{Sink, SinkId};
 pub(crate) use time::nanoseconds_since_epoch;
 pub use websocket_server::{WebSocketServer, WebSocketServerBlockingHandle, WebSocketServerHandle};
 

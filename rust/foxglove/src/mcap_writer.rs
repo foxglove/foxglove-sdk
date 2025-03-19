@@ -3,7 +3,7 @@
 use std::fs::File;
 use std::io::{BufWriter, Seek};
 use std::path::Path;
-use std::sync::Arc;
+use std::sync::{Arc, Weak};
 use std::{fmt::Debug, io::Write};
 
 use crate::{Context, FoxgloveError, Sink};
@@ -15,11 +15,18 @@ use mcap_sink::McapSink;
 /// An MCAP writer for logging events.
 #[must_use]
 #[derive(Debug, Clone)]
-pub struct McapWriter(WriteOptions);
+pub struct McapWriter {
+    options: WriteOptions,
+    context: Arc<Context>,
+}
 
 impl From<WriteOptions> for McapWriter {
     fn from(value: WriteOptions) -> Self {
-        Self(value.library(format!("foxglove-sdk-rs-{}", env!("CARGO_PKG_VERSION"))))
+        let options = value.library(format!("foxglove-sdk-rs-{}", env!("CARGO_PKG_VERSION")));
+        Self {
+            options,
+            context: Context::get_default(),
+        }
     }
 }
 
@@ -41,6 +48,13 @@ impl McapWriter {
         options.into()
     }
 
+    /// Sets the context for this sink.
+    #[doc(hidden)]
+    pub fn context(mut self, ctx: &Arc<Context>) -> Self {
+        self.context = ctx.clone();
+        self
+    }
+
     /// Begins logging events to the specified writer.
     ///
     /// Returns a handle. When the handle is dropped, the recording will be flushed to the writer
@@ -50,9 +64,12 @@ impl McapWriter {
     where
         W: Write + Seek + Send + 'static,
     {
-        let writer = McapSink::new(writer, self.0)?;
-        Context::get_default().add_sink(writer.clone());
-        Ok(McapWriterHandle(writer))
+        let sink = McapSink::new(writer, self.options)?;
+        self.context.add_sink(sink.clone());
+        Ok(McapWriterHandle {
+            sink,
+            context: Arc::downgrade(&self.context),
+        })
     }
 
     /// Creates a new write-only buffered file, and begins logging events to it.
@@ -80,12 +97,10 @@ impl McapWriter {
 /// When this handle is dropped, the writer will stop logging events, and flush any buffered data
 /// to the writer.
 #[must_use]
-pub struct McapWriterHandle<W: Write + Seek + Send + 'static>(Arc<McapSink<W>>);
-
-impl<W: Write + Seek + Send + 'static> Debug for McapWriterHandle<W> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_tuple("McapWriterHandle").finish()
-    }
+#[derive(Debug)]
+pub struct McapWriterHandle<W: Write + Seek + Send + 'static> {
+    sink: Arc<McapSink<W>>,
+    context: Weak<Context>,
 }
 
 impl<W: Write + Seek + Send + 'static> McapWriterHandle<W> {
@@ -97,9 +112,11 @@ impl<W: Write + Seek + Send + 'static> McapWriterHandle<W> {
     }
 
     fn finish(&self) -> Result<Option<W>, FoxgloveError> {
-        let sink = self.0.clone() as Arc<dyn Sink>;
-        Context::get_default().remove_sink(&sink);
-        self.0.finish()
+        let sink = self.sink.clone() as Arc<dyn Sink>;
+        if let Some(context) = self.context.upgrade() {
+            context.remove_sink(&sink);
+        }
+        self.sink.finish()
     }
 }
 

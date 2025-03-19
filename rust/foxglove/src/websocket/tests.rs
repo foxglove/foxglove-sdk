@@ -17,7 +17,7 @@ use crate::websocket::{
     BlockingAssetHandlerFn, Capability, ClientChannelId, ConnectionGraph, Parameter, ParameterType,
     ParameterValue, Status, StatusLevel,
 };
-use crate::{collection, Channel, ChannelBuilder, Context, FoxgloveError, Metadata, Schema, Sink};
+use crate::{collection, Channel, ChannelBuilder, Context, FoxgloveError, PartialMetadata, Schema};
 
 fn make_message(id: usize) -> Message {
     Message::Text(format!("{id}").into())
@@ -72,7 +72,7 @@ fn test_send_lossy() {
     assert_eq!(received, ((TOTAL - BACKLOG)..TOTAL).collect::<Vec<_>>());
 }
 
-fn new_channel(topic: &str, ctx: &Context) -> Arc<Channel> {
+fn new_channel(topic: &str, ctx: &Arc<Context>) -> Arc<Channel> {
     ChannelBuilder::new(topic)
         .message_encoding("message_encoding")
         .schema(Schema::new(
@@ -212,9 +212,7 @@ async fn test_advertise_to_client() {
     msg.expect("Invalid serverInfo");
 
     let ch = new_channel("/foo", &ctx);
-    let metadata = Metadata::default();
-
-    server.log(&ch, b"foo bar", &metadata).unwrap();
+    ch.log(b"foo bar");
 
     let subscription_id = 1;
     let result = client_receiver.next().await.expect("No advertisement sent");
@@ -250,7 +248,7 @@ async fn test_advertise_to_client() {
     // FG-10395 replace this with something more precise
     tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
-    server.log(&ch, b"{\"a\":1}", &metadata).unwrap();
+    ch.log(b"{\"a\":1}");
 
     let result = client_receiver.next().await.unwrap();
     let msg = result.expect("Failed to parse message");
@@ -275,6 +273,67 @@ async fn test_advertise_to_client() {
     assert_eq!(subscriptions.len(), 1);
     assert_eq!(subscriptions[0].1.id, ch.id);
     assert_eq!(subscriptions[0].1.topic, ch.topic);
+
+    server.stop().await;
+}
+
+#[traced_test]
+#[tokio::test]
+async fn test_advertise_schemaless_channels() {
+    let recording_listener = Arc::new(RecordingServerListener::new());
+
+    let server = create_server(ServerOptions {
+        listener: Some(recording_listener.clone()),
+        ..Default::default()
+    });
+
+    let ctx = Context::new();
+    ctx.add_sink(server.clone());
+
+    let addr = server
+        .start("127.0.0.1", 0)
+        .await
+        .expect("Failed to start server");
+
+    let mut client_stream = connect_client(addr).await;
+
+    let msg = client_stream.next().await.expect("No serverInfo sent");
+    msg.expect("Invalid serverInfo");
+
+    // Client receives the correct advertisement for schemaless JSON
+    let json_chan = ChannelBuilder::new("/schemaless_json")
+        .message_encoding("json")
+        .context(&ctx)
+        .build()
+        .expect("Failed to create channel");
+
+    json_chan.log(b"{\"a\": 1}");
+
+    let result = client_stream.next().await.expect("No advertisement sent");
+    let advertisement = result.expect("Failed to parse advertisement");
+    let text = advertisement.into_text().expect("Invalid advertisement");
+    let msg: Value = serde_json::from_str(&text).expect("Failed to advertisement");
+    assert_eq!(msg["op"], "advertise");
+    assert_eq!(
+        msg["channels"][0]["id"].as_u64().unwrap(),
+        u64::from(json_chan.id())
+    );
+
+    // Client receives no advertisements for other schemaless channels (not supported)
+    let invalid_chan = ChannelBuilder::new("/schemaless_other")
+        .message_encoding("protobuf")
+        .context(&ctx)
+        .build()
+        .expect("Failed to create channel");
+
+    invalid_chan.log(b"1");
+
+    let msg = client_stream.next().now_or_never();
+    assert!(msg.is_none());
+
+    assert!(logs_contain(
+        "Ignoring advertise channel for /schemaless_other because a schema is required"
+    ));
 
     server.stop().await;
 }
@@ -398,13 +457,13 @@ async fn test_log_only_to_subscribers() {
     assert_eq!(unsubscriptions[0].1.topic, ch1.topic);
     assert_eq!(unsubscriptions[1].1.topic, ch2.topic);
 
-    let metadata = Metadata {
-        log_time: 123456,
-        ..Metadata::default()
+    let metadata = PartialMetadata {
+        log_time: Some(123456),
+        ..PartialMetadata::default()
     };
-    server.log(&ch1, b"channel1", &metadata).unwrap();
-    server.log(&ch2, b"channel2", &metadata).unwrap();
-    server.log(&ch3, b"channel3", &metadata).unwrap();
+    ch1.log_with_meta(b"channel1", metadata);
+    ch2.log_with_meta(b"channel2", metadata);
+    ch3.log_with_meta(b"channel3", metadata);
 
     // Receive the message for client1 and client2
     let result = client1.next().await.unwrap();

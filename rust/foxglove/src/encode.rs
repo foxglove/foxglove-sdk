@@ -173,8 +173,7 @@ macro_rules! static_typed_channel {
 mod test {
     use super::*;
     use crate::channel_builder::ChannelBuilder;
-    use crate::testutil::GlobalContextTest;
-    use crate::Schema;
+    use crate::{Context, Schema};
     use prost::bytes::BufMut;
     use serde::Serialize;
     use serde_json::{json, Value};
@@ -215,8 +214,9 @@ mod test {
     #[traced_test]
     #[test]
     fn test_json_typed_channel() {
-        let _cleanup = GlobalContextTest::new();
+        let ctx = Context::new();
         let channel = ChannelBuilder::new("topic2")
+            .context(&ctx)
             .build_typed::<TestMessage>()
             .expect("failed to build channel");
 

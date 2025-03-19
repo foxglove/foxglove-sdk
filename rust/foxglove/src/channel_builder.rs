@@ -9,15 +9,15 @@ use std::sync::Arc;
 
 /// ChannelBuilder is a builder for creating a new [`Channel`] or [`TypedChannel`].
 #[must_use]
-pub struct ChannelBuilder<'a> {
+pub struct ChannelBuilder {
     topic: String,
     message_encoding: Option<String>,
     schema: Option<Schema>,
     metadata: BTreeMap<String, String>,
-    context: Option<&'a Context>,
+    context: Arc<Context>,
 }
 
-impl<'a> ChannelBuilder<'a> {
+impl ChannelBuilder {
     /// Creates a new channel builder for the specified topic.
     pub fn new<T: Into<String>>(topic: T) -> Self {
         Self {
@@ -25,7 +25,7 @@ impl<'a> ChannelBuilder<'a> {
             message_encoding: None,
             schema: None,
             metadata: BTreeMap::new(),
-            context: None,
+            context: Context::get_default(),
         }
     }
 
@@ -38,9 +38,9 @@ impl<'a> ChannelBuilder<'a> {
     }
 
     /// Set the message encoding for the channel.
-    /// This is required for Channel, but not for [`TypedChannel`].
-    /// (it's provided by the [`Encode`] trait for [`TypedChannel`].)
-    /// The [well-known message encodings](https://mcap.dev/spec/registry#well-known-message-encodings) are preferred.
+    /// This is required for Channel, but not for [`TypedChannel`] (it's provided by the [`Encode`]
+    /// trait for [`TypedChannel`].) Foxglove supports several well-known message encodings:
+    /// <https://docs.foxglove.dev/docs/visualization/message-schemas/introduction>
     pub fn message_encoding(mut self, encoding: &str) -> Self {
         self.message_encoding = Some(encoding.to_string());
         self
@@ -59,14 +59,15 @@ impl<'a> ChannelBuilder<'a> {
         self
     }
 
+    /// Sets the context for this channel.
     #[doc(hidden)]
-    pub fn context(mut self, ctx: &'a Context) -> Self {
-        self.context = Some(ctx);
+    pub fn context(mut self, ctx: &Arc<Context>) -> Self {
+        self.context = ctx.clone();
         self
     }
 
     /// Build the channel and return it in an [`Arc`] as a Result.
-    /// Returns FoxgloveError::DuplicateChannel if a channel with the same topic already exists.
+    /// Returns [`FoxgloveError::DuplicateChannel`] if a channel with the same topic already exists.
     pub fn build(self) -> Result<Arc<Channel>, FoxgloveError> {
         static CHANNEL_ID: AtomicU64 = AtomicU64::new(1);
         let channel = Arc::new(Channel {
@@ -80,15 +81,13 @@ impl<'a> ChannelBuilder<'a> {
             schema: self.schema,
             metadata: self.metadata,
         });
-        self.context
-            .unwrap_or_else(|| Context::get_default())
-            .add_channel(channel.clone())?;
+        self.context.add_channel(channel.clone())?;
         Ok(channel)
     }
 
     /// Build the channel and return it as a [`TypedChannel`] as a Result.
     /// `T` must implement [`Encode`].
-    /// Returns FoxgloveError::DuplicateChannel if a channel with the same topic already exists.
+    /// Returns [`FoxgloveError::DuplicateChannel`] if a channel with the same topic already exists.
     pub fn build_typed<T: Encode>(mut self) -> Result<TypedChannel<T>, FoxgloveError> {
         if self.message_encoding.is_none() {
             self.message_encoding = Some(<T as Encode>::get_message_encoding());

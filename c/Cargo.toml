@@ -12,6 +12,7 @@ crate-type = ["staticlib", "cdylib"]
 workspace = true
 
 [dependencies]
+bitflags = "2.9.0"
 foxglove = { path = "../rust/foxglove", features = ["unstable"] }
 mcap.workspace = true
 

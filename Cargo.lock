@@ -174,9 +174,9 @@ dependencies = [
 
 [[package]]
 name = "bitflags"
-version = "2.8.0"
+version = "2.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8f68f53c83ab957f72c32642f3868eec03eb974d1fb82e453128456482613d36"
+checksum = "5c8214115b7bf84099f1309324e63141d4c5d7cc26862f97a0a857dbefe165bd"
 
 [[package]]
 name = "block-buffer"
@@ -651,6 +651,7 @@ dependencies = [
  "serde_json",
  "serde_repr",
  "serde_with",
+ "smallvec",
  "strum 0.26.3",
  "tempfile",
  "thiserror 1.0.69",
@@ -696,6 +697,7 @@ dependencies = [
 name = "foxglove_c"
 version = "0.3.0"
 dependencies = [
+ "bitflags",
  "cbindgen",
  "foxglove",
  "mcap 0.15.1",
@@ -1746,9 +1748,9 @@ dependencies = [
 
 [[package]]
 name = "smallvec"
-version = "1.13.2"
+version = "1.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3c5e1a9a646d36c3599cd173a41282daf47c44583ad367b8e6837255952e5c67"
+checksum = "7fcf8323ef1faaee30a44a340193b1ac6814fd9b7b4e88e9d4519a3e4abe1cfd"
 
 [[package]]
 name = "socket2"

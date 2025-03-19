@@ -178,30 +178,53 @@ pub fn server_info(
     .to_string()
 }
 
+fn is_schema_required(message_encoding: &str) -> bool {
+    message_encoding == "flatbuffer"
+        || message_encoding == "protobuf"
+        || message_encoding == "ros1"
+        || message_encoding == "cdr"
+}
+
+// A `schema` in the channel is optional except for message_encodings which require a schema.
+// Currently, Foxglove supports schemaless JSON messages.
 // https://github.com/foxglove/ws-protocol/blob/main/docs/spec.md#advertise
-// Caller must check that the channel has a schema, otherwise this will panic.
 pub fn advertisement(channel: &Channel) -> Result<String, FoxgloveError> {
-    let schema = &channel
-        .schema
-        .as_ref()
-        .ok_or_else(|| FoxgloveError::SchemaRequired)?;
+    let schema = channel.schema.as_ref();
 
-    let schema_data = if super::is_known_binary_schema_encoding(&schema.encoding) {
-        BASE64_STANDARD.encode(&schema.data)
-    } else {
-        String::from_utf8(schema.data.to_vec()).map_err(|e| FoxgloveError::Unspecified(e.into()))?
-    };
+    if schema.is_none() && is_schema_required(channel.message_encoding.as_str()) {
+        return Err(FoxgloveError::SchemaRequired);
+    }
 
-    Ok(json!({
-        "op": "advertise",
-        "channels": [Advertisement{
+    let advertisement = if let Some(schema) = schema {
+        let schema_data = if super::is_known_binary_schema_encoding(&schema.encoding) {
+            BASE64_STANDARD.encode(&schema.data)
+        } else {
+            String::from_utf8(schema.data.to_vec())
+                .map_err(|e| FoxgloveError::Unspecified(e.into()))?
+        };
+
+        Ok::<Advertisement, FoxgloveError>(Advertisement {
             id: channel.id,
             topic: &channel.topic,
             encoding: &channel.message_encoding,
             schema_name: &schema.name,
             schema: schema_data,
             schema_encoding: Some(&schema.encoding),
-        }],
+        })
+    } else {
+        Ok(Advertisement {
+            id: channel.id,
+            topic: &channel.topic,
+            encoding: &channel.message_encoding,
+            schema_name: "",
+            schema: "".to_string(),
+            schema_encoding: None,
+        })
+    }?;
+
+    Ok(json!({
+        "op": "advertise",
+        "channels": [advertisement],
     })
     .to_string())
 }

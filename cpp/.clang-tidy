@@ -8,6 +8,7 @@ Checks:
   - concurrency-*
   - cppcoreguidelines-*
   - -cppcoreguidelines-avoid-magic-numbers
+  - -cppcoreguidelines-pro-bounds-pointer-arithmetic
   - -cppcoreguidelines-pro-type-reinterpret-cast
   - hicpp-*
   - modernize-*
@@ -15,5 +16,11 @@ Checks:
   - performance-*
   - portability-*
   - readability-*
+  - -readability-function-cognitive-complexity
   - -readability-identifier-length
   - -readability-magic-numbers
+
+CheckOptions:
+  hicpp-signed-bitwise:
+    # See discussion at https://stackoverflow.com/a/58845898/23649 & https://stackoverflow.com/a/78343833/23649
+    IgnorePositiveIntegerLiterals: true
