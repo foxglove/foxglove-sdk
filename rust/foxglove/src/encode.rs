@@ -97,13 +97,26 @@ impl<T: Encode> TypedChannel<T> {
         }
     }
 
+    /// Returns true if there's at least one sink subscribed to this channel.
+    pub fn has_sinks(&self) -> bool {
+        self.inner.has_sinks()
+    }
+
     /// Encodes the message and logs it on the channel.
     pub fn log(&self, msg: &T) {
-        self.log_with_meta(msg, PartialMetadata::default());
+        if self.has_sinks() {
+            self.log_to_sinks(msg, PartialMetadata::default());
+        }
     }
 
     /// Encodes the message and logs it on the channel with additional metadata.
     pub fn log_with_meta(&self, msg: &T, metadata: PartialMetadata) {
+        if self.has_sinks() {
+            self.log_to_sinks(msg, metadata);
+        }
+    }
+
+    fn log_to_sinks(&self, msg: &T, metadata: PartialMetadata) {
         // Try to avoid heap allocation by using a stack buffer.
         let mut stack_buf = [0u8; STACK_BUFFER_SIZE];
         let mut cursor = &mut stack_buf[..];
@@ -112,7 +125,7 @@ impl<T: Encode> TypedChannel<T> {
             Ok(()) => {
                 // Compute the written amount of bytes
                 let written = cursor.as_ptr() as usize - stack_buf.as_ptr() as usize;
-                self.inner.log_with_meta(&stack_buf[..written], metadata);
+                self.inner.log_to_sinks(&stack_buf[..written], metadata);
             }
             Err(_) => {
                 // Likely the stack buffer was too small, so fall back to a heap buffer.
@@ -125,7 +138,7 @@ impl<T: Encode> TypedChannel<T> {
                 if let Err(err) = msg.encode(&mut buf) {
                     tracing::error!("failed to encode message: {:?}", err);
                 }
-                self.inner.log_with_meta(&buf, metadata);
+                self.inner.log_to_sinks(&buf, metadata);
             }
         }
     }

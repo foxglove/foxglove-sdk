@@ -1,45 +1,28 @@
-use crate::{FoxgloveError, Sink};
-use parking_lot::RwLock;
 use std::sync::Arc;
+
+use arc_swap::ArcSwap;
+
+use crate::sink::SmallSinkVec;
+use crate::{FoxgloveError, Sink};
 
 pub(crate) const ERROR_LOGGING_MESSAGE: &str = "error logging message";
 
-// Future optimization: lock-free chain of struct {
-//    array: [MAX_SINKS_PER_CHANNEL]AtomicPtr<Arc<dyn LogSink>>,
-//    next: AtomicPtr<Self>,
-// }
-
-pub(crate) struct LogSinkSet(RwLock<Vec<Arc<dyn Sink>>>);
+#[derive(Default)]
+pub(crate) struct LogSinkSet(ArcSwap<SmallSinkVec>);
 
 impl LogSinkSet {
-    pub const fn new() -> Self {
-        Self(RwLock::new(Vec::new()))
+    pub fn new() -> Self {
+        Self::default()
     }
 
     /// Returns true if the set is empty.
-    #[inline(always)]
-    pub(crate) fn is_empty(&self) -> bool {
-        // It's too expensive to lock the whole set just to check if it's empty, for now we don't implement this
-        false
+    pub fn is_empty(&self) -> bool {
+        self.0.load().is_empty()
     }
 
-    /// Add a sink to the set. Returns false if the sink was already in the set.
-    pub fn add_sink(&self, sink: Arc<dyn Sink>) -> bool {
-        let mut sinks = self.0.write();
-        // Check if the sink is already in the set.
-        if sinks.iter().any(|s| Arc::ptr_eq(s, &sink)) {
-            return false;
-        }
-        sinks.push(sink);
-        true
-    }
-
-    /// Remove a sink from the set. Returns true if the sink was removed.
-    pub fn remove_sink(&self, sink: &Arc<dyn Sink>) -> bool {
-        let mut sinks = self.0.write();
-        let len_before = sinks.len();
-        sinks.retain(|s| !Arc::ptr_eq(s, sink));
-        sinks.len() < len_before
+    /// Replaces the set of sinks in the set.
+    pub fn store(&self, sinks: SmallSinkVec) {
+        self.0.store(Arc::new(sinks));
     }
 
     /// Iterate over all the sinks in the set, calling the given function on each,
@@ -48,15 +31,15 @@ impl LogSinkSet {
     where
         F: FnMut(&Arc<dyn Sink>) -> Result<(), FoxgloveError>,
     {
-        let sinks = self.0.read();
-        for sink in sinks.iter() {
+        for sink in self.0.load().iter() {
             if let Err(err) = f(sink) {
                 tracing::warn!("{ERROR_LOGGING_MESSAGE}: {:?}", err);
             }
         }
     }
 
+    /// Clears the set.
     pub fn clear(&self) {
-        self.0.write().clear();
+        self.0.store(Arc::default());
     }
 }

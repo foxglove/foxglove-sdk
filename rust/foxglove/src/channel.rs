@@ -1,10 +1,13 @@
-use crate::log_sink_set::LogSinkSet;
-use crate::{nanoseconds_since_epoch, Metadata, PartialMetadata};
-use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use std::collections::BTreeMap;
 use std::sync::atomic::AtomicU32;
 use std::sync::atomic::Ordering::Relaxed;
+
+use serde::{Deserialize, Serialize};
+
+use crate::log_sink_set::LogSinkSet;
+use crate::sink::SmallSinkVec;
+use crate::{nanoseconds_since_epoch, Metadata, PartialMetadata};
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Deserialize, Serialize)]
 pub struct ChannelId(u64);
@@ -88,7 +91,6 @@ impl Schema {
 /// ```
 pub struct Channel {
     // TODO add public read-only accessors for these for the Rust API.
-    // TODO add a list of contexts here as well (or restrict to one context per channel?)
     pub(crate) sinks: LogSinkSet,
     /// id is a unique identifier for the channel inside the process,
     /// it's used to map a channel to a channel_id or subscription_id in log sinks.
@@ -121,18 +123,37 @@ impl Channel {
         self.message_sequence.fetch_add(1, Relaxed)
     }
 
+    /// Updates the set of sinks that are subscribed to this channel.
+    pub(crate) fn update_sinks(&self, sinks: SmallSinkVec) {
+        self.sinks.store(sinks);
+    }
+
+    /// Clears the set of subscribed sinks.
+    pub(crate) fn clear_sinks(&self) {
+        self.sinks.clear();
+    }
+
+    /// Returns true if at least one sink is subscribed to this channel.
+    pub fn has_sinks(&self) -> bool {
+        !self.sinks.is_empty()
+    }
+
     /// Logs a message.
     pub fn log(&self, msg: &[u8]) {
-        self.log_with_meta(msg, PartialMetadata::default());
+        if self.has_sinks() {
+            self.log_to_sinks(msg, PartialMetadata::default());
+        }
     }
 
     /// Logs a message with additional metadata.
     pub fn log_with_meta(&self, msg: &[u8], opts: PartialMetadata) {
-        // Bail out early if there are no sinks (logging is disabled).
-        if self.sinks.is_empty() {
-            return;
+        if self.has_sinks() {
+            self.log_to_sinks(msg, opts);
         }
+    }
 
+    /// Logs a message with additional metadata.
+    pub(crate) fn log_to_sinks(&self, msg: &[u8], opts: PartialMetadata) {
         let mut metadata = Metadata {
             sequence: opts.sequence.unwrap_or_else(|| self.next_sequence()),
             log_time: opts.log_time.unwrap_or_else(nanoseconds_since_epoch),
@@ -170,15 +191,6 @@ impl std::fmt::Debug for Channel {
             .field("schema", &self.schema)
             .field("metadata", &self.metadata)
             .finish()
-    }
-}
-
-impl Drop for Channel {
-    fn drop(&mut self) {
-        self.sinks.for_each(|sink| {
-            sink.remove_channel(self);
-            Ok(())
-        });
     }
 }
 
