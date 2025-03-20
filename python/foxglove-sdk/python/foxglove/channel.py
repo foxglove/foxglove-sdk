@@ -126,7 +126,7 @@ def log(
             )
         _channels_by_topic[topic] = channel
 
-    # mypy isn't smart enough to realize that when channel is a Channel, message is also a compatible type
+    # mypy isn't smart enough to realize that when channel is a Channel, message a compatible type
     channel.log(cast(Any, message))
 
 
