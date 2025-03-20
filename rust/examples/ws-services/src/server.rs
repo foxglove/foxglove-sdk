@@ -17,7 +17,7 @@ pub async fn main(config: Config) -> Result<()> {
         .name(env!("CARGO_PKG_NAME"))
         .bind(&config.host, config.port)
         .capabilities([Capability::Services])
-        .supported_encodings(["json", "raw"])
+        .supported_encodings(["json"])
         .start()
         .await
         .context("Failed to start server")?;
@@ -72,10 +72,10 @@ fn empty_schema() -> ServiceSchema {
 }
 
 fn echo_schema() -> ServiceSchema {
-    // A simple schema with a well-specified request & response.
-    ServiceSchema::new("/custom_srvs/RawEcho")
-        .with_request("raw", Schema::new("raw", "none", b""))
-        .with_response("raw", Schema::new("raw", "none", b""))
+    // A simple schema with a specified request & response type.
+    ServiceSchema::new("/custom_srvs/Echo")
+        .with_request("json", Schema::new("any", "jsonschema", b"true"))
+        .with_response("json", Schema::new("any", "jsonschema", b"true"))
 }
 
 fn int_bin_schema() -> ServiceSchema {
@@ -115,7 +115,7 @@ fn int_bin_handler(req: Request) -> Result<Bytes> {
         "/IntBin/add" => req.a.saturating_add(req.b),
         "/IntBin/sub" => req.a.saturating_sub(req.b),
         "/IntBin/mul" => req.a.saturating_mul(req.b),
-        "/IntBin/mod" => req.a % req.b,
+        "/IntBin/mod" => req.a.checked_rem(req.b).unwrap_or(0),
         m => return Err(anyhow::anyhow!("unexpected service: {m}")),
     };
 
