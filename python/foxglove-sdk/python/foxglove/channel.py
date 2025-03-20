@@ -1,5 +1,5 @@
 import json
-from typing import TYPE_CHECKING, Any, Dict, Optional, Union, cast
+from typing import Any, Dict, Optional, Union, cast
 
 from . import schemas
 from ._foxglove_py import BaseChannel, Schema, channels
