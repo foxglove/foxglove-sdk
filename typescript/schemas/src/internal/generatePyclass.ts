@@ -28,7 +28,12 @@ export function generateSchemaPrelude(): string {
     "use pyo3::types::PyBytes;",
   ];
 
-  const outputSections = [docs.join("\n"), imports.join("\n")];
+  const prelude = [
+    "\n#[pyclass(module = \"foxglove.schemas\")]",
+    "pub(crate) struct FoxgloveSchema;",
+  ];
+
+  const outputSections = [docs.join("\n"), imports.join("\n"), prelude.join("\n")];
 
   return outputSections.join("\n") + "\n\n";
 }
@@ -52,6 +57,9 @@ export function generatePySchemaStub(schemas: FoxgloveSchema[]): string {
     // Use "from mod import X as X" syntax to explicitly re-export.
     "from .schemas_wkt import Duration as Duration",
     "from .schemas_wkt import Timestamp as Timestamp",
+    // Base class for all the foxglove schema types
+    "class FoxgloveSchema:",
+    "    pass",
   ].join("\n") + "\n";
 
   const enums = schemas
@@ -80,7 +88,7 @@ export function generatePySchemaStub(schemas: FoxgloveSchema[]): string {
     return {
       name,
       source: [
-        `class ${name}:`,
+        `class ${name}(FoxgloveSchema):`,
         ...doc,
         `    def __new__(`,
         "        cls,",
@@ -154,7 +162,7 @@ function generateMessageClass(schema: FoxgloveMessageSchema): string {
     ),
     `///`,
     `/// See https://docs.foxglove.dev/docs/visualization/message-schemas/${constantToKebabCase(className)}`,
-    `#[pyclass(module = "foxglove.schemas")]`,
+    `#[pyclass(module = "foxglove.schemas", extends = FoxgloveSchema)]`,
     `#[derive(Clone)]`,
     `pub(crate) struct ${className}(pub(crate) foxglove::schemas::${className});`,
   ];

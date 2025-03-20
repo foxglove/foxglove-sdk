@@ -205,7 +205,14 @@ pub fn generate_protos(proto_path: &Path, out_dir: &Path) -> anyhow::Result<()> 
     config.bytes(["."]);
 
     let mut fds = config
-        .load_fds(&proto_files, &[proto_path])
+        .load_fds(
+            &proto_files,
+            &[
+                proto_path,
+                PathBuf::from("/usr/include"), // Standard location on Linux
+                PathBuf::from("/usr/local/include"), // Standard location on macOS and some Linux distros)
+            ],
+        )
         .context("Failed to load protos")?;
     fds.file.sort_unstable_by(|a, b| a.name.cmp(&b.name));
 

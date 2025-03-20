@@ -5,6 +5,9 @@ from typing import List, Optional
 from .schemas_wkt import Duration as Duration
 from .schemas_wkt import Timestamp as Timestamp
 
+class FoxgloveSchema:
+    pass
+
 #
 # Enums
 #
@@ -78,7 +81,7 @@ class SceneEntityDeletionType(Enum):
 # Classes
 #
 
-class ArrowPrimitive:
+class ArrowPrimitive(FoxgloveSchema):
     """
     A primitive representing an arrow
     """
@@ -94,7 +97,7 @@ class ArrowPrimitive:
         color: "Optional[Color]" = None,
     ) -> "ArrowPrimitive": ...
 
-class CameraCalibration:
+class CameraCalibration(FoxgloveSchema):
     """
     Camera calibration parameters
     """
@@ -113,7 +116,7 @@ class CameraCalibration:
         P: "Optional[List[float]]" = [],
     ) -> "CameraCalibration": ...
 
-class CircleAnnotation:
+class CircleAnnotation(FoxgloveSchema):
     """
     A circle annotation on a 2D image
     """
@@ -129,7 +132,7 @@ class CircleAnnotation:
         outline_color: "Optional[Color]" = None,
     ) -> "CircleAnnotation": ...
 
-class Color:
+class Color(FoxgloveSchema):
     """
     A color in RGBA format
     """
@@ -143,7 +146,7 @@ class Color:
         a: "Optional[float]" = 0.0,
     ) -> "Color": ...
 
-class CompressedImage:
+class CompressedImage(FoxgloveSchema):
     """
     A compressed image
     """
@@ -157,7 +160,7 @@ class CompressedImage:
         format: "Optional[str]" = "",
     ) -> "CompressedImage": ...
 
-class CompressedVideo:
+class CompressedVideo(FoxgloveSchema):
     """
     A single frame of a compressed video bitstream
     """
@@ -171,7 +174,7 @@ class CompressedVideo:
         format: "Optional[str]" = "",
     ) -> "CompressedVideo": ...
 
-class CubePrimitive:
+class CubePrimitive(FoxgloveSchema):
     """
     A primitive representing a cube or rectangular prism
     """
@@ -184,7 +187,7 @@ class CubePrimitive:
         color: "Optional[Color]" = None,
     ) -> "CubePrimitive": ...
 
-class CylinderPrimitive:
+class CylinderPrimitive(FoxgloveSchema):
     """
     A primitive representing a cylinder, elliptic cylinder, or truncated cone
     """
@@ -199,7 +202,7 @@ class CylinderPrimitive:
         color: "Optional[Color]" = None,
     ) -> "CylinderPrimitive": ...
 
-class FrameTransform:
+class FrameTransform(FoxgloveSchema):
     """
     A transform between two reference frames in 3D space
     """
@@ -214,7 +217,7 @@ class FrameTransform:
         rotation: "Optional[Quaternion]" = None,
     ) -> "FrameTransform": ...
 
-class FrameTransforms:
+class FrameTransforms(FoxgloveSchema):
     """
     An array of FrameTransform messages
     """
@@ -223,14 +226,14 @@ class FrameTransforms:
         cls, *, transforms: "Optional[List[FrameTransform]]" = []
     ) -> "FrameTransforms": ...
 
-class GeoJson:
+class GeoJson(FoxgloveSchema):
     """
     GeoJSON data for annotating maps
     """
 
     def __new__(cls, *, geojson: "Optional[str]" = "") -> "GeoJson": ...
 
-class Grid:
+class Grid(FoxgloveSchema):
     """
     A 2D grid of data
     """
@@ -249,7 +252,7 @@ class Grid:
         data: "Optional[bytes]" = b"",
     ) -> "Grid": ...
 
-class ImageAnnotations:
+class ImageAnnotations(FoxgloveSchema):
     """
     Array of annotations for a 2D image
     """
@@ -262,7 +265,7 @@ class ImageAnnotations:
         texts: "Optional[List[TextAnnotation]]" = [],
     ) -> "ImageAnnotations": ...
 
-class KeyValuePair:
+class KeyValuePair(FoxgloveSchema):
     """
     A key with its associated value
     """
@@ -271,7 +274,7 @@ class KeyValuePair:
         cls, *, key: "Optional[str]" = "", value: "Optional[str]" = ""
     ) -> "KeyValuePair": ...
 
-class LaserScan:
+class LaserScan(FoxgloveSchema):
     """
     A single scan from a planar laser range-finder
     """
@@ -288,7 +291,7 @@ class LaserScan:
         intensities: "Optional[List[float]]" = [],
     ) -> "LaserScan": ...
 
-class LinePrimitive:
+class LinePrimitive(FoxgloveSchema):
     """
     A primitive representing a series of points connected by lines
     """
@@ -306,7 +309,7 @@ class LinePrimitive:
         indices: "Optional[List[int]]" = [],
     ) -> "LinePrimitive": ...
 
-class LocationFix:
+class LocationFix(FoxgloveSchema):
     """
     A navigation satellite fix for any Global Navigation Satellite System
     """
@@ -323,7 +326,7 @@ class LocationFix:
         position_covariance_type: "Optional[LocationFixPositionCovarianceType]" = LocationFixPositionCovarianceType.Unknown,
     ) -> "LocationFix": ...
 
-class Log:
+class Log(FoxgloveSchema):
     """
     A log message
     """
@@ -339,7 +342,7 @@ class Log:
         line: "Optional[int]" = 0,
     ) -> "Log": ...
 
-class ModelPrimitive:
+class ModelPrimitive(FoxgloveSchema):
     """
     A primitive representing a 3D model file loaded from an external URL or embedded data
     """
@@ -356,7 +359,7 @@ class ModelPrimitive:
         data: "Optional[bytes]" = b"",
     ) -> "ModelPrimitive": ...
 
-class PackedElementField:
+class PackedElementField(FoxgloveSchema):
     """
     A field present within each element in a byte array of packed elements.
     """
@@ -369,7 +372,7 @@ class PackedElementField:
         type: "Optional[PackedElementFieldNumericType]" = PackedElementFieldNumericType.Unknown,
     ) -> "PackedElementField": ...
 
-class Point2:
+class Point2(FoxgloveSchema):
     """
     A point representing a position in 2D space
     """
@@ -378,7 +381,7 @@ class Point2:
         cls, *, x: "Optional[float]" = 0.0, y: "Optional[float]" = 0.0
     ) -> "Point2": ...
 
-class Point3:
+class Point3(FoxgloveSchema):
     """
     A point representing a position in 3D space
     """
@@ -391,7 +394,7 @@ class Point3:
         z: "Optional[float]" = 0.0,
     ) -> "Point3": ...
 
-class PointCloud:
+class PointCloud(FoxgloveSchema):
     """
     A collection of N-dimensional points, which may contain additional fields with information like normals, intensity, etc.
     """
@@ -407,7 +410,7 @@ class PointCloud:
         data: "Optional[bytes]" = b"",
     ) -> "PointCloud": ...
 
-class PointsAnnotation:
+class PointsAnnotation(FoxgloveSchema):
     """
     An array of points on a 2D image
     """
@@ -424,7 +427,7 @@ class PointsAnnotation:
         thickness: "Optional[float]" = 0.0,
     ) -> "PointsAnnotation": ...
 
-class Pose:
+class Pose(FoxgloveSchema):
     """
     A position and orientation for an object or reference frame in 3D space
     """
@@ -436,7 +439,7 @@ class Pose:
         orientation: "Optional[Quaternion]" = None,
     ) -> "Pose": ...
 
-class PoseInFrame:
+class PoseInFrame(FoxgloveSchema):
     """
     A timestamped pose for an object or reference frame in 3D space
     """
@@ -449,7 +452,7 @@ class PoseInFrame:
         pose: "Optional[Pose]" = None,
     ) -> "PoseInFrame": ...
 
-class PosesInFrame:
+class PosesInFrame(FoxgloveSchema):
     """
     An array of timestamped poses for an object or reference frame in 3D space
     """
@@ -462,7 +465,7 @@ class PosesInFrame:
         poses: "Optional[List[Pose]]" = [],
     ) -> "PosesInFrame": ...
 
-class Quaternion:
+class Quaternion(FoxgloveSchema):
     """
     A [quaternion](https://eater.net/quaternions) representing a rotation in 3D space
     """
@@ -476,7 +479,7 @@ class Quaternion:
         w: "Optional[float]" = 0.0,
     ) -> "Quaternion": ...
 
-class RawImage:
+class RawImage(FoxgloveSchema):
     """
     A raw image
     """
@@ -493,7 +496,7 @@ class RawImage:
         data: "Optional[bytes]" = b"",
     ) -> "RawImage": ...
 
-class SceneEntity:
+class SceneEntity(FoxgloveSchema):
     """
     A visual element in a 3D scene. An entity may be composed of multiple primitives which all share the same frame of reference.
     """
@@ -517,7 +520,7 @@ class SceneEntity:
         models: "Optional[List[ModelPrimitive]]" = [],
     ) -> "SceneEntity": ...
 
-class SceneEntityDeletion:
+class SceneEntityDeletion(FoxgloveSchema):
     """
     Command to remove previously published entities
     """
@@ -530,7 +533,7 @@ class SceneEntityDeletion:
         id: "Optional[str]" = "",
     ) -> "SceneEntityDeletion": ...
 
-class SceneUpdate:
+class SceneUpdate(FoxgloveSchema):
     """
     An update to the entities displayed in a 3D scene
     """
@@ -542,7 +545,7 @@ class SceneUpdate:
         entities: "Optional[List[SceneEntity]]" = [],
     ) -> "SceneUpdate": ...
 
-class SpherePrimitive:
+class SpherePrimitive(FoxgloveSchema):
     """
     A primitive representing a sphere or ellipsoid
     """
@@ -555,7 +558,7 @@ class SpherePrimitive:
         color: "Optional[Color]" = None,
     ) -> "SpherePrimitive": ...
 
-class TextAnnotation:
+class TextAnnotation(FoxgloveSchema):
     """
     A text label on a 2D image
     """
@@ -571,7 +574,7 @@ class TextAnnotation:
         background_color: "Optional[Color]" = None,
     ) -> "TextAnnotation": ...
 
-class TextPrimitive:
+class TextPrimitive(FoxgloveSchema):
     """
     A primitive representing a text label
     """
@@ -587,7 +590,7 @@ class TextPrimitive:
         text: "Optional[str]" = "",
     ) -> "TextPrimitive": ...
 
-class TriangleListPrimitive:
+class TriangleListPrimitive(FoxgloveSchema):
     """
     A primitive representing a set of triangles or a surface tiled by triangles
     """
@@ -602,7 +605,7 @@ class TriangleListPrimitive:
         indices: "Optional[List[int]]" = [],
     ) -> "TriangleListPrimitive": ...
 
-class Vector2:
+class Vector2(FoxgloveSchema):
     """
     A vector in 2D space that represents a direction only
     """
@@ -611,7 +614,7 @@ class Vector2:
         cls, *, x: "Optional[float]" = 0.0, y: "Optional[float]" = 0.0
     ) -> "Vector2": ...
 
-class Vector3:
+class Vector3(FoxgloveSchema):
     """
     A vector in 3D space that represents a direction only
     """
