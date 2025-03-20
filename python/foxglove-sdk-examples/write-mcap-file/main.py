@@ -2,7 +2,7 @@ import argparse
 import inspect
 
 import foxglove
-from foxglove.channel import LogChannel
+from foxglove.channels import LogChannel
 from foxglove.schemas import Log, LogLevel
 
 parser = argparse.ArgumentParser()

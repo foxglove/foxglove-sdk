@@ -8,7 +8,8 @@ from math import cos, sin
 
 import foxglove
 import numpy as np
-from foxglove import Channel, RawImageChannel, Schema
+from foxglove import Channel, Schema
+from foxglove.channels import RawImageChannel
 from foxglove.schemas import (
     Color,
     CubePrimitive,
