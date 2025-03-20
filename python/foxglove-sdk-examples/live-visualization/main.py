@@ -8,7 +8,7 @@ from math import cos, sin
 
 import foxglove
 import numpy as np
-from foxglove import Channel, Schema
+from foxglove import Channel, RawImageChannel, Schema
 from foxglove.schemas import (
     Color,
     CubePrimitive,
@@ -143,7 +143,7 @@ def main() -> None:
     # If you want to use JSON encoding, you can also specify the schema and log messages as dicts.
     json_chan = Channel(topic="/json", schema=plot_schema)
 
-    img_chan = ImageChannel(topic="/image")
+    img_chan = RawImageChannel(topic="/image")
 
     try:
         counter = 0
