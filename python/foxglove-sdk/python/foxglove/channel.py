@@ -113,14 +113,15 @@ def log(topic: str, message: JsonMessage | list[Any] | bytes | str | schemas.Fox
         elif isinstance(message, (dict, list)):
             channel = Channel(topic, message_encoding="json")
         else:
+            assert isinstance(message, schemas.FoxgloveSchema), "unsupported message type"
             channel_name = f"{schema_name}Channel"
             channel_cls = getattr(channels, channel_name, None)
             if channel_cls is not None:
                 channel = channel_cls(topic)
-            if channel is None:
-                raise ValueError(
-                    f"No Foxglove schema channel found for message type {type(message).__name__}"
-                )
+        if channel is None:
+            raise ValueError(
+                f"No Foxglove schema channel found for message type {schema_name}"
+            )
         _channels_by_topic[topic] = channel
 
     channel.log(message)
