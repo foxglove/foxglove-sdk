@@ -1168,10 +1168,6 @@ async fn test_get_parameters() {
     server.stop().await;
 }
 
-async fn svc_panic(_req: super::service::Request) -> Result<Bytes, String> {
-    panic!("oh noes")
-}
-
 #[tokio::test]
 async fn test_services() {
     let ok_svc = Service::builder("/ok", ServiceSchema::new("plain")).handler_fn(
@@ -1375,8 +1371,8 @@ async fn test_services() {
     );
 
     // Add a service that always panics.
-    let panic_svc =
-        Service::builder("/panic", ServiceSchema::new("raw")).async_handler_fn(svc_panic);
+    let panic_svc = Service::builder("/panic", ServiceSchema::new("raw"))
+        .blocking_handler_fn(|_| -> Result<Bytes, String> { panic!("oh noes") });
     let panic_svc_id = panic_svc.id();
     server
         .add_services(vec![panic_svc])
