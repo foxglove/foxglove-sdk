@@ -314,16 +314,15 @@ impl<'a> TryFrom<&'a service::MessageSchema> for AdvertiseServiceMessageSchema<'
 pub(crate) fn advertise_services<'a>(services: impl IntoIterator<Item = &'a Service>) -> String {
     let services: Vec<_> = services
         .into_iter()
-        .filter_map(|s| {
-            AdvertiseService::try_from(s)
-                .inspect_err(|e| {
-                    error!(
-                        "Failed to encode service advertisement for {}: {e}",
-                        s.name()
-                    )
-                })
-                .ok()
-                .map(|s| json!(s))
+        .filter_map(|s| match AdvertiseService::try_from(s) {
+            Ok(adv) => Some(json!(adv)),
+            Err(e) => {
+                error!(
+                    "Failed to encode service advertisement for {}: {e}",
+                    s.name()
+                );
+                None
+            }
         })
         .collect();
     json!({
