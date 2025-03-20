@@ -2,7 +2,6 @@ import argparse
 import inspect
 
 import foxglove
-from foxglove.channels import LogChannel
 from foxglove.schemas import Log, LogLevel
 
 parser = argparse.ArgumentParser()
@@ -13,13 +12,12 @@ args = parser.parse_args()
 def main() -> None:
     # Create a new mcap file at the given path for recording
     with foxglove.open_mcap(args.path):
-        channel = LogChannel("/hello")
-
         for i in range(10):
             frame = inspect.currentframe()
             frameinfo = inspect.getframeinfo(frame) if frame else None
 
-            channel.log(
+            foxglove.log(
+                "/hello",
                 Log(
                     level=LogLevel.Info,
                     name="SDK example",
