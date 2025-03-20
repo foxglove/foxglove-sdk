@@ -1,8 +1,11 @@
-use crate::{Channel, ChannelBuilder, FoxgloveError, PartialMetadata, Schema};
+use std::{borrow::Cow, collections::BTreeMap, sync::Arc};
+
 use bytes::BufMut;
+use delegate::delegate;
 use schemars::{gen::SchemaSettings, JsonSchema};
 use serde::Serialize;
-use std::{borrow::Cow, sync::Arc};
+
+use crate::{channel::ChannelId, Channel, ChannelBuilder, FoxgloveError, PartialMetadata, Schema};
 
 const STACK_BUFFER_SIZE: usize = 128 * 1024;
 
@@ -76,13 +79,6 @@ pub struct TypedChannel<T: Encode> {
 }
 
 impl<T: Encode> TypedChannel<T> {
-    /// Returns the topic name of the channel.
-    pub fn topic(&self) -> &str {
-        &self.inner.topic
-    }
-}
-
-impl<T: Encode> TypedChannel<T> {
     /// Constructs a new typed channel with default settings.
     ///
     /// If you want to override the channel configuration, use [`ChannelBuilder::build_typed`].
@@ -97,10 +93,25 @@ impl<T: Encode> TypedChannel<T> {
         }
     }
 
-    /// Returns true if there's at least one sink subscribed to this channel.
-    pub fn has_sinks(&self) -> bool {
-        self.inner.has_sinks()
-    }
+    delegate! { to self.inner {
+        /// Returns the channel ID.
+        pub fn id(&self) -> ChannelId;
+
+        /// Returns the topic name of the channel.
+        pub fn topic(&self) -> &str;
+
+        /// Returns the channel schema.
+        pub fn schema(&self) -> Option<&Schema>;
+
+        /// Returns the message encoding for this channel.
+        pub fn message_encoding(&self) -> &str;
+
+        /// Returns the metadata for this channel.
+        pub fn metadata(&self) -> &BTreeMap<String, String>;
+
+        /// Returns true if there's at least one sink subscribed to this channel.
+        pub fn has_sinks(&self) -> bool;
+    } }
 
     /// Encodes the message and logs it on the channel.
     pub fn log(&self, msg: &T) {

@@ -1,7 +1,8 @@
 use std::borrow::Cow;
 use std::collections::BTreeMap;
-use std::sync::atomic::AtomicU32;
 use std::sync::atomic::Ordering::Relaxed;
+use std::sync::atomic::{AtomicU32, AtomicU64};
+use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
 
@@ -14,6 +15,13 @@ pub struct ChannelId(u64);
 
 impl ChannelId {
     pub fn new(id: u64) -> Self {
+        Self(id)
+    }
+
+    /// Allocates the next channel ID.
+    pub(crate) fn next() -> Self {
+        static NEXT_ID: AtomicU64 = AtomicU64::new(1);
+        let id = NEXT_ID.fetch_add(1, Relaxed);
         Self(id)
     }
 }
@@ -90,19 +98,33 @@ impl Schema {
 /// use foxglove::{ChannelBuilder, Schema};
 /// ```
 pub struct Channel {
-    // TODO add public read-only accessors for these for the Rust API.
-    pub(crate) sinks: LogSinkSet,
-    /// id is a unique identifier for the channel inside the process,
-    /// it's used to map a channel to a channel_id or subscription_id in log sinks.
-    pub(crate) id: ChannelId,
-    pub(crate) message_sequence: AtomicU32,
-    pub(crate) topic: String,
-    pub(crate) message_encoding: String,
-    pub(crate) schema: Option<Schema>,
-    pub(crate) metadata: BTreeMap<String, String>,
+    id: ChannelId,
+    topic: String,
+    message_encoding: String,
+    schema: Option<Schema>,
+    metadata: BTreeMap<String, String>,
+    message_sequence: AtomicU32,
+    sinks: LogSinkSet,
 }
 
 impl Channel {
+    pub(crate) fn new(
+        topic: String,
+        message_encoding: String,
+        schema: Option<Schema>,
+        metadata: BTreeMap<String, String>,
+    ) -> Arc<Self> {
+        Arc::new(Self {
+            id: ChannelId::next(),
+            topic,
+            message_encoding,
+            schema,
+            metadata,
+            message_sequence: AtomicU32::new(1),
+            sinks: LogSinkSet::new(),
+        })
+    }
+
     /// Returns the channel ID.
     pub fn id(&self) -> ChannelId {
         self.id
@@ -116,6 +138,16 @@ impl Channel {
     /// Returns the channel schema.
     pub fn schema(&self) -> Option<&Schema> {
         self.schema.as_ref()
+    }
+
+    /// Returns the message encoding for this channel.
+    pub fn message_encoding(&self) -> &str {
+        &self.message_encoding
+    }
+
+    /// Returns the metadata for this channel.
+    pub fn metadata(&self) -> &BTreeMap<String, String> {
+        &self.metadata
     }
 
     /// Atomically increments and returns the next message sequence number.
@@ -136,6 +168,12 @@ impl Channel {
     /// Returns true if at least one sink is subscribed to this channel.
     pub fn has_sinks(&self) -> bool {
         !self.sinks.is_empty()
+    }
+
+    /// Returns the count of sinks subscribed to this channel.
+    #[cfg(test)]
+    pub(crate) fn num_sinks(&self) -> usize {
+        self.sinks.len()
     }
 
     /// Logs a message.
@@ -205,14 +243,11 @@ mod test {
     use std::sync::Arc;
     use tracing_test::traced_test;
 
-    fn new_test_channel(id: u64) -> Arc<Channel> {
-        Arc::new(Channel {
-            sinks: LogSinkSet::new(),
-            id: ChannelId::new(id),
-            message_sequence: AtomicU32::new(1),
-            topic: "topic".to_string(),
-            message_encoding: "message_encoding".to_string(),
-            schema: Some(Schema::new(
+    fn new_test_channel() -> Arc<Channel> {
+        Channel::new(
+            "topic".into(),
+            "message_encoding".into(),
+            Some(Schema::new(
                 "name",
                 "encoding",
                 br#"{
@@ -223,8 +258,8 @@ mod test {
                     },
                 }"#,
             )),
-            metadata: collection! {"key".to_string() => "value".to_string()},
-        })
+            collection! {"key".to_string() => "value".to_string()},
+        )
     }
 
     #[test]
@@ -252,7 +287,7 @@ mod test {
 
     #[test]
     fn test_channel_next_sequence() {
-        let channel = new_test_channel(1);
+        let channel = new_test_channel();
         assert_eq!(channel.next_sequence(), 1);
         assert_eq!(channel.next_sequence(), 2);
     }
@@ -260,7 +295,7 @@ mod test {
     #[traced_test]
     #[test]
     fn test_channel_log_msg() {
-        let channel = Arc::new(new_test_channel(1));
+        let channel = Arc::new(new_test_channel());
         let msg = vec![1, 2, 3];
         channel.log(&msg);
         assert!(!logs_contain(ERROR_LOGGING_MESSAGE));
@@ -274,7 +309,7 @@ mod test {
 
         assert!(ctx.add_sink(recording_sink.clone()));
 
-        let channel = new_test_channel(1);
+        let channel = new_test_channel();
         ctx.add_channel(channel.clone()).unwrap();
         let msg = b"test_message";
 

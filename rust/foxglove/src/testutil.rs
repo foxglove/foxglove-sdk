@@ -1,12 +1,15 @@
 //! Test utilities.
 
-mod sink;
+use std::time::Duration;
+
+use parking_lot::Mutex;
 
 use crate::channel::ChannelId;
 use crate::websocket::{
     ChannelView, Client, ClientChannel, ClientChannelId, ClientId, Parameter, ServerListener,
 };
-use parking_lot::Mutex;
+
+mod sink;
 pub use sink::{ErrorSink, MockSink, RecordingSink};
 
 #[allow(dead_code)]
@@ -86,6 +89,26 @@ impl RecordingServerListener {
             parameters_set: Mutex::new(Vec::new()),
             parameters_get_result: Mutex::new(Vec::new()),
         }
+    }
+
+    pub fn message_data_len(&self) -> usize {
+        self.message_data.lock().len()
+    }
+
+    pub fn client_advertise_len(&self) -> usize {
+        self.client_advertise.lock().len()
+    }
+
+    pub fn client_unadvertise_len(&self) -> usize {
+        self.client_unadvertise.lock().len()
+    }
+
+    pub fn parameters_subscribe_len(&self) -> usize {
+        self.parameters_subscribe.lock().len()
+    }
+
+    pub fn parameters_unsubscribe_len(&self) -> usize {
+        self.parameters_unsubscribe.lock().len()
     }
 
     pub fn take_message_data(&self) -> Vec<MessageData> {
@@ -198,4 +221,24 @@ impl ServerListener for RecordingServerListener {
         let mut unsubs = self.parameters_unsubscribe.lock();
         unsubs.push(param_names.clone());
     }
+}
+
+/// Asserts that `cond` returns true within 50ms, polling every 1ms.
+///
+/// When using this, you probably want to wrap the things you're testing in `dbg!()` macros so that
+/// you get helpful debug logs when a test fails:
+///
+/// ```
+/// assert_eventually(|| dbg!(x.len()) == 2);
+/// ```
+pub async fn assert_eventually(cond: impl Fn() -> bool) {
+    let timeout = Duration::from_millis(50);
+    let poll_interval = Duration::from_millis(1);
+    let result = tokio::time::timeout(timeout, async {
+        while !cond() {
+            tokio::time::sleep(poll_interval).await;
+        }
+    })
+    .await;
+    assert!(result.is_ok(), "condition not met within {timeout:?}");
 }

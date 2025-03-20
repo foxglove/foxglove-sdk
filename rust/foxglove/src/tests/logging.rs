@@ -1,12 +1,12 @@
-use crate::{ChannelBuilder, Context, McapWriter, Schema, WebSocketServer};
-use futures_util::{FutureExt, SinkExt, StreamExt};
+use std::io::{BufReader, BufWriter, Read, Seek};
+
+use futures_util::{SinkExt, StreamExt};
 use serde_json::json;
-use std::{
-    io::{BufReader, BufWriter, Read, Seek},
-    time::Duration,
-};
 use tempfile::NamedTempFile;
 use tokio_tungstenite::tungstenite::{client::IntoClientRequest, http::HeaderValue, Message};
+
+use crate::testutil::assert_eventually;
+use crate::{ChannelBuilder, Context, McapWriter, Schema, WebSocketServer};
 
 #[tokio::test]
 async fn test_logging_to_file_and_live_sinks() {
@@ -40,9 +40,6 @@ async fn test_logging_to_file_and_live_sinks() {
 
         ws_stream
     };
-
-    // FG-10395 replace this with something more precise
-    tokio::time::sleep(Duration::from_millis(100)).await;
 
     let channel = ChannelBuilder::new("/test-topic")
         .message_encoding("json")
@@ -104,8 +101,7 @@ async fn test_logging_to_file_and_live_sinks() {
             .expect("Failed to subscribe");
 
         // Let subscription register before publishing
-        // FG-10395 replace this with something more precise
-        tokio::time::sleep(Duration::from_millis(100)).await;
+        assert_eventually(|| dbg!(channel.num_sinks()) == 1).await;
     }
 
     {
@@ -124,9 +120,6 @@ async fn test_logging_to_file_and_live_sinks() {
             .expect("Failed to record file");
 
         channel.log(&msg);
-
-        // FG-10395 replace this with something more precise
-        tokio::time::sleep(Duration::from_millis(100)).await;
 
         let writer = handle.close().expect("Failed to flush log");
         file = writer
@@ -164,10 +157,9 @@ async fn test_logging_to_file_and_live_sinks() {
 
     let msg = ws_client
         .next()
-        .now_or_never()
-        .expect("No message pending")
-        .unwrap()
-        .expect("Next message failed");
+        .await
+        .expect("No message received")
+        .expect("Failed to parse message");
     let data = msg.into_data();
     assert_eq!(data[0], 0x01); // message data opcode
 

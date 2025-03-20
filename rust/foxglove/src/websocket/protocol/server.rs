@@ -208,32 +208,35 @@ fn encode_schema_data<'a>(
 // Currently, Foxglove supports schemaless JSON messages.
 // https://github.com/foxglove/ws-protocol/blob/main/docs/spec.md#advertise
 pub fn advertisement(channel: &Channel) -> Result<String, FoxgloveError> {
-    let schema = channel.schema.as_ref();
+    let id = channel.id();
+    let topic = channel.topic();
+    let encoding = channel.message_encoding();
+    let schema = channel.schema();
 
-    if schema.is_none() && is_schema_required(channel.message_encoding.as_str()) {
+    if schema.is_none() && is_schema_required(encoding) {
         return Err(FoxgloveError::SchemaRequired);
     }
 
     let advertisement = if let Some(schema) = schema {
         let schema_data = encode_schema_data(&schema.encoding, &schema.data)?;
-        Ok::<Advertisement, FoxgloveError>(Advertisement {
-            id: channel.id,
-            topic: &channel.topic,
-            encoding: &channel.message_encoding,
+        Advertisement {
+            id,
+            topic,
+            encoding,
             schema_name: &schema.name,
             schema: schema_data,
             schema_encoding: Some(&schema.encoding),
-        })
+        }
     } else {
-        Ok(Advertisement {
-            id: channel.id,
-            topic: &channel.topic,
-            encoding: &channel.message_encoding,
+        Advertisement {
+            id,
+            topic,
+            encoding,
             schema_name: "",
             schema: Cow::Borrowed(""),
             schema_encoding: None,
-        })
-    }?;
+        }
+    };
 
     Ok(json!({
         "op": "advertise",
