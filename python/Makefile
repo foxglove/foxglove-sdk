@@ -37,6 +37,8 @@ generate-protobuf:
 		--python_out=foxglove_schemas_protobuf \
 		--mypy_out=foxglove_schemas_protobuf \
 		--proto_path ../../schemas/proto \
+		--proto_path /usr/include \
+		--proto_path /usr/local/include \
 		../../schemas/proto/foxglove/*.proto
 	mv foxglove-schemas-protobuf/foxglove_schemas_protobuf/foxglove/* foxglove-schemas-protobuf/foxglove_schemas_protobuf
 	rmdir foxglove-schemas-protobuf/foxglove_schemas_protobuf/foxglove
