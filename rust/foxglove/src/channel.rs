@@ -14,7 +14,8 @@ use crate::{nanoseconds_since_epoch, Metadata, PartialMetadata};
 pub struct ChannelId(u64);
 
 impl ChannelId {
-    pub fn new(id: u64) -> Self {
+    #[cfg(test)]
+    pub(crate) fn new(id: u64) -> Self {
         Self(id)
     }
 
@@ -43,7 +44,7 @@ impl std::fmt::Display for ChannelId {
 /// It allows Foxglove to validate messages and provide richer visualizations.
 /// You can use the well known types provided in the [crate::schemas] module or provide your own.
 /// See the [MCAP spec](https://mcap.dev/spec#schema-op0x03) for more information.
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct Schema {
     /// An identifier for the schema.
     pub name: String,
@@ -52,6 +53,15 @@ pub struct Schema {
     pub encoding: String,
     /// Must conform to the schema encoding. If encoding is an empty string, data should be 0 length.
     pub data: Cow<'static, [u8]>,
+}
+
+impl std::fmt::Debug for Schema {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Schema")
+            .field("name", &self.name)
+            .field("encoding", &self.encoding)
+            .finish_non_exhaustive()
+    }
 }
 
 impl Schema {
@@ -228,7 +238,7 @@ impl std::fmt::Debug for Channel {
             .field("message_encoding", &self.message_encoding)
             .field("schema", &self.schema)
             .field("metadata", &self.metadata)
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 

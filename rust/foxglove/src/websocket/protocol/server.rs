@@ -39,7 +39,7 @@ pub struct Advertisement<'a> {
 }
 
 /// A parameter type.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ParameterType {
     /// A byte array, encoded as a base64-encoded string.
@@ -93,7 +93,7 @@ pub enum ServerMessage<'a> {
 }
 
 /// The log level for a [`Status`] message.
-#[derive(Debug, Copy, Clone, Serialize_repr)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Serialize_repr)]
 #[repr(u8)]
 #[allow(missing_docs)]
 pub enum StatusLevel {

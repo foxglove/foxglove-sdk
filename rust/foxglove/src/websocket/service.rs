@@ -31,6 +31,14 @@ impl ServiceId {
     pub fn new(id: u32) -> Self {
         Self(id)
     }
+
+    /// Allocates the next service ID.
+    pub fn next() -> Self {
+        static NEXT_ID: AtomicU32 = AtomicU32::new(1);
+        let id = NEXT_ID.fetch_add(1, Ordering::Relaxed);
+        assert_ne!(id, 0);
+        Self(id)
+    }
 }
 
 impl From<ServiceId> for u32 {
@@ -79,11 +87,8 @@ pub struct ServiceBuilder {
 impl ServiceBuilder {
     /// Creates a new builder for a websocket service.
     fn new(name: impl Into<String>, schema: ServiceSchema) -> Self {
-        static ID: AtomicU32 = AtomicU32::new(1);
-        let id = ID.fetch_add(1, Ordering::Relaxed);
-        assert_ne!(id, 0);
         Self {
-            id: ServiceId::new(id),
+            id: ServiceId::next(),
             name: name.into(),
             schema,
         }

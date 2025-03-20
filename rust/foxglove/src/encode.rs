@@ -73,6 +73,7 @@ impl<T: Serialize + JsonSchema> Encode for T {
 /// A typed [`Channel`] for messages that implement [`Encode`].
 ///
 /// Channels are immutable, returned as `Arc<Channel>` and can be shared between threads.
+#[derive(Debug)]
 pub struct TypedChannel<T: Encode> {
     inner: Arc<Channel>,
     _phantom: std::marker::PhantomData<T>,

@@ -108,7 +108,7 @@ fn int_bin_handler(req: Request) -> Result<Bytes> {
     let service_name = req.service_name();
     let client_id = req.client_id();
     let req: IntBinRequest = serde_json::from_slice(req.payload())?;
-    info!("Client {client_id:?}: {service_name}: {req:?}");
+    info!("Client {client_id}: {service_name}: {req:?}");
 
     // Shared handlers can use `Request::service_name` to disambiguate the service endpoint.
     // Service names are guaranteed to be unique.
@@ -135,7 +135,7 @@ impl SyncHandler for Flag {
         // Decode the payload.
         let client_id = req.client_id();
         let req: SetBoolRequest = serde_json::from_slice(req.payload())?;
-        info!("Client {client_id:?}: {req:?}");
+        info!("Client {client_id}: {req:?}");
 
         // Update the flag.
         let prev = self.0.swap(req.data, std::sync::atomic::Ordering::Relaxed);

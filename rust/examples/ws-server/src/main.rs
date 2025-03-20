@@ -35,7 +35,7 @@ static SCHEMALESS_CHANNEL: LazyLock<Arc<Channel>> = LazyLock::new(|| {
     {
         Ok(chan) => chan,
         Err(e) => {
-            panic!("example failed to create /schemaless channel: {:?}", e);
+            panic!("example failed to create /schemaless channel: {e}");
         }
     }
 });
@@ -119,7 +119,7 @@ async fn main() {
     let args = Cli::parse();
 
     let server = foxglove::WebSocketServer::new()
-        .name("ws-demo")
+        .name(env!("CARGO_PKG_NAME"))
         .bind(&args.host, args.port)
         .start()
         .await

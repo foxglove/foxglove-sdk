@@ -23,16 +23,26 @@ struct Cli {
     port: u16,
     #[arg(long, default_value = "127.0.0.1")]
     host: String,
-    #[arg(long, default_value = "example-json-server")]
-    server_name: String,
 }
 
 struct ExampleCallbackHandler;
 impl ServerListener for ExampleCallbackHandler {
-    fn on_message_data(&self, _client: Client, channel: &ClientChannel, message: &[u8]) {
+    fn on_message_data(&self, client: Client, channel: &ClientChannel, message: &[u8]) {
         let json: serde_json::Value =
             serde_json::from_slice(message).expect("Failed to parse message");
-        println!("Received message on channel {}: {json}", channel.id);
+        println!(
+            "Client {} published to channel {}: {json}",
+            client.id(),
+            channel.id
+        );
+    }
+
+    fn on_client_advertise(&self, client: Client, channel: &ClientChannel) {
+        println!(
+            "Client {} advertised channel: {}",
+            client.id(),
+            channel.topic
+        );
     }
 }
 
@@ -44,10 +54,11 @@ async fn main() {
     let args = Cli::parse();
 
     let server = WebSocketServer::new()
-        .name("client-publish")
+        .name(env!("CARGO_PKG_NAME"))
         .bind(args.host, args.port)
         .capabilities([Capability::ClientPublish])
         .listener(Arc::new(ExampleCallbackHandler))
+        .supported_encodings(["json"])
         .start()
         .await
         .expect("Failed to start server");

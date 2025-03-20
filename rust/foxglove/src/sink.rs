@@ -18,6 +18,11 @@ impl SinkId {
         Self(id)
     }
 }
+impl std::fmt::Display for SinkId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
 
 /// A [`Sink`] writes a message from a [`Channel`] to a destination.
 ///
