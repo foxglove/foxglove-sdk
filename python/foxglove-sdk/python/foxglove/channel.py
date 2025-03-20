@@ -1,7 +1,7 @@
 import json
 from typing import Any, Dict, Optional, Union
 
-from ._foxglove_py import BaseChannel, Schema, channels
+from ._foxglove_py import BaseChannel, Schema, channels, schemas
 
 JsonSchema = Dict[str, Any]
 JsonMessage = Dict[str, Any]
@@ -53,7 +53,7 @@ class Channel:
 
     def log(
         self,
-        msg: Union[JsonMessage, bytes],
+        msg: Union[JsonMessage, list[Any], bytes, str],
         log_time: Optional[int] = None,
         publish_time: Optional[int] = None,
         sequence: Optional[int] = None,
@@ -62,17 +62,19 @@ class Channel:
         Log a message on the channel.
 
         :param msg: the message to log. If the channel uses JSON encoding, you may pass a
-            dictionary. Otherwise, you are responsible for serializing the message.
+            dictionary or list. Otherwise, you are responsible for serializing the message.
         """
-        if isinstance(msg, bytes):
-            return self.base.log(msg, log_time, publish_time, sequence)
-
-        if self.message_encoding == "json":
+        if self.message_encoding == "json" and isinstance(msg, (dict, list)):
             return self.base.log(
                 json.dumps(msg).encode("utf-8"), log_time, publish_time, sequence
             )
 
-        raise ValueError(f"Unsupported message type: {type(msg)}")
+        if isinstance(msg, str):
+            msg = msg.encode("utf-8")
+        if isinstance(msg, bytes):
+            return self.base.log(msg, log_time, publish_time, sequence)
+
+        raise TypeError(f"Unsupported message type: {type(msg)}")
 
     def close(self) -> None:
         """
@@ -87,22 +89,39 @@ class Channel:
 _channels_by_topic: Dict[str, Channel] = {}
 
 
-def log(topic: str, message: Any) -> None:
-    channel: Optional[Channel] = _channels_by_topic.get(topic, None)
+def log(topic: str, message: JsonMessage | list[Any] | bytes | str | schemas.FoxgloveSchema) -> None:
+    """ Log a message on a topic.
+    Creates a new channel the first time called for a given topic.
+    For foxglove types in the schemas module, this creates a typed channel.
+    For bytes and str, this creates a simple schemaless channel and logs the bytes as-is.
+    For dict and list, this creates a schemaless json channel.
+
+    The type of the message must be kept consistent for each topic or an error will be raised.
+    This can be avoided with type checking and creating and using the channels directly instead of using this function.
+
+    Note: currently this always creates a new channel for the given topic,
+    even if a channel already exists, which will raise an error.
+
+    :param topic: The topic name.
+    :param message: The message to log.
+    """
+    channel: Optional[Any] = _channels_by_topic.get(topic, None)
     if channel is None:
         schema_name = type(message).__name__
-        channel_name = f"{schema_name}Channel"
-        channel_cls = getattr(channels, channel_name, None)
-        if channel_cls is not None:
-            channel = channel_cls(topic)
-        if channel is None:
-            raise ValueError(
-                f"No Foxglove schema channel found for message type {type(message).__name__}"
-            )
+        if isinstance(message, (bytes, str)):
+            channel = Channel(topic)
+        elif isinstance(message, (dict, list)):
+            channel = Channel(topic, message_encoding="json")
+        else:
+            channel_name = f"{schema_name}Channel"
+            channel_cls = getattr(channels, channel_name, None)
+            if channel_cls is not None:
+                channel = channel_cls(topic)
+            if channel is None:
+                raise ValueError(
+                    f"No Foxglove schema channel found for message type {type(message).__name__}"
+                )
         _channels_by_topic[topic] = channel
-    else:
-        # TODO: Check schema compatibility with proto_msg
-        pass
 
     channel.log(message)
 
