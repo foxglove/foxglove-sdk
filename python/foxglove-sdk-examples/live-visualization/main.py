@@ -143,6 +143,8 @@ def main() -> None:
     # If you want to use JSON encoding, you can also specify the schema and log messages as dicts.
     json_chan = Channel(topic="/json", schema=plot_schema)
 
+    img_chan = ImageChannel(topic="/image")
+
     try:
         counter = 0
         while True:
@@ -212,9 +214,8 @@ def main() -> None:
                 make_point_cloud(),
             )
 
-            # Or use high-level log API without needing to manage explicit Channels.
-            foxglove.log(
-                "/high-level",
+            # Or use typed channels directly to get better type checking
+            img_chan.log(
                 RawImage(
                     data=np.zeros((100, 100, 3), dtype=np.uint8).tobytes(),
                     step=300,
