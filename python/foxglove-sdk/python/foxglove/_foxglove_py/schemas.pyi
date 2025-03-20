@@ -624,4 +624,43 @@ class Vector3:
         z: "Optional[float]" = 0.0,
     ) -> "Vector3": ...
 
-type FoxgloveSchema = ArrowPrimitive | CameraCalibration | CircleAnnotation | Color | CompressedImage | CompressedVideo | CylinderPrimitive | CubePrimitive | FrameTransform | FrameTransforms | GeoJson | Grid | ImageAnnotations | KeyValuePair | LaserScan | LinePrimitive | LocationFix | Log | SceneEntityDeletion | SceneEntity | SceneUpdate | ModelPrimitive | PackedElementField | Point2 | Point3 | PointCloud | PointsAnnotation | Pose | PoseInFrame | PosesInFrame | Quaternion | RawImage | SpherePrimitive | TextAnnotation | TextPrimitive | TriangleListPrimitive | Vector2 | Vector3
+FoxgloveSchema = (
+    ArrowPrimitive
+    | CameraCalibration
+    | CircleAnnotation
+    | Color
+    | CompressedImage
+    | CompressedVideo
+    | CylinderPrimitive
+    | CubePrimitive
+    | FrameTransform
+    | FrameTransforms
+    | GeoJson
+    | Grid
+    | ImageAnnotations
+    | KeyValuePair
+    | LaserScan
+    | LinePrimitive
+    | LocationFix
+    | Log
+    | SceneEntityDeletion
+    | SceneEntity
+    | SceneUpdate
+    | ModelPrimitive
+    | PackedElementField
+    | Point2
+    | Point3
+    | PointCloud
+    | PointsAnnotation
+    | Pose
+    | PoseInFrame
+    | PosesInFrame
+    | Quaternion
+    | RawImage
+    | SpherePrimitive
+    | TextAnnotation
+    | TextPrimitive
+    | TriangleListPrimitive
+    | Vector2
+    | Vector3
+)

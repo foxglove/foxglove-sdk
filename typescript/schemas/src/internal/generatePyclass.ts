@@ -103,7 +103,7 @@ export function generatePySchemaStub(schemas: FoxgloveSchema[]): string {
   const enumMarker = '#\n# Enums\n#\n';
   const classMarker = '#\n# Classes\n#\n';
 
-  const typeUnion = `\ntype FoxgloveSchema = ${all_schemas.join(" | ")};\n`;
+  const typeUnion = `\nFoxgloveSchema = ${all_schemas.join(" | ")};\n`;
 
   return [header, enumMarker, ...enumSources, classMarker, ...classSources, typeUnion].join("\n");
 }
