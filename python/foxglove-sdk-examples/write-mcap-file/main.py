@@ -2,8 +2,8 @@ import argparse
 import inspect
 
 import foxglove
-from foxglove.schemas import Log, LogLevel
 from foxglove.channel import LogChannel
+from foxglove.schemas import Log, LogLevel
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--path", type=str, default="output.mcap")
