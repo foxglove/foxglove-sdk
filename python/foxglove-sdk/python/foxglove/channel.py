@@ -1,7 +1,8 @@
 import json
-from typing import Any, Dict, Optional, Union, cast
+from typing import Any, Dict, Optional, Union, cast, TYPE_CHECKING
 
-from ._foxglove_py import BaseChannel, Schema, channels, schemas
+from ._foxglove_py import BaseChannel, Schema, channels
+from . import schemas
 
 JsonSchema = Dict[str, Any]
 JsonMessage = Dict[str, Any]
