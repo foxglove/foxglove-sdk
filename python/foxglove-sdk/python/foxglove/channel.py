@@ -1,5 +1,5 @@
 import json
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, Optional, Union, cast
 
 from ._foxglove_py import BaseChannel, Schema, channels, schemas
 
@@ -90,7 +90,8 @@ _channels_by_topic: Dict[str, Channel] = {}
 
 
 def log(
-    topic: str, message: JsonMessage | list[Any] | bytes | str | schemas.FoxgloveSchema
+    topic: str,
+    message: Union[JsonMessage, list[Any], bytes, str, schemas.FoxgloveSchema],
 ) -> None:
     """Log a message on a topic.
     Creates a new channel the first time called for a given topic.
@@ -125,7 +126,8 @@ def log(
             )
         _channels_by_topic[topic] = channel
 
-    channel.log(message)
+    # mypy isn't smart enough to realize that when channel is a Channel, message is also a compatible type
+    channel.log(cast(Any, message))
 
 
 def _normalize_schema(
