@@ -57,7 +57,7 @@ jobs:
       - uses: arduino/setup-protoc@v3
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
-          version: "29.x"
+          version: "29.3"
 
       - name: Install Flatbuffer compiler
         run: |

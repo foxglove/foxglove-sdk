@@ -300,9 +300,8 @@ impl WebSocketServerHandle {
 
     /// Gracefully shutdown the websocket server.
     pub async fn stop(self) {
-        let sink = self.server.clone() as Arc<dyn Sink>;
         if let Some(context) = self.context.upgrade() {
-            context.remove_sink(&sink);
+            context.remove_sink(self.server.id());
         }
         self.server.stop().await;
     }

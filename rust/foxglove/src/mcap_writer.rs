@@ -111,9 +111,8 @@ impl<W: Write + Seek + Send + 'static> McapWriterHandle<W> {
     }
 
     fn finish(&self) -> Result<Option<W>, FoxgloveError> {
-        let sink = self.sink.clone() as Arc<dyn Sink>;
         if let Some(context) = self.context.upgrade() {
-            context.remove_sink(&sink);
+            context.remove_sink(self.sink.id());
         }
         self.sink.finish()
     }
