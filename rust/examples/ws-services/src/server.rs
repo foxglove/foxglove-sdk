@@ -73,9 +73,10 @@ fn empty_schema() -> ServiceSchema {
 
 fn echo_schema() -> ServiceSchema {
     // A simple schema with a specified request & response type.
+    let any_object = Schema::new("any object", "jsonschema", br#"{"type":"object"}"#);
     ServiceSchema::new("/custom_srvs/Echo")
-        .with_request("json", Schema::new("any", "jsonschema", b"true"))
-        .with_response("json", Schema::new("any", "jsonschema", b"true"))
+        .with_request("json", any_object.clone())
+        .with_response("json", any_object)
 }
 
 fn int_bin_schema() -> ServiceSchema {

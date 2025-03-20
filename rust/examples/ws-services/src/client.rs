@@ -13,6 +13,7 @@ use protocol::{
     AdvertiseServices, ServerMessage, ServiceCallFailure, ServiceCallRequest, ServiceCallResponse,
     UnadvertiseServices, SDK_SUBPROTOCOL,
 };
+use serde_json::json;
 use tokio::sync::oneshot;
 use tokio::task::{JoinHandle, JoinSet};
 use tokio_tungstenite::tungstenite::{client::IntoClientRequest, Message};
@@ -142,7 +143,7 @@ impl Client {
     }
 
     async fn call_echo(&self, msg: String) -> Result<String> {
-        let req = msg.into_bytes().into();
+        let req = json!({ "msg": msg }).to_string().into();
         let resp = self
             .service_call("/echo", "json", req)
             .await
