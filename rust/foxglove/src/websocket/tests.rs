@@ -12,7 +12,7 @@ use tungstenite::client::IntoClientRequest;
 
 use super::{create_server, send_lossy, SendLossyResult, ServerOptions, SUBPROTOCOL};
 use crate::testutil::{assert_eventually, RecordingServerListener};
-use crate::websocket::service::{CallId, Service, ServiceId, ServiceSchema};
+use crate::websocket::service::{CallId, Service, ServiceSchema};
 use crate::websocket::{
     BlockingAssetHandlerFn, Capability, ClientChannelId, ConnectionGraph, Parameter, ParameterType,
     ParameterValue, Status, StatusLevel,
@@ -1168,11 +1168,14 @@ async fn test_get_parameters() {
     server.stop().await;
 }
 
+async fn svc_panic(_req: super::service::Request) -> Result<Bytes, String> {
+    panic!("oh noes")
+}
+
 #[tokio::test]
 async fn test_services() {
-    let ok_svc = Service::builder("/ok", ServiceSchema::new("plain"))
-        .with_id(ServiceId::new(1))
-        .handler_fn(|req| -> Result<Bytes, String> {
+    let ok_svc = Service::builder("/ok", ServiceSchema::new("plain")).handler_fn(
+        |req| -> Result<Bytes, String> {
             assert_eq!(req.service_name(), "/ok");
             assert_eq!(req.call_id(), CallId::new(99));
             let payload = req.into_payload();
@@ -1180,7 +1183,9 @@ async fn test_services() {
             response.put(payload);
             response.reverse();
             Ok(response.freeze())
-        });
+        },
+    );
+    let ok_svc_id = ok_svc.id();
 
     let ctx = Context::new();
     let server = create_server(
@@ -1213,7 +1218,7 @@ async fn test_services() {
             "op": "advertiseServices",
             "services": [
                 {
-                    "id": 1,
+                    "id": ok_svc_id,
                     "name": "/ok",
                     "type": "plain",
                     "requestSchema": "",
@@ -1227,7 +1232,7 @@ async fn test_services() {
     // Send a request.
     let mut buf = BytesMut::new();
     buf.put_u8(2); // opcode
-    buf.put_u32_le(1); // service id
+    buf.put_u32_le(ok_svc_id.into()); // service id
     buf.put_u32_le(99); // call id
     buf.put_u32_le(3); // encoding length
     buf.put(b"raw".as_slice());
@@ -1246,7 +1251,7 @@ async fn test_services() {
         .expect("Failed to parse response");
     let mut buf = BytesMut::new();
     buf.put_u8(3); // opcode
-    buf.put_u32_le(1); // service id
+    buf.put_u32_le(ok_svc_id.into()); // service id
     buf.put_u32_le(99); // call id
     buf.put_u32_le(3); // encoding length
     buf.put(b"raw".as_slice());
@@ -1254,9 +1259,9 @@ async fn test_services() {
     assert_eq!(msg.into_data(), buf);
 
     // Register a new service.
-    let err_svc = Service::builder("/err", ServiceSchema::new("plain"))
-        .with_id(ServiceId::new(2))
-        .handler_fn(|_| Err("oh noes"));
+    let err_svc =
+        Service::builder("/err", ServiceSchema::new("plain")).handler_fn(|_| Err("oh noes"));
+    let err_svc_id = err_svc.id();
     server
         .add_services(vec![err_svc])
         .expect("Failed to add service");
@@ -1272,7 +1277,7 @@ async fn test_services() {
             "op": "advertiseServices",
             "services": [
                 {
-                    "id": 2,
+                    "id": err_svc_id,
                     "name": "/err",
                     "type": "plain",
                     "requestSchema": "",
@@ -1286,7 +1291,7 @@ async fn test_services() {
     // Send a request to the error service.
     let mut buf = BytesMut::new();
     buf.put_u8(2); // opcode
-    buf.put_u32_le(2); // service id
+    buf.put_u32_le(err_svc_id.into()); // service id
     buf.put_u32_le(11); // call id
     buf.put_u32_le(3); // encoding length
     buf.put(b"raw".as_slice());
@@ -1306,7 +1311,7 @@ async fn test_services() {
         msg.into_text().expect("Expected utf8").as_str(),
         json!({
             "op": "serviceCallFailure",
-            "serviceId": 2,
+            "serviceId": err_svc_id,
             "callId": 11,
             "message": "oh noes",
         })
@@ -1341,7 +1346,7 @@ async fn test_services() {
         msg.into_text().expect("Expected utf8").as_str(),
         json!({
             "op": "unadvertiseServices",
-            "serviceIds": [1]
+            "serviceIds": [ok_svc_id]
         })
         .to_string()
     );
@@ -1362,9 +1367,53 @@ async fn test_services() {
         msg.into_text().expect("Expected utf8").as_str(),
         json!({
             "op": "serviceCallFailure",
-            "serviceId": 1,
+            "serviceId": ok_svc_id,
             "callId": 99,
             "message": "Unknown service",
+        })
+        .to_string()
+    );
+
+    // Add a service that always panics.
+    let panic_svc =
+        Service::builder("/panic", ServiceSchema::new("raw")).async_handler_fn(svc_panic);
+    let panic_svc_id = panic_svc.id();
+    server
+        .add_services(vec![panic_svc])
+        .expect("Failed to add service");
+
+    let _ = client1
+        .next()
+        .await
+        .expect("No service advertisement sent")
+        .unwrap();
+
+    // Send a request to the panic service.
+    let mut buf = BytesMut::new();
+    buf.put_u8(2); // opcode
+    buf.put_u32_le(panic_svc_id.into()); // service id
+    buf.put_u32_le(22); // call id
+    buf.put_u32_le(3); // encoding length
+    buf.put(b"raw".as_slice());
+    buf.put(b"payload".as_slice());
+    client1
+        .send(Message::binary(buf.freeze()))
+        .await
+        .expect("Failed to send");
+
+    // Validate the error response.
+    let msg = client1
+        .next()
+        .await
+        .expect("No service call response")
+        .expect("Failed to parse response");
+    assert_eq!(
+        msg.into_text().expect("Expected utf8").as_str(),
+        json!({
+            "op": "serviceCallFailure",
+            "serviceId": panic_svc_id,
+            "callId": 22,
+            "message": "Internal server error",
         })
         .to_string()
     );

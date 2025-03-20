@@ -14,13 +14,7 @@ use crate::websocket::{protocol, ConnectedClient, SemaphoreGuard};
 /// [`Responder::respond`]. If you drop the responder without responding, the client will never
 /// receive a response for its request.
 #[must_use]
-pub struct Responder {
-    client: Arc<ConnectedClient>,
-    service_id: ServiceId,
-    call_id: CallId,
-    encoding: String,
-    _guard: SemaphoreGuard,
-}
+pub struct Responder(Option<Inner>);
 impl Responder {
     /// Creates a new responder.
     pub(crate) fn new(
@@ -30,13 +24,13 @@ impl Responder {
         encoding: impl Into<String>,
         _guard: SemaphoreGuard,
     ) -> Self {
-        Self {
+        Self(Some(Inner {
             client,
             service_id,
             call_id,
             encoding: encoding.into(),
             _guard,
-        }
+        }))
     }
 
     /// Overrides the default response encoding.
@@ -45,11 +39,40 @@ impl Responder {
     /// [`ServiceSchema`][super::ServiceSchema]. If no response encoding was declared, then the
     /// encoding is presumed to be the same as the request.
     pub fn set_encoding(&mut self, encoding: impl Into<String>) {
-        self.encoding = encoding.into();
+        if let Some(inner) = self.0.as_mut() {
+            inner.encoding = encoding.into();
+        }
     }
 
     /// Completes the request by sending a response to the client.
-    pub fn respond(self, result: Result<Bytes, String>) {
+    pub fn respond(mut self, result: Result<Bytes, String>) {
+        if let Some(inner) = self.0.take() {
+            inner.respond(result);
+        }
+    }
+}
+
+impl Drop for Responder {
+    fn drop(&mut self) {
+        if let Some(inner) = self.0.take() {
+            // The service call handler has dropped its responder without responding. This could be
+            // due to a panic or some other flaw in implementation. Reply with a generic error
+            // message.
+            inner.respond(Err("Internal server error".into()))
+        }
+    }
+}
+
+struct Inner {
+    client: Arc<ConnectedClient>,
+    service_id: ServiceId,
+    call_id: CallId,
+    encoding: String,
+    _guard: SemaphoreGuard,
+}
+
+impl Inner {
+    fn respond(self, result: Result<Bytes, String>) {
         let message = match result {
             Ok(payload) => Message::binary(
                 protocol::server::ServiceCallResponse::new(
