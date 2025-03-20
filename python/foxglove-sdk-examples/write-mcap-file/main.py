@@ -3,10 +3,14 @@ import inspect
 
 import foxglove
 from foxglove.schemas import Log, LogLevel
+from foxglove.channel import LogChannel
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--path", type=str, default="output.mcap")
 args = parser.parse_args()
+
+
+log_chan = LogChannel(topic="/log1")
 
 
 def main() -> None:
@@ -17,7 +21,18 @@ def main() -> None:
             frameinfo = inspect.getframeinfo(frame) if frame else None
 
             foxglove.log(
-                "/hello",
+                "/log2",
+                Log(
+                    level=LogLevel.Info,
+                    name="SDK example",
+                    file=frameinfo.filename if frameinfo else None,
+                    line=frameinfo.lineno if frameinfo else None,
+                    message=f"message {i}",
+                ),
+            )
+
+            # Or use the typed channel directly to get better type checking
+            log_chan.log(
                 Log(
                     level=LogLevel.Info,
                     name="SDK example",
