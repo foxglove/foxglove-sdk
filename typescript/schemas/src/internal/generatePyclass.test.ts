@@ -14,9 +14,6 @@ describe("generatePyclass", () => {
         use pyo3::prelude::*;
         use pyo3::types::PyBytes;
 
-        #[pyclass(module = "foxglove.schemas")]
-        pub(crate) struct FoxgloveSchema;
-
         "
         `);
   });
@@ -66,7 +63,7 @@ describe("generatePyclass", () => {
         /// :param field_nested_array: A nested array field
         ///
         /// See https://docs.foxglove.dev/docs/visualization/message-schemas/example-message
-        #[pyclass(module = "foxglove.schemas", extends = FoxgloveSchema)]
+        #[pyclass(module = "foxglove.schemas")]
         #[derive(Clone)]
         pub(crate) struct ExampleMessage(pub(crate) foxglove::schemas::ExampleMessage);
         #[pymethods]

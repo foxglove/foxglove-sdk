@@ -5,9 +5,6 @@ from typing import List, Optional
 from .schemas_wkt import Duration as Duration
 from .schemas_wkt import Timestamp as Timestamp
 
-class FoxgloveSchema:
-    pass
-
 #
 # Enums
 #
@@ -626,3 +623,5 @@ class Vector3(FoxgloveSchema):
         y: "Optional[float]" = 0.0,
         z: "Optional[float]" = 0.0,
     ) -> "Vector3": ...
+
+type FoxgloveSchema = ArrowPrimitive | CameraCalibration | CircleAnnotation | Color | CompressedImage | CompressedVideo | CylinderPrimitive | CubePrimitive | FrameTransform | FrameTransforms | GeoJson | Grid | ImageAnnotations | KeyValuePair | LaserScan | LinePrimitive | LocationFix | Log | SceneEntityDeletion | SceneEntity | SceneUpdate | ModelPrimitive | PackedElementField | Point2 | Point3 | PointCloud | PointsAnnotation | Pose | PoseInFrame | PosesInFrame | Quaternion | RawImage | SpherePrimitive | TextAnnotation | TextPrimitive | TriangleListPrimitive | Vector2 | Vector3

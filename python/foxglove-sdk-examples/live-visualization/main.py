@@ -178,7 +178,7 @@ def main() -> None:
                             translation=Vector3(x=-10, y=-10, z=0),
                         ),
                     ]
-                )
+                ),
             )
 
             foxglove.log(
@@ -204,7 +204,7 @@ def main() -> None:
                             ],
                         ),
                     ]
-                )
+                ),
             )
 
             foxglove.log(

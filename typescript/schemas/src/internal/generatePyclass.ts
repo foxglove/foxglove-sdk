@@ -28,12 +28,7 @@ export function generateSchemaPrelude(): string {
     "use pyo3::types::PyBytes;",
   ];
 
-  const prelude = [
-    "\n#[pyclass(module = \"foxglove.schemas\")]",
-    "pub(crate) struct FoxgloveSchema;",
-  ];
-
-  const outputSections = [docs.join("\n"), imports.join("\n"), prelude.join("\n")];
+  const outputSections = [docs.join("\n"), imports.join("\n")];
 
   return outputSections.join("\n") + "\n\n";
 }
@@ -57,9 +52,6 @@ export function generatePySchemaStub(schemas: FoxgloveSchema[]): string {
     // Use "from mod import X as X" syntax to explicitly re-export.
     "from .schemas_wkt import Duration as Duration",
     "from .schemas_wkt import Timestamp as Timestamp",
-    // Base class for all the foxglove schema types
-    "class FoxgloveSchema:",
-    "    pass",
   ].join("\n") + "\n";
 
   const enums = schemas
@@ -76,8 +68,11 @@ export function generatePySchemaStub(schemas: FoxgloveSchema[]): string {
       };
     });
 
+  const all_schemas: string[] = [];
+
   const classes = schemas.filter(isMessageSchema).map((schema) => {
     const name = structName(schema.name);
+    all_schemas.push(name);
     const doc = ['    """', `    ${schema.description}`, '    """'];
     const params = schema.fields
       .map((field) => {
@@ -108,7 +103,9 @@ export function generatePySchemaStub(schemas: FoxgloveSchema[]): string {
   const enumMarker = '#\n# Enums\n#\n';
   const classMarker = '#\n# Classes\n#\n';
 
-  return [header, enumMarker, ...enumSources, classMarker, ...classSources].join("\n");
+  const typeUnion = `\ntype FoxgloveSchema = ${all_schemas.join(" | ")};\n`;
+
+  return [header, enumMarker, ...enumSources, classMarker, ...classSources, typeUnion].join("\n");
 }
 
 /**
@@ -162,7 +159,7 @@ function generateMessageClass(schema: FoxgloveMessageSchema): string {
     ),
     `///`,
     `/// See https://docs.foxglove.dev/docs/visualization/message-schemas/${constantToKebabCase(className)}`,
-    `#[pyclass(module = "foxglove.schemas", extends = FoxgloveSchema)]`,
+    `#[pyclass(module = "foxglove.schemas")]`,
     `#[derive(Clone)]`,
     `pub(crate) struct ${className}(pub(crate) foxglove::schemas::${className});`,
   ];

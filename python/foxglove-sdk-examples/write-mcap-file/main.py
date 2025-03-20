@@ -24,7 +24,7 @@ def main() -> None:
                     file=frameinfo.filename if frameinfo else None,
                     line=frameinfo.lineno if frameinfo else None,
                     message=f"message {i}",
-                )
+                ),
             )
 
 
