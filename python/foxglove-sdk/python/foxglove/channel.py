@@ -99,7 +99,7 @@ def log(
     For dict and list, this creates a schemaless json channel.
 
     The type of the message must be kept consistent for each topic or an error will be raised.
-    This can be avoided with type checking and creating and using the channels directly instead of using this function.
+    This can be avoided by creating and using the channels directly instead of using this function.
 
     Note: currently this always creates a new channel for the given topic on the first call,
     even if a channel already exists, which will raise an error.
