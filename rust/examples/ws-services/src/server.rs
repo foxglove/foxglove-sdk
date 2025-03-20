@@ -14,10 +14,10 @@ use crate::Config;
 
 pub async fn main(config: Config) -> Result<()> {
     let server = foxglove::WebSocketServer::new()
-        .name("echo")
+        .name(env!("CARGO_PKG_NAME"))
         .bind(&config.host, config.port)
         .capabilities([Capability::Services])
-        .supported_encodings(["raw"])
+        .supported_encodings(["json", "raw"])
         .start()
         .await
         .context("Failed to start server")?;
@@ -112,9 +112,9 @@ fn int_bin_handler(req: Request) -> Result<Bytes> {
     // Shared handlers can use `Request::service_name` to disambiguate the service endpoint.
     // Service names are guaranteed to be unique.
     let result = match service_name {
-        "/IntBin/add" => req.a + req.b,
-        "/IntBin/sub" => req.a - req.b,
-        "/IntBin/mul" => req.a * req.b,
+        "/IntBin/add" => req.a.saturating_add(req.b),
+        "/IntBin/sub" => req.a.saturating_sub(req.b),
+        "/IntBin/mul" => req.a.saturating_mul(req.b),
         "/IntBin/mod" => req.a % req.b,
         m => return Err(anyhow::anyhow!("unexpected service: {m}")),
     };
