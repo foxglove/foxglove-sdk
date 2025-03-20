@@ -240,8 +240,5 @@ pub async fn assert_eventually(cond: impl Fn() -> bool) {
         }
     })
     .await;
-    assert!(
-        result.is_ok(),
-        "condition not met within the specified timeout"
-    );
+    assert!(result.is_ok(), "condition not met within {timeout:?}");
 }
