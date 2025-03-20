@@ -83,7 +83,7 @@ export function generatePySchemaStub(schemas: FoxgloveSchema[]): string {
     return {
       name,
       source: [
-        `class ${name}(FoxgloveSchema):`,
+        `class ${name}:`,
         ...doc,
         `    def __new__(`,
         "        cls,",
