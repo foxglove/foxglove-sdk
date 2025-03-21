@@ -71,7 +71,7 @@ impl AssetResponder {
         self.client.clone()
     }
 
-    /// Send an response to the client.
+    /// Send a response to the client.
     pub fn respond(mut self, result: Result<Bytes, String>) {
         if let Some(inner) = self.inner.take() {
             inner.respond(&self.client, result)
