@@ -17,6 +17,7 @@ impl TypedChannelPlaceholder {
     unsafe fn log<T: Encode>(channel_ptr: *mut Self, msg: &T) {
         // Safety: we're restoring the Arc<Channel> we leaked into_raw in new()
         let channel_arc = Arc::from_raw(channel_ptr as *mut Channel);
+        // We can safely create a TypedChannel from any Arc<Channel>
         let typed_channel = ManuallyDrop::new(TypedChannel::<T>::from_channel(channel_arc));
         typed_channel.log(msg);
     }
@@ -34,13 +35,36 @@ fn create_channel<T: Encode>(
         .context(context)
         .build()
         .unwrap_or_else(|e| {
-            context.get_channel_by_topic(topic).unwrap_or_else(|| {
+            let existing_channel = context.get_channel_by_topic(topic).unwrap_or_else(|| {
                 panic!("Failed to create channel: {}", e);
-            })
+            });
+            let schema = T::get_schema();
+            if existing_channel.schema() != schema.as_ref() {
+                panic!("Channel {} already exists with different schema", topic);
+            }
+            if existing_channel.message_encoding() != T::get_message_encoding() {
+                panic!(
+                    "Channel {} already exists with different message encoding",
+                    topic
+                );
+            }
+            existing_channel
         });
     TypedChannelPlaceholder::new(channel)
 }
 
+/// Log a message for a topic.
+///
+/// $topic: string literal topic name
+/// $msg: expression to log, must implement Encode trait
+///
+/// If a channel for the topic already exists in the Context, it will be used.
+/// Otherwise, a new channel will be created.
+/// Either way, the channel exists until the end of the process.
+///
+/// Panics if a channel can't be created for $msg
+/// or if $topic names an existing channel, and $msg specifies a schema or message_encoding incomptable with the existing channel.
+#[macro_export]
 macro_rules! log {
     ($topic:literal, $msg:expr) => {{
         static CHANNEL: AtomicPtr<TypedChannelPlaceholder> = AtomicPtr::new(std::ptr::null_mut());
