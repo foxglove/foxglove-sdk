@@ -108,7 +108,8 @@ def log(
     The type of the message must be kept consistent for each topic or an error will be raised.
     This can be avoided by creating and using the channels directly instead of using this function.
 
-    Note: currently this raises an error if a channel with the same topic was created by some other means.
+    Note: this raises an error if a channel with the same topic was created by other means.
+    This limitation may be lifted in the future.
 
     :param topic: The topic name.
     :param message: The message to log.
