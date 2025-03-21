@@ -5,7 +5,7 @@ use std::sync::atomic::{
 };
 use std::sync::Arc;
 
-use crate::{Channel, ChannelBuilder, Encode, TypedChannel};
+use crate::{Channel, ChannelBuilder, Context, Encode, TypedChannel};
 
 struct TypedChannelPlaceholder {}
 
@@ -23,21 +23,22 @@ impl TypedChannelPlaceholder {
 }
 
 #[cold]
-fn create_channel<T: Encode>(topic: &str, _: &T) -> *mut TypedChannelPlaceholder {
-    println!(
-        "Creating channel for {} and type {} with encoding {}",
-        topic,
-        std::any::type_name::<T>(),
-        T::get_message_encoding()
-    );
-    ChannelBuilder::new(topic)
+fn create_channel<T: Encode>(
+    topic: &str,
+    _: &T,
+    context: &Arc<Context>,
+) -> *mut TypedChannelPlaceholder {
+    let channel = ChannelBuilder::new(topic)
         .schema(T::get_schema())
         .message_encoding(T::get_message_encoding())
+        .context(context)
         .build()
-        .map(TypedChannelPlaceholder::new)
         .unwrap_or_else(|e| {
-            panic!("Failed to create channel: {}", e);
-        })
+            context.get_channel_by_topic(topic).unwrap_or_else(|| {
+                panic!("Failed to create channel: {}", e);
+            })
+        });
+    TypedChannelPlaceholder::new(channel)
 }
 
 macro_rules! log {
@@ -45,7 +46,7 @@ macro_rules! log {
         static CHANNEL: AtomicPtr<TypedChannelPlaceholder> = AtomicPtr::new(std::ptr::null_mut());
         let mut channel_ptr = CHANNEL.load(Acquire);
         if channel_ptr.is_null() {
-            channel_ptr = create_channel($topic, &$msg);
+            channel_ptr = create_channel($topic, &$msg, &Context::get_default());
             CHANNEL.store(channel_ptr, Release);
         }
         // Safety: channel_ptr was created above by create_channel, it's safe to pass to log
