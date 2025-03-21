@@ -48,7 +48,7 @@ struct Message {
     count: u32,
 }
 
-foxglove::static_typed_channel!(pub MSG_CHANNEL, "/msg", Message);
+foxglove::static_channel!(pub MSG_CHANNEL, "/msg", Message);
 
 fn log_until(fps: u8, stop: Arc<AtomicBool>) {
     let mut count: u32 = 0;

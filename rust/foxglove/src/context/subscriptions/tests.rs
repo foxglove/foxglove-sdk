@@ -1,8 +1,7 @@
 use std::sync::Arc;
 
-use crate::channel::ChannelId;
 use crate::testutil::MockSink;
-use crate::Sink;
+use crate::{ChannelId, Sink};
 
 use super::Subscriptions;
 

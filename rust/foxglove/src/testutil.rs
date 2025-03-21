@@ -4,10 +4,10 @@ use std::time::Duration;
 
 use parking_lot::Mutex;
 
-use crate::channel::ChannelId;
 use crate::websocket::{
     ChannelView, Client, ClientChannel, ClientChannelId, ClientId, Parameter, ServerListener,
 };
+use crate::ChannelId;
 
 mod sink;
 pub use sink::{ErrorSink, MockSink, RecordingSink};
