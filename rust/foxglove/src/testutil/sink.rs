@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
-use crate::channel::ChannelId;
-use crate::{FoxgloveError, Metadata, RawChannel, Sink, SinkId};
+use crate::{ChannelId, FoxgloveError, Metadata, RawChannel, Sink, SinkId};
 use parking_lot::Mutex;
 
 pub struct MockSink(SinkId);

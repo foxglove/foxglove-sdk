@@ -21,9 +21,10 @@ use tokio_tungstenite::tungstenite::{self, handshake::server, http::HeaderValue,
 use tokio_tungstenite::WebSocketStream;
 use tokio_util::sync::CancellationToken;
 
-use crate::channel::ChannelId;
 use crate::cow_vec::CowVec;
-use crate::{get_runtime_handle, Context, FoxgloveError, Metadata, RawChannel, Sink, SinkId};
+use crate::{
+    get_runtime_handle, ChannelId, Context, FoxgloveError, Metadata, RawChannel, Sink, SinkId,
+};
 
 mod fetch_asset;
 pub use fetch_asset::{AssetHandler, AssetResponder};

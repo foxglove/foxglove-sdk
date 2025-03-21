@@ -1,11 +1,8 @@
-use crate::channel::ChannelId;
-use crate::channel::RawChannel;
-use crate::websocket::service::CallId;
-use crate::websocket::service::ServiceId;
-use crate::websocket::service::{self, Service};
+use crate::websocket::service::{self, CallId, Service, ServiceId};
 use crate::websocket::Capability;
 use crate::FoxgloveError;
 use crate::Schema;
+use crate::{ChannelId, RawChannel};
 use base64::prelude::*;
 use bytes::{BufMut, Bytes, BytesMut};
 use serde::{Deserialize, Serialize};

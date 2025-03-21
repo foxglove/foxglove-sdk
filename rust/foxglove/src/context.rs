@@ -5,8 +5,7 @@ use std::sync::{Arc, LazyLock};
 
 use parking_lot::RwLock;
 
-use crate::channel::ChannelId;
-use crate::{FoxgloveError, RawChannel, Sink, SinkId};
+use crate::{ChannelId, FoxgloveError, RawChannel, Sink, SinkId};
 
 mod subscriptions;
 use subscriptions::Subscriptions;

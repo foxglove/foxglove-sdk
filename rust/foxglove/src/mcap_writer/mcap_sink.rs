@@ -1,6 +1,5 @@
 //! [`Sink`] implementation for an MCAP writer.
-use crate::channel::ChannelId;
-use crate::{FoxgloveError, Metadata, RawChannel, Sink, SinkId};
+use crate::{ChannelId, FoxgloveError, Metadata, RawChannel, Sink, SinkId};
 use mcap::WriteOptions;
 use parking_lot::Mutex;
 use std::collections::hash_map::Entry;
