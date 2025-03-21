@@ -6,7 +6,7 @@ use crate::{Channel, Context, Encode, FoxgloveError, Schema};
 
 /// ChannelBuilder is a builder for creating a new [`Channel`] or [`TypedChannel`].
 #[must_use]
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct ChannelBuilder {
     topic: String,
     message_encoding: Option<String>,
