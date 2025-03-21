@@ -1,6 +1,6 @@
 //! [`Sink`] implementation for an MCAP writer.
 use crate::channel::ChannelId;
-use crate::{Channel, FoxgloveError, Metadata, Sink, SinkId};
+use crate::{FoxgloveError, Metadata, RawChannel, Sink, SinkId};
 use mcap::WriteOptions;
 use parking_lot::Mutex;
 use std::collections::hash_map::Entry;
@@ -25,7 +25,7 @@ impl<W: Write + Seek> WriterState<W> {
 
     fn log(
         &mut self,
-        channel: &Channel,
+        channel: &RawChannel,
         msg: &[u8],
         metadata: &Metadata,
     ) -> Result<(), FoxgloveError> {
@@ -110,7 +110,12 @@ impl<W: Write + Seek + Send> Sink for McapSink<W> {
         self.sink_id
     }
 
-    fn log(&self, channel: &Channel, msg: &[u8], metadata: &Metadata) -> Result<(), FoxgloveError> {
+    fn log(
+        &self,
+        channel: &RawChannel,
+        msg: &[u8],
+        metadata: &Metadata,
+    ) -> Result<(), FoxgloveError> {
         _ = metadata;
         let mut guard = self.inner.lock();
         let writer = guard.as_mut().ok_or(FoxgloveError::SinkClosed)?;
@@ -126,8 +131,8 @@ mod tests {
     use std::path::Path;
     use tempfile::NamedTempFile;
 
-    fn new_test_channel(topic: String, schema_name: String) -> Arc<Channel> {
-        Channel::new(
+    fn new_test_channel(topic: String, schema_name: String) -> Arc<RawChannel> {
+        RawChannel::new(
             topic,
             "message_encoding".to_string(),
             Some(Schema::new(

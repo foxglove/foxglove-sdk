@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use crate::channel::ChannelId;
-use crate::{Channel, FoxgloveError, Metadata, Sink, SinkId};
+use crate::{FoxgloveError, Metadata, RawChannel, Sink, SinkId};
 use parking_lot::Mutex;
 
 pub struct MockSink(SinkId);
@@ -18,7 +18,7 @@ impl Sink for MockSink {
 
     fn log(
         &self,
-        _channel: &Channel,
+        _channel: &RawChannel,
         _msg: &[u8],
         _metadata: &Metadata,
     ) -> Result<(), FoxgloveError> {
@@ -69,11 +69,16 @@ impl Sink for RecordingSink {
         self.auto_subscribe
     }
 
-    fn add_channel(&self, _channel: &Arc<Channel>) -> bool {
+    fn add_channel(&self, _channel: &Arc<RawChannel>) -> bool {
         self.add_channel_rval
     }
 
-    fn log(&self, channel: &Channel, msg: &[u8], metadata: &Metadata) -> Result<(), FoxgloveError> {
+    fn log(
+        &self,
+        channel: &RawChannel,
+        msg: &[u8],
+        metadata: &Metadata,
+    ) -> Result<(), FoxgloveError> {
         let mut recorded = self.recorded.lock();
         recorded.push(LogCall {
             channel_id: channel.id(),
@@ -107,7 +112,7 @@ impl Sink for ErrorSink {
 
     fn log(
         &self,
-        _channel: &Channel,
+        _channel: &RawChannel,
         _msg: &[u8],
         _metadata: &Metadata,
     ) -> Result<(), FoxgloveError> {

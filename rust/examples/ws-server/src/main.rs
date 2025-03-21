@@ -3,7 +3,7 @@ use foxglove::convert::SaturatingInto;
 use foxglove::schemas::{
     Color, CubePrimitive, FrameTransform, Pose, Quaternion, SceneEntity, SceneUpdate, Vector3,
 };
-use foxglove::{static_typed_channel, Channel, ChannelBuilder};
+use foxglove::{static_typed_channel, ChannelBuilder, RawChannel};
 use schemars::JsonSchema;
 use serde::Serialize;
 use std::sync::{Arc, LazyLock};
@@ -28,17 +28,18 @@ static_typed_channel!(pub TF_CHANNEL, "/tf", FrameTransform);
 static_typed_channel!(pub MSG_CHANNEL, "/msg", Message);
 
 // Foxglove supports logging arbitrary JSON values without specifying a schema
-static SCHEMALESS_CHANNEL: LazyLock<Arc<Channel>> = LazyLock::new(|| {
-    match ChannelBuilder::new("/schemaless")
-        .message_encoding("json")
-        .build()
-    {
-        Ok(chan) => chan,
-        Err(e) => {
-            panic!("example failed to create /schemaless channel: {e}");
+static SCHEMALESS_CHANNEL: LazyLock<Arc<RawChannel>> =
+    LazyLock::new(|| {
+        match ChannelBuilder::new("/schemaless")
+            .message_encoding("json")
+            .build_raw()
+        {
+            Ok(chan) => chan,
+            Err(e) => {
+                panic!("example failed to create /schemaless channel: {e}");
+            }
         }
-    }
-});
+    });
 
 async fn log_forever(fps: u8) {
     let mut counter: u32 = 0;

@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use crate::{ChannelBuilder, Encode, FoxgloveError, PartialMetadata, Schema};
 
 mod raw_channel;
-pub use raw_channel::Channel;
+pub use raw_channel::RawChannel;
 
 /// Stack buffer size to use for encoding messages.
 const STACK_BUFFER_SIZE: usize = 128 * 1024;
@@ -44,12 +44,12 @@ impl std::fmt::Display for ChannelId {
     }
 }
 
-/// A typed [`Channel`] for messages that implement [`Encode`].
+/// A typed channel for messages that implement [`Encode`].
 ///
 /// Channels are immutable, returned as `Arc<Channel>` and can be shared between threads.
 #[derive(Debug)]
 pub struct TypedChannel<T: Encode> {
-    inner: Arc<Channel>,
+    inner: Arc<RawChannel>,
     _phantom: std::marker::PhantomData<T>,
 }
 
@@ -61,7 +61,7 @@ impl<T: Encode> TypedChannel<T> {
         ChannelBuilder::new(topic).build_typed()
     }
 
-    pub(crate) fn from_channel(channel: Arc<Channel>) -> Self {
+    pub(crate) fn from_channel(channel: Arc<RawChannel>) -> Self {
         Self {
             inner: channel,
             _phantom: std::marker::PhantomData,
@@ -174,13 +174,13 @@ mod test {
     use crate::collection::collection;
     use crate::log_sink_set::ERROR_LOGGING_MESSAGE;
     use crate::testutil::RecordingSink;
-    use crate::{Channel, Context, Schema};
+    use crate::{Context, RawChannel, Schema};
     use std::collections::BTreeMap;
     use std::sync::Arc;
     use tracing_test::traced_test;
 
-    fn new_test_channel() -> Arc<Channel> {
-        Channel::new(
+    fn new_test_channel() -> Arc<RawChannel> {
+        RawChannel::new(
             "topic".into(),
             "message_encoding".into(),
             Some(Schema::new(
@@ -211,7 +211,7 @@ mod test {
             .schema(schema.clone())
             .metadata(metadata.clone())
             .context(&ctx)
-            .build()
+            .build_raw()
             .expect("Failed to create channel");
         assert!(u64::from(channel.id()) > 0);
         assert_eq!(channel.topic(), topic);

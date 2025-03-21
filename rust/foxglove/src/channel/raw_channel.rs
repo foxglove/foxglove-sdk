@@ -28,7 +28,7 @@ use crate::{nanoseconds_since_epoch, Metadata, PartialMetadata, Schema};
 /// ```
 /// use foxglove::{ChannelBuilder, Schema};
 /// ```
-pub struct Channel {
+pub struct RawChannel {
     id: ChannelId,
     topic: String,
     message_encoding: String,
@@ -38,7 +38,7 @@ pub struct Channel {
     sinks: LogSinkSet,
 }
 
-impl Channel {
+impl RawChannel {
     pub(crate) fn new(
         topic: String,
         message_encoding: String,
@@ -138,7 +138,7 @@ impl Channel {
 }
 
 #[cfg(test)]
-impl PartialEq for Channel {
+impl PartialEq for RawChannel {
     fn eq(&self, other: &Self) -> bool {
         self.topic == other.topic
             && self.message_encoding == other.message_encoding
@@ -149,9 +149,9 @@ impl PartialEq for Channel {
 }
 
 #[cfg(test)]
-impl Eq for Channel {}
+impl Eq for RawChannel {}
 
-impl std::fmt::Debug for Channel {
+impl std::fmt::Debug for RawChannel {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Channel")
             .field("id", &self.id)

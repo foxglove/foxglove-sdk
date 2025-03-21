@@ -6,7 +6,7 @@ use serde::Serialize;
 
 use crate::Schema;
 
-/// A trait representing a message that can be logged to a [`Channel`].
+/// A trait representing a message that can be logged to a channel.
 ///
 /// Implementing this trait for your type `T` enables the use of [`TypedChannel<T>`],
 /// which offers a type-checked `log` method.

@@ -52,7 +52,7 @@ async fn test_logging_to_file_and_live_sinks() {
             }"#,
         ))
         .context(&ctx)
-        .build()
+        .build_raw()
         .expect("Failed to create channel");
 
     {

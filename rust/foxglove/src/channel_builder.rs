@@ -1,9 +1,9 @@
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
-use crate::{Channel, Context, Encode, FoxgloveError, Schema, TypedChannel};
+use crate::{Context, Encode, FoxgloveError, RawChannel, Schema, TypedChannel};
 
-/// ChannelBuilder is a builder for creating a new [`Channel`] or [`TypedChannel`].
+/// ChannelBuilder is a builder for creating a new [`RawChannel`] or [`TypedChannel`].
 #[must_use]
 #[derive(Debug)]
 pub struct ChannelBuilder {
@@ -63,10 +63,11 @@ impl ChannelBuilder {
         self
     }
 
-    /// Build the channel and return it in an [`Arc`] as a Result.
+    /// Builds a [`RawChannel`].
+    ///
     /// Returns [`FoxgloveError::DuplicateChannel`] if a channel with the same topic already exists.
-    pub fn build(self) -> Result<Arc<Channel>, FoxgloveError> {
-        let channel = Channel::new(
+    pub fn build_raw(self) -> Result<Arc<RawChannel>, FoxgloveError> {
+        let channel = RawChannel::new(
             self.topic,
             self.message_encoding
                 .ok_or_else(|| FoxgloveError::MessageEncodingRequired)?,
@@ -87,7 +88,7 @@ impl ChannelBuilder {
         if self.schema.is_none() {
             self.schema = <T as Encode>::get_schema();
         }
-        let channel = self.build()?;
+        let channel = self.build_raw()?;
         Ok(TypedChannel::from_channel(channel))
     }
 }
