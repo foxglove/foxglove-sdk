@@ -1,18 +1,5 @@
 //! Websocket functionality
 
-use crate::channel::ChannelId;
-use crate::cow_vec::CowVec;
-pub use crate::websocket::protocol::client::{ClientChannel, ClientChannelId};
-pub(crate) use crate::websocket::protocol::client::{ClientMessage, Subscription, SubscriptionId};
-pub use crate::websocket::protocol::server::{
-    Parameter, ParameterType, ParameterValue, Status, StatusLevel,
-};
-use crate::{get_runtime_handle, Channel, FoxgloveError, Metadata, Sink, SinkId};
-use bimap::BiHashMap;
-use bytes::{BufMut, Bytes, BytesMut};
-use flume::TrySendError;
-use futures_util::{stream::SplitSink, SinkExt, StreamExt};
-use serde::Serialize;
 use std::collections::hash_map::Entry;
 use std::collections::HashSet;
 use std::sync::atomic::Ordering::{AcqRel, Acquire, Release};
@@ -20,33 +7,41 @@ use std::sync::atomic::{AtomicBool, AtomicU16, AtomicU32};
 use std::sync::Weak;
 use std::time::{SystemTime, UNIX_EPOCH};
 use std::{collections::HashMap, net::SocketAddr, sync::Arc};
+
+use bimap::BiHashMap;
+use bytes::{BufMut, Bytes, BytesMut};
+use flume::TrySendError;
+use futures_util::{stream::SplitSink, SinkExt, StreamExt};
+use serde::Serialize;
 use thiserror::Error;
+use tokio::net::{TcpListener, TcpStream};
 use tokio::runtime::Handle;
-use tokio::{
-    net::{TcpListener, TcpStream},
-    sync::Mutex,
-};
-use tokio_tungstenite::{
-    tungstenite::{self, handshake::server, http::HeaderValue, Message},
-    WebSocketStream,
-};
+use tokio::sync::Mutex;
+use tokio_tungstenite::tungstenite::{self, handshake::server, http::HeaderValue, Message};
+use tokio_tungstenite::WebSocketStream;
 use tokio_util::sync::CancellationToken;
+
+use crate::channel::ChannelId;
+use crate::cow_vec::CowVec;
+use crate::{get_runtime_handle, Channel, Context, FoxgloveError, Metadata, Sink, SinkId};
 
 mod fetch_asset;
 pub use fetch_asset::{AssetHandler, AssetResponder};
 pub(crate) use fetch_asset::{AsyncAssetHandlerFn, BlockingAssetHandlerFn};
 mod connection_graph;
 mod protocol;
+pub use protocol::client::{ClientChannel, ClientChannelId};
+pub(crate) use protocol::client::{ClientMessage, Subscription, SubscriptionId};
+pub use protocol::server::{Parameter, ParameterType, ParameterValue, Status, StatusLevel};
 mod semaphore;
 pub mod service;
 pub use connection_graph::ConnectionGraph;
 pub(crate) use semaphore::{Semaphore, SemaphoreGuard};
+use service::{CallId, Service, ServiceId, ServiceMap};
 #[cfg(test)]
 mod tests;
 #[cfg(all(test, feature = "unstable"))]
 mod unstable_tests;
-
-use service::{CallId, Service, ServiceId, ServiceMap};
 
 /// A capability that a websocket server can support.
 #[derive(Debug, Serialize, Eq, PartialEq, Hash, Clone, Copy)]
@@ -191,7 +186,7 @@ pub(crate) struct Server {
     /// It's analogous to the mixin shared_from_this in C++.
     weak_self: Weak<Self>,
     started: AtomicBool,
-    sink_id: SinkId,
+    context: Weak<Context>,
     /// Local port the server is listening on, once it has been started
     port: AtomicU16,
     message_backlog_size: u32,
@@ -200,7 +195,6 @@ pub(crate) struct Server {
     session_id: parking_lot::RwLock<String>,
     name: String,
     clients: CowVec<Arc<ConnectedClient>>,
-    channels: parking_lot::RwLock<HashMap<ChannelId, Arc<Channel>>>,
     /// Callbacks for handling client messages, etc.
     listener: Option<Arc<dyn ServerListener>>,
     /// Capabilities advertised to clients
@@ -283,6 +277,10 @@ pub(crate) struct ConnectedClient {
     id: ClientId,
     addr: SocketAddr,
     weak_self: Weak<Self>,
+    sink_id: SinkId,
+    context: Weak<Context>,
+    /// A cache of channels for `on_subscribe` and `on_unsubscribe` callbacks.
+    channels: parking_lot::RwLock<HashMap<ChannelId, Arc<Channel>>>,
     /// Write side of a WS stream
     sender: Mutex<WebsocketSender>,
     data_plane_tx: flume::Sender<Message>,
@@ -352,8 +350,8 @@ impl ConnectedClient {
         };
 
         match msg {
-            ClientMessage::Subscribe(msg) => self.on_subscribe(server, msg.subscriptions),
-            ClientMessage::Unsubscribe(msg) => self.on_unsubscribe(server, msg.subscription_ids),
+            ClientMessage::Subscribe(msg) => self.on_subscribe(msg.subscriptions),
+            ClientMessage::Unsubscribe(msg) => self.on_unsubscribe(msg.subscription_ids),
             ClientMessage::Advertise(msg) => self.on_advertise(server, msg.channels),
             ClientMessage::Unadvertise(msg) => self.on_unadvertise(msg.channel_ids),
             ClientMessage::MessageData(msg) => self.on_message_data(msg),
@@ -518,7 +516,7 @@ impl ConnectedClient {
         }
     }
 
-    fn on_unsubscribe(&self, server: Arc<Server>, subscription_ids: Vec<SubscriptionId>) {
+    fn on_unsubscribe(&self, subscription_ids: Vec<SubscriptionId>) {
         let mut unsubscribed_channel_ids = Vec::with_capacity(subscription_ids.len());
         // First gather the unsubscribed channel ids while holding the subscriptions lock
         {
@@ -530,6 +528,11 @@ impl ConnectedClient {
             }
         }
 
+        // Propagate client unsubscriptions to the context.
+        if let Some(context) = self.context.upgrade() {
+            context.unsubscribe_channels(self.sink_id, &unsubscribed_channel_ids);
+        }
+
         // If we don't have a ServerListener, we're done.
         let Some(handler) = self.server_listener.as_ref() else {
             return;
@@ -538,7 +541,7 @@ impl ConnectedClient {
         // Then gather the actual channel references while holding the channels lock
         let mut unsubscribed_channels = Vec::with_capacity(unsubscribed_channel_ids.len());
         {
-            let channels = server.channels.read();
+            let channels = self.channels.read();
             for channel_id in unsubscribed_channel_ids {
                 if let Some(channel) = channels.get(&channel_id) {
                     unsubscribed_channels.push(channel.clone());
@@ -551,19 +554,19 @@ impl ConnectedClient {
             handler.on_unsubscribe(
                 Client::new(self),
                 ChannelView {
-                    id: channel.id,
-                    topic: &channel.topic,
+                    id: channel.id(),
+                    topic: channel.topic(),
                 },
             );
         }
     }
 
-    fn on_subscribe(&self, server: Arc<Server>, mut subscriptions: Vec<Subscription>) {
+    fn on_subscribe(&self, mut subscriptions: Vec<Subscription>) {
         // First prune out any subscriptions for channels not in the channel map,
         // limiting how long we need to hold the lock.
         let mut subscribed_channels = Vec::with_capacity(subscriptions.len());
         {
-            let channels = server.channels.read();
+            let channels = self.channels.read();
             let mut i = 0;
             while i < subscriptions.len() {
                 let subscription = &subscriptions[i];
@@ -583,6 +586,7 @@ impl ConnectedClient {
             }
         }
 
+        let mut channel_ids = Vec::with_capacity(subscribed_channels.len());
         for (subscription, channel) in subscriptions.into_iter().zip(subscribed_channels) {
             // Using a limited scope here to avoid holding the lock on subscriptions while calling on_subscribe
             {
@@ -613,15 +617,22 @@ impl ConnectedClient {
                 subscription.channel_id,
                 subscription.id
             );
+            channel_ids.push(channel.id());
+
             if let Some(handler) = self.server_listener.as_ref() {
                 handler.on_subscribe(
                     Client::new(self),
                     ChannelView {
-                        id: channel.id,
-                        topic: &channel.topic,
+                        id: channel.id(),
+                        topic: channel.topic(),
                     },
                 );
             }
+        }
+
+        // Propagate client subscription requests to the context.
+        if let Some(context) = self.context.upgrade() {
+            context.subscribe_channels(self.sink_id, &channel_ids);
         }
     }
 
@@ -972,6 +983,49 @@ impl ConnectedClient {
         let message = Message::binary(buf);
         self.send_control_msg(message);
     }
+
+    /// Advertises a channel to the client.
+    fn advertise_channel(&self, channel: &Arc<Channel>) {
+        let message = match protocol::server::advertisement(channel) {
+            Ok(message) => message,
+            Err(FoxgloveError::SchemaRequired) => {
+                tracing::error!(
+                    "Ignoring advertise channel for {} because a schema is required",
+                    channel.topic()
+                );
+                return;
+            }
+            Err(err) => {
+                tracing::error!("Error advertising channel to client: {err}");
+                return;
+            }
+        };
+
+        self.channels.write().insert(channel.id(), channel.clone());
+
+        if self.send_control_msg(Message::text(message.clone())) {
+            tracing::debug!(
+                "Advertised channel {} with id {} to client {}",
+                channel.topic(),
+                channel.id(),
+                self.addr
+            );
+        }
+    }
+
+    /// Unadvertises a channel to the client.
+    fn unadvertise_channel(&self, channel_id: ChannelId) {
+        self.channels.write().remove(&channel_id);
+
+        let message = protocol::server::unadvertise(channel_id);
+        if self.send_control_msg(Message::text(message.clone())) {
+            tracing::debug!(
+                "Unadvertised channel with id {} to client {}",
+                channel_id,
+                self.addr
+            );
+        }
+    }
 }
 
 impl std::fmt::Debug for ConnectedClient {
@@ -994,7 +1048,7 @@ impl Server {
             .unwrap_or_default()
     }
 
-    pub fn new(weak_self: Weak<Self>, opts: ServerOptions) -> Self {
+    pub fn new(weak_self: Weak<Self>, ctx: &Arc<Context>, opts: ServerOptions) -> Self {
         let mut capabilities = opts.capabilities.unwrap_or_default();
         let mut supported_encodings = opts.supported_encodings.unwrap_or_default();
 
@@ -1018,7 +1072,7 @@ impl Server {
             weak_self,
             port: AtomicU16::new(0),
             started: AtomicBool::new(false),
-            sink_id: SinkId::next(),
+            context: Arc::downgrade(ctx),
             message_backlog_size: opts
                 .message_backlog_size
                 .unwrap_or(DEFAULT_MESSAGE_BACKLOG_SIZE) as u32,
@@ -1029,7 +1083,6 @@ impl Server {
             ),
             name: opts.name.unwrap_or_default(),
             clients: CowVec::new(),
-            channels: parking_lot::RwLock::new(HashMap::new()),
             subscribed_parameters: parking_lot::Mutex::new(HashSet::new()),
             capabilities,
             supported_encodings,
@@ -1104,56 +1157,6 @@ impl Server {
         }
         self.clients.clear();
         self.cancellation_token.cancel();
-    }
-
-    fn advertise_channel(&self, channel: &Arc<Channel>) {
-        let message = match protocol::server::advertisement(channel) {
-            Ok(message) => message,
-            Err(FoxgloveError::SchemaRequired) => {
-                tracing::error!(
-                    "Ignoring advertise channel for {} because a schema is required",
-                    channel.topic
-                );
-                return;
-            }
-            Err(err) => {
-                // If an advertisement fails for an unknown reason, assume it may succeed for other
-                // clients.
-                self.channels.write().insert(channel.id, channel.clone());
-                tracing::error!("Error advertising channel to client: {err}");
-                return;
-            }
-        };
-
-        self.channels.write().insert(channel.id, channel.clone());
-
-        let clients = self.clients.get();
-        for client in clients.iter() {
-            if client.send_control_msg(Message::text(message.clone())) {
-                tracing::debug!(
-                    "Advertised channel {} with id {} to client {}",
-                    channel.topic,
-                    channel.id,
-                    client.addr
-                );
-            }
-        }
-    }
-
-    fn unadvertise_channel(&self, channel_id: ChannelId) {
-        self.channels.write().remove(&channel_id);
-
-        let message = protocol::server::unadvertise(channel_id);
-        let clients = self.clients.get();
-        for client in clients.iter() {
-            if client.send_control_msg(Message::text(message.clone())) {
-                tracing::debug!(
-                    "Unadvertised channel with id {} to client {}",
-                    channel_id,
-                    client.addr
-                );
-            }
-        }
     }
 
     /// Filter param_names to just those with no subscribers
@@ -1271,10 +1274,14 @@ impl Server {
         let (ctrl_tx, ctrl_rx) = flume::bounded(self.message_backlog_size as usize);
         let cancellation_token = CancellationToken::new();
 
+        let sink_id = SinkId::next();
         let new_client = Arc::new_cyclic(|weak_self| ConnectedClient {
             id,
             addr,
             weak_self: weak_self.clone(),
+            sink_id,
+            context: self.context.clone(),
+            channels: parking_lot::RwLock::default(),
             sender: Mutex::new(ws_sender),
             data_plane_tx: data_tx,
             data_plane_rx: data_rx,
@@ -1291,7 +1298,7 @@ impl Server {
             subscribed_to_connection_graph: AtomicBool::new(false),
         });
 
-        self.register_client_and_advertise(new_client.clone()).await;
+        self.register_client_and_advertise(new_client.clone());
 
         let receive_messages = async {
             while let Some(msg) = ws_receiver.next().await {
@@ -1356,59 +1363,31 @@ impl Server {
             }
         }
 
+        // Remove the client sink.
+        if let Some(context) = self.context.upgrade() {
+            context.remove_sink(sink_id);
+        }
+
         self.clients.retain(|c| !Arc::ptr_eq(c, &new_client));
         new_client.on_disconnect(&self).await;
     }
 
-    async fn register_client_and_advertise(&self, client: Arc<ConnectedClient>) {
-        // Lock the sender so the channel advertisement is the first message sent
-        let mut sender = client.sender.lock().await;
-        // Add the client to self.clients
+    fn register_client_and_advertise(&self, client: Arc<ConnectedClient>) {
+        // Add the client to self.clients, and register it as a sink. This synchronously triggers
+        // advertisements for all channels via the `Sink::add_channel` callback.
+        tracing::info!("Registered client {}", client.addr);
         self.clients.push(client.clone());
-
-        // Advertise existing channels to the new client. We must do this AFTER adding the client to clients,
-        // otherwise there is potential for the client to miss a new channel advertisement.
-        // Create a copy of the channels to avoid holding the lock while sending messages.
-        let channels: Vec<_> = self.channels.read().values().cloned().collect();
-        let services: Vec<_> = self.services.read().values().cloned().collect();
-
-        tracing::info!(
-            "Registered client {}; advertising {} channels and {} services",
-            client.addr,
-            channels.len(),
-            services.len(),
-        );
-
-        for channel in channels {
-            let message = match protocol::server::advertisement(&channel) {
-                Ok(message) => message,
-                Err(err) => {
-                    tracing::error!("Error creating advertise channel message to client: {err}");
-                    return;
-                }
-            };
-
-            if let Err(err) = sender.send(Message::text(message)).await {
-                // We can't send messages to the client. Maybe we can still receive messages? Let's continue.
-                tracing::error!("Error advertising channel: {err}");
-                break;
-            }
-
-            tracing::debug!(
-                "Advertised channel {} with id {} to client {}",
-                channel.topic,
-                channel.id,
-                client.addr
-            );
+        if let Some(context) = self.context.upgrade() {
+            context.add_sink(client.clone());
         }
 
+        // Advertise services.
+        let services: Vec<_> = self.services.read().values().cloned().collect();
         if !services.is_empty() {
             let msg = Message::text(protocol::server::advertise_services(
                 services.iter().map(|s| s.as_ref()),
             ));
-            if let Err(err) = sender.send(msg).await {
-                tracing::error!("Error advertising services: {err}");
-            } else {
+            if client.send_control_msg(msg) {
                 for service in services {
                     tracing::debug!(
                         "Advertised service {} with id {} to client {}",
@@ -1601,50 +1580,50 @@ fn send_lossy(
     }
 }
 
-impl Sink for Server {
+impl Sink for ConnectedClient {
     fn id(&self) -> SinkId {
         self.sink_id
     }
 
     fn log(&self, channel: &Channel, msg: &[u8], metadata: &Metadata) -> Result<(), FoxgloveError> {
-        let clients = self.clients.get();
-        for client in clients.iter() {
-            let subscriptions = client.subscriptions.lock();
-            let Some(subscription_id) = subscriptions.get_by_left(&channel.id).copied() else {
-                continue;
-            };
+        let subscriptions = self.subscriptions.lock();
+        let Some(subscription_id) = subscriptions.get_by_left(&channel.id()).copied() else {
+            return Ok(());
+        };
 
-            // https://github.com/foxglove/ws-protocol/blob/main/docs/spec.md#message-data
-            let header_size: usize = 1 + 4 + 8;
-            let mut buf = BytesMut::with_capacity(header_size + msg.len());
-            buf.put_u8(protocol::server::BinaryOpcode::MessageData as u8);
-            buf.put_u32_le(subscription_id.into());
-            buf.put_u64_le(metadata.log_time);
-            buf.put_slice(msg);
+        // https://github.com/foxglove/ws-protocol/blob/main/docs/spec.md#message-data
+        let header_size: usize = 1 + 4 + 8;
+        let mut buf = BytesMut::with_capacity(header_size + msg.len());
+        buf.put_u8(protocol::server::BinaryOpcode::MessageData as u8);
+        buf.put_u32_le(subscription_id.into());
+        buf.put_u64_le(metadata.log_time);
+        buf.put_slice(msg);
 
-            let message = Message::binary(buf);
+        let message = Message::binary(buf);
 
-            client.send_data_lossy(message, MAX_SEND_RETRIES);
-        }
+        self.send_data_lossy(message, MAX_SEND_RETRIES);
         Ok(())
     }
 
     /// Server has an available channel. Advertise to all clients.
     fn add_channel(&self, channel: &Arc<Channel>) -> bool {
-        let server = self.arc();
-        server.advertise_channel(channel);
+        self.advertise_channel(channel);
         false
     }
 
     /// A channel is being removed. Unadvertise to all clients.
     fn remove_channel(&self, channel: &Channel) {
-        let server = self.arc();
-        server.unadvertise_channel(channel.id());
+        self.unadvertise_channel(channel.id());
+    }
+
+    /// Clients maintain subscriptions dynamically.
+    fn auto_subscribe(&self) -> bool {
+        false
     }
 }
 
-pub(crate) fn create_server(opts: ServerOptions) -> Arc<Server> {
-    Arc::new_cyclic(|weak_self| Server::new(weak_self.clone(), opts))
+pub(crate) fn create_server(ctx: &Arc<Context>, opts: ServerOptions) -> Arc<Server> {
+    Arc::new_cyclic(|weak_self| Server::new(weak_self.clone(), ctx, opts))
 }
 
 // Spawn a new task for each incoming connection

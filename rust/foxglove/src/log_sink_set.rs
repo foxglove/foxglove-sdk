@@ -20,6 +20,12 @@ impl LogSinkSet {
         self.0.load().is_empty()
     }
 
+    /// Returns the number of sinks in the set.
+    #[cfg(test)]
+    pub fn len(&self) -> usize {
+        self.0.load().len()
+    }
+
     /// Replaces the set of sinks in the set.
     pub fn store(&self, sinks: SmallSinkVec) {
         self.0.store(Arc::new(sinks));
