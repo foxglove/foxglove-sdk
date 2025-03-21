@@ -52,6 +52,21 @@ typedef struct foxglove_channel foxglove_channel;
  */
 #define FOXGLOVE_SERVER_CAPABILITY_SERVICES (1 << 4)
 
+enum FoxgloveMcapCompression
+#ifdef __cplusplus
+  : uint8_t
+#endif // __cplusplus
+ {
+  FoxgloveMcapCompression_None,
+  FoxgloveMcapCompression_Zstd,
+  FoxgloveMcapCompression_Lz4,
+};
+#ifndef __cplusplus
+typedef uint8_t FoxgloveMcapCompression;
+#endif // __cplusplus
+
+typedef struct foxglove_mcap_writer foxglove_mcap_writer;
+
 typedef struct foxglove_websocket_server foxglove_websocket_server;
 
 typedef struct foxglove_client_channel {
@@ -94,6 +109,30 @@ typedef struct foxglove_server_options {
   size_t supported_encodings_count;
 } foxglove_server_options;
 
+typedef struct foxglove_mcap_options {
+  const char *path;
+  size_t path_len;
+  bool create;
+  bool truncate;
+  FoxgloveMcapCompression compression;
+  const char *profile;
+  size_t profile_len;
+  /**
+   * chunk_size of 0 is treated as if it was omitted (None)
+   */
+  uint64_t chunk_size;
+  bool use_chunks;
+  bool disable_seeking;
+  bool emit_statistics;
+  bool emit_summary_offsets;
+  bool emit_message_indexes;
+  bool emit_chunk_indexes;
+  bool emit_attachment_indexes;
+  bool emit_metadata_indexes;
+  bool repeat_channels;
+  bool repeat_schemas;
+} foxglove_mcap_options;
+
 typedef struct foxglove_schema {
   const char *name;
   const char *encoding;
@@ -114,6 +153,30 @@ extern "C" {
  * `name` and `host` must be null-terminated strings with valid UTF8.
  */
 struct foxglove_websocket_server *foxglove_server_start(const struct foxglove_server_options *FOXGLOVE_NONNULL options);
+
+/**
+ * Create or open an MCAP file for writing. Must later be freed with `foxglove_mcap_free`.
+ *
+ * # Safety
+ * `path`, `profile`, and `library` must be valid UTF8.
+ */
+struct foxglove_mcap_writer *foxglove_mcap_open(const struct foxglove_mcap_options *FOXGLOVE_NONNULL options);
+
+/**
+ * Close an MCAP file writer created via `foxglove_mcap_open`.
+ *
+ * # Safety
+ * `writer` must be a valid pointer to a `FoxgloveMcapWriter` created via `foxglove_mcap_open`.
+ */
+void foxglove_mcap_close(struct foxglove_mcap_writer *writer);
+
+/**
+ * Free an MCAP file writer created via `foxglove_mcap_open`.
+ *
+ * # Safety
+ * `writer` must be a valid pointer to a `FoxgloveMcapWriter` created via `foxglove_mcap_open`.
+ */
+void foxglove_mcap_free(struct foxglove_mcap_writer *writer);
 
 /**
  * Free a server created via `foxglove_server_start`.
