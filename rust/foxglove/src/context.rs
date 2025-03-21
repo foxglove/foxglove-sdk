@@ -6,6 +6,7 @@ use std::sync::{Arc, LazyLock};
 use parking_lot::RwLock;
 
 use crate::channel::ChannelId;
+use crate::log_sink_set::ERROR_LOGGING_MESSAGE;
 use crate::{Channel, FoxgloveError, Sink, SinkId};
 
 mod subscriptions;
@@ -42,8 +43,13 @@ impl ContextInner {
             }
         }
 
-        // Connect channel sinks.
+        // Log static messages to all subscribers, and connect channel sinks.
         let sinks = self.subs.get_subscribers(channel.id());
+        if channel.static_message().is_some() {
+            for sink in &sinks {
+                self.log_static_messages(sink, [&channel]);
+            }
+        }
         channel.update_sinks(sinks);
 
         Ok(())
@@ -90,8 +96,14 @@ impl ContextInner {
 
         // Add requested subscriptions.
         if !sub_channel_ids.is_empty() && self.subs.subscribe_channels(&sink, &sub_channel_ids) {
-            self.update_channel_sinks_by_ids(&sub_channel_ids);
+            let channels: Vec<_> = sub_channel_ids
+                .into_iter()
+                .filter_map(|id| self.channels.get(&id))
+                .collect();
+            self.log_static_messages(&sink, &channels);
+            self.update_channel_sinks(&channels);
         } else if auto_subscribe && self.subs.subscribe_global(sink.clone()) {
+            self.log_static_messages(&sink, self.channels.values());
             self.update_channel_sinks(self.channels.values());
         }
 
@@ -112,7 +124,16 @@ impl ContextInner {
     fn subscribe_channels(&mut self, sink_id: SinkId, channel_ids: &[ChannelId]) {
         if let Some(sink) = self.sinks.get(&sink_id) {
             if self.subs.subscribe_channels(sink, channel_ids) {
-                self.update_channel_sinks_by_ids(channel_ids);
+                // If a sink "resubscribes" to a channel, while also subscribing to new channels,
+                // we'll replay the static message here. That probably undesirable, though not a
+                // corner case anyone is likely to hit, because the websocket server rejects
+                // duplicate subscription requests.
+                let channels: Vec<_> = channel_ids
+                    .iter()
+                    .filter_map(|id| self.channels.get(id))
+                    .collect();
+                self.log_static_messages(sink, &channels);
+                self.update_channel_sinks(channels);
             }
         }
     }
@@ -120,14 +141,29 @@ impl ContextInner {
     /// Unsubscribes a sink from the specified channels.
     fn unsubscribe_channels(&mut self, sink_id: SinkId, channel_ids: &[ChannelId]) {
         if self.subs.unsubscribe_channels(sink_id, channel_ids) {
-            self.update_channel_sinks_by_ids(channel_ids);
+            let channels = channel_ids.iter().filter_map(|id| self.channels.get(id));
+            self.update_channel_sinks(channels);
         }
     }
 
-    /// Updates the set of connected sinks on the specified channels, given by their IDs.
-    fn update_channel_sinks_by_ids(&self, channel_ids: &[ChannelId]) {
-        let channels = channel_ids.iter().filter_map(|id| self.channels.get(id));
-        self.update_channel_sinks(channels);
+    /// Logs static messages from the specified channels to the sink.
+    ///
+    /// Generally, this should be done before adding the sink to the channel's list of subscribed
+    /// sinks, to ensure that the static message is the very first one logged to the sink after
+    /// processing the subscription.
+    fn log_static_messages(
+        &self,
+        sink: &Arc<dyn Sink>,
+        channels: impl IntoIterator<Item = impl AsRef<Channel>>,
+    ) {
+        for channel in channels {
+            let channel = channel.as_ref();
+            if let Some(msg) = channel.static_message() {
+                if let Err(err) = sink.log(channel, msg.data(), msg.metadata()) {
+                    tracing::warn!("{ERROR_LOGGING_MESSAGE}: {:?}", err);
+                }
+            }
+        }
     }
 
     /// Updates the set of connected sinks on the specified channels.
@@ -501,5 +537,59 @@ mod tests {
         assert!(ctx.remove_channel_for_topic(ch.topic()));
         ctx.add_channel(ch.clone()).unwrap();
         assert!(!ch.has_sinks());
+    }
+
+    #[test]
+    fn test_log_static_messages() {
+        let ctx = Context::new();
+        let chan1 = new_test_channel(&ctx, "t1").unwrap();
+        chan1.log_static(b"static1".to_vec());
+
+        // Static messages are logged to new auto-subscribe sinks when they are added.
+        let sink1 = Arc::new(RecordingSink::new());
+        ctx.add_sink(sink1.clone());
+        {
+            let mut rx = sink1.recorded.lock();
+            assert_eq!(rx.len(), 1);
+            assert_eq!(rx[0].channel_id, chan1.id());
+            assert_eq!(rx[0].msg, b"static1");
+            rx.clear();
+        }
+
+        // Static messages are logged to dynamically-subscribed sinks when they subscribe.
+        let sink2 = Arc::new(RecordingSink::new().auto_subscribe(false));
+        ctx.add_sink(sink2.clone());
+        assert!(sink2.recorded.lock().is_empty());
+        ctx.subscribe_channels(sink2.id(), &[chan1.id()]);
+        {
+            let mut rx = sink2.recorded.lock();
+            assert_eq!(rx.len(), 1);
+            assert_eq!(rx[0].channel_id, chan1.id());
+            assert_eq!(rx[0].msg, b"static1");
+            rx.clear();
+        }
+
+        // Static messages are logged to subscribed sinks.
+        chan1.log_static(b"static2".to_vec());
+        for sink in [&sink1, &sink2] {
+            let mut rx = sink.recorded.lock();
+            assert_eq!(rx.len(), 1);
+            assert_eq!(rx[0].channel_id, chan1.id());
+            assert_eq!(rx[0].msg, b"static2");
+            rx.clear();
+        }
+
+        // Static messages are logged to auto-subscribed sinks when a channel with a static message
+        // is added to the context.
+        ctx.remove_channel_for_topic(chan1.topic());
+        ctx.add_channel(chan1.clone()).unwrap();
+        {
+            let mut rx = sink1.recorded.lock();
+            assert_eq!(rx.len(), 1);
+            assert_eq!(rx[0].channel_id, chan1.id());
+            assert_eq!(rx[0].msg, b"static2");
+            rx.clear();
+        }
+        assert!(sink2.recorded.lock().is_empty());
     }
 }
