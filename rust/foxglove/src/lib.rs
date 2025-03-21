@@ -170,6 +170,7 @@ mod log_sink_set;
 mod mcap_writer;
 mod metadata;
 mod runtime;
+mod schema;
 pub mod schemas;
 mod schemas_wkt;
 mod sink;
@@ -181,7 +182,7 @@ mod time;
 pub mod websocket;
 mod websocket_server;
 
-pub use channel::{Channel, Schema};
+pub use channel::Channel;
 pub use channel_builder::ChannelBuilder;
 #[doc(hidden)]
 pub use context::Context;
@@ -190,6 +191,7 @@ pub use mcap_writer::{McapWriter, McapWriterHandle};
 pub use metadata::{Metadata, PartialMetadata};
 pub(crate) use runtime::get_runtime_handle;
 pub use runtime::shutdown_runtime;
+pub use schema::Schema;
 pub use sink::{Sink, SinkId};
 pub(crate) use time::nanoseconds_since_epoch;
 pub use websocket_server::{WebSocketServer, WebSocketServerBlockingHandle, WebSocketServerHandle};
