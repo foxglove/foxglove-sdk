@@ -50,10 +50,8 @@ where
 /// Wraps a weak reference to a Client and provides a method
 /// to respond to the fetch asset request from that client.
 pub struct AssetResponder {
-    /// The client requesting the asset.
     client: Client,
-    request_id: u32,
-    _guard: SemaphoreGuard,
+    inner: Option<AssetResponderInner>,
 }
 
 impl AssetResponder {
@@ -61,8 +59,10 @@ impl AssetResponder {
     pub(crate) fn new(client: Client, request_id: u32, guard: SemaphoreGuard) -> Self {
         Self {
             client,
-            request_id,
-            _guard: guard,
+            inner: Some(AssetResponderInner {
+                request_id,
+                _guard: guard,
+            }),
         }
     }
 
@@ -72,7 +72,34 @@ impl AssetResponder {
     }
 
     /// Send an response to the client.
-    pub fn respond(self, result: Result<Bytes, String>) {
-        self.client.send_asset_response(result, self.request_id);
+    pub fn respond(mut self, result: Result<Bytes, String>) {
+        if let Some(inner) = self.inner.take() {
+            inner.respond(&self.client, result)
+        }
+    }
+}
+
+impl Drop for AssetResponder {
+    fn drop(&mut self) {
+        if let Some(inner) = self.inner.take() {
+            // The asset handler has dropped its responder without responding. This could be due to
+            // a panic or some other flaw in implementation. Reply with a generic error message.
+            inner.respond(
+                &self.client,
+                Err("Internal server error: asset handler failed to send a response".into()),
+            )
+        }
+    }
+}
+
+struct AssetResponderInner {
+    request_id: u32,
+    _guard: SemaphoreGuard,
+}
+
+impl AssetResponderInner {
+    /// Send an response to the client.
+    pub fn respond(self, client: &Client, result: Result<Bytes, String>) {
+        client.send_asset_response(result, self.request_id);
     }
 }

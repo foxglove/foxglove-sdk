@@ -1426,6 +1426,8 @@ async fn test_fetch_asset() {
                 |_client, uri: String| {
                     if uri.ends_with("error") {
                         Err("test error".to_string())
+                    } else if uri.ends_with("panic") {
+                        panic!("oh no")
                     } else {
                         Ok(Bytes::from_static(b"test data"))
                     }
@@ -1442,46 +1444,61 @@ async fn test_fetch_asset() {
     let mut ws_client = connect_client(addr).await;
     let _ = ws_client.next().await.expect("No serverInfo sent");
 
-    let fetch_asset = json!({
-        "op": "fetchAsset",
-        "uri": "https://example.com/asset.png",
-        "requestId": 1,
-    });
-    ws_client
-        .send(Message::text(fetch_asset.to_string()))
-        .await
-        .expect("Failed to send fetch asset");
-    let fetch_asset_err = json!({
-        "op": "fetchAsset",
-        "uri": "https://example.com/error",
-        "requestId": 2,
-    });
-    ws_client
-        .send(Message::text(fetch_asset_err.to_string()))
-        .await
-        .expect("Failed to send fetch asset");
+    #[derive(Debug)]
+    struct Case<'a> {
+        uri: &'a str,
+        expect: Result<&'a [u8], &'a [u8]>,
+    }
+    impl<'a> Case<'a> {
+        fn new(uri: &'a str, expect: Result<&'a [u8], &'a [u8]>) -> Self {
+            Self { uri, expect }
+        }
+    }
+    let cases = [
+        Case::new("https://example.com/asset.png", Ok(b"test data")),
+        Case::new(
+            "https://example.com/panic",
+            Err(b"Internal server error: asset handler failed to send a response"),
+        ),
+        Case::new("https://example.com/error", Err(b"test error")),
+    ];
+    for (request_id, case) in cases.iter().enumerate() {
+        dbg!(case);
+        let req = json!({
+            "op": "fetchAsset",
+            "uri": case.uri,
+            "requestId": request_id,
+        });
+        ws_client
+            .send(Message::text(req.to_string()))
+            .await
+            .expect("Failed to send fetch asset");
 
-    let result = ws_client.next().await.unwrap();
-    let msg = result.expect("Failed to parse message");
-    let data = msg.into_data();
-    println!("data: {:?}", data);
-    assert_eq!(data[0], 0x04); // fetch asset opcode
-    assert_eq!(u32::from_le_bytes(data[1..5].try_into().unwrap()), 1);
-    assert_eq!(data[5], 0); // 0 for success
-    assert_eq!(u32::from_le_bytes(data[6..10].try_into().unwrap()), 0);
-    assert_eq!(&data[10..], b"test data");
-
-    let result = ws_client.next().await.unwrap();
-    let msg = result.expect("Failed to parse message");
-    let data = msg.into_data();
-    assert_eq!(data[0], 0x04); // fetch asset opcode
-    assert_eq!(u32::from_le_bytes(data[1..5].try_into().unwrap()), 2);
-    assert_eq!(data[5], 1); // 1 for error
-    assert_eq!(
-        u32::from_le_bytes(data[6..10].try_into().unwrap()),
-        b"test error".len() as u32
-    );
-    assert_eq!(&data[10..], b"test error");
+        let result = ws_client.next().await.unwrap();
+        let msg = result.expect("Failed to parse message");
+        let data = msg.into_data();
+        println!("data: {:?}", data);
+        assert_eq!(data[0], 0x04); // fetch asset opcode
+        assert_eq!(
+            u32::from_le_bytes(data[1..5].try_into().unwrap()),
+            request_id as u32
+        );
+        match case.expect {
+            Ok(expect_data) => {
+                assert_eq!(data[5], 0);
+                assert_eq!(u32::from_le_bytes(data[6..10].try_into().unwrap()), 0);
+                assert_eq!(&data[10..], expect_data);
+            }
+            Err(expect_data) => {
+                assert_eq!(data[5], 1);
+                assert_eq!(
+                    u32::from_le_bytes(data[6..10].try_into().unwrap()),
+                    expect_data.len() as u32
+                );
+                assert_eq!(&data[10..], expect_data);
+            }
+        }
+    }
 }
 
 #[traced_test]
