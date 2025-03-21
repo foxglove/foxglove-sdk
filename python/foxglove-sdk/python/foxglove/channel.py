@@ -1,5 +1,5 @@
-from typing import Any, Dict, Optional, Union, cast
 import json
+from typing import Any, Dict, Optional, Union, cast
 
 from . import schemas
 from ._foxglove_py import BaseChannel, Schema, channels
@@ -93,6 +93,7 @@ _channels_by_topic: Dict[str, Channel] = {}
 def log(
     topic: str,
     message: Union[JsonMessage, list[Any], bytes, str, schemas.FoxgloveSchema],
+    *,
     log_time: Optional[int] = None,
     publish_time: Optional[int] = None,
     sequence: Optional[int] = None,
@@ -107,8 +108,7 @@ def log(
     The type of the message must be kept consistent for each topic or an error will be raised.
     This can be avoided by creating and using the channels directly instead of using this function.
 
-    Note: currently this always creates a new channel for the given topic on the first call,
-    even if a channel with the same topic was created by some other means.
+    Note: currently this raises an error if a channel with the same topic was created by some other means.
 
     :param topic: The topic name.
     :param message: The message to log.
