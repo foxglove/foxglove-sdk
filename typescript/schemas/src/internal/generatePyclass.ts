@@ -631,6 +631,7 @@ export function generatePyChannelStub(messageSchemas: FoxgloveMessageSchema[]): 
         `    def log(`,
         `        self,`,
         `        message: "${schemaClass}",`,
+        `        *,`,
         `        log_time: int | None = None,`,
         `        publish_time: int | None = None,`,
         `        sequence: int | None = None,`,

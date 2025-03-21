@@ -45,6 +45,7 @@ class CameraCalibrationChannel:
     def log(
         self,
         message: "CameraCalibration",
+        *,
         log_time: int | None = None,
         publish_time: int | None = None,
         sequence: int | None = None,
@@ -63,6 +64,7 @@ class CircleAnnotationChannel:
     def log(
         self,
         message: "CircleAnnotation",
+        *,
         log_time: int | None = None,
         publish_time: int | None = None,
         sequence: int | None = None,
@@ -81,6 +83,7 @@ class ColorChannel:
     def log(
         self,
         message: "Color",
+        *,
         log_time: int | None = None,
         publish_time: int | None = None,
         sequence: int | None = None,
@@ -99,6 +102,7 @@ class CompressedImageChannel:
     def log(
         self,
         message: "CompressedImage",
+        *,
         log_time: int | None = None,
         publish_time: int | None = None,
         sequence: int | None = None,
@@ -117,6 +121,7 @@ class CompressedVideoChannel:
     def log(
         self,
         message: "CompressedVideo",
+        *,
         log_time: int | None = None,
         publish_time: int | None = None,
         sequence: int | None = None,
@@ -135,6 +140,7 @@ class FrameTransformChannel:
     def log(
         self,
         message: "FrameTransform",
+        *,
         log_time: int | None = None,
         publish_time: int | None = None,
         sequence: int | None = None,
@@ -153,6 +159,7 @@ class FrameTransformsChannel:
     def log(
         self,
         message: "FrameTransforms",
+        *,
         log_time: int | None = None,
         publish_time: int | None = None,
         sequence: int | None = None,
@@ -171,6 +178,7 @@ class GeoJsonChannel:
     def log(
         self,
         message: "GeoJson",
+        *,
         log_time: int | None = None,
         publish_time: int | None = None,
         sequence: int | None = None,
@@ -189,6 +197,7 @@ class GridChannel:
     def log(
         self,
         message: "Grid",
+        *,
         log_time: int | None = None,
         publish_time: int | None = None,
         sequence: int | None = None,
@@ -207,6 +216,7 @@ class ImageAnnotationsChannel:
     def log(
         self,
         message: "ImageAnnotations",
+        *,
         log_time: int | None = None,
         publish_time: int | None = None,
         sequence: int | None = None,
@@ -225,6 +235,7 @@ class KeyValuePairChannel:
     def log(
         self,
         message: "KeyValuePair",
+        *,
         log_time: int | None = None,
         publish_time: int | None = None,
         sequence: int | None = None,
@@ -243,6 +254,7 @@ class LaserScanChannel:
     def log(
         self,
         message: "LaserScan",
+        *,
         log_time: int | None = None,
         publish_time: int | None = None,
         sequence: int | None = None,
@@ -261,6 +273,7 @@ class LocationFixChannel:
     def log(
         self,
         message: "LocationFix",
+        *,
         log_time: int | None = None,
         publish_time: int | None = None,
         sequence: int | None = None,
@@ -279,6 +292,7 @@ class LogChannel:
     def log(
         self,
         message: "Log",
+        *,
         log_time: int | None = None,
         publish_time: int | None = None,
         sequence: int | None = None,
@@ -297,6 +311,7 @@ class PackedElementFieldChannel:
     def log(
         self,
         message: "PackedElementField",
+        *,
         log_time: int | None = None,
         publish_time: int | None = None,
         sequence: int | None = None,
@@ -315,6 +330,7 @@ class Point2Channel:
     def log(
         self,
         message: "Point2",
+        *,
         log_time: int | None = None,
         publish_time: int | None = None,
         sequence: int | None = None,
@@ -333,6 +349,7 @@ class Point3Channel:
     def log(
         self,
         message: "Point3",
+        *,
         log_time: int | None = None,
         publish_time: int | None = None,
         sequence: int | None = None,
@@ -351,6 +368,7 @@ class PointCloudChannel:
     def log(
         self,
         message: "PointCloud",
+        *,
         log_time: int | None = None,
         publish_time: int | None = None,
         sequence: int | None = None,
@@ -369,6 +387,7 @@ class PointsAnnotationChannel:
     def log(
         self,
         message: "PointsAnnotation",
+        *,
         log_time: int | None = None,
         publish_time: int | None = None,
         sequence: int | None = None,
@@ -387,6 +406,7 @@ class PoseChannel:
     def log(
         self,
         message: "Pose",
+        *,
         log_time: int | None = None,
         publish_time: int | None = None,
         sequence: int | None = None,
@@ -405,6 +425,7 @@ class PoseInFrameChannel:
     def log(
         self,
         message: "PoseInFrame",
+        *,
         log_time: int | None = None,
         publish_time: int | None = None,
         sequence: int | None = None,
@@ -423,6 +444,7 @@ class PosesInFrameChannel:
     def log(
         self,
         message: "PosesInFrame",
+        *,
         log_time: int | None = None,
         publish_time: int | None = None,
         sequence: int | None = None,
@@ -441,6 +463,7 @@ class QuaternionChannel:
     def log(
         self,
         message: "Quaternion",
+        *,
         log_time: int | None = None,
         publish_time: int | None = None,
         sequence: int | None = None,
@@ -459,6 +482,7 @@ class RawImageChannel:
     def log(
         self,
         message: "RawImage",
+        *,
         log_time: int | None = None,
         publish_time: int | None = None,
         sequence: int | None = None,
@@ -477,6 +501,7 @@ class SceneEntityChannel:
     def log(
         self,
         message: "SceneEntity",
+        *,
         log_time: int | None = None,
         publish_time: int | None = None,
         sequence: int | None = None,
@@ -495,6 +520,7 @@ class SceneEntityDeletionChannel:
     def log(
         self,
         message: "SceneEntityDeletion",
+        *,
         log_time: int | None = None,
         publish_time: int | None = None,
         sequence: int | None = None,
@@ -513,6 +539,7 @@ class SceneUpdateChannel:
     def log(
         self,
         message: "SceneUpdate",
+        *,
         log_time: int | None = None,
         publish_time: int | None = None,
         sequence: int | None = None,
@@ -531,6 +558,7 @@ class TextAnnotationChannel:
     def log(
         self,
         message: "TextAnnotation",
+        *,
         log_time: int | None = None,
         publish_time: int | None = None,
         sequence: int | None = None,
@@ -549,6 +577,7 @@ class Vector2Channel:
     def log(
         self,
         message: "Vector2",
+        *,
         log_time: int | None = None,
         publish_time: int | None = None,
         sequence: int | None = None,
@@ -567,6 +596,7 @@ class Vector3Channel:
     def log(
         self,
         message: "Vector3",
+        *,
         log_time: int | None = None,
         publish_time: int | None = None,
         sequence: int | None = None,
