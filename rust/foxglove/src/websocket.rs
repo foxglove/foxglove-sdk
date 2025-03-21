@@ -820,7 +820,7 @@ impl ConnectedClient {
         };
 
         // Prepare the responder and the request. No failures past this point. If the responder is
-        // dropped without sending a response, it will send a generc "internal server error" back
+        // dropped without sending a response, it will send a generic "internal server error" back
         // to the client.
         let responder = service::Responder::new(
             self.arc(),
