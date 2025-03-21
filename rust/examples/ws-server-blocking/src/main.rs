@@ -56,7 +56,7 @@ fn main() {
     .expect("Failed to set SIGINT handler");
 
     let server = foxglove::WebSocketServer::new()
-        .name("ws-demo")
+        .name(env!("CARGO_PKG_NAME"))
         .bind(&args.host, args.port)
         .start_blocking()
         .expect("Server failed to start");

@@ -77,6 +77,12 @@ impl From<ClientId> for u32 {
     }
 }
 
+impl std::fmt::Display for ClientId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
 /// A connected client session with the websocket server.
 #[derive(Debug, Clone)]
 pub struct Client {

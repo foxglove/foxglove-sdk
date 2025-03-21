@@ -227,7 +227,7 @@ pub(crate) struct JsonClientChannel {
 }
 
 /// Information about a channel advertised by the client
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ClientChannel {
     /// An identifier for this channel, assigned by the client
     pub id: ClientChannelId,

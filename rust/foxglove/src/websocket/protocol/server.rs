@@ -5,13 +5,16 @@ use crate::websocket::service::ServiceId;
 use crate::websocket::service::{self, Service};
 use crate::websocket::Capability;
 use crate::FoxgloveError;
+use crate::Schema;
 use base64::prelude::*;
 use bytes::{BufMut, Bytes, BytesMut};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use serde_repr::Serialize_repr;
 use serde_with::{base64::Base64, serde_as};
+use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
+use tracing::error;
 
 #[repr(u8)]
 pub enum BinaryOpcode {
@@ -31,13 +34,13 @@ pub struct Advertisement<'a> {
     pub topic: &'a str,
     pub encoding: &'a str,
     pub schema_name: &'a str,
-    pub schema: String,
+    pub schema: Cow<'a, str>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub schema_encoding: Option<&'a str>,
 }
 
 /// A parameter type.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ParameterType {
     /// A byte array, encoded as a base64-encoded string.
@@ -91,7 +94,7 @@ pub enum ServerMessage<'a> {
 }
 
 /// The log level for a [`Status`] message.
-#[derive(Debug, Copy, Clone, Serialize_repr)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Serialize_repr)]
 #[repr(u8)]
 #[allow(missing_docs)]
 pub enum StatusLevel {
@@ -185,6 +188,20 @@ fn is_schema_required(message_encoding: &str) -> bool {
         || message_encoding == "cdr"
 }
 
+/// Encodes schema data, based on the schema encoding.
+///
+/// For binary encodings, the schema data is base64-encoded. For other encodings, the schema must
+/// be valid UTF-8, or this function will return an error.
+fn encode_schema_data(schema: &Schema) -> Result<Cow<str>, FoxgloveError> {
+    if super::is_known_binary_schema_encoding(&schema.encoding) {
+        Ok(Cow::Owned(BASE64_STANDARD.encode(&schema.data)))
+    } else {
+        std::str::from_utf8(&schema.data)
+            .map_err(|e| FoxgloveError::Unspecified(e.into()))
+            .map(Cow::Borrowed)
+    }
+}
+
 // A `schema` in the channel is optional except for message_encodings which require a schema.
 // Currently, Foxglove supports schemaless JSON messages.
 // https://github.com/foxglove/ws-protocol/blob/main/docs/spec.md#advertise
@@ -199,13 +216,7 @@ pub fn advertisement(channel: &Channel) -> Result<String, FoxgloveError> {
     }
 
     let advertisement = if let Some(schema) = schema {
-        let schema_data = if super::is_known_binary_schema_encoding(&schema.encoding) {
-            BASE64_STANDARD.encode(&schema.data)
-        } else {
-            String::from_utf8(schema.data.to_vec())
-                .map_err(|e| FoxgloveError::Unspecified(e.into()))?
-        };
-
+        let schema_data = encode_schema_data(schema)?;
         Advertisement {
             id,
             topic,
@@ -220,7 +231,7 @@ pub fn advertisement(channel: &Channel) -> Result<String, FoxgloveError> {
             topic,
             encoding,
             schema_name: "",
-            schema: "".to_string(),
+            schema: Cow::Borrowed(""),
             schema_encoding: None,
         }
     };
@@ -257,20 +268,22 @@ struct AdvertiseService<'a> {
     response_schema: Option<&'a str>,
 }
 
-impl<'a> From<&'a Service> for AdvertiseService<'a> {
-    fn from(service: &'a Service) -> Self {
+impl<'a> TryFrom<&'a Service> for AdvertiseService<'a> {
+    type Error = FoxgloveError;
+
+    fn try_from(service: &'a Service) -> Result<Self, Self::Error> {
         let schema = service.schema();
         let request = schema.request();
         let response = schema.response();
-        Self {
+        Ok(Self {
             id: service.id(),
             name: service.name(),
             r#type: schema.name(),
-            request: request.map(|r| r.into()),
+            request: request.map(|r| r.try_into()).transpose()?,
             request_schema: if request.is_none() { Some("") } else { None },
-            response: response.map(|r| r.into()),
+            response: response.map(|r| r.try_into()).transpose()?,
             response_schema: if response.is_none() { Some("") } else { None },
-        }
+        })
     }
 }
 
@@ -280,18 +293,21 @@ struct AdvertiseServiceMessageSchema<'a> {
     encoding: &'a str,
     schema_name: &'a str,
     schema_encoding: &'a str,
-    schema: &'a [u8],
+    schema: Cow<'a, str>,
 }
 
-impl<'a> From<&'a service::MessageSchema> for AdvertiseServiceMessageSchema<'a> {
-    fn from(ms: &'a service::MessageSchema) -> Self {
+impl<'a> TryFrom<&'a service::MessageSchema> for AdvertiseServiceMessageSchema<'a> {
+    type Error = FoxgloveError;
+
+    fn try_from(ms: &'a service::MessageSchema) -> Result<Self, Self::Error> {
         let schema = &ms.schema;
-        Self {
+        let schema_data = encode_schema_data(schema)?;
+        Ok(Self {
             encoding: &ms.encoding,
             schema_name: &schema.name,
             schema_encoding: &schema.encoding,
-            schema: &schema.data,
-        }
+            schema: schema_data,
+        })
     }
 }
 
@@ -299,7 +315,16 @@ impl<'a> From<&'a service::MessageSchema> for AdvertiseServiceMessageSchema<'a> 
 pub(crate) fn advertise_services<'a>(services: impl IntoIterator<Item = &'a Service>) -> String {
     let services: Vec<_> = services
         .into_iter()
-        .map(|s| json!(AdvertiseService::from(s)))
+        .filter_map(|s| match AdvertiseService::try_from(s) {
+            Ok(adv) => Some(json!(adv)),
+            Err(e) => {
+                error!(
+                    "Failed to encode service advertisement for {}: {e}",
+                    s.name()
+                );
+                None
+            }
+        })
         .collect();
     json!({
         "op": "advertiseServices",
@@ -420,6 +445,7 @@ impl ConnectionGraphDiff<'_> {
 #[cfg(test)]
 mod tests {
     use service::ServiceSchema;
+    use tracing_test::traced_test;
 
     use crate::Schema;
 
@@ -629,6 +655,7 @@ mod tests {
     }
 
     #[test]
+    #[traced_test]
     fn test_advertise_services() {
         let s1_schema = ServiceSchema::new("std_srvs/Empty");
         let s1 = Service::builder("foo", s1_schema)
@@ -652,40 +679,29 @@ mod tests {
             .with_id(ServiceId::new(2))
             .handler_fn(|_| Err("not implemented"));
 
-        let adv = advertise_services(&[s1, s2]);
-        assert_eq!(
-            adv,
-            json!({
-                "op": "advertiseServices",
-                "services": [
-                    {
-                        "id": 1,
-                        "name": "foo",
-                        "type": "std_srvs/Empty",
-                        "requestSchema": "",
-                        "responseSchema": ""
-                    },
-                    {
-                        "id": 2,
-                        "name": "set_bool",
-                        "type": "std_srvs/SetBool",
-                        "request": {
-                            "encoding": "ros1",
-                            "schemaName": "std_srvs/SetBool_Request",
-                            "schemaEncoding": "ros1msg",
-                            "schema": b"bool data"
-                        },
-                        "response": {
-                            "encoding": "ros1",
-                            "schemaName": "std_srvs/SetBool_Response",
-                            "schemaEncoding": "ros1msg",
-                            "schema": b"bool success\nstring message"
-                        }
-                    }
-                ]
-            })
-            .to_string()
+        let s3_schema = ServiceSchema::new("invalid_schema").with_request(
+            "json",
+            Schema::new("invalid", "jsonschema", &[0, 159, 146, 150]),
         );
+        let s3 = Service::builder("invalid_schema", s3_schema)
+            .with_id(ServiceId::new(3))
+            .handler_fn(|_| Err("not implemented"));
+
+        let s4_schema = ServiceSchema::new("pb/and_jelly")
+            .with_request("protobuf", Schema::new("pb.Request", "protobuf", b"req"))
+            .with_response("protobuf", Schema::new("pb.Response", "protobuf", b"resp"));
+        let s4 = Service::builder("sandwich", s4_schema)
+            .with_id(ServiceId::new(4))
+            .handler_fn(|_| Err("not implemented"));
+
+        let adv = advertise_services(&[s1, s2, s3, s4]);
+
+        assert!(logs_contain(
+            "Failed to encode service advertisement for invalid_schema: invalid utf-8"
+        ));
+
+        let obj: serde_json::Value = serde_json::from_str(&adv).unwrap();
+        insta::assert_json_snapshot!(obj);
     }
 
     #[test]

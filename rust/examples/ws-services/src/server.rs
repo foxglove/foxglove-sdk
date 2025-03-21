@@ -14,10 +14,10 @@ use crate::Config;
 
 pub async fn main(config: Config) -> Result<()> {
     let server = foxglove::WebSocketServer::new()
-        .name("echo")
+        .name(env!("CARGO_PKG_NAME"))
         .bind(&config.host, config.port)
         .capabilities([Capability::Services])
-        .supported_encodings(["raw"])
+        .supported_encodings(["json"])
         .start()
         .await
         .context("Failed to start server")?;
@@ -72,10 +72,11 @@ fn empty_schema() -> ServiceSchema {
 }
 
 fn echo_schema() -> ServiceSchema {
-    // A simple schema with a well-specified request & response.
-    ServiceSchema::new("/custom_srvs/RawEcho")
-        .with_request("raw", Schema::new("raw", "none", b""))
-        .with_response("raw", Schema::new("raw", "none", b""))
+    // A simple schema with a specified request & response type.
+    let any_object = Schema::new("any object", "jsonschema", br#"{"type":"object"}"#);
+    ServiceSchema::new("/custom_srvs/Echo")
+        .with_request("json", any_object.clone())
+        .with_response("json", any_object)
 }
 
 fn int_bin_schema() -> ServiceSchema {
@@ -107,15 +108,15 @@ fn int_bin_handler(req: Request) -> Result<Bytes> {
     let service_name = req.service_name();
     let client_id = req.client_id();
     let req: IntBinRequest = serde_json::from_slice(req.payload())?;
-    info!("Client {client_id:?}: {service_name}: {req:?}");
+    info!("Client {client_id}: {service_name}: {req:?}");
 
     // Shared handlers can use `Request::service_name` to disambiguate the service endpoint.
     // Service names are guaranteed to be unique.
     let result = match service_name {
-        "/IntBin/add" => req.a + req.b,
-        "/IntBin/sub" => req.a - req.b,
-        "/IntBin/mul" => req.a * req.b,
-        "/IntBin/mod" => req.a % req.b,
+        "/IntBin/add" => req.a.saturating_add(req.b),
+        "/IntBin/sub" => req.a.saturating_sub(req.b),
+        "/IntBin/mul" => req.a.saturating_mul(req.b),
+        "/IntBin/mod" => req.a.checked_rem(req.b).unwrap_or(0),
         m => return Err(anyhow::anyhow!("unexpected service: {m}")),
     };
 
@@ -134,7 +135,7 @@ impl SyncHandler for Flag {
         // Decode the payload.
         let client_id = req.client_id();
         let req: SetBoolRequest = serde_json::from_slice(req.payload())?;
-        info!("Client {client_id:?}: {req:?}");
+        info!("Client {client_id}: {req:?}");
 
         // Update the flag.
         let prev = self.0.swap(req.data, std::sync::atomic::Ordering::Relaxed);

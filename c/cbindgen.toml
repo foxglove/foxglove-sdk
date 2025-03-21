@@ -29,11 +29,16 @@ typedef struct foxglove_channel foxglove_channel;
 [ptr]
 non_null_attribute = "FOXGLOVE_NONNULL"
 
+[enum]
+prefix_with_name = true
+
 [export.rename]
 FoxgloveWebSocketServer = "foxglove_websocket_server"
 FoxgloveChannel = "foxglove_channel"
 FoxgloveSchema = "foxglove_schema"
 FoxgloveServerCallbacks = "foxglove_server_callbacks"
 FoxgloveServerOptions = "foxglove_server_options"
+FoxgloveMcapOptions = "foxglove_mcap_options"
+FoxgloveMcapWriter = "foxglove_mcap_writer"
 FoxgloveServerCapability = "foxglove_server_capability"
 FoxgloveClientChannel = "foxglove_client_channel"

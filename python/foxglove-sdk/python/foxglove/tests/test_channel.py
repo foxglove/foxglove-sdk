@@ -46,7 +46,7 @@ def test_log_must_serialize_on_protobuf_channel(new_topic: str) -> None:
         ),
     )
 
-    with pytest.raises(ValueError, match="Unsupported message type"):
+    with pytest.raises(TypeError, match="Unsupported message type"):
         channel.log({"test": "test"})
 
     channel.log(b"\x01")
@@ -74,3 +74,15 @@ def test_close_typed_channel(new_topic: str, caplog: pytest.LogCaptureFixture) -
     for log_name, _, message in caplog.record_tuples:
         assert log_name == "foxglove.channels"
         assert message == "Cannot log() on a closed LogChannel"
+
+
+def test_typed_channel_requires_kwargs_after_message(new_topic: str) -> None:
+    channel = LogChannel(new_topic)
+
+    channel.log(Log(), log_time=0)
+
+    with pytest.raises(
+        TypeError,
+        match="takes 1 positional arguments but 2 were given",
+    ):
+        channel.log(Log(), 0)  # type: ignore

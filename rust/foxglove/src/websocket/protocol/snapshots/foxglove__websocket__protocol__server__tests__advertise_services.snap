@@ -1,0 +1,50 @@
+---
+source: rust/foxglove/src/websocket/protocol/server.rs
+expression: obj
+---
+{
+  "op": "advertiseServices",
+  "services": [
+    {
+      "id": 1,
+      "name": "foo",
+      "requestSchema": "",
+      "responseSchema": "",
+      "type": "std_srvs/Empty"
+    },
+    {
+      "id": 2,
+      "name": "set_bool",
+      "request": {
+        "encoding": "ros1",
+        "schema": "bool data",
+        "schemaEncoding": "ros1msg",
+        "schemaName": "std_srvs/SetBool_Request"
+      },
+      "response": {
+        "encoding": "ros1",
+        "schema": "bool success\nstring message",
+        "schemaEncoding": "ros1msg",
+        "schemaName": "std_srvs/SetBool_Response"
+      },
+      "type": "std_srvs/SetBool"
+    },
+    {
+      "id": 4,
+      "name": "sandwich",
+      "request": {
+        "encoding": "protobuf",
+        "schema": "cmVx",
+        "schemaEncoding": "protobuf",
+        "schemaName": "pb.Request"
+      },
+      "response": {
+        "encoding": "protobuf",
+        "schema": "cmVzcA==",
+        "schemaEncoding": "protobuf",
+        "schemaName": "pb.Response"
+      },
+      "type": "pb/and_jelly"
+    }
+  ]
+}
