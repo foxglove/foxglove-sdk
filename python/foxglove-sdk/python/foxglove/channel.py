@@ -102,7 +102,8 @@ def log(
     """Log a message on a topic.
 
     Creates a new channel the first time called for a given topic.
-    For foxglove types in the schemas module, this creates a typed channel.
+    For Foxglove types in the schemas module, this creates a typed channel
+    (see :py:mod:`foxglove.channels` for supported types).
     For bytes and str, this creates a simple schemaless channel and logs the bytes as-is.
     For dict and list, this creates a schemaless json channel.
 
