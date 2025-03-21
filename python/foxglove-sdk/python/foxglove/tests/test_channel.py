@@ -76,9 +76,7 @@ def test_close_typed_channel(new_topic: str, caplog: pytest.LogCaptureFixture) -
         assert message == "Cannot log() on a closed LogChannel"
 
 
-def test_requires_kwargs_after_message(
-    new_topic: str, caplog: pytest.LogCaptureFixture
-) -> None:
+def test_typed_channel_requires_kwargs_after_message(new_topic: str) -> None:
     channel = LogChannel(new_topic)
 
     channel.log(Log(), log_time=0)
