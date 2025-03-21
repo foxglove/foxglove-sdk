@@ -44,6 +44,14 @@ impl ServerListener for ExampleCallbackHandler {
             channel.topic
         );
     }
+
+    fn on_client_unadvertise(&self, client: Client, channel: &ClientChannel) {
+        println!(
+            "Client {} unadvertised channel: {}",
+            client.id(),
+            channel.topic
+        );
+    }
 }
 
 #[tokio::main]
