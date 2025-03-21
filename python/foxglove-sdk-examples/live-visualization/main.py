@@ -66,9 +66,7 @@ class ExampleListener(ServerListener):
         We'll use this and on_unsubscribe to simply track if we have any subscribers at all.
         """
         logging.info(f"Client {client} subscribed to channel {channel.topic}")
-        if client.id not in self.subscribers:
-            self.subscribers[client.id] = set()
-        self.subscribers[client.id].add(channel.topic)
+        self.subscribers.setdefault(client.id, set()).add(channel.topic)
 
     def on_unsubscribe(
         self,
