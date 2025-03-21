@@ -36,7 +36,7 @@ impl ServiceId {
     pub fn next() -> Self {
         static NEXT_ID: AtomicU32 = AtomicU32::new(1);
         let id = NEXT_ID.fetch_add(1, Ordering::Relaxed);
-        assert_ne!(id, 0);
+        assert_ne!(id, 0, "ServiceId overflowed");
         Self(id)
     }
 }
