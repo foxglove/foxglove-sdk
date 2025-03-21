@@ -1,9 +1,11 @@
 #include <foxglove-c/foxglove-c.h>
 #include <foxglove/channel.hpp>
 
+#include "schema_traits.hpp"
+
 namespace foxglove {
 
-Channel::Channel(
+RawChannel::RawChannel(
   const std::string& topic, const std::string& messageEncoding, std::optional<Schema> schema
 )
     : _impl(nullptr, foxglove_channel_free) {
@@ -19,11 +21,11 @@ Channel::Channel(
   );
 }
 
-uint64_t Channel::id() const {
+uint64_t RawChannel::id() const {
   return foxglove_channel_get_id(_impl.get());
 }
 
-void Channel::log(
+void RawChannel::log(
   const std::byte* data, size_t dataLen, std::optional<uint64_t> logTime,
   std::optional<uint64_t> publishTime, std::optional<uint32_t> sequence
 ) {
@@ -36,5 +38,43 @@ void Channel::log(
     sequence ? &*sequence : nullptr
   );
 }
+
+template<class TMsg>
+Channel<TMsg, std::enable_if_t<foxglove::internal::IsBuiltinSchema<TMsg>::value>>::Channel(
+  const std::string& topic
+)
+    : _impl(
+        foxglove_typed_channel_create(
+          topic.data(), internal::BuiltinSchemaTraits<TMsg>::BuiltinSchema
+        ),
+        foxglove_typed_channel_free
+      ) {}
+
+template<class TMsg>
+uint64_t Channel<TMsg, std::enable_if_t<foxglove::internal::IsBuiltinSchema<TMsg>::value>>::id(
+) const {
+  return foxglove_typed_channel_get_id(_impl.get());
+}
+
+template<class TMsg>
+void Channel<TMsg, std::enable_if_t<foxglove::internal::IsBuiltinSchema<TMsg>::value>>::log(
+  const TMsg& msg, std::optional<uint64_t> logTime, std::optional<uint64_t> publishTime,
+  std::optional<uint32_t> sequence
+) {
+  internal::BuiltinSchemaTraits<TMsg>::WithCMessage(
+    msg,
+    [&](const typename internal::BuiltinSchemaTraits<TMsg>::CType& cMsg) {
+      foxglove_typed_channel_log(
+        _impl.get(),
+        &cMsg,
+        logTime ? &*logTime : nullptr,
+        publishTime ? &*publishTime : nullptr,
+        sequence ? &*sequence : nullptr
+      );
+    }
+  );
+}
+
+template class Channel<foxglove::schemas::Vector3>;
 
 }  // namespace foxglove

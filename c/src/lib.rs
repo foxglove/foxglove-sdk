@@ -10,6 +10,8 @@ use std::io::BufWriter;
 use std::mem::ManuallyDrop;
 use std::sync::Arc;
 
+pub mod schemas;
+
 // Easier to get reasonable C output from cbindgen with constants rather than directly exporting the bitflags macro
 #[derive(Clone, Copy)]
 #[repr(transparent)]
@@ -67,6 +69,10 @@ impl From<FoxgloveServerCapability> for FoxgloveServerCapabilityBitFlags {
     fn from(bits: FoxgloveServerCapability) -> Self {
         Self::from_bits_retain(bits.flags)
     }
+}
+
+pub enum FoxgloveTypedChannel {
+    Vector3(foxglove::TypedChannel<foxglove::schemas::Vector3>),
 }
 
 #[repr(C)]
@@ -132,6 +138,11 @@ pub struct FoxgloveWebSocketServer(Option<foxglove::WebSocketServerBlockingHandl
 // cbindgen does not actually generate a declaration for this, so we manually write one in
 // after_includes
 pub use foxglove::Channel as FoxgloveChannel;
+
+#[repr(u8)]
+pub enum FoxgloveBuiltinSchema {
+    Vector3,
+}
 
 #[repr(C)]
 pub struct FoxgloveSchema {
@@ -439,6 +450,77 @@ pub unsafe extern "C" fn foxglove_channel_log(
             sequence: unsafe { sequence.as_ref() }.copied(),
         },
     );
+}
+
+/// Create a new channel. The channel must later be freed with `foxglove_channel_free`.
+///
+/// # Safety
+/// `topic` and `message_encoding` must be null-terminated strings with valid UTF8. `schema` is an
+/// optional pointer to a schema. The schema and the data it points to need only remain alive for
+/// the duration of this function call (they will be copied).
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_typed_channel_create(
+    topic: *const c_char,
+    schema: FoxgloveBuiltinSchema,
+) -> *mut FoxgloveTypedChannel {
+    let topic = unsafe { CStr::from_ptr(topic) }
+        .to_str()
+        .expect("topic is invalid");
+    let builder = foxglove::ChannelBuilder::new(topic);
+    let channel = match schema {
+        FoxgloveBuiltinSchema::Vector3 => builder.build_typed().map(FoxgloveTypedChannel::Vector3),
+    };
+
+    Box::into_raw(Box::new(channel.expect("Failed to create channel")))
+}
+
+/// Free a channel created via `foxglove_typed_channel_create`.
+#[unsafe(no_mangle)]
+pub extern "C" fn foxglove_typed_channel_free(channel: Option<&mut FoxgloveTypedChannel>) {
+    let Some(channel) = channel else {
+        return;
+    };
+    // Safety: undoes the into_raw in foxglove_typed_channel_create
+    drop(unsafe { Box::from_raw(channel) });
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn foxglove_typed_channel_get_id(channel: Option<&FoxgloveTypedChannel>) -> u64 {
+    let channel = channel.expect("channel is required");
+    u64::from(match channel {
+        FoxgloveTypedChannel::Vector3(channel) => channel.id(),
+    })
+}
+
+/// Log a message on a channel.
+///
+/// # Safety
+/// `msg` must be non-null, point to a valid message object that matches the type of the channel.
+///
+/// `log_time`, `publish_time`, and `sequence` may be null, or may point to valid, properly-aligned values.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_typed_channel_log(
+    channel: Option<&FoxgloveTypedChannel>,
+    msg: *const c_void,
+    log_time: *const u64,
+    publish_time: *const u64,
+    sequence: *const u32,
+) {
+    let channel = channel.expect("channel is required");
+    if msg.is_null() {
+        panic!("msg is required");
+    }
+    let meta = foxglove::PartialMetadata {
+        log_time: unsafe { log_time.as_ref() }.copied(),
+        publish_time: unsafe { publish_time.as_ref() }.copied(),
+        sequence: unsafe { sequence.as_ref() }.copied(),
+    };
+    match channel {
+        FoxgloveTypedChannel::Vector3(channel) => {
+            let msg = unsafe { &*(msg as *const self::schemas::Vector3) };
+            channel.log_with_meta(&msg.into(), meta)
+        }
+    }
 }
 
 impl foxglove::websocket::ServerListener for FoxgloveServerCallbacks {
