@@ -56,7 +56,7 @@ pub struct Channel<T: Encode> {
 impl<T: Encode> Channel<T> {
     /// Constructs a new typed channel with default settings.
     ///
-    /// If you want to override the channel configuration, use [`ChannelBuilder::build_typed`].
+    /// If you want to override the channel configuration, use [`ChannelBuilder`].
     pub fn new(topic: impl Into<String>) -> Result<Self, FoxgloveError> {
         ChannelBuilder::new(topic).build()
     }
