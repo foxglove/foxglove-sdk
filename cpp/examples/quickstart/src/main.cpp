@@ -2,7 +2,10 @@
 #include <foxglove/mcap.hpp>
 #include <foxglove/server.hpp>
 
+#include <atomic>
+#include <chrono>
 #include <csignal>
+#include <functional>
 #include <iostream>
 #include <thread>
 
