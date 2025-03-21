@@ -3,6 +3,17 @@
 
 namespace foxglove {
 
+FoxgloveMcapCompression toFoxgloveMcapCompression(McapCompression compression) {
+  switch (compression) {
+    case McapCompression::Zstd:
+      return FoxgloveMcapCompression_Zstd;
+    case McapCompression::Lz4:
+      return FoxgloveMcapCompression_Lz4;
+    default:
+      return FoxgloveMcapCompression_None;
+  }
+}
+
 McapWriter::McapWriter(McapWriterOptions options)
     : _impl(nullptr, foxglove_mcap_free) {
   foxglove_mcap_options cOptions = {};
@@ -10,7 +21,7 @@ McapWriter::McapWriter(McapWriterOptions options)
   cOptions.path_len = options.path.length();
   cOptions.profile = options.profile.data();
   cOptions.profile_len = options.profile.length();
-  cOptions.compression = options.compression;
+  cOptions.compression = toFoxgloveMcapCompression(options.compression);
   cOptions.chunk_size = options.chunkSize;
   cOptions.use_chunks = options.useChunks;
   cOptions.disable_seeking = options.disableSeeking;

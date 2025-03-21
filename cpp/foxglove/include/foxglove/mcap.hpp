@@ -3,28 +3,32 @@
 #include <memory>
 #include <string>
 
-#include "foxglove-c/foxglove-c.h"
-
 struct foxglove_mcap_writer;
 
 namespace foxglove {
 
+enum class McapCompression {
+  None,
+  Zstd,
+  Lz4,
+};
+
 struct McapWriterOptions {
   std::string_view path;
   std::string_view profile;
-  uint64_t chunkSize = 0;
-  FoxgloveMcapCompression compression = FoxgloveMcapCompression_None;
-  bool useChunks = false;
+  uint64_t chunkSize = 1024 * 768;
+  McapCompression compression = McapCompression::Zstd;
+  bool useChunks = true;
   bool disableSeeking = false;
-  bool emitStatistics = false;
-  bool emitSummaryOffsets = false;
-  bool emitMessageIndexes = false;
-  bool emitChunkIndexes = false;
-  bool emitAttachmentIndexes = false;
-  bool emitMetadataIndexes = false;
-  bool repeatChannels = false;
-  bool repeatSchemas = false;
-  bool create = false;
+  bool emitStatistics = true;
+  bool emitSummaryOffsets = true;
+  bool emitMessageIndexes = true;
+  bool emitChunkIndexes = true;
+  bool emitAttachmentIndexes = true;
+  bool emitMetadataIndexes = true;
+  bool repeatChannels = true;
+  bool repeatSchemas = true;
+  bool create = true;
   bool truncate = false;
 };
 

@@ -43,7 +43,7 @@ impl McapWriter {
     }
 
     /// Instantiates a new MCAP writer with the provided options.
-    /// The library option is ignored. chunk_size=0 is treated
+    /// The library option is ignored.
     pub fn with_options(options: WriteOptions) -> Self {
         options.into()
     }

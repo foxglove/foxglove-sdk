@@ -49,6 +49,7 @@ TEST_CASE("Open and truncate existing file") {
   foxglove::McapWriterOptions options = {};
   options.path = "test.mcap";
   options.truncate = true;
+  options.create = false;
   foxglove::McapWriter writer(options);
   writer.close();
 
@@ -58,12 +59,17 @@ TEST_CASE("Open and truncate existing file") {
 
 // TODO FG-10682 add a test case for failing to open an existing file if truncate=false
 
+std::string readFile(const std::string& path) {
+  std::ifstream file(path, std::ios::binary);
+  REQUIRE(file.is_open());
+  return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+}
+
 TEST_CASE("specify profile") {
   FileCleanup cleanup("test.mcap");
 
   foxglove::McapWriterOptions options = {};
   options.path = "test.mcap";
-  options.create = true;
   options.profile = "test_profile";
   foxglove::McapWriter writer(options);
 
@@ -80,9 +86,7 @@ TEST_CASE("specify profile") {
   REQUIRE(std::filesystem::exists("test.mcap"));
 
   // Check that it contains the profile and library
-  std::ifstream file("test.mcap", std::ios::binary);
-  REQUIRE(file.is_open());
-  std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+  std::string content = readFile("test.mcap");
   REQUIRE_THAT(content, ContainsSubstring("test_profile"));
 }
 
@@ -91,8 +95,7 @@ TEST_CASE("zstd compression") {
 
   foxglove::McapWriterOptions options = {};
   options.path = "test.mcap";
-  options.create = true;
-  options.compression = FoxgloveMcapCompression_Zstd;
+  options.compression = foxglove::McapCompression::Zstd;
   options.chunkSize = 10000;
   options.useChunks = true;
   foxglove::McapWriter writer(options);
@@ -110,9 +113,7 @@ TEST_CASE("zstd compression") {
   REQUIRE(std::filesystem::exists("test.mcap"));
 
   // Check that it contains the word "zstd"
-  std::ifstream file("test.mcap", std::ios::binary);
-  REQUIRE(file.is_open());
-  std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+  std::string content = readFile("test.mcap");
   REQUIRE_THAT(content, ContainsSubstring("zstd"));
 }
 
@@ -121,8 +122,7 @@ TEST_CASE("lz4 compression") {
 
   foxglove::McapWriterOptions options = {};
   options.path = "test.mcap";
-  options.create = true;
-  options.compression = FoxgloveMcapCompression_Lz4;
+  options.compression = foxglove::McapCompression::Lz4;
   options.chunkSize = 10000;
   options.useChunks = true;
   foxglove::McapWriter writer(options);
@@ -140,8 +140,6 @@ TEST_CASE("lz4 compression") {
   REQUIRE(std::filesystem::exists("test.mcap"));
 
   // Check that it contains the word "lz4"
-  std::ifstream file("test.mcap", std::ios::binary);
-  REQUIRE(file.is_open());
-  std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+  std::string content = readFile("test.mcap");
   REQUIRE_THAT(content, ContainsSubstring("lz4"));
 }
