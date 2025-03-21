@@ -540,7 +540,7 @@ dependencies = [
  "ctrlc",
  "env_logger",
  "foxglove",
- "mcap",
+ "mcap 0.15.1",
  "schemars",
  "serde",
 ]
@@ -623,7 +623,7 @@ dependencies = [
  "ctrlc",
  "env_logger",
  "foxglove",
- "mcap",
+ "mcap 0.14.1",
  "tracing",
 ]
 
@@ -673,7 +673,7 @@ dependencies = [
  "flume",
  "futures-util",
  "insta",
- "mcap",
+ "mcap 0.15.1",
  "parking_lot",
  "prost",
  "prost-types",
@@ -731,6 +731,7 @@ dependencies = [
  "bitflags",
  "cbindgen",
  "foxglove",
+ "mcap 0.15.1",
 ]
 
 [[package]]
@@ -1100,6 +1101,26 @@ name = "mcap"
 version = "0.14.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9fcadec48bb9fafa74ef722a5fee3e7d15dc536a590f3c4d0a4ce55a6f679c80"
+dependencies = [
+ "bimap",
+ "binrw",
+ "byteorder",
+ "crc32fast",
+ "enumset",
+ "log",
+ "lz4",
+ "num_cpus",
+ "paste",
+ "static_assertions",
+ "thiserror 1.0.69",
+ "zstd",
+]
+
+[[package]]
+name = "mcap"
+version = "0.15.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6296339c8431f23d5620f1dfb82dd8115f76f1d0bcdd26edbdbd3bc0cc0dd260"
 dependencies = [
  "bimap",
  "binrw",
