@@ -1,5 +1,5 @@
-import json
 from typing import Any, Dict, Optional, Union, cast
+import json
 
 from . import schemas
 from ._foxglove_py import BaseChannel, Schema, channels
@@ -93,8 +93,12 @@ _channels_by_topic: Dict[str, Channel] = {}
 def log(
     topic: str,
     message: Union[JsonMessage, list[Any], bytes, str, schemas.FoxgloveSchema],
+    log_time: Optional[int] = None,
+    publish_time: Optional[int] = None,
+    sequence: Optional[int] = None,
 ) -> None:
     """Log a message on a topic.
+
     Creates a new channel the first time called for a given topic.
     For foxglove types in the schemas module, this creates a typed channel.
     For bytes and str, this creates a simple schemaless channel and logs the bytes as-is.
@@ -104,7 +108,7 @@ def log(
     This can be avoided by creating and using the channels directly instead of using this function.
 
     Note: currently this always creates a new channel for the given topic on the first call,
-    even if a channel already exists, which will raise an error.
+    even if a channel with the same topic was created by some other means.
 
     :param topic: The topic name.
     :param message: The message to log.
@@ -128,7 +132,7 @@ def log(
         _channels_by_topic[topic] = channel
 
     # mypy isn't smart enough to realize that when channel is a Channel, message a compatible type
-    channel.log(cast(Any, message))
+    channel.log(cast(Any, message), log_time, publish_time, sequence)
 
 
 def _normalize_schema(
@@ -151,4 +155,4 @@ def _normalize_schema(
             ),
         )
     else:
-        raise ValueError(f"Invalid schema type: {type(schema)}")
+        raise TypeError(f"Invalid schema type: {type(schema)}")
