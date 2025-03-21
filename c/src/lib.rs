@@ -78,11 +78,11 @@ pub struct FoxgloveServerOptions<'a> {
 }
 
 #[repr(C)]
-pub struct FoxgloveClientChannel<'a> {
+pub struct FoxgloveClientChannel {
     pub id: u32,
-    pub topic: &'a c_char,
-    pub encoding: &'a c_char,
-    pub schema_name: &'a c_char,
+    pub topic: *const c_char,
+    pub encoding: *const c_char,
+    pub schema_name: *const c_char,
     pub schema_encoding: *const c_char,
     pub schema: *const c_void,
     pub schema_len: usize,
@@ -350,9 +350,9 @@ impl foxglove::websocket::ServerListener for FoxgloveServerCallbacks {
             .map(|enc| CString::new(enc.clone()).unwrap());
         let c_channel = FoxgloveClientChannel {
             id: channel.id.into(),
-            topic: unsafe { &*topic.as_ptr() },
-            encoding: unsafe { &*encoding.as_ptr() },
-            schema_name: unsafe { &*schema_name.as_ptr() },
+            topic: topic.as_ptr(),
+            encoding: encoding.as_ptr(),
+            schema_name: schema_name.as_ptr(),
             schema_encoding: schema_encoding
                 .as_ref()
                 .map(|enc| enc.as_ptr())

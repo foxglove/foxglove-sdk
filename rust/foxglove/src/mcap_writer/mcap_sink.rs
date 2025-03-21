@@ -45,9 +45,9 @@ impl<W: Write + Seek> WriterState<W> {
                     .writer
                     .add_channel(
                         schema_id,
-                        &channel.topic,
-                        &channel.message_encoding,
-                        &channel.metadata,
+                        channel.topic(),
+                        channel.message_encoding(),
+                        channel.metadata(),
                     )
                     .map_err(FoxgloveError::from)?;
 
@@ -121,22 +121,17 @@ impl<W: Write + Seek + Send> Sink for McapSink<W> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::log_sink_set::LogSinkSet;
     use crate::{collection, Metadata, Schema};
     use mcap::McapError;
     use std::path::Path;
-    use std::sync::atomic::AtomicU32;
     use tempfile::NamedTempFile;
 
-    fn new_test_channel(id: u64, topic: String, name: String) -> Arc<Channel> {
-        Arc::new(Channel {
-            sinks: LogSinkSet::new(),
-            id: ChannelId::new(id),
-            message_sequence: AtomicU32::new(1),
+    fn new_test_channel(topic: String, schema_name: String) -> Arc<Channel> {
+        Channel::new(
             topic,
-            message_encoding: "message_encoding".to_string(),
-            schema: Some(Schema::new(
-                name,
+            "message_encoding".to_string(),
+            Some(Schema::new(
+                schema_name,
                 "encoding",
                 br#"{
                     "type": "object",
@@ -146,8 +141,8 @@ mod tests {
                     },
                 }"#,
             )),
-            metadata: collection! {"key".to_string() => "value".to_string()},
-        })
+            collection! {"key".to_string() => "value".to_string()},
+        )
     }
 
     fn foreach_mcap_message<F>(path: &Path, mut f: F) -> Result<(), McapError>
@@ -165,8 +160,8 @@ mod tests {
     #[test]
     fn test_log_channels() {
         // Create two channels
-        let ch1 = new_test_channel(1, "foo".to_string(), "foo_schema".to_string());
-        let ch2 = new_test_channel(2, "bar".to_string(), "bar_schema".to_string());
+        let ch1 = new_test_channel("foo".to_string(), "foo_schema".to_string());
+        let ch2 = new_test_channel("bar".to_string(), "bar_schema".to_string());
 
         // Generate a temporary file path without creating the file
         let temp_file = NamedTempFile::new().expect("create tempfile");
@@ -225,7 +220,6 @@ mod tests {
 
         // Read the MCAP file and verify the contents
         foreach_mcap_message(&temp_path, |msg| {
-            dbg!(&msg);
             let channel_id = msg.channel.id;
             let payload = msg.data;
             match channel_id {

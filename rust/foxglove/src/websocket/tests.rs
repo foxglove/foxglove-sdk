@@ -11,7 +11,7 @@ use tracing_test::traced_test;
 use tungstenite::client::IntoClientRequest;
 
 use super::{create_server, send_lossy, SendLossyResult, ServerOptions, SUBPROTOCOL};
-use crate::testutil::RecordingServerListener;
+use crate::testutil::{assert_eventually, RecordingServerListener};
 use crate::websocket::service::{CallId, Service, ServiceId, ServiceSchema};
 use crate::websocket::{
     BlockingAssetHandlerFn, Capability, ClientChannelId, ConnectionGraph, Parameter, ParameterType,
@@ -89,11 +89,15 @@ fn new_channel(topic: &str, ctx: &Arc<Context>) -> Arc<Channel> {
 #[traced_test]
 #[tokio::test]
 async fn test_client_connect() {
-    let server = create_server(ServerOptions {
-        session_id: Some("mock_sess_id".to_string()),
-        name: Some("mock_server".to_string()),
-        ..Default::default()
-    });
+    let ctx = Context::new();
+    let server = create_server(
+        &ctx,
+        ServerOptions {
+            session_id: Some("mock_sess_id".to_string()),
+            name: Some("mock_server".to_string()),
+            ..Default::default()
+        },
+    );
     let addr = server
         .start("127.0.0.1", 0)
         .await
@@ -115,7 +119,8 @@ async fn test_client_connect() {
 #[traced_test]
 #[tokio::test]
 async fn test_handshake_with_unknown_subprotocol_fails_on_client() {
-    let server = create_server(ServerOptions::default());
+    let ctx = Context::new();
+    let server = create_server(&ctx, ServerOptions::default());
     let addr = server
         .start("127.0.0.1", 0)
         .await
@@ -141,7 +146,8 @@ async fn test_handshake_with_unknown_subprotocol_fails_on_client() {
 #[traced_test]
 #[tokio::test]
 async fn test_handshake_with_multiple_subprotocols() {
-    let server = create_server(ServerOptions::default());
+    let ctx = Context::new();
+    let server = create_server(&ctx, ServerOptions::default());
     let addr = server
         .start("127.0.0.1", 0)
         .await
@@ -192,13 +198,14 @@ async fn test_handshake_with_multiple_subprotocols() {
 async fn test_advertise_to_client() {
     let recording_listener = Arc::new(RecordingServerListener::new());
 
-    let server = create_server(ServerOptions {
-        listener: Some(recording_listener.clone()),
-        ..Default::default()
-    });
-
     let ctx = Context::new();
-    ctx.add_sink(server.clone());
+    let server = create_server(
+        &ctx,
+        ServerOptions {
+            listener: Some(recording_listener.clone()),
+            ..Default::default()
+        },
+    );
 
     let addr = server
         .start("127.0.0.1", 0)
@@ -238,23 +245,11 @@ async fn test_advertise_to_client() {
         .send(Message::text(subscribe.to_string()))
         .await
         .expect("Failed to send");
-    // Send a duplicate subscribe message (ignored)
-    client_sender
-        .send(Message::text(subscribe.to_string()))
-        .await
-        .expect("Failed to send");
 
     // Allow the server to process the subscription
-    // FG-10395 replace this with something more precise
-    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    assert_eventually(|| dbg!(ch.num_sinks()) == 1).await;
 
     ch.log(b"{\"a\":1}");
-
-    let result = client_receiver.next().await.unwrap();
-    let msg = result.expect("Failed to parse message");
-    let data = msg.into_data();
-    let data_str = std::str::from_utf8(&data).unwrap();
-    assert!(data_str.contains("Client is already subscribed to channel"));
 
     let msg = client_receiver
         .next()
@@ -271,8 +266,20 @@ async fn test_advertise_to_client() {
 
     let subscriptions = recording_listener.take_subscribe();
     assert_eq!(subscriptions.len(), 1);
-    assert_eq!(subscriptions[0].1.id, ch.id);
-    assert_eq!(subscriptions[0].1.topic, ch.topic);
+    assert_eq!(subscriptions[0].1.id, ch.id());
+    assert_eq!(subscriptions[0].1.topic, ch.topic());
+
+    // Send a duplicate subscribe message (ignored)
+    client_sender
+        .send(Message::text(subscribe.to_string()))
+        .await
+        .expect("Failed to send");
+
+    let result = client_receiver.next().await.unwrap();
+    let msg = result.expect("Failed to parse message");
+    let data = msg.into_data();
+    let data_str = std::str::from_utf8(&data).unwrap();
+    assert!(data_str.contains("Client is already subscribed to channel"));
 
     server.stop().await;
 }
@@ -282,13 +289,14 @@ async fn test_advertise_to_client() {
 async fn test_advertise_schemaless_channels() {
     let recording_listener = Arc::new(RecordingServerListener::new());
 
-    let server = create_server(ServerOptions {
-        listener: Some(recording_listener.clone()),
-        ..Default::default()
-    });
-
     let ctx = Context::new();
-    ctx.add_sink(server.clone());
+    let server = create_server(
+        &ctx,
+        ServerOptions {
+            listener: Some(recording_listener.clone()),
+            ..Default::default()
+        },
+    );
 
     let addr = server
         .start("127.0.0.1", 0)
@@ -343,14 +351,14 @@ async fn test_advertise_schemaless_channels() {
 async fn test_log_only_to_subscribers() {
     let recording_listener = Arc::new(RecordingServerListener::new());
 
-    let server = create_server(ServerOptions {
-        listener: Some(recording_listener.clone()),
-        ..Default::default()
-    });
-
     let ctx = Context::new();
-
-    ctx.add_sink(server.clone());
+    let server = create_server(
+        &ctx,
+        ServerOptions {
+            listener: Some(recording_listener.clone()),
+            ..Default::default()
+        },
+    );
 
     let ch1 = new_channel("/foo", &ctx);
     let ch2 = new_channel("/bar", &ctx);
@@ -393,10 +401,7 @@ async fn test_log_only_to_subscribers() {
     let subscribe1 = json!({
         "op": "subscribe",
         "subscriptions": [
-            {
-                "id": 1,
-                "channelId": ch1.id(),
-            }
+            { "id": 1, "channelId": ch1.id() }
         ]
     });
     client1
@@ -407,10 +412,7 @@ async fn test_log_only_to_subscribers() {
     let subscribe2 = json!({
         "op": "subscribe",
         "subscriptions": [
-            {
-                "id": 2,
-                "channelId": ch2.id(),
-            }
+            { "id": 2, "channelId": ch2.id() }
         ]
     });
     client2
@@ -418,44 +420,53 @@ async fn test_log_only_to_subscribers() {
         .await
         .expect("Failed to send");
 
-    let unsubscribe_both = json!({
-        "op": "unsubscribe",
-        "subscriptionIds": [1, 2],
+    // Allow the server to process the subscriptions
+    assert_eventually(|| dbg!(ch1.num_sinks()) == 1 && dbg!(ch2.num_sinks()) == 1).await;
+
+    let subscribe_both = json!({
+        "op": "subscribe",
+        "subscriptions": [
+            { "id": 111, "channelId": ch1.id() },
+            { "id": 222, "channelId": ch2.id() },
+        ]
     });
     client3
-        .send(Message::text(subscribe1.to_string()))
+        .send(Message::text(subscribe_both.to_string()))
         .await
         .expect("Failed to send");
-    client3
-        .send(Message::text(subscribe2.to_string()))
-        .await
-        .expect("Failed to send");
+
+    // Allow the server to process the subscriptions
+    assert_eventually(|| dbg!(ch1.num_sinks()) == 2 && dbg!(ch2.num_sinks()) == 2).await;
+
+    let unsubscribe_both = json!({
+        "op": "unsubscribe",
+        "subscriptionIds": [111, 222],
+    });
     client3
         .send(Message::text(unsubscribe_both.to_string()))
         .await
         .expect("Failed to send");
 
-    // Allow the server to process the subscription
-    // FG-10395 replace this with something more precise
-    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    // Allow the server to process the unsubscriptions
+    assert_eventually(|| dbg!(ch1.num_sinks()) == 1 && dbg!(ch2.num_sinks()) == 1).await;
 
     let subscriptions = recording_listener.take_subscribe();
     assert_eq!(subscriptions.len(), 4);
-    assert_eq!(subscriptions[0].1.id, ch1.id);
-    assert_eq!(subscriptions[1].1.id, ch2.id);
-    assert_eq!(subscriptions[2].1.id, ch1.id);
-    assert_eq!(subscriptions[3].1.id, ch2.id);
-    assert_eq!(subscriptions[0].1.topic, ch1.topic);
-    assert_eq!(subscriptions[1].1.topic, ch2.topic);
-    assert_eq!(subscriptions[2].1.topic, ch1.topic);
-    assert_eq!(subscriptions[3].1.topic, ch2.topic);
+    assert_eq!(subscriptions[0].1.id, ch1.id());
+    assert_eq!(subscriptions[1].1.id, ch2.id());
+    assert_eq!(subscriptions[2].1.id, ch1.id());
+    assert_eq!(subscriptions[3].1.id, ch2.id());
+    assert_eq!(subscriptions[0].1.topic, ch1.topic());
+    assert_eq!(subscriptions[1].1.topic, ch2.topic());
+    assert_eq!(subscriptions[2].1.topic, ch1.topic());
+    assert_eq!(subscriptions[3].1.topic, ch2.topic());
 
     let unsubscriptions = recording_listener.take_unsubscribe();
     assert_eq!(unsubscriptions.len(), 2);
-    assert_eq!(unsubscriptions[0].1.id, ch1.id);
-    assert_eq!(unsubscriptions[1].1.id, ch2.id);
-    assert_eq!(unsubscriptions[0].1.topic, ch1.topic);
-    assert_eq!(unsubscriptions[1].1.topic, ch2.topic);
+    assert_eq!(unsubscriptions[0].1.id, ch1.id());
+    assert_eq!(unsubscriptions[1].1.id, ch2.id());
+    assert_eq!(unsubscriptions[0].1.topic, ch1.topic());
+    assert_eq!(unsubscriptions[1].1.topic, ch2.topic());
 
     let metadata = PartialMetadata {
         log_time: Some(123456),
@@ -493,7 +504,8 @@ async fn test_log_only_to_subscribers() {
 #[tokio::test]
 async fn test_error_when_client_publish_unsupported() {
     // Server does not support clientPublish capability by default
-    let server = create_server(ServerOptions::default());
+    let ctx = Context::new();
+    let server = create_server(&ctx, ServerOptions::default());
     let addr = server
         .start("127.0.0.1", 0)
         .await
@@ -537,7 +549,8 @@ async fn test_error_when_client_publish_unsupported() {
 #[traced_test]
 #[tokio::test]
 async fn test_error_status_message() {
-    let server = create_server(ServerOptions::default());
+    let ctx = Context::new();
+    let server = create_server(&ctx, ServerOptions::default());
     let addr = server
         .start("127.0.0.1", 0)
         .await
@@ -605,7 +618,8 @@ async fn test_error_status_message() {
 #[tokio::test]
 async fn test_service_registration_not_supported() {
     // Can't register services if we don't declare support.
-    let server = create_server(ServerOptions::default());
+    let ctx = Context::new();
+    let server = create_server(&ctx, ServerOptions::default());
     let svc = Service::builder("/s", ServiceSchema::new("")).handler_fn(|_| Err(""));
     assert_matches!(
         server.add_services(vec![svc]),
@@ -616,10 +630,14 @@ async fn test_service_registration_not_supported() {
 #[tokio::test]
 async fn test_service_registration_missing_request_encoding() {
     // Can't register a service with no encoding unless we declare global encodings.
-    let server = create_server(ServerOptions {
-        capabilities: Some(HashSet::from([Capability::Services])),
-        ..Default::default()
-    });
+    let ctx = Context::new();
+    let server = create_server(
+        &ctx,
+        ServerOptions {
+            capabilities: Some(HashSet::from([Capability::Services])),
+            ..Default::default()
+        },
+    );
     let svc = Service::builder("/s", ServiceSchema::new("")).handler_fn(|_| Err(""));
     assert_matches!(
         server.add_services(vec![svc]),
@@ -630,13 +648,17 @@ async fn test_service_registration_missing_request_encoding() {
 #[tokio::test]
 async fn test_service_registration_duplicate_name() {
     // Can't register a service with no encoding unless we declare global encodings.
+    let ctx = Context::new();
     let sa1 = Service::builder("/a", ServiceSchema::new("")).handler_fn(|_| Err(""));
-    let server = create_server(ServerOptions {
-        capabilities: Some(HashSet::from([Capability::Services])),
-        services: HashMap::from([(sa1.name().to_string(), sa1)]),
-        supported_encodings: Some(HashSet::from(["ros1msg".into()])),
-        ..Default::default()
-    });
+    let server = create_server(
+        &ctx,
+        ServerOptions {
+            capabilities: Some(HashSet::from([Capability::Services])),
+            services: HashMap::from([(sa1.name().to_string(), sa1)]),
+            supported_encodings: Some(HashSet::from(["ros1msg".into()])),
+            ..Default::default()
+        },
+    );
 
     let sa2 = Service::builder("/a", ServiceSchema::new("")).handler_fn(|_| Err(""));
     assert_matches!(
@@ -655,7 +677,8 @@ async fn test_service_registration_duplicate_name() {
 #[traced_test]
 #[tokio::test]
 async fn test_publish_status_message() {
-    let server = create_server(ServerOptions::default());
+    let ctx = Context::new();
+    let server = create_server(&ctx, ServerOptions::default());
 
     let addr = server
         .start("127.0.0.1", 0)
@@ -699,7 +722,8 @@ async fn test_publish_status_message() {
 #[traced_test]
 #[tokio::test]
 async fn test_remove_status() {
-    let server = create_server(ServerOptions::default());
+    let ctx = Context::new();
+    let server = create_server(&ctx, ServerOptions::default());
     let addr = server
         .start("127.0.0.1", 0)
         .await
@@ -742,12 +766,16 @@ async fn test_remove_status() {
 async fn test_client_advertising() {
     let recording_listener = Arc::new(RecordingServerListener::new());
 
-    let server = create_server(ServerOptions {
-        capabilities: Some(HashSet::from([Capability::ClientPublish])),
-        supported_encodings: Some(HashSet::from(["json".to_string()])),
-        listener: Some(recording_listener.clone()),
-        ..Default::default()
-    });
+    let ctx = Context::new();
+    let server = create_server(
+        &ctx,
+        ServerOptions {
+            capabilities: Some(HashSet::from([Capability::ClientPublish])),
+            supported_encodings: Some(HashSet::from(["json".to_string()])),
+            listener: Some(recording_listener.clone()),
+            ..Default::default()
+        },
+    );
 
     let addr = server
         .start("127.0.0.1", 0)
@@ -825,8 +853,12 @@ async fn test_client_advertising() {
         .await
         .expect("Failed to send unadvertise");
 
-    // FG-10395 replace this with something more precise
-    tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+    assert_eventually(|| {
+        dbg!(recording_listener.message_data_len()) == 1
+            && dbg!(recording_listener.client_advertise_len()) == 1
+            && dbg!(recording_listener.client_unadvertise_len()) == 1
+    })
+    .await;
 
     // Server should have received one message
     let mut received = recording_listener.take_message_data();
@@ -851,10 +883,16 @@ async fn test_client_advertising() {
 #[traced_test]
 #[tokio::test]
 async fn test_parameter_values() {
-    let server = create_server(ServerOptions {
-        capabilities: Some(HashSet::from([Capability::Parameters])),
-        ..Default::default()
-    });
+    let ctx = Context::new();
+    let recording_listener = Arc::new(RecordingServerListener::new());
+    let server = create_server(
+        &ctx,
+        ServerOptions {
+            capabilities: Some(HashSet::from([Capability::Parameters])),
+            listener: Some(recording_listener.clone()),
+            ..Default::default()
+        },
+    );
     let addr = server
         .start("127.0.0.1", 0)
         .await
@@ -871,8 +909,9 @@ async fn test_parameter_values() {
         .await
         .expect("Failed to send subscribe parameter updates");
 
-    // FG-10395 replace this with something more precise
-    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+    ws_client.next().await.expect("No serverInfo sent").unwrap();
+
+    assert_eventually(|| dbg!(recording_listener.parameters_subscribe_len()) == 1).await;
 
     let parameter = Parameter {
         name: "some-float-value".to_string(),
@@ -880,11 +919,6 @@ async fn test_parameter_values() {
         r#type: Some(ParameterType::Float64),
     };
     server.publish_parameter_values(vec![parameter]);
-
-    // FG-10395 replace this with something more precise
-    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-
-    _ = ws_client.next().await.expect("No serverInfo sent");
 
     let msg = ws_client.next().await.expect("No message received");
     let msg = msg.expect("Failed to parse message");
@@ -903,11 +937,15 @@ async fn test_parameter_values() {
 async fn test_parameter_unsubscribe_no_updates() {
     let recording_listener = Arc::new(RecordingServerListener::new());
 
-    let server = create_server(ServerOptions {
-        capabilities: Some(HashSet::from([Capability::Parameters])),
-        listener: Some(recording_listener.clone()),
-        ..Default::default()
-    });
+    let ctx = Context::new();
+    let server = create_server(
+        &ctx,
+        ServerOptions {
+            capabilities: Some(HashSet::from([Capability::Parameters])),
+            listener: Some(recording_listener.clone()),
+            ..Default::default()
+        },
+    );
     let addr = server
         .start("127.0.0.1", 0)
         .await
@@ -933,7 +971,11 @@ async fn test_parameter_unsubscribe_no_updates() {
 
     _ = ws_client.next().await.expect("No serverInfo sent");
 
-    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+    assert_eventually(|| {
+        dbg!(recording_listener.parameters_subscribe_len()) == 1
+            && dbg!(recording_listener.parameters_unsubscribe_len()) == 1
+    })
+    .await;
 
     let parameter_names = recording_listener
         .take_parameters_subscribe()
@@ -954,8 +996,9 @@ async fn test_parameter_unsubscribe_no_updates() {
     };
     server.publish_parameter_values(vec![parameter]);
 
-    // FG-10395 replace this with something more precise
-    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+    // Sleep for a little while to give the server time to flush its queues, to ensure that it
+    // doesn't send a parameter message to an unsubscribed client.
+    tokio::time::sleep(std::time::Duration::from_millis(10)).await;
 
     server.stop().await;
 
@@ -971,11 +1014,15 @@ async fn test_parameter_unsubscribe_no_updates() {
 async fn test_set_parameters() {
     let recording_listener = Arc::new(RecordingServerListener::new());
 
-    let server = create_server(ServerOptions {
-        capabilities: Some(HashSet::from([Capability::Parameters])),
-        listener: Some(recording_listener.clone()),
-        ..Default::default()
-    });
+    let ctx = Context::new();
+    let server = create_server(
+        &ctx,
+        ServerOptions {
+            capabilities: Some(HashSet::from([Capability::Parameters])),
+            listener: Some(recording_listener.clone()),
+            ..Default::default()
+        },
+    );
     let addr = server
         .start("127.0.0.1", 0)
         .await
@@ -991,8 +1038,7 @@ async fn test_set_parameters() {
         .await
         .expect("Failed to send subscribe parameter updates");
 
-    // FG-10395 replace this with something more precise
-    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+    assert_eventually(|| dbg!(recording_listener.parameters_subscribe_len()) == 1).await;
 
     ws_client
         .send(Message::text(
@@ -1000,34 +1046,6 @@ async fn test_set_parameters() {
         ))
         .await
         .expect("Failed to send set parameters");
-
-    // FG-10395 replace this with something more precise
-    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-
-    let set_parameters = recording_listener.take_parameters_set().pop().unwrap();
-    assert_eq!(set_parameters.parameters.len(), 3);
-    assert_eq!(set_parameters.parameters[0].name, "foo");
-    assert_eq!(
-        set_parameters.parameters[0].value,
-        Some(ParameterValue::Number(1.0))
-    );
-    assert_eq!(
-        set_parameters.parameters[0].r#type,
-        Some(ParameterType::Float64)
-    );
-    assert_eq!(set_parameters.parameters[1].name, "bar");
-    assert_eq!(
-        set_parameters.parameters[1].value,
-        Some(ParameterValue::String(Vec::from("hello".as_bytes())))
-    );
-    assert_eq!(set_parameters.parameters[1].r#type, None);
-    assert_eq!(set_parameters.parameters[2].name, "baz");
-    assert_eq!(
-        set_parameters.parameters[2].value,
-        Some(ParameterValue::Bool(true))
-    );
-    assert_eq!(set_parameters.parameters[2].r#type, None);
-    assert_eq!(set_parameters.request_id, Some("123".to_string()));
 
     _ = ws_client.next().await.expect("No serverInfo sent");
 
@@ -1069,6 +1087,31 @@ async fn test_set_parameters() {
     );
     assert_eq!(params[1].r#type, None);
 
+    let set_parameters = recording_listener.take_parameters_set().pop().unwrap();
+    assert_eq!(set_parameters.parameters.len(), 3);
+    assert_eq!(set_parameters.parameters[0].name, "foo");
+    assert_eq!(
+        set_parameters.parameters[0].value,
+        Some(ParameterValue::Number(1.0))
+    );
+    assert_eq!(
+        set_parameters.parameters[0].r#type,
+        Some(ParameterType::Float64)
+    );
+    assert_eq!(set_parameters.parameters[1].name, "bar");
+    assert_eq!(
+        set_parameters.parameters[1].value,
+        Some(ParameterValue::String(Vec::from("hello".as_bytes())))
+    );
+    assert_eq!(set_parameters.parameters[1].r#type, None);
+    assert_eq!(set_parameters.parameters[2].name, "baz");
+    assert_eq!(
+        set_parameters.parameters[2].value,
+        Some(ParameterValue::Bool(true))
+    );
+    assert_eq!(set_parameters.parameters[2].r#type, None);
+    assert_eq!(set_parameters.request_id, Some("123".to_string()));
+
     server.stop().await;
 }
 
@@ -1082,11 +1125,15 @@ async fn test_get_parameters() {
         r#type: Some(ParameterType::Float64),
     }]);
 
-    let server = create_server(ServerOptions {
-        capabilities: Some(HashSet::from([Capability::Parameters])),
-        listener: Some(recording_listener.clone()),
-        ..Default::default()
-    });
+    let ctx = Context::new();
+    let server = create_server(
+        &ctx,
+        ServerOptions {
+            capabilities: Some(HashSet::from([Capability::Parameters])),
+            listener: Some(recording_listener.clone()),
+            ..Default::default()
+        },
+    );
     let addr = server
         .start("127.0.0.1", 0)
         .await
@@ -1101,13 +1148,6 @@ async fn test_get_parameters() {
         .await
         .expect("Failed to send get parameters");
 
-    // FG-10395 replace this with something more precise
-    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-
-    let get_parameters = recording_listener.take_parameters_get().pop().unwrap();
-    assert_eq!(get_parameters.param_names, vec!["foo", "bar", "baz"]);
-    assert_eq!(get_parameters.request_id, Some("123".to_string()));
-
     _ = ws_client.next().await.expect("No serverInfo sent");
 
     let msg = ws_client.next().await.expect("No message received");
@@ -1120,6 +1160,10 @@ async fn test_get_parameters() {
     assert_eq!(params[0].name, "foo");
     assert_eq!(params[0].value, Some(ParameterValue::Number(1.0)));
     assert_eq!(params[0].r#type, Some(ParameterType::Float64));
+
+    let get_parameters = recording_listener.take_parameters_get().pop().unwrap();
+    assert_eq!(get_parameters.param_names, vec!["foo", "bar", "baz"]);
+    assert_eq!(get_parameters.request_id, Some("123".to_string()));
 
     server.stop().await;
 }
@@ -1138,14 +1182,18 @@ async fn test_services() {
             Ok(response.freeze())
         });
 
-    let server = create_server(ServerOptions {
-        services: [ok_svc]
-            .into_iter()
-            .map(|s| (s.name().to_string(), s))
-            .collect(),
-        supported_encodings: Some(HashSet::from(["raw".to_string()])),
-        ..Default::default()
-    });
+    let ctx = Context::new();
+    let server = create_server(
+        &ctx,
+        ServerOptions {
+            services: [ok_svc]
+                .into_iter()
+                .map(|s| (s.name().to_string(), s))
+                .collect(),
+            supported_encodings: Some(HashSet::from(["raw".to_string()])),
+            ..Default::default()
+        },
+    );
 
     let addr = server
         .start("127.0.0.1", 0)
@@ -1324,19 +1372,23 @@ async fn test_services() {
 
 #[tokio::test]
 async fn test_fetch_asset() {
-    let server = create_server(ServerOptions {
-        capabilities: Some(HashSet::from([Capability::Assets])),
-        fetch_asset_handler: Some(Box::new(BlockingAssetHandlerFn(Arc::new(
-            |_client, uri: String| {
-                if uri.ends_with("error") {
-                    Err("test error".to_string())
-                } else {
-                    Ok(Bytes::from_static(b"test data"))
-                }
-            },
-        )))),
-        ..Default::default()
-    });
+    let ctx = Context::new();
+    let server = create_server(
+        &ctx,
+        ServerOptions {
+            capabilities: Some(HashSet::from([Capability::Assets])),
+            fetch_asset_handler: Some(Box::new(BlockingAssetHandlerFn(Arc::new(
+                |_client, uri: String| {
+                    if uri.ends_with("error") {
+                        Err("test error".to_string())
+                    } else {
+                        Ok(Bytes::from_static(b"test data"))
+                    }
+                },
+            )))),
+            ..Default::default()
+        },
+    );
     let addr = server
         .start("127.0.0.1", 0)
         .await
@@ -1363,9 +1415,6 @@ async fn test_fetch_asset() {
         .send(Message::text(fetch_asset_err.to_string()))
         .await
         .expect("Failed to send fetch asset");
-
-    // FG-10395 replace this with something more precise
-    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
 
     let result = ws_client.next().await.unwrap();
     let msg = result.expect("Failed to parse message");
@@ -1395,11 +1444,15 @@ async fn test_fetch_asset() {
 async fn test_update_connection_graph() {
     let recording_listener = Arc::new(RecordingServerListener::new());
 
-    let server = create_server(ServerOptions {
-        capabilities: Some(HashSet::from([Capability::ConnectionGraph])),
-        listener: Some(recording_listener.clone()),
-        ..Default::default()
-    });
+    let ctx = Context::new();
+    let server = create_server(
+        &ctx,
+        ServerOptions {
+            capabilities: Some(HashSet::from([Capability::ConnectionGraph])),
+            listener: Some(recording_listener.clone()),
+            ..Default::default()
+        },
+    );
     let addr = server
         .start("127.0.0.1", 0)
         .await
@@ -1422,9 +1475,6 @@ async fn test_update_connection_graph() {
 
     _ = ws_client.next().await.expect("No serverInfo sent");
 
-    // FG-10395 replace this with something more precise
-    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-
     let msg = ws_client.next().await.expect("No message received");
     let msg = msg.expect("Failed to parse message");
     let text = msg.into_text().expect("Failed to get message text");
@@ -1441,9 +1491,6 @@ async fn test_update_connection_graph() {
     assert_eq!(msg["advertisedServices"][0]["providerIds"][0], "provider1");
     assert_eq!(msg["removedTopics"], json!([]));
     assert_eq!(msg["removedServices"], json!([]));
-
-    // FG-10395 replace this with something more precise
-    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
 
     let mut graph = ConnectionGraph::new();
     // Update publisher for topic1
@@ -1477,10 +1524,14 @@ async fn test_update_connection_graph() {
 #[traced_test]
 #[tokio::test]
 async fn test_slow_client() {
-    let server = create_server(ServerOptions {
-        message_backlog_size: Some(1),
-        ..Default::default()
-    });
+    let ctx = Context::new();
+    let server = create_server(
+        &ctx,
+        ServerOptions {
+            message_backlog_size: Some(1),
+            ..Default::default()
+        },
+    );
     let addr = server
         .start("127.0.0.1", 0)
         .await
@@ -1493,8 +1544,6 @@ async fn test_slow_client() {
         let status = Status::new(StatusLevel::Error, format!("msg{}", i));
         server.publish_status(status);
     }
-
-    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
 
     _ = ws_client.next().await.expect("No serverInfo sent");
 

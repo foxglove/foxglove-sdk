@@ -56,9 +56,9 @@ typedef struct foxglove_websocket_server foxglove_websocket_server;
 
 typedef struct foxglove_client_channel {
   uint32_t id;
-  const char *FOXGLOVE_NONNULL topic;
-  const char *FOXGLOVE_NONNULL encoding;
-  const char *FOXGLOVE_NONNULL schema_name;
+  const char *topic;
+  const char *encoding;
+  const char *schema_name;
   const char *schema_encoding;
   const void *schema;
   size_t schema_len;

@@ -13,6 +13,7 @@ use protocol::{
     AdvertiseServices, ServerMessage, ServiceCallFailure, ServiceCallRequest, ServiceCallResponse,
     UnadvertiseServices, SDK_SUBPROTOCOL,
 };
+use serde_json::json;
 use tokio::sync::oneshot;
 use tokio::task::{JoinHandle, JoinSet};
 use tokio_tungstenite::tungstenite::{client::IntoClientRequest, Message};
@@ -142,9 +143,9 @@ impl Client {
     }
 
     async fn call_echo(&self, msg: String) -> Result<String> {
-        let req = msg.into_bytes().into();
+        let req = json!({ "msg": msg }).to_string().into();
         let resp = self
-            .service_call("/echo", "raw", req)
+            .service_call("/echo", "json", req)
             .await
             .context("failed to call /echo")?;
         let resp = String::from_utf8(resp.to_vec()).context("invalid echo response")?;
@@ -152,14 +153,14 @@ impl Client {
     }
 
     async fn call_sleep(&self) -> Result<()> {
-        self.service_call("/sleep", "raw", Bytes::new())
+        self.service_call("/sleep", "json", Bytes::new())
             .await
             .context("failed to call /sleep")?;
         Ok(())
     }
 
     async fn call_blocking(&self) -> Result<()> {
-        self.service_call("/blocking", "raw", Bytes::new())
+        self.service_call("/blocking", "json", Bytes::new())
             .await
             .context("failed to call /blocking")?;
         Ok(())
