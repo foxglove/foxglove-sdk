@@ -93,6 +93,6 @@ impl ChannelBuilder {
             self.schema = <T as Encode>::get_schema();
         }
         let channel = self.build_raw()?;
-        Ok(Channel::from_channel(channel))
+        Ok(Channel::from_raw_channel(channel))
     }
 }
