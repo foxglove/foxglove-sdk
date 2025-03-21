@@ -182,11 +182,11 @@ mod time;
 pub mod websocket;
 mod websocket_server;
 
-pub use channel::Channel;
+pub use channel::{Channel, TypedChannel};
 pub use channel_builder::ChannelBuilder;
 #[doc(hidden)]
 pub use context::Context;
-pub use encode::{Encode, TypedChannel};
+pub use encode::Encode;
 pub use mcap_writer::{McapWriter, McapWriterHandle};
 pub use metadata::{Metadata, PartialMetadata};
 pub(crate) use runtime::get_runtime_handle;

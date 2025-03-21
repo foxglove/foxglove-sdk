@@ -1,8 +1,7 @@
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
-use crate::encode::TypedChannel;
-use crate::{Channel, Context, Encode, FoxgloveError, Schema};
+use crate::{Channel, Context, Encode, FoxgloveError, Schema, TypedChannel};
 
 /// ChannelBuilder is a builder for creating a new [`Channel`] or [`TypedChannel`].
 #[must_use]
