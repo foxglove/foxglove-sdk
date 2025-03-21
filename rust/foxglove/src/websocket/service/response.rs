@@ -14,6 +14,7 @@ use crate::websocket::{protocol, ConnectedClient, SemaphoreGuard};
 /// [`Responder::respond`]. If you drop the responder without responding, the client will never
 /// receive a response for its request.
 #[must_use]
+#[derive(Debug)]
 pub struct Responder(Option<Inner>);
 impl Responder {
     /// Creates a new responder.
@@ -65,6 +66,7 @@ impl Drop for Responder {
     }
 }
 
+#[derive(Debug)]
 struct Inner {
     client: Arc<ConnectedClient>,
     service_id: ServiceId,
