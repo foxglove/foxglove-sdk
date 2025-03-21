@@ -55,6 +55,7 @@ class Channel:
     def log(
         self,
         msg: Union[JsonMessage, list[Any], bytes, str],
+        *,
         log_time: Optional[int] = None,
         publish_time: Optional[int] = None,
         sequence: Optional[int] = None,
@@ -133,7 +134,12 @@ def log(
         _channels_by_topic[topic] = channel
 
     # mypy isn't smart enough to realize that when channel is a Channel, message a compatible type
-    channel.log(cast(Any, message), log_time, publish_time, sequence)
+    channel.log(
+        cast(Any, message),
+        log_time=log_time,
+        publish_time=publish_time,
+        sequence=sequence,
+    )
 
 
 def _normalize_schema(

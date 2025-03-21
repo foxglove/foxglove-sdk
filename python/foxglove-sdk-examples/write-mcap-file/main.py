@@ -31,7 +31,7 @@ def main() -> None:
                 ),
             )
 
-            # Or use the typed channel directly to get better type checking
+            # Or use a typed channel directly to get better type checking
             log_chan.log(
                 Log(
                     level=LogLevel.Info,
