@@ -142,21 +142,21 @@ impl<T: Encode> Channel<T> {
 ///
 /// # Example
 /// ```
-/// use foxglove::static_typed_channel;
+/// use foxglove::static_channel;
 /// use foxglove::schemas::{FrameTransform, SceneUpdate};
 ///
 /// // A locally-scoped typed channel.
-/// static_typed_channel!(TF, "/tf", FrameTransform);
+/// static_channel!(TF, "/tf", FrameTransform);
 ///
 /// // A pub(crate)-scoped typed channel.
-/// static_typed_channel!(pub(crate) BOXES, "/boxes", SceneUpdate);
+/// static_channel!(pub(crate) BOXES, "/boxes", SceneUpdate);
 ///
 /// // Usage (you would populate the structs, rather than using `default()`).
 /// TF.log(&FrameTransform::default());
 /// BOXES.log(&SceneUpdate::default());
 /// ```
 #[macro_export]
-macro_rules! static_typed_channel {
+macro_rules! static_channel {
     ($vis:vis $ident: ident, $topic: literal, $ty: ty) => {
         $vis static $ident: std::sync::LazyLock<$crate::Channel<$ty>> =
             std::sync::LazyLock::new(|| match $crate::Channel::new($topic) {

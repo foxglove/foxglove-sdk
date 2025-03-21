@@ -72,11 +72,11 @@
 //! ### Static Channels
 //!
 //! A common pattern is to create the channels once as static variables, and then use them
-//! throughout the application. To support this, the [`static_typed_channel!`] macro
-//! provides a convenient way to create static channels:
+//! throughout the application. To support this, the [`static_channel!`] macro provides a
+//! convenient way to create static channels:
 //!
 //! ```no_run
-//! foxglove::static_typed_channel!(pub(crate) BOXES, "/boxes", foxglove::schemas::SceneUpdate);
+//! foxglove::static_channel!(pub(crate) BOXES, "/boxes", foxglove::schemas::SceneUpdate);
 //! ```
 //!
 //! [jsonschema-trait]: https://docs.rs/schemars/latest/schemars/trait.JsonSchema.html

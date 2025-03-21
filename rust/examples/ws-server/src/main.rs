@@ -3,7 +3,7 @@ use foxglove::convert::SaturatingInto;
 use foxglove::schemas::{
     Color, CubePrimitive, FrameTransform, Pose, Quaternion, SceneEntity, SceneUpdate, Vector3,
 };
-use foxglove::{static_typed_channel, ChannelBuilder, RawChannel};
+use foxglove::{static_channel, ChannelBuilder, RawChannel};
 use schemars::JsonSchema;
 use serde::Serialize;
 use std::sync::{Arc, LazyLock};
@@ -23,9 +23,9 @@ struct Message {
     count: u32,
 }
 
-static_typed_channel!(pub BOX_CHANNEL, "/boxes", SceneUpdate);
-static_typed_channel!(pub TF_CHANNEL, "/tf", FrameTransform);
-static_typed_channel!(pub MSG_CHANNEL, "/msg", Message);
+static_channel!(pub BOX_CHANNEL, "/boxes", SceneUpdate);
+static_channel!(pub TF_CHANNEL, "/tf", FrameTransform);
+static_channel!(pub MSG_CHANNEL, "/msg", Message);
 
 // Foxglove supports logging arbitrary JSON values without specifying a schema
 static SCHEMALESS_CHANNEL: LazyLock<Arc<RawChannel>> =
