@@ -58,7 +58,9 @@ impl Drop for Responder {
             // The service call handler has dropped its responder without responding. This could be
             // due to a panic or some other flaw in implementation. Reply with a generic error
             // message.
-            inner.respond(Err("Internal server error".into()))
+            inner.respond(Err(
+                "Internal server error: service failed to send a response".into(),
+            ))
         }
     }
 }
