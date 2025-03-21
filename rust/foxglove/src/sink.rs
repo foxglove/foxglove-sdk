@@ -3,9 +3,8 @@ use std::sync::Arc;
 
 use smallvec::SmallVec;
 
-use crate::channel::Channel;
 use crate::metadata::Metadata;
-use crate::FoxgloveError;
+use crate::{Channel, FoxgloveError};
 
 /// Uniquely identifies a [`Sink`] in the context of this program.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
