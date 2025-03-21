@@ -5,6 +5,7 @@ description = ""
 authors = [{ name = "Foxglove", email = "support@foxglove.dev" }]
 readme = "README.md"
 requires-python = ">=3.9"
+dependencies = ["foxglove-sdk>=0.4.0"]
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
@@ -12,9 +13,6 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 package-mode = false
-
-[tool.poetry.dependencies]
-foxglove-sdk = { path = "../../foxglove-sdk/" }
 
 [tool.poetry.group.dev.dependencies]
 mypy = "^1"
