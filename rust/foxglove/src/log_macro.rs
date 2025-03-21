@@ -24,6 +24,12 @@ impl TypedChannelPlaceholder {
 
 #[cold]
 fn create_channel<T: Encode>(topic: &str, _: &T) -> *mut TypedChannelPlaceholder {
+    println!(
+        "Creating channel for {} and type {} with encoding {}",
+        topic,
+        std::any::type_name::<T>(),
+        T::get_message_encoding()
+    );
     ChannelBuilder::new(topic)
         .schema(T::get_schema())
         .message_encoding(T::get_message_encoding())
@@ -49,22 +55,39 @@ macro_rules! log {
 
 #[cfg(test)]
 mod tests {
+    use crate::schemas::Log;
     use crate::{testutil::RecordingSink, Context};
 
     use super::*;
+
+    fn serialize_log(log: &Log) -> Vec<u8> {
+        let mut buf = Vec::new();
+        log.encode(&mut buf).unwrap();
+        buf
+    }
 
     #[test]
     fn test_log() {
         let sink = Arc::new(RecordingSink::new());
         Context::get_default().add_sink(sink.clone());
 
-        for _ in 0..2 {
-            log!("test", b"Hello, world!");
+        let mut log_messages = Vec::new();
+        for line in 1..=2 {
+            let msg = Log {
+                timestamp: None,
+                level: 1,
+                message: "Hello, world!".to_string(),
+                name: "".to_string(),
+                file: "".to_string(),
+                line,
+            };
+            log!("test", msg);
+            log_messages.push(msg);
         }
 
         let messages = sink.take_messages();
         assert_eq!(messages.len(), 2);
-        assert_eq!(messages[0].msg, b"Hello, world!");
-        assert_eq!(messages[1].msg, b"Hello, world!");
+        assert_eq!(messages[0].msg, serialize_log(&log_messages[0]));
+        assert_eq!(messages[1].msg, serialize_log(&log_messages[1]));
     }
 }
