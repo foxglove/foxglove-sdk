@@ -1409,7 +1409,7 @@ async fn test_services() {
             "op": "serviceCallFailure",
             "serviceId": panic_svc_id,
             "callId": 22,
-            "message": "Internal server error",
+            "message": "Internal server error: service failed to send a response",
         })
         .to_string()
     );
