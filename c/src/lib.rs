@@ -441,6 +441,12 @@ pub unsafe extern "C" fn foxglove_channel_log(
     );
 }
 
+/// For use by the C++ SDK. Identifies that wrapper as the source of logs.
+#[unsafe(no_mangle)]
+pub extern "C" fn _register_cpp_wrapper() {
+    foxglove::library_version::set_sdk_language("cpp");
+}
+
 impl foxglove::websocket::ServerListener for FoxgloveServerCallbacks {
     fn on_subscribe(
         &self,

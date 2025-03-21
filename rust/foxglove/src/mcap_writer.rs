@@ -6,7 +6,7 @@ use std::path::Path;
 use std::sync::{Arc, Weak};
 use std::{fmt::Debug, io::Write};
 
-use crate::LIBRARY_NAME;
+use crate::library_version::get_library_version;
 use crate::{Context, FoxgloveError, Sink};
 use mcap::WriteOptions;
 
@@ -23,7 +23,7 @@ pub struct McapWriter {
 
 impl From<WriteOptions> for McapWriter {
     fn from(value: WriteOptions) -> Self {
-        let options = value.library(&*LIBRARY_NAME);
+        let options = value.library(get_library_version());
         Self {
             options,
             context: Context::get_default(),

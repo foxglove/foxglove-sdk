@@ -230,6 +230,12 @@ void foxglove_channel_log(const foxglove_channel *channel,
                           const uint64_t *publish_time,
                           const uint32_t *sequence);
 
+/**
+ * For use by the C++ SDK.
+ * Identifies the C++ SDK wrapper as the source of logs.
+ */
+void _register_cpp_wrapper(void);
+
 #ifdef __cplusplus
 }  // extern "C"
 #endif  // __cplusplus

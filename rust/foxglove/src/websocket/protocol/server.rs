@@ -1,12 +1,12 @@
 use crate::channel::Channel;
 use crate::channel::ChannelId;
+use crate::library_version::get_library_version;
 use crate::websocket::service::CallId;
 use crate::websocket::service::ServiceId;
 use crate::websocket::service::{self, Service};
 use crate::websocket::Capability;
 use crate::FoxgloveError;
 use crate::Schema;
-use crate::LIBRARY_NAME;
 use base64::prelude::*;
 use bytes::{BufMut, Bytes, BytesMut};
 use serde::{Deserialize, Serialize};
@@ -177,7 +177,7 @@ pub fn server_info(
         "capabilities": caps,
         "supportedEncodings": supported_encodings,
         "metadata": {
-            "fg-library-name": &*LIBRARY_NAME,
+            "fg-library": get_library_version(),
         },
         "sessionId": session_id
     })
@@ -464,7 +464,7 @@ mod tests {
             "capabilities": [],
             "supportedEncodings": [],
             "metadata": {
-                "fg-library-name": &*LIBRARY_NAME,
+                "fg-library": get_library_version(),
             },
         });
         assert_eq!(default, expected.to_string());
@@ -482,7 +482,7 @@ mod tests {
             "capabilities": ["clientPublish"],
             "supportedEncodings": ["json"],
             "metadata": {
-                "fg-library-name": &*LIBRARY_NAME,
+                "fg-library": get_library_version(),
             },
         });
         assert_eq!(with_publish, expected.to_string());
@@ -499,7 +499,7 @@ mod tests {
             "capabilities": ["parameters", "parametersSubscribe"],
             "supportedEncodings": [],
             "metadata": {
-                "fg-library-name": &*LIBRARY_NAME,
+                "fg-library": get_library_version(),
             },
         });
         assert_eq!(info, expected.to_string());
