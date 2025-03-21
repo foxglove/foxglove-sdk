@@ -1,13 +1,9 @@
 import json
 from typing import Any, Dict, Optional, Union, cast
 
-<<<<<<< HEAD
-from . import schemas
-from ._foxglove_py import BaseChannel, Schema, channels
-=======
 from . import _foxglove_py as _foxglove
-from ._foxglove_py import channels as _channels
->>>>>>> main
+from . import channels as _channels
+from . import schemas as _schemas
 
 JsonSchema = Dict[str, Any]
 JsonMessage = Dict[str, Any]
@@ -98,7 +94,7 @@ _channels_by_topic: Dict[str, Channel] = {}
 
 def log(
     topic: str,
-    message: Union[JsonMessage, list[Any], bytes, str, schemas.FoxgloveSchema],
+    message: Union[JsonMessage, list[Any], bytes, str, _schemas.FoxgloveSchema],
     *,
     log_time: Optional[int] = None,
     publish_time: Optional[int] = None,
@@ -130,7 +126,7 @@ def log(
             channel = Channel(topic, message_encoding="json")
         else:
             channel_name = f"{schema_name}Channel"
-            channel_cls = getattr(channels, channel_name, None)
+            channel_cls = getattr(_channels, channel_name, None)
             if channel_cls is not None:
                 channel = channel_cls(topic)
         if channel is None:
