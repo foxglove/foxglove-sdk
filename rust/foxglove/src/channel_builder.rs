@@ -38,8 +38,8 @@ impl ChannelBuilder {
     /// This is required for Channel, but not for [`TypedChannel`] (it's provided by the [`Encode`]
     /// trait for [`TypedChannel`].) Foxglove supports several well-known message encodings:
     /// <https://docs.foxglove.dev/docs/visualization/message-schemas/introduction>
-    pub fn message_encoding(mut self, encoding: &str) -> Self {
-        self.message_encoding = Some(encoding.to_string());
+    pub fn message_encoding(mut self, encoding: impl Into<String>) -> Self {
+        self.message_encoding = Some(encoding.into());
         self
     }
 
