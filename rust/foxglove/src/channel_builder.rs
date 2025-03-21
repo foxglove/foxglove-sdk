@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use crate::{Channel, Context, Encode, FoxgloveError, RawChannel, Schema};
 
-/// ChannelBuilder is a builder for creating a new [`RawChannel`] or [`Channel`].
+/// A builder for creating a [`Channel`] or [`RawChannel`].
 #[must_use]
 #[derive(Debug)]
 pub struct ChannelBuilder {

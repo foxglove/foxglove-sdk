@@ -23,11 +23,6 @@ use crate::{nanoseconds_since_epoch, Metadata, PartialMetadata, Schema};
 /// immutable, returned as `Arc<Channel>` and can be shared between threads.
 ///
 /// Channels are created using [`ChannelBuilder`](crate::ChannelBuilder).
-///
-/// # Example
-/// ```
-/// use foxglove::{ChannelBuilder, Schema};
-/// ```
 pub struct RawChannel {
     id: ChannelId,
     topic: String,
