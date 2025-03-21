@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Foxglove SDK documentation &#8212; Foxglove SDK  documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=12dfc556" />
+    <script src="_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="_static/doctools.js?v=9a2dae69"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Examples" href="examples.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="foxglove-sdk-documentation">
+<h1>Foxglove SDK documentation<a class="headerlink" href="#foxglove-sdk-documentation" title="Link to this heading">¶</a></h1>
+<p>The official <a class="reference external" href="https://docs.foxglove.dev/docs">Foxglove</a> SDK for Python.</p>
+<p>This package provides support for integrating with the Foxglove platform. It can be used to log
+events to local <a class="reference external" href="https://mcap.dev/">MCAP</a> files or a local visualization server that communicates
+with the Foxglove app.</p>
+<section id="unstable">
+<h2>Unstable<a class="headerlink" href="#unstable" title="Link to this heading">¶</a></h2>
+<p>This package is currently under active development and not recommended for production use. See
+<a class="reference external" href="https://github.com/foxglove/ws-protocol/tree/main/python">foxglove-websocket</a> for the currently
+recommended approach.</p>
+</section>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Link to this heading">¶</a></h2>
+<p>To record messages, you need at least one sink and at least one channel.</p>
+<p>A “sink” is a destination for logged messages — either an MCAP file or a live visualization server.
+Use <a class="reference internal" href="api/index.html#foxglove.open_mcap" title="foxglove.open_mcap"><code class="xref py py-func docutils literal notranslate"><span class="pre">open_mcap()</span></code></a> to register a new MCAP sink. Use
+<a class="reference internal" href="api/index.html#foxglove.start_server" title="foxglove.start_server"><code class="xref py py-func docutils literal notranslate"><span class="pre">start_server()</span></code></a> to create a new live visualization server.</p>
+<p>A “channel” gives a way to log related messages which have the same schema. Each channel is
+instantiated with a unique topic name.</p>
+<p>The SDK provides classes for well-known schemas. These can be used in conjunction with associated
+channel classes for type-safe logging, which ensures at compile time that messages logged to a
+channel all share a common schema. For example, you may create a <a class="reference internal" href="api/channels.html#foxglove.channels.SceneUpdateChannel" title="foxglove.channels.SceneUpdateChannel"><code class="xref py py-class docutils literal notranslate"><span class="pre">channels.SceneUpdateChannel</span></code></a> on
+which you will log <a class="reference internal" href="api/schemas.html#foxglove.schemas.SceneUpdate" title="foxglove.schemas.SceneUpdate"><code class="xref py py-class docutils literal notranslate"><span class="pre">schemas.SceneUpdate</span></code></a> messages.</p>
+<p>You can also log messages with arbitrary schemas and provide your own encoding, by instantiating a
+<a class="reference internal" href="api/index.html#foxglove.Channel" title="foxglove.Channel"><code class="xref py py-class docutils literal notranslate"><span class="pre">Channel</span></code></a> class.</p>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="examples.html#live-visualization">Live visualization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples.html#write-to-an-mcap-file">Write to an MCAP file</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples.html#stream-an-mcap-file-to-foxglove">Stream an MCAP file to Foxglove</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples.html#parameter-server">Parameter server</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples.html#advertising-services">Advertising Services</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples.html#asset-server">Asset server</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api/index.html">API Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="api/index.html#foxglove">foxglove</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api/index.html#foxglove.Channel"><code class="docutils literal notranslate"><span class="pre">Channel</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/index.html#foxglove.MCAPWriter"><code class="docutils literal notranslate"><span class="pre">MCAPWriter</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/index.html#foxglove.Schema"><code class="docutils literal notranslate"><span class="pre">Schema</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/index.html#foxglove.log"><code class="docutils literal notranslate"><span class="pre">log()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/index.html#foxglove.open_mcap"><code class="docutils literal notranslate"><span class="pre">open_mcap()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/index.html#foxglove.set_log_level"><code class="docutils literal notranslate"><span class="pre">set_log_level()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/index.html#foxglove.start_server"><code class="docutils literal notranslate"><span class="pre">start_server()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/index.html#enums">Enums</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/index.html#schemas">Schemas</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/index.html#channels">Channels</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/index.html#parameters">Parameters</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/index.html#asset-handling">Asset handling</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="#">Foxglove SDK</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/index.html">API Reference</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="#">Documentation overview</a><ul>
+      <li>Next: <a href="examples.html" title="next chapter">Examples</a></li>
+  </ul></li>
+</ul>
+</div>
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025, Foxglove.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 7.4.7</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 0.7.16</a>
+      
+      |
+      <a href="_sources/index.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
