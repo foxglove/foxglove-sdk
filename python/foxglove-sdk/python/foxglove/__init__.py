@@ -9,14 +9,14 @@ import atexit
 import logging
 from typing import List, Optional, Union
 
+from . import _foxglove_py as _foxglove
+
+# Re-export these imports
 from ._foxglove_py import (
     MCAPWriter,
     Schema,
-    enable_logging,
     open_mcap,
-    shutdown,
 )
-from ._foxglove_py import start_server as _start_server
 from .channel import Channel, log
 from .websocket import (
     AssetHandler,
@@ -26,7 +26,7 @@ from .websocket import (
     WebSocketServer,
 )
 
-atexit.register(shutdown)
+atexit.register(_foxglove.shutdown)
 
 
 def start_server(
@@ -61,7 +61,7 @@ def start_server(
         it doesn't exist.
     :type asset_handler: Optional[:py:class:`AssetHandler`] = None
     """
-    return _start_server(
+    return _foxglove.start_server(
         name=name,
         host=host,
         port=port,
@@ -100,7 +100,7 @@ def set_log_level(level: Union[int, str] = "INFO") -> None:
     else:
         level = max(0, min(2**32 - 1, level))
 
-    enable_logging(level)
+    _foxglove.enable_logging(level)
 
 
 def _level_names() -> dict[str, int]:

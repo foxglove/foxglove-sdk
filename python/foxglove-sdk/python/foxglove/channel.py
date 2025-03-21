@@ -1,7 +1,8 @@
 import json
 from typing import Any, Dict, Optional, Union
 
-from ._foxglove_py import BaseChannel, Schema, channels
+from . import _foxglove_py as _foxglove
+from ._foxglove_py import channels as _channels
 
 JsonSchema = Dict[str, Any]
 JsonMessage = Dict[str, Any]
@@ -13,14 +14,14 @@ class Channel:
     """
 
     __slots__ = ["base", "message_encoding"]
-    base: BaseChannel
+    base: _foxglove.BaseChannel
     message_encoding: str
 
     def __init__(
         self,
         topic: str,
         *,
-        schema: Union[JsonSchema, Schema, None] = None,
+        schema: Union[JsonSchema, _foxglove.Schema, None] = None,
         message_encoding: Optional[str] = None,
     ):
         """
@@ -43,7 +44,7 @@ class Channel:
 
         self.message_encoding = message_encoding
 
-        self.base = BaseChannel(
+        self.base = _foxglove.BaseChannel(
             topic,
             message_encoding,
             schema,
@@ -92,7 +93,7 @@ def log(topic: str, message: Any) -> None:
     if channel is None:
         schema_name = type(message).__name__
         channel_name = f"{schema_name}Channel"
-        channel_cls = getattr(channels, channel_name, None)
+        channel_cls = getattr(_channels, channel_name, None)
         if channel_cls is not None:
             channel = channel_cls(topic)
         if channel is None:
@@ -109,9 +110,9 @@ def log(topic: str, message: Any) -> None:
 
 def _normalize_schema(
     message_encoding: Optional[str],
-    schema: Union[JsonSchema, Schema, None] = None,
-) -> tuple[str, Optional[Schema]]:
-    if isinstance(schema, Schema) or schema is None:
+    schema: Union[JsonSchema, _foxglove.Schema, None] = None,
+) -> tuple[str, Optional[_foxglove.Schema]]:
+    if isinstance(schema, _foxglove.Schema) or schema is None:
         if message_encoding is None:
             raise ValueError("message encoding is required")
         return message_encoding, schema
@@ -120,7 +121,7 @@ def _normalize_schema(
             raise ValueError("Only object schemas are supported")
         return (
             message_encoding or "json",
-            Schema(
+            _foxglove.Schema(
                 name=schema.get("title", "json_schema"),
                 encoding="jsonschema",
                 data=json.dumps(schema).encode("utf-8"),
@@ -128,3 +129,6 @@ def _normalize_schema(
         )
     else:
         raise ValueError(f"Invalid schema type: {type(schema)}")
+
+
+__all__ = ["Channel", "log"]
