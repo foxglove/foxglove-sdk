@@ -229,9 +229,9 @@ impl FoxgloveMcapOptions {
         .expect("profile is invalid");
 
         let compression = match self.compression {
-            FoxgloveMcapCompression::None => None,
             FoxgloveMcapCompression::Zstd => Some(Compression::Zstd),
             FoxgloveMcapCompression::Lz4 => Some(Compression::Lz4),
+            _ => None,
         };
 
         WriteOptions::default()
