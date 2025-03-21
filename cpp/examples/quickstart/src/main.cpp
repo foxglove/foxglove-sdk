@@ -49,8 +49,7 @@ int main(int argc, const char* argv[]) {
 
   while (!done) {
     std::this_thread::sleep_for(33ms);
-    auto now =
-      std::chrono::system_clock::now().time_since_epoch().count();
+    auto now = std::chrono::system_clock::now().time_since_epoch().count();
     std::string msg = "{\"val\": " + std::to_string(now) + "}";
     channel.log(reinterpret_cast<const std::byte*>(msg.data()), msg.size());
   }
