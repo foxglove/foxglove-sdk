@@ -540,7 +540,7 @@ export function generateChannelClasses(messageSchemas: FoxgloveMessageSchema[]):
   ].join("\n");
 
   const imports = [
-    `use foxglove::{TypedChannel, PartialMetadata};`,
+    `use foxglove::{Channel, PartialMetadata};`,
     `use pyo3::prelude::*;`,
     `use crate::errors::PyFoxgloveError;`,
     `use super::schemas;`,
@@ -554,7 +554,7 @@ export function generateChannelClasses(messageSchemas: FoxgloveMessageSchema[]):
     return `
 /// A channel for logging :py:class:\`foxglove.schemas.${schemaClass}\` messages.
 #[pyclass(module = "foxglove.channels")]
-struct ${channelClass}(Option<TypedChannel<foxglove::schemas::${schemaClass}>>);
+struct ${channelClass}(Option<Channel<foxglove::schemas::${schemaClass}>>);
 
 #[pymethods]
 impl ${channelClass} {
@@ -563,7 +563,7 @@ impl ${channelClass} {
     /// :param topic: The topic to log messages to.
     #[new]
     fn new(topic: &str) -> PyResult<Self> {
-        let base = TypedChannel::new(topic).map_err(PyFoxgloveError::from)?;
+        let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
         Ok(Self(Some(base)))
     }
 

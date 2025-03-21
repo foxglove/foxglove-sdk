@@ -14,13 +14,13 @@
 //! called `"/log"`. Then we write one log message and close the file.
 //!
 //! ```no_run
-//! use foxglove::{McapWriter, TypedChannel};
+//! use foxglove::{McapWriter, Channel};
 //! use foxglove::schemas::Log;
 //!
 //! # fn func() -> Result<(), foxglove::FoxgloveError> {
 //! let mcap = McapWriter::new().create_new_buffered_file("test.mcap")?;
 //!
-//! let channel = TypedChannel::new("/log")?;
+//! let channel = Channel::new("/log")?;
 //! channel.log(&Log{
 //!     message: "Hello, Foxglove!".to_string(),
 //!     ..Default::default()
@@ -42,15 +42,15 @@
 //!
 //! ### Well-known types
 //!
-//! The SDK provides [structs for well-known schemas](schemas). These can be used in
-//! conjunction with [`TypedChannel`] for type-safe logging, which ensures at compile time that
-//! messages logged to a channel all share a common schema.
+//! The SDK provides [structs for well-known schemas](schemas). These can be used in conjunction
+//! with [`Channel`] for type-safe logging, which ensures at compile time that messages logged to a
+//! channel all share a common schema.
 //!
 //! ### Custom data
 //!
 //! You can also define your own custom data types by implementing the [`Encode`] trait. This
-//! allows you to log arbitrary custom data types. Notably, the `Encode` trait is
-//! automatically implemented for types that implement [`Serialize`](serde::Serialize) and
+//! allows you to log arbitrary custom data types. Notably, the `Encode` trait is automatically
+//! implemented for types that implement [`Serialize`](serde::Serialize) and
 //! [`JsonSchema`][jsonschema-trait]. This makes it easy to define new custom messages:
 //!
 //! ```no_run
@@ -61,7 +61,7 @@
 //! }
 //!
 //! # fn func() -> Result<(), foxglove::FoxgloveError> {
-//! let channel = foxglove::TypedChannel::new("/custom")?;
+//! let channel = foxglove::Channel::new("/custom")?;
 //! channel.log(&Custom{
 //!     msg: "custom",
 //!     count: 42
@@ -182,7 +182,7 @@ mod time;
 pub mod websocket;
 mod websocket_server;
 
-pub use channel::{RawChannel, TypedChannel};
+pub use channel::{Channel, RawChannel};
 pub use channel_builder::ChannelBuilder;
 #[doc(hidden)]
 pub use context::Context;

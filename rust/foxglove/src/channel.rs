@@ -44,21 +44,21 @@ impl std::fmt::Display for ChannelId {
     }
 }
 
-/// A typed channel for messages that implement [`Encode`].
+/// A channel for messages that implement [`Encode`].
 ///
 /// Channels are immutable, returned as `Arc<Channel>` and can be shared between threads.
 #[derive(Debug)]
-pub struct TypedChannel<T: Encode> {
+pub struct Channel<T: Encode> {
     inner: Arc<RawChannel>,
     _phantom: std::marker::PhantomData<T>,
 }
 
-impl<T: Encode> TypedChannel<T> {
+impl<T: Encode> Channel<T> {
     /// Constructs a new typed channel with default settings.
     ///
     /// If you want to override the channel configuration, use [`ChannelBuilder::build_typed`].
     pub fn new(topic: impl Into<String>) -> Result<Self, FoxgloveError> {
-        ChannelBuilder::new(topic).build_typed()
+        ChannelBuilder::new(topic).build()
     }
 
     pub(crate) fn from_channel(channel: Arc<RawChannel>) -> Self {
@@ -130,13 +130,13 @@ impl<T: Encode> TypedChannel<T> {
     }
 }
 
-/// Registers a static [`TypedChannel`] for the provided topic and message type.
+/// Registers a static [`Channel`] for the provided topic and message type.
 ///
-/// This macro is a wrapper around [`LazyLock<TypedChannel<T>>`](std::sync::LazyLock),
+/// This macro is a wrapper around [`LazyLock<Channel<T>>`](std::sync::LazyLock),
 /// which initializes the channel lazily upon first use. If the initialization fails (e.g., due to
 /// [`FoxgloveError::DuplicateChannel`]), the program will panic.
 ///
-/// If you don't require a static variable, you can just use [`TypedChannel::new()`] directly.
+/// If you don't require a static variable, you can just use [`Channel::new()`] directly.
 ///
 /// The channel is created with the provided visibility and identifier, and the topic and message type.
 ///
@@ -158,8 +158,8 @@ impl<T: Encode> TypedChannel<T> {
 #[macro_export]
 macro_rules! static_typed_channel {
     ($vis:vis $ident: ident, $topic: literal, $ty: ty) => {
-        $vis static $ident: std::sync::LazyLock<$crate::TypedChannel<$ty>> =
-            std::sync::LazyLock::new(|| match $crate::TypedChannel::new($topic) {
+        $vis static $ident: std::sync::LazyLock<$crate::Channel<$ty>> =
+            std::sync::LazyLock::new(|| match $crate::Channel::new($topic) {
                 Ok(channel) => channel,
                 Err(e) => {
                     panic!("Failed to create channel for {}: {:?}", $topic, e);

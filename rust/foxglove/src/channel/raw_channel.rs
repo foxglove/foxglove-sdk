@@ -19,8 +19,8 @@ use crate::{nanoseconds_since_epoch, Metadata, PartialMetadata, Schema};
 /// [MCAP channel]: https://mcap.dev/guides/concepts#channel
 ///
 /// If a schema was provided, all messages must be encoded according to the schema.
-/// This is not checked. See [`TypedChannel`](crate::TypedChannel) for type-safe channels.
-/// Channels are immutable, returned as `Arc<Channel>` and can be shared between threads.
+/// This is not checked. See [`Channel`](crate::Channel) for type-safe channels. Channels are
+/// immutable, returned as `Arc<Channel>` and can be shared between threads.
 ///
 /// Channels are created using [`ChannelBuilder`](crate::ChannelBuilder).
 ///

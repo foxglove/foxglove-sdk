@@ -8,8 +8,8 @@ use crate::Schema;
 
 /// A trait representing a message that can be logged to a channel.
 ///
-/// Implementing this trait for your type `T` enables the use of [`TypedChannel<T>`],
-/// which offers a type-checked `log` method.
+/// Implementing this trait for your type `T` enables the use of [`Channel<T>`], which offers a
+/// type-checked `log` method.
 pub trait Encode {
     /// The error type returned by methods in this trait.
     type Error: std::error::Error;
@@ -115,7 +115,7 @@ mod test {
         let ctx = Context::new();
         let channel = ChannelBuilder::new("topic2")
             .context(&ctx)
-            .build_typed::<TestMessage>()
+            .build::<TestMessage>()
             .expect("failed to build channel");
 
         let message = TestMessage {

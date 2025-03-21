@@ -1,9 +1,9 @@
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
-use crate::{Context, Encode, FoxgloveError, RawChannel, Schema, TypedChannel};
+use crate::{Channel, Context, Encode, FoxgloveError, RawChannel, Schema};
 
-/// ChannelBuilder is a builder for creating a new [`RawChannel`] or [`TypedChannel`].
+/// ChannelBuilder is a builder for creating a new [`RawChannel`] or [`Channel`].
 #[must_use]
 #[derive(Debug)]
 pub struct ChannelBuilder {
@@ -35,8 +35,9 @@ impl ChannelBuilder {
     }
 
     /// Set the message encoding for the channel.
-    /// This is required for Channel, but not for [`TypedChannel`] (it's provided by the [`Encode`]
-    /// trait for [`TypedChannel`].) Foxglove supports several well-known message encodings:
+    ///
+    /// This is required for [`RawChannel`], but not for [`Channel`] (it's provided by the
+    /// [`Encode`] trait for [`Channel`].) Foxglove supports several well-known message encodings:
     /// <https://docs.foxglove.dev/docs/visualization/message-schemas/introduction>
     pub fn message_encoding(mut self, encoding: &str) -> Self {
         self.message_encoding = Some(encoding.to_string());
@@ -78,10 +79,13 @@ impl ChannelBuilder {
         Ok(channel)
     }
 
-    /// Build the channel and return it as a [`TypedChannel`] as a Result.
+    /// Builds a [`Channel`].
+    ///
     /// `T` must implement [`Encode`].
-    /// Returns [`FoxgloveError::DuplicateChannel`] if a channel with the same topic already exists.
-    pub fn build_typed<T: Encode>(mut self) -> Result<TypedChannel<T>, FoxgloveError> {
+    ///
+    /// Returns [`FoxgloveError::DuplicateChannel`] if a channel with the same topic already
+    /// exists.
+    pub fn build<T: Encode>(mut self) -> Result<Channel<T>, FoxgloveError> {
         if self.message_encoding.is_none() {
             self.message_encoding = Some(<T as Encode>::get_message_encoding());
         }
@@ -89,6 +93,6 @@ impl ChannelBuilder {
             self.schema = <T as Encode>::get_schema();
         }
         let channel = self.build_raw()?;
-        Ok(TypedChannel::from_channel(channel))
+        Ok(Channel::from_channel(channel))
     }
 }
