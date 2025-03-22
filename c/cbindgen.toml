@@ -23,7 +23,7 @@ after_includes = """
 #endif
 
 
-typedef struct foxglove_channel foxglove_channel;
+typedef struct foxglove_raw_channel foxglove_raw_channel;
 """
 
 [ptr]
@@ -37,8 +37,8 @@ include = ["Vector3"]
 
 [export.rename]
 FoxgloveWebSocketServer = "foxglove_websocket_server"
+FoxgloveRawChannel = "foxglove_raw_channel"
 FoxgloveChannel = "foxglove_channel"
-FoxgloveTypedChannel = "foxglove_typed_channel"
 FoxgloveSchema = "foxglove_schema"
 FoxgloveServerCallbacks = "foxglove_server_callbacks"
 FoxgloveServerOptions = "foxglove_server_options"

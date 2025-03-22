@@ -20,7 +20,7 @@
 #endif
 
 
-typedef struct foxglove_channel foxglove_channel;
+typedef struct foxglove_raw_channel foxglove_raw_channel;
 
 
 /**
@@ -76,9 +76,9 @@ enum FoxgloveMcapCompression
 typedef uint8_t FoxgloveMcapCompression;
 #endif // __cplusplus
 
-typedef struct foxglove_mcap_writer foxglove_mcap_writer;
+typedef struct foxglove_channel foxglove_channel;
 
-typedef struct foxglove_typed_channel foxglove_typed_channel;
+typedef struct foxglove_mcap_writer foxglove_mcap_writer;
 
 typedef struct foxglove_websocket_server foxglove_websocket_server;
 
@@ -227,23 +227,23 @@ uint16_t foxglove_server_get_port(const struct foxglove_websocket_server *server
 void foxglove_server_stop(struct foxglove_websocket_server *server);
 
 /**
- * Create a new channel. The channel must later be freed with `foxglove_channel_free`.
+ * Create a new raw channel. The channel must later be freed with `foxglove_raw_channel_free`.
  *
  * # Safety
  * `topic` and `message_encoding` must be null-terminated strings with valid UTF8. `schema` is an
  * optional pointer to a schema. The schema and the data it points to need only remain alive for
  * the duration of this function call (they will be copied).
  */
-foxglove_channel *foxglove_channel_create(const char *topic,
-                                          const char *message_encoding,
-                                          const struct foxglove_schema *schema);
+foxglove_raw_channel *foxglove_raw_channel_create(const char *topic,
+                                                  const char *message_encoding,
+                                                  const struct foxglove_schema *schema);
 
 /**
- * Free a channel created via `foxglove_channel_create`.
+ * Free a channel created via `foxglove_raw_channel_create`.
  */
-void foxglove_channel_free(foxglove_channel *channel);
+void foxglove_raw_channel_free(foxglove_raw_channel *channel);
 
-uint64_t foxglove_channel_get_id(const foxglove_channel *channel);
+uint64_t foxglove_raw_channel_get_id(const foxglove_raw_channel *channel);
 
 /**
  * Log a message on a channel.
@@ -254,30 +254,29 @@ uint64_t foxglove_channel_get_id(const foxglove_channel *channel);
  *
  * `log_time`, `publish_time`, and `sequence` may be null, or may point to valid, properly-aligned values.
  */
-void foxglove_channel_log(const foxglove_channel *channel,
-                          const uint8_t *data,
-                          size_t data_len,
-                          const uint64_t *log_time,
-                          const uint64_t *publish_time,
-                          const uint32_t *sequence);
+void foxglove_raw_channel_log(const foxglove_raw_channel *channel,
+                              const uint8_t *data,
+                              size_t data_len,
+                              const uint64_t *log_time,
+                              const uint64_t *publish_time,
+                              const uint32_t *sequence);
 
 /**
- * Create a new channel. The channel must later be freed with `foxglove_channel_free`.
+ * Create a new channel. The channel must later be freed with `foxglove_raw_channel_free`.
  *
  * # Safety
  * `topic` and `message_encoding` must be null-terminated strings with valid UTF8. `schema` is an
  * optional pointer to a schema. The schema and the data it points to need only remain alive for
  * the duration of this function call (they will be copied).
  */
-struct foxglove_typed_channel *foxglove_typed_channel_create(const char *topic,
-                                                             foxglove_builtin_schema schema);
+struct foxglove_channel *foxglove_channel_create(const char *topic, foxglove_builtin_schema schema);
 
 /**
- * Free a channel created via `foxglove_typed_channel_create`.
+ * Free a channel created via `foxglove_channel_create`.
  */
-void foxglove_typed_channel_free(struct foxglove_typed_channel *channel);
+void foxglove_channel_free(struct foxglove_channel *channel);
 
-uint64_t foxglove_typed_channel_get_id(const struct foxglove_typed_channel *channel);
+uint64_t foxglove_channel_get_id(const struct foxglove_channel *channel);
 
 /**
  * Log a message on a channel.
@@ -287,11 +286,11 @@ uint64_t foxglove_typed_channel_get_id(const struct foxglove_typed_channel *chan
  *
  * `log_time`, `publish_time`, and `sequence` may be null, or may point to valid, properly-aligned values.
  */
-void foxglove_typed_channel_log(const struct foxglove_typed_channel *channel,
-                                const void *msg,
-                                const uint64_t *log_time,
-                                const uint64_t *publish_time,
-                                const uint32_t *sequence);
+void foxglove_channel_log(const struct foxglove_channel *channel,
+                          const void *msg,
+                          const uint64_t *log_time,
+                          const uint64_t *publish_time,
+                          const uint32_t *sequence);
 
 #ifdef __cplusplus
 }  // extern "C"

@@ -7,8 +7,8 @@
 #include <optional>
 #include <string>
 
+struct foxglove_raw_channel;
 struct foxglove_channel;
-struct foxglove_typed_channel;
 
 namespace foxglove {
 
@@ -34,7 +34,7 @@ public:
   uint64_t id() const;
 
 private:
-  std::unique_ptr<foxglove_channel, void (*)(foxglove_channel*)> _impl;
+  std::unique_ptr<foxglove_raw_channel, void (*)(foxglove_raw_channel*)> _impl;
 };
 
 template<class TMsg, class = void>
@@ -57,7 +57,7 @@ public:
   uint64_t id() const;
 
 private:
-  std::unique_ptr<foxglove_typed_channel, void (*)(foxglove_typed_channel*)> _impl;
+  std::unique_ptr<foxglove_channel, void (*)(foxglove_channel*)> _impl;
 };
 
 }  // namespace foxglove
