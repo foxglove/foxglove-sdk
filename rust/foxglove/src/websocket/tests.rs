@@ -17,7 +17,9 @@ use crate::websocket::{
     BlockingAssetHandlerFn, Capability, ClientChannelId, ConnectionGraph, Parameter, ParameterType,
     ParameterValue, Status, StatusLevel,
 };
-use crate::{collection, Channel, ChannelBuilder, Context, FoxgloveError, PartialMetadata, Schema};
+use crate::{
+    collection, ChannelBuilder, Context, FoxgloveError, PartialMetadata, RawChannel, Schema,
+};
 
 fn make_message(id: usize) -> Message {
     Message::Text(format!("{id}").into())
@@ -72,7 +74,7 @@ fn test_send_lossy() {
     assert_eq!(received, ((TOTAL - BACKLOG)..TOTAL).collect::<Vec<_>>());
 }
 
-fn new_channel(topic: &str, ctx: &Arc<Context>) -> Arc<Channel> {
+fn new_channel(topic: &str, ctx: &Arc<Context>) -> Arc<RawChannel> {
     ChannelBuilder::new(topic)
         .message_encoding("message_encoding")
         .schema(Schema::new(
@@ -82,7 +84,7 @@ fn new_channel(topic: &str, ctx: &Arc<Context>) -> Arc<Channel> {
         ))
         .metadata(collection! {"key".to_string() => "value".to_string()})
         .context(ctx)
-        .build()
+        .build_raw()
         .expect("Failed to create channel")
 }
 
@@ -312,7 +314,7 @@ async fn test_advertise_schemaless_channels() {
     let json_chan = ChannelBuilder::new("/schemaless_json")
         .message_encoding("json")
         .context(&ctx)
-        .build()
+        .build_raw()
         .expect("Failed to create channel");
 
     json_chan.log(b"{\"a\": 1}");
@@ -331,7 +333,7 @@ async fn test_advertise_schemaless_channels() {
     let invalid_chan = ChannelBuilder::new("/schemaless_other")
         .message_encoding("protobuf")
         .context(&ctx)
-        .build()
+        .build_raw()
         .expect("Failed to create channel");
 
     invalid_chan.log(b"1");

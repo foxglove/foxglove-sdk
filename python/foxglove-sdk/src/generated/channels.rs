@@ -3,7 +3,7 @@
 
 use super::schemas;
 use crate::errors::PyFoxgloveError;
-use foxglove::{PartialMetadata, TypedChannel};
+use foxglove::{Channel, PartialMetadata};
 use pyo3::prelude::*;
 
 pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
@@ -52,7 +52,7 @@ pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
 
 /// A channel for logging :py:class:`foxglove.schemas.CameraCalibration` messages.
 #[pyclass(module = "foxglove.channels")]
-struct CameraCalibrationChannel(Option<TypedChannel<foxglove::schemas::CameraCalibration>>);
+struct CameraCalibrationChannel(Option<Channel<foxglove::schemas::CameraCalibration>>);
 
 #[pymethods]
 impl CameraCalibrationChannel {
@@ -61,7 +61,7 @@ impl CameraCalibrationChannel {
     /// :param topic: The topic to log messages to.
     #[new]
     fn new(topic: &str) -> PyResult<Self> {
-        let base = TypedChannel::new(topic).map_err(PyFoxgloveError::from)?;
+        let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
         Ok(Self(Some(base)))
     }
 
@@ -117,7 +117,7 @@ impl CameraCalibrationChannel {
 
 /// A channel for logging :py:class:`foxglove.schemas.CircleAnnotation` messages.
 #[pyclass(module = "foxglove.channels")]
-struct CircleAnnotationChannel(Option<TypedChannel<foxglove::schemas::CircleAnnotation>>);
+struct CircleAnnotationChannel(Option<Channel<foxglove::schemas::CircleAnnotation>>);
 
 #[pymethods]
 impl CircleAnnotationChannel {
@@ -126,7 +126,7 @@ impl CircleAnnotationChannel {
     /// :param topic: The topic to log messages to.
     #[new]
     fn new(topic: &str) -> PyResult<Self> {
-        let base = TypedChannel::new(topic).map_err(PyFoxgloveError::from)?;
+        let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
         Ok(Self(Some(base)))
     }
 
@@ -182,7 +182,7 @@ impl CircleAnnotationChannel {
 
 /// A channel for logging :py:class:`foxglove.schemas.Color` messages.
 #[pyclass(module = "foxglove.channels")]
-struct ColorChannel(Option<TypedChannel<foxglove::schemas::Color>>);
+struct ColorChannel(Option<Channel<foxglove::schemas::Color>>);
 
 #[pymethods]
 impl ColorChannel {
@@ -191,7 +191,7 @@ impl ColorChannel {
     /// :param topic: The topic to log messages to.
     #[new]
     fn new(topic: &str) -> PyResult<Self> {
-        let base = TypedChannel::new(topic).map_err(PyFoxgloveError::from)?;
+        let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
         Ok(Self(Some(base)))
     }
 
@@ -247,7 +247,7 @@ impl ColorChannel {
 
 /// A channel for logging :py:class:`foxglove.schemas.CompressedImage` messages.
 #[pyclass(module = "foxglove.channels")]
-struct CompressedImageChannel(Option<TypedChannel<foxglove::schemas::CompressedImage>>);
+struct CompressedImageChannel(Option<Channel<foxglove::schemas::CompressedImage>>);
 
 #[pymethods]
 impl CompressedImageChannel {
@@ -256,7 +256,7 @@ impl CompressedImageChannel {
     /// :param topic: The topic to log messages to.
     #[new]
     fn new(topic: &str) -> PyResult<Self> {
-        let base = TypedChannel::new(topic).map_err(PyFoxgloveError::from)?;
+        let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
         Ok(Self(Some(base)))
     }
 
@@ -312,7 +312,7 @@ impl CompressedImageChannel {
 
 /// A channel for logging :py:class:`foxglove.schemas.CompressedVideo` messages.
 #[pyclass(module = "foxglove.channels")]
-struct CompressedVideoChannel(Option<TypedChannel<foxglove::schemas::CompressedVideo>>);
+struct CompressedVideoChannel(Option<Channel<foxglove::schemas::CompressedVideo>>);
 
 #[pymethods]
 impl CompressedVideoChannel {
@@ -321,7 +321,7 @@ impl CompressedVideoChannel {
     /// :param topic: The topic to log messages to.
     #[new]
     fn new(topic: &str) -> PyResult<Self> {
-        let base = TypedChannel::new(topic).map_err(PyFoxgloveError::from)?;
+        let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
         Ok(Self(Some(base)))
     }
 
@@ -377,7 +377,7 @@ impl CompressedVideoChannel {
 
 /// A channel for logging :py:class:`foxglove.schemas.FrameTransform` messages.
 #[pyclass(module = "foxglove.channels")]
-struct FrameTransformChannel(Option<TypedChannel<foxglove::schemas::FrameTransform>>);
+struct FrameTransformChannel(Option<Channel<foxglove::schemas::FrameTransform>>);
 
 #[pymethods]
 impl FrameTransformChannel {
@@ -386,7 +386,7 @@ impl FrameTransformChannel {
     /// :param topic: The topic to log messages to.
     #[new]
     fn new(topic: &str) -> PyResult<Self> {
-        let base = TypedChannel::new(topic).map_err(PyFoxgloveError::from)?;
+        let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
         Ok(Self(Some(base)))
     }
 
@@ -442,7 +442,7 @@ impl FrameTransformChannel {
 
 /// A channel for logging :py:class:`foxglove.schemas.FrameTransforms` messages.
 #[pyclass(module = "foxglove.channels")]
-struct FrameTransformsChannel(Option<TypedChannel<foxglove::schemas::FrameTransforms>>);
+struct FrameTransformsChannel(Option<Channel<foxglove::schemas::FrameTransforms>>);
 
 #[pymethods]
 impl FrameTransformsChannel {
@@ -451,7 +451,7 @@ impl FrameTransformsChannel {
     /// :param topic: The topic to log messages to.
     #[new]
     fn new(topic: &str) -> PyResult<Self> {
-        let base = TypedChannel::new(topic).map_err(PyFoxgloveError::from)?;
+        let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
         Ok(Self(Some(base)))
     }
 
@@ -507,7 +507,7 @@ impl FrameTransformsChannel {
 
 /// A channel for logging :py:class:`foxglove.schemas.GeoJson` messages.
 #[pyclass(module = "foxglove.channels")]
-struct GeoJsonChannel(Option<TypedChannel<foxglove::schemas::GeoJson>>);
+struct GeoJsonChannel(Option<Channel<foxglove::schemas::GeoJson>>);
 
 #[pymethods]
 impl GeoJsonChannel {
@@ -516,7 +516,7 @@ impl GeoJsonChannel {
     /// :param topic: The topic to log messages to.
     #[new]
     fn new(topic: &str) -> PyResult<Self> {
-        let base = TypedChannel::new(topic).map_err(PyFoxgloveError::from)?;
+        let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
         Ok(Self(Some(base)))
     }
 
@@ -572,7 +572,7 @@ impl GeoJsonChannel {
 
 /// A channel for logging :py:class:`foxglove.schemas.Grid` messages.
 #[pyclass(module = "foxglove.channels")]
-struct GridChannel(Option<TypedChannel<foxglove::schemas::Grid>>);
+struct GridChannel(Option<Channel<foxglove::schemas::Grid>>);
 
 #[pymethods]
 impl GridChannel {
@@ -581,7 +581,7 @@ impl GridChannel {
     /// :param topic: The topic to log messages to.
     #[new]
     fn new(topic: &str) -> PyResult<Self> {
-        let base = TypedChannel::new(topic).map_err(PyFoxgloveError::from)?;
+        let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
         Ok(Self(Some(base)))
     }
 
@@ -637,7 +637,7 @@ impl GridChannel {
 
 /// A channel for logging :py:class:`foxglove.schemas.ImageAnnotations` messages.
 #[pyclass(module = "foxglove.channels")]
-struct ImageAnnotationsChannel(Option<TypedChannel<foxglove::schemas::ImageAnnotations>>);
+struct ImageAnnotationsChannel(Option<Channel<foxglove::schemas::ImageAnnotations>>);
 
 #[pymethods]
 impl ImageAnnotationsChannel {
@@ -646,7 +646,7 @@ impl ImageAnnotationsChannel {
     /// :param topic: The topic to log messages to.
     #[new]
     fn new(topic: &str) -> PyResult<Self> {
-        let base = TypedChannel::new(topic).map_err(PyFoxgloveError::from)?;
+        let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
         Ok(Self(Some(base)))
     }
 
@@ -702,7 +702,7 @@ impl ImageAnnotationsChannel {
 
 /// A channel for logging :py:class:`foxglove.schemas.KeyValuePair` messages.
 #[pyclass(module = "foxglove.channels")]
-struct KeyValuePairChannel(Option<TypedChannel<foxglove::schemas::KeyValuePair>>);
+struct KeyValuePairChannel(Option<Channel<foxglove::schemas::KeyValuePair>>);
 
 #[pymethods]
 impl KeyValuePairChannel {
@@ -711,7 +711,7 @@ impl KeyValuePairChannel {
     /// :param topic: The topic to log messages to.
     #[new]
     fn new(topic: &str) -> PyResult<Self> {
-        let base = TypedChannel::new(topic).map_err(PyFoxgloveError::from)?;
+        let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
         Ok(Self(Some(base)))
     }
 
@@ -767,7 +767,7 @@ impl KeyValuePairChannel {
 
 /// A channel for logging :py:class:`foxglove.schemas.LaserScan` messages.
 #[pyclass(module = "foxglove.channels")]
-struct LaserScanChannel(Option<TypedChannel<foxglove::schemas::LaserScan>>);
+struct LaserScanChannel(Option<Channel<foxglove::schemas::LaserScan>>);
 
 #[pymethods]
 impl LaserScanChannel {
@@ -776,7 +776,7 @@ impl LaserScanChannel {
     /// :param topic: The topic to log messages to.
     #[new]
     fn new(topic: &str) -> PyResult<Self> {
-        let base = TypedChannel::new(topic).map_err(PyFoxgloveError::from)?;
+        let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
         Ok(Self(Some(base)))
     }
 
@@ -832,7 +832,7 @@ impl LaserScanChannel {
 
 /// A channel for logging :py:class:`foxglove.schemas.LocationFix` messages.
 #[pyclass(module = "foxglove.channels")]
-struct LocationFixChannel(Option<TypedChannel<foxglove::schemas::LocationFix>>);
+struct LocationFixChannel(Option<Channel<foxglove::schemas::LocationFix>>);
 
 #[pymethods]
 impl LocationFixChannel {
@@ -841,7 +841,7 @@ impl LocationFixChannel {
     /// :param topic: The topic to log messages to.
     #[new]
     fn new(topic: &str) -> PyResult<Self> {
-        let base = TypedChannel::new(topic).map_err(PyFoxgloveError::from)?;
+        let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
         Ok(Self(Some(base)))
     }
 
@@ -897,7 +897,7 @@ impl LocationFixChannel {
 
 /// A channel for logging :py:class:`foxglove.schemas.Log` messages.
 #[pyclass(module = "foxglove.channels")]
-struct LogChannel(Option<TypedChannel<foxglove::schemas::Log>>);
+struct LogChannel(Option<Channel<foxglove::schemas::Log>>);
 
 #[pymethods]
 impl LogChannel {
@@ -906,7 +906,7 @@ impl LogChannel {
     /// :param topic: The topic to log messages to.
     #[new]
     fn new(topic: &str) -> PyResult<Self> {
-        let base = TypedChannel::new(topic).map_err(PyFoxgloveError::from)?;
+        let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
         Ok(Self(Some(base)))
     }
 
@@ -962,7 +962,7 @@ impl LogChannel {
 
 /// A channel for logging :py:class:`foxglove.schemas.SceneEntityDeletion` messages.
 #[pyclass(module = "foxglove.channels")]
-struct SceneEntityDeletionChannel(Option<TypedChannel<foxglove::schemas::SceneEntityDeletion>>);
+struct SceneEntityDeletionChannel(Option<Channel<foxglove::schemas::SceneEntityDeletion>>);
 
 #[pymethods]
 impl SceneEntityDeletionChannel {
@@ -971,7 +971,7 @@ impl SceneEntityDeletionChannel {
     /// :param topic: The topic to log messages to.
     #[new]
     fn new(topic: &str) -> PyResult<Self> {
-        let base = TypedChannel::new(topic).map_err(PyFoxgloveError::from)?;
+        let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
         Ok(Self(Some(base)))
     }
 
@@ -1027,7 +1027,7 @@ impl SceneEntityDeletionChannel {
 
 /// A channel for logging :py:class:`foxglove.schemas.SceneEntity` messages.
 #[pyclass(module = "foxglove.channels")]
-struct SceneEntityChannel(Option<TypedChannel<foxglove::schemas::SceneEntity>>);
+struct SceneEntityChannel(Option<Channel<foxglove::schemas::SceneEntity>>);
 
 #[pymethods]
 impl SceneEntityChannel {
@@ -1036,7 +1036,7 @@ impl SceneEntityChannel {
     /// :param topic: The topic to log messages to.
     #[new]
     fn new(topic: &str) -> PyResult<Self> {
-        let base = TypedChannel::new(topic).map_err(PyFoxgloveError::from)?;
+        let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
         Ok(Self(Some(base)))
     }
 
@@ -1092,7 +1092,7 @@ impl SceneEntityChannel {
 
 /// A channel for logging :py:class:`foxglove.schemas.SceneUpdate` messages.
 #[pyclass(module = "foxglove.channels")]
-struct SceneUpdateChannel(Option<TypedChannel<foxglove::schemas::SceneUpdate>>);
+struct SceneUpdateChannel(Option<Channel<foxglove::schemas::SceneUpdate>>);
 
 #[pymethods]
 impl SceneUpdateChannel {
@@ -1101,7 +1101,7 @@ impl SceneUpdateChannel {
     /// :param topic: The topic to log messages to.
     #[new]
     fn new(topic: &str) -> PyResult<Self> {
-        let base = TypedChannel::new(topic).map_err(PyFoxgloveError::from)?;
+        let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
         Ok(Self(Some(base)))
     }
 
@@ -1157,7 +1157,7 @@ impl SceneUpdateChannel {
 
 /// A channel for logging :py:class:`foxglove.schemas.PackedElementField` messages.
 #[pyclass(module = "foxglove.channels")]
-struct PackedElementFieldChannel(Option<TypedChannel<foxglove::schemas::PackedElementField>>);
+struct PackedElementFieldChannel(Option<Channel<foxglove::schemas::PackedElementField>>);
 
 #[pymethods]
 impl PackedElementFieldChannel {
@@ -1166,7 +1166,7 @@ impl PackedElementFieldChannel {
     /// :param topic: The topic to log messages to.
     #[new]
     fn new(topic: &str) -> PyResult<Self> {
-        let base = TypedChannel::new(topic).map_err(PyFoxgloveError::from)?;
+        let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
         Ok(Self(Some(base)))
     }
 
@@ -1222,7 +1222,7 @@ impl PackedElementFieldChannel {
 
 /// A channel for logging :py:class:`foxglove.schemas.Point2` messages.
 #[pyclass(module = "foxglove.channels")]
-struct Point2Channel(Option<TypedChannel<foxglove::schemas::Point2>>);
+struct Point2Channel(Option<Channel<foxglove::schemas::Point2>>);
 
 #[pymethods]
 impl Point2Channel {
@@ -1231,7 +1231,7 @@ impl Point2Channel {
     /// :param topic: The topic to log messages to.
     #[new]
     fn new(topic: &str) -> PyResult<Self> {
-        let base = TypedChannel::new(topic).map_err(PyFoxgloveError::from)?;
+        let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
         Ok(Self(Some(base)))
     }
 
@@ -1287,7 +1287,7 @@ impl Point2Channel {
 
 /// A channel for logging :py:class:`foxglove.schemas.Point3` messages.
 #[pyclass(module = "foxglove.channels")]
-struct Point3Channel(Option<TypedChannel<foxglove::schemas::Point3>>);
+struct Point3Channel(Option<Channel<foxglove::schemas::Point3>>);
 
 #[pymethods]
 impl Point3Channel {
@@ -1296,7 +1296,7 @@ impl Point3Channel {
     /// :param topic: The topic to log messages to.
     #[new]
     fn new(topic: &str) -> PyResult<Self> {
-        let base = TypedChannel::new(topic).map_err(PyFoxgloveError::from)?;
+        let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
         Ok(Self(Some(base)))
     }
 
@@ -1352,7 +1352,7 @@ impl Point3Channel {
 
 /// A channel for logging :py:class:`foxglove.schemas.PointCloud` messages.
 #[pyclass(module = "foxglove.channels")]
-struct PointCloudChannel(Option<TypedChannel<foxglove::schemas::PointCloud>>);
+struct PointCloudChannel(Option<Channel<foxglove::schemas::PointCloud>>);
 
 #[pymethods]
 impl PointCloudChannel {
@@ -1361,7 +1361,7 @@ impl PointCloudChannel {
     /// :param topic: The topic to log messages to.
     #[new]
     fn new(topic: &str) -> PyResult<Self> {
-        let base = TypedChannel::new(topic).map_err(PyFoxgloveError::from)?;
+        let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
         Ok(Self(Some(base)))
     }
 
@@ -1417,7 +1417,7 @@ impl PointCloudChannel {
 
 /// A channel for logging :py:class:`foxglove.schemas.PointsAnnotation` messages.
 #[pyclass(module = "foxglove.channels")]
-struct PointsAnnotationChannel(Option<TypedChannel<foxglove::schemas::PointsAnnotation>>);
+struct PointsAnnotationChannel(Option<Channel<foxglove::schemas::PointsAnnotation>>);
 
 #[pymethods]
 impl PointsAnnotationChannel {
@@ -1426,7 +1426,7 @@ impl PointsAnnotationChannel {
     /// :param topic: The topic to log messages to.
     #[new]
     fn new(topic: &str) -> PyResult<Self> {
-        let base = TypedChannel::new(topic).map_err(PyFoxgloveError::from)?;
+        let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
         Ok(Self(Some(base)))
     }
 
@@ -1482,7 +1482,7 @@ impl PointsAnnotationChannel {
 
 /// A channel for logging :py:class:`foxglove.schemas.Pose` messages.
 #[pyclass(module = "foxglove.channels")]
-struct PoseChannel(Option<TypedChannel<foxglove::schemas::Pose>>);
+struct PoseChannel(Option<Channel<foxglove::schemas::Pose>>);
 
 #[pymethods]
 impl PoseChannel {
@@ -1491,7 +1491,7 @@ impl PoseChannel {
     /// :param topic: The topic to log messages to.
     #[new]
     fn new(topic: &str) -> PyResult<Self> {
-        let base = TypedChannel::new(topic).map_err(PyFoxgloveError::from)?;
+        let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
         Ok(Self(Some(base)))
     }
 
@@ -1547,7 +1547,7 @@ impl PoseChannel {
 
 /// A channel for logging :py:class:`foxglove.schemas.PoseInFrame` messages.
 #[pyclass(module = "foxglove.channels")]
-struct PoseInFrameChannel(Option<TypedChannel<foxglove::schemas::PoseInFrame>>);
+struct PoseInFrameChannel(Option<Channel<foxglove::schemas::PoseInFrame>>);
 
 #[pymethods]
 impl PoseInFrameChannel {
@@ -1556,7 +1556,7 @@ impl PoseInFrameChannel {
     /// :param topic: The topic to log messages to.
     #[new]
     fn new(topic: &str) -> PyResult<Self> {
-        let base = TypedChannel::new(topic).map_err(PyFoxgloveError::from)?;
+        let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
         Ok(Self(Some(base)))
     }
 
@@ -1612,7 +1612,7 @@ impl PoseInFrameChannel {
 
 /// A channel for logging :py:class:`foxglove.schemas.PosesInFrame` messages.
 #[pyclass(module = "foxglove.channels")]
-struct PosesInFrameChannel(Option<TypedChannel<foxglove::schemas::PosesInFrame>>);
+struct PosesInFrameChannel(Option<Channel<foxglove::schemas::PosesInFrame>>);
 
 #[pymethods]
 impl PosesInFrameChannel {
@@ -1621,7 +1621,7 @@ impl PosesInFrameChannel {
     /// :param topic: The topic to log messages to.
     #[new]
     fn new(topic: &str) -> PyResult<Self> {
-        let base = TypedChannel::new(topic).map_err(PyFoxgloveError::from)?;
+        let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
         Ok(Self(Some(base)))
     }
 
@@ -1677,7 +1677,7 @@ impl PosesInFrameChannel {
 
 /// A channel for logging :py:class:`foxglove.schemas.Quaternion` messages.
 #[pyclass(module = "foxglove.channels")]
-struct QuaternionChannel(Option<TypedChannel<foxglove::schemas::Quaternion>>);
+struct QuaternionChannel(Option<Channel<foxglove::schemas::Quaternion>>);
 
 #[pymethods]
 impl QuaternionChannel {
@@ -1686,7 +1686,7 @@ impl QuaternionChannel {
     /// :param topic: The topic to log messages to.
     #[new]
     fn new(topic: &str) -> PyResult<Self> {
-        let base = TypedChannel::new(topic).map_err(PyFoxgloveError::from)?;
+        let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
         Ok(Self(Some(base)))
     }
 
@@ -1742,7 +1742,7 @@ impl QuaternionChannel {
 
 /// A channel for logging :py:class:`foxglove.schemas.RawImage` messages.
 #[pyclass(module = "foxglove.channels")]
-struct RawImageChannel(Option<TypedChannel<foxglove::schemas::RawImage>>);
+struct RawImageChannel(Option<Channel<foxglove::schemas::RawImage>>);
 
 #[pymethods]
 impl RawImageChannel {
@@ -1751,7 +1751,7 @@ impl RawImageChannel {
     /// :param topic: The topic to log messages to.
     #[new]
     fn new(topic: &str) -> PyResult<Self> {
-        let base = TypedChannel::new(topic).map_err(PyFoxgloveError::from)?;
+        let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
         Ok(Self(Some(base)))
     }
 
@@ -1807,7 +1807,7 @@ impl RawImageChannel {
 
 /// A channel for logging :py:class:`foxglove.schemas.TextAnnotation` messages.
 #[pyclass(module = "foxglove.channels")]
-struct TextAnnotationChannel(Option<TypedChannel<foxglove::schemas::TextAnnotation>>);
+struct TextAnnotationChannel(Option<Channel<foxglove::schemas::TextAnnotation>>);
 
 #[pymethods]
 impl TextAnnotationChannel {
@@ -1816,7 +1816,7 @@ impl TextAnnotationChannel {
     /// :param topic: The topic to log messages to.
     #[new]
     fn new(topic: &str) -> PyResult<Self> {
-        let base = TypedChannel::new(topic).map_err(PyFoxgloveError::from)?;
+        let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
         Ok(Self(Some(base)))
     }
 
@@ -1872,7 +1872,7 @@ impl TextAnnotationChannel {
 
 /// A channel for logging :py:class:`foxglove.schemas.Vector2` messages.
 #[pyclass(module = "foxglove.channels")]
-struct Vector2Channel(Option<TypedChannel<foxglove::schemas::Vector2>>);
+struct Vector2Channel(Option<Channel<foxglove::schemas::Vector2>>);
 
 #[pymethods]
 impl Vector2Channel {
@@ -1881,7 +1881,7 @@ impl Vector2Channel {
     /// :param topic: The topic to log messages to.
     #[new]
     fn new(topic: &str) -> PyResult<Self> {
-        let base = TypedChannel::new(topic).map_err(PyFoxgloveError::from)?;
+        let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
         Ok(Self(Some(base)))
     }
 
@@ -1937,7 +1937,7 @@ impl Vector2Channel {
 
 /// A channel for logging :py:class:`foxglove.schemas.Vector3` messages.
 #[pyclass(module = "foxglove.channels")]
-struct Vector3Channel(Option<TypedChannel<foxglove::schemas::Vector3>>);
+struct Vector3Channel(Option<Channel<foxglove::schemas::Vector3>>);
 
 #[pymethods]
 impl Vector3Channel {
@@ -1946,7 +1946,7 @@ impl Vector3Channel {
     /// :param topic: The topic to log messages to.
     #[new]
     fn new(topic: &str) -> PyResult<Self> {
-        let base = TypedChannel::new(topic).map_err(PyFoxgloveError::from)?;
+        let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
         Ok(Self(Some(base)))
     }
 

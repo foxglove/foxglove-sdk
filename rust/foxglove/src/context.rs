@@ -5,27 +5,26 @@ use std::sync::{Arc, LazyLock};
 
 use parking_lot::RwLock;
 
-use crate::channel::ChannelId;
-use crate::{Channel, FoxgloveError, Sink, SinkId};
+use crate::{ChannelId, FoxgloveError, RawChannel, Sink, SinkId};
 
 mod subscriptions;
 use subscriptions::Subscriptions;
 
 #[derive(Default)]
 struct ContextInner {
-    channels: HashMap<ChannelId, Arc<Channel>>,
-    channels_by_topic: HashMap<String, Arc<Channel>>,
+    channels: HashMap<ChannelId, Arc<RawChannel>>,
+    channels_by_topic: HashMap<String, Arc<RawChannel>>,
     sinks: HashMap<SinkId, Arc<dyn Sink>>,
     subs: Subscriptions,
 }
 impl ContextInner {
     /// Returns the channel for the specified topic, if there is one.
-    fn get_channel_by_topic(&self, topic: &str) -> Option<&Arc<Channel>> {
+    fn get_channel_by_topic(&self, topic: &str) -> Option<&Arc<RawChannel>> {
         self.channels_by_topic.get(topic)
     }
 
     /// Adds a channel to the context.
-    fn add_channel(&mut self, channel: Arc<Channel>) -> Result<(), FoxgloveError> {
+    fn add_channel(&mut self, channel: Arc<RawChannel>) -> Result<(), FoxgloveError> {
         // Insert channel.
         let topic = channel.topic();
         let Entry::Vacant(entry) = self.channels_by_topic.entry(topic.to_string()) else {
@@ -131,7 +130,7 @@ impl ContextInner {
     }
 
     /// Updates the set of connected sinks on the specified channels.
-    fn update_channel_sinks(&self, channels: impl IntoIterator<Item = impl AsRef<Channel>>) {
+    fn update_channel_sinks(&self, channels: impl IntoIterator<Item = impl AsRef<RawChannel>>) {
         for channel in channels {
             let channel = channel.as_ref();
             let sinks = self.subs.get_subscribers(channel.id());
@@ -176,12 +175,12 @@ impl Context {
     }
 
     /// Returns the channel for the specified topic, if there is one.
-    pub fn get_channel_by_topic(&self, topic: &str) -> Option<Arc<Channel>> {
+    pub fn get_channel_by_topic(&self, topic: &str) -> Option<Arc<RawChannel>> {
         self.0.read().get_channel_by_topic(topic).cloned()
     }
 
     /// Adds a channel to the context.
-    pub fn add_channel(&self, channel: Arc<Channel>) -> Result<(), FoxgloveError> {
+    pub fn add_channel(&self, channel: Arc<RawChannel>) -> Result<(), FoxgloveError> {
         self.0.write().add_channel(channel)
     }
 
@@ -234,11 +233,11 @@ mod tests {
     use crate::log_sink_set::ERROR_LOGGING_MESSAGE;
     use crate::testutil::{ErrorSink, MockSink, RecordingSink};
     use crate::{context::*, ChannelBuilder};
-    use crate::{nanoseconds_since_epoch, Channel, PartialMetadata, Schema};
+    use crate::{nanoseconds_since_epoch, PartialMetadata, RawChannel, Schema};
     use std::sync::Arc;
     use tracing_test::traced_test;
 
-    fn new_test_channel(ctx: &Arc<Context>, topic: &str) -> Result<Arc<Channel>, FoxgloveError> {
+    fn new_test_channel(ctx: &Arc<Context>, topic: &str) -> Result<Arc<RawChannel>, FoxgloveError> {
         ChannelBuilder::new(topic)
             .context(ctx)
             .message_encoding("message_encoding")
@@ -254,7 +253,7 @@ mod tests {
                 }"#,
             ))
             .metadata(collection! {"key".to_string() => "value".to_string()})
-            .build()
+            .build_raw()
     }
 
     #[test]
@@ -472,7 +471,7 @@ mod tests {
         let ch = ChannelBuilder::new("topic")
             .message_encoding("json")
             .context(&ctx)
-            .build()
+            .build_raw()
             .unwrap();
         assert!(ch.has_sinks());
         ctx.remove_sink(s1.id());

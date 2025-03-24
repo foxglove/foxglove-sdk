@@ -1,6 +1,6 @@
 use errors::PyFoxgloveError;
 use foxglove::{
-    Channel, ChannelBuilder, Context, McapWriter, McapWriterHandle, PartialMetadata, Schema,
+    ChannelBuilder, Context, McapWriter, McapWriterHandle, PartialMetadata, RawChannel, Schema,
 };
 use generated::channels;
 use generated::schemas;
@@ -57,7 +57,7 @@ impl From<PySchema> for foxglove::Schema {
 }
 
 #[pyclass(module = "foxglove")]
-struct BaseChannel(Option<Arc<Channel>>);
+struct BaseChannel(Option<Arc<RawChannel>>);
 
 /// A writer for logging messages to an MCAP file.
 ///
@@ -122,7 +122,7 @@ impl BaseChannel {
             .message_encoding(message_encoding)
             .schema(schema.map(Schema::from))
             .metadata(metadata.unwrap_or_default())
-            .build()
+            .build_raw()
             .map_err(PyFoxgloveError::from)?;
 
         Ok(BaseChannel(Some(channel)))

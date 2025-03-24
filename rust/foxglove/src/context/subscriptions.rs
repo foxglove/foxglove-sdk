@@ -3,9 +3,8 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use crate::channel::ChannelId;
 use crate::sink::SmallSinkVec;
-use crate::{Sink, SinkId};
+use crate::{ChannelId, Sink, SinkId};
 
 #[cfg(test)]
 mod tests;

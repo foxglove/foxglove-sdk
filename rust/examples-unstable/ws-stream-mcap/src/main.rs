@@ -15,7 +15,7 @@ use bytes::Buf;
 use clap::Parser;
 use foxglove::websocket::Capability;
 use foxglove::{
-    Channel, ChannelBuilder, PartialMetadata, Schema, WebSocketServer,
+    ChannelBuilder, PartialMetadata, RawChannel, Schema, WebSocketServer,
     WebSocketServerBlockingHandle,
 };
 use mcap::records::{MessageHeader, Record, SchemaHeader};
@@ -117,7 +117,7 @@ where
 struct Summary {
     path: PathBuf,
     schemas: HashMap<u16, Schema>,
-    channels: HashMap<u16, Arc<Channel>>,
+    channels: HashMap<u16, Arc<RawChannel>>,
 }
 
 impl Summary {
@@ -195,7 +195,7 @@ impl Summary {
             let channel = ChannelBuilder::new(record.topic)
                 .message_encoding(&record.message_encoding)
                 .schema(schema)
-                .build()?;
+                .build_raw()?;
             entry.insert(channel);
         }
         Ok(())
@@ -204,13 +204,13 @@ impl Summary {
 
 struct FileStream<'a> {
     path: PathBuf,
-    channels: &'a HashMap<u16, Arc<Channel>>,
+    channels: &'a HashMap<u16, Arc<RawChannel>>,
     time_tracker: Option<TimeTracker>,
 }
 
 impl<'a> FileStream<'a> {
     /// Creates a new file stream.
-    fn new(path: &Path, channels: &'a HashMap<u16, Arc<Channel>>) -> Self {
+    fn new(path: &Path, channels: &'a HashMap<u16, Arc<RawChannel>>) -> Self {
         Self {
             path: path.to_owned(),
             channels,
