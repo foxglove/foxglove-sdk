@@ -1,9 +1,6 @@
 use std::{
     ops::Add,
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc,
-    },
+    sync::atomic::{AtomicBool, Ordering},
 };
 
 use foxglove::McapWriter;
@@ -48,12 +45,10 @@ fn main() {
     let env = env_logger::Env::default().default_filter_or("debug");
     env_logger::init_from_env(env);
 
-    let done = Arc::new(AtomicBool::default());
-    ctrlc::set_handler({
-        let done = done.clone();
-        move || {
-            done.store(true, Ordering::Relaxed);
-        }
+    static DONE: AtomicBool = AtomicBool::new(false);
+
+    ctrlc::set_handler(move || {
+        DONE.store(true, Ordering::Release);
     })
     .expect("Failed to set SIGINT handler");
 
@@ -65,7 +60,7 @@ fn main() {
         .create_new_buffered_file(FILE_NAME)
         .expect("Failed to start mcap writer");
 
-    while !done.load(Ordering::Relaxed) {
+    while !DONE.load(Ordering::Acquire) {
         log_message();
         std::thread::sleep(std::time::Duration::from_millis(33));
     }
