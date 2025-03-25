@@ -10,6 +10,7 @@ use crate::log_sink_set::LogSinkSet;
 use crate::sink::SmallSinkVec;
 use crate::{nanoseconds_since_epoch, Metadata, PartialMetadata};
 
+/// Unique identifier of a channel.
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Deserialize, Serialize)]
 pub struct ChannelId(u64);
 
