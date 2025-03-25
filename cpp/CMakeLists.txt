@@ -44,8 +44,8 @@ FetchContent_Declare(asio
 FetchContent_MakeAvailable(asio)
 
 if(DEFINED SANITIZE)
-  if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    message(FATAL_ERROR "Sanitizers are only supported with Clang")
+  if(NOT CMAKE_CXX_COMPILER_ID MATCHES ".*Clang")
+    message(FATAL_ERROR "Sanitizers are only supported with Clang, not ${CMAKE_CXX_COMPILER_ID}")
   endif()
   set(SANITIZER_COMPILE_OPTIONS -fsanitize=${SANITIZE} -fsanitize-ignorelist=${CMAKE_CURRENT_SOURCE_DIR}/sanitize-ignorelist.txt -fno-omit-frame-pointer -fno-sanitize-recover=all)
   set(SANITIZER_LINK_OPTIONS -fsanitize=${SANITIZE})

@@ -46,6 +46,29 @@ TEST_CASE("Log a message with and without metadata") {
   channel.log(reinterpret_cast<const std::byte*>(data.data()), data.size(), 1, 2, 3);
 }
 
+TEST_CASE("Channel can outlive Schema") {
+  foxglove::WebSocketServerOptions options;
+  options.name = "unit-test";
+  options.host = "127.0.0.1";
+  options.port = 0;
+  foxglove::WebSocketServer server{options};
+  REQUIRE(server.port() != 0);
+
+  std::optional<foxglove::Channel> channel;
+  {
+    foxglove::Schema schema;
+    schema.name = "ExampleSchema";
+    schema.encoding = "unknown";
+    const std::array<uint8_t, 3> data = {1, 2, 3};
+    schema.data = reinterpret_cast<const std::byte*>(data.data());
+    schema.dataLen = data.size();
+    channel = foxglove::Channel{"example", "json", schema};
+  }
+
+  const std::array<uint8_t, 3> data = {4, 5, 6};
+  channel->log(reinterpret_cast<const std::byte*>(data.data()), data.size());
+}
+
 TEST_CASE("Subscribe and unsubscribe callbacks") {
   std::mutex mutex;
   std::condition_variable cv;
