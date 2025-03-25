@@ -21,6 +21,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # Linux
           - runner: ubuntu-24.04
             target: aarch64-unknown-linux-gnu
             staticlib_name: libfoxglove.a
@@ -35,6 +36,8 @@ jobs:
             staticlib_artifact_name: libfoxglove-x86_64-unknown-linux-gnu.a
             cdylib_artifact_name: libfoxglove-x86_64-unknown-linux-gnu.so
             cross: false
+
+          # macOS
           - runner: macos-15
             target: aarch64-apple-darwin
             staticlib_name: libfoxglove.a
@@ -49,6 +52,8 @@ jobs:
             staticlib_artifact_name: libfoxglove-x86_64-apple-darwin.a
             cdylib_artifact_name: libfoxglove-x86_64-apple-darwin.dylib
             cross: true
+
+          # Windows
           - runner: windows-2025
             target: x86_64-pc-windows-msvc
             staticlib_name: foxglove.lib
@@ -86,71 +91,6 @@ jobs:
             cdylib_name: libfoxglove.dylib
             staticlib_artifact_name: libfoxglove-x86_64-apple-ios.a
             cdylib_artifact_name: libfoxglove-x86_64-apple-ios.dylib
-            cross: true
-
-          # watchOS
-          - runner: macos-15
-            target: aarch64-apple-watchos
-            staticlib_name: libfoxglove.a
-            cdylib_name: libfoxglove.dylib
-            staticlib_artifact_name: libfoxglove-aarch64-apple-watchos.a
-            cdylib_artifact_name: libfoxglove-aarch64-apple-watchos.dylib
-            cross: true
-          # watchOS simulator
-          - runner: macos-15
-            target: aarch64-apple-watchos-sim
-            staticlib_name: libfoxglove.a
-            cdylib_name: libfoxglove.dylib
-            staticlib_artifact_name: libfoxglove-aarch64-apple-watchos-sim.a
-            cdylib_artifact_name: libfoxglove-aarch64-apple-watchos-sim.dylib
-            cross: true
-          - runner: macos-15
-            target: x86_64-apple-watchos-sim
-            staticlib_name: libfoxglove.a
-            cdylib_name: libfoxglove.dylib
-            staticlib_artifact_name: libfoxglove-x86_64-apple-watchos-sim.a
-            cdylib_artifact_name: libfoxglove-x86_64-apple-watchos-sim.dylib
-            cross: true
-
-          # tvOS
-          - runner: macos-15
-            target: aarch64-apple-tvos
-            staticlib_name: libfoxglove.a
-            cdylib_name: libfoxglove.dylib
-            staticlib_artifact_name: libfoxglove-aarch64-apple-tvos.a
-            cdylib_artifact_name: libfoxglove-aarch64-apple-tvos.dylib
-            cross: true
-          # tvOS simulator
-          - runner: macos-15
-            target: aarch64-apple-tvos-sim
-            staticlib_name: libfoxglove.a
-            cdylib_name: libfoxglove.dylib
-            staticlib_artifact_name: libfoxglove-aarch64-apple-tvos-sim.a
-            cdylib_artifact_name: libfoxglove-aarch64-apple-tvos-sim.dylib
-            cross: true
-          - runner: macos-15
-            target: x86_64-apple-tvos
-            staticlib_name: libfoxglove.a
-            cdylib_name: libfoxglove.dylib
-            staticlib_artifact_name: libfoxglove-x86_64-apple-tvos.a
-            cdylib_artifact_name: libfoxglove-x86_64-apple-tvos.dylib
-            cross: true
-
-          # visionOS
-          - runner: macos-15
-            target: aarch64-apple-visionos
-            staticlib_name: libfoxglove.a
-            cdylib_name: libfoxglove.dylib
-            staticlib_artifact_name: libfoxglove-aarch64-apple-visionos.a
-            cdylib_artifact_name: libfoxglove-aarch64-apple-visionos.dylib
-            cross: true
-          # visionOS simulator
-          - runner: macos-15
-            target: aarch64-apple-visionos-sim
-            staticlib_name: libfoxglove.a
-            cdylib_name: libfoxglove.dylib
-            staticlib_artifact_name: libfoxglove-aarch64-apple-visionos-sim.a
-            cdylib_artifact_name: libfoxglove-aarch64-apple-visionos-sim.dylib
             cross: true
 
     name: build (${{ matrix.target }})
