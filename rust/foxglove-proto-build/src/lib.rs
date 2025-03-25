@@ -136,7 +136,7 @@ fn compile_proto(proto: &impl AsRef<Path>, includes: &[impl AsRef<Path>]) -> Res
                         "protobuf".to_string()
                     }
 
-                    fn encode(&self, buf: &mut impl bytes::BufMut) -> Result<(), Self::Error> {
+                    fn encode(&self, buf: &mut impl prost::bytes::BufMut) -> Result<(), Self::Error> {
                         ::prost::Message::encode(self, buf)
                     }
                 }

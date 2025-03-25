@@ -13,5 +13,9 @@ ctrlc = "3.4.5"
 env_logger = "0.11.5"
 mcap.workspace = true
 
+# transitive dependencies I wish I could remove so the user does not need to provide them
+# in addition to the foxglove dependency
+prost = "0.13.5"
+
 [build-dependencies]
 foxglove-proto-build = { path = "../../foxglove-proto-build" }

@@ -548,6 +548,7 @@ dependencies = [
  "foxglove",
  "foxglove-proto-build",
  "mcap 0.15.1",
+ "prost",
 ]
 
 [[package]]
