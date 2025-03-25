@@ -6,6 +6,7 @@
 
 #include <filesystem>
 #include <fstream>
+#include <optional>
 using Catch::Matchers::ContainsSubstring;
 using Catch::Matchers::Equals;
 
@@ -142,4 +143,38 @@ TEST_CASE("lz4 compression") {
   // Check that it contains the word "lz4"
   std::string content = readFile("test.mcap");
   REQUIRE_THAT(content, ContainsSubstring("lz4"));
+}
+
+TEST_CASE("Channel can outlive Schema") {
+  FileCleanup cleanup("test.mcap");
+
+  foxglove::McapWriterOptions options = {};
+  options.path = "test.mcap";
+  foxglove::McapWriter writer(options);
+
+  // Write message
+  std::optional<foxglove::Channel> channel;
+  {
+    foxglove::Schema schema;
+    schema.name = "ExampleSchema";
+    schema.encoding = "unknown";
+    std::string data = "FAKESCHEMA";
+    schema.data = reinterpret_cast<const std::byte*>(data.data());
+    schema.dataLen = data.size();
+    channel = foxglove::Channel{"example", "json", schema};
+    // Channel should copy the schema, so this modification has no effect on the output
+    data[2] = 'I';
+    data[3] = 'L';
+  }
+
+  const std::array<uint8_t, 3> data = {4, 5, 6};
+  channel->log(reinterpret_cast<const std::byte*>(data.data()), data.size());
+
+  writer.close();
+
+  REQUIRE(std::filesystem::exists("test.mcap"));
+
+  std::string content = readFile("test.mcap");
+  REQUIRE_THAT(content, !ContainsSubstring("FAILSCHEMA"));
+  REQUIRE_THAT(content, ContainsSubstring("FAKESCHEMA"));
 }
