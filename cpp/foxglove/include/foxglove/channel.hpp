@@ -4,6 +4,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <vector>
 
 struct foxglove_channel;
 
@@ -32,6 +33,7 @@ public:
 
 private:
   std::unique_ptr<foxglove_channel, void (*)(foxglove_channel*)> _impl;
+  std::vector<uint8_t> _storedSchema;
 };
 
 }  // namespace foxglove
