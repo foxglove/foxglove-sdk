@@ -380,7 +380,7 @@ pub unsafe extern "C" fn foxglove_channel_create(
             .to_str()
             .expect("schema encoding is invalid");
         let data = unsafe { std::slice::from_raw_parts(schema.data, schema.data_len) };
-        foxglove::Schema::new(name, encoding, data)
+        foxglove::Schema::new(name, encoding, data.to_owned())
     });
     Arc::into_raw(
         foxglove::ChannelBuilder::new(topic)
