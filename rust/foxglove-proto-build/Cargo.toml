@@ -1,0 +1,18 @@
+[package]
+name = "foxglove-proto-build"
+edition = "2021"
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+bytes = "1.9.0"
+prost = "0.13.5"
+prost-types = "0.13.5"
+prost-build = "0.13.5"
+protox = "0.7.2"
+quote = "1.0.40"
+syn = "2.0.100"
+prettyplease = "0.2.31"
+heck = "0.5.0"

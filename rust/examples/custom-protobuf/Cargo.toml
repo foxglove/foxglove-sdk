@@ -1,0 +1,17 @@
+[package]
+name = "example-custom-protobuf"
+edition = "2021"
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+foxglove = { path = "../../foxglove" }
+clap = { version = "4.5", features = ["derive"] }
+ctrlc = "3.4.5"
+env_logger = "0.11.5"
+mcap.workspace = true
+
+[build-dependencies]
+foxglove-proto-build = { path = "../../foxglove-proto-build" }
