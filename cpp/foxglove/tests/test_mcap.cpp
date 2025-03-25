@@ -84,12 +84,11 @@ TEST_CASE("Stores the schema in the channel") {
   std::unique_ptr<std::byte[]> tempBuffer(new std::byte[dataLen]);
   std::memcpy(tempBuffer.get(), schemaJson.data(), dataLen);
 
-  foxglove::Schema schema = {
-    .name = "TempSchema",
-    .encoding = "jsonschema",
-    .data = tempBuffer.get(),
-    .dataLen = dataLen,
-  };
+  foxglove::Schema schema;
+  schema.name = "TempSchema";
+  schema.encoding = "jsonschema";
+  schema.data = tempBuffer.get();
+  schema.dataLen = dataLen;
 
   // Construct the channel using the temporary buffer
   foxglove::Channel channel("/temp", "json", schema);
