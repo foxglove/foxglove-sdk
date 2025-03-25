@@ -181,7 +181,7 @@ mod time;
 pub mod websocket;
 mod websocket_server;
 
-pub use channel::{Channel, Schema};
+pub use channel::{Channel, ChannelId, Schema};
 pub use channel_builder::ChannelBuilder;
 #[doc(hidden)]
 pub use context::Context;
