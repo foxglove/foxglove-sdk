@@ -15,8 +15,8 @@ use crate::{nanoseconds_since_epoch, Metadata, PartialMetadata};
 pub struct ChannelId(u64);
 
 impl ChannelId {
-    #[cfg(test)]
-    pub(crate) fn new(id: u64) -> Self {
+    /// Returns a new ChannelId
+    pub fn new(id: u64) -> Self {
         Self(id)
     }
 
@@ -31,6 +31,12 @@ impl ChannelId {
 impl From<ChannelId> for u64 {
     fn from(id: ChannelId) -> u64 {
         id.0
+    }
+}
+
+impl From<u64> for ChannelId {
+    fn from(value: u64) -> Self {
+        ChannelId::new(value)
     }
 }
 
