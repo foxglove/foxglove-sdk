@@ -298,23 +298,23 @@ mod tests {
         channel.log(msg);
         assert!(!logs_contain(ERROR_LOGGING_MESSAGE));
 
-        let recorded1 = sink1.recorded.lock();
-        let recorded2 = sink2.recorded.lock();
+        let messages1 = sink1.take_messages();
+        let messages2 = sink2.take_messages();
 
-        assert_eq!(recorded1.len(), 1);
-        assert_eq!(recorded2.len(), 1);
+        assert_eq!(messages1.len(), 1);
+        assert_eq!(messages2.len(), 1);
 
-        assert_eq!(recorded1[0].channel_id, channel.id());
-        assert_eq!(recorded1[0].msg, msg.to_vec());
-        let metadata1 = &recorded1[0].metadata;
+        assert_eq!(messages1[0].channel_id, channel.id());
+        assert_eq!(messages1[0].msg, msg.to_vec());
+        let metadata1 = &messages1[0].metadata;
         assert!(metadata1.log_time >= now);
         assert!(metadata1.publish_time >= now);
         assert_eq!(metadata1.log_time, metadata1.publish_time);
         assert!(metadata1.sequence > 0);
 
-        assert_eq!(recorded2[0].channel_id, channel.id());
-        assert_eq!(recorded2[0].msg, msg.to_vec());
-        let metadata2 = &recorded2[0].metadata;
+        assert_eq!(messages2[0].channel_id, channel.id());
+        assert_eq!(messages2[0].msg, msg.to_vec());
+        let metadata2 = &messages2[0].metadata;
         assert!(metadata2.log_time >= now);
         assert!(metadata2.publish_time >= now);
         assert_eq!(metadata2.log_time, metadata2.publish_time);
@@ -345,11 +345,11 @@ mod tests {
         assert!(logs_contain(ERROR_LOGGING_MESSAGE));
         assert!(logs_contain("ErrorSink always fails"));
 
-        let recorded = recording_sink.recorded.lock();
-        assert_eq!(recorded.len(), 1);
-        assert_eq!(recorded[0].channel_id, channel.id());
-        assert_eq!(recorded[0].msg, msg.to_vec());
-        let metadata = &recorded[0].metadata;
+        let messages = recording_sink.take_messages();
+        assert_eq!(messages.len(), 1);
+        assert_eq!(messages[0].channel_id, channel.id());
+        assert_eq!(messages[0].msg, msg.to_vec());
+        let metadata = &messages[0].metadata;
         assert_eq!(metadata.sequence, opts.sequence.unwrap());
         assert_eq!(metadata.log_time, opts.log_time.unwrap());
         assert_eq!(metadata.publish_time, opts.publish_time.unwrap());
