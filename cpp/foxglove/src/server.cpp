@@ -8,6 +8,8 @@ namespace foxglove {
 WebSocketServer::WebSocketServer(const WebSocketServerOptions& options)
     : _callbacks(options.callbacks)
     , _impl(nullptr, foxglove_server_free) {
+  _register_cpp_wrapper();
+
   foxglove_server_callbacks cCallbacks = {};
   cCallbacks.context = this;
   bool hasAnyCallbacks = false;
