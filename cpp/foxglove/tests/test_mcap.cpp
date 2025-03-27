@@ -79,7 +79,7 @@ TEST_CASE("specify profile") {
   // Write message
   foxglove::Schema schema;
   schema.name = "ExampleSchema";
-  foxglove::Channel channel{"example1", "json", schema};
+  foxglove::RawChannel channel{"example1", "json", schema};
   std::string data = "Hello, world!";
   channel.log(reinterpret_cast<const std::byte*>(data.data()), data.size());
 
@@ -106,7 +106,7 @@ TEST_CASE("zstd compression") {
   // Write message
   foxglove::Schema schema;
   schema.name = "ExampleSchema";
-  foxglove::Channel channel{"example2", "json", schema};
+  foxglove::RawChannel channel{"example2", "json", schema};
   std::string data = "Hello, world!";
   channel.log(reinterpret_cast<const std::byte*>(data.data()), data.size());
 
@@ -133,7 +133,7 @@ TEST_CASE("lz4 compression") {
   // Write message
   foxglove::Schema schema;
   schema.name = "ExampleSchema";
-  foxglove::Channel channel{"example3", "json", schema};
+  foxglove::RawChannel channel{"example3", "json", schema};
   std::string data = "Hello, world!";
   channel.log(reinterpret_cast<const std::byte*>(data.data()), data.size());
 

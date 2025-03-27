@@ -19,7 +19,7 @@ int main(int argc, const char* argv[]) {
     })";
   schema.data = reinterpret_cast<const std::byte*>(schemaData.data());
   schema.dataLen = schemaData.size();
-  foxglove::Channel channel{"example", "json", std::move(schema)};
+  foxglove::RawChannel channel{"example", "json", std::move(schema)};
 
   for (int i = 0; i < 100; ++i) {
     std::string msg = "{\"val\": " + std::to_string(i) + "}";
