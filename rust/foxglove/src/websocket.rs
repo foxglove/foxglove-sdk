@@ -1417,6 +1417,9 @@ impl Server {
         if !self.capabilities.contains(&Capability::Services) {
             return Err(FoxgloveError::ServicesNotSupported);
         }
+        if new_services.is_empty() {
+            return Ok(());
+        }
 
         let mut new_names = HashMap::with_capacity(new_services.len());
         for service in &new_services {
