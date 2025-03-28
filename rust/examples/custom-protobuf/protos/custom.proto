@@ -1,0 +1,8 @@
+syntax = "proto3";
+
+package custom;
+
+message CustomMessage {
+    string msg = 1;
+    uint32 count = 2;
+}
