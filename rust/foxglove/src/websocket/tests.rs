@@ -500,6 +500,50 @@ async fn test_log_only_to_subscribers() {
     server.stop().await;
 }
 
+#[tokio::test]
+async fn test_log_static_messages() {
+    let ctx = Context::new();
+    let server = create_server(&ctx, ServerOptions::default());
+    let addr = server
+        .start("127.0.0.1", 0)
+        .await
+        .expect("Failed to start server");
+
+    // Create a channel with a static message.
+    let chan = new_channel("/test", &ctx);
+    chan.log_static_with_meta(
+        b"static".to_vec(),
+        PartialMetadata {
+            log_time: Some(123456),
+            ..Default::default()
+        },
+    );
+
+    // Connect a client and subscribe.
+    let mut ws_client = connect_client(addr).await;
+    ws_client.next().await.expect("server info").unwrap();
+    ws_client.next().await.expect("advertisement").unwrap();
+    ws_client
+        .send(Message::text(
+            json!({
+                "op": "subscribe",
+                "subscriptions": [{ "id": 1, "channelId": chan.id() }]
+            })
+            .to_string(),
+        ))
+        .await
+        .expect("Failed to send");
+
+    // Receive the static message immediately.
+    let result = ws_client.next().await.unwrap();
+    let msg = result.expect("Failed to parse message");
+    let data = msg.into_data();
+    assert_eq!(data[0], 0x01); // message data opcode
+    assert_eq!(u32::from_le_bytes(data[1..=4].try_into().unwrap()), 1);
+    assert_eq!(u64::from_le_bytes(data[5..=12].try_into().unwrap()), 123456);
+    assert_eq!(&data[13..], b"static");
+}
+
 #[traced_test]
 #[tokio::test]
 async fn test_error_when_client_publish_unsupported() {
