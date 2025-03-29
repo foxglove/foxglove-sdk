@@ -42,7 +42,7 @@ impl From<CompressionArg> for Option<Compression> {
     }
 }
 
-#[derive(Debug, serde::Serialize, schemars::JsonSchema)]
+#[derive(Debug, foxglove::Loggable)]
 struct Message {
     msg: String,
     count: u32,

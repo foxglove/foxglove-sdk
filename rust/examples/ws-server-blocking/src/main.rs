@@ -6,7 +6,7 @@ use std::time::Duration;
 
 use clap::Parser;
 
-#[derive(Debug, serde::Serialize, schemars::JsonSchema)]
+#[derive(Debug, foxglove::Loggable)]
 struct Message {
     msg: String,
     count: u32,
