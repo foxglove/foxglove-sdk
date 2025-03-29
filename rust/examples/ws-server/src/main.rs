@@ -4,19 +4,17 @@ use foxglove::schemas::{
     Color, CubePrimitive, FrameTransform, Pose, Quaternion, SceneEntity, SceneUpdate, Vector3,
 };
 use foxglove::{static_typed_channel, Channel, ChannelBuilder};
-use schemars::JsonSchema;
-use serde::Serialize;
 use std::sync::{Arc, LazyLock};
 use std::time::Duration;
 
-#[derive(Debug, Serialize, JsonSchema)]
+#[derive(Debug, Clone, Copy, foxglove::Loggable)]
 enum MessageLevel {
     Debug,
     #[allow(dead_code)]
     Info,
 }
 
-#[derive(Debug, Serialize, JsonSchema)]
+#[derive(foxglove::Loggable)]
 struct Message {
     level: MessageLevel,
     msg: String,

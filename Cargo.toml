@@ -4,6 +4,7 @@ members = [
   "c",
   "rust/foxglove",
   "rust/foxglove-proto-gen",
+  "rust/foxglove-derive",
   "rust/examples/*",
   "rust/examples-unstable/*",
   "python/foxglove-sdk",

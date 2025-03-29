@@ -39,6 +39,7 @@ tokio-util.workspace = true
 tokio.workspace = true
 tracing.workspace = true
 delegate = "0.13.2"
+foxglove-derive = { version = "0.0.1", path = "../foxglove-derive" }
 
 [dev-dependencies]
 assert_matches = "1.5.0"
