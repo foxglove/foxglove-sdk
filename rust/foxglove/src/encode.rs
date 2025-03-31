@@ -4,10 +4,11 @@ use bytes::BufMut;
 use delegate::delegate;
 use schemars::{gen::SchemaSettings, JsonSchema};
 use serde::Serialize;
+use smallbytes::SmallBytes;
 
 use crate::{channel::ChannelId, Channel, ChannelBuilder, FoxgloveError, PartialMetadata, Schema};
 
-const STACK_BUFFER_SIZE: usize = 128 * 1024;
+const STACK_BUFFER_SIZE: usize = 256 * 1024;
 
 /// A trait representing a message that can be logged to a [`Channel`].
 ///
@@ -130,29 +131,10 @@ impl<T: Encode> TypedChannel<T> {
 
     fn log_to_sinks(&self, msg: &T, metadata: PartialMetadata) {
         // Try to avoid heap allocation by using a stack buffer.
-        let mut stack_buf = [0u8; STACK_BUFFER_SIZE];
-        let mut cursor = &mut stack_buf[..];
+        let mut buf: SmallBytes<STACK_BUFFER_SIZE> = SmallBytes::new();
 
-        match msg.encode(&mut cursor) {
-            Ok(()) => {
-                // Compute the written amount of bytes
-                let written = cursor.as_ptr() as usize - stack_buf.as_ptr() as usize;
-                self.inner.log_to_sinks(&stack_buf[..written], metadata);
-            }
-            Err(_) => {
-                // Likely the stack buffer was too small, so fall back to a heap buffer.
-                let mut size = msg.encoded_len().unwrap_or(STACK_BUFFER_SIZE * 2);
-                if size <= STACK_BUFFER_SIZE {
-                    // The estimate in `encoded_len` was too small, fall back to stack buffer size * 2
-                    size = STACK_BUFFER_SIZE * 2;
-                }
-                let mut buf = Vec::with_capacity(size);
-                if let Err(err) = msg.encode(&mut buf) {
-                    tracing::error!("failed to encode message: {:?}", err);
-                }
-                self.inner.log_to_sinks(&buf, metadata);
-            }
-        }
+        msg.encode(&mut buf).unwrap();
+        self.inner.log_to_sinks(&buf, metadata);
     }
 }
 

@@ -32,6 +32,7 @@ serde_repr = "0.1.19"
 serde_with = { version = "3.12.0", features = ["macros", "base64"] }
 serde.workspace = true
 smallvec = "1.14.0"
+smallbytes = "0.1.0"
 strum = { version = "0.26", features = ["derive"] }
 thiserror.workspace = true
 tokio-tungstenite.workspace = true
