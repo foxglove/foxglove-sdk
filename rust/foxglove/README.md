@@ -18,7 +18,7 @@ A "sink" is a destination for logged messages — either an MCAP file or a live 
 A "channel" gives a way to log related messages which have the same schema. Each channel is instantiated with a unique topic name.
 
 The SDK provides structs for well-known schemas. These can be used in conjunction with
-`TypedChannel` for type-safe logging, which ensures at compile time that
+`Channel` for type-safe logging, which ensures at compile time that
 messages logged to a channel all share a common schema.
 
 You can also define your own custom data types by implementing the `Encode` trait. This

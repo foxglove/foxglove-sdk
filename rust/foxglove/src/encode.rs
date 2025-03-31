@@ -1,18 +1,14 @@
-use std::{borrow::Cow, collections::BTreeMap, sync::Arc};
+use std::borrow::Cow;
 
 use bytes::BufMut;
-use delegate::delegate;
 use schemars::{gen::SchemaSettings, JsonSchema};
 use serde::Serialize;
-use smallbytes::SmallBytes;
 
-use crate::{channel::ChannelId, Channel, ChannelBuilder, FoxgloveError, PartialMetadata, Schema};
-
-const STACK_BUFFER_SIZE: usize = 256 * 1024;
+use crate::Schema;
 
 /// A trait representing a message that can be logged to a [`Channel`].
 ///
-/// Implementing this trait for your type `T` enables the use of [`TypedChannel<T>`],
+/// Implementing this trait for your type `T` enables the use of [`Channel<T>`][crate::Channel],
 /// which offers a type-checked `log` method.
 pub trait Encode {
     /// The error type returned by methods in this trait.
@@ -71,111 +67,6 @@ impl<T: Serialize + JsonSchema> Encode for T {
     }
 }
 
-/// A typed [`Channel`] for messages that implement [`Encode`].
-///
-/// Channels are immutable, returned as `Arc<Channel>` and can be shared between threads.
-#[derive(Debug)]
-pub struct TypedChannel<T: Encode> {
-    inner: Arc<Channel>,
-    _phantom: std::marker::PhantomData<T>,
-}
-
-impl<T: Encode> TypedChannel<T> {
-    /// Constructs a new typed channel with default settings.
-    ///
-    /// If you want to override the channel configuration, use [`ChannelBuilder::build_typed`].
-    pub fn new(topic: impl Into<String>) -> Result<Self, FoxgloveError> {
-        ChannelBuilder::new(topic).build_typed()
-    }
-
-    pub(crate) fn from_channel(channel: Arc<Channel>) -> Self {
-        Self {
-            inner: channel,
-            _phantom: std::marker::PhantomData,
-        }
-    }
-
-    delegate! { to self.inner {
-        /// Returns the channel ID.
-        pub fn id(&self) -> ChannelId;
-
-        /// Returns the topic name of the channel.
-        pub fn topic(&self) -> &str;
-
-        /// Returns the channel schema.
-        pub fn schema(&self) -> Option<&Schema>;
-
-        /// Returns the message encoding for this channel.
-        pub fn message_encoding(&self) -> &str;
-
-        /// Returns the metadata for this channel.
-        pub fn metadata(&self) -> &BTreeMap<String, String>;
-
-        /// Returns true if there's at least one sink subscribed to this channel.
-        pub fn has_sinks(&self) -> bool;
-    } }
-
-    /// Encodes the message and logs it on the channel.
-    pub fn log(&self, msg: &T) {
-        if self.has_sinks() {
-            self.log_to_sinks(msg, PartialMetadata::default());
-        }
-    }
-
-    /// Encodes the message and logs it on the channel with additional metadata.
-    pub fn log_with_meta(&self, msg: &T, metadata: PartialMetadata) {
-        if self.has_sinks() {
-            self.log_to_sinks(msg, metadata);
-        }
-    }
-
-    fn log_to_sinks(&self, msg: &T, metadata: PartialMetadata) {
-        // Try to avoid heap allocation by using a stack buffer.
-        let mut buf: SmallBytes<STACK_BUFFER_SIZE> = SmallBytes::new();
-
-        msg.encode(&mut buf).unwrap();
-        self.inner.log_to_sinks(&buf, metadata);
-    }
-}
-
-/// Registers a static [`TypedChannel`] for the provided topic and message type.
-///
-/// This macro is a wrapper around [`LazyLock<TypedChannel<T>>`](std::sync::LazyLock),
-/// which initializes the channel lazily upon first use. If the initialization fails (e.g., due to
-/// [`FoxgloveError::DuplicateChannel`]), the program will panic.
-///
-/// If you don't require a static variable, you can just use [`TypedChannel::new()`] directly.
-///
-/// The channel is created with the provided visibility and identifier, and the topic and message type.
-///
-/// # Example
-/// ```
-/// use foxglove::static_typed_channel;
-/// use foxglove::schemas::{FrameTransform, SceneUpdate};
-///
-/// // A locally-scoped typed channel.
-/// static_typed_channel!(TF, "/tf", FrameTransform);
-///
-/// // A pub(crate)-scoped typed channel.
-/// static_typed_channel!(pub(crate) BOXES, "/boxes", SceneUpdate);
-///
-/// // Usage (you would populate the structs, rather than using `default()`).
-/// TF.log(&FrameTransform::default());
-/// BOXES.log(&SceneUpdate::default());
-/// ```
-#[macro_export]
-macro_rules! static_typed_channel {
-    ($vis:vis $ident: ident, $topic: literal, $ty: ty) => {
-        $vis static $ident: std::sync::LazyLock<$crate::TypedChannel<$ty>> =
-            std::sync::LazyLock::new(|| match $crate::TypedChannel::new($topic) {
-                Ok(channel) => channel,
-                Err(e) => {
-                    panic!("Failed to create channel for {}: {:?}", $topic, e);
-                }
-            });
-    };
-}
-
 #[cfg(test)]
 mod test {
     use super::*;
@@ -224,7 +115,7 @@ mod test {
         let ctx = Context::new();
         let channel = ChannelBuilder::new("topic2")
             .context(&ctx)
-            .build_typed::<TestMessage>()
+            .build::<TestMessage>()
             .expect("failed to build channel");
 
         let message = TestMessage {

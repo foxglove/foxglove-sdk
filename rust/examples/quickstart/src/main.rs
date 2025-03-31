@@ -10,7 +10,7 @@ use foxglove::McapWriter;
 
 const FILE_NAME: &str = "quickstart-rust.mcap";
 
-foxglove::static_typed_channel!(pub(crate) SCENE, "/scene", foxglove::schemas::SceneUpdate);
+foxglove::static_channel!(pub(crate) SCENE, "/scene", foxglove::schemas::SceneUpdate);
 
 fn log_message() {
     let size = std::time::SystemTime::now()

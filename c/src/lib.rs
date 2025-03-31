@@ -131,7 +131,7 @@ pub struct FoxgloveWebSocketServer(Option<foxglove::WebSocketServerBlockingHandl
 
 // cbindgen does not actually generate a declaration for this, so we manually write one in
 // after_includes
-pub use foxglove::Channel as FoxgloveChannel;
+pub use foxglove::RawChannel as FoxgloveChannel;
 
 #[repr(C)]
 pub struct FoxgloveSchema {
@@ -386,7 +386,7 @@ pub unsafe extern "C" fn foxglove_channel_create(
         foxglove::ChannelBuilder::new(topic)
             .message_encoding(message_encoding)
             .schema(schema)
-            .build()
+            .build_raw()
             .expect("Failed to create channel"),
     )
     .cast_mut()
