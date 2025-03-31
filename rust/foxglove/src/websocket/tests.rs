@@ -12,7 +12,7 @@ use tungstenite::client::IntoClientRequest;
 
 use super::{create_server, send_lossy, SendLossyResult, ServerOptions, SUBPROTOCOL};
 use crate::testutil::{assert_eventually, RecordingServerListener};
-use crate::websocket::service::{CallId, Service, ServiceId, ServiceSchema};
+use crate::websocket::service::{CallId, Service, ServiceSchema};
 use crate::websocket::{
     BlockingAssetHandlerFn, Capability, ClientChannelId, ConnectionGraph, Parameter, ParameterType,
     ParameterValue, Status, StatusLevel,
@@ -1172,9 +1172,8 @@ async fn test_get_parameters() {
 
 #[tokio::test]
 async fn test_services() {
-    let ok_svc = Service::builder("/ok", ServiceSchema::new("plain"))
-        .with_id(ServiceId::new(1))
-        .handler_fn(|req| -> Result<Bytes, String> {
+    let ok_svc = Service::builder("/ok", ServiceSchema::new("plain")).handler_fn(
+        |req| -> Result<Bytes, String> {
             assert_eq!(req.service_name(), "/ok");
             assert_eq!(req.call_id(), CallId::new(99));
             let payload = req.into_payload();
@@ -1182,7 +1181,9 @@ async fn test_services() {
             response.put(payload);
             response.reverse();
             Ok(response.freeze())
-        });
+        },
+    );
+    let ok_svc_id = ok_svc.id();
 
     let ctx = Context::new();
     let server = create_server(
@@ -1215,7 +1216,7 @@ async fn test_services() {
             "op": "advertiseServices",
             "services": [
                 {
-                    "id": 1,
+                    "id": ok_svc_id,
                     "name": "/ok",
                     "type": "plain",
                     "requestSchema": "",
@@ -1229,7 +1230,7 @@ async fn test_services() {
     // Send a request.
     let mut buf = BytesMut::new();
     buf.put_u8(2); // opcode
-    buf.put_u32_le(1); // service id
+    buf.put_u32_le(ok_svc_id.into()); // service id
     buf.put_u32_le(99); // call id
     buf.put_u32_le(3); // encoding length
     buf.put(b"raw".as_slice());
@@ -1248,7 +1249,7 @@ async fn test_services() {
         .expect("Failed to parse response");
     let mut buf = BytesMut::new();
     buf.put_u8(3); // opcode
-    buf.put_u32_le(1); // service id
+    buf.put_u32_le(ok_svc_id.into()); // service id
     buf.put_u32_le(99); // call id
     buf.put_u32_le(3); // encoding length
     buf.put(b"raw".as_slice());
@@ -1256,9 +1257,9 @@ async fn test_services() {
     assert_eq!(msg.into_data(), buf);
 
     // Register a new service.
-    let err_svc = Service::builder("/err", ServiceSchema::new("plain"))
-        .with_id(ServiceId::new(2))
-        .handler_fn(|_| Err("oh noes"));
+    let err_svc =
+        Service::builder("/err", ServiceSchema::new("plain")).handler_fn(|_| Err("oh noes"));
+    let err_svc_id = err_svc.id();
     server
         .add_services(vec![err_svc])
         .expect("Failed to add service");
@@ -1274,7 +1275,7 @@ async fn test_services() {
             "op": "advertiseServices",
             "services": [
                 {
-                    "id": 2,
+                    "id": err_svc_id,
                     "name": "/err",
                     "type": "plain",
                     "requestSchema": "",
@@ -1288,7 +1289,7 @@ async fn test_services() {
     // Send a request to the error service.
     let mut buf = BytesMut::new();
     buf.put_u8(2); // opcode
-    buf.put_u32_le(2); // service id
+    buf.put_u32_le(err_svc_id.into()); // service id
     buf.put_u32_le(11); // call id
     buf.put_u32_le(3); // encoding length
     buf.put(b"raw".as_slice());
@@ -1308,7 +1309,7 @@ async fn test_services() {
         msg.into_text().expect("Expected utf8").as_str(),
         json!({
             "op": "serviceCallFailure",
-            "serviceId": 2,
+            "serviceId": err_svc_id,
             "callId": 11,
             "message": "oh noes",
         })
@@ -1343,7 +1344,7 @@ async fn test_services() {
         msg.into_text().expect("Expected utf8").as_str(),
         json!({
             "op": "unadvertiseServices",
-            "serviceIds": [1]
+            "serviceIds": [ok_svc_id]
         })
         .to_string()
     );
@@ -1364,9 +1365,53 @@ async fn test_services() {
         msg.into_text().expect("Expected utf8").as_str(),
         json!({
             "op": "serviceCallFailure",
-            "serviceId": 1,
+            "serviceId": ok_svc_id,
             "callId": 99,
             "message": "Unknown service",
+        })
+        .to_string()
+    );
+
+    // Add a service that always panics.
+    let panic_svc = Service::builder("/panic", ServiceSchema::new("raw"))
+        .blocking_handler_fn(|_| -> Result<Bytes, String> { panic!("oh noes") });
+    let panic_svc_id = panic_svc.id();
+    server
+        .add_services(vec![panic_svc])
+        .expect("Failed to add service");
+
+    let _ = client1
+        .next()
+        .await
+        .expect("No service advertisement sent")
+        .unwrap();
+
+    // Send a request to the panic service.
+    let mut buf = BytesMut::new();
+    buf.put_u8(2); // opcode
+    buf.put_u32_le(panic_svc_id.into()); // service id
+    buf.put_u32_le(22); // call id
+    buf.put_u32_le(3); // encoding length
+    buf.put(b"raw".as_slice());
+    buf.put(b"payload".as_slice());
+    client1
+        .send(Message::binary(buf.freeze()))
+        .await
+        .expect("Failed to send");
+
+    // Validate the error response.
+    let msg = client1
+        .next()
+        .await
+        .expect("No service call response")
+        .expect("Failed to parse response");
+    assert_eq!(
+        msg.into_text().expect("Expected utf8").as_str(),
+        json!({
+            "op": "serviceCallFailure",
+            "serviceId": panic_svc_id,
+            "callId": 22,
+            "message": "Internal server error: service failed to send a response",
         })
         .to_string()
     );
@@ -1383,6 +1428,8 @@ async fn test_fetch_asset() {
                 |_client, uri: String| {
                     if uri.ends_with("error") {
                         Err("test error".to_string())
+                    } else if uri.ends_with("panic") {
+                        panic!("oh no")
                     } else {
                         Ok(Bytes::from_static(b"test data"))
                     }
@@ -1399,46 +1446,61 @@ async fn test_fetch_asset() {
     let mut ws_client = connect_client(addr).await;
     let _ = ws_client.next().await.expect("No serverInfo sent");
 
-    let fetch_asset = json!({
-        "op": "fetchAsset",
-        "uri": "https://example.com/asset.png",
-        "requestId": 1,
-    });
-    ws_client
-        .send(Message::text(fetch_asset.to_string()))
-        .await
-        .expect("Failed to send fetch asset");
-    let fetch_asset_err = json!({
-        "op": "fetchAsset",
-        "uri": "https://example.com/error",
-        "requestId": 2,
-    });
-    ws_client
-        .send(Message::text(fetch_asset_err.to_string()))
-        .await
-        .expect("Failed to send fetch asset");
+    #[derive(Debug)]
+    struct Case<'a> {
+        uri: &'a str,
+        expect: Result<&'a [u8], &'a [u8]>,
+    }
+    impl<'a> Case<'a> {
+        fn new(uri: &'a str, expect: Result<&'a [u8], &'a [u8]>) -> Self {
+            Self { uri, expect }
+        }
+    }
+    let cases = [
+        Case::new("https://example.com/asset.png", Ok(b"test data")),
+        Case::new(
+            "https://example.com/panic",
+            Err(b"Internal server error: asset handler failed to send a response"),
+        ),
+        Case::new("https://example.com/error", Err(b"test error")),
+    ];
+    for (request_id, case) in cases.iter().enumerate() {
+        dbg!(case);
+        let req = json!({
+            "op": "fetchAsset",
+            "uri": case.uri,
+            "requestId": request_id,
+        });
+        ws_client
+            .send(Message::text(req.to_string()))
+            .await
+            .expect("Failed to send fetch asset");
 
-    let result = ws_client.next().await.unwrap();
-    let msg = result.expect("Failed to parse message");
-    let data = msg.into_data();
-    println!("data: {:?}", data);
-    assert_eq!(data[0], 0x04); // fetch asset opcode
-    assert_eq!(u32::from_le_bytes(data[1..5].try_into().unwrap()), 1);
-    assert_eq!(data[5], 0); // 0 for success
-    assert_eq!(u32::from_le_bytes(data[6..10].try_into().unwrap()), 0);
-    assert_eq!(&data[10..], b"test data");
-
-    let result = ws_client.next().await.unwrap();
-    let msg = result.expect("Failed to parse message");
-    let data = msg.into_data();
-    assert_eq!(data[0], 0x04); // fetch asset opcode
-    assert_eq!(u32::from_le_bytes(data[1..5].try_into().unwrap()), 2);
-    assert_eq!(data[5], 1); // 1 for error
-    assert_eq!(
-        u32::from_le_bytes(data[6..10].try_into().unwrap()),
-        b"test error".len() as u32
-    );
-    assert_eq!(&data[10..], b"test error");
+        let result = ws_client.next().await.unwrap();
+        let msg = result.expect("Failed to parse message");
+        let data = msg.into_data();
+        println!("data: {:?}", data);
+        assert_eq!(data[0], 0x04); // fetch asset opcode
+        assert_eq!(
+            u32::from_le_bytes(data[1..5].try_into().unwrap()),
+            request_id as u32
+        );
+        match case.expect {
+            Ok(expect_data) => {
+                assert_eq!(data[5], 0);
+                assert_eq!(u32::from_le_bytes(data[6..10].try_into().unwrap()), 0);
+                assert_eq!(&data[10..], expect_data);
+            }
+            Err(expect_data) => {
+                assert_eq!(data[5], 1);
+                assert_eq!(
+                    u32::from_le_bytes(data[6..10].try_into().unwrap()),
+                    expect_data.len() as u32
+                );
+                assert_eq!(&data[10..], expect_data);
+            }
+        }
+    }
 }
 
 #[traced_test]

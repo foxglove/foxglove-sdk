@@ -162,7 +162,7 @@ impl Encode for GeoJson {
 
     fn get_schema() -> Option<Schema> {
         Some(Schema::new(
-            "foxglove.GeoJson",
+            "foxglove.GeoJSON",
             "protobuf",
             descriptors::GEO_JSON,
         ))
