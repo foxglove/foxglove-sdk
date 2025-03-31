@@ -153,7 +153,7 @@ async fn main() {
     }
 
     let server = WebSocketServer::new()
-        .name("param server")
+        .name(env!("CARGO_PKG_NAME"))
         .capabilities([Capability::Parameters])
         .listener(listener.clone())
         .bind(args.host, args.port)

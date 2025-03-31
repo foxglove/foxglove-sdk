@@ -131,7 +131,7 @@ pub struct FoxgloveWebSocketServer(Option<foxglove::WebSocketServerBlockingHandl
 
 // cbindgen does not actually generate a declaration for this, so we manually write one in
 // after_includes
-pub use foxglove::Channel as FoxgloveChannel;
+pub use foxglove::RawChannel as FoxgloveChannel;
 
 #[repr(C)]
 pub struct FoxgloveSchema {
@@ -372,23 +372,21 @@ pub unsafe extern "C" fn foxglove_channel_create(
     let message_encoding = unsafe { CStr::from_ptr(message_encoding) }
         .to_str()
         .expect("message_encoding is invalid");
-    let schema = unsafe {
-        schema.as_ref().map(|schema| {
-            let name = CStr::from_ptr(schema.name)
-                .to_str()
-                .expect("schema name is invalid");
-            let encoding = CStr::from_ptr(schema.encoding)
-                .to_str()
-                .expect("schema encoding is invalid");
-            let data = std::slice::from_raw_parts(schema.data, schema.data_len);
-            foxglove::Schema::new(name, encoding, data)
-        })
-    };
+    let schema = unsafe { schema.as_ref() }.map(|schema| {
+        let name = unsafe { CStr::from_ptr(schema.name) }
+            .to_str()
+            .expect("schema name is invalid");
+        let encoding = unsafe { CStr::from_ptr(schema.encoding) }
+            .to_str()
+            .expect("schema encoding is invalid");
+        let data = unsafe { std::slice::from_raw_parts(schema.data, schema.data_len) };
+        foxglove::Schema::new(name, encoding, data.to_owned())
+    });
     Arc::into_raw(
         foxglove::ChannelBuilder::new(topic)
             .message_encoding(message_encoding)
             .schema(schema)
-            .build()
+            .build_raw()
             .expect("Failed to create channel"),
     )
     .cast_mut()

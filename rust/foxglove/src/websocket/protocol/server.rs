@@ -1,10 +1,8 @@
-use crate::channel::Channel;
-use crate::channel::ChannelId;
-use crate::websocket::service::CallId;
-use crate::websocket::service::ServiceId;
-use crate::websocket::service::{self, Service};
+use crate::websocket::service::{self, CallId, Service, ServiceId};
 use crate::websocket::Capability;
 use crate::FoxgloveError;
+use crate::Schema;
+use crate::{ChannelId, RawChannel};
 use base64::prelude::*;
 use bytes::{BufMut, Bytes, BytesMut};
 use serde::{Deserialize, Serialize};
@@ -39,7 +37,7 @@ pub struct Advertisement<'a> {
 }
 
 /// A parameter type.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ParameterType {
     /// A byte array, encoded as a base64-encoded string.
@@ -93,7 +91,7 @@ pub enum ServerMessage<'a> {
 }
 
 /// The log level for a [`Status`] message.
-#[derive(Debug, Copy, Clone, Serialize_repr)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Serialize_repr)]
 #[repr(u8)]
 #[allow(missing_docs)]
 pub enum StatusLevel {
@@ -187,18 +185,15 @@ fn is_schema_required(message_encoding: &str) -> bool {
         || message_encoding == "cdr"
 }
 
-/// Encodes schema data, based on message encoding.
+/// Encodes schema data, based on the schema encoding.
 ///
 /// For binary encodings, the schema data is base64-encoded. For other encodings, the schema must
 /// be valid UTF-8, or this function will return an error.
-fn encode_schema_data<'a>(
-    message_encoding: &str,
-    data: &'a [u8],
-) -> Result<Cow<'a, str>, FoxgloveError> {
-    if super::is_known_binary_schema_encoding(message_encoding) {
-        Ok(Cow::Owned(BASE64_STANDARD.encode(data)))
+fn encode_schema_data(schema: &Schema) -> Result<Cow<str>, FoxgloveError> {
+    if super::is_known_binary_schema_encoding(&schema.encoding) {
+        Ok(Cow::Owned(BASE64_STANDARD.encode(&schema.data)))
     } else {
-        std::str::from_utf8(data)
+        std::str::from_utf8(&schema.data)
             .map_err(|e| FoxgloveError::Unspecified(e.into()))
             .map(Cow::Borrowed)
     }
@@ -207,7 +202,7 @@ fn encode_schema_data<'a>(
 // A `schema` in the channel is optional except for message_encodings which require a schema.
 // Currently, Foxglove supports schemaless JSON messages.
 // https://github.com/foxglove/ws-protocol/blob/main/docs/spec.md#advertise
-pub fn advertisement(channel: &Channel) -> Result<String, FoxgloveError> {
+pub fn advertisement(channel: &RawChannel) -> Result<String, FoxgloveError> {
     let id = channel.id();
     let topic = channel.topic();
     let encoding = channel.message_encoding();
@@ -218,7 +213,7 @@ pub fn advertisement(channel: &Channel) -> Result<String, FoxgloveError> {
     }
 
     let advertisement = if let Some(schema) = schema {
-        let schema_data = encode_schema_data(&schema.encoding, &schema.data)?;
+        let schema_data = encode_schema_data(schema)?;
         Advertisement {
             id,
             topic,
@@ -303,7 +298,7 @@ impl<'a> TryFrom<&'a service::MessageSchema> for AdvertiseServiceMessageSchema<'
 
     fn try_from(ms: &'a service::MessageSchema) -> Result<Self, Self::Error> {
         let schema = &ms.schema;
-        let schema_data = encode_schema_data(&ms.encoding, &schema.data)?;
+        let schema_data = encode_schema_data(schema)?;
         Ok(Self {
             encoding: &ms.encoding,
             schema_name: &schema.name,

@@ -1,7 +1,6 @@
 import datetime
 import json
 import logging
-import math
 import struct
 import time
 from math import cos, sin
@@ -9,11 +8,7 @@ from math import cos, sin
 import foxglove
 import numpy as np
 from foxglove import Channel, Schema
-from foxglove.channels import (
-    FrameTransformsChannel,
-    PointCloudChannel,
-    SceneUpdateChannel,
-)
+from foxglove.channels import RawImageChannel
 from foxglove.schemas import (
     Color,
     CubePrimitive,
@@ -55,7 +50,8 @@ plot_schema = {
 
 class ExampleListener(ServerListener):
     def __init__(self) -> None:
-        self.subscribers: set[int] = set()
+        # Map client id -> set of subscribed topics
+        self.subscribers: dict[int, set[str]] = {}
 
     def has_subscribers(self) -> bool:
         return len(self.subscribers) > 0
@@ -70,7 +66,7 @@ class ExampleListener(ServerListener):
         We'll use this and on_unsubscribe to simply track if we have any subscribers at all.
         """
         logging.info(f"Client {client} subscribed to channel {channel.topic}")
-        self.subscribers.add(client.id)
+        self.subscribers.setdefault(client.id, set()).add(channel.topic)
 
     def on_unsubscribe(
         self,
@@ -81,7 +77,9 @@ class ExampleListener(ServerListener):
         Called by the server when a client unsubscribes from a channel.
         """
         logging.info(f"Client {client} unsubscribed from channel {channel.topic}")
-        self.subscribers.remove(client.id)
+        self.subscribers[client.id].remove(channel.topic)
+        if not self.subscribers[client.id]:
+            del self.subscribers[client.id]
 
     def on_client_advertise(
         self,
@@ -96,7 +94,7 @@ class ExampleListener(ServerListener):
         logging.info(f"  Encoding: {channel.encoding}")
         logging.info(f"  Schema name: {channel.schema_name}")
         logging.info(f"  Schema encoding: {channel.schema_encoding}")
-        logging.info(f"  Schema: {channel.schema}")
+        logging.info(f"  Schema: {channel.schema!r}")
 
     def on_message_data(
         self,
@@ -134,11 +132,6 @@ def main() -> None:
         supported_encodings=["json"],
     )
 
-    # Log messages having well-known Foxglove schemas using the appropriate channel type.
-    box_chan = SceneUpdateChannel("/boxes")
-    tf_chan = FrameTransformsChannel("/tf")
-    point_chan = PointCloudChannel("/pointcloud")
-
     # Log messages with a custom schema and any encoding.
     sin_chan = Channel(
         topic="/sine",
@@ -153,15 +146,14 @@ def main() -> None:
     # If you want to use JSON encoding, you can also specify the schema and log messages as dicts.
     json_chan = Channel(topic="/json", schema=plot_schema)
 
+    img_chan = RawImageChannel(topic="/image")
+
     try:
         counter = 0
         while True:
-            if not listener.has_subscribers():
-                continue
-
             counter += 1
             now = time.time()
-            y = np.sin(now)
+            y = sin(now)
 
             json_msg = {
                 "timestamp": now,
@@ -171,7 +163,8 @@ def main() -> None:
 
             json_chan.log(json_msg)
 
-            tf_chan.log(
+            foxglove.log(
+                "/tf",
                 FrameTransforms(
                     transforms=[
                         FrameTransform(
@@ -187,10 +180,11 @@ def main() -> None:
                             translation=Vector3(x=-10, y=-10, z=0),
                         ),
                     ]
-                )
+                ),
             )
 
-            box_chan.log(
+            foxglove.log(
+                "/boxes",
                 SceneUpdate(
                     entities=[
                         SceneEntity(
@@ -212,14 +206,16 @@ def main() -> None:
                             ],
                         ),
                     ]
-                )
+                ),
             )
 
-            point_chan.log(make_point_cloud())
-
-            # Or use high-level log API without needing to manage explicit Channels.
             foxglove.log(
-                "/high-level",
+                "/pointcloud",
+                make_point_cloud(),
+            )
+
+            # Or use typed channels directly to get better type checking
+            img_chan.log(
                 RawImage(
                     data=np.zeros((100, 100, 3), dtype=np.uint8).tobytes(),
                     step=300,
@@ -230,6 +226,10 @@ def main() -> None:
             )
 
             time.sleep(0.05)
+
+            while not listener.has_subscribers():
+                time.sleep(1)
+                continue
 
     except KeyboardInterrupt:
         server.stop()
@@ -244,13 +244,13 @@ def make_point_cloud() -> PointCloud:
     u32 = PackedElementFieldNumericType.Uint32
 
     t = time.time()
-    points = [(x + math.cos(t + y / 5), y, 0) for x in range(20) for y in range(20)]
+    points = [(x + cos(t + y / 5), y, 0) for x in range(20) for y in range(20)]
     buffer = bytearray(point_struct.size * len(points))
     for i, point in enumerate(points):
         x, y, z = point
         r = int(255 * (0.5 + 0.5 * x / 20))
         g = int(255 * y / 20)
-        b = int(255 * (0.5 + 0.5 * math.sin(t)))
+        b = int(255 * (0.5 + 0.5 * sin(t)))
         a = int(255 * (0.5 + 0.5 * ((x / 20) * (y / 20))))
         point_struct.pack_into(buffer, i * point_struct.size, x, y, z, b, g, r, a)
 

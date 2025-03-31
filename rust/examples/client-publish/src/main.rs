@@ -12,7 +12,7 @@ use foxglove::convert::SaturatingInto;
 use foxglove::schemas::log::Level;
 use foxglove::schemas::Log;
 use foxglove::websocket::{Capability, Client, ClientChannel, ServerListener};
-use foxglove::{PartialMetadata, TypedChannel, WebSocketServer};
+use foxglove::{Channel, PartialMetadata, WebSocketServer};
 use std::sync::Arc;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use tokio_util::sync::CancellationToken;
@@ -23,16 +23,34 @@ struct Cli {
     port: u16,
     #[arg(long, default_value = "127.0.0.1")]
     host: String,
-    #[arg(long, default_value = "example-json-server")]
-    server_name: String,
 }
 
 struct ExampleCallbackHandler;
 impl ServerListener for ExampleCallbackHandler {
-    fn on_message_data(&self, _client: Client, channel: &ClientChannel, message: &[u8]) {
+    fn on_message_data(&self, client: Client, channel: &ClientChannel, message: &[u8]) {
         let json: serde_json::Value =
             serde_json::from_slice(message).expect("Failed to parse message");
-        println!("Received message on channel {}: {json}", channel.id);
+        println!(
+            "Client {} published to channel {}: {json}",
+            client.id(),
+            channel.id
+        );
+    }
+
+    fn on_client_advertise(&self, client: Client, channel: &ClientChannel) {
+        println!(
+            "Client {} advertised channel: {}",
+            client.id(),
+            channel.topic
+        );
+    }
+
+    fn on_client_unadvertise(&self, client: Client, channel: &ClientChannel) {
+        println!(
+            "Client {} unadvertised channel: {}",
+            client.id(),
+            channel.topic
+        );
     }
 }
 
@@ -44,10 +62,11 @@ async fn main() {
     let args = Cli::parse();
 
     let server = WebSocketServer::new()
-        .name("client-publish")
+        .name(env!("CARGO_PKG_NAME"))
         .bind(args.host, args.port)
         .capabilities([Capability::ClientPublish])
         .listener(Arc::new(ExampleCallbackHandler))
+        .supported_encodings(["json"])
         .start()
         .await
         .expect("Failed to start server");
@@ -62,7 +81,7 @@ async fn main() {
 }
 
 async fn log_forever() {
-    let channel = TypedChannel::new("/log").expect("Failed to create channel");
+    let channel = Channel::new("/log").expect("Failed to create channel");
     let start = Instant::now();
     let mut sequence = 0;
     let mut interval = tokio::time::interval(Duration::from_secs(1));

@@ -1,5 +1,6 @@
 use std::{error::Error, fmt::Display};
 mod logging;
+mod schemas;
 
 use crate::FoxgloveError;
 

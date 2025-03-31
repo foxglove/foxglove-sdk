@@ -24,7 +24,7 @@ class MCAPWriter:
         Close the writer explicitly.
 
         You may call this to explicitly close the writer. Note that the writer
-        will be automatically closed whne it is garbage-collected, or when
+        will be automatically closed when it is garbage-collected, or when
         exiting the context manager.
         """
         ...

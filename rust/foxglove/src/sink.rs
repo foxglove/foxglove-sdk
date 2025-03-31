@@ -3,9 +3,8 @@ use std::sync::Arc;
 
 use smallvec::SmallVec;
 
-use crate::channel::Channel;
 use crate::metadata::Metadata;
-use crate::FoxgloveError;
+use crate::{FoxgloveError, RawChannel};
 
 /// Uniquely identifies a [`Sink`] in the context of this program.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -18,8 +17,13 @@ impl SinkId {
         Self(id)
     }
 }
+impl std::fmt::Display for SinkId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
 
-/// A [`Sink`] writes a message from a [`Channel`] to a destination.
+/// A [`Sink`] writes a message from a channel to a destination.
 ///
 /// Sinks are thread-safe and can be shared between threads. Usually you'd use our implementations
 /// like [`McapWriter`](crate::McapWriter) or [`WebSocketServer`](crate::WebSocketServer).
@@ -32,7 +36,12 @@ pub trait Sink: Send + Sync {
     /// Writes the message for the channel to the sink.
     ///
     /// Metadata contains optional message metadata that may be used by some sink implementations.
-    fn log(&self, channel: &Channel, msg: &[u8], metadata: &Metadata) -> Result<(), FoxgloveError>;
+    fn log(
+        &self,
+        channel: &RawChannel,
+        msg: &[u8],
+        metadata: &Metadata,
+    ) -> Result<(), FoxgloveError>;
 
     /// Called when a new channel is made available within the [`Context`][ctx].
     ///
@@ -53,7 +62,7 @@ pub trait Sink: Send + Sync {
     ///
     /// [ctx]: crate::Context
     /// [sub]: crate::Context::subscribe_channels
-    fn add_channel(&self, _channel: &Arc<Channel>) -> bool {
+    fn add_channel(&self, _channel: &Arc<RawChannel>) -> bool {
         false
     }
 
@@ -67,7 +76,7 @@ pub trait Sink: Send + Sync {
     ///
     /// [ctx]: crate::Context
     /// [unsub]: crate::Context::unsubscribe_channels
-    fn remove_channel(&self, _channel: &Channel) {}
+    fn remove_channel(&self, _channel: &RawChannel) {}
 
     /// Indicates whether this sink automatically subscribes to all channels.
     ///

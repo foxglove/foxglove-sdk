@@ -46,7 +46,7 @@ def test_log_must_serialize_on_protobuf_channel(new_topic: str) -> None:
         ),
     )
 
-    with pytest.raises(ValueError, match="Unsupported message type"):
+    with pytest.raises(TypeError, match="Unsupported message type"):
         channel.log({"test": "test"})
 
     channel.log(b"\x01")
