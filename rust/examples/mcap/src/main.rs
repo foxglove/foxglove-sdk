@@ -3,7 +3,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
 use clap::{Parser, ValueEnum};
-use foxglove::McapWriter;
+use foxglove::{LazyChannel, McapWriter};
 use mcap::{Compression, WriteOptions};
 use std::time::Duration;
 
@@ -48,7 +48,7 @@ struct Message {
     count: u32,
 }
 
-foxglove::static_channel!(pub MSG_CHANNEL, "/msg", Message);
+static MSG_CHANNEL: LazyChannel<Message> = LazyChannel::new("/msg");
 
 fn log_until(fps: u8, stop: Arc<AtomicBool>) {
     let mut count: u32 = 0;

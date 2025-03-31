@@ -8,7 +8,10 @@ use serde::{Deserialize, Serialize};
 
 use crate::{ChannelBuilder, Encode, FoxgloveError, PartialMetadata, Schema};
 
+mod lazy_channel;
 mod raw_channel;
+
+pub use lazy_channel::LazyChannel;
 pub use raw_channel::RawChannel;
 
 /// Stack buffer size to use for encoding messages.
@@ -134,44 +137,6 @@ impl<T: Encode> Channel<T> {
             }
         }
     }
-}
-
-/// Registers a static [`Channel`] for the provided topic and message type.
-///
-/// This macro is a wrapper around [`LazyLock<Channel<T>>`](std::sync::LazyLock),
-/// which initializes the channel lazily upon first use. If the initialization fails (e.g., due to
-/// [`FoxgloveError::DuplicateChannel`]), the program will panic.
-///
-/// If you don't require a static variable, you can just use [`Channel::new()`] directly.
-///
-/// The channel is created with the provided visibility and identifier, and the topic and message type.
-///
-/// # Example
-/// ```
-/// use foxglove::static_channel;
-/// use foxglove::schemas::{FrameTransform, SceneUpdate};
-///
-/// // A locally-scoped typed channel.
-/// static_channel!(TF, "/tf", FrameTransform);
-///
-/// // A pub(crate)-scoped typed channel.
-/// static_channel!(pub(crate) BOXES, "/boxes", SceneUpdate);
-///
-/// // Usage (you would populate the structs, rather than using `default()`).
-/// TF.log(&FrameTransform::default());
-/// BOXES.log(&SceneUpdate::default());
-/// ```
-#[macro_export]
-macro_rules! static_channel {
-    ($vis:vis $ident: ident, $topic: literal, $ty: ty) => {
-        $vis static $ident: std::sync::LazyLock<$crate::Channel<$ty>> =
-            std::sync::LazyLock::new(|| match $crate::Channel::new($topic) {
-                Ok(channel) => channel,
-                Err(e) => {
-                    panic!("Failed to create channel for {}: {:?}", $topic, e);
-                }
-            });
-    };
 }
 
 #[cfg(test)]
