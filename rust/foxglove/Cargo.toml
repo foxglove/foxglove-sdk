@@ -3,6 +3,7 @@ name = "foxglove"
 version = "0.4.1"
 description = "Foxglove SDK"
 edition = "2021"
+rust-version = "1.83.0"
 repository = "https://github.com/foxglove/foxglove-sdk"
 license = "MIT"
 

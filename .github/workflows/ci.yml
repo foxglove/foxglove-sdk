@@ -21,6 +21,8 @@ jobs:
           version: "29.x"
 
       - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: 1.83.0
 
       - name: Ensure generated protobuf schemas are up to date
         run: cargo run --bin foxglove-proto-gen && git diff --exit-code
