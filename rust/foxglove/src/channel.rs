@@ -112,6 +112,9 @@ impl<T: Encode> Channel<T> {
     fn log_to_sinks(&self, msg: &T, metadata: PartialMetadata) {
         // Try to avoid heap allocation by using a stack buffer.
         let mut buf: SmallBytes<STACK_BUFFER_SIZE> = SmallBytes::new();
+        if let Some(estimated_size) = msg.encoded_len() {
+            buf.reserve(estimated_size);
+        }
 
         msg.encode(&mut buf).unwrap();
         self.inner.log_to_sinks(&buf, metadata);
