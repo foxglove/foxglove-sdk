@@ -289,6 +289,6 @@ fn test_timestamp_now() {
 
     let now = Timestamp::now();
 
-    assert!(now.sec() > before.sec() || (now.sec() == before.sec() && now.nsec() >= before.nsec()));
+    assert!(now >= before);
     assert!(now.nsec() < 1_000_000_000);
 }
