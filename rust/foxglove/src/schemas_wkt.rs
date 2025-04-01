@@ -339,6 +339,15 @@ impl Timestamp {
         Self::new_checked(sec, nsec).unwrap()
     }
 
+    /// Returns the current timestamp using SystemTime
+    pub fn now() -> Self {
+        let now = std::time::SystemTime::now();
+        let duration = now.duration_since(std::time::UNIX_EPOCH).unwrap();
+        let sec = duration.as_secs() as u32;
+        let nsec = duration.subsec_nanos();
+        Self::new(sec, nsec)
+    }
+
     /// Returns the number of seconds in the timestamp.
     pub fn sec(&self) -> u32 {
         self.sec
@@ -443,3 +452,5 @@ where
         }
     }
 }
+
+

@@ -281,3 +281,14 @@ fn test_timestamp_from_system_time() {
     assert_matches!(Timestamp::try_from(orig), Err(RangeError::UpperBound));
     assert_eq!(Timestamp::saturating_from(orig), Timestamp::MAX);
 }
+
+#[test]
+fn test_timestamp_now() {
+    let now = std::time::SystemTime::now();
+    let before = Timestamp::try_from(now).unwrap();
+
+    let now = Timestamp::now();
+
+    assert!(now.sec() > before.sec() || (now.sec() == before.sec() && now.nsec() >= before.nsec()));
+    assert!(now.nsec() < 1_000_000_000);
+}
