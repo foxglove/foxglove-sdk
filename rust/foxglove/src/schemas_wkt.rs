@@ -130,8 +130,9 @@ impl Duration {
 
     /// Creates a new normalized duration.
     ///
-    /// Returns `None` if the result is out of range. This can only happen if `nsec` is greater
-    /// than `999_999_999`.
+    /// This constructor normalizes the duration by converting excess nanoseconds into seconds.
+    ///
+    /// Returns `None` if the attempt to convert excess nanoseconds causes `sec` to overflow.
     pub fn new_checked(sec: i32, nsec: u32) -> Option<Self> {
         normalize_nsec(nsec)
             .carry_i32(sec)
@@ -140,8 +141,9 @@ impl Duration {
 
     /// Creates a new normalized duration.
     ///
-    /// Panics if the result is out of range. This can only happen if `nsec` is greater than
-    /// `999_999_999`.
+    /// This constructor normalizes the duration by converting excess nanoseconds into seconds.
+    ///
+    /// Panics if the attempt to convert excess nanoseconds causes `sec` to overflow.
     pub fn new(sec: i32, nsec: u32) -> Self {
         Self::new_checked(sec, nsec).unwrap()
     }
