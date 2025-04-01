@@ -38,6 +38,19 @@ impl Timestamp {
         self.0.nsec()
     }
 
+    /// Creates a :py:class:`Timestamp` from the current system time.
+    ///
+    /// Raises `OverflowError` if the timestamp cannot be represented.
+    /// :rtype: :py:class:`Timestamp`
+    #[staticmethod]
+    #[pyo3(signature = ())]
+    fn now() -> PyResult<Self> {
+        let now = std::time::SystemTime::now();
+        Ok(Self(foxglove::schemas::Timestamp::try_from(now).map_err(
+            |_| PyOverflowError::new_err("timestamp out of range"),
+        )?))
+    }
+
     /// Creates a :py:class:`Timestamp` from an epoch timestamp, such as is returned by
     /// :py:func:`time.time` or :py:func:`datetime.datetime.timestamp`.
     ///

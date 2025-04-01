@@ -29,3 +29,7 @@ automatically implemented for types that implement `serde::Serialize` and
 # Get Started
 
 For more information and examples, see [docs.rs](https://docs.rs/foxglove).
+
+# Supported Rust Versions
+
+The current MSRV (minimum supported rust version) is 1.83.0.
