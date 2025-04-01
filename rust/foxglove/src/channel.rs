@@ -93,6 +93,11 @@ impl<T: Encode> Channel<T> {
 
         /// Returns true if there's at least one sink subscribed to this channel.
         pub fn has_sinks(&self) -> bool;
+
+        /// Closes the channel, removing it from the context.
+        ///
+        /// Future messages logged to the channel will not be received by any sink.
+        pub fn close(&self);
     } }
 
     /// Encodes the message and logs it on the channel.
@@ -170,8 +175,9 @@ mod test {
     use std::sync::Arc;
     use tracing_test::traced_test;
 
-    fn new_test_channel() -> Arc<RawChannel> {
+    fn new_test_channel(ctx: &Arc<Context>) -> Arc<RawChannel> {
         RawChannel::new(
+            ctx,
             "topic".into(),
             "message_encoding".into(),
             Some(Schema::new(
@@ -214,7 +220,8 @@ mod test {
 
     #[test]
     fn test_channel_next_sequence() {
-        let channel = new_test_channel();
+        let ctx = Context::new();
+        let channel = new_test_channel(&ctx);
         assert_eq!(channel.next_sequence(), 1);
         assert_eq!(channel.next_sequence(), 2);
     }
@@ -222,7 +229,8 @@ mod test {
     #[traced_test]
     #[test]
     fn test_channel_log_msg() {
-        let channel = Arc::new(new_test_channel());
+        let ctx = Context::new();
+        let channel = Arc::new(new_test_channel(&ctx));
         let msg = vec![1, 2, 3];
         channel.log(&msg);
         assert!(!logs_contain(ERROR_LOGGING_MESSAGE));
@@ -236,7 +244,7 @@ mod test {
 
         assert!(ctx.add_sink(recording_sink.clone()));
 
-        let channel = new_test_channel();
+        let channel = new_test_channel(&ctx);
         ctx.add_channel(channel.clone()).unwrap();
         let msg = b"test_message";
 

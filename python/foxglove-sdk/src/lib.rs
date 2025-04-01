@@ -151,8 +151,7 @@ impl BaseChannel {
 
     fn close(&mut self) {
         if let Some(inner) = self.0.take() {
-            let ctx = Context::get_default();
-            ctx.remove_channel_for_topic(inner.topic());
+            inner.close();
         }
     }
 }

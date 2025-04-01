@@ -68,11 +68,13 @@ impl CameraCalibrationChannel {
     /// Close the channel.
     ///
     /// You do not need to call this unless you explicitly want to remove advertisements from live
-    /// visualization clients. Destroying all references to the channel will also close it.
+    /// visualization clients.
     ///
     /// It is an error to call :py:meth:`log` after closing the channel.
     fn close(&mut self) {
-        self.0 = None;
+        if let Some(inner) = self.0.take() {
+            inner.close();
+        }
     }
 
     /// Log a :py:class:`foxglove.schemas.CameraCalibration` message to the channel.
@@ -133,11 +135,13 @@ impl CircleAnnotationChannel {
     /// Close the channel.
     ///
     /// You do not need to call this unless you explicitly want to remove advertisements from live
-    /// visualization clients. Destroying all references to the channel will also close it.
+    /// visualization clients.
     ///
     /// It is an error to call :py:meth:`log` after closing the channel.
     fn close(&mut self) {
-        self.0 = None;
+        if let Some(inner) = self.0.take() {
+            inner.close();
+        }
     }
 
     /// Log a :py:class:`foxglove.schemas.CircleAnnotation` message to the channel.
@@ -198,11 +202,13 @@ impl ColorChannel {
     /// Close the channel.
     ///
     /// You do not need to call this unless you explicitly want to remove advertisements from live
-    /// visualization clients. Destroying all references to the channel will also close it.
+    /// visualization clients.
     ///
     /// It is an error to call :py:meth:`log` after closing the channel.
     fn close(&mut self) {
-        self.0 = None;
+        if let Some(inner) = self.0.take() {
+            inner.close();
+        }
     }
 
     /// Log a :py:class:`foxglove.schemas.Color` message to the channel.
@@ -263,11 +269,13 @@ impl CompressedImageChannel {
     /// Close the channel.
     ///
     /// You do not need to call this unless you explicitly want to remove advertisements from live
-    /// visualization clients. Destroying all references to the channel will also close it.
+    /// visualization clients.
     ///
     /// It is an error to call :py:meth:`log` after closing the channel.
     fn close(&mut self) {
-        self.0 = None;
+        if let Some(inner) = self.0.take() {
+            inner.close();
+        }
     }
 
     /// Log a :py:class:`foxglove.schemas.CompressedImage` message to the channel.
@@ -328,11 +336,13 @@ impl CompressedVideoChannel {
     /// Close the channel.
     ///
     /// You do not need to call this unless you explicitly want to remove advertisements from live
-    /// visualization clients. Destroying all references to the channel will also close it.
+    /// visualization clients.
     ///
     /// It is an error to call :py:meth:`log` after closing the channel.
     fn close(&mut self) {
-        self.0 = None;
+        if let Some(inner) = self.0.take() {
+            inner.close();
+        }
     }
 
     /// Log a :py:class:`foxglove.schemas.CompressedVideo` message to the channel.
@@ -393,11 +403,13 @@ impl FrameTransformChannel {
     /// Close the channel.
     ///
     /// You do not need to call this unless you explicitly want to remove advertisements from live
-    /// visualization clients. Destroying all references to the channel will also close it.
+    /// visualization clients.
     ///
     /// It is an error to call :py:meth:`log` after closing the channel.
     fn close(&mut self) {
-        self.0 = None;
+        if let Some(inner) = self.0.take() {
+            inner.close();
+        }
     }
 
     /// Log a :py:class:`foxglove.schemas.FrameTransform` message to the channel.
@@ -458,11 +470,13 @@ impl FrameTransformsChannel {
     /// Close the channel.
     ///
     /// You do not need to call this unless you explicitly want to remove advertisements from live
-    /// visualization clients. Destroying all references to the channel will also close it.
+    /// visualization clients.
     ///
     /// It is an error to call :py:meth:`log` after closing the channel.
     fn close(&mut self) {
-        self.0 = None;
+        if let Some(inner) = self.0.take() {
+            inner.close();
+        }
     }
 
     /// Log a :py:class:`foxglove.schemas.FrameTransforms` message to the channel.
@@ -523,11 +537,13 @@ impl GeoJsonChannel {
     /// Close the channel.
     ///
     /// You do not need to call this unless you explicitly want to remove advertisements from live
-    /// visualization clients. Destroying all references to the channel will also close it.
+    /// visualization clients.
     ///
     /// It is an error to call :py:meth:`log` after closing the channel.
     fn close(&mut self) {
-        self.0 = None;
+        if let Some(inner) = self.0.take() {
+            inner.close();
+        }
     }
 
     /// Log a :py:class:`foxglove.schemas.GeoJson` message to the channel.
@@ -588,11 +604,13 @@ impl GridChannel {
     /// Close the channel.
     ///
     /// You do not need to call this unless you explicitly want to remove advertisements from live
-    /// visualization clients. Destroying all references to the channel will also close it.
+    /// visualization clients.
     ///
     /// It is an error to call :py:meth:`log` after closing the channel.
     fn close(&mut self) {
-        self.0 = None;
+        if let Some(inner) = self.0.take() {
+            inner.close();
+        }
     }
 
     /// Log a :py:class:`foxglove.schemas.Grid` message to the channel.
@@ -653,11 +671,13 @@ impl ImageAnnotationsChannel {
     /// Close the channel.
     ///
     /// You do not need to call this unless you explicitly want to remove advertisements from live
-    /// visualization clients. Destroying all references to the channel will also close it.
+    /// visualization clients.
     ///
     /// It is an error to call :py:meth:`log` after closing the channel.
     fn close(&mut self) {
-        self.0 = None;
+        if let Some(inner) = self.0.take() {
+            inner.close();
+        }
     }
 
     /// Log a :py:class:`foxglove.schemas.ImageAnnotations` message to the channel.
@@ -718,11 +738,13 @@ impl KeyValuePairChannel {
     /// Close the channel.
     ///
     /// You do not need to call this unless you explicitly want to remove advertisements from live
-    /// visualization clients. Destroying all references to the channel will also close it.
+    /// visualization clients.
     ///
     /// It is an error to call :py:meth:`log` after closing the channel.
     fn close(&mut self) {
-        self.0 = None;
+        if let Some(inner) = self.0.take() {
+            inner.close();
+        }
     }
 
     /// Log a :py:class:`foxglove.schemas.KeyValuePair` message to the channel.
@@ -783,11 +805,13 @@ impl LaserScanChannel {
     /// Close the channel.
     ///
     /// You do not need to call this unless you explicitly want to remove advertisements from live
-    /// visualization clients. Destroying all references to the channel will also close it.
+    /// visualization clients.
     ///
     /// It is an error to call :py:meth:`log` after closing the channel.
     fn close(&mut self) {
-        self.0 = None;
+        if let Some(inner) = self.0.take() {
+            inner.close();
+        }
     }
 
     /// Log a :py:class:`foxglove.schemas.LaserScan` message to the channel.
@@ -848,11 +872,13 @@ impl LocationFixChannel {
     /// Close the channel.
     ///
     /// You do not need to call this unless you explicitly want to remove advertisements from live
-    /// visualization clients. Destroying all references to the channel will also close it.
+    /// visualization clients.
     ///
     /// It is an error to call :py:meth:`log` after closing the channel.
     fn close(&mut self) {
-        self.0 = None;
+        if let Some(inner) = self.0.take() {
+            inner.close();
+        }
     }
 
     /// Log a :py:class:`foxglove.schemas.LocationFix` message to the channel.
@@ -913,11 +939,13 @@ impl LogChannel {
     /// Close the channel.
     ///
     /// You do not need to call this unless you explicitly want to remove advertisements from live
-    /// visualization clients. Destroying all references to the channel will also close it.
+    /// visualization clients.
     ///
     /// It is an error to call :py:meth:`log` after closing the channel.
     fn close(&mut self) {
-        self.0 = None;
+        if let Some(inner) = self.0.take() {
+            inner.close();
+        }
     }
 
     /// Log a :py:class:`foxglove.schemas.Log` message to the channel.
@@ -978,11 +1006,13 @@ impl SceneEntityDeletionChannel {
     /// Close the channel.
     ///
     /// You do not need to call this unless you explicitly want to remove advertisements from live
-    /// visualization clients. Destroying all references to the channel will also close it.
+    /// visualization clients.
     ///
     /// It is an error to call :py:meth:`log` after closing the channel.
     fn close(&mut self) {
-        self.0 = None;
+        if let Some(inner) = self.0.take() {
+            inner.close();
+        }
     }
 
     /// Log a :py:class:`foxglove.schemas.SceneEntityDeletion` message to the channel.
@@ -1043,11 +1073,13 @@ impl SceneEntityChannel {
     /// Close the channel.
     ///
     /// You do not need to call this unless you explicitly want to remove advertisements from live
-    /// visualization clients. Destroying all references to the channel will also close it.
+    /// visualization clients.
     ///
     /// It is an error to call :py:meth:`log` after closing the channel.
     fn close(&mut self) {
-        self.0 = None;
+        if let Some(inner) = self.0.take() {
+            inner.close();
+        }
     }
 
     /// Log a :py:class:`foxglove.schemas.SceneEntity` message to the channel.
@@ -1108,11 +1140,13 @@ impl SceneUpdateChannel {
     /// Close the channel.
     ///
     /// You do not need to call this unless you explicitly want to remove advertisements from live
-    /// visualization clients. Destroying all references to the channel will also close it.
+    /// visualization clients.
     ///
     /// It is an error to call :py:meth:`log` after closing the channel.
     fn close(&mut self) {
-        self.0 = None;
+        if let Some(inner) = self.0.take() {
+            inner.close();
+        }
     }
 
     /// Log a :py:class:`foxglove.schemas.SceneUpdate` message to the channel.
@@ -1173,11 +1207,13 @@ impl PackedElementFieldChannel {
     /// Close the channel.
     ///
     /// You do not need to call this unless you explicitly want to remove advertisements from live
-    /// visualization clients. Destroying all references to the channel will also close it.
+    /// visualization clients.
     ///
     /// It is an error to call :py:meth:`log` after closing the channel.
     fn close(&mut self) {
-        self.0 = None;
+        if let Some(inner) = self.0.take() {
+            inner.close();
+        }
     }
 
     /// Log a :py:class:`foxglove.schemas.PackedElementField` message to the channel.
@@ -1238,11 +1274,13 @@ impl Point2Channel {
     /// Close the channel.
     ///
     /// You do not need to call this unless you explicitly want to remove advertisements from live
-    /// visualization clients. Destroying all references to the channel will also close it.
+    /// visualization clients.
     ///
     /// It is an error to call :py:meth:`log` after closing the channel.
     fn close(&mut self) {
-        self.0 = None;
+        if let Some(inner) = self.0.take() {
+            inner.close();
+        }
     }
 
     /// Log a :py:class:`foxglove.schemas.Point2` message to the channel.
@@ -1303,11 +1341,13 @@ impl Point3Channel {
     /// Close the channel.
     ///
     /// You do not need to call this unless you explicitly want to remove advertisements from live
-    /// visualization clients. Destroying all references to the channel will also close it.
+    /// visualization clients.
     ///
     /// It is an error to call :py:meth:`log` after closing the channel.
     fn close(&mut self) {
-        self.0 = None;
+        if let Some(inner) = self.0.take() {
+            inner.close();
+        }
     }
 
     /// Log a :py:class:`foxglove.schemas.Point3` message to the channel.
@@ -1368,11 +1408,13 @@ impl PointCloudChannel {
     /// Close the channel.
     ///
     /// You do not need to call this unless you explicitly want to remove advertisements from live
-    /// visualization clients. Destroying all references to the channel will also close it.
+    /// visualization clients.
     ///
     /// It is an error to call :py:meth:`log` after closing the channel.
     fn close(&mut self) {
-        self.0 = None;
+        if let Some(inner) = self.0.take() {
+            inner.close();
+        }
     }
 
     /// Log a :py:class:`foxglove.schemas.PointCloud` message to the channel.
@@ -1433,11 +1475,13 @@ impl PointsAnnotationChannel {
     /// Close the channel.
     ///
     /// You do not need to call this unless you explicitly want to remove advertisements from live
-    /// visualization clients. Destroying all references to the channel will also close it.
+    /// visualization clients.
     ///
     /// It is an error to call :py:meth:`log` after closing the channel.
     fn close(&mut self) {
-        self.0 = None;
+        if let Some(inner) = self.0.take() {
+            inner.close();
+        }
     }
 
     /// Log a :py:class:`foxglove.schemas.PointsAnnotation` message to the channel.
@@ -1498,11 +1542,13 @@ impl PoseChannel {
     /// Close the channel.
     ///
     /// You do not need to call this unless you explicitly want to remove advertisements from live
-    /// visualization clients. Destroying all references to the channel will also close it.
+    /// visualization clients.
     ///
     /// It is an error to call :py:meth:`log` after closing the channel.
     fn close(&mut self) {
-        self.0 = None;
+        if let Some(inner) = self.0.take() {
+            inner.close();
+        }
     }
 
     /// Log a :py:class:`foxglove.schemas.Pose` message to the channel.
@@ -1563,11 +1609,13 @@ impl PoseInFrameChannel {
     /// Close the channel.
     ///
     /// You do not need to call this unless you explicitly want to remove advertisements from live
-    /// visualization clients. Destroying all references to the channel will also close it.
+    /// visualization clients.
     ///
     /// It is an error to call :py:meth:`log` after closing the channel.
     fn close(&mut self) {
-        self.0 = None;
+        if let Some(inner) = self.0.take() {
+            inner.close();
+        }
     }
 
     /// Log a :py:class:`foxglove.schemas.PoseInFrame` message to the channel.
@@ -1628,11 +1676,13 @@ impl PosesInFrameChannel {
     /// Close the channel.
     ///
     /// You do not need to call this unless you explicitly want to remove advertisements from live
-    /// visualization clients. Destroying all references to the channel will also close it.
+    /// visualization clients.
     ///
     /// It is an error to call :py:meth:`log` after closing the channel.
     fn close(&mut self) {
-        self.0 = None;
+        if let Some(inner) = self.0.take() {
+            inner.close();
+        }
     }
 
     /// Log a :py:class:`foxglove.schemas.PosesInFrame` message to the channel.
@@ -1693,11 +1743,13 @@ impl QuaternionChannel {
     /// Close the channel.
     ///
     /// You do not need to call this unless you explicitly want to remove advertisements from live
-    /// visualization clients. Destroying all references to the channel will also close it.
+    /// visualization clients.
     ///
     /// It is an error to call :py:meth:`log` after closing the channel.
     fn close(&mut self) {
-        self.0 = None;
+        if let Some(inner) = self.0.take() {
+            inner.close();
+        }
     }
 
     /// Log a :py:class:`foxglove.schemas.Quaternion` message to the channel.
@@ -1758,11 +1810,13 @@ impl RawImageChannel {
     /// Close the channel.
     ///
     /// You do not need to call this unless you explicitly want to remove advertisements from live
-    /// visualization clients. Destroying all references to the channel will also close it.
+    /// visualization clients.
     ///
     /// It is an error to call :py:meth:`log` after closing the channel.
     fn close(&mut self) {
-        self.0 = None;
+        if let Some(inner) = self.0.take() {
+            inner.close();
+        }
     }
 
     /// Log a :py:class:`foxglove.schemas.RawImage` message to the channel.
@@ -1823,11 +1877,13 @@ impl TextAnnotationChannel {
     /// Close the channel.
     ///
     /// You do not need to call this unless you explicitly want to remove advertisements from live
-    /// visualization clients. Destroying all references to the channel will also close it.
+    /// visualization clients.
     ///
     /// It is an error to call :py:meth:`log` after closing the channel.
     fn close(&mut self) {
-        self.0 = None;
+        if let Some(inner) = self.0.take() {
+            inner.close();
+        }
     }
 
     /// Log a :py:class:`foxglove.schemas.TextAnnotation` message to the channel.
@@ -1888,11 +1944,13 @@ impl Vector2Channel {
     /// Close the channel.
     ///
     /// You do not need to call this unless you explicitly want to remove advertisements from live
-    /// visualization clients. Destroying all references to the channel will also close it.
+    /// visualization clients.
     ///
     /// It is an error to call :py:meth:`log` after closing the channel.
     fn close(&mut self) {
-        self.0 = None;
+        if let Some(inner) = self.0.take() {
+            inner.close();
+        }
     }
 
     /// Log a :py:class:`foxglove.schemas.Vector2` message to the channel.
@@ -1953,11 +2011,13 @@ impl Vector3Channel {
     /// Close the channel.
     ///
     /// You do not need to call this unless you explicitly want to remove advertisements from live
-    /// visualization clients. Destroying all references to the channel will also close it.
+    /// visualization clients.
     ///
     /// It is an error to call :py:meth:`log` after closing the channel.
     fn close(&mut self) {
-        self.0 = None;
+        if let Some(inner) = self.0.take() {
+            inner.close();
+        }
     }
 
     /// Log a :py:class:`foxglove.schemas.Vector3` message to the channel.

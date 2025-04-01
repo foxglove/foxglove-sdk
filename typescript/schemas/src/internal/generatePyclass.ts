@@ -570,11 +570,13 @@ impl ${channelClass} {
     /// Close the channel.
     ///
     /// You do not need to call this unless you explicitly want to remove advertisements from live
-    /// visualization clients. Destroying all references to the channel will also close it.
+    /// visualization clients.
     ///
     /// It is an error to call :py:meth:\`log\` after closing the channel.
     fn close(&mut self) {
-        self.0 = None;
+        if let Some(inner) = self.0.take() {
+            inner.close();
+        }
     }
 
     /// Log a :py:class:\`foxglove.schemas.${schemaClass}\` message to the channel.

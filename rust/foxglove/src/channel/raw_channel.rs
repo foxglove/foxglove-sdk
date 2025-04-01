@@ -3,12 +3,12 @@
 use std::collections::BTreeMap;
 use std::sync::atomic::AtomicU32;
 use std::sync::atomic::Ordering::Relaxed;
-use std::sync::Arc;
+use std::sync::{Arc, Weak};
 
 use super::ChannelId;
 use crate::log_sink_set::LogSinkSet;
 use crate::sink::SmallSinkVec;
-use crate::{nanoseconds_since_epoch, Metadata, PartialMetadata, Schema};
+use crate::{nanoseconds_since_epoch, Context, Metadata, PartialMetadata, Schema};
 
 /// A log channel that can be used to log binary messages.
 ///
@@ -25,6 +25,7 @@ use crate::{nanoseconds_since_epoch, Metadata, PartialMetadata, Schema};
 /// Channels are created using [`ChannelBuilder`](crate::ChannelBuilder).
 pub struct RawChannel {
     id: ChannelId,
+    context: Weak<Context>,
     topic: String,
     message_encoding: String,
     schema: Option<Schema>,
@@ -35,6 +36,7 @@ pub struct RawChannel {
 
 impl RawChannel {
     pub(crate) fn new(
+        context: &Arc<Context>,
         topic: String,
         message_encoding: String,
         schema: Option<Schema>,
@@ -42,6 +44,7 @@ impl RawChannel {
     ) -> Arc<Self> {
         Arc::new(Self {
             id: ChannelId::next(),
+            context: Arc::downgrade(context),
             topic,
             message_encoding,
             schema,
@@ -79,6 +82,15 @@ impl RawChannel {
     /// Atomically increments and returns the next message sequence number.
     pub fn next_sequence(&self) -> u32 {
         self.message_sequence.fetch_add(1, Relaxed)
+    }
+
+    /// Closes the channel, removing it from the context.
+    ///
+    /// Future messages logged to the channel will not be received by any sink.
+    pub fn close(&self) {
+        if let Some(ctx) = self.context.upgrade() {
+            ctx.remove_channel(self.id);
+        }
     }
 
     /// Updates the set of sinks that are subscribed to this channel.

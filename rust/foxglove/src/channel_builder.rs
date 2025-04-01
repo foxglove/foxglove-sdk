@@ -69,6 +69,7 @@ impl ChannelBuilder {
     /// Returns [`FoxgloveError::DuplicateChannel`] if a channel with the same topic already exists.
     pub fn build_raw(self) -> Result<Arc<RawChannel>, FoxgloveError> {
         let channel = RawChannel::new(
+            &self.context,
             self.topic,
             self.message_encoding
                 .ok_or_else(|| FoxgloveError::MessageEncodingRequired)?,
