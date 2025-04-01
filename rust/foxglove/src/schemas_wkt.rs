@@ -342,10 +342,7 @@ impl Timestamp {
     /// Returns the current timestamp using SystemTime
     pub fn now() -> Self {
         let now = std::time::SystemTime::now();
-        let duration = now.duration_since(std::time::UNIX_EPOCH).unwrap();
-        let sec = duration.as_secs() as u32;
-        let nsec = duration.subsec_nanos();
-        Self::new(sec, nsec)
+        Self::try_from(now).expect("timestamp out of range")
     }
 
     /// Returns the number of seconds in the timestamp.
@@ -452,5 +449,3 @@ where
         }
     }
 }
-
-
