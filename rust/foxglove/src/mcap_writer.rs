@@ -94,8 +94,8 @@ impl McapWriter {
 
 /// A handle to an MCAP file writer.
 ///
-/// When this handle is dropped, the writer will stop logging events, and flush any buffered data
-/// to the writer.
+/// When this handle is dropped, the writer will unregister from the [`Context`], stop logging
+/// events, and flush any buffered data to the writer.
 #[must_use]
 #[derive(Debug)]
 pub struct McapWriterHandle<W: Write + Seek + Send + 'static> {

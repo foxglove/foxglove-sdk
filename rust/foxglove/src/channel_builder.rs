@@ -58,7 +58,6 @@ impl ChannelBuilder {
     }
 
     /// Sets the context for this channel.
-    #[doc(hidden)]
     pub fn context(mut self, ctx: &Arc<Context>) -> Self {
         self.context = ctx.clone();
         self
