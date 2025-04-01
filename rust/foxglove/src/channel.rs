@@ -12,7 +12,7 @@ use crate::{ChannelBuilder, Encode, FoxgloveError, PartialMetadata, Schema};
 mod lazy_channel;
 mod raw_channel;
 
-pub use lazy_channel::LazyChannel;
+pub use lazy_channel::{LazyChannel, LazyRawChannel};
 pub use raw_channel::RawChannel;
 
 /// Stack buffer size to use for encoding messages.
