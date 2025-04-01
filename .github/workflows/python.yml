@@ -124,8 +124,9 @@ jobs:
           working-directory: python/foxglove-sdk
           args: --release --out dist --find-interpreter
           sccache: "true"
-          sccache-version: "0.7.4" # Specify newer sccache version
           manylinux: auto
+        env:
+          SCCACHE_VERSION: "0.9.1"
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
@@ -157,8 +158,9 @@ jobs:
           working-directory: python/foxglove-sdk
           args: --release --out dist --find-interpreter
           sccache: "true"
-          sccache-version: "0.7.4"
           manylinux: musllinux_1_2
+        env:
+          SCCACHE_VERSION: "0.9.1"
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
@@ -187,7 +189,8 @@ jobs:
           working-directory: python/foxglove-sdk
           args: --release --out dist --find-interpreter
           sccache: "true"
-          sccache-version: "0.7.4"
+        env:
+          SCCACHE_VERSION: "0.9.1"
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
@@ -215,7 +218,8 @@ jobs:
           working-directory: python/foxglove-sdk
           args: --release --out dist --find-interpreter
           sccache: "true"
-          sccache-version: "0.7.4"
+        env:
+          SCCACHE_VERSION: "0.9.1"
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
