@@ -339,7 +339,7 @@ impl Timestamp {
         Self::new_checked(sec, nsec).unwrap()
     }
 
-    /// Returns the current timestamp using SystemTime
+    /// Returns the current timestamp using [`SystemTime::now`][std::time::SystemTime::now].
     pub fn now() -> Self {
         let now = std::time::SystemTime::now();
         Self::try_from(now).expect("timestamp out of range")
