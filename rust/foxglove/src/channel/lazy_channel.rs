@@ -81,8 +81,7 @@ impl<T: Encode> Deref for LazyChannel<T> {
 /// ```
 /// use foxglove::LazyRawChannel;
 ///
-/// static RAW: LazyRawChannel = LazyRawChannel::new("/raw", "message encoding")
-///     .schema("schema name", "schema encoding", b"schema data");
+/// static SCHEMALESS: LazyRawChannel = LazyRawChannel::new("/schemaless", "json");
 /// ```
 pub struct LazyRawChannel {
     topic: &'static str,
