@@ -192,7 +192,7 @@ impl Context {
         self.0.write().add_channel(channel)
     }
 
-    /// Removes the specified channel.
+    /// Removes a channel from the context.
     pub(crate) fn remove_channel(&self, channel_id: ChannelId) -> bool {
         self.0.write().remove_channel(channel_id)
     }
