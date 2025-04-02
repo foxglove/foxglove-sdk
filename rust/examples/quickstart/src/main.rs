@@ -1,16 +1,13 @@
-use std::{
-    ops::Add,
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc,
-    },
-};
+use std::ops::Add;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 
-use foxglove::McapWriter;
+use foxglove::schemas::SceneUpdate;
+use foxglove::{LazyChannel, McapWriter};
 
 const FILE_NAME: &str = "quickstart-rust.mcap";
 
-foxglove::static_channel!(pub(crate) SCENE, "/scene", foxglove::schemas::SceneUpdate);
+static SCENE: LazyChannel<SceneUpdate> = LazyChannel::new("/scene");
 
 fn log_message() {
     let size = std::time::SystemTime::now()
