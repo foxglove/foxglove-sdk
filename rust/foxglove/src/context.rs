@@ -188,11 +188,19 @@ impl Context {
     }
 
     /// Adds a channel to the context.
+    ///
+    /// This is deliberately `pub(crate)` to ensure that the channel's context linkage remains
+    /// consistent. Publicly, the only way to add a channel to a context is by constructing it via
+    /// a [`ChannelBuilder`][crate::ChannelBuilder].
     pub(crate) fn add_channel(&self, channel: Arc<RawChannel>) -> Result<(), FoxgloveError> {
         self.0.write().add_channel(channel)
     }
 
     /// Removes a channel from the context.
+    ///
+    /// This is deliberately `pub(crate)` to ensure that the channel's context linkage remains
+    /// consistent. Publicly, the only way to remove a channel from a context is by calling
+    /// [`RawChannel::close`], or by dropping the context entirely.
     pub(crate) fn remove_channel(&self, channel_id: ChannelId) -> bool {
         self.0.write().remove_channel(channel_id)
     }
