@@ -35,6 +35,8 @@ import {
   foxgloveEnumSchemas,
   foxgloveMessageSchemas,
 } from "../typescript/schemas/src/internal/schemas";
+import { generateCppSchemas } from "../typescript/schemas/src/internal/generateCpp";
+import { generateRustTypes } from "../typescript/schemas/src/internal/generateRust";
 
 async function logProgress(message: string, body: () => Promise<void>) {
   process.stderr.write(`${message}... `);
@@ -268,6 +270,33 @@ async function main({ clean }: { clean: boolean }) {
     ];
     await exec("poetry", ["run", "black", ...pythonFiles], { cwd: repoRoot });
     await exec("poetry", ["run", "isort", ...pythonFiles], { cwd: repoRoot });
+  });
+
+  await logProgress("Generating Rust code", async () => {
+    await fs.mkdir(path.join(repoRoot, "c", "src", "generated"), { recursive: true });
+    const typesFile = path.join(repoRoot, "c", "src", "generated", "types.rs");
+    await fs.writeFile(
+      typesFile,
+      generateRustTypes(
+        Object.values(foxgloveMessageSchemas).filter(
+          (schema) => !schema.name.endsWith("Primitive"),
+        ),
+      ),
+    );
+    // await fs.writeFile(
+    //   path.join(repoRoot, 'cpp','foxglove','schema_traits_generated.hpp'),
+    //   generateCppSchemaTraits(Object.values(foxgloveMessageSchemas), Object.values(foxgloveEnumSchemas)),
+    // );
+    await exec("cargo", ["fmt", "--", path.resolve(typesFile)], {
+      cwd: repoRoot,
+    });
+  });
+
+  await logProgress("Generating C++ schemas", async () => {
+    await fs.writeFile(
+      path.join(repoRoot, "cpp", "foxglove", "include", "foxglove", "schemas.hpp"),
+      generateCppSchemas(Object.values(foxgloveMessageSchemas), Object.values(foxgloveEnumSchemas)),
+    );
   });
 
   await logProgressLn("Updating Jest snapshots", async () => {

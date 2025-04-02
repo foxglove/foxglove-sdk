@@ -20,7 +20,7 @@
 #endif
 
 
-typedef struct foxglove_channel foxglove_channel;
+typedef struct foxglove_raw_channel foxglove_raw_channel;
 
 
 /**
@@ -52,6 +52,46 @@ typedef struct foxglove_channel foxglove_channel;
  */
 #define FOXGLOVE_SERVER_CAPABILITY_SERVICES (1 << 4)
 
+enum foxglove_builtin_schema
+#ifdef __cplusplus
+  : uint8_t
+#endif // __cplusplus
+ {
+  foxglove_builtin_schema_CameraCalibration,
+  foxglove_builtin_schema_CircleAnnotation,
+  foxglove_builtin_schema_Color,
+  foxglove_builtin_schema_CompressedImage,
+  foxglove_builtin_schema_CompressedVideo,
+  foxglove_builtin_schema_FrameTransform,
+  foxglove_builtin_schema_FrameTransforms,
+  foxglove_builtin_schema_GeoJSON,
+  foxglove_builtin_schema_Grid,
+  foxglove_builtin_schema_ImageAnnotations,
+  foxglove_builtin_schema_KeyValuePair,
+  foxglove_builtin_schema_LaserScan,
+  foxglove_builtin_schema_LocationFix,
+  foxglove_builtin_schema_Log,
+  foxglove_builtin_schema_SceneEntityDeletion,
+  foxglove_builtin_schema_SceneEntity,
+  foxglove_builtin_schema_SceneUpdate,
+  foxglove_builtin_schema_PackedElementField,
+  foxglove_builtin_schema_Point2,
+  foxglove_builtin_schema_Point3,
+  foxglove_builtin_schema_PointCloud,
+  foxglove_builtin_schema_PointsAnnotation,
+  foxglove_builtin_schema_Pose,
+  foxglove_builtin_schema_PoseInFrame,
+  foxglove_builtin_schema_PosesInFrame,
+  foxglove_builtin_schema_Quaternion,
+  foxglove_builtin_schema_RawImage,
+  foxglove_builtin_schema_TextAnnotation,
+  foxglove_builtin_schema_Vector2,
+  foxglove_builtin_schema_Vector3,
+};
+#ifndef __cplusplus
+typedef uint8_t foxglove_builtin_schema;
+#endif // __cplusplus
+
 enum FoxgloveMcapCompression
 #ifdef __cplusplus
   : uint8_t
@@ -64,6 +104,8 @@ enum FoxgloveMcapCompression
 #ifndef __cplusplus
 typedef uint8_t FoxgloveMcapCompression;
 #endif // __cplusplus
+
+typedef struct foxglove_channel foxglove_channel;
 
 typedef struct foxglove_mcap_writer foxglove_mcap_writer;
 
@@ -140,6 +182,24 @@ typedef struct foxglove_schema {
   size_t data_len;
 } foxglove_schema;
 
+/**
+ * A vector in 3D space that represents a direction only
+ */
+typedef struct foxglove_vector3 {
+  /**
+   * x coordinate length
+   */
+  double x;
+  /**
+   * y coordinate length
+   */
+  double y;
+  /**
+   * z coordinate length
+   */
+  double z;
+} foxglove_vector3;
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
@@ -196,23 +256,23 @@ uint16_t foxglove_server_get_port(const struct foxglove_websocket_server *server
 void foxglove_server_stop(struct foxglove_websocket_server *server);
 
 /**
- * Create a new channel. The channel must later be freed with `foxglove_channel_free`.
+ * Create a new raw channel. The channel must later be freed with `foxglove_raw_channel_free`.
  *
  * # Safety
  * `topic` and `message_encoding` must be null-terminated strings with valid UTF8. `schema` is an
  * optional pointer to a schema. The schema and the data it points to need only remain alive for
  * the duration of this function call (they will be copied).
  */
-foxglove_channel *foxglove_channel_create(const char *topic,
-                                          const char *message_encoding,
-                                          const struct foxglove_schema *schema);
+foxglove_raw_channel *foxglove_raw_channel_create(const char *topic,
+                                                  const char *message_encoding,
+                                                  const struct foxglove_schema *schema);
 
 /**
- * Free a channel created via `foxglove_channel_create`.
+ * Free a channel created via `foxglove_raw_channel_create`.
  */
-void foxglove_channel_free(foxglove_channel *channel);
+void foxglove_raw_channel_free(foxglove_raw_channel *channel);
 
-uint64_t foxglove_channel_get_id(const foxglove_channel *channel);
+uint64_t foxglove_raw_channel_get_id(const foxglove_raw_channel *channel);
 
 /**
  * Log a message on a channel.
@@ -223,9 +283,38 @@ uint64_t foxglove_channel_get_id(const foxglove_channel *channel);
  *
  * `log_time`, `publish_time`, and `sequence` may be null, or may point to valid, properly-aligned values.
  */
-void foxglove_channel_log(const foxglove_channel *channel,
-                          const uint8_t *data,
-                          size_t data_len,
+void foxglove_raw_channel_log(const foxglove_raw_channel *channel,
+                              const uint8_t *data,
+                              size_t data_len,
+                              const uint64_t *log_time,
+                              const uint64_t *publish_time,
+                              const uint32_t *sequence);
+
+/**
+ * Create a new channel. The channel must later be freed with `foxglove_channel_free`.
+ *
+ * # Safety
+ * `topic` must be a null-terminated string with valid UTF8.
+ */
+struct foxglove_channel *foxglove_channel_create(const char *topic, foxglove_builtin_schema schema);
+
+/**
+ * Free a channel created via `foxglove_channel_create`.
+ */
+void foxglove_channel_free(struct foxglove_channel *channel);
+
+uint64_t foxglove_channel_get_id(const struct foxglove_channel *channel);
+
+/**
+ * Log a message on a channel.
+ *
+ * # Safety
+ * `msg` must be non-null, point to a valid message object that matches the type of the channel.
+ *
+ * `log_time`, `publish_time`, and `sequence` may be null, or may point to valid, properly-aligned values.
+ */
+void foxglove_channel_log(const struct foxglove_channel *channel,
+                          const void *msg,
                           const uint64_t *log_time,
                           const uint64_t *publish_time,
                           const uint32_t *sequence);

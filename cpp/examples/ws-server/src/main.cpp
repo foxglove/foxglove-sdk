@@ -78,7 +78,9 @@ int main(int argc, const char* argv[]) {
   })";
   schema.data = reinterpret_cast<const std::byte*>(schemaData.data());
   schema.dataLen = schemaData.size();
-  foxglove::Channel channel{"example", "json", std::move(schema)};
+  foxglove::RawChannel jsonChannel{"example_json", "json", std::move(schema)};
+
+  foxglove::Channel<foxglove::schemas::Vector3> vec3Channel{"example_vec"};
 
   uint32_t i = 0;
   while (!done) {
@@ -86,7 +88,11 @@ int main(int argc, const char* argv[]) {
     std::string msg = "{\"val\": " + std::to_string(i) + "}";
     auto now =
       std::chrono::nanoseconds(std::chrono::system_clock::now().time_since_epoch()).count();
-    channel.log(reinterpret_cast<const std::byte*>(msg.data()), msg.size(), now, now, i);
+    jsonChannel.log(reinterpret_cast<const std::byte*>(msg.data()), msg.size(), now, now, i);
+
+    vec3Channel.log(
+      foxglove::schemas::Vector3{double(i), double(i + 1), double(i + 2)}, now, now, i
+    );
     ++i;
   }
 
