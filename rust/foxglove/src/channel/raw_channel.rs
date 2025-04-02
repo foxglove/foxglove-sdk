@@ -98,8 +98,10 @@ impl RawChannel {
 
     /// Closes the channel, removing it from the context.
     ///
-    /// Future messages logged to the channel will not be received by any sink. Attempts to log
-    /// on a closed channel will elicit a throttled warning message.
+    /// You can use this to explicitly unadvertise the channel to sinks that subscribe to channels
+    /// dynamically, such as the [`WebSocketServer`][crate::WebSocketServer].
+    ///
+    /// Attempts to log on a closed channel will elicit a throttled warning message.
     pub fn close(&self) {
         if !self.is_closed() {
             if let Some(ctx) = self.context.upgrade() {
@@ -110,14 +112,17 @@ impl RawChannel {
 
     /// Invoked when the channel is removed from its context.
     ///
-    /// This can happen either due to an explicit call to [`RawChannel::close`], or due to the
-    /// context being dropped.
+    /// This can happen either in the context of an explicit call to [`RawChannel::close`], or due
+    /// to the context being dropped.
     pub(crate) fn remove_from_context(&self) {
         self.closed.store(true, Release);
         self.sinks.clear();
     }
 
     /// Returns true if the channel is closed.
+    ///
+    /// A channel may be closed either by an explicit call to [`RawChannel::close`], or due to the
+    /// context being dropped.
     fn is_closed(&self) -> bool {
         self.closed.load(Acquire)
     }

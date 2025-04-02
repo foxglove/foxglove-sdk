@@ -96,8 +96,10 @@ impl<T: Encode> Channel<T> {
 
         /// Closes the channel, removing it from the context.
         ///
-        /// Future messages logged to the channel will not be received by any sink. Attempts to log
-        /// on a closed channel will elicit a throttled warning message.
+        /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
+        /// channels dynamically, such as the [`WebSocketServer`][crate::WebSocketServer].
+        ///
+        /// Attempts to log on a closed channel will elicit a throttled warning message.
         pub fn close(&self);
     } }
 
