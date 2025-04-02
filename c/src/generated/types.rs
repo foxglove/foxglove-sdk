@@ -71,11 +71,18 @@ pub enum FoxgloveChannel {
 
 /// A timestamp, represented as an offset from a user-defined epoch.
 #[repr(C)]
+#[derive(Debug, Clone, Copy)]
 pub struct Timestamp {
     /// Seconds since epoch.
     pub sec: u32,
     /// Additional nanoseconds since epoch.
     pub nsec: u32,
+}
+
+impl From<Timestamp> for foxglove::schemas::Timestamp {
+    fn from(other: Timestamp) -> Self {
+        Self::new(other.sec, other.nsec)
+    }
 }
 
 /// A signed, fixed-length span of time.
@@ -88,6 +95,12 @@ pub struct Duration {
     sec: i32,
     /// Nanoseconds offset in the positive direction.
     nsec: u32,
+}
+
+impl From<Duration> for foxglove::schemas::Duration {
+    fn from(other: Duration) -> Self {
+        Self::new(other.sec, other.nsec)
+    }
 }
 
 /// Camera calibration parameters
@@ -108,7 +121,8 @@ pub struct CameraCalibration {
     pub distortion_model: *const c_char,
     pub distortion_model_len: usize,
     /// Distortion parameters
-    pub D: f64,
+    /*TODO*/
+    pub D_count: usize,
     /// Intrinsic camera matrix (3x3 row-major matrix)
     ///
     /// A 3x3 row-major matrix for the raw (distorted) image.
@@ -121,11 +135,13 @@ pub struct CameraCalibration {
     ///     [ 0  0  1]
     /// ```
     ///
-    pub K: f64,
+    /*TODO*/
+    pub K_count: usize,
     /// Rectification matrix (stereo cameras only, 3x3 row-major matrix)
     ///
     /// A rotation matrix aligning the camera coordinate system to the ideal stereo image plane so that epipolar lines in both stereo images are parallel.
-    pub R: f64,
+    /*TODO*/
+    pub R_count: usize,
     /// Projection/camera matrix (3x4 row-major matrix)
     ///
     /// ```
@@ -152,21 +168,33 @@ pub struct CameraCalibration {
     ///
     /// This holds for both images of a stereo pair.
     ///
-    pub P: f64,
+    /*TODO*/
+    pub P_count: usize,
 }
 
 impl From<&CameraCalibration> for foxglove::schemas::CameraCalibration {
     fn from(msg: &CameraCalibration) -> Self {
         Self {
-            timestamp: msg.timestamp,
-            frame_id: msg.frame_id,
+            timestamp: Some(msg.timestamp.into()),
+            frame_id: std::str::from_utf8(unsafe {
+                std::slice::from_raw_parts(msg.frame_id as *const u8, msg.frame_id_len)
+            })
+            .unwrap()
+            .to_string(),
             width: msg.width,
             height: msg.height,
-            distortion_model: msg.distortion_model,
-            D: msg.D,
-            K: msg.K,
-            R: msg.R,
-            P: msg.P,
+            distortion_model: std::str::from_utf8(unsafe {
+                std::slice::from_raw_parts(
+                    msg.distortion_model as *const u8,
+                    msg.distortion_model_len,
+                )
+            })
+            .unwrap()
+            .to_string(),
+            d: todo!("arrays"),
+            k: todo!("arrays"),
+            r: todo!("arrays"),
+            p: todo!("arrays"),
         }
     }
 }
@@ -178,26 +206,26 @@ pub struct CircleAnnotation {
     pub timestamp: Timestamp,
     /// Center of the circle in 2D image coordinates (pixels).
     /// The coordinate uses the top-left corner of the top-left pixel of the image as the origin.
-    pub position: bool, /*TODO*/
+    pub position: *const Point2,
     /// Circle diameter in pixels
     pub diameter: f64,
     /// Line thickness in pixels
     pub thickness: f64,
     /// Fill color
-    pub fill_color: bool, /*TODO*/
+    pub fill_color: *const Color,
     /// Outline color
-    pub outline_color: bool, /*TODO*/
+    pub outline_color: *const Color,
 }
 
 impl From<&CircleAnnotation> for foxglove::schemas::CircleAnnotation {
     fn from(msg: &CircleAnnotation) -> Self {
         Self {
-            timestamp: msg.timestamp,
-            position: todo!(),
+            timestamp: Some(msg.timestamp.into()),
+            position: Some(unsafe { &*msg.position }.into()),
             diameter: msg.diameter,
             thickness: msg.thickness,
-            fill_color: todo!(),
-            outline_color: todo!(),
+            fill_color: Some(unsafe { &*msg.fill_color }.into()),
+            outline_color: Some(unsafe { &*msg.outline_color }.into()),
         }
     }
 }
@@ -247,10 +275,18 @@ pub struct CompressedImage {
 impl From<&CompressedImage> for foxglove::schemas::CompressedImage {
     fn from(msg: &CompressedImage) -> Self {
         Self {
-            timestamp: msg.timestamp,
-            frame_id: msg.frame_id,
-            data: msg.data,
-            format: msg.format,
+            timestamp: Some(msg.timestamp.into()),
+            frame_id: std::str::from_utf8(unsafe {
+                std::slice::from_raw_parts(msg.frame_id as *const u8, msg.frame_id_len)
+            })
+            .unwrap()
+            .to_string(),
+            data: unsafe { std::slice::from_raw_parts(msg.data, msg.data_len) },
+            format: std::str::from_utf8(unsafe {
+                std::slice::from_raw_parts(msg.format as *const u8, msg.format_len)
+            })
+            .unwrap()
+            .to_string(),
         }
     }
 }
@@ -302,10 +338,18 @@ pub struct CompressedVideo {
 impl From<&CompressedVideo> for foxglove::schemas::CompressedVideo {
     fn from(msg: &CompressedVideo) -> Self {
         Self {
-            timestamp: msg.timestamp,
-            frame_id: msg.frame_id,
-            data: msg.data,
-            format: msg.format,
+            timestamp: Some(msg.timestamp.into()),
+            frame_id: std::str::from_utf8(unsafe {
+                std::slice::from_raw_parts(msg.frame_id as *const u8, msg.frame_id_len)
+            })
+            .unwrap()
+            .to_string(),
+            data: unsafe { std::slice::from_raw_parts(msg.data, msg.data_len) },
+            format: std::str::from_utf8(unsafe {
+                std::slice::from_raw_parts(msg.format as *const u8, msg.format_len)
+            })
+            .unwrap()
+            .to_string(),
         }
     }
 }
@@ -322,19 +366,30 @@ pub struct FrameTransform {
     pub child_frame_id: *const c_char,
     pub child_frame_id_len: usize,
     /// Translation component of the transform
-    pub translation: bool, /*TODO*/
+    pub translation: *const Vector3,
     /// Rotation component of the transform
-    pub rotation: bool, /*TODO*/
+    pub rotation: *const Quaternion,
 }
 
 impl From<&FrameTransform> for foxglove::schemas::FrameTransform {
     fn from(msg: &FrameTransform) -> Self {
         Self {
-            timestamp: msg.timestamp,
-            parent_frame_id: msg.parent_frame_id,
-            child_frame_id: msg.child_frame_id,
-            translation: todo!(),
-            rotation: todo!(),
+            timestamp: Some(msg.timestamp.into()),
+            parent_frame_id: std::str::from_utf8(unsafe {
+                std::slice::from_raw_parts(
+                    msg.parent_frame_id as *const u8,
+                    msg.parent_frame_id_len,
+                )
+            })
+            .unwrap()
+            .to_string(),
+            child_frame_id: std::str::from_utf8(unsafe {
+                std::slice::from_raw_parts(msg.child_frame_id as *const u8, msg.child_frame_id_len)
+            })
+            .unwrap()
+            .to_string(),
+            translation: Some(unsafe { &*msg.translation }.into()),
+            rotation: Some(unsafe { &*msg.rotation }.into()),
         }
     }
 }
@@ -343,13 +398,14 @@ impl From<&FrameTransform> for foxglove::schemas::FrameTransform {
 #[repr(C)]
 pub struct FrameTransforms {
     /// Array of transforms
-    pub transforms: bool, /*TODO*/
+    /*TODO*/
+    pub transforms_count: usize,
 }
 
 impl From<&FrameTransforms> for foxglove::schemas::FrameTransforms {
     fn from(msg: &FrameTransforms) -> Self {
         Self {
-            transforms: todo!(),
+            transforms: todo!("arrays"),
         }
     }
 }
@@ -365,7 +421,11 @@ pub struct GeoJSON {
 impl From<&GeoJSON> for foxglove::schemas::GeoJson {
     fn from(msg: &GeoJSON) -> Self {
         Self {
-            geojson: msg.geojson,
+            geojson: std::str::from_utf8(unsafe {
+                std::slice::from_raw_parts(msg.geojson as *const u8, msg.geojson_len)
+            })
+            .unwrap()
+            .to_string(),
         }
     }
 }
@@ -379,17 +439,18 @@ pub struct Grid {
     pub frame_id: *const c_char,
     pub frame_id_len: usize,
     /// Origin of grid's corner relative to frame of reference; grid is positioned in the x-y plane relative to this origin
-    pub pose: bool, /*TODO*/
+    pub pose: *const Pose,
     /// Number of grid columns
     pub column_count: u32,
     /// Size of single grid cell along x and y axes, relative to `pose`
-    pub cell_size: bool, /*TODO*/
+    pub cell_size: *const Vector2,
     /// Number of bytes between rows in `data`
     pub row_stride: u32,
     /// Number of bytes between cells within a row in `data`
     pub cell_stride: u32,
     /// Fields in `data`. `red`, `green`, `blue`, and `alpha` are optional for customizing the grid's color.
-    pub fields: bool, /*TODO*/
+    /*TODO*/
+    pub fields_count: usize,
     /// Grid cell data, interpreted using `fields`, in row-major (y-major) order
     pub data: *const c_void,
     pub data_len: usize,
@@ -398,15 +459,19 @@ pub struct Grid {
 impl From<&Grid> for foxglove::schemas::Grid {
     fn from(msg: &Grid) -> Self {
         Self {
-            timestamp: msg.timestamp,
-            frame_id: msg.frame_id,
-            pose: todo!(),
+            timestamp: Some(msg.timestamp.into()),
+            frame_id: std::str::from_utf8(unsafe {
+                std::slice::from_raw_parts(msg.frame_id as *const u8, msg.frame_id_len)
+            })
+            .unwrap()
+            .to_string(),
+            pose: Some(unsafe { &*msg.pose }.into()),
             column_count: msg.column_count,
-            cell_size: todo!(),
+            cell_size: Some(unsafe { &*msg.cell_size }.into()),
             row_stride: msg.row_stride,
             cell_stride: msg.cell_stride,
-            fields: todo!(),
-            data: msg.data,
+            fields: todo!("arrays"),
+            data: unsafe { std::slice::from_raw_parts(msg.data, msg.data_len) },
         }
     }
 }
@@ -415,19 +480,22 @@ impl From<&Grid> for foxglove::schemas::Grid {
 #[repr(C)]
 pub struct ImageAnnotations {
     /// Circle annotations
-    pub circles: bool, /*TODO*/
+    /*TODO*/
+    pub circles_count: usize,
     /// Points annotations
-    pub points: bool, /*TODO*/
+    /*TODO*/
+    pub points_count: usize,
     /// Text annotations
-    pub texts: bool, /*TODO*/
+    /*TODO*/
+    pub texts_count: usize,
 }
 
 impl From<&ImageAnnotations> for foxglove::schemas::ImageAnnotations {
     fn from(msg: &ImageAnnotations) -> Self {
         Self {
-            circles: todo!(),
-            points: todo!(),
-            texts: todo!(),
+            circles: todo!("arrays"),
+            points: todo!("arrays"),
+            texts: todo!("arrays"),
         }
     }
 }
@@ -446,8 +514,16 @@ pub struct KeyValuePair {
 impl From<&KeyValuePair> for foxglove::schemas::KeyValuePair {
     fn from(msg: &KeyValuePair) -> Self {
         Self {
-            key: msg.key,
-            value: msg.value,
+            key: std::str::from_utf8(unsafe {
+                std::slice::from_raw_parts(msg.key as *const u8, msg.key_len)
+            })
+            .unwrap()
+            .to_string(),
+            value: std::str::from_utf8(unsafe {
+                std::slice::from_raw_parts(msg.value as *const u8, msg.value_len)
+            })
+            .unwrap()
+            .to_string(),
         }
     }
 }
@@ -461,27 +537,33 @@ pub struct LaserScan {
     pub frame_id: *const c_char,
     pub frame_id_len: usize,
     /// Origin of scan relative to frame of reference; points are positioned in the x-y plane relative to this origin; angles are interpreted as counterclockwise rotations around the z axis with 0 rad being in the +x direction
-    pub pose: bool, /*TODO*/
+    pub pose: *const Pose,
     /// Bearing of first point, in radians
     pub start_angle: f64,
     /// Bearing of last point, in radians
     pub end_angle: f64,
     /// Distance of detections from origin; assumed to be at equally-spaced angles between `start_angle` and `end_angle`
-    pub ranges: f64,
+    /*TODO*/
+    pub ranges_count: usize,
     /// Intensity of detections
-    pub intensities: f64,
+    /*TODO*/
+    pub intensities_count: usize,
 }
 
 impl From<&LaserScan> for foxglove::schemas::LaserScan {
     fn from(msg: &LaserScan) -> Self {
         Self {
-            timestamp: msg.timestamp,
-            frame_id: msg.frame_id,
-            pose: todo!(),
+            timestamp: Some(msg.timestamp.into()),
+            frame_id: std::str::from_utf8(unsafe {
+                std::slice::from_raw_parts(msg.frame_id as *const u8, msg.frame_id_len)
+            })
+            .unwrap()
+            .to_string(),
+            pose: Some(unsafe { &*msg.pose }.into()),
             start_angle: msg.start_angle,
             end_angle: msg.end_angle,
-            ranges: msg.ranges,
-            intensities: msg.intensities,
+            ranges: todo!("arrays"),
+            intensities: todo!("arrays"),
         }
     }
 }
@@ -501,20 +583,25 @@ pub struct LocationFix {
     /// Altitude in meters
     pub altitude: f64,
     /// Position covariance (m^2) defined relative to a tangential plane through the reported position. The components are East, North, and Up (ENU), in row-major order.
-    pub position_covariance: f64,
+    /*TODO*/
+    pub position_covariance_count: usize,
     /// If `position_covariance` is available, `position_covariance_type` must be set to indicate the type of covariance.
-    pub position_covariance_type: bool, /*TODO*/
+    pub position_covariance_type: i32, /*TODO*/
 }
 
 impl From<&LocationFix> for foxglove::schemas::LocationFix {
     fn from(msg: &LocationFix) -> Self {
         Self {
-            timestamp: msg.timestamp,
-            frame_id: msg.frame_id,
+            timestamp: Some(msg.timestamp.into()),
+            frame_id: std::str::from_utf8(unsafe {
+                std::slice::from_raw_parts(msg.frame_id as *const u8, msg.frame_id_len)
+            })
+            .unwrap()
+            .to_string(),
             latitude: msg.latitude,
             longitude: msg.longitude,
             altitude: msg.altitude,
-            position_covariance: msg.position_covariance,
+            position_covariance: todo!("arrays"),
             position_covariance_type: todo!(),
         }
     }
@@ -526,7 +613,7 @@ pub struct Log {
     /// Timestamp of log message
     pub timestamp: Timestamp,
     /// Log level
-    pub level: bool, /*TODO*/
+    pub level: i32, /*TODO*/
     /// Log message
     pub message: *const c_char,
     pub message_len: usize,
@@ -543,11 +630,23 @@ pub struct Log {
 impl From<&Log> for foxglove::schemas::Log {
     fn from(msg: &Log) -> Self {
         Self {
-            timestamp: msg.timestamp,
+            timestamp: Some(msg.timestamp.into()),
             level: todo!(),
-            message: msg.message,
-            name: msg.name,
-            file: msg.file,
+            message: std::str::from_utf8(unsafe {
+                std::slice::from_raw_parts(msg.message as *const u8, msg.message_len)
+            })
+            .unwrap()
+            .to_string(),
+            name: std::str::from_utf8(unsafe {
+                std::slice::from_raw_parts(msg.name as *const u8, msg.name_len)
+            })
+            .unwrap()
+            .to_string(),
+            file: std::str::from_utf8(unsafe {
+                std::slice::from_raw_parts(msg.file as *const u8, msg.file_len)
+            })
+            .unwrap()
+            .to_string(),
             line: msg.line,
         }
     }
@@ -559,7 +658,7 @@ pub struct SceneEntityDeletion {
     /// Timestamp of the deletion. Only matching entities earlier than this timestamp will be deleted.
     pub timestamp: Timestamp,
     /// Type of deletion action to perform
-    pub r#type: bool, /*TODO*/
+    pub r#type: i32, /*TODO*/
     /// Identifier which must match if `type` is `MATCHING_ID`.
     pub id: *const c_char,
     pub id_len: usize,
@@ -568,9 +667,13 @@ pub struct SceneEntityDeletion {
 impl From<&SceneEntityDeletion> for foxglove::schemas::SceneEntityDeletion {
     fn from(msg: &SceneEntityDeletion) -> Self {
         Self {
-            timestamp: msg.timestamp,
+            timestamp: Some(msg.timestamp.into()),
             r#type: todo!(),
-            id: msg.id,
+            id: std::str::from_utf8(unsafe {
+                std::slice::from_raw_parts(msg.id as *const u8, msg.id_len)
+            })
+            .unwrap()
+            .to_string(),
         }
     }
 }
@@ -591,42 +694,59 @@ pub struct SceneEntity {
     /// Whether the entity should keep its location in the fixed frame (false) or follow the frame specified in `frame_id` as it moves relative to the fixed frame (true)
     pub frame_locked: bool,
     /// Additional user-provided metadata associated with the entity. Keys must be unique.
-    pub metadata: bool, /*TODO*/
+    /*TODO*/
+    pub metadata_count: usize,
     /// Arrow primitives
-    pub arrows: bool, /*TODO*/
+    /*TODO*/
+    pub arrows_count: usize,
     /// Cube primitives
-    pub cubes: bool, /*TODO*/
+    /*TODO*/
+    pub cubes_count: usize,
     /// Sphere primitives
-    pub spheres: bool, /*TODO*/
+    /*TODO*/
+    pub spheres_count: usize,
     /// Cylinder primitives
-    pub cylinders: bool, /*TODO*/
+    /*TODO*/
+    pub cylinders_count: usize,
     /// Line primitives
-    pub lines: bool, /*TODO*/
+    /*TODO*/
+    pub lines_count: usize,
     /// Triangle list primitives
-    pub triangles: bool, /*TODO*/
+    /*TODO*/
+    pub triangles_count: usize,
     /// Text primitives
-    pub texts: bool, /*TODO*/
+    /*TODO*/
+    pub texts_count: usize,
     /// Model primitives
-    pub models: bool, /*TODO*/
+    /*TODO*/
+    pub models_count: usize,
 }
 
 impl From<&SceneEntity> for foxglove::schemas::SceneEntity {
     fn from(msg: &SceneEntity) -> Self {
         Self {
-            timestamp: msg.timestamp,
-            frame_id: msg.frame_id,
-            id: msg.id,
-            lifetime: msg.lifetime,
+            timestamp: Some(msg.timestamp.into()),
+            frame_id: std::str::from_utf8(unsafe {
+                std::slice::from_raw_parts(msg.frame_id as *const u8, msg.frame_id_len)
+            })
+            .unwrap()
+            .to_string(),
+            id: std::str::from_utf8(unsafe {
+                std::slice::from_raw_parts(msg.id as *const u8, msg.id_len)
+            })
+            .unwrap()
+            .to_string(),
+            lifetime: Some(msg.lifetime.into()),
             frame_locked: msg.frame_locked,
-            metadata: todo!(),
-            arrows: todo!(),
-            cubes: todo!(),
-            spheres: todo!(),
-            cylinders: todo!(),
-            lines: todo!(),
-            triangles: todo!(),
-            texts: todo!(),
-            models: todo!(),
+            metadata: todo!("arrays"),
+            arrows: todo!("arrays"),
+            cubes: todo!("arrays"),
+            spheres: todo!("arrays"),
+            cylinders: todo!("arrays"),
+            lines: todo!("arrays"),
+            triangles: todo!("arrays"),
+            texts: todo!("arrays"),
+            models: todo!("arrays"),
         }
     }
 }
@@ -635,16 +755,18 @@ impl From<&SceneEntity> for foxglove::schemas::SceneEntity {
 #[repr(C)]
 pub struct SceneUpdate {
     /// Scene entities to delete
-    pub deletions: bool, /*TODO*/
+    /*TODO*/
+    pub deletions_count: usize,
     /// Scene entities to add or replace
-    pub entities: bool, /*TODO*/
+    /*TODO*/
+    pub entities_count: usize,
 }
 
 impl From<&SceneUpdate> for foxglove::schemas::SceneUpdate {
     fn from(msg: &SceneUpdate) -> Self {
         Self {
-            deletions: todo!(),
-            entities: todo!(),
+            deletions: todo!("arrays"),
+            entities: todo!("arrays"),
         }
     }
 }
@@ -658,13 +780,17 @@ pub struct PackedElementField {
     /// Byte offset from start of data buffer
     pub offset: u32,
     /// Type of data in the field. Integers are stored using little-endian byte order.
-    pub r#type: bool, /*TODO*/
+    pub r#type: i32, /*TODO*/
 }
 
 impl From<&PackedElementField> for foxglove::schemas::PackedElementField {
     fn from(msg: &PackedElementField) -> Self {
         Self {
-            name: msg.name,
+            name: std::str::from_utf8(unsafe {
+                std::slice::from_raw_parts(msg.name as *const u8, msg.name_len)
+            })
+            .unwrap()
+            .to_string(),
             offset: msg.offset,
             r#type: todo!(),
         }
@@ -716,11 +842,12 @@ pub struct PointCloud {
     pub frame_id: *const c_char,
     pub frame_id_len: usize,
     /// The origin of the point cloud relative to the frame of reference
-    pub pose: bool, /*TODO*/
+    pub pose: *const Pose,
     /// Number of bytes between points in the `data`
     pub point_stride: u32,
     /// Fields in `data`. At least 2 coordinate fields from `x`, `y`, and `z` are required for each point's position; `red`, `green`, `blue`, and `alpha` are optional for customizing each point's color.
-    pub fields: bool, /*TODO*/
+    /*TODO*/
+    pub fields_count: usize,
     /// Point data, interpreted using `fields`
     pub data: *const c_void,
     pub data_len: usize,
@@ -729,12 +856,16 @@ pub struct PointCloud {
 impl From<&PointCloud> for foxglove::schemas::PointCloud {
     fn from(msg: &PointCloud) -> Self {
         Self {
-            timestamp: msg.timestamp,
-            frame_id: msg.frame_id,
-            pose: todo!(),
+            timestamp: Some(msg.timestamp.into()),
+            frame_id: std::str::from_utf8(unsafe {
+                std::slice::from_raw_parts(msg.frame_id as *const u8, msg.frame_id_len)
+            })
+            .unwrap()
+            .to_string(),
+            pose: Some(unsafe { &*msg.pose }.into()),
             point_stride: msg.point_stride,
-            fields: todo!(),
-            data: msg.data,
+            fields: todo!("arrays"),
+            data: unsafe { std::slice::from_raw_parts(msg.data, msg.data_len) },
         }
     }
 }
@@ -745,16 +876,18 @@ pub struct PointsAnnotation {
     /// Timestamp of annotation
     pub timestamp: Timestamp,
     /// Type of points annotation to draw
-    pub r#type: bool, /*TODO*/
+    pub r#type: i32, /*TODO*/
     /// Points in 2D image coordinates (pixels).
     /// These coordinates use the top-left corner of the top-left pixel of the image as the origin.
-    pub points: bool, /*TODO*/
+    /*TODO*/
+    pub points_count: usize,
     /// Outline color
-    pub outline_color: bool, /*TODO*/
+    pub outline_color: *const Color,
     /// Per-point colors, if `type` is `POINTS`, or per-segment stroke colors, if `type` is `LINE_LIST`, `LINE_STRIP` or `LINE_LOOP`.
-    pub outline_colors: bool, /*TODO*/
+    /*TODO*/
+    pub outline_colors_count: usize,
     /// Fill color
-    pub fill_color: bool, /*TODO*/
+    pub fill_color: *const Color,
     /// Stroke thickness in pixels
     pub thickness: f64,
 }
@@ -762,12 +895,12 @@ pub struct PointsAnnotation {
 impl From<&PointsAnnotation> for foxglove::schemas::PointsAnnotation {
     fn from(msg: &PointsAnnotation) -> Self {
         Self {
-            timestamp: msg.timestamp,
+            timestamp: Some(msg.timestamp.into()),
             r#type: todo!(),
-            points: todo!(),
-            outline_color: todo!(),
-            outline_colors: todo!(),
-            fill_color: todo!(),
+            points: todo!("arrays"),
+            outline_color: Some(unsafe { &*msg.outline_color }.into()),
+            outline_colors: todo!("arrays"),
+            fill_color: Some(unsafe { &*msg.fill_color }.into()),
             thickness: msg.thickness,
         }
     }
@@ -777,16 +910,16 @@ impl From<&PointsAnnotation> for foxglove::schemas::PointsAnnotation {
 #[repr(C)]
 pub struct Pose {
     /// Point denoting position in 3D space
-    pub position: bool, /*TODO*/
+    pub position: *const Vector3,
     /// Quaternion denoting orientation in 3D space
-    pub orientation: bool, /*TODO*/
+    pub orientation: *const Quaternion,
 }
 
 impl From<&Pose> for foxglove::schemas::Pose {
     fn from(msg: &Pose) -> Self {
         Self {
-            position: todo!(),
-            orientation: todo!(),
+            position: Some(unsafe { &*msg.position }.into()),
+            orientation: Some(unsafe { &*msg.orientation }.into()),
         }
     }
 }
@@ -800,15 +933,19 @@ pub struct PoseInFrame {
     pub frame_id: *const c_char,
     pub frame_id_len: usize,
     /// Pose in 3D space
-    pub pose: bool, /*TODO*/
+    pub pose: *const Pose,
 }
 
 impl From<&PoseInFrame> for foxglove::schemas::PoseInFrame {
     fn from(msg: &PoseInFrame) -> Self {
         Self {
-            timestamp: msg.timestamp,
-            frame_id: msg.frame_id,
-            pose: todo!(),
+            timestamp: Some(msg.timestamp.into()),
+            frame_id: std::str::from_utf8(unsafe {
+                std::slice::from_raw_parts(msg.frame_id as *const u8, msg.frame_id_len)
+            })
+            .unwrap()
+            .to_string(),
+            pose: Some(unsafe { &*msg.pose }.into()),
         }
     }
 }
@@ -822,15 +959,20 @@ pub struct PosesInFrame {
     pub frame_id: *const c_char,
     pub frame_id_len: usize,
     /// Poses in 3D space
-    pub poses: bool, /*TODO*/
+    /*TODO*/
+    pub poses_count: usize,
 }
 
 impl From<&PosesInFrame> for foxglove::schemas::PosesInFrame {
     fn from(msg: &PosesInFrame) -> Self {
         Self {
-            timestamp: msg.timestamp,
-            frame_id: msg.frame_id,
-            poses: todo!(),
+            timestamp: Some(msg.timestamp.into()),
+            frame_id: std::str::from_utf8(unsafe {
+                std::slice::from_raw_parts(msg.frame_id as *const u8, msg.frame_id_len)
+            })
+            .unwrap()
+            .to_string(),
+            poses: todo!("arrays"),
         }
     }
 }
@@ -886,13 +1028,21 @@ pub struct RawImage {
 impl From<&RawImage> for foxglove::schemas::RawImage {
     fn from(msg: &RawImage) -> Self {
         Self {
-            timestamp: msg.timestamp,
-            frame_id: msg.frame_id,
+            timestamp: Some(msg.timestamp.into()),
+            frame_id: std::str::from_utf8(unsafe {
+                std::slice::from_raw_parts(msg.frame_id as *const u8, msg.frame_id_len)
+            })
+            .unwrap()
+            .to_string(),
             width: msg.width,
             height: msg.height,
-            encoding: msg.encoding,
+            encoding: std::str::from_utf8(unsafe {
+                std::slice::from_raw_parts(msg.encoding as *const u8, msg.encoding_len)
+            })
+            .unwrap()
+            .to_string(),
             step: msg.step,
-            data: msg.data,
+            data: unsafe { std::slice::from_raw_parts(msg.data, msg.data_len) },
         }
     }
 }
@@ -904,27 +1054,31 @@ pub struct TextAnnotation {
     pub timestamp: Timestamp,
     /// Bottom-left origin of the text label in 2D image coordinates (pixels).
     /// The coordinate uses the top-left corner of the top-left pixel of the image as the origin.
-    pub position: bool, /*TODO*/
+    pub position: *const Point2,
     /// Text to display
     pub text: *const c_char,
     pub text_len: usize,
     /// Font size in pixels
     pub font_size: f64,
     /// Text color
-    pub text_color: bool, /*TODO*/
+    pub text_color: *const Color,
     /// Background fill color
-    pub background_color: bool, /*TODO*/
+    pub background_color: *const Color,
 }
 
 impl From<&TextAnnotation> for foxglove::schemas::TextAnnotation {
     fn from(msg: &TextAnnotation) -> Self {
         Self {
-            timestamp: msg.timestamp,
-            position: todo!(),
-            text: msg.text,
+            timestamp: Some(msg.timestamp.into()),
+            position: Some(unsafe { &*msg.position }.into()),
+            text: std::str::from_utf8(unsafe {
+                std::slice::from_raw_parts(msg.text as *const u8, msg.text_len)
+            })
+            .unwrap()
+            .to_string(),
             font_size: msg.font_size,
-            text_color: todo!(),
-            background_color: todo!(),
+            text_color: Some(unsafe { &*msg.text_color }.into()),
+            background_color: Some(unsafe { &*msg.background_color }.into()),
         }
     }
 }

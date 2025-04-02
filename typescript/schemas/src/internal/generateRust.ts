@@ -38,6 +38,12 @@ pub struct ${schema.name} {
   ${schema.fields
     .flatMap((field) => {
       const comment = formatComment(field.description);
+      if (field.array !== undefined) {
+        return [
+          // `${comment}\npub ${escapeId(field.name)}: !`,
+          `${comment}\n/*TODO*/\n  pub ${escapeId(field.name)}_count: usize`,
+        ];
+      }
       switch (field.type.type) {
         case "primitive":
           if (field.type.name === "string") {
@@ -53,8 +59,9 @@ pub struct ${schema.name} {
           }
           return `${comment}\npub ${escapeId(field.name)}: ${primitiveToRust(field.type.name)}`;
         case "enum":
+          return `${comment}\npub ${escapeId(field.name)}: i32/*TODO*/`;
         case "nested":
-          return `${comment}\npub ${escapeId(field.name)}: bool/*TODO*/`;
+          return `${comment}\npub ${escapeId(field.name)}: *const ${field.type.schema.name}`;
       }
     })
     .join(",\n  ")}
@@ -65,12 +72,25 @@ impl From<&${schema.name}> for foxglove::schemas::${schema.name.replace("JSON", 
     Self {
       ${schema.fields
         .map((field) => {
+          const srcName = escapeId(field.name);
+          const dstName = escapeId(field.name).toLowerCase();
+          if (field.array !== undefined) {
+            return `${dstName}: todo!("arrays")`;
+          }
           switch (field.type.type) {
             case "primitive":
-              return `${escapeId(field.name)}: msg.${escapeId(field.name)}`;
+              if (field.type.name === "string") {
+                return `${dstName}: std::str::from_utf8(unsafe { std::slice::from_raw_parts(msg.${srcName} as *const u8, msg.${field.name}_len) }).unwrap().to_string()`;
+              } else if (field.type.name === "bytes") {
+                return `${dstName}: unsafe { std::slice::from_raw_parts(msg.${srcName}, msg.${field.name}_len) }`;
+              } else if (field.type.name === "time" || field.type.name === "duration") {
+                return `${dstName}: Some(msg.${srcName}.into())`;
+              }
+              return `${dstName}: msg.${srcName}`;
             case "enum":
+              return `${dstName}: todo!()`;
             case "nested":
-              return `${escapeId(field.name)}: todo!()`;
+              return `${dstName}: Some(unsafe { &*msg.${srcName} }.into())`;
           }
         })
         .join(",      \n")}
@@ -103,11 +123,18 @@ impl From<&${schema.name}> for foxglove::schemas::${schema.name.replace("JSON", 
     `\
 /// A timestamp, represented as an offset from a user-defined epoch.
 #[repr(C)]
+#[derive(Debug, Clone, Copy)]
 pub struct Timestamp {
     /// Seconds since epoch.
     pub sec: u32,
     /// Additional nanoseconds since epoch.
     pub nsec: u32,
+}
+
+impl From<Timestamp> for foxglove::schemas::Timestamp {
+  fn from(other: Timestamp) -> Self {
+    Self::new(other.sec, other.nsec)
+  }
 }`,
 
     `\
@@ -121,6 +148,12 @@ pub struct Duration {
     sec: i32,
     /// Nanoseconds offset in the positive direction.
     nsec: u32,
+}
+
+impl From<Duration> for foxglove::schemas::Duration {
+  fn from(other: Duration) -> Self {
+    Self::new(other.sec, other.nsec)
+  }
 }`,
 
     ...schemaStructs,
