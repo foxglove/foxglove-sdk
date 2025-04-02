@@ -58,8 +58,8 @@ impl ContextInner {
         // Remove subscriptions for this channel.
         self.subs.remove_channel_subscriptions(channel.id());
 
-        // Disconnect channel sinks.
-        channel.clear_sinks();
+        // Close the channel and remove sinks.
+        channel.remove_from_context();
 
         // Notify sinks of removed channel.
         for sink in self.sinks.values() {
@@ -140,7 +140,15 @@ impl ContextInner {
 
     /// Removes all channels and sinks from the context.
     fn clear(&mut self) {
-        self.channels.clear();
+        for (_, channel) in self.channels.drain() {
+            // Close the channel and remove sinks.
+            channel.remove_from_context();
+
+            // Notify sink of removed channel.
+            for sink in self.sinks.values() {
+                sink.remove_channel(&channel);
+            }
+        }
         self.channels_by_topic.clear();
         self.sinks.clear();
         self.subs.clear();

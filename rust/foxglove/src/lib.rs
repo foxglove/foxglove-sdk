@@ -178,6 +178,7 @@ mod sink;
 mod tests;
 #[cfg(test)]
 mod testutil;
+mod throttler;
 mod time;
 pub mod websocket;
 mod websocket_server;

@@ -1,14 +1,22 @@
 //! A raw channel.
 
 use std::collections::BTreeMap;
-use std::sync::atomic::AtomicU32;
-use std::sync::atomic::Ordering::Relaxed;
+use std::sync::atomic::Ordering::{Acquire, Relaxed, Release};
+use std::sync::atomic::{AtomicBool, AtomicU32};
 use std::sync::{Arc, Weak};
+use std::time::Duration;
+
+use parking_lot::Mutex;
+use tracing::warn;
 
 use super::ChannelId;
 use crate::log_sink_set::LogSinkSet;
 use crate::sink::SmallSinkVec;
+use crate::throttler::Throttler;
 use crate::{nanoseconds_since_epoch, Context, Metadata, PartialMetadata, Schema};
+
+/// Interval for throttled warnings.
+static WARN_THROTTLER_INTERVAL: Duration = Duration::from_secs(10);
 
 /// A log channel that can be used to log binary messages.
 ///
@@ -32,6 +40,8 @@ pub struct RawChannel {
     metadata: BTreeMap<String, String>,
     message_sequence: AtomicU32,
     sinks: LogSinkSet,
+    closed: AtomicBool,
+    warn_throttler: Mutex<Throttler>,
 }
 
 impl RawChannel {
@@ -51,6 +61,8 @@ impl RawChannel {
             metadata,
             message_sequence: AtomicU32::new(1),
             sinks: LogSinkSet::new(),
+            closed: AtomicBool::new(false),
+            warn_throttler: Mutex::new(Throttler::new(WARN_THROTTLER_INTERVAL)),
         })
     }
 
@@ -86,21 +98,40 @@ impl RawChannel {
 
     /// Closes the channel, removing it from the context.
     ///
-    /// Future messages logged to the channel will not be received by any sink.
+    /// Future messages logged to the channel will not be received by any sink. Attempts to log
+    /// on a closed channel will elicit a throttled warning message.
     pub fn close(&self) {
-        if let Some(ctx) = self.context.upgrade() {
-            ctx.remove_channel(self.id);
+        if !self.is_closed() {
+            if let Some(ctx) = self.context.upgrade() {
+                ctx.remove_channel(self.id);
+            }
+        }
+    }
+
+    /// Invoked when the channel is removed from its context.
+    ///
+    /// This can happen either due to an explicit call to [`RawChannel::close`], or due to the
+    /// context being dropped.
+    pub(crate) fn remove_from_context(&self) {
+        self.closed.store(true, Release);
+        self.sinks.clear();
+    }
+
+    /// Returns true if the channel is closed.
+    fn is_closed(&self) -> bool {
+        self.closed.load(Acquire)
+    }
+
+    /// Issues a throttled warning about attempting to log on a closed channel.
+    pub(crate) fn log_warn_if_closed(&self) {
+        if self.is_closed() && self.warn_throttler.lock().try_acquire() {
+            warn!("Cannot log on closed channel for {}", self.topic());
         }
     }
 
     /// Updates the set of sinks that are subscribed to this channel.
     pub(crate) fn update_sinks(&self, sinks: SmallSinkVec) {
         self.sinks.store(sinks);
-    }
-
-    /// Clears the set of subscribed sinks.
-    pub(crate) fn clear_sinks(&self) {
-        self.sinks.clear();
     }
 
     /// Returns true if at least one sink is subscribed to this channel.
@@ -116,15 +147,15 @@ impl RawChannel {
 
     /// Logs a message.
     pub fn log(&self, msg: &[u8]) {
-        if self.has_sinks() {
-            self.log_to_sinks(msg, PartialMetadata::default());
-        }
+        self.log_with_meta(msg, PartialMetadata::default());
     }
 
     /// Logs a message with additional metadata.
     pub fn log_with_meta(&self, msg: &[u8], opts: PartialMetadata) {
         if self.has_sinks() {
             self.log_to_sinks(msg, opts);
+        } else {
+            self.log_warn_if_closed();
         }
     }
 
