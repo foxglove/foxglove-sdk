@@ -5,27 +5,26 @@ use std::sync::{Arc, LazyLock};
 
 use parking_lot::RwLock;
 
-use crate::channel::ChannelId;
-use crate::{Channel, FoxgloveError, Sink, SinkId};
+use crate::{ChannelId, FoxgloveError, RawChannel, Sink, SinkId};
 
 mod subscriptions;
 use subscriptions::Subscriptions;
 
 #[derive(Default)]
 struct ContextInner {
-    channels: HashMap<ChannelId, Arc<Channel>>,
-    channels_by_topic: HashMap<String, Arc<Channel>>,
+    channels: HashMap<ChannelId, Arc<RawChannel>>,
+    channels_by_topic: HashMap<String, Arc<RawChannel>>,
     sinks: HashMap<SinkId, Arc<dyn Sink>>,
     subs: Subscriptions,
 }
 impl ContextInner {
     /// Returns the channel for the specified topic, if there is one.
-    fn get_channel_by_topic(&self, topic: &str) -> Option<&Arc<Channel>> {
+    fn get_channel_by_topic(&self, topic: &str) -> Option<&Arc<RawChannel>> {
         self.channels_by_topic.get(topic)
     }
 
     /// Adds a channel to the context.
-    fn add_channel(&mut self, channel: Arc<Channel>) -> Result<(), FoxgloveError> {
+    fn add_channel(&mut self, channel: Arc<RawChannel>) -> Result<(), FoxgloveError> {
         // Insert channel.
         let topic = channel.topic();
         let Entry::Vacant(entry) = self.channels_by_topic.entry(topic.to_string()) else {
@@ -49,18 +48,18 @@ impl ContextInner {
         Ok(())
     }
 
-    /// Removes the channel for the specified topic.
-    fn remove_channel_for_topic(&mut self, topic: &str) -> bool {
-        let Some(channel) = self.channels_by_topic.remove(topic) else {
+    /// Removes a channel from the context.
+    fn remove_channel(&mut self, channel_id: ChannelId) -> bool {
+        let Some(channel) = self.channels.remove(&channel_id) else {
             return false;
         };
-        self.channels.remove(&channel.id());
+        self.channels_by_topic.remove(channel.topic());
 
         // Remove subscriptions for this channel.
         self.subs.remove_channel_subscriptions(channel.id());
 
-        // Disconnect channel sinks.
-        channel.clear_sinks();
+        // Close the channel and remove sinks.
+        channel.remove_from_context();
 
         // Notify sinks of removed channel.
         for sink in self.sinks.values() {
@@ -131,7 +130,7 @@ impl ContextInner {
     }
 
     /// Updates the set of connected sinks on the specified channels.
-    fn update_channel_sinks(&self, channels: impl IntoIterator<Item = impl AsRef<Channel>>) {
+    fn update_channel_sinks(&self, channels: impl IntoIterator<Item = impl AsRef<RawChannel>>) {
         for channel in channels {
             let channel = channel.as_ref();
             let sinks = self.subs.get_subscribers(channel.id());
@@ -141,7 +140,15 @@ impl ContextInner {
 
     /// Removes all channels and sinks from the context.
     fn clear(&mut self) {
-        self.channels.clear();
+        for (_, channel) in self.channels.drain() {
+            // Close the channel and remove sinks.
+            channel.remove_from_context();
+
+            // Notify sink of removed channel.
+            for sink in self.sinks.values() {
+                sink.remove_channel(&channel);
+            }
+        }
         self.channels_by_topic.clear();
         self.sinks.clear();
         self.subs.clear();
@@ -176,18 +183,26 @@ impl Context {
     }
 
     /// Returns the channel for the specified topic, if there is one.
-    pub fn get_channel_by_topic(&self, topic: &str) -> Option<Arc<Channel>> {
+    pub fn get_channel_by_topic(&self, topic: &str) -> Option<Arc<RawChannel>> {
         self.0.read().get_channel_by_topic(topic).cloned()
     }
 
     /// Adds a channel to the context.
-    pub fn add_channel(&self, channel: Arc<Channel>) -> Result<(), FoxgloveError> {
+    ///
+    /// This is deliberately `pub(crate)` to ensure that the channel's context linkage remains
+    /// consistent. Publicly, the only way to add a channel to a context is by constructing it via
+    /// a [`ChannelBuilder`][crate::ChannelBuilder].
+    pub(crate) fn add_channel(&self, channel: Arc<RawChannel>) -> Result<(), FoxgloveError> {
         self.0.write().add_channel(channel)
     }
 
-    /// Removes the channel for the specified topic.
-    pub fn remove_channel_for_topic(&self, topic: &str) -> bool {
-        self.0.write().remove_channel_for_topic(topic)
+    /// Removes a channel from the context.
+    ///
+    /// This is deliberately `pub(crate)` to ensure that the channel's context linkage remains
+    /// consistent. Publicly, the only way to remove a channel from a context is by calling
+    /// [`RawChannel::close`], or by dropping the context entirely.
+    pub(crate) fn remove_channel(&self, channel_id: ChannelId) -> bool {
+        self.0.write().remove_channel(channel_id)
     }
 
     /// Adds a sink to the context.
@@ -198,11 +213,13 @@ impl Context {
     /// present and future channels on the context. Otherwise, the sink is expected to manage its
     /// subscriptions dynamically with [`Context::subscribe_channels`] and
     /// [`Context::unsubscribe_channels`].
+    #[doc(hidden)] // Hidden until Sink is public
     pub fn add_sink(&self, sink: Arc<dyn Sink>) -> bool {
         self.0.write().add_sink(sink)
     }
 
     /// Removes a sink from the context.
+    #[doc(hidden)] // Hidden until Sink is public.
     pub fn remove_sink(&self, sink_id: SinkId) -> bool {
         self.0.write().remove_sink(sink_id)
     }
@@ -210,6 +227,7 @@ impl Context {
     /// Subscribes a sink to the specified channels.
     ///
     /// This method has no effect for sinks that return true from [`Sink::auto_subscribe`].
+    #[doc(hidden)] // Hidden until Sink is public.
     pub fn subscribe_channels(&self, sink_id: SinkId, channel_ids: &[ChannelId]) {
         self.0.write().subscribe_channels(sink_id, channel_ids);
     }
@@ -217,6 +235,7 @@ impl Context {
     /// Unsubscribes a sink from the specified channels.
     ///
     /// This method has no effect for sinks that return true from [`Sink::auto_subscribe`].
+    #[doc(hidden)] // Hidden until Sink is public.
     pub fn unsubscribe_channels(&self, sink_id: SinkId, channel_ids: &[ChannelId]) {
         self.0.write().unsubscribe_channels(sink_id, channel_ids);
     }
@@ -234,11 +253,11 @@ mod tests {
     use crate::log_sink_set::ERROR_LOGGING_MESSAGE;
     use crate::testutil::{ErrorSink, MockSink, RecordingSink};
     use crate::{context::*, ChannelBuilder};
-    use crate::{nanoseconds_since_epoch, Channel, PartialMetadata, Schema};
+    use crate::{nanoseconds_since_epoch, PartialMetadata, RawChannel, Schema};
     use std::sync::Arc;
     use tracing_test::traced_test;
 
-    fn new_test_channel(ctx: &Arc<Context>, topic: &str) -> Result<Arc<Channel>, FoxgloveError> {
+    fn new_test_channel(ctx: &Arc<Context>, topic: &str) -> Result<Arc<RawChannel>, FoxgloveError> {
         ChannelBuilder::new(topic)
             .context(ctx)
             .message_encoding("message_encoding")
@@ -254,7 +273,7 @@ mod tests {
                 }"#,
             ))
             .metadata(collection! {"key".to_string() => "value".to_string()})
-            .build()
+            .build_raw()
     }
 
     #[test]
@@ -368,8 +387,8 @@ mod tests {
     #[test]
     fn test_remove_channel() {
         let ctx = Context::new();
-        let _ = new_test_channel(&ctx, "topic").unwrap();
-        assert!(ctx.remove_channel_for_topic("topic"));
+        let ch = new_test_channel(&ctx, "topic").unwrap();
+        assert!(ctx.remove_channel(ch.id()));
         assert!(ctx.0.read().channels.is_empty());
     }
 
@@ -389,7 +408,7 @@ mod tests {
         assert!(c2.has_sinks());
 
         // Auto-subscribe to new channels.
-        assert!(ctx.remove_channel_for_topic(c1.topic()));
+        assert!(ctx.remove_channel(c1.id()));
         assert!(!c1.has_sinks());
         assert!(c2.has_sinks());
         ctx.add_channel(c1.clone()).unwrap();
@@ -417,7 +436,7 @@ mod tests {
         assert!(!c2.has_sinks());
 
         // No auto-subscribe to new channels.
-        assert!(ctx.remove_channel_for_topic(c1.topic()));
+        assert!(ctx.remove_channel(c1.id()));
         ctx.add_channel(c1.clone()).unwrap();
         assert!(!c1.has_sinks());
 
@@ -432,7 +451,7 @@ mod tests {
         // If a channel is removed and re-added, its subscriptions are lost. This isn't a workflow
         // we expect to happen. Note that the sink will receive `remove_channel` and `add_channel`
         // callbacks, so it has an opportunity to reinstall subscriptions if it wants to.
-        assert!(ctx.remove_channel_for_topic(c1.topic()));
+        assert!(ctx.remove_channel(c1.id()));
         assert!(!c1.has_sinks());
         assert!(c2.has_sinks());
         ctx.add_channel(c1.clone()).unwrap();
@@ -472,7 +491,7 @@ mod tests {
         let ch = ChannelBuilder::new("topic")
             .message_encoding("json")
             .context(&ctx)
-            .build()
+            .build_raw()
             .unwrap();
         assert!(ch.has_sinks());
         ctx.remove_sink(s1.id());
@@ -498,7 +517,7 @@ mod tests {
         assert!(!ch.has_sinks());
 
         // Add channel with existing sink.
-        assert!(ctx.remove_channel_for_topic(ch.topic()));
+        assert!(ctx.remove_channel(ch.id()));
         ctx.add_channel(ch.clone()).unwrap();
         assert!(!ch.has_sinks());
     }

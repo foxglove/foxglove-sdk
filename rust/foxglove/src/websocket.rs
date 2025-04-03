@@ -21,9 +21,10 @@ use tokio_tungstenite::tungstenite::{self, handshake::server, http::HeaderValue,
 use tokio_tungstenite::WebSocketStream;
 use tokio_util::sync::CancellationToken;
 
-use crate::channel::ChannelId;
 use crate::cow_vec::CowVec;
-use crate::{get_runtime_handle, Channel, Context, FoxgloveError, Metadata, Sink, SinkId};
+use crate::{
+    get_runtime_handle, ChannelId, Context, FoxgloveError, Metadata, RawChannel, Sink, SinkId,
+};
 
 mod fetch_asset;
 pub use fetch_asset::{AssetHandler, AssetResponder};
@@ -286,7 +287,7 @@ pub(crate) struct ConnectedClient {
     sink_id: SinkId,
     context: Weak<Context>,
     /// A cache of channels for `on_subscribe` and `on_unsubscribe` callbacks.
-    channels: parking_lot::RwLock<HashMap<ChannelId, Arc<Channel>>>,
+    channels: parking_lot::RwLock<HashMap<ChannelId, Arc<RawChannel>>>,
     /// Write side of a WS stream
     sender: Mutex<WebsocketSender>,
     data_plane_tx: flume::Sender<Message>,
@@ -993,7 +994,7 @@ impl ConnectedClient {
     }
 
     /// Advertises a channel to the client.
-    fn advertise_channel(&self, channel: &Arc<Channel>) {
+    fn advertise_channel(&self, channel: &Arc<RawChannel>) {
         let message = match protocol::server::advertisement(channel) {
             Ok(message) => message,
             Err(FoxgloveError::SchemaRequired) => {
@@ -1417,6 +1418,9 @@ impl Server {
         if !self.capabilities.contains(&Capability::Services) {
             return Err(FoxgloveError::ServicesNotSupported);
         }
+        if new_services.is_empty() {
+            return Ok(());
+        }
 
         let mut new_names = HashMap::with_capacity(new_services.len());
         for service in &new_services {
@@ -1593,7 +1597,12 @@ impl Sink for ConnectedClient {
         self.sink_id
     }
 
-    fn log(&self, channel: &Channel, msg: &[u8], metadata: &Metadata) -> Result<(), FoxgloveError> {
+    fn log(
+        &self,
+        channel: &RawChannel,
+        msg: &[u8],
+        metadata: &Metadata,
+    ) -> Result<(), FoxgloveError> {
         let subscriptions = self.subscriptions.lock();
         let Some(subscription_id) = subscriptions.get_by_left(&channel.id()).copied() else {
             return Ok(());
@@ -1614,13 +1623,13 @@ impl Sink for ConnectedClient {
     }
 
     /// Server has an available channel. Advertise to all clients.
-    fn add_channel(&self, channel: &Arc<Channel>) -> bool {
+    fn add_channel(&self, channel: &Arc<RawChannel>) -> bool {
         self.advertise_channel(channel);
         false
     }
 
     /// A channel is being removed. Unadvertise to all clients.
-    fn remove_channel(&self, channel: &Channel) {
+    fn remove_channel(&self, channel: &RawChannel) {
         self.unadvertise_channel(channel.id());
     }
 

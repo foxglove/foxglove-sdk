@@ -18,7 +18,7 @@ A "sink" is a destination for logged messages — either an MCAP file or a live 
 A "channel" gives a way to log related messages which have the same schema. Each channel is instantiated with a unique topic name.
 
 The SDK provides structs for well-known schemas. These can be used in conjunction with
-`TypedChannel` for type-safe logging, which ensures at compile time that
+`Channel` for type-safe logging, which ensures at compile time that
 messages logged to a channel all share a common schema.
 
 You can also define your own custom data types by implementing the `Encode` trait. This
@@ -29,3 +29,7 @@ automatically implemented for types that implement `serde::Serialize` and
 # Get Started
 
 For more information and examples, see [docs.rs](https://docs.rs/foxglove).
+
+# Supported Rust Versions
+
+The current MSRV (minimum supported rust version) is 1.83.0.
