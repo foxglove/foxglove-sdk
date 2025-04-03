@@ -213,6 +213,9 @@ pub enum FoxgloveError {
     /// An unspecified error.
     #[error("{0}")]
     Unspecified(#[source] Box<dyn std::error::Error + Send + Sync + 'static>),
+    /// A value or argument is invalid.
+    #[error("Value or argument is invalid: {0}")]
+    ValueError(String),
     /// The sink dropped a message because it is closed.
     #[error("Sink closed")]
     SinkClosed,

@@ -145,19 +145,38 @@ pub struct FoxgloveSchema {
 ///
 /// `port` may be 0, in which case an available port will be automatically selected.
 ///
+/// If an error occurs, returns null and error will be set with the error details.
+/// Remember to call `foxglove_error_free` afterwards.
+/// If error is null, no error details are returned.
+///
 /// # Safety
 /// `name` and `host` must be null-terminated strings with valid UTF8.
 #[unsafe(no_mangle)]
 #[must_use]
 pub unsafe extern "C" fn foxglove_server_start(
     options: &FoxgloveServerOptions,
+    error: *mut FoxgloveError,
 ) -> *mut FoxgloveWebSocketServer {
+    unsafe {
+        match do_foxglove_server_start(options) {
+            Ok(server) => Box::into_raw(server),
+            Err(err) => {
+                set_error(error, err);
+                std::ptr::null_mut()
+            }
+        }
+    }
+}
+
+unsafe fn do_foxglove_server_start(
+    options: &FoxgloveServerOptions,
+) -> Result<Box<FoxgloveWebSocketServer>, foxglove::FoxgloveError> {
     let name = unsafe { CStr::from_ptr(options.name) }
         .to_str()
-        .expect("name is invalid");
+        .map_err(|e| foxglove::FoxgloveError::ValueError(format!("name is invalid: {}", e)))?;
     let host = unsafe { CStr::from_ptr(options.host) }
         .to_str()
-        .expect("host is invalid");
+        .map_err(|e| foxglove::FoxgloveError::ValueError(format!("host is invalid: {}", e)))?;
     let mut server = foxglove::WebSocketServer::new()
         .name(name)
         .capabilities(
@@ -166,6 +185,11 @@ pub unsafe extern "C" fn foxglove_server_start(
         )
         .bind(host, options.port);
     if options.supported_encodings_count > 0 {
+        if options.supported_encodings.is_null() {
+            return Err(foxglove::FoxgloveError::ValueError(
+                "supported_encodings is null".to_string(),
+            ));
+        }
         server = server.supported_encodings(
             unsafe {
                 std::slice::from_raw_parts(
@@ -175,18 +199,26 @@ pub unsafe extern "C" fn foxglove_server_start(
             }
             .iter()
             .map(|&enc| {
-                assert!(!enc.is_null());
-                unsafe { CStr::from_ptr(enc) }
-                    .to_str()
-                    .expect("encoding is invalid")
-            }),
+                if enc.is_null() {
+                    return Err(foxglove::FoxgloveError::ValueError(
+                        "encoding in supported_encodings is null".to_string(),
+                    ));
+                }
+                unsafe { CStr::from_ptr(enc) }.to_str().map_err(|e| {
+                    foxglove::FoxgloveError::ValueError(format!(
+                        "encoding in supported_encodings is invalid: {}",
+                        e
+                    ))
+                })
+            })
+            .collect::<Result<Vec<_>, _>>()?,
         );
     }
     if let Some(callbacks) = options.callbacks {
         server = server.listener(Arc::new(callbacks.clone()))
     }
-    Box::into_raw(Box::new(FoxgloveWebSocketServer(Some(
-        server.start_blocking().expect("Server failed to start"),
+    Ok(Box::new(FoxgloveWebSocketServer(Some(
+        server.start_blocking()?,
     ))))
 }
 
@@ -222,11 +254,11 @@ pub struct FoxgloveMcapOptions {
 }
 
 impl FoxgloveMcapOptions {
-    unsafe fn to_write_options(&self) -> WriteOptions {
+    unsafe fn to_write_options(&self) -> Result<WriteOptions, foxglove::FoxgloveError> {
         let profile = std::str::from_utf8(unsafe {
             std::slice::from_raw_parts(self.profile as *const u8, self.profile_len)
         })
-        .expect("profile is invalid");
+        .map_err(|e| foxglove::FoxgloveError::ValueError(format!("profile is invalid: {}", e)))?;
 
         let compression = match self.compression {
             FoxgloveMcapCompression::Zstd => Some(Compression::Zstd),
@@ -234,7 +266,7 @@ impl FoxgloveMcapOptions {
             _ => None,
         };
 
-        WriteOptions::default()
+        Ok(WriteOptions::default()
             .profile(profile)
             .compression(compression)
             .chunk_size(if self.chunk_size > 0 {
@@ -251,7 +283,7 @@ impl FoxgloveMcapOptions {
             .emit_attachment_indexes(self.emit_attachment_indexes)
             .emit_metadata_indexes(self.emit_metadata_indexes)
             .repeat_channels(self.repeat_channels)
-            .repeat_schemas(self.repeat_schemas)
+            .repeat_schemas(self.repeat_schemas))
     }
 }
 
@@ -259,45 +291,83 @@ pub struct FoxgloveMcapWriter(Option<foxglove::McapWriterHandle<BufWriter<File>>
 
 /// Create or open an MCAP file for writing. Must later be freed with `foxglove_mcap_free`.
 ///
+/// If an error occurs, returns null and error will be set with the error details.
+/// Remember to call `foxglove_error_free` afterwards.
+/// If error is null, no error details are returned.
+///
 /// # Safety
-/// `path`, `profile`, and `library` must be valid UTF8.
+/// `path` and `profile` must be valid UTF8.
 #[unsafe(no_mangle)]
 #[must_use]
 pub unsafe extern "C" fn foxglove_mcap_open(
     options: &FoxgloveMcapOptions,
+    error: *mut FoxgloveError,
 ) -> *mut FoxgloveMcapWriter {
+    unsafe {
+        match do_foxglove_mcap_open(options) {
+            Ok(writer) => Box::into_raw(writer),
+            Err(err) => {
+                set_error(error, err);
+                std::ptr::null_mut()
+            }
+        }
+    }
+}
+
+unsafe fn do_foxglove_mcap_open(
+    options: &FoxgloveMcapOptions,
+) -> Result<Box<FoxgloveMcapWriter>, foxglove::FoxgloveError> {
     let path = std::str::from_utf8(unsafe {
         std::slice::from_raw_parts(options.path as *const u8, options.path_len)
     })
-    .expect("path is invalid");
+    .map_err(|e| foxglove::FoxgloveError::ValueError(format!("path is invalid: {}", e)))?;
 
     // Safety: this is safe if the options struct contains valid strings
-    let mcap_options = unsafe { options.to_write_options() };
+    let mcap_options = unsafe { options.to_write_options() }?;
 
     let file = File::options()
         .write(true)
         .create(options.create)
         .truncate(options.truncate)
         .open(path)
-        .expect("Failed to open file");
-    let writer = foxglove::McapWriter::with_options(mcap_options)
-        .create(BufWriter::new(file))
-        .expect("Failed to create writer");
-    Box::into_raw(Box::new(FoxgloveMcapWriter(Some(writer))))
+        .map_err(foxglove::FoxgloveError::IoError)?;
+
+    let writer = foxglove::McapWriter::with_options(mcap_options).create(BufWriter::new(file))?;
+    Ok(Box::new(FoxgloveMcapWriter(Some(writer))))
 }
 
 /// Close an MCAP file writer created via `foxglove_mcap_open`.
+/// Returns true if file closed without error.
+///
+/// If an error occurs, returns false and error will be set with the error details.
+/// Remember to call `foxglove_error_free` afterwards.
+/// If error is null, no error details are returned.
 ///
 /// # Safety
 /// `writer` must be a valid pointer to a `FoxgloveMcapWriter` created via `foxglove_mcap_open`.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn foxglove_mcap_close(writer: Option<&mut FoxgloveMcapWriter>) {
+pub unsafe extern "C" fn foxglove_mcap_close(
+    writer: Option<&mut FoxgloveMcapWriter>,
+    error: *mut FoxgloveError,
+) -> bool {
     let Some(writer) = writer else {
-        return;
+        unsafe {
+            set_error(
+                error,
+                foxglove::FoxgloveError::ValueError("writer is null".to_string()),
+            );
+        }
+        return false;
     };
     if let Some(handle) = writer.0.take() {
-        handle.close().expect("Failed to close writer");
+        if let Err(e) = handle.close() {
+            unsafe {
+                set_error(error, e);
+            }
+            return false;
+        }
     }
+    true
 }
 
 /// Free an MCAP file writer created via `foxglove_mcap_open`.
@@ -319,6 +389,7 @@ pub unsafe extern "C" fn foxglove_mcap_free(writer: Option<&mut FoxgloveMcapWrit
 /// Free a server created via `foxglove_server_start`.
 ///
 /// If the server has not already been stopped, it will be stopped automatically.
+/// Does nothing if server is null.
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_server_free(server: Option<&mut FoxgloveWebSocketServer>) {
     let Some(server) = server else {
@@ -334,10 +405,12 @@ pub extern "C" fn foxglove_server_free(server: Option<&mut FoxgloveWebSocketServ
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_server_get_port(server: Option<&FoxgloveWebSocketServer>) -> u16 {
     let Some(server) = server else {
-        panic!("Expected a non-null server");
+        tracing::error!("foxglove_server_get_port called with null server");
+        return 0;
     };
     let Some(ref handle) = server.0 else {
-        panic!("Server already stopped");
+        tracing::debug!("foxgove_server_get_port called with stopped server");
+        return 0;
     };
     handle.port()
 }
@@ -346,15 +419,21 @@ pub extern "C" fn foxglove_server_get_port(server: Option<&FoxgloveWebSocketServ
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_server_stop(server: Option<&mut FoxgloveWebSocketServer>) {
     let Some(server) = server else {
-        panic!("Expected a non-null server");
+        tracing::error!("foxglove_server_stop called with null server");
+        return;
     };
     let Some(handle) = server.0.take() else {
-        panic!("Server already stopped");
+        tracing::debug!("foxglove_server already stopped");
+        return;
     };
     handle.stop();
 }
 
 /// Create a new channel. The channel must later be freed with `foxglove_channel_free`.
+///
+/// If an error occurs, returns null and error will be set with the error details.
+/// Remember to call `foxglove_error_free` afterwards.
+/// If error is null, no error details are returned.
 ///
 /// # Safety
 /// `topic` and `message_encoding` must be null-terminated strings with valid UTF8. `schema` is an
@@ -365,34 +444,66 @@ pub unsafe extern "C" fn foxglove_channel_create(
     topic: *const c_char,
     message_encoding: *const c_char,
     schema: *const FoxgloveSchema,
+    error: *mut FoxgloveError,
 ) -> *mut FoxgloveChannel {
+    unsafe {
+        match do_foxglove_channel_create(topic, message_encoding, schema) {
+            Ok(channel) => Arc::into_raw(channel).cast_mut(),
+            Err(e) => {
+                set_error(error, e);
+                std::ptr::null_mut()
+            }
+        }
+    }
+}
+
+unsafe fn do_foxglove_channel_create(
+    topic: *const c_char,
+    message_encoding: *const c_char,
+    schema: *const FoxgloveSchema,
+) -> Result<Arc<foxglove::RawChannel>, foxglove::FoxgloveError> {
     let topic = unsafe { CStr::from_ptr(topic) }
         .to_str()
-        .expect("topic is invalid");
+        .map_err(|e| foxglove::FoxgloveError::ValueError(format!("topic invalid: {}", e)))?;
     let message_encoding = unsafe { CStr::from_ptr(message_encoding) }
         .to_str()
-        .expect("message_encoding is invalid");
-    let schema = unsafe { schema.as_ref() }.map(|schema| {
+        .map_err(|e| {
+            foxglove::FoxgloveError::ValueError(format!("message_encoding invalid: {}", e))
+        })?;
+
+    let mut maybe_schema = None;
+    if let Some(schema) = unsafe { schema.as_ref() } {
         let name = unsafe { CStr::from_ptr(schema.name) }
             .to_str()
-            .expect("schema name is invalid");
+            .map_err(|e| {
+                foxglove::FoxgloveError::ValueError(format!("schema name invalid: {}", e))
+            })?;
         let encoding = unsafe { CStr::from_ptr(schema.encoding) }
             .to_str()
-            .expect("schema encoding is invalid");
+            .map_err(|e| {
+                foxglove::FoxgloveError::ValueError(format!("schema name invalid: {}", e))
+            })?;
         let data = unsafe { std::slice::from_raw_parts(schema.data, schema.data_len) };
-        foxglove::Schema::new(name, encoding, data.to_owned())
-    });
-    Arc::into_raw(
-        foxglove::ChannelBuilder::new(topic)
-            .message_encoding(message_encoding)
-            .schema(schema)
-            .build_raw()
-            .expect("Failed to create channel"),
-    )
-    .cast_mut()
+        maybe_schema = Some(foxglove::Schema::new(name, encoding, data.to_owned()));
+    }
+
+    foxglove::ChannelBuilder::new(topic)
+        .message_encoding(message_encoding)
+        .schema(maybe_schema)
+        .build_raw()
+}
+
+unsafe fn set_error(error: *mut FoxgloveError, err: foxglove::FoxgloveError) {
+    if error.is_null() {
+        return;
+    }
+    unsafe { *error = FoxgloveError::from(err) };
 }
 
 /// Free a channel created via `foxglove_channel_create`.
+/// # Safety
+/// `channel` must be a valid pointer to a `FoxgloveChannel` created via `foxglove_channel_create`.
+/// If channel is null, this does nothing.
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_free(channel: Option<&mut FoxgloveChannel>) {
     let Some(channel) = channel else {
@@ -401,9 +512,17 @@ pub extern "C" fn foxglove_channel_free(channel: Option<&mut FoxgloveChannel>) {
     drop(unsafe { Arc::from_raw(channel) });
 }
 
+/// Get the ID of a channel.
+///
+/// # Safety
+/// `channel` must be a valid pointer to a `FoxgloveChannel` created via `foxglove_channel_create`.
+///
+/// If the passed channel is null, an invalid id of 0 is returned.
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_get_id(channel: Option<&FoxgloveChannel>) -> u64 {
-    let channel = channel.expect("channel is required");
+    let Some(channel) = channel else {
+        return 0;
+    };
     u64::from(channel.id())
 }
 
@@ -423,9 +542,16 @@ pub unsafe extern "C" fn foxglove_channel_log(
     publish_time: *const u64,
     sequence: *const u32,
 ) {
-    let channel = channel.expect("channel is required");
-    if data.is_null() {
-        panic!("data is required");
+    // An assert might be reasonable under different circumstances, but here
+    // we don't want to crash the program using the library, on a robot in the field,
+    // because it called log incorrectly. Safer to just warn about it and do nothing.
+    let Some(channel) = channel else {
+        tracing::error!("foxglove_channel_log called with null channel");
+        return;
+    };
+    if data.is_null() || data_len == 0 {
+        tracing::error!("foxglove_channel_log called with null or empty data");
+        return;
     }
     // avoid decrementing ref count
     let channel = ManuallyDrop::new(unsafe { Arc::from_raw(channel) });
@@ -531,5 +657,96 @@ impl foxglove::websocket::ServerListener for FoxgloveServerCallbacks {
         if let Some(on_client_unadvertise) = self.on_client_unadvertise {
             unsafe { on_client_unadvertise(client.id().into(), channel.id.into(), self.context) };
         }
+    }
+}
+
+#[repr(u8)]
+pub enum FoxgloveErrorKind {
+    Unspecified,
+    ValueError,
+    SinkClosed,
+    SchemaRequired,
+    MessageEncodingRequired,
+    ServerAlreadyStarted,
+    Bind,
+    DuplicateChannel,
+    DuplicateService,
+    MissingRequestEncoding,
+    ServicesNotSupported,
+    ConnectionGraphNotSupported,
+    IoError,
+    McapError,
+}
+
+impl From<&foxglove::FoxgloveError> for FoxgloveErrorKind {
+    fn from(error: &foxglove::FoxgloveError) -> Self {
+        match error {
+            foxglove::FoxgloveError::ValueError(_) => FoxgloveErrorKind::ValueError,
+            foxglove::FoxgloveError::SinkClosed => FoxgloveErrorKind::SinkClosed,
+            foxglove::FoxgloveError::SchemaRequired => FoxgloveErrorKind::SchemaRequired,
+            foxglove::FoxgloveError::MessageEncodingRequired => {
+                FoxgloveErrorKind::MessageEncodingRequired
+            }
+            foxglove::FoxgloveError::ServerAlreadyStarted => {
+                FoxgloveErrorKind::ServerAlreadyStarted
+            }
+            foxglove::FoxgloveError::Bind(_) => FoxgloveErrorKind::Bind,
+            foxglove::FoxgloveError::DuplicateChannel(_) => FoxgloveErrorKind::DuplicateChannel,
+            foxglove::FoxgloveError::DuplicateService(_) => FoxgloveErrorKind::DuplicateService,
+            foxglove::FoxgloveError::MissingRequestEncoding(_) => {
+                FoxgloveErrorKind::MissingRequestEncoding
+            }
+            foxglove::FoxgloveError::ServicesNotSupported => {
+                FoxgloveErrorKind::ServicesNotSupported
+            }
+            foxglove::FoxgloveError::ConnectionGraphNotSupported => {
+                FoxgloveErrorKind::ConnectionGraphNotSupported
+            }
+            foxglove::FoxgloveError::IoError(_) => FoxgloveErrorKind::IoError,
+            foxglove::FoxgloveError::McapError(_) => FoxgloveErrorKind::McapError,
+            _ => FoxgloveErrorKind::Unspecified,
+        }
+    }
+}
+
+const FOXGLOVE_ERROR_MAGIC: u32 = 0xDEADDEAD;
+
+#[repr(C)]
+pub struct FoxgloveError {
+    pub kind: FoxgloveErrorKind,
+    magic: u32,
+    pub message: *const c_char,
+}
+
+impl From<foxglove::FoxgloveError> for FoxgloveError {
+    fn from(error: foxglove::FoxgloveError) -> Self {
+        let message = CString::new(error.to_string()).unwrap();
+        Self {
+            // This gives a little protection against people passing an unintialized
+            // FoxgloveError into foxglove_error_free, which is an easy mistake to make in C.
+            magic: FOXGLOVE_ERROR_MAGIC,
+            kind: FoxgloveErrorKind::from(&error),
+            message: message.into_raw(),
+        }
+    }
+}
+
+/// Free an error returned from a call to a foxglove.
+///
+/// # Safety
+/// `error` must be zero initialized or have been set by a call to another foxglove function.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_error_free(error: *mut FoxgloveError) {
+    unsafe {
+        let err = &mut *error;
+        if err.message.is_null() {
+            return;
+        }
+        assert_eq!(
+            err.magic, FOXGLOVE_ERROR_MAGIC,
+            "invalid or uninitialized error passed to foxglove_error_free"
+        );
+        drop(CString::from_raw(err.message as *mut _));
+        err.message = std::ptr::null();
     }
 }
