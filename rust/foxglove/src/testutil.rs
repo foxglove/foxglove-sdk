@@ -9,7 +9,10 @@ use crate::websocket::{
 };
 use crate::ChannelId;
 
+mod global_context;
 mod sink;
+
+pub use global_context::GlobalContextTest;
 pub use sink::{ErrorSink, MockSink, RecordingSink};
 
 #[allow(dead_code)]

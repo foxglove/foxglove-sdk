@@ -219,11 +219,16 @@ impl Context {
     pub fn unsubscribe_channels(&self, sink_id: SinkId, channel_ids: &[ChannelId]) {
         self.0.write().unsubscribe_channels(sink_id, channel_ids);
     }
+
+    /// Removes all channels and sinks from the context.
+    pub(crate) fn clear(&self) {
+        self.0.write().clear();
+    }
 }
 
 impl Drop for Context {
     fn drop(&mut self) {
-        self.0.write().clear();
+        self.clear();
     }
 }
 

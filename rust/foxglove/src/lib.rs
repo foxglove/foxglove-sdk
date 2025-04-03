@@ -166,7 +166,8 @@ mod context;
 pub mod convert;
 mod cow_vec;
 mod encode;
-mod log_macro;
+#[doc(hidden)]
+pub mod log_macro;
 mod log_sink_set;
 mod mcap_writer;
 mod metadata;

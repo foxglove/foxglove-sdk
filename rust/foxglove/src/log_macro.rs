@@ -1,20 +1,17 @@
 use std::mem::ManuallyDrop;
-use std::sync::atomic::{
-    AtomicPtr,
-    Ordering::{Acquire, Release},
-};
 use std::sync::Arc;
 
 use crate::{Channel, ChannelBuilder, Context, Encode, PartialMetadata, RawChannel};
 
-struct ChannelPlaceholder {}
+#[doc(hidden)]
+pub struct ChannelPlaceholder {}
 
 impl ChannelPlaceholder {
-    fn new(channel: Arc<RawChannel>) -> *mut Self {
+    pub fn new(channel: Arc<RawChannel>) -> *mut Self {
         Arc::into_raw(channel) as *mut Self
     }
 
-    unsafe fn log<T: Encode>(channel_ptr: *mut Self, msg: &T, metadata: PartialMetadata) {
+    pub unsafe fn log<T: Encode>(channel_ptr: *mut Self, msg: &T, metadata: PartialMetadata) {
         // Safety: we're restoring the Arc<Channel> we leaked into_raw in new()
         let channel_arc = Arc::from_raw(channel_ptr as *mut RawChannel);
         // We can safely create a TypedChannel from any Arc<Channel>
@@ -23,8 +20,9 @@ impl ChannelPlaceholder {
     }
 }
 
+#[doc(hidden)]
 #[cold]
-fn create_channel<T: Encode>(
+pub fn create_channel<T: Encode>(
     topic: &str,
     _: &T,
     context: &Arc<Context>,
@@ -55,7 +53,7 @@ fn create_channel<T: Encode>(
     ChannelPlaceholder::new(channel)
 }
 
-/// Log a message for a topic.
+/// Log a message for a topic to the default Context.
 ///
 /// $topic: string literal topic name
 /// $msg: expression to log, must implement Encode trait
@@ -65,21 +63,21 @@ fn create_channel<T: Encode>(
 /// - publish_time: timestamp when the message was published
 /// - sequence: sequence number of the message
 ///
-/// If a channel for the topic already exists in the Context, it will be used.
-/// Otherwise, a new channel will be created.
-/// Either way, the channel exists until the end of the process.
+/// If a channel for the topic already exists in the default Context, it will be used.
+/// Otherwise, a new channel will be created. Either way, the channel is never removed
+/// from the Context. Panics if the existing channel schema or message_encoding
+/// is incomptable with $msg.
 ///
-/// Panics if a channel can't be created for $msg
-/// or if $topic names an existing channel, and $msg specifies a schema or message_encoding incomptable with the existing channel.
+/// Panics if a channel can't be created for $msg.
 #[macro_export]
 macro_rules! log {
     // Base case with just topic and message
-    ($topic:literal, $msg:expr) => {{
+    ($topic:literal, $msg:expr $(,)? ) => {{
         $crate::log_with_meta!($topic, $msg, $crate::PartialMetadata::default())
     }};
 
     // Cases with different combinations of keyword arguments
-    ($topic:literal, $msg:expr, log_time = $log_time:expr) => {{
+    ($topic:literal, $msg:expr, log_time = $log_time:expr $(,)? ) => {{
         $crate::log_with_meta!(
             $topic,
             $msg,
@@ -91,7 +89,7 @@ macro_rules! log {
         )
     }};
 
-    ($topic:literal, $msg:expr, publish_time = $publish_time:expr) => {{
+    ($topic:literal, $msg:expr, publish_time = $publish_time:expr $(,)? ) => {{
         $crate::log_with_meta!(
             $topic,
             $msg,
@@ -103,7 +101,7 @@ macro_rules! log {
         )
     }};
 
-    ($topic:literal, $msg:expr, sequence = $sequence:expr) => {{
+    ($topic:literal, $msg:expr, sequence = $sequence:expr $(,)? ) => {{
         $crate::log_with_meta!(
             $topic,
             $msg,
@@ -115,7 +113,7 @@ macro_rules! log {
         )
     }};
 
-    ($topic:literal, $msg:expr, log_time = $log_time:expr, publish_time = $publish_time:expr) => {{
+    ($topic:literal, $msg:expr, log_time = $log_time:expr, publish_time = $publish_time:expr $(,)? ) => {{
         $crate::log_with_meta!(
             $topic,
             $msg,
@@ -127,7 +125,7 @@ macro_rules! log {
         )
     }};
 
-    ($topic:literal, $msg:expr, log_time = $log_time:expr, sequence = $sequence:expr) => {{
+    ($topic:literal, $msg:expr, log_time = $log_time:expr, sequence = $sequence:expr $(,)? ) => {{
         $crate::log_with_meta!(
             $topic,
             $msg,
@@ -139,7 +137,7 @@ macro_rules! log {
         )
     }};
 
-    ($topic:literal, $msg:expr, publish_time = $publish_time:expr, sequence = $sequence:expr) => {{
+    ($topic:literal, $msg:expr, publish_time = $publish_time:expr, sequence = $sequence:expr $(,)? ) => {{
         $crate::log_with_meta!(
             $topic,
             $msg,
@@ -152,7 +150,7 @@ macro_rules! log {
     }};
 
     // Case with all keyword arguments specified
-    ($topic:literal, $msg:expr, log_time = $log_time:expr, publish_time = $publish_time:expr, sequence = $sequence:expr) => {{
+    ($topic:literal, $msg:expr, log_time = $log_time:expr, publish_time = $publish_time:expr, sequence = $sequence:expr $(,)? ) => {{
         $crate::log_with_meta!(
             $topic,
             $msg,
@@ -174,11 +172,13 @@ macro_rules! log {
 #[macro_export]
 macro_rules! log_with_meta {
     ($topic:literal, $msg:expr, $metadata:expr) => {{
-        static CHANNEL: AtomicPtr<ChannelPlaceholder> = AtomicPtr::new(std::ptr::null_mut());
-        let mut channel_ptr = CHANNEL.load(Acquire);
+        static CHANNEL: std::sync::atomic::AtomicPtr<$crate::log_macro::ChannelPlaceholder> =
+            std::sync::atomic::AtomicPtr::new(std::ptr::null_mut());
+        let mut channel_ptr = CHANNEL.load(std::sync::atomic::Ordering::Acquire);
         if channel_ptr.is_null() {
-            channel_ptr = create_channel($topic, &$msg, &Context::get_default());
-            CHANNEL.store(channel_ptr, Release);
+            channel_ptr =
+                $crate::log_macro::create_channel($topic, &$msg, &$crate::Context::get_default());
+            CHANNEL.store(channel_ptr, std::sync::atomic::Ordering::Release);
         }
         // Safety: channel_ptr was created above by create_channel, it's safe to pass to log
         unsafe { $crate::log_macro::ChannelPlaceholder::log(channel_ptr, &$msg, $metadata) };
@@ -187,11 +187,15 @@ macro_rules! log_with_meta {
 
 #[cfg(test)]
 mod tests {
+    use bytes::BufMut;
+
     use crate::nanoseconds_since_epoch;
-    use crate::schemas::{Log, ;
+    use crate::schemas::{LaserScan, Log};
     use crate::{testutil::RecordingSink, Context};
+    use crate::{FoxgloveError, Schema};
 
     use super::*;
+    use crate::testutil::GlobalContextTest;
 
     fn serialize_log(log: &Log) -> Vec<u8> {
         let mut buf = Vec::new();
@@ -200,7 +204,9 @@ mod tests {
     }
 
     #[test]
-    fn test_log() {
+    fn test_log_macro() {
+        let _cleanup = GlobalContextTest::new();
+
         let now = nanoseconds_since_epoch();
         let sink = Arc::new(RecordingSink::new());
         Context::get_default().add_sink(sink.clone());
@@ -234,39 +240,7 @@ mod tests {
 
     #[test]
     fn test_log_in_loop() {
-        let sink = Arc::new(RecordingSink::new());
-        Context::get_default().add_sink(sink.clone());
-
-        let mut log_messages = Vec::new();
-        for line in 1..=2 {
-            let msg = Log {
-                timestamp: None,
-                level: 1,
-                message: "Hello, world!".to_string(),
-                name: "".to_string(),
-                file: "".to_string(),
-                line,
-            };
-            log!("foo", msg, log_time = 123);
-            log_messages.push(msg);
-        }
-
-        let messages = sink.take_messages();
-        assert_eq!(messages.len(), 2);
-        assert_eq!(messages[0].msg, serialize_log(&log_messages[0]));
-        assert_eq!(messages[0].metadata.log_time, 123);
-        assert_eq!(messages[0].metadata.publish_time, 123);
-        assert_eq!(messages[1].msg, serialize_log(&log_messages[1]));
-        assert_eq!(messages[1].metadata.log_time, 123);
-        assert_eq!(messages[1].metadata.publish_time, 123);
-        assert!(messages[1].metadata.sequence > messages[0].metadata.sequence);
-    }
-
-    #[test]
-    fn test_log_existing_channel_different_schema_panics() {
-        let sink = Arc::new(RecordingSink::new());        Context::get_default().add_sink(sink.clone());
-
-        static_channel!(CHANNEL, "bar", Log);
+        let _cleanup = GlobalContextTest::new();
 
         let sink = Arc::new(RecordingSink::new());
         Context::get_default().add_sink(sink.clone());
@@ -294,5 +268,83 @@ mod tests {
         assert_eq!(messages[1].metadata.log_time, 123);
         assert_eq!(messages[1].metadata.publish_time, 123);
         assert!(messages[1].metadata.sequence > messages[0].metadata.sequence);
+    }
+
+    #[test]
+    #[should_panic(expected = "Channel foo already exists with different schema")]
+    fn test_log_existing_channel_different_schema_panics() {
+        let _cleanup = GlobalContextTest::new();
+
+        let sink = Arc::new(RecordingSink::new());
+        Context::get_default().add_sink(sink.clone());
+
+        let _channel = ChannelBuilder::new("foo").build::<LaserScan>().unwrap();
+
+        log!(
+            "foo",
+            Log {
+                timestamp: None,
+                level: 1,
+                message: "Hello, world!".to_string(),
+                name: "".to_string(),
+                file: "".to_string(),
+                line: 1,
+            }
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "Channel foo already exists with different message encoding")]
+    fn test_log_existing_channel_different_encoding_panics() {
+        let _cleanup = GlobalContextTest::new();
+
+        let sink = Arc::new(RecordingSink::new());
+        Context::get_default().add_sink(sink.clone());
+
+        struct Foo {
+            x: u32,
+        }
+
+        impl Encode for Foo {
+            type Error = FoxgloveError;
+
+            fn encode(&self, buf: &mut impl BufMut) -> Result<(), Self::Error> {
+                buf.put_u32(self.x);
+                Ok(())
+            }
+
+            fn get_schema() -> Option<Schema> {
+                None
+            }
+
+            fn get_message_encoding() -> String {
+                "foo".to_string()
+            }
+        }
+
+        struct Bar {
+            x: u32,
+        }
+
+        impl Encode for Bar {
+            type Error = FoxgloveError;
+
+            fn encode(&self, buf: &mut impl BufMut) -> Result<(), Self::Error> {
+                buf.put_u32(self.x);
+                Ok(())
+            }
+
+            fn get_schema() -> Option<Schema> {
+                None
+            }
+
+            fn get_message_encoding() -> String {
+                "bar".to_string()
+            }
+        }
+
+        let _channel = ChannelBuilder::new("foo").build::<Foo>().unwrap();
+
+        log!("foo", Bar { x: 1 });
     }
 }
