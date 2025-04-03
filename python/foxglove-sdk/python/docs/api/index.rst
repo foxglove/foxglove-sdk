@@ -8,8 +8,6 @@ foxglove
 .. Parameter types and values are manually documented since nested classes (values) are not supported by automodule.
 .. automodule:: foxglove
    :members:
-   :exclude-members: Capability, ParameterType, ParameterValue, StatusLevel
-
 
 Enums
 ^^^^^
@@ -123,3 +121,11 @@ disk and return its contents.
 See the Asset Server example for more information.
 
 .. autoclass:: foxglove.AssetHandler
+
+
+foxglove.websocket
+------------------
+
+.. automodule:: foxglove.websocket
+   :members:
+   :exclude-members: Capability, ParameterType, ParameterValue, StatusLevel
