@@ -52,7 +52,7 @@ pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
 
 /// A channel for logging :py:class:`foxglove.schemas.CameraCalibration` messages.
 #[pyclass(module = "foxglove.channels")]
-struct CameraCalibrationChannel(Option<Channel<foxglove::schemas::CameraCalibration>>);
+struct CameraCalibrationChannel(Channel<foxglove::schemas::CameraCalibration>);
 
 #[pymethods]
 impl CameraCalibrationChannel {
@@ -62,17 +62,17 @@ impl CameraCalibrationChannel {
     #[new]
     fn new(topic: &str) -> PyResult<Self> {
         let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
-        Ok(Self(Some(base)))
+        Ok(Self(base))
     }
 
     /// Close the channel.
     ///
-    /// You do not need to call this unless you explicitly want to remove advertisements from live
-    /// visualization clients. Destroying all references to the channel will also close it.
+    /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
+    /// channels dynamically, such as the :py:class:`foxglove.WebSocketServer`.
     ///
-    /// It is an error to call :py:meth:`log` after closing the channel.
+    /// Attempts to log on a closed channel will elicit a throttled warning message.
     fn close(&mut self) {
-        self.0 = None;
+        self.0.close();
     }
 
     /// Log a :py:class:`foxglove.schemas.CameraCalibration` message to the channel.
@@ -99,25 +99,17 @@ impl CameraCalibrationChannel {
             publish_time,
             sequence,
         };
-        if let Some(channel) = &self.0 {
-            channel.log_with_meta(&msg.0, metadata);
-        } else {
-            tracing::debug!(target: "foxglove.channels", "Cannot log() on a closed CameraCalibrationChannel");
-        }
+        self.0.log_with_meta(&msg.0, metadata);
     }
 
     fn __repr__(&self) -> String {
-        if let Some(channel) = &self.0 {
-            format!("CameraCalibrationChannel(topic='{}')", channel.topic()).to_string()
-        } else {
-            "CameraCalibrationChannel (closed)".to_string()
-        }
+        format!("CameraCalibrationChannel(topic='{}')", self.0.topic()).to_string()
     }
 }
 
 /// A channel for logging :py:class:`foxglove.schemas.CircleAnnotation` messages.
 #[pyclass(module = "foxglove.channels")]
-struct CircleAnnotationChannel(Option<Channel<foxglove::schemas::CircleAnnotation>>);
+struct CircleAnnotationChannel(Channel<foxglove::schemas::CircleAnnotation>);
 
 #[pymethods]
 impl CircleAnnotationChannel {
@@ -127,17 +119,17 @@ impl CircleAnnotationChannel {
     #[new]
     fn new(topic: &str) -> PyResult<Self> {
         let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
-        Ok(Self(Some(base)))
+        Ok(Self(base))
     }
 
     /// Close the channel.
     ///
-    /// You do not need to call this unless you explicitly want to remove advertisements from live
-    /// visualization clients. Destroying all references to the channel will also close it.
+    /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
+    /// channels dynamically, such as the :py:class:`foxglove.WebSocketServer`.
     ///
-    /// It is an error to call :py:meth:`log` after closing the channel.
+    /// Attempts to log on a closed channel will elicit a throttled warning message.
     fn close(&mut self) {
-        self.0 = None;
+        self.0.close();
     }
 
     /// Log a :py:class:`foxglove.schemas.CircleAnnotation` message to the channel.
@@ -164,25 +156,17 @@ impl CircleAnnotationChannel {
             publish_time,
             sequence,
         };
-        if let Some(channel) = &self.0 {
-            channel.log_with_meta(&msg.0, metadata);
-        } else {
-            tracing::debug!(target: "foxglove.channels", "Cannot log() on a closed CircleAnnotationChannel");
-        }
+        self.0.log_with_meta(&msg.0, metadata);
     }
 
     fn __repr__(&self) -> String {
-        if let Some(channel) = &self.0 {
-            format!("CircleAnnotationChannel(topic='{}')", channel.topic()).to_string()
-        } else {
-            "CircleAnnotationChannel (closed)".to_string()
-        }
+        format!("CircleAnnotationChannel(topic='{}')", self.0.topic()).to_string()
     }
 }
 
 /// A channel for logging :py:class:`foxglove.schemas.Color` messages.
 #[pyclass(module = "foxglove.channels")]
-struct ColorChannel(Option<Channel<foxglove::schemas::Color>>);
+struct ColorChannel(Channel<foxglove::schemas::Color>);
 
 #[pymethods]
 impl ColorChannel {
@@ -192,17 +176,17 @@ impl ColorChannel {
     #[new]
     fn new(topic: &str) -> PyResult<Self> {
         let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
-        Ok(Self(Some(base)))
+        Ok(Self(base))
     }
 
     /// Close the channel.
     ///
-    /// You do not need to call this unless you explicitly want to remove advertisements from live
-    /// visualization clients. Destroying all references to the channel will also close it.
+    /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
+    /// channels dynamically, such as the :py:class:`foxglove.WebSocketServer`.
     ///
-    /// It is an error to call :py:meth:`log` after closing the channel.
+    /// Attempts to log on a closed channel will elicit a throttled warning message.
     fn close(&mut self) {
-        self.0 = None;
+        self.0.close();
     }
 
     /// Log a :py:class:`foxglove.schemas.Color` message to the channel.
@@ -229,25 +213,17 @@ impl ColorChannel {
             publish_time,
             sequence,
         };
-        if let Some(channel) = &self.0 {
-            channel.log_with_meta(&msg.0, metadata);
-        } else {
-            tracing::debug!(target: "foxglove.channels", "Cannot log() on a closed ColorChannel");
-        }
+        self.0.log_with_meta(&msg.0, metadata);
     }
 
     fn __repr__(&self) -> String {
-        if let Some(channel) = &self.0 {
-            format!("ColorChannel(topic='{}')", channel.topic()).to_string()
-        } else {
-            "ColorChannel (closed)".to_string()
-        }
+        format!("ColorChannel(topic='{}')", self.0.topic()).to_string()
     }
 }
 
 /// A channel for logging :py:class:`foxglove.schemas.CompressedImage` messages.
 #[pyclass(module = "foxglove.channels")]
-struct CompressedImageChannel(Option<Channel<foxglove::schemas::CompressedImage>>);
+struct CompressedImageChannel(Channel<foxglove::schemas::CompressedImage>);
 
 #[pymethods]
 impl CompressedImageChannel {
@@ -257,17 +233,17 @@ impl CompressedImageChannel {
     #[new]
     fn new(topic: &str) -> PyResult<Self> {
         let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
-        Ok(Self(Some(base)))
+        Ok(Self(base))
     }
 
     /// Close the channel.
     ///
-    /// You do not need to call this unless you explicitly want to remove advertisements from live
-    /// visualization clients. Destroying all references to the channel will also close it.
+    /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
+    /// channels dynamically, such as the :py:class:`foxglove.WebSocketServer`.
     ///
-    /// It is an error to call :py:meth:`log` after closing the channel.
+    /// Attempts to log on a closed channel will elicit a throttled warning message.
     fn close(&mut self) {
-        self.0 = None;
+        self.0.close();
     }
 
     /// Log a :py:class:`foxglove.schemas.CompressedImage` message to the channel.
@@ -294,25 +270,17 @@ impl CompressedImageChannel {
             publish_time,
             sequence,
         };
-        if let Some(channel) = &self.0 {
-            channel.log_with_meta(&msg.0, metadata);
-        } else {
-            tracing::debug!(target: "foxglove.channels", "Cannot log() on a closed CompressedImageChannel");
-        }
+        self.0.log_with_meta(&msg.0, metadata);
     }
 
     fn __repr__(&self) -> String {
-        if let Some(channel) = &self.0 {
-            format!("CompressedImageChannel(topic='{}')", channel.topic()).to_string()
-        } else {
-            "CompressedImageChannel (closed)".to_string()
-        }
+        format!("CompressedImageChannel(topic='{}')", self.0.topic()).to_string()
     }
 }
 
 /// A channel for logging :py:class:`foxglove.schemas.CompressedVideo` messages.
 #[pyclass(module = "foxglove.channels")]
-struct CompressedVideoChannel(Option<Channel<foxglove::schemas::CompressedVideo>>);
+struct CompressedVideoChannel(Channel<foxglove::schemas::CompressedVideo>);
 
 #[pymethods]
 impl CompressedVideoChannel {
@@ -322,17 +290,17 @@ impl CompressedVideoChannel {
     #[new]
     fn new(topic: &str) -> PyResult<Self> {
         let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
-        Ok(Self(Some(base)))
+        Ok(Self(base))
     }
 
     /// Close the channel.
     ///
-    /// You do not need to call this unless you explicitly want to remove advertisements from live
-    /// visualization clients. Destroying all references to the channel will also close it.
+    /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
+    /// channels dynamically, such as the :py:class:`foxglove.WebSocketServer`.
     ///
-    /// It is an error to call :py:meth:`log` after closing the channel.
+    /// Attempts to log on a closed channel will elicit a throttled warning message.
     fn close(&mut self) {
-        self.0 = None;
+        self.0.close();
     }
 
     /// Log a :py:class:`foxglove.schemas.CompressedVideo` message to the channel.
@@ -359,25 +327,17 @@ impl CompressedVideoChannel {
             publish_time,
             sequence,
         };
-        if let Some(channel) = &self.0 {
-            channel.log_with_meta(&msg.0, metadata);
-        } else {
-            tracing::debug!(target: "foxglove.channels", "Cannot log() on a closed CompressedVideoChannel");
-        }
+        self.0.log_with_meta(&msg.0, metadata);
     }
 
     fn __repr__(&self) -> String {
-        if let Some(channel) = &self.0 {
-            format!("CompressedVideoChannel(topic='{}')", channel.topic()).to_string()
-        } else {
-            "CompressedVideoChannel (closed)".to_string()
-        }
+        format!("CompressedVideoChannel(topic='{}')", self.0.topic()).to_string()
     }
 }
 
 /// A channel for logging :py:class:`foxglove.schemas.FrameTransform` messages.
 #[pyclass(module = "foxglove.channels")]
-struct FrameTransformChannel(Option<Channel<foxglove::schemas::FrameTransform>>);
+struct FrameTransformChannel(Channel<foxglove::schemas::FrameTransform>);
 
 #[pymethods]
 impl FrameTransformChannel {
@@ -387,17 +347,17 @@ impl FrameTransformChannel {
     #[new]
     fn new(topic: &str) -> PyResult<Self> {
         let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
-        Ok(Self(Some(base)))
+        Ok(Self(base))
     }
 
     /// Close the channel.
     ///
-    /// You do not need to call this unless you explicitly want to remove advertisements from live
-    /// visualization clients. Destroying all references to the channel will also close it.
+    /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
+    /// channels dynamically, such as the :py:class:`foxglove.WebSocketServer`.
     ///
-    /// It is an error to call :py:meth:`log` after closing the channel.
+    /// Attempts to log on a closed channel will elicit a throttled warning message.
     fn close(&mut self) {
-        self.0 = None;
+        self.0.close();
     }
 
     /// Log a :py:class:`foxglove.schemas.FrameTransform` message to the channel.
@@ -424,25 +384,17 @@ impl FrameTransformChannel {
             publish_time,
             sequence,
         };
-        if let Some(channel) = &self.0 {
-            channel.log_with_meta(&msg.0, metadata);
-        } else {
-            tracing::debug!(target: "foxglove.channels", "Cannot log() on a closed FrameTransformChannel");
-        }
+        self.0.log_with_meta(&msg.0, metadata);
     }
 
     fn __repr__(&self) -> String {
-        if let Some(channel) = &self.0 {
-            format!("FrameTransformChannel(topic='{}')", channel.topic()).to_string()
-        } else {
-            "FrameTransformChannel (closed)".to_string()
-        }
+        format!("FrameTransformChannel(topic='{}')", self.0.topic()).to_string()
     }
 }
 
 /// A channel for logging :py:class:`foxglove.schemas.FrameTransforms` messages.
 #[pyclass(module = "foxglove.channels")]
-struct FrameTransformsChannel(Option<Channel<foxglove::schemas::FrameTransforms>>);
+struct FrameTransformsChannel(Channel<foxglove::schemas::FrameTransforms>);
 
 #[pymethods]
 impl FrameTransformsChannel {
@@ -452,17 +404,17 @@ impl FrameTransformsChannel {
     #[new]
     fn new(topic: &str) -> PyResult<Self> {
         let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
-        Ok(Self(Some(base)))
+        Ok(Self(base))
     }
 
     /// Close the channel.
     ///
-    /// You do not need to call this unless you explicitly want to remove advertisements from live
-    /// visualization clients. Destroying all references to the channel will also close it.
+    /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
+    /// channels dynamically, such as the :py:class:`foxglove.WebSocketServer`.
     ///
-    /// It is an error to call :py:meth:`log` after closing the channel.
+    /// Attempts to log on a closed channel will elicit a throttled warning message.
     fn close(&mut self) {
-        self.0 = None;
+        self.0.close();
     }
 
     /// Log a :py:class:`foxglove.schemas.FrameTransforms` message to the channel.
@@ -489,25 +441,17 @@ impl FrameTransformsChannel {
             publish_time,
             sequence,
         };
-        if let Some(channel) = &self.0 {
-            channel.log_with_meta(&msg.0, metadata);
-        } else {
-            tracing::debug!(target: "foxglove.channels", "Cannot log() on a closed FrameTransformsChannel");
-        }
+        self.0.log_with_meta(&msg.0, metadata);
     }
 
     fn __repr__(&self) -> String {
-        if let Some(channel) = &self.0 {
-            format!("FrameTransformsChannel(topic='{}')", channel.topic()).to_string()
-        } else {
-            "FrameTransformsChannel (closed)".to_string()
-        }
+        format!("FrameTransformsChannel(topic='{}')", self.0.topic()).to_string()
     }
 }
 
 /// A channel for logging :py:class:`foxglove.schemas.GeoJson` messages.
 #[pyclass(module = "foxglove.channels")]
-struct GeoJsonChannel(Option<Channel<foxglove::schemas::GeoJson>>);
+struct GeoJsonChannel(Channel<foxglove::schemas::GeoJson>);
 
 #[pymethods]
 impl GeoJsonChannel {
@@ -517,17 +461,17 @@ impl GeoJsonChannel {
     #[new]
     fn new(topic: &str) -> PyResult<Self> {
         let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
-        Ok(Self(Some(base)))
+        Ok(Self(base))
     }
 
     /// Close the channel.
     ///
-    /// You do not need to call this unless you explicitly want to remove advertisements from live
-    /// visualization clients. Destroying all references to the channel will also close it.
+    /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
+    /// channels dynamically, such as the :py:class:`foxglove.WebSocketServer`.
     ///
-    /// It is an error to call :py:meth:`log` after closing the channel.
+    /// Attempts to log on a closed channel will elicit a throttled warning message.
     fn close(&mut self) {
-        self.0 = None;
+        self.0.close();
     }
 
     /// Log a :py:class:`foxglove.schemas.GeoJson` message to the channel.
@@ -554,25 +498,17 @@ impl GeoJsonChannel {
             publish_time,
             sequence,
         };
-        if let Some(channel) = &self.0 {
-            channel.log_with_meta(&msg.0, metadata);
-        } else {
-            tracing::debug!(target: "foxglove.channels", "Cannot log() on a closed GeoJsonChannel");
-        }
+        self.0.log_with_meta(&msg.0, metadata);
     }
 
     fn __repr__(&self) -> String {
-        if let Some(channel) = &self.0 {
-            format!("GeoJsonChannel(topic='{}')", channel.topic()).to_string()
-        } else {
-            "GeoJsonChannel (closed)".to_string()
-        }
+        format!("GeoJsonChannel(topic='{}')", self.0.topic()).to_string()
     }
 }
 
 /// A channel for logging :py:class:`foxglove.schemas.Grid` messages.
 #[pyclass(module = "foxglove.channels")]
-struct GridChannel(Option<Channel<foxglove::schemas::Grid>>);
+struct GridChannel(Channel<foxglove::schemas::Grid>);
 
 #[pymethods]
 impl GridChannel {
@@ -582,17 +518,17 @@ impl GridChannel {
     #[new]
     fn new(topic: &str) -> PyResult<Self> {
         let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
-        Ok(Self(Some(base)))
+        Ok(Self(base))
     }
 
     /// Close the channel.
     ///
-    /// You do not need to call this unless you explicitly want to remove advertisements from live
-    /// visualization clients. Destroying all references to the channel will also close it.
+    /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
+    /// channels dynamically, such as the :py:class:`foxglove.WebSocketServer`.
     ///
-    /// It is an error to call :py:meth:`log` after closing the channel.
+    /// Attempts to log on a closed channel will elicit a throttled warning message.
     fn close(&mut self) {
-        self.0 = None;
+        self.0.close();
     }
 
     /// Log a :py:class:`foxglove.schemas.Grid` message to the channel.
@@ -619,25 +555,17 @@ impl GridChannel {
             publish_time,
             sequence,
         };
-        if let Some(channel) = &self.0 {
-            channel.log_with_meta(&msg.0, metadata);
-        } else {
-            tracing::debug!(target: "foxglove.channels", "Cannot log() on a closed GridChannel");
-        }
+        self.0.log_with_meta(&msg.0, metadata);
     }
 
     fn __repr__(&self) -> String {
-        if let Some(channel) = &self.0 {
-            format!("GridChannel(topic='{}')", channel.topic()).to_string()
-        } else {
-            "GridChannel (closed)".to_string()
-        }
+        format!("GridChannel(topic='{}')", self.0.topic()).to_string()
     }
 }
 
 /// A channel for logging :py:class:`foxglove.schemas.ImageAnnotations` messages.
 #[pyclass(module = "foxglove.channels")]
-struct ImageAnnotationsChannel(Option<Channel<foxglove::schemas::ImageAnnotations>>);
+struct ImageAnnotationsChannel(Channel<foxglove::schemas::ImageAnnotations>);
 
 #[pymethods]
 impl ImageAnnotationsChannel {
@@ -647,17 +575,17 @@ impl ImageAnnotationsChannel {
     #[new]
     fn new(topic: &str) -> PyResult<Self> {
         let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
-        Ok(Self(Some(base)))
+        Ok(Self(base))
     }
 
     /// Close the channel.
     ///
-    /// You do not need to call this unless you explicitly want to remove advertisements from live
-    /// visualization clients. Destroying all references to the channel will also close it.
+    /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
+    /// channels dynamically, such as the :py:class:`foxglove.WebSocketServer`.
     ///
-    /// It is an error to call :py:meth:`log` after closing the channel.
+    /// Attempts to log on a closed channel will elicit a throttled warning message.
     fn close(&mut self) {
-        self.0 = None;
+        self.0.close();
     }
 
     /// Log a :py:class:`foxglove.schemas.ImageAnnotations` message to the channel.
@@ -684,25 +612,17 @@ impl ImageAnnotationsChannel {
             publish_time,
             sequence,
         };
-        if let Some(channel) = &self.0 {
-            channel.log_with_meta(&msg.0, metadata);
-        } else {
-            tracing::debug!(target: "foxglove.channels", "Cannot log() on a closed ImageAnnotationsChannel");
-        }
+        self.0.log_with_meta(&msg.0, metadata);
     }
 
     fn __repr__(&self) -> String {
-        if let Some(channel) = &self.0 {
-            format!("ImageAnnotationsChannel(topic='{}')", channel.topic()).to_string()
-        } else {
-            "ImageAnnotationsChannel (closed)".to_string()
-        }
+        format!("ImageAnnotationsChannel(topic='{}')", self.0.topic()).to_string()
     }
 }
 
 /// A channel for logging :py:class:`foxglove.schemas.KeyValuePair` messages.
 #[pyclass(module = "foxglove.channels")]
-struct KeyValuePairChannel(Option<Channel<foxglove::schemas::KeyValuePair>>);
+struct KeyValuePairChannel(Channel<foxglove::schemas::KeyValuePair>);
 
 #[pymethods]
 impl KeyValuePairChannel {
@@ -712,17 +632,17 @@ impl KeyValuePairChannel {
     #[new]
     fn new(topic: &str) -> PyResult<Self> {
         let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
-        Ok(Self(Some(base)))
+        Ok(Self(base))
     }
 
     /// Close the channel.
     ///
-    /// You do not need to call this unless you explicitly want to remove advertisements from live
-    /// visualization clients. Destroying all references to the channel will also close it.
+    /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
+    /// channels dynamically, such as the :py:class:`foxglove.WebSocketServer`.
     ///
-    /// It is an error to call :py:meth:`log` after closing the channel.
+    /// Attempts to log on a closed channel will elicit a throttled warning message.
     fn close(&mut self) {
-        self.0 = None;
+        self.0.close();
     }
 
     /// Log a :py:class:`foxglove.schemas.KeyValuePair` message to the channel.
@@ -749,25 +669,17 @@ impl KeyValuePairChannel {
             publish_time,
             sequence,
         };
-        if let Some(channel) = &self.0 {
-            channel.log_with_meta(&msg.0, metadata);
-        } else {
-            tracing::debug!(target: "foxglove.channels", "Cannot log() on a closed KeyValuePairChannel");
-        }
+        self.0.log_with_meta(&msg.0, metadata);
     }
 
     fn __repr__(&self) -> String {
-        if let Some(channel) = &self.0 {
-            format!("KeyValuePairChannel(topic='{}')", channel.topic()).to_string()
-        } else {
-            "KeyValuePairChannel (closed)".to_string()
-        }
+        format!("KeyValuePairChannel(topic='{}')", self.0.topic()).to_string()
     }
 }
 
 /// A channel for logging :py:class:`foxglove.schemas.LaserScan` messages.
 #[pyclass(module = "foxglove.channels")]
-struct LaserScanChannel(Option<Channel<foxglove::schemas::LaserScan>>);
+struct LaserScanChannel(Channel<foxglove::schemas::LaserScan>);
 
 #[pymethods]
 impl LaserScanChannel {
@@ -777,17 +689,17 @@ impl LaserScanChannel {
     #[new]
     fn new(topic: &str) -> PyResult<Self> {
         let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
-        Ok(Self(Some(base)))
+        Ok(Self(base))
     }
 
     /// Close the channel.
     ///
-    /// You do not need to call this unless you explicitly want to remove advertisements from live
-    /// visualization clients. Destroying all references to the channel will also close it.
+    /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
+    /// channels dynamically, such as the :py:class:`foxglove.WebSocketServer`.
     ///
-    /// It is an error to call :py:meth:`log` after closing the channel.
+    /// Attempts to log on a closed channel will elicit a throttled warning message.
     fn close(&mut self) {
-        self.0 = None;
+        self.0.close();
     }
 
     /// Log a :py:class:`foxglove.schemas.LaserScan` message to the channel.
@@ -814,25 +726,17 @@ impl LaserScanChannel {
             publish_time,
             sequence,
         };
-        if let Some(channel) = &self.0 {
-            channel.log_with_meta(&msg.0, metadata);
-        } else {
-            tracing::debug!(target: "foxglove.channels", "Cannot log() on a closed LaserScanChannel");
-        }
+        self.0.log_with_meta(&msg.0, metadata);
     }
 
     fn __repr__(&self) -> String {
-        if let Some(channel) = &self.0 {
-            format!("LaserScanChannel(topic='{}')", channel.topic()).to_string()
-        } else {
-            "LaserScanChannel (closed)".to_string()
-        }
+        format!("LaserScanChannel(topic='{}')", self.0.topic()).to_string()
     }
 }
 
 /// A channel for logging :py:class:`foxglove.schemas.LocationFix` messages.
 #[pyclass(module = "foxglove.channels")]
-struct LocationFixChannel(Option<Channel<foxglove::schemas::LocationFix>>);
+struct LocationFixChannel(Channel<foxglove::schemas::LocationFix>);
 
 #[pymethods]
 impl LocationFixChannel {
@@ -842,17 +746,17 @@ impl LocationFixChannel {
     #[new]
     fn new(topic: &str) -> PyResult<Self> {
         let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
-        Ok(Self(Some(base)))
+        Ok(Self(base))
     }
 
     /// Close the channel.
     ///
-    /// You do not need to call this unless you explicitly want to remove advertisements from live
-    /// visualization clients. Destroying all references to the channel will also close it.
+    /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
+    /// channels dynamically, such as the :py:class:`foxglove.WebSocketServer`.
     ///
-    /// It is an error to call :py:meth:`log` after closing the channel.
+    /// Attempts to log on a closed channel will elicit a throttled warning message.
     fn close(&mut self) {
-        self.0 = None;
+        self.0.close();
     }
 
     /// Log a :py:class:`foxglove.schemas.LocationFix` message to the channel.
@@ -879,25 +783,17 @@ impl LocationFixChannel {
             publish_time,
             sequence,
         };
-        if let Some(channel) = &self.0 {
-            channel.log_with_meta(&msg.0, metadata);
-        } else {
-            tracing::debug!(target: "foxglove.channels", "Cannot log() on a closed LocationFixChannel");
-        }
+        self.0.log_with_meta(&msg.0, metadata);
     }
 
     fn __repr__(&self) -> String {
-        if let Some(channel) = &self.0 {
-            format!("LocationFixChannel(topic='{}')", channel.topic()).to_string()
-        } else {
-            "LocationFixChannel (closed)".to_string()
-        }
+        format!("LocationFixChannel(topic='{}')", self.0.topic()).to_string()
     }
 }
 
 /// A channel for logging :py:class:`foxglove.schemas.Log` messages.
 #[pyclass(module = "foxglove.channels")]
-struct LogChannel(Option<Channel<foxglove::schemas::Log>>);
+struct LogChannel(Channel<foxglove::schemas::Log>);
 
 #[pymethods]
 impl LogChannel {
@@ -907,17 +803,17 @@ impl LogChannel {
     #[new]
     fn new(topic: &str) -> PyResult<Self> {
         let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
-        Ok(Self(Some(base)))
+        Ok(Self(base))
     }
 
     /// Close the channel.
     ///
-    /// You do not need to call this unless you explicitly want to remove advertisements from live
-    /// visualization clients. Destroying all references to the channel will also close it.
+    /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
+    /// channels dynamically, such as the :py:class:`foxglove.WebSocketServer`.
     ///
-    /// It is an error to call :py:meth:`log` after closing the channel.
+    /// Attempts to log on a closed channel will elicit a throttled warning message.
     fn close(&mut self) {
-        self.0 = None;
+        self.0.close();
     }
 
     /// Log a :py:class:`foxglove.schemas.Log` message to the channel.
@@ -944,25 +840,17 @@ impl LogChannel {
             publish_time,
             sequence,
         };
-        if let Some(channel) = &self.0 {
-            channel.log_with_meta(&msg.0, metadata);
-        } else {
-            tracing::debug!(target: "foxglove.channels", "Cannot log() on a closed LogChannel");
-        }
+        self.0.log_with_meta(&msg.0, metadata);
     }
 
     fn __repr__(&self) -> String {
-        if let Some(channel) = &self.0 {
-            format!("LogChannel(topic='{}')", channel.topic()).to_string()
-        } else {
-            "LogChannel (closed)".to_string()
-        }
+        format!("LogChannel(topic='{}')", self.0.topic()).to_string()
     }
 }
 
 /// A channel for logging :py:class:`foxglove.schemas.SceneEntityDeletion` messages.
 #[pyclass(module = "foxglove.channels")]
-struct SceneEntityDeletionChannel(Option<Channel<foxglove::schemas::SceneEntityDeletion>>);
+struct SceneEntityDeletionChannel(Channel<foxglove::schemas::SceneEntityDeletion>);
 
 #[pymethods]
 impl SceneEntityDeletionChannel {
@@ -972,17 +860,17 @@ impl SceneEntityDeletionChannel {
     #[new]
     fn new(topic: &str) -> PyResult<Self> {
         let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
-        Ok(Self(Some(base)))
+        Ok(Self(base))
     }
 
     /// Close the channel.
     ///
-    /// You do not need to call this unless you explicitly want to remove advertisements from live
-    /// visualization clients. Destroying all references to the channel will also close it.
+    /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
+    /// channels dynamically, such as the :py:class:`foxglove.WebSocketServer`.
     ///
-    /// It is an error to call :py:meth:`log` after closing the channel.
+    /// Attempts to log on a closed channel will elicit a throttled warning message.
     fn close(&mut self) {
-        self.0 = None;
+        self.0.close();
     }
 
     /// Log a :py:class:`foxglove.schemas.SceneEntityDeletion` message to the channel.
@@ -1009,25 +897,17 @@ impl SceneEntityDeletionChannel {
             publish_time,
             sequence,
         };
-        if let Some(channel) = &self.0 {
-            channel.log_with_meta(&msg.0, metadata);
-        } else {
-            tracing::debug!(target: "foxglove.channels", "Cannot log() on a closed SceneEntityDeletionChannel");
-        }
+        self.0.log_with_meta(&msg.0, metadata);
     }
 
     fn __repr__(&self) -> String {
-        if let Some(channel) = &self.0 {
-            format!("SceneEntityDeletionChannel(topic='{}')", channel.topic()).to_string()
-        } else {
-            "SceneEntityDeletionChannel (closed)".to_string()
-        }
+        format!("SceneEntityDeletionChannel(topic='{}')", self.0.topic()).to_string()
     }
 }
 
 /// A channel for logging :py:class:`foxglove.schemas.SceneEntity` messages.
 #[pyclass(module = "foxglove.channels")]
-struct SceneEntityChannel(Option<Channel<foxglove::schemas::SceneEntity>>);
+struct SceneEntityChannel(Channel<foxglove::schemas::SceneEntity>);
 
 #[pymethods]
 impl SceneEntityChannel {
@@ -1037,17 +917,17 @@ impl SceneEntityChannel {
     #[new]
     fn new(topic: &str) -> PyResult<Self> {
         let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
-        Ok(Self(Some(base)))
+        Ok(Self(base))
     }
 
     /// Close the channel.
     ///
-    /// You do not need to call this unless you explicitly want to remove advertisements from live
-    /// visualization clients. Destroying all references to the channel will also close it.
+    /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
+    /// channels dynamically, such as the :py:class:`foxglove.WebSocketServer`.
     ///
-    /// It is an error to call :py:meth:`log` after closing the channel.
+    /// Attempts to log on a closed channel will elicit a throttled warning message.
     fn close(&mut self) {
-        self.0 = None;
+        self.0.close();
     }
 
     /// Log a :py:class:`foxglove.schemas.SceneEntity` message to the channel.
@@ -1074,25 +954,17 @@ impl SceneEntityChannel {
             publish_time,
             sequence,
         };
-        if let Some(channel) = &self.0 {
-            channel.log_with_meta(&msg.0, metadata);
-        } else {
-            tracing::debug!(target: "foxglove.channels", "Cannot log() on a closed SceneEntityChannel");
-        }
+        self.0.log_with_meta(&msg.0, metadata);
     }
 
     fn __repr__(&self) -> String {
-        if let Some(channel) = &self.0 {
-            format!("SceneEntityChannel(topic='{}')", channel.topic()).to_string()
-        } else {
-            "SceneEntityChannel (closed)".to_string()
-        }
+        format!("SceneEntityChannel(topic='{}')", self.0.topic()).to_string()
     }
 }
 
 /// A channel for logging :py:class:`foxglove.schemas.SceneUpdate` messages.
 #[pyclass(module = "foxglove.channels")]
-struct SceneUpdateChannel(Option<Channel<foxglove::schemas::SceneUpdate>>);
+struct SceneUpdateChannel(Channel<foxglove::schemas::SceneUpdate>);
 
 #[pymethods]
 impl SceneUpdateChannel {
@@ -1102,17 +974,17 @@ impl SceneUpdateChannel {
     #[new]
     fn new(topic: &str) -> PyResult<Self> {
         let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
-        Ok(Self(Some(base)))
+        Ok(Self(base))
     }
 
     /// Close the channel.
     ///
-    /// You do not need to call this unless you explicitly want to remove advertisements from live
-    /// visualization clients. Destroying all references to the channel will also close it.
+    /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
+    /// channels dynamically, such as the :py:class:`foxglove.WebSocketServer`.
     ///
-    /// It is an error to call :py:meth:`log` after closing the channel.
+    /// Attempts to log on a closed channel will elicit a throttled warning message.
     fn close(&mut self) {
-        self.0 = None;
+        self.0.close();
     }
 
     /// Log a :py:class:`foxglove.schemas.SceneUpdate` message to the channel.
@@ -1139,25 +1011,17 @@ impl SceneUpdateChannel {
             publish_time,
             sequence,
         };
-        if let Some(channel) = &self.0 {
-            channel.log_with_meta(&msg.0, metadata);
-        } else {
-            tracing::debug!(target: "foxglove.channels", "Cannot log() on a closed SceneUpdateChannel");
-        }
+        self.0.log_with_meta(&msg.0, metadata);
     }
 
     fn __repr__(&self) -> String {
-        if let Some(channel) = &self.0 {
-            format!("SceneUpdateChannel(topic='{}')", channel.topic()).to_string()
-        } else {
-            "SceneUpdateChannel (closed)".to_string()
-        }
+        format!("SceneUpdateChannel(topic='{}')", self.0.topic()).to_string()
     }
 }
 
 /// A channel for logging :py:class:`foxglove.schemas.PackedElementField` messages.
 #[pyclass(module = "foxglove.channels")]
-struct PackedElementFieldChannel(Option<Channel<foxglove::schemas::PackedElementField>>);
+struct PackedElementFieldChannel(Channel<foxglove::schemas::PackedElementField>);
 
 #[pymethods]
 impl PackedElementFieldChannel {
@@ -1167,17 +1031,17 @@ impl PackedElementFieldChannel {
     #[new]
     fn new(topic: &str) -> PyResult<Self> {
         let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
-        Ok(Self(Some(base)))
+        Ok(Self(base))
     }
 
     /// Close the channel.
     ///
-    /// You do not need to call this unless you explicitly want to remove advertisements from live
-    /// visualization clients. Destroying all references to the channel will also close it.
+    /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
+    /// channels dynamically, such as the :py:class:`foxglove.WebSocketServer`.
     ///
-    /// It is an error to call :py:meth:`log` after closing the channel.
+    /// Attempts to log on a closed channel will elicit a throttled warning message.
     fn close(&mut self) {
-        self.0 = None;
+        self.0.close();
     }
 
     /// Log a :py:class:`foxglove.schemas.PackedElementField` message to the channel.
@@ -1204,25 +1068,17 @@ impl PackedElementFieldChannel {
             publish_time,
             sequence,
         };
-        if let Some(channel) = &self.0 {
-            channel.log_with_meta(&msg.0, metadata);
-        } else {
-            tracing::debug!(target: "foxglove.channels", "Cannot log() on a closed PackedElementFieldChannel");
-        }
+        self.0.log_with_meta(&msg.0, metadata);
     }
 
     fn __repr__(&self) -> String {
-        if let Some(channel) = &self.0 {
-            format!("PackedElementFieldChannel(topic='{}')", channel.topic()).to_string()
-        } else {
-            "PackedElementFieldChannel (closed)".to_string()
-        }
+        format!("PackedElementFieldChannel(topic='{}')", self.0.topic()).to_string()
     }
 }
 
 /// A channel for logging :py:class:`foxglove.schemas.Point2` messages.
 #[pyclass(module = "foxglove.channels")]
-struct Point2Channel(Option<Channel<foxglove::schemas::Point2>>);
+struct Point2Channel(Channel<foxglove::schemas::Point2>);
 
 #[pymethods]
 impl Point2Channel {
@@ -1232,17 +1088,17 @@ impl Point2Channel {
     #[new]
     fn new(topic: &str) -> PyResult<Self> {
         let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
-        Ok(Self(Some(base)))
+        Ok(Self(base))
     }
 
     /// Close the channel.
     ///
-    /// You do not need to call this unless you explicitly want to remove advertisements from live
-    /// visualization clients. Destroying all references to the channel will also close it.
+    /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
+    /// channels dynamically, such as the :py:class:`foxglove.WebSocketServer`.
     ///
-    /// It is an error to call :py:meth:`log` after closing the channel.
+    /// Attempts to log on a closed channel will elicit a throttled warning message.
     fn close(&mut self) {
-        self.0 = None;
+        self.0.close();
     }
 
     /// Log a :py:class:`foxglove.schemas.Point2` message to the channel.
@@ -1269,25 +1125,17 @@ impl Point2Channel {
             publish_time,
             sequence,
         };
-        if let Some(channel) = &self.0 {
-            channel.log_with_meta(&msg.0, metadata);
-        } else {
-            tracing::debug!(target: "foxglove.channels", "Cannot log() on a closed Point2Channel");
-        }
+        self.0.log_with_meta(&msg.0, metadata);
     }
 
     fn __repr__(&self) -> String {
-        if let Some(channel) = &self.0 {
-            format!("Point2Channel(topic='{}')", channel.topic()).to_string()
-        } else {
-            "Point2Channel (closed)".to_string()
-        }
+        format!("Point2Channel(topic='{}')", self.0.topic()).to_string()
     }
 }
 
 /// A channel for logging :py:class:`foxglove.schemas.Point3` messages.
 #[pyclass(module = "foxglove.channels")]
-struct Point3Channel(Option<Channel<foxglove::schemas::Point3>>);
+struct Point3Channel(Channel<foxglove::schemas::Point3>);
 
 #[pymethods]
 impl Point3Channel {
@@ -1297,17 +1145,17 @@ impl Point3Channel {
     #[new]
     fn new(topic: &str) -> PyResult<Self> {
         let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
-        Ok(Self(Some(base)))
+        Ok(Self(base))
     }
 
     /// Close the channel.
     ///
-    /// You do not need to call this unless you explicitly want to remove advertisements from live
-    /// visualization clients. Destroying all references to the channel will also close it.
+    /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
+    /// channels dynamically, such as the :py:class:`foxglove.WebSocketServer`.
     ///
-    /// It is an error to call :py:meth:`log` after closing the channel.
+    /// Attempts to log on a closed channel will elicit a throttled warning message.
     fn close(&mut self) {
-        self.0 = None;
+        self.0.close();
     }
 
     /// Log a :py:class:`foxglove.schemas.Point3` message to the channel.
@@ -1334,25 +1182,17 @@ impl Point3Channel {
             publish_time,
             sequence,
         };
-        if let Some(channel) = &self.0 {
-            channel.log_with_meta(&msg.0, metadata);
-        } else {
-            tracing::debug!(target: "foxglove.channels", "Cannot log() on a closed Point3Channel");
-        }
+        self.0.log_with_meta(&msg.0, metadata);
     }
 
     fn __repr__(&self) -> String {
-        if let Some(channel) = &self.0 {
-            format!("Point3Channel(topic='{}')", channel.topic()).to_string()
-        } else {
-            "Point3Channel (closed)".to_string()
-        }
+        format!("Point3Channel(topic='{}')", self.0.topic()).to_string()
     }
 }
 
 /// A channel for logging :py:class:`foxglove.schemas.PointCloud` messages.
 #[pyclass(module = "foxglove.channels")]
-struct PointCloudChannel(Option<Channel<foxglove::schemas::PointCloud>>);
+struct PointCloudChannel(Channel<foxglove::schemas::PointCloud>);
 
 #[pymethods]
 impl PointCloudChannel {
@@ -1362,17 +1202,17 @@ impl PointCloudChannel {
     #[new]
     fn new(topic: &str) -> PyResult<Self> {
         let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
-        Ok(Self(Some(base)))
+        Ok(Self(base))
     }
 
     /// Close the channel.
     ///
-    /// You do not need to call this unless you explicitly want to remove advertisements from live
-    /// visualization clients. Destroying all references to the channel will also close it.
+    /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
+    /// channels dynamically, such as the :py:class:`foxglove.WebSocketServer`.
     ///
-    /// It is an error to call :py:meth:`log` after closing the channel.
+    /// Attempts to log on a closed channel will elicit a throttled warning message.
     fn close(&mut self) {
-        self.0 = None;
+        self.0.close();
     }
 
     /// Log a :py:class:`foxglove.schemas.PointCloud` message to the channel.
@@ -1399,25 +1239,17 @@ impl PointCloudChannel {
             publish_time,
             sequence,
         };
-        if let Some(channel) = &self.0 {
-            channel.log_with_meta(&msg.0, metadata);
-        } else {
-            tracing::debug!(target: "foxglove.channels", "Cannot log() on a closed PointCloudChannel");
-        }
+        self.0.log_with_meta(&msg.0, metadata);
     }
 
     fn __repr__(&self) -> String {
-        if let Some(channel) = &self.0 {
-            format!("PointCloudChannel(topic='{}')", channel.topic()).to_string()
-        } else {
-            "PointCloudChannel (closed)".to_string()
-        }
+        format!("PointCloudChannel(topic='{}')", self.0.topic()).to_string()
     }
 }
 
 /// A channel for logging :py:class:`foxglove.schemas.PointsAnnotation` messages.
 #[pyclass(module = "foxglove.channels")]
-struct PointsAnnotationChannel(Option<Channel<foxglove::schemas::PointsAnnotation>>);
+struct PointsAnnotationChannel(Channel<foxglove::schemas::PointsAnnotation>);
 
 #[pymethods]
 impl PointsAnnotationChannel {
@@ -1427,17 +1259,17 @@ impl PointsAnnotationChannel {
     #[new]
     fn new(topic: &str) -> PyResult<Self> {
         let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
-        Ok(Self(Some(base)))
+        Ok(Self(base))
     }
 
     /// Close the channel.
     ///
-    /// You do not need to call this unless you explicitly want to remove advertisements from live
-    /// visualization clients. Destroying all references to the channel will also close it.
+    /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
+    /// channels dynamically, such as the :py:class:`foxglove.WebSocketServer`.
     ///
-    /// It is an error to call :py:meth:`log` after closing the channel.
+    /// Attempts to log on a closed channel will elicit a throttled warning message.
     fn close(&mut self) {
-        self.0 = None;
+        self.0.close();
     }
 
     /// Log a :py:class:`foxglove.schemas.PointsAnnotation` message to the channel.
@@ -1464,25 +1296,17 @@ impl PointsAnnotationChannel {
             publish_time,
             sequence,
         };
-        if let Some(channel) = &self.0 {
-            channel.log_with_meta(&msg.0, metadata);
-        } else {
-            tracing::debug!(target: "foxglove.channels", "Cannot log() on a closed PointsAnnotationChannel");
-        }
+        self.0.log_with_meta(&msg.0, metadata);
     }
 
     fn __repr__(&self) -> String {
-        if let Some(channel) = &self.0 {
-            format!("PointsAnnotationChannel(topic='{}')", channel.topic()).to_string()
-        } else {
-            "PointsAnnotationChannel (closed)".to_string()
-        }
+        format!("PointsAnnotationChannel(topic='{}')", self.0.topic()).to_string()
     }
 }
 
 /// A channel for logging :py:class:`foxglove.schemas.Pose` messages.
 #[pyclass(module = "foxglove.channels")]
-struct PoseChannel(Option<Channel<foxglove::schemas::Pose>>);
+struct PoseChannel(Channel<foxglove::schemas::Pose>);
 
 #[pymethods]
 impl PoseChannel {
@@ -1492,17 +1316,17 @@ impl PoseChannel {
     #[new]
     fn new(topic: &str) -> PyResult<Self> {
         let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
-        Ok(Self(Some(base)))
+        Ok(Self(base))
     }
 
     /// Close the channel.
     ///
-    /// You do not need to call this unless you explicitly want to remove advertisements from live
-    /// visualization clients. Destroying all references to the channel will also close it.
+    /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
+    /// channels dynamically, such as the :py:class:`foxglove.WebSocketServer`.
     ///
-    /// It is an error to call :py:meth:`log` after closing the channel.
+    /// Attempts to log on a closed channel will elicit a throttled warning message.
     fn close(&mut self) {
-        self.0 = None;
+        self.0.close();
     }
 
     /// Log a :py:class:`foxglove.schemas.Pose` message to the channel.
@@ -1529,25 +1353,17 @@ impl PoseChannel {
             publish_time,
             sequence,
         };
-        if let Some(channel) = &self.0 {
-            channel.log_with_meta(&msg.0, metadata);
-        } else {
-            tracing::debug!(target: "foxglove.channels", "Cannot log() on a closed PoseChannel");
-        }
+        self.0.log_with_meta(&msg.0, metadata);
     }
 
     fn __repr__(&self) -> String {
-        if let Some(channel) = &self.0 {
-            format!("PoseChannel(topic='{}')", channel.topic()).to_string()
-        } else {
-            "PoseChannel (closed)".to_string()
-        }
+        format!("PoseChannel(topic='{}')", self.0.topic()).to_string()
     }
 }
 
 /// A channel for logging :py:class:`foxglove.schemas.PoseInFrame` messages.
 #[pyclass(module = "foxglove.channels")]
-struct PoseInFrameChannel(Option<Channel<foxglove::schemas::PoseInFrame>>);
+struct PoseInFrameChannel(Channel<foxglove::schemas::PoseInFrame>);
 
 #[pymethods]
 impl PoseInFrameChannel {
@@ -1557,17 +1373,17 @@ impl PoseInFrameChannel {
     #[new]
     fn new(topic: &str) -> PyResult<Self> {
         let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
-        Ok(Self(Some(base)))
+        Ok(Self(base))
     }
 
     /// Close the channel.
     ///
-    /// You do not need to call this unless you explicitly want to remove advertisements from live
-    /// visualization clients. Destroying all references to the channel will also close it.
+    /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
+    /// channels dynamically, such as the :py:class:`foxglove.WebSocketServer`.
     ///
-    /// It is an error to call :py:meth:`log` after closing the channel.
+    /// Attempts to log on a closed channel will elicit a throttled warning message.
     fn close(&mut self) {
-        self.0 = None;
+        self.0.close();
     }
 
     /// Log a :py:class:`foxglove.schemas.PoseInFrame` message to the channel.
@@ -1594,25 +1410,17 @@ impl PoseInFrameChannel {
             publish_time,
             sequence,
         };
-        if let Some(channel) = &self.0 {
-            channel.log_with_meta(&msg.0, metadata);
-        } else {
-            tracing::debug!(target: "foxglove.channels", "Cannot log() on a closed PoseInFrameChannel");
-        }
+        self.0.log_with_meta(&msg.0, metadata);
     }
 
     fn __repr__(&self) -> String {
-        if let Some(channel) = &self.0 {
-            format!("PoseInFrameChannel(topic='{}')", channel.topic()).to_string()
-        } else {
-            "PoseInFrameChannel (closed)".to_string()
-        }
+        format!("PoseInFrameChannel(topic='{}')", self.0.topic()).to_string()
     }
 }
 
 /// A channel for logging :py:class:`foxglove.schemas.PosesInFrame` messages.
 #[pyclass(module = "foxglove.channels")]
-struct PosesInFrameChannel(Option<Channel<foxglove::schemas::PosesInFrame>>);
+struct PosesInFrameChannel(Channel<foxglove::schemas::PosesInFrame>);
 
 #[pymethods]
 impl PosesInFrameChannel {
@@ -1622,17 +1430,17 @@ impl PosesInFrameChannel {
     #[new]
     fn new(topic: &str) -> PyResult<Self> {
         let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
-        Ok(Self(Some(base)))
+        Ok(Self(base))
     }
 
     /// Close the channel.
     ///
-    /// You do not need to call this unless you explicitly want to remove advertisements from live
-    /// visualization clients. Destroying all references to the channel will also close it.
+    /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
+    /// channels dynamically, such as the :py:class:`foxglove.WebSocketServer`.
     ///
-    /// It is an error to call :py:meth:`log` after closing the channel.
+    /// Attempts to log on a closed channel will elicit a throttled warning message.
     fn close(&mut self) {
-        self.0 = None;
+        self.0.close();
     }
 
     /// Log a :py:class:`foxglove.schemas.PosesInFrame` message to the channel.
@@ -1659,25 +1467,17 @@ impl PosesInFrameChannel {
             publish_time,
             sequence,
         };
-        if let Some(channel) = &self.0 {
-            channel.log_with_meta(&msg.0, metadata);
-        } else {
-            tracing::debug!(target: "foxglove.channels", "Cannot log() on a closed PosesInFrameChannel");
-        }
+        self.0.log_with_meta(&msg.0, metadata);
     }
 
     fn __repr__(&self) -> String {
-        if let Some(channel) = &self.0 {
-            format!("PosesInFrameChannel(topic='{}')", channel.topic()).to_string()
-        } else {
-            "PosesInFrameChannel (closed)".to_string()
-        }
+        format!("PosesInFrameChannel(topic='{}')", self.0.topic()).to_string()
     }
 }
 
 /// A channel for logging :py:class:`foxglove.schemas.Quaternion` messages.
 #[pyclass(module = "foxglove.channels")]
-struct QuaternionChannel(Option<Channel<foxglove::schemas::Quaternion>>);
+struct QuaternionChannel(Channel<foxglove::schemas::Quaternion>);
 
 #[pymethods]
 impl QuaternionChannel {
@@ -1687,17 +1487,17 @@ impl QuaternionChannel {
     #[new]
     fn new(topic: &str) -> PyResult<Self> {
         let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
-        Ok(Self(Some(base)))
+        Ok(Self(base))
     }
 
     /// Close the channel.
     ///
-    /// You do not need to call this unless you explicitly want to remove advertisements from live
-    /// visualization clients. Destroying all references to the channel will also close it.
+    /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
+    /// channels dynamically, such as the :py:class:`foxglove.WebSocketServer`.
     ///
-    /// It is an error to call :py:meth:`log` after closing the channel.
+    /// Attempts to log on a closed channel will elicit a throttled warning message.
     fn close(&mut self) {
-        self.0 = None;
+        self.0.close();
     }
 
     /// Log a :py:class:`foxglove.schemas.Quaternion` message to the channel.
@@ -1724,25 +1524,17 @@ impl QuaternionChannel {
             publish_time,
             sequence,
         };
-        if let Some(channel) = &self.0 {
-            channel.log_with_meta(&msg.0, metadata);
-        } else {
-            tracing::debug!(target: "foxglove.channels", "Cannot log() on a closed QuaternionChannel");
-        }
+        self.0.log_with_meta(&msg.0, metadata);
     }
 
     fn __repr__(&self) -> String {
-        if let Some(channel) = &self.0 {
-            format!("QuaternionChannel(topic='{}')", channel.topic()).to_string()
-        } else {
-            "QuaternionChannel (closed)".to_string()
-        }
+        format!("QuaternionChannel(topic='{}')", self.0.topic()).to_string()
     }
 }
 
 /// A channel for logging :py:class:`foxglove.schemas.RawImage` messages.
 #[pyclass(module = "foxglove.channels")]
-struct RawImageChannel(Option<Channel<foxglove::schemas::RawImage>>);
+struct RawImageChannel(Channel<foxglove::schemas::RawImage>);
 
 #[pymethods]
 impl RawImageChannel {
@@ -1752,17 +1544,17 @@ impl RawImageChannel {
     #[new]
     fn new(topic: &str) -> PyResult<Self> {
         let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
-        Ok(Self(Some(base)))
+        Ok(Self(base))
     }
 
     /// Close the channel.
     ///
-    /// You do not need to call this unless you explicitly want to remove advertisements from live
-    /// visualization clients. Destroying all references to the channel will also close it.
+    /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
+    /// channels dynamically, such as the :py:class:`foxglove.WebSocketServer`.
     ///
-    /// It is an error to call :py:meth:`log` after closing the channel.
+    /// Attempts to log on a closed channel will elicit a throttled warning message.
     fn close(&mut self) {
-        self.0 = None;
+        self.0.close();
     }
 
     /// Log a :py:class:`foxglove.schemas.RawImage` message to the channel.
@@ -1789,25 +1581,17 @@ impl RawImageChannel {
             publish_time,
             sequence,
         };
-        if let Some(channel) = &self.0 {
-            channel.log_with_meta(&msg.0, metadata);
-        } else {
-            tracing::debug!(target: "foxglove.channels", "Cannot log() on a closed RawImageChannel");
-        }
+        self.0.log_with_meta(&msg.0, metadata);
     }
 
     fn __repr__(&self) -> String {
-        if let Some(channel) = &self.0 {
-            format!("RawImageChannel(topic='{}')", channel.topic()).to_string()
-        } else {
-            "RawImageChannel (closed)".to_string()
-        }
+        format!("RawImageChannel(topic='{}')", self.0.topic()).to_string()
     }
 }
 
 /// A channel for logging :py:class:`foxglove.schemas.TextAnnotation` messages.
 #[pyclass(module = "foxglove.channels")]
-struct TextAnnotationChannel(Option<Channel<foxglove::schemas::TextAnnotation>>);
+struct TextAnnotationChannel(Channel<foxglove::schemas::TextAnnotation>);
 
 #[pymethods]
 impl TextAnnotationChannel {
@@ -1817,17 +1601,17 @@ impl TextAnnotationChannel {
     #[new]
     fn new(topic: &str) -> PyResult<Self> {
         let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
-        Ok(Self(Some(base)))
+        Ok(Self(base))
     }
 
     /// Close the channel.
     ///
-    /// You do not need to call this unless you explicitly want to remove advertisements from live
-    /// visualization clients. Destroying all references to the channel will also close it.
+    /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
+    /// channels dynamically, such as the :py:class:`foxglove.WebSocketServer`.
     ///
-    /// It is an error to call :py:meth:`log` after closing the channel.
+    /// Attempts to log on a closed channel will elicit a throttled warning message.
     fn close(&mut self) {
-        self.0 = None;
+        self.0.close();
     }
 
     /// Log a :py:class:`foxglove.schemas.TextAnnotation` message to the channel.
@@ -1854,25 +1638,17 @@ impl TextAnnotationChannel {
             publish_time,
             sequence,
         };
-        if let Some(channel) = &self.0 {
-            channel.log_with_meta(&msg.0, metadata);
-        } else {
-            tracing::debug!(target: "foxglove.channels", "Cannot log() on a closed TextAnnotationChannel");
-        }
+        self.0.log_with_meta(&msg.0, metadata);
     }
 
     fn __repr__(&self) -> String {
-        if let Some(channel) = &self.0 {
-            format!("TextAnnotationChannel(topic='{}')", channel.topic()).to_string()
-        } else {
-            "TextAnnotationChannel (closed)".to_string()
-        }
+        format!("TextAnnotationChannel(topic='{}')", self.0.topic()).to_string()
     }
 }
 
 /// A channel for logging :py:class:`foxglove.schemas.Vector2` messages.
 #[pyclass(module = "foxglove.channels")]
-struct Vector2Channel(Option<Channel<foxglove::schemas::Vector2>>);
+struct Vector2Channel(Channel<foxglove::schemas::Vector2>);
 
 #[pymethods]
 impl Vector2Channel {
@@ -1882,17 +1658,17 @@ impl Vector2Channel {
     #[new]
     fn new(topic: &str) -> PyResult<Self> {
         let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
-        Ok(Self(Some(base)))
+        Ok(Self(base))
     }
 
     /// Close the channel.
     ///
-    /// You do not need to call this unless you explicitly want to remove advertisements from live
-    /// visualization clients. Destroying all references to the channel will also close it.
+    /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
+    /// channels dynamically, such as the :py:class:`foxglove.WebSocketServer`.
     ///
-    /// It is an error to call :py:meth:`log` after closing the channel.
+    /// Attempts to log on a closed channel will elicit a throttled warning message.
     fn close(&mut self) {
-        self.0 = None;
+        self.0.close();
     }
 
     /// Log a :py:class:`foxglove.schemas.Vector2` message to the channel.
@@ -1919,25 +1695,17 @@ impl Vector2Channel {
             publish_time,
             sequence,
         };
-        if let Some(channel) = &self.0 {
-            channel.log_with_meta(&msg.0, metadata);
-        } else {
-            tracing::debug!(target: "foxglove.channels", "Cannot log() on a closed Vector2Channel");
-        }
+        self.0.log_with_meta(&msg.0, metadata);
     }
 
     fn __repr__(&self) -> String {
-        if let Some(channel) = &self.0 {
-            format!("Vector2Channel(topic='{}')", channel.topic()).to_string()
-        } else {
-            "Vector2Channel (closed)".to_string()
-        }
+        format!("Vector2Channel(topic='{}')", self.0.topic()).to_string()
     }
 }
 
 /// A channel for logging :py:class:`foxglove.schemas.Vector3` messages.
 #[pyclass(module = "foxglove.channels")]
-struct Vector3Channel(Option<Channel<foxglove::schemas::Vector3>>);
+struct Vector3Channel(Channel<foxglove::schemas::Vector3>);
 
 #[pymethods]
 impl Vector3Channel {
@@ -1947,17 +1715,17 @@ impl Vector3Channel {
     #[new]
     fn new(topic: &str) -> PyResult<Self> {
         let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
-        Ok(Self(Some(base)))
+        Ok(Self(base))
     }
 
     /// Close the channel.
     ///
-    /// You do not need to call this unless you explicitly want to remove advertisements from live
-    /// visualization clients. Destroying all references to the channel will also close it.
+    /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
+    /// channels dynamically, such as the :py:class:`foxglove.WebSocketServer`.
     ///
-    /// It is an error to call :py:meth:`log` after closing the channel.
+    /// Attempts to log on a closed channel will elicit a throttled warning message.
     fn close(&mut self) {
-        self.0 = None;
+        self.0.close();
     }
 
     /// Log a :py:class:`foxglove.schemas.Vector3` message to the channel.
@@ -1984,18 +1752,10 @@ impl Vector3Channel {
             publish_time,
             sequence,
         };
-        if let Some(channel) = &self.0 {
-            channel.log_with_meta(&msg.0, metadata);
-        } else {
-            tracing::debug!(target: "foxglove.channels", "Cannot log() on a closed Vector3Channel");
-        }
+        self.0.log_with_meta(&msg.0, metadata);
     }
 
     fn __repr__(&self) -> String {
-        if let Some(channel) = &self.0 {
-            format!("Vector3Channel(topic='{}')", channel.topic()).to_string()
-        } else {
-            "Vector3Channel (closed)".to_string()
-        }
+        format!("Vector3Channel(topic='{}')", self.0.topic()).to_string()
     }
 }

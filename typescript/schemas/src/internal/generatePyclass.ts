@@ -554,7 +554,7 @@ export function generateChannelClasses(messageSchemas: FoxgloveMessageSchema[]):
     return `
 /// A channel for logging :py:class:\`foxglove.schemas.${schemaClass}\` messages.
 #[pyclass(module = "foxglove.channels")]
-struct ${channelClass}(Option<Channel<foxglove::schemas::${schemaClass}>>);
+struct ${channelClass}(Channel<foxglove::schemas::${schemaClass}>);
 
 #[pymethods]
 impl ${channelClass} {
@@ -564,17 +564,17 @@ impl ${channelClass} {
     #[new]
     fn new(topic: &str) -> PyResult<Self> {
         let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
-        Ok(Self(Some(base)))
+        Ok(Self(base))
     }
 
     /// Close the channel.
     ///
-    /// You do not need to call this unless you explicitly want to remove advertisements from live
-    /// visualization clients. Destroying all references to the channel will also close it.
+    /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
+    /// channels dynamically, such as the :py:class:\`foxglove.WebSocketServer\`.
     ///
-    /// It is an error to call :py:meth:\`log\` after closing the channel.
+    /// Attempts to log on a closed channel will elicit a throttled warning message.
     fn close(&mut self) {
-        self.0 = None;
+        self.0.close();
     }
 
     /// Log a :py:class:\`foxglove.schemas.${schemaClass}\` message to the channel.
@@ -597,19 +597,11 @@ impl ${channelClass} {
         sequence: Option<u32>,
     ) {
         let metadata = PartialMetadata{ log_time, publish_time, sequence };
-        if let Some(channel) = &self.0 {
-          channel.log_with_meta(&msg.0, metadata);
-        } else {
-          tracing::debug!(target: "foxglove.channels", "Cannot log() on a closed ${channelClass}");
-        }
+        self.0.log_with_meta(&msg.0, metadata);
     }
 
     fn __repr__(&self) -> String {
-        if let Some(channel) = &self.0 {
-            format!("${channelClass}(topic='{}')", channel.topic()).to_string()
-        } else {
-            "${channelClass} (closed)".to_string()
-        }
+        format!("${channelClass}(topic='{}')", self.0.topic()).to_string()
     }
 }
 `;

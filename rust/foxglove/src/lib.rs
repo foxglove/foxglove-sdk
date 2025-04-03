@@ -69,17 +69,24 @@
 //! # Ok(()) }
 //! ```
 //!
+//! [jsonschema-trait]: https://docs.rs/schemars/latest/schemars/trait.JsonSchema.html
+//!
 //! ### Static Channels
 //!
 //! A common pattern is to create the channels once as static variables, and then use them
-//! throughout the application. To support this, the [`static_channel!`] macro provides a
-//! convenient way to create static channels:
+//! throughout the application. But because channels do not have a const initializer, they must be
+//! initialized lazily. [`LazyChannel`] provides a convenient way to do this.
 //!
-//! ```no_run
-//! foxglove::static_channel!(pub(crate) BOXES, "/boxes", foxglove::schemas::SceneUpdate);
+//! Be careful when using this pattern. The channel will not be advertised to sinks until it is
+//! initialized, which is guaranteed to happen when the channel is first used. If you need to
+//! ensure the channel is initialized _before_ using it, you can use [`LazyChannel::init`].
+//!
 //! ```
+//! use foxglove::LazyChannel;
+//! use foxglove::schemas::SceneUpdate;
 //!
-//! [jsonschema-trait]: https://docs.rs/schemars/latest/schemars/trait.JsonSchema.html
+//! static BOXES: LazyChannel<SceneUpdate> = LazyChannel::new("/boxes");
+//! ```
 //!
 //! ## Sinks
 //!
@@ -180,11 +187,12 @@ mod sink;
 mod tests;
 #[cfg(test)]
 mod testutil;
+mod throttler;
 mod time;
 pub mod websocket;
 mod websocket_server;
 
-pub use channel::{Channel, ChannelId, RawChannel};
+pub use channel::{Channel, ChannelId, LazyChannel, LazyRawChannel, RawChannel};
 pub use channel_builder::ChannelBuilder;
 #[doc(hidden)]
 pub use context::Context;
