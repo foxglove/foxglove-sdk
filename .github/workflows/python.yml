@@ -123,7 +123,8 @@ jobs:
           target: ${{ matrix.platform.target }}
           working-directory: python/foxglove-sdk
           args: --release --out dist --find-interpreter
-          sccache: "true"
+          # Add a comment so there is a diff
+          sccache: "false"
           manylinux: auto
       - name: Upload wheels
         uses: actions/upload-artifact@v4
@@ -155,7 +156,7 @@ jobs:
           target: ${{ matrix.platform.target }}
           working-directory: python/foxglove-sdk
           args: --release --out dist --find-interpreter
-          sccache: "true"
+          sccache: "false"
           manylinux: musllinux_1_2
       - name: Upload wheels
         uses: actions/upload-artifact@v4
@@ -184,7 +185,7 @@ jobs:
           target: ${{ matrix.platform.target }}
           working-directory: python/foxglove-sdk
           args: --release --out dist --find-interpreter
-          sccache: "true"
+          sccache: "false"
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
@@ -211,7 +212,7 @@ jobs:
           target: ${{ matrix.platform.target }}
           working-directory: python/foxglove-sdk
           args: --release --out dist --find-interpreter
-          sccache: "true"
+          sccache: "false"
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
