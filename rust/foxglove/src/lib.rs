@@ -18,6 +18,7 @@
 //! use foxglove::schemas::Log;
 //!
 //! # fn func() -> Result<(), foxglove::FoxgloveError> {
+//! // Create a new MCAP file named 'test.mcap'.
 //! let mcap = McapWriter::new().create_new_buffered_file("test.mcap")?;
 //!
 //! log!("/log", Log{
@@ -25,17 +26,60 @@
 //!     ..Default::default()
 //! });
 //!
+//! // Flush and close the MCAP file.
 //! mcap.close()?;
 //! # Ok(()) }
 //! ```
 //!
 //! # Concepts
 //!
+//! ## Context
+//!
+//! A [`Context`] is the binding between channels and sinks. Each channel and sink belongs to
+//! exactly one context. Sinks receive advertisements about channels on the context, and can
+//! optionally subscribe to receive logged messages on those channels.
+//!
+//! When the context goes out of scope, its corresponding channels and sinks will be disconnected
+//! from one another, and logging will stop. Attempts to log further messages on the channels
+//! will elict throttled warning messages.
+//!
+//! Since many applications only need a single context, the SDK provides a static default context
+//! for convenience. This default sink is the one used in the example above. If we wanted to use an
+//! explicit context instead, we'd write:
+//!
+//! ```no_run
+//! use foxglove::Context;
+//! use foxglove::schemas::Log;
+//!
+//! # fn func() -> Result<(), foxglove::FoxgloveError> {
+//! // Create a new context.
+//! let ctx = Context::new();
+//!
+//! // Create a new MCAP file named 'test.mcap'.
+//! let mcap = ctx.mcap_writer().create_new_buffered_file("test.mcap")?;
+//!
+//! // Create a new channel for the topic "/log" for `Log` messages.
+//! let channel = ctx.channel_builder("/log").build()?;
+//! channel.log(&Log{
+//!     message: "Hello, Foxglove!".to_string(),
+//!     ..Default::default()
+//! });
+//!
+//! // Flush and close the MCAP file.
+//! mcap.close()?;
+//! # Ok(()) }
+//! ```
+//!
 //! ## Channels
 //!
-//! A "channel" gives a way to log related messages which have the same type, or [`Schema`].
+//! A [`Channel`] gives a way to log related messages which have the same type, or [`Schema`].
 //! Each channel is instantiated with a unique "topic", or name, which is typically prefixed by a `/`.
-//! If you're familiar with MCAP, it's the same concept as an [MCAP channel]:
+//! If you're familiar with MCAP, it's the same concept as an [MCAP channel].
+//!
+//! A channel is always associated with exactly one [`Context`] throughout its lifecycle. The
+//! channel remains attached to the context until it is either explicitly closed with
+//! [`Channel::close`], or the context is dropped. Attempting to log a message on a closed channel
+//! will elicit a throttled warning.
 //!
 //! [MCAP channel]: https://mcap.dev/guides/concepts#channel
 //!
@@ -95,21 +139,35 @@
 //!
 //! [jsonschema-trait]: https://docs.rs/schemars/latest/schemars/trait.JsonSchema.html
 //!
-//! ### Static Channels
+//! ### Lazy Channels
 //!
 //! A common pattern is to create the channels once as static variables, and then use them
 //! throughout the application. But because channels do not have a const initializer, they must be
-//! initialized lazily. [`LazyChannel`] provides a convenient way to do this.
+//! initialized lazily. [`LazyChannel`] and [`LazyRawChannel`] provide a convenient way to do this.
 //!
 //! Be careful when using this pattern. The channel will not be advertised to sinks until it is
 //! initialized, which is guaranteed to happen when the channel is first used. If you need to
 //! ensure the channel is initialized _before_ using it, you can use [`LazyChannel::init`].
 //!
+//! In this example, we create two lazy channels on the default context:
+//!
 //! ```
-//! use foxglove::LazyChannel;
+//! use foxglove::{LazyChannel, LazyRawChannel};
 //! use foxglove::schemas::SceneUpdate;
 //!
 //! static BOXES: LazyChannel<SceneUpdate> = LazyChannel::new("/boxes");
+//! static MSG: LazyRawChannel = LazyRawChannel::new("/msg", "json");
+//! ```
+//!
+//! It is also possible to bind lazy channels to an explicit [`LazyContext`]:
+//!
+//! ```
+//! use foxglove::{LazyChannel, LazyContext, LazyRawChannel};
+//! use foxglove::schemas::SceneUpdate;
+//!
+//! static CTX: LazyContext = LazyContext::new();
+//! static BOXES: LazyChannel<SceneUpdate> = CTX.channel("/boxes");
+//! static MSG: LazyRawChannel = CTX.raw_channel("/msg", "json");
 //! ```
 //!
 //! ## Sinks
@@ -118,11 +176,14 @@
 //! will simply be dropped without being recorded. You can configure multiple sinks, and you can
 //! create or destroy them dynamically at runtime.
 //!
+//! A sink is typically associated with exactly one [`Context`] throughout its lifecycle. Details
+//! about the how the sink is registered and unregistered from the context are sink-specific.
+//!
 //! ### MCAP file
 //!
 //! Use [`McapWriter::new()`] to register a new MCAP writer. As long as the handle remains in
-//! scope, events will be logged to the MCAP file. When the handle is closed or dropped, the file
-//! will be finalized and flushed.
+//! scope, events will be logged to the MCAP file. When the handle is closed or dropped, the sink
+//! will be unregistered from the [`Context`], and the file will be finalized and flushed.
 //!
 //! ```no_run
 //! # fn func() -> Result<(), foxglove::FoxgloveError> {
@@ -151,8 +212,11 @@
 //!
 //! Use [`WebSocketServer::new`] to create a new live visualization server. By default, the server
 //! listens on `127.0.0.1:8765`. Once the server is configured, call [`WebSocketServer::start`] to
-//! register the server as a message sink, and begin accepting websocket connections from the
-//! Foxglove app.
+//! start the server, and begin accepting websocket connections from the Foxglove app.
+//!
+//! Each client that connects to the websocket server is its own independent sink. The sink is
+//! dynamically added to the [`Context`] associated with the server when the client connects, and
+//! removed from the context when the client disconnects.
 //!
 //! See the ["Connect" documentation][app-connect] for how to connect the Foxglove app to your running
 //! server.
@@ -220,8 +284,7 @@ mod websocket_server;
 
 pub use channel::{Channel, ChannelId, LazyChannel, LazyRawChannel, RawChannel};
 pub use channel_builder::ChannelBuilder;
-#[doc(hidden)]
-pub use context::Context;
+pub use context::{Context, LazyContext};
 pub use encode::Encode;
 pub use mcap_writer::{McapWriter, McapWriterHandle};
 pub use metadata::{Metadata, PartialMetadata};

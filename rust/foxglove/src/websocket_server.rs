@@ -171,7 +171,6 @@ impl WebSocketServer {
     }
 
     /// Sets the context for this sink.
-    #[doc(hidden)]
     pub fn context(mut self, ctx: &Arc<Context>) -> Self {
         self.context = ctx.clone();
         self
