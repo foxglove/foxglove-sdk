@@ -14,7 +14,7 @@
 //! on a topic called `/log`. We write one log message and close the file.
 //!
 //! ```no_run
-//! use foxglove::{McapWriter, Channel, log};
+//! use foxglove::{McapWriter, log};
 //! use foxglove::schemas::Log;
 //!
 //! # fn func() -> Result<(), foxglove::FoxgloveError> {
