@@ -4,7 +4,7 @@ use foxglove::{
     schemas::{
         Color, CubePrimitive, Log, Pose, Quaternion, SceneEntity, SceneUpdate, Timestamp, Vector3,
     },
-    McapWriter,
+    ChannelBuilder, McapWriter,
 };
 use std::time::Duration;
 
@@ -54,7 +54,7 @@ fn main() {
     );
 
     // You can also use log! with existing channels in the default Context, as long as the message encoding and schema match
-    foxglove::static_channel!(pub SCENE_CHANNEL, "/scene", SceneUpdate);
+    let _channel = ChannelBuilder::new("/scene").build::<SceneUpdate>();
 
     log!(
         "/scene",
