@@ -104,6 +104,7 @@
 //! // Flush and close the MCAP file.
 //! mcap.close()?;
 //! # Ok(()) }
+//! ```
 //!
 //! log! can be mixed and matched with manually created Channels in the default [`Context`]
 //! as long as the types are exactly the same.
