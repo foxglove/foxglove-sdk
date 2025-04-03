@@ -11,7 +11,7 @@
 //!
 //! To record messages, you need at least one sink. In this example, we
 //! create an MCAP file sink, and log a [`Log`](`crate::schemas::Log`) message
-//! on a topic called `"/log"`. We write one log message and close the file.
+//! on a topic called `/log`. We write one log message and close the file.
 //!
 //! ```no_run
 //! use foxglove::{McapWriter, Channel, log};
