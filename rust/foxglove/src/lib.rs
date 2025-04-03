@@ -173,9 +173,9 @@ mod context;
 pub mod convert;
 mod cow_vec;
 mod encode;
+pub mod library_version;
 #[doc(hidden)]
 pub mod log_macro;
-pub mod library_version;
 mod log_sink_set;
 mod mcap_writer;
 mod metadata;
