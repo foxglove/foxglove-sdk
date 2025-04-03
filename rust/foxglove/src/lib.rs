@@ -9,19 +9,18 @@
 //!
 //! # Getting started
 //!
-//! To record messages, you need at least one sink, and at least one channel. In this example, we
-//! create an MCAP file sink, and a channel for [`Log`](`crate::schemas::Log`) messages on a topic
-//! called `"/log"`. Then we write one log message and close the file.
+//! To record messages, you need at least one sink. In this example, we
+//! create an MCAP file sink, and log a [`Log`](`crate::schemas::Log`) message
+//! on a topic called `"/log"`. We write one log message and close the file.
 //!
 //! ```no_run
-//! use foxglove::{McapWriter, Channel};
+//! use foxglove::{McapWriter, Channel, log};
 //! use foxglove::schemas::Log;
 //!
 //! # fn func() -> Result<(), foxglove::FoxgloveError> {
 //! let mcap = McapWriter::new().create_new_buffered_file("test.mcap")?;
 //!
-//! let channel = Channel::new("/log")?;
-//! channel.log(&Log{
+//! log!("/log", Log{
 //!     message: "Hello, Foxglove!".to_string(),
 //!     ..Default::default()
 //! });
@@ -39,6 +38,31 @@
 //! If you're familiar with MCAP, it's the same concept as an [MCAP channel]:
 //!
 //! [MCAP channel]: https://mcap.dev/guides/concepts#channel
+//!
+//! In the example above, log! creates a Channel("/log") behind the scenes on the first call.
+//! The example could be equivalently written as:
+//!
+//! ```no_run
+//! use foxglove::{Channel, McapWriter};
+//! use foxglove::schemas::Log;
+//!
+//! # fn func() -> Result<(), foxglove::FoxgloveError> {
+//! // Create a new MCAP file named 'test.mcap'.
+//! let mcap = McapWriter::new().create_new_buffered_file("test.mcap")?;
+//!
+//! // Create a new channel for the topic "/log" for `Log` messages.
+//! let channel = Channel::new("/log")?;
+//! channel.log(&Log{
+//!     message: "Hello, Foxglove!".to_string(),
+//!     ..Default::default()
+//! });
+//!
+//! // Flush and close the MCAP file.
+//! mcap.close()?;
+//! # Ok(()) }
+//!
+//! log! can be mixed and matched with manually created Channels in the default [`Context`]
+//! as long as the types are exactly the same.
 //!
 //! ### Well-known types
 //!
