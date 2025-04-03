@@ -233,7 +233,7 @@ void foxglove_channel_log(const foxglove_channel *channel,
 /**
  * For use by the C++ SDK. Identifies that wrapper as the source of logs.
  */
-void _register_cpp_wrapper(void);
+void foxglove_internal_register_cpp_wrapper(void);
 
 #ifdef __cplusplus
 }  // extern "C"

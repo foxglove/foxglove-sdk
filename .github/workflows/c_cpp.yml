@@ -91,8 +91,6 @@ jobs:
 
       - name: Build C++ library and run tests
         if: ${{ !fromJson(matrix.cross) }}
-        env:
-          FOXGLOVE_SDK_LANGUAGE: cpp
         run: make test
         working-directory: cpp
 
