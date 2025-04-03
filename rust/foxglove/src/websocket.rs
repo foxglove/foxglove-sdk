@@ -416,6 +416,12 @@ impl ConnectedClient {
             _ = sender.send(Message::Close(None)).await;
         }
 
+        let channel_ids = {
+            let subscriptions = self.subscriptions.lock();
+            subscriptions.left_values().copied().collect()
+        };
+        self.unsubscribe_channel_ids(channel_ids);
+
         // If we track paramter subscriptions, unsubscribe this clients subscriptions
         // and notify the handler, if necessary
         if !server.capabilities.contains(&Capability::Parameters) || self.server_listener.is_none()
@@ -535,37 +541,7 @@ impl ConnectedClient {
             }
         }
 
-        // Propagate client unsubscriptions to the context.
-        if let Some(context) = self.context.upgrade() {
-            context.unsubscribe_channels(self.sink_id, &unsubscribed_channel_ids);
-        }
-
-        // If we don't have a ServerListener, we're done.
-        let Some(handler) = self.server_listener.as_ref() else {
-            return;
-        };
-
-        // Then gather the actual channel references while holding the channels lock
-        let mut unsubscribed_channels = Vec::with_capacity(unsubscribed_channel_ids.len());
-        {
-            let channels = self.channels.read();
-            for channel_id in unsubscribed_channel_ids {
-                if let Some(channel) = channels.get(&channel_id) {
-                    unsubscribed_channels.push(channel.clone());
-                }
-            }
-        }
-
-        // Finally call the handler for each channel
-        for channel in unsubscribed_channels {
-            handler.on_unsubscribe(
-                Client::new(self),
-                ChannelView {
-                    id: channel.id(),
-                    topic: channel.topic(),
-                },
-            );
-        }
+        self.unsubscribe_channel_ids(unsubscribed_channel_ids);
     }
 
     fn on_subscribe(&self, mut subscriptions: Vec<Subscription>) {
@@ -1032,6 +1008,42 @@ impl ConnectedClient {
                 "Unadvertised channel with id {} to client {}",
                 channel_id,
                 self.addr
+            );
+        }
+    }
+
+    /// Unsubscribes from a list of channel IDs.
+    /// Takes a read lock on the channels map.
+    fn unsubscribe_channel_ids(&self, unsubscribed_channel_ids: Vec<ChannelId>) {
+        // Propagate client unsubscriptions to the context.
+        if let Some(context) = self.context.upgrade() {
+            context.unsubscribe_channels(self.sink_id, &unsubscribed_channel_ids);
+        }
+
+        // If we don't have a ServerListener, we're done.
+        let Some(handler) = self.server_listener.as_ref() else {
+            return;
+        };
+
+        // Then gather the actual channel references while holding the channels lock
+        let mut unsubscribed_channels = Vec::with_capacity(unsubscribed_channel_ids.len());
+        {
+            let channels = self.channels.read();
+            for channel_id in unsubscribed_channel_ids {
+                if let Some(channel) = channels.get(&channel_id) {
+                    unsubscribed_channels.push(channel.clone());
+                }
+            }
+        }
+
+        // Finally call the handler for each channel
+        for channel in unsubscribed_channels {
+            handler.on_unsubscribe(
+                Client::new(self),
+                ChannelView {
+                    id: channel.id(),
+                    topic: channel.topic(),
+                },
             );
         }
     }

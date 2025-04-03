@@ -504,6 +504,62 @@ async fn test_log_only_to_subscribers() {
 
 #[traced_test]
 #[tokio::test]
+async fn test_on_unsubscribe_called_after_disconnect() {
+    let recording_listener = Arc::new(RecordingServerListener::new());
+
+    let ctx = Context::new();
+    let server = create_server(
+        &ctx,
+        ServerOptions {
+            listener: Some(recording_listener.clone()),
+            ..Default::default()
+        },
+    );
+
+    let chan = new_channel("/foo", &ctx);
+    let addr = server
+        .start("127.0.0.1", 0)
+        .await
+        .expect("Failed to start server");
+
+    let mut client = connect_client(addr).await;
+    client.next().await.expect("No serverInfo sent").unwrap();
+    client.next().await.expect("No advertisement sent").unwrap();
+
+    let subscribe = json!({
+        "op": "subscribe",
+        "subscriptions": [
+            { "id": 1, "channelId": chan.id() }
+        ]
+    });
+    client
+        .send(Message::text(subscribe.to_string()))
+        .await
+        .expect("Failed to send");
+
+    // Allow the server to process the subscriptions
+    assert_eventually(|| dbg!(chan.num_sinks()) == 1).await;
+
+    let subscriptions = recording_listener.take_subscribe();
+    assert_eq!(subscriptions.len(), 1);
+
+    let unsubscriptions = recording_listener.take_unsubscribe();
+    assert_eq!(unsubscriptions.len(), 0);
+
+    // Disconnect the client without unsubscribing explicitly
+    client.close(None).await.unwrap();
+
+    // Allow the server to process the disconnection
+    assert_eventually(|| dbg!(chan.num_sinks()) == 0).await;
+
+    let unsubscriptions = recording_listener.take_unsubscribe();
+    assert_eq!(unsubscriptions.len(), 1);
+
+    server.stop().await;
+}
+
+#[traced_test]
+#[tokio::test]
 async fn test_error_when_client_publish_unsupported() {
     // Server does not support clientPublish capability by default
     let ctx = Context::new();
