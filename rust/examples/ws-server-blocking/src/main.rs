@@ -6,13 +6,15 @@ use std::time::Duration;
 
 use clap::Parser;
 
+use foxglove::LazyChannel;
+
 #[derive(Debug, serde::Serialize, schemars::JsonSchema)]
 struct Message {
     msg: String,
     count: u32,
 }
 
-foxglove::static_typed_channel!(pub MSG_CHANNEL, "/msg", Message);
+static MSG_CHANNEL: LazyChannel<Message> = LazyChannel::new("/msg");
 
 fn log_until(fps: u8, stop: Arc<AtomicBool>) {
     let mut count: u32 = 0;
@@ -56,7 +58,7 @@ fn main() {
     .expect("Failed to set SIGINT handler");
 
     let server = foxglove::WebSocketServer::new()
-        .name("ws-demo")
+        .name(env!("CARGO_PKG_NAME"))
         .bind(&args.host, args.port)
         .start_blocking()
         .expect("Server failed to start");

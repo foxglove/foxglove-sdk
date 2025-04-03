@@ -14,13 +14,13 @@
 //! called `"/log"`. Then we write one log message and close the file.
 //!
 //! ```no_run
-//! use foxglove::{McapWriter, TypedChannel};
+//! use foxglove::{McapWriter, Channel};
 //! use foxglove::schemas::Log;
 //!
 //! # fn func() -> Result<(), foxglove::FoxgloveError> {
 //! let mcap = McapWriter::new().create_new_buffered_file("test.mcap")?;
 //!
-//! let channel = TypedChannel::new("/log")?;
+//! let channel = Channel::new("/log")?;
 //! channel.log(&Log{
 //!     message: "Hello, Foxglove!".to_string(),
 //!     ..Default::default()
@@ -42,15 +42,15 @@
 //!
 //! ### Well-known types
 //!
-//! The SDK provides [structs for well-known schemas](schemas). These can be used in
-//! conjunction with [`TypedChannel`] for type-safe logging, which ensures at compile time that
-//! messages logged to a channel all share a common schema.
+//! The SDK provides [structs for well-known schemas](schemas). These can be used in conjunction
+//! with [`Channel`] for type-safe logging, which ensures at compile time that messages logged to a
+//! channel all share a common schema.
 //!
 //! ### Custom data
 //!
 //! You can also define your own custom data types by implementing the [`Encode`] trait. This
-//! allows you to log arbitrary custom data types. Notably, the `Encode` trait is
-//! automatically implemented for types that implement [`Serialize`](serde::Serialize) and
+//! allows you to log arbitrary custom data types. Notably, the `Encode` trait is automatically
+//! implemented for types that implement [`Serialize`](serde::Serialize) and
 //! [`JsonSchema`][jsonschema-trait]. This makes it easy to define new custom messages:
 //!
 //! ```no_run
@@ -61,7 +61,7 @@
 //! }
 //!
 //! # fn func() -> Result<(), foxglove::FoxgloveError> {
-//! let channel = foxglove::TypedChannel::new("/custom")?;
+//! let channel = foxglove::Channel::new("/custom")?;
 //! channel.log(&Custom{
 //!     msg: "custom",
 //!     count: 42
@@ -69,17 +69,24 @@
 //! # Ok(()) }
 //! ```
 //!
+//! [jsonschema-trait]: https://docs.rs/schemars/latest/schemars/trait.JsonSchema.html
+//!
 //! ### Static Channels
 //!
 //! A common pattern is to create the channels once as static variables, and then use them
-//! throughout the application. To support this, the [`static_typed_channel!`] macro
-//! provides a convenient way to create static channels:
+//! throughout the application. But because channels do not have a const initializer, they must be
+//! initialized lazily. [`LazyChannel`] provides a convenient way to do this.
 //!
-//! ```no_run
-//! foxglove::static_typed_channel!(pub(crate) BOXES, "/boxes", foxglove::schemas::SceneUpdate);
+//! Be careful when using this pattern. The channel will not be advertised to sinks until it is
+//! initialized, which is guaranteed to happen when the channel is first used. If you need to
+//! ensure the channel is initialized _before_ using it, you can use [`LazyChannel::init`].
+//!
 //! ```
+//! use foxglove::LazyChannel;
+//! use foxglove::schemas::SceneUpdate;
 //!
-//! [jsonschema-trait]: https://docs.rs/schemars/latest/schemars/trait.JsonSchema.html
+//! static BOXES: LazyChannel<SceneUpdate> = LazyChannel::new("/boxes");
+//! ```
 //!
 //! ## Sinks
 //!
@@ -171,6 +178,7 @@ mod log_sink_set;
 mod mcap_writer;
 mod metadata;
 mod runtime;
+mod schema;
 pub mod schemas;
 mod schemas_wkt;
 mod sink;
@@ -179,19 +187,21 @@ mod sink;
 mod tests;
 #[cfg(test)]
 mod testutil;
+mod throttler;
 mod time;
 pub mod websocket;
 mod websocket_server;
 
-pub use channel::{Channel, Schema};
+pub use channel::{Channel, ChannelId, LazyChannel, LazyRawChannel, RawChannel};
 pub use channel_builder::ChannelBuilder;
 #[doc(hidden)]
 pub use context::Context;
-pub use encode::{Encode, TypedChannel};
+pub use encode::Encode;
 pub use mcap_writer::{McapWriter, McapWriterHandle};
 pub use metadata::{Metadata, PartialMetadata};
 pub(crate) use runtime::get_runtime_handle;
 pub use runtime::shutdown_runtime;
+pub use schema::Schema;
 pub use sink::{Sink, SinkId};
 pub(crate) use time::nanoseconds_since_epoch;
 pub use websocket_server::{WebSocketServer, WebSocketServerBlockingHandle, WebSocketServerHandle};

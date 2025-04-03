@@ -1,6 +1,6 @@
 use errors::PyFoxgloveError;
 use foxglove::{
-    Channel, ChannelBuilder, Context, McapWriter, McapWriterHandle, PartialMetadata, Schema,
+    ChannelBuilder, Context, McapWriter, McapWriterHandle, PartialMetadata, RawChannel, Schema,
 };
 use generated::channels;
 use generated::schemas;
@@ -57,7 +57,7 @@ impl From<PySchema> for foxglove::Schema {
 }
 
 #[pyclass(module = "foxglove")]
-struct BaseChannel(Option<Arc<Channel>>);
+struct BaseChannel(Arc<RawChannel>);
 
 /// A writer for logging messages to an MCAP file.
 ///
@@ -122,10 +122,10 @@ impl BaseChannel {
             .message_encoding(message_encoding)
             .schema(schema.map(Schema::from))
             .metadata(metadata.unwrap_or_default())
-            .build()
+            .build_raw()
             .map_err(PyFoxgloveError::from)?;
 
-        Ok(BaseChannel(Some(channel)))
+        Ok(BaseChannel(channel))
     }
 
     #[pyo3(signature = (msg, log_time=None, publish_time=None, sequence=None))]
@@ -141,16 +141,12 @@ impl BaseChannel {
             publish_time,
             sequence,
         };
-        if let Some(channel) = &self.0 {
-            channel.log_with_meta(msg, metadata);
-        } else {
-            tracing::debug!(target: "foxglove.channels", "Cannot log() on a closed channel");
-        }
+        self.0.log_with_meta(msg, metadata);
         Ok(())
     }
 
     fn close(&mut self) {
-        self.0 = None;
+        self.0.close();
     }
 }
 
@@ -177,7 +173,7 @@ fn open_mcap(path: PathBuf, allow_overwrite: bool) -> PyResult<PyMcapWriter> {
 #[pyfunction]
 fn get_channel_for_topic(topic: &str) -> PyResult<Option<BaseChannel>> {
     let channel = Context::get_default().get_channel_by_topic(topic);
-    Ok(channel.map(|chan| BaseChannel(Some(chan))))
+    Ok(channel.map(BaseChannel))
 }
 
 // Not public. Re-exported in a wrapping function.

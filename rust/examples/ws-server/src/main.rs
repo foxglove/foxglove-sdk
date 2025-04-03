@@ -3,10 +3,9 @@ use foxglove::convert::SaturatingInto;
 use foxglove::schemas::{
     Color, CubePrimitive, FrameTransform, Pose, Quaternion, SceneEntity, SceneUpdate, Vector3,
 };
-use foxglove::{static_typed_channel, Channel, ChannelBuilder};
+use foxglove::{LazyChannel, LazyRawChannel};
 use schemars::JsonSchema;
 use serde::Serialize;
-use std::sync::{Arc, LazyLock};
 use std::time::Duration;
 
 #[derive(Debug, Serialize, JsonSchema)]
@@ -23,22 +22,12 @@ struct Message {
     count: u32,
 }
 
-static_typed_channel!(pub BOX_CHANNEL, "/boxes", SceneUpdate);
-static_typed_channel!(pub TF_CHANNEL, "/tf", FrameTransform);
-static_typed_channel!(pub MSG_CHANNEL, "/msg", Message);
+static BOX_CHANNEL: LazyChannel<SceneUpdate> = LazyChannel::new("/boxes");
+static TF_CHANNEL: LazyChannel<FrameTransform> = LazyChannel::new("/tf");
+static MSG_CHANNEL: LazyChannel<Message> = LazyChannel::new("/msg");
 
 // Foxglove supports logging arbitrary JSON values without specifying a schema
-static SCHEMALESS_CHANNEL: LazyLock<Arc<Channel>> = LazyLock::new(|| {
-    match ChannelBuilder::new("/schemaless")
-        .message_encoding("json")
-        .build()
-    {
-        Ok(chan) => chan,
-        Err(e) => {
-            panic!("example failed to create /schemaless channel: {:?}", e);
-        }
-    }
-});
+static SCHEMALESS_CHANNEL: LazyRawChannel = LazyRawChannel::new("/schemaless", "json");
 
 async fn log_forever(fps: u8) {
     let mut counter: u32 = 0;
@@ -119,7 +108,7 @@ async fn main() {
     let args = Cli::parse();
 
     let server = foxglove::WebSocketServer::new()
-        .name("ws-demo")
+        .name(env!("CARGO_PKG_NAME"))
         .bind(&args.host, args.port)
         .start()
         .await

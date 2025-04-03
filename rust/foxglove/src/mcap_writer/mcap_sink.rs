@@ -1,6 +1,5 @@
 //! [`Sink`] implementation for an MCAP writer.
-use crate::channel::ChannelId;
-use crate::{Channel, FoxgloveError, Metadata, Sink, SinkId};
+use crate::{ChannelId, FoxgloveError, Metadata, RawChannel, Sink, SinkId};
 use mcap::WriteOptions;
 use parking_lot::Mutex;
 use std::collections::hash_map::Entry;
@@ -25,7 +24,7 @@ impl<W: Write + Seek> WriterState<W> {
 
     fn log(
         &mut self,
-        channel: &Channel,
+        channel: &RawChannel,
         msg: &[u8],
         metadata: &Metadata,
     ) -> Result<(), FoxgloveError> {
@@ -110,7 +109,12 @@ impl<W: Write + Seek + Send> Sink for McapSink<W> {
         self.sink_id
     }
 
-    fn log(&self, channel: &Channel, msg: &[u8], metadata: &Metadata) -> Result<(), FoxgloveError> {
+    fn log(
+        &self,
+        channel: &RawChannel,
+        msg: &[u8],
+        metadata: &Metadata,
+    ) -> Result<(), FoxgloveError> {
         _ = metadata;
         let mut guard = self.inner.lock();
         let writer = guard.as_mut().ok_or(FoxgloveError::SinkClosed)?;
@@ -121,16 +125,16 @@ impl<W: Write + Seek + Send> Sink for McapSink<W> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{collection, Metadata, Schema};
+    use crate::{collection, ChannelBuilder, Context, Metadata, Schema};
     use mcap::McapError;
     use std::path::Path;
     use tempfile::NamedTempFile;
 
-    fn new_test_channel(topic: String, schema_name: String) -> Arc<Channel> {
-        Channel::new(
-            topic,
-            "message_encoding".to_string(),
-            Some(Schema::new(
+    fn new_test_channel(ctx: &Arc<Context>, topic: String, schema_name: String) -> Arc<RawChannel> {
+        ChannelBuilder::new(topic)
+            .context(ctx)
+            .message_encoding("message_encoding")
+            .schema(Schema::new(
                 schema_name,
                 "encoding",
                 br#"{
@@ -140,9 +144,10 @@ mod tests {
                         "count": {"type": "number"},
                     },
                 }"#,
-            )),
-            collection! {"key".to_string() => "value".to_string()},
-        )
+            ))
+            .metadata(collection! {"key".to_string() => "value".to_string()})
+            .build_raw()
+            .unwrap()
     }
 
     fn foreach_mcap_message<F>(path: &Path, mut f: F) -> Result<(), McapError>
@@ -159,9 +164,10 @@ mod tests {
 
     #[test]
     fn test_log_channels() {
+        let ctx = Context::new();
         // Create two channels
-        let ch1 = new_test_channel("foo".to_string(), "foo_schema".to_string());
-        let ch2 = new_test_channel("bar".to_string(), "bar_schema".to_string());
+        let ch1 = new_test_channel(&ctx, "foo".to_string(), "foo_schema".to_string());
+        let ch2 = new_test_channel(&ctx, "bar".to_string(), "bar_schema".to_string());
 
         // Generate a temporary file path without creating the file
         let temp_file = NamedTempFile::new().expect("create tempfile");

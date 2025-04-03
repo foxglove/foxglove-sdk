@@ -557,6 +557,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "example-quickstart"
+version = "0.0.0"
+dependencies = [
+ "ctrlc",
+ "env_logger",
+ "foxglove",
+]
+
+[[package]]
 name = "example-ws-server"
 version = "0.0.0"
 dependencies = [
@@ -659,7 +668,7 @@ checksum = "3f9eec918d3f24069decb9af1554cad7c880e2da24a9afd88aca000531ab82c1"
 
 [[package]]
 name = "foxglove"
-version = "0.3.0"
+version = "0.4.1"
 dependencies = [
  "arc-swap",
  "assert_matches",
@@ -682,6 +691,7 @@ dependencies = [
  "serde_json",
  "serde_repr",
  "serde_with",
+ "smallbytes",
  "smallvec",
  "strum 0.26.3",
  "tempfile",
@@ -707,7 +717,7 @@ dependencies = [
 
 [[package]]
 name = "foxglove-sdk-python"
-version = "0.3.0"
+version = "0.4.1"
 dependencies = [
  "bytes",
  "env_logger",
@@ -726,7 +736,7 @@ dependencies = [
 
 [[package]]
 name = "foxglove_c"
-version = "0.3.0"
+version = "0.4.1"
 dependencies = [
  "bitflags",
  "cbindgen",
@@ -1064,9 +1074,9 @@ dependencies = [
 
 [[package]]
 name = "log"
-version = "0.4.25"
+version = "0.4.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "04cbf5b083de1c7e0222a7a51dbfdba1cbe1c6ab0b15e29fff3f6c077fd9cd9f"
+checksum = "30bde2b3dc3671ae49d8e2e9f044c7c005836e7a023ee57cffa25ab82764bb9e"
 
 [[package]]
 name = "lz4"
@@ -1821,6 +1831,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8f92a496fb766b417c996b9c5e57daf2f7ad3b0bebe1ccfca4856390e3d3bb67"
 dependencies = [
  "autocfg",
+]
+
+[[package]]
+name = "smallbytes"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "058d68c846e75e40719a9f772887608604e8af199157a2fa58a3ae4bad6ee934"
+dependencies = [
+ "bytes",
+ "smallvec",
 ]
 
 [[package]]

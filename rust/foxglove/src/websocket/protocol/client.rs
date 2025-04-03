@@ -1,10 +1,8 @@
 //! Definitions of client-to-server messages in ws-protocol.
 //! Serializations are derived for testing.
 
-use crate::{
-    channel::ChannelId,
-    websocket::service::{CallId, ServiceId},
-};
+use crate::websocket::service::{CallId, ServiceId};
+use crate::ChannelId;
 use base64::{prelude::BASE64_STANDARD, Engine};
 use bytes::{Buf, Bytes};
 use serde::{Deserialize, Serialize};
@@ -227,7 +225,7 @@ pub(crate) struct JsonClientChannel {
 }
 
 /// Information about a channel advertised by the client
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ClientChannel {
     /// An identifier for this channel, assigned by the client
     pub id: ClientChannelId,

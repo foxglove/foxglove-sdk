@@ -49,7 +49,7 @@ async fn main() {
     let asset_server = AssetServer::new();
 
     let server = foxglove::WebSocketServer::new()
-        .name("ws-demo")
+        .name(env!("CARGO_PKG_NAME"))
         .bind(&args.host, args.port)
         .fetch_asset_handler(Box::new(asset_server))
         .start()

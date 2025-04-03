@@ -142,6 +142,7 @@ fn generate_impls(out_dir: &Path, fds: &FileDescriptorSet) -> anyhow::Result<()>
         else {
             continue;
         };
+        let schema_name = name;
         // Special case for GeoJSON casing
         if name == "GeoJSON" {
             name = "GeoJson";
@@ -154,7 +155,7 @@ fn generate_impls(out_dir: &Path, fds: &FileDescriptorSet) -> anyhow::Result<()>
 
     fn get_schema() -> Option<Schema> {{
         Some(Schema::new(
-            \"foxglove.{name}\",
+            \"foxglove.{schema_name}\",
             \"protobuf\",
             descriptors::{descriptor_name},
         ))

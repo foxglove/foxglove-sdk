@@ -27,14 +27,28 @@ FetchContent_Declare(
   GIT_REPOSITORY https://github.com/corrosion-rs/corrosion.git
   GIT_TAG v0.5.1
 )
+# Clear CMAKE_CONFIGURATION_TYPES before making Corrosion available
+if(CMAKE_GENERATOR MATCHES "Unix Makefiles|Ninja")
+  unset(CMAKE_CONFIGURATION_TYPES CACHE)
+endif()
 FetchContent_MakeAvailable(Corrosion)
-
 
 FetchContent_Declare(
   websocketpp
   GIT_REPOSITORY https://github.com/zaphoyd/websocketpp.git
   GIT_TAG 0.8.2
+  OVERRIDE_FIND_PACKAGE
 )
+# Set WebSocketPP CMake policy to suppress the warning
+set(FETCHCONTENT_TRY_FIND_PACKAGE_MODE NEVER)
+FetchContent_GetProperties(websocketpp)
+if(NOT websocketpp_POPULATED)
+  FetchContent_Populate(websocketpp)
+  # Don't call add_subdirectory to avoid running the original CMakeLists.txt
+  # Just set up the include directory
+  add_library(websocketpp INTERFACE)
+  target_include_directories(websocketpp INTERFACE ${websocketpp_SOURCE_DIR})
+endif()
 FetchContent_MakeAvailable(websocketpp)
 
 FetchContent_Declare(asio
@@ -44,8 +58,8 @@ FetchContent_Declare(asio
 FetchContent_MakeAvailable(asio)
 
 if(DEFINED SANITIZE)
-  if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    message(FATAL_ERROR "Sanitizers are only supported with Clang")
+  if(NOT CMAKE_CXX_COMPILER_ID MATCHES ".*Clang")
+    message(FATAL_ERROR "Sanitizers are only supported with Clang, not ${CMAKE_CXX_COMPILER_ID}")
   endif()
   set(SANITIZER_COMPILE_OPTIONS -fsanitize=${SANITIZE} -fsanitize-ignorelist=${CMAKE_CURRENT_SOURCE_DIR}/sanitize-ignorelist.txt -fno-omit-frame-pointer -fno-sanitize-recover=all)
   set(SANITIZER_LINK_OPTIONS -fsanitize=${SANITIZE})
@@ -129,3 +143,10 @@ add_executable(example_mcap examples/mcap/src/main.cpp)
 target_compile_options(example_mcap PUBLIC ${SANITIZER_COMPILE_OPTIONS})
 target_link_options(example_mcap PUBLIC ${SANITIZER_LINK_OPTIONS})
 target_link_libraries(example_mcap foxglove_cpp_static)
+
+add_executable(example_quickstart examples/quickstart/src/main.cpp)
+target_compile_options(example_quickstart PUBLIC ${SANITIZER_COMPILE_OPTIONS})
+target_link_options(example_quickstart PUBLIC ${SANITIZER_LINK_OPTIONS})
+set_property(TARGET example_quickstart PROPERTY CXX_STANDARD 17)
+set_property(TARGET example_quickstart PROPERTY CXX_STANDARD_REQUIRED True)
+target_link_libraries(example_quickstart foxglove_cpp_static)

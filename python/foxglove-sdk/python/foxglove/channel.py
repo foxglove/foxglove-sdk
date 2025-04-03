@@ -1,8 +1,9 @@
 import json
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, Optional, Union, cast
 
 from . import _foxglove_py as _foxglove
-from ._foxglove_py import channels as _channels
+from . import channels as _channels
+from . import schemas as _schemas
 
 JsonSchema = Dict[str, Any]
 JsonMessage = Dict[str, Any]
@@ -54,7 +55,8 @@ class Channel:
 
     def log(
         self,
-        msg: Union[JsonMessage, bytes],
+        msg: Union[JsonMessage, list[Any], bytes, str],
+        *,
         log_time: Optional[int] = None,
         publish_time: Optional[int] = None,
         sequence: Optional[int] = None,
@@ -63,24 +65,28 @@ class Channel:
         Log a message on the channel.
 
         :param msg: the message to log. If the channel uses JSON encoding, you may pass a
-            dictionary. Otherwise, you are responsible for serializing the message.
+            dictionary or list. Otherwise, you are responsible for serializing the message.
         """
-        if isinstance(msg, bytes):
-            return self.base.log(msg, log_time, publish_time, sequence)
-
-        if self.message_encoding == "json":
+        if self.message_encoding == "json" and isinstance(msg, (dict, list)):
             return self.base.log(
                 json.dumps(msg).encode("utf-8"), log_time, publish_time, sequence
             )
 
-        raise ValueError(f"Unsupported message type: {type(msg)}")
+        if isinstance(msg, str):
+            msg = msg.encode("utf-8")
+        if isinstance(msg, bytes):
+            return self.base.log(msg, log_time, publish_time, sequence)
+
+        raise TypeError(f"Unsupported message type: {type(msg)}")
 
     def close(self) -> None:
         """
         Close the channel.
 
-        You do not need to call this unless you explicitly want to remove advertisements from live
-        visualization clients. Destroying all references to the channel will also close it.
+        You can use this to explicitly unadvertise the channel to sinks that subscribe to
+        channels dynamically, such as the :py:class:`foxglove.WebSocketServer`.
+
+        Attempts to log on a closed channel will elicit a throttled warning message.
         """
         self.base.close()
 
@@ -88,24 +94,56 @@ class Channel:
 _channels_by_topic: Dict[str, Channel] = {}
 
 
-def log(topic: str, message: Any) -> None:
-    channel: Optional[Channel] = _channels_by_topic.get(topic, None)
+def log(
+    topic: str,
+    message: Union[JsonMessage, list[Any], bytes, str, _schemas.FoxgloveSchema],
+    *,
+    log_time: Optional[int] = None,
+    publish_time: Optional[int] = None,
+    sequence: Optional[int] = None,
+) -> None:
+    """Log a message on a topic.
+
+    Creates a new channel the first time called for a given topic.
+    For Foxglove types in the schemas module, this creates a typed channel
+    (see :py:mod:`foxglove.channels` for supported types).
+    For bytes and str, this creates a simple schemaless channel and logs the bytes as-is.
+    For dict and list, this creates a schemaless json channel.
+
+    The type of the message must be kept consistent for each topic or an error will be raised.
+    This can be avoided by creating and using the channels directly instead of using this function.
+
+    Note: this raises an error if a channel with the same topic was created by other means.
+    This limitation may be lifted in the future.
+
+    :param topic: The topic name.
+    :param message: The message to log.
+    """
+    channel: Optional[Any] = _channels_by_topic.get(topic, None)
     if channel is None:
         schema_name = type(message).__name__
-        channel_name = f"{schema_name}Channel"
-        channel_cls = getattr(_channels, channel_name, None)
-        if channel_cls is not None:
-            channel = channel_cls(topic)
+        if isinstance(message, (bytes, str)):
+            channel = Channel(topic)
+        elif isinstance(message, (dict, list)):
+            channel = Channel(topic, message_encoding="json")
+        else:
+            channel_name = f"{schema_name}Channel"
+            channel_cls = getattr(_channels, channel_name, None)
+            if channel_cls is not None:
+                channel = channel_cls(topic)
         if channel is None:
             raise ValueError(
-                f"No Foxglove schema channel found for message type {type(message).__name__}"
+                f"No Foxglove schema channel found for message type {schema_name}"
             )
         _channels_by_topic[topic] = channel
-    else:
-        # TODO: Check schema compatibility with proto_msg
-        pass
 
-    channel.log(message)
+    # mypy isn't smart enough to realize that when channel is a Channel, message a compatible type
+    channel.log(
+        cast(Any, message),
+        log_time=log_time,
+        publish_time=publish_time,
+        sequence=sequence,
+    )
 
 
 def _normalize_schema(
@@ -128,7 +166,4 @@ def _normalize_schema(
             ),
         )
     else:
-        raise ValueError(f"Invalid schema type: {type(schema)}")
-
-
-__all__ = ["Channel", "log"]
+        raise TypeError(f"Invalid schema type: {type(schema)}")
