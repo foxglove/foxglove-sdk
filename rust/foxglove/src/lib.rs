@@ -283,6 +283,9 @@ mod time;
 pub mod websocket;
 mod websocket_server;
 
+// Re-export bytes crate for convenience when implementing the `Encode` trait
+pub use bytes;
+
 pub use channel::{Channel, ChannelId, LazyChannel, LazyRawChannel, RawChannel};
 pub use channel_builder::ChannelBuilder;
 pub use context::{Context, LazyContext};
