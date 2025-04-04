@@ -63,9 +63,9 @@ impl<'a> ServerMessage<'a> {
     }
 
     /// Parses a server message from a binary buffer.
-    pub fn parse_binary(mut data: &'a [u8]) -> Result<Option<Self>, ParseError> {
+    pub fn parse_binary(mut data: &'a [u8]) -> Result<Self, ParseError> {
         if data.is_empty() {
-            Ok(None)
+            Err(ParseError::EmptyBinaryMessage)
         } else {
             let opcode = data.get_u8();
             match BinaryOpcode::from_repr(opcode) {
@@ -81,7 +81,6 @@ impl<'a> ServerMessage<'a> {
                 }
                 None => Err(ParseError::InvalidOpcode(opcode)),
             }
-            .map(Some)
         }
     }
 

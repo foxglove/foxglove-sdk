@@ -184,7 +184,7 @@ mod tests {
     fn test_roundtrip_asset_data() {
         let orig = asset_data();
         let buf = orig.to_bytes();
-        let msg = ServerMessage::parse_binary(&buf).unwrap().unwrap();
+        let msg = ServerMessage::parse_binary(&buf).unwrap();
         assert_eq!(msg, ServerMessage::FetchAssetResponse(orig));
     }
 
@@ -192,7 +192,7 @@ mod tests {
     fn test_roundtrip_error_message() {
         let orig = error_message();
         let buf = orig.to_bytes();
-        let msg = ServerMessage::parse_binary(&buf).unwrap().unwrap();
+        let msg = ServerMessage::parse_binary(&buf).unwrap();
         assert_eq!(msg, ServerMessage::FetchAssetResponse(orig));
     }
 }

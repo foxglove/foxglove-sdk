@@ -1,6 +1,13 @@
 /// An error encountered while parsing a message.
 #[derive(Debug, thiserror::Error)]
+#[non_exhaustive]
 pub enum ParseError {
+    /// Empty binary message.
+    #[error("Empty binary message")]
+    EmptyBinaryMessage,
+    /// Unhandled message type.
+    #[error("Unhandled message type")]
+    UnhandledMessageType,
     /// Invalid opcode for a binary message.
     #[error("Unknown binary opcode {0}")]
     InvalidOpcode(u8),

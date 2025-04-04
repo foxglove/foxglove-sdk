@@ -2,31 +2,15 @@
 
 use tungstenite::Message;
 
-use crate::{client, server, BinaryMessage, JsonMessage};
-
-/// An error encountered while parsing a tungstenite message.
-#[derive(Debug, thiserror::Error)]
-pub enum ParseError {
-    /// Empty binary message.
-    #[error("Empty binary message")]
-    EmptyBinaryMessage,
-    /// Unhandled message type.
-    #[error("Unhandled message type")]
-    UnhandledMessageType,
-    /// Common parse error.
-    #[error(transparent)]
-    ParseError(#[from] crate::ParseError),
-}
+use crate::{client, server, BinaryMessage, JsonMessage, ParseError};
 
 impl<'a> TryFrom<&'a Message> for client::ClientMessage<'a> {
     type Error = ParseError;
 
     fn try_from(msg: &'a Message) -> Result<Self, Self::Error> {
         match msg {
-            Message::Text(utf8) => Ok(Self::parse_json(utf8)?),
-            Message::Binary(bytes) => {
-                Self::parse_binary(bytes)?.ok_or(ParseError::EmptyBinaryMessage)
-            }
+            Message::Text(utf8) => Self::parse_json(utf8),
+            Message::Binary(bytes) => Self::parse_binary(bytes),
             _ => Err(ParseError::UnhandledMessageType),
         }
     }
@@ -37,10 +21,8 @@ impl<'a> TryFrom<&'a Message> for server::ServerMessage<'a> {
 
     fn try_from(msg: &'a Message) -> Result<Self, Self::Error> {
         match msg {
-            Message::Text(utf8) => Ok(Self::parse_json(utf8)?),
-            Message::Binary(bytes) => {
-                Self::parse_binary(bytes)?.ok_or(ParseError::EmptyBinaryMessage)
-            }
+            Message::Text(utf8) => Self::parse_json(utf8),
+            Message::Binary(bytes) => Self::parse_binary(bytes),
             _ => Err(ParseError::UnhandledMessageType),
         }
     }

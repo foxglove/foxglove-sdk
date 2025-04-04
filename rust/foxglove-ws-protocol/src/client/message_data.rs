@@ -78,7 +78,7 @@ mod tests {
     fn test_roundtrip() {
         let orig = message();
         let buf = orig.to_bytes();
-        let msg = ClientMessage::parse_binary(&buf).unwrap().unwrap();
+        let msg = ClientMessage::parse_binary(&buf).unwrap();
         assert_eq!(msg, ClientMessage::MessageData(orig));
     }
 }

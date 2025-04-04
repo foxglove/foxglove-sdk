@@ -60,18 +60,18 @@ impl<'a> ClientMessage<'a> {
     }
 
     /// Parses a client message from a binary buffer.
-    pub fn parse_binary(mut data: &'a [u8]) -> Result<Option<Self>, ParseError> {
+    pub fn parse_binary(mut data: &'a [u8]) -> Result<Self, ParseError> {
         if data.is_empty() {
-            Ok(None)
+            Err(ParseError::EmptyBinaryMessage)
         } else {
             let opcode = data.get_u8();
             match BinaryOpcode::from_repr(opcode) {
-                Some(BinaryOpcode::MessageData) => MessageData::parse_binary(data)
-                    .map(ClientMessage::MessageData)
-                    .map(Some),
-                Some(BinaryOpcode::ServiceCallRequest) => ServiceCallRequest::parse_binary(data)
-                    .map(ClientMessage::ServiceCallRequest)
-                    .map(Some),
+                Some(BinaryOpcode::MessageData) => {
+                    MessageData::parse_binary(data).map(ClientMessage::MessageData)
+                }
+                Some(BinaryOpcode::ServiceCallRequest) => {
+                    ServiceCallRequest::parse_binary(data).map(ClientMessage::ServiceCallRequest)
+                }
                 None => Err(ParseError::InvalidOpcode(opcode)),
             }
         }

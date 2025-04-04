@@ -51,7 +51,7 @@ mod tests {
     fn test_roundtrip() {
         let orig = message();
         let buf = orig.to_bytes();
-        let msg = ServerMessage::parse_binary(&buf).unwrap().unwrap();
+        let msg = ServerMessage::parse_binary(&buf).unwrap();
         assert_eq!(msg, ServerMessage::Time(orig));
     }
 }
