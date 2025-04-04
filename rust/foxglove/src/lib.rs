@@ -283,11 +283,14 @@ mod time;
 pub mod websocket;
 mod websocket_server;
 
+// Re-export bytes crate for convenience when implementing the `Encode` trait
+pub use bytes;
+
 pub use channel::{Channel, ChannelId, LazyChannel, LazyRawChannel, RawChannel};
 pub use channel_builder::ChannelBuilder;
 pub use context::{Context, LazyContext};
 pub use encode::Encode;
-pub use mcap_writer::{McapWriter, McapWriterHandle};
+pub use mcap_writer::{McapCompression, McapWriteOptions, McapWriter, McapWriterHandle};
 pub use metadata::{Metadata, PartialMetadata};
 pub(crate) use runtime::get_runtime_handle;
 pub use runtime::shutdown_runtime;
