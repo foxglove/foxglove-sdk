@@ -1,0 +1,11 @@
+---
+source: src/server/unadvertise_services.rs
+expression: message()
+---
+{
+  "op": "unadvertiseServices",
+  "serviceIds": [
+    1,
+    2
+  ]
+}

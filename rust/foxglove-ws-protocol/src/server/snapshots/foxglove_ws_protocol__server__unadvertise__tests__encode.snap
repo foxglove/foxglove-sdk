@@ -1,0 +1,12 @@
+---
+source: src/server/unadvertise.rs
+expression: message()
+---
+{
+  "op": "unadvertise",
+  "channelIds": [
+    1,
+    2,
+    3
+  ]
+}

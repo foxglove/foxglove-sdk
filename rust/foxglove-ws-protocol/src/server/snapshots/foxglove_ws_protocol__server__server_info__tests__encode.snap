@@ -1,0 +1,19 @@
+---
+source: src/server/server_info.rs
+expression: message()
+---
+{
+  "op": "serverInfo",
+  "name": "example server",
+  "capabilities": [
+    "clientPublish",
+    "time"
+  ],
+  "supportedEncodings": [
+    "json"
+  ],
+  "metadata": {
+    "key": "value"
+  },
+  "sessionId": "1675789422160"
+}

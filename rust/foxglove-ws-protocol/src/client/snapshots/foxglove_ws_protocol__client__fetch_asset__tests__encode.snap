@@ -1,0 +1,9 @@
+---
+source: src/client/fetch_asset.rs
+expression: message()
+---
+{
+  "op": "fetchAsset",
+  "uri": "package://foxglove/example.urdf",
+  "requestId": 42
+}
