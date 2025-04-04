@@ -3,6 +3,26 @@
 use crate::JsonMessage;
 use serde::{Deserialize, Serialize};
 
+/// Connection graph update message.
+///
+/// Spec: <https://github.com/foxglove/ws-protocol/blob/main/docs/spec.md#connection-graph-update>
+#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "op", rename = "connectionGraphUpdate", rename_all = "camelCase")]
+pub struct ConnectionGraphUpdate {
+    /// Published topics.
+    pub published_topics: Vec<PublishedTopic>,
+    /// Subscribed topics.
+    pub subscribed_topics: Vec<SubscribedTopic>,
+    /// Advertised services.
+    pub advertised_services: Vec<AdvertisedService>,
+    /// Removed tpoics.
+    pub removed_topics: Vec<String>,
+    /// Removed services.
+    pub removed_services: Vec<String>,
+}
+
+impl JsonMessage for ConnectionGraphUpdate {}
+
 /// A published topic in a [`ConnectionGraphUpdate`] message.
 #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -71,26 +91,6 @@ impl AdvertisedService {
         }
     }
 }
-
-/// Connection graph update message.
-///
-/// Spec: <https://github.com/foxglove/ws-protocol/blob/main/docs/spec.md#connection-graph-update>
-#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(tag = "op", rename = "connectionGraphUpdate", rename_all = "camelCase")]
-pub struct ConnectionGraphUpdate {
-    /// Published topics.
-    pub published_topics: Vec<PublishedTopic>,
-    /// Subscribed topics.
-    pub subscribed_topics: Vec<SubscribedTopic>,
-    /// Advertised services.
-    pub advertised_services: Vec<AdvertisedService>,
-    /// Removed tpoics.
-    pub removed_topics: Vec<String>,
-    /// Removed services.
-    pub removed_services: Vec<String>,
-}
-
-impl JsonMessage for ConnectionGraphUpdate {}
 
 #[cfg(test)]
 mod tests {

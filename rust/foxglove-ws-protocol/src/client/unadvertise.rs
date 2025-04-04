@@ -11,6 +11,15 @@ pub struct Unadvertise {
     pub channel_ids: Vec<u32>,
 }
 
+impl Unadvertise {
+    /// Creates a new unadvertise message.
+    pub fn new(channel_ids: impl IntoIterator<Item = u32>) -> Self {
+        Self {
+            channel_ids: channel_ids.into_iter().collect(),
+        }
+    }
+}
+
 impl JsonMessage for Unadvertise {}
 
 #[cfg(test)]
@@ -20,9 +29,7 @@ mod tests {
     use super::*;
 
     fn message() -> Unadvertise {
-        Unadvertise {
-            channel_ids: vec![1, 2, 3],
-        }
+        Unadvertise::new([1, 2, 3])
     }
 
     #[test]

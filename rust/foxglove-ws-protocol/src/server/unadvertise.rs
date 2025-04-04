@@ -12,7 +12,7 @@ pub struct Unadvertise {
 }
 
 impl Unadvertise {
-    /// Creates a new Unadvertise message with the given channel IDs.
+    /// Creates a new unadvertise message with the given channel IDs.
     pub fn new(channel_ids: impl IntoIterator<Item = u64>) -> Self {
         Self {
             channel_ids: channel_ids.into_iter().collect(),

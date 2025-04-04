@@ -8,19 +8,24 @@ use base64::prelude::*;
 #[derive(Debug, thiserror::Error)]
 pub enum EncodeError {
     /// The schema data is not valid UTF-8.
-    #[error("Schema data is not valid UTF-8")]
-    NotUtf8,
+    #[error("Schema data is not valid UTF-8: {0}")]
+    Utf8(#[from] std::str::Utf8Error),
     /// Missing schema or schema_encoding.
     #[error("Missing schema or schema_encoding")]
     MissingSchema,
+}
+impl From<std::string::FromUtf8Error> for EncodeError {
+    fn from(err: std::string::FromUtf8Error) -> Self {
+        EncodeError::Utf8(err.utf8_error())
+    }
 }
 
 /// An error that occurs while decoding schema data.
 #[derive(Debug, thiserror::Error)]
 pub enum DecodeError {
     /// The schema data is not valid base64.
-    #[error("Schema data is not valid base64")]
-    NotBase64,
+    #[error("Schema data is not valid base64: {0}")]
+    Base64(#[from] base64::DecodeError),
     /// Missing schema or schema_encoding.
     #[error("Missing schema or schema_encoding")]
     MissingSchema,
@@ -53,14 +58,10 @@ pub(crate) fn encode_schema_data<'a>(
     if is_known_binary_schema_encoding(schema_encoding) {
         Ok(Cow::Owned(BASE64_STANDARD.encode(data)))
     } else {
-        match data {
-            Cow::Owned(data) => String::from_utf8(data)
-                .map(Cow::Owned)
-                .map_err(|_| EncodeError::NotUtf8),
-            Cow::Borrowed(data) => std::str::from_utf8(data)
-                .map(Cow::Borrowed)
-                .map_err(|_| EncodeError::NotUtf8),
-        }
+        Ok(match data {
+            Cow::Owned(data) => Cow::Owned(String::from_utf8(data)?),
+            Cow::Borrowed(data) => Cow::Borrowed(std::str::from_utf8(data)?),
+        })
     }
 }
 
@@ -73,9 +74,7 @@ pub(crate) fn decode_schema_data(
     data: &str,
 ) -> Result<Vec<u8>, DecodeError> {
     if is_known_binary_schema_encoding(schema_encoding) {
-        BASE64_STANDARD
-            .decode(data)
-            .map_err(|_| DecodeError::NotBase64)
+        Ok(BASE64_STANDARD.decode(data)?)
     } else {
         Ok(data.as_bytes().to_vec())
     }

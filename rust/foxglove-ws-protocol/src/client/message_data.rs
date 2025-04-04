@@ -63,10 +63,7 @@ mod tests {
     use crate::client::ClientMessage;
 
     fn message() -> MessageData<'static> {
-        MessageData {
-            channel_id: 30,
-            data: br#"{"key": "value"}"#.into(),
-        }
+        MessageData::new(30, br#"{"key": "value"}"#)
     }
 
     #[test]

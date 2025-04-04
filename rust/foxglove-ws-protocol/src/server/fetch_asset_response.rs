@@ -8,41 +8,6 @@ use crate::{BinaryMessage, ParseError};
 
 use super::BinaryOpcode;
 
-/// Status code.
-#[repr(u8)]
-enum Status {
-    Success = 0,
-    Error = 1,
-}
-impl Status {
-    fn from_repr(value: u8) -> Option<Self> {
-        match value {
-            0 => Some(Self::Success),
-            1 => Some(Self::Error),
-            _ => None,
-        }
-    }
-}
-
-/// Payload for a [`FetchAssetResponse`].
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Payload<'a> {
-    /// An error response.
-    ErrorMessage(Cow<'a, str>),
-    /// A successful response.
-    AssetData(Cow<'a, [u8]>),
-}
-
-impl Payload<'_> {
-    /// Returns an owned version of this payload.
-    pub fn into_owned(self) -> Payload<'static> {
-        match self {
-            Payload::ErrorMessage(msg) => Payload::ErrorMessage(Cow::Owned(msg.into_owned())),
-            Payload::AssetData(data) => Payload::AssetData(Cow::Owned(data.into_owned())),
-        }
-    }
-}
-
 /// Fetch asset response message.
 ///
 /// Spec: <https://github.com/foxglove/ws-protocol/blob/main/docs/spec.md#fetch-asset-response>
@@ -123,6 +88,41 @@ impl<'a> BinaryMessage<'a> for FetchAssetResponse<'a> {
         buf.put_u32_le(error_message_len as u32);
         buf.put_slice(payload);
         buf
+    }
+}
+
+/// Status code.
+#[repr(u8)]
+enum Status {
+    Success = 0,
+    Error = 1,
+}
+impl Status {
+    fn from_repr(value: u8) -> Option<Self> {
+        match value {
+            0 => Some(Self::Success),
+            1 => Some(Self::Error),
+            _ => None,
+        }
+    }
+}
+
+/// Payload for a [`FetchAssetResponse`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Payload<'a> {
+    /// An error response.
+    ErrorMessage(Cow<'a, str>),
+    /// A successful response.
+    AssetData(Cow<'a, [u8]>),
+}
+
+impl Payload<'_> {
+    /// Returns an owned version of this payload.
+    pub fn into_owned(self) -> Payload<'static> {
+        match self {
+            Payload::ErrorMessage(msg) => Payload::ErrorMessage(Cow::Owned(msg.into_owned())),
+            Payload::AssetData(data) => Payload::AssetData(Cow::Owned(data.into_owned())),
+        }
     }
 }
 

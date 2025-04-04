@@ -11,6 +11,15 @@ pub struct RemoveStatus {
     pub status_ids: Vec<String>,
 }
 
+impl RemoveStatus {
+    /// Creates a new remove status message.
+    pub fn new(status_ids: impl IntoIterator<Item = impl Into<String>>) -> Self {
+        Self {
+            status_ids: status_ids.into_iter().map(|s| s.into()).collect(),
+        }
+    }
+}
+
 impl JsonMessage for RemoveStatus {}
 
 #[cfg(test)]
@@ -20,9 +29,7 @@ mod tests {
     use super::*;
 
     fn message() -> RemoveStatus {
-        RemoveStatus {
-            status_ids: vec!["status-1".into(), "status-2".into(), "status-3".into()],
-        }
+        RemoveStatus::new(["status-1", "status-2", "status-3"])
     }
 
     #[test]

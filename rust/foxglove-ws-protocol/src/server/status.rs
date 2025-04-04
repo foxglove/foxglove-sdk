@@ -4,16 +4,6 @@ use crate::JsonMessage;
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 
-/// Level indicator for a [`Status`] message.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize_repr, Deserialize_repr)]
-#[repr(u8)]
-#[allow(missing_docs)]
-pub enum Level {
-    Info = 0,
-    Warning = 1,
-    Error = 2,
-}
-
 /// Status message.
 ///
 /// Spec: <https://github.com/foxglove/ws-protocol/blob/main/docs/spec.md#status>
@@ -64,6 +54,16 @@ impl Status {
 
 impl JsonMessage for Status {}
 
+/// Level indicator for a [`Status`] message.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize_repr, Deserialize_repr)]
+#[repr(u8)]
+#[allow(missing_docs)]
+pub enum Level {
+    Info = 0,
+    Warning = 1,
+    Error = 2,
+}
+
 #[cfg(test)]
 mod tests {
     use crate::server::ServerMessage;
@@ -71,7 +71,11 @@ mod tests {
     use super::*;
 
     fn message() -> Status {
-        Status::warning("Oh no").with_id("status-123")
+        Status::warning("Oh no")
+    }
+
+    fn message_with_id() -> Status {
+        message().with_id("my-id")
     }
 
     #[test]
@@ -80,10 +84,23 @@ mod tests {
     }
 
     #[test]
-    fn test_roundtrip() {
-        let orig = message();
+    fn test_encode_with_id() {
+        insta::assert_json_snapshot!(message_with_id());
+    }
+
+    fn test_roundtrip_inner(orig: Status) {
         let buf = orig.to_string();
         let msg = ServerMessage::parse_json(&buf).unwrap();
         assert_eq!(msg, ServerMessage::Status(orig));
+    }
+
+    #[test]
+    fn test_roundtrip() {
+        test_roundtrip_inner(message());
+    }
+
+    #[test]
+    fn test_roundtrip_with_id() {
+        test_roundtrip_inner(message_with_id());
     }
 }

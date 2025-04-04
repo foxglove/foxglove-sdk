@@ -10,6 +10,7 @@ pub struct UnadvertiseServices {
     /// IDs of the services to unadvertise.
     pub service_ids: Vec<u32>,
 }
+
 impl UnadvertiseServices {
     /// Creates a new unadvertise services message.
     pub fn new(service_ids: impl IntoIterator<Item = u32>) -> Self {

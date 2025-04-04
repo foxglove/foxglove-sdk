@@ -1,6 +1,6 @@
 ---
 source: rust/foxglove-ws-protocol/src/client/set_parameters.rs
-expression: message()
+expression: message_with_id()
 ---
 {
   "op": "setParameters",
@@ -30,5 +30,6 @@ expression: message()
       "name": "bool",
       "value": true
     }
-  ]
+  ],
+  "id": "my-id"
 }

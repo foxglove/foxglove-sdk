@@ -1,11 +1,12 @@
 ---
 source: rust/foxglove-ws-protocol/src/client/get_parameters.rs
-expression: message()
+expression: message_with_id()
 ---
 {
   "op": "getParameters",
   "parameterNames": [
     "param1",
     "param2"
-  ]
+  ],
+  "id": "my-id"
 }

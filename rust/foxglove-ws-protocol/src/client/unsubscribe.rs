@@ -11,6 +11,15 @@ pub struct Unsubscribe {
     pub subscription_ids: Vec<u32>,
 }
 
+impl Unsubscribe {
+    /// Creates a new unsubscribe message.
+    pub fn new(subscription_ids: impl IntoIterator<Item = u32>) -> Self {
+        Self {
+            subscription_ids: subscription_ids.into_iter().collect(),
+        }
+    }
+}
+
 impl JsonMessage for Unsubscribe {}
 
 #[cfg(test)]
@@ -20,9 +29,7 @@ mod tests {
     use super::*;
 
     fn message() -> Unsubscribe {
-        Unsubscribe {
-            subscription_ids: vec![1, 2, 3],
-        }
+        Unsubscribe::new([1, 2, 3])
     }
 
     #[test]

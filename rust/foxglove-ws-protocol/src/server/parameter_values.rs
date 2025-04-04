@@ -18,14 +18,18 @@ pub struct ParameterValues {
 
 impl ParameterValues {
     /// Creates a new parameter values message.
-    pub fn new(
-        parameters: impl IntoIterator<Item = Parameter>,
-        id: impl Into<Option<String>>,
-    ) -> Self {
+    pub fn new(parameters: impl IntoIterator<Item = Parameter>) -> Self {
         Self {
             parameters: parameters.into_iter().collect(),
-            id: id.into(),
+            id: None,
         }
+    }
+
+    /// Sets the request ID.
+    #[must_use]
+    pub fn with_id(mut self, id: impl Into<String>) -> Self {
+        self.id = Some(id.into());
+        self
     }
 }
 
@@ -38,16 +42,17 @@ mod tests {
     use super::*;
 
     fn message() -> ParameterValues {
-        ParameterValues {
-            id: None,
-            parameters: vec![
-                Parameter::empty("empty"),
-                Parameter::float64("f64", 1.23),
-                Parameter::float64_array("f64[]", vec![1.23, 4.56]),
-                Parameter::byte_array("byte[]", [0x10, 0x20, 0x30]),
-                Parameter::bool("bool", true),
-            ],
-        }
+        ParameterValues::new([
+            Parameter::empty("empty"),
+            Parameter::float64("f64", 1.23),
+            Parameter::float64_array("f64[]", vec![1.23, 4.56]),
+            Parameter::byte_array("byte[]", [0x10, 0x20, 0x30]),
+            Parameter::bool("bool", true),
+        ])
+    }
+
+    fn message_with_id() -> ParameterValues {
+        message().with_id("my-id")
     }
 
     #[test]
@@ -56,10 +61,23 @@ mod tests {
     }
 
     #[test]
-    fn test_roundtrip() {
-        let orig = message();
+    fn test_encode_with_id() {
+        insta::assert_json_snapshot!(message_with_id());
+    }
+
+    fn test_roundtrip_inner(orig: ParameterValues) {
         let buf = orig.to_string();
         let msg = ServerMessage::parse_json(&buf).unwrap();
         assert_eq!(msg, ServerMessage::ParameterValues(orig));
+    }
+
+    #[test]
+    fn test_roundtrip() {
+        test_roundtrip_inner(message())
+    }
+
+    #[test]
+    fn test_roundtrip_with_id() {
+        test_roundtrip_inner(message_with_id())
     }
 }

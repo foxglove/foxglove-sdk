@@ -33,9 +33,7 @@ mod tests {
     use super::*;
 
     fn message() -> SubscribeParameterUpdates {
-        SubscribeParameterUpdates {
-            parameter_names: vec!["param1".to_string(), "param2".to_string()],
-        }
+        SubscribeParameterUpdates::new(["param1", "param2"])
     }
 
     #[test]

@@ -7,10 +7,20 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "op", rename = "fetchAsset", rename_all = "camelCase")]
 pub struct FetchAsset {
-    /// Asset URI.
-    pub uri: String,
     /// Request ID.
     pub request_id: u32,
+    /// Asset URI.
+    pub uri: String,
+}
+
+impl FetchAsset {
+    /// Creates a new fetch asset message.
+    pub fn new(request_id: u32, uri: impl Into<String>) -> Self {
+        Self {
+            request_id,
+            uri: uri.into(),
+        }
+    }
 }
 
 impl JsonMessage for FetchAsset {}
@@ -22,10 +32,7 @@ mod tests {
     use super::*;
 
     fn message() -> FetchAsset {
-        FetchAsset {
-            uri: "package://foxglove/example.urdf".to_string(),
-            request_id: 42,
-        }
+        FetchAsset::new(42, "package://foxglove/example.urdf")
     }
 
     #[test]

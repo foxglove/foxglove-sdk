@@ -18,9 +18,14 @@ pub struct Advertise<'a> {
     pub channels: Vec<Channel<'a>>,
 }
 
-impl JsonMessage for Advertise<'_> {}
+impl<'a> Advertise<'a> {
+    /// Creates a new advertise message
+    pub fn new(channels: impl IntoIterator<Item = Channel<'a>>) -> Self {
+        Self {
+            channels: channels.into_iter().collect(),
+        }
+    }
 
-impl Advertise<'_> {
     /// Returns an owned version of this message.
     pub fn into_owned(self) -> Advertise<'static> {
         Advertise {
@@ -28,6 +33,8 @@ impl Advertise<'_> {
         }
     }
 }
+
+impl JsonMessage for Advertise<'_> {}
 
 /// Client channel advertisement.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -161,27 +168,25 @@ mod tests {
     use super::*;
 
     fn message() -> Advertise<'static> {
-        Advertise {
-            channels: vec![
-                Channel::builder(10, "/t1", "json").build().unwrap(),
-                Channel::builder(20, "/t2", "json")
-                    .with_schema(Schema::new(
-                        "t2-schema",
-                        "jsonschema",
-                        br#"{"type": "object"}"#,
-                    ))
-                    .build()
-                    .unwrap(),
-                Channel::builder(30, "/t3", "protobuf")
-                    .with_schema(Schema::new(
-                        "t3-schema",
-                        "protobuf",
-                        &[0xde, 0xad, 0xbe, 0xef],
-                    ))
-                    .build()
-                    .unwrap(),
-            ],
-        }
+        Advertise::new([
+            Channel::builder(10, "/t1", "json").build().unwrap(),
+            Channel::builder(20, "/t2", "json")
+                .with_schema(Schema::new(
+                    "t2-schema",
+                    "jsonschema",
+                    br#"{"type": "object"}"#,
+                ))
+                .build()
+                .unwrap(),
+            Channel::builder(30, "/t3", "protobuf")
+                .with_schema(Schema::new(
+                    "t3-schema",
+                    "protobuf",
+                    &[0xde, 0xad, 0xbe, 0xef],
+                ))
+                .build()
+                .unwrap(),
+        ])
     }
 
     #[test]

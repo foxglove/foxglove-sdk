@@ -1,9 +1,10 @@
 ---
 source: rust/foxglove-ws-protocol/src/server/status.rs
-expression: message()
+expression: message_with_id()
 ---
 {
   "op": "status",
   "level": 1,
-  "message": "Oh no"
+  "message": "Oh no",
+  "id": "my-id"
 }

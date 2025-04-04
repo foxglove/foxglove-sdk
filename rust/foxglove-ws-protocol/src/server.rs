@@ -35,7 +35,7 @@ pub use time::Time;
 pub use unadvertise::Unadvertise;
 pub use unadvertise_services::UnadvertiseServices;
 
-/// A server message.
+/// A representation of a server message useful for deserializing.
 #[derive(Debug, Clone, PartialEq)]
 #[allow(missing_docs)]
 pub enum ServerMessage<'a> {

@@ -5,26 +5,6 @@ use std::collections::HashMap;
 use crate::JsonMessage;
 use serde::{Deserialize, Serialize};
 
-/// A capability advertised in a [`ServerInfo`] message.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub enum Capability {
-    /// Allow clients to advertise channels to send data messages to the server.
-    ClientPublish,
-    /// Allow clients to get & set parameters.
-    Parameters,
-    /// Allow clients to subscribe to parameter changes.
-    ParametersSubscribe,
-    /// The server may publish binary time messages.
-    Time,
-    /// Allow clients to call services.
-    Services,
-    /// Allow clients to subscribe to updates to the connection graph.
-    ConnectionGraph,
-    /// Allow clients to fetch assets.
-    Assets,
-}
-
 /// Server info message.
 ///
 /// Spec: <https://github.com/foxglove/ws-protocol/blob/main/docs/spec.md#server-info>
@@ -45,6 +25,26 @@ pub struct ServerInfo {
 }
 
 impl JsonMessage for ServerInfo {}
+
+/// A capability advertised in a [`ServerInfo`] message.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum Capability {
+    /// Allow clients to advertise channels to send data messages to the server.
+    ClientPublish,
+    /// Allow clients to get & set parameters.
+    Parameters,
+    /// Allow clients to subscribe to parameter changes.
+    ParametersSubscribe,
+    /// The server may publish binary time messages.
+    Time,
+    /// Allow clients to call services.
+    Services,
+    /// Allow clients to subscribe to updates to the connection graph.
+    ConnectionGraph,
+    /// Allow clients to fetch assets.
+    Assets,
+}
 
 #[cfg(test)]
 mod tests {

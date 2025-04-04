@@ -8,6 +8,35 @@ use serde::{Deserialize, Serialize};
 use crate::schema::{decode_schema_data, encode_schema_data, EncodeError, Schema};
 use crate::JsonMessage;
 
+/// Advertise services message.
+///
+/// Spec: <https://github.com/foxglove/ws-protocol/blob/main/docs/spec.md#advertise-services>
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "op", rename = "advertiseServices", rename_all = "camelCase")]
+pub struct AdvertiseServices<'a> {
+    /// Services.
+    #[serde(borrow)]
+    pub services: Vec<Service<'a>>,
+}
+
+impl<'a> AdvertiseServices<'a> {
+    /// Creates a new advertise services message.
+    pub fn new(services: impl IntoIterator<Item = Service<'a>>) -> Self {
+        Self {
+            services: services.into_iter().collect(),
+        }
+    }
+
+    /// Returns an owned version of this message.
+    pub fn into_owned(self) -> AdvertiseServices<'static> {
+        AdvertiseServices {
+            services: self.services.into_iter().map(|s| s.into_owned()).collect(),
+        }
+    }
+}
+
+impl JsonMessage for AdvertiseServices<'_> {}
+
 /// A service in a [`AdvertiseServices`] message.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -191,28 +220,6 @@ impl<'a> TryFrom<MessageSchema<'a>> for Schema<'a> {
     }
 }
 
-/// Advertise services message.
-///
-/// Spec: <https://github.com/foxglove/ws-protocol/blob/main/docs/spec.md#advertise-services>
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(tag = "op", rename = "advertiseServices", rename_all = "camelCase")]
-pub struct AdvertiseServices<'a> {
-    /// Services.
-    #[serde(borrow)]
-    pub services: Vec<Service<'a>>,
-}
-
-impl AdvertiseServices<'_> {
-    /// Returns an owned version of this message.
-    pub fn into_owned(self) -> AdvertiseServices<'static> {
-        AdvertiseServices {
-            services: self.services.into_iter().map(|s| s.into_owned()).collect(),
-        }
-    }
-}
-
-impl JsonMessage for AdvertiseServices<'_> {}
-
 #[cfg(test)]
 mod tests {
     use crate::schema::Schema;
@@ -221,69 +228,67 @@ mod tests {
     use super::*;
 
     fn message() -> AdvertiseServices<'static> {
-        AdvertiseServices {
-            services: vec![
-                // Service with both request and response schemas using the new format
-                Service::new(10, "/s1", "my_type")
-                    .with_request(
-                        "json",
-                        Schema::new("request-schema", "jsonschema", br#"{"type": "object"}"#),
-                    )
-                    .unwrap()
-                    .with_response(
-                        "json",
-                        Schema::new("response-schema", "jsonschema", br#"{"type": "object"}"#),
-                    )
-                    .unwrap(),
-                // Service with only request schema using the new format
-                Service::new(20, "/s2", "other_type")
-                    .with_request(
-                        "protobuf",
-                        Schema::new("request-schema", "protobuf", &[0xde, 0xad, 0xbe, 0xef]),
-                    )
-                    .unwrap(),
-                // Service with both request and response schemas using the old format
-                Service::new(30, "/s3", "old_type")
-                    .with_request_schema("request-schema")
-                    .with_response_schema("response-schema"),
-                // Service with request schema in new format and response in old format
-                Service::new(40, "/s4", "mixed_type")
-                    .with_request(
-                        "json",
-                        Schema::new("request-schema", "jsonschema", br#"{"type": "object"}"#),
-                    )
-                    .unwrap()
-                    .with_response_schema("response-schema"),
-                // Service with request schema in old format and response in new format
-                Service::new(50, "/s5", "mixed_type")
-                    .with_request_schema("request-schema")
-                    .with_response(
-                        "json",
-                        Schema::new("response-schema", "jsonschema", br#"{"type": "object"}"#),
-                    )
-                    .unwrap(),
-                // Service with schema overrides
-                Service::new(60, "/s6", "override_type")
-                    .with_request(
-                        "json",
-                        Schema::new("request-schema", "jsonschema", br#"{"type": "object"}"#),
-                    )
-                    .unwrap()
-                    .with_request_schema("new-request-schema")
-                    .with_response_schema("response-schema")
-                    .with_response(
-                        "json",
-                        Schema::new(
-                            "new-response-schema",
-                            "jsonschema",
-                            br#"{"type": "object"}"#,
-                        ),
-                    )
-                    .unwrap(),
-                // Service with default schemas
-                Service::new(70, "/s7", "default_schemas"),
-            ],
-        }
+        AdvertiseServices::new([
+            // Service with both request and response schemas using the new format
+            Service::new(10, "/s1", "my_type")
+                .with_request(
+                    "json",
+                    Schema::new("request-schema", "jsonschema", br#"{"type": "object"}"#),
+                )
+                .unwrap()
+                .with_response(
+                    "json",
+                    Schema::new("response-schema", "jsonschema", br#"{"type": "object"}"#),
+                )
+                .unwrap(),
+            // Service with only request schema using the new format
+            Service::new(20, "/s2", "other_type")
+                .with_request(
+                    "protobuf",
+                    Schema::new("request-schema", "protobuf", &[0xde, 0xad, 0xbe, 0xef]),
+                )
+                .unwrap(),
+            // Service with both request and response schemas using the old format
+            Service::new(30, "/s3", "old_type")
+                .with_request_schema("request-schema")
+                .with_response_schema("response-schema"),
+            // Service with request schema in new format and response in old format
+            Service::new(40, "/s4", "mixed_type")
+                .with_request(
+                    "json",
+                    Schema::new("request-schema", "jsonschema", br#"{"type": "object"}"#),
+                )
+                .unwrap()
+                .with_response_schema("response-schema"),
+            // Service with request schema in old format and response in new format
+            Service::new(50, "/s5", "mixed_type")
+                .with_request_schema("request-schema")
+                .with_response(
+                    "json",
+                    Schema::new("response-schema", "jsonschema", br#"{"type": "object"}"#),
+                )
+                .unwrap(),
+            // Service with schema overrides
+            Service::new(60, "/s6", "override_type")
+                .with_request(
+                    "json",
+                    Schema::new("request-schema", "jsonschema", br#"{"type": "object"}"#),
+                )
+                .unwrap()
+                .with_request_schema("new-request-schema")
+                .with_response_schema("response-schema")
+                .with_response(
+                    "json",
+                    Schema::new(
+                        "new-response-schema",
+                        "jsonschema",
+                        br#"{"type": "object"}"#,
+                    ),
+                )
+                .unwrap(),
+            // Service with default schemas
+            Service::new(70, "/s7", "default_schemas"),
+        ])
     }
 
     #[test]

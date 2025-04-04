@@ -12,6 +12,14 @@ pub struct Time {
     /// Timestamp in nanoseconds.
     pub timestamp: u64,
 }
+
+impl Time {
+    /// Creates a new time message.
+    pub fn new(timestamp: u64) -> Self {
+        Self { timestamp }
+    }
+}
+
 impl<'a> BinaryMessage<'a> for Time {
     fn parse_binary(mut data: &'a [u8]) -> Result<Self, ParseError> {
         if data.len() < 8 {
@@ -37,9 +45,7 @@ mod tests {
     use super::*;
 
     fn message() -> Time {
-        Time {
-            timestamp: 1234567890,
-        }
+        Time::new(1234567890)
     }
 
     #[test]

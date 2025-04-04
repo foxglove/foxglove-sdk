@@ -13,6 +13,17 @@ pub struct Subscribe {
     pub subscriptions: Vec<Subscription>,
 }
 
+impl Subscribe {
+    /// Creates a new subscribe message.
+    pub fn new(subscriptions: impl IntoIterator<Item = Subscription>) -> Self {
+        Self {
+            subscriptions: subscriptions.into_iter().collect(),
+        }
+    }
+}
+
+impl JsonMessage for Subscribe {}
+
 /// A subscription for a [`Subscribe`] message.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -23,8 +34,6 @@ pub struct Subscription {
     pub channel_id: u64,
 }
 
-impl JsonMessage for Subscribe {}
-
 #[cfg(test)]
 mod tests {
     use crate::client::ClientMessage;
@@ -32,18 +41,16 @@ mod tests {
     use super::*;
 
     fn message() -> Subscribe {
-        Subscribe {
-            subscriptions: vec![
-                Subscription {
-                    id: 1,
-                    channel_id: 10,
-                },
-                Subscription {
-                    id: 2,
-                    channel_id: 20,
-                },
-            ],
-        }
+        Subscribe::new([
+            Subscription {
+                id: 1,
+                channel_id: 10,
+            },
+            Subscription {
+                id: 2,
+                channel_id: 20,
+            },
+        ])
     }
 
     #[test]
