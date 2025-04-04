@@ -16,7 +16,16 @@ use tracing::warn;
 
 /// A websocket server for live visualization.
 ///
+/// ### Buffering
 ///
+/// Logged messages are queued in a channel for each client and delivered in a background task. If a
+/// queue fills, perhaps because of a slow client, then the oldest messages will be dropped. The
+/// queue size is configurable with [`WebSocketServer::message_backlog_size`] when creating the
+/// server.
+///
+/// Other protocol messages, including status updates, are delivered from a separate "control"
+/// queue, using the same configured queue size. If the control queue fills, then the slow client is
+/// dropped.
 #[must_use]
 #[derive(Debug)]
 pub struct WebSocketServer {

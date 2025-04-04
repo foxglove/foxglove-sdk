@@ -107,11 +107,17 @@ impl<T: Encode> Channel<T> {
     } }
 
     /// Encodes the message and logs it on the channel.
+    ///
+    /// The buffering behavior depends on the log sink; see [`McapWriter`][crate::McapWriter] and
+    /// [`WebSocketServer`][crate::WebSocketServer] for details.
     pub fn log(&self, msg: &T) {
         self.log_with_meta(msg, PartialMetadata::default());
     }
 
     /// Encodes the message and logs it on the channel with additional metadata.
+    ///
+    /// The buffering behavior depends on the log sink; see [`McapWriter`][crate::McapWriter] and
+    /// [`WebSocketServer`][crate::WebSocketServer] for details.
     pub fn log_with_meta(&self, msg: &T, metadata: PartialMetadata) {
         if self.has_sinks() {
             self.log_to_sinks(msg, metadata);

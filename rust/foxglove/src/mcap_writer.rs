@@ -14,6 +14,11 @@ mod mcap_sink;
 use mcap_sink::McapSink;
 
 /// An MCAP writer for logging events.
+///
+/// ### Buffering
+///
+/// Logged messages are buffered in a [`BufWriter`]. When the writer is dropped, the buffered
+/// messages are flushed to the writer and the writer is closed.
 #[must_use]
 #[derive(Debug, Clone)]
 pub struct McapWriter {
