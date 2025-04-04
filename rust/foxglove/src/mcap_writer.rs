@@ -8,7 +8,9 @@ use std::{fmt::Debug, io::Write};
 
 use crate::library_version::get_library_version;
 use crate::{Context, FoxgloveError, Sink};
-use mcap::WriteOptions;
+
+pub use mcap::Compression as McapCompression;
+pub use mcap::WriteOptions as McapWriteOptions;
 
 mod mcap_sink;
 use mcap_sink::McapSink;
@@ -17,12 +19,12 @@ use mcap_sink::McapSink;
 #[must_use]
 #[derive(Debug, Clone)]
 pub struct McapWriter {
-    options: WriteOptions,
+    options: McapWriteOptions,
     context: Arc<Context>,
 }
 
-impl From<WriteOptions> for McapWriter {
-    fn from(value: WriteOptions) -> Self {
+impl From<McapWriteOptions> for McapWriter {
+    fn from(value: McapWriteOptions) -> Self {
         let options = value.library(get_library_version());
         Self {
             options,
@@ -33,7 +35,7 @@ impl From<WriteOptions> for McapWriter {
 
 impl Default for McapWriter {
     fn default() -> Self {
-        Self::from(WriteOptions::default())
+        Self::from(McapWriteOptions::default())
     }
 }
 
@@ -45,7 +47,7 @@ impl McapWriter {
 
     /// Instantiates a new MCAP writer with the provided options.
     /// The library option is ignored.
-    pub fn with_options(options: WriteOptions) -> Self {
+    pub fn with_options(options: McapWriteOptions) -> Self {
         options.into()
     }
 

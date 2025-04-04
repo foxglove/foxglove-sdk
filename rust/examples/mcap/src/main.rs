@@ -3,8 +3,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
 use clap::{Parser, ValueEnum};
-use foxglove::{LazyChannel, McapWriter};
-use mcap::{Compression, WriteOptions};
+use foxglove::{LazyChannel, McapCompression, McapWriteOptions, McapWriter};
 use std::time::Duration;
 
 #[derive(Debug, Parser)]
@@ -32,11 +31,11 @@ enum CompressionArg {
     Lz4,
     None,
 }
-impl From<CompressionArg> for Option<Compression> {
+impl From<CompressionArg> for Option<McapCompression> {
     fn from(value: CompressionArg) -> Self {
         match value {
-            CompressionArg::Zstd => Some(Compression::Zstd),
-            CompressionArg::Lz4 => Some(Compression::Lz4),
+            CompressionArg::Zstd => Some(McapCompression::Zstd),
+            CompressionArg::Lz4 => Some(McapCompression::Lz4),
             CompressionArg::None => None,
         }
     }
@@ -82,7 +81,7 @@ fn main() {
         std::fs::remove_file(&args.path).expect("Failed to remove file");
     }
 
-    let options = WriteOptions::new()
+    let options = McapWriteOptions::new()
         .chunk_size(Some(args.chunk_size))
         .compression(args.compression.into());
 
