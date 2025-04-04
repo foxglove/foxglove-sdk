@@ -1,0 +1,9 @@
+---
+source: src/parameter.rs
+expression: "Parameter\n{\n    name: \"byte[]\".to_string(), value:\n    Some(ParameterValue::String(data.into())), r#type:\n    Some(ParameterType::ByteArray),\n}"
+---
+{
+  "name": "byte[]",
+  "type": "byte_array",
+  "value": "ECAw"
+}

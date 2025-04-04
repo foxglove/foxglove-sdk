@@ -1,0 +1,10 @@
+---
+source: src/server/status.rs
+expression: message()
+---
+{
+  "op": "status",
+  "level": 1,
+  "message": "Oh no",
+  "id": "status-123"
+}

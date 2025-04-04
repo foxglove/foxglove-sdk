@@ -1,0 +1,7 @@
+---
+source: src/parameter.rs
+expression: "Parameter::empty(\"test\")"
+---
+{
+  "name": "test"
+}

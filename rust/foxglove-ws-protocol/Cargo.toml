@@ -1,0 +1,33 @@
+[package]
+name = "foxglove-ws-protocol"
+version = "0.4.1"
+description = "Foxglove WebSocket Protocol"
+edition = "2021"
+repository = "https://github.com/foxglove/foxglove-sdk"
+license = "MIT"
+
+[features]
+default = []
+tungstenite = ["dep:tungstenite"]
+
+[lints]
+workspace = true
+
+[dependencies]
+base64.workspace = true
+bytes.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+serde_repr = "0.1"
+serde_with = { version = "3.0", features = ["base64"] }
+thiserror.workspace = true
+tungstenite = { workspace = true, optional = true }
+
+[dev-dependencies]
+assert_matches = "1.5"
+insta = { version = "1.31", features = ["json"] }
+maplit = "1.0.2"
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]

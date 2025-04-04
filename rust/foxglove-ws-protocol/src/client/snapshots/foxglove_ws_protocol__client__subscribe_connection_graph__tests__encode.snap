@@ -1,0 +1,7 @@
+---
+source: src/client/subscribe_connection_graph.rs
+expression: "SubscribeConnectionGraph {}"
+---
+{
+  "op": "subscribeConnectionGraph"
+}

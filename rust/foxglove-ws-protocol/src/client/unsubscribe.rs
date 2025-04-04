@@ -1,0 +1,40 @@
+use crate::JsonMessage;
+use serde::{Deserialize, Serialize};
+
+/// Unsubscribe message.
+///
+/// Spec: <https://github.com/foxglove/ws-protocol/blob/main/docs/spec.md#unsubscribe>
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "op", rename = "unsubscribe", rename_all = "camelCase")]
+pub struct Unsubscribe {
+    /// Subscription IDs.
+    pub subscription_ids: Vec<u32>,
+}
+
+impl JsonMessage for Unsubscribe {}
+
+#[cfg(test)]
+mod tests {
+    use crate::client::ClientMessage;
+
+    use super::*;
+
+    fn message() -> Unsubscribe {
+        Unsubscribe {
+            subscription_ids: vec![1, 2, 3],
+        }
+    }
+
+    #[test]
+    fn test_encode() {
+        insta::assert_json_snapshot!(message());
+    }
+
+    #[test]
+    fn test_roundtrip() {
+        let orig = message();
+        let buf = orig.to_string();
+        let msg = ClientMessage::parse_json(&buf).unwrap();
+        assert_eq!(msg, ClientMessage::Unsubscribe(orig));
+    }
+}

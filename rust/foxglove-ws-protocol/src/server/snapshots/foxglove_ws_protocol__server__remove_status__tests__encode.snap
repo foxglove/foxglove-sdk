@@ -1,0 +1,12 @@
+---
+source: src/server/remove_status.rs
+expression: message()
+---
+{
+  "op": "removeStatus",
+  "statusIds": [
+    "status-1",
+    "status-2",
+    "status-3"
+  ]
+}

@@ -1,0 +1,8 @@
+---
+source: src/parameter.rs
+expression: "Parameter\n{\n    name: \"bool\".to_string(), value: Some(ParameterValue::Bool(true)), r#type:\n    None,\n}"
+---
+{
+  "name": "bool",
+  "value": true
+}
