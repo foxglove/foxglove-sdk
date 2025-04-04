@@ -85,6 +85,7 @@ impl<'a> ServerMessage<'a> {
     }
 
     /// Returns a server message with a static lifetime.
+    #[allow(dead_code)]
     pub fn into_owned(self) -> ServerMessage<'static> {
         match self {
             ServerMessage::ServerInfo(m) => ServerMessage::ServerInfo(m),
