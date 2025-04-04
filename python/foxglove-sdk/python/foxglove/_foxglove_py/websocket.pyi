@@ -61,6 +61,9 @@ class ConnectionGraph:
         """
         Set a published topic and its associated publisher ids. Overwrites any existing topic with
         the same name.
+
+        :param topic: The topic name.
+        :param publisher_ids: The set of publisher ids.
         """
         ...
 
@@ -68,6 +71,9 @@ class ConnectionGraph:
         """
         Set a subscribed topic and its associated subscriber ids. Overwrites any existing topic with
         the same name.
+
+        :param topic: The topic name.
+        :param subscriber_ids: The set of subscriber ids.
         """
         ...
 
@@ -75,6 +81,9 @@ class ConnectionGraph:
         """
         Set an advertised service and its associated provider ids Overwrites any existing service
         with the same name.
+
+        :param service: The service name.
+        :param provider_ids: The set of provider ids.
         """
         ...
 

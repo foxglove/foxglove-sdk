@@ -55,8 +55,7 @@ class Timestamp:
     def from_epoch_secs(timestamp: float) -> "Timestamp":
         """
         Creates a :py:class:`Timestamp` from an epoch timestamp, such as is
-        returned by :py:meth:`time.time` or
-        :py:func:`datetime.datetime.timestamp`.
+        returned by :py:func:`time.time` or :py:func:`datetime.datetime.timestamp`.
 
         Raises `OverflowError` if the timestamp cannot be represented.
 

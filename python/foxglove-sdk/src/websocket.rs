@@ -935,9 +935,7 @@ impl PyConnectionGraph {
     /// Overwrites any existing topic with the same name.
     ///
     /// :param topic: The topic name.
-    /// :type topic: str
     /// :param publisher_ids: The set of publisher ids.
-    /// :type publisher_ids: list[str]
     pub fn set_published_topic(&mut self, topic: &str, publisher_ids: Vec<String>) {
         self.0.set_published_topic(topic, publisher_ids);
     }
@@ -946,9 +944,7 @@ impl PyConnectionGraph {
     /// Overwrites any existing topic with the same name.
     ///
     /// :param topic: The topic name.
-    /// :type topic: str
     /// :param subscriber_ids: The set of subscriber ids.
-    /// :type subscriber_ids: list[str]
     pub fn set_subscribed_topic(&mut self, topic: &str, subscriber_ids: Vec<String>) {
         self.0.set_subscribed_topic(topic, subscriber_ids);
     }
@@ -957,9 +953,7 @@ impl PyConnectionGraph {
     /// Overwrites any existing service with the same name.
     ///
     /// :param service: The service name.
-    /// :type service: str
     /// :param provider_ids: The set of provider ids.
-    /// :type provider_ids: list[str]
     pub fn set_advertised_service(&mut self, service: &str, provider_ids: Vec<String>) {
         self.0.set_advertised_service(service, provider_ids);
     }
