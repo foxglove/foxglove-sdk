@@ -28,13 +28,11 @@ pub struct PartialMetadata {
 pub struct Metadata {
     /// The sequence number is unique per channel,
     /// and allows for ordering of messages as well as detecting missing messages.
-    /// If omitted, a monotonically increasing sequence number unique to the channel is used.
     pub sequence: u32,
     /// The log time is the time, as nanoseconds from the unix epoch, that the message was recorded.
     /// Usually this is the time log() is called. If omitted, the current time is used.
     pub log_time: u64,
     /// The publish_time is the time at which the message was published.
     /// e.g. the timestamp at which the sensor reading was taken.
-    /// If omitted, log time is used.
     pub publish_time: u64,
 }
