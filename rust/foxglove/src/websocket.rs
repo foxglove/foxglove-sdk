@@ -1662,26 +1662,33 @@ async fn handle_connections(server: Arc<Server>, listener: TcpListener) {
     }
 }
 
-/// Add the subprotocol header to the response if the client requested one we support.
-/// If the client doesn't support our protocol, do not include the protocol header in the response;
-/// the client must fail the connection. [WebSocket RFC](https://www.rfc-editor.org/rfc/rfc6455#section-4)
+/// Add the subprotocol header to the response if the client requested it. If the client requests
+/// subprotocols which don't contain ours, or does not include the expected header, return a 400.
 async fn do_handshake(stream: TcpStream) -> Result<WebSocketStream<TcpStream>, tungstenite::Error> {
     tokio_tungstenite::accept_hdr_async(
         stream,
         |req: &server::Request, mut res: server::Response| {
-            let all_headers = req.headers().get_all("sec-websocket-protocol");
-            if all_headers.iter().any(|h| {
-                (*h).to_str()
-                    .unwrap_or_default()
-                    .split(',')
-                    .any(|s| s.trim() == SUBPROTOCOL)
-            }) {
-                res.headers_mut().insert(
-                    "sec-websocket-protocol",
-                    HeaderValue::from_static(SUBPROTOCOL),
-                );
-            };
-            Ok(res)
+            let protocol_headers = req.headers().get_all("sec-websocket-protocol");
+
+            for header in &protocol_headers {
+                let mut values = header.to_str().unwrap_or_default().split(',');
+                if values.any(|v| v.trim() == SUBPROTOCOL) {
+                    res.headers_mut().insert(
+                        "sec-websocket-protocol",
+                        HeaderValue::from_static(SUBPROTOCOL),
+                    );
+                    return Ok(res);
+                }
+            }
+
+            let resp = server::Response::builder()
+                .status(400)
+                .body(Some(
+                    "Missing expected sec-websocket-protocol header".into(),
+                ))
+                .unwrap();
+
+            Err(resp)
         },
     )
     .await

@@ -141,8 +141,36 @@ async fn test_handshake_with_unknown_subprotocol_fails_on_client() {
     assert!(result.is_err());
     assert_eq!(
         result.unwrap_err().to_string(),
-        "WebSocket protocol error: SubProtocol error: Server sent no subprotocol"
+        "HTTP error: 400 Bad Request"
     );
+    assert!(logs_contain("Dropping client"));
+}
+
+#[traced_test]
+#[tokio::test]
+async fn test_handshake_with_no_subprotocol_fails_upgrade() {
+    let ctx = Context::new();
+    let server = create_server(&ctx, ServerOptions::default());
+    let addr = server
+        .start("127.0.0.1", 0)
+        .await
+        .expect("Failed to start server");
+
+    let mut request = format!("ws://{addr}/")
+        .into_client_request()
+        .expect("Failed to build request");
+
+    request
+        .headers_mut()
+        .insert("some-other-header", HeaderValue::from_static("1"));
+
+    let result = tokio_tungstenite::connect_async(request).await;
+    assert!(result.is_err());
+    assert_eq!(
+        result.unwrap_err().to_string(),
+        "HTTP error: 400 Bad Request"
+    );
+    assert!(logs_contain("Dropping client"));
 }
 
 #[traced_test]
