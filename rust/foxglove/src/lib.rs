@@ -41,7 +41,7 @@
 //!
 //! When the context goes out of scope, its corresponding channels and sinks will be disconnected
 //! from one another, and logging will stop. Attempts to log further messages on the channels will
-//! elict throttled warning messages.
+//! elicit throttled warning messages.
 //!
 //! Since many applications only need a single context, the SDK provides a static default context
 //! for convenience. This default sink is the one used in the example above. If we wanted to use an
