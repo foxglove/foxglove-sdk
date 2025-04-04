@@ -7,7 +7,7 @@ publish = false
 workspace = true
 
 [dependencies]
-foxglove = { path = "../../foxglove" }
+foxglove = { path = "../../foxglove", default-features = false }
 clap = { version = "4.5", features = ["derive"] }
 ctrlc = "3.4.5"
 env_logger = "0.11.5"
