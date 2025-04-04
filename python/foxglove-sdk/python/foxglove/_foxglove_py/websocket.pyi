@@ -2,7 +2,7 @@ from collections.abc import Callable
 from enum import Enum
 from typing import List, Optional, Union
 
-from . import Schema
+import foxglove
 
 class Capability(Enum):
     """
@@ -67,13 +67,13 @@ class MessageSchema:
     """
 
     encoding: str
-    schema: "Schema"
+    schema: "foxglove.Schema"
 
     def __new__(
         cls,
         *,
         encoding: str,
-        schema: "Schema",
+        schema: "foxglove.Schema",
     ) -> "MessageSchema": ...
 
 class Parameter:

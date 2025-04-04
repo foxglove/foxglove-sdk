@@ -23,8 +23,6 @@ class Duration:
         Raises `OverflowError` if the duration cannot be represented.
 
         :param secs: Seconds
-        :type secs: float
-        :rtype: :py:class:`Duration`
         """
         ...
 
@@ -36,8 +34,6 @@ class Duration:
         Raises `OverflowError` if the duration cannot be represented.
 
         :param td: Timedelta
-        :type td: :py:class:`datetime.timedelta`
-        :rtype: :py:class:`Duration`
         """
         ...
 
@@ -59,14 +55,12 @@ class Timestamp:
     def from_epoch_secs(timestamp: float) -> "Timestamp":
         """
         Creates a :py:class:`Timestamp` from an epoch timestamp, such as is
-        returned by :py:func:`time.time` or
+        returned by :py:meth:`time.time` or
         :py:func:`datetime.datetime.timestamp`.
 
         Raises `OverflowError` if the timestamp cannot be represented.
 
         :param timestamp: Seconds since epoch
-        :type timestamp: float
-        :rtype: :py:class:`Timestamp`
         """
         ...
 
@@ -80,7 +74,5 @@ class Timestamp:
         Raises `OverflowError` if the timestamp cannot be represented.
 
         :param dt: Datetime
-        :type dt: :py:class:`datetime.datetime`
-        :rtype: :py:class:`Timestamp`
         """
         ...

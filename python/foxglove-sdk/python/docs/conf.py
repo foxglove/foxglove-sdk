@@ -2,24 +2,34 @@
 #
 # For the full list of built-in configuration values, see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
+from datetime import date
+
+from docs.version import SDK_VERSION
 
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = "Foxglove SDK"
-copyright = "2025, Foxglove"
+copyright = f"{date.today().year}, Foxglove"
 author = "Foxglove"
+release = SDK_VERSION
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 extensions: list[str] = [
     "sphinx.ext.autodoc",
+    "sphinx_autodoc_typehints",
     "enum_tools.autoenum",
 ]
 
+nitpicky = True
 templates_path = ["_templates"]
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
+
+# Config for sphinx_autodoc_typehints
+# https://pypi.org/project/sphinx-autodoc-typehints/
+typehints_defaults = "braces"
 
 
 # -- Options for HTML output -------------------------------------------------

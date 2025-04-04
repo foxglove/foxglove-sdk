@@ -359,7 +359,7 @@ impl foxglove::websocket::service::Handler for ServiceHandler {
 /// :param host: The host to bind to.
 /// :param port: The port to bind to.
 /// :param capabilities: A list of capabilities to advertise to clients.
-/// :param server_listener: A Python object that implements the :py:class:`ServerListener` protocol.
+/// :param server_listener: A Python object that implements the :py:class:`foxglove.websocket.ServerListener` protocol.
 /// :param supported_encodings: A list of encodings to advertise to clients.
 ///    Foxglove currently supports "json", "ros1", and "cdr" for client-side publishing.
 ///
@@ -423,19 +423,20 @@ pub fn start_server(
     Ok(PyWebSocketServer(Some(handle)))
 }
 
-/// A live visualization server. Obtain an instance by calling :py:func:`start_server`.
+/// A live visualization server. Obtain an instance by calling :py:func:`foxglove.start_server`.
 #[pyclass(name = "WebSocketServer", module = "foxglove")]
 pub struct PyWebSocketServer(pub Option<WebSocketServerBlockingHandle>);
 
 #[pymethods]
 impl PyWebSocketServer {
+    /// Explicitly stop the server.
     pub fn stop(&mut self, py: Python<'_>) {
         if let Some(server) = self.0.take() {
             py.allow_threads(|| server.stop())
         }
     }
 
-    // Get the port on which the server is listening.
+    /// Get the port on which the server is listening.
     #[getter]
     pub fn port(&self) -> u16 {
         self.0.as_ref().map_or(0, |handle| handle.port())
@@ -538,6 +539,12 @@ impl PyWebSocketServer {
         }
     }
 
+    /// Publishes a connection graph update to all subscribed clients. An update is published to
+    /// clients as a difference from the current graph to the replacement graph. When a client first
+    /// subscribes to connection graph updates, it receives the current graph.
+    ///
+    /// :param graph: The connection graph to publish.
+    /// :type graph: :py:class:`foxglove.websocket.ConnectionGraph`
     pub fn publish_connection_graph(&self, graph: Bound<'_, PyConnectionGraph>) -> PyResult<()> {
         let Some(server) = &self.0 else {
             return Ok(());
@@ -550,7 +557,7 @@ impl PyWebSocketServer {
     }
 }
 
-/// A level for :py:meth:`WebSocketServer.publish_status`.
+/// A level for :py:meth:`websocket.WebSocketServer.publish_status`.
 #[pyclass(name = "StatusLevel", module = "foxglove", eq, eq_int)]
 #[derive(Clone, PartialEq)]
 pub enum PyStatusLevel {
@@ -763,7 +770,7 @@ impl From<PyServiceSchema> for foxglove::websocket::service::ServiceSchema {
 /// :param encoding: The encoding of the message.
 /// :type encoding: str
 /// :param schema: The message schema.
-/// :type schema: :py:class:`Schema`
+/// :type schema: :py:class:`foxglove.Schema`
 #[pyclass(name = "MessageSchema", module = "foxglove", get_all, set_all)]
 #[derive(Clone)]
 pub struct PyMessageSchema {
@@ -919,6 +926,7 @@ impl From<foxglove::websocket::Parameter> for PyParameter {
     }
 }
 
+/// A connection graph.
 #[pyclass(name = "ConnectionGraph", module = "foxglove")]
 #[derive(Clone)]
 pub struct PyConnectionGraph(foxglove::websocket::ConnectionGraph);
@@ -933,6 +941,7 @@ impl PyConnectionGraph {
 
     /// Set a published topic and its associated publisher ids.
     /// Overwrites any existing topic with the same name.
+    ///
     /// :param topic: The topic name.
     /// :type topic: str
     /// :param publisher_ids: The set of publisher ids.
@@ -943,6 +952,7 @@ impl PyConnectionGraph {
 
     /// Set a subscribed topic and its associated subscriber ids.
     /// Overwrites any existing topic with the same name.
+    ///
     /// :param topic: The topic name.
     /// :type topic: str
     /// :param subscriber_ids: The set of subscriber ids.
@@ -953,6 +963,7 @@ impl PyConnectionGraph {
 
     /// Set an advertised service and its associated provider ids.
     /// Overwrites any existing service with the same name.
+    ///
     /// :param service: The service name.
     /// :type service: str
     /// :param provider_ids: The set of provider ids.
