@@ -1,6 +1,8 @@
 API Reference
 =============
 
+Version: |release|
+
 foxglove
 --------
 
