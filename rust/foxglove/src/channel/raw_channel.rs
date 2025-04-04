@@ -151,11 +151,17 @@ impl RawChannel {
     }
 
     /// Logs a message.
+    ///
+    /// The buffering behavior depends on the log sink; see [`McapWriter`][`crate::McapWriter`] and
+    /// [`WebSocketServer`][crate::WebSocketServer] for details.
     pub fn log(&self, msg: &[u8]) {
         self.log_with_meta(msg, PartialMetadata::default());
     }
 
     /// Logs a message with additional metadata.
+    ///
+    /// The buffering behavior depends on the log sink; see [`McapWriter`][`crate::McapWriter`] and
+    /// [`WebSocketServer`][crate::WebSocketServer] for details.
     pub fn log_with_meta(&self, msg: &[u8], opts: PartialMetadata) {
         if self.has_sinks() {
             self.log_to_sinks(msg, opts);
