@@ -8,10 +8,10 @@ repository = "https://github.com/foxglove/foxglove-sdk"
 license = "MIT"
 
 [features]
-default = ["live_viz"]
+default = ["live_visualization"]
 chrono = ["dep:chrono"]
 unstable = []
-live_viz = ["dep:tokio", "dep:tokio-util", "dep:tokio-tungstenite"]
+live_visualization = ["dep:tokio", "dep:tokio-util", "dep:tokio-tungstenite"]
 
 [lints]
 workspace = true
