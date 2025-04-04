@@ -502,7 +502,6 @@ async fn test_log_only_to_subscribers() {
     server.stop().await;
 }
 
-#[traced_test]
 #[tokio::test]
 async fn test_on_unsubscribe_called_after_disconnect() {
     let recording_listener = Arc::new(RecordingServerListener::new());
