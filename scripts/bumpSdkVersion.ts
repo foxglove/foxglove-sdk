@@ -81,6 +81,23 @@ async function main() {
     process.exit(status);
   }
 
+  // update version in Python SDK docs
+  console.log("\nUpdating python docs version...");
+  const pythonVersionModule = path.join(
+    workspaceRoot,
+    "python/foxglove-sdk/python/docs/version.py",
+  );
+  const content = await readFile(pythonVersionModule, "utf8");
+  const updatedContent = content.replace(
+    /SDK_VERSION\s*=\s*"([^"]*)"/m,
+    `SDK_VERSION = "${newVersion}"`,
+  );
+  if (!updatedContent.includes(newVersion)) {
+    console.error(`❌ Failed to update python docs version`);
+    process.exit(1);
+  }
+  await writeFile(pythonVersionModule, updatedContent);
+
   console.log("\n✅ Success!");
 
   // github action outputs

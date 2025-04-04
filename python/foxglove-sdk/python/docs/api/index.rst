@@ -1,53 +1,13 @@
 API Reference
 =============
 
+Version: |release|
+
 foxglove
 --------
 
-.. Enums are excluded and manually documented, since pyo3 only emulates them. (https://github.com/PyO3/pyo3/issues/2887)
-.. Parameter types and values are manually documented since nested classes (values) are not supported by automodule.
 .. automodule:: foxglove
    :members:
-   :exclude-members: Capability, ParameterType, ParameterValue, StatusLevel
-
-
-Enums
-^^^^^
-
-.. py:enum:: Capability
-
-   An enumeration of capabilities that you may choose to support for live visualization.
-
-   Specify the capabilities you support when calling :py:func:`start_server`. These will be
-   advertised to the Foxglove app when connected as a WebSocket client.
-
-   .. py:data:: ClientPublish
-
-      Allow clients to advertise channels to send data messages to the server.
-
-   .. py:data:: Parameters
-
-      Allow clients to get & set parameters.
-
-   .. py:data:: Services
-
-      Allow clients to call services.
-
-   .. py:data:: Time
-
-      Inform clients about the latest server time.
-
-      This allows accelerated, slowed, or stepped control over the progress of time. If the
-      server publishes time data, then timestamps of published messages must originate from the
-      same time source.
-
-.. py:enum:: StatusLevel
-
-   A level for :py:meth:`WebSocketServer.publish_status`.
-
-   .. py:data:: Info
-   .. py:data:: Warning
-   .. py:data:: Error
 
 Schemas
 ^^^^^^^
@@ -69,7 +29,7 @@ Channels
 Parameters
 ^^^^^^^^^^
 
-Used with the parameter service during live visualization. Requires the :py:data:`Capability.Parameters` capability.
+Used with the parameter service during live visualization. Requires the :py:data:`websocket.Capability.Parameters` capability.
 
 .. autoclass:: foxglove.websocket.ParameterType
 
@@ -123,3 +83,52 @@ disk and return its contents.
 See the Asset Server example for more information.
 
 .. autoclass:: foxglove.AssetHandler
+
+
+foxglove.websocket
+------------------
+
+.. Enums are excluded and manually documented, since pyo3 only emulates them. (https://github.com/PyO3/pyo3/issues/2887)
+.. Parameter types and values are manually documented since nested classes (values) are not supported by automodule.
+.. automodule:: foxglove.websocket
+   :members:
+   :exclude-members: Capability, ParameterType, ParameterValue, StatusLevel
+
+
+Enums
+^^^^^
+
+.. py:enum:: Capability
+
+   An enumeration of capabilities that you may choose to support for live visualization.
+
+   Specify the capabilities you support when calling :py:func:`foxglove.start_server`. These will be
+   advertised to the Foxglove app when connected as a WebSocket client.
+
+   .. py:data:: ClientPublish
+
+      Allow clients to advertise channels to send data messages to the server.
+
+   .. py:data:: Parameters
+
+      Allow clients to get & set parameters.
+
+   .. py:data:: Services
+
+      Allow clients to call services.
+
+   .. py:data:: Time
+
+      Inform clients about the latest server time.
+
+      This allows accelerated, slowed, or stepped control over the progress of time. If the
+      server publishes time data, then timestamps of published messages must originate from the
+      same time source.
+
+.. py:enum:: StatusLevel
+
+   A level for :py:meth:`WebSocketServer.publish_status`.
+
+   .. py:data:: Info
+   .. py:data:: Warning
+   .. py:data:: Error

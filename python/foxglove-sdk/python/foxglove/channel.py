@@ -84,7 +84,7 @@ class Channel:
         Close the channel.
 
         You can use this to explicitly unadvertise the channel to sinks that subscribe to
-        channels dynamically, such as the :py:class:`foxglove.WebSocketServer`.
+        channels dynamically, such as the :py:class:`foxglove.websocket.WebSocketServer`.
 
         Attempts to log on a closed channel will elicit a throttled warning message.
         """
