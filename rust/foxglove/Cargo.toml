@@ -50,3 +50,7 @@ futures-util = "0.3.31"
 insta = { version = "1.42.2", features = ["json"] }
 tempfile = "3.15.0"
 tracing-test = "0.2.5"
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
