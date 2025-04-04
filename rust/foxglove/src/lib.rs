@@ -246,9 +246,9 @@
 //!
 //! # Requirements
 //!
-//! The Foxglove SDK depends on [tokio] as its async runtime with the `rt-multi-thread`
-//! feature enabled. Refer to the tokio documentation for more information about how to configure
-//! your application to use tokio.
+//! With the `live_visualization` feature (enabled by default), the Foxglove SDK depends on [tokio]
+//! as its async runtime with the `rt-multi-thread` feature enabled. Refer to the tokio
+//! documentation for more information about how to configure your application to use tokio.
 //!
 //! [tokio]: https://docs.rs/tokio/latest/tokio/
 
