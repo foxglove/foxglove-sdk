@@ -9,7 +9,9 @@ use std::{fmt::Debug, io::Write};
 use crate::library_version::get_library_version;
 use crate::{Context, FoxgloveError, Sink};
 
+/// Compression options for content in an MCAP file
 pub use mcap::Compression as McapCompression;
+/// Options for use with an [`McapWriter`][crate::McapWriter].
 pub use mcap::WriteOptions as McapWriteOptions;
 
 mod mcap_sink;
