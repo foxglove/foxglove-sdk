@@ -57,9 +57,26 @@ class ConnectionGraph:
     """
 
     def __new__(cls) -> "ConnectionGraph": ...
-    def set_published_topic(self, topic: str, publisher_ids: List[str]) -> None: ...
-    def set_subscribed_topic(self, topic: str, subscriber_ids: List[str]) -> None: ...
-    def set_advertised_service(self, service: str, provider_ids: List[str]) -> None: ...
+    def set_published_topic(self, topic: str, publisher_ids: List[str]) -> None:
+        """
+        Set a published topic and its associated publisher ids. Overwrites any existing topic with
+        the same name.
+        """
+        ...
+
+    def set_subscribed_topic(self, topic: str, subscriber_ids: List[str]) -> None:
+        """
+        Set a subscribed topic and its associated subscriber ids. Overwrites any existing topic with
+        the same name.
+        """
+        ...
+
+    def set_advertised_service(self, service: str, provider_ids: List[str]) -> None:
+        """
+        Set an advertised service and its associated provider ids Overwrites any existing service
+        with the same name.
+        """
+        ...
 
 class MessageSchema:
     """
@@ -199,6 +216,8 @@ class ServiceSchema:
     ) -> "ServiceSchema": ...
 
 class StatusLevel(Enum):
+    """A level for `WebSocketServer.publish_status`"""
+
     Info = ...
     Warning = ...
     Error = ...
@@ -210,15 +229,60 @@ class WebSocketServer:
 
     def __new__(cls) -> "WebSocketServer": ...
     @property
-    def port(self) -> int: ...
-    def stop(self) -> None: ...
-    def clear_session(self, session_id: Optional[str] = None) -> None: ...
-    def broadcast_time(self, timestamp_nanos: int) -> None: ...
-    def publish_parameter_values(self, parameters: List["Parameter"]) -> None: ...
+    def port(self) -> int:
+        """Get the port on which the server is listening."""
+        ...
+
+    def stop(self) -> None:
+        """Explicitly stop the server."""
+        ...
+
+    def clear_session(self, session_id: Optional[str] = None) -> None:
+        """
+        Sets a new session ID and notifies all clients, causing them to reset their state.
+        If no session ID is provided, generates a new one based on the current timestamp.
+        If the server has been stopped, this has no effect.
+        """
+        ...
+
+    def broadcast_time(self, timestamp_nanos: int) -> None:
+        """
+        Publishes the current server timestamp to all clients.
+        If the server has been stopped, this has no effect.
+        """
+        ...
+
+    def publish_parameter_values(self, parameters: List["Parameter"]) -> None:
+        """Publishes parameter values to all subscribed clients."""
+        ...
+
     def publish_status(
         self, message: str, level: "StatusLevel", id: Optional[str] = None
-    ) -> None: ...
-    def remove_status(self, ids: list[str]) -> None: ...
-    def add_services(self, services: list["Service"]) -> None: ...
-    def remove_services(self, names: list[str]) -> None: ...
-    def publish_connection_graph(self, graph: "ConnectionGraph") -> None: ...
+    ) -> None:
+        """
+        Send a status message to all clients. If the server has been stopped, this has no effect.
+        """
+        ...
+
+    def remove_status(self, ids: list[str]) -> None:
+        """
+        Remove status messages by id from all clients. If the server has been stopped, this has no
+        effect.
+        """
+        ...
+
+    def add_services(self, services: list["Service"]) -> None:
+        """Add services to the server."""
+        ...
+
+    def remove_services(self, names: list[str]) -> None:
+        """Removes services that were previously advertised."""
+        ...
+
+    def publish_connection_graph(self, graph: "ConnectionGraph") -> None:
+        """
+        Publishes a connection graph update to all subscribed clients. An update is published to
+        clients as a difference from the current graph to the replacement graph. When a client first
+        subscribes to connection graph updates, it receives the current graph.
+        """
+        ...

@@ -447,7 +447,6 @@ impl PyWebSocketServer {
     /// If the server has been stopped, this has no effect.
     ///
     /// :param session_id: An optional session ID.
-    /// :type session_id: Optional[str]
     #[pyo3(signature = (session_id=None))]
     pub fn clear_session(&self, session_id: Option<String>) {
         if let Some(server) = &self.0 {
@@ -459,7 +458,6 @@ impl PyWebSocketServer {
     /// If the server has been stopped, this has no effect.
     ///
     /// :param timestamp_nanos: The timestamp to broadcast, in nanoseconds.
-    /// :type timestamp_nanos: int
     #[pyo3(signature = (timestamp_nanos))]
     pub fn broadcast_time(&self, timestamp_nanos: u64) {
         if let Some(server) = &self.0 {
@@ -471,11 +469,8 @@ impl PyWebSocketServer {
     /// If the server has been stopped, this has no effect.
     ///
     /// :param message: The message to send.
-    /// :type message: str
     /// :param level: The level of the status message.
-    /// :type level: :py:enum:`StatusLevel`
     /// :param id: An optional id for the status message.
-    /// :type id: Optional[str]
     #[pyo3(signature = (message, level, id=None))]
     pub fn publish_status(&self, message: String, level: &PyStatusLevel, id: Option<String>) {
         let Some(server) = &self.0 else {
@@ -517,7 +512,6 @@ impl PyWebSocketServer {
     /// This method will fail if the server was not configured with :py:attr:`Capability.Services`.
     ///
     /// :param services: Services to add.
-    /// :type services: list[:py:class:`Service`]
     pub fn add_services(&self, py: Python<'_>, services: Vec<PyService>) -> PyResult<()> {
         if let Some(server) = &self.0 {
             py.allow_threads(move || {
@@ -532,7 +526,6 @@ impl PyWebSocketServer {
     /// Removes services that were previously advertised.
     ///
     /// :param names: Names of services to remove.
-    /// :type names: list[str]
     pub fn remove_services(&self, py: Python<'_>, names: Vec<String>) {
         if let Some(server) = &self.0 {
             py.allow_threads(move || server.remove_services(names));
@@ -544,7 +537,6 @@ impl PyWebSocketServer {
     /// subscribes to connection graph updates, it receives the current graph.
     ///
     /// :param graph: The connection graph to publish.
-    /// :type graph: :py:class:`foxglove.websocket.ConnectionGraph`
     pub fn publish_connection_graph(&self, graph: Bound<'_, PyConnectionGraph>) -> PyResult<()> {
         let Some(server) = &self.0 else {
             return Ok(());
