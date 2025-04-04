@@ -15,6 +15,8 @@ use tokio::runtime::Handle;
 use tracing::warn;
 
 /// A websocket server for live visualization.
+///
+///
 #[must_use]
 #[derive(Debug)]
 pub struct WebSocketServer {
@@ -191,8 +193,13 @@ impl WebSocketServer {
     /// Returns a handle that can optionally be used to gracefully shutdown the server. The caller
     /// can safely drop the handle, and the server will run forever.
     ///
+    /// If you choose to use this blocking interface rather than [`WebSocketServer::start`],
+    /// the SDK will spawn a multi-threaded [tokio] runtime.
+    ///
     /// This method will panic if invoked from an asynchronous execution context. Use
     /// [`WebSocketServer::start`] instead.
+    ///
+    /// [tokio]: https://docs.rs/tokio/latest/tokio/
     pub fn start_blocking(mut self) -> Result<WebSocketServerBlockingHandle, FoxgloveError> {
         let runtime = self
             .options
