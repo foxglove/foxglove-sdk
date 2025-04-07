@@ -213,9 +213,6 @@ pub(crate) struct Server {
     /// The current connection graph, unused unless the "connectionGraph" capability is set.
     /// see https://github.com/foxglove/ws-protocol/blob/main/docs/spec.md#connection-graph-update
     connection_graph: parking_lot::Mutex<ConnectionGraph>,
-    /// The number of clients subscribed to the connection graph
-    /// This is a mutex, not an atomic, as it's used to synchronize calls to on_connection_graph_subscribe/unsubscribe
-    connection_graph_subscriber_count: parking_lot::Mutex<u32>,
     /// Token for cancelling all tasks
     cancellation_token: CancellationToken,
     /// Registered services.
@@ -306,10 +303,6 @@ pub(crate) struct ConnectedClient {
     /// The cancellation_token is used by the server to disconnect the client.
     /// It's cancelled when the client's control plane queue fills up (slow client).
     cancellation_token: CancellationToken,
-    /// Whether this client is subscribed to the connection graph
-    /// This is updated only with the connection_graph mutex held in on_connection_graph_subscribe and unsubscribe.
-    /// It's read with the connection_graph mutex held, when sending connection graph updates to clients.
-    subscribed_to_connection_graph: AtomicBool,
 }
 
 impl ConnectedClient {
@@ -321,10 +314,6 @@ impl ConnectedClient {
         self.weak_self
             .upgrade()
             .expect("client cannot be dropped while in use")
-    }
-
-    fn is_subscribed_to_connection_graph(&self) -> bool {
-        self.subscribed_to_connection_graph.load(Acquire)
     }
 
     /// Handle a text or binary message sent from the client.
@@ -748,46 +737,19 @@ impl ConnectedClient {
     }
 
     fn on_connection_graph_subscribe(&self, server: Arc<Server>) {
-        if !server.capabilities.contains(&Capability::ConnectionGraph) {
+        if !server.has_capability(Capability::ConnectionGraph) {
             self.send_error("Server does not support connection graph capability".to_string());
             return;
         }
 
-        let is_subscribed = self.subscribed_to_connection_graph.load(Acquire);
-        if is_subscribed {
+        if let Some(initial_update) = server.subscribe_connection_graph(self.id) {
+            self.send_control_msg(initial_update);
+        } else {
             tracing::debug!(
                 "Client {} is already subscribed to connection graph updates",
                 self.addr
             );
-            return;
         }
-
-        {
-            let mut subscriber_count = server.connection_graph_subscriber_count.lock();
-            let is_first_subscriber = *subscriber_count == 0;
-            *subscriber_count += 1;
-
-            // We hold the lock over the call to the listener so that subscribe and unsubscribe
-            // calls are correctly ordered relative to each other.
-            if is_first_subscriber {
-                if let Some(listener) = server.listener.as_ref() {
-                    listener.on_connection_graph_subscribe();
-                }
-            }
-        }
-
-        // We hold the connection_graph lock over updating self.subscribed_to_connection_graph
-        // and sending the initial update message, so it's synchronized with unsubscribe and
-        // with server.connection_graph_update.
-        let mut connection_graph = server.connection_graph.lock();
-        // Take the graph and replace it with an empty default
-        let current_graph = std::mem::take(&mut *connection_graph);
-        // Update the empty default with the current graph, setting it back to where it was,
-        // and generating the full diff in the process.
-        let json_diff = connection_graph.update(current_graph);
-        // Send the full diff to the client as the starting state
-        self.send_control_msg(Message::text(json_diff));
-        self.subscribed_to_connection_graph.store(true, Release);
     }
 
     fn on_connection_graph_unsubscribe(&self, server: Arc<Server>) {
@@ -796,26 +758,12 @@ impl ConnectedClient {
             return;
         }
 
-        let is_subscribed = self.is_subscribed_to_connection_graph();
-        if !is_subscribed {
-            self.send_error("Client is not subscribed to connection graph updates".to_string());
-            return;
+        if !server.unsubscribe_connection_graph(self.id) {
+            tracing::debug!(
+                "Client {} is already unsubscribed from connection graph updates",
+                self.addr
+            );
         }
-
-        {
-            let mut subscriber_count = server.connection_graph_subscriber_count.lock();
-            *subscriber_count -= 1;
-
-            if *subscriber_count == 0 {
-                if let Some(listener) = server.listener.as_ref() {
-                    listener.on_connection_graph_unsubscribe();
-                }
-            }
-        }
-
-        // Acquire the lock to sychronize with subscribe and with server.connection_graph_update.
-        let _guard = server.connection_graph.lock();
-        self.subscribed_to_connection_graph.store(false, Release);
     }
 
     /// Send an ad hoc error status message to the client, with the given message.
@@ -1007,8 +955,7 @@ impl Server {
             subscribed_parameters: parking_lot::RwLock::default(),
             capabilities,
             supported_encodings,
-            connection_graph: parking_lot::Mutex::new(ConnectionGraph::new()),
-            connection_graph_subscriber_count: parking_lot::Mutex::new(0),
+            connection_graph: parking_lot::Mutex::default(),
             cancellation_token: CancellationToken::new(),
             services: parking_lot::RwLock::new(ServiceMap::from_iter(opts.services.into_values())),
             fetch_asset_handler: opts.fetch_asset_handler,
@@ -1177,6 +1124,47 @@ impl Server {
         }
     }
 
+    /// Adds a connection graph subscription for the client.
+    ///
+    /// Returns `None` if this client is already subscribed. Otherwise, returns an initial
+    /// `ConnectionGraphUpdate` message with the complete graph state.
+    fn subscribe_connection_graph(&self, client_id: ClientId) -> Option<Message> {
+        let mut graph = self.connection_graph.lock();
+        let first = !graph.has_subscribers();
+        if !graph.add_subscriber(client_id) {
+            return None;
+        }
+
+        // Notify listener, if this is the first subscriber.
+        if first {
+            if let Some(listener) = self.listener.as_ref() {
+                listener.on_connection_graph_subscribe();
+            }
+        }
+
+        let initial_update = graph.as_initial_update();
+        Some(Message::Text(initial_update.into()))
+    }
+
+    /// Removes a connection graph subscription for the client.
+    ///
+    /// Returns false if this client is already unsubscribed.
+    fn unsubscribe_connection_graph(&self, client_id: ClientId) -> bool {
+        let mut graph = self.connection_graph.lock();
+        if !graph.remove_subscriber(client_id) {
+            return false;
+        }
+
+        // Notify listener, if this was the last subscriber.
+        if !graph.has_subscribers() {
+            if let Some(listener) = self.listener.as_ref() {
+                listener.on_connection_graph_unsubscribe();
+            }
+        }
+
+        true
+    }
+
     /// Publish parameter values to all subscribed clients.
     pub fn publish_parameter_values(&self, parameters: Vec<Parameter>) {
         if !self.has_capability(Capability::Parameters) {
@@ -1296,7 +1284,6 @@ impl Server {
             server_listener: self.listener.clone(),
             server: self.weak_self.clone(),
             cancellation_token: cancellation_token.clone(),
-            subscribed_to_connection_graph: AtomicBool::new(false),
         });
 
         self.register_client_and_advertise(new_client.clone());
@@ -1372,6 +1359,9 @@ impl Server {
         self.clients.retain(|c| !Arc::ptr_eq(c, &new_client));
         if self.has_capability(Capability::Parameters) {
             self.unsubscribe_all_parameters(new_client.id());
+        }
+        if self.has_capability(Capability::ConnectionGraph) {
+            self.unsubscribe_connection_graph(new_client.id());
         }
         new_client.on_disconnect().await;
     }
@@ -1521,11 +1511,11 @@ impl Server {
         }
 
         // Hold the lock while sending to synchronize with subscribe and unsubscribe.
-        let mut connection_graph = self.connection_graph.lock();
-        let json_diff = connection_graph.update(replacement_graph);
+        let mut graph = self.connection_graph.lock();
+        let json_diff = graph.update(replacement_graph);
         let msg = Message::text(json_diff);
         for client in self.clients.get().iter() {
-            if client.is_subscribed_to_connection_graph() {
+            if graph.is_subscriber(client.id()) {
                 client.send_control_msg(msg.clone());
             }
         }
