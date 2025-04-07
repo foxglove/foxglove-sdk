@@ -3,6 +3,8 @@ use crate::websocket::protocol::server::{
 };
 use std::collections::{HashMap, HashSet};
 
+use super::ClientId;
+
 /// A HashMap where the keys are the topic or service name and the value is a set of string ids.
 type MapOfSets = HashMap<String, HashSet<String>>;
 
@@ -16,6 +18,8 @@ pub struct ConnectionGraph {
     subscribed_topics: MapOfSets,
     /// A map of active service names to the set of string provider ids.
     advertised_services: MapOfSets,
+    /// A set of subscribers.
+    subscribers: HashSet<ClientId>,
 }
 
 impl ConnectionGraph {
@@ -63,13 +67,36 @@ impl ConnectionGraph {
         );
     }
 
-    /// Replace self with replacement_graph, computing the difference and returning it as JSON
-    /// See: https://github.com/foxglove/ws-protocol/blob/main/docs/spec.md#connection-graph-update
-    pub(crate) fn update(&mut self, replacement_graph: ConnectionGraph) -> String {
+    /// Adds a connection graph subscription for the client.
+    ///
+    /// Returns false if this client is already subscribed.
+    pub(crate) fn add_subscriber(&mut self, client_id: ClientId) -> bool {
+        self.subscribers.insert(client_id)
+    }
+
+    /// Removes a connection graph subscription for the client.
+    ///
+    /// Returns false if this client is already unsubscribed.
+    pub(crate) fn remove_subscriber(&mut self, client_id: ClientId) -> bool {
+        self.subscribers.remove(&client_id)
+    }
+
+    /// Returns true if the graph has subscribers.
+    pub(crate) fn has_subscribers(&self) -> bool {
+        !self.subscribers.is_empty()
+    }
+
+    /// Returns true if the client is a subscriber.
+    pub(crate) fn is_subscriber(&self, client_id: ClientId) -> bool {
+        self.subscribers.contains(&client_id)
+    }
+
+    /// Computes a diff of this connection graph against the other.
+    pub(crate) fn diff<'a>(&self, other: &'a ConnectionGraph) -> ConnectionGraphDiff<'a> {
         let mut diff = ConnectionGraphDiff::new();
 
         // Get new or changed published topics
-        for (name, publisher_ids) in &replacement_graph.published_topics {
+        for (name, publisher_ids) in &other.published_topics {
             if let Some(self_publisher_ids) = self.published_topics.get(name) {
                 if self_publisher_ids == publisher_ids {
                     // No change
@@ -84,7 +111,7 @@ impl ConnectionGraph {
         }
 
         // Get new or changed subscribed topics
-        for (name, subscriber_ids) in &replacement_graph.subscribed_topics {
+        for (name, subscriber_ids) in &other.subscribed_topics {
             if let Some(self_subscriber_ids) = self.subscribed_topics.get(name) {
                 if self_subscriber_ids == subscriber_ids {
                     // No change
@@ -99,7 +126,7 @@ impl ConnectionGraph {
         }
 
         // Get new or changed advertised services
-        for (name, provider_ids) in &replacement_graph.advertised_services {
+        for (name, provider_ids) in &other.advertised_services {
             if let Some(self_provider_ids) = self.advertised_services.get(name) {
                 if self_provider_ids == provider_ids {
                     // No change
@@ -112,29 +139,49 @@ impl ConnectionGraph {
         }
 
         // Get removed advertised services
-        for name in std::mem::take(&mut self.advertised_services).into_keys() {
-            if !replacement_graph.advertised_services.contains_key(&name) {
-                diff.removed_services.push(name);
+        for name in self.advertised_services.keys() {
+            if !other.advertised_services.contains_key(name) {
+                diff.removed_services.push(name.clone());
             }
         }
 
         // Get the topics from both published_topics and subscribed_topics that are no longer in either
-        for name in std::mem::take(&mut self.published_topics)
-            .into_keys()
-            .chain(std::mem::take(&mut self.subscribed_topics).into_keys())
+        for name in self
+            .published_topics
+            .keys()
+            .chain(self.subscribed_topics.keys())
         {
-            if replacement_graph.published_topics.contains_key(&name) {
+            if other.published_topics.contains_key(name) {
                 continue;
             }
-            if replacement_graph.subscribed_topics.contains_key(&name) {
+            if other.subscribed_topics.contains_key(name) {
                 continue;
             }
-            diff.removed_topics.insert(name);
+            diff.removed_topics.insert(name.clone());
         }
 
-        let json_diff = diff.to_json();
-        *self = replacement_graph;
-        json_diff
+        diff
+    }
+
+    /// Returns a `ConnectionGraphUpdate` message for the initial state of the graph.
+    ///
+    /// See: <https://github.com/foxglove/ws-protocol/blob/main/docs/spec.md#connection-graph-update>
+    pub(crate) fn as_initial_update(&self) -> String {
+        ConnectionGraph::default().diff(self).to_json()
+    }
+
+    /// Replaces the connection graph content.
+    ///
+    /// The set of subscribers is not modified.
+    ///
+    /// Returns a `ConnectionGraphUpdate` message as a JSON string.
+    /// See: <https://github.com/foxglove/ws-protocol/blob/main/docs/spec.md#connection-graph-update>
+    pub(crate) fn update(&mut self, new: ConnectionGraph) -> String {
+        let diff = self.diff(&new).to_json();
+        self.published_topics = new.published_topics;
+        self.subscribed_topics = new.subscribed_topics;
+        self.advertised_services = new.advertised_services;
+        diff
     }
 }
 

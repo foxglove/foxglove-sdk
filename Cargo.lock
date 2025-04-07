@@ -551,7 +551,6 @@ dependencies = [
  "ctrlc",
  "env_logger",
  "foxglove",
- "mcap 0.15.1",
  "schemars",
  "serde",
 ]
@@ -679,7 +678,7 @@ checksum = "3f9eec918d3f24069decb9af1554cad7c880e2da24a9afd88aca000531ab82c1"
 
 [[package]]
 name = "foxglove"
-version = "0.4.1"
+version = "0.5.0"
 dependencies = [
  "arc-swap",
  "assert_matches",
@@ -728,7 +727,7 @@ dependencies = [
 
 [[package]]
 name = "foxglove-sdk-python"
-version = "0.4.1"
+version = "0.5.0"
 dependencies = [
  "bytes",
  "env_logger",
@@ -764,7 +763,7 @@ dependencies = [
 
 [[package]]
 name = "foxglove_c"
-version = "0.4.1"
+version = "0.5.0"
 dependencies = [
  "bitflags",
  "cbindgen",

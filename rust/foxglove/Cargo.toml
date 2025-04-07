@@ -1,6 +1,6 @@
 [package]
 name = "foxglove"
-version = "0.4.1"
+version = "0.5.0"
 description = "Foxglove SDK"
 edition = "2021"
 rust-version = "1.83.0"
@@ -8,9 +8,10 @@ repository = "https://github.com/foxglove/foxglove-sdk"
 license = "MIT"
 
 [features]
-default = []
+default = ["live_visualization"]
 chrono = ["dep:chrono"]
 unstable = []
+live_visualization = ["dep:tokio", "dep:tokio-util", "dep:tokio-tungstenite"]
 
 [lints]
 workspace = true
@@ -36,9 +37,9 @@ smallvec = "1.14.0"
 smallbytes = "0.1.0"
 strum = { version = "0.26", features = ["derive"] }
 thiserror.workspace = true
-tokio-tungstenite.workspace = true
-tokio-util.workspace = true
-tokio.workspace = true
+tokio-tungstenite = { workspace = true, optional = true }
+tokio-util = { workspace = true, optional = true }
+tokio = { workspace = true, optional = true }
 tracing.workspace = true
 delegate = "0.13.2"
 

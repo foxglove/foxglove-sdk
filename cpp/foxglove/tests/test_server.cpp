@@ -88,6 +88,7 @@ TEST_CASE("Subscribe and unsubscribe callbacks") {
   client.init_asio();
   std::error_code ec;
   auto connection = client.get_connection("ws://127.0.0.1:" + std::to_string(server.port()), ec);
+  connection->add_subprotocol("foxglove.sdk.v1");
   UNSCOPED_INFO(ec.message());
   REQUIRE(!ec);
   client.connect(connection);
@@ -215,6 +216,7 @@ TEST_CASE("Client advertise/publish callbacks") {
   client.init_asio();
   std::error_code ec;
   auto connection = client.get_connection("ws://127.0.0.1:" + std::to_string(server.port()), ec);
+  connection->add_subprotocol("foxglove.sdk.v1");
   UNSCOPED_INFO(ec.message());
   REQUIRE(!ec);
   client.connect(connection);
