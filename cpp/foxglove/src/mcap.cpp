@@ -41,11 +41,7 @@ McapWriter::McapWriter(McapWriterOptions options)
   foxglove_error cError = {};
   _impl.reset(foxglove_mcap_open(&cOptions, &cError));
   if (cError.message != nullptr) {
-    printf("cError: %s\n", cError.message);
-    printf("cError.kind: %d\n", cError.kind);
   } else {
-    printf("cError: nullptr\n");
-    printf("_impl == nullptr: %d\n", _impl.get() == nullptr);
   }
   if (_impl.get() == nullptr) {
     throw FoxgloveError(std::move(cError));
