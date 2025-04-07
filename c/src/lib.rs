@@ -396,7 +396,9 @@ pub unsafe extern "C" fn foxglove_mcap_free(writer: Option<&mut FoxgloveMcapWrit
         return;
     };
     if let Some(handle) = writer.0.take() {
-        handle.close().expect("Failed to close writer");
+        if let Err(e) = handle.close() {
+            tracing::error!("failed to close mcap writer: {}", e);
+        }
     }
     // Safety: undoes the into_raw in foxglove_mcap_open
     drop(unsafe { Box::from_raw(writer) });
