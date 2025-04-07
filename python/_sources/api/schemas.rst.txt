@@ -1,0 +1,2 @@
+.. automodule:: foxglove.schemas
+   :members:
