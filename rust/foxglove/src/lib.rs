@@ -248,6 +248,8 @@
 //!
 //! The Foxglove SDK defines the following feature flags:
 //!
+//! - `chrono`: enables [chrono] conversions for [`Duration`][crate::schemas::Duration] and
+//!   [`Timestamp`][crate::schemas::Timestamp].
 //! - `live_visualization`: enables the live visualization server and client, and adds dependencies
 //!   on [tokio]. Enabled by default.
 //! - `unstable`: features which are under active development and likely to change in an upcoming
@@ -262,6 +264,7 @@
 //! as its async runtime. See [`WebSocketServer`] for more information. Refer to the tokio
 //! documentation for more information about how to configure your application to use tokio.
 //!
+//! [chrono]: https://docs.rs/chrono/latest/chrono/
 //! [tokio]: https://docs.rs/tokio/latest/tokio/
 
 #![warn(missing_docs)]
