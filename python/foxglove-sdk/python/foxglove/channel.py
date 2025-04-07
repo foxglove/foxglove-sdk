@@ -36,6 +36,9 @@ class Channel:
             for full control. If a dictionary is passed, it will be treated as a
             JSON schema.
 
+        If both message_encoding and schema are None, then the channel will use JSON encoding, and
+        allow any dict to be logged.
+
         :raises KeyError: if a channel already exists for the given topic.
         """
         if topic in _channels_by_topic:
@@ -150,11 +153,17 @@ def _normalize_schema(
     message_encoding: Optional[str],
     schema: Union[JsonSchema, _foxglove.Schema, None] = None,
 ) -> tuple[str, Optional[_foxglove.Schema]]:
-    if isinstance(schema, _foxglove.Schema) or schema is None:
+    if isinstance(schema, _foxglove.Schema):
         if message_encoding is None:
             raise ValueError("message encoding is required")
         return message_encoding, schema
-    elif isinstance(schema, dict):
+
+    if schema is None and message_encoding is None:
+        # Schemaless support via JSON encoding; same as specifying an empty dict schema
+        schema = {}
+        message_encoding = "json"
+
+    if isinstance(schema, dict):
         # Dicts default to json encoding. An empty dict is equivalent to the empty schema (b"")
         if message_encoding and message_encoding != "json":
             raise ValueError("message_encoding must be 'json' when schema is a dict")
@@ -168,5 +177,5 @@ def _normalize_schema(
                 data=json.dumps(schema).encode("utf-8") if schema else b"",
             ),
         )
-    else:
-        raise TypeError(f"Invalid schema type: {type(schema)}")
+
+    raise TypeError(f"Invalid schema type: {type(schema)}")
