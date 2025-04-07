@@ -452,7 +452,7 @@ impl ConnectedClient {
     }
 
     fn on_advertise(&self, server: Arc<Server>, message: ws_protocol::client::Advertise) {
-        if !server.capabilities.contains(&Capability::ClientPublish) {
+        if !server.has_capability(Capability::ClientPublish) {
             self.send_error("Server does not support clientPublish capability".to_string());
             return;
         }
@@ -601,7 +601,7 @@ impl ConnectedClient {
         param_names: Vec<String>,
         request_id: Option<String>,
     ) {
-        if !server.capabilities.contains(&Capability::Parameters) {
+        if !server.has_capability(Capability::Parameters) {
             self.send_error("Server does not support parameters capability".to_string());
             return;
         }
@@ -623,7 +623,7 @@ impl ConnectedClient {
         parameters: Vec<Parameter>,
         request_id: Option<String>,
     ) {
-        if !server.capabilities.contains(&Capability::Parameters) {
+        if !server.has_capability(Capability::Parameters) {
             self.send_error("Server does not support parameters capability".to_string());
             return;
         }
@@ -674,7 +674,7 @@ impl ConnectedClient {
         // We have a response channel if and only if the server supports services.
         let service_id = ServiceId::new(req.service_id);
         let call_id = CallId::new(req.call_id);
-        if !server.capabilities.contains(&Capability::Services) {
+        if !server.has_capability(Capability::Services) {
             self.send_service_call_failure(service_id, call_id, "Server does not support services");
             return;
         };
@@ -690,7 +690,7 @@ impl ConnectedClient {
         if !service
             .request_encoding()
             .map(|e| e == req.encoding)
-            .unwrap_or_else(|| server.supported_encodings.contains(req.encoding.as_ref()))
+            .unwrap_or_else(|| server.supports_encoding(&req.encoding))
         {
             self.send_service_call_failure(service_id, call_id, "Unsupported encoding");
             return;
@@ -734,7 +734,7 @@ impl ConnectedClient {
     }
 
     fn on_fetch_asset(&self, server: Arc<Server>, uri: String, request_id: u32) {
-        if !server.capabilities.contains(&Capability::Assets) {
+        if !server.has_capability(Capability::Assets) {
             self.send_error("Server does not support assets capability".to_string());
             return;
         }
@@ -744,7 +744,7 @@ impl ConnectedClient {
             return;
         };
 
-        if let Some(handler) = server.fetch_asset_handler.as_ref() {
+        if let Some(handler) = server.fetch_asset_handler() {
             let asset_responder = AssetResponder::new(Client::new(self), request_id, guard);
             handler.fetch(uri, asset_responder);
         } else {
@@ -770,7 +770,7 @@ impl ConnectedClient {
     }
 
     fn on_connection_graph_unsubscribe(&self, server: Arc<Server>) {
-        if !server.capabilities.contains(&Capability::ConnectionGraph) {
+        if !server.has_capability(Capability::ConnectionGraph) {
             self.send_error("Server does not support connection graph capability".to_string());
             return;
         }
@@ -973,6 +973,16 @@ impl Server {
         self.capabilities.contains(&cap)
     }
 
+    /// Returns true if the server supports the encoding.
+    fn supports_encoding(&self, encoding: impl AsRef<str>) -> bool {
+        self.supported_encodings.contains(encoding.as_ref())
+    }
+
+    /// Returns a reference to the fetch asset handler.
+    fn fetch_asset_handler(&self) -> Option<&dyn AssetHandler> {
+        self.fetch_asset_handler.as_deref()
+    }
+
     // Spawn a task to accept all incoming connections and return the server's local address
     pub async fn start(&self, host: &str, port: u16) -> Result<SocketAddr, FoxgloveError> {
         if self.started.load(Acquire) {
@@ -1028,7 +1038,7 @@ impl Server {
     pub fn broadcast_time(&self, timestamp: u64) {
         use ws_protocol::server::Time;
 
-        if !self.capabilities.contains(&Capability::Time) {
+        if !self.has_capability(Capability::Time) {
             tracing::error!("Server does not support time capability");
             return;
         }
@@ -1387,7 +1397,7 @@ impl Server {
     /// not unique.
     pub fn add_services(&self, new_services: Vec<Service>) -> Result<(), FoxgloveError> {
         // Make sure that the server supports services.
-        if !self.capabilities.contains(&Capability::Services) {
+        if !self.has_capability(Capability::Services) {
             return Err(FoxgloveError::ServicesNotSupported);
         }
         if new_services.is_empty() {
@@ -1498,7 +1508,7 @@ impl Server {
         replacement_graph: ConnectionGraph,
     ) -> Result<(), FoxgloveError> {
         // Make sure that the server supports connection graph.
-        if !self.capabilities.contains(&Capability::ConnectionGraph) {
+        if !self.has_capability(Capability::ConnectionGraph) {
             return Err(FoxgloveError::ConnectionGraphNotSupported);
         }
 
