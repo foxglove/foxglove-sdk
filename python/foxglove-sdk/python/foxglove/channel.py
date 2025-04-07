@@ -155,14 +155,17 @@ def _normalize_schema(
             raise ValueError("message encoding is required")
         return message_encoding, schema
     elif isinstance(schema, dict):
-        if schema.get("type") != "object":
+        # Dicts default to json encoding. An empty dict is equivalent to the empty schema (b"")
+        if message_encoding and message_encoding != "json":
+            raise ValueError("message_encoding must be 'json' when schema is a dict")
+        if schema and schema.get("type") != "object":
             raise ValueError("Only object schemas are supported")
         return (
-            message_encoding or "json",
+            "json",
             _foxglove.Schema(
                 name=schema.get("title", "json_schema"),
                 encoding="jsonschema",
-                data=json.dumps(schema).encode("utf-8"),
+                data=json.dumps(schema).encode("utf-8") if schema else b"",
             ),
         )
     else:
