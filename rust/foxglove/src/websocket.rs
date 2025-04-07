@@ -1669,10 +1669,13 @@ async fn do_handshake(stream: TcpStream) -> Result<WebSocketStream<TcpStream>, t
         stream,
         |req: &server::Request, mut res: server::Response| {
             let protocol_headers = req.headers().get_all("sec-websocket-protocol");
-
             for header in &protocol_headers {
-                let mut values = header.to_str().unwrap_or_default().split(',');
-                if values.any(|v| v.trim() == SUBPROTOCOL) {
+                if header
+                    .to_str()
+                    .unwrap_or_default()
+                    .split(',')
+                    .any(|v| v.trim() == SUBPROTOCOL)
+                {
                     res.headers_mut().insert(
                         "sec-websocket-protocol",
                         HeaderValue::from_static(SUBPROTOCOL),
