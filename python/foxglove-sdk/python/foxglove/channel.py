@@ -158,7 +158,7 @@ def _normalize_schema(
             raise ValueError("message encoding is required")
         return message_encoding, schema
 
-    if schema is None and message_encoding is None:
+    if schema is None and (message_encoding is None or message_encoding == "json"):
         # Schemaless support via JSON encoding; same as specifying an empty dict schema
         schema = {}
         message_encoding = "json"

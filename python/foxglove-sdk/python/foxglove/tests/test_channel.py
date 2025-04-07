@@ -50,6 +50,16 @@ def test_log_dict_with_empty_schema(new_topic: str) -> None:
     channel.log({"test": "test"})
 
 
+def test_log_dict_on_schemaless_json_channel(new_topic: str) -> None:
+    channel = Channel(
+        new_topic,
+        message_encoding="json",
+    )
+    assert channel.message_encoding == "json"
+
+    channel.log({"test": "test"})
+
+
 def test_log_must_serialize_on_protobuf_channel(new_topic: str) -> None:
     channel = Channel(
         new_topic,
