@@ -325,10 +325,26 @@ unsafe fn do_foxglove_mcap_open(
     // Safety: this is safe if the options struct contains valid strings
     let mcap_options = unsafe { options.to_write_options() }?;
 
-    let file = File::options()
-        .write(true)
-        .create(options.create)
-        .truncate(options.truncate)
+    println!("create, truncate: {}, {}", options.create, options.truncate);
+
+    let mut file_options = File::options();
+    file_options.write(true);
+    if options.create {
+        if options.truncate {
+            file_options.create(true).truncate(true);
+        } else {
+            file_options.create_new(true);
+        }
+    } else if options.truncate {
+        file_options.truncate(true);
+    } else {
+        // Append doesn't make sense with mcap
+        return Err(foxglove::FoxgloveError::IoError(std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "append mode not supported with mcap, specify create=true and/or truncate=true",
+        )));
+    }
+    let file = file_options
         .open(path)
         .map_err(foxglove::FoxgloveError::IoError)?;
 
@@ -732,6 +748,9 @@ impl From<foxglove::FoxgloveError> for FoxgloveError {
 }
 
 /// Free an error returned from a call to a foxglove.
+///
+/// Note this frees the message field, not the foxglove_error itself
+/// (which is typically on the stack)
 ///
 /// # Safety
 /// `error` must be zero initialized or have been set by a call to another foxglove function.

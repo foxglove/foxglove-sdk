@@ -1,5 +1,6 @@
 #include <foxglove-c/foxglove-c.h>
 #include <foxglove/channel.hpp>
+#include <foxglove/error.hpp>
 
 namespace foxglove {
 
@@ -14,9 +15,13 @@ Channel::Channel(
     cSchema.data = reinterpret_cast<const uint8_t*>(schema->data);
     cSchema.data_len = schema->dataLen;
   }
-  _impl.reset(
-    foxglove_channel_create(topic.data(), messageEncoding.data(), schema ? &cSchema : nullptr)
-  );
+  foxglove_error cError = {};
+  _impl.reset(foxglove_channel_create(
+    topic.data(), messageEncoding.data(), schema ? &cSchema : nullptr, &cError
+  ));
+  if (_impl.get() == nullptr) {
+    throw FoxgloveError(std::move(cError));
+  }
 }
 
 uint64_t Channel::id() const {

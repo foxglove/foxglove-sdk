@@ -1,14 +1,17 @@
 #include <foxglove-c/foxglove-c.h>
 #include <foxglove/channel.hpp>
+#include <foxglove/error.hpp>
 #include <foxglove/server.hpp>
 
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_string.hpp>
 #include <catch2/matchers/catch_matchers_vector.hpp>
 #include <websocketpp/client.hpp>
 #include <websocketpp/config/asio_no_tls_client.hpp>
 
 #include <type_traits>
 
+using Catch::Matchers::ContainsSubstring;
 using Catch::Matchers::Equals;
 
 using WebSocketClient = websocketpp::client<websocketpp::config::asio_client>;
@@ -30,6 +33,47 @@ TEST_CASE("Start and stop server") {
   foxglove::WebSocketServer server{options};
   REQUIRE(server.port() != 0);
   server.stop();
+}
+
+TEST_CASE("name is not valid utf-8") {
+  foxglove::WebSocketServerOptions options;
+  options.name = "\x80\x80\x80\x80";
+  try {
+    foxglove::WebSocketServer server{options};
+    REQUIRE(false);  // expected error
+  } catch (const foxglove::FoxgloveError& e) {
+    REQUIRE(e.kind() == foxglove::FoxgloveErrorKind::ValueError);
+    REQUIRE_THAT(e.what(), ContainsSubstring("invalid utf-8"));
+  }
+}
+
+TEST_CASE("port is privaleged") {
+  foxglove::WebSocketServerOptions options;
+  options.name = "unit-test";
+  options.host = "127.0.0.1";
+  options.port = 20;
+  try {
+    foxglove::WebSocketServer server{options};
+    REQUIRE(false);  // expected error
+  } catch (const foxglove::FoxgloveError& e) {
+    REQUIRE(e.kind() == foxglove::FoxgloveErrorKind::Bind);
+    REQUIRE_THAT(e.what(), ContainsSubstring("Failed to bind port: Permission denied"));
+  }
+}
+
+TEST_CASE("supported encoding is invalid utf-8") {
+  foxglove::WebSocketServerOptions options;
+  options.name = "unit-test";
+  options.host = "127.0.0.1";
+  options.port = 0;
+  options.supportedEncodings.push_back("\x80\x80\x80\x80");
+  try {
+    foxglove::WebSocketServer server{options};
+    REQUIRE(false);  // expected error
+  } catch (const foxglove::FoxgloveError& e) {
+    REQUIRE(e.kind() == foxglove::FoxgloveErrorKind::ValueError);
+    REQUIRE_THAT(e.what(), ContainsSubstring("invalid utf-8"));
+  }
 }
 
 TEST_CASE("Log a message with and without metadata") {

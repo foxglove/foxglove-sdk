@@ -1,4 +1,5 @@
 #include <foxglove/channel.hpp>
+#include <foxglove/error.hpp>
 #include <foxglove/mcap.hpp>
 
 #include <catch2/catch_test_macros.hpp>
@@ -60,7 +61,70 @@ TEST_CASE("Open and truncate existing file") {
   REQUIRE(std::filesystem::exists("test.mcap"));
 }
 
-// TODO FG-10682 add a test case for failing to open an existing file if truncate=false
+TEST_CASE("fail to open existing file if truncate=false") {
+  FileCleanup cleanup("test.mcap");
+
+  std::ofstream file("test.mcap", std::ios::binary);
+  REQUIRE(file.is_open());
+  // Write some dummy content
+  const char data[] = "MCAP0000";
+  file.write(data, sizeof(data) - 1);
+  file.close();
+
+  foxglove::McapWriterOptions options = {};
+  options.path = "test.mcap";
+  try {
+    foxglove::McapWriter writer(options);
+    REQUIRE(false);  // expected IoError
+  } catch (const foxglove::FoxgloveError& e) {
+    REQUIRE(e.kind() == foxglove::FoxgloveErrorKind::IoError);
+  }
+
+  // Check if test.mcap file exists
+  REQUIRE(std::filesystem::exists("test.mcap"));
+}
+
+TEST_CASE("fail to open existing file if create=true and truncate=false") {
+  FileCleanup cleanup("test.mcap");
+
+  std::ofstream file("test.mcap", std::ios::binary);
+  REQUIRE(file.is_open());
+  // Write some dummy content
+  const char data[] = "MCAP0000";
+  file.write(data, sizeof(data) - 1);
+  file.close();
+
+  foxglove::McapWriterOptions options = {};
+  options.path = "test.mcap";
+  options.create = true;
+  try {
+    foxglove::McapWriter writer(options);
+    REQUIRE(false);  // expected IoError
+  } catch (const foxglove::FoxgloveError& e) {
+    REQUIRE(e.kind() == foxglove::FoxgloveErrorKind::IoError);
+  }
+
+  // Check if test.mcap file exists
+  REQUIRE(std::filesystem::exists("test.mcap"));
+}
+
+TEST_CASE("fail if file path is not valid utf-8") {
+  FileCleanup cleanup("test.mcap");
+
+  foxglove::McapWriterOptions options = {};
+  options.path = "\x80\x80\x80\x80";
+  options.create = true;
+  try {
+    foxglove::McapWriter writer(options);
+    REQUIRE(false);  // expected error
+  } catch (const foxglove::FoxgloveError& e) {
+    REQUIRE(e.kind() == foxglove::FoxgloveErrorKind::ValueError);
+    REQUIRE_THAT(e.what(), ContainsSubstring("invalid utf-8"));
+  }
+
+  // Check test.mcap file does not exist
+  REQUIRE(!std::filesystem::exists("test.mcap"));
+}
 
 std::string readFile(const std::string& path) {
   std::ifstream file(path, std::ios::binary);
