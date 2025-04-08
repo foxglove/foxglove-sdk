@@ -1,5 +1,4 @@
-use super::ws_protocol::{client, schema, server};
-use crate::{RawChannel, Schema};
+use super::ws_protocol::{client, schema};
 
 /// A client channel ID.
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
@@ -64,23 +63,5 @@ impl TryFrom<client::advertise::Channel<'_>> for ClientChannel {
             schema_encoding: ch.schema_encoding.map(|s| s.to_string()),
             schema,
         })
-    }
-}
-
-impl<'a> TryFrom<&'a RawChannel> for server::advertise::Channel<'a> {
-    type Error = schema::EncodeError;
-
-    fn try_from(ch: &'a RawChannel) -> Result<Self, Self::Error> {
-        let mut builder = Self::builder(ch.id().into(), ch.topic(), ch.message_encoding());
-        if let Some(schema) = ch.schema() {
-            builder = builder.with_schema(schema.into());
-        }
-        builder.build()
-    }
-}
-
-impl<'a> From<&'a Schema> for schema::Schema<'a> {
-    fn from(schema: &'a Schema) -> Self {
-        Self::new(&schema.name, &schema.encoding, schema.data.clone())
     }
 }

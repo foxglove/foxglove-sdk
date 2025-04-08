@@ -19,14 +19,14 @@ use tokio::sync::Mutex;
 use tokio_tungstenite::tungstenite::{self, handshake::server, http::HeaderValue, Message};
 use tokio_tungstenite::WebSocketStream;
 use tokio_util::sync::CancellationToken;
-use tracing::{error, warn};
 
 use crate::{
     get_runtime_handle, ChannelId, Context, FoxgloveError, Metadata, RawChannel, Sink, SinkId,
 };
 
+mod advertise;
 mod capability;
-mod channel;
+mod client_channel;
 mod connection_graph;
 mod cow_vec;
 mod fetch_asset;
@@ -40,7 +40,7 @@ mod testutil;
 mod ws_protocol;
 
 pub use capability::Capability;
-pub use channel::{ClientChannel, ClientChannelId};
+pub use client_channel::{ClientChannel, ClientChannelId};
 pub use connection_graph::ConnectionGraph;
 use cow_vec::CowVec;
 pub use fetch_asset::{AssetHandler, AssetResponder};
@@ -52,8 +52,8 @@ use ws_protocol::client::ClientMessage;
 pub use ws_protocol::parameter::{Parameter, ParameterType, ParameterValue};
 pub use ws_protocol::server::status::{Level as StatusLevel, Status};
 use ws_protocol::server::{
-    Advertise, AdvertiseServices, FetchAssetResponse, MessageData, ParameterValues, RemoveStatus,
-    ServerInfo, ServiceCallFailure, Unadvertise, UnadvertiseServices,
+    AdvertiseServices, FetchAssetResponse, MessageData, ParameterValues, RemoveStatus, ServerInfo,
+    ServiceCallFailure, Unadvertise, UnadvertiseServices,
 };
 use ws_protocol::ParseError;
 
@@ -462,7 +462,7 @@ impl ConnectedClient {
             .into_iter()
             .filter_map(|c| {
                 ClientChannel::try_from(c)
-                    .inspect_err(|e| warn!("Failed to parse advertised channel: {e:?}"))
+                    .inspect_err(|e| tracing::warn!("Failed to parse advertised channel: {e:?}"))
                     .ok()
             })
             .collect();
@@ -819,20 +819,7 @@ impl ConnectedClient {
 
     /// Advertises a channel to the client.
     fn advertise_channel(&self, channel: &Arc<RawChannel>) {
-        let message = match channel.as_ref().try_into() {
-            Ok(c) => Advertise::new([c]),
-            Err(ws_protocol::schema::EncodeError::MissingSchema) => {
-                tracing::error!(
-                    "Ignoring advertise channel for {} because a schema is required",
-                    channel.topic()
-                );
-                return;
-            }
-            Err(err) => {
-                tracing::error!("Error advertising channel to client: {err}");
-                return;
-            }
-        };
+        let message = advertise::advertise_channels([channel]);
 
         self.channels.write().insert(channel.id(), channel.clone());
 
@@ -1375,7 +1362,7 @@ impl Server {
 
         // Advertise services.
         let services: Vec<_> = self.services.read().values().cloned().collect();
-        let msg = AdvertiseServices::new(services.iter().filter_map(|s| s.maybe_advertise()));
+        let msg = advertise::advertise_services(services.iter().map(|s| s.as_ref()));
         if msg.services.is_empty() {
             return;
         }
@@ -1424,7 +1411,7 @@ impl Server {
             }
 
             // Prepare a service advertisement.
-            if let Some(adv) = service.maybe_advertise() {
+            if let Some(adv) = advertise::maybe_advertise_service(service) {
                 msg.services.push(adv.into_owned());
             }
         }

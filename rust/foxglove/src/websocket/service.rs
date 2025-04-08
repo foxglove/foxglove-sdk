@@ -9,8 +9,6 @@ use std::sync::Arc;
 use bytes::Bytes;
 use serde::{Deserialize, Serialize};
 
-use super::ws_protocol::server::advertise_services;
-
 mod handler;
 mod request;
 mod response;
@@ -192,18 +190,6 @@ impl Service {
         &self.schema
     }
 
-    /// Constructs an advertisement, or logs an error message.
-    pub(crate) fn maybe_advertise(&self) -> Option<advertise_services::Service<'_>> {
-        self.try_into()
-            .inspect_err(|e| {
-                tracing::error!(
-                    "Failed to encode service advertisement for {}: {e}",
-                    self.name()
-                )
-            })
-            .ok()
-    }
-
     /// The declared request encoding.
     pub(crate) fn request_encoding(&self) -> Option<&str> {
         self.schema().request().map(|rs| rs.encoding.as_str())
@@ -217,22 +203,6 @@ impl Service {
     /// Invokes the service call implementation.
     pub(crate) fn call(&self, request: Request, responder: Responder) {
         self.handler.call(request, responder);
-    }
-}
-
-impl<'a> TryFrom<&'a Service> for advertise_services::Service<'a> {
-    type Error = super::ws_protocol::schema::EncodeError;
-
-    fn try_from(s: &'a Service) -> Result<Self, Self::Error> {
-        let schema = s.schema();
-        let mut service = Self::new(s.id().into(), s.name(), schema.name());
-        if let Some(request) = schema.request() {
-            service = service.with_request(&request.encoding, (&request.schema).into())?;
-        }
-        if let Some(response) = schema.response() {
-            service = service.with_response(&response.encoding, (&response.schema).into())?;
-        }
-        Ok(service)
     }
 }
 
