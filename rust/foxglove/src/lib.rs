@@ -277,7 +277,6 @@ mod channel_builder;
 mod collection;
 mod context;
 pub mod convert;
-mod cow_vec;
 mod encode;
 pub mod library_version;
 #[doc(hidden)]

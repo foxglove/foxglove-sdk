@@ -31,7 +31,7 @@ jobs:
       - run: cargo fmt --all --check
       - run: cargo build --verbose
       # Validate that we can build without live visualization
-      - run: cargo build --verbose --no-default-features
+      - run: cargo build -p foxglove --verbose --no-default-features
       # Validate that we can build against the MSRV (minimum specified rust version).
       - run: cargo +1.83.0 build -p foxglove --verbose
       - run: cargo clippy --no-deps --all-targets --tests -- -D warnings

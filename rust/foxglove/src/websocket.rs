@@ -21,28 +21,30 @@ use tokio_tungstenite::tungstenite::{self, handshake::server, http::HeaderValue,
 use tokio_tungstenite::WebSocketStream;
 use tokio_util::sync::CancellationToken;
 
-use crate::cow_vec::CowVec;
 use crate::{
     get_runtime_handle, ChannelId, Context, FoxgloveError, Metadata, RawChannel, Sink, SinkId,
 };
 
-mod fetch_asset;
-pub use fetch_asset::{AssetHandler, AssetResponder};
-pub(crate) use fetch_asset::{AsyncAssetHandlerFn, BlockingAssetHandlerFn};
 mod connection_graph;
+mod cow_vec;
+mod fetch_asset;
 mod protocol;
-pub use protocol::client::{ClientChannel, ClientChannelId};
-pub(crate) use protocol::client::{ClientMessage, Subscription, SubscriptionId};
-pub use protocol::server::{Parameter, ParameterType, ParameterValue, Status, StatusLevel};
 mod semaphore;
 pub mod service;
-pub use connection_graph::ConnectionGraph;
-pub(crate) use semaphore::{Semaphore, SemaphoreGuard};
-use service::{CallId, Service, ServiceId, ServiceMap};
 #[cfg(test)]
 mod tests;
 #[cfg(all(test, feature = "unstable"))]
 mod unstable_tests;
+
+pub use connection_graph::ConnectionGraph;
+use cow_vec::CowVec;
+pub use fetch_asset::{AssetHandler, AssetResponder};
+pub(crate) use fetch_asset::{AsyncAssetHandlerFn, BlockingAssetHandlerFn};
+pub use protocol::client::{ClientChannel, ClientChannelId};
+pub(crate) use protocol::client::{ClientMessage, Subscription, SubscriptionId};
+pub use protocol::server::{Parameter, ParameterType, ParameterValue, Status, StatusLevel};
+pub(crate) use semaphore::{Semaphore, SemaphoreGuard};
+use service::{CallId, Service, ServiceId, ServiceMap};
 
 /// A capability that a websocket server can support.
 #[derive(Debug, Serialize, Eq, PartialEq, Hash, Clone, Copy)]
