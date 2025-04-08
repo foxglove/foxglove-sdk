@@ -1,0 +1,42 @@
+---
+source: rust/foxglove/src/websocket/ws_protocol/server/connection_graph_update.rs
+expression: message()
+---
+{
+  "op": "connectionGraphUpdate",
+  "publishedTopics": [
+    {
+      "name": "/t1",
+      "publisherIds": [
+        "p1",
+        "p2"
+      ]
+    }
+  ],
+  "subscribedTopics": [
+    {
+      "name": "/t2",
+      "subscriberIds": [
+        "s1",
+        "s2"
+      ]
+    }
+  ],
+  "advertisedServices": [
+    {
+      "name": "/s1",
+      "providerIds": [
+        "pr1",
+        "pr2"
+      ]
+    }
+  ],
+  "removedTopics": [
+    "/t3",
+    "/t4"
+  ],
+  "removedServices": [
+    "/s2",
+    "/s3"
+  ]
+}

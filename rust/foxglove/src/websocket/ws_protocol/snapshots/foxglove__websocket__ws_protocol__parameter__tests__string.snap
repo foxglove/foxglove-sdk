@@ -1,0 +1,9 @@
+---
+source: rust/foxglove/src/websocket/ws_protocol/parameter.rs
+expression: "Parameter::string(\"string\", \"howdy\")"
+---
+{
+  "name": "string",
+  "type": "byte_array",
+  "value": "aG93ZHk="
+}

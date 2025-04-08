@@ -43,6 +43,8 @@ use service::{CallId, Service, ServiceId, ServiceMap};
 mod tests;
 #[cfg(all(test, feature = "unstable"))]
 mod unstable_tests;
+#[allow(dead_code)]
+mod ws_protocol;
 
 /// A capability that a websocket server can support.
 #[derive(Debug, Serialize, Eq, PartialEq, Hash, Clone, Copy)]

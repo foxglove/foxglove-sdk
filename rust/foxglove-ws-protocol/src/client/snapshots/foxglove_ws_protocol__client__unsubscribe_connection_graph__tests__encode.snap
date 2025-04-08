@@ -1,7 +1,0 @@
----
-source: src/client/unsubscribe_connection_graph.rs
-expression: "UnsubscribeConnectionGraph {}"
----
-{
-  "op": "unsubscribeConnectionGraph"
-}

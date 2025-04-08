@@ -1,0 +1,10 @@
+---
+source: rust/foxglove/src/websocket/ws_protocol/server/service_call_failure.rs
+expression: message()
+---
+{
+  "op": "serviceCallFailure",
+  "serviceId": 1,
+  "callId": 1,
+  "message": "Service does not exist"
+}

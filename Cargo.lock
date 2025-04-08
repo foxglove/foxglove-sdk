@@ -692,6 +692,7 @@ dependencies = [
  "flume",
  "futures-util",
  "insta",
+ "maplit",
  "mcap 0.15.1",
  "parking_lot",
  "prost",
@@ -742,23 +743,6 @@ dependencies = [
  "tokio-util",
  "tracing",
  "walkdir",
-]
-
-[[package]]
-name = "foxglove-ws-protocol"
-version = "0.4.1"
-dependencies = [
- "assert_matches",
- "base64",
- "bytes",
- "insta",
- "maplit",
- "serde",
- "serde_json",
- "serde_repr",
- "serde_with",
- "thiserror 1.0.69",
- "tungstenite",
 ]
 
 [[package]]

@@ -1,9 +1,0 @@
----
-source: src/parameter.rs
-expression: "Parameter\n{\n    name: \"f64\".to_string(), value: Some(ParameterValue::Number(1.23)),\n    r#type: Some(ParameterType::Float64),\n}"
----
-{
-  "name": "f64",
-  "type": "float64",
-  "value": 1.23
-}

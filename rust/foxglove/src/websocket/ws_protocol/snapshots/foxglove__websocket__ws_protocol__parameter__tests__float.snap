@@ -1,0 +1,9 @@
+---
+source: rust/foxglove/src/websocket/ws_protocol/parameter.rs
+expression: "Parameter::float64(\"f64\", 1.23)"
+---
+{
+  "name": "f64",
+  "type": "float64",
+  "value": 1.23
+}
