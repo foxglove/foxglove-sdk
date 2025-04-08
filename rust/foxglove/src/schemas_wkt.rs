@@ -323,8 +323,9 @@ impl Timestamp {
 
     /// Creates a new normalized timestamp.
     ///
-    /// Returns `None` if the result is out of range. This can only happen if `nsec` is greater
-    /// than `999_999_999`.
+    /// This constructor normalizes the timestamp by converting excess nanoseconds into seconds.
+    ///
+    /// Returns `None` if the attempt to convert excess nanoseconds causes `sec` to overflow.
     pub fn new_checked(sec: u32, nsec: u32) -> Option<Self> {
         normalize_nsec(nsec)
             .carry_u32(sec)
@@ -333,8 +334,9 @@ impl Timestamp {
 
     /// Creates a new normalized timestamp.
     ///
-    /// Panics if the result is out of range. This can only happen if `nsec` is greater than
-    /// `999_999_999`.
+    /// This constructor normalizes the timestamp by converting excess nanoseconds into seconds.
+    ///
+    /// Panics if the attempt to convert excess nanoseconds causes `sec` to overflow.
     pub fn new(sec: u32, nsec: u32) -> Self {
         Self::new_checked(sec, nsec).unwrap()
     }

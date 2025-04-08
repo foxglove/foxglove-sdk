@@ -1,5 +1,6 @@
 //! Test utilities.
 
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Duration;
 
 use parking_lot::Mutex;
@@ -9,7 +10,10 @@ use crate::websocket::{
 };
 use crate::ChannelId;
 
+mod global_context;
 mod sink;
+
+pub use global_context::GlobalContextTest;
 pub use sink::{ErrorSink, MockSink, RecordingSink};
 
 #[allow(dead_code)]
@@ -73,21 +77,25 @@ pub(crate) struct RecordingServerListener {
     parameters_get: Mutex<Vec<GetParameters>>,
     parameters_set: Mutex<Vec<SetParameters>>,
     parameters_get_result: Mutex<Vec<Parameter>>,
+    connection_graph_subscribe: AtomicUsize,
+    connection_graph_unsubscribe: AtomicUsize,
 }
 
 impl RecordingServerListener {
     pub fn new() -> Self {
         Self {
-            message_data: Mutex::new(Vec::new()),
-            subscribe: Mutex::new(Vec::new()),
-            unsubscribe: Mutex::new(Vec::new()),
-            client_advertise: Mutex::new(Vec::new()),
-            client_unadvertise: Mutex::new(Vec::new()),
-            parameters_subscribe: Mutex::new(Vec::new()),
-            parameters_unsubscribe: Mutex::new(Vec::new()),
-            parameters_get: Mutex::new(Vec::new()),
-            parameters_set: Mutex::new(Vec::new()),
-            parameters_get_result: Mutex::new(Vec::new()),
+            message_data: Mutex::default(),
+            subscribe: Mutex::default(),
+            unsubscribe: Mutex::default(),
+            client_advertise: Mutex::default(),
+            client_unadvertise: Mutex::default(),
+            parameters_subscribe: Mutex::default(),
+            parameters_unsubscribe: Mutex::default(),
+            parameters_get: Mutex::default(),
+            parameters_set: Mutex::default(),
+            parameters_get_result: Mutex::default(),
+            connection_graph_subscribe: AtomicUsize::default(),
+            connection_graph_unsubscribe: AtomicUsize::default(),
         }
     }
 
@@ -149,6 +157,24 @@ impl RecordingServerListener {
 
     pub fn take_parameters_set(&self) -> Vec<SetParameters> {
         std::mem::take(&mut self.parameters_set.lock())
+    }
+
+    fn inc_connection_graph_subscribe(&self) {
+        self.connection_graph_subscribe
+            .fetch_add(1, Ordering::AcqRel);
+    }
+
+    pub fn take_connection_graph_subscribe(&self) -> usize {
+        self.connection_graph_subscribe.swap(0, Ordering::AcqRel)
+    }
+
+    fn inc_connection_graph_unsubscribe(&self) {
+        self.connection_graph_unsubscribe
+            .fetch_add(1, Ordering::AcqRel);
+    }
+
+    pub fn take_connection_graph_unsubscribe(&self) -> usize {
+        self.connection_graph_unsubscribe.swap(0, Ordering::AcqRel)
     }
 }
 
@@ -220,6 +246,14 @@ impl ServerListener for RecordingServerListener {
     fn on_parameters_unsubscribe(&self, param_names: Vec<String>) {
         let mut unsubs = self.parameters_unsubscribe.lock();
         unsubs.push(param_names.clone());
+    }
+
+    fn on_connection_graph_subscribe(&self) {
+        self.inc_connection_graph_subscribe();
+    }
+
+    fn on_connection_graph_unsubscribe(&self) {
+        self.inc_connection_graph_unsubscribe();
     }
 }
 

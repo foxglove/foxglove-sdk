@@ -72,7 +72,6 @@ mod test {
     use super::*;
     use crate::channel_builder::ChannelBuilder;
     use crate::{Context, Schema};
-    use prost::bytes::BufMut;
     use serde::Serialize;
     use serde_json::{json, Value};
     use tracing_test::traced_test;

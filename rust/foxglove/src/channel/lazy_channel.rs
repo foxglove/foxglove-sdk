@@ -3,7 +3,7 @@
 use std::sync::OnceLock;
 use std::{ops::Deref, sync::Arc};
 
-use crate::{ChannelBuilder, Encode, Schema};
+use crate::{ChannelBuilder, Encode, LazyContext, Schema};
 
 use super::{Channel, RawChannel};
 
@@ -26,16 +26,26 @@ use super::{Channel, RawChannel};
 /// ```
 pub struct LazyChannel<T: Encode> {
     topic: &'static str,
+    context: &'static LazyContext,
     inner: OnceLock<Channel<T>>,
 }
 
 impl<T: Encode> LazyChannel<T> {
     /// Creates a new lazily-initialized channel.
+    #[must_use]
     pub const fn new(topic: &'static str) -> Self {
         Self {
             topic,
+            context: LazyContext::get_default(),
             inner: OnceLock::new(),
         }
+    }
+
+    /// Sets the context for this channel.
+    #[must_use]
+    pub const fn context(mut self, context: &'static LazyContext) -> Self {
+        self.context = context;
+        self
     }
 
     /// Ensures that the channel is initialized.
@@ -48,12 +58,15 @@ impl<T: Encode> LazyChannel<T> {
     /// Returns a reference to the channel, initializing it if necessary.
     fn get_or_init(&self) -> &Channel<T> {
         self.inner.get_or_init(|| {
-            Channel::new(self.topic).unwrap_or_else(|e| {
-                panic!(
-                    "Failed to lazily initialize channel for {}: {e:?}",
-                    self.topic
-                )
-            })
+            ChannelBuilder::new(self.topic)
+                .context(self.context)
+                .build()
+                .unwrap_or_else(|e| {
+                    panic!(
+                        "Failed to lazily initialize channel for {}: {e:?}",
+                        self.topic
+                    )
+                })
         })
     }
 }
@@ -85,6 +98,7 @@ impl<T: Encode> Deref for LazyChannel<T> {
 /// ```
 pub struct LazyRawChannel {
     topic: &'static str,
+    context: &'static LazyContext,
     message_encoding: &'static str,
     schema: Option<(&'static str, &'static str, &'static [u8])>,
     inner: OnceLock<Arc<RawChannel>>,
@@ -95,10 +109,18 @@ impl LazyRawChannel {
     pub const fn new(topic: &'static str, message_encoding: &'static str) -> Self {
         Self {
             topic,
+            context: LazyContext::get_default(),
             message_encoding,
             schema: None,
             inner: OnceLock::new(),
         }
+    }
+
+    /// Sets the context for this channel.
+    #[must_use]
+    pub const fn context(mut self, context: &'static LazyContext) -> Self {
+        self.context = context;
+        self
     }
 
     /// Sets the schema for the channel.
@@ -129,6 +151,7 @@ impl LazyRawChannel {
             ChannelBuilder::new(self.topic)
                 .message_encoding(self.message_encoding)
                 .schema(schema)
+                .context(self.context)
                 .build_raw()
                 .unwrap_or_else(|e| {
                     panic!(

@@ -23,17 +23,19 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           # The last-specified toolchain is the default.
-          toolchain: 1.83.0,stable
+          toolchain: 1.83.0,nightly,stable
 
       - name: Ensure generated protobuf schemas are up to date
         run: cargo run --bin foxglove-proto-gen && git diff --exit-code
 
       - run: cargo fmt --all --check
       - run: cargo build --verbose
+      # Validate that we can build without live visualization
+      - run: cargo build --verbose --no-default-features
       # Validate that we can build against the MSRV (minimum specified rust version).
       - run: cargo +1.83.0 build -p foxglove --verbose
       - run: cargo clippy --no-deps --all-targets --tests -- -D warnings
-      - run: cargo rustdoc -p foxglove -- -D warnings
+      - run: cargo +nightly rustdoc -p foxglove --all-features -- -D warnings --cfg docsrs
       - run: cargo test --features unstable --verbose
         timeout-minutes: 10
       - run: cargo publish --package foxglove --dry-run

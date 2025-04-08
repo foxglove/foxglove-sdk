@@ -7,7 +7,7 @@ use pyo3::types::{timezone_utc, PyDateTime};
 /// A timestamp in seconds and nanoseconds
 ///
 /// :param sec: The number of seconds since a user-defined epoch.
-/// :param nsec: The number of nanoseconds since the :py:attr:\`sec\` value.
+/// :param nsec: The number of nanoseconds since the sec value.
 #[pyclass(module = "foxglove.schemas", eq)]
 #[derive(Clone, PartialEq, Eq)]
 pub struct Timestamp(foxglove::schemas::Timestamp);
@@ -41,6 +41,7 @@ impl Timestamp {
     /// Creates a :py:class:`Timestamp` from the current system time.
     ///
     /// Raises `OverflowError` if the timestamp cannot be represented.
+    ///
     /// :rtype: :py:class:`Timestamp`
     #[staticmethod]
     #[pyo3(signature = ())]
@@ -52,12 +53,11 @@ impl Timestamp {
     }
 
     /// Creates a :py:class:`Timestamp` from an epoch timestamp, such as is returned by
-    /// :py:func:`time.time` or :py:func:`datetime.datetime.timestamp`.
+    /// :py:func:`!time.time` or :py:func:`!datetime.datetime.timestamp`.
     ///
     /// Raises `OverflowError` if the timestamp cannot be represented.
     ///
     /// :param timestamp: Seconds since epoch
-    /// :type timestamp: float
     /// :rtype: :py:class:`Timestamp`
     #[staticmethod]
     #[pyo3(signature = (timestamp))]
@@ -74,7 +74,6 @@ impl Timestamp {
     /// Raises `OverflowError` if the timestamp cannot be represented.
     ///
     /// :param dt: Datetime
-    /// :type dt: :py:class:`datetime.datetime`
     /// :rtype: :py:class:`Timestamp`
     #[staticmethod]
     #[pyo3(signature = (dt))]
@@ -159,7 +158,6 @@ impl Duration {
     /// Raises `OverflowError` if the duration cannot be represented.
     ///
     /// :param secs: Seconds
-    /// :type secs: float
     /// :rtype: :py:class:`Duration`
     #[staticmethod]
     #[pyo3(signature = (secs))]
@@ -174,7 +172,6 @@ impl Duration {
     /// Raises `OverflowError` if the duration cannot be represented.
     ///
     /// :param td: Timedelta
-    /// :type td: :py:class:`datetime.timedelta`
     /// :rtype: :py:class:`Duration`
     #[staticmethod]
     #[pyo3(signature = (td))]

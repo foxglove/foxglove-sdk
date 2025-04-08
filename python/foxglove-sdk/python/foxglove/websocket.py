@@ -33,20 +33,16 @@ class ServerListener(Protocol):
         Called by the server when a client subscribes to a channel.
 
         :param client: The client (id) that sent the message.
-        :type client: :py:class:`Client`
         :param channel: The channel (id, topic) that the message was sent on.
-        :type channel: :py:class:`ChannelView`
         """
         return None
 
     def on_unsubscribe(self, client: Client, channel: ChannelView) -> None:
         """
-        Called by the server when a client unsubscribes from a channel.
+        Called by the server when a client unsubscribes from a channel or disconnects.
 
         :param client: The client (id) that sent the message.
-        :type client: :py:class:`Client`
         :param channel: The channel (id, topic) that the message was sent on.
-        :type channel: :py:class:`ChannelView`
         """
         return None
 
@@ -55,9 +51,7 @@ class ServerListener(Protocol):
         Called by the server when a client advertises a channel.
 
         :param client: The client (id) that sent the message.
-        :type client: :py:class:`Client`
         :param channel: The client channel that is being advertised.
-        :type channel: :py:class:`ClientChannel`
         """
         return None
 
@@ -66,9 +60,7 @@ class ServerListener(Protocol):
         Called by the server when a client unadvertises a channel.
 
         :param client: The client (id) that is unadvertising the channel.
-        :type client: :py:class:`Client`
         :param client_channel_id: The client channel id that is being unadvertised.
-        :type client_channel_id: int
         """
         return None
 
@@ -79,11 +71,8 @@ class ServerListener(Protocol):
         Called by the server when a message is received from a client.
 
         :param client: The client (id) that sent the message.
-        :type client: :py:class:`Client`
         :param client_channel_id: The client channel id that the message was sent on.
-        :type client_channel_id: int
         :param data: The message data.
-        :type data: bytes
         """
         return None
 
@@ -99,11 +88,8 @@ class ServerListener(Protocol):
         Requires :py:data:`Capability.Parameters`.
 
         :param client: The client (id) that sent the message.
-        :type client: :py:class:`Client`
         :param param_names: The names of the parameters to get.
-        :type param_names: list[str]
         :param request_id: An optional request id.
-        :type request_id: Optional[str]
         """
         return []
 
@@ -121,11 +107,8 @@ class ServerListener(Protocol):
         Requires :py:data:`Capability.Parameters`.
 
         :param client: The client (id) that sent the message.
-        :type client: :py:class:`Client`
         :param parameters: The parameters to set.
-        :type parameters: list[:py:class:`Parameter`]
         :param request_id: An optional request id.
-        :type request_id: Optional[str]
         """
         return parameters
 
@@ -139,7 +122,6 @@ class ServerListener(Protocol):
         Requires :py:data:`Capability.Parameters`.
 
         :param param_names: The names of the parameters to subscribe to.
-        :type param_names: list[str]
         """
         return None
 
@@ -154,7 +136,6 @@ class ServerListener(Protocol):
         Requires :py:data:`Capability.Parameters`.
 
         :param param_names: The names of the parameters to unsubscribe from.
-        :type param_names: list[str]
         """
         return None
 

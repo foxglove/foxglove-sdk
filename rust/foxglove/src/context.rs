@@ -1,13 +1,18 @@
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::fmt::Debug;
-use std::sync::{Arc, LazyLock};
+use std::sync::Arc;
 
 use parking_lot::RwLock;
 
-use crate::{ChannelId, FoxgloveError, RawChannel, Sink, SinkId};
+use crate::{
+    ChannelBuilder, ChannelId, FoxgloveError, McapWriter, RawChannel, Sink, SinkId, WebSocketServer,
+};
 
+mod lazy_context;
 mod subscriptions;
+
+pub use lazy_context::LazyContext;
 use subscriptions::Subscriptions;
 
 #[derive(Default)]
@@ -155,10 +160,40 @@ impl ContextInner {
     }
 }
 
-/// A context is a collection of channels and sinks.
+/// A context is the binding between channels and sinks.
 ///
-/// To obtain a reference to the default context, use [`Context::get_default`]. To construct a new
-/// context, use [`Context::new`].
+/// Each channel and each sink belongs to exactly one context. Sinks receive advertisements about
+/// channels on the context, and can optionally subscribe to receive logged messages on those
+/// channels.
+///
+/// When the context is dropped, its corresponding channels and sinks will be disconnected from one
+/// another, and logging will stop. Attempts to log on a channel after its context has been dropped
+/// will elicit a throttled warning message.
+///
+/// Since many applications only need a single context, the SDK provides a static default context
+/// for convenience. To obtain a reference to the default context, use [`Context::get_default`].
+///
+/// It is also possible to create explicit contexts:
+///
+/// ```
+/// use foxglove::{Context, FoxgloveError};
+/// use foxglove::schemas::Log;
+///
+/// // Create a channel for the "/log" topic.
+/// let topic = "/topic";
+/// let ctx_a = Context::new();
+/// let chan_a = ctx_a.channel_builder(topic).build().unwrap();
+/// chan_a.log(&Log{ message: "hello a".into(), ..Log::default() });
+///
+/// // Attempting to create another channel with the same topic on the same context will fail.
+/// let err = ctx_a.channel_builder(topic).build::<Log>().unwrap_err();
+/// assert!(matches!(err, FoxgloveError::DuplicateChannel(_)));
+///
+/// // Create a channel for the "/log" topic on a different context.
+/// let ctx_b = Context::new();
+/// let chan_b = ctx_b.channel_builder(topic).build().unwrap();
+/// chan_b.log(&Log{ message: "hello b".into(), ..Log::default() });
+/// ```
 pub struct Context(RwLock<ContextInner>);
 
 impl Debug for Context {
@@ -178,8 +213,22 @@ impl Context {
     ///
     /// If there is no default context, this function instantiates one.
     pub fn get_default() -> Arc<Self> {
-        static DEFAULT_CONTEXT: LazyLock<Arc<Context>> = LazyLock::new(Context::new);
-        DEFAULT_CONTEXT.clone()
+        Arc::clone(LazyContext::get_default())
+    }
+
+    /// Returns a channel builder for a channel in this context.
+    pub fn channel_builder(self: &Arc<Self>, topic: impl Into<String>) -> ChannelBuilder {
+        ChannelBuilder::new(topic).context(self)
+    }
+
+    /// Returns a builder for an MCAP writer in this context.
+    pub fn mcap_writer(self: &Arc<Self>) -> McapWriter {
+        McapWriter::new().context(self)
+    }
+
+    /// Returns a builder for a websocket server in this context.
+    pub fn websocket_server(self: &Arc<Self>) -> WebSocketServer {
+        WebSocketServer::new().context(self)
     }
 
     /// Returns the channel for the specified topic, if there is one.
@@ -239,11 +288,16 @@ impl Context {
     pub fn unsubscribe_channels(&self, sink_id: SinkId, channel_ids: &[ChannelId]) {
         self.0.write().unsubscribe_channels(sink_id, channel_ids);
     }
+
+    /// Removes all channels and sinks from the context.
+    pub(crate) fn clear(&self) {
+        self.0.write().clear();
+    }
 }
 
 impl Drop for Context {
     fn drop(&mut self) {
-        self.0.write().clear();
+        self.clear();
     }
 }
 
@@ -317,23 +371,23 @@ mod tests {
         channel.log(msg);
         assert!(!logs_contain(ERROR_LOGGING_MESSAGE));
 
-        let recorded1 = sink1.recorded.lock();
-        let recorded2 = sink2.recorded.lock();
+        let messages1 = sink1.take_messages();
+        let messages2 = sink2.take_messages();
 
-        assert_eq!(recorded1.len(), 1);
-        assert_eq!(recorded2.len(), 1);
+        assert_eq!(messages1.len(), 1);
+        assert_eq!(messages2.len(), 1);
 
-        assert_eq!(recorded1[0].channel_id, channel.id());
-        assert_eq!(recorded1[0].msg, msg.to_vec());
-        let metadata1 = &recorded1[0].metadata;
+        assert_eq!(messages1[0].channel_id, channel.id());
+        assert_eq!(messages1[0].msg, msg.to_vec());
+        let metadata1 = &messages1[0].metadata;
         assert!(metadata1.log_time >= now);
         assert!(metadata1.publish_time >= now);
         assert_eq!(metadata1.log_time, metadata1.publish_time);
         assert!(metadata1.sequence > 0);
 
-        assert_eq!(recorded2[0].channel_id, channel.id());
-        assert_eq!(recorded2[0].msg, msg.to_vec());
-        let metadata2 = &recorded2[0].metadata;
+        assert_eq!(messages2[0].channel_id, channel.id());
+        assert_eq!(messages2[0].msg, msg.to_vec());
+        let metadata2 = &messages2[0].metadata;
         assert!(metadata2.log_time >= now);
         assert!(metadata2.publish_time >= now);
         assert_eq!(metadata2.log_time, metadata2.publish_time);
@@ -364,11 +418,11 @@ mod tests {
         assert!(logs_contain(ERROR_LOGGING_MESSAGE));
         assert!(logs_contain("ErrorSink always fails"));
 
-        let recorded = recording_sink.recorded.lock();
-        assert_eq!(recorded.len(), 1);
-        assert_eq!(recorded[0].channel_id, channel.id());
-        assert_eq!(recorded[0].msg, msg.to_vec());
-        let metadata = &recorded[0].metadata;
+        let messages = recording_sink.take_messages();
+        assert_eq!(messages.len(), 1);
+        assert_eq!(messages[0].channel_id, channel.id());
+        assert_eq!(messages[0].msg, msg.to_vec());
+        let metadata = &messages[0].metadata;
         assert_eq!(metadata.sequence, opts.sequence.unwrap());
         assert_eq!(metadata.log_time, opts.log_time.unwrap());
         assert_eq!(metadata.publish_time, opts.publish_time.unwrap());

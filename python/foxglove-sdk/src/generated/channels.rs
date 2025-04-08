@@ -68,7 +68,7 @@ impl CameraCalibrationChannel {
     /// Close the channel.
     ///
     /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
-    /// channels dynamically, such as the :py:class:`foxglove.WebSocketServer`.
+    /// channels dynamically, such as the :py:class:`foxglove.websocket.WebSocketServer`.
     ///
     /// Attempts to log on a closed channel will elicit a throttled warning message.
     fn close(&mut self) {
@@ -125,7 +125,7 @@ impl CircleAnnotationChannel {
     /// Close the channel.
     ///
     /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
-    /// channels dynamically, such as the :py:class:`foxglove.WebSocketServer`.
+    /// channels dynamically, such as the :py:class:`foxglove.websocket.WebSocketServer`.
     ///
     /// Attempts to log on a closed channel will elicit a throttled warning message.
     fn close(&mut self) {
@@ -182,7 +182,7 @@ impl ColorChannel {
     /// Close the channel.
     ///
     /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
-    /// channels dynamically, such as the :py:class:`foxglove.WebSocketServer`.
+    /// channels dynamically, such as the :py:class:`foxglove.websocket.WebSocketServer`.
     ///
     /// Attempts to log on a closed channel will elicit a throttled warning message.
     fn close(&mut self) {
@@ -239,7 +239,7 @@ impl CompressedImageChannel {
     /// Close the channel.
     ///
     /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
-    /// channels dynamically, such as the :py:class:`foxglove.WebSocketServer`.
+    /// channels dynamically, such as the :py:class:`foxglove.websocket.WebSocketServer`.
     ///
     /// Attempts to log on a closed channel will elicit a throttled warning message.
     fn close(&mut self) {
@@ -296,7 +296,7 @@ impl CompressedVideoChannel {
     /// Close the channel.
     ///
     /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
-    /// channels dynamically, such as the :py:class:`foxglove.WebSocketServer`.
+    /// channels dynamically, such as the :py:class:`foxglove.websocket.WebSocketServer`.
     ///
     /// Attempts to log on a closed channel will elicit a throttled warning message.
     fn close(&mut self) {
@@ -353,7 +353,7 @@ impl FrameTransformChannel {
     /// Close the channel.
     ///
     /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
-    /// channels dynamically, such as the :py:class:`foxglove.WebSocketServer`.
+    /// channels dynamically, such as the :py:class:`foxglove.websocket.WebSocketServer`.
     ///
     /// Attempts to log on a closed channel will elicit a throttled warning message.
     fn close(&mut self) {
@@ -410,7 +410,7 @@ impl FrameTransformsChannel {
     /// Close the channel.
     ///
     /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
-    /// channels dynamically, such as the :py:class:`foxglove.WebSocketServer`.
+    /// channels dynamically, such as the :py:class:`foxglove.websocket.WebSocketServer`.
     ///
     /// Attempts to log on a closed channel will elicit a throttled warning message.
     fn close(&mut self) {
@@ -467,7 +467,7 @@ impl GeoJsonChannel {
     /// Close the channel.
     ///
     /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
-    /// channels dynamically, such as the :py:class:`foxglove.WebSocketServer`.
+    /// channels dynamically, such as the :py:class:`foxglove.websocket.WebSocketServer`.
     ///
     /// Attempts to log on a closed channel will elicit a throttled warning message.
     fn close(&mut self) {
@@ -524,7 +524,7 @@ impl GridChannel {
     /// Close the channel.
     ///
     /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
-    /// channels dynamically, such as the :py:class:`foxglove.WebSocketServer`.
+    /// channels dynamically, such as the :py:class:`foxglove.websocket.WebSocketServer`.
     ///
     /// Attempts to log on a closed channel will elicit a throttled warning message.
     fn close(&mut self) {
@@ -581,7 +581,7 @@ impl ImageAnnotationsChannel {
     /// Close the channel.
     ///
     /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
-    /// channels dynamically, such as the :py:class:`foxglove.WebSocketServer`.
+    /// channels dynamically, such as the :py:class:`foxglove.websocket.WebSocketServer`.
     ///
     /// Attempts to log on a closed channel will elicit a throttled warning message.
     fn close(&mut self) {
@@ -638,7 +638,7 @@ impl KeyValuePairChannel {
     /// Close the channel.
     ///
     /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
-    /// channels dynamically, such as the :py:class:`foxglove.WebSocketServer`.
+    /// channels dynamically, such as the :py:class:`foxglove.websocket.WebSocketServer`.
     ///
     /// Attempts to log on a closed channel will elicit a throttled warning message.
     fn close(&mut self) {
@@ -695,7 +695,7 @@ impl LaserScanChannel {
     /// Close the channel.
     ///
     /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
-    /// channels dynamically, such as the :py:class:`foxglove.WebSocketServer`.
+    /// channels dynamically, such as the :py:class:`foxglove.websocket.WebSocketServer`.
     ///
     /// Attempts to log on a closed channel will elicit a throttled warning message.
     fn close(&mut self) {
@@ -752,7 +752,7 @@ impl LocationFixChannel {
     /// Close the channel.
     ///
     /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
-    /// channels dynamically, such as the :py:class:`foxglove.WebSocketServer`.
+    /// channels dynamically, such as the :py:class:`foxglove.websocket.WebSocketServer`.
     ///
     /// Attempts to log on a closed channel will elicit a throttled warning message.
     fn close(&mut self) {
@@ -809,7 +809,7 @@ impl LogChannel {
     /// Close the channel.
     ///
     /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
-    /// channels dynamically, such as the :py:class:`foxglove.WebSocketServer`.
+    /// channels dynamically, such as the :py:class:`foxglove.websocket.WebSocketServer`.
     ///
     /// Attempts to log on a closed channel will elicit a throttled warning message.
     fn close(&mut self) {
@@ -866,7 +866,7 @@ impl SceneEntityDeletionChannel {
     /// Close the channel.
     ///
     /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
-    /// channels dynamically, such as the :py:class:`foxglove.WebSocketServer`.
+    /// channels dynamically, such as the :py:class:`foxglove.websocket.WebSocketServer`.
     ///
     /// Attempts to log on a closed channel will elicit a throttled warning message.
     fn close(&mut self) {
@@ -923,7 +923,7 @@ impl SceneEntityChannel {
     /// Close the channel.
     ///
     /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
-    /// channels dynamically, such as the :py:class:`foxglove.WebSocketServer`.
+    /// channels dynamically, such as the :py:class:`foxglove.websocket.WebSocketServer`.
     ///
     /// Attempts to log on a closed channel will elicit a throttled warning message.
     fn close(&mut self) {
@@ -980,7 +980,7 @@ impl SceneUpdateChannel {
     /// Close the channel.
     ///
     /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
-    /// channels dynamically, such as the :py:class:`foxglove.WebSocketServer`.
+    /// channels dynamically, such as the :py:class:`foxglove.websocket.WebSocketServer`.
     ///
     /// Attempts to log on a closed channel will elicit a throttled warning message.
     fn close(&mut self) {
@@ -1037,7 +1037,7 @@ impl PackedElementFieldChannel {
     /// Close the channel.
     ///
     /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
-    /// channels dynamically, such as the :py:class:`foxglove.WebSocketServer`.
+    /// channels dynamically, such as the :py:class:`foxglove.websocket.WebSocketServer`.
     ///
     /// Attempts to log on a closed channel will elicit a throttled warning message.
     fn close(&mut self) {
@@ -1094,7 +1094,7 @@ impl Point2Channel {
     /// Close the channel.
     ///
     /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
-    /// channels dynamically, such as the :py:class:`foxglove.WebSocketServer`.
+    /// channels dynamically, such as the :py:class:`foxglove.websocket.WebSocketServer`.
     ///
     /// Attempts to log on a closed channel will elicit a throttled warning message.
     fn close(&mut self) {
@@ -1151,7 +1151,7 @@ impl Point3Channel {
     /// Close the channel.
     ///
     /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
-    /// channels dynamically, such as the :py:class:`foxglove.WebSocketServer`.
+    /// channels dynamically, such as the :py:class:`foxglove.websocket.WebSocketServer`.
     ///
     /// Attempts to log on a closed channel will elicit a throttled warning message.
     fn close(&mut self) {
@@ -1208,7 +1208,7 @@ impl PointCloudChannel {
     /// Close the channel.
     ///
     /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
-    /// channels dynamically, such as the :py:class:`foxglove.WebSocketServer`.
+    /// channels dynamically, such as the :py:class:`foxglove.websocket.WebSocketServer`.
     ///
     /// Attempts to log on a closed channel will elicit a throttled warning message.
     fn close(&mut self) {
@@ -1265,7 +1265,7 @@ impl PointsAnnotationChannel {
     /// Close the channel.
     ///
     /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
-    /// channels dynamically, such as the :py:class:`foxglove.WebSocketServer`.
+    /// channels dynamically, such as the :py:class:`foxglove.websocket.WebSocketServer`.
     ///
     /// Attempts to log on a closed channel will elicit a throttled warning message.
     fn close(&mut self) {
@@ -1322,7 +1322,7 @@ impl PoseChannel {
     /// Close the channel.
     ///
     /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
-    /// channels dynamically, such as the :py:class:`foxglove.WebSocketServer`.
+    /// channels dynamically, such as the :py:class:`foxglove.websocket.WebSocketServer`.
     ///
     /// Attempts to log on a closed channel will elicit a throttled warning message.
     fn close(&mut self) {
@@ -1379,7 +1379,7 @@ impl PoseInFrameChannel {
     /// Close the channel.
     ///
     /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
-    /// channels dynamically, such as the :py:class:`foxglove.WebSocketServer`.
+    /// channels dynamically, such as the :py:class:`foxglove.websocket.WebSocketServer`.
     ///
     /// Attempts to log on a closed channel will elicit a throttled warning message.
     fn close(&mut self) {
@@ -1436,7 +1436,7 @@ impl PosesInFrameChannel {
     /// Close the channel.
     ///
     /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
-    /// channels dynamically, such as the :py:class:`foxglove.WebSocketServer`.
+    /// channels dynamically, such as the :py:class:`foxglove.websocket.WebSocketServer`.
     ///
     /// Attempts to log on a closed channel will elicit a throttled warning message.
     fn close(&mut self) {
@@ -1493,7 +1493,7 @@ impl QuaternionChannel {
     /// Close the channel.
     ///
     /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
-    /// channels dynamically, such as the :py:class:`foxglove.WebSocketServer`.
+    /// channels dynamically, such as the :py:class:`foxglove.websocket.WebSocketServer`.
     ///
     /// Attempts to log on a closed channel will elicit a throttled warning message.
     fn close(&mut self) {
@@ -1550,7 +1550,7 @@ impl RawImageChannel {
     /// Close the channel.
     ///
     /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
-    /// channels dynamically, such as the :py:class:`foxglove.WebSocketServer`.
+    /// channels dynamically, such as the :py:class:`foxglove.websocket.WebSocketServer`.
     ///
     /// Attempts to log on a closed channel will elicit a throttled warning message.
     fn close(&mut self) {
@@ -1607,7 +1607,7 @@ impl TextAnnotationChannel {
     /// Close the channel.
     ///
     /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
-    /// channels dynamically, such as the :py:class:`foxglove.WebSocketServer`.
+    /// channels dynamically, such as the :py:class:`foxglove.websocket.WebSocketServer`.
     ///
     /// Attempts to log on a closed channel will elicit a throttled warning message.
     fn close(&mut self) {
@@ -1664,7 +1664,7 @@ impl Vector2Channel {
     /// Close the channel.
     ///
     /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
-    /// channels dynamically, such as the :py:class:`foxglove.WebSocketServer`.
+    /// channels dynamically, such as the :py:class:`foxglove.websocket.WebSocketServer`.
     ///
     /// Attempts to log on a closed channel will elicit a throttled warning message.
     fn close(&mut self) {
@@ -1721,7 +1721,7 @@ impl Vector3Channel {
     /// Close the channel.
     ///
     /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
-    /// channels dynamically, such as the :py:class:`foxglove.WebSocketServer`.
+    /// channels dynamically, such as the :py:class:`foxglove.websocket.WebSocketServer`.
     ///
     /// Attempts to log on a closed channel will elicit a throttled warning message.
     fn close(&mut self) {

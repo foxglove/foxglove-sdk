@@ -207,15 +207,12 @@ pub(crate) struct Server {
     /// Capabilities advertised to clients
     capabilities: HashSet<Capability>,
     /// Parameters subscribed to by clients
-    subscribed_parameters: parking_lot::Mutex<HashSet<String>>,
+    subscribed_parameters: parking_lot::RwLock<HashMap<String, HashSet<ClientId>>>,
     /// Encodings server can accept from clients. Ignored unless the "clientPublish" capability is set.
     supported_encodings: HashSet<String>,
     /// The current connection graph, unused unless the "connectionGraph" capability is set.
     /// see https://github.com/foxglove/ws-protocol/blob/main/docs/spec.md#connection-graph-update
     connection_graph: parking_lot::Mutex<ConnectionGraph>,
-    /// The number of clients subscribed to the connection graph
-    /// This is a mutex, not an atomic, as it's used to synchronize calls to on_connection_graph_subscribe/unsubscribe
-    connection_graph_subscriber_count: parking_lot::Mutex<u32>,
     /// Token for cancelling all tasks
     cancellation_token: CancellationToken,
     /// Registered services.
@@ -235,7 +232,7 @@ pub trait ServerListener: Send + Sync {
     /// Callback invoked when a client subscribes to a channel.
     /// Only invoked if the channel is associated with the server and isn't already subscribed to by the client.
     fn on_subscribe(&self, _client: Client, _channel: ChannelView) {}
-    /// Callback invoked when a client unsubscribes from a channel.
+    /// Callback invoked when a client unsubscribes from a channel or disconnects.
     /// Only invoked for channels that had an active subscription from the client.
     fn on_unsubscribe(&self, _client: Client, _channel: ChannelView) {}
     /// Callback invoked when a client advertises a client channel. Requires [`Capability::ClientPublish`].
@@ -300,29 +297,23 @@ pub(crate) struct ConnectedClient {
     subscriptions: parking_lot::Mutex<BiHashMap<ChannelId, SubscriptionId>>,
     /// Channels advertised by this client
     advertised_channels: parking_lot::Mutex<HashMap<ClientChannelId, Arc<ClientChannel>>>,
-    /// Parameters subscribed to by this client
-    parameter_subscriptions: parking_lot::Mutex<HashSet<String>>,
     /// Optional callback handler for a server implementation
     server_listener: Option<Arc<dyn ServerListener>>,
     server: Weak<Server>,
     /// The cancellation_token is used by the server to disconnect the client.
     /// It's cancelled when the client's control plane queue fills up (slow client).
     cancellation_token: CancellationToken,
-    /// Whether this client is subscribed to the connection graph
-    /// This is updated only with the connection_graph mutex held in on_connection_graph_subscribe and unsubscribe.
-    /// It's read with the connection_graph mutex held, when sending connection graph updates to clients.
-    subscribed_to_connection_graph: AtomicBool,
 }
 
 impl ConnectedClient {
+    fn id(&self) -> ClientId {
+        self.id
+    }
+
     fn arc(&self) -> Arc<Self> {
         self.weak_self
             .upgrade()
             .expect("client cannot be dropped while in use")
-    }
-
-    fn is_subscribed_to_connection_graph(&self) -> bool {
-        self.subscribed_to_connection_graph.load(Acquire)
     }
 
     /// Handle a text or binary message sent from the client.
@@ -403,7 +394,7 @@ impl ConnectedClient {
         true
     }
 
-    async fn on_disconnect(&self, server: &Arc<Server>) {
+    async fn on_disconnect(&self) {
         if self.cancellation_token.is_cancelled() {
             let mut sender = self.sender.lock().await;
             let status = Status::new(
@@ -416,31 +407,11 @@ impl ConnectedClient {
             _ = sender.send(Message::Close(None)).await;
         }
 
-        // If we track paramter subscriptions, unsubscribe this clients subscriptions
-        // and notify the handler, if necessary
-        if !server.capabilities.contains(&Capability::Parameters) || self.server_listener.is_none()
-        {
-            return;
-        }
-
-        // Remove all subscriptions from the server subscriptions.
-        // First take the server-wide lock.
-        let mut all_subscriptions = server.subscribed_parameters.lock();
-
-        // Remove the parameter subscriptions for this client,
-        // and filter out any we weren't subscribed to.
-        let mut client_subscriptions = self.parameter_subscriptions.lock();
-        let client_subscriptions = std::mem::take(&mut *client_subscriptions);
-        let mut unsubscribed_parameters =
-            server.parameters_without_subscription(client_subscriptions.into_iter().collect());
-        if unsubscribed_parameters.is_empty() {
-            return;
-        }
-
-        unsubscribed_parameters.retain(|name| all_subscriptions.remove(name));
-        if let Some(handler) = self.server_listener.as_ref() {
-            handler.on_parameters_unsubscribe(unsubscribed_parameters);
-        }
+        let channel_ids = {
+            let subscriptions = self.subscriptions.lock();
+            subscriptions.left_values().copied().collect()
+        };
+        self.unsubscribe_channel_ids(channel_ids);
     }
 
     fn on_message_data(&self, message: protocol::client::ClientMessageData) {
@@ -535,37 +506,7 @@ impl ConnectedClient {
             }
         }
 
-        // Propagate client unsubscriptions to the context.
-        if let Some(context) = self.context.upgrade() {
-            context.unsubscribe_channels(self.sink_id, &unsubscribed_channel_ids);
-        }
-
-        // If we don't have a ServerListener, we're done.
-        let Some(handler) = self.server_listener.as_ref() else {
-            return;
-        };
-
-        // Then gather the actual channel references while holding the channels lock
-        let mut unsubscribed_channels = Vec::with_capacity(unsubscribed_channel_ids.len());
-        {
-            let channels = self.channels.read();
-            for channel_id in unsubscribed_channel_ids {
-                if let Some(channel) = channels.get(&channel_id) {
-                    unsubscribed_channels.push(channel.clone());
-                }
-            }
-        }
-
-        // Finally call the handler for each channel
-        for channel in unsubscribed_channels {
-            handler.on_unsubscribe(
-                Client::new(self),
-                ChannelView {
-                    id: channel.id(),
-                    topic: channel.topic(),
-                },
-            );
-        }
+        self.unsubscribe_channel_ids(unsubscribed_channel_ids);
     }
 
     fn on_subscribe(&self, mut subscriptions: Vec<Subscription>) {
@@ -693,101 +634,25 @@ impl ConnectedClient {
         server.publish_parameter_values(updated_parameters);
     }
 
-    fn update_parameters(&self, parameters: &[Parameter]) {
-        // Hold the lock for as short a time as possible
-        let subscribed_parameters: Vec<Parameter> = {
-            let subscribed_parameters = self.parameter_subscriptions.lock();
-            // Filter parameters to only send the ones the client is subscribed to
-            parameters
-                .iter()
-                .filter(|p| subscribed_parameters.contains(&p.name))
-                .cloned()
-                .collect()
-        };
-        if subscribed_parameters.is_empty() {
-            return;
-        }
-        let message = protocol::server::parameters_json(&subscribed_parameters, None);
+    fn update_parameters(&self, parameters: Vec<Parameter>) {
+        let message = protocol::server::parameters_json(&parameters, None);
         self.send_control_msg(Message::text(message));
     }
 
-    fn on_parameters_subscribe(&self, server: Arc<Server>, param_names: Vec<String>) {
-        if !server.capabilities.contains(&Capability::Parameters) {
+    fn on_parameters_subscribe(&self, server: Arc<Server>, names: Vec<String>) {
+        if server.has_capability(Capability::Parameters) {
+            server.subscribe_parameters(self.id, names);
+        } else {
             self.send_error("Server does not support parametersSubscribe capability".to_string());
-            return;
-        }
-
-        // We hold the server lock here the entire time to serialize
-        // calls to subscribe and unsubscribe, otherwise there are all
-        // kinds of race conditions here where handlers get invoked in
-        // an order different than the order the events were applied,
-        // leading to the listener thinking it has no subscribers to a
-        // parameter when it actually does or visa versa.
-        let mut new_param_subscriptions = Vec::with_capacity(
-            self.server_listener
-                .as_ref()
-                .map(|_| param_names.len())
-                .unwrap_or_default(),
-        );
-        let mut all_subscriptions = server.subscribed_parameters.lock();
-
-        // Get the list of which subscriptions are new to the server (first time subscriptions)
-        if self.server_listener.is_some() {
-            for name in &param_names {
-                if all_subscriptions.insert(name.clone()) {
-                    new_param_subscriptions.push(name.clone());
-                }
-            }
-        }
-
-        {
-            // Track the client's own subscriptions
-            let mut client_subscriptions = self.parameter_subscriptions.lock();
-            client_subscriptions.extend(param_names);
-        }
-
-        if new_param_subscriptions.is_empty() {
-            return;
-        }
-
-        if let Some(handler) = self.server_listener.as_ref() {
-            // We hold the server subscribed_parameters mutex across the call to the handler
-            // to synchrnize with other
-            handler.on_parameters_subscribe(new_param_subscriptions);
         }
     }
 
-    fn on_parameters_unsubscribe(&self, server: Arc<Server>, mut param_names: Vec<String>) {
-        if !server.capabilities.contains(&Capability::Parameters) {
+    fn on_parameters_unsubscribe(&self, server: Arc<Server>, names: Vec<String>) {
+        if server.has_capability(Capability::Parameters) {
+            server.unsubscribe_parameters(self.id, names);
+        } else {
             self.send_error("Server does not support parametersSubscribe capability".to_string());
-            return;
         }
-
-        // Like in subscribe, we first take the server-wide lock.
-        let mut all_subscriptions = server.subscribed_parameters.lock();
-
-        {
-            // Remove the parameter subscriptions for this client,
-            // and filter out any we weren't subscribed to.
-            let mut client_subscriptions = self.parameter_subscriptions.lock();
-            param_names.retain(|name| client_subscriptions.remove(name));
-        }
-
-        if param_names.is_empty() {
-            // We didn't remove any subscriptions
-            return;
-        }
-
-        let Some(handler) = self.server_listener.as_ref() else {
-            return;
-        };
-
-        let mut unsubscribed_parameters = server.parameters_without_subscription(param_names);
-        // Remove the unsubscribed parameters from the server's list of subscribed parameters
-        unsubscribed_parameters.retain(|name| all_subscriptions.remove(name));
-        // We have to hold the lock while calling the handler because we need
-        // to synchronize this with other calls to on_parameters_subscribe and on_parameters_unsubscribe
-        handler.on_parameters_unsubscribe(unsubscribed_parameters);
     }
 
     fn on_service_call(&self, req: protocol::client::ServiceCallRequest) {
@@ -872,46 +737,19 @@ impl ConnectedClient {
     }
 
     fn on_connection_graph_subscribe(&self, server: Arc<Server>) {
-        if !server.capabilities.contains(&Capability::ConnectionGraph) {
+        if !server.has_capability(Capability::ConnectionGraph) {
             self.send_error("Server does not support connection graph capability".to_string());
             return;
         }
 
-        let is_subscribed = self.subscribed_to_connection_graph.load(Acquire);
-        if is_subscribed {
+        if let Some(initial_update) = server.subscribe_connection_graph(self.id) {
+            self.send_control_msg(initial_update);
+        } else {
             tracing::debug!(
                 "Client {} is already subscribed to connection graph updates",
                 self.addr
             );
-            return;
         }
-
-        {
-            let mut subscriber_count = server.connection_graph_subscriber_count.lock();
-            let is_first_subscriber = *subscriber_count == 0;
-            *subscriber_count += 1;
-
-            // We hold the lock over the call to the listener so that subscribe and unsubscribe
-            // calls are correctly ordered relative to each other.
-            if is_first_subscriber {
-                if let Some(listener) = server.listener.as_ref() {
-                    listener.on_connection_graph_subscribe();
-                }
-            }
-        }
-
-        // We hold the connection_graph lock over updating self.subscribed_to_connection_graph
-        // and sending the initial update message, so it's synchronized with unsubscribe and
-        // with server.connection_graph_update.
-        let mut connection_graph = server.connection_graph.lock();
-        // Take the graph and replace it with an empty default
-        let current_graph = std::mem::take(&mut *connection_graph);
-        // Update the empty default with the current graph, setting it back to where it was,
-        // and generating the full diff in the process.
-        let json_diff = connection_graph.update(current_graph);
-        // Send the full diff to the client as the starting state
-        self.send_control_msg(Message::text(json_diff));
-        self.subscribed_to_connection_graph.store(true, Release);
     }
 
     fn on_connection_graph_unsubscribe(&self, server: Arc<Server>) {
@@ -920,26 +758,12 @@ impl ConnectedClient {
             return;
         }
 
-        let is_subscribed = self.is_subscribed_to_connection_graph();
-        if !is_subscribed {
-            self.send_error("Client is not subscribed to connection graph updates".to_string());
-            return;
+        if !server.unsubscribe_connection_graph(self.id) {
+            tracing::debug!(
+                "Client {} is already unsubscribed from connection graph updates",
+                self.addr
+            );
         }
-
-        {
-            let mut subscriber_count = server.connection_graph_subscriber_count.lock();
-            *subscriber_count -= 1;
-
-            if *subscriber_count == 0 {
-                if let Some(listener) = server.listener.as_ref() {
-                    listener.on_connection_graph_unsubscribe();
-                }
-            }
-        }
-
-        // Acquire the lock to sychronize with subscribe and with server.connection_graph_update.
-        let _guard = server.connection_graph.lock();
-        self.subscribed_to_connection_graph.store(false, Release);
     }
 
     /// Send an ad hoc error status message to the client, with the given message.
@@ -1035,6 +859,42 @@ impl ConnectedClient {
             );
         }
     }
+
+    /// Unsubscribes from a list of channel IDs.
+    /// Takes a read lock on the channels map.
+    fn unsubscribe_channel_ids(&self, unsubscribed_channel_ids: Vec<ChannelId>) {
+        // Propagate client unsubscriptions to the context.
+        if let Some(context) = self.context.upgrade() {
+            context.unsubscribe_channels(self.sink_id, &unsubscribed_channel_ids);
+        }
+
+        // If we don't have a ServerListener, we're done.
+        let Some(handler) = self.server_listener.as_ref() else {
+            return;
+        };
+
+        // Then gather the actual channel references while holding the channels lock
+        let mut unsubscribed_channels = Vec::with_capacity(unsubscribed_channel_ids.len());
+        {
+            let channels = self.channels.read();
+            for channel_id in unsubscribed_channel_ids {
+                if let Some(channel) = channels.get(&channel_id) {
+                    unsubscribed_channels.push(channel.clone());
+                }
+            }
+        }
+
+        // Finally call the handler for each channel
+        for channel in unsubscribed_channels {
+            handler.on_unsubscribe(
+                Client::new(self),
+                ChannelView {
+                    id: channel.id(),
+                    topic: channel.topic(),
+                },
+            );
+        }
+    }
 }
 
 impl std::fmt::Debug for ConnectedClient {
@@ -1092,11 +952,10 @@ impl Server {
             ),
             name: opts.name.unwrap_or_default(),
             clients: CowVec::new(),
-            subscribed_parameters: parking_lot::Mutex::new(HashSet::new()),
+            subscribed_parameters: parking_lot::RwLock::default(),
             capabilities,
             supported_encodings,
-            connection_graph: parking_lot::Mutex::new(ConnectionGraph::new()),
-            connection_graph_subscriber_count: parking_lot::Mutex::new(0),
+            connection_graph: parking_lot::Mutex::default(),
             cancellation_token: CancellationToken::new(),
             services: parking_lot::RwLock::new(ServiceMap::from_iter(opts.services.into_values())),
             fetch_asset_handler: opts.fetch_asset_handler,
@@ -1116,6 +975,11 @@ impl Server {
     // Returns a handle to the async runtime that this server is using.
     pub fn runtime(&self) -> &Handle {
         &self.runtime
+    }
+
+    /// Returns true if the server supports the capability.
+    fn has_capability(&self, cap: Capability) -> bool {
+        self.capabilities.contains(&cap)
     }
 
     // Spawn a task to accept all incoming connections and return the server's local address
@@ -1168,18 +1032,6 @@ impl Server {
         self.cancellation_token.cancel();
     }
 
-    /// Filter param_names to just those with no subscribers
-    fn parameters_without_subscription(&self, mut param_names: Vec<String>) -> Vec<String> {
-        let clients = self.clients.get();
-        for client in clients.iter() {
-            let subscribed_parameters = client.parameter_subscriptions.lock();
-            // Remove any parameters that are already subscribed to by this client
-            param_names.retain(|name| !subscribed_parameters.contains(name));
-        }
-        // The remaining parameters are those with no subscribers
-        param_names
-    }
-
     /// Publish the current timestamp to all clients.
     #[cfg(feature = "unstable")]
     pub fn broadcast_time(&self, timestamp_nanos: u64) {
@@ -1200,16 +1052,145 @@ impl Server {
         }
     }
 
+    /// Adds client parameter subscriptions by parameter name.
+    fn subscribe_parameters(&self, client_id: ClientId, names: Vec<String>) {
+        let mut subs = self.subscribed_parameters.write();
+
+        // Update subscriptions, keeping track of params that are newly-subscribed.
+        let mut new_names = vec![];
+        for name in names {
+            match subs.entry(name.clone()) {
+                Entry::Occupied(mut entry) => {
+                    entry.get_mut().insert(client_id);
+                }
+                Entry::Vacant(entry) => {
+                    entry.insert(HashSet::from_iter([client_id]));
+                    new_names.push(name);
+                }
+            }
+        }
+
+        // Notify listener.
+        if !new_names.is_empty() {
+            if let Some(listener) = self.listener.as_ref() {
+                listener.on_parameters_subscribe(new_names);
+            }
+        }
+    }
+
+    /// Removes client parameter subscriptions by parameter name.
+    fn unsubscribe_parameters(&self, client_id: ClientId, names: Vec<String>) {
+        let mut subs = self.subscribed_parameters.write();
+
+        // Update subscriptions, keeping track of params that now have no subscribers.
+        let mut old_names = vec![];
+        for name in names {
+            if let Some(entry) = subs.get_mut(&name) {
+                if entry.remove(&client_id) && entry.is_empty() {
+                    subs.remove(&name);
+                    old_names.push(name);
+                }
+            }
+        }
+
+        // Notify listener.
+        if !old_names.is_empty() {
+            if let Some(listener) = self.listener.as_ref() {
+                listener.on_parameters_unsubscribe(old_names);
+            }
+        }
+    }
+
+    /// Removes all client parameter subscriptions.
+    fn unsubscribe_all_parameters(&self, client_id: ClientId) {
+        let mut subs = self.subscribed_parameters.write();
+
+        // Update subscriptions, keeping track of params that now have no subscribers.
+        let mut old_names = vec![];
+        for (name, entry) in subs.iter_mut() {
+            if entry.remove(&client_id) && entry.is_empty() {
+                old_names.push(name.to_string());
+            }
+        }
+        for name in &old_names {
+            subs.remove(name);
+        }
+
+        // Notify listener.
+        if !old_names.is_empty() {
+            if let Some(listener) = self.listener.as_ref() {
+                listener.on_parameters_unsubscribe(old_names);
+            }
+        }
+    }
+
+    /// Adds a connection graph subscription for the client.
+    ///
+    /// Returns `None` if this client is already subscribed. Otherwise, returns an initial
+    /// `ConnectionGraphUpdate` message with the complete graph state.
+    fn subscribe_connection_graph(&self, client_id: ClientId) -> Option<Message> {
+        let mut graph = self.connection_graph.lock();
+        let first = !graph.has_subscribers();
+        if !graph.add_subscriber(client_id) {
+            return None;
+        }
+
+        // Notify listener, if this is the first subscriber.
+        if first {
+            if let Some(listener) = self.listener.as_ref() {
+                listener.on_connection_graph_subscribe();
+            }
+        }
+
+        let initial_update = graph.as_initial_update();
+        Some(Message::Text(initial_update.into()))
+    }
+
+    /// Removes a connection graph subscription for the client.
+    ///
+    /// Returns false if this client is already unsubscribed.
+    fn unsubscribe_connection_graph(&self, client_id: ClientId) -> bool {
+        let mut graph = self.connection_graph.lock();
+        if !graph.remove_subscriber(client_id) {
+            return false;
+        }
+
+        // Notify listener, if this was the last subscriber.
+        if !graph.has_subscribers() {
+            if let Some(listener) = self.listener.as_ref() {
+                listener.on_connection_graph_unsubscribe();
+            }
+        }
+
+        true
+    }
+
     /// Publish parameter values to all subscribed clients.
     pub fn publish_parameter_values(&self, parameters: Vec<Parameter>) {
-        if !self.capabilities.contains(&Capability::Parameters) {
+        if !self.has_capability(Capability::Parameters) {
             tracing::error!("Server does not support parameters capability");
             return;
         }
 
         let clients = self.clients.get();
         for client in clients.iter() {
-            client.update_parameters(&parameters);
+            // Filter parameters by subscriptions.
+            let filtered: Vec<_> = {
+                let subs = self.subscribed_parameters.read();
+                parameters
+                    .iter()
+                    .filter(|p| {
+                        subs.get(&p.name)
+                            .is_some_and(|ids| ids.contains(&client.id()))
+                    })
+                    .cloned()
+                    .collect()
+            };
+
+            // Notify client.
+            if !filtered.is_empty() {
+                client.update_parameters(filtered);
+            }
         }
     }
 
@@ -1300,11 +1281,9 @@ impl Server {
             fetch_asset_sem: Semaphore::new(DEFAULT_FETCH_ASSET_CALLS_PER_CLIENT),
             subscriptions: parking_lot::Mutex::new(BiHashMap::new()),
             advertised_channels: parking_lot::Mutex::new(HashMap::new()),
-            parameter_subscriptions: parking_lot::Mutex::new(HashSet::new()),
             server_listener: self.listener.clone(),
             server: self.weak_self.clone(),
             cancellation_token: cancellation_token.clone(),
-            subscribed_to_connection_graph: AtomicBool::new(false),
         });
 
         self.register_client_and_advertise(new_client.clone());
@@ -1378,7 +1357,13 @@ impl Server {
         }
 
         self.clients.retain(|c| !Arc::ptr_eq(c, &new_client));
-        new_client.on_disconnect(&self).await;
+        if self.has_capability(Capability::Parameters) {
+            self.unsubscribe_all_parameters(new_client.id());
+        }
+        if self.has_capability(Capability::ConnectionGraph) {
+            self.unsubscribe_connection_graph(new_client.id());
+        }
+        new_client.on_disconnect().await;
     }
 
     fn register_client_and_advertise(&self, client: Arc<ConnectedClient>) {
@@ -1526,11 +1511,11 @@ impl Server {
         }
 
         // Hold the lock while sending to synchronize with subscribe and unsubscribe.
-        let mut connection_graph = self.connection_graph.lock();
-        let json_diff = connection_graph.update(replacement_graph);
+        let mut graph = self.connection_graph.lock();
+        let json_diff = graph.update(replacement_graph);
         let msg = Message::text(json_diff);
         for client in self.clients.get().iter() {
-            if client.is_subscribed_to_connection_graph() {
+            if graph.is_subscriber(client.id()) {
                 client.send_control_msg(msg.clone());
             }
         }
@@ -1650,26 +1635,36 @@ async fn handle_connections(server: Arc<Server>, listener: TcpListener) {
     }
 }
 
-/// Add the subprotocol header to the response if the client requested one we support.
-/// If the client doesn't support our protocol, do not include the protocol header in the response;
-/// the client must fail the connection. [WebSocket RFC](https://www.rfc-editor.org/rfc/rfc6455#section-4)
+/// Add the subprotocol header to the response if the client requested it. If the client requests
+/// subprotocols which don't contain ours, or does not include the expected header, return a 400.
 async fn do_handshake(stream: TcpStream) -> Result<WebSocketStream<TcpStream>, tungstenite::Error> {
     tokio_tungstenite::accept_hdr_async(
         stream,
         |req: &server::Request, mut res: server::Response| {
-            let all_headers = req.headers().get_all("sec-websocket-protocol");
-            if all_headers.iter().any(|h| {
-                (*h).to_str()
+            let protocol_headers = req.headers().get_all("sec-websocket-protocol");
+            for header in &protocol_headers {
+                if header
+                    .to_str()
                     .unwrap_or_default()
                     .split(',')
-                    .any(|s| s.trim() == SUBPROTOCOL)
-            }) {
-                res.headers_mut().insert(
-                    "sec-websocket-protocol",
-                    HeaderValue::from_static(SUBPROTOCOL),
-                );
-            };
-            Ok(res)
+                    .any(|v| v.trim() == SUBPROTOCOL)
+                {
+                    res.headers_mut().insert(
+                        "sec-websocket-protocol",
+                        HeaderValue::from_static(SUBPROTOCOL),
+                    );
+                    return Ok(res);
+                }
+            }
+
+            let resp = server::Response::builder()
+                .status(400)
+                .body(Some(
+                    "Missing expected sec-websocket-protocol header".into(),
+                ))
+                .unwrap();
+
+            Err(resp)
         },
     )
     .await

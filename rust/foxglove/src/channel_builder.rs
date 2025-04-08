@@ -39,8 +39,8 @@ impl ChannelBuilder {
     /// This is required for [`RawChannel`], but not for [`Channel`] (it's provided by the
     /// [`Encode`] trait for [`Channel`].) Foxglove supports several well-known message encodings:
     /// <https://docs.foxglove.dev/docs/visualization/message-schemas/introduction>
-    pub fn message_encoding(mut self, encoding: &str) -> Self {
-        self.message_encoding = Some(encoding.to_string());
+    pub fn message_encoding(mut self, encoding: impl Into<String>) -> Self {
+        self.message_encoding = Some(encoding.into());
         self
     }
 
@@ -58,7 +58,6 @@ impl ChannelBuilder {
     }
 
     /// Sets the context for this channel.
-    #[doc(hidden)]
     pub fn context(mut self, ctx: &Arc<Context>) -> Self {
         self.context = ctx.clone();
         self

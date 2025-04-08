@@ -8,21 +8,30 @@ use std::{fmt::Debug, io::Write};
 
 use crate::library_version::get_library_version;
 use crate::{Context, FoxgloveError, Sink};
-use mcap::WriteOptions;
+
+/// Compression options for content in an MCAP file
+pub use mcap::Compression as McapCompression;
+/// Options for use with an [`McapWriter`][crate::McapWriter].
+pub use mcap::WriteOptions as McapWriteOptions;
 
 mod mcap_sink;
 use mcap_sink::McapSink;
 
 /// An MCAP writer for logging events.
+///
+/// ### Buffering
+///
+/// Logged messages are buffered in a [`BufWriter`]. When the writer is dropped, the buffered
+/// messages are flushed to the writer and the writer is closed.
 #[must_use]
 #[derive(Debug, Clone)]
 pub struct McapWriter {
-    options: WriteOptions,
+    options: McapWriteOptions,
     context: Arc<Context>,
 }
 
-impl From<WriteOptions> for McapWriter {
-    fn from(value: WriteOptions) -> Self {
+impl From<McapWriteOptions> for McapWriter {
+    fn from(value: McapWriteOptions) -> Self {
         let options = value.library(get_library_version());
         Self {
             options,
@@ -33,7 +42,7 @@ impl From<WriteOptions> for McapWriter {
 
 impl Default for McapWriter {
     fn default() -> Self {
-        Self::from(WriteOptions::default())
+        Self::from(McapWriteOptions::default())
     }
 }
 
@@ -45,7 +54,7 @@ impl McapWriter {
 
     /// Instantiates a new MCAP writer with the provided options.
     /// The library option is ignored.
-    pub fn with_options(options: WriteOptions) -> Self {
+    pub fn with_options(options: McapWriteOptions) -> Self {
         options.into()
     }
 
@@ -95,8 +104,8 @@ impl McapWriter {
 
 /// A handle to an MCAP file writer.
 ///
-/// When this handle is dropped, the writer will stop logging events, and flush any buffered data
-/// to the writer.
+/// When this handle is dropped, the writer will unregister from the [`Context`], stop logging
+/// events, and flush any buffered data to the writer.
 #[must_use]
 #[derive(Debug)]
 pub struct McapWriterHandle<W: Write + Seek + Send + 'static> {
