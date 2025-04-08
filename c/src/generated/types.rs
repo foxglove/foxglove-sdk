@@ -2,6 +2,8 @@
 
 use std::ffi::{c_char, c_void};
 
+use bytes::Bytes;
+
 #[repr(u8)]
 pub enum FoxgloveBuiltinSchema {
     CameraCalibration,
@@ -90,6 +92,7 @@ impl From<Timestamp> for foxglove::schemas::Timestamp {
 /// The duration is represented by a count of seconds (which may be negative), and a count of
 /// fractional seconds at nanosecond resolution (which are always positive).
 #[repr(C)]
+#[derive(Debug, Clone, Copy)]
 pub struct Duration {
     /// Seconds offset.
     sec: i32,
@@ -108,21 +111,27 @@ impl From<Duration> for foxglove::schemas::Duration {
 pub struct CameraCalibration {
     /// Timestamp of calibration data
     pub timestamp: Timestamp,
+
     /// Frame of reference for the camera. The origin of the frame is the optical center of the camera. +x points to the right in the image, +y points down, and +z points into the plane of the image.
     pub frame_id: *const c_char,
     pub frame_id_len: usize,
+
     /// Image width
     pub width: u32,
+
     /// Image height
     pub height: u32,
+
     /// Name of distortion model
     ///
     /// Supported parameters: `plumb_bob` (k1, k2, p1, p2, k3) and `rational_polynomial` (k1, k2, p1, p2, k3, k4, k5, k6). Distortion models are based on [OpenCV's](https://docs.opencv.org/2.4/modules/calib3d/doc/camera_calibration_and_3d_reconstruction.html) [pinhole camera model](https://en.wikipedia.org/wiki/Distortion_%28optics%29#Software_correction). This is the same [implementation used by ROS](http://docs.ros.org/en/diamondback/api/image_geometry/html/c++/pinhole__camera__model_8cpp_source.html)
     pub distortion_model: *const c_char,
     pub distortion_model_len: usize,
+
     /// Distortion parameters
-    /*TODO*/
+    pub D: *const f64,
     pub D_count: usize,
+
     /// Intrinsic camera matrix (3x3 row-major matrix)
     ///
     /// A 3x3 row-major matrix for the raw (distorted) image.
@@ -135,13 +144,13 @@ pub struct CameraCalibration {
     ///     [ 0  0  1]
     /// ```
     ///
-    /*TODO*/
-    pub K_count: usize,
+    pub K: [f64; 9],
+
     /// Rectification matrix (stereo cameras only, 3x3 row-major matrix)
     ///
     /// A rotation matrix aligning the camera coordinate system to the ideal stereo image plane so that epipolar lines in both stereo images are parallel.
-    /*TODO*/
-    pub R_count: usize,
+    pub R: [f64; 9],
+
     /// Projection/camera matrix (3x4 row-major matrix)
     ///
     /// ```
@@ -168,8 +177,7 @@ pub struct CameraCalibration {
     ///
     /// This holds for both images of a stereo pair.
     ///
-    /*TODO*/
-    pub P_count: usize,
+    pub P: [f64; 12],
 }
 
 impl From<&CameraCalibration> for foxglove::schemas::CameraCalibration {
@@ -204,15 +212,20 @@ impl From<&CameraCalibration> for foxglove::schemas::CameraCalibration {
 pub struct CircleAnnotation {
     /// Timestamp of circle
     pub timestamp: Timestamp,
+
     /// Center of the circle in 2D image coordinates (pixels).
     /// The coordinate uses the top-left corner of the top-left pixel of the image as the origin.
     pub position: *const Point2,
+
     /// Circle diameter in pixels
     pub diameter: f64,
+
     /// Line thickness in pixels
     pub thickness: f64,
+
     /// Fill color
     pub fill_color: *const Color,
+
     /// Outline color
     pub outline_color: *const Color,
 }
@@ -235,10 +248,13 @@ impl From<&CircleAnnotation> for foxglove::schemas::CircleAnnotation {
 pub struct Color {
     /// Red value between 0 and 1
     pub r: f64,
+
     /// Green value between 0 and 1
     pub g: f64,
+
     /// Blue value between 0 and 1
     pub b: f64,
+
     /// Alpha value between 0 and 1
     pub a: f64,
 }
@@ -259,12 +275,15 @@ impl From<&Color> for foxglove::schemas::Color {
 pub struct CompressedImage {
     /// Timestamp of image
     pub timestamp: Timestamp,
+
     /// Frame of reference for the image. The origin of the frame is the optical center of the camera. +x points to the right in the image, +y points down, and +z points into the plane of the image.
     pub frame_id: *const c_char,
     pub frame_id_len: usize,
+
     /// Compressed image data
     pub data: *const c_void,
     pub data_len: usize,
+
     /// Image format
     ///
     /// Supported values: image media types supported by Chrome, such as `webp`, `jpeg`, `png`
@@ -281,7 +300,9 @@ impl From<&CompressedImage> for foxglove::schemas::CompressedImage {
             })
             .unwrap()
             .to_string(),
-            data: unsafe { std::slice::from_raw_parts(msg.data, msg.data_len) },
+            data: Bytes::copy_from_slice(unsafe {
+                std::slice::from_raw_parts(msg.data, msg.data_len)
+            }),
             format: std::str::from_utf8(unsafe {
                 std::slice::from_raw_parts(msg.format as *const u8, msg.format_len)
             })
@@ -296,11 +317,13 @@ impl From<&CompressedImage> for foxglove::schemas::CompressedImage {
 pub struct CompressedVideo {
     /// Timestamp of video frame
     pub timestamp: Timestamp,
+
     /// Frame of reference for the video.
     ///
     /// The origin of the frame is the optical center of the camera. +x points to the right in the video, +y points down, and +z points into the plane of the video.
     pub frame_id: *const c_char,
     pub frame_id_len: usize,
+
     /// Compressed video frame data.
     ///
     /// For packet-based video codecs this data must begin and end on packet boundaries (no partial packets), and must contain enough video packets to decode exactly one image (either a keyframe or delta frame). Note: Foxglove does not support video streams that include B frames because they require lookahead.
@@ -326,6 +349,7 @@ pub struct CompressedVideo {
     ///   - Each message containing a key frame must also include a Sequence Header OBU
     pub data: *const c_void,
     pub data_len: usize,
+
     /// Video format.
     ///
     /// Supported values: `h264`, `h265`, `vp9`, `av1`.
@@ -344,7 +368,9 @@ impl From<&CompressedVideo> for foxglove::schemas::CompressedVideo {
             })
             .unwrap()
             .to_string(),
-            data: unsafe { std::slice::from_raw_parts(msg.data, msg.data_len) },
+            data: Bytes::copy_from_slice(unsafe {
+                std::slice::from_raw_parts(msg.data, msg.data_len)
+            }),
             format: std::str::from_utf8(unsafe {
                 std::slice::from_raw_parts(msg.format as *const u8, msg.format_len)
             })
@@ -359,14 +385,18 @@ impl From<&CompressedVideo> for foxglove::schemas::CompressedVideo {
 pub struct FrameTransform {
     /// Timestamp of transform
     pub timestamp: Timestamp,
+
     /// Name of the parent frame
     pub parent_frame_id: *const c_char,
     pub parent_frame_id_len: usize,
+
     /// Name of the child frame
     pub child_frame_id: *const c_char,
     pub child_frame_id_len: usize,
+
     /// Translation component of the transform
     pub translation: *const Vector3,
+
     /// Rotation component of the transform
     pub rotation: *const Quaternion,
 }
@@ -398,7 +428,7 @@ impl From<&FrameTransform> for foxglove::schemas::FrameTransform {
 #[repr(C)]
 pub struct FrameTransforms {
     /// Array of transforms
-    /*TODO*/
+    pub transforms: *const *const FrameTransform,
     pub transforms_count: usize,
 }
 
@@ -435,22 +465,30 @@ impl From<&GeoJSON> for foxglove::schemas::GeoJson {
 pub struct Grid {
     /// Timestamp of grid
     pub timestamp: Timestamp,
+
     /// Frame of reference
     pub frame_id: *const c_char,
     pub frame_id_len: usize,
+
     /// Origin of grid's corner relative to frame of reference; grid is positioned in the x-y plane relative to this origin
     pub pose: *const Pose,
+
     /// Number of grid columns
     pub column_count: u32,
+
     /// Size of single grid cell along x and y axes, relative to `pose`
     pub cell_size: *const Vector2,
+
     /// Number of bytes between rows in `data`
     pub row_stride: u32,
+
     /// Number of bytes between cells within a row in `data`
     pub cell_stride: u32,
+
     /// Fields in `data`. `red`, `green`, `blue`, and `alpha` are optional for customizing the grid's color.
-    /*TODO*/
+    pub fields: *const *const PackedElementField,
     pub fields_count: usize,
+
     /// Grid cell data, interpreted using `fields`, in row-major (y-major) order
     pub data: *const c_void,
     pub data_len: usize,
@@ -471,7 +509,9 @@ impl From<&Grid> for foxglove::schemas::Grid {
             row_stride: msg.row_stride,
             cell_stride: msg.cell_stride,
             fields: todo!("arrays"),
-            data: unsafe { std::slice::from_raw_parts(msg.data, msg.data_len) },
+            data: Bytes::copy_from_slice(unsafe {
+                std::slice::from_raw_parts(msg.data, msg.data_len)
+            }),
         }
     }
 }
@@ -480,13 +520,15 @@ impl From<&Grid> for foxglove::schemas::Grid {
 #[repr(C)]
 pub struct ImageAnnotations {
     /// Circle annotations
-    /*TODO*/
+    pub circles: *const *const CircleAnnotation,
     pub circles_count: usize,
+
     /// Points annotations
-    /*TODO*/
+    pub points: *const *const PointsAnnotation,
     pub points_count: usize,
+
     /// Text annotations
-    /*TODO*/
+    pub texts: *const *const TextAnnotation,
     pub texts_count: usize,
 }
 
@@ -506,6 +548,7 @@ pub struct KeyValuePair {
     /// Key
     pub key: *const c_char,
     pub key_len: usize,
+
     /// Value
     pub value: *const c_char,
     pub value_len: usize,
@@ -533,20 +576,26 @@ impl From<&KeyValuePair> for foxglove::schemas::KeyValuePair {
 pub struct LaserScan {
     /// Timestamp of scan
     pub timestamp: Timestamp,
+
     /// Frame of reference
     pub frame_id: *const c_char,
     pub frame_id_len: usize,
+
     /// Origin of scan relative to frame of reference; points are positioned in the x-y plane relative to this origin; angles are interpreted as counterclockwise rotations around the z axis with 0 rad being in the +x direction
     pub pose: *const Pose,
+
     /// Bearing of first point, in radians
     pub start_angle: f64,
+
     /// Bearing of last point, in radians
     pub end_angle: f64,
+
     /// Distance of detections from origin; assumed to be at equally-spaced angles between `start_angle` and `end_angle`
-    /*TODO*/
+    pub ranges: *const f64,
     pub ranges_count: usize,
+
     /// Intensity of detections
-    /*TODO*/
+    pub intensities: *const f64,
     pub intensities_count: usize,
 }
 
@@ -573,20 +622,25 @@ impl From<&LaserScan> for foxglove::schemas::LaserScan {
 pub struct LocationFix {
     /// Timestamp of the message
     pub timestamp: Timestamp,
+
     /// Frame for the sensor. Latitude and longitude readings are at the origin of the frame.
     pub frame_id: *const c_char,
     pub frame_id_len: usize,
+
     /// Latitude in degrees
     pub latitude: f64,
+
     /// Longitude in degrees
     pub longitude: f64,
+
     /// Altitude in meters
     pub altitude: f64,
+
     /// Position covariance (m^2) defined relative to a tangential plane through the reported position. The components are East, North, and Up (ENU), in row-major order.
-    /*TODO*/
-    pub position_covariance_count: usize,
+    pub position_covariance: [f64; 9],
+
     /// If `position_covariance` is available, `position_covariance_type` must be set to indicate the type of covariance.
-    pub position_covariance_type: i32, /*TODO*/
+    pub position_covariance_type: i32,
 }
 
 impl From<&LocationFix> for foxglove::schemas::LocationFix {
@@ -612,17 +666,22 @@ impl From<&LocationFix> for foxglove::schemas::LocationFix {
 pub struct Log {
     /// Timestamp of log message
     pub timestamp: Timestamp,
+
     /// Log level
-    pub level: i32, /*TODO*/
+    pub level: i32,
+
     /// Log message
     pub message: *const c_char,
     pub message_len: usize,
+
     /// Process or node name
     pub name: *const c_char,
     pub name_len: usize,
+
     /// Filename
     pub file: *const c_char,
     pub file_len: usize,
+
     /// Line number in the file
     pub line: u32,
 }
@@ -657,8 +716,10 @@ impl From<&Log> for foxglove::schemas::Log {
 pub struct SceneEntityDeletion {
     /// Timestamp of the deletion. Only matching entities earlier than this timestamp will be deleted.
     pub timestamp: Timestamp,
+
     /// Type of deletion action to perform
-    pub r#type: i32, /*TODO*/
+    pub r#type: i32,
+
     /// Identifier which must match if `type` is `MATCHING_ID`.
     pub id: *const c_char,
     pub id_len: usize,
@@ -683,42 +744,55 @@ impl From<&SceneEntityDeletion> for foxglove::schemas::SceneEntityDeletion {
 pub struct SceneEntity {
     /// Timestamp of the entity
     pub timestamp: Timestamp,
+
     /// Frame of reference
     pub frame_id: *const c_char,
     pub frame_id_len: usize,
+
     /// Identifier for the entity. A entity will replace any prior entity on the same topic with the same `id`.
     pub id: *const c_char,
     pub id_len: usize,
+
     /// Length of time (relative to `timestamp`) after which the entity should be automatically removed. Zero value indicates the entity should remain visible until it is replaced or deleted.
     pub lifetime: Duration,
+
     /// Whether the entity should keep its location in the fixed frame (false) or follow the frame specified in `frame_id` as it moves relative to the fixed frame (true)
     pub frame_locked: bool,
+
     /// Additional user-provided metadata associated with the entity. Keys must be unique.
-    /*TODO*/
+    pub metadata: *const *const KeyValuePair,
     pub metadata_count: usize,
+
     /// Arrow primitives
-    /*TODO*/
+    pub arrows: *const *const ArrowPrimitive,
     pub arrows_count: usize,
+
     /// Cube primitives
-    /*TODO*/
+    pub cubes: *const *const CubePrimitive,
     pub cubes_count: usize,
+
     /// Sphere primitives
-    /*TODO*/
+    pub spheres: *const *const SpherePrimitive,
     pub spheres_count: usize,
+
     /// Cylinder primitives
-    /*TODO*/
+    pub cylinders: *const *const CylinderPrimitive,
     pub cylinders_count: usize,
+
     /// Line primitives
-    /*TODO*/
+    pub lines: *const *const LinePrimitive,
     pub lines_count: usize,
+
     /// Triangle list primitives
-    /*TODO*/
+    pub triangles: *const *const TriangleListPrimitive,
     pub triangles_count: usize,
+
     /// Text primitives
-    /*TODO*/
+    pub texts: *const *const TextPrimitive,
     pub texts_count: usize,
+
     /// Model primitives
-    /*TODO*/
+    pub models: *const *const ModelPrimitive,
     pub models_count: usize,
 }
 
@@ -755,10 +829,11 @@ impl From<&SceneEntity> for foxglove::schemas::SceneEntity {
 #[repr(C)]
 pub struct SceneUpdate {
     /// Scene entities to delete
-    /*TODO*/
+    pub deletions: *const *const SceneEntityDeletion,
     pub deletions_count: usize,
+
     /// Scene entities to add or replace
-    /*TODO*/
+    pub entities: *const *const SceneEntity,
     pub entities_count: usize,
 }
 
@@ -777,10 +852,12 @@ pub struct PackedElementField {
     /// Name of the field
     pub name: *const c_char,
     pub name_len: usize,
+
     /// Byte offset from start of data buffer
     pub offset: u32,
+
     /// Type of data in the field. Integers are stored using little-endian byte order.
-    pub r#type: i32, /*TODO*/
+    pub r#type: i32,
 }
 
 impl From<&PackedElementField> for foxglove::schemas::PackedElementField {
@@ -802,6 +879,7 @@ impl From<&PackedElementField> for foxglove::schemas::PackedElementField {
 pub struct Point2 {
     /// x coordinate position
     pub x: f64,
+
     /// y coordinate position
     pub y: f64,
 }
@@ -817,8 +895,10 @@ impl From<&Point2> for foxglove::schemas::Point2 {
 pub struct Point3 {
     /// x coordinate position
     pub x: f64,
+
     /// y coordinate position
     pub y: f64,
+
     /// z coordinate position
     pub z: f64,
 }
@@ -838,16 +918,21 @@ impl From<&Point3> for foxglove::schemas::Point3 {
 pub struct PointCloud {
     /// Timestamp of point cloud
     pub timestamp: Timestamp,
+
     /// Frame of reference
     pub frame_id: *const c_char,
     pub frame_id_len: usize,
+
     /// The origin of the point cloud relative to the frame of reference
     pub pose: *const Pose,
+
     /// Number of bytes between points in the `data`
     pub point_stride: u32,
+
     /// Fields in `data`. At least 2 coordinate fields from `x`, `y`, and `z` are required for each point's position; `red`, `green`, `blue`, and `alpha` are optional for customizing each point's color.
-    /*TODO*/
+    pub fields: *const *const PackedElementField,
     pub fields_count: usize,
+
     /// Point data, interpreted using `fields`
     pub data: *const c_void,
     pub data_len: usize,
@@ -865,7 +950,9 @@ impl From<&PointCloud> for foxglove::schemas::PointCloud {
             pose: Some(unsafe { &*msg.pose }.into()),
             point_stride: msg.point_stride,
             fields: todo!("arrays"),
-            data: unsafe { std::slice::from_raw_parts(msg.data, msg.data_len) },
+            data: Bytes::copy_from_slice(unsafe {
+                std::slice::from_raw_parts(msg.data, msg.data_len)
+            }),
         }
     }
 }
@@ -875,19 +962,25 @@ impl From<&PointCloud> for foxglove::schemas::PointCloud {
 pub struct PointsAnnotation {
     /// Timestamp of annotation
     pub timestamp: Timestamp,
+
     /// Type of points annotation to draw
-    pub r#type: i32, /*TODO*/
+    pub r#type: i32,
+
     /// Points in 2D image coordinates (pixels).
     /// These coordinates use the top-left corner of the top-left pixel of the image as the origin.
-    /*TODO*/
+    pub points: *const *const Point2,
     pub points_count: usize,
+
     /// Outline color
     pub outline_color: *const Color,
+
     /// Per-point colors, if `type` is `POINTS`, or per-segment stroke colors, if `type` is `LINE_LIST`, `LINE_STRIP` or `LINE_LOOP`.
-    /*TODO*/
+    pub outline_colors: *const *const Color,
     pub outline_colors_count: usize,
+
     /// Fill color
     pub fill_color: *const Color,
+
     /// Stroke thickness in pixels
     pub thickness: f64,
 }
@@ -911,6 +1004,7 @@ impl From<&PointsAnnotation> for foxglove::schemas::PointsAnnotation {
 pub struct Pose {
     /// Point denoting position in 3D space
     pub position: *const Vector3,
+
     /// Quaternion denoting orientation in 3D space
     pub orientation: *const Quaternion,
 }
@@ -929,9 +1023,11 @@ impl From<&Pose> for foxglove::schemas::Pose {
 pub struct PoseInFrame {
     /// Timestamp of pose
     pub timestamp: Timestamp,
+
     /// Frame of reference for pose position and orientation
     pub frame_id: *const c_char,
     pub frame_id_len: usize,
+
     /// Pose in 3D space
     pub pose: *const Pose,
 }
@@ -955,11 +1051,13 @@ impl From<&PoseInFrame> for foxglove::schemas::PoseInFrame {
 pub struct PosesInFrame {
     /// Timestamp of pose
     pub timestamp: Timestamp,
+
     /// Frame of reference for pose position and orientation
     pub frame_id: *const c_char,
     pub frame_id_len: usize,
+
     /// Poses in 3D space
-    /*TODO*/
+    pub poses: *const *const Pose,
     pub poses_count: usize,
 }
 
@@ -982,10 +1080,13 @@ impl From<&PosesInFrame> for foxglove::schemas::PosesInFrame {
 pub struct Quaternion {
     /// x value
     pub x: f64,
+
     /// y value
     pub y: f64,
+
     /// z value
     pub z: f64,
+
     /// w value
     pub w: f64,
 }
@@ -1006,20 +1107,26 @@ impl From<&Quaternion> for foxglove::schemas::Quaternion {
 pub struct RawImage {
     /// Timestamp of image
     pub timestamp: Timestamp,
+
     /// Frame of reference for the image. The origin of the frame is the optical center of the camera. +x points to the right in the image, +y points down, and +z points into the plane of the image.
     pub frame_id: *const c_char,
     pub frame_id_len: usize,
+
     /// Image width
     pub width: u32,
+
     /// Image height
     pub height: u32,
+
     /// Encoding of the raw image data
     ///
     /// Supported values: `8UC1`, `8UC3`, `16UC1` (little endian), `32FC1` (little endian), `bayer_bggr8`, `bayer_gbrg8`, `bayer_grbg8`, `bayer_rggb8`, `bgr8`, `bgra8`, `mono8`, `mono16`, `rgb8`, `rgba8`, `uyvy` or `yuv422`, `yuyv` or `yuv422_yuy2`
     pub encoding: *const c_char,
     pub encoding_len: usize,
+
     /// Byte length of a single row
     pub step: u32,
+
     /// Raw image data
     pub data: *const c_void,
     pub data_len: usize,
@@ -1042,7 +1149,9 @@ impl From<&RawImage> for foxglove::schemas::RawImage {
             .unwrap()
             .to_string(),
             step: msg.step,
-            data: unsafe { std::slice::from_raw_parts(msg.data, msg.data_len) },
+            data: Bytes::copy_from_slice(unsafe {
+                std::slice::from_raw_parts(msg.data, msg.data_len)
+            }),
         }
     }
 }
@@ -1052,16 +1161,21 @@ impl From<&RawImage> for foxglove::schemas::RawImage {
 pub struct TextAnnotation {
     /// Timestamp of annotation
     pub timestamp: Timestamp,
+
     /// Bottom-left origin of the text label in 2D image coordinates (pixels).
     /// The coordinate uses the top-left corner of the top-left pixel of the image as the origin.
     pub position: *const Point2,
+
     /// Text to display
     pub text: *const c_char,
     pub text_len: usize,
+
     /// Font size in pixels
     pub font_size: f64,
+
     /// Text color
     pub text_color: *const Color,
+
     /// Background fill color
     pub background_color: *const Color,
 }
@@ -1088,6 +1202,7 @@ impl From<&TextAnnotation> for foxglove::schemas::TextAnnotation {
 pub struct Vector2 {
     /// x coordinate length
     pub x: f64,
+
     /// y coordinate length
     pub y: f64,
 }
@@ -1103,8 +1218,10 @@ impl From<&Vector2> for foxglove::schemas::Vector2 {
 pub struct Vector3 {
     /// x coordinate length
     pub x: f64,
+
     /// y coordinate length
     pub y: f64,
+
     /// z coordinate length
     pub z: f64,
 }
