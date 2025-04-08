@@ -36,7 +36,6 @@ McapWriter::McapWriter(McapWriterOptions options)
   cOptions.emit_metadata_indexes = options.emitMetadataIndexes;
   cOptions.repeat_channels = options.repeatChannels;
   cOptions.repeat_schemas = options.repeatSchemas;
-  cOptions.create = options.create;
   cOptions.truncate = options.truncate;
   foxglove_error cError = {};
   _impl.reset(foxglove_mcap_open(&cOptions, &cError));

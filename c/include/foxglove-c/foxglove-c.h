@@ -142,7 +142,6 @@ typedef struct foxglove_error {
 typedef struct foxglove_mcap_options {
   const char *path;
   size_t path_len;
-  bool create;
   bool truncate;
   FoxgloveMcapCompression compression;
   const char *profile;

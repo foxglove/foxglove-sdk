@@ -233,7 +233,6 @@ pub enum FoxgloveMcapCompression {
 pub struct FoxgloveMcapOptions {
     pub path: *const c_char,
     pub path_len: usize,
-    pub create: bool,
     pub truncate: bool,
     pub compression: FoxgloveMcapCompression,
     pub profile: *const c_char,
@@ -325,26 +324,14 @@ unsafe fn do_foxglove_mcap_open(
     // Safety: this is safe if the options struct contains valid strings
     let mcap_options = unsafe { options.to_write_options() }?;
 
-    println!("create, truncate: {}, {}", options.create, options.truncate);
-
     let mut file_options = File::options();
-    file_options.write(true);
-    if options.create {
-        if options.truncate {
-            file_options.create(true).truncate(true);
-        } else {
-            file_options.create_new(true);
-        }
-    } else if options.truncate {
-        file_options.truncate(true);
+    if options.truncate {
+        file_options.create(true).truncate(true);
     } else {
-        // Append doesn't make sense with mcap
-        return Err(foxglove::FoxgloveError::IoError(std::io::Error::new(
-            std::io::ErrorKind::InvalidInput,
-            "append mode not supported with mcap, specify create=true and/or truncate=true",
-        )));
+        file_options.create_new(true);
     }
     let file = file_options
+        .write(true)
         .open(path)
         .map_err(foxglove::FoxgloveError::IoError)?;
 

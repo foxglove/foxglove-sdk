@@ -32,7 +32,6 @@ TEST_CASE("Open new file and close mcap writer") {
 
   foxglove::McapWriterOptions options = {};
   options.path = "test.mcap";
-  options.create = true;
   foxglove::McapWriter writer(options);
   writer.close();
 
@@ -53,7 +52,6 @@ TEST_CASE("Open and truncate existing file") {
   foxglove::McapWriterOptions options = {};
   options.path = "test.mcap";
   options.truncate = true;
-  options.create = false;
   foxglove::McapWriter writer(options);
   writer.close();
 
@@ -96,7 +94,6 @@ TEST_CASE("fail to open existing file if create=true and truncate=false") {
 
   foxglove::McapWriterOptions options = {};
   options.path = "test.mcap";
-  options.create = true;
   try {
     foxglove::McapWriter writer(options);
     REQUIRE(false);  // expected IoError
@@ -113,7 +110,6 @@ TEST_CASE("fail if file path is not valid utf-8") {
 
   foxglove::McapWriterOptions options = {};
   options.path = "\x80\x80\x80\x80";
-  options.create = true;
   try {
     foxglove::McapWriter writer(options);
     REQUIRE(false);  // expected error
