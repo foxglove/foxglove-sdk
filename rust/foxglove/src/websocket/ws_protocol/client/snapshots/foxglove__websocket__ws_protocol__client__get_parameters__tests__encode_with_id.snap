@@ -1,0 +1,12 @@
+---
+source: rust/foxglove/src/websocket/ws_protocol/client/get_parameters.rs
+expression: message_with_id()
+---
+{
+  "op": "getParameters",
+  "parameterNames": [
+    "param1",
+    "param2"
+  ],
+  "id": "my-id"
+}

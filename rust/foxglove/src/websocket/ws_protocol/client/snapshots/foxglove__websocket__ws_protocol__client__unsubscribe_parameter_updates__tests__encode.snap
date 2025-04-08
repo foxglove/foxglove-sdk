@@ -1,0 +1,11 @@
+---
+source: rust/foxglove/src/websocket/ws_protocol/client/unsubscribe_parameter_updates.rs
+expression: message()
+---
+{
+  "op": "unsubscribeParameterUpdates",
+  "parameterNames": [
+    "param1",
+    "param2"
+  ]
+}

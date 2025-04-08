@@ -1,0 +1,9 @@
+---
+source: rust/foxglove/src/websocket/ws_protocol/server/server_info.rs
+expression: message()
+---
+{
+  "op": "serverInfo",
+  "name": "example server",
+  "capabilities": []
+}

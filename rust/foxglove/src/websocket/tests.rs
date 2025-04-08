@@ -6,6 +6,7 @@ use serde_json::{json, Value};
 use std::collections::{HashMap, HashSet};
 use std::net::SocketAddr;
 use std::sync::Arc;
+use std::time::Duration;
 use tokio_tungstenite::tungstenite::{self, http::HeaderValue, Message};
 use tracing_test::traced_test;
 use tungstenite::client::IntoClientRequest;
@@ -141,8 +142,36 @@ async fn test_handshake_with_unknown_subprotocol_fails_on_client() {
     assert!(result.is_err());
     assert_eq!(
         result.unwrap_err().to_string(),
-        "WebSocket protocol error: SubProtocol error: Server sent no subprotocol"
+        "HTTP error: 400 Bad Request"
     );
+    assert!(logs_contain("Dropping client"));
+}
+
+#[traced_test]
+#[tokio::test]
+async fn test_handshake_with_no_subprotocol_fails_upgrade() {
+    let ctx = Context::new();
+    let server = create_server(&ctx, ServerOptions::default());
+    let addr = server
+        .start("127.0.0.1", 0)
+        .await
+        .expect("Failed to start server");
+
+    let mut request = format!("ws://{addr}/")
+        .into_client_request()
+        .expect("Failed to build request");
+
+    request
+        .headers_mut()
+        .insert("some-other-header", HeaderValue::from_static("1"));
+
+    let result = tokio_tungstenite::connect_async(request).await;
+    assert!(result.is_err());
+    assert_eq!(
+        result.unwrap_err().to_string(),
+        "HTTP error: 400 Bad Request"
+    );
+    assert!(logs_contain("Dropping client"));
 }
 
 #[traced_test]
@@ -498,6 +527,61 @@ async fn test_log_only_to_subscribers() {
     // Client 3 should not receive any messages since it unsubscribed from all channels
     let rs = client3.next().now_or_never();
     assert!(rs.is_none());
+
+    server.stop().await;
+}
+
+#[tokio::test]
+async fn test_on_unsubscribe_called_after_disconnect() {
+    let recording_listener = Arc::new(RecordingServerListener::new());
+
+    let ctx = Context::new();
+    let server = create_server(
+        &ctx,
+        ServerOptions {
+            listener: Some(recording_listener.clone()),
+            ..Default::default()
+        },
+    );
+
+    let chan = new_channel("/foo", &ctx);
+    let addr = server
+        .start("127.0.0.1", 0)
+        .await
+        .expect("Failed to start server");
+
+    let mut client = connect_client(addr).await;
+    client.next().await.expect("No serverInfo sent").unwrap();
+    client.next().await.expect("No advertisement sent").unwrap();
+
+    let subscribe = json!({
+        "op": "subscribe",
+        "subscriptions": [
+            { "id": 1, "channelId": chan.id() }
+        ]
+    });
+    client
+        .send(Message::text(subscribe.to_string()))
+        .await
+        .expect("Failed to send");
+
+    // Allow the server to process the subscriptions
+    assert_eventually(|| dbg!(chan.num_sinks()) == 1).await;
+
+    let subscriptions = recording_listener.take_subscribe();
+    assert_eq!(subscriptions.len(), 1);
+
+    let unsubscriptions = recording_listener.take_unsubscribe();
+    assert_eq!(unsubscriptions.len(), 0);
+
+    // Disconnect the client without unsubscribing explicitly
+    client.close(None).await.unwrap();
+
+    // Allow the server to process the disconnection
+    assert_eventually(|| dbg!(chan.num_sinks()) == 0).await;
+
+    let unsubscriptions = recording_listener.take_unsubscribe();
+    assert_eq!(unsubscriptions.len(), 1);
 
     server.stop().await;
 }
@@ -1530,16 +1614,21 @@ async fn test_update_connection_graph() {
         .replace_connection_graph(initial_graph)
         .expect("failed to update connection graph");
 
-    let mut ws_client = connect_client(addr).await;
+    assert_eq!(recording_listener.take_connection_graph_subscribe(), 0);
+    assert_eq!(recording_listener.take_connection_graph_unsubscribe(), 0);
 
-    ws_client
-        .send(Message::text(r#"{"op": "subscribeConnectionGraph"}"#))
+    // Connect a client and subscribe to graph updates.
+    let mut c1 = connect_client(addr).await;
+    c1.send(Message::text(r#"{"op": "subscribeConnectionGraph"}"#))
         .await
         .expect("Failed to send get parameters");
+    _ = c1.next().await.expect("No serverInfo sent");
 
-    _ = ws_client.next().await.expect("No serverInfo sent");
+    // There should be a server listener callback, since this is the first subscriber.
+    assert_eventually(|| dbg!(recording_listener.take_connection_graph_subscribe() == 1)).await;
 
-    let msg = ws_client.next().await.expect("No message received");
+    // First client gets the complete initial state upon subscribing.
+    let msg = c1.next().await.expect("No message received");
     let msg = msg.expect("Failed to parse message");
     let text = msg.into_text().expect("Failed to get message text");
     let msg: Value = serde_json::from_str(&text).expect("Failed to parse message");
@@ -1556,6 +1645,40 @@ async fn test_update_connection_graph() {
     assert_eq!(msg["removedTopics"], json!([]));
     assert_eq!(msg["removedServices"], json!([]));
 
+    // Connect a second client and subscribe to graph updates.
+    let mut c2 = connect_client(addr).await;
+    c2.send(Message::text(r#"{"op": "subscribeConnectionGraph"}"#))
+        .await
+        .expect("Failed to send get parameters");
+    _ = c2.next().await.expect("No serverInfo sent");
+
+    // Second client also gets the complete initial state.
+    let msg = c2.next().await.expect("No message received");
+    let msg = msg.expect("Failed to parse message");
+    let text = msg.into_text().expect("Failed to get message text");
+    let msg: Value = serde_json::from_str(&text).expect("Failed to parse message");
+    assert_eq!(msg["op"], "connectionGraphUpdate");
+    assert_eq!(msg["publishedTopics"][0]["name"], "topic1");
+    assert_eq!(msg["publishedTopics"][0]["publisherIds"][0], "publisher1");
+    assert_eq!(msg["subscribedTopics"][0]["name"], "topic1");
+    assert_eq!(
+        msg["subscribedTopics"][0]["subscriberIds"][0],
+        "subscriber1"
+    );
+    assert_eq!(msg["advertisedServices"][0]["name"], "service1");
+    assert_eq!(msg["advertisedServices"][0]["providerIds"][0], "provider1");
+    assert_eq!(msg["removedTopics"], json!([]));
+    assert_eq!(msg["removedServices"], json!([]));
+
+    // There was no listener callback for subscribe, because c1 is already an active subscriber.
+    assert_eq!(recording_listener.take_connection_graph_subscribe(), 0);
+
+    // Close the client. No unsubscribe callback because c1 is still subscribed. Since the server
+    // processes the client disconnect asynchronously, just sleep a little while.
+    c2.close(None).await.unwrap();
+    tokio::time::sleep(Duration::from_millis(10)).await;
+    assert_eq!(recording_listener.take_connection_graph_unsubscribe(), 0);
+
     let mut graph = ConnectionGraph::new();
     // Update publisher for topic1
     graph.set_published_topic("topic1", ["publisher2".to_string()]);
@@ -1566,7 +1689,7 @@ async fn test_update_connection_graph() {
         .replace_connection_graph(graph)
         .expect("failed to update connection graph");
 
-    let msg = ws_client.next().await.expect("No message received");
+    let msg = c1.next().await.expect("No message received");
     let msg = msg.expect("Failed to parse message");
     let text = msg.into_text().expect("Failed to get message text");
     let msg: Value = serde_json::from_str(&text).expect("Failed to parse message");
@@ -1581,6 +1704,13 @@ async fn test_update_connection_graph() {
     assert_eq!(msg["advertisedServices"], json!([]));
     assert_eq!(msg["removedTopics"], json!([]));
     assert_eq!(msg["removedServices"], json!(["service1"]));
+
+    // Last client unsubscribes, expect a listener callback for that.
+    assert_eq!(recording_listener.take_connection_graph_unsubscribe(), 0);
+    c1.send(Message::text(r#"{"op": "unsubscribeConnectionGraph"}"#))
+        .await
+        .unwrap();
+    assert_eventually(|| dbg!(recording_listener.take_connection_graph_unsubscribe() == 1)).await;
 
     server.stop().await;
 }

@@ -35,7 +35,7 @@ pub struct RecordingSink {
     id: SinkId,
     auto_subscribe: bool,
     add_channel_rval: bool,
-    pub recorded: Mutex<Vec<LogCall>>,
+    recorded: Mutex<Vec<LogCall>>,
 }
 
 impl RecordingSink {
@@ -56,6 +56,10 @@ impl RecordingSink {
     pub fn auto_subscribe(mut self, value: bool) -> Self {
         self.auto_subscribe = value;
         self
+    }
+
+    pub fn take_messages(&self) -> Vec<LogCall> {
+        std::mem::take(&mut *self.recorded.lock())
     }
 }
 

@@ -1,44 +1,113 @@
 //! The official [Foxglove] SDK.
 //!
 //! This crate provides support for integrating with the Foxglove platform. It can be used to log
-//! events to local [MCAP] files or a local visualization server that communicates with the
-//! Foxglove app.
+//! events to local [MCAP] files or a local visualization server that communicates with the Foxglove
+//! app.
 //!
 //! [Foxglove]: https://docs.foxglove.dev/
 //! [MCAP]: https://mcap.dev/
 //!
 //! # Getting started
 //!
-//! To record messages, you need at least one sink, and at least one channel. In this example, we
-//! create an MCAP file sink, and a channel for [`Log`](`crate::schemas::Log`) messages on a topic
-//! called `"/log"`. Then we write one log message and close the file.
+//! To record messages, you need at least one sink. In this example, we create an MCAP file sink,
+//! and log a [`Log`](`crate::schemas::Log`) message on a topic called `/log`. We write one log
+//! message and close the file.
 //!
 //! ```no_run
-//! use foxglove::{McapWriter, Channel};
+//! use foxglove::{McapWriter, log};
 //! use foxglove::schemas::Log;
 //!
 //! # fn func() -> Result<(), foxglove::FoxgloveError> {
+//! // Create a new MCAP file named 'test.mcap'.
 //! let mcap = McapWriter::new().create_new_buffered_file("test.mcap")?;
 //!
-//! let channel = Channel::new("/log")?;
-//! channel.log(&Log{
+//! log!("/log", Log{
 //!     message: "Hello, Foxglove!".to_string(),
 //!     ..Default::default()
 //! });
 //!
+//! // Flush and close the MCAP file.
 //! mcap.close()?;
 //! # Ok(()) }
 //! ```
 //!
 //! # Concepts
 //!
+//! ## Context
+//!
+//! A [`Context`] is the binding between channels and sinks. Each channel and sink belongs to
+//! exactly one context. Sinks receive advertisements about channels on the context, and can
+//! optionally subscribe to receive logged messages on those channels.
+//!
+//! When the context goes out of scope, its corresponding channels and sinks will be disconnected
+//! from one another, and logging will stop. Attempts to log further messages on the channels will
+//! elicit throttled warning messages.
+//!
+//! Since many applications only need a single context, the SDK provides a static default context
+//! for convenience. This default context is the one used in the [example above](#getting-started).
+//! If we wanted to use an explicit context instead, we'd write:
+//!
+//! ```no_run
+//! use foxglove::Context;
+//! use foxglove::schemas::Log;
+//!
+//! # fn func() -> Result<(), foxglove::FoxgloveError> {
+//! // Create a new context.
+//! let ctx = Context::new();
+//!
+//! // Create a new MCAP file named 'test.mcap'.
+//! let mcap = ctx.mcap_writer().create_new_buffered_file("test.mcap")?;
+//!
+//! // Create a new channel for the topic "/log" for `Log` messages.
+//! let channel = ctx.channel_builder("/log").build()?;
+//! channel.log(&Log{
+//!     message: "Hello, Foxglove!".to_string(),
+//!     ..Default::default()
+//! });
+//!
+//! // Flush and close the MCAP file.
+//! mcap.close()?;
+//! # Ok(()) }
+//! ```
+//!
 //! ## Channels
 //!
-//! A "channel" gives a way to log related messages which have the same type, or [`Schema`].
-//! Each channel is instantiated with a unique "topic", or name, which is typically prefixed by a `/`.
-//! If you're familiar with MCAP, it's the same concept as an [MCAP channel]:
+//! A [`Channel`] gives a way to log related messages which have the same type, or [`Schema`]. Each
+//! channel is instantiated with a unique "topic", or name, which is typically prefixed by a `/`. If
+//! you're familiar with MCAP, it's the same concept as an [MCAP channel].
+//!
+//! A channel is always associated with exactly one [`Context`] throughout its lifecycle. The
+//! channel remains attached to the context until it is either explicitly closed with
+//! [`Channel::close`], or the context is dropped. Attempting to log a message on a closed channel
+//! will elicit a throttled warning.
 //!
 //! [MCAP channel]: https://mcap.dev/guides/concepts#channel
+//!
+//! In the [example above](#getting-started), `log!` creates a `Channel<Log>` behind the scenes on
+//! the first call. The example could be equivalently written as:
+//!
+//! ```no_run
+//! use foxglove::{Channel, McapWriter};
+//! use foxglove::schemas::Log;
+//!
+//! # fn func() -> Result<(), foxglove::FoxgloveError> {
+//! // Create a new MCAP file named 'test.mcap'.
+//! let mcap = McapWriter::new().create_new_buffered_file("test.mcap")?;
+//!
+//! // Create a new channel for the topic "/log" for `Log` messages.
+//! let channel = Channel::new("/log")?;
+//! channel.log(&Log{
+//!     message: "Hello, Foxglove!".to_string(),
+//!     ..Default::default()
+//! });
+//!
+//! // Flush and close the MCAP file.
+//! mcap.close()?;
+//! # Ok(()) }
+//! ```
+//!
+//! `log!` can be mixed and matched with manually created channels in the default [`Context`], as
+//! long as the types are exactly the same.
 //!
 //! ### Well-known types
 //!
@@ -48,10 +117,10 @@
 //!
 //! ### Custom data
 //!
-//! You can also define your own custom data types by implementing the [`Encode`] trait. This
-//! allows you to log arbitrary custom data types. Notably, the `Encode` trait is automatically
-//! implemented for types that implement [`Serialize`](serde::Serialize) and
-//! [`JsonSchema`][jsonschema-trait]. This makes it easy to define new custom messages:
+//! You can also define your own custom data types by implementing the [`Encode`] trait. This allows
+//! you to log arbitrary custom data types. Notably, the `Encode` trait is automatically implemented
+//! for types that implement [`Serialize`](serde::Serialize) and [`JsonSchema`][jsonschema-trait].
+//! This makes it easy to define new custom messages:
 //!
 //! ```no_run
 //! #[derive(serde::Serialize, schemars::JsonSchema)]
@@ -69,29 +138,53 @@
 //! # Ok(()) }
 //! ```
 //!
-//! ### Static Channels
+//! [jsonschema-trait]: https://docs.rs/schemars/latest/schemars/trait.JsonSchema.html
+//!
+//! ### Lazy Channels
 //!
 //! A common pattern is to create the channels once as static variables, and then use them
-//! throughout the application. To support this, the [`static_channel!`] macro provides a
-//! convenient way to create static channels:
+//! throughout the application. But because channels do not have a const initializer, they must be
+//! initialized lazily. [`LazyChannel`] and [`LazyRawChannel`] provide a convenient way to do this.
 //!
-//! ```no_run
-//! foxglove::static_channel!(pub(crate) BOXES, "/boxes", foxglove::schemas::SceneUpdate);
+//! Be careful when using this pattern. The channel will not be advertised to sinks until it is
+//! initialized, which is guaranteed to happen when the channel is first used. If you need to ensure
+//! the channel is initialized _before_ using it, you can use [`LazyChannel::init`].
+//!
+//! In this example, we create two lazy channels on the default context:
+//!
+//! ```
+//! use foxglove::{LazyChannel, LazyRawChannel};
+//! use foxglove::schemas::SceneUpdate;
+//!
+//! static BOXES: LazyChannel<SceneUpdate> = LazyChannel::new("/boxes");
+//! static MSG: LazyRawChannel = LazyRawChannel::new("/msg", "json");
 //! ```
 //!
-//! [jsonschema-trait]: https://docs.rs/schemars/latest/schemars/trait.JsonSchema.html
+//! It is also possible to bind lazy channels to an explicit [`LazyContext`]:
+//!
+//! ```
+//! use foxglove::{LazyChannel, LazyContext, LazyRawChannel};
+//! use foxglove::schemas::SceneUpdate;
+//!
+//! static CTX: LazyContext = LazyContext::new();
+//! static BOXES: LazyChannel<SceneUpdate> = CTX.channel("/boxes");
+//! static MSG: LazyRawChannel = CTX.raw_channel("/msg", "json");
+//! ```
 //!
 //! ## Sinks
 //!
-//! A "sink" is a destination for logged messages. If you do not configure a sink, log messages
-//! will simply be dropped without being recorded. You can configure multiple sinks, and you can
-//! create or destroy them dynamically at runtime.
+//! A "sink" is a destination for logged messages. If you do not configure a sink, log messages will
+//! simply be dropped without being recorded. You can configure multiple sinks, and you can create
+//! or destroy them dynamically at runtime.
+//!
+//! A sink is typically associated with exactly one [`Context`] throughout its lifecycle. Details
+//! about the how the sink is registered and unregistered from the context are sink-specific.
 //!
 //! ### MCAP file
 //!
-//! Use [`McapWriter::new()`] to register a new MCAP writer. As long as the handle remains in
-//! scope, events will be logged to the MCAP file. When the handle is closed or dropped, the file
-//! will be finalized and flushed.
+//! Use [`McapWriter::new()`] to register a new MCAP writer. As long as the handle remains in scope,
+//! events will be logged to the MCAP file. When the handle is closed or dropped, the sink will be
+//! unregistered from the [`Context`], and the file will be finalized and flushed.
 //!
 //! ```no_run
 //! # fn func() -> Result<(), foxglove::FoxgloveError> {
@@ -118,16 +211,21 @@
 //!
 //! You can use the SDK to publish messages to the Foxglove app.
 //!
+//! Note: this requires the `live_visualization` feature, which is enabled by default.
+//!
 //! Use [`WebSocketServer::new`] to create a new live visualization server. By default, the server
 //! listens on `127.0.0.1:8765`. Once the server is configured, call [`WebSocketServer::start`] to
-//! register the server as a message sink, and begin accepting websocket connections from the
-//! Foxglove app.
+//! start the server, and begin accepting websocket connections from the Foxglove app.
 //!
-//! See the ["Connect" documentation][app-connect] for how to connect the Foxglove app to your running
-//! server.
+//! Each client that connects to the websocket server is its own independent sink. The sink is
+//! dynamically added to the [`Context`] associated with the server when the client connects, and
+//! removed from the context when the client disconnects.
 //!
-//! Note that the server remains running until the process exits, even if the handle is dropped.
-//! Use [`stop`](`WebSocketServerHandle::stop`) to shut down the server explicitly.
+//! See the ["Connect" documentation][app-connect] for how to connect the Foxglove app to your
+//! running server.
+//!
+//! Note that the server remains running until the process exits, even if the handle is dropped. Use
+//! [`stop`](`WebSocketServerHandle::stop`) to shut down the server explicitly.
 //!
 //! [app-connect]: https://docs.foxglove.dev/docs/connecting-to-data/frameworks/custom#connect
 //!
@@ -146,12 +244,27 @@
 //! # }
 //! ```
 //!
+//! # Feature flags
+//!
+//! The Foxglove SDK defines the following feature flags:
+//!
+//! - `chrono`: enables [chrono] conversions for [`Duration`][crate::schemas::Duration] and
+//!   [`Timestamp`][crate::schemas::Timestamp].
+//! - `live_visualization`: enables the live visualization server and client, and adds dependencies
+//!   on [tokio]. Enabled by default.
+//! - `unstable`: features which are under active development and likely to change in an upcoming
+//!   version.
+//!
+//! If you do not require live visualization features, you can disable that flag to reduce the
+//! compiled size of the SDK.
+//!
 //! # Requirements
 //!
-//! The Foxglove SDK depends on [tokio] as its async runtime with the `rt-multi-thread`
-//! feature enabled. Refer to the tokio documentation for more information about how to configure
-//! your application to use tokio.
+//! With the `live_visualization` feature (enabled by default), the Foxglove SDK depends on [tokio]
+//! as its async runtime. See [`WebSocketServer`] for more information. Refer to the tokio
+//! documentation for more information about how to configure your application to use tokio.
 //!
+//! [chrono]: https://docs.rs/chrono/latest/chrono/
 //! [tokio]: https://docs.rs/tokio/latest/tokio/
 
 #![warn(missing_docs)]
@@ -164,36 +277,49 @@ mod channel_builder;
 mod collection;
 mod context;
 pub mod convert;
-mod cow_vec;
 mod encode;
+pub mod library_version;
+#[doc(hidden)]
+pub mod log_macro;
 mod log_sink_set;
 mod mcap_writer;
 mod metadata;
-mod runtime;
 mod schema;
 pub mod schemas;
 mod schemas_wkt;
 mod sink;
+
 #[cfg(test)]
 mod tests;
 #[cfg(test)]
 mod testutil;
+mod throttler;
 mod time;
-pub mod websocket;
-mod websocket_server;
 
-pub use channel::{Channel, ChannelId, RawChannel};
+// Re-export bytes crate for convenience when implementing the `Encode` trait
+pub use bytes;
+
+pub use channel::{Channel, ChannelId, LazyChannel, LazyRawChannel, RawChannel};
 pub use channel_builder::ChannelBuilder;
-#[doc(hidden)]
-pub use context::Context;
+pub use context::{Context, LazyContext};
 pub use encode::Encode;
-pub use mcap_writer::{McapWriter, McapWriterHandle};
+pub use mcap_writer::{McapCompression, McapWriteOptions, McapWriter, McapWriterHandle};
 pub use metadata::{Metadata, PartialMetadata};
-pub(crate) use runtime::get_runtime_handle;
-pub use runtime::shutdown_runtime;
 pub use schema::Schema;
 pub use sink::{Sink, SinkId};
 pub(crate) use time::nanoseconds_since_epoch;
+
+#[cfg(feature = "live_visualization")]
+mod runtime;
+#[cfg(feature = "live_visualization")]
+pub mod websocket;
+#[cfg(feature = "live_visualization")]
+mod websocket_server;
+#[cfg(feature = "live_visualization")]
+pub(crate) use runtime::get_runtime_handle;
+#[cfg(feature = "live_visualization")]
+pub use runtime::shutdown_runtime;
+#[cfg(feature = "live_visualization")]
 pub use websocket_server::{WebSocketServer, WebSocketServerBlockingHandle, WebSocketServerHandle};
 
 /// An error type for errors generated by this crate.

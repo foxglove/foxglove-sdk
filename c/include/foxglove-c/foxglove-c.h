@@ -319,6 +319,11 @@ void foxglove_channel_log(const struct foxglove_channel *channel,
                           const uint64_t *publish_time,
                           const uint32_t *sequence);
 
+/**
+ * For use by the C++ SDK. Identifies that wrapper as the source of logs.
+ */
+void foxglove_internal_register_cpp_wrapper(void);
+
 #ifdef __cplusplus
 }  // extern "C"
 #endif  // __cplusplus

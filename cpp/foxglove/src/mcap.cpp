@@ -16,6 +16,8 @@ FoxgloveMcapCompression toFoxgloveMcapCompression(McapCompression compression) {
 
 McapWriter::McapWriter(McapWriterOptions options)
     : _impl(nullptr, foxglove_mcap_free) {
+  foxglove_internal_register_cpp_wrapper();
+
   foxglove_mcap_options cOptions = {};
   cOptions.path = options.path.data();
   cOptions.path_len = options.path.length();

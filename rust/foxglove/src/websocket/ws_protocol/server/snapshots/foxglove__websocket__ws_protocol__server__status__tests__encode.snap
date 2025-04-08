@@ -1,0 +1,9 @@
+---
+source: rust/foxglove/src/websocket/ws_protocol/server/status.rs
+expression: message()
+---
+{
+  "op": "status",
+  "level": 1,
+  "message": "Oh no"
+}

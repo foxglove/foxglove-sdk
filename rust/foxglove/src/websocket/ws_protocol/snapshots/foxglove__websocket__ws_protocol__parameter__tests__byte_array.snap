@@ -1,0 +1,9 @@
+---
+source: rust/foxglove/src/websocket/ws_protocol/parameter.rs
+expression: "Parameter::byte_array(\"byte[]\", [0x10, 0x20, 0x30])"
+---
+{
+  "name": "byte[]",
+  "type": "byte_array",
+  "value": "ECAw"
+}

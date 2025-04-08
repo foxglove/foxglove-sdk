@@ -1,0 +1,14 @@
+---
+source: rust/foxglove/src/websocket/ws_protocol/parameter.rs
+expression: "Parameter::dict(\"outer\", maplit::btreemap!\n{\n    \"bool\".into() => ParameterValue::Bool(false), \"number\".into() =>\n    ParameterValue::Number(1.23), \"nested\".into() =>\n    ParameterValue::Dict(maplit::btreemap!\n    { \"inner\".into() => ParameterValue::Number(1.0), })\n})"
+---
+{
+  "name": "outer",
+  "value": {
+    "bool": false,
+    "nested": {
+      "inner": 1.0
+    },
+    "number": 1.23
+  }
+}

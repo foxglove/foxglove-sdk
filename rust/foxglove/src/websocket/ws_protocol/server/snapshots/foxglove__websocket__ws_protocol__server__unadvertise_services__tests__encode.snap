@@ -1,0 +1,11 @@
+---
+source: rust/foxglove/src/websocket/ws_protocol/server/unadvertise_services.rs
+expression: message()
+---
+{
+  "op": "unadvertiseServices",
+  "serviceIds": [
+    1,
+    2
+  ]
+}

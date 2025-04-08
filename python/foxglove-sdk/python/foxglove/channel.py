@@ -83,8 +83,10 @@ class Channel:
         """
         Close the channel.
 
-        You do not need to call this unless you explicitly want to remove advertisements from live
-        visualization clients. Destroying all references to the channel will also close it.
+        You can use this to explicitly unadvertise the channel to sinks that subscribe to
+        channels dynamically, such as the :py:class:`foxglove.websocket.WebSocketServer`.
+
+        Attempts to log on a closed channel will elicit a throttled warning message.
         """
         self.base.close()
 

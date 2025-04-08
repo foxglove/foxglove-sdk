@@ -1,6 +1,6 @@
 [package]
 name = "foxglove"
-version = "0.4.1"
+version = "0.5.0"
 description = "Foxglove SDK"
 edition = "2021"
 rust-version = "1.83.0"
@@ -8,16 +8,24 @@ repository = "https://github.com/foxglove/foxglove-sdk"
 license = "MIT"
 
 [features]
-default = []
+default = ["live_visualization"]
 chrono = ["dep:chrono"]
 unstable = []
+live_visualization = [
+  "dep:base64",
+  "dep:tokio",
+  "dep:tokio-util",
+  "dep:tokio-tungstenite",
+  "dep:serde_repr",
+  "dep:serde_with",
+]
 
 [lints]
 workspace = true
 
 [dependencies]
 arc-swap = "1.7.1"
-base64 = "0.22.1"
+base64 = { version = "0.22", optional = true}
 bimap = "0.6.3"
 bytes.workspace = true
 chrono = { version = "0.4.39", optional = true }
@@ -28,17 +36,17 @@ parking_lot = "0.12.3"
 prost-types.workspace = true
 prost.workspace = true
 schemars = "0.8.21"
-serde_json = "1.0.128"
-serde_repr = "0.1.19"
-serde_with = { version = "3.12.0", features = ["macros", "base64"] }
+serde_json = "1.0"
+serde_repr = { version = "0.1.19", optional = true }
+serde_with = { version = "3.12.0", features = ["macros", "base64"], optional = true }
 serde.workspace = true
 smallvec = "1.14.0"
 smallbytes = "0.1.0"
 strum = { version = "0.26", features = ["derive"] }
 thiserror.workspace = true
-tokio-tungstenite.workspace = true
-tokio-util.workspace = true
-tokio.workspace = true
+tokio-tungstenite = { workspace = true, optional = true }
+tokio-util = { workspace = true, optional = true }
+tokio = { workspace = true, optional = true }
 tracing.workspace = true
 delegate = "0.13.2"
 
@@ -48,5 +56,10 @@ clap = { version = "4.5", features = ["derive"] }
 env_logger = "0.11.5"
 futures-util = "0.3.31"
 insta = { version = "1.42.2", features = ["json"] }
+maplit = "1.0.2"
 tempfile = "3.15.0"
 tracing-test = "0.2.5"
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
