@@ -39,9 +39,6 @@ McapWriter::McapWriter(McapWriterOptions options)
   cOptions.truncate = options.truncate;
   foxglove_error cError = {};
   _impl.reset(foxglove_mcap_open(&cOptions, &cError));
-  if (cError.message != nullptr) {
-  } else {
-  }
   if (_impl.get() == nullptr) {
     throw FoxgloveError(std::move(cError));
   }

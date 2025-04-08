@@ -486,7 +486,7 @@ unsafe fn do_foxglove_channel_create(
         let encoding = unsafe { CStr::from_ptr(schema.encoding) }
             .to_str()
             .map_err(|e| {
-                foxglove::FoxgloveError::ValueError(format!("schema name invalid: {}", e))
+                foxglove::FoxgloveError::ValueError(format!("schema encoding invalid: {}", e))
             })?;
         let data = unsafe { std::slice::from_raw_parts(schema.data, schema.data_len) };
         maybe_schema = Some(foxglove::Schema::new(name, encoding, data.to_owned()));
