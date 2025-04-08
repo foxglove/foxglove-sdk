@@ -24,7 +24,7 @@ pub struct WebSocketClient {
 }
 
 impl WebSocketClient {
-    /// Connect to a server, ensuring the protocol header is set, and return the client WS stream
+    /// Connects to a server and validates the handshake response.
     pub async fn connect(addr: impl std::fmt::Display) -> Self {
         let mut request = format!("ws://{addr}/")
             .into_client_request()
@@ -47,13 +47,7 @@ impl WebSocketClient {
         Self { stream }
     }
 
-    /// Receive and parse a messsage from the server.
-    pub async fn recv(&mut self) -> Result<ServerMessage, RecvError> {
-        let msg = self.recv_msg().await?;
-        let msg = ServerMessage::try_from(&msg)?;
-        Ok(msg.into_owned())
-    }
-
+    /// Receives a messsage from the server.
     pub async fn recv_msg(&mut self) -> Result<Message, RecvError> {
         match self.stream.next().await {
             Some(r) => r.map_err(RecvError::from),
@@ -61,11 +55,19 @@ impl WebSocketClient {
         }
     }
 
-    /// Send a message to the server.
+    /// Receives and parses a messsage from the server.
+    pub async fn recv(&mut self) -> Result<ServerMessage, RecvError> {
+        let msg = self.recv_msg().await?;
+        let msg = ServerMessage::try_from(&msg)?;
+        Ok(msg.into_owned())
+    }
+
+    /// Sends a message to the server.
     pub async fn send(&mut self, msg: impl Into<Message>) -> Result<(), tungstenite::Error> {
         self.stream.send(msg.into()).await
     }
 
+    /// Closes the websocket connection.
     pub async fn close(&mut self) {
         self.stream.close(None).await.unwrap();
     }
