@@ -47,17 +47,16 @@ TEST_CASE("name is not valid utf-8") {
   }
 }
 
-TEST_CASE("port is privaleged") {
+TEST_CASE("we can't bind host") {
   foxglove::WebSocketServerOptions options;
   options.name = "unit-test";
-  options.host = "127.0.0.1";
-  options.port = 20;
+  options.host = "invalidhost";
   try {
     foxglove::WebSocketServer server{options};
     REQUIRE(false);  // expected error
   } catch (const foxglove::FoxgloveError& e) {
     REQUIRE(e.kind() == foxglove::FoxgloveErrorKind::Bind);
-    REQUIRE_THAT(e.what(), ContainsSubstring("Failed to bind port: Permission denied"));
+    REQUIRE_THAT(e.what(), ContainsSubstring("failed to lookup address information"));
   }
 }
 
