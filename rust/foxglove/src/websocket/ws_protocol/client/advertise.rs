@@ -79,7 +79,7 @@ impl<'a> Channel<'a> {
     }
 
     /// Returns the decoded schema data.
-    pub fn schema(&self) -> Result<Vec<u8>, schema::DecodeError> {
+    pub fn decode_schema(&self) -> Result<Vec<u8>, schema::DecodeError> {
         if let Some((schema_encoding, schema)) =
             self.schema_encoding.as_ref().zip(self.schema.as_ref())
         {
@@ -106,7 +106,7 @@ impl<'a> TryFrom<Channel<'a>> for Schema<'a> {
     type Error = schema::DecodeError;
 
     fn try_from(value: Channel<'a>) -> Result<Self, schema::DecodeError> {
-        let schema = value.schema()?;
+        let schema = value.decode_schema()?;
         Ok(Schema::new(
             value.schema_name,
             value.schema_encoding.unwrap_or_default(),
