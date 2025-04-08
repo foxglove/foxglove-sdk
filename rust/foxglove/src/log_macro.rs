@@ -59,8 +59,7 @@ pub fn create_channel<T: Encode>(
 /// $msg: expression to log, must implement Encode trait
 ///
 /// Optional keyword arguments:
-/// - log_time: timestamp when the message was logged
-/// - sequence: sequence number of the message
+/// - log_time: timestamp when the message was logged. See [`PartialMetadata`].
 ///
 /// If a channel for the topic already exists in the default Context, it will be used.
 /// Otherwise, a new channel will be created. Either way, the channel is never removed
@@ -70,41 +69,16 @@ pub fn create_channel<T: Encode>(
 /// Panics if a channel can't be created for $msg.
 #[macro_export]
 macro_rules! log {
-    // Base case with just topic and message
     ($topic:literal, $msg:expr $(,)? ) => {{
         $crate::log_with_meta!($topic, $msg, $crate::PartialMetadata::default())
     }};
 
-    // Cases with different combinations of keyword arguments
     ($topic:literal, $msg:expr, log_time = $log_time:expr $(,)? ) => {{
         $crate::log_with_meta!(
             $topic,
             $msg,
             $crate::PartialMetadata {
                 log_time: Some($log_time),
-                sequence: None,
-            }
-        )
-    }};
-
-    ($topic:literal, $msg:expr, sequence = $sequence:expr $(,)? ) => {{
-        $crate::log_with_meta!(
-            $topic,
-            $msg,
-            $crate::PartialMetadata {
-                log_time: None,
-                sequence: Some($sequence),
-            }
-        )
-    }};
-
-    ($topic:literal, $msg:expr, log_time = $log_time:expr, sequence = $sequence:expr $(,)? ) => {{
-        $crate::log_with_meta!(
-            $topic,
-            $msg,
-            $crate::PartialMetadata {
-                log_time: Some($log_time),
-                sequence: Some($sequence),
             }
         )
     }};
@@ -159,7 +133,7 @@ mod tests {
         Context::get_default().add_sink(sink.clone());
 
         let mut log_messages = Vec::new();
-        for line in 1..=3 {
+        for line in 1..=2 {
             let msg = Log {
                 timestamp: None,
                 level: 1,
@@ -172,21 +146,15 @@ mod tests {
         }
 
         log!("foo", log_messages[0], log_time = 123);
-        log!("foo", log_messages[1], sequence = 2);
-        log!("foo", log_messages[2], log_time = 125, sequence = 3);
+        log!("foo", log_messages[1]);
 
         let messages = sink.take_messages();
-        assert_eq!(messages.len(), 3);
+        assert_eq!(messages.len(), 2);
         assert_eq!(messages[0].msg, serialize_log(&log_messages[0]));
         assert_eq!(messages[0].metadata.log_time, 123);
 
         assert_eq!(messages[1].msg, serialize_log(&log_messages[1]));
         assert!(messages[1].metadata.log_time >= now);
-        assert_eq!(messages[1].metadata.sequence, 2);
-        assert!(messages[1].metadata.sequence > messages[0].metadata.sequence);
-
-        assert_eq!(messages[2].msg, serialize_log(&log_messages[2]));
-        assert_eq!(messages[2].metadata.sequence, 3);
     }
 
     #[test]
@@ -216,7 +184,6 @@ mod tests {
         assert_eq!(messages[0].metadata.log_time, 123);
         assert_eq!(messages[1].msg, serialize_log(&log_messages[1]));
         assert_eq!(messages[1].metadata.log_time, 123);
-        assert!(messages[1].metadata.sequence > messages[0].metadata.sequence);
     }
 
     #[test]

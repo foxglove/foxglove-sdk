@@ -128,9 +128,9 @@ impl BaseChannel {
         Ok(BaseChannel(channel))
     }
 
-    #[pyo3(signature = (msg, log_time=None, sequence=None))]
-    fn log(&self, msg: &[u8], log_time: Option<u64>, sequence: Option<u32>) -> PyResult<()> {
-        let metadata = PartialMetadata { log_time, sequence };
+    #[pyo3(signature = (msg, log_time=None))]
+    fn log(&self, msg: &[u8], log_time: Option<u64>) -> PyResult<()> {
+        let metadata = PartialMetadata { log_time };
         self.0.log_with_meta(msg, metadata);
         Ok(())
     }

@@ -12,7 +12,7 @@ use foxglove::convert::SaturatingInto;
 use foxglove::schemas::log::Level;
 use foxglove::schemas::Log;
 use foxglove::websocket::{Capability, Client, ClientChannel, ServerListener};
-use foxglove::{Channel, PartialMetadata, WebSocketServer};
+use foxglove::{Channel, WebSocketServer};
 use std::sync::Arc;
 use std::time::{Duration, Instant, SystemTime};
 use tokio_util::sync::CancellationToken;
@@ -83,7 +83,6 @@ async fn main() {
 async fn log_forever() {
     let channel = Channel::new("/log").expect("Failed to create channel");
     let start = Instant::now();
-    let mut sequence = 0;
     let mut interval = tokio::time::interval(Duration::from_secs(1));
     loop {
         interval.tick().await;
@@ -93,12 +92,7 @@ async fn log_forever() {
             level: Level::Info.into(),
             ..Default::default()
         };
-        let meta = PartialMetadata {
-            sequence: Some(sequence),
-            ..Default::default()
-        };
-        channel.log_with_meta(&msg, meta);
-        sequence += 1;
+        channel.log(&msg);
     }
 }
 

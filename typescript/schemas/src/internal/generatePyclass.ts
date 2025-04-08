@@ -583,17 +583,13 @@ impl ${channelClass} {
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
     ///     message was recorded. Usually this is the time log() is called. If omitted, the
     ///     current time is used.
-    /// :param sequence: The sequence number is unique per channel and allows for ordering of
-    ///     messages as well as detecting missing messages. If omitted, a monotonically increasing
-    ///     sequence number unique to the channel is used.
-    #[pyo3(signature = (msg, *, log_time=None, sequence=None))]
+    #[pyo3(signature = (msg, *, log_time=None))]
     fn log(
         &self,
         msg: &schemas::${schemaClass},
         log_time: Option<u64>,
-        sequence: Option<u32>,
     ) {
-        let metadata = PartialMetadata{ log_time, sequence };
+        let metadata = PartialMetadata{ log_time };
         self.0.log_with_meta(&msg.0, metadata);
     }
 
@@ -638,7 +634,6 @@ export function generatePyChannelStub(messageSchemas: FoxgloveMessageSchema[]): 
         `        message: "${schemaClass}",`,
         `        *,`,
         `        log_time: int | None = None,`,
-        `        sequence: int | None = None,`,
         `    ) -> None: ...\n`,
       ].join("\n"),
     };

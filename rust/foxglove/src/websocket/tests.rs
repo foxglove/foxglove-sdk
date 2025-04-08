@@ -501,7 +501,6 @@ async fn test_log_only_to_subscribers() {
 
     let metadata = PartialMetadata {
         log_time: Some(123456),
-        ..PartialMetadata::default()
     };
     ch1.log_with_meta(b"channel1", metadata);
     ch2.log_with_meta(b"channel2", metadata);

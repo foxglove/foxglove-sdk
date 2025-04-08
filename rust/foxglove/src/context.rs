@@ -381,14 +381,11 @@ mod tests {
         assert_eq!(messages1[0].msg, msg.to_vec());
         let metadata1 = &messages1[0].metadata;
         assert!(metadata1.log_time >= now);
-        assert!(metadata1.sequence > 0);
 
         assert_eq!(messages2[0].channel_id, channel.id());
         assert_eq!(messages2[0].msg, msg.to_vec());
         let metadata2 = &messages2[0].metadata;
         assert!(metadata2.log_time >= now);
-        assert!(metadata2.sequence > 0);
-        assert_eq!(metadata1.sequence, metadata2.sequence);
     }
 
     #[traced_test]
@@ -405,7 +402,6 @@ mod tests {
         let channel = new_test_channel(&ctx, "topic").unwrap();
         let msg = b"test_message";
         let opts = PartialMetadata {
-            sequence: Some(1),
             log_time: Some(nanoseconds_since_epoch()),
         };
 
@@ -418,7 +414,6 @@ mod tests {
         assert_eq!(messages[0].channel_id, channel.id());
         assert_eq!(messages[0].msg, msg.to_vec());
         let metadata = &messages[0].metadata;
-        assert_eq!(metadata.sequence, opts.sequence.unwrap());
         assert_eq!(metadata.log_time, opts.log_time.unwrap());
     }
 

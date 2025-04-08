@@ -34,9 +34,8 @@ fn main() {
             file: "main.rs".to_string(),
             line: 42,
         },
-        // You can specify optional "keyword" arguments for log_time and sequence
+        // You can specify an optional `log_time` "keyword" argument
         log_time = 1000,
-        sequence = 123
     );
 
     // Including custom structs that implement serde::Serialize and schemars::JsonSchema

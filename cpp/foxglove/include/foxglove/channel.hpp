@@ -22,10 +22,7 @@ public:
     const std::string& topic, const std::string& messageEncoding, std::optional<Schema> schema
   );
 
-  void log(
-    const std::byte* data, size_t dataLen, std::optional<uint64_t> logTime = std::nullopt,
-    std::optional<uint32_t> sequence = std::nullopt
-  );
+  void log(const std::byte* data, size_t dataLen, std::optional<uint64_t> logTime = std::nullopt);
 
   uint64_t id() const;
 

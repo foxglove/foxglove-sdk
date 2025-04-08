@@ -221,13 +221,12 @@ uint64_t foxglove_channel_get_id(const foxglove_channel *channel);
  * `data` must be non-null, and the range `[data, data + data_len)` must contain initialized data
  * contained within a single allocated object.
  *
- * `log_time` and `sequence` may be null, or may point to valid, properly-aligned values.
+ * `log_time` may be null or may point to a valid value.
  */
 void foxglove_channel_log(const foxglove_channel *channel,
                           const uint8_t *data,
                           size_t data_len,
-                          const uint64_t *log_time,
-                          const uint32_t *sequence);
+                          const uint64_t *log_time);
 
 /**
  * For use by the C++ SDK. Identifies that wrapper as the source of logs.

@@ -173,7 +173,6 @@ impl RawChannel {
     /// Logs a message with additional metadata.
     pub(crate) fn log_to_sinks(&self, msg: &[u8], opts: PartialMetadata) {
         let metadata = Metadata {
-            sequence: opts.sequence.unwrap_or_else(|| self.next_sequence()),
             log_time: opts.log_time.unwrap_or_else(nanoseconds_since_epoch),
         };
 
