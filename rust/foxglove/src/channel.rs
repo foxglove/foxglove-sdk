@@ -228,10 +228,6 @@ mod test {
         assert_eq!(messages[0].channel_id, channel.id());
         assert_eq!(messages[0].msg, msg.to_vec());
         assert_eq!(messages[0].metadata.sequence, 1);
-        assert_eq!(
-            messages[0].metadata.log_time,
-            messages[0].metadata.publish_time
-        );
         assert!(messages[0].metadata.log_time > 1732847588055322395);
     }
 

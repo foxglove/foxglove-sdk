@@ -58,7 +58,6 @@ class Channel:
         msg: Union[JsonMessage, list[Any], bytes, str],
         *,
         log_time: Optional[int] = None,
-        publish_time: Optional[int] = None,
         sequence: Optional[int] = None,
     ) -> None:
         """
@@ -66,16 +65,16 @@ class Channel:
 
         :param msg: the message to log. If the channel uses JSON encoding, you may pass a
             dictionary or list. Otherwise, you are responsible for serializing the message.
+        :param log_time: The optional time the message was logged.
+        :param sequence: The optional sequence number of the message.
         """
         if self.message_encoding == "json" and isinstance(msg, (dict, list)):
-            return self.base.log(
-                json.dumps(msg).encode("utf-8"), log_time, publish_time, sequence
-            )
+            return self.base.log(json.dumps(msg).encode("utf-8"), log_time, sequence)
 
         if isinstance(msg, str):
             msg = msg.encode("utf-8")
         if isinstance(msg, bytes):
-            return self.base.log(msg, log_time, publish_time, sequence)
+            return self.base.log(msg, log_time, sequence)
 
         raise TypeError(f"Unsupported message type: {type(msg)}")
 
@@ -99,7 +98,6 @@ def log(
     message: Union[JsonMessage, list[Any], bytes, str, _schemas.FoxgloveSchema],
     *,
     log_time: Optional[int] = None,
-    publish_time: Optional[int] = None,
     sequence: Optional[int] = None,
 ) -> None:
     """Log a message on a topic.
@@ -118,6 +116,8 @@ def log(
 
     :param topic: The topic name.
     :param message: The message to log.
+    :param log_time: The optional time the message was logged.
+    :param sequence: The optional sequence number of the message.
     """
     channel: Optional[Any] = _channels_by_topic.get(topic, None)
     if channel is None:
@@ -141,7 +141,6 @@ def log(
     channel.log(
         cast(Any, message),
         log_time=log_time,
-        publish_time=publish_time,
         sequence=sequence,
     )
 

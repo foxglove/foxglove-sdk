@@ -144,7 +144,6 @@ async fn test_logging_to_file_and_live_sinks() {
         assert_eq!(message.channel.topic, "/test-topic");
         assert_eq!(message.channel.message_encoding, "json");
         assert_ne!(message.log_time, 0);
-        assert_ne!(message.publish_time, 0);
 
         let data = String::from_utf8(message.data.to_vec()).unwrap();
         let json: serde_json::Value = serde_json::from_str(&data).unwrap();

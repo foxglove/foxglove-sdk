@@ -14,7 +14,7 @@ use foxglove::schemas::Log;
 use foxglove::websocket::{Capability, Client, ClientChannel, ServerListener};
 use foxglove::{Channel, PartialMetadata, WebSocketServer};
 use std::sync::Arc;
-use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, Instant, SystemTime};
 use tokio_util::sync::CancellationToken;
 
 #[derive(Debug, Parser)]
@@ -95,7 +95,6 @@ async fn log_forever() {
         };
         let meta = PartialMetadata {
             sequence: Some(sequence),
-            publish_time: Some(nanoseconds_since_epoch()),
             ..Default::default()
         };
         channel.log_with_meta(&msg, meta);
@@ -113,12 +112,4 @@ fn watch_ctrl_c() -> CancellationToken {
         }
     });
     token
-}
-
-fn nanoseconds_since_epoch() -> u64 {
-    let now = SystemTime::now();
-    if let Ok(duration) = now.duration_since(UNIX_EPOCH) {
-        return duration.as_secs() * 1_000_000_000 + duration.subsec_nanos() as u64;
-    }
-    0
 }

@@ -266,7 +266,6 @@ impl<'a> FileStream<'a> {
                 PartialMetadata {
                     sequence: Some(header.sequence),
                     log_time: Some(header.log_time),
-                    publish_time: Some(header.publish_time),
                 },
             );
         }

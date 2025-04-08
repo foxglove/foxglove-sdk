@@ -61,7 +61,8 @@ impl<W: Write + Seek> WriterState<W> {
                     channel_id: mcap_channel_id,
                     sequence: metadata.sequence,
                     log_time: metadata.log_time,
-                    publish_time: metadata.publish_time,
+                    // Use log_time as publish_time (required when publish_time unavailable)
+                    publish_time: metadata.log_time,
                 },
                 msg,
             )
@@ -177,12 +178,10 @@ mod tests {
         let ch1_meta = &[
             Metadata {
                 sequence: 1,
-                publish_time: 2,
                 log_time: 3,
             },
             Metadata {
                 sequence: 4,
-                publish_time: 5,
                 log_time: 6,
             },
         ];
@@ -191,12 +190,10 @@ mod tests {
         let ch2_meta = &[
             Metadata {
                 sequence: 7,
-                publish_time: 8,
                 log_time: 9,
             },
             Metadata {
                 sequence: 10,
-                publish_time: 11,
                 log_time: 12,
             },
         ];
@@ -236,7 +233,7 @@ mod tests {
                     );
                     let metadata = ch1_meta_iter.next().expect("unexpected metadata channel 1");
                     assert_eq!(msg.sequence, metadata.sequence);
-                    assert_eq!(msg.publish_time, metadata.publish_time);
+                    assert_eq!(msg.publish_time, metadata.log_time); // publish_time == log_time
                     assert_eq!(msg.log_time, metadata.log_time);
                     assert_eq!(msg.channel.topic, "foo");
                     assert_eq!(
@@ -251,7 +248,7 @@ mod tests {
                     );
                     let metadata = ch2_meta_iter.next().expect("unexpected metadata channel 2");
                     assert_eq!(msg.sequence, metadata.sequence);
-                    assert_eq!(msg.publish_time, metadata.publish_time);
+                    assert_eq!(msg.publish_time, metadata.log_time); // publish_time == log_time
                     assert_eq!(msg.log_time, metadata.log_time);
                     assert_eq!(msg.channel.topic, "bar");
                     assert_eq!(

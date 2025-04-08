@@ -86,7 +86,7 @@ int main(int argc, const char* argv[]) {
     std::string msg = "{\"val\": " + std::to_string(i) + "}";
     auto now =
       std::chrono::nanoseconds(std::chrono::system_clock::now().time_since_epoch()).count();
-    channel.log(reinterpret_cast<const std::byte*>(msg.data()), msg.size(), now, now, i);
+    channel.log(reinterpret_cast<const std::byte*>(msg.data()), msg.size(), now, i);
     ++i;
   }
 
