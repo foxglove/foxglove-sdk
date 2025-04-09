@@ -7,7 +7,7 @@ pub struct ChannelView<'a> {
     topic: &'a str,
 }
 
-impl<'a> ChannelView<'a> {
+impl ChannelView<'_> {
     /// Returns the channel ID.
     pub fn id(&self) -> ChannelId {
         self.id
