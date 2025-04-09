@@ -170,11 +170,6 @@ impl Server {
         self.port.load(Acquire)
     }
 
-    // Returns a handle to the async runtime that this server is using.
-    pub fn runtime(&self) -> &Handle {
-        &self.runtime
-    }
-
     /// Returns true if the server supports the capability.
     pub(super) fn has_capability(&self, cap: Capability) -> bool {
         self.capabilities.contains(&cap)

@@ -57,5 +57,5 @@ async fn main() {
         .expect("Server failed to start");
 
     tokio::signal::ctrl_c().await.ok();
-    server.stop().await;
+    server.stop();
 }

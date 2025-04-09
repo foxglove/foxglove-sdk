@@ -125,5 +125,5 @@ async fn test_logging_to_file_and_live_sinks() {
 
     expect_recv!(client, ServerMessage::MessageData);
 
-    server.stop().await;
+    server.stop();
 }

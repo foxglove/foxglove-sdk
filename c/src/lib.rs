@@ -127,7 +127,7 @@ pub struct FoxgloveServerCallbacks {
 unsafe impl Send for FoxgloveServerCallbacks {}
 unsafe impl Sync for FoxgloveServerCallbacks {}
 
-pub struct FoxgloveWebSocketServer(Option<foxglove::WebSocketServerBlockingHandle>);
+pub struct FoxgloveWebSocketServer(Option<foxglove::WebSocketServerHandle>);
 
 // cbindgen does not actually generate a declaration for this, so we manually write one in
 // after_includes

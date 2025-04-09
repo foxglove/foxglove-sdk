@@ -77,7 +77,7 @@ async fn main() {
         () = log_forever() => (),
     };
 
-    server.stop().await;
+    server.stop();
 }
 
 async fn log_forever() {
