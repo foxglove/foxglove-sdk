@@ -157,8 +157,6 @@ pub(crate) struct ConnectedClient {
     subscriptions: parking_lot::Mutex<BiHashMap<ChannelId, SubscriptionId>>,
     /// Channels advertised by this client
     advertised_channels: parking_lot::Mutex<HashMap<ClientChannelId, Arc<ClientChannel>>>,
-    /// Optional callback handler for a server implementation
-    server_listener: Option<Arc<dyn ServerListener>>,
     server: Weak<Server>,
     /// The cancellation_token is used by the server to disconnect the client.
     /// It's cancelled when the client's control plane queue fills up (slow client).
@@ -207,11 +205,11 @@ impl ConnectedClient {
         };
 
         match msg {
-            ClientMessage::Subscribe(msg) => self.on_subscribe(msg),
+            ClientMessage::Subscribe(msg) => self.on_subscribe(server, msg),
             ClientMessage::Unsubscribe(msg) => self.on_unsubscribe(msg),
             ClientMessage::Advertise(msg) => self.on_advertise(server, msg),
-            ClientMessage::Unadvertise(msg) => self.on_unadvertise(msg),
-            ClientMessage::MessageData(msg) => self.on_message_data(msg),
+            ClientMessage::Unadvertise(msg) => self.on_unadvertise(server, msg),
+            ClientMessage::MessageData(msg) => self.on_message_data(server, msg),
             ClientMessage::GetParameters(msg) => {
                 self.on_get_parameters(server, msg.parameter_names, msg.id)
             }
@@ -273,7 +271,7 @@ impl ConnectedClient {
         self.unsubscribe_channel_ids(channel_ids);
     }
 
-    fn on_message_data(&self, message: ws_protocol::client::MessageData) {
+    fn on_message_data(&self, server: Arc<Server>, message: ws_protocol::client::MessageData) {
         let channel_id = ClientChannelId::new(message.channel_id);
         let payload = message.data;
         let client_channel = {
@@ -287,12 +285,12 @@ impl ConnectedClient {
             channel.clone()
         };
         // Call the handler after releasing the advertised_channels lock
-        if let Some(handler) = self.server_listener.as_ref() {
+        if let Some(handler) = server.listener() {
             handler.on_message_data(Client::new(self), &client_channel, &payload);
         }
     }
 
-    fn on_unadvertise(&self, message: ws_protocol::client::Unadvertise) {
+    fn on_unadvertise(&self, server: Arc<Server>, message: ws_protocol::client::Unadvertise) {
         let mut channel_ids: Vec<_> = message
             .channel_ids
             .into_iter()
@@ -319,7 +317,7 @@ impl ConnectedClient {
             }
         }
         // Call the handler after releasing the advertised_channels lock
-        if let Some(handler) = self.server_listener.as_ref() {
+        if let Some(handler) = server.listener() {
             for client_channel in client_channels {
                 handler.on_client_unadvertise(Client::new(self), &client_channel);
             }
@@ -362,7 +360,7 @@ impl ConnectedClient {
             };
 
             // Call the handler after releasing the advertised_channels lock
-            if let Some(handler) = self.server_listener.as_ref() {
+            if let Some(handler) = server.listener() {
                 handler.on_client_advertise(Client::new(self), &client_channel);
             }
         }
@@ -389,7 +387,7 @@ impl ConnectedClient {
         self.unsubscribe_channel_ids(unsubscribed_channel_ids);
     }
 
-    fn on_subscribe(&self, message: ws_protocol::client::Subscribe) {
+    fn on_subscribe(&self, server: Arc<Server>, message: ws_protocol::client::Subscribe) {
         let mut subscriptions: Vec<_> = message
             .subscriptions
             .into_iter()
@@ -453,7 +451,7 @@ impl ConnectedClient {
             );
             channel_ids.push(channel.id());
 
-            if let Some(handler) = self.server_listener.as_ref() {
+            if let Some(handler) = server.listener() {
                 handler.on_subscribe(Client::new(self), channel.as_ref().into());
             }
         }
@@ -475,7 +473,7 @@ impl ConnectedClient {
             return;
         }
 
-        if let Some(handler) = self.server_listener.as_ref() {
+        if let Some(handler) = server.listener() {
             let parameters =
                 handler.on_get_parameters(Client::new(self), param_names, request_id.as_deref());
             let mut msg = ParameterValues::new(parameters);
@@ -497,7 +495,7 @@ impl ConnectedClient {
             return;
         }
 
-        let updated_parameters = if let Some(handler) = self.server_listener.as_ref() {
+        let updated_parameters = if let Some(handler) = server.listener() {
             let updated =
                 handler.on_set_parameters(Client::new(self), parameters, request_id.as_deref());
             // Send all the updated_parameters back to the client if request_id is provided.
@@ -729,7 +727,8 @@ impl ConnectedClient {
         }
 
         // If we don't have a ServerListener, we're done.
-        let Some(handler) = self.server_listener.as_ref() else {
+        let server = self.server.upgrade();
+        let Some(handler) = server.as_ref().and_then(|s| s.listener()) else {
             return;
         };
 
@@ -844,6 +843,11 @@ impl Server {
     /// Returns a reference to the fetch asset handler.
     fn fetch_asset_handler(&self) -> Option<&dyn AssetHandler> {
         self.fetch_asset_handler.as_deref()
+    }
+
+    /// Returns a reference to the server listener.
+    fn listener(&self) -> Option<&dyn ServerListener> {
+        self.listener.as_deref()
     }
 
     // Spawn a task to accept all incoming connections and return the server's local address
@@ -1139,7 +1143,6 @@ impl Server {
             fetch_asset_sem: Semaphore::new(DEFAULT_FETCH_ASSET_CALLS_PER_CLIENT),
             subscriptions: parking_lot::Mutex::new(BiHashMap::new()),
             advertised_channels: parking_lot::Mutex::new(HashMap::new()),
-            server_listener: self.listener.clone(),
             server: self.weak_self.clone(),
             cancellation_token: cancellation_token.clone(),
         });
