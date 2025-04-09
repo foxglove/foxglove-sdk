@@ -2,7 +2,8 @@ use std::{fmt::Display, future::Future, sync::Arc};
 
 use bytes::Bytes;
 
-use super::{Client, SemaphoreGuard};
+use super::semaphore::SemaphoreGuard;
+use super::Client;
 
 /// A handler to respond to fetch asset requests.
 ///

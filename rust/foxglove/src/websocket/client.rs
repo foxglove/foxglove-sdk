@@ -4,7 +4,8 @@ use std::sync::Weak;
 
 use bytes::Bytes;
 
-use super::{ConnectedClient, Status};
+use super::connected_client::ConnectedClient;
+use super::Status;
 
 /// Identifies a client connection. Unique for the duration of the server's lifetime.
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
@@ -39,7 +40,7 @@ pub struct Client {
 }
 
 impl Client {
-    pub(crate) fn new(client: &ConnectedClient) -> Self {
+    pub(super) fn new(client: &ConnectedClient) -> Self {
         Self {
             id: client.id(),
             client: client.weak().clone(),

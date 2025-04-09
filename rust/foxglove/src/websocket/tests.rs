@@ -3,7 +3,6 @@ use bytes::{BufMut, Bytes, BytesMut};
 use futures_util::FutureExt;
 use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
-use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio_tungstenite::tungstenite::{self, http::HeaderValue, Message};
@@ -24,24 +23,14 @@ use super::ws_protocol::server::{
     advertise_services, ConnectionGraphUpdate, FetchAssetResponse, ParameterValues, ServerInfo,
     ServerMessage, ServiceCallFailure, ServiceCallResponse, Status,
 };
-use super::{create_server, send_lossy, SendLossyResult, ServerOptions, SUBPROTOCOL};
 use crate::testutil::{assert_eventually, RecordingServerListener};
+use crate::websocket::handshake::SUBPROTOCOL;
+use crate::websocket::server::{create_server, ServerOptions};
 use crate::websocket::service::{CallId, Service, ServiceSchema};
 use crate::websocket::{
     BlockingAssetHandlerFn, Capability, ClientChannelId, ConnectionGraph, Parameter,
 };
 use crate::{ChannelBuilder, Context, FoxgloveError, PartialMetadata, RawChannel, Schema};
-
-fn make_message(id: usize) -> Message {
-    Message::Text(format!("{id}").into())
-}
-
-fn parse_message(msg: Message) -> usize {
-    match msg {
-        Message::Text(text) => text.parse().expect("id"),
-        _ => unreachable!(),
-    }
-}
 
 macro_rules! expect_recv {
     ($client:expr, $variant:path) => {{
@@ -61,42 +50,6 @@ macro_rules! expect_recv_close {
             m => panic!("Received unexpected message: {m:?}"),
         }
     }};
-}
-
-#[traced_test]
-#[test]
-fn test_send_lossy() {
-    const BACKLOG: usize = 4;
-    const TOTAL: usize = 10;
-
-    let addr = SocketAddr::new("127.0.0.1".parse().unwrap(), 1234);
-
-    let (tx, rx) = flume::bounded(BACKLOG);
-    for i in 0..BACKLOG {
-        assert_matches!(
-            send_lossy(&addr, &tx, &rx, make_message(i), 0),
-            SendLossyResult::Sent
-        );
-    }
-
-    // The queue is full now. We'll only succeed with retries.
-    for i in BACKLOG..TOTAL {
-        assert_matches!(
-            send_lossy(&addr, &tx, &rx, make_message(TOTAL + i), 0),
-            SendLossyResult::ExhaustedRetries
-        );
-        assert_matches!(
-            send_lossy(&addr, &tx, &rx, make_message(i), 1),
-            SendLossyResult::SentLossy(1)
-        );
-    }
-
-    // Receive everything, expect that the first (TOTAL - BACKLOG) messages were dropped.
-    let mut received: Vec<usize> = vec![];
-    while let Ok(msg) = rx.try_recv() {
-        received.push(parse_message(msg));
-    }
-    assert_eq!(received, ((TOTAL - BACKLOG)..TOTAL).collect::<Vec<_>>());
 }
 
 fn new_channel(topic: &str, ctx: &Arc<Context>) -> Arc<RawChannel> {

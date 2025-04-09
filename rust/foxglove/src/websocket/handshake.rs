@@ -3,7 +3,7 @@ use tokio_tungstenite::tungstenite::handshake::server;
 use tokio_tungstenite::tungstenite::http::HeaderValue;
 use tokio_tungstenite::{tungstenite, WebSocketStream};
 
-use super::SUBPROTOCOL;
+pub(crate) static SUBPROTOCOL: &str = "foxglove.sdk.v1";
 
 /// Add the subprotocol header to the response if the client requested it. If the client requests
 /// subprotocols which don't contain ours, or does not include the expected header, return a 400.
