@@ -3,20 +3,18 @@
 use std::collections::hash_map::Entry;
 use std::collections::HashSet;
 use std::sync::atomic::Ordering::{AcqRel, Acquire, Release};
-use std::sync::atomic::{AtomicBool, AtomicU16, AtomicU32};
+use std::sync::atomic::{AtomicBool, AtomicU16};
 use std::sync::Weak;
 use std::time::{SystemTime, UNIX_EPOCH};
 use std::{collections::HashMap, net::SocketAddr, sync::Arc};
 
 use bimap::BiHashMap;
-use bytes::Bytes;
 use flume::TrySendError;
 use futures_util::{stream::SplitSink, SinkExt, StreamExt};
-use thiserror::Error;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::runtime::Handle;
 use tokio::sync::Mutex;
-use tokio_tungstenite::tungstenite::{self, handshake::server, http::HeaderValue, Message};
+use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::WebSocketStream;
 use tokio_util::sync::CancellationToken;
 
@@ -26,11 +24,15 @@ use crate::{
 
 mod advertise;
 mod capability;
+mod channel_view;
+mod client;
 mod client_channel;
 mod connection_graph;
 mod cow_vec;
 mod fetch_asset;
+mod handshake;
 mod semaphore;
+mod server_listener;
 pub mod service;
 mod subscription;
 #[cfg(test)]
@@ -40,12 +42,15 @@ pub(crate) mod testutil;
 pub(crate) mod ws_protocol;
 
 pub use capability::Capability;
+pub use channel_view::ChannelView;
+pub use client::{Client, ClientId};
 pub use client_channel::{ClientChannel, ClientChannelId};
 pub use connection_graph::ConnectionGraph;
 use cow_vec::CowVec;
 pub use fetch_asset::{AssetHandler, AssetResponder};
 pub(crate) use fetch_asset::{AsyncAssetHandlerFn, BlockingAssetHandlerFn};
 pub(crate) use semaphore::{Semaphore, SemaphoreGuard};
+pub use server_listener::ServerListener;
 use service::{CallId, Service, ServiceId, ServiceMap};
 pub(crate) use subscription::{Subscription, SubscriptionId};
 use ws_protocol::client::ClientMessage;
@@ -57,79 +62,6 @@ use ws_protocol::server::{
 };
 use ws_protocol::ParseError;
 
-/// Identifies a client connection. Unique for the duration of the server's lifetime.
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
-pub struct ClientId(u32);
-
-impl From<ClientId> for u32 {
-    fn from(client: ClientId) -> Self {
-        client.0
-    }
-}
-
-impl std::fmt::Display for ClientId {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-/// A connected client session with the websocket server.
-#[derive(Debug, Clone)]
-pub struct Client {
-    id: ClientId,
-    client: Weak<ConnectedClient>,
-}
-
-impl Client {
-    pub(crate) fn new(client: &ConnectedClient) -> Self {
-        Self {
-            id: client.id,
-            client: client.weak_self.clone(),
-        }
-    }
-
-    /// Returns the client ID.
-    pub fn id(&self) -> ClientId {
-        self.id
-    }
-
-    /// Send a status message to this client. Does nothing if client is disconnected.
-    pub fn send_status(&self, status: Status) {
-        if let Some(client) = self.client.upgrade() {
-            client.send_status(status);
-        }
-    }
-
-    /// Send a fetch asset response to the client. Does nothing if client is disconnected.
-    pub(crate) fn send_asset_response(&self, result: Result<Bytes, String>, request_id: u32) {
-        if let Some(client) = self.client.upgrade() {
-            match result {
-                Ok(asset) => client.send_asset_response(&asset, request_id),
-                Err(err) => client.send_asset_error(&err.to_string(), request_id),
-            }
-        }
-    }
-}
-
-/// Information about a channel.
-#[derive(Debug)]
-pub struct ChannelView<'a> {
-    id: ChannelId,
-    topic: &'a str,
-}
-
-impl ChannelView<'_> {
-    /// Returns the channel ID.
-    pub fn id(&self) -> ChannelId {
-        self.id
-    }
-
-    /// Returns the topic of the channel.
-    pub fn topic(&self) -> &str {
-        self.topic
-    }
-}
-
 pub(crate) const SUBPROTOCOL: &str = "foxglove.sdk.v1";
 const MAX_SEND_RETRIES: usize = 10;
 
@@ -140,12 +72,6 @@ type WebsocketSender = SplitSink<WebSocketStream<TcpStream>, Message>;
 const DEFAULT_MESSAGE_BACKLOG_SIZE: usize = 1024;
 const DEFAULT_SERVICE_CALLS_PER_CLIENT: usize = 32;
 const DEFAULT_FETCH_ASSET_CALLS_PER_CLIENT: usize = 32;
-
-#[derive(Error, Debug)]
-enum WSError {
-    #[error("client handshake failed")]
-    HandshakeError,
-}
 
 #[derive(Default)]
 pub(crate) struct ServerOptions {
@@ -210,61 +136,6 @@ pub(crate) struct Server {
     fetch_asset_handler: Option<Box<dyn AssetHandler>>,
 }
 
-/// Provides a mechanism for registering callbacks for handling client message events.
-///
-/// These methods are invoked from the client's main poll loop and must not block. If blocking or
-/// long-running behavior is required, the implementation should use [`tokio::task::spawn`] (or
-/// [`tokio::task::spawn_blocking`]).
-pub trait ServerListener: Send + Sync {
-    /// Callback invoked when a client message is received.
-    fn on_message_data(&self, _client: Client, _client_channel: &ClientChannel, _payload: &[u8]) {}
-    /// Callback invoked when a client subscribes to a channel.
-    /// Only invoked if the channel is associated with the server and isn't already subscribed to by the client.
-    fn on_subscribe(&self, _client: Client, _channel: ChannelView) {}
-    /// Callback invoked when a client unsubscribes from a channel or disconnects.
-    /// Only invoked for channels that had an active subscription from the client.
-    fn on_unsubscribe(&self, _client: Client, _channel: ChannelView) {}
-    /// Callback invoked when a client advertises a client channel. Requires [`Capability::ClientPublish`].
-    fn on_client_advertise(&self, _client: Client, _channel: &ClientChannel) {}
-    /// Callback invoked when a client unadvertises a client channel. Requires [`Capability::ClientPublish`].
-    fn on_client_unadvertise(&self, _client: Client, _channel: &ClientChannel) {}
-    /// Callback invoked when a client requests parameters. Requires [`Capability::Parameters`].
-    /// Should return the named paramters, or all paramters if param_names is empty.
-    fn on_get_parameters(
-        &self,
-        _client: Client,
-        _param_names: Vec<String>,
-        _request_id: Option<&str>,
-    ) -> Vec<Parameter> {
-        Vec::new()
-    }
-    /// Callback invoked when a client sets parameters. Requires [`Capability::Parameters`].
-    /// Should return the updated parameters for the passed parameters.
-    /// The implementation could return the modified parameters.
-    /// All clients subscribed to updates for the _returned_ parameters will be notified.
-    ///
-    /// Note that only `parameters` which have changed are included in the callback, but the return
-    /// value must include all parameters.
-    fn on_set_parameters(
-        &self,
-        _client: Client,
-        parameters: Vec<Parameter>,
-        _request_id: Option<&str>,
-    ) -> Vec<Parameter> {
-        parameters
-    }
-    /// Callback invoked when a client subscribes to the named parameters for the first time.
-    /// Requires [`Capability::Parameters`].
-    fn on_parameters_subscribe(&self, _param_names: Vec<String>) {}
-    /// Callback invoked when the last client unsubscribes from the named parameters.
-    /// Requires [`Capability::Parameters`].
-    fn on_parameters_unsubscribe(&self, _param_names: Vec<String>) {}
-    /// Callback invoked when the first client subscribes to the connection graph. Requires [`Capability::ConnectionGraph`].
-    fn on_connection_graph_subscribe(&self) {}
-    /// Callback invoked when the last client unsubscribes from the connection graph. Requires [`Capability::ConnectionGraph`].
-    fn on_connection_graph_unsubscribe(&self) {}
-}
-
 /// A connected client session with the websocket server.
 pub(crate) struct ConnectedClient {
     id: ClientId,
@@ -303,6 +174,10 @@ impl ConnectedClient {
         self.weak_self
             .upgrade()
             .expect("client cannot be dropped while in use")
+    }
+
+    fn weak(&self) -> &Weak<Self> {
+        &self.weak_self
     }
 
     /// Handle a text or binary message sent from the client.
@@ -579,13 +454,7 @@ impl ConnectedClient {
             channel_ids.push(channel.id());
 
             if let Some(handler) = self.server_listener.as_ref() {
-                handler.on_subscribe(
-                    Client::new(self),
-                    ChannelView {
-                        id: channel.id(),
-                        topic: channel.topic(),
-                    },
-                );
+                handler.on_subscribe(Client::new(self), channel.as_ref().into());
             }
         }
 
@@ -877,13 +746,7 @@ impl ConnectedClient {
 
         // Finally call the handler for each channel
         for channel in unsubscribed_channels {
-            handler.on_unsubscribe(
-                Client::new(self),
-                ChannelView {
-                    id: channel.id(),
-                    topic: channel.topic(),
-                },
-            );
+            handler.on_unsubscribe(Client::new(self), channel.as_ref().into());
         }
     }
 }
@@ -1241,8 +1104,8 @@ impl Server {
     /// - Advertise existing services
     /// - Listen for client meesages
     async fn handle_connection(self: Arc<Self>, stream: TcpStream, addr: SocketAddr) {
-        let Ok(ws_stream) = do_handshake(stream).await else {
-            tracing::error!("Dropping client {addr}: {}", WSError::HandshakeError);
+        let Ok(ws_stream) = handshake::do_handshake(stream).await else {
+            tracing::error!("Dropping client {addr}: handshake failed");
             return;
         };
 
@@ -1255,16 +1118,13 @@ impl Server {
             return;
         }
 
-        static CLIENT_ID: AtomicU32 = AtomicU32::new(1);
-        let id = ClientId(CLIENT_ID.fetch_add(1, AcqRel));
-
         let (data_tx, data_rx) = flume::bounded(self.message_backlog_size as usize);
         let (ctrl_tx, ctrl_rx) = flume::bounded(self.message_backlog_size as usize);
         let cancellation_token = CancellationToken::new();
 
         let sink_id = SinkId::next();
         let new_client = Arc::new_cyclic(|weak_self| ConnectedClient {
-            id,
+            id: ClientId::next(),
             addr,
             weak_self: weak_self.clone(),
             sink_id,
@@ -1625,39 +1485,4 @@ async fn handle_connections(server: Arc<Server>, listener: TcpListener) {
     while let Ok((stream, addr)) = listener.accept().await {
         tokio::spawn(server.clone().handle_connection(stream, addr));
     }
-}
-
-/// Add the subprotocol header to the response if the client requested it. If the client requests
-/// subprotocols which don't contain ours, or does not include the expected header, return a 400.
-async fn do_handshake(stream: TcpStream) -> Result<WebSocketStream<TcpStream>, tungstenite::Error> {
-    tokio_tungstenite::accept_hdr_async(
-        stream,
-        |req: &server::Request, mut res: server::Response| {
-            let protocol_headers = req.headers().get_all("sec-websocket-protocol");
-            for header in &protocol_headers {
-                if header
-                    .to_str()
-                    .unwrap_or_default()
-                    .split(',')
-                    .any(|v| v.trim() == SUBPROTOCOL)
-                {
-                    res.headers_mut().insert(
-                        "sec-websocket-protocol",
-                        HeaderValue::from_static(SUBPROTOCOL),
-                    );
-                    return Ok(res);
-                }
-            }
-
-            let resp = server::Response::builder()
-                .status(400)
-                .body(Some(
-                    "Missing expected sec-websocket-protocol header".into(),
-                ))
-                .unwrap();
-
-            Err(resp)
-        },
-    )
-    .await
 }
