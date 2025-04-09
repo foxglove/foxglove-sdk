@@ -36,8 +36,8 @@ mod subscription;
 #[cfg(test)]
 mod tests;
 #[cfg(test)]
-mod testutil;
-mod ws_protocol;
+pub(crate) mod testutil;
+pub(crate) mod ws_protocol;
 
 pub use capability::Capability;
 pub use client_channel::{ClientChannel, ClientChannelId};

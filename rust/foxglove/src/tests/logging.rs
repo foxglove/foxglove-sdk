@@ -1,12 +1,24 @@
 use std::io::{BufReader, BufWriter, Read, Seek};
 
-use futures_util::{SinkExt, StreamExt};
 use serde_json::json;
 use tempfile::NamedTempFile;
-use tokio_tungstenite::tungstenite::{client::IntoClientRequest, http::HeaderValue, Message};
 
 use crate::testutil::assert_eventually;
+use crate::websocket::testutil::WebSocketClient;
+use crate::websocket::ws_protocol::client::subscribe::Subscription;
+use crate::websocket::ws_protocol::client::Subscribe;
+use crate::websocket::ws_protocol::server::ServerMessage;
 use crate::{ChannelBuilder, Context, McapWriter, Schema, WebSocketServer};
+
+macro_rules! expect_recv {
+    ($client:expr, $variant:path) => {{
+        let msg = $client.recv().await.expect("Failed to recv");
+        match msg {
+            $variant(m) => m,
+            _ => panic!("Received unexpected message: {msg:?}"),
+        }
+    }};
+}
 
 #[tokio::test]
 async fn test_logging_to_file_and_live_sinks() {
@@ -24,22 +36,7 @@ async fn test_logging_to_file_and_live_sinks() {
         .await
         .expect("Failed to start server");
 
-    let mut ws_client = {
-        let mut request = format!("ws://127.0.0.1:{port}/")
-            .into_client_request()
-            .expect("Failed to build request");
-
-        request.headers_mut().insert(
-            "sec-websocket-protocol",
-            HeaderValue::from_static("foxglove.sdk.v1"),
-        );
-
-        let (ws_stream, _) = tokio_tungstenite::connect_async(request)
-            .await
-            .expect("Failed to connect");
-
-        ws_stream
-    };
+    let mut client = WebSocketClient::connect(format!("127.0.0.1:{port}")).await;
 
     let channel = ChannelBuilder::new("/test-topic")
         .message_encoding("json")
@@ -57,46 +54,18 @@ async fn test_logging_to_file_and_live_sinks() {
 
     {
         // Server info
-        let msg = ws_client
-            .next()
-            .await
-            .expect("No message received")
-            .unwrap();
-        let json = ws_msg_to_json(msg);
-        assert_eq!(json.get("op").expect("Missing 'op'"), "serverInfo");
+        expect_recv!(client, ServerMessage::ServerInfo);
 
         // Advertisement
-        let msg = ws_client
-            .next()
-            .await
-            .expect("No message received")
-            .unwrap();
-        let json = ws_msg_to_json(msg);
-        let channels = json
-            .get("channels")
-            .expect("Missing 'channels'")
-            .as_array()
-            .unwrap();
-        assert_eq!(json.get("op").expect("Missing 'op'"), "advertise");
+        let msg = expect_recv!(client, ServerMessage::Advertise);
+        let channels = msg.channels;
         assert_eq!(channels.len(), 1);
-        assert_eq!(
-            channels[0].get("topic").expect("Missing topic"),
-            "/test-topic"
-        );
+        assert_eq!(channels[0].topic, "/test-topic");
+        let channel_id = channels[0].id;
 
         // Client subscription
-        let channel_id = channels[0].get("id").expect("Missing channel id");
-        let subscribe = json!({
-            "op": "subscribe",
-            "subscriptions": [
-                {
-                    "id": 1,
-                    "channelId": channel_id,
-                }
-            ]
-        });
-        ws_client
-            .send(Message::text(subscribe.to_string()))
+        client
+            .send(&Subscribe::new([Subscription { id: 1, channel_id }]))
             .await
             .expect("Failed to subscribe");
 
@@ -155,21 +124,7 @@ async fn test_logging_to_file_and_live_sinks() {
     }
     assert_eq!(message_count, 1);
 
-    let msg = ws_client
-        .next()
-        .await
-        .expect("No message received")
-        .expect("Failed to parse message");
-    let data = msg.into_data();
-    assert_eq!(data[0], 0x01); // message data opcode
+    expect_recv!(client, ServerMessage::MessageData);
 
     server.stop().await;
-}
-
-fn ws_msg_to_json(msg: Message) -> serde_json::Value {
-    let data = msg
-        .into_text()
-        .expect("Failed to convert ws message to text");
-    let json: serde_json::Value = serde_json::from_str(&data).unwrap();
-    json
 }
