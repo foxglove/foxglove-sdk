@@ -820,6 +820,9 @@ impl ConnectedClient {
     /// Advertises a channel to the client.
     fn advertise_channel(&self, channel: &Arc<RawChannel>) {
         let message = advertise::advertise_channels([channel]);
+        if message.channels.is_empty() {
+            return;
+        }
 
         self.channels.write().insert(channel.id(), channel.clone());
 
