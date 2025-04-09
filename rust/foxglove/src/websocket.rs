@@ -1002,22 +1002,20 @@ impl Server {
         Ok(local_addr)
     }
 
+    /// Stops the server.
+    ///
+    /// Once stopped, the server cannot be restarted.
     pub fn stop(&self) {
-        if self
-            .started
-            .compare_exchange(true, false, AcqRel, Acquire)
-            .is_err()
-        {
+        if !self.started.load(Acquire) {
             return;
         }
         tracing::info!("Shutting down");
         self.port.store(0, Release);
-        let clients = self.clients.get();
+        self.cancellation_token.cancel();
+        let clients = self.clients.take_and_freeze();
         for client in clients.iter() {
             client.shutdown(ShutdownReason::ServerStopped);
         }
-        self.clients.clear();
-        self.cancellation_token.cancel();
     }
 
     /// Publish the current timestamp to all clients.
@@ -1247,17 +1245,24 @@ impl Server {
             addr,
             self.message_backlog_size as usize,
         );
-        self.register_client_and_advertise(client.clone());
+        self.register_client_and_advertise(&client);
         client.run().await;
         self.unregister_client(&client);
     }
 
     /// Registers a new client.
-    fn register_client_and_advertise(&self, client: Arc<ConnectedClient>) {
-        // Add the client to self.clients, and register it as a sink. This synchronously triggers
-        // advertisements for all channels via the `Sink::add_channel` callback.
-        tracing::info!("Registered client {}", client.addr);
-        self.clients.push(client.clone());
+    fn register_client_and_advertise(&self, client: &Arc<ConnectedClient>) {
+        // Add the client to self.clients. This will fail if the server is stopped.
+        if !self.clients.push(client.clone()) {
+            tracing::debug!("Disconnecting client {}: server is stopped", client.addr());
+            client.shutdown(ShutdownReason::ServerStopped);
+            return;
+        }
+
+        tracing::info!("Registered client {}", client.addr());
+
+        // Add the client as a sink. This synchronously triggers advertisements for all channels
+        // via the `Sink::add_channel` callback.
         if let Some(context) = self.context.upgrade() {
             context.add_sink(client.clone());
         }
@@ -1287,7 +1292,7 @@ impl Server {
             context.remove_sink(client.sink_id());
         }
 
-        self.clients.retain(|c| !Arc::ptr_eq(c, client));
+        self.clients.retain(|c| c.id() != client.id());
         if self.has_capability(Capability::Parameters) {
             self.unsubscribe_all_parameters(client.id());
         }
