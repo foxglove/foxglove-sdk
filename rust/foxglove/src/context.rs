@@ -5,9 +5,7 @@ use std::sync::Arc;
 
 use parking_lot::RwLock;
 
-use crate::{
-    ChannelBuilder, ChannelId, FoxgloveError, McapWriter, RawChannel, Sink, SinkId, WebSocketServer,
-};
+use crate::{ChannelBuilder, ChannelId, FoxgloveError, McapWriter, RawChannel, Sink, SinkId};
 
 mod lazy_context;
 mod subscriptions;
@@ -227,8 +225,9 @@ impl Context {
     }
 
     /// Returns a builder for a websocket server in this context.
-    pub fn websocket_server(self: &Arc<Self>) -> WebSocketServer {
-        WebSocketServer::new().context(self)
+    #[cfg(feature = "live_visualization")]
+    pub fn websocket_server(self: &Arc<Self>) -> crate::WebSocketServer {
+        crate::WebSocketServer::new().context(self)
     }
 
     /// Returns the channel for the specified topic, if there is one.

@@ -1,0 +1,11 @@
+---
+source: rust/foxglove/src/websocket/ws_protocol/client/get_parameters.rs
+expression: message()
+---
+{
+  "op": "getParameters",
+  "parameterNames": [
+    "param1",
+    "param2"
+  ]
+}

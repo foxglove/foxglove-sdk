@@ -44,8 +44,8 @@
 //! elicit throttled warning messages.
 //!
 //! Since many applications only need a single context, the SDK provides a static default context
-//! for convenience. This default sink is the one used in the example above. If we wanted to use an
-//! explicit context instead, we'd write:
+//! for convenience. This default context is the one used in the [example above](#getting-started).
+//! If we wanted to use an explicit context instead, we'd write:
 //!
 //! ```no_run
 //! use foxglove::Context;
@@ -83,8 +83,8 @@
 //!
 //! [MCAP channel]: https://mcap.dev/guides/concepts#channel
 //!
-//! In the example above, log! creates a Channel("/log") behind the scenes on the first call. The
-//! example could be equivalently written as:
+//! In the [example above](#getting-started), `log!` creates a `Channel<Log>` behind the scenes on
+//! the first call. The example could be equivalently written as:
 //!
 //! ```no_run
 //! use foxglove::{Channel, McapWriter};
@@ -106,8 +106,8 @@
 //! # Ok(()) }
 //! ```
 //!
-//! log! can be mixed and matched with manually created Channels in the default [`Context`] as long
-//! as the types are exactly the same.
+//! `log!` can be mixed and matched with manually created channels in the default [`Context`], as
+//! long as the types are exactly the same.
 //!
 //! ### Well-known types
 //!
@@ -277,7 +277,6 @@ mod channel_builder;
 mod collection;
 mod context;
 pub mod convert;
-mod cow_vec;
 mod encode;
 pub mod library_version;
 #[doc(hidden)]

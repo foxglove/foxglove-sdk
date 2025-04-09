@@ -1,0 +1,88 @@
+---
+source: rust/foxglove/src/websocket/ws_protocol/server/advertise_services.rs
+expression: message()
+---
+{
+  "op": "advertiseServices",
+  "services": [
+    {
+      "id": 10,
+      "name": "/s1",
+      "type": "my_type",
+      "request": {
+        "encoding": "json",
+        "schemaName": "request-schema",
+        "schemaEncoding": "jsonschema",
+        "schema": "{\"type\": \"object\"}"
+      },
+      "response": {
+        "encoding": "json",
+        "schemaName": "response-schema",
+        "schemaEncoding": "jsonschema",
+        "schema": "{\"type\": \"object\"}"
+      }
+    },
+    {
+      "id": 20,
+      "name": "/s2",
+      "type": "other_type",
+      "request": {
+        "encoding": "protobuf",
+        "schemaName": "request-schema",
+        "schemaEncoding": "protobuf",
+        "schema": "3q2+7w=="
+      },
+      "responseSchema": ""
+    },
+    {
+      "id": 30,
+      "name": "/s3",
+      "type": "old_type",
+      "requestSchema": "request-schema",
+      "responseSchema": "response-schema"
+    },
+    {
+      "id": 40,
+      "name": "/s4",
+      "type": "mixed_type",
+      "request": {
+        "encoding": "json",
+        "schemaName": "request-schema",
+        "schemaEncoding": "jsonschema",
+        "schema": "{\"type\": \"object\"}"
+      },
+      "responseSchema": "response-schema"
+    },
+    {
+      "id": 50,
+      "name": "/s5",
+      "type": "mixed_type",
+      "requestSchema": "request-schema",
+      "response": {
+        "encoding": "json",
+        "schemaName": "response-schema",
+        "schemaEncoding": "jsonschema",
+        "schema": "{\"type\": \"object\"}"
+      }
+    },
+    {
+      "id": 60,
+      "name": "/s6",
+      "type": "override_type",
+      "requestSchema": "new-request-schema",
+      "response": {
+        "encoding": "json",
+        "schemaName": "new-response-schema",
+        "schemaEncoding": "jsonschema",
+        "schema": "{\"type\": \"object\"}"
+      }
+    },
+    {
+      "id": 70,
+      "name": "/s7",
+      "type": "default_schemas",
+      "requestSchema": "",
+      "responseSchema": ""
+    }
+  ]
+}

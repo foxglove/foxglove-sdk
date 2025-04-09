@@ -1,0 +1,20 @@
+---
+source: rust/foxglove/src/websocket/ws_protocol/server/fetch_asset_response.rs
+expression: "format!(\"{:#04x?}\", asset_data().to_bytes())"
+---
+[
+    0x04,
+    0x0a,
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+    0x64,
+    0x61,
+    0x74,
+    0x61,
+]
