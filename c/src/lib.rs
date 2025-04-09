@@ -72,6 +72,9 @@ impl From<FoxgloveServerCapability> for FoxgloveServerCapabilityBitFlags {
 #[repr(C)]
 pub struct FoxgloveServerOptions<'a> {
     pub name: *const c_char,
+    /// `context` can be null, or it be a valid pointer to a context created via `foxglove_context_new` or
+    /// `foxglove_context_get_default`. If it's null, the server will be created with the default context.
+    pub context: *const FoxgloveContext,
     pub host: *const c_char,
     pub port: u16,
     pub callbacks: Option<&'a FoxgloveServerCallbacks>,
@@ -129,8 +132,9 @@ unsafe impl Sync for FoxgloveServerCallbacks {}
 
 pub struct FoxgloveWebSocketServer(Option<foxglove::WebSocketServerBlockingHandle>);
 
-// cbindgen does not actually generate a declaration for this, so we manually write one in
+// cbindgen does not actually generate a declaration for these, so we manually write one in
 // after_includes
+pub use foxglove::Context as FoxgloveContext;
 pub use foxglove::RawChannel as FoxgloveChannel;
 
 #[repr(C)]
@@ -185,6 +189,10 @@ pub unsafe extern "C" fn foxglove_server_start(
     if let Some(callbacks) = options.callbacks {
         server = server.listener(Arc::new(callbacks.clone()))
     }
+    if !options.context.is_null() {
+        let context = ManuallyDrop::new(unsafe { Arc::from_raw(options.context) });
+        server = server.context(&context);
+    }
     Box::into_raw(Box::new(FoxgloveWebSocketServer(Some(
         server.start_blocking().expect("Server failed to start"),
     ))))
@@ -200,6 +208,9 @@ pub enum FoxgloveMcapCompression {
 #[repr(C)]
 pub struct FoxgloveMcapOptions {
     pub path: *const c_char,
+    /// `context` can be null, or it be a valid pointer to a context created via `foxglove_context_new` or
+    /// `foxglove_context_get_default`. If it's null, the mcap file will be created with the default context.
+    pub context: *const FoxgloveContext,
     pub path_len: usize,
     pub create: bool,
     pub truncate: bool,
@@ -270,6 +281,7 @@ pub unsafe extern "C" fn foxglove_mcap_open(
         std::slice::from_raw_parts(options.path as *const u8, options.path_len)
     })
     .expect("path is invalid");
+    let context = options.context;
 
     // Safety: this is safe if the options struct contains valid strings
     let mcap_options = unsafe { options.to_write_options() };
@@ -280,7 +292,12 @@ pub unsafe extern "C" fn foxglove_mcap_open(
         .truncate(options.truncate)
         .open(path)
         .expect("Failed to open file");
-    let writer = foxglove::McapWriter::with_options(mcap_options)
+    let mut builder = foxglove::McapWriter::with_options(mcap_options);
+    if !context.is_null() {
+        let context = ManuallyDrop::new(unsafe { Arc::from_raw(context) });
+        builder = builder.context(&context);
+    }
+    let writer = builder
         .create(BufWriter::new(file))
         .expect("Failed to create writer");
     Box::into_raw(Box::new(FoxgloveMcapWriter(Some(writer))))
@@ -357,14 +374,17 @@ pub extern "C" fn foxglove_server_stop(server: Option<&mut FoxgloveWebSocketServ
 /// Create a new channel. The channel must later be freed with `foxglove_channel_free`.
 ///
 /// # Safety
-/// `topic` and `message_encoding` must be null-terminated strings with valid UTF8. `schema` is an
-/// optional pointer to a schema. The schema and the data it points to need only remain alive for
-/// the duration of this function call (they will be copied).
+/// `topic` and `message_encoding` must be null-terminated strings with valid UTF8.
+/// `schema` is an optional pointer to a schema. The schema and the data it points
+/// to need only remain alive for the duration of this function call (they will be copied).
+/// `context` can be null, or it be a valid pointer to a context created via `foxglove_context_new` or
+/// `foxglove_context_get_default`. If it's null, the channel will be created in the default context.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_channel_create(
     topic: *const c_char,
     message_encoding: *const c_char,
     schema: *const FoxgloveSchema,
+    context: *const FoxgloveContext,
 ) -> *mut FoxgloveChannel {
     let topic = unsafe { CStr::from_ptr(topic) }
         .to_str()
@@ -382,14 +402,15 @@ pub unsafe extern "C" fn foxglove_channel_create(
         let data = unsafe { std::slice::from_raw_parts(schema.data, schema.data_len) };
         foxglove::Schema::new(name, encoding, data.to_owned())
     });
-    Arc::into_raw(
-        foxglove::ChannelBuilder::new(topic)
-            .message_encoding(message_encoding)
-            .schema(schema)
-            .build_raw()
-            .expect("Failed to create channel"),
-    )
-    .cast_mut()
+
+    let mut builder = foxglove::ChannelBuilder::new(topic)
+        .message_encoding(message_encoding)
+        .schema(schema);
+    if !context.is_null() {
+        let context = ManuallyDrop::new(unsafe { Arc::from_raw(context) });
+        builder = builder.context(&context);
+    }
+    Arc::into_raw(builder.build_raw().expect("Failed to create channel")).cast_mut()
 }
 
 /// Free a channel created via `foxglove_channel_create`.
@@ -437,6 +458,35 @@ pub unsafe extern "C" fn foxglove_channel_log(
             sequence: unsafe { sequence.as_ref() }.copied(),
         },
     );
+}
+
+/// Create a new context. This never fails.
+/// You must pass this to `foxglove_context_free` when done with it.
+#[unsafe(no_mangle)]
+pub extern "C" fn foxglove_context_new() -> *const FoxgloveContext {
+    let context = foxglove::Context::new();
+    Arc::into_raw(context) as *const _
+}
+
+/// Get the default context. This never fails.
+/// You must pass this to `foxglove_context_free` when done with it.
+#[unsafe(no_mangle)]
+pub extern "C" fn foxglove_context_get_default() -> *const FoxgloveContext {
+    let context = foxglove::Context::get_default();
+    Arc::into_raw(context) as *const _
+}
+
+/// Free a context created via `foxglove_context_new` or `foxglove_context_free`.
+///
+/// # Safety
+/// `context` must be a valid pointer to a context created via `foxglove_context_new` or
+/// `foxglove_context_get_default`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_context_free(context: *const FoxgloveContext) {
+    if context.is_null() {
+        return;
+    }
+    drop(unsafe { Arc::from_raw(context) });
 }
 
 /// For use by the C++ SDK. Identifies that wrapper as the source of logs.

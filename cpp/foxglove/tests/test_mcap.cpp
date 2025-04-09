@@ -68,6 +68,31 @@ std::string readFile(const std::string& path) {
   return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
 }
 
+TEST_CASE("specify context") {
+  FileCleanup cleanup("test.mcap");
+  foxglove::Context context();
+
+  foxglove::McapWriterOptions options = {context};
+  options.path = "test.mcap";
+  foxglove::McapWriter writer(options);
+
+  // Write message
+  foxglove::Schema schema;
+  schema.name = "ExampleSchema";
+  foxglove::Channel channel{"example1", "json", schema};
+  std::string data = "Hello, world!";
+  channel.log(reinterpret_cast<const std::byte*>(data.data()), data.size());
+
+  writer.close();
+
+  // Check if test.mcap file exists
+  REQUIRE(std::filesystem::exists("test.mcap"));
+
+  // Check that it contains the profile and library
+  std::string content = readFile("test.mcap");
+  REQUIRE_THAT(content, ContainsSubstring("test_profile"));
+}
+
 TEST_CASE("specify profile") {
   FileCleanup cleanup("test.mcap");
 

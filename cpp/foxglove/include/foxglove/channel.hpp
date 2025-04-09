@@ -9,6 +9,8 @@ struct foxglove_channel;
 
 namespace foxglove {
 
+struct Context;
+
 struct Schema {
   std::string name;
   std::string encoding;
@@ -19,7 +21,9 @@ struct Schema {
 class Channel final {
 public:
   Channel(
-    const std::string& topic, const std::string& messageEncoding, std::optional<Schema> schema
+    const std::string& topic, const std::string& messageEncoding,
+    std::optional<Schema> schema = std::nullopt,
+    std::optional<const Context&> context = std::nullopt
   );
 
   void log(

@@ -1,11 +1,14 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 #include <string>
 
 struct foxglove_mcap_writer;
 
 namespace foxglove {
+
+struct Context;
 
 enum class McapCompression {
   None,
@@ -16,6 +19,7 @@ enum class McapCompression {
 struct McapWriterOptions {
   std::string_view path;
   std::string_view profile;
+  std::optional<const Context&> context = std::nullopt;
   uint64_t chunkSize = 1024 * 768;
   McapCompression compression = McapCompression::Zstd;
   bool useChunks = true;
@@ -34,7 +38,7 @@ struct McapWriterOptions {
 
 class McapWriter final {
 public:
-  explicit McapWriter(McapWriterOptions options);
+  McapWriter(McapWriterOptions options, std::optional<const Context&> context = std::nullopt);
 
   void close();
 

@@ -3,11 +3,14 @@
 #include <cstdint>
 #include <functional>
 #include <memory>
+#include <optional>
 #include <string>
 
 struct foxglove_websocket_server;
 
 namespace foxglove {
+
+struct Context;
 
 struct ClientChannel {
   uint32_t id;
@@ -59,6 +62,7 @@ struct WebSocketServerCallbacks {
 };
 
 struct WebSocketServerOptions {
+  std::optional<const Context&> context = std::nullopt;
   std::string name;
   std::string host;
   uint16_t port;
@@ -69,7 +73,9 @@ struct WebSocketServerOptions {
 
 class WebSocketServer final {
 public:
-  explicit WebSocketServer(const WebSocketServerOptions& options);
+  WebSocketServer(
+    WebSocketServerOptions options, std::optional<const Context&> context = std::nullopt
+  );
 
   // Get the port on which the server is listening.
   uint16_t port() const;

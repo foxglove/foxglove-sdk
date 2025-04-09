@@ -14,11 +14,12 @@ FoxgloveMcapCompression toFoxgloveMcapCompression(McapCompression compression) {
   }
 }
 
-McapWriter::McapWriter(McapWriterOptions options)
+McapWriter::McapWriter(McapWriterOptions options, std::optional<const Context&> context)
     : _impl(nullptr, foxglove_mcap_free) {
   foxglove_internal_register_cpp_wrapper();
 
   foxglove_mcap_options cOptions = {};
+  cOptions.context = context.has_value() ? context->get_inner() : nullptr;
   cOptions.path = options.path.data();
   cOptions.path_len = options.path.length();
   cOptions.profile = options.profile.data();
