@@ -351,10 +351,15 @@ async fn test_log_only_to_subscribers() {
     expect_recv!(client3, ServerMessage::ServerInfo);
 
     // Read the channel advertisement from each client for all 3 channels
-    for _ in 0..3 {
-        expect_recv!(client1, ServerMessage::Advertise);
-        expect_recv!(client2, ServerMessage::Advertise);
-        expect_recv!(client3, ServerMessage::Advertise);
+    let expect_ch_ids: Vec<_> = [&ch1, &ch2, &ch3]
+        .iter()
+        .map(|c| u64::from(c.id()))
+        .collect();
+    for client in [&mut client1, &mut client2, &mut client3] {
+        let msg = expect_recv!(client, ServerMessage::Advertise);
+        let mut ch_ids: Vec<_> = msg.channels.iter().map(|c| c.id).collect();
+        ch_ids.sort_unstable();
+        assert_eq!(&ch_ids, &expect_ch_ids);
     }
 
     client1
