@@ -307,8 +307,9 @@ impl WebSocketServerHandle {
     }
 
     /// Gracefully shutdown the websocket server.
+    #[allow(clippy::unused_async)] // to be removed next minor version bump.
     pub async fn stop(self) {
-        self.0.stop().await;
+        self.0.stop();
     }
 }
 

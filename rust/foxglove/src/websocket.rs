@@ -10,10 +10,10 @@ use std::{collections::HashMap, net::SocketAddr, sync::Arc};
 
 use bimap::BiHashMap;
 use flume::TrySendError;
-use futures_util::{stream::SplitSink, SinkExt, StreamExt};
+use futures_util::{SinkExt, StreamExt};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::runtime::Handle;
-use tokio::sync::Mutex;
+use tokio::sync::oneshot;
 use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::WebSocketStream;
 use tokio_util::sync::CancellationToken;
@@ -64,8 +64,6 @@ use ws_protocol::ParseError;
 
 pub(crate) const SUBPROTOCOL: &str = "foxglove.sdk.v1";
 const MAX_SEND_RETRIES: usize = 10;
-
-type WebsocketSender = SplitSink<WebSocketStream<TcpStream>, Message>;
 
 // Queue up to 1024 messages per connected client before dropping messages
 // Can be overridden by ServerOptions::message_backlog_size.
@@ -145,12 +143,9 @@ pub(crate) struct ConnectedClient {
     context: Weak<Context>,
     /// A cache of channels for `on_subscribe` and `on_unsubscribe` callbacks.
     channels: parking_lot::RwLock<HashMap<ChannelId, Arc<RawChannel>>>,
-    /// Write side of a WS stream
-    sender: Mutex<WebsocketSender>,
     data_plane_tx: flume::Sender<Message>,
     data_plane_rx: flume::Receiver<Message>,
     control_plane_tx: flume::Sender<Message>,
-    control_plane_rx: flume::Receiver<Message>,
     service_call_sem: Semaphore,
     fetch_asset_sem: Semaphore,
     /// Subscriptions from this client
@@ -158,14 +153,133 @@ pub(crate) struct ConnectedClient {
     /// Channels advertised by this client
     advertised_channels: parking_lot::Mutex<HashMap<ClientChannelId, Arc<ClientChannel>>>,
     server: Weak<Server>,
-    /// The cancellation_token is used by the server to disconnect the client.
-    /// It's cancelled when the client's control plane queue fills up (slow client).
-    cancellation_token: CancellationToken,
+    shutdown_tx: parking_lot::Mutex<Option<oneshot::Sender<ShutdownReason>>>,
+}
+
+/// A poller for a connected client.
+///
+/// The poller is repsonsible for:
+/// - Sending messages (from `data_plane` and `control_plane`) to the websocket.
+/// - Receiving messages from the websocket and invoking [`ConnectedClient::handle_message`].
+/// - Waiting for a shutdown signal, and closing the websocket.
+struct Poller {
+    client: Arc<ConnectedClient>,
+    websocket: WebSocketStream<TcpStream>,
+    data_plane_rx: flume::Receiver<Message>,
+    control_plane_rx: flume::Receiver<Message>,
+    shutdown_rx: oneshot::Receiver<ShutdownReason>,
+}
+
+enum ShutdownReason {
+    /// The client disconnected.
+    ClientDisconnected,
+    /// The server has been stopped.
+    ServerStopped,
+    /// The control plane queue overflowed, and the client must be disconnected.
+    ControlPlaneQueueFull,
+}
+
+impl Poller {
+    /// Runs the main poll loop for a websocket connection.
+    async fn run(self) {
+        let addr = self.client.addr();
+        let (mut ws_tx, mut ws_rx) = self.websocket.split();
+
+        // Handle messages received from the websocket.
+        let ws_rx_loop = async {
+            while let Some(msg) = ws_rx.next().await {
+                match msg {
+                    Ok(Message::Close(_)) => break,
+                    Ok(msg) => self.client.handle_message(msg),
+                    Err(err) => tracing::error!("Error receiving from client {addr}: {err}"),
+                }
+            }
+            tracing::info!("Connection closed by client {addr}");
+            ShutdownReason::ClientDisconnected
+        };
+
+        // Send messages from queues to the websocket.
+        let ws_tx_loop = async {
+            while let Ok(msg) = tokio::select! {
+                msg = self.control_plane_rx.recv_async() => msg,
+                msg = self.data_plane_rx.recv_async() => msg,
+            } {
+                if let Err(err) = ws_tx.send(msg).await {
+                    tracing::error!("Error sending message to client {addr}: {err}");
+                }
+            }
+            unreachable!("ConnectedClient holds queues");
+        };
+
+        // Run send and receive loops concurrently.
+        let reason = tokio::select! {
+            _ = ws_tx_loop => unreachable!("ConnectedClient holds queues"),
+            r = ws_rx_loop => r,
+            r = self.shutdown_rx => r.expect("ConnectedClient sends before dropping sender"),
+        };
+
+        // Send final messages, as appropriate.
+        match reason {
+            ShutdownReason::ClientDisconnected => (),
+            ShutdownReason::ServerStopped => {
+                ws_tx.send(Message::Close(None)).await.ok();
+            }
+            ShutdownReason::ControlPlaneQueueFull => {
+                let status = Status::error(
+                    "Disconnected because the message backlog on the server is full. \
+                    The backlog size is configurable in the server setup.",
+                );
+                ws_tx.send(Message::from(&status)).await.ok();
+                ws_tx.send(Message::Close(None)).await.ok();
+            }
+        }
+    }
 }
 
 impl ConnectedClient {
+    fn new(
+        context: &Weak<Context>,
+        server: &Weak<Server>,
+        websocket: WebSocketStream<TcpStream>,
+        addr: SocketAddr,
+        message_backlog_size: usize,
+    ) -> (Arc<Self>, Poller) {
+        let (data_plane_tx, data_plane_rx) = flume::bounded(message_backlog_size);
+        let (control_plane_tx, control_plane_rx) = flume::bounded(message_backlog_size);
+        let (shutdown_tx, shutdown_rx) = oneshot::channel();
+        let client = Arc::new_cyclic(|weak_self| Self {
+            id: ClientId::next(),
+            addr,
+            weak_self: weak_self.clone(),
+            sink_id: SinkId::next(),
+            context: context.clone(),
+            channels: parking_lot::RwLock::default(),
+            data_plane_tx,
+            data_plane_rx: data_plane_rx.clone(),
+            control_plane_tx,
+            service_call_sem: Semaphore::new(DEFAULT_SERVICE_CALLS_PER_CLIENT),
+            fetch_asset_sem: Semaphore::new(DEFAULT_FETCH_ASSET_CALLS_PER_CLIENT),
+            subscriptions: parking_lot::Mutex::default(),
+            advertised_channels: parking_lot::Mutex::default(),
+            server: server.clone(),
+            shutdown_tx: parking_lot::Mutex::new(Some(shutdown_tx)),
+        });
+        let poller = Poller {
+            client: client.clone(),
+            websocket,
+            data_plane_rx,
+            control_plane_rx,
+            shutdown_rx,
+        };
+        (client, poller)
+    }
+
     fn id(&self) -> ClientId {
         self.id
+    }
+
+    fn sink_id(&self) -> SinkId {
+        self.sink_id
     }
 
     fn arc(&self) -> Arc<Self> {
@@ -176,6 +290,17 @@ impl ConnectedClient {
 
     fn weak(&self) -> &Weak<Self> {
         &self.weak_self
+    }
+
+    fn addr(&self) -> SocketAddr {
+        self.addr
+    }
+
+    /// Shuts down the connection by signalling the [`Poller`] to exit.
+    fn shutdown(&self, reason: ShutdownReason) {
+        if let Some(shutdown_tx) = self.shutdown_tx.lock().take() {
+            shutdown_tx.send(reason).ok();
+        }
     }
 
     /// Handle a text or binary message sent from the client.
@@ -245,29 +370,16 @@ impl ConnectedClient {
     /// Send the message on the control plane, disconnecting the client if the channel is full.
     fn send_control_msg(&self, message: impl Into<Message>) -> bool {
         if let Err(TrySendError::Full(_)) = self.control_plane_tx.try_send(message.into()) {
-            self.cancellation_token.cancel();
-            return false;
+            self.shutdown(ShutdownReason::ControlPlaneQueueFull);
+            false
+        } else {
+            true
         }
-        true
     }
 
-    async fn on_disconnect(&self) {
-        if self.cancellation_token.is_cancelled() {
-            let mut sender = self.sender.lock().await;
-            let status = Status::new(
-                StatusLevel::Error,
-                "Disconnected because message backlog on the server is full. The backlog size is configurable in the server setup."
-                    .to_string(),
-            );
-            let message = Message::text(serde_json::to_string(&status).unwrap());
-            _ = sender.send(message).await;
-            _ = sender.send(Message::Close(None)).await;
-        }
-
-        let channel_ids = {
-            let subscriptions = self.subscriptions.lock();
-            subscriptions.left_values().copied().collect()
-        };
+    /// Called when the server finally drops the connection.
+    fn on_disconnect(&self) {
+        let channel_ids = self.subscriptions.lock().left_values().copied().collect();
         self.unsubscribe_channel_ids(channel_ids);
     }
 
@@ -881,7 +993,7 @@ impl Server {
         Ok(local_addr)
     }
 
-    pub async fn stop(&self) {
+    pub fn stop(&self) {
         if self
             .started
             .compare_exchange(true, false, AcqRel, Acquire)
@@ -893,8 +1005,7 @@ impl Server {
         self.port.store(0, Release);
         let clients = self.clients.get();
         for client in clients.iter() {
-            let mut sender = client.sender.lock().await;
-            sender.send(Message::Close(None)).await.ok();
+            client.shutdown(ShutdownReason::ServerStopped);
         }
         self.clients.clear();
         self.cancellation_token.cancel();
@@ -1108,125 +1219,31 @@ impl Server {
     /// - Advertise existing services
     /// - Listen for client meesages
     async fn handle_connection(self: Arc<Self>, stream: TcpStream, addr: SocketAddr) {
-        let Ok(ws_stream) = handshake::do_handshake(stream).await else {
+        let Ok(mut ws_stream) = handshake::do_handshake(stream).await else {
             tracing::error!("Dropping client {addr}: handshake failed");
             return;
         };
 
-        let (mut ws_sender, mut ws_receiver) = ws_stream.split();
-
         let message = Message::from(&self.server_info());
-        if let Err(err) = ws_sender.send(message).await {
+        if let Err(err) = ws_stream.send(message).await {
             // ServerInfo is required; do not store this client.
             tracing::error!("Failed to send required server info: {err}");
             return;
         }
 
-        let (data_tx, data_rx) = flume::bounded(self.message_backlog_size as usize);
-        let (ctrl_tx, ctrl_rx) = flume::bounded(self.message_backlog_size as usize);
-        let cancellation_token = CancellationToken::new();
-
-        let sink_id = SinkId::next();
-        let new_client = Arc::new_cyclic(|weak_self| ConnectedClient {
-            id: ClientId::next(),
+        let (client, poller) = ConnectedClient::new(
+            &self.context,
+            &self.weak_self,
+            ws_stream,
             addr,
-            weak_self: weak_self.clone(),
-            sink_id,
-            context: self.context.clone(),
-            channels: parking_lot::RwLock::default(),
-            sender: Mutex::new(ws_sender),
-            data_plane_tx: data_tx,
-            data_plane_rx: data_rx,
-            control_plane_tx: ctrl_tx,
-            control_plane_rx: ctrl_rx,
-            service_call_sem: Semaphore::new(DEFAULT_SERVICE_CALLS_PER_CLIENT),
-            fetch_asset_sem: Semaphore::new(DEFAULT_FETCH_ASSET_CALLS_PER_CLIENT),
-            subscriptions: parking_lot::Mutex::new(BiHashMap::new()),
-            advertised_channels: parking_lot::Mutex::new(HashMap::new()),
-            server: self.weak_self.clone(),
-            cancellation_token: cancellation_token.clone(),
-        });
-
-        self.register_client_and_advertise(new_client.clone());
-
-        let receive_messages = async {
-            while let Some(msg) = ws_receiver.next().await {
-                match msg {
-                    Ok(Message::Close(_)) => {
-                        tracing::info!("Connection closed by client {addr}");
-                        // Finish receive_messages
-                        return;
-                    }
-                    Ok(msg) => {
-                        new_client.handle_message(msg);
-                    }
-                    Err(err) => {
-                        tracing::error!("Error receiving from client {addr}: {err}");
-                    }
-                }
-            }
-        };
-
-        let send_control_messages = async {
-            while let Ok(msg) = new_client.control_plane_rx.recv_async().await {
-                let mut sender = new_client.sender.lock().await;
-                if let Err(err) = sender.send(msg).await {
-                    if self.started.load(Acquire) {
-                        tracing::error!("Error sending control message to client {addr}: {err}");
-                    } else {
-                        new_client.control_plane_rx.drain();
-                        new_client.data_plane_rx.drain();
-                    }
-                }
-            }
-        };
-
-        // send_messages forwards messages from the rx size of the data plane to the sender
-        let send_messages = async {
-            while let Ok(msg) = new_client.data_plane_rx.recv_async().await {
-                let mut sender = new_client.sender.lock().await;
-                if let Err(err) = sender.send(msg).await {
-                    if self.started.load(Acquire) {
-                        tracing::error!("Error sending data message to client {addr}: {err}");
-                    } else {
-                        new_client.control_plane_rx.drain();
-                        new_client.data_plane_rx.drain();
-                    }
-                }
-            }
-        };
-
-        // Run send and receive loops concurrently, and wait for receive to complete
-        tokio::select! {
-            _ = send_control_messages => {
-                tracing::error!("Send control messages task completed");
-            }
-            _ = send_messages => {
-                tracing::error!("Send messages task completed");
-            }
-            _ = receive_messages => {
-                tracing::debug!("Receive messages task completed");
-            }
-            _ = cancellation_token.cancelled() => {
-                tracing::warn!("Server disconnecting slow client {}", new_client.addr);
-            }
-        }
-
-        // Remove the client sink.
-        if let Some(context) = self.context.upgrade() {
-            context.remove_sink(sink_id);
-        }
-
-        self.clients.retain(|c| !Arc::ptr_eq(c, &new_client));
-        if self.has_capability(Capability::Parameters) {
-            self.unsubscribe_all_parameters(new_client.id());
-        }
-        if self.has_capability(Capability::ConnectionGraph) {
-            self.unsubscribe_connection_graph(new_client.id());
-        }
-        new_client.on_disconnect().await;
+            self.message_backlog_size as usize,
+        );
+        self.register_client_and_advertise(client.clone());
+        poller.run().await;
+        self.unregister_client(&client);
     }
 
+    /// Registers a new client.
     fn register_client_and_advertise(&self, client: Arc<ConnectedClient>) {
         // Add the client to self.clients, and register it as a sink. This synchronously triggers
         // advertisements for all channels via the `Sink::add_channel` callback.
@@ -1252,6 +1269,24 @@ impl Server {
                 );
             }
         }
+    }
+
+    /// Unregisters a client after the connection is closed.
+    fn unregister_client(&self, client: &Arc<ConnectedClient>) {
+        // Remove the client sink.
+        if let Some(context) = self.context.upgrade() {
+            context.remove_sink(client.sink_id());
+        }
+
+        self.clients.retain(|c| !Arc::ptr_eq(c, client));
+        if self.has_capability(Capability::Parameters) {
+            self.unsubscribe_all_parameters(client.id());
+        }
+        if self.has_capability(Capability::ConnectionGraph) {
+            self.unsubscribe_connection_graph(client.id());
+        }
+        client.on_disconnect();
+        tracing::info!("Unregistered client {}", client.addr());
     }
 
     /// Adds new services, and advertises them to all clients.
