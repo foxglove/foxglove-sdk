@@ -6,12 +6,16 @@ use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::io::{Seek, Write};
+use std::sync::atomic::AtomicU32;
+use std::sync::atomic::Ordering::Relaxed;
 use std::sync::Arc;
 
 struct WriterState<W: Write + Seek> {
     writer: mcap::Writer<W>,
     // ChannelId -> mcap file channel id
     channel_map: HashMap<ChannelId, u16>,
+    // Current message sequence number for each channel
+    channel_sequence: HashMap<ChannelId, AtomicU32>,
 }
 
 impl<W: Write + Seek> WriterState<W> {
@@ -19,7 +23,15 @@ impl<W: Write + Seek> WriterState<W> {
         Self {
             writer,
             channel_map: HashMap::new(),
+            channel_sequence: HashMap::new(),
         }
+    }
+
+    fn next_sequence(&mut self, channel_id: ChannelId) -> u32 {
+        self.channel_sequence
+            .entry(channel_id)
+            .or_insert_with(|| AtomicU32::new(1))
+            .fetch_add(1, Relaxed)
     }
 
     fn log(
@@ -54,12 +66,13 @@ impl<W: Write + Seek> WriterState<W> {
                 mcap_channel_id
             }
         };
+        let sequence = self.next_sequence(channel_id);
 
         self.writer
             .write_to_known_channel(
                 &mcap::records::MessageHeader {
                     channel_id: mcap_channel_id,
-                    sequence: channel.next_sequence(),
+                    sequence,
                     log_time: metadata.log_time,
                     // Use log_time as publish_time (required when publish_time unavailable)
                     publish_time: metadata.log_time,
