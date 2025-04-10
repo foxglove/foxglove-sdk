@@ -6,8 +6,6 @@ use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::io::{Seek, Write};
-use std::sync::atomic::AtomicU32;
-use std::sync::atomic::Ordering::Relaxed;
 use std::sync::Arc;
 
 struct WriterState<W: Write + Seek> {
@@ -15,7 +13,7 @@ struct WriterState<W: Write + Seek> {
     // ChannelId -> mcap file channel id
     channel_map: HashMap<ChannelId, u16>,
     // Current message sequence number for each channel
-    channel_sequence: HashMap<ChannelId, AtomicU32>,
+    channel_sequence: HashMap<ChannelId, u32>,
 }
 
 impl<W: Write + Seek> WriterState<W> {
@@ -28,10 +26,11 @@ impl<W: Write + Seek> WriterState<W> {
     }
 
     fn next_sequence(&mut self, channel_id: ChannelId) -> u32 {
-        self.channel_sequence
+        *self
+            .channel_sequence
             .entry(channel_id)
-            .or_insert_with(|| AtomicU32::new(1))
-            .fetch_add(1, Relaxed)
+            .and_modify(|seq| *seq += 1)
+            .or_insert(1)
     }
 
     fn log(
