@@ -141,6 +141,7 @@ pub(crate) struct ConnectedClient {
     weak_self: Weak<Self>,
     sink_id: SinkId,
     context: Weak<Context>,
+    poller: parking_lot::Mutex<Option<Poller>>,
     /// A cache of channels for `on_subscribe` and `on_unsubscribe` callbacks.
     channels: parking_lot::RwLock<HashMap<ChannelId, Arc<RawChannel>>>,
     data_plane_tx: flume::Sender<Message>,
@@ -243,7 +244,7 @@ impl ConnectedClient {
         websocket: WebSocketStream<TcpStream>,
         addr: SocketAddr,
         message_backlog_size: usize,
-    ) -> (Arc<Self>, Poller) {
+    ) -> Arc<Self> {
         let (data_plane_tx, data_plane_rx) = flume::bounded(message_backlog_size);
         let (control_plane_tx, control_plane_rx) = flume::bounded(message_backlog_size);
         let (shutdown_tx, shutdown_rx) = oneshot::channel();
@@ -253,6 +254,7 @@ impl ConnectedClient {
             weak_self: weak_self.clone(),
             sink_id: SinkId::next(),
             context: context.clone(),
+            poller: parking_lot::Mutex::default(),
             channels: parking_lot::RwLock::default(),
             data_plane_tx,
             data_plane_rx: data_plane_rx.clone(),
@@ -264,14 +266,14 @@ impl ConnectedClient {
             server: server.clone(),
             shutdown_tx: parking_lot::Mutex::new(Some(shutdown_tx)),
         });
-        let poller = Poller {
+        *client.poller.lock() = Some(Poller {
             client: client.clone(),
             websocket,
             data_plane_rx,
             control_plane_rx,
             shutdown_rx,
-        };
-        (client, poller)
+        });
+        client
     }
 
     fn id(&self) -> ClientId {
@@ -294,6 +296,17 @@ impl ConnectedClient {
 
     fn addr(&self) -> SocketAddr {
         self.addr
+    }
+
+    /// Runs the client's poll loop to completion.
+    ///
+    /// The poll loop may exit either due to the client closing the connection, or due to an
+    /// internal call to [`ConnectedClient::shutdown`].
+    ///
+    /// Panics if called more than once.
+    async fn run(&self) {
+        let poller = self.poller.lock().take().expect("only call run once");
+        poller.run().await;
     }
 
     /// Shuts down the connection by signalling the [`Poller`] to exit.
@@ -1231,7 +1244,7 @@ impl Server {
             return;
         }
 
-        let (client, poller) = ConnectedClient::new(
+        let client = ConnectedClient::new(
             &self.context,
             &self.weak_self,
             ws_stream,
@@ -1239,7 +1252,7 @@ impl Server {
             self.message_backlog_size as usize,
         );
         self.register_client_and_advertise(client.clone());
-        poller.run().await;
+        client.run().await;
         self.unregister_client(&client);
     }
 
