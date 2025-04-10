@@ -164,7 +164,6 @@ pub(crate) struct ConnectedClient {
 /// - Receiving messages from the websocket and invoking [`ConnectedClient::handle_message`].
 /// - Waiting for a shutdown signal, and closing the websocket.
 struct Poller {
-    client: Arc<ConnectedClient>,
     websocket: WebSocketStream<TcpStream>,
     data_plane_rx: flume::Receiver<Message>,
     control_plane_rx: flume::Receiver<Message>,
@@ -182,8 +181,8 @@ enum ShutdownReason {
 
 impl Poller {
     /// Runs the main poll loop for a websocket connection.
-    async fn run(self) {
-        let addr = self.client.addr();
+    async fn run(self, client: &ConnectedClient) {
+        let addr = client.addr();
         let (mut ws_tx, mut ws_rx) = self.websocket.split();
 
         // Handle messages received from the websocket.
@@ -191,7 +190,7 @@ impl Poller {
             while let Some(msg) = ws_rx.next().await {
                 match msg {
                     Ok(Message::Close(_)) => break,
-                    Ok(msg) => self.client.handle_message(msg),
+                    Ok(msg) => client.handle_message(msg),
                     Err(err) => tracing::error!("Error receiving from client {addr}: {err}"),
                 }
             }
@@ -248,16 +247,21 @@ impl ConnectedClient {
         let (data_plane_tx, data_plane_rx) = flume::bounded(message_backlog_size);
         let (control_plane_tx, control_plane_rx) = flume::bounded(message_backlog_size);
         let (shutdown_tx, shutdown_rx) = oneshot::channel();
-        let client = Arc::new_cyclic(|weak_self| Self {
+        Arc::new_cyclic(|weak_self| Self {
             id: ClientId::next(),
             addr,
             weak_self: weak_self.clone(),
             sink_id: SinkId::next(),
             context: context.clone(),
-            poller: parking_lot::Mutex::default(),
+            poller: parking_lot::Mutex::new(Some(Poller {
+                websocket,
+                data_plane_rx: data_plane_rx.clone(),
+                control_plane_rx,
+                shutdown_rx,
+            })),
             channels: parking_lot::RwLock::default(),
             data_plane_tx,
-            data_plane_rx: data_plane_rx.clone(),
+            data_plane_rx,
             control_plane_tx,
             service_call_sem: Semaphore::new(DEFAULT_SERVICE_CALLS_PER_CLIENT),
             fetch_asset_sem: Semaphore::new(DEFAULT_FETCH_ASSET_CALLS_PER_CLIENT),
@@ -265,15 +269,7 @@ impl ConnectedClient {
             advertised_channels: parking_lot::Mutex::default(),
             server: server.clone(),
             shutdown_tx: parking_lot::Mutex::new(Some(shutdown_tx)),
-        });
-        *client.poller.lock() = Some(Poller {
-            client: client.clone(),
-            websocket,
-            data_plane_rx,
-            control_plane_rx,
-            shutdown_rx,
-        });
-        client
+        })
     }
 
     fn id(&self) -> ClientId {
@@ -306,7 +302,7 @@ impl ConnectedClient {
     /// Panics if called more than once.
     async fn run(&self) {
         let poller = self.poller.lock().take().expect("only call run once");
-        poller.run().await;
+        poller.run(self).await;
     }
 
     /// Shuts down the connection by signalling the [`Poller`] to exit.
