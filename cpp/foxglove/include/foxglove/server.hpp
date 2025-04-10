@@ -62,20 +62,25 @@ struct WebSocketServerCallbacks {
 };
 
 struct WebSocketServerOptions {
-  std::optional<const Context&> context = std::nullopt;
+  friend class WebSocketServer;
+
   std::string name;
-  std::string host;
-  uint16_t port;
+  std::string host = "127.0.0.1";
+  uint16_t port = 0;
   WebSocketServerCallbacks callbacks;
   WebSocketServerCapabilities capabilities = WebSocketServerCapabilities(0);
   std::vector<std::string> supportedEncodings;
+
+  WebSocketServerOptions() = default;
+  explicit WebSocketServerOptions(const Context& context);
+
+private:
+  const ContextInner* context = nullptr;
 };
 
 class WebSocketServer final {
 public:
-  WebSocketServer(
-    WebSocketServerOptions options, std::optional<const Context&> context = std::nullopt
-  );
+  explicit WebSocketServer(WebSocketServerOptions options);
 
   // Get the port on which the server is listening.
   uint16_t port() const;

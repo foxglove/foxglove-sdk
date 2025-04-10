@@ -21,7 +21,7 @@
 
 
 typedef struct foxglove_channel foxglove_channel;
-typedef struct foxglove_conext foxglove_context;
+typedef struct foxglove_context foxglove_context;
 
 
 /**

@@ -9,10 +9,12 @@ struct foxglove_context;
 
 namespace foxglove {
 
+typedef foxglove_context ContextInner;
+
 class Context final {
-  friend class McapWriter;
+  friend class McapWriterOptions;
   friend class Channel;
-  friend class WebSocketServer;
+  friend class WebSocketServerOptions;
 
 public:
   Context();
@@ -22,7 +24,7 @@ public:
 private:
   explicit Context(const foxglove_context* context);
 
-  inline const foxglove_context* get_inner() const {
+  inline const ContextInner* get_inner() const {
     return _impl.get();
   }
 

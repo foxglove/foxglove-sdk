@@ -6,9 +6,10 @@
 
 namespace foxglove {
 
-WebSocketServer::WebSocketServer(
-  WebSocketServerOptions options, std::optional<const Context&> context
-)
+WebSocketServerOptions::WebSocketServerOptions(const Context& context)
+    : context(context.get_inner()) {}
+
+WebSocketServer::WebSocketServer(WebSocketServerOptions options)
     : _callbacks(options.callbacks)
     , _impl(nullptr, foxglove_server_free) {
   foxglove_internal_register_cpp_wrapper();
@@ -72,7 +73,7 @@ WebSocketServer::WebSocketServer(
   }
 
   foxglove_server_options cOptions = {};
-  cOptions.context = context.has_value() ? context->get_inner() : nullptr;
+  cOptions.context = options.context;
   cOptions.name = options.name.c_str();
   cOptions.host = options.host.c_str();
   cOptions.port = options.port;

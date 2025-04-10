@@ -5,10 +5,12 @@
 #include <string>
 
 struct foxglove_mcap_writer;
+struct foxglove_context;
 
 namespace foxglove {
 
 struct Context;
+typedef foxglove_context ContextInner;
 
 enum class McapCompression {
   None,
@@ -17,9 +19,10 @@ enum class McapCompression {
 };
 
 struct McapWriterOptions {
+  friend class McapWriter;
+
   std::string_view path;
   std::string_view profile;
-  std::optional<const Context&> context = std::nullopt;
   uint64_t chunkSize = 1024 * 768;
   McapCompression compression = McapCompression::Zstd;
   bool useChunks = true;
@@ -34,11 +37,17 @@ struct McapWriterOptions {
   bool repeatSchemas = true;
   bool create = true;
   bool truncate = false;
+
+  McapWriterOptions() = default;
+  explicit McapWriterOptions(const Context& context);
+
+private:
+  const ContextInner* context = nullptr;
 };
 
 class McapWriter final {
 public:
-  McapWriter(McapWriterOptions options, std::optional<const Context&> context = std::nullopt);
+  explicit McapWriter(McapWriterOptions options);
 
   void close();
 

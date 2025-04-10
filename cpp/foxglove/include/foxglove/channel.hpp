@@ -6,10 +6,12 @@
 #include <string>
 
 struct foxglove_channel;
+struct foxglove_context;
 
 namespace foxglove {
 
 struct Context;
+typedef foxglove_context ContextInner;
 
 struct Schema {
   std::string name;
@@ -22,8 +24,13 @@ class Channel final {
 public:
   Channel(
     const std::string& topic, const std::string& messageEncoding,
-    std::optional<Schema> schema = std::nullopt,
-    std::optional<const Context&> context = std::nullopt
+    std::optional<Schema> schema = std::nullopt
+  )
+      : Channel(topic, messageEncoding, schema, nullptr) {}
+
+  Channel(
+    const std::string& topic, const std::string& messageEncoding, Schema schema,
+    const Context& context
   );
 
   void log(
@@ -35,6 +42,11 @@ public:
   uint64_t id() const;
 
 private:
+  Channel(
+    const std::string& topic, const std::string& messageEncoding, std::optional<Schema> schema,
+    const ContextInner* context
+  );
+
   std::unique_ptr<foxglove_channel, void (*)(foxglove_channel*)> _impl;
 };
 

@@ -1,4 +1,5 @@
 #include <foxglove/channel.hpp>
+#include <foxglove/context.hpp>
 #include <foxglove/mcap.hpp>
 
 #include <catch2/catch_test_macros.hpp>
@@ -70,13 +71,13 @@ std::string readFile(const std::string& path) {
 
 TEST_CASE("specify context") {
   FileCleanup cleanup("test.mcap");
-  foxglove::Context context();
+  foxglove::Context context;
 
-  foxglove::McapWriterOptions options = {context};
+  foxglove::McapWriterOptions options(context);
   options.path = "test.mcap";
   foxglove::McapWriter writer(options);
 
-  // Write message
+  // Write message, but on default global context
   foxglove::Schema schema;
   schema.name = "ExampleSchema";
   foxglove::Channel channel{"example1", "json", schema};
@@ -88,9 +89,9 @@ TEST_CASE("specify context") {
   // Check if test.mcap file exists
   REQUIRE(std::filesystem::exists("test.mcap"));
 
-  // Check that it contains the profile and library
+  // Check that it does not contain the message
   std::string content = readFile("test.mcap");
-  REQUIRE_THAT(content, ContainsSubstring("test_profile"));
+  REQUIRE_THAT(content, !ContainsSubstring("Hello, world!"));
 }
 
 TEST_CASE("specify profile") {
