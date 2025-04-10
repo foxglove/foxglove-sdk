@@ -72,7 +72,7 @@ impl From<FoxgloveServerCapability> for FoxgloveServerCapabilityBitFlags {
 #[repr(C)]
 pub struct FoxgloveServerOptions<'a> {
     pub name: *const c_char,
-    /// `context` can be null, or it be a valid pointer to a context created via `foxglove_context_new` or
+    /// `context` can be null, or a valid pointer to a context created via `foxglove_context_new` or
     /// `foxglove_context_get_default`. If it's null, the server will be created with the default context.
     pub context: *const FoxgloveContext,
     pub host: *const c_char,
@@ -208,7 +208,7 @@ pub enum FoxgloveMcapCompression {
 #[repr(C)]
 pub struct FoxgloveMcapOptions {
     pub path: *const c_char,
-    /// `context` can be null, or it be a valid pointer to a context created via `foxglove_context_new` or
+    /// `context` can be null, or a valid pointer to a context created via `foxglove_context_new` or
     /// `foxglove_context_get_default`. If it's null, the mcap file will be created with the default context.
     pub context: *const FoxgloveContext,
     pub path_len: usize,
@@ -377,7 +377,7 @@ pub extern "C" fn foxglove_server_stop(server: Option<&mut FoxgloveWebSocketServ
 /// `topic` and `message_encoding` must be null-terminated strings with valid UTF8.
 /// `schema` is an optional pointer to a schema. The schema and the data it points
 /// to need only remain alive for the duration of this function call (they will be copied).
-/// `context` can be null, or it be a valid pointer to a context created via `foxglove_context_new` or
+/// `context` can be null, or a valid pointer to a context created via `foxglove_context_new` or
 /// `foxglove_context_get_default`. If it's null, the channel will be created in the default context.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_channel_create(

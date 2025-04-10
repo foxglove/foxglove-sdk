@@ -103,7 +103,7 @@ typedef uint8_t foxglove_server_capability;
 typedef struct foxglove_server_options {
   const char *name;
   /**
-   * `context` can be null, or it be a valid pointer to a context created via `foxglove_context_new` or
+   * `context` can be null, or a valid pointer to a context created via `foxglove_context_new` or
    * `foxglove_context_get_default`. If it's null, the server will be created with the default context.
    */
   const foxglove_context *context;
@@ -118,7 +118,7 @@ typedef struct foxglove_server_options {
 typedef struct foxglove_mcap_options {
   const char *path;
   /**
-   * `context` can be null, or it be a valid pointer to a context created via `foxglove_context_new` or
+   * `context` can be null, or a valid pointer to a context created via `foxglove_context_new` or
    * `foxglove_context_get_default`. If it's null, the mcap file will be created with the default context.
    */
   const foxglove_context *context;
@@ -213,7 +213,7 @@ void foxglove_server_stop(struct foxglove_websocket_server *server);
  * `topic` and `message_encoding` must be null-terminated strings with valid UTF8.
  * `schema` is an optional pointer to a schema. The schema and the data it points
  * to need only remain alive for the duration of this function call (they will be copied).
- * `context` can be null, or it be a valid pointer to a context created via `foxglove_context_new` or
+ * `context` can be null, or a valid pointer to a context created via `foxglove_context_new` or
  * `foxglove_context_get_default`. If it's null, the channel will be created in the default context.
  */
 foxglove_channel *foxglove_channel_create(const char *topic,
