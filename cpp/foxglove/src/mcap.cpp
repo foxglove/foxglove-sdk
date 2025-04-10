@@ -1,4 +1,5 @@
 #include <foxglove-c/foxglove-c.h>
+#include <foxglove/error.hpp>
 #include <foxglove/mcap.hpp>
 
 namespace foxglove {
@@ -35,13 +36,19 @@ McapWriter::McapWriter(McapWriterOptions options)
   cOptions.emit_metadata_indexes = options.emitMetadataIndexes;
   cOptions.repeat_channels = options.repeatChannels;
   cOptions.repeat_schemas = options.repeatSchemas;
-  cOptions.create = options.create;
   cOptions.truncate = options.truncate;
-  _impl.reset(foxglove_mcap_open(&cOptions));
+  foxglove_error cError = {};
+  _impl.reset(foxglove_mcap_open(&cOptions, &cError));
+  if (_impl.get() == nullptr) {
+    throw FoxgloveError(std::move(cError));
+  }
 }
 
 void McapWriter::close() {
-  foxglove_mcap_close(_impl.get());
+  foxglove_error cError = {};
+  if (!foxglove_mcap_close(_impl.get(), &cError)) {
+    throw FoxgloveError(std::move(cError));
+  }
 }
 
 }  // namespace foxglove

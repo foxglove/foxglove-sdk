@@ -28,7 +28,6 @@ struct McapWriterOptions {
   bool emitMetadataIndexes = true;
   bool repeatChannels = true;
   bool repeatSchemas = true;
-  bool create = true;
   bool truncate = false;
 };
 

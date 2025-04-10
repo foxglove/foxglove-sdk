@@ -1,4 +1,5 @@
 #include <foxglove-c/foxglove-c.h>
+#include <foxglove/error.hpp>
 #include <foxglove/server.hpp>
 
 #include <type_traits>
@@ -82,7 +83,12 @@ WebSocketServer::WebSocketServer(const WebSocketServerOptions& options)
   }
   cOptions.supported_encodings = supportedEncodings.data();
   cOptions.supported_encodings_count = supportedEncodings.size();
-  _impl.reset(foxglove_server_start(&cOptions));
+  foxglove_error cError = {};
+  auto server = foxglove_server_start(&cOptions, &cError);
+  if (server == nullptr) {
+    throw FoxgloveError(std::move(cError));
+  }
+  _impl.reset(server);
 }
 
 void WebSocketServer::stop() {
