@@ -3,7 +3,6 @@ use bytes::{BufMut, Bytes, BytesMut};
 use futures_util::FutureExt;
 use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
-use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio_tungstenite::tungstenite::{self, http::HeaderValue, Message};
@@ -24,24 +23,14 @@ use super::ws_protocol::server::{
     advertise_services, ConnectionGraphUpdate, FetchAssetResponse, ParameterValues, ServerInfo,
     ServerMessage, ServiceCallFailure, ServiceCallResponse, Status,
 };
-use super::{create_server, send_lossy, SendLossyResult, ServerOptions, SUBPROTOCOL};
 use crate::testutil::{assert_eventually, RecordingServerListener};
+use crate::websocket::handshake::SUBPROTOCOL;
+use crate::websocket::server::{create_server, ServerOptions};
 use crate::websocket::service::{CallId, Service, ServiceSchema};
 use crate::websocket::{
     BlockingAssetHandlerFn, Capability, ClientChannelId, ConnectionGraph, Parameter,
 };
 use crate::{ChannelBuilder, Context, FoxgloveError, PartialMetadata, RawChannel, Schema};
-
-fn make_message(id: usize) -> Message {
-    Message::Text(format!("{id}").into())
-}
-
-fn parse_message(msg: Message) -> usize {
-    match msg {
-        Message::Text(text) => text.parse().expect("id"),
-        _ => unreachable!(),
-    }
-}
 
 macro_rules! expect_recv {
     ($client:expr, $variant:path) => {{
@@ -61,42 +50,6 @@ macro_rules! expect_recv_close {
             m => panic!("Received unexpected message: {m:?}"),
         }
     }};
-}
-
-#[traced_test]
-#[test]
-fn test_send_lossy() {
-    const BACKLOG: usize = 4;
-    const TOTAL: usize = 10;
-
-    let addr = SocketAddr::new("127.0.0.1".parse().unwrap(), 1234);
-
-    let (tx, rx) = flume::bounded(BACKLOG);
-    for i in 0..BACKLOG {
-        assert_matches!(
-            send_lossy(&addr, &tx, &rx, make_message(i), 0),
-            SendLossyResult::Sent
-        );
-    }
-
-    // The queue is full now. We'll only succeed with retries.
-    for i in BACKLOG..TOTAL {
-        assert_matches!(
-            send_lossy(&addr, &tx, &rx, make_message(TOTAL + i), 0),
-            SendLossyResult::ExhaustedRetries
-        );
-        assert_matches!(
-            send_lossy(&addr, &tx, &rx, make_message(i), 1),
-            SendLossyResult::SentLossy(1)
-        );
-    }
-
-    // Receive everything, expect that the first (TOTAL - BACKLOG) messages were dropped.
-    let mut received: Vec<usize> = vec![];
-    while let Ok(msg) = rx.try_recv() {
-        received.push(parse_message(msg));
-    }
-    assert_eq!(received, ((TOTAL - BACKLOG)..TOTAL).collect::<Vec<_>>());
 }
 
 fn new_channel(topic: &str, ctx: &Arc<Context>) -> Arc<RawChannel> {
@@ -138,7 +91,7 @@ async fn test_client_connect() {
         ServerInfo::new("mock_server").with_session_id("mock_sess_id")
     );
 
-    server.stop().await;
+    server.stop();
 }
 
 #[traced_test]
@@ -243,7 +196,7 @@ async fn test_handshake_with_multiple_subprotocols() {
         Some(&HeaderValue::from_static(SUBPROTOCOL))
     );
 
-    server.stop().await;
+    server.stop();
 }
 
 #[traced_test]
@@ -307,7 +260,7 @@ async fn test_advertise_to_client() {
         ))
     );
 
-    server.stop().await;
+    server.stop();
 }
 
 #[traced_test]
@@ -361,7 +314,7 @@ async fn test_advertise_schemaless_channels() {
         "Ignoring advertise channel for /schemaless_other because a schema is required"
     ));
 
-    server.stop().await;
+    server.stop();
 }
 
 #[traced_test]
@@ -468,7 +421,6 @@ async fn test_log_only_to_subscribers() {
 
     let metadata = PartialMetadata {
         log_time: Some(123456),
-        ..PartialMetadata::default()
     };
     ch3.log_with_meta(b"channel3", metadata);
     ch2.log_with_meta(b"channel2", metadata);
@@ -488,7 +440,7 @@ async fn test_log_only_to_subscribers() {
     // Client 3 should not receive any messages since it unsubscribed from all channels
     assert!(client3.recv().now_or_never().is_none());
 
-    server.stop().await;
+    server.stop();
 }
 
 #[tokio::test]
@@ -540,7 +492,7 @@ async fn test_on_unsubscribe_called_after_disconnect() {
     let unsubscriptions = recording_listener.take_unsubscribe();
     assert_eq!(unsubscriptions.len(), 1);
 
-    server.stop().await;
+    server.stop();
 }
 
 #[traced_test]
@@ -573,7 +525,7 @@ async fn test_error_when_client_publish_unsupported() {
     );
 
     client.close().await;
-    server.stop().await;
+    server.stop();
 }
 
 #[traced_test]
@@ -628,7 +580,7 @@ async fn test_error_status_message() {
         );
     }
 
-    server.stop().await;
+    server.stop();
 }
 
 #[tokio::test]
@@ -842,7 +794,7 @@ async fn test_client_advertising() {
     assert_eq!(unadvertises[0].1.id, ClientChannelId::new(channel_id));
 
     client.close().await;
-    server.stop().await;
+    server.stop();
 }
 
 #[traced_test]
@@ -882,7 +834,7 @@ async fn test_parameter_values() {
     let msg = expect_recv!(client, ServerMessage::ParameterValues);
     assert_eq!(msg, ParameterValues::new([parameter]));
 
-    server.stop().await;
+    server.stop();
 }
 
 #[traced_test]
@@ -948,7 +900,7 @@ async fn test_parameter_unsubscribe_no_updates() {
     // doesn't send a parameter message to an unsubscribed client.
     tokio::time::sleep(std::time::Duration::from_millis(10)).await;
 
-    server.stop().await;
+    server.stop();
 
     // No parameter message was sent with the updated param before the Close message
     expect_recv_close!(client);
@@ -1008,7 +960,7 @@ async fn test_set_parameters() {
     assert_eq!(set_parameters.request_id, Some("123".to_string()));
     assert_eq!(set_parameters.parameters, parameters);
 
-    server.stop().await;
+    server.stop();
 }
 
 #[traced_test]
@@ -1048,7 +1000,7 @@ async fn test_get_parameters() {
     assert_eq!(get_parameters.param_names, vec!["foo", "bar", "baz"]);
     assert_eq!(get_parameters.request_id, Some("123".to_string()));
 
-    server.stop().await;
+    server.stop();
 }
 
 #[tokio::test]
@@ -1378,7 +1330,7 @@ async fn test_update_connection_graph() {
     c1.send(&UnsubscribeConnectionGraph {}).await.unwrap();
     assert_eventually(|| dbg!(recording_listener.take_connection_graph_unsubscribe() == 1)).await;
 
-    server.stop().await;
+    server.stop();
 }
 
 #[traced_test]
@@ -1415,14 +1367,14 @@ async fn test_slow_client() {
         }
         assert_eq!(
             msg.message,
-            "Disconnected because message backlog on the server is full. The backlog size is configurable in the server setup."
+            "Disconnected because the message backlog on the server is full. The backlog size is configurable in the server setup."
         );
         break;
     }
 
     // Close message should be received
     expect_recv_close!(client);
-    server.stop().await;
+    server.stop();
 }
 
 #[cfg(feature = "unstable")]

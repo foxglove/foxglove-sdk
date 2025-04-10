@@ -15,8 +15,7 @@ use bytes::Buf;
 use clap::Parser;
 use foxglove::websocket::Capability;
 use foxglove::{
-    ChannelBuilder, PartialMetadata, RawChannel, Schema, WebSocketServer,
-    WebSocketServerBlockingHandle,
+    ChannelBuilder, PartialMetadata, RawChannel, Schema, WebSocketServer, WebSocketServerHandle,
 };
 use mcap::records::{MessageHeader, Record, SchemaHeader};
 use mcap::sans_io::read::{LinearReader, LinearReaderOptions, ReadAction};
@@ -221,7 +220,7 @@ impl<'a> FileStream<'a> {
     /// Streams the file content until `done` is set.
     fn stream_until(
         mut self,
-        server: &WebSocketServerBlockingHandle,
+        server: &WebSocketServerHandle,
         done: &Arc<AtomicBool>,
     ) -> Result<()> {
         let mut file = BufReader::new(File::open(&self.path)?);
@@ -237,7 +236,7 @@ impl<'a> FileStream<'a> {
     }
 
     /// Handles an mcap record parsed from the file.
-    fn handle_record(&mut self, server: &WebSocketServerBlockingHandle, record: Record<'_>) {
+    fn handle_record(&mut self, server: &WebSocketServerHandle, record: Record<'_>) {
         if let Record::Message { header, data } = record {
             self.handle_message(server, header, &data);
         }
@@ -246,7 +245,7 @@ impl<'a> FileStream<'a> {
     /// Streams the message data to the server.
     fn handle_message(
         &mut self,
-        server: &WebSocketServerBlockingHandle,
+        server: &WebSocketServerHandle,
         header: MessageHeader,
         data: &[u8],
     ) {
@@ -264,9 +263,7 @@ impl<'a> FileStream<'a> {
             channel.log_with_meta(
                 data,
                 PartialMetadata {
-                    sequence: Some(header.sequence),
                     log_time: Some(header.log_time),
-                    publish_time: Some(header.publish_time),
                 },
             );
         }

@@ -11,7 +11,6 @@ use crate::websocket::{
 };
 use crate::{get_runtime_handle, Context, FoxgloveError};
 use bytes::Bytes;
-use tokio::runtime::Handle;
 use tracing::warn;
 
 /// A websocket server for live visualization.
@@ -176,7 +175,7 @@ impl WebSocketServer {
     /// [`WebSocketServer::start_blocking`]).
     #[doc(hidden)]
     #[cfg(feature = "unstable")]
-    pub fn tokio_runtime(mut self, handle: &Handle) -> Self {
+    pub fn tokio_runtime(mut self, handle: &tokio::runtime::Handle) -> Self {
         self.options.runtime = Some(handle.clone());
         self
     }
@@ -209,14 +208,14 @@ impl WebSocketServer {
     /// [`WebSocketServer::start`] instead.
     ///
     /// [tokio]: https://docs.rs/tokio/latest/tokio/
-    pub fn start_blocking(mut self) -> Result<WebSocketServerBlockingHandle, FoxgloveError> {
+    pub fn start_blocking(mut self) -> Result<WebSocketServerHandle, FoxgloveError> {
         let runtime = self
             .options
             .runtime
             .get_or_insert_with(get_runtime_handle)
             .clone();
         let handle = runtime.block_on(self.start())?;
-        Ok(WebSocketServerBlockingHandle(handle))
+        Ok(handle)
     }
 }
 
@@ -232,11 +231,6 @@ impl Debug for WebSocketServerHandle {
 }
 
 impl WebSocketServerHandle {
-    /// Returns a handle to the async runtime.
-    fn runtime(&self) -> &Handle {
-        self.0.runtime()
-    }
-
     /// Returns the local port that the server is listening on.
     pub fn port(&self) -> u16 {
         self.0.port()
@@ -307,87 +301,7 @@ impl WebSocketServerHandle {
     }
 
     /// Gracefully shutdown the websocket server.
-    pub async fn stop(self) {
-        self.0.stop().await;
-    }
-}
-
-/// A blocking wrapper around a WebSocketServerHandle.
-#[derive(Debug)]
-pub struct WebSocketServerBlockingHandle(WebSocketServerHandle);
-
-impl WebSocketServerBlockingHandle {
-    /// Returns the local port that the server is listening on.
-    pub fn port(&self) -> u16 {
-        self.0.port()
-    }
-
-    /// Advertises support for the provided services.
-    ///
-    /// These services will be available for clients to use until they are removed with
-    /// [`remove_services`][WebSocketServerBlockingHandle::remove_services].
-    ///
-    /// This method will fail if the server was not configured with [`Capability::Services`].
-    pub fn add_services(
-        &self,
-        services: impl IntoIterator<Item = Service>,
-    ) -> Result<(), FoxgloveError> {
-        self.0.add_services(services)
-    }
-
-    /// Removes services that were previously advertised.
-    pub fn remove_services(&self, names: impl IntoIterator<Item = impl AsRef<str>>) {
-        self.0.remove_services(names);
-    }
-
-    /// Publishes the current server timestamp to all clients.
-    #[doc(hidden)]
-    #[cfg(feature = "unstable")]
-    pub fn broadcast_time(&self, timestamp_nanos: u64) {
-        self.0.broadcast_time(timestamp_nanos);
-    }
-
-    /// Sets a new session ID and notifies all clients, causing them to reset their state.
-    /// If no session ID is provided, generates a new one based on the current timestamp.
-    pub fn clear_session(&self, new_session_id: Option<String>) {
-        self.0.clear_session(new_session_id);
-    }
-
-    /// Publishes parameter values to all subscribed clients.
-    pub fn publish_parameter_values(&self, parameters: Vec<Parameter>) {
-        self.0.publish_parameter_values(parameters)
-    }
-
-    /// Publishes a status message to all clients.
-    ///
-    /// For more information, refer to the [Status][status] message specification.
-    ///
-    /// [status]: https://github.com/foxglove/ws-protocol/blob/main/docs/spec.md#status
-    pub fn publish_status(&self, status: Status) {
-        self.0.publish_status(status);
-    }
-
-    /// Removes status messages by id from all clients.
-    ///
-    /// For more information, refer to the [Remove Status][remove-status] message specification.
-    ///
-    /// [remove-status]: https://github.com/foxglove/ws-protocol/blob/main/docs/spec.md#remove-status
-    pub fn remove_status(&self, status_ids: Vec<String>) {
-        self.0.remove_status(status_ids);
-    }
-
-    /// Publishes a connection graph update to all subscribed clients.
-    /// The update is published as a difference from the current graph to replacement_graph.
-    /// When a client first subscribes to connection graph updates, it receives the current graph.
-    pub fn publish_connection_graph(
-        &self,
-        replacement_graph: ConnectionGraph,
-    ) -> Result<(), FoxgloveError> {
-        self.0.publish_connection_graph(replacement_graph)
-    }
-
-    /// Gracefully shutdown the websocket server.
     pub fn stop(self) {
-        self.0.runtime().clone().block_on(self.0.stop());
+        self.0.stop();
     }
 }

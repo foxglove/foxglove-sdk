@@ -188,14 +188,6 @@ mod test {
         assert_eq!(ctx.get_channel_by_topic(topic), Some(channel));
     }
 
-    #[test]
-    fn test_channel_next_sequence() {
-        let ctx = Context::new();
-        let channel = new_test_channel(&ctx).unwrap();
-        assert_eq!(channel.next_sequence(), 1);
-        assert_eq!(channel.next_sequence(), 2);
-    }
-
     #[traced_test]
     #[test]
     fn test_channel_log_msg() {
@@ -224,11 +216,6 @@ mod test {
         assert_eq!(messages.len(), 1);
         assert_eq!(messages[0].channel_id, channel.id());
         assert_eq!(messages[0].msg, msg.to_vec());
-        assert_eq!(messages[0].metadata.sequence, 1);
-        assert_eq!(
-            messages[0].metadata.log_time,
-            messages[0].metadata.publish_time
-        );
         assert!(messages[0].metadata.log_time > 1732847588055322395);
     }
 

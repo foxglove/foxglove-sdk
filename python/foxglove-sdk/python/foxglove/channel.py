@@ -36,6 +36,9 @@ class Channel:
             for full control. If a dictionary is passed, it will be treated as a
             JSON schema.
 
+        If both message_encoding and schema are None, then the channel will use JSON encoding, and
+        allow any dict to be logged.
+
         :raises KeyError: if a channel already exists for the given topic.
         """
         if topic in _channels_by_topic:
@@ -58,24 +61,22 @@ class Channel:
         msg: Union[JsonMessage, list[Any], bytes, str],
         *,
         log_time: Optional[int] = None,
-        publish_time: Optional[int] = None,
-        sequence: Optional[int] = None,
     ) -> None:
         """
         Log a message on the channel.
 
         :param msg: the message to log. If the channel uses JSON encoding, you may pass a
             dictionary or list. Otherwise, you are responsible for serializing the message.
+        :param log_time: The optional time the message was logged.
         """
         if self.message_encoding == "json" and isinstance(msg, (dict, list)):
-            return self.base.log(
-                json.dumps(msg).encode("utf-8"), log_time, publish_time, sequence
-            )
+            return self.base.log(json.dumps(msg).encode("utf-8"), log_time)
 
         if isinstance(msg, str):
             msg = msg.encode("utf-8")
+
         if isinstance(msg, bytes):
-            return self.base.log(msg, log_time, publish_time, sequence)
+            return self.base.log(msg, log_time)
 
         raise TypeError(f"Unsupported message type: {type(msg)}")
 
@@ -99,8 +100,6 @@ def log(
     message: Union[JsonMessage, list[Any], bytes, str, _schemas.FoxgloveSchema],
     *,
     log_time: Optional[int] = None,
-    publish_time: Optional[int] = None,
-    sequence: Optional[int] = None,
 ) -> None:
     """Log a message on a topic.
 
@@ -118,6 +117,7 @@ def log(
 
     :param topic: The topic name.
     :param message: The message to log.
+    :param log_time: The optional time the message was logged.
     """
     channel: Optional[Any] = _channels_by_topic.get(topic, None)
     if channel is None:
@@ -141,8 +141,6 @@ def log(
     channel.log(
         cast(Any, message),
         log_time=log_time,
-        publish_time=publish_time,
-        sequence=sequence,
     )
 
 
@@ -150,20 +148,29 @@ def _normalize_schema(
     message_encoding: Optional[str],
     schema: Union[JsonSchema, _foxglove.Schema, None] = None,
 ) -> tuple[str, Optional[_foxglove.Schema]]:
-    if isinstance(schema, _foxglove.Schema) or schema is None:
+    if isinstance(schema, _foxglove.Schema):
         if message_encoding is None:
             raise ValueError("message encoding is required")
         return message_encoding, schema
-    elif isinstance(schema, dict):
-        if schema.get("type") != "object":
+
+    if schema is None and (message_encoding is None or message_encoding == "json"):
+        # Schemaless support via JSON encoding; same as specifying an empty dict schema
+        schema = {}
+        message_encoding = "json"
+
+    if isinstance(schema, dict):
+        # Dicts default to json encoding. An empty dict is equivalent to the empty schema (b"")
+        if message_encoding and message_encoding != "json":
+            raise ValueError("message_encoding must be 'json' when schema is a dict")
+        if schema and schema.get("type") != "object":
             raise ValueError("Only object schemas are supported")
         return (
-            message_encoding or "json",
+            "json",
             _foxglove.Schema(
                 name=schema.get("title", "json_schema"),
                 encoding="jsonschema",
-                data=json.dumps(schema).encode("utf-8"),
+                data=json.dumps(schema).encode("utf-8") if schema else b"",
             ),
         )
-    else:
-        raise TypeError(f"Invalid schema type: {type(schema)}")
+
+    raise TypeError(f"Invalid schema type: {type(schema)}")

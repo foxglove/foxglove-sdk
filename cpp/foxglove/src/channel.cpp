@@ -31,17 +31,9 @@ uint64_t Channel::id() const {
   return foxglove_channel_get_id(_impl.get());
 }
 
-void Channel::log(
-  const std::byte* data, size_t dataLen, std::optional<uint64_t> logTime,
-  std::optional<uint64_t> publishTime, std::optional<uint32_t> sequence
-) {
+void Channel::log(const std::byte* data, size_t dataLen, std::optional<uint64_t> logTime) {
   foxglove_channel_log(
-    _impl.get(),
-    reinterpret_cast<const uint8_t*>(data),
-    dataLen,
-    logTime ? &*logTime : nullptr,
-    publishTime ? &*publishTime : nullptr,
-    sequence ? &*sequence : nullptr
+    _impl.get(), reinterpret_cast<const uint8_t*>(data), dataLen, logTime ? &*logTime : nullptr
   );
 }
 

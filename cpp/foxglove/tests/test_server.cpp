@@ -45,7 +45,7 @@ TEST_CASE("Log a message with and without metadata") {
   foxglove::Channel channel{"example", "json", std::nullopt, context};
   const std::array<uint8_t, 3> data = {1, 2, 3};
   channel.log(reinterpret_cast<const std::byte*>(data.data()), data.size());
-  channel.log(reinterpret_cast<const std::byte*>(data.data()), data.size(), 1, 2, 3);
+  channel.log(reinterpret_cast<const std::byte*>(data.data()), data.size(), 1);
 }
 
 TEST_CASE("Subscribe and unsubscribe callbacks") {

@@ -6,8 +6,9 @@ use bytes::Bytes;
 use tokio_tungstenite::tungstenite::Message;
 
 use super::{CallId, ServiceId};
+use crate::websocket::connected_client::ConnectedClient;
+use crate::websocket::semaphore::SemaphoreGuard;
 use crate::websocket::ws_protocol::server::{ServiceCallFailure, ServiceCallResponse};
-use crate::websocket::{ConnectedClient, SemaphoreGuard};
 
 /// A handle for completing a service call.
 ///
@@ -19,7 +20,7 @@ use crate::websocket::{ConnectedClient, SemaphoreGuard};
 pub struct Responder(Option<Inner>);
 impl Responder {
     /// Creates a new responder.
-    pub(crate) fn new(
+    pub(in crate::websocket) fn new(
         client: Arc<ConnectedClient>,
         service_id: ServiceId,
         call_id: CallId,

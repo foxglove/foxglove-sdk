@@ -44,10 +44,16 @@ class BaseChannel:
     def log(
         self,
         msg: bytes,
-        publish_time: Optional[int] = None,
         log_time: Optional[int] = None,
-        sequence: Optional[int] = None,
-    ) -> None: ...
+    ) -> None:
+        """
+        Log a message to the channel.
+
+        :param msg: The message to log.
+        :param log_time: The optional time the message was logged.
+        """
+        ...
+
     def close(self) -> None: ...
 
 class Schema:

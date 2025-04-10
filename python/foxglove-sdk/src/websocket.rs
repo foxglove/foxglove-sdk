@@ -1,11 +1,9 @@
 use crate::{errors::PyFoxgloveError, PySchema};
 use bytes::Bytes;
-use foxglove::{
-    websocket::{
-        AssetHandler, ChannelView, Client, ClientChannel, ServerListener, Status, StatusLevel,
-    },
-    WebSocketServer, WebSocketServerBlockingHandle,
+use foxglove::websocket::{
+    AssetHandler, ChannelView, Client, ClientChannel, ServerListener, Status, StatusLevel,
 };
+use foxglove::{WebSocketServer, WebSocketServerHandle};
 use pyo3::{
     exceptions::PyIOError,
     prelude::*,
@@ -425,7 +423,7 @@ pub fn start_server(
 
 /// A live visualization server. Obtain an instance by calling :py:func:`foxglove.start_server`.
 #[pyclass(name = "WebSocketServer", module = "foxglove")]
-pub struct PyWebSocketServer(pub Option<WebSocketServerBlockingHandle>);
+pub struct PyWebSocketServer(pub Option<WebSocketServerHandle>);
 
 #[pymethods]
 impl PyWebSocketServer {

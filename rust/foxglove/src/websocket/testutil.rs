@@ -5,9 +5,9 @@ use tokio_tungstenite::tungstenite::http::HeaderValue;
 use tokio_tungstenite::tungstenite::{self, Message};
 use tokio_tungstenite::{MaybeTlsStream, WebSocketStream};
 
+use super::handshake::SUBPROTOCOL;
 use super::ws_protocol::server::ServerMessage;
 use super::ws_protocol::ParseError;
-use super::SUBPROTOCOL;
 
 #[derive(Debug, thiserror::Error)]
 pub enum RecvError {

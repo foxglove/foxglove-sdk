@@ -167,7 +167,7 @@ async fn main() {
         () = update_parameters(&server, listener) => (),
     };
 
-    server.stop().await;
+    server.stop();
 }
 
 async fn update_parameters(server: &WebSocketServerHandle, _listener: Arc<ParamListener>) {
