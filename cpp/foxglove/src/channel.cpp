@@ -1,10 +1,18 @@
 #include <foxglove-c/foxglove-c.h>
 #include <foxglove/channel.hpp>
+#include <foxglove/context.hpp>
 
 namespace foxglove {
 
 Channel::Channel(
-  const std::string& topic, const std::string& messageEncoding, std::optional<Schema> schema
+  const std::string& topic, const std::string& messageEncoding, std::optional<Schema> schema,
+  const Context& context
+)
+    : Channel(topic, messageEncoding, schema, context.get_inner()) {}
+
+Channel::Channel(
+  const std::string& topic, const std::string& messageEncoding, std::optional<Schema> schema,
+  const ContextInner* context
 )
     : _impl(nullptr, foxglove_channel_free) {
   foxglove_schema cSchema = {};
@@ -14,9 +22,9 @@ Channel::Channel(
     cSchema.data = reinterpret_cast<const uint8_t*>(schema->data);
     cSchema.data_len = schema->dataLen;
   }
-  _impl.reset(
-    foxglove_channel_create(topic.data(), messageEncoding.data(), schema ? &cSchema : nullptr)
-  );
+  _impl.reset(foxglove_channel_create(
+    topic.data(), messageEncoding.data(), schema ? &cSchema : nullptr, context
+  ));
 }
 
 uint64_t Channel::id() const {

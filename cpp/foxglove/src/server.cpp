@@ -1,11 +1,15 @@
 #include <foxglove-c/foxglove-c.h>
+#include <foxglove/context.hpp>
 #include <foxglove/server.hpp>
 
 #include <type_traits>
 
 namespace foxglove {
 
-WebSocketServer::WebSocketServer(const WebSocketServerOptions& options)
+WebSocketServerOptions::WebSocketServerOptions(const Context& context)
+    : context(context.get_inner()) {}
+
+WebSocketServer::WebSocketServer(WebSocketServerOptions options)
     : _callbacks(options.callbacks)
     , _impl(nullptr, foxglove_server_free) {
   foxglove_internal_register_cpp_wrapper();
@@ -69,6 +73,7 @@ WebSocketServer::WebSocketServer(const WebSocketServerOptions& options)
   }
 
   foxglove_server_options cOptions = {};
+  cOptions.context = options.context;
   cOptions.name = options.name.c_str();
   cOptions.host = options.host.c_str();
   cOptions.port = options.port;
