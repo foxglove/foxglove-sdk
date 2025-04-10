@@ -32,7 +32,7 @@ TEST_CASE("Start and stop server") {
   server.stop();
 }
 
-TEST_CASE("Log a message with and without metadata") {
+TEST_CASE("Log a raw message with and without metadata") {
   foxglove::WebSocketServerOptions options;
   options.name = "unit-test";
   options.host = "127.0.0.1";
@@ -40,10 +40,24 @@ TEST_CASE("Log a message with and without metadata") {
   foxglove::WebSocketServer server{options};
   REQUIRE(server.port() != 0);
 
-  foxglove::Channel channel{"example", "json", std::nullopt};
+  foxglove::RawChannel channel{"example", "json", std::nullopt};
   const std::array<uint8_t, 3> data = {1, 2, 3};
   channel.log(reinterpret_cast<const std::byte*>(data.data()), data.size());
   channel.log(reinterpret_cast<const std::byte*>(data.data()), data.size(), 1, 2, 3);
+}
+
+TEST_CASE("Log a typed message with and without metadata") {
+  foxglove::WebSocketServerOptions options;
+  options.name = "unit-test";
+  options.host = "127.0.0.1";
+  options.port = 0;
+  foxglove::WebSocketServer server{options};
+  REQUIRE(server.port() != 0);
+
+  foxglove::Channel<foxglove::schemas::Vector3> channel{"example"};
+  foxglove::schemas::Vector3 msg = {1.0, 2.0, 3.0};
+  channel.log(msg);
+  channel.log(msg, 1, 2, 3);
 }
 
 TEST_CASE("Subscribe and unsubscribe callbacks") {
@@ -75,7 +89,7 @@ TEST_CASE("Subscribe and unsubscribe callbacks") {
 
   foxglove::Schema schema;
   schema.name = "ExampleSchema";
-  foxglove::Channel channel{"example", "json", schema};
+  foxglove::RawChannel channel{"example", "json", schema};
 
   WebSocketClient client;
   client.clear_access_channels(websocketpp::log::alevel::all);

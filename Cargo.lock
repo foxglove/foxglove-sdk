@@ -749,6 +749,7 @@ name = "foxglove_c"
 version = "0.5.0"
 dependencies = [
  "bitflags",
+ "bytes",
  "cbindgen",
  "foxglove",
  "mcap 0.15.1",
