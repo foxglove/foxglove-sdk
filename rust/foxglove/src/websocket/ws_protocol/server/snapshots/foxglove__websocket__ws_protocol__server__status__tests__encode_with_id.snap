@@ -1,0 +1,10 @@
+---
+source: rust/foxglove/src/websocket/ws_protocol/server/status.rs
+expression: message_with_id()
+---
+{
+  "op": "status",
+  "level": 1,
+  "message": "Oh no",
+  "id": "my-id"
+}

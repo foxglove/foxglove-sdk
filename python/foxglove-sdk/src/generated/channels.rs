@@ -81,24 +81,9 @@ impl CameraCalibrationChannel {
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
     ///     message was recorded. Usually this is the time log() is called. If omitted, the
     ///     current time is used.
-    /// :param publish_time: The publish_time is the time at which the message was published. e.g.
-    ///     the timestamp at which the sensor reading was taken. If omitted, log time is used.
-    /// :param sequence: The sequence number is unique per channel and allows for ordering of
-    ///     messages as well as detecting missing messages. If omitted, a monotonically increasing
-    ///     sequence number unique to the channel is used.
-    #[pyo3(signature = (msg, *, log_time=None, publish_time=None, sequence=None))]
-    fn log(
-        &self,
-        msg: &schemas::CameraCalibration,
-        log_time: Option<u64>,
-        publish_time: Option<u64>,
-        sequence: Option<u32>,
-    ) {
-        let metadata = PartialMetadata {
-            log_time,
-            publish_time,
-            sequence,
-        };
+    #[pyo3(signature = (msg, *, log_time=None))]
+    fn log(&self, msg: &schemas::CameraCalibration, log_time: Option<u64>) {
+        let metadata = PartialMetadata { log_time };
         self.0.log_with_meta(&msg.0, metadata);
     }
 
@@ -138,24 +123,9 @@ impl CircleAnnotationChannel {
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
     ///     message was recorded. Usually this is the time log() is called. If omitted, the
     ///     current time is used.
-    /// :param publish_time: The publish_time is the time at which the message was published. e.g.
-    ///     the timestamp at which the sensor reading was taken. If omitted, log time is used.
-    /// :param sequence: The sequence number is unique per channel and allows for ordering of
-    ///     messages as well as detecting missing messages. If omitted, a monotonically increasing
-    ///     sequence number unique to the channel is used.
-    #[pyo3(signature = (msg, *, log_time=None, publish_time=None, sequence=None))]
-    fn log(
-        &self,
-        msg: &schemas::CircleAnnotation,
-        log_time: Option<u64>,
-        publish_time: Option<u64>,
-        sequence: Option<u32>,
-    ) {
-        let metadata = PartialMetadata {
-            log_time,
-            publish_time,
-            sequence,
-        };
+    #[pyo3(signature = (msg, *, log_time=None))]
+    fn log(&self, msg: &schemas::CircleAnnotation, log_time: Option<u64>) {
+        let metadata = PartialMetadata { log_time };
         self.0.log_with_meta(&msg.0, metadata);
     }
 
@@ -195,24 +165,9 @@ impl ColorChannel {
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
     ///     message was recorded. Usually this is the time log() is called. If omitted, the
     ///     current time is used.
-    /// :param publish_time: The publish_time is the time at which the message was published. e.g.
-    ///     the timestamp at which the sensor reading was taken. If omitted, log time is used.
-    /// :param sequence: The sequence number is unique per channel and allows for ordering of
-    ///     messages as well as detecting missing messages. If omitted, a monotonically increasing
-    ///     sequence number unique to the channel is used.
-    #[pyo3(signature = (msg, *, log_time=None, publish_time=None, sequence=None))]
-    fn log(
-        &self,
-        msg: &schemas::Color,
-        log_time: Option<u64>,
-        publish_time: Option<u64>,
-        sequence: Option<u32>,
-    ) {
-        let metadata = PartialMetadata {
-            log_time,
-            publish_time,
-            sequence,
-        };
+    #[pyo3(signature = (msg, *, log_time=None))]
+    fn log(&self, msg: &schemas::Color, log_time: Option<u64>) {
+        let metadata = PartialMetadata { log_time };
         self.0.log_with_meta(&msg.0, metadata);
     }
 
@@ -252,24 +207,9 @@ impl CompressedImageChannel {
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
     ///     message was recorded. Usually this is the time log() is called. If omitted, the
     ///     current time is used.
-    /// :param publish_time: The publish_time is the time at which the message was published. e.g.
-    ///     the timestamp at which the sensor reading was taken. If omitted, log time is used.
-    /// :param sequence: The sequence number is unique per channel and allows for ordering of
-    ///     messages as well as detecting missing messages. If omitted, a monotonically increasing
-    ///     sequence number unique to the channel is used.
-    #[pyo3(signature = (msg, *, log_time=None, publish_time=None, sequence=None))]
-    fn log(
-        &self,
-        msg: &schemas::CompressedImage,
-        log_time: Option<u64>,
-        publish_time: Option<u64>,
-        sequence: Option<u32>,
-    ) {
-        let metadata = PartialMetadata {
-            log_time,
-            publish_time,
-            sequence,
-        };
+    #[pyo3(signature = (msg, *, log_time=None))]
+    fn log(&self, msg: &schemas::CompressedImage, log_time: Option<u64>) {
+        let metadata = PartialMetadata { log_time };
         self.0.log_with_meta(&msg.0, metadata);
     }
 
@@ -309,24 +249,9 @@ impl CompressedVideoChannel {
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
     ///     message was recorded. Usually this is the time log() is called. If omitted, the
     ///     current time is used.
-    /// :param publish_time: The publish_time is the time at which the message was published. e.g.
-    ///     the timestamp at which the sensor reading was taken. If omitted, log time is used.
-    /// :param sequence: The sequence number is unique per channel and allows for ordering of
-    ///     messages as well as detecting missing messages. If omitted, a monotonically increasing
-    ///     sequence number unique to the channel is used.
-    #[pyo3(signature = (msg, *, log_time=None, publish_time=None, sequence=None))]
-    fn log(
-        &self,
-        msg: &schemas::CompressedVideo,
-        log_time: Option<u64>,
-        publish_time: Option<u64>,
-        sequence: Option<u32>,
-    ) {
-        let metadata = PartialMetadata {
-            log_time,
-            publish_time,
-            sequence,
-        };
+    #[pyo3(signature = (msg, *, log_time=None))]
+    fn log(&self, msg: &schemas::CompressedVideo, log_time: Option<u64>) {
+        let metadata = PartialMetadata { log_time };
         self.0.log_with_meta(&msg.0, metadata);
     }
 
@@ -366,24 +291,9 @@ impl FrameTransformChannel {
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
     ///     message was recorded. Usually this is the time log() is called. If omitted, the
     ///     current time is used.
-    /// :param publish_time: The publish_time is the time at which the message was published. e.g.
-    ///     the timestamp at which the sensor reading was taken. If omitted, log time is used.
-    /// :param sequence: The sequence number is unique per channel and allows for ordering of
-    ///     messages as well as detecting missing messages. If omitted, a monotonically increasing
-    ///     sequence number unique to the channel is used.
-    #[pyo3(signature = (msg, *, log_time=None, publish_time=None, sequence=None))]
-    fn log(
-        &self,
-        msg: &schemas::FrameTransform,
-        log_time: Option<u64>,
-        publish_time: Option<u64>,
-        sequence: Option<u32>,
-    ) {
-        let metadata = PartialMetadata {
-            log_time,
-            publish_time,
-            sequence,
-        };
+    #[pyo3(signature = (msg, *, log_time=None))]
+    fn log(&self, msg: &schemas::FrameTransform, log_time: Option<u64>) {
+        let metadata = PartialMetadata { log_time };
         self.0.log_with_meta(&msg.0, metadata);
     }
 
@@ -423,24 +333,9 @@ impl FrameTransformsChannel {
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
     ///     message was recorded. Usually this is the time log() is called. If omitted, the
     ///     current time is used.
-    /// :param publish_time: The publish_time is the time at which the message was published. e.g.
-    ///     the timestamp at which the sensor reading was taken. If omitted, log time is used.
-    /// :param sequence: The sequence number is unique per channel and allows for ordering of
-    ///     messages as well as detecting missing messages. If omitted, a monotonically increasing
-    ///     sequence number unique to the channel is used.
-    #[pyo3(signature = (msg, *, log_time=None, publish_time=None, sequence=None))]
-    fn log(
-        &self,
-        msg: &schemas::FrameTransforms,
-        log_time: Option<u64>,
-        publish_time: Option<u64>,
-        sequence: Option<u32>,
-    ) {
-        let metadata = PartialMetadata {
-            log_time,
-            publish_time,
-            sequence,
-        };
+    #[pyo3(signature = (msg, *, log_time=None))]
+    fn log(&self, msg: &schemas::FrameTransforms, log_time: Option<u64>) {
+        let metadata = PartialMetadata { log_time };
         self.0.log_with_meta(&msg.0, metadata);
     }
 
@@ -480,24 +375,9 @@ impl GeoJsonChannel {
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
     ///     message was recorded. Usually this is the time log() is called. If omitted, the
     ///     current time is used.
-    /// :param publish_time: The publish_time is the time at which the message was published. e.g.
-    ///     the timestamp at which the sensor reading was taken. If omitted, log time is used.
-    /// :param sequence: The sequence number is unique per channel and allows for ordering of
-    ///     messages as well as detecting missing messages. If omitted, a monotonically increasing
-    ///     sequence number unique to the channel is used.
-    #[pyo3(signature = (msg, *, log_time=None, publish_time=None, sequence=None))]
-    fn log(
-        &self,
-        msg: &schemas::GeoJson,
-        log_time: Option<u64>,
-        publish_time: Option<u64>,
-        sequence: Option<u32>,
-    ) {
-        let metadata = PartialMetadata {
-            log_time,
-            publish_time,
-            sequence,
-        };
+    #[pyo3(signature = (msg, *, log_time=None))]
+    fn log(&self, msg: &schemas::GeoJson, log_time: Option<u64>) {
+        let metadata = PartialMetadata { log_time };
         self.0.log_with_meta(&msg.0, metadata);
     }
 
@@ -537,24 +417,9 @@ impl GridChannel {
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
     ///     message was recorded. Usually this is the time log() is called. If omitted, the
     ///     current time is used.
-    /// :param publish_time: The publish_time is the time at which the message was published. e.g.
-    ///     the timestamp at which the sensor reading was taken. If omitted, log time is used.
-    /// :param sequence: The sequence number is unique per channel and allows for ordering of
-    ///     messages as well as detecting missing messages. If omitted, a monotonically increasing
-    ///     sequence number unique to the channel is used.
-    #[pyo3(signature = (msg, *, log_time=None, publish_time=None, sequence=None))]
-    fn log(
-        &self,
-        msg: &schemas::Grid,
-        log_time: Option<u64>,
-        publish_time: Option<u64>,
-        sequence: Option<u32>,
-    ) {
-        let metadata = PartialMetadata {
-            log_time,
-            publish_time,
-            sequence,
-        };
+    #[pyo3(signature = (msg, *, log_time=None))]
+    fn log(&self, msg: &schemas::Grid, log_time: Option<u64>) {
+        let metadata = PartialMetadata { log_time };
         self.0.log_with_meta(&msg.0, metadata);
     }
 
@@ -594,24 +459,9 @@ impl ImageAnnotationsChannel {
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
     ///     message was recorded. Usually this is the time log() is called. If omitted, the
     ///     current time is used.
-    /// :param publish_time: The publish_time is the time at which the message was published. e.g.
-    ///     the timestamp at which the sensor reading was taken. If omitted, log time is used.
-    /// :param sequence: The sequence number is unique per channel and allows for ordering of
-    ///     messages as well as detecting missing messages. If omitted, a monotonically increasing
-    ///     sequence number unique to the channel is used.
-    #[pyo3(signature = (msg, *, log_time=None, publish_time=None, sequence=None))]
-    fn log(
-        &self,
-        msg: &schemas::ImageAnnotations,
-        log_time: Option<u64>,
-        publish_time: Option<u64>,
-        sequence: Option<u32>,
-    ) {
-        let metadata = PartialMetadata {
-            log_time,
-            publish_time,
-            sequence,
-        };
+    #[pyo3(signature = (msg, *, log_time=None))]
+    fn log(&self, msg: &schemas::ImageAnnotations, log_time: Option<u64>) {
+        let metadata = PartialMetadata { log_time };
         self.0.log_with_meta(&msg.0, metadata);
     }
 
@@ -651,24 +501,9 @@ impl KeyValuePairChannel {
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
     ///     message was recorded. Usually this is the time log() is called. If omitted, the
     ///     current time is used.
-    /// :param publish_time: The publish_time is the time at which the message was published. e.g.
-    ///     the timestamp at which the sensor reading was taken. If omitted, log time is used.
-    /// :param sequence: The sequence number is unique per channel and allows for ordering of
-    ///     messages as well as detecting missing messages. If omitted, a monotonically increasing
-    ///     sequence number unique to the channel is used.
-    #[pyo3(signature = (msg, *, log_time=None, publish_time=None, sequence=None))]
-    fn log(
-        &self,
-        msg: &schemas::KeyValuePair,
-        log_time: Option<u64>,
-        publish_time: Option<u64>,
-        sequence: Option<u32>,
-    ) {
-        let metadata = PartialMetadata {
-            log_time,
-            publish_time,
-            sequence,
-        };
+    #[pyo3(signature = (msg, *, log_time=None))]
+    fn log(&self, msg: &schemas::KeyValuePair, log_time: Option<u64>) {
+        let metadata = PartialMetadata { log_time };
         self.0.log_with_meta(&msg.0, metadata);
     }
 
@@ -708,24 +543,9 @@ impl LaserScanChannel {
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
     ///     message was recorded. Usually this is the time log() is called. If omitted, the
     ///     current time is used.
-    /// :param publish_time: The publish_time is the time at which the message was published. e.g.
-    ///     the timestamp at which the sensor reading was taken. If omitted, log time is used.
-    /// :param sequence: The sequence number is unique per channel and allows for ordering of
-    ///     messages as well as detecting missing messages. If omitted, a monotonically increasing
-    ///     sequence number unique to the channel is used.
-    #[pyo3(signature = (msg, *, log_time=None, publish_time=None, sequence=None))]
-    fn log(
-        &self,
-        msg: &schemas::LaserScan,
-        log_time: Option<u64>,
-        publish_time: Option<u64>,
-        sequence: Option<u32>,
-    ) {
-        let metadata = PartialMetadata {
-            log_time,
-            publish_time,
-            sequence,
-        };
+    #[pyo3(signature = (msg, *, log_time=None))]
+    fn log(&self, msg: &schemas::LaserScan, log_time: Option<u64>) {
+        let metadata = PartialMetadata { log_time };
         self.0.log_with_meta(&msg.0, metadata);
     }
 
@@ -765,24 +585,9 @@ impl LocationFixChannel {
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
     ///     message was recorded. Usually this is the time log() is called. If omitted, the
     ///     current time is used.
-    /// :param publish_time: The publish_time is the time at which the message was published. e.g.
-    ///     the timestamp at which the sensor reading was taken. If omitted, log time is used.
-    /// :param sequence: The sequence number is unique per channel and allows for ordering of
-    ///     messages as well as detecting missing messages. If omitted, a monotonically increasing
-    ///     sequence number unique to the channel is used.
-    #[pyo3(signature = (msg, *, log_time=None, publish_time=None, sequence=None))]
-    fn log(
-        &self,
-        msg: &schemas::LocationFix,
-        log_time: Option<u64>,
-        publish_time: Option<u64>,
-        sequence: Option<u32>,
-    ) {
-        let metadata = PartialMetadata {
-            log_time,
-            publish_time,
-            sequence,
-        };
+    #[pyo3(signature = (msg, *, log_time=None))]
+    fn log(&self, msg: &schemas::LocationFix, log_time: Option<u64>) {
+        let metadata = PartialMetadata { log_time };
         self.0.log_with_meta(&msg.0, metadata);
     }
 
@@ -822,24 +627,9 @@ impl LogChannel {
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
     ///     message was recorded. Usually this is the time log() is called. If omitted, the
     ///     current time is used.
-    /// :param publish_time: The publish_time is the time at which the message was published. e.g.
-    ///     the timestamp at which the sensor reading was taken. If omitted, log time is used.
-    /// :param sequence: The sequence number is unique per channel and allows for ordering of
-    ///     messages as well as detecting missing messages. If omitted, a monotonically increasing
-    ///     sequence number unique to the channel is used.
-    #[pyo3(signature = (msg, *, log_time=None, publish_time=None, sequence=None))]
-    fn log(
-        &self,
-        msg: &schemas::Log,
-        log_time: Option<u64>,
-        publish_time: Option<u64>,
-        sequence: Option<u32>,
-    ) {
-        let metadata = PartialMetadata {
-            log_time,
-            publish_time,
-            sequence,
-        };
+    #[pyo3(signature = (msg, *, log_time=None))]
+    fn log(&self, msg: &schemas::Log, log_time: Option<u64>) {
+        let metadata = PartialMetadata { log_time };
         self.0.log_with_meta(&msg.0, metadata);
     }
 
@@ -879,24 +669,9 @@ impl SceneEntityDeletionChannel {
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
     ///     message was recorded. Usually this is the time log() is called. If omitted, the
     ///     current time is used.
-    /// :param publish_time: The publish_time is the time at which the message was published. e.g.
-    ///     the timestamp at which the sensor reading was taken. If omitted, log time is used.
-    /// :param sequence: The sequence number is unique per channel and allows for ordering of
-    ///     messages as well as detecting missing messages. If omitted, a monotonically increasing
-    ///     sequence number unique to the channel is used.
-    #[pyo3(signature = (msg, *, log_time=None, publish_time=None, sequence=None))]
-    fn log(
-        &self,
-        msg: &schemas::SceneEntityDeletion,
-        log_time: Option<u64>,
-        publish_time: Option<u64>,
-        sequence: Option<u32>,
-    ) {
-        let metadata = PartialMetadata {
-            log_time,
-            publish_time,
-            sequence,
-        };
+    #[pyo3(signature = (msg, *, log_time=None))]
+    fn log(&self, msg: &schemas::SceneEntityDeletion, log_time: Option<u64>) {
+        let metadata = PartialMetadata { log_time };
         self.0.log_with_meta(&msg.0, metadata);
     }
 
@@ -936,24 +711,9 @@ impl SceneEntityChannel {
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
     ///     message was recorded. Usually this is the time log() is called. If omitted, the
     ///     current time is used.
-    /// :param publish_time: The publish_time is the time at which the message was published. e.g.
-    ///     the timestamp at which the sensor reading was taken. If omitted, log time is used.
-    /// :param sequence: The sequence number is unique per channel and allows for ordering of
-    ///     messages as well as detecting missing messages. If omitted, a monotonically increasing
-    ///     sequence number unique to the channel is used.
-    #[pyo3(signature = (msg, *, log_time=None, publish_time=None, sequence=None))]
-    fn log(
-        &self,
-        msg: &schemas::SceneEntity,
-        log_time: Option<u64>,
-        publish_time: Option<u64>,
-        sequence: Option<u32>,
-    ) {
-        let metadata = PartialMetadata {
-            log_time,
-            publish_time,
-            sequence,
-        };
+    #[pyo3(signature = (msg, *, log_time=None))]
+    fn log(&self, msg: &schemas::SceneEntity, log_time: Option<u64>) {
+        let metadata = PartialMetadata { log_time };
         self.0.log_with_meta(&msg.0, metadata);
     }
 
@@ -993,24 +753,9 @@ impl SceneUpdateChannel {
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
     ///     message was recorded. Usually this is the time log() is called. If omitted, the
     ///     current time is used.
-    /// :param publish_time: The publish_time is the time at which the message was published. e.g.
-    ///     the timestamp at which the sensor reading was taken. If omitted, log time is used.
-    /// :param sequence: The sequence number is unique per channel and allows for ordering of
-    ///     messages as well as detecting missing messages. If omitted, a monotonically increasing
-    ///     sequence number unique to the channel is used.
-    #[pyo3(signature = (msg, *, log_time=None, publish_time=None, sequence=None))]
-    fn log(
-        &self,
-        msg: &schemas::SceneUpdate,
-        log_time: Option<u64>,
-        publish_time: Option<u64>,
-        sequence: Option<u32>,
-    ) {
-        let metadata = PartialMetadata {
-            log_time,
-            publish_time,
-            sequence,
-        };
+    #[pyo3(signature = (msg, *, log_time=None))]
+    fn log(&self, msg: &schemas::SceneUpdate, log_time: Option<u64>) {
+        let metadata = PartialMetadata { log_time };
         self.0.log_with_meta(&msg.0, metadata);
     }
 
@@ -1050,24 +795,9 @@ impl PackedElementFieldChannel {
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
     ///     message was recorded. Usually this is the time log() is called. If omitted, the
     ///     current time is used.
-    /// :param publish_time: The publish_time is the time at which the message was published. e.g.
-    ///     the timestamp at which the sensor reading was taken. If omitted, log time is used.
-    /// :param sequence: The sequence number is unique per channel and allows for ordering of
-    ///     messages as well as detecting missing messages. If omitted, a monotonically increasing
-    ///     sequence number unique to the channel is used.
-    #[pyo3(signature = (msg, *, log_time=None, publish_time=None, sequence=None))]
-    fn log(
-        &self,
-        msg: &schemas::PackedElementField,
-        log_time: Option<u64>,
-        publish_time: Option<u64>,
-        sequence: Option<u32>,
-    ) {
-        let metadata = PartialMetadata {
-            log_time,
-            publish_time,
-            sequence,
-        };
+    #[pyo3(signature = (msg, *, log_time=None))]
+    fn log(&self, msg: &schemas::PackedElementField, log_time: Option<u64>) {
+        let metadata = PartialMetadata { log_time };
         self.0.log_with_meta(&msg.0, metadata);
     }
 
@@ -1107,24 +837,9 @@ impl Point2Channel {
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
     ///     message was recorded. Usually this is the time log() is called. If omitted, the
     ///     current time is used.
-    /// :param publish_time: The publish_time is the time at which the message was published. e.g.
-    ///     the timestamp at which the sensor reading was taken. If omitted, log time is used.
-    /// :param sequence: The sequence number is unique per channel and allows for ordering of
-    ///     messages as well as detecting missing messages. If omitted, a monotonically increasing
-    ///     sequence number unique to the channel is used.
-    #[pyo3(signature = (msg, *, log_time=None, publish_time=None, sequence=None))]
-    fn log(
-        &self,
-        msg: &schemas::Point2,
-        log_time: Option<u64>,
-        publish_time: Option<u64>,
-        sequence: Option<u32>,
-    ) {
-        let metadata = PartialMetadata {
-            log_time,
-            publish_time,
-            sequence,
-        };
+    #[pyo3(signature = (msg, *, log_time=None))]
+    fn log(&self, msg: &schemas::Point2, log_time: Option<u64>) {
+        let metadata = PartialMetadata { log_time };
         self.0.log_with_meta(&msg.0, metadata);
     }
 
@@ -1164,24 +879,9 @@ impl Point3Channel {
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
     ///     message was recorded. Usually this is the time log() is called. If omitted, the
     ///     current time is used.
-    /// :param publish_time: The publish_time is the time at which the message was published. e.g.
-    ///     the timestamp at which the sensor reading was taken. If omitted, log time is used.
-    /// :param sequence: The sequence number is unique per channel and allows for ordering of
-    ///     messages as well as detecting missing messages. If omitted, a monotonically increasing
-    ///     sequence number unique to the channel is used.
-    #[pyo3(signature = (msg, *, log_time=None, publish_time=None, sequence=None))]
-    fn log(
-        &self,
-        msg: &schemas::Point3,
-        log_time: Option<u64>,
-        publish_time: Option<u64>,
-        sequence: Option<u32>,
-    ) {
-        let metadata = PartialMetadata {
-            log_time,
-            publish_time,
-            sequence,
-        };
+    #[pyo3(signature = (msg, *, log_time=None))]
+    fn log(&self, msg: &schemas::Point3, log_time: Option<u64>) {
+        let metadata = PartialMetadata { log_time };
         self.0.log_with_meta(&msg.0, metadata);
     }
 
@@ -1221,24 +921,9 @@ impl PointCloudChannel {
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
     ///     message was recorded. Usually this is the time log() is called. If omitted, the
     ///     current time is used.
-    /// :param publish_time: The publish_time is the time at which the message was published. e.g.
-    ///     the timestamp at which the sensor reading was taken. If omitted, log time is used.
-    /// :param sequence: The sequence number is unique per channel and allows for ordering of
-    ///     messages as well as detecting missing messages. If omitted, a monotonically increasing
-    ///     sequence number unique to the channel is used.
-    #[pyo3(signature = (msg, *, log_time=None, publish_time=None, sequence=None))]
-    fn log(
-        &self,
-        msg: &schemas::PointCloud,
-        log_time: Option<u64>,
-        publish_time: Option<u64>,
-        sequence: Option<u32>,
-    ) {
-        let metadata = PartialMetadata {
-            log_time,
-            publish_time,
-            sequence,
-        };
+    #[pyo3(signature = (msg, *, log_time=None))]
+    fn log(&self, msg: &schemas::PointCloud, log_time: Option<u64>) {
+        let metadata = PartialMetadata { log_time };
         self.0.log_with_meta(&msg.0, metadata);
     }
 
@@ -1278,24 +963,9 @@ impl PointsAnnotationChannel {
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
     ///     message was recorded. Usually this is the time log() is called. If omitted, the
     ///     current time is used.
-    /// :param publish_time: The publish_time is the time at which the message was published. e.g.
-    ///     the timestamp at which the sensor reading was taken. If omitted, log time is used.
-    /// :param sequence: The sequence number is unique per channel and allows for ordering of
-    ///     messages as well as detecting missing messages. If omitted, a monotonically increasing
-    ///     sequence number unique to the channel is used.
-    #[pyo3(signature = (msg, *, log_time=None, publish_time=None, sequence=None))]
-    fn log(
-        &self,
-        msg: &schemas::PointsAnnotation,
-        log_time: Option<u64>,
-        publish_time: Option<u64>,
-        sequence: Option<u32>,
-    ) {
-        let metadata = PartialMetadata {
-            log_time,
-            publish_time,
-            sequence,
-        };
+    #[pyo3(signature = (msg, *, log_time=None))]
+    fn log(&self, msg: &schemas::PointsAnnotation, log_time: Option<u64>) {
+        let metadata = PartialMetadata { log_time };
         self.0.log_with_meta(&msg.0, metadata);
     }
 
@@ -1335,24 +1005,9 @@ impl PoseChannel {
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
     ///     message was recorded. Usually this is the time log() is called. If omitted, the
     ///     current time is used.
-    /// :param publish_time: The publish_time is the time at which the message was published. e.g.
-    ///     the timestamp at which the sensor reading was taken. If omitted, log time is used.
-    /// :param sequence: The sequence number is unique per channel and allows for ordering of
-    ///     messages as well as detecting missing messages. If omitted, a monotonically increasing
-    ///     sequence number unique to the channel is used.
-    #[pyo3(signature = (msg, *, log_time=None, publish_time=None, sequence=None))]
-    fn log(
-        &self,
-        msg: &schemas::Pose,
-        log_time: Option<u64>,
-        publish_time: Option<u64>,
-        sequence: Option<u32>,
-    ) {
-        let metadata = PartialMetadata {
-            log_time,
-            publish_time,
-            sequence,
-        };
+    #[pyo3(signature = (msg, *, log_time=None))]
+    fn log(&self, msg: &schemas::Pose, log_time: Option<u64>) {
+        let metadata = PartialMetadata { log_time };
         self.0.log_with_meta(&msg.0, metadata);
     }
 
@@ -1392,24 +1047,9 @@ impl PoseInFrameChannel {
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
     ///     message was recorded. Usually this is the time log() is called. If omitted, the
     ///     current time is used.
-    /// :param publish_time: The publish_time is the time at which the message was published. e.g.
-    ///     the timestamp at which the sensor reading was taken. If omitted, log time is used.
-    /// :param sequence: The sequence number is unique per channel and allows for ordering of
-    ///     messages as well as detecting missing messages. If omitted, a monotonically increasing
-    ///     sequence number unique to the channel is used.
-    #[pyo3(signature = (msg, *, log_time=None, publish_time=None, sequence=None))]
-    fn log(
-        &self,
-        msg: &schemas::PoseInFrame,
-        log_time: Option<u64>,
-        publish_time: Option<u64>,
-        sequence: Option<u32>,
-    ) {
-        let metadata = PartialMetadata {
-            log_time,
-            publish_time,
-            sequence,
-        };
+    #[pyo3(signature = (msg, *, log_time=None))]
+    fn log(&self, msg: &schemas::PoseInFrame, log_time: Option<u64>) {
+        let metadata = PartialMetadata { log_time };
         self.0.log_with_meta(&msg.0, metadata);
     }
 
@@ -1449,24 +1089,9 @@ impl PosesInFrameChannel {
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
     ///     message was recorded. Usually this is the time log() is called. If omitted, the
     ///     current time is used.
-    /// :param publish_time: The publish_time is the time at which the message was published. e.g.
-    ///     the timestamp at which the sensor reading was taken. If omitted, log time is used.
-    /// :param sequence: The sequence number is unique per channel and allows for ordering of
-    ///     messages as well as detecting missing messages. If omitted, a monotonically increasing
-    ///     sequence number unique to the channel is used.
-    #[pyo3(signature = (msg, *, log_time=None, publish_time=None, sequence=None))]
-    fn log(
-        &self,
-        msg: &schemas::PosesInFrame,
-        log_time: Option<u64>,
-        publish_time: Option<u64>,
-        sequence: Option<u32>,
-    ) {
-        let metadata = PartialMetadata {
-            log_time,
-            publish_time,
-            sequence,
-        };
+    #[pyo3(signature = (msg, *, log_time=None))]
+    fn log(&self, msg: &schemas::PosesInFrame, log_time: Option<u64>) {
+        let metadata = PartialMetadata { log_time };
         self.0.log_with_meta(&msg.0, metadata);
     }
 
@@ -1506,24 +1131,9 @@ impl QuaternionChannel {
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
     ///     message was recorded. Usually this is the time log() is called. If omitted, the
     ///     current time is used.
-    /// :param publish_time: The publish_time is the time at which the message was published. e.g.
-    ///     the timestamp at which the sensor reading was taken. If omitted, log time is used.
-    /// :param sequence: The sequence number is unique per channel and allows for ordering of
-    ///     messages as well as detecting missing messages. If omitted, a monotonically increasing
-    ///     sequence number unique to the channel is used.
-    #[pyo3(signature = (msg, *, log_time=None, publish_time=None, sequence=None))]
-    fn log(
-        &self,
-        msg: &schemas::Quaternion,
-        log_time: Option<u64>,
-        publish_time: Option<u64>,
-        sequence: Option<u32>,
-    ) {
-        let metadata = PartialMetadata {
-            log_time,
-            publish_time,
-            sequence,
-        };
+    #[pyo3(signature = (msg, *, log_time=None))]
+    fn log(&self, msg: &schemas::Quaternion, log_time: Option<u64>) {
+        let metadata = PartialMetadata { log_time };
         self.0.log_with_meta(&msg.0, metadata);
     }
 
@@ -1563,24 +1173,9 @@ impl RawImageChannel {
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
     ///     message was recorded. Usually this is the time log() is called. If omitted, the
     ///     current time is used.
-    /// :param publish_time: The publish_time is the time at which the message was published. e.g.
-    ///     the timestamp at which the sensor reading was taken. If omitted, log time is used.
-    /// :param sequence: The sequence number is unique per channel and allows for ordering of
-    ///     messages as well as detecting missing messages. If omitted, a monotonically increasing
-    ///     sequence number unique to the channel is used.
-    #[pyo3(signature = (msg, *, log_time=None, publish_time=None, sequence=None))]
-    fn log(
-        &self,
-        msg: &schemas::RawImage,
-        log_time: Option<u64>,
-        publish_time: Option<u64>,
-        sequence: Option<u32>,
-    ) {
-        let metadata = PartialMetadata {
-            log_time,
-            publish_time,
-            sequence,
-        };
+    #[pyo3(signature = (msg, *, log_time=None))]
+    fn log(&self, msg: &schemas::RawImage, log_time: Option<u64>) {
+        let metadata = PartialMetadata { log_time };
         self.0.log_with_meta(&msg.0, metadata);
     }
 
@@ -1620,24 +1215,9 @@ impl TextAnnotationChannel {
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
     ///     message was recorded. Usually this is the time log() is called. If omitted, the
     ///     current time is used.
-    /// :param publish_time: The publish_time is the time at which the message was published. e.g.
-    ///     the timestamp at which the sensor reading was taken. If omitted, log time is used.
-    /// :param sequence: The sequence number is unique per channel and allows for ordering of
-    ///     messages as well as detecting missing messages. If omitted, a monotonically increasing
-    ///     sequence number unique to the channel is used.
-    #[pyo3(signature = (msg, *, log_time=None, publish_time=None, sequence=None))]
-    fn log(
-        &self,
-        msg: &schemas::TextAnnotation,
-        log_time: Option<u64>,
-        publish_time: Option<u64>,
-        sequence: Option<u32>,
-    ) {
-        let metadata = PartialMetadata {
-            log_time,
-            publish_time,
-            sequence,
-        };
+    #[pyo3(signature = (msg, *, log_time=None))]
+    fn log(&self, msg: &schemas::TextAnnotation, log_time: Option<u64>) {
+        let metadata = PartialMetadata { log_time };
         self.0.log_with_meta(&msg.0, metadata);
     }
 
@@ -1677,24 +1257,9 @@ impl Vector2Channel {
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
     ///     message was recorded. Usually this is the time log() is called. If omitted, the
     ///     current time is used.
-    /// :param publish_time: The publish_time is the time at which the message was published. e.g.
-    ///     the timestamp at which the sensor reading was taken. If omitted, log time is used.
-    /// :param sequence: The sequence number is unique per channel and allows for ordering of
-    ///     messages as well as detecting missing messages. If omitted, a monotonically increasing
-    ///     sequence number unique to the channel is used.
-    #[pyo3(signature = (msg, *, log_time=None, publish_time=None, sequence=None))]
-    fn log(
-        &self,
-        msg: &schemas::Vector2,
-        log_time: Option<u64>,
-        publish_time: Option<u64>,
-        sequence: Option<u32>,
-    ) {
-        let metadata = PartialMetadata {
-            log_time,
-            publish_time,
-            sequence,
-        };
+    #[pyo3(signature = (msg, *, log_time=None))]
+    fn log(&self, msg: &schemas::Vector2, log_time: Option<u64>) {
+        let metadata = PartialMetadata { log_time };
         self.0.log_with_meta(&msg.0, metadata);
     }
 
@@ -1734,24 +1299,9 @@ impl Vector3Channel {
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
     ///     message was recorded. Usually this is the time log() is called. If omitted, the
     ///     current time is used.
-    /// :param publish_time: The publish_time is the time at which the message was published. e.g.
-    ///     the timestamp at which the sensor reading was taken. If omitted, log time is used.
-    /// :param sequence: The sequence number is unique per channel and allows for ordering of
-    ///     messages as well as detecting missing messages. If omitted, a monotonically increasing
-    ///     sequence number unique to the channel is used.
-    #[pyo3(signature = (msg, *, log_time=None, publish_time=None, sequence=None))]
-    fn log(
-        &self,
-        msg: &schemas::Vector3,
-        log_time: Option<u64>,
-        publish_time: Option<u64>,
-        sequence: Option<u32>,
-    ) {
-        let metadata = PartialMetadata {
-            log_time,
-            publish_time,
-            sequence,
-        };
+    #[pyo3(signature = (msg, *, log_time=None))]
+    fn log(&self, msg: &schemas::Vector3, log_time: Option<u64>) {
+        let metadata = PartialMetadata { log_time };
         self.0.log_with_meta(&msg.0, metadata);
     }
 

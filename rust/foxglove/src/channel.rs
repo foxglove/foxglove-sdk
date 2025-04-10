@@ -141,11 +141,9 @@ impl<T: Encode> Channel<T> {
 #[cfg(test)]
 mod test {
     use crate::channel_builder::ChannelBuilder;
-    use crate::collection::collection;
     use crate::log_sink_set::ERROR_LOGGING_MESSAGE;
     use crate::testutil::RecordingSink;
     use crate::{Context, FoxgloveError, RawChannel, Schema};
-    use std::collections::BTreeMap;
     use std::sync::Arc;
     use tracing_test::traced_test;
 
@@ -164,7 +162,7 @@ mod test {
                     },
                 }"#,
             ))
-            .metadata(collection! {"key".to_string() => "value".to_string()})
+            .metadata(maplit::btreemap! {"key".to_string() => "value".to_string()})
             .build_raw()
     }
 
@@ -174,8 +172,7 @@ mod test {
         let topic = "topic";
         let message_encoding = "message_encoding";
         let schema = Schema::new("schema_name", "schema_encoding", &[1, 2, 3]);
-        let metadata: BTreeMap<String, String> =
-            collection! {"key".to_string() => "value".to_string()};
+        let metadata = maplit::btreemap! {"key".to_string() => "value".to_string()};
         let channel = ChannelBuilder::new(topic)
             .message_encoding(message_encoding)
             .schema(schema.clone())
@@ -189,14 +186,6 @@ mod test {
         assert_eq!(channel.schema(), Some(&schema));
         assert_eq!(channel.metadata(), &metadata);
         assert_eq!(ctx.get_channel_by_topic(topic), Some(channel));
-    }
-
-    #[test]
-    fn test_channel_next_sequence() {
-        let ctx = Context::new();
-        let channel = new_test_channel(&ctx).unwrap();
-        assert_eq!(channel.next_sequence(), 1);
-        assert_eq!(channel.next_sequence(), 2);
     }
 
     #[traced_test]
@@ -227,11 +216,6 @@ mod test {
         assert_eq!(messages.len(), 1);
         assert_eq!(messages[0].channel_id, channel.id());
         assert_eq!(messages[0].msg, msg.to_vec());
-        assert_eq!(messages[0].metadata.sequence, 1);
-        assert_eq!(
-            messages[0].metadata.log_time,
-            messages[0].metadata.publish_time
-        );
         assert!(messages[0].metadata.log_time > 1732847588055322395);
     }
 

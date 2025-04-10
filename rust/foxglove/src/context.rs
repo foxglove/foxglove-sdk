@@ -5,9 +5,7 @@ use std::sync::Arc;
 
 use parking_lot::RwLock;
 
-use crate::{
-    ChannelBuilder, ChannelId, FoxgloveError, McapWriter, RawChannel, Sink, SinkId, WebSocketServer,
-};
+use crate::{ChannelBuilder, ChannelId, FoxgloveError, McapWriter, RawChannel, Sink, SinkId};
 
 mod lazy_context;
 mod subscriptions;
@@ -227,8 +225,9 @@ impl Context {
     }
 
     /// Returns a builder for a websocket server in this context.
-    pub fn websocket_server(self: &Arc<Self>) -> WebSocketServer {
-        WebSocketServer::new().context(self)
+    #[cfg(feature = "live_visualization")]
+    pub fn websocket_server(self: &Arc<Self>) -> crate::WebSocketServer {
+        crate::WebSocketServer::new().context(self)
     }
 
     /// Returns the channel for the specified topic, if there is one.
@@ -303,7 +302,6 @@ impl Drop for Context {
 
 #[cfg(test)]
 mod tests {
-    use crate::collection::collection;
     use crate::log_sink_set::ERROR_LOGGING_MESSAGE;
     use crate::testutil::{ErrorSink, MockSink, RecordingSink};
     use crate::{context::*, ChannelBuilder};
@@ -326,7 +324,7 @@ mod tests {
                     },
                 }"#,
             ))
-            .metadata(collection! {"key".to_string() => "value".to_string()})
+            .metadata(maplit::btreemap! {"key".to_string() => "value".to_string()})
             .build_raw()
     }
 
@@ -381,18 +379,11 @@ mod tests {
         assert_eq!(messages1[0].msg, msg.to_vec());
         let metadata1 = &messages1[0].metadata;
         assert!(metadata1.log_time >= now);
-        assert!(metadata1.publish_time >= now);
-        assert_eq!(metadata1.log_time, metadata1.publish_time);
-        assert!(metadata1.sequence > 0);
 
         assert_eq!(messages2[0].channel_id, channel.id());
         assert_eq!(messages2[0].msg, msg.to_vec());
         let metadata2 = &messages2[0].metadata;
         assert!(metadata2.log_time >= now);
-        assert!(metadata2.publish_time >= now);
-        assert_eq!(metadata2.log_time, metadata2.publish_time);
-        assert!(metadata2.sequence > 0);
-        assert_eq!(metadata1.sequence, metadata2.sequence);
     }
 
     #[traced_test]
@@ -409,9 +400,7 @@ mod tests {
         let channel = new_test_channel(&ctx, "topic").unwrap();
         let msg = b"test_message";
         let opts = PartialMetadata {
-            sequence: Some(1),
             log_time: Some(nanoseconds_since_epoch()),
-            publish_time: Some(nanoseconds_since_epoch()),
         };
 
         channel.log_with_meta(msg, opts);
@@ -423,9 +412,7 @@ mod tests {
         assert_eq!(messages[0].channel_id, channel.id());
         assert_eq!(messages[0].msg, msg.to_vec());
         let metadata = &messages[0].metadata;
-        assert_eq!(metadata.sequence, opts.sequence.unwrap());
         assert_eq!(metadata.log_time, opts.log_time.unwrap());
-        assert_eq!(metadata.publish_time, opts.publish_time.unwrap());
     }
 
     #[traced_test]

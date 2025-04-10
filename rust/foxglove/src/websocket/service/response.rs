@@ -6,7 +6,9 @@ use bytes::Bytes;
 use tokio_tungstenite::tungstenite::Message;
 
 use super::{CallId, ServiceId};
-use crate::websocket::{protocol, ConnectedClient, SemaphoreGuard};
+use crate::websocket::connected_client::ConnectedClient;
+use crate::websocket::semaphore::SemaphoreGuard;
+use crate::websocket::ws_protocol::server::{ServiceCallFailure, ServiceCallResponse};
 
 /// A handle for completing a service call.
 ///
@@ -18,7 +20,7 @@ use crate::websocket::{protocol, ConnectedClient, SemaphoreGuard};
 pub struct Responder(Option<Inner>);
 impl Responder {
     /// Creates a new responder.
-    pub(crate) fn new(
+    pub(in crate::websocket) fn new(
         client: Arc<ConnectedClient>,
         service_id: ServiceId,
         call_id: CallId,
@@ -78,20 +80,17 @@ struct Inner {
 impl Inner {
     fn respond(self, result: Result<Bytes, String>) {
         let message = match result {
-            Ok(payload) => Message::binary(
-                protocol::server::ServiceCallResponse::new(
-                    self.service_id,
-                    self.call_id,
-                    self.encoding,
-                    payload,
-                )
-                .encode(),
-            ),
-            Err(message) => Message::text(protocol::server::service_call_failure(
-                self.service_id,
-                self.call_id,
-                &message,
-            )),
+            Ok(payload) => Message::from(&ServiceCallResponse {
+                service_id: self.service_id.into(),
+                call_id: self.call_id.into(),
+                encoding: self.encoding.into(),
+                payload: (&*payload).into(),
+            }),
+            Err(message) => Message::from(&ServiceCallFailure {
+                service_id: self.service_id.into(),
+                call_id: self.call_id.into(),
+                message,
+            }),
         };
 
         // Callee logs errors.

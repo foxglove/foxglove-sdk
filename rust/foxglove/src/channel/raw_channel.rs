@@ -1,8 +1,8 @@
 //! A raw channel.
 
 use std::collections::BTreeMap;
-use std::sync::atomic::Ordering::{Acquire, Relaxed, Release};
-use std::sync::atomic::{AtomicBool, AtomicU32};
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering::{Acquire, Release};
 use std::sync::{Arc, Weak};
 use std::time::Duration;
 
@@ -38,7 +38,6 @@ pub struct RawChannel {
     message_encoding: String,
     schema: Option<Schema>,
     metadata: BTreeMap<String, String>,
-    message_sequence: AtomicU32,
     sinks: LogSinkSet,
     closed: AtomicBool,
     warn_throttler: Mutex<Throttler>,
@@ -59,7 +58,6 @@ impl RawChannel {
             message_encoding,
             schema,
             metadata,
-            message_sequence: AtomicU32::new(1),
             sinks: LogSinkSet::new(),
             closed: AtomicBool::new(false),
             warn_throttler: Mutex::new(Throttler::new(WARN_THROTTLER_INTERVAL)),
@@ -89,11 +87,6 @@ impl RawChannel {
     /// Returns the metadata for this channel.
     pub fn metadata(&self) -> &BTreeMap<String, String> {
         &self.metadata
-    }
-
-    /// Atomically increments and returns the next message sequence number.
-    pub fn next_sequence(&self) -> u32 {
-        self.message_sequence.fetch_add(1, Relaxed)
     }
 
     /// Closes the channel, removing it from the context.
@@ -172,15 +165,9 @@ impl RawChannel {
 
     /// Logs a message with additional metadata.
     pub(crate) fn log_to_sinks(&self, msg: &[u8], opts: PartialMetadata) {
-        let mut metadata = Metadata {
-            sequence: opts.sequence.unwrap_or_else(|| self.next_sequence()),
+        let metadata = Metadata {
             log_time: opts.log_time.unwrap_or_else(nanoseconds_since_epoch),
-            publish_time: opts.publish_time.unwrap_or_default(),
         };
-        // If publish_time is not set, use log_time.
-        if opts.publish_time.is_none() {
-            metadata.publish_time = metadata.log_time
-        }
 
         self.sinks.for_each(|sink| sink.log(self, msg, &metadata));
     }
@@ -193,7 +180,6 @@ impl PartialEq for RawChannel {
             && self.message_encoding == other.message_encoding
             && self.schema == other.schema
             && self.metadata == other.metadata
-            && self.message_sequence.load(Relaxed) == other.message_sequence.load(Relaxed)
     }
 }
 

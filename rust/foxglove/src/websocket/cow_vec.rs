@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 pub struct CowVec<T> {
     inner: ArcSwap<Vec<T>>,
-    write_lock: parking_lot::Mutex<()>,
+    frozen: parking_lot::Mutex<bool>,
 }
 
 impl<T> CowVec<T>
@@ -13,7 +13,7 @@ where
     pub fn new() -> Self {
         Self {
             inner: ArcSwap::new(Arc::new(Vec::new())),
-            write_lock: parking_lot::Mutex::new(()),
+            frozen: parking_lot::Mutex::new(false),
         }
     }
 
@@ -21,7 +21,7 @@ where
     pub fn from_vec(vec: Vec<T>) -> Self {
         Self {
             inner: ArcSwap::from(Arc::new(vec)),
-            write_lock: parking_lot::Mutex::new(()),
+            frozen: parking_lot::Mutex::new(false),
         }
     }
 
@@ -30,9 +30,15 @@ where
         self.inner.load()
     }
 
-    pub fn push(&self, item: T) {
-        // Lock to ensure only one writer at a time
-        let _guard = self.write_lock.lock();
+    /// Adds a new element.
+    ///
+    /// Returns false after [`CowVec::close`].
+    pub fn push(&self, item: T) -> bool {
+        // Hold the lock to ensure only one writer at a time
+        let frozen = self.frozen.lock();
+        if *frozen {
+            return false;
+        }
 
         // Get current vec and create new one with modification
         let current = self.inner.load();
@@ -41,14 +47,21 @@ where
 
         // Swap in the new vec
         self.inner.store(Arc::new(new_vec));
+        true
     }
 
+    /// Retains elements that match the specified predicate.
     pub fn retain<F>(&self, predicate: F)
     where
         F: FnMut(&T) -> bool,
     {
         // Lock to ensure only one writer at a time
-        let _guard = self.write_lock.lock();
+        let frozen = self.frozen.lock();
+        if *frozen {
+            #[cfg(debug_assertions)]
+            assert!(self.inner.load().is_empty());
+            return;
+        }
 
         // Get current vec and create new one with only the matching elements
         let current = self.inner.load();
@@ -59,12 +72,14 @@ where
         self.inner.store(Arc::new(new_vec));
     }
 
-    pub fn clear(&self) {
-        // Lock to ensure only one writer at a time
-        let _guard = self.write_lock.lock();
+    /// Takes the inner vec, replacing it with an immutable empty vec.
+    pub fn take_and_freeze(&self) -> Arc<Vec<T>> {
+        // Lock to ensure only one writer at a time.
+        let mut frozen = self.frozen.lock();
+        *frozen = true;
 
-        // Swap in an empty vec
-        self.inner.store(Arc::new(Vec::new()));
+        // Swap in an empty vec.
+        self.inner.swap(Arc::default())
     }
 }
 
@@ -143,5 +158,16 @@ mod tests {
         let read_result = reading_thread.join().unwrap();
         assert_eq!(read_result, vec![1, 2, 3, 4, 5]); // Reading thread should see original state
         assert_eq!(vec.get().to_vec(), vec![2, 4]); // Final state should have only even numbers
+    }
+
+    #[test]
+    fn test_take_and_freeze() {
+        let orig = vec![1, 2, 3, 4];
+        let cv = CowVec::from_vec(orig.clone());
+        assert_eq!(cv.take_and_freeze().as_ref(), &orig);
+        assert!(cv.get().is_empty());
+        assert!(!cv.push(5));
+        cv.retain(|_| true);
+        assert!(cv.get().is_empty());
     }
 }

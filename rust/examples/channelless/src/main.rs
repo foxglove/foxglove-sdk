@@ -34,10 +34,8 @@ fn main() {
             file: "main.rs".to_string(),
             line: 42,
         },
-        // You can specify optional "keyword" arguments for log_time, publish_time, and sequence
+        // You can specify an optional `log_time` "keyword" argument
         log_time = 1000,
-        publish_time = 2000,
-        sequence = 123
     );
 
     // Including custom structs that implement serde::Serialize and schemars::JsonSchema
@@ -46,11 +44,7 @@ fn main() {
         Message {
             msg: "Hello, world!".to_string(),
             count: 42,
-        },
-        // You can specify optional keyword arguments for log_time, publish_time, and sequence
-        log_time = 1000,
-        publish_time = 2000,
-        sequence = 123,
+        }
     );
 
     // You can also use log! with existing channels in the default Context, as long as the message encoding and schema match

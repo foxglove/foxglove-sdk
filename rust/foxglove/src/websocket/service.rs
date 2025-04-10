@@ -15,11 +15,11 @@ mod response;
 mod schema;
 #[cfg(test)]
 mod tests;
+
 use handler::{AsyncHandlerFn, BlockingHandlerFn, HandlerFn};
 pub use handler::{Handler, SyncHandler};
 pub use request::Request;
 pub use response::Responder;
-pub(crate) use schema::MessageSchema;
 pub use schema::ServiceSchema;
 
 /// A service ID, which uniquely identifies a service hosted by the server.

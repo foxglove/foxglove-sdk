@@ -47,8 +47,6 @@ class CameraCalibrationChannel:
         message: "CameraCalibration",
         *,
         log_time: int | None = None,
-        publish_time: int | None = None,
-        sequence: int | None = None,
     ) -> None: ...
 
 class CircleAnnotationChannel:
@@ -66,8 +64,6 @@ class CircleAnnotationChannel:
         message: "CircleAnnotation",
         *,
         log_time: int | None = None,
-        publish_time: int | None = None,
-        sequence: int | None = None,
     ) -> None: ...
 
 class ColorChannel:
@@ -85,8 +81,6 @@ class ColorChannel:
         message: "Color",
         *,
         log_time: int | None = None,
-        publish_time: int | None = None,
-        sequence: int | None = None,
     ) -> None: ...
 
 class CompressedImageChannel:
@@ -104,8 +98,6 @@ class CompressedImageChannel:
         message: "CompressedImage",
         *,
         log_time: int | None = None,
-        publish_time: int | None = None,
-        sequence: int | None = None,
     ) -> None: ...
 
 class CompressedVideoChannel:
@@ -123,8 +115,6 @@ class CompressedVideoChannel:
         message: "CompressedVideo",
         *,
         log_time: int | None = None,
-        publish_time: int | None = None,
-        sequence: int | None = None,
     ) -> None: ...
 
 class FrameTransformChannel:
@@ -142,8 +132,6 @@ class FrameTransformChannel:
         message: "FrameTransform",
         *,
         log_time: int | None = None,
-        publish_time: int | None = None,
-        sequence: int | None = None,
     ) -> None: ...
 
 class FrameTransformsChannel:
@@ -161,8 +149,6 @@ class FrameTransformsChannel:
         message: "FrameTransforms",
         *,
         log_time: int | None = None,
-        publish_time: int | None = None,
-        sequence: int | None = None,
     ) -> None: ...
 
 class GeoJsonChannel:
@@ -180,8 +166,6 @@ class GeoJsonChannel:
         message: "GeoJson",
         *,
         log_time: int | None = None,
-        publish_time: int | None = None,
-        sequence: int | None = None,
     ) -> None: ...
 
 class GridChannel:
@@ -199,8 +183,6 @@ class GridChannel:
         message: "Grid",
         *,
         log_time: int | None = None,
-        publish_time: int | None = None,
-        sequence: int | None = None,
     ) -> None: ...
 
 class ImageAnnotationsChannel:
@@ -218,8 +200,6 @@ class ImageAnnotationsChannel:
         message: "ImageAnnotations",
         *,
         log_time: int | None = None,
-        publish_time: int | None = None,
-        sequence: int | None = None,
     ) -> None: ...
 
 class KeyValuePairChannel:
@@ -237,8 +217,6 @@ class KeyValuePairChannel:
         message: "KeyValuePair",
         *,
         log_time: int | None = None,
-        publish_time: int | None = None,
-        sequence: int | None = None,
     ) -> None: ...
 
 class LaserScanChannel:
@@ -256,8 +234,6 @@ class LaserScanChannel:
         message: "LaserScan",
         *,
         log_time: int | None = None,
-        publish_time: int | None = None,
-        sequence: int | None = None,
     ) -> None: ...
 
 class LocationFixChannel:
@@ -275,8 +251,6 @@ class LocationFixChannel:
         message: "LocationFix",
         *,
         log_time: int | None = None,
-        publish_time: int | None = None,
-        sequence: int | None = None,
     ) -> None: ...
 
 class LogChannel:
@@ -294,8 +268,6 @@ class LogChannel:
         message: "Log",
         *,
         log_time: int | None = None,
-        publish_time: int | None = None,
-        sequence: int | None = None,
     ) -> None: ...
 
 class PackedElementFieldChannel:
@@ -313,8 +285,6 @@ class PackedElementFieldChannel:
         message: "PackedElementField",
         *,
         log_time: int | None = None,
-        publish_time: int | None = None,
-        sequence: int | None = None,
     ) -> None: ...
 
 class Point2Channel:
@@ -332,8 +302,6 @@ class Point2Channel:
         message: "Point2",
         *,
         log_time: int | None = None,
-        publish_time: int | None = None,
-        sequence: int | None = None,
     ) -> None: ...
 
 class Point3Channel:
@@ -351,8 +319,6 @@ class Point3Channel:
         message: "Point3",
         *,
         log_time: int | None = None,
-        publish_time: int | None = None,
-        sequence: int | None = None,
     ) -> None: ...
 
 class PointCloudChannel:
@@ -370,8 +336,6 @@ class PointCloudChannel:
         message: "PointCloud",
         *,
         log_time: int | None = None,
-        publish_time: int | None = None,
-        sequence: int | None = None,
     ) -> None: ...
 
 class PointsAnnotationChannel:
@@ -389,8 +353,6 @@ class PointsAnnotationChannel:
         message: "PointsAnnotation",
         *,
         log_time: int | None = None,
-        publish_time: int | None = None,
-        sequence: int | None = None,
     ) -> None: ...
 
 class PoseChannel:
@@ -408,8 +370,6 @@ class PoseChannel:
         message: "Pose",
         *,
         log_time: int | None = None,
-        publish_time: int | None = None,
-        sequence: int | None = None,
     ) -> None: ...
 
 class PoseInFrameChannel:
@@ -427,8 +387,6 @@ class PoseInFrameChannel:
         message: "PoseInFrame",
         *,
         log_time: int | None = None,
-        publish_time: int | None = None,
-        sequence: int | None = None,
     ) -> None: ...
 
 class PosesInFrameChannel:
@@ -446,8 +404,6 @@ class PosesInFrameChannel:
         message: "PosesInFrame",
         *,
         log_time: int | None = None,
-        publish_time: int | None = None,
-        sequence: int | None = None,
     ) -> None: ...
 
 class QuaternionChannel:
@@ -465,8 +421,6 @@ class QuaternionChannel:
         message: "Quaternion",
         *,
         log_time: int | None = None,
-        publish_time: int | None = None,
-        sequence: int | None = None,
     ) -> None: ...
 
 class RawImageChannel:
@@ -484,8 +438,6 @@ class RawImageChannel:
         message: "RawImage",
         *,
         log_time: int | None = None,
-        publish_time: int | None = None,
-        sequence: int | None = None,
     ) -> None: ...
 
 class SceneEntityChannel:
@@ -503,8 +455,6 @@ class SceneEntityChannel:
         message: "SceneEntity",
         *,
         log_time: int | None = None,
-        publish_time: int | None = None,
-        sequence: int | None = None,
     ) -> None: ...
 
 class SceneEntityDeletionChannel:
@@ -522,8 +472,6 @@ class SceneEntityDeletionChannel:
         message: "SceneEntityDeletion",
         *,
         log_time: int | None = None,
-        publish_time: int | None = None,
-        sequence: int | None = None,
     ) -> None: ...
 
 class SceneUpdateChannel:
@@ -541,8 +489,6 @@ class SceneUpdateChannel:
         message: "SceneUpdate",
         *,
         log_time: int | None = None,
-        publish_time: int | None = None,
-        sequence: int | None = None,
     ) -> None: ...
 
 class TextAnnotationChannel:
@@ -560,8 +506,6 @@ class TextAnnotationChannel:
         message: "TextAnnotation",
         *,
         log_time: int | None = None,
-        publish_time: int | None = None,
-        sequence: int | None = None,
     ) -> None: ...
 
 class Vector2Channel:
@@ -579,8 +523,6 @@ class Vector2Channel:
         message: "Vector2",
         *,
         log_time: int | None = None,
-        publish_time: int | None = None,
-        sequence: int | None = None,
     ) -> None: ...
 
 class Vector3Channel:
@@ -598,6 +540,4 @@ class Vector3Channel:
         message: "Vector3",
         *,
         log_time: int | None = None,
-        publish_time: int | None = None,
-        sequence: int | None = None,
     ) -> None: ...

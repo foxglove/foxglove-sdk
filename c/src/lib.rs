@@ -127,7 +127,7 @@ pub struct FoxgloveServerCallbacks {
 unsafe impl Send for FoxgloveServerCallbacks {}
 unsafe impl Sync for FoxgloveServerCallbacks {}
 
-pub struct FoxgloveWebSocketServer(Option<foxglove::WebSocketServerBlockingHandle>);
+pub struct FoxgloveWebSocketServer(Option<foxglove::WebSocketServerHandle>);
 
 // cbindgen does not actually generate a declaration for this, so we manually write one in
 // after_includes
@@ -537,15 +537,13 @@ pub extern "C" fn foxglove_channel_get_id(channel: Option<&FoxgloveChannel>) -> 
 /// `data` must be non-null, and the range `[data, data + data_len)` must contain initialized data
 /// contained within a single allocated object.
 ///
-/// `log_time`, `publish_time`, and `sequence` may be null, or may point to valid, properly-aligned values.
+/// `log_time` may be null or may point to a valid value.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_channel_log(
     channel: Option<&FoxgloveChannel>,
     data: *const u8,
     data_len: usize,
     log_time: *const u64,
-    publish_time: *const u64,
-    sequence: *const u32,
 ) {
     // An assert might be reasonable under different circumstances, but here
     // we don't want to crash the program using the library, on a robot in the field,
@@ -564,8 +562,6 @@ pub unsafe extern "C" fn foxglove_channel_log(
         unsafe { std::slice::from_raw_parts(data, data_len) },
         foxglove::PartialMetadata {
             log_time: unsafe { log_time.as_ref() }.copied(),
-            publish_time: unsafe { publish_time.as_ref() }.copied(),
-            sequence: unsafe { sequence.as_ref() }.copied(),
         },
     );
 }

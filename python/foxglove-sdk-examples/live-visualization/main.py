@@ -144,6 +144,7 @@ def main() -> None:
     )
 
     # If you want to use JSON encoding, you can also specify the schema and log messages as dicts.
+    # Dicts can also be logged without specifying a schema.
     json_chan = Channel(topic="/json", schema=plot_schema)
 
     img_chan = RawImageChannel(topic="/image")
