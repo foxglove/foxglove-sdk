@@ -1,8 +1,7 @@
 use assert_matches::assert_matches;
 use bytes::{BufMut, Bytes, BytesMut};
-use futures_util::{FutureExt, SinkExt, StreamExt};
-use serde::Deserialize;
-use serde_json::{json, Value};
+use futures_util::FutureExt;
+use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -11,16 +10,27 @@ use tokio_tungstenite::tungstenite::{self, http::HeaderValue, Message};
 use tracing_test::traced_test;
 use tungstenite::client::IntoClientRequest;
 
+use super::testutil::WebSocketClient;
+use super::ws_protocol::client::subscribe::Subscription;
+use super::ws_protocol::client::{
+    self, Advertise, FetchAsset, GetParameters, ServiceCallRequest, SetParameters, Subscribe,
+    SubscribeConnectionGraph, SubscribeParameterUpdates, Unsubscribe, UnsubscribeConnectionGraph,
+    UnsubscribeParameterUpdates,
+};
+use super::ws_protocol::server::connection_graph_update::{
+    AdvertisedService, PublishedTopic, SubscribedTopic,
+};
+use super::ws_protocol::server::{
+    advertise_services, ConnectionGraphUpdate, FetchAssetResponse, ParameterValues, ServerInfo,
+    ServerMessage, ServiceCallFailure, ServiceCallResponse, Status,
+};
 use super::{create_server, send_lossy, SendLossyResult, ServerOptions, SUBPROTOCOL};
 use crate::testutil::{assert_eventually, RecordingServerListener};
 use crate::websocket::service::{CallId, Service, ServiceSchema};
 use crate::websocket::{
-    BlockingAssetHandlerFn, Capability, ClientChannelId, ConnectionGraph, Parameter, ParameterType,
-    ParameterValue, Status, StatusLevel,
+    BlockingAssetHandlerFn, Capability, ClientChannelId, ConnectionGraph, Parameter,
 };
-use crate::{
-    collection, ChannelBuilder, Context, FoxgloveError, PartialMetadata, RawChannel, Schema,
-};
+use crate::{ChannelBuilder, Context, FoxgloveError, PartialMetadata, RawChannel, Schema};
 
 fn make_message(id: usize) -> Message {
     Message::Text(format!("{id}").into())
@@ -33,10 +43,24 @@ fn parse_message(msg: Message) -> usize {
     }
 }
 
-#[derive(Debug, Deserialize)]
-struct ParameterValues {
-    id: Option<String>,
-    parameters: Vec<Parameter>,
+macro_rules! expect_recv {
+    ($client:expr, $variant:path) => {{
+        let msg = $client.recv().await.expect("Failed to recv");
+        match msg {
+            $variant(m) => m,
+            _ => panic!("Received unexpected message: {msg:?}"),
+        }
+    }};
+}
+
+macro_rules! expect_recv_close {
+    ($client:expr) => {{
+        let msg = $client.recv_msg().await.expect("Failed to recv");
+        match msg {
+            Message::Close(_) => (),
+            m => panic!("Received unexpected message: {m:?}"),
+        }
+    }};
 }
 
 #[traced_test]
@@ -83,7 +107,7 @@ fn new_channel(topic: &str, ctx: &Arc<Context>) -> Arc<RawChannel> {
             "schema_encoding",
             b"schema_data",
         ))
-        .metadata(collection! {"key".to_string() => "value".to_string()})
+        .metadata(maplit::btreemap! {"key".to_string() => "value".to_string()})
         .context(ctx)
         .build_raw()
         .expect("Failed to create channel")
@@ -106,15 +130,13 @@ async fn test_client_connect() {
         .await
         .expect("Failed to start server");
 
-    let mut client_stream = connect_client(addr).await;
+    let mut client = WebSocketClient::connect(addr).await;
 
-    let result = client_stream.next().await.expect("No message received");
-    let msg = result.expect("Failed to parse message");
-    let text = msg.into_text().expect("Failed to get message text");
-    let server_info: Value = serde_json::from_str(&text).expect("Failed to parse server info");
-
-    assert_eq!(server_info["name"], "mock_server");
-    assert_eq!(server_info["sessionId"], "mock_sess_id");
+    let msg = expect_recv!(client, ServerMessage::ServerInfo);
+    assert_eq!(
+        msg,
+        ServerInfo::new("mock_server").with_session_id("mock_sess_id")
+    );
 
     server.stop().await;
 }
@@ -243,74 +265,47 @@ async fn test_advertise_to_client() {
         .await
         .expect("Failed to start server");
 
-    let client_stream = connect_client(addr).await;
-    let (mut client_sender, mut client_receiver) = client_stream.split();
-
-    let msg = client_receiver.next().await.expect("No serverInfo sent");
-    msg.expect("Invalid serverInfo");
+    let mut client = WebSocketClient::connect(addr).await;
+    expect_recv!(client, ServerMessage::ServerInfo);
 
     let ch = new_channel("/foo", &ctx);
     ch.log(b"foo bar");
 
-    let subscription_id = 1;
-    let result = client_receiver.next().await.expect("No advertisement sent");
-    let advertisement = result.expect("Failed to parse advertisement");
-    let text = advertisement.into_text().expect("Invalid advertisement");
-    let msg: Value = serde_json::from_str(&text).expect("Failed to advertisement");
-    assert_eq!(msg["op"], "advertise");
-    assert_eq!(
-        msg["channels"][0]["id"].as_u64().unwrap(),
-        u64::from(ch.id())
-    );
+    let msg = expect_recv!(client, ServerMessage::Advertise);
+    let adv_ch = msg.channels.first().expect("not empty");
+    assert_eq!(adv_ch.id, u64::from(ch.id()));
+    assert_eq!(adv_ch.topic, ch.topic());
 
-    let subscribe = json!({
-        "op": "subscribe",
-        "subscriptions": [
-            {
-                "id": subscription_id,
-                "channelId": ch.id(),
-            }
-        ]
-    });
-    client_sender
-        .send(Message::text(subscribe.to_string()))
-        .await
-        .expect("Failed to send");
+    let subscription_id = 42;
+    let subscribe_msg = Subscribe::new([Subscription {
+        id: subscription_id,
+        channel_id: ch.id().into(),
+    }]);
+    client.send(&subscribe_msg).await.expect("Failed to send");
 
     // Allow the server to process the subscription
     assert_eventually(|| dbg!(ch.num_sinks()) == 1).await;
 
     ch.log(b"{\"a\":1}");
 
-    let msg = client_receiver
-        .next()
-        .await
-        .unwrap()
-        .expect("Failed to parse message");
-    let data = msg.into_data();
-
-    assert_eq!(data[0], 0x01); // message data opcode
-    assert_eq!(
-        u32::from_le_bytes(data[1..=4].try_into().unwrap()),
-        subscription_id
-    );
+    let msg = expect_recv!(client, ServerMessage::MessageData);
+    assert_eq!(msg.subscription_id, subscription_id);
 
     let subscriptions = recording_listener.take_subscribe();
     assert_eq!(subscriptions.len(), 1);
     assert_eq!(subscriptions[0].1.id, ch.id());
     assert_eq!(subscriptions[0].1.topic, ch.topic());
 
-    // Send a duplicate subscribe message (ignored)
-    client_sender
-        .send(Message::text(subscribe.to_string()))
-        .await
-        .expect("Failed to send");
-
-    let result = client_receiver.next().await.unwrap();
-    let msg = result.expect("Failed to parse message");
-    let data = msg.into_data();
-    let data_str = std::str::from_utf8(&data).unwrap();
-    assert!(data_str.contains("Client is already subscribed to channel"));
+    // Send a duplicate subscribe message, get an error.
+    client.send(&subscribe_msg).await.expect("Failed to send");
+    let msg = expect_recv!(client, ServerMessage::Status);
+    assert_eq!(
+        msg,
+        Status::warning(format!(
+            "Client is already subscribed to channel: {}; ignoring subscription",
+            ch.id(),
+        ))
+    );
 
     server.stop().await;
 }
@@ -334,10 +329,8 @@ async fn test_advertise_schemaless_channels() {
         .await
         .expect("Failed to start server");
 
-    let mut client_stream = connect_client(addr).await;
-
-    let msg = client_stream.next().await.expect("No serverInfo sent");
-    msg.expect("Invalid serverInfo");
+    let mut client = WebSocketClient::connect(addr).await;
+    expect_recv!(client, ServerMessage::ServerInfo);
 
     // Client receives the correct advertisement for schemaless JSON
     let json_chan = ChannelBuilder::new("/schemaless_json")
@@ -348,15 +341,10 @@ async fn test_advertise_schemaless_channels() {
 
     json_chan.log(b"{\"a\": 1}");
 
-    let result = client_stream.next().await.expect("No advertisement sent");
-    let advertisement = result.expect("Failed to parse advertisement");
-    let text = advertisement.into_text().expect("Invalid advertisement");
-    let msg: Value = serde_json::from_str(&text).expect("Failed to advertisement");
-    assert_eq!(msg["op"], "advertise");
-    assert_eq!(
-        msg["channels"][0]["id"].as_u64().unwrap(),
-        u64::from(json_chan.id())
-    );
+    let msg = expect_recv!(client, ServerMessage::Advertise);
+    let adv_chan = msg.channels.first().expect("not empty");
+    assert_eq!(adv_chan.id, u64::from(json_chan.id()));
+    assert_eq!(adv_chan.topic, json_chan.topic());
 
     // Client receives no advertisements for other schemaless channels (not supported)
     let invalid_chan = ChannelBuilder::new("/schemaless_other")
@@ -367,8 +355,7 @@ async fn test_advertise_schemaless_channels() {
 
     invalid_chan.log(b"1");
 
-    let msg = client_stream.next().now_or_never();
-    assert!(msg.is_none());
+    assert!(client.recv().now_or_never().is_none());
 
     assert!(logs_contain(
         "Ignoring advertise channel for /schemaless_other because a schema is required"
@@ -400,81 +387,61 @@ async fn test_log_only_to_subscribers() {
         .await
         .expect("Failed to start server");
 
-    let mut client1 = connect_client(addr).await;
-    let mut client2 = connect_client(addr).await;
-    let mut client3 = connect_client(addr).await;
+    let mut client1 = WebSocketClient::connect(addr).await;
+    let mut client2 = WebSocketClient::connect(addr).await;
+    let mut client3 = WebSocketClient::connect(addr).await;
 
     // client1 subscribes to ch1; client2 subscribes to ch2; client3 unsubscribes from all
     // Read the server info message from each
-    let _ = client1.next().await.expect("No serverInfo sent").unwrap();
-    let _ = client2.next().await.expect("No serverInfo sent").unwrap();
-    let _ = client3.next().await.expect("No serverInfo sent").unwrap();
+    expect_recv!(client1, ServerMessage::ServerInfo);
+    expect_recv!(client2, ServerMessage::ServerInfo);
+    expect_recv!(client3, ServerMessage::ServerInfo);
 
     // Read the channel advertisement from each client for all 3 channels
     for _ in 0..3 {
-        let _ = client1
-            .next()
-            .await
-            .expect("No advertisement sent")
-            .unwrap();
-        let _ = client2
-            .next()
-            .await
-            .expect("No advertisement sent")
-            .unwrap();
-        let _ = client3
-            .next()
-            .await
-            .expect("No advertisement sent")
-            .unwrap();
+        expect_recv!(client1, ServerMessage::Advertise);
+        expect_recv!(client2, ServerMessage::Advertise);
+        expect_recv!(client3, ServerMessage::Advertise);
     }
 
-    let subscribe1 = json!({
-        "op": "subscribe",
-        "subscriptions": [
-            { "id": 1, "channelId": ch1.id() }
-        ]
-    });
     client1
-        .send(Message::text(subscribe1.to_string()))
+        .send(&Subscribe::new([Subscription {
+            id: 1,
+            channel_id: ch1.id().into(),
+        }]))
         .await
         .expect("Failed to send");
 
-    let subscribe2 = json!({
-        "op": "subscribe",
-        "subscriptions": [
-            { "id": 2, "channelId": ch2.id() }
-        ]
-    });
     client2
-        .send(Message::text(subscribe2.to_string()))
+        .send(&Subscribe::new([Subscription {
+            id: 2,
+            channel_id: ch2.id().into(),
+        }]))
         .await
         .expect("Failed to send");
 
     // Allow the server to process the subscriptions
     assert_eventually(|| dbg!(ch1.num_sinks()) == 1 && dbg!(ch2.num_sinks()) == 1).await;
 
-    let subscribe_both = json!({
-        "op": "subscribe",
-        "subscriptions": [
-            { "id": 111, "channelId": ch1.id() },
-            { "id": 222, "channelId": ch2.id() },
-        ]
-    });
     client3
-        .send(Message::text(subscribe_both.to_string()))
+        .send(&Subscribe::new([
+            Subscription {
+                id: 111,
+                channel_id: ch1.id().into(),
+            },
+            Subscription {
+                id: 222,
+                channel_id: ch2.id().into(),
+            },
+        ]))
         .await
         .expect("Failed to send");
 
     // Allow the server to process the subscriptions
     assert_eventually(|| dbg!(ch1.num_sinks()) == 2 && dbg!(ch2.num_sinks()) == 2).await;
 
-    let unsubscribe_both = json!({
-        "op": "unsubscribe",
-        "subscriptionIds": [111, 222],
-    });
     client3
-        .send(Message::text(unsubscribe_both.to_string()))
+        .send(&Unsubscribe::new([111, 222]))
         .await
         .expect("Failed to send");
 
@@ -502,30 +469,23 @@ async fn test_log_only_to_subscribers() {
     let metadata = PartialMetadata {
         log_time: Some(123456),
     };
-    ch1.log_with_meta(b"channel1", metadata);
-    ch2.log_with_meta(b"channel2", metadata);
     ch3.log_with_meta(b"channel3", metadata);
+    ch2.log_with_meta(b"channel2", metadata);
+    ch1.log_with_meta(b"channel1", metadata);
 
     // Receive the message for client1 and client2
-    let result = client1.next().await.unwrap();
-    let msg = result.expect("Failed to parse message");
-    let data = msg.into_data();
-    assert_eq!(data[0], 0x01); // message data opcode
-    assert_eq!(u32::from_le_bytes(data[1..=4].try_into().unwrap()), 1);
-    assert_eq!(u64::from_le_bytes(data[5..=12].try_into().unwrap()), 123456);
-    assert_eq!(&data[13..], b"channel1");
+    let msg = expect_recv!(client1, ServerMessage::MessageData);
+    assert_eq!(msg.subscription_id, 1);
+    assert_eq!(msg.log_time, 123456);
+    assert_eq!(msg.data, Cow::Borrowed(b"channel1"));
 
-    let result = client2.next().await.unwrap();
-    let msg = result.expect("Failed to parse message");
-    let data = msg.into_data();
-    assert_eq!(data[0], 0x01); // message data opcode
-    assert_eq!(u32::from_le_bytes(data[1..=4].try_into().unwrap()), 2);
-    assert_eq!(u64::from_le_bytes(data[5..=12].try_into().unwrap()), 123456);
-    assert_eq!(&data[13..], b"channel2");
+    let msg = expect_recv!(client2, ServerMessage::MessageData);
+    assert_eq!(msg.subscription_id, 2);
+    assert_eq!(msg.log_time, 123456);
+    assert_eq!(msg.data, Cow::Borrowed(b"channel2"));
 
     // Client 3 should not receive any messages since it unsubscribed from all channels
-    let rs = client3.next().now_or_never();
-    assert!(rs.is_none());
+    assert!(client3.recv().now_or_never().is_none());
 
     server.stop().await;
 }
@@ -549,18 +509,15 @@ async fn test_on_unsubscribe_called_after_disconnect() {
         .await
         .expect("Failed to start server");
 
-    let mut client = connect_client(addr).await;
-    client.next().await.expect("No serverInfo sent").unwrap();
-    client.next().await.expect("No advertisement sent").unwrap();
+    let mut client = WebSocketClient::connect(addr).await;
+    expect_recv!(client, ServerMessage::ServerInfo);
+    expect_recv!(client, ServerMessage::Advertise);
 
-    let subscribe = json!({
-        "op": "subscribe",
-        "subscriptions": [
-            { "id": 1, "channelId": chan.id() }
-        ]
-    });
     client
-        .send(Message::text(subscribe.to_string()))
+        .send(&Subscribe::new([Subscription {
+            id: 1,
+            channel_id: chan.id().into(),
+        }]))
         .await
         .expect("Failed to send");
 
@@ -574,7 +531,7 @@ async fn test_on_unsubscribe_called_after_disconnect() {
     assert_eq!(unsubscriptions.len(), 0);
 
     // Disconnect the client without unsubscribing explicitly
-    client.close(None).await.unwrap();
+    client.close().await;
 
     // Allow the server to process the disconnection
     assert_eventually(|| dbg!(chan.num_sinks()) == 0).await;
@@ -596,38 +553,25 @@ async fn test_error_when_client_publish_unsupported() {
         .await
         .expect("Failed to start server");
 
-    let mut ws_client = connect_client(addr).await;
-    ws_client.next().await.expect("No serverInfo sent").ok();
+    let mut client = WebSocketClient::connect(addr).await;
+    expect_recv!(client, ServerMessage::ServerInfo);
 
-    let advertise = json!({
-        "op": "advertise",
-        "channels": [
-            {
-                "id": 1,
-                "topic": "/test",
-                "encoding": "json",
-                "schemaName": "test",
-            }
-        ]
-    });
-    ws_client
-        .send(Message::text(advertise.to_string()))
+    let advertise = Advertise::new([client::advertise::Channel::builder(1, "/test", "json")
+        .build()
+        .unwrap()]);
+    client
+        .send(&advertise)
         .await
         .expect("Failed to send advertisement");
 
     // Server should respond with an error status
-    let result = ws_client.next().await.expect("No message received");
-    let msg = result.expect("Failed to parse message");
-    let msg = msg.into_text().expect("Failed to parse message text");
-    let status: Value = serde_json::from_str(&msg).expect("Failed to parse status");
-    assert_eq!(status["op"], "status");
-    assert_eq!(status["level"], 2);
+    let msg = expect_recv!(client, ServerMessage::Status);
     assert_eq!(
-        status["message"],
-        "Server does not support clientPublish capability"
+        msg,
+        Status::error("Server does not support clientPublish capability")
     );
 
-    ws_client.close(None).await.unwrap();
+    client.close().await;
     server.stop().await;
 }
 
@@ -641,59 +585,45 @@ async fn test_error_status_message() {
         .await
         .expect("Failed to start server");
 
-    let mut ws_client = connect_client(addr).await;
-
-    _ = ws_client.next().await.expect("No serverInfo sent");
+    let mut client = WebSocketClient::connect(addr).await;
+    expect_recv!(client, ServerMessage::ServerInfo);
 
     {
-        ws_client
+        client
             .send(Message::text("nonsense".to_string()))
             .await
             .expect("Failed to send message");
 
-        let result = ws_client.next().await.unwrap();
-        let msg = result.expect("Failed to parse message");
-        let text = msg.into_text().expect("Failed to get message text");
-        let status: Value = serde_json::from_str(&text).expect("Failed to parse status");
-        assert_eq!(status["level"], 2);
         assert_eq!(
-            status["message"],
-            "Invalid message: expected ident at line 1 column 2"
+            expect_recv!(client, ServerMessage::Status),
+            Status::error("Invalid message: expected ident at line 1 column 2")
         );
     }
 
     {
-        let msg = json!({
-            "op": "subscribe",
-            "subscriptions": [{ "id": 1, "channelId": 555, }]
-        });
-        ws_client
-            .send(Message::text(msg.to_string()))
+        client
+            .send(&Subscribe::new([Subscription {
+                id: 1,
+                channel_id: 555,
+            }]))
             .await
             .expect("Failed to send message");
 
-        let result = ws_client.next().await.unwrap();
-        let msg = result.expect("Failed to parse message");
-        let text = msg.into_text().expect("Failed to get message text");
-        let status: Value = serde_json::from_str(&text).expect("Failed to parse status");
-        assert_eq!(status["level"], 2);
-        assert_eq!(status["message"], "Unknown channel ID: 555");
+        assert_eq!(
+            expect_recv!(client, ServerMessage::Status),
+            Status::error("Unknown channel ID: 555")
+        );
     }
 
     {
-        ws_client
+        client
             .send(Message::binary(vec![0xff]))
             .await
             .expect("Failed to send message");
 
-        let result = ws_client.next().await.unwrap();
-        let msg = result.expect("Failed to parse message");
-        let text = msg.into_text().expect("Failed to get message text");
-        let status: Value = serde_json::from_str(&text).expect("Failed to parse status");
-        assert_eq!(status["level"], 2);
         assert_eq!(
-            status["message"],
-            "Invalid message: Unknown binary opcode 255"
+            expect_recv!(client, ServerMessage::Status),
+            Status::error("Invalid message: Unknown binary opcode 255")
         );
     }
 
@@ -770,38 +700,19 @@ async fn test_publish_status_message() {
         .await
         .expect("Failed to start server");
 
-    let mut ws_client = connect_client(addr).await;
+    let mut client = WebSocketClient::connect(addr).await;
+    expect_recv!(client, ServerMessage::ServerInfo);
 
-    _ = ws_client.next().await.expect("No serverInfo sent");
-
-    server
-        .publish_status(Status::new(StatusLevel::Info, "Hello, world!".to_string()).with_id("123"));
-
-    let msg = ws_client
-        .next()
-        .await
-        .expect("No message received")
-        .expect("Failed to parse message");
-    let text = msg.into_text().expect("Failed to get message text");
-    assert_eq!(
-        text.as_str(),
-        r#"{"op":"status","level":0,"message":"Hello, world!","id":"123"}"#
-    );
-
-    server.publish_status(
-        Status::new(StatusLevel::Error, "Reactor core overload!".to_string()).with_id("abc"),
-    );
-
-    let msg = ws_client
-        .next()
-        .await
-        .expect("No message received")
-        .expect("Failed to parse message");
-    let text = msg.into_text().expect("Failed to get message text");
-    assert_eq!(
-        text.as_str(),
-        r#"{"op":"status","level":2,"message":"Reactor core overload!","id":"abc"}"#
-    );
+    let statuses = [
+        Status::info("Hello, world!").with_id("123"),
+        Status::warning("Situation unusual"),
+        Status::error("Reactor core overload!").with_id("abc"),
+    ];
+    for status in statuses {
+        server.publish_status(status.clone());
+        let msg = expect_recv!(client, ServerMessage::Status);
+        assert_eq!(msg, status);
+    }
 }
 
 #[traced_test]
@@ -814,36 +725,18 @@ async fn test_remove_status() {
         .await
         .expect("Failed to start server");
 
-    let mut ws_client1 = connect_client(addr).await;
-    let mut ws_client2 = connect_client(addr).await;
-
-    _ = ws_client1.next().await.expect("No serverInfo sent");
-    _ = ws_client2.next().await.expect("No serverInfo sent");
+    let mut client1 = WebSocketClient::connect(addr).await;
+    let mut client2 = WebSocketClient::connect(addr).await;
+    expect_recv!(client1, ServerMessage::ServerInfo);
+    expect_recv!(client2, ServerMessage::ServerInfo);
 
     // These don't have to exist, and aren't checked
-    server.remove_status(vec!["123".to_string(), "abc".to_string()]);
-
-    let msg = ws_client1
-        .next()
-        .await
-        .expect("No message received")
-        .expect("Failed to parse message");
-    let text = msg.into_text().expect("Failed to get message text");
-    assert_eq!(
-        text.as_str(),
-        r#"{"op":"removeStatus","statusIds":["123","abc"]}"#
-    );
-
-    let msg = ws_client2
-        .next()
-        .await
-        .expect("No message received")
-        .expect("Failed to parse message");
-    let text = msg.into_text().expect("Failed to get message text");
-    assert_eq!(
-        text.as_str(),
-        r#"{"op":"removeStatus","statusIds":["123","abc"]}"#
-    );
+    let ids = vec!["123".to_string(), "abc".to_string()];
+    server.remove_status(ids.clone());
+    for mut client in [client1, client2] {
+        let msg = expect_recv!(client, ServerMessage::RemoveStatus);
+        assert_eq!(msg.status_ids, ids);
+    }
 }
 
 #[traced_test]
@@ -867,74 +760,60 @@ async fn test_client_advertising() {
         .await
         .expect("Failed to start server");
 
-    let mut ws_client = connect_client(addr).await;
+    let mut client = WebSocketClient::connect(addr).await;
+    expect_recv!(client, ServerMessage::ServerInfo);
 
     let channel_id = 1;
-    let msg_bytes = {
-        let mut bytes = BytesMut::new();
-        bytes.put_u8(0x01); // message data opcode
-        bytes.put_u32_le(channel_id);
-        bytes.put_slice(json!({ "a": 1 }).to_string().as_bytes());
-        bytes
-    };
+    let data = b"{\"a\":1}";
+    let msg_data = client::MessageData::new(channel_id, data);
 
     // Send before advertising: message is dropped
-    ws_client
-        .send(Message::binary(msg_bytes.clone()))
+    client
+        .send(&msg_data)
         .await
         .expect("Failed to send binary message");
+
     // No message sent to listener
     assert!(recording_listener.take_message_data().is_empty());
 
-    let advertise = json!({
-        "op": "advertise",
-        "channels": [
-            {
-                "id": channel_id,
-                "topic": "/test",
-                "encoding": "json",
-                "schemaName": "test",
-            }
-        ]
-    });
-
-    ws_client
-        .send(Message::text(advertise.to_string()))
+    let advertise =
+        client::Advertise::new([
+            client::advertise::Channel::builder(channel_id, "/test", "json")
+                .build()
+                .unwrap(),
+        ]);
+    client
+        .send(&advertise)
         .await
         .expect("Failed to send advertisement");
 
     // Send duplicate advertisement: no effect
-    ws_client
-        .send(Message::text(advertise.to_string()))
+    client
+        .send(&advertise)
         .await
-        .expect("Failed to send duplicate advertisement");
+        .expect("Failed to send advertisement");
 
     // Send message after advertising
-    ws_client
-        .send(Message::binary(msg_bytes))
+    client
+        .send(&msg_data)
         .await
         .expect("Failed to send binary message");
 
     // Does not error on a binary message with no opcode
-    ws_client
+    client
         .send(Message::binary(vec![]))
         .await
         .expect("Failed to send empty binary message");
 
-    let unadvertise = json!({
-        "op": "unadvertise",
-        "channelIds": [channel_id]
-    });
-
-    tracing::info!("unadvertise: {}", unadvertise.to_string());
-    ws_client
-        .send(Message::text(unadvertise.to_string()))
+    let unadvertise = client::Unadvertise::new([channel_id]);
+    client
+        .send(&unadvertise)
         .await
         .expect("Failed to send unadvertise");
 
     // Should be ignored
-    ws_client
-        .send(Message::text(unadvertise.to_string()))
+    client
+        .send(&unadvertise)
         .await
         .expect("Failed to send unadvertise");
 
@@ -949,7 +828,7 @@ async fn test_client_advertising() {
     let mut received = recording_listener.take_message_data();
     let message_data = received.pop().expect("No message received");
     assert_eq!(message_data.channel.id, ClientChannelId::new(1));
-    assert_eq!(message_data.data, b"{\"a\":1}");
+    assert_eq!(message_data.data, data);
 
     // Server should have ignored the duplicate advertisement
     let advertisements = recording_listener.take_client_advertise();
@@ -961,7 +840,7 @@ async fn test_client_advertising() {
     assert_eq!(unadvertises.len(), 1);
     assert_eq!(unadvertises[0].1.id, ClientChannelId::new(channel_id));
 
-    ws_client.close(None).await.unwrap();
+    client.close().await;
     server.stop().await;
 }
 
@@ -983,36 +862,24 @@ async fn test_parameter_values() {
         .await
         .expect("Failed to start server");
 
-    let mut ws_client = connect_client(addr).await;
+    let mut client = WebSocketClient::connect(addr).await;
 
     // Send the Subscribe Parameter Update message for "some-float-value"
     // Otherwise we won't get the update after we publish it.
-    ws_client
-        .send(Message::text(
-            r#"{"op":"subscribeParameterUpdates","parameterNames":["some-float-value"]}"#,
-        ))
+    client
+        .send(&SubscribeParameterUpdates::new(["some-float-value"]))
         .await
         .expect("Failed to send subscribe parameter updates");
 
-    ws_client.next().await.expect("No serverInfo sent").unwrap();
+    expect_recv!(client, ServerMessage::ServerInfo);
 
     assert_eventually(|| dbg!(recording_listener.parameters_subscribe_len()) == 1).await;
 
-    let parameter = Parameter {
-        name: "some-float-value".to_string(),
-        value: Some(ParameterValue::Number(1.23)),
-        r#type: Some(ParameterType::Float64),
-    };
-    server.publish_parameter_values(vec![parameter]);
+    let parameter = Parameter::float64("some-float-value", 1.23);
+    server.publish_parameter_values(vec![parameter.clone()]);
 
-    let msg = ws_client.next().await.expect("No message received");
-    let msg = msg.expect("Failed to parse message");
-    let text = msg.into_text().expect("Failed to get message text");
-    let msg: Value = serde_json::from_str(&text).expect("Failed to parse message");
-    assert_eq!(msg["op"], "parameterValues");
-    assert_eq!(msg["parameters"].as_array().unwrap().len(), 1);
-    assert_eq!(msg["parameters"][0]["name"], "some-float-value");
-    assert_eq!(msg["parameters"][0]["value"], 1.23);
+    let msg = expect_recv!(client, ServerMessage::ParameterValues);
+    assert_eq!(msg, ParameterValues::new([parameter]));
 
     server.stop().await;
 }
@@ -1036,25 +903,24 @@ async fn test_parameter_unsubscribe_no_updates() {
         .await
         .expect("Failed to start server");
 
-    let mut ws_client = connect_client(addr).await;
+    let mut client = WebSocketClient::connect(addr).await;
 
     // Send the Subscribe Parameter Update message for "some-float-value"
-    ws_client
-        .send(Message::text(
-            r#"{"op":"subscribeParameterUpdates","parameterNames":["some-float-value"]}"#,
-        ))
+    client
+        .send(&SubscribeParameterUpdates::new(["some-float-value"]))
         .await
         .expect("Failed to send subscribe parameter updates");
 
     // Send the Unsubscribe Parameter Update message for "some-float-value"
-    ws_client
-        .send(Message::text(
-            r#"{"op":"unsubscribeParameterUpdates","parameterNames":["some-float-value","baz"]}"#,
-        ))
+    client
+        .send(&UnsubscribeParameterUpdates::new([
+            "some-float-value",
+            "baz",
+        ]))
         .await
         .expect("Failed to send unsubscribe parameter updates");
 
-    _ = ws_client.next().await.expect("No serverInfo sent");
+    expect_recv!(client, ServerMessage::ServerInfo);
 
     assert_eventually(|| {
         dbg!(recording_listener.parameters_subscribe_len()) == 1
@@ -1074,11 +940,7 @@ async fn test_parameter_unsubscribe_no_updates() {
         .unwrap();
     assert_eq!(parameter_names, vec!["some-float-value"]);
 
-    let parameter = Parameter {
-        name: "some-float-value".to_string(),
-        value: Some(ParameterValue::Number(1.23)),
-        r#type: Some(ParameterType::Float64),
-    };
+    let parameter = Parameter::float64("some-float-value", 1.23);
     server.publish_parameter_values(vec![parameter]);
 
     // Sleep for a little while to give the server time to flush its queues, to ensure that it
@@ -1088,10 +950,7 @@ async fn test_parameter_unsubscribe_no_updates() {
     server.stop().await;
 
     // No parameter message was sent with the updated param before the Close message
-    assert!(matches!(
-        ws_client.next().await,
-        Some(Ok(Message::Close(_)))
-    ));
+    expect_recv_close!(client);
 }
 
 #[traced_test]
@@ -1113,89 +972,40 @@ async fn test_set_parameters() {
         .await
         .expect("Failed to start server");
 
-    let mut ws_client = connect_client(addr).await;
+    let mut client = WebSocketClient::connect(addr).await;
 
     // Subscribe to "foo" and "bar"
-    ws_client
-        .send(Message::text(
-            r#"{"op":"subscribeParameterUpdates","parameterNames":["foo", "bar"]}"#,
-        ))
+    client
+        .send(&SubscribeParameterUpdates::new(["foo", "bar"]))
         .await
         .expect("Failed to send subscribe parameter updates");
 
     assert_eventually(|| dbg!(recording_listener.parameters_subscribe_len()) == 1).await;
 
-    ws_client
-        .send(Message::text(
-            r#"{"op":"setParameters", "parameters":[{"name":"foo","value":1,"type":"float64"},{"name":"bar","value":"aGVsbG8="},{"name":"baz","value":true}], "id":"123"}"#,
-        ))
+    let parameters = vec![
+        Parameter::float64("foo", 1.0),
+        Parameter::string("bar", "hello"),
+        Parameter::bool("baz", true),
+    ];
+    client
+        .send(&SetParameters::new(parameters.clone()).with_id("123"))
         .await
         .expect("Failed to send set parameters");
 
-    _ = ws_client.next().await.expect("No serverInfo sent");
+    expect_recv!(client, ServerMessage::ServerInfo);
 
     // setParameters returns the result of on_set_parameters, which for recording listener, just returns them back
-    let msg = ws_client.next().await.expect("No message received");
-    let msg = msg.expect("Failed to parse message");
-    let text = msg.into_text().expect("Failed to get message text");
-    let msg: ParameterValues = serde_json::from_str(&text).expect("Failed to parse message");
-    let params = msg.parameters;
-    assert_eq!(params.len(), 3);
-    assert_eq!(params[0].name, "foo");
-    assert_eq!(params[0].value, Some(ParameterValue::Number(1.0)));
-    assert_eq!(params[0].r#type, Some(ParameterType::Float64));
-    assert_eq!(params[1].name, "bar");
-    assert_eq!(
-        params[1].value,
-        Some(ParameterValue::String(Vec::from("hello".as_bytes())))
-    );
-    assert_eq!(params[1].r#type, None);
-    assert_eq!(params[2].name, "baz");
-    assert_eq!(params[2].value, Some(ParameterValue::Bool(true)));
-    assert_eq!(params[2].r#type, None);
+    let msg = expect_recv!(client, ServerMessage::ParameterValues);
+    assert_eq!(msg, ParameterValues::new(parameters.clone()).with_id("123"));
 
     // it will also publish the updated paramters returned from on_set_parameters
     // which will send just the paramters we're subscribed to.
-    let msg = ws_client.next().await.expect("No message received");
-    let msg = msg.expect("Failed to parse message");
-    let text = msg.into_text().expect("Failed to get message text");
-    let msg: ParameterValues = serde_json::from_str(&text).expect("Failed to parse message");
-    let params = msg.parameters;
-    assert_eq!(params.len(), 2);
-    assert_eq!(params[0].name, "foo");
-    assert_eq!(params[0].value, Some(ParameterValue::Number(1.0)));
-    assert_eq!(params[0].r#type, Some(ParameterType::Float64));
-    assert_eq!(params[1].name, "bar");
-    assert_eq!(
-        params[1].value,
-        Some(ParameterValue::String(Vec::from("hello".as_bytes())))
-    );
-    assert_eq!(params[1].r#type, None);
+    let msg = expect_recv!(client, ServerMessage::ParameterValues);
+    assert_eq!(msg, ParameterValues::new(parameters[..2].to_vec()));
 
     let set_parameters = recording_listener.take_parameters_set().pop().unwrap();
-    assert_eq!(set_parameters.parameters.len(), 3);
-    assert_eq!(set_parameters.parameters[0].name, "foo");
-    assert_eq!(
-        set_parameters.parameters[0].value,
-        Some(ParameterValue::Number(1.0))
-    );
-    assert_eq!(
-        set_parameters.parameters[0].r#type,
-        Some(ParameterType::Float64)
-    );
-    assert_eq!(set_parameters.parameters[1].name, "bar");
-    assert_eq!(
-        set_parameters.parameters[1].value,
-        Some(ParameterValue::String(Vec::from("hello".as_bytes())))
-    );
-    assert_eq!(set_parameters.parameters[1].r#type, None);
-    assert_eq!(set_parameters.parameters[2].name, "baz");
-    assert_eq!(
-        set_parameters.parameters[2].value,
-        Some(ParameterValue::Bool(true))
-    );
-    assert_eq!(set_parameters.parameters[2].r#type, None);
     assert_eq!(set_parameters.request_id, Some("123".to_string()));
+    assert_eq!(set_parameters.parameters, parameters);
 
     server.stop().await;
 }
@@ -1203,12 +1013,9 @@ async fn test_set_parameters() {
 #[traced_test]
 #[tokio::test]
 async fn test_get_parameters() {
+    let parameters = vec![Parameter::float64("foo", 1.0)];
     let recording_listener = Arc::new(RecordingServerListener::new());
-    recording_listener.set_parameters_get_result(vec![Parameter {
-        name: "foo".to_string(),
-        value: Some(ParameterValue::Number(1.0)),
-        r#type: Some(ParameterType::Float64),
-    }]);
+    recording_listener.set_parameters_get_result(parameters.clone());
 
     let ctx = Context::new();
     let server = create_server(
@@ -1224,27 +1031,17 @@ async fn test_get_parameters() {
         .await
         .expect("Failed to start server");
 
-    let mut ws_client = connect_client(addr).await;
+    let mut client = WebSocketClient::connect(addr).await;
 
-    ws_client
-        .send(Message::text(
-            r#"{"op":"getParameters", "parameterNames":["foo", "bar", "baz"], "id":"123"}"#,
-        ))
+    client
+        .send(&GetParameters::new(["foo", "bar", "baz"]).with_id("123"))
         .await
         .expect("Failed to send get parameters");
 
-    _ = ws_client.next().await.expect("No serverInfo sent");
-
-    let msg = ws_client.next().await.expect("No message received");
-    let msg = msg.expect("Failed to parse message");
-    let text = msg.into_text().expect("Failed to get message text");
-    let msg: ParameterValues = serde_json::from_str(&text).expect("Failed to parse message");
-    let params = msg.parameters;
-    assert_eq!(msg.id, Some("123".to_string()));
-    assert_eq!(params.len(), 1);
-    assert_eq!(params[0].name, "foo");
-    assert_eq!(params[0].value, Some(ParameterValue::Number(1.0)));
-    assert_eq!(params[0].r#type, Some(ParameterType::Float64));
+    expect_recv!(client, ServerMessage::ServerInfo);
+    let msg = expect_recv!(client, ServerMessage::ParameterValues);
+    assert_eq!(msg.id, Some("123".into()));
+    assert_eq!(msg.parameters, parameters);
 
     let get_parameters = recording_listener.take_parameters_get().pop().unwrap();
     assert_eq!(get_parameters.param_names, vec!["foo", "bar", "baz"]);
@@ -1266,7 +1063,7 @@ async fn test_services() {
             Ok(response.freeze())
         },
     );
-    let ok_svc_id = ok_svc.id();
+    let ok_svc_id = u32::from(ok_svc.id());
 
     let ctx = Context::new();
     let server = create_server(
@@ -1286,217 +1083,129 @@ async fn test_services() {
         .await
         .expect("Failed to start server");
 
-    let mut client1 = connect_client(addr).await;
-    let _ = client1.next().await.expect("No serverInfo sent").unwrap();
-    let msg = client1
-        .next()
-        .await
-        .expect("No service advertisement sent")
-        .unwrap();
+    let mut client1 = WebSocketClient::connect(addr).await;
+    expect_recv!(client1, ServerMessage::ServerInfo);
+    let msg = expect_recv!(client1, ServerMessage::AdvertiseServices);
     assert_eq!(
-        msg.into_text().expect("Expected utf8").as_str(),
-        json!({
-            "op": "advertiseServices",
-            "services": [
-                {
-                    "id": ok_svc_id,
-                    "name": "/ok",
-                    "type": "plain",
-                    "requestSchema": "",
-                    "responseSchema": "",
-                }
-            ]
-        })
-        .to_string()
+        msg.services,
+        vec![advertise_services::Service::new(ok_svc_id, "/ok", "plain")]
     );
 
     // Send a request.
-    let mut buf = BytesMut::new();
-    buf.put_u8(2); // opcode
-    buf.put_u32_le(ok_svc_id.into()); // service id
-    buf.put_u32_le(99); // call id
-    buf.put_u32_le(3); // encoding length
-    buf.put(b"raw".as_slice());
-    buf.put(b"payload".as_slice());
-    let ok_req = buf.freeze();
-    client1
-        .send(Message::binary(ok_req.clone()))
-        .await
-        .expect("Failed to send");
+    let ok_req = ServiceCallRequest {
+        service_id: ok_svc_id,
+        call_id: 99,
+        encoding: "raw".into(),
+        payload: b"payload".into(),
+    };
+    client1.send(&ok_req).await.expect("Failed to send");
 
     // Validate the response.
-    let msg = client1
-        .next()
-        .await
-        .expect("No service call response")
-        .expect("Failed to parse response");
-    let mut buf = BytesMut::new();
-    buf.put_u8(3); // opcode
-    buf.put_u32_le(ok_svc_id.into()); // service id
-    buf.put_u32_le(99); // call id
-    buf.put_u32_le(3); // encoding length
-    buf.put(b"raw".as_slice());
-    buf.put(b"daolyap".as_slice());
-    assert_eq!(msg.into_data(), buf);
+    let msg = expect_recv!(client1, ServerMessage::ServiceCallResponse);
+    assert_eq!(
+        msg,
+        ServiceCallResponse {
+            service_id: ok_svc_id,
+            call_id: 99,
+            encoding: "raw".into(),
+            payload: b"daolyap".into(),
+        }
+    );
 
     // Register a new service.
     let err_svc =
         Service::builder("/err", ServiceSchema::new("plain")).handler_fn(|_| Err("oh noes"));
-    let err_svc_id = err_svc.id();
+    let err_svc_id = u32::from(err_svc.id());
     server
         .add_services(vec![err_svc])
         .expect("Failed to add service");
 
-    let msg = client1
-        .next()
-        .await
-        .expect("No service advertisement sent")
-        .unwrap();
+    let msg = expect_recv!(client1, ServerMessage::AdvertiseServices);
     assert_eq!(
-        msg.into_text().expect("Expected utf8").as_str(),
-        json!({
-            "op": "advertiseServices",
-            "services": [
-                {
-                    "id": err_svc_id,
-                    "name": "/err",
-                    "type": "plain",
-                    "requestSchema": "",
-                    "responseSchema": "",
-                }
-            ]
-        })
-        .to_string()
+        msg.services,
+        vec![advertise_services::Service::new(
+            err_svc_id, "/err", "plain"
+        )]
     );
 
     // Send a request to the error service.
-    let mut buf = BytesMut::new();
-    buf.put_u8(2); // opcode
-    buf.put_u32_le(err_svc_id.into()); // service id
-    buf.put_u32_le(11); // call id
-    buf.put_u32_le(3); // encoding length
-    buf.put(b"raw".as_slice());
-    buf.put(b"payload".as_slice());
     client1
-        .send(Message::binary(buf.freeze()))
+        .send(&ServiceCallRequest {
+            service_id: err_svc_id,
+            call_id: 11,
+            encoding: "raw".into(),
+            payload: b"payload".into(),
+        })
         .await
         .expect("Failed to send");
 
     // Validate the error response.
-    let msg = client1
-        .next()
-        .await
-        .expect("No service call response")
-        .expect("Failed to parse response");
+    let msg = expect_recv!(client1, ServerMessage::ServiceCallFailure);
     assert_eq!(
-        msg.into_text().expect("Expected utf8").as_str(),
-        json!({
-            "op": "serviceCallFailure",
-            "serviceId": err_svc_id,
-            "callId": 11,
-            "message": "oh noes",
-        })
-        .to_string()
+        msg,
+        ServiceCallFailure {
+            service_id: err_svc_id,
+            call_id: 11,
+            message: "oh noes".into(),
+        }
     );
 
     // New client sees both services immediately.
-    let mut client2 = connect_client(addr).await;
-    let _ = client2.next().await.expect("No serverInfo sent").unwrap();
-    let msg = client2
-        .next()
-        .await
-        .expect("No service advertisement sent")
-        .unwrap();
-    let value: serde_json::Value =
-        serde_json::from_str(msg.into_text().expect("utf8").as_str()).expect("json");
-    let adv_services = value
-        .get("services")
-        .and_then(|s| s.as_array())
-        .expect("services key");
-    assert_eq!(adv_services.len(), 2);
+    let mut client2 = WebSocketClient::connect(addr).await;
+    expect_recv!(client2, ServerMessage::ServerInfo);
+    let msg = expect_recv!(client2, ServerMessage::AdvertiseServices);
+    assert_eq!(msg.services.len(), 2);
     drop(client2);
 
     // Unregister services.
     server.remove_services(["/ok"]);
-    let msg = client1
-        .next()
-        .await
-        .expect("No service unadvertisement sent")
-        .unwrap();
-    assert_eq!(
-        msg.into_text().expect("Expected utf8").as_str(),
-        json!({
-            "op": "unadvertiseServices",
-            "serviceIds": [ok_svc_id]
-        })
-        .to_string()
-    );
+    let msg = expect_recv!(client1, ServerMessage::UnadvertiseServices);
+    assert_eq!(msg.service_ids, vec![ok_svc_id]);
 
     // Try to call the now-unregistered service.
-    client1
-        .send(Message::binary(ok_req.clone()))
-        .await
-        .expect("Failed to send");
+    client1.send(&ok_req).await.expect("Failed to send");
 
     // Validate the error response.
-    let msg = client1
-        .next()
-        .await
-        .expect("No service call response")
-        .expect("Failed to parse response");
+    let msg = expect_recv!(client1, ServerMessage::ServiceCallFailure);
     assert_eq!(
-        msg.into_text().expect("Expected utf8").as_str(),
-        json!({
-            "op": "serviceCallFailure",
-            "serviceId": ok_svc_id,
-            "callId": 99,
-            "message": "Unknown service",
-        })
-        .to_string()
+        msg,
+        ServiceCallFailure {
+            service_id: ok_svc_id,
+            call_id: 99,
+            message: "Unknown service".into(),
+        }
     );
 
     // Add a service that always panics.
     let panic_svc = Service::builder("/panic", ServiceSchema::new("raw"))
         .blocking_handler_fn(|_| -> Result<Bytes, String> { panic!("oh noes") });
-    let panic_svc_id = panic_svc.id();
+    let panic_svc_id = u32::from(panic_svc.id());
     server
         .add_services(vec![panic_svc])
         .expect("Failed to add service");
 
-    let _ = client1
-        .next()
-        .await
-        .expect("No service advertisement sent")
-        .unwrap();
+    expect_recv!(client1, ServerMessage::AdvertiseServices);
 
     // Send a request to the panic service.
-    let mut buf = BytesMut::new();
-    buf.put_u8(2); // opcode
-    buf.put_u32_le(panic_svc_id.into()); // service id
-    buf.put_u32_le(22); // call id
-    buf.put_u32_le(3); // encoding length
-    buf.put(b"raw".as_slice());
-    buf.put(b"payload".as_slice());
     client1
-        .send(Message::binary(buf.freeze()))
+        .send(&ServiceCallRequest {
+            service_id: panic_svc_id,
+            call_id: 22,
+            encoding: "raw".into(),
+            payload: b"payload".into(),
+        })
         .await
         .expect("Failed to send");
 
     // Validate the error response.
-    let msg = client1
-        .next()
-        .await
-        .expect("No service call response")
-        .expect("Failed to parse response");
+    let msg = expect_recv!(client1, ServerMessage::ServiceCallFailure);
     assert_eq!(
-        msg.into_text().expect("Expected utf8").as_str(),
-        json!({
-            "op": "serviceCallFailure",
-            "serviceId": panic_svc_id,
-            "callId": 22,
-            "message": "Internal server error: service failed to send a response",
-        })
-        .to_string()
+        msg,
+        ServiceCallFailure {
+            service_id: panic_svc_id,
+            call_id: 22,
+            message: "Internal server error: service failed to send a response".into(),
+        }
     );
 }
 
@@ -1526,16 +1235,16 @@ async fn test_fetch_asset() {
         .await
         .expect("Failed to start server");
 
-    let mut ws_client = connect_client(addr).await;
-    let _ = ws_client.next().await.expect("No serverInfo sent");
+    let mut client = WebSocketClient::connect(addr).await;
+    expect_recv!(client, ServerMessage::ServerInfo);
 
     #[derive(Debug)]
     struct Case<'a> {
         uri: &'a str,
-        expect: Result<&'a [u8], &'a [u8]>,
+        expect: Result<&'a [u8], &'a str>,
     }
     impl<'a> Case<'a> {
-        fn new(uri: &'a str, expect: Result<&'a [u8], &'a [u8]>) -> Self {
+        fn new(uri: &'a str, expect: Result<&'a [u8], &'a str>) -> Self {
             Self { uri, expect }
         }
     }
@@ -1543,45 +1252,22 @@ async fn test_fetch_asset() {
         Case::new("https://example.com/asset.png", Ok(b"test data")),
         Case::new(
             "https://example.com/panic",
-            Err(b"Internal server error: asset handler failed to send a response"),
+            Err("Internal server error: asset handler failed to send a response"),
         ),
-        Case::new("https://example.com/error", Err(b"test error")),
+        Case::new("https://example.com/error", Err("test error")),
     ];
     for (request_id, case) in cases.iter().enumerate() {
         dbg!(case);
-        let req = json!({
-            "op": "fetchAsset",
-            "uri": case.uri,
-            "requestId": request_id,
-        });
-        ws_client
-            .send(Message::text(req.to_string()))
+        let request_id = request_id as u32;
+        client
+            .send(&FetchAsset::new(request_id, case.uri))
             .await
-            .expect("Failed to send fetch asset");
+            .unwrap();
 
-        let result = ws_client.next().await.unwrap();
-        let msg = result.expect("Failed to parse message");
-        let data = msg.into_data();
-        println!("data: {:?}", data);
-        assert_eq!(data[0], 0x04); // fetch asset opcode
-        assert_eq!(
-            u32::from_le_bytes(data[1..5].try_into().unwrap()),
-            request_id as u32
-        );
+        let msg = expect_recv!(client, ServerMessage::FetchAssetResponse);
         match case.expect {
-            Ok(expect_data) => {
-                assert_eq!(data[5], 0);
-                assert_eq!(u32::from_le_bytes(data[6..10].try_into().unwrap()), 0);
-                assert_eq!(&data[10..], expect_data);
-            }
-            Err(expect_data) => {
-                assert_eq!(data[5], 1);
-                assert_eq!(
-                    u32::from_le_bytes(data[6..10].try_into().unwrap()),
-                    expect_data.len() as u32
-                );
-                assert_eq!(&data[10..], expect_data);
-            }
+            Ok(data) => assert_eq!(msg, FetchAssetResponse::asset_data(request_id, data)),
+            Err(err) => assert_eq!(msg, FetchAssetResponse::error_message(request_id, err)),
         }
     }
 }
@@ -1617,64 +1303,50 @@ async fn test_update_connection_graph() {
     assert_eq!(recording_listener.take_connection_graph_unsubscribe(), 0);
 
     // Connect a client and subscribe to graph updates.
-    let mut c1 = connect_client(addr).await;
-    c1.send(Message::text(r#"{"op": "subscribeConnectionGraph"}"#))
-        .await
-        .expect("Failed to send get parameters");
-    _ = c1.next().await.expect("No serverInfo sent");
+    let mut c1 = WebSocketClient::connect(addr).await;
+    c1.send(&SubscribeConnectionGraph {}).await.unwrap();
 
     // There should be a server listener callback, since this is the first subscriber.
     assert_eventually(|| dbg!(recording_listener.take_connection_graph_subscribe() == 1)).await;
 
     // First client gets the complete initial state upon subscribing.
-    let msg = c1.next().await.expect("No message received");
-    let msg = msg.expect("Failed to parse message");
-    let text = msg.into_text().expect("Failed to get message text");
-    let msg: Value = serde_json::from_str(&text).expect("Failed to parse message");
-    assert_eq!(msg["op"], "connectionGraphUpdate");
-    assert_eq!(msg["publishedTopics"][0]["name"], "topic1");
-    assert_eq!(msg["publishedTopics"][0]["publisherIds"][0], "publisher1");
-    assert_eq!(msg["subscribedTopics"][0]["name"], "topic1");
+    expect_recv!(c1, ServerMessage::ServerInfo);
+    let msg = expect_recv!(c1, ServerMessage::ConnectionGraphUpdate);
     assert_eq!(
-        msg["subscribedTopics"][0]["subscriberIds"][0],
-        "subscriber1"
+        msg,
+        ConnectionGraphUpdate {
+            published_topics: vec![PublishedTopic::new("topic1", ["publisher1"]),],
+            subscribed_topics: vec![SubscribedTopic::new("topic1", ["subscriber1"]),],
+            advertised_services: vec![AdvertisedService::new("service1", ["provider1"]),],
+            removed_topics: vec![],
+            removed_services: vec![],
+        }
     );
-    assert_eq!(msg["advertisedServices"][0]["name"], "service1");
-    assert_eq!(msg["advertisedServices"][0]["providerIds"][0], "provider1");
-    assert_eq!(msg["removedTopics"], json!([]));
-    assert_eq!(msg["removedServices"], json!([]));
 
     // Connect a second client and subscribe to graph updates.
-    let mut c2 = connect_client(addr).await;
-    c2.send(Message::text(r#"{"op": "subscribeConnectionGraph"}"#))
-        .await
-        .expect("Failed to send get parameters");
-    _ = c2.next().await.expect("No serverInfo sent");
+    let mut c2 = WebSocketClient::connect(addr).await;
+    c2.send(&SubscribeConnectionGraph {}).await.unwrap();
 
     // Second client also gets the complete initial state.
-    let msg = c2.next().await.expect("No message received");
-    let msg = msg.expect("Failed to parse message");
-    let text = msg.into_text().expect("Failed to get message text");
-    let msg: Value = serde_json::from_str(&text).expect("Failed to parse message");
-    assert_eq!(msg["op"], "connectionGraphUpdate");
-    assert_eq!(msg["publishedTopics"][0]["name"], "topic1");
-    assert_eq!(msg["publishedTopics"][0]["publisherIds"][0], "publisher1");
-    assert_eq!(msg["subscribedTopics"][0]["name"], "topic1");
+    expect_recv!(c2, ServerMessage::ServerInfo);
+    let msg = expect_recv!(c2, ServerMessage::ConnectionGraphUpdate);
     assert_eq!(
-        msg["subscribedTopics"][0]["subscriberIds"][0],
-        "subscriber1"
+        msg,
+        ConnectionGraphUpdate {
+            published_topics: vec![PublishedTopic::new("topic1", ["publisher1"]),],
+            subscribed_topics: vec![SubscribedTopic::new("topic1", ["subscriber1"]),],
+            advertised_services: vec![AdvertisedService::new("service1", ["provider1"]),],
+            removed_topics: vec![],
+            removed_services: vec![],
+        }
     );
-    assert_eq!(msg["advertisedServices"][0]["name"], "service1");
-    assert_eq!(msg["advertisedServices"][0]["providerIds"][0], "provider1");
-    assert_eq!(msg["removedTopics"], json!([]));
-    assert_eq!(msg["removedServices"], json!([]));
 
     // There was no listener callback for subscribe, because c1 is already an active subscriber.
     assert_eq!(recording_listener.take_connection_graph_subscribe(), 0);
 
     // Close the client. No unsubscribe callback because c1 is still subscribed. Since the server
     // processes the client disconnect asynchronously, just sleep a little while.
-    c2.close(None).await.unwrap();
+    c2.close().await;
     tokio::time::sleep(Duration::from_millis(10)).await;
     assert_eq!(recording_listener.take_connection_graph_unsubscribe(), 0);
 
@@ -1688,27 +1360,21 @@ async fn test_update_connection_graph() {
         .replace_connection_graph(graph)
         .expect("failed to update connection graph");
 
-    let msg = c1.next().await.expect("No message received");
-    let msg = msg.expect("Failed to parse message");
-    let text = msg.into_text().expect("Failed to get message text");
-    let msg: Value = serde_json::from_str(&text).expect("Failed to parse message");
-    assert_eq!(msg["op"], "connectionGraphUpdate");
-    assert_eq!(msg["publishedTopics"][0]["name"], "topic1");
-    assert_eq!(msg["publishedTopics"][0]["publisherIds"][0], "publisher2");
-    assert_eq!(msg["subscribedTopics"][0]["name"], "topic2");
+    let msg = expect_recv!(c1, ServerMessage::ConnectionGraphUpdate);
     assert_eq!(
-        msg["subscribedTopics"][0]["subscriberIds"][0],
-        "subscriber2"
+        msg,
+        ConnectionGraphUpdate {
+            published_topics: vec![PublishedTopic::new("topic1", ["publisher2"]),],
+            subscribed_topics: vec![SubscribedTopic::new("topic2", ["subscriber2"]),],
+            advertised_services: vec![],
+            removed_topics: vec![],
+            removed_services: vec!["service1".to_string()],
+        }
     );
-    assert_eq!(msg["advertisedServices"], json!([]));
-    assert_eq!(msg["removedTopics"], json!([]));
-    assert_eq!(msg["removedServices"], json!(["service1"]));
 
     // Last client unsubscribes, expect a listener callback for that.
     assert_eq!(recording_listener.take_connection_graph_unsubscribe(), 0);
-    c1.send(Message::text(r#"{"op": "unsubscribeConnectionGraph"}"#))
-        .await
-        .unwrap();
+    c1.send(&UnsubscribeConnectionGraph {}).await.unwrap();
     assert_eventually(|| dbg!(recording_listener.take_connection_graph_unsubscribe() == 1)).await;
 
     server.stop().await;
@@ -1730,68 +1396,54 @@ async fn test_slow_client() {
         .await
         .expect("Failed to start server");
 
-    let mut ws_client = connect_client(addr).await;
+    let mut client = WebSocketClient::connect(addr).await;
 
     // Publish more status messages than the client can handle
     for i in 0..50 {
-        let status = Status::new(StatusLevel::Error, format!("msg{}", i));
+        let status = Status::error(format!("msg{}", i));
         server.publish_status(status);
     }
 
-    _ = ws_client.next().await.expect("No serverInfo sent");
+    expect_recv!(client, ServerMessage::ServerInfo);
 
     for _ in 0..51 {
         // Client should have been disconnected
-        let msg = ws_client.next().await.expect("No message received");
-        let msg = msg.expect("Failed to parse message");
-        let text = msg.into_text().expect("Failed to get message text");
-
-        let msg: Value = serde_json::from_str(&text).expect("Failed to parse message");
-        assert_eq!(msg["op"], "status");
-        assert_eq!(msg["level"], 2);
-        let message_text = msg["message"].as_str().expect("Failed to get message text");
-        // Skip the msg message until we get the disconnect error status
-        if message_text.starts_with("msg") {
+        let msg = expect_recv!(client, ServerMessage::Status);
+        if msg.message.starts_with("msg") {
             continue;
         }
         assert_eq!(
-            message_text,
+            msg.message,
             "Disconnected because message backlog on the server is full. The backlog size is configurable in the server setup."
         );
         break;
     }
 
     // Close message should be received
-    let msg = ws_client.next().await.expect("No message received");
-    let msg = msg.expect("Failed to parse message");
-    assert!(msg.is_close());
-
-    // Client should be closed
-    assert!(ws_client.next().await.is_none());
+    expect_recv_close!(client);
     server.stop().await;
 }
 
-/// Connect to a server, ensuring the protocol header is set, and return the client WS stream
-pub async fn connect_client(
-    addr: SocketAddr,
-) -> tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>> {
-    let mut request = format!("ws://{}/", addr)
-        .into_client_request()
-        .expect("Failed to build request");
-
-    request.headers_mut().insert(
-        "sec-websocket-protocol",
-        HeaderValue::from_static(SUBPROTOCOL),
+#[cfg(feature = "unstable")]
+#[tokio::test]
+async fn test_broadcast_time() {
+    let ctx = Context::new();
+    let server = create_server(
+        &ctx,
+        ServerOptions {
+            capabilities: Some(HashSet::from([Capability::Time])),
+            ..Default::default()
+        },
     );
-
-    let (ws_stream, response) = tokio_tungstenite::connect_async(request)
+    let addr = server
+        .start("127.0.0.1", 0)
         .await
-        .expect("Failed to connect");
+        .expect("Failed to start server");
 
-    assert_eq!(
-        response.headers().get("sec-websocket-protocol"),
-        Some(&HeaderValue::from_static(SUBPROTOCOL))
-    );
+    let mut client = WebSocketClient::connect(addr).await;
+    expect_recv!(client, ServerMessage::ServerInfo);
 
-    ws_stream
+    server.broadcast_time(42);
+    let msg = expect_recv!(client, ServerMessage::Time);
+    assert_eq!(msg.timestamp, 42);
 }

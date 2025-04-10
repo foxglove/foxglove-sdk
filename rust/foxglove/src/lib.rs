@@ -274,7 +274,6 @@ use thiserror::Error;
 
 mod channel;
 mod channel_builder;
-mod collection;
 mod context;
 pub mod convert;
 mod encode;

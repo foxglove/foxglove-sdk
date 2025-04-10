@@ -78,6 +78,7 @@ impl<'a> ClientMessage<'a> {
     }
 
     /// Returns a client message with a static lifetime.
+    #[allow(dead_code)]
     pub fn into_owned(self) -> ClientMessage<'static> {
         match self {
             ClientMessage::Subscribe(m) => ClientMessage::Subscribe(m),

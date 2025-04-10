@@ -302,7 +302,6 @@ impl Drop for Context {
 
 #[cfg(test)]
 mod tests {
-    use crate::collection::collection;
     use crate::log_sink_set::ERROR_LOGGING_MESSAGE;
     use crate::testutil::{ErrorSink, MockSink, RecordingSink};
     use crate::{context::*, ChannelBuilder};
@@ -325,7 +324,7 @@ mod tests {
                     },
                 }"#,
             ))
-            .metadata(collection! {"key".to_string() => "value".to_string()})
+            .metadata(maplit::btreemap! {"key".to_string() => "value".to_string()})
             .build_raw()
     }
 

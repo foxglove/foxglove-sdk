@@ -139,7 +139,7 @@ impl<W: Write + Seek + Send> Sink for McapSink<W> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{collection, ChannelBuilder, Context, Metadata, Schema};
+    use crate::{ChannelBuilder, Context, Metadata, Schema};
     use mcap::McapError;
     use std::path::Path;
     use tempfile::NamedTempFile;
@@ -159,7 +159,7 @@ mod tests {
                     },
                 }"#,
             ))
-            .metadata(collection! {"key".to_string() => "value".to_string()})
+            .metadata(maplit::btreemap! {"key".to_string() => "value".to_string()})
             .build_raw()
             .unwrap()
     }
