@@ -29,7 +29,7 @@ public:
       : Channel(topic, messageEncoding, schema, nullptr) {}
 
   Channel(
-    const std::string& topic, const std::string& messageEncoding, Schema schema,
+    const std::string& topic, const std::string& messageEncoding, std::optional<Schema> schema,
     const Context& context
   );
 

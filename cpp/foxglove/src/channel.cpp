@@ -5,7 +5,7 @@
 namespace foxglove {
 
 Channel::Channel(
-  const std::string& topic, const std::string& messageEncoding, Schema schema,
+  const std::string& topic, const std::string& messageEncoding, std::optional<Schema> schema,
   const Context& context
 )
     : Channel(topic, messageEncoding, schema, context.get_inner()) {}

@@ -69,18 +69,19 @@ std::string readFile(const std::string& path) {
   return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
 }
 
-TEST_CASE("specify context") {
+TEST_CASE("different contexts") {
   FileCleanup cleanup("test.mcap");
-  foxglove::Context context;
+  foxglove::Context context1;
+  foxglove::Context context2;
 
-  foxglove::McapWriterOptions options(context);
+  foxglove::McapWriterOptions options(context1);
   options.path = "test.mcap";
   foxglove::McapWriter writer(options);
 
   // Write message, but on default global context
   foxglove::Schema schema;
   schema.name = "ExampleSchema";
-  foxglove::Channel channel{"example1", "json", schema};
+  foxglove::Channel channel{"example1", "json", schema, context2};
   std::string data = "Hello, world!";
   channel.log(reinterpret_cast<const std::byte*>(data.data()), data.size());
 
@@ -96,8 +97,9 @@ TEST_CASE("specify context") {
 
 TEST_CASE("specify profile") {
   FileCleanup cleanup("test.mcap");
+  foxglove::Context context;
 
-  foxglove::McapWriterOptions options = {};
+  foxglove::McapWriterOptions options(context);
   options.path = "test.mcap";
   options.profile = "test_profile";
   foxglove::McapWriter writer(options);
@@ -105,7 +107,7 @@ TEST_CASE("specify profile") {
   // Write message
   foxglove::Schema schema;
   schema.name = "ExampleSchema";
-  foxglove::Channel channel{"example1", "json", schema};
+  foxglove::Channel channel{"example1", "json", schema, context};
   std::string data = "Hello, world!";
   channel.log(reinterpret_cast<const std::byte*>(data.data()), data.size());
 
@@ -121,8 +123,9 @@ TEST_CASE("specify profile") {
 
 TEST_CASE("zstd compression") {
   FileCleanup cleanup("test.mcap");
+  foxglove::Context context;
 
-  foxglove::McapWriterOptions options = {};
+  foxglove::McapWriterOptions options(context);
   options.path = "test.mcap";
   options.compression = foxglove::McapCompression::Zstd;
   options.chunkSize = 10000;
@@ -132,7 +135,7 @@ TEST_CASE("zstd compression") {
   // Write message
   foxglove::Schema schema;
   schema.name = "ExampleSchema";
-  foxglove::Channel channel{"example2", "json", schema};
+  foxglove::Channel channel{"example2", "json", schema, context};
   std::string data = "Hello, world!";
   channel.log(reinterpret_cast<const std::byte*>(data.data()), data.size());
 
@@ -148,8 +151,9 @@ TEST_CASE("zstd compression") {
 
 TEST_CASE("lz4 compression") {
   FileCleanup cleanup("test.mcap");
+  foxglove::Context context;
 
-  foxglove::McapWriterOptions options = {};
+  foxglove::McapWriterOptions options(context);
   options.path = "test.mcap";
   options.compression = foxglove::McapCompression::Lz4;
   options.chunkSize = 10000;
@@ -159,7 +163,7 @@ TEST_CASE("lz4 compression") {
   // Write message
   foxglove::Schema schema;
   schema.name = "ExampleSchema";
-  foxglove::Channel channel{"example3", "json", schema};
+  foxglove::Channel channel{"example3", "json", schema, context};
   std::string data = "Hello, world!";
   channel.log(reinterpret_cast<const std::byte*>(data.data()), data.size());
 
@@ -175,8 +179,9 @@ TEST_CASE("lz4 compression") {
 
 TEST_CASE("Channel can outlive Schema") {
   FileCleanup cleanup("test.mcap");
+  foxglove::Context context;
 
-  foxglove::McapWriterOptions options = {};
+  foxglove::McapWriterOptions options(context);
   options.path = "test.mcap";
   foxglove::McapWriter writer(options);
 
@@ -189,7 +194,7 @@ TEST_CASE("Channel can outlive Schema") {
     std::string data = "FAKESCHEMA";
     schema.data = reinterpret_cast<const std::byte*>(data.data());
     schema.dataLen = data.size();
-    channel = foxglove::Channel{"example", "json", schema};
+    channel = foxglove::Channel{"example", "json", schema, context};
     // Channel should copy the schema, so this modification has no effect on the output
     data[2] = 'I';
     data[3] = 'L';
