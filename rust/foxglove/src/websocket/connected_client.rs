@@ -238,7 +238,7 @@ impl ConnectedClient {
             ClientMessage::UnsubscribeParameterUpdates(msg) => {
                 self.on_parameters_unsubscribe(server, msg.parameter_names)
             }
-            ClientMessage::ServiceCallRequest(msg) => self.on_service_call(msg),
+            ClientMessage::ServiceCallRequest(msg) => self.on_service_call(server, msg),
             ClientMessage::FetchAsset(msg) => self.on_fetch_asset(server, msg.uri, msg.request_id),
             ClientMessage::SubscribeConnectionGraph => self.on_connection_graph_subscribe(server),
             ClientMessage::UnsubscribeConnectionGraph => {
@@ -536,11 +536,7 @@ impl ConnectedClient {
         }
     }
 
-    fn on_service_call(&self, req: ws_protocol::client::ServiceCallRequest) {
-        let Some(server) = self.server.upgrade() else {
-            return;
-        };
-
+    fn on_service_call(&self, server: Arc<Server>, req: ws_protocol::client::ServiceCallRequest) {
         // We have a response channel if and only if the server supports services.
         let service_id = ServiceId::new(req.service_id);
         let call_id = CallId::new(req.call_id);
