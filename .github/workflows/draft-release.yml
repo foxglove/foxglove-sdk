@@ -12,6 +12,10 @@ env:
   SDK_TAG: sdk/${{ github.event.inputs.version }}
   SDK_BRANCH: release/sdk/${{ github.event.inputs.version }}
 
+concurrency:
+  group: "draft-release-${{ github.event.inputs.version }}"
+  cancel-in-progress: false
+
 jobs:
   build-artifacts:
     uses: ./.github/workflows/c_cpp.yml
@@ -63,6 +67,9 @@ jobs:
 
       - name: List downloaded artifacts
         run: ls -l ${{ needs.build-artifacts.outputs.artifact_prefix }}
+
+      - name: Debug version
+        run: gh --version
 
       - name: Create draft release
         env:
