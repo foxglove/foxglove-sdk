@@ -4,7 +4,7 @@ use std::sync::Arc;
 use smallvec::SmallVec;
 
 use crate::metadata::Metadata;
-use crate::{FoxgloveError, RawChannel};
+use crate::{ChannelId, FoxgloveError, RawChannel};
 
 /// Uniquely identifies a [`Sink`] in the context of this program.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -43,7 +43,7 @@ pub trait Sink: Send + Sync {
         metadata: &Metadata,
     ) -> Result<(), FoxgloveError>;
 
-    /// Called when a new channel is made available within the [`Context`][ctx].
+    /// Called when new channels are made available within the [`Context`][ctx].
     ///
     /// Sinks can track channels seen, and do new channel-related things the first time they see a
     /// channel, rather than in this method. The choice is up to the implementor.
@@ -52,18 +52,29 @@ pub trait Sink: Send + Sync {
     /// with each of the channels registered to that context.
     ///
     /// For sinks that manage their channel subscriptions dynamically, note that it is NOT safe to
-    /// call [`Context::subscribe_channels`][sub] from the context of this callback. The
-    /// implementation may return true to immediately subscribe to the channel, or it may return
-    /// false and subscribe later by calling [`Context::subscribe_channels`][sub] at some later
-    /// time.
+    /// call [`Context::subscribe_channels`][sub] from the context of this callback. If the sink
+    /// wants to subscribe to channels immediately, it may return a list of corresponding channel
+    /// IDs.
     ///
     /// For sinks that [auto-subscribe][Sink::auto_subscribe] to all channels, the return value of
     /// this method is ignored.
     ///
     /// [ctx]: crate::Context
     /// [sub]: crate::Context::subscribe_channels
-    fn add_channel(&self, _channel: &Arc<RawChannel>) -> bool {
-        false
+    fn add_channels(&self, _channel: &[&Arc<RawChannel>]) -> Option<Vec<ChannelId>> {
+        None
+    }
+
+    /// Called when a new channel is made available within the [`Context`][crate::Context].
+    ///
+    /// See [`Sink::add_channels`] for additional details.
+    ///
+    /// For sinks that manage their channel subscriptions dynamically, this function may return
+    /// true to immediately subscribe to the channel.
+    #[doc(hidden)]
+    fn add_channel(&self, channel: &Arc<RawChannel>) -> bool {
+        self.add_channels(&[channel])
+            .is_some_and(|ids| ids.contains(&channel.id()))
     }
 
     /// Called when a channel is unregistered from the [`Context`][ctx].

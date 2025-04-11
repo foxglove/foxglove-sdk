@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use futures_util::{SinkExt, StreamExt};
 use tokio::net::TcpStream;
 use tokio_tungstenite::tungstenite::client::IntoClientRequest;
@@ -17,6 +19,8 @@ pub enum RecvError {
     ParseError(#[from] ParseError),
     #[error(transparent)]
     Tungstenite(#[from] tungstenite::Error),
+    #[error(transparent)]
+    Timeout(#[from] tokio::time::error::Elapsed),
 }
 
 pub struct WebSocketClient {
@@ -57,7 +61,7 @@ impl WebSocketClient {
 
     /// Receives and parses a messsage from the server.
     pub async fn recv(&mut self) -> Result<ServerMessage, RecvError> {
-        let msg = self.recv_msg().await?;
+        let msg = tokio::time::timeout(Duration::from_secs(1), self.recv_msg()).await??;
         let msg = ServerMessage::try_from(&msg)?;
         Ok(msg.into_owned())
     }

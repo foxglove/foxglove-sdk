@@ -81,20 +81,24 @@ impl ContextInner {
         entry.insert(sink.clone());
 
         // Notify sink of existing channels. Sinks that dynamically manage subscriptions may return
-        // true from `add_channel` to add a subscription synchronously.
-        let auto_subscribe = sink.auto_subscribe();
-        let mut sub_channel_ids = vec![];
-        for channel in self.channels.values() {
-            if sink.add_channel(channel) && !auto_subscribe {
-                sub_channel_ids.push(channel.id());
-            }
-        }
+        // a set of channel IDs that they want to subscribe to immediately.
+        let channels: Vec<_> = self.channels.values().collect();
+        let ids = if !channels.is_empty() {
+            sink.add_channels(&channels)
+        } else {
+            None
+        };
 
         // Add requested subscriptions.
-        if !sub_channel_ids.is_empty() && self.subs.subscribe_channels(&sink, &sub_channel_ids) {
-            self.update_channel_sinks_by_ids(&sub_channel_ids);
-        } else if auto_subscribe && self.subs.subscribe_global(sink.clone()) {
-            self.update_channel_sinks(self.channels.values());
+        if sink.auto_subscribe() {
+            if self.subs.subscribe_global(sink.clone()) {
+                self.update_channel_sinks(&channels);
+            }
+        } else if let Some(mut ids) = ids {
+            ids.retain(|id| self.channels.contains_key(id));
+            if !ids.is_empty() && self.subs.subscribe_channels(&sink, &ids) {
+                self.update_channel_sinks_by_ids(&ids);
+            }
         }
 
         true
@@ -438,7 +442,7 @@ mod tests {
         let ctx = Context::new();
         let c1 = new_test_channel(&ctx, "t1").unwrap();
         let c2 = new_test_channel(&ctx, "t2").unwrap();
-        let sink = Arc::new(RecordingSink::new());
+        let sink = Arc::new(RecordingSink::new().auto_subscribe(true));
 
         assert!(!c1.has_sinks());
         assert!(!c2.has_sinks());
@@ -520,46 +524,74 @@ mod tests {
     fn test_sink_subscribe_on_channel_add() {
         let ctx = Context::new();
 
-        // Sink which returns true from add_channel
+        // Sink which automatically subscribes to t1, but not t2.
         let s1 = Arc::new(
             RecordingSink::new()
                 .auto_subscribe(false)
-                .add_channel_rval(true),
+                .add_channels(|channels| {
+                    Some(
+                        channels
+                            .iter()
+                            .filter_map(|c| {
+                                if c.topic() == "t1" {
+                                    Some(c.id())
+                                } else {
+                                    None
+                                }
+                            })
+                            .collect(),
+                    )
+                }),
         );
         ctx.add_sink(s1.clone());
 
-        // Add channel with existing sink.
-        let ch = ChannelBuilder::new("topic")
-            .message_encoding("json")
-            .context(&ctx)
-            .build_raw()
-            .unwrap();
-        assert!(ch.has_sinks());
-        ctx.remove_sink(s1.id());
+        // Add channels with existing sink.
+        let c1 = new_test_channel(&ctx, "t1").unwrap();
+        let c2 = new_test_channel(&ctx, "t2").unwrap();
+        assert!(c1.has_sinks());
+        assert!(!c2.has_sinks());
 
-        // Add sink with existing channel.
-        assert!(!ch.has_sinks());
+        // Remove sink.
+        ctx.remove_sink(s1.id());
+        assert!(!c1.has_sinks());
+        assert!(!c2.has_sinks());
+
+        // Add sink with existing channels.
         ctx.add_sink(s1.clone());
-        assert!(ch.has_sinks());
+        assert!(c1.has_sinks());
+        assert!(!c2.has_sinks());
 
         // Cleanup
         ctx.remove_sink(s1.id());
-        assert!(!ch.has_sinks());
+        assert!(!c1.has_sinks());
 
-        // Sink which returns false from add_channel
+        // Sink which never auto-subscribes to anything.
         let s2 = Arc::new(
             RecordingSink::new()
                 .auto_subscribe(false)
-                .add_channel_rval(false),
+                .add_channels(|_| None),
         );
 
-        // Add sink with existing channel.
+        // Add sink with existing channels.
         ctx.add_sink(s2.clone());
-        assert!(!ch.has_sinks());
+        assert!(!c1.has_sinks());
+        assert!(!c2.has_sinks());
 
-        // Add channel with existing sink.
-        assert!(ctx.remove_channel(ch.id()));
-        ctx.add_channel(ch.clone()).unwrap();
-        assert!(!ch.has_sinks());
+        // Remove channels.
+        assert!(ctx.remove_channel(c1.id()));
+        assert!(ctx.remove_channel(c2.id()));
+
+        // Add channels with existing sink.
+        ctx.add_channel(c1.clone()).unwrap();
+        ctx.add_channel(c2.clone()).unwrap();
+        assert!(!c1.has_sinks());
+        assert!(!c2.has_sinks());
+    }
+
+    #[test]
+    fn test_no_add_channels_cb() {
+        let ctx = Context::new();
+        let s1 = Arc::new(RecordingSink::new().add_channels(|_| unreachable!("no channels!")));
+        ctx.add_sink(s1.clone());
     }
 }

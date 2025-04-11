@@ -34,6 +34,7 @@ mod send_lossy;
 use poller::Poller;
 
 const MAX_SEND_RETRIES: usize = 10;
+const ADVERTISE_CHANNEL_BATCH_SIZE: usize = 100;
 const DEFAULT_SERVICE_CALLS_PER_CLIENT: usize = 32;
 const DEFAULT_FETCH_ASSET_CALLS_PER_CLIENT: usize = 32;
 
@@ -101,19 +102,20 @@ impl Sink for ConnectedClient {
         Ok(())
     }
 
-    /// Server has an available channel. Advertise to all clients.
-    fn add_channel(&self, channel: &Arc<RawChannel>) -> bool {
-        self.advertise_channel(channel);
-        false
+    fn add_channels(&self, channels: &[&Arc<RawChannel>]) -> Option<Vec<ChannelId>> {
+        for channels in channels.chunks(ADVERTISE_CHANNEL_BATCH_SIZE) {
+            self.advertise_channels(channels);
+        }
+        // Clients subscribe asynchronously.
+        None
     }
 
-    /// A channel is being removed. Unadvertise to all clients.
     fn remove_channel(&self, channel: &RawChannel) {
         self.unadvertise_channel(channel.id());
     }
 
-    /// Clients maintain subscriptions dynamically.
     fn auto_subscribe(&self) -> bool {
+        // Clients maintain subscriptions dynamically.
         false
     }
 }
@@ -684,21 +686,25 @@ impl ConnectedClient {
     }
 
     /// Advertises a channel to the client.
-    fn advertise_channel(&self, channel: &Arc<RawChannel>) {
-        let message = advertise::advertise_channels([channel]);
+    fn advertise_channels(&self, channels: &[&Arc<RawChannel>]) {
+        let message = advertise::advertise_channels(channels.iter().copied());
         if message.channels.is_empty() {
             return;
         }
 
-        self.channels.write().insert(channel.id(), channel.clone());
+        self.channels
+            .write()
+            .extend(channels.iter().map(|&c| (c.id(), c.clone())));
 
         if self.send_control_msg(&message) {
-            tracing::debug!(
-                "Advertised channel {} with id {} to client {}",
-                channel.topic(),
-                channel.id(),
-                self.addr
-            );
+            for channel in channels {
+                tracing::debug!(
+                    "Advertised channel {} with id {} to client {}",
+                    channel.topic(),
+                    channel.id(),
+                    self.addr
+                );
+            }
         }
     }
 
