@@ -59,9 +59,9 @@ jobs:
         with:
           pattern: "*foxglove*"
           path: ${{ needs.build-artifacts.outputs.artifact_prefix }}
-          merge-multiple: true
+          merge-multiple: false
 
-      - name: List artifacts
+      - name: List downloaded artifacts
         run: ls -l ${{ needs.build-artifacts.outputs.artifact_prefix }}
 
       - name: Create draft release
@@ -69,9 +69,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "${{ env.SDK_TAG }}" \
+            '${{ needs.build-artifacts.outputs.artifact_prefix }}' \
             --title "${{ env.SDK_TAG }}" \
             --target "${{ env.SDK_BRANCH }}" \
             --generate-notes \
             --notes-start-tag "sdk/v${{ steps.bump-version.outputs.prev-version }}" \
-            --draft \
-            ${{ needs.build-artifacts.outputs.artifact_prefix }}
+            --draft
