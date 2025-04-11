@@ -67,7 +67,10 @@ pub trait Sink: Send + Sync {
 
     /// Called when a new channel is made available within the [`Context`][crate::Context].
     ///
-    /// See [`Sink::add_channels`] for more details.
+    /// See [`Sink::add_channels`] for additional details.
+    ///
+    /// For sinks that manage their channel subscriptions dynamically, this function may return
+    /// true to immediately subscribe to the channel.
     #[doc(hidden)]
     fn add_channel(&self, channel: &Arc<RawChannel>) -> bool {
         self.add_channels(&[channel])
