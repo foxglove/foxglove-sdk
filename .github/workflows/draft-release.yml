@@ -62,7 +62,7 @@ jobs:
           merge-multiple: true
 
       - name: List artifacts
-        run: ls -l ./c_artifacts
+        run: ls -l ${{ needs.build-artifacts.outputs.artifact_prefix }}
 
       - name: Create draft release
         env:
@@ -74,4 +74,4 @@ jobs:
             --generate-notes \
             --notes-start-tag "sdk/v${{ steps.bump-version.outputs.prev-version }}" \
             --draft \
-            ./c_artifacts/*
+            ${{ needs.build-artifacts.outputs.artifact_prefix }}
