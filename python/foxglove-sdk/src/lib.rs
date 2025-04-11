@@ -200,6 +200,7 @@ fn shutdown(py: Python<'_>) {
 /// Rust bindings are exported as `_foxglove_py` and should not be imported directly.
 #[pymodule]
 fn _foxglove_py(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    foxglove::library_version::set_sdk_language("python");
     pyo3_log::init();
     m.add_function(wrap_pyfunction!(enable_logging, m)?)?;
     m.add_function(wrap_pyfunction!(disable_logging, m)?)?;
