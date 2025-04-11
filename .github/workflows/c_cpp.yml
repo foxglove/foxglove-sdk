@@ -5,6 +5,12 @@ on:
     branches: [main]
     tags: ["**"]
   pull_request: {}
+  # workflow may be called by draft-release to publish artifacts
+  workflow_call:
+    outputs:
+      artifact_prefix:
+        description: "prefix pattern for all uploaded artifacts"
+        value: ${{ jobs.build.outputs.artifact_prefix }}
 
 jobs:
   lint:
@@ -98,6 +104,9 @@ jobs:
 
     env:
       CARGO_BUILD_TARGET: ${{ matrix.target }}
+
+    outputs:
+      artifact_prefix: target/*
 
     steps:
       - uses: actions/checkout@v4
