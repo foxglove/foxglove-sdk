@@ -76,7 +76,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "${{ env.SDK_TAG }}" \
-            "${{ needs.build-artifacts.outputs.artifact_prefix }}" \
+            ${{ needs.build-artifacts.outputs.artifact_prefix }} \
             --title "${{ env.SDK_TAG }}" \
             --target "${{ env.SDK_BRANCH }}" \
             --generate-notes \
