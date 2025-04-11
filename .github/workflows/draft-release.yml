@@ -13,8 +13,12 @@ env:
   SDK_BRANCH: release/sdk/${{ github.event.inputs.version }}
 
 jobs:
+  build-artifacts:
+    uses: ./.github/workflows/c_cpp.yml
+
   draft:
     runs-on: ubuntu-latest
+    needs: build-artifacts
     permissions:
       contents: write
     steps:
@@ -50,6 +54,16 @@ jobs:
           git commit -m "Release '${{ env.SDK_TAG }}'"
           git push -f origin "${{ env.SDK_BRANCH }}"
 
+      - name: Download C/C++ artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: c_artifacts
+          path: ${{ needs.build-artifacts.outputs.artifact_prefix }}
+          merge-multiple: true
+
+      - name: List artifacts
+        run: ls -l ./c_artifacts
+
       - name: Create draft release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -59,4 +73,5 @@ jobs:
             --target "${{ env.SDK_BRANCH }}" \
             --generate-notes \
             --notes-start-tag "sdk/v${{ steps.bump-version.outputs.prev-version }}" \
-            --draft
+            --draft \
+            ./c_artifacts/*
