@@ -8,9 +8,9 @@ on:
   # workflow may be called by draft-release to publish artifacts
   workflow_call:
     outputs:
-      artifact_prefix:
-        description: "prefix pattern for all uploaded artifacts"
-        value: ${{ jobs.build.outputs.artifact_prefix }}
+      artifact_pattern:
+        description: "pattern to match all uploaded artifact names"
+        value: ${{ jobs.build.outputs.artifact_pattern }}
 
 jobs:
   lint:
@@ -106,7 +106,7 @@ jobs:
       CARGO_BUILD_TARGET: ${{ matrix.target }}
 
     outputs:
-      artifact_prefix: target/*
+      artifact_pattern: "*foxglove*"
 
     steps:
       - uses: actions/checkout@v4
@@ -137,12 +137,14 @@ jobs:
         with:
           name: ${{ matrix.staticlib_artifact_name }}
           path: target/${{ matrix.target }}/release/${{ matrix.staticlib_name }}
+          if-no-files-found: error
 
       - name: Upload shared library to artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.cdylib_artifact_name }}
           path: target/${{ matrix.target }}/release/${{ matrix.cdylib_name }}
+          if-no-files-found: error
 
   test-asan-ubsan:
     runs-on: ubuntu-latest
