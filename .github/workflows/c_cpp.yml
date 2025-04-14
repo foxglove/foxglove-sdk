@@ -5,12 +5,6 @@ on:
     branches: [main]
     tags: ["**"]
   pull_request: {}
-  # workflow may be called by draft-release to publish artifacts
-  workflow_call:
-    outputs:
-      artifact_pattern:
-        description: "pattern to match all uploaded artifact names"
-        value: ${{ jobs.build.outputs.artifact_pattern }}
 
 jobs:
   lint:
@@ -105,9 +99,6 @@ jobs:
     env:
       CARGO_BUILD_TARGET: ${{ matrix.target }}
 
-    outputs:
-      artifact_pattern: "*foxglove*"
-
     steps:
       - uses: actions/checkout@v4
       - uses: actions-rust-lang/setup-rust-toolchain@v1
@@ -132,18 +123,24 @@ jobs:
         run: make test
         working-directory: cpp
 
+      - name: Zip libraries for artifact
+        run: |
+          zip target/${{ matrix.target }}.zip \
+            target/${{ matrix.target }}/release/${{ matrix.staticlib_name }} \
+            target/${{ matrix.target }}/release/${{ matrix.cdylib_name }}
+
       - name: Upload static library to artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.staticlib_artifact_name }}
-          path: target/${{ matrix.target }}/release/${{ matrix.staticlib_name }}
+          path: target/${{ matrix.target }}-${{ matrix.staticlib_name }}.zip
           if-no-files-found: error
 
       - name: Upload shared library to artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.cdylib_artifact_name }}
-          path: target/${{ matrix.target }}/release/${{ matrix.cdylib_name }}
+          path: target/${{ matrix.target }}-${{ matrix.cdylib_name }}.zip
           if-no-files-found: error
 
   test-asan-ubsan:

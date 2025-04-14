@@ -61,21 +61,12 @@ jobs:
       - name: Download C/C++ artifacts
         uses: actions/download-artifact@v4
         with:
-          pattern: ${{ needs.build-artifacts.outputs.artifact_pattern }}
+          pattern: "*foxglove*.zip"
           path: ci_artifacts/
-          merge-multiple: false
-
-      - name: Record downloaded artifacts
-        # "{path}#{label}" format used by `gh release create`. Use the artifact name as the label.
-        run: find ./ci_artifacts -type f -exec python -c 'print("{}#" + "{}".split("/")[-2])' \; > ci_artifacts.txt
+          merge-multiple: true
 
       - name: List artifacts
-        run: cat ci_artifacts.txt
-
-      - name: List args
-        run: |
-          <ci_artifacts.txt xargs \
-            echo
+        run: ls -l ./ci_artifacts
 
       # - name: Create draft release
       #   env:
