@@ -137,18 +137,11 @@ jobs:
             target/${{ matrix.target }}/release/${{ matrix.staticlib_name }} \
             target/${{ matrix.target }}/release/${{ matrix.cdylib_name }}
 
-      - name: Upload static library to artifacts
+      - name: Upload static & shared library to artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.staticlib_artifact_name }}
-          path: target/${{ matrix.target }}-${{ matrix.staticlib_name }}.zip
-          if-no-files-found: error
-
-      - name: Upload shared library to artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.cdylib_artifact_name }}
-          path: target/${{ matrix.target }}-${{ matrix.cdylib_name }}.zip
+          path: target/${{ matrix.target }}.zip
           if-no-files-found: error
 
   test-asan-ubsan:
