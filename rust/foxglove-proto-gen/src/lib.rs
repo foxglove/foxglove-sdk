@@ -143,7 +143,7 @@ fn generate_impls(out_dir: &Path, fds: &FileDescriptorSet) -> anyhow::Result<()>
             continue;
         };
         let schema_name = name;
-        // Special case for GeoJSON casing
+        // Use rust casing for the struct name, but preserve the original casing for the schema.
         if name == "GeoJSON" {
             name = "GeoJson";
         }
