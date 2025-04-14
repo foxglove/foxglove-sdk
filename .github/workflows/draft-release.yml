@@ -61,7 +61,7 @@ jobs:
       - name: Download C/C++ artifacts
         uses: actions/download-artifact@v4
         with:
-          pattern: "*foxglove*.zip"
+          pattern: ${{ needs.build-artifacts.outputs.artifact_pattern }}
           path: ci_artifacts/
           merge-multiple: true
 
