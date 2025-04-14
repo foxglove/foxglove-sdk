@@ -249,15 +249,19 @@ fn fix_generated_comments(out_dir: &Path) -> anyhow::Result<()> {
         let mut line = line.context("Failed to read line")?;
 
         // Replace the intro doc URL with one to specific schema docs.
-        while let Some(Ok(next_line)) = input.peek() {
-            if let Some(captures) = struct_pattern.captures(next_line) {
-                let struct_name = captures.name("struct").context("Unexpected match")?;
-                let doc_slug = camel_case_to_kebab_case(struct_name.as_str());
-                line = line.replace(
-                    "message-schemas/introduction",
-                    &format!("message-schemas/{doc_slug}"),
-                );
-                break;
+        if line.contains(DOC_REF) {
+            while let Some(Ok(next_line)) = input.peek() {
+                if let Some(captures) = struct_pattern.captures(next_line) {
+                    let struct_name = captures.name("struct").context("Unexpected match")?;
+                    let doc_slug = camel_case_to_kebab_case(struct_name.as_str());
+                    line = line.replace(
+                        "message-schemas/introduction",
+                        &format!("message-schemas/{doc_slug}"),
+                    );
+                    break;
+                } else if next_line.contains(DOC_REF) {
+                    break;
+                }
             }
         }
 
