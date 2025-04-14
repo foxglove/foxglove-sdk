@@ -132,8 +132,16 @@ jobs:
         working-directory: cpp
 
       - name: Zip libraries for artifact
+        if: runner.os != 'Windows'
         run: |
           zip target/${{ matrix.target }}.zip \
+            target/${{ matrix.target }}/release/${{ matrix.staticlib_name }} \
+            target/${{ matrix.target }}/release/${{ matrix.cdylib_name }}
+
+      - name: Zip libraries for artifact (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          7z a -tzip target/${{ matrix.target }}.zip \
             target/${{ matrix.target }}/release/${{ matrix.staticlib_name }} \
             target/${{ matrix.target }}/release/${{ matrix.cdylib_name }}
 
