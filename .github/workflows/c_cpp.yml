@@ -8,9 +8,8 @@ on:
   workflow_call:
     inputs:
       sdk-version:
-        required: false
+        required: true
         type: string
-        default: ${{ github.sha }}
     outputs:
       artifact_pattern:
         description: "pattern to match all uploaded artifact names"
@@ -137,31 +136,36 @@ jobs:
         working-directory: cpp
 
       - name: Organize artifacts for zip
+        shell: bash
         run: |
-          mkdir target/foxglove
-          mkdir target/foxglove/lib
-          mv target/${{ matrix.target }}/release/${{ matrix.staticlib_name }} target/foxglove/lib/
-          mv target/${{ matrix.target }}/release/${{ matrix.cdylib_name }} target/foxglove/lib/
+          mkdir -p artifacts/foxglove/lib
+          mkdir -p artifacts/foxglove/include
+          mv target/${{ matrix.target }}/release/${{ matrix.staticlib_name }} artifacts/foxglove/lib/
+          mv target/${{ matrix.target }}/release/${{ matrix.cdylib_name }} artifacts/foxglove/lib/
+          cp -R cpp/foxglove/include/foxglove artifacts/foxglove/include/
+          cp -R c/include/foxglove-c artifacts/foxglove/include/
 
       - name: Zip libraries for artifact
         if: runner.os != 'Windows'
+        working-directory: artifacts
         run: |
           zip -r \
-            target/foxglove-${{inputs.sdk-version}}-cpp-${{ matrix.target }}.zip \
-            target/foxglove
+            foxglove-${{inputs.sdk-version || github.sha}}-cpp-${{ matrix.target }}.zip \
+            foxglove/
 
       - name: Zip libraries for artifact (Windows)
         if: runner.os == 'Windows'
+        working-directory: artifacts
         run: |
           7z a -tzip -sse `
-            target/foxglove-${{inputs.sdk-version}}-cpp-${{ matrix.target }}.zip `
-            target/foxglove
+            foxglove-${{inputs.sdk-version || github.sha}}-cpp-${{ matrix.target }}.zip `
+            foxglove/
 
       - name: Upload static & shared library to artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.target }}.zip
-          path: target/${{ matrix.target }}.zip
+          path: artifacts/foxglove-${{inputs.sdk-version || github.sha}}-cpp-${{ matrix.target }}.zip
           if-no-files-found: error
 
   test-asan-ubsan:

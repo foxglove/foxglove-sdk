@@ -68,7 +68,7 @@ jobs:
           merge-multiple: true
 
       - name: List artifacts
-        run: ls -l ./ci_artifacts
+        run: find ./ci_artifacts -type f
 
       - name: Create draft release
         env:
