@@ -4,7 +4,7 @@
 
 use bitflags::bitflags;
 use mcap::{Compression, WriteOptions};
-use std::ffi::{c_char, c_void, CStr, CString};
+use std::ffi::{c_char, c_void, CString};
 use std::fs::File;
 use std::io::BufWriter;
 use std::mem::ManuallyDrop;
@@ -72,11 +72,14 @@ impl From<FoxgloveServerCapability> for FoxgloveServerCapabilityBitFlags {
 #[repr(C)]
 pub struct FoxgloveServerOptions<'a> {
     pub name: *const c_char,
+    pub name_len: usize,
     pub host: *const c_char,
+    pub host_len: usize,
     pub port: u16,
     pub callbacks: Option<&'a FoxgloveServerCallbacks>,
     pub capabilities: FoxgloveServerCapability,
     pub supported_encodings: *const *const c_char,
+    pub supported_encoding_lengths: *const usize,
     pub supported_encodings_count: usize,
 }
 
@@ -136,7 +139,9 @@ pub use foxglove::RawChannel as FoxgloveChannel;
 #[repr(C)]
 pub struct FoxgloveSchema {
     pub name: *const c_char,
+    pub name_len: usize,
     pub encoding: *const c_char,
+    pub encoding_len: usize,
     pub data: *const u8,
     pub data_len: usize,
 }
@@ -146,18 +151,30 @@ pub struct FoxgloveSchema {
 /// `port` may be 0, in which case an available port will be automatically selected.
 ///
 /// # Safety
-/// `name` and `host` must be null-terminated strings with valid UTF8.
+/// If `name` is supplied in options, it must be valid UTF8, and `name_len` must be the length of
+/// `name`.
+/// If `host` is supplied in options, it must be valid UTF8, and `host_len` must be the length of
+/// `host`.
+/// If `supported_encodings` is supplied in options, all `supported_encodings` must be valid UTF8;
+/// `supported_encoding_lengths` must define the length of each encoding in `supported_encodings`;
+/// and both `supported_encodings` and `supported_encoding_lengths` must have the same length, equal
+/// to `supported_encodings_count`.
+/// "Length" here refers to the number of characters in the string.
 #[unsafe(no_mangle)]
 #[must_use]
 pub unsafe extern "C" fn foxglove_server_start(
     options: &FoxgloveServerOptions,
 ) -> *mut FoxgloveWebSocketServer {
-    let name = unsafe { CStr::from_ptr(options.name) }
-        .to_str()
-        .expect("name is invalid");
-    let host = unsafe { CStr::from_ptr(options.host) }
-        .to_str()
-        .expect("host is invalid");
+    let name = std::str::from_utf8(unsafe {
+        std::slice::from_raw_parts(options.name as *const u8, options.name_len)
+    })
+    .expect("name is invalid");
+
+    let host = std::str::from_utf8(unsafe {
+        std::slice::from_raw_parts(options.host as *const u8, options.host_len)
+    })
+    .expect("host is invalid");
+
     let mut server = foxglove::WebSocketServer::new()
         .name(name)
         .capabilities(
@@ -166,6 +183,12 @@ pub unsafe extern "C" fn foxglove_server_start(
         )
         .bind(host, options.port);
     if options.supported_encodings_count > 0 {
+        let enc_lengths = unsafe {
+            std::slice::from_raw_parts(
+                options.supported_encoding_lengths,
+                options.supported_encodings_count,
+            )
+        };
         server = server.supported_encodings(
             unsafe {
                 std::slice::from_raw_parts(
@@ -174,11 +197,13 @@ pub unsafe extern "C" fn foxglove_server_start(
                 )
             }
             .iter()
-            .map(|&enc| {
+            .enumerate()
+            .map(|(i, &enc)| {
                 assert!(!enc.is_null());
-                unsafe { CStr::from_ptr(enc) }
-                    .to_str()
-                    .expect("encoding is invalid")
+                std::str::from_utf8(unsafe {
+                    std::slice::from_raw_parts(enc as *const u8, enc_lengths[i])
+                })
+                .expect("encoding is invalid")
             }),
         );
     }
@@ -357,28 +382,35 @@ pub extern "C" fn foxglove_server_stop(server: Option<&mut FoxgloveWebSocketServ
 /// Create a new channel. The channel must later be freed with `foxglove_channel_free`.
 ///
 /// # Safety
-/// `topic` and `message_encoding` must be null-terminated strings with valid UTF8. `schema` is an
-/// optional pointer to a schema. The schema and the data it points to need only remain alive for
-/// the duration of this function call (they will be copied).
+/// `topic` and `message_encoding` must contain valid UTF8. `topic_len` and `message_encoding_len`
+/// must define the lengths (number of characters) of `topic` and `message_encoding` respectively.
+/// `schema` is an optional pointer to a schema. The schema and the data it points to need only
+/// remain alive for the duration of this function call (they will be copied).
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_channel_create(
     topic: *const c_char,
+    topic_len: usize,
     message_encoding: *const c_char,
+    message_encoding_len: usize,
     schema: *const FoxgloveSchema,
 ) -> *mut FoxgloveChannel {
-    let topic = unsafe { CStr::from_ptr(topic) }
-        .to_str()
-        .expect("topic is invalid");
-    let message_encoding = unsafe { CStr::from_ptr(message_encoding) }
-        .to_str()
-        .expect("message_encoding is invalid");
+    let topic =
+        std::str::from_utf8(unsafe { std::slice::from_raw_parts(topic as *const u8, topic_len) })
+            .expect("topic is invalid");
+    let message_encoding = std::str::from_utf8(unsafe {
+        std::slice::from_raw_parts(message_encoding as *const u8, message_encoding_len)
+    })
+    .expect("message_encoding is invalid");
+
     let schema = unsafe { schema.as_ref() }.map(|schema| {
-        let name = unsafe { CStr::from_ptr(schema.name) }
-            .to_str()
-            .expect("schema name is invalid");
-        let encoding = unsafe { CStr::from_ptr(schema.encoding) }
-            .to_str()
-            .expect("schema encoding is invalid");
+        let name = std::str::from_utf8(unsafe {
+            std::slice::from_raw_parts(schema.name as *const u8, schema.name_len)
+        })
+        .expect("schema name is invalid");
+        let encoding = std::str::from_utf8(unsafe {
+            std::slice::from_raw_parts(schema.encoding as *const u8, schema.encoding_len)
+        })
+        .expect("schema encoding is invalid");
         let data = unsafe { std::slice::from_raw_parts(schema.data, schema.data_len) };
         foxglove::Schema::new(name, encoding, data.to_owned())
     });

@@ -167,6 +167,7 @@ TEST_CASE("Client advertise/publish callbacks") {
   options.host = "127.0.0.1";
   options.port = 0;
   options.capabilities = foxglove::WebSocketServerCapabilities::ClientPublish;
+  options.supportedEncodings = {"schema encoding", "another"};
   options.callbacks.onClientAdvertise =
     [&](uint32_t clientId, const foxglove::ClientChannel& channel) {
       std::scoped_lock lock{mutex};

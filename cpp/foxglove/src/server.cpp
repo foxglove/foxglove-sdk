@@ -70,17 +70,24 @@ WebSocketServer::WebSocketServer(const WebSocketServerOptions& options)
 
   foxglove_server_options cOptions = {};
   cOptions.name = options.name.c_str();
+  cOptions.name_len = options.name.length();
   cOptions.host = options.host.c_str();
+  cOptions.host_len = options.host.length();
   cOptions.port = options.port;
   cOptions.callbacks = hasAnyCallbacks ? &cCallbacks : nullptr;
   cOptions.capabilities =
     static_cast<std::underlying_type_t<decltype(options.capabilities)>>(options.capabilities);
   std::vector<const char*> supportedEncodings;
   supportedEncodings.reserve(options.supportedEncodings.size());
+
+  std::vector<size_t> supportedEncodingLengths;
+  supportedEncodingLengths.reserve(options.supportedEncodings.size());
   for (const auto& encoding : options.supportedEncodings) {
     supportedEncodings.push_back(encoding.c_str());
+    supportedEncodingLengths.push_back(encoding.length());
   }
   cOptions.supported_encodings = supportedEncodings.data();
+  cOptions.supported_encoding_lengths = supportedEncodingLengths.data();
   cOptions.supported_encodings_count = supportedEncodings.size();
   _impl.reset(foxglove_server_start(&cOptions));
 }

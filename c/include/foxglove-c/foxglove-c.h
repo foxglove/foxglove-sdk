@@ -101,11 +101,14 @@ typedef uint8_t foxglove_server_capability;
 
 typedef struct foxglove_server_options {
   const char *name;
+  size_t name_len;
   const char *host;
+  size_t host_len;
   uint16_t port;
   const struct foxglove_server_callbacks *callbacks;
   foxglove_server_capability capabilities;
   const char *const *supported_encodings;
+  const size_t *supported_encoding_lengths;
   size_t supported_encodings_count;
 } foxglove_server_options;
 
@@ -135,7 +138,9 @@ typedef struct foxglove_mcap_options {
 
 typedef struct foxglove_schema {
   const char *name;
+  size_t name_len;
   const char *encoding;
+  size_t encoding_len;
   const uint8_t *data;
   size_t data_len;
 } foxglove_schema;
@@ -150,7 +155,15 @@ extern "C" {
  * `port` may be 0, in which case an available port will be automatically selected.
  *
  * # Safety
- * `name` and `host` must be null-terminated strings with valid UTF8.
+ * If `name` is supplied in options, it must be valid UTF8, and `name_len` must be the length of
+ * `name`.
+ * If `host` is supplied in options, it must be valid UTF8, and `host_len` must be the length of
+ * `host`.
+ * If `supported_encodings` is supplied in options, all `supported_encodings` must be valid UTF8;
+ * `supported_encoding_lengths` must define the length of each encoding in `supported_encodings`;
+ * and both `supported_encodings` and `supported_encoding_lengths` must have the same length, equal
+ * to `supported_encodings_count`.
+ * "Length" here refers to the number of characters in the string.
  */
 struct foxglove_websocket_server *foxglove_server_start(const struct foxglove_server_options *FOXGLOVE_NONNULL options);
 
@@ -199,12 +212,15 @@ void foxglove_server_stop(struct foxglove_websocket_server *server);
  * Create a new channel. The channel must later be freed with `foxglove_channel_free`.
  *
  * # Safety
- * `topic` and `message_encoding` must be null-terminated strings with valid UTF8. `schema` is an
- * optional pointer to a schema. The schema and the data it points to need only remain alive for
- * the duration of this function call (they will be copied).
+ * `topic` and `message_encoding` must contain valid UTF8. `topic_len` and `message_encoding_len`
+ * must define the lengths (number of characters) of `topic` and `message_encoding` respectively.
+ * `schema` is an optional pointer to a schema. The schema and the data it points to need only
+ * remain alive for the duration of this function call (they will be copied).
  */
 foxglove_channel *foxglove_channel_create(const char *topic,
+                                          size_t topic_len,
                                           const char *message_encoding,
+                                          size_t message_encoding_len,
                                           const struct foxglove_schema *schema);
 
 /**

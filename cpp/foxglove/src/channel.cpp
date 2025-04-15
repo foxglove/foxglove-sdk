@@ -14,9 +14,13 @@ Channel::Channel(
     cSchema.data = reinterpret_cast<const uint8_t*>(schema->data);
     cSchema.data_len = schema->dataLen;
   }
-  _impl.reset(
-    foxglove_channel_create(topic.data(), messageEncoding.data(), schema ? &cSchema : nullptr)
-  );
+  _impl.reset(foxglove_channel_create(
+    topic.data(),
+    topic.length(),
+    messageEncoding.data(),
+    messageEncoding.length(),
+    schema ? &cSchema : nullptr
+  ));
 }
 
 uint64_t Channel::id() const {
