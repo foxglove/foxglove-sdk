@@ -150,7 +150,7 @@ jobs:
         working-directory: artifacts
         run: |
           zip -r \
-            ${{ matrix.target }}.zip \
+            foxglove-${{inputs.sdk-version || github.sha}}-cpp-${{ matrix.target }}.zip \
             foxglove/
 
       - name: Zip libraries for artifact (Windows)
@@ -158,14 +158,14 @@ jobs:
         working-directory: artifacts
         run: |
           7z a -tzip -sse `
-            ${{ matrix.target }}.zip `
+            foxglove-${{inputs.sdk-version || github.sha}}-cpp-${{ matrix.target }}.zip `
             foxglove/
 
       - name: Upload static & shared library to artifacts
         uses: actions/upload-artifact@v4
         with:
           name: foxglove-${{inputs.sdk-version || github.sha}}-cpp-${{ matrix.target }}.zip
-          path: artifacts/${{ matrix.target }}.zip
+          path: artifacts/foxglove-${{inputs.sdk-version || github.sha}}-cpp-${{ matrix.target }}.zip
           if-no-files-found: error
 
   test-asan-ubsan:
