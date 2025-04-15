@@ -148,7 +148,7 @@ jobs:
       - name: Upload static & shared library to artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.staticlib_artifact_name }}
+          name: ${{ matrix.target }}.zip
           path: target/${{ matrix.target }}.zip
           if-no-files-found: error
 
