@@ -135,6 +135,10 @@ impl BaseChannel {
         Ok(())
     }
 
+    fn id(&self) -> u64 {
+        self.0.id().into()
+    }
+
     fn topic(&self) -> &str {
         self.0.topic()
     }

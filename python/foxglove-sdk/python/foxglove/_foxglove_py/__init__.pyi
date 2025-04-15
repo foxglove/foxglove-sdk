@@ -41,6 +41,10 @@ class BaseChannel:
         schema: Optional["Schema"] = None,
         metadata: Optional[List[Tuple[str, str]]] = None,
     ) -> "BaseChannel": ...
+    def id(self) -> int:
+        """The id of the channel"""
+        ...
+
     def topic(self) -> str:
         """The topic name of the channel"""
         ...
