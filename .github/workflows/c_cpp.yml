@@ -141,8 +141,8 @@ jobs:
       - name: Zip libraries for artifact (Windows)
         if: runner.os == 'Windows'
         run: |
-          7z a -tzip target/${{ matrix.target }}.zip \
-            target/${{ matrix.target }}/release/${{ matrix.staticlib_name }} \
+          7z a -tzip target/${{ matrix.target }}.zip `
+            target/${{ matrix.target }}/release/${{ matrix.staticlib_name }} `
             target/${{ matrix.target }}/release/${{ matrix.cdylib_name }}
 
       - name: Upload static & shared library to artifacts

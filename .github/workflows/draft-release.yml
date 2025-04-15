@@ -68,14 +68,14 @@ jobs:
       - name: List artifacts
         run: ls -l ./ci_artifacts
 
-      # - name: Create draft release
-      #   env:
-      #     GH_TOKEN: ${{ github.token }}
-      #   run: |
-      #     <ci_artifacts.txt xargs \
-      #       gh release create "${{ env.SDK_TAG }}" \
-      #       --title "${{ env.SDK_TAG }}" \
-      #       --target "${{ env.SDK_BRANCH }}" \
-      #       --generate-notes \
-      #       --notes-start-tag "sdk/v${{ steps.bump-version.outputs.prev-version }}" \
-      #       --draft
+      - name: Create draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ env.SDK_TAG }}" \
+            ./ci_artifacts/* \
+            --title "${{ env.SDK_TAG }}" \
+            --target "${{ env.SDK_BRANCH }}" \
+            --generate-notes \
+            --notes-start-tag "sdk/v${{ steps.bump-version.outputs.prev-version }}" \
+            --draft
