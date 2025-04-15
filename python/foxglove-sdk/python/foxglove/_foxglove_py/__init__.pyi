@@ -42,7 +42,7 @@ class BaseChannel:
         metadata: Optional[List[Tuple[str, str]]] = None,
     ) -> "BaseChannel": ...
     def id(self) -> int:
-        """The id of the channel"""
+        """The unique ID of the channel"""
         ...
 
     def topic(self) -> str:
