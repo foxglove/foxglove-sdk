@@ -103,7 +103,12 @@ impl CameraCalibrationChannel {
     }
 
     fn __repr__(&self) -> String {
-        format!("CameraCalibrationChannel(topic='{}')", self.0.topic()).to_string()
+        format!(
+            "CameraCalibrationChannel(id='{}',topic='{}')",
+            self.id(),
+            self.topic()
+        )
+        .to_string()
     }
 }
 
@@ -160,7 +165,12 @@ impl CircleAnnotationChannel {
     }
 
     fn __repr__(&self) -> String {
-        format!("CircleAnnotationChannel(topic='{}')", self.0.topic()).to_string()
+        format!(
+            "CircleAnnotationChannel(id='{}',topic='{}')",
+            self.id(),
+            self.topic()
+        )
+        .to_string()
     }
 }
 
@@ -217,7 +227,7 @@ impl ColorChannel {
     }
 
     fn __repr__(&self) -> String {
-        format!("ColorChannel(topic='{}')", self.0.topic()).to_string()
+        format!("ColorChannel(id='{}',topic='{}')", self.id(), self.topic()).to_string()
     }
 }
 
@@ -274,7 +284,12 @@ impl CompressedImageChannel {
     }
 
     fn __repr__(&self) -> String {
-        format!("CompressedImageChannel(topic='{}')", self.0.topic()).to_string()
+        format!(
+            "CompressedImageChannel(id='{}',topic='{}')",
+            self.id(),
+            self.topic()
+        )
+        .to_string()
     }
 }
 
@@ -331,7 +346,12 @@ impl CompressedVideoChannel {
     }
 
     fn __repr__(&self) -> String {
-        format!("CompressedVideoChannel(topic='{}')", self.0.topic()).to_string()
+        format!(
+            "CompressedVideoChannel(id='{}',topic='{}')",
+            self.id(),
+            self.topic()
+        )
+        .to_string()
     }
 }
 
@@ -388,7 +408,12 @@ impl FrameTransformChannel {
     }
 
     fn __repr__(&self) -> String {
-        format!("FrameTransformChannel(topic='{}')", self.0.topic()).to_string()
+        format!(
+            "FrameTransformChannel(id='{}',topic='{}')",
+            self.id(),
+            self.topic()
+        )
+        .to_string()
     }
 }
 
@@ -445,7 +470,12 @@ impl FrameTransformsChannel {
     }
 
     fn __repr__(&self) -> String {
-        format!("FrameTransformsChannel(topic='{}')", self.0.topic()).to_string()
+        format!(
+            "FrameTransformsChannel(id='{}',topic='{}')",
+            self.id(),
+            self.topic()
+        )
+        .to_string()
     }
 }
 
@@ -502,7 +532,12 @@ impl GeoJsonChannel {
     }
 
     fn __repr__(&self) -> String {
-        format!("GeoJsonChannel(topic='{}')", self.0.topic()).to_string()
+        format!(
+            "GeoJsonChannel(id='{}',topic='{}')",
+            self.id(),
+            self.topic()
+        )
+        .to_string()
     }
 }
 
@@ -559,7 +594,7 @@ impl GridChannel {
     }
 
     fn __repr__(&self) -> String {
-        format!("GridChannel(topic='{}')", self.0.topic()).to_string()
+        format!("GridChannel(id='{}',topic='{}')", self.id(), self.topic()).to_string()
     }
 }
 
@@ -616,7 +651,12 @@ impl ImageAnnotationsChannel {
     }
 
     fn __repr__(&self) -> String {
-        format!("ImageAnnotationsChannel(topic='{}')", self.0.topic()).to_string()
+        format!(
+            "ImageAnnotationsChannel(id='{}',topic='{}')",
+            self.id(),
+            self.topic()
+        )
+        .to_string()
     }
 }
 
@@ -673,7 +713,12 @@ impl KeyValuePairChannel {
     }
 
     fn __repr__(&self) -> String {
-        format!("KeyValuePairChannel(topic='{}')", self.0.topic()).to_string()
+        format!(
+            "KeyValuePairChannel(id='{}',topic='{}')",
+            self.id(),
+            self.topic()
+        )
+        .to_string()
     }
 }
 
@@ -730,7 +775,12 @@ impl LaserScanChannel {
     }
 
     fn __repr__(&self) -> String {
-        format!("LaserScanChannel(topic='{}')", self.0.topic()).to_string()
+        format!(
+            "LaserScanChannel(id='{}',topic='{}')",
+            self.id(),
+            self.topic()
+        )
+        .to_string()
     }
 }
 
@@ -787,7 +837,12 @@ impl LocationFixChannel {
     }
 
     fn __repr__(&self) -> String {
-        format!("LocationFixChannel(topic='{}')", self.0.topic()).to_string()
+        format!(
+            "LocationFixChannel(id='{}',topic='{}')",
+            self.id(),
+            self.topic()
+        )
+        .to_string()
     }
 }
 
@@ -844,7 +899,7 @@ impl LogChannel {
     }
 
     fn __repr__(&self) -> String {
-        format!("LogChannel(topic='{}')", self.0.topic()).to_string()
+        format!("LogChannel(id='{}',topic='{}')", self.id(), self.topic()).to_string()
     }
 }
 
@@ -901,7 +956,12 @@ impl SceneEntityDeletionChannel {
     }
 
     fn __repr__(&self) -> String {
-        format!("SceneEntityDeletionChannel(topic='{}')", self.0.topic()).to_string()
+        format!(
+            "SceneEntityDeletionChannel(id='{}',topic='{}')",
+            self.id(),
+            self.topic()
+        )
+        .to_string()
     }
 }
 
@@ -958,7 +1018,12 @@ impl SceneEntityChannel {
     }
 
     fn __repr__(&self) -> String {
-        format!("SceneEntityChannel(topic='{}')", self.0.topic()).to_string()
+        format!(
+            "SceneEntityChannel(id='{}',topic='{}')",
+            self.id(),
+            self.topic()
+        )
+        .to_string()
     }
 }
 
@@ -1015,7 +1080,12 @@ impl SceneUpdateChannel {
     }
 
     fn __repr__(&self) -> String {
-        format!("SceneUpdateChannel(topic='{}')", self.0.topic()).to_string()
+        format!(
+            "SceneUpdateChannel(id='{}',topic='{}')",
+            self.id(),
+            self.topic()
+        )
+        .to_string()
     }
 }
 
@@ -1072,7 +1142,12 @@ impl PackedElementFieldChannel {
     }
 
     fn __repr__(&self) -> String {
-        format!("PackedElementFieldChannel(topic='{}')", self.0.topic()).to_string()
+        format!(
+            "PackedElementFieldChannel(id='{}',topic='{}')",
+            self.id(),
+            self.topic()
+        )
+        .to_string()
     }
 }
 
@@ -1129,7 +1204,7 @@ impl Point2Channel {
     }
 
     fn __repr__(&self) -> String {
-        format!("Point2Channel(topic='{}')", self.0.topic()).to_string()
+        format!("Point2Channel(id='{}',topic='{}')", self.id(), self.topic()).to_string()
     }
 }
 
@@ -1186,7 +1261,7 @@ impl Point3Channel {
     }
 
     fn __repr__(&self) -> String {
-        format!("Point3Channel(topic='{}')", self.0.topic()).to_string()
+        format!("Point3Channel(id='{}',topic='{}')", self.id(), self.topic()).to_string()
     }
 }
 
@@ -1243,7 +1318,12 @@ impl PointCloudChannel {
     }
 
     fn __repr__(&self) -> String {
-        format!("PointCloudChannel(topic='{}')", self.0.topic()).to_string()
+        format!(
+            "PointCloudChannel(id='{}',topic='{}')",
+            self.id(),
+            self.topic()
+        )
+        .to_string()
     }
 }
 
@@ -1300,7 +1380,12 @@ impl PointsAnnotationChannel {
     }
 
     fn __repr__(&self) -> String {
-        format!("PointsAnnotationChannel(topic='{}')", self.0.topic()).to_string()
+        format!(
+            "PointsAnnotationChannel(id='{}',topic='{}')",
+            self.id(),
+            self.topic()
+        )
+        .to_string()
     }
 }
 
@@ -1357,7 +1442,7 @@ impl PoseChannel {
     }
 
     fn __repr__(&self) -> String {
-        format!("PoseChannel(topic='{}')", self.0.topic()).to_string()
+        format!("PoseChannel(id='{}',topic='{}')", self.id(), self.topic()).to_string()
     }
 }
 
@@ -1414,7 +1499,12 @@ impl PoseInFrameChannel {
     }
 
     fn __repr__(&self) -> String {
-        format!("PoseInFrameChannel(topic='{}')", self.0.topic()).to_string()
+        format!(
+            "PoseInFrameChannel(id='{}',topic='{}')",
+            self.id(),
+            self.topic()
+        )
+        .to_string()
     }
 }
 
@@ -1471,7 +1561,12 @@ impl PosesInFrameChannel {
     }
 
     fn __repr__(&self) -> String {
-        format!("PosesInFrameChannel(topic='{}')", self.0.topic()).to_string()
+        format!(
+            "PosesInFrameChannel(id='{}',topic='{}')",
+            self.id(),
+            self.topic()
+        )
+        .to_string()
     }
 }
 
@@ -1528,7 +1623,12 @@ impl QuaternionChannel {
     }
 
     fn __repr__(&self) -> String {
-        format!("QuaternionChannel(topic='{}')", self.0.topic()).to_string()
+        format!(
+            "QuaternionChannel(id='{}',topic='{}')",
+            self.id(),
+            self.topic()
+        )
+        .to_string()
     }
 }
 
@@ -1585,7 +1685,12 @@ impl RawImageChannel {
     }
 
     fn __repr__(&self) -> String {
-        format!("RawImageChannel(topic='{}')", self.0.topic()).to_string()
+        format!(
+            "RawImageChannel(id='{}',topic='{}')",
+            self.id(),
+            self.topic()
+        )
+        .to_string()
     }
 }
 
@@ -1642,7 +1747,12 @@ impl TextAnnotationChannel {
     }
 
     fn __repr__(&self) -> String {
-        format!("TextAnnotationChannel(topic='{}')", self.0.topic()).to_string()
+        format!(
+            "TextAnnotationChannel(id='{}',topic='{}')",
+            self.id(),
+            self.topic()
+        )
+        .to_string()
     }
 }
 
@@ -1699,7 +1809,12 @@ impl Vector2Channel {
     }
 
     fn __repr__(&self) -> String {
-        format!("Vector2Channel(topic='{}')", self.0.topic()).to_string()
+        format!(
+            "Vector2Channel(id='{}',topic='{}')",
+            self.id(),
+            self.topic()
+        )
+        .to_string()
     }
 }
 
@@ -1756,6 +1871,11 @@ impl Vector3Channel {
     }
 
     fn __repr__(&self) -> String {
-        format!("Vector3Channel(topic='{}')", self.0.topic()).to_string()
+        format!(
+            "Vector3Channel(id='{}',topic='{}')",
+            self.id(),
+            self.topic()
+        )
+        .to_string()
     }
 }

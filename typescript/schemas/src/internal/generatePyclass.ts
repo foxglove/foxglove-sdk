@@ -609,7 +609,7 @@ impl ${channelClass} {
     }
 
     fn __repr__(&self) -> String {
-        format!("${channelClass}(topic='{}')", self.0.topic()).to_string()
+        format!("${channelClass}(id='{}',topic='{}')", self.id(), self.topic()).to_string()
     }
 }
 `;
