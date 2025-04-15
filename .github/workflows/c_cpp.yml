@@ -6,6 +6,11 @@ on:
     tags: ["**"]
   pull_request: {}
   workflow_call:
+    inputs:
+      sdk-version:
+        required: false
+        type: string
+        default: ${{ github.sha }}
     outputs:
       artifact_pattern:
         description: "pattern to match all uploaded artifact names"
@@ -131,20 +136,26 @@ jobs:
         run: make test
         working-directory: cpp
 
+      - name: Organize artifacts for zip
+        run: |
+          mkdir target/foxglove
+          mkdir target/foxglove/lib
+          mv target/${{ matrix.target }}/release/${{ matrix.staticlib_name }} target/foxglove/lib/
+          mv target/${{ matrix.target }}/release/${{ matrix.cdylib_name }} target/foxglove/lib/
+
       - name: Zip libraries for artifact
         if: runner.os != 'Windows'
         run: |
-          zip --must-match --junk-paths target/${{ matrix.target }}.zip \
-            target/${{ matrix.target }}/release/${{ matrix.staticlib_name }} \
-            target/${{ matrix.target }}/release/${{ matrix.cdylib_name }}
+          zip -r \
+            target/foxglove-${{inputs.sdk-version}}-cpp-${{ matrix.target }}.zip \
+            target/foxglove
 
       - name: Zip libraries for artifact (Windows)
         if: runner.os == 'Windows'
-        working-directory: target/${{ matrix.target }}/release
         run: |
-          7z a -tzip -sse ../../${{ matrix.target }}.zip `
-            ${{ matrix.staticlib_name }} `
-            ${{ matrix.cdylib_name }}
+          7z a -tzip -sse `
+            target/foxglove-${{inputs.sdk-version}}-cpp-${{ matrix.target }}.zip `
+            target/foxglove
 
       - name: Upload static & shared library to artifacts
         uses: actions/upload-artifact@v4

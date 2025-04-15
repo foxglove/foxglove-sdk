@@ -19,6 +19,8 @@ concurrency:
 jobs:
   build-artifacts:
     uses: ./.github/workflows/c_cpp.yml
+    with:
+      sdk-version: ${{ github.event.inputs.version }}
 
   draft:
     runs-on: ubuntu-latest
