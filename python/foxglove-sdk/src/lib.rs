@@ -135,12 +135,16 @@ impl BaseChannel {
         Ok(())
     }
 
+    fn id(&self) -> u64 {
+        self.0.id().into()
+    }
+
     fn topic(&self) -> &str {
         self.0.topic()
     }
 
     fn schema_name(&self) -> Option<&str> {
-        self.0.schema().map(|s| s.name.as_str())
+        Some(self.0.schema()?.name.as_str())
     }
 
     fn close(&mut self) {

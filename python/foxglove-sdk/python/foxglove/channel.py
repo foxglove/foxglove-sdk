@@ -59,9 +59,11 @@ class Channel:
         _channels_by_topic[topic] = self
 
     def __repr__(self) -> str:
-        return (
-            f"Channel(topic='{self.base.topic()}', schema='{self.base.schema_name()}')"
-        )
+        return f"Channel(id={self.id()}, topic='{self.topic()}', schema='{self.schema_name()}')"
+
+    def id(self) -> int:
+        """The unique ID of the channel"""
+        return self.base.id()
 
     def topic(self) -> str:
         """The topic name of the channel"""
