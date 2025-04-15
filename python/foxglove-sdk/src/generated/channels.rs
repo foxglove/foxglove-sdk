@@ -65,6 +65,21 @@ impl CameraCalibrationChannel {
         Ok(Self(base))
     }
 
+    /// The unique ID of the channel.
+    fn id(&self) -> u64 {
+        self.0.id().into()
+    }
+
+    /// The topic name of the channel.
+    fn topic(&self) -> &str {
+        self.0.topic()
+    }
+
+    /// The name of the schema for the channel.
+    fn schema_name(&self) -> Option<&str> {
+        Some(self.0.schema()?.name.as_str())
+    }
+
     /// Close the channel.
     ///
     /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
@@ -105,6 +120,21 @@ impl CircleAnnotationChannel {
     fn new(topic: &str) -> PyResult<Self> {
         let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
         Ok(Self(base))
+    }
+
+    /// The unique ID of the channel.
+    fn id(&self) -> u64 {
+        self.0.id().into()
+    }
+
+    /// The topic name of the channel.
+    fn topic(&self) -> &str {
+        self.0.topic()
+    }
+
+    /// The name of the schema for the channel.
+    fn schema_name(&self) -> Option<&str> {
+        Some(self.0.schema()?.name.as_str())
     }
 
     /// Close the channel.
@@ -149,6 +179,21 @@ impl ColorChannel {
         Ok(Self(base))
     }
 
+    /// The unique ID of the channel.
+    fn id(&self) -> u64 {
+        self.0.id().into()
+    }
+
+    /// The topic name of the channel.
+    fn topic(&self) -> &str {
+        self.0.topic()
+    }
+
+    /// The name of the schema for the channel.
+    fn schema_name(&self) -> Option<&str> {
+        Some(self.0.schema()?.name.as_str())
+    }
+
     /// Close the channel.
     ///
     /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
@@ -189,6 +234,21 @@ impl CompressedImageChannel {
     fn new(topic: &str) -> PyResult<Self> {
         let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
         Ok(Self(base))
+    }
+
+    /// The unique ID of the channel.
+    fn id(&self) -> u64 {
+        self.0.id().into()
+    }
+
+    /// The topic name of the channel.
+    fn topic(&self) -> &str {
+        self.0.topic()
+    }
+
+    /// The name of the schema for the channel.
+    fn schema_name(&self) -> Option<&str> {
+        Some(self.0.schema()?.name.as_str())
     }
 
     /// Close the channel.
@@ -233,6 +293,21 @@ impl CompressedVideoChannel {
         Ok(Self(base))
     }
 
+    /// The unique ID of the channel.
+    fn id(&self) -> u64 {
+        self.0.id().into()
+    }
+
+    /// The topic name of the channel.
+    fn topic(&self) -> &str {
+        self.0.topic()
+    }
+
+    /// The name of the schema for the channel.
+    fn schema_name(&self) -> Option<&str> {
+        Some(self.0.schema()?.name.as_str())
+    }
+
     /// Close the channel.
     ///
     /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
@@ -273,6 +348,21 @@ impl FrameTransformChannel {
     fn new(topic: &str) -> PyResult<Self> {
         let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
         Ok(Self(base))
+    }
+
+    /// The unique ID of the channel.
+    fn id(&self) -> u64 {
+        self.0.id().into()
+    }
+
+    /// The topic name of the channel.
+    fn topic(&self) -> &str {
+        self.0.topic()
+    }
+
+    /// The name of the schema for the channel.
+    fn schema_name(&self) -> Option<&str> {
+        Some(self.0.schema()?.name.as_str())
     }
 
     /// Close the channel.
@@ -317,6 +407,21 @@ impl FrameTransformsChannel {
         Ok(Self(base))
     }
 
+    /// The unique ID of the channel.
+    fn id(&self) -> u64 {
+        self.0.id().into()
+    }
+
+    /// The topic name of the channel.
+    fn topic(&self) -> &str {
+        self.0.topic()
+    }
+
+    /// The name of the schema for the channel.
+    fn schema_name(&self) -> Option<&str> {
+        Some(self.0.schema()?.name.as_str())
+    }
+
     /// Close the channel.
     ///
     /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
@@ -357,6 +462,21 @@ impl GeoJsonChannel {
     fn new(topic: &str) -> PyResult<Self> {
         let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
         Ok(Self(base))
+    }
+
+    /// The unique ID of the channel.
+    fn id(&self) -> u64 {
+        self.0.id().into()
+    }
+
+    /// The topic name of the channel.
+    fn topic(&self) -> &str {
+        self.0.topic()
+    }
+
+    /// The name of the schema for the channel.
+    fn schema_name(&self) -> Option<&str> {
+        Some(self.0.schema()?.name.as_str())
     }
 
     /// Close the channel.
@@ -401,6 +521,21 @@ impl GridChannel {
         Ok(Self(base))
     }
 
+    /// The unique ID of the channel.
+    fn id(&self) -> u64 {
+        self.0.id().into()
+    }
+
+    /// The topic name of the channel.
+    fn topic(&self) -> &str {
+        self.0.topic()
+    }
+
+    /// The name of the schema for the channel.
+    fn schema_name(&self) -> Option<&str> {
+        Some(self.0.schema()?.name.as_str())
+    }
+
     /// Close the channel.
     ///
     /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
@@ -441,6 +576,21 @@ impl ImageAnnotationsChannel {
     fn new(topic: &str) -> PyResult<Self> {
         let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
         Ok(Self(base))
+    }
+
+    /// The unique ID of the channel.
+    fn id(&self) -> u64 {
+        self.0.id().into()
+    }
+
+    /// The topic name of the channel.
+    fn topic(&self) -> &str {
+        self.0.topic()
+    }
+
+    /// The name of the schema for the channel.
+    fn schema_name(&self) -> Option<&str> {
+        Some(self.0.schema()?.name.as_str())
     }
 
     /// Close the channel.
@@ -485,6 +635,21 @@ impl KeyValuePairChannel {
         Ok(Self(base))
     }
 
+    /// The unique ID of the channel.
+    fn id(&self) -> u64 {
+        self.0.id().into()
+    }
+
+    /// The topic name of the channel.
+    fn topic(&self) -> &str {
+        self.0.topic()
+    }
+
+    /// The name of the schema for the channel.
+    fn schema_name(&self) -> Option<&str> {
+        Some(self.0.schema()?.name.as_str())
+    }
+
     /// Close the channel.
     ///
     /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
@@ -525,6 +690,21 @@ impl LaserScanChannel {
     fn new(topic: &str) -> PyResult<Self> {
         let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
         Ok(Self(base))
+    }
+
+    /// The unique ID of the channel.
+    fn id(&self) -> u64 {
+        self.0.id().into()
+    }
+
+    /// The topic name of the channel.
+    fn topic(&self) -> &str {
+        self.0.topic()
+    }
+
+    /// The name of the schema for the channel.
+    fn schema_name(&self) -> Option<&str> {
+        Some(self.0.schema()?.name.as_str())
     }
 
     /// Close the channel.
@@ -569,6 +749,21 @@ impl LocationFixChannel {
         Ok(Self(base))
     }
 
+    /// The unique ID of the channel.
+    fn id(&self) -> u64 {
+        self.0.id().into()
+    }
+
+    /// The topic name of the channel.
+    fn topic(&self) -> &str {
+        self.0.topic()
+    }
+
+    /// The name of the schema for the channel.
+    fn schema_name(&self) -> Option<&str> {
+        Some(self.0.schema()?.name.as_str())
+    }
+
     /// Close the channel.
     ///
     /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
@@ -609,6 +804,21 @@ impl LogChannel {
     fn new(topic: &str) -> PyResult<Self> {
         let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
         Ok(Self(base))
+    }
+
+    /// The unique ID of the channel.
+    fn id(&self) -> u64 {
+        self.0.id().into()
+    }
+
+    /// The topic name of the channel.
+    fn topic(&self) -> &str {
+        self.0.topic()
+    }
+
+    /// The name of the schema for the channel.
+    fn schema_name(&self) -> Option<&str> {
+        Some(self.0.schema()?.name.as_str())
     }
 
     /// Close the channel.
@@ -653,6 +863,21 @@ impl SceneEntityDeletionChannel {
         Ok(Self(base))
     }
 
+    /// The unique ID of the channel.
+    fn id(&self) -> u64 {
+        self.0.id().into()
+    }
+
+    /// The topic name of the channel.
+    fn topic(&self) -> &str {
+        self.0.topic()
+    }
+
+    /// The name of the schema for the channel.
+    fn schema_name(&self) -> Option<&str> {
+        Some(self.0.schema()?.name.as_str())
+    }
+
     /// Close the channel.
     ///
     /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
@@ -693,6 +918,21 @@ impl SceneEntityChannel {
     fn new(topic: &str) -> PyResult<Self> {
         let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
         Ok(Self(base))
+    }
+
+    /// The unique ID of the channel.
+    fn id(&self) -> u64 {
+        self.0.id().into()
+    }
+
+    /// The topic name of the channel.
+    fn topic(&self) -> &str {
+        self.0.topic()
+    }
+
+    /// The name of the schema for the channel.
+    fn schema_name(&self) -> Option<&str> {
+        Some(self.0.schema()?.name.as_str())
     }
 
     /// Close the channel.
@@ -737,6 +977,21 @@ impl SceneUpdateChannel {
         Ok(Self(base))
     }
 
+    /// The unique ID of the channel.
+    fn id(&self) -> u64 {
+        self.0.id().into()
+    }
+
+    /// The topic name of the channel.
+    fn topic(&self) -> &str {
+        self.0.topic()
+    }
+
+    /// The name of the schema for the channel.
+    fn schema_name(&self) -> Option<&str> {
+        Some(self.0.schema()?.name.as_str())
+    }
+
     /// Close the channel.
     ///
     /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
@@ -777,6 +1032,21 @@ impl PackedElementFieldChannel {
     fn new(topic: &str) -> PyResult<Self> {
         let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
         Ok(Self(base))
+    }
+
+    /// The unique ID of the channel.
+    fn id(&self) -> u64 {
+        self.0.id().into()
+    }
+
+    /// The topic name of the channel.
+    fn topic(&self) -> &str {
+        self.0.topic()
+    }
+
+    /// The name of the schema for the channel.
+    fn schema_name(&self) -> Option<&str> {
+        Some(self.0.schema()?.name.as_str())
     }
 
     /// Close the channel.
@@ -821,6 +1091,21 @@ impl Point2Channel {
         Ok(Self(base))
     }
 
+    /// The unique ID of the channel.
+    fn id(&self) -> u64 {
+        self.0.id().into()
+    }
+
+    /// The topic name of the channel.
+    fn topic(&self) -> &str {
+        self.0.topic()
+    }
+
+    /// The name of the schema for the channel.
+    fn schema_name(&self) -> Option<&str> {
+        Some(self.0.schema()?.name.as_str())
+    }
+
     /// Close the channel.
     ///
     /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
@@ -861,6 +1146,21 @@ impl Point3Channel {
     fn new(topic: &str) -> PyResult<Self> {
         let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
         Ok(Self(base))
+    }
+
+    /// The unique ID of the channel.
+    fn id(&self) -> u64 {
+        self.0.id().into()
+    }
+
+    /// The topic name of the channel.
+    fn topic(&self) -> &str {
+        self.0.topic()
+    }
+
+    /// The name of the schema for the channel.
+    fn schema_name(&self) -> Option<&str> {
+        Some(self.0.schema()?.name.as_str())
     }
 
     /// Close the channel.
@@ -905,6 +1205,21 @@ impl PointCloudChannel {
         Ok(Self(base))
     }
 
+    /// The unique ID of the channel.
+    fn id(&self) -> u64 {
+        self.0.id().into()
+    }
+
+    /// The topic name of the channel.
+    fn topic(&self) -> &str {
+        self.0.topic()
+    }
+
+    /// The name of the schema for the channel.
+    fn schema_name(&self) -> Option<&str> {
+        Some(self.0.schema()?.name.as_str())
+    }
+
     /// Close the channel.
     ///
     /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
@@ -945,6 +1260,21 @@ impl PointsAnnotationChannel {
     fn new(topic: &str) -> PyResult<Self> {
         let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
         Ok(Self(base))
+    }
+
+    /// The unique ID of the channel.
+    fn id(&self) -> u64 {
+        self.0.id().into()
+    }
+
+    /// The topic name of the channel.
+    fn topic(&self) -> &str {
+        self.0.topic()
+    }
+
+    /// The name of the schema for the channel.
+    fn schema_name(&self) -> Option<&str> {
+        Some(self.0.schema()?.name.as_str())
     }
 
     /// Close the channel.
@@ -989,6 +1319,21 @@ impl PoseChannel {
         Ok(Self(base))
     }
 
+    /// The unique ID of the channel.
+    fn id(&self) -> u64 {
+        self.0.id().into()
+    }
+
+    /// The topic name of the channel.
+    fn topic(&self) -> &str {
+        self.0.topic()
+    }
+
+    /// The name of the schema for the channel.
+    fn schema_name(&self) -> Option<&str> {
+        Some(self.0.schema()?.name.as_str())
+    }
+
     /// Close the channel.
     ///
     /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
@@ -1029,6 +1374,21 @@ impl PoseInFrameChannel {
     fn new(topic: &str) -> PyResult<Self> {
         let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
         Ok(Self(base))
+    }
+
+    /// The unique ID of the channel.
+    fn id(&self) -> u64 {
+        self.0.id().into()
+    }
+
+    /// The topic name of the channel.
+    fn topic(&self) -> &str {
+        self.0.topic()
+    }
+
+    /// The name of the schema for the channel.
+    fn schema_name(&self) -> Option<&str> {
+        Some(self.0.schema()?.name.as_str())
     }
 
     /// Close the channel.
@@ -1073,6 +1433,21 @@ impl PosesInFrameChannel {
         Ok(Self(base))
     }
 
+    /// The unique ID of the channel.
+    fn id(&self) -> u64 {
+        self.0.id().into()
+    }
+
+    /// The topic name of the channel.
+    fn topic(&self) -> &str {
+        self.0.topic()
+    }
+
+    /// The name of the schema for the channel.
+    fn schema_name(&self) -> Option<&str> {
+        Some(self.0.schema()?.name.as_str())
+    }
+
     /// Close the channel.
     ///
     /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
@@ -1113,6 +1488,21 @@ impl QuaternionChannel {
     fn new(topic: &str) -> PyResult<Self> {
         let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
         Ok(Self(base))
+    }
+
+    /// The unique ID of the channel.
+    fn id(&self) -> u64 {
+        self.0.id().into()
+    }
+
+    /// The topic name of the channel.
+    fn topic(&self) -> &str {
+        self.0.topic()
+    }
+
+    /// The name of the schema for the channel.
+    fn schema_name(&self) -> Option<&str> {
+        Some(self.0.schema()?.name.as_str())
     }
 
     /// Close the channel.
@@ -1157,6 +1547,21 @@ impl RawImageChannel {
         Ok(Self(base))
     }
 
+    /// The unique ID of the channel.
+    fn id(&self) -> u64 {
+        self.0.id().into()
+    }
+
+    /// The topic name of the channel.
+    fn topic(&self) -> &str {
+        self.0.topic()
+    }
+
+    /// The name of the schema for the channel.
+    fn schema_name(&self) -> Option<&str> {
+        Some(self.0.schema()?.name.as_str())
+    }
+
     /// Close the channel.
     ///
     /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
@@ -1197,6 +1602,21 @@ impl TextAnnotationChannel {
     fn new(topic: &str) -> PyResult<Self> {
         let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
         Ok(Self(base))
+    }
+
+    /// The unique ID of the channel.
+    fn id(&self) -> u64 {
+        self.0.id().into()
+    }
+
+    /// The topic name of the channel.
+    fn topic(&self) -> &str {
+        self.0.topic()
+    }
+
+    /// The name of the schema for the channel.
+    fn schema_name(&self) -> Option<&str> {
+        Some(self.0.schema()?.name.as_str())
     }
 
     /// Close the channel.
@@ -1241,6 +1661,21 @@ impl Vector2Channel {
         Ok(Self(base))
     }
 
+    /// The unique ID of the channel.
+    fn id(&self) -> u64 {
+        self.0.id().into()
+    }
+
+    /// The topic name of the channel.
+    fn topic(&self) -> &str {
+        self.0.topic()
+    }
+
+    /// The name of the schema for the channel.
+    fn schema_name(&self) -> Option<&str> {
+        Some(self.0.schema()?.name.as_str())
+    }
+
     /// Close the channel.
     ///
     /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
@@ -1281,6 +1716,21 @@ impl Vector3Channel {
     fn new(topic: &str) -> PyResult<Self> {
         let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
         Ok(Self(base))
+    }
+
+    /// The unique ID of the channel.
+    fn id(&self) -> u64 {
+        self.0.id().into()
+    }
+
+    /// The topic name of the channel.
+    fn topic(&self) -> &str {
+        self.0.topic()
+    }
+
+    /// The name of the schema for the channel.
+    fn schema_name(&self) -> Option<&str> {
+        Some(self.0.schema()?.name.as_str())
     }
 
     /// Close the channel.

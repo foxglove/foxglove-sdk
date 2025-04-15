@@ -144,7 +144,7 @@ impl BaseChannel {
     }
 
     fn schema_name(&self) -> Option<&str> {
-        self.0.schema().map(|s| s.name.as_str())
+        Some(self.0.schema()?.name.as_str())
     }
 
     fn close(&mut self) {
