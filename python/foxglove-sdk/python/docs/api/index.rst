@@ -8,6 +8,7 @@ foxglove
 
 .. automodule:: foxglove
    :members:
+   :exclude-members: MCAPWriter
 
 Schemas
 ^^^^^^^
@@ -83,6 +84,25 @@ disk and return its contents.
 See the Asset Server example for more information.
 
 .. autoclass:: foxglove.AssetHandler
+
+.. py:class:: MCAPCompression
+
+   Deprecated. Use :py:class:`mcap.MCAPCompression` instead.
+
+
+foxglove.mcap
+------------------
+
+.. Enums are excluded and manually documented, since pyo3 only emulates them. (https://github.com/PyO3/pyo3/issues/2887)
+.. Parameter types and values are manually documented since nested classes (values) are not supported by automodule.
+.. automodule:: foxglove.mcap
+   :members:
+   :exclude-members: MCAPCompression
+
+.. py:enum:: MCAPCompression
+
+   .. py:data:: Zstd
+   .. py:data:: Lz4
 
 
 foxglove.websocket
