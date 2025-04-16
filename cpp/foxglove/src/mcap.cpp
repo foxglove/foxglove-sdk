@@ -4,19 +4,7 @@
 
 namespace foxglove {
 
-FoxgloveMcapCompression toFoxgloveMcapCompression(McapCompression compression) {
-  switch (compression) {
-    case McapCompression::Zstd:
-      return FoxgloveMcapCompression_Zstd;
-    case McapCompression::Lz4:
-      return FoxgloveMcapCompression_Lz4;
-    default:
-      return FoxgloveMcapCompression_None;
-  }
-}
-
-McapWriter::McapWriter(McapWriterOptions options)
-    : _impl(nullptr, foxglove_mcap_free) {
+FoxgloveResult<McapWriter> McapWriter::create(const McapWriterOptions& options) {
   foxglove_internal_register_cpp_wrapper();
 
   foxglove_mcap_options cOptions = {};
@@ -24,7 +12,9 @@ McapWriter::McapWriter(McapWriterOptions options)
   cOptions.path_len = options.path.length();
   cOptions.profile = options.profile.data();
   cOptions.profile_len = options.profile.length();
-  cOptions.compression = toFoxgloveMcapCompression(options.compression);
+  // TODO FG-11215: generate the enum for C++ from the C enum
+  // so this is guaranteed to never get out of sync
+  cOptions.compression = static_cast<foxglove_mcap_compression>(options.compression);
   cOptions.chunk_size = options.chunkSize;
   cOptions.use_chunks = options.useChunks;
   cOptions.disable_seeking = options.disableSeeking;
@@ -37,18 +27,23 @@ McapWriter::McapWriter(McapWriterOptions options)
   cOptions.repeat_channels = options.repeatChannels;
   cOptions.repeat_schemas = options.repeatSchemas;
   cOptions.truncate = options.truncate;
-  foxglove_error cError = {};
-  _impl.reset(foxglove_mcap_open(&cOptions, &cError));
-  if (_impl.get() == nullptr) {
-    throw FoxgloveError(std::move(cError));
+
+  foxglove_mcap_writer* writer = nullptr;
+  foxglove_error error = foxglove_mcap_open(&cOptions, &writer);
+  if (error != foxglove_error::FOXGLOVE_ERROR_OK || writer == nullptr) {
+    return tl::unexpected(static_cast<FoxgloveError>(error));
   }
+
+  return McapWriter(writer);
 }
 
-void McapWriter::close() {
-  foxglove_error cError = {};
-  if (!foxglove_mcap_close(_impl.get(), &cError)) {
-    throw FoxgloveError(std::move(cError));
-  }
+McapWriter::McapWriter(foxglove_mcap_writer* writer)
+    : _impl(writer, foxglove_mcap_close) {}
+
+FoxgloveError McapWriter::close() {
+  foxglove_error error = foxglove_mcap_close(_impl.get());
+  _impl.reset();
+  return FoxgloveError(error);
 }
 
 }  // namespace foxglove

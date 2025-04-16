@@ -1,14 +1,17 @@
+#pragma once
+
+#include <tl/expected.hpp>
 
 #include <exception>
 #include <memory>
 
-struct foxglove_error;
-
 namespace foxglove {
 
-enum class FoxgloveErrorKind {
+enum class FoxgloveError : uint8_t {
+  Ok,
   Unspecified,
   ValueError,
+  Utf8Error,
   SinkClosed,
   SchemaRequired,
   MessageEncodingRequired,
@@ -20,19 +23,12 @@ enum class FoxgloveErrorKind {
   ServicesNotSupported,
   ConnectionGraphNotSupported,
   IoError,
-  McapError,
+  McapError
 };
 
-class FoxgloveError : public std::exception {
-public:
-  FoxgloveError(const foxglove_error&& error);
-  ~FoxgloveError();
+template<typename T>
+using FoxgloveResult = tl::expected<T, FoxgloveError>;
 
-  virtual const char* what() const noexcept override;
-  FoxgloveErrorKind kind() const;
-
-private:
-  std::unique_ptr<foxglove_error> _impl;
-};
+const char* strerror(FoxgloveError error);
 
 }  // namespace foxglove

@@ -17,19 +17,19 @@ pub struct FoxgloveServerCapability {
     pub flags: u8,
 }
 /// Allow clients to advertise channels to send data messages to the server.
-pub const FOXGLOVE_SERVER_CAPABILITY_CLIENT_PUBLISH: u8 = 1 << 0;
+pub const FOXGLOVE_SERVER_CAPABILITY_CLIENT_PUBLISH: u8 = 1;
 /// Allow clients to subscribe and make connection graph updates
-pub const FOXGLOVE_SERVER_CAPABILITY_CONNECTION_GRAPH: u8 = 1 << 1;
+pub const FOXGLOVE_SERVER_CAPABILITY_CONNECTION_GRAPH: u8 = 2;
 /// Allow clients to get & set parameters.
-pub const FOXGLOVE_SERVER_CAPABILITY_PARAMETERS: u8 = 1 << 2;
+pub const FOXGLOVE_SERVER_CAPABILITY_PARAMETERS: u8 = 4;
 /// Inform clients about the latest server time.
 ///
 /// This allows accelerated, slowed, or stepped control over the progress of time. If the
 /// server publishes time data, then timestamps of published messages must originate from the
 /// same time source.
-pub const FOXGLOVE_SERVER_CAPABILITY_TIME: u8 = 1 << 3;
+pub const FOXGLOVE_SERVER_CAPABILITY_TIME: u8 = 8;
 /// Allow clients to call services.
-pub const FOXGLOVE_SERVER_CAPABILITY_SERVICES: u8 = 1 << 4;
+pub const FOXGLOVE_SERVER_CAPABILITY_SERVICES: u8 = 16;
 
 bitflags! {
     #[derive(Clone, Copy, PartialEq, Eq)]
@@ -127,11 +127,13 @@ pub struct FoxgloveServerCallbacks {
 unsafe impl Send for FoxgloveServerCallbacks {}
 unsafe impl Sync for FoxgloveServerCallbacks {}
 
-pub struct FoxgloveWebSocketServer(Option<foxglove::WebSocketServerHandle>);
-
-// cbindgen does not actually generate a declaration for this, so we manually write one in
-// after_includes
-pub use foxglove::RawChannel as FoxgloveChannel;
+// cbindgen does not actually generate a declaration for these,
+// so we manually add them in after_includes. If we use type aliases
+// instead, cbindgen will generate them, but verbatim naming the rust
+// types which don't exist in C.
+// pub use foxglove::RawChannel as FoxgloveChannel;
+// pub use foxglove::RawWebSocketServerHandle as FoxgloveWebSocketServer;
+// pub use foxglove::McapWriterHandle<BufWriter<File>> as FoxgloveMcapWriter;
 
 #[repr(C)]
 pub struct FoxgloveSchema {
@@ -139,6 +141,18 @@ pub struct FoxgloveSchema {
     pub encoding: *const c_char,
     pub data: *const u8,
     pub data_len: usize,
+}
+
+pub struct FoxgloveWebSocketServer(Option<foxglove::WebSocketServerHandle>);
+
+impl FoxgloveWebSocketServer {
+    fn as_ref(&self) -> Option<&foxglove::WebSocketServerHandle> {
+        self.0.as_ref()
+    }
+
+    fn take(&mut self) -> Option<foxglove::WebSocketServerHandle> {
+        self.0.take()
+    }
 }
 
 /// Create and start a server.
@@ -154,7 +168,7 @@ pub struct FoxgloveSchema {
 #[must_use]
 pub unsafe extern "C" fn foxglove_server_start(
     options: &FoxgloveServerOptions,
-    server: *mut FoxgloveWebSocketServer,
+    server: *mut *mut FoxgloveWebSocketServer,
 ) -> FoxgloveError {
     unsafe {
         let result = do_foxglove_server_start(options);
@@ -164,7 +178,7 @@ pub unsafe extern "C" fn foxglove_server_start(
 
 unsafe fn do_foxglove_server_start(
     options: &FoxgloveServerOptions,
-) -> Result<FoxgloveWebSocketServer, foxglove::FoxgloveError> {
+) -> Result<*mut FoxgloveWebSocketServer, foxglove::FoxgloveError> {
     let name = unsafe { CStr::from_ptr(options.name) }
         .to_str()
         .map_err(|e| foxglove::FoxgloveError::ValueError(format!("name is invalid: {}", e)))?;
@@ -211,7 +225,41 @@ unsafe fn do_foxglove_server_start(
     if let Some(callbacks) = options.callbacks {
         server = server.listener(Arc::new(callbacks.clone()))
     }
-    Ok(FoxgloveWebSocketServer(Some(server.start_blocking()?)))
+    let server = server.start_blocking()?;
+    Ok(Box::into_raw(Box::new(FoxgloveWebSocketServer(Some(
+        server,
+    )))))
+}
+
+/// Get the port on which the server is listening.
+#[unsafe(no_mangle)]
+pub extern "C" fn foxglove_server_get_port(server: Option<&mut FoxgloveWebSocketServer>) -> u16 {
+    let Some(server) = server else {
+        tracing::error!("foxglove_server_get_port called with null server");
+        return 0;
+    };
+    let Some(server) = server.as_ref() else {
+        tracing::error!("foxglove_server_get_port called with closed server");
+        return 0;
+    };
+    server.port()
+}
+
+/// Stop and shut down `server` and free the resources associated with it.
+#[unsafe(no_mangle)]
+pub extern "C" fn foxglove_server_stop(
+    server: Option<&mut FoxgloveWebSocketServer>,
+) -> FoxgloveError {
+    let Some(server) = server else {
+        tracing::error!("foxglove_server_stop called with null server");
+        return FoxgloveError::ValueError;
+    };
+    let Some(server) = server.take() else {
+        tracing::error!("foxglove_server_stop called with closed server");
+        return FoxgloveError::SinkClosed;
+    };
+    server.stop();
+    FoxgloveError::Ok
 }
 
 #[repr(u8)]
@@ -280,6 +328,12 @@ impl FoxgloveMcapOptions {
 
 pub struct FoxgloveMcapWriter(Option<foxglove::McapWriterHandle<BufWriter<File>>>);
 
+impl FoxgloveMcapWriter {
+    fn take(&mut self) -> Option<foxglove::McapWriterHandle<BufWriter<File>>> {
+        self.0.take()
+    }
+}
+
 /// Create or open an MCAP file for writing.
 /// Resources must later be freed with `foxglove_mcap_close`.
 ///
@@ -291,7 +345,7 @@ pub struct FoxgloveMcapWriter(Option<foxglove::McapWriterHandle<BufWriter<File>>
 #[must_use]
 pub unsafe extern "C" fn foxglove_mcap_open(
     options: &FoxgloveMcapOptions,
-    writer: *mut FoxgloveMcapWriter,
+    writer: *mut *mut FoxgloveMcapWriter,
 ) -> FoxgloveError {
     unsafe {
         let result = do_foxglove_mcap_open(options);
@@ -301,7 +355,7 @@ pub unsafe extern "C" fn foxglove_mcap_open(
 
 unsafe fn do_foxglove_mcap_open(
     options: &FoxgloveMcapOptions,
-) -> Result<FoxgloveMcapWriter, foxglove::FoxgloveError> {
+) -> Result<*mut FoxgloveMcapWriter, foxglove::FoxgloveError> {
     let path = std::str::from_utf8(unsafe {
         std::slice::from_raw_parts(options.path as *const u8, options.path_len)
     })
@@ -322,7 +376,9 @@ unsafe fn do_foxglove_mcap_open(
         .map_err(foxglove::FoxgloveError::IoError)?;
 
     let writer = foxglove::McapWriter::with_options(mcap_options).create(BufWriter::new(file))?;
-    Ok(FoxgloveMcapWriter(Some(writer)))
+    // We can avoid this double indirection if we refactor McapWriterHandle to move the context into the Arc
+    // and then add into_raw and from_raw methods like with the WebSocketServerHandle
+    Ok(Box::into_raw(Box::new(FoxgloveMcapWriter(Some(writer)))))
 }
 
 /// Close an MCAP file writer created via `foxglove_mcap_open`.
@@ -339,46 +395,16 @@ pub unsafe extern "C" fn foxglove_mcap_close(
         tracing::error!("foxglove_mcap_close called with null writer");
         return FoxgloveError::ValueError;
     };
-    let Some(handle) = writer.0.take() else {
-        tracing::debug!("foxglove_mcap_close called with already closed writer");
-        return FoxgloveError::ValueError;
+    let Some(writer) = writer.take() else {
+        tracing::error!("foxglove_mcap_close called with writer already closed");
+        return FoxgloveError::SinkClosed;
     };
-
-    let result = handle.close();
+    let result = writer.close();
     // We don't care about the return value
     unsafe { result_to_c(result, std::ptr::null_mut()) }
 }
 
-/// Get the port on which the server is listening.
-#[unsafe(no_mangle)]
-pub extern "C" fn foxglove_server_get_port(server: Option<&FoxgloveWebSocketServer>) -> u16 {
-    let Some(server) = server else {
-        tracing::error!("foxglove_server_get_port called with null server");
-        return 0;
-    };
-    let Some(ref handle) = server.0 else {
-        tracing::debug!("foxgove_server_get_port called with stopped server");
-        return 0;
-    };
-    handle.port()
-}
-
-/// Stop and shut down a server.
-#[unsafe(no_mangle)]
-pub extern "C" fn foxglove_server_stop(
-    server: Option<&mut FoxgloveWebSocketServer>,
-) -> FoxgloveError {
-    let Some(server) = server else {
-        tracing::error!("foxglove_server_stop called with null server");
-        return FoxgloveError::ValueError;
-    };
-    let Some(handle) = server.0.take() else {
-        tracing::debug!("foxglove_server already stopped");
-        return FoxgloveError::ValueError;
-    };
-    handle.stop();
-    FoxgloveError::Ok
-}
+pub struct FoxgloveChannel(foxglove::RawChannel);
 
 /// Create a new channel. The channel must later be freed with `foxglove_channel_free`.
 ///
@@ -409,7 +435,7 @@ unsafe fn do_foxglove_channel_create(
     topic: *const c_char,
     message_encoding: *const c_char,
     schema: *const FoxgloveSchema,
-) -> Result<*const foxglove::RawChannel, foxglove::FoxgloveError> {
+) -> Result<*const FoxgloveChannel, foxglove::FoxgloveError> {
     let topic = unsafe { CStr::from_ptr(topic) }
         .to_str()
         .map_err(|e| foxglove::FoxgloveError::ValueError(format!("topic invalid: {}", e)))?;
@@ -439,7 +465,7 @@ unsafe fn do_foxglove_channel_create(
         .message_encoding(message_encoding)
         .schema(maybe_schema)
         .build_raw()
-        .map(|raw_channel| Arc::into_raw(raw_channel))
+        .map(|raw_channel| Arc::into_raw(raw_channel) as *const FoxgloveChannel)
 }
 
 /// Free a channel created via `foxglove_channel_create`.
@@ -447,7 +473,7 @@ unsafe fn do_foxglove_channel_create(
 /// `channel` must be a valid pointer to a `FoxgloveChannel` created via `foxglove_channel_create`.
 /// If channel is null, this does nothing.
 #[unsafe(no_mangle)]
-pub extern "C" fn foxglove_channel_free(channel: Option<&mut FoxgloveChannel>) {
+pub extern "C" fn foxglove_channel_free(channel: Option<&FoxgloveChannel>) {
     let Some(channel) = channel else {
         return;
     };
@@ -465,7 +491,7 @@ pub extern "C" fn foxglove_channel_get_id(channel: Option<&FoxgloveChannel>) -> 
     let Some(channel) = channel else {
         return 0;
     };
-    u64::from(channel.id())
+    u64::from(channel.0.id())
 }
 
 /// Log a message on a channel.
@@ -494,7 +520,9 @@ pub unsafe extern "C" fn foxglove_channel_log(
         return FoxgloveError::ValueError;
     }
     // avoid decrementing ref count
-    let channel = ManuallyDrop::new(unsafe { Arc::from_raw(channel) });
+    let channel = ManuallyDrop::new(unsafe {
+        Arc::from_raw(channel as *const _ as *const foxglove::RawChannel)
+    });
     channel.log_with_meta(
         unsafe { std::slice::from_raw_parts(data, data_len) },
         foxglove::PartialMetadata {
@@ -692,6 +720,7 @@ unsafe fn result_to_c<T>(
 }
 
 /// Convert a `FoxgloveError` code to a C string.
-extern "C" fn foxglove_error_to_string(error: FoxgloveError) -> *const c_char {
+#[unsafe(no_mangle)]
+pub extern "C" fn foxglove_error_to_cstr(error: FoxgloveError) -> *const c_char {
     error.to_cstr().as_ptr() as *const _
 }

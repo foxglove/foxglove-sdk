@@ -6,13 +6,13 @@
 
 namespace foxglove {
 
-WebSocketServer::WebSocketServer(const WebSocketServerOptions& options)
-    : _callbacks(options.callbacks)
-    , _impl(nullptr, foxglove_server_free) {
+FoxgloveResult<WebSocketServer> WebSocketServer::create(
+  WebSocketServerOptions&& options  // NOLINT(cppcoreguidelines-rvalue-reference-param-not-moved)
+) {
   foxglove_internal_register_cpp_wrapper();
 
   foxglove_server_callbacks cCallbacks = {};
-  cCallbacks.context = this;
+  cCallbacks.context = options.callbackContext;
   bool hasAnyCallbacks = false;
   if (options.callbacks.onSubscribe) {
     hasAnyCallbacks = true;
@@ -83,16 +83,25 @@ WebSocketServer::WebSocketServer(const WebSocketServerOptions& options)
   }
   cOptions.supported_encodings = supportedEncodings.data();
   cOptions.supported_encodings_count = supportedEncodings.size();
-  foxglove_error cError = {};
-  auto server = foxglove_server_start(&cOptions, &cError);
-  if (server == nullptr) {
-    throw FoxgloveError(std::move(cError));
+
+  foxglove_websocket_server* server = nullptr;
+  foxglove_error error = foxglove_server_start(&cOptions, &server);
+  if (error != foxglove_error::FOXGLOVE_ERROR_OK || server == nullptr) {
+    return tl::unexpected(static_cast<FoxgloveError>(error));
   }
-  _impl.reset(server);
+
+  return WebSocketServer(server, std::move(options.callbacks));
 }
 
-void WebSocketServer::stop() {
-  foxglove_server_stop(_impl.get());
+WebSocketServer::WebSocketServer(
+  foxglove_websocket_server* server, WebSocketServerCallbacks&& callbacks
+)
+    : _impl(server, foxglove_server_stop)
+    , _callbacks(std::move(callbacks)) {}
+
+FoxgloveError WebSocketServer::stop() {
+  foxglove_error error = foxglove_server_stop(_impl.release());
+  return FoxgloveError(error);
 }
 
 uint16_t WebSocketServer::port() const {

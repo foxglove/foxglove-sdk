@@ -10,25 +10,18 @@ using Catch::Matchers::ContainsSubstring;
 using Catch::Matchers::Equals;
 
 TEST_CASE("topic is not valid utf-8") {
-  try {
-    foxglove::Channel channel(std::string("\x80\x80\x80\x80"), "json", std::nullopt);
-    REQUIRE(false);  // expected error
-  } catch (const foxglove::FoxgloveError& e) {
-    REQUIRE(e.kind() == foxglove::FoxgloveErrorKind::ValueError);
-    REQUIRE_THAT(e.what(), ContainsSubstring("invalid utf-8"));
-  }
+  auto channel = foxglove::Channel::create(std::string("\x80\x80\x80\x80"), "json", std::nullopt);
+  REQUIRE(!channel.has_value());
+  REQUIRE(channel.error() == foxglove::FoxgloveError::Utf8Error);
 }
 
 // TODO FG-11089: create a context specifically for this test here so it doesn't pollute the global
 // context
 
 TEST_CASE("duplicate topic") {
-  foxglove::Channel channel("test", "json", std::nullopt);
-  try {
-    foxglove::Channel channel("test", "json", std::nullopt);
-    REQUIRE(false);  // expected error
-  } catch (const foxglove::FoxgloveError& e) {
-    REQUIRE(e.kind() == foxglove::FoxgloveErrorKind::DuplicateChannel);
-    REQUIRE_THAT(e.what(), ContainsSubstring("topic test already exists"));
-  }
+  auto channel = foxglove::Channel::create("test", "json", std::nullopt);
+  REQUIRE(channel.has_value());
+  auto channel2 = foxglove::Channel::create("test", "json", std::nullopt);
+  REQUIRE(!channel2.has_value());
+  REQUIRE(channel2.error() == foxglove::FoxgloveError::DuplicateChannel);
 }
