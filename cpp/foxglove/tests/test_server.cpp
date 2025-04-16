@@ -43,7 +43,7 @@ TEST_CASE("name is not valid utf-8") {
   auto serverResult = foxglove::WebSocketServer::create(std::move(options));
   REQUIRE(!serverResult.has_value());
   REQUIRE(serverResult.error() == foxglove::FoxgloveError::Utf8Error);
-  REQUIRE(foxglove::strerror(serverResult.error()) == "UTF-8 Error");
+  REQUIRE(foxglove::strerror(serverResult.error()) == std::string("UTF-8 Error"));
 }
 
 TEST_CASE("we can't bind host") {
@@ -64,7 +64,7 @@ TEST_CASE("supported encoding is invalid utf-8") {
   auto serverResult = foxglove::WebSocketServer::create(std::move(options));
   REQUIRE(!serverResult.has_value());
   REQUIRE(serverResult.error() == foxglove::FoxgloveError::Utf8Error);
-  REQUIRE(foxglove::strerror(serverResult.error()) == "UTF-8 Error");
+  REQUIRE(foxglove::strerror(serverResult.error()) == std::string("UTF-8 Error"));
 }
 
 TEST_CASE("Log a message with and without metadata") {
@@ -161,7 +161,7 @@ TEST_CASE("Subscribe and unsubscribe callbacks") {
   );
   UNSCOPED_INFO(ec.message());
   REQUIRE(!ec);
-  cv.wait(lock, [&] {
+  cv.wait_for(lock, std::chrono::seconds(1), [&] {
     return !subscribeCalls.empty();
   });
   REQUIRE_THAT(subscribeCalls, Equals(std::vector<uint64_t>{1}));
@@ -175,8 +175,7 @@ TEST_CASE("Subscribe and unsubscribe callbacks") {
     websocketpp::frame::opcode::text,
     ec
   );
-
-  cv.wait(lock, [&] {
+  cv.wait_for(lock, std::chrono::seconds(1), [&] {
     return !unsubscribeCalls.empty();
   });
   REQUIRE_THAT(unsubscribeCalls, Equals(std::vector<uint64_t>{1}));
@@ -304,16 +303,18 @@ TEST_CASE("Client advertise/publish callbacks") {
   );
   UNSCOPED_INFO(ec.message());
   REQUIRE(!ec);
-  cv.wait(lock, [&] {
+  auto advertisedResult = cv.wait_for(lock, std::chrono::seconds(1), [&] {
     return advertised;
   });
+  REQUIRE(advertisedResult);
 
   // send ClientMessageData message
   std::array<char, 8> msg = {1, 100, 0, 0, 0, 'a', 'b', 'c'};
   client.send(connection, msg.data(), msg.size(), websocketpp::frame::opcode::binary, ec);
-  cv.wait(lock, [&] {
+  auto receivedResult = cv.wait_for(lock, std::chrono::seconds(1), [&] {
     return receivedMessage;
   });
+  REQUIRE(receivedResult);
 
   client.send(
     connection,

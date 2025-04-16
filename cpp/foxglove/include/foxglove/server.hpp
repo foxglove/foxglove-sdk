@@ -66,7 +66,6 @@ struct WebSocketServerOptions {
   std::string host;
   uint16_t port;
   WebSocketServerCallbacks callbacks;
-  void* callbackContext;
   WebSocketServerCapabilities capabilities = WebSocketServerCapabilities(0);
   std::vector<std::string> supportedEncodings;
 };
@@ -81,9 +80,11 @@ public:
   FoxgloveError stop();
 
 private:
-  WebSocketServer(foxglove_websocket_server* server, WebSocketServerCallbacks&& callbacks);
+  WebSocketServer(
+    foxglove_websocket_server* server, std::unique_ptr<WebSocketServerCallbacks> callbacks
+  );
 
-  WebSocketServerCallbacks _callbacks;
+  std::unique_ptr<WebSocketServerCallbacks> _callbacks;
   std::unique_ptr<foxglove_websocket_server, foxglove_error (*)(foxglove_websocket_server*)> _impl;
 };
 

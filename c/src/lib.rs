@@ -181,10 +181,10 @@ unsafe fn do_foxglove_server_start(
 ) -> Result<*mut FoxgloveWebSocketServer, foxglove::FoxgloveError> {
     let name = unsafe { CStr::from_ptr(options.name) }
         .to_str()
-        .map_err(|e| foxglove::FoxgloveError::ValueError(format!("name is invalid: {}", e)))?;
+        .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("name is invalid: {}", e)))?;
     let host = unsafe { CStr::from_ptr(options.host) }
         .to_str()
-        .map_err(|e| foxglove::FoxgloveError::ValueError(format!("host is invalid: {}", e)))?;
+        .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("host is invalid: {}", e)))?;
     let mut server = foxglove::WebSocketServer::new()
         .name(name)
         .capabilities(
@@ -213,7 +213,7 @@ unsafe fn do_foxglove_server_start(
                     ));
                 }
                 unsafe { CStr::from_ptr(enc) }.to_str().map_err(|e| {
-                    foxglove::FoxgloveError::ValueError(format!(
+                    foxglove::FoxgloveError::Utf8Error(format!(
                         "encoding in supported_encodings is invalid: {}",
                         e
                     ))
@@ -359,7 +359,7 @@ unsafe fn do_foxglove_mcap_open(
     let path = std::str::from_utf8(unsafe {
         std::slice::from_raw_parts(options.path as *const u8, options.path_len)
     })
-    .map_err(|e| foxglove::FoxgloveError::ValueError(format!("path is invalid: {}", e)))?;
+    .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("path is invalid: {}", e)))?;
 
     // Safety: this is safe if the options struct contains valid strings
     let mcap_options = unsafe { options.to_write_options() }?;
@@ -438,11 +438,11 @@ unsafe fn do_foxglove_channel_create(
 ) -> Result<*const FoxgloveChannel, foxglove::FoxgloveError> {
     let topic = unsafe { CStr::from_ptr(topic) }
         .to_str()
-        .map_err(|e| foxglove::FoxgloveError::ValueError(format!("topic invalid: {}", e)))?;
+        .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("topic invalid: {}", e)))?;
     let message_encoding = unsafe { CStr::from_ptr(message_encoding) }
         .to_str()
         .map_err(|e| {
-            foxglove::FoxgloveError::ValueError(format!("message_encoding invalid: {}", e))
+            foxglove::FoxgloveError::Utf8Error(format!("message_encoding invalid: {}", e))
         })?;
 
     let mut maybe_schema = None;
@@ -450,12 +450,12 @@ unsafe fn do_foxglove_channel_create(
         let name = unsafe { CStr::from_ptr(schema.name) }
             .to_str()
             .map_err(|e| {
-                foxglove::FoxgloveError::ValueError(format!("schema name invalid: {}", e))
+                foxglove::FoxgloveError::Utf8Error(format!("schema name invalid: {}", e))
             })?;
         let encoding = unsafe { CStr::from_ptr(schema.encoding) }
             .to_str()
             .map_err(|e| {
-                foxglove::FoxgloveError::ValueError(format!("schema encoding invalid: {}", e))
+                foxglove::FoxgloveError::Utf8Error(format!("schema encoding invalid: {}", e))
             })?;
         let data = unsafe { std::slice::from_raw_parts(schema.data, schema.data_len) };
         maybe_schema = Some(foxglove::Schema::new(name, encoding, data.to_owned()));

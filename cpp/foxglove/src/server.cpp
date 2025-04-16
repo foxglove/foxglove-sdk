@@ -2,6 +2,7 @@
 #include <foxglove/error.hpp>
 #include <foxglove/server.hpp>
 
+#include <iostream>
 #include <type_traits>
 
 namespace foxglove {
@@ -11,62 +12,65 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
 ) {
   foxglove_internal_register_cpp_wrapper();
 
+  bool hasAnyCallbacks = options.callbacks.onSubscribe || options.callbacks.onUnsubscribe ||
+                         options.callbacks.onClientAdvertise || options.callbacks.onMessageData ||
+                         options.callbacks.onClientUnadvertise;
+
+  auto callbacks = std::make_unique<WebSocketServerCallbacks>(std::move(options.callbacks));
+
   foxglove_server_callbacks cCallbacks = {};
-  cCallbacks.context = options.callbackContext;
-  bool hasAnyCallbacks = false;
-  if (options.callbacks.onSubscribe) {
-    hasAnyCallbacks = true;
-    cCallbacks.on_subscribe = [](uint64_t channel_id, const void* context) {
-      (reinterpret_cast<const WebSocketServer*>(context))->_callbacks.onSubscribe(channel_id);
-    };
-  }
-  if (options.callbacks.onUnsubscribe) {
-    hasAnyCallbacks = true;
-    cCallbacks.on_unsubscribe = [](uint64_t channel_id, const void* context) {
-      (reinterpret_cast<const WebSocketServer*>(context))->_callbacks.onUnsubscribe(channel_id);
-    };
-  }
-  if (options.callbacks.onClientAdvertise) {
-    hasAnyCallbacks = true;
-    cCallbacks.on_client_advertise =
-      [](uint32_t client_id, const foxglove_client_channel* channel, const void* context) {
-        ClientChannel cppChannel = {
-          channel->id,
-          channel->topic,
-          channel->encoding,
-          channel->schema_name,
-          channel->schema_encoding == nullptr ? std::string_view{} : channel->schema_encoding,
-          reinterpret_cast<const std::byte*>(channel->schema),
-          channel->schema_len
+
+  if (hasAnyCallbacks) {
+    cCallbacks.context = callbacks.get();
+    if (callbacks->onSubscribe) {
+      cCallbacks.on_subscribe = [](uint64_t channel_id, const void* context) {
+        (static_cast<const WebSocketServerCallbacks*>(context))->onSubscribe(channel_id);
+      };
+    }
+    if (callbacks->onUnsubscribe) {
+      cCallbacks.on_unsubscribe = [](uint64_t channel_id, const void* context) {
+        (static_cast<const WebSocketServerCallbacks*>(context))->onUnsubscribe(channel_id);
+      };
+    }
+    if (callbacks->onClientAdvertise) {
+      cCallbacks.on_client_advertise =
+        [](uint32_t client_id, const foxglove_client_channel* channel, const void* context) {
+          ClientChannel cppChannel = {
+            channel->id,
+            channel->topic,
+            channel->encoding,
+            channel->schema_name,
+            channel->schema_encoding == nullptr ? std::string_view{} : channel->schema_encoding,
+            reinterpret_cast<const std::byte*>(channel->schema),
+            channel->schema_len
+          };
+          (static_cast<const WebSocketServerCallbacks*>(context))
+            ->onClientAdvertise(client_id, cppChannel);
         };
-        (reinterpret_cast<const WebSocketServer*>(context))
-          ->_callbacks.onClientAdvertise(client_id, cppChannel);
+    }
+    if (callbacks->onMessageData) {
+      cCallbacks.on_message_data = [](
+                                     // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
+                                     uint32_t client_id,
+                                     uint32_t client_channel_id,
+                                     const uint8_t* payload,
+                                     size_t payload_len,
+                                     const void* context
+                                   ) {
+        (static_cast<const WebSocketServerCallbacks*>(context))
+          ->onMessageData(
+            client_id, client_channel_id, reinterpret_cast<const std::byte*>(payload), payload_len
+          );
       };
-  }
-  if (options.callbacks.onMessageData) {
-    hasAnyCallbacks = true;
-    cCallbacks.on_message_data = [](
-                                   // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
-                                   uint32_t client_id,
-                                   uint32_t client_channel_id,
-                                   const uint8_t* payload,
-                                   size_t payload_len,
-                                   const void* context
-                                 ) {
-      (reinterpret_cast<const WebSocketServer*>(context))
-        ->_callbacks.onMessageData(
-          client_id, client_channel_id, reinterpret_cast<const std::byte*>(payload), payload_len
-        );
-    };
-  }
-  if (options.callbacks.onClientUnadvertise) {
-    hasAnyCallbacks = true;
-    cCallbacks.on_client_unadvertise =
-      // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
-      [](uint32_t client_id, uint32_t client_channel_id, const void* context) {
-        (reinterpret_cast<const WebSocketServer*>(context))
-          ->_callbacks.onClientUnadvertise(client_id, client_channel_id);
-      };
+    }
+    if (callbacks->onClientUnadvertise) {
+      cCallbacks.on_client_unadvertise =
+        // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
+        [](uint32_t client_id, uint32_t client_channel_id, const void* context) {
+          (static_cast<const WebSocketServerCallbacks*>(context))
+            ->onClientUnadvertise(client_id, client_channel_id);
+        };
+    }
   }
 
   foxglove_server_options cOptions = {};
@@ -90,11 +94,11 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
     return tl::unexpected(static_cast<FoxgloveError>(error));
   }
 
-  return WebSocketServer(server, std::move(options.callbacks));
+  return WebSocketServer(server, std::move(callbacks));
 }
 
 WebSocketServer::WebSocketServer(
-  foxglove_websocket_server* server, WebSocketServerCallbacks&& callbacks
+  foxglove_websocket_server* server, std::unique_ptr<WebSocketServerCallbacks> callbacks
 )
     : _impl(server, foxglove_server_stop)
     , _callbacks(std::move(callbacks)) {}
