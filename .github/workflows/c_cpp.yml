@@ -140,10 +140,12 @@ jobs:
         run: |
           mkdir -p artifacts/foxglove/lib
           mkdir -p artifacts/foxglove/include
+          mkdir -p artifacts/foxglove/src
           mv target/${{ matrix.target }}/release/${{ matrix.staticlib_name }} artifacts/foxglove/lib/
           mv target/${{ matrix.target }}/release/${{ matrix.cdylib_name }} artifacts/foxglove/lib/
-          cp -R cpp/foxglove/include/foxglove artifacts/foxglove/include/
           cp -R c/include/foxglove-c artifacts/foxglove/include/
+          cp -R cpp/foxglove/include/foxglove artifacts/foxglove/include/
+          cp -R cpp/foxglove/src/* artifacts/foxglove/src/
 
       - name: Zip libraries for artifact
         if: runner.os != 'Windows'
