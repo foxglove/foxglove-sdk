@@ -24,7 +24,7 @@ public:
 private:
   explicit Context(const foxglove_context* context);
 
-  inline const ContextInner* get_inner() const {
+  const ContextInner* get_inner() const {
     return _impl.get();
   }
 

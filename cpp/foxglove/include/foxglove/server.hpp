@@ -75,6 +75,7 @@ struct WebSocketServerOptions {
   explicit WebSocketServerOptions(const Context& context);
 
 private:
+  // TODO start here, make this a unique_ptr?
   const ContextInner* context = nullptr;
 };
 
