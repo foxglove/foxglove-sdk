@@ -25,7 +25,6 @@ impl FoxgloveString {
     /// # Safety
     ///
     /// The [`self::data`] must be valid UTF-8, and have a length equal to [`FoxgloveString.len`].
-    #[unsafe(no_mangle)]
     unsafe fn as_utf8_str(&self) -> Result<&str, std::str::Utf8Error> {
         std::str::from_utf8(unsafe { std::slice::from_raw_parts(self.data as *const u8, self.len) })
     }
