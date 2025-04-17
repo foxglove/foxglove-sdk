@@ -113,7 +113,7 @@ impl Audio {
                 .map(|x| Bytes::copy_from_slice(x.as_bytes()))
                 .unwrap_or_default(),
             format: format as i32,
-            description: data
+            description: description
                 .map(|x| Bytes::copy_from_slice(x.as_bytes()))
                 .unwrap_or_default(),
             sample_rate,
