@@ -1,7 +1,10 @@
 #include <foxglove-c/foxglove-c.h>
+#include <foxglove/context.hpp>
 #include <foxglove/mcap.hpp>
-
 namespace foxglove {
+
+McapWriterOptions::McapWriterOptions(const Context& context)
+    : context(context.get_inner()) {}
 
 FoxgloveMcapCompression toFoxgloveMcapCompression(McapCompression compression) {
   switch (compression) {
@@ -19,6 +22,7 @@ McapWriter::McapWriter(McapWriterOptions options)
   foxglove_internal_register_cpp_wrapper();
 
   foxglove_mcap_options cOptions = {};
+  cOptions.context = options.context;
   cOptions.path = options.path.data();
   cOptions.path_len = options.path.length();
   cOptions.profile = options.profile.data();
