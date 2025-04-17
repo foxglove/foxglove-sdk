@@ -19,9 +19,7 @@ Checks:
   - -readability-function-cognitive-complexity
   - -readability-identifier-length
   - -readability-magic-numbers
-# TODO I(eloff) couldn't get this working, not sure if it's an issue in my local setup or something else.
-# For now I replaced the Rust constants with power of 2 integer constants instead of computing them via shift.
-# CheckOptions:
-#   hicpp-signed-bitwise:
-#     # See discussion at https://stackoverflow.com/a/58845898/23649 & https://stackoverflow.com/a/78343833/23649
-#     IgnorePositiveIntegerLiterals: true
+
+CheckOptions:
+  # See discussion at https://stackoverflow.com/a/58845898/23649 & https://stackoverflow.com/a/78343833/23649
+  hicpp-signed-bitwise.IgnorePositiveIntegerLiterals: true

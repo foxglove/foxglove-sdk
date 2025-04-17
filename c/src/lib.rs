@@ -17,19 +17,19 @@ pub struct FoxgloveServerCapability {
     pub flags: u8,
 }
 /// Allow clients to advertise channels to send data messages to the server.
-pub const FOXGLOVE_SERVER_CAPABILITY_CLIENT_PUBLISH: u8 = 1;
+pub const FOXGLOVE_SERVER_CAPABILITY_CLIENT_PUBLISH: u8 = 1 << 0;
 /// Allow clients to subscribe and make connection graph updates
-pub const FOXGLOVE_SERVER_CAPABILITY_CONNECTION_GRAPH: u8 = 2;
+pub const FOXGLOVE_SERVER_CAPABILITY_CONNECTION_GRAPH: u8 = 1 << 1;
 /// Allow clients to get & set parameters.
-pub const FOXGLOVE_SERVER_CAPABILITY_PARAMETERS: u8 = 4;
+pub const FOXGLOVE_SERVER_CAPABILITY_PARAMETERS: u8 = 1 << 2;
 /// Inform clients about the latest server time.
 ///
 /// This allows accelerated, slowed, or stepped control over the progress of time. If the
 /// server publishes time data, then timestamps of published messages must originate from the
 /// same time source.
-pub const FOXGLOVE_SERVER_CAPABILITY_TIME: u8 = 8;
+pub const FOXGLOVE_SERVER_CAPABILITY_TIME: u8 = 1 << 3;
 /// Allow clients to call services.
-pub const FOXGLOVE_SERVER_CAPABILITY_SERVICES: u8 = 16;
+pub const FOXGLOVE_SERVER_CAPABILITY_SERVICES: u8 = 1 << 4;
 
 bitflags! {
     #[derive(Clone, Copy, PartialEq, Eq)]
