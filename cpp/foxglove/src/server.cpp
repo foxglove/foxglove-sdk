@@ -69,10 +69,8 @@ WebSocketServer::WebSocketServer(const WebSocketServerOptions& options)
   }
 
   foxglove_server_options cOptions = {};
-  cOptions.name = options.name.c_str();
-  cOptions.name_len = options.name.length();
-  cOptions.host = options.host.c_str();
-  cOptions.host_len = options.host.length();
+  cOptions.name = {options.name.c_str(), options.name.length()};
+  cOptions.host = {options.host.c_str(), options.host.length()};
   cOptions.port = options.port;
   cOptions.callbacks = hasAnyCallbacks ? &cCallbacks : nullptr;
   cOptions.capabilities =

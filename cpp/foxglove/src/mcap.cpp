@@ -19,10 +19,8 @@ McapWriter::McapWriter(McapWriterOptions options)
   foxglove_internal_register_cpp_wrapper();
 
   foxglove_mcap_options cOptions = {};
-  cOptions.path = options.path.data();
-  cOptions.path_len = options.path.length();
-  cOptions.profile = options.profile.data();
-  cOptions.profile_len = options.profile.length();
+  cOptions.path = {options.path.data(), options.path.length()};
+  cOptions.profile = {options.profile.data(), options.profile.length()};
   cOptions.compression = toFoxgloveMcapCompression(options.compression);
   cOptions.chunk_size = options.chunkSize;
   cOptions.use_chunks = options.useChunks;
