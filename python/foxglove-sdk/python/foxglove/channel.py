@@ -1,4 +1,6 @@
+import hashlib
 import json
+from base64 import b64encode
 from typing import Any, Dict, Optional, Union, cast
 
 from . import _foxglove_py as _foxglove
@@ -55,6 +57,21 @@ class Channel:
         )
 
         _channels_by_topic[topic] = self
+
+    def __repr__(self) -> str:
+        return f"Channel(id={self.id()}, topic='{self.topic()}', schema='{self.schema_name()}')"
+
+    def id(self) -> int:
+        """The unique ID of the channel"""
+        return self.base.id()
+
+    def topic(self) -> str:
+        """The topic name of the channel"""
+        return self.base.topic()
+
+    def schema_name(self) -> Optional[str]:
+        """The name of the schema for the channel"""
+        return self.base.schema_name()
 
     def log(
         self,
@@ -164,13 +181,24 @@ def _normalize_schema(
             raise ValueError("message_encoding must be 'json' when schema is a dict")
         if schema and schema.get("type") != "object":
             raise ValueError("Only object schemas are supported")
+
+        data = json.dumps(schema).encode("utf-8") if schema else b""
+        name = schema["title"] if "title" in schema else _default_schema_name(data)
+
         return (
             "json",
             _foxglove.Schema(
-                name=schema.get("title", "json_schema"),
+                name=name,
                 encoding="jsonschema",
-                data=json.dumps(schema).encode("utf-8") if schema else b"",
+                data=data,
             ),
         )
 
     raise TypeError(f"Invalid schema type: {type(schema)}")
+
+
+def _default_schema_name(data: bytes) -> str:
+    # Provide a consistent, readable, and reasonably unique name for a given schema so the app can
+    # identify it to the user.
+    hash = hashlib.shake_128(data).digest(6)
+    return "schema-" + b64encode(hash, b"-_").decode("utf-8")

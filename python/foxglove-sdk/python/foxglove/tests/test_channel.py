@@ -111,3 +111,32 @@ def test_typed_channel_requires_kwargs_after_message(new_topic: str) -> None:
         match="takes 1 positional arguments but 2 were given",
     ):
         channel.log(Log(), 0)  # type: ignore
+
+
+def test_generates_names_for_schemas(new_topic: str) -> None:
+    ch_1 = Channel(
+        new_topic + "-1",
+        schema={"type": "object", "properties": {"foo": {"type": "string"}}},
+    )
+    ch_2 = Channel(
+        new_topic + "-2",
+        schema={"type": "object", "additionalProperties": True},
+    )
+    # Same schema will have the same name
+    ch_3 = Channel(
+        new_topic + "-3",
+        schema={"type": "object", "additionalProperties": True},
+    )
+
+    assert ch_1.schema_name() != ch_2.schema_name()
+    assert ch_2.schema_name() == ch_3.schema_name()
+
+
+def test_exposes_unique_channel_ids(new_topic: str) -> None:
+    ch_1 = Channel(new_topic + "-1")
+    ch_2 = Channel(new_topic + "-2")
+    ch_3 = LogChannel(new_topic + "-3")
+
+    assert ch_1.id() > 0
+    assert ch_1.id() < ch_2.id()
+    assert ch_2.id() < ch_3.id()
