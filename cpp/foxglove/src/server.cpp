@@ -16,11 +16,12 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
                          options.callbacks.onClientAdvertise || options.callbacks.onMessageData ||
                          options.callbacks.onClientUnadvertise;
 
-  auto callbacks = std::make_unique<WebSocketServerCallbacks>(std::move(options.callbacks));
+  std::unique_ptr<WebSocketServerCallbacks> callbacks;
 
   foxglove_server_callbacks cCallbacks = {};
 
   if (hasAnyCallbacks) {
+    callbacks = std::make_unique<WebSocketServerCallbacks>(std::move(options.callbacks));
     cCallbacks.context = callbacks.get();
     if (callbacks->onSubscribe) {
       cCallbacks.on_subscribe = [](uint64_t channel_id, const void* context) {

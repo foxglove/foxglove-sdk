@@ -34,7 +34,6 @@ public:
   Channel& operator=(const Channel&) = delete;
 
   Channel(Channel&& other) noexcept = default;
-  Channel& operator=(Channel&& other) noexcept = default;
 
 private:
   explicit Channel(const foxglove_channel* channel);

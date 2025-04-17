@@ -254,6 +254,9 @@ pub extern "C" fn foxglove_server_stop(
         tracing::error!("foxglove_server_stop called with null server");
         return FoxgloveError::ValueError;
     };
+
+    // Safety: undo the Box::into_raw in foxglove_server_start, safe if this was created by that method
+    let mut server = unsafe { Box::from_raw(server) };
     let Some(server) = server.take() else {
         tracing::error!("foxglove_server_stop called with closed server");
         return FoxgloveError::SinkClosed;
