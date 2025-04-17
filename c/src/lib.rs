@@ -167,10 +167,10 @@ pub struct FoxgloveSchema {
 /// `port` may be 0, in which case an available port will be automatically selected.
 ///
 /// # Safety
-/// If `name` is supplied in options, it must be valid UTF8.
-/// If `host` is supplied in options, it must be valid UTF8.
-/// If `supported_encodings` is supplied in options, all `supported_encodings` must be valid UTF8,
-/// and `supported_encodings` must have length equal to `supported_encodings_count`.
+/// If `name` is supplied in options, it must contain valid UTF8.
+/// If `host` is supplied in options, it must contain valid UTF8.
+/// If `supported_encodings` is supplied in options, all `supported_encodings` must contain valid
+/// UTF8, and `supported_encodings` must have length equal to `supported_encodings_count`.
 #[unsafe(no_mangle)]
 #[must_use]
 pub unsafe extern "C" fn foxglove_server_start(
@@ -274,15 +274,13 @@ pub struct FoxgloveMcapWriter(Option<foxglove::McapWriterHandle<BufWriter<File>>
 /// Create or open an MCAP file for writing. Must later be freed with `foxglove_mcap_free`.
 ///
 /// # Safety
-/// `path`, `profile`, and `library` must be valid UTF8.
+/// `path` and `profile` must contain valid UTF8.
 #[unsafe(no_mangle)]
 #[must_use]
 pub unsafe extern "C" fn foxglove_mcap_open(
     options: &FoxgloveMcapOptions,
 ) -> *mut FoxgloveMcapWriter {
     let path = unsafe { options.path.as_utf8_str().expect("path is invalid") };
-
-    // Safety: this is safe if the options struct contains valid strings
     let mcap_options = unsafe { options.to_write_options() };
 
     let file = File::options()

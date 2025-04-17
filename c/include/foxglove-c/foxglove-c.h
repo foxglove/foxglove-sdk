@@ -162,10 +162,10 @@ extern "C" {
  * `port` may be 0, in which case an available port will be automatically selected.
  *
  * # Safety
- * If `name` is supplied in options, it must be valid UTF8.
- * If `host` is supplied in options, it must be valid UTF8.
- * If `supported_encodings` is supplied in options, all `supported_encodings` must be valid UTF8,
- * and `supported_encodings` must have length equal to `supported_encodings_count`.
+ * If `name` is supplied in options, it must contain valid UTF8.
+ * If `host` is supplied in options, it must contain valid UTF8.
+ * If `supported_encodings` is supplied in options, all `supported_encodings` must contain valid
+ * UTF8, and `supported_encodings` must have length equal to `supported_encodings_count`.
  */
 struct foxglove_websocket_server *foxglove_server_start(const struct foxglove_server_options *FOXGLOVE_NONNULL options);
 
@@ -173,7 +173,7 @@ struct foxglove_websocket_server *foxglove_server_start(const struct foxglove_se
  * Create or open an MCAP file for writing. Must later be freed with `foxglove_mcap_free`.
  *
  * # Safety
- * `path`, `profile`, and `library` must be valid UTF8.
+ * `path` and `profile` must contain valid UTF8.
  */
 struct foxglove_mcap_writer *foxglove_mcap_open(const struct foxglove_mcap_options *FOXGLOVE_NONNULL options);
 

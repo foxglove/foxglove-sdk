@@ -8,5 +8,5 @@ fn main() {
         .write_to_file("include/foxglove-c/foxglove-c.h");
 
     println!("cargo:rerun-if-changed=cbindgen.toml");
-    println!("cargo:rerun-if-changed=src/lib.rs");
+    println!("cargo:rerun-if-changed=src/");
 }
