@@ -1,14 +1,17 @@
 #include <foxglove-c/foxglove-c.h>
 #include <foxglove/channel.hpp>
+#include <foxglove/error.hpp>
 #include <foxglove/server.hpp>
 
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_string.hpp>
 #include <catch2/matchers/catch_matchers_vector.hpp>
 #include <websocketpp/client.hpp>
 #include <websocketpp/config/asio_no_tls_client.hpp>
 
 #include <type_traits>
 
+using Catch::Matchers::ContainsSubstring;
 using Catch::Matchers::Equals;
 
 using WebSocketClient = websocketpp::client<websocketpp::config::asio_client>;
@@ -27,9 +30,41 @@ TEST_CASE("Start and stop server") {
   options.name = "unit-test";
   options.host = "127.0.0.1";
   options.port = 0;
-  foxglove::WebSocketServer server{options};
+  auto serverResult = foxglove::WebSocketServer::create(std::move(options));
+  REQUIRE(serverResult.has_value());
+  auto& server = serverResult.value();
   REQUIRE(server.port() != 0);
-  server.stop();
+  REQUIRE(server.stop() == foxglove::FoxgloveError::Ok);
+}
+
+TEST_CASE("name is not valid utf-8") {
+  foxglove::WebSocketServerOptions options;
+  options.name = "\x80\x80\x80\x80";
+  auto serverResult = foxglove::WebSocketServer::create(std::move(options));
+  REQUIRE(!serverResult.has_value());
+  REQUIRE(serverResult.error() == foxglove::FoxgloveError::Utf8Error);
+  REQUIRE(foxglove::strerror(serverResult.error()) == std::string("UTF-8 Error"));
+}
+
+TEST_CASE("we can't bind host") {
+  foxglove::WebSocketServerOptions options;
+  options.name = "unit-test";
+  options.host = "invalidhost";
+  auto serverResult = foxglove::WebSocketServer::create(std::move(options));
+  REQUIRE(!serverResult.has_value());
+  REQUIRE(serverResult.error() == foxglove::FoxgloveError::Bind);
+}
+
+TEST_CASE("supported encoding is invalid utf-8") {
+  foxglove::WebSocketServerOptions options;
+  options.name = "unit-test";
+  options.host = "127.0.0.1";
+  options.port = 0;
+  options.supportedEncodings.emplace_back("\x80\x80\x80\x80");
+  auto serverResult = foxglove::WebSocketServer::create(std::move(options));
+  REQUIRE(!serverResult.has_value());
+  REQUIRE(serverResult.error() == foxglove::FoxgloveError::Utf8Error);
+  REQUIRE(foxglove::strerror(serverResult.error()) == std::string("UTF-8 Error"));
 }
 
 TEST_CASE("Log a message with and without metadata") {
@@ -37,13 +72,23 @@ TEST_CASE("Log a message with and without metadata") {
   options.name = "unit-test";
   options.host = "127.0.0.1";
   options.port = 0;
-  foxglove::WebSocketServer server{options};
+  auto serverResult = foxglove::WebSocketServer::create(std::move(options));
+  REQUIRE(serverResult.has_value());
+  auto& server = serverResult.value();
   REQUIRE(server.port() != 0);
 
-  foxglove::Channel channel{"example", "json", std::nullopt};
+  auto channelResult = foxglove::Channel::create("example", "json", std::nullopt);
+  REQUIRE(channelResult.has_value());
+  auto channel = std::move(channelResult.value());
   const std::array<uint8_t, 3> data = {1, 2, 3};
-  channel.log(reinterpret_cast<const std::byte*>(data.data()), data.size());
-  channel.log(reinterpret_cast<const std::byte*>(data.data()), data.size(), 1);
+  REQUIRE(
+    channel.log(reinterpret_cast<const std::byte*>(data.data()), data.size()) ==
+    foxglove::FoxgloveError::Ok
+  );
+  REQUIRE(
+    channel.log(reinterpret_cast<const std::byte*>(data.data()), data.size(), 1) ==
+    foxglove::FoxgloveError::Ok
+  );
 }
 
 TEST_CASE("Subscribe and unsubscribe callbacks") {
@@ -70,12 +115,16 @@ TEST_CASE("Subscribe and unsubscribe callbacks") {
     unsubscribeCalls.push_back(channel_id);
     cv.notify_all();
   };
-  foxglove::WebSocketServer server{options};
+  auto serverResult = foxglove::WebSocketServer::create(std::move(options));
+  REQUIRE(serverResult.has_value());
+  auto& server = serverResult.value();
   REQUIRE(server.port() != 0);
 
   foxglove::Schema schema;
   schema.name = "ExampleSchema";
-  foxglove::Channel channel{"example", "json", schema};
+  auto channelResult = foxglove::Channel::create("example", "json", schema);
+  REQUIRE(channelResult.has_value());
+  auto channel = std::move(channelResult.value());
 
   WebSocketClient client;
   client.clear_access_channels(websocketpp::log::alevel::all);
@@ -112,7 +161,7 @@ TEST_CASE("Subscribe and unsubscribe callbacks") {
   );
   UNSCOPED_INFO(ec.message());
   REQUIRE(!ec);
-  cv.wait(lock, [&] {
+  cv.wait_for(lock, std::chrono::seconds(1), [&] {
     return !subscribeCalls.empty();
   });
   REQUIRE_THAT(subscribeCalls, Equals(std::vector<uint64_t>{1}));
@@ -126,8 +175,7 @@ TEST_CASE("Subscribe and unsubscribe callbacks") {
     websocketpp::frame::opcode::text,
     ec
   );
-
-  cv.wait(lock, [&] {
+  cv.wait_for(lock, std::chrono::seconds(1), [&] {
     return !unsubscribeCalls.empty();
   });
   REQUIRE_THAT(unsubscribeCalls, Equals(std::vector<uint64_t>{1}));
@@ -139,17 +187,25 @@ TEST_CASE("Subscribe and unsubscribe callbacks") {
 }
 
 TEST_CASE("Capability enums") {
-#define TEST_CAPABILITY(CAMEL_CAPABILITY, SNAKE_CAPABILITY) \
-  REQUIRE( \
-    to_underlying(foxglove::WebSocketServerCapabilities::CAMEL_CAPABILITY) == \
-    FOXGLOVE_SERVER_CAPABILITY_##SNAKE_CAPABILITY \
-  )
-  TEST_CAPABILITY(ClientPublish, CLIENT_PUBLISH);
-  TEST_CAPABILITY(ConnectionGraph, CONNECTION_GRAPH);
-  TEST_CAPABILITY(Parameters, PARAMETERS);
-  TEST_CAPABILITY(Time, TIME);
-  TEST_CAPABILITY(Services, SERVICES);
-#undef TEST_CAPABILITY
+  REQUIRE(
+    to_underlying(foxglove::WebSocketServerCapabilities::ClientPublish) ==
+    (FOXGLOVE_SERVER_CAPABILITY_CLIENT_PUBLISH)
+  );
+  REQUIRE(
+    to_underlying(foxglove::WebSocketServerCapabilities::ConnectionGraph) ==
+    (FOXGLOVE_SERVER_CAPABILITY_CONNECTION_GRAPH)
+  );
+  REQUIRE(
+    to_underlying(foxglove::WebSocketServerCapabilities::Parameters) ==
+    (FOXGLOVE_SERVER_CAPABILITY_PARAMETERS)
+  );
+  REQUIRE(
+    to_underlying(foxglove::WebSocketServerCapabilities::Time) == (FOXGLOVE_SERVER_CAPABILITY_TIME)
+  );
+  REQUIRE(
+    to_underlying(foxglove::WebSocketServerCapabilities::Services) ==
+    (FOXGLOVE_SERVER_CAPABILITY_SERVICES)
+  );
 }
 
 TEST_CASE("Client advertise/publish callbacks") {
@@ -203,7 +259,9 @@ TEST_CASE("Client advertise/publish callbacks") {
     REQUIRE(clientChannelId == 100);
     cv.notify_all();
   };
-  foxglove::WebSocketServer server{options};
+  auto serverResult = foxglove::WebSocketServer::create(std::move(options));
+  REQUIRE(serverResult.has_value());
+  auto& server = serverResult.value();
   REQUIRE(server.port() != 0);
 
   WebSocketClient client;
@@ -246,16 +304,18 @@ TEST_CASE("Client advertise/publish callbacks") {
   );
   UNSCOPED_INFO(ec.message());
   REQUIRE(!ec);
-  cv.wait(lock, [&] {
+  auto advertisedResult = cv.wait_for(lock, std::chrono::seconds(1), [&] {
     return advertised;
   });
+  REQUIRE(advertisedResult);
 
   // send ClientMessageData message
   std::array<char, 8> msg = {1, 100, 0, 0, 0, 'a', 'b', 'c'};
   client.send(connection, msg.data(), msg.size(), websocketpp::frame::opcode::binary, ec);
-  cv.wait(lock, [&] {
+  auto receivedResult = cv.wait_for(lock, std::chrono::seconds(1), [&] {
     return receivedMessage;
   });
+  REQUIRE(receivedResult);
 
   client.send(
     connection,

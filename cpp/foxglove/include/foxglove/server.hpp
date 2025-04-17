@@ -1,10 +1,13 @@
 #pragma once
 
+#include <foxglove/error.hpp>
+
 #include <cstdint>
 #include <functional>
 #include <memory>
 #include <string>
 
+enum foxglove_error : uint8_t;
 struct foxglove_websocket_server;
 
 namespace foxglove {
@@ -69,16 +72,20 @@ struct WebSocketServerOptions {
 
 class WebSocketServer final {
 public:
-  explicit WebSocketServer(const WebSocketServerOptions& options);
+  static FoxgloveResult<WebSocketServer> create(WebSocketServerOptions&& options);
 
   // Get the port on which the server is listening.
   uint16_t port() const;
 
-  void stop();
+  FoxgloveError stop();
 
 private:
-  WebSocketServerCallbacks _callbacks;
-  std::unique_ptr<foxglove_websocket_server, void (*)(foxglove_websocket_server*)> _impl;
+  WebSocketServer(
+    foxglove_websocket_server* server, std::unique_ptr<WebSocketServerCallbacks> callbacks
+  );
+
+  std::unique_ptr<WebSocketServerCallbacks> _callbacks;
+  std::unique_ptr<foxglove_websocket_server, foxglove_error (*)(foxglove_websocket_server*)> _impl;
 };
 
 }  // namespace foxglove

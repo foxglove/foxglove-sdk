@@ -3,11 +3,13 @@
 #include <memory>
 #include <string>
 
+enum foxglove_error : uint8_t;
+enum class FoxgloveError : uint8_t;
 struct foxglove_mcap_writer;
 
 namespace foxglove {
 
-enum class McapCompression {
+enum McapCompression : uint8_t {
   None,
   Zstd,
   Lz4,
@@ -28,18 +30,20 @@ struct McapWriterOptions {
   bool emitMetadataIndexes = true;
   bool repeatChannels = true;
   bool repeatSchemas = true;
-  bool create = true;
   bool truncate = false;
 };
 
 class McapWriter final {
 public:
-  explicit McapWriter(McapWriterOptions options);
+  static FoxgloveResult<McapWriter> create(const McapWriterOptions& options);
 
-  void close();
+  FoxgloveError close();
+  McapWriter(McapWriter&&) = default;
 
 private:
-  std::unique_ptr<foxglove_mcap_writer, void (*)(foxglove_mcap_writer*)> _impl;
+  explicit McapWriter(foxglove_mcap_writer* writer);
+
+  std::unique_ptr<foxglove_mcap_writer, foxglove_error (*)(foxglove_mcap_writer*)> _impl;
 };
 
 }  // namespace foxglove

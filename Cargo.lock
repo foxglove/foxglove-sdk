@@ -754,6 +754,7 @@ dependencies = [
  "cbindgen",
  "foxglove",
  "mcap 0.15.1",
+ "tracing",
 ]
 
 [[package]]
