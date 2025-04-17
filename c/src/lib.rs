@@ -202,18 +202,10 @@ pub unsafe extern "C" fn foxglove_server_start(
 unsafe fn do_foxglove_server_start(
     options: &FoxgloveServerOptions,
 ) -> Result<*mut FoxgloveWebSocketServer, foxglove::FoxgloveError> {
-    let name = unsafe {
-        options
-            .name
-            .as_utf8_str()
-            .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("name is invalid: {}", e)))?
-    };
-    let host = unsafe {
-        options
-            .host
-            .as_utf8_str()
-            .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("host is invalid: {}", e)))?
-    };
+    let name = unsafe { options.name.as_utf8_str() }
+        .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("name is invalid: {}", e)))?;
+    let host = unsafe { options.host.as_utf8_str() }
+        .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("host is invalid: {}", e)))?;
 
     let mut server = foxglove::WebSocketServer::new()
         .name(name)
