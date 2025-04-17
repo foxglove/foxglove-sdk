@@ -3,6 +3,28 @@ use crate::schemas::{descriptors, foxglove::*};
 use crate::{Schema, Encode};
 use bytes::BufMut;
 
+impl Encode for Audio {
+    type Error = ::prost::EncodeError;
+
+    fn get_schema() -> Option<Schema> {
+        Some(Schema::new(
+            "foxglove.Audio",
+            "protobuf",
+            descriptors::AUDIO,
+        ))
+    }
+
+    fn get_message_encoding() -> String {
+        "protobuf".to_string()
+    }
+
+    fn encode(&self, buf: &mut impl BufMut) -> Result<(), prost::EncodeError> {
+        ::prost::Message::encode(self, buf)
+    }
+
+    fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
+}
+
 impl Encode for CameraCalibration {
     type Error = ::prost::EncodeError;
 

@@ -22,6 +22,75 @@ pub struct ArrowPrimitive {
     #[prost(message, optional, tag = "6")]
     pub color: ::core::option::Option<Color>,
 }
+/// A single frame of an audio bitstream
+/// <https://docs.foxglove.dev/docs/visualization/message-schemas/audio>
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct Audio {
+    /// Timestamp of audio frame
+    #[prost(message, optional, tag = "1")]
+    pub timestamp: ::core::option::Option<crate::schemas::Timestamp>,
+    /// Audio frame data
+    #[prost(bytes = "bytes", tag = "2")]
+    pub data: ::prost::bytes::Bytes,
+    /// Audio format
+    #[prost(enumeration = "audio::AudioFormat", tag = "3")]
+    pub format: i32,
+    /// Audio frame data
+    #[prost(bytes = "bytes", tag = "4")]
+    pub description: ::prost::bytes::Bytes,
+    /// Sample rate in Hz
+    #[prost(fixed32, tag = "5")]
+    pub sample_rate: u32,
+    /// Number of channels in the audio frame
+    #[prost(fixed32, tag = "6")]
+    pub number_of_channels: u32,
+}
+/// Nested message and enum types in `Audio`.
+pub mod audio {
+    /// An enumeration of supported audio formats
+    #[derive(
+        Clone,
+        Copy,
+        Debug,
+        PartialEq,
+        Eq,
+        Hash,
+        PartialOrd,
+        Ord,
+        ::prost::Enumeration
+    )]
+    #[repr(i32)]
+    pub enum AudioFormat {
+        /// Interleaved, signed 16-bit PCM
+        PcmS16 = 0,
+        /// Opus
+        Opus = 1,
+        /// MPEG-4 AAC LC
+        Mp4a402 = 2,
+    }
+    impl AudioFormat {
+        /// String value of the enum field names used in the ProtoBuf definition.
+        ///
+        /// The values are not transformed in any way and thus are considered stable
+        /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+        pub fn as_str_name(&self) -> &'static str {
+            match self {
+                Self::PcmS16 => "PCM_S16",
+                Self::Opus => "OPUS",
+                Self::Mp4a402 => "MP4A_40_2",
+            }
+        }
+        /// Creates an enum from field names used in the ProtoBuf definition.
+        pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+            match value {
+                "PCM_S16" => Some(Self::PcmS16),
+                "OPUS" => Some(Self::Opus),
+                "MP4A_40_2" => Some(Self::Mp4a402),
+                _ => None,
+            }
+        }
+    }
+}
 /// Camera calibration parameters
 /// <https://docs.foxglove.dev/docs/visualization/message-schemas/camera-calibration>
 #[derive(Clone, PartialEq, ::prost::Message)]

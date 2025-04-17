@@ -1,5 +1,57 @@
 import { FoxgloveEnumSchema, FoxgloveMessageSchema } from "./types";
 
+const AudioFormat: FoxgloveEnumSchema = {
+  type: "enum",
+  name: "AudioFormat",
+  parentSchemaName: "Audio",
+  protobufEnumName: "AudioFormat",
+  description:
+    "An enumeration of supported audio formats",
+  values: [
+    { value: 0, name: "PCM_S16", description: "Interleaved, signed 16-bit PCM" },
+    { value: 1, name: "OPUS", description: "Opus" },
+    { value: 2, name: "MP4A_40_2", description: "MPEG-4 AAC LC" },
+  ],
+};
+
+const Audio: FoxgloveMessageSchema = {
+  type: "message",
+  name: "Audio",
+  description: "A single frame of an audio bitstream",
+  fields: [
+    {
+      name: "timestamp",
+      type: { type: "primitive", name: "time" },
+      description: "Timestamp of audio frame",
+    },
+    {
+      name: "data",
+      type: { type: "primitive", name: "bytes" },
+      description: `Audio frame data`,
+    },
+    {
+      name: "format",
+      type: { type: "enum", enum: AudioFormat },
+      description: "Audio format",
+    },
+    {
+      name: "description",
+      type: { type: "primitive", name: "bytes" },
+      description: `Audio frame data`,
+    },
+    {
+      name: "sample_rate",
+      type: { type: "primitive", name: "uint32" },
+      description: "Sample rate in Hz"
+    },
+    {
+      name: "number_of_channels",
+      type: { type: "primitive", name: "uint32" },
+      description: "Number of channels in the audio frame"
+    },
+  ],
+};
+
 const Color: FoxgloveMessageSchema = {
   type: "message",
   name: "Color",
@@ -1476,6 +1528,7 @@ const LaserScan: FoxgloveMessageSchema = {
 };
 
 export const foxgloveMessageSchemas = {
+  Audio,
   ArrowPrimitive,
   CameraCalibration,
   CircleAnnotation,
@@ -1517,6 +1570,7 @@ export const foxgloveMessageSchemas = {
 };
 
 export const foxgloveEnumSchemas = {
+  AudioFormat,
   LineType,
   LogLevel,
   SceneEntityDeletionType,

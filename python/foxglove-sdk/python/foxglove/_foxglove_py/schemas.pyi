@@ -9,6 +9,15 @@ from .schemas_wkt import Timestamp as Timestamp
 # Enums
 #
 
+class AudioFormat(Enum):
+    """
+    An enumeration of supported audio formats
+    """
+
+    PcmS16 = 0
+    Opus = 1
+    Mp4a402 = 2
+
 class LinePrimitiveLineType(Enum):
     """
     An enumeration indicating how input points should be interpreted to create lines
@@ -93,6 +102,22 @@ class ArrowPrimitive:
         head_diameter: "Optional[float]" = 0.0,
         color: "Optional[Color]" = None,
     ) -> "ArrowPrimitive": ...
+
+class Audio:
+    """
+    A single frame of an audio bitstream
+    """
+
+    def __new__(
+        cls,
+        *,
+        timestamp: "Optional[Timestamp]" = None,
+        data: "Optional[bytes]" = b"",
+        format: "Optional[AudioFormat]" = AudioFormat.PcmS16,
+        description: "Optional[bytes]" = b"",
+        sample_rate: "Optional[int]" = 0,
+        number_of_channels: "Optional[int]" = 0,
+    ) -> "Audio": ...
 
 class CameraCalibration:
     """
@@ -625,6 +650,7 @@ class Vector3:
     ) -> "Vector3": ...
 
 FoxgloveSchema = Union[
+    Audio,
     ArrowPrimitive,
     CameraCalibration,
     CircleAnnotation,
