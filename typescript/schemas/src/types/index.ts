@@ -1,4 +1,6 @@
 export * from "./ArrowPrimitive";
+export * from "./Audio";
+export * from "./AudioFormat";
 export * from "./CameraCalibration";
 export * from "./CircleAnnotation";
 export * from "./Color";

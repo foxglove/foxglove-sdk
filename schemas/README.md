@@ -6,6 +6,7 @@ All schemas are generated from [schemas.ts](/internal/schemas.ts).
 
 ## Contents
 
+- [enum AudioFormat](#enum-audioformat)
 - [enum LineType](#enum-linetype)
 - [enum LogLevel](#enum-loglevel)
 - [enum NumericType](#enum-numerictype)
@@ -13,6 +14,7 @@ All schemas are generated from [schemas.ts](/internal/schemas.ts).
 - [enum PositionCovarianceType](#enum-positioncovariancetype)
 - [enum SceneEntityDeletionType](#enum-sceneentitydeletiontype)
 - [ArrowPrimitive](#arrowprimitive)
+- [Audio](#audio)
 - [CameraCalibration](#cameracalibration)
 - [CircleAnnotation](#circleannotation)
 - [Color](#color)
@@ -52,6 +54,18 @@ All schemas are generated from [schemas.ts](/internal/schemas.ts).
 - [Vector3](#vector3)
 
 ----
+
+## enum AudioFormat
+
+An enumeration of supported audio formats
+
+name | value | description
+---- | ----- | -----------
+`PCM_S16` | 0 | Interleaved, signed 16-bit PCM
+`OPUS` | 1 | Opus
+`MP4A_40_2` | 2 | MPEG-4 AAC LC
+
+
 
 ## enum LineType
 
@@ -221,6 +235,96 @@ Diameter of the arrow head
 <td>
 
 Color of the arrow
+
+</td>
+</tr>
+</table>
+
+## Audio
+
+A single frame of an audio bitstream
+
+<table>
+  <tr>
+    <th>field</th>
+    <th>type</th>
+    <th>description</th>
+  </tr>
+<tr>
+<td><code>timestamp</code></td>
+<td>
+
+time
+
+</td>
+<td>
+
+Timestamp of audio frame
+
+</td>
+</tr>
+<tr>
+<td><code>data</code></td>
+<td>
+
+bytes
+
+</td>
+<td>
+
+Audio frame data
+
+</td>
+</tr>
+<tr>
+<td><code>format</code></td>
+<td>
+
+[enum AudioFormat](#enum-audioformat)
+
+</td>
+<td>
+
+Audio format
+
+</td>
+</tr>
+<tr>
+<td><code>description</code></td>
+<td>
+
+bytes
+
+</td>
+<td>
+
+Audio frame data
+
+</td>
+</tr>
+<tr>
+<td><code>sample_rate</code></td>
+<td>
+
+uint32
+
+</td>
+<td>
+
+Sample rate in Hz
+
+</td>
+</tr>
+<tr>
+<td><code>number_of_channels</code></td>
+<td>
+
+uint32
+
+</td>
+<td>
+
+Number of channels in the audio frame
 
 </td>
 </tr>

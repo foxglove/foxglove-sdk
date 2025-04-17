@@ -10,6 +10,8 @@ from typing import Union
 
 from foxglove._foxglove_py.schemas import (
     ArrowPrimitive,
+    Audio,
+    AudioFormat,
     CameraCalibration,
     CircleAnnotation,
     Color,
@@ -59,6 +61,7 @@ from foxglove._foxglove_py.schemas import (
 
 FoxgloveSchema = Union[
     ArrowPrimitive,
+    Audio,
     CameraCalibration,
     CircleAnnotation,
     Color,
@@ -101,6 +104,8 @@ FoxgloveSchema = Union[
 __all__ = [
     "FoxgloveSchema",
     "ArrowPrimitive",
+    "Audio",
+    "AudioFormat",
     "CameraCalibration",
     "CircleAnnotation",
     "Color",
