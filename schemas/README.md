@@ -6,7 +6,6 @@ All schemas are generated from [schemas.ts](/internal/schemas.ts).
 
 ## Contents
 
-- [enum AudioFormat](#enum-audioformat)
 - [enum LineType](#enum-linetype)
 - [enum LogLevel](#enum-loglevel)
 - [enum NumericType](#enum-numerictype)
@@ -54,18 +53,6 @@ All schemas are generated from [schemas.ts](/internal/schemas.ts).
 - [Vector3](#vector3)
 
 ----
-
-## enum AudioFormat
-
-An enumeration of supported audio formats
-
-name | value | description
----- | ----- | -----------
-`PCM_S16` | 0 | Interleaved, signed 16-bit PCM
-`OPUS` | 1 | Opus
-`MP4A_40_2` | 2 | MPEG-4 AAC LC
-
-
 
 ## enum LineType
 
@@ -242,7 +229,7 @@ Color of the arrow
 
 ## Audio
 
-A single frame of an audio bitstream
+A single frame of an audio bit stream
 
 <table>
   <tr>
@@ -273,6 +260,9 @@ bytes
 <td>
 
 Audio frame data
+For packet-based audio codecs this data must begin and end on packet boundaries (no partial packets).
+For PCM audio formats the samples in the data must be interleaved.
+
 
 </td>
 </tr>
@@ -280,12 +270,12 @@ Audio frame data
 <td><code>format</code></td>
 <td>
 
-[enum AudioFormat](#enum-audioformat)
+string
 
 </td>
 <td>
 
-Audio format
+Audio format. One of 'pcm-s16', 'opus', or 'mp4a.40.2'
 
 </td>
 </tr>
