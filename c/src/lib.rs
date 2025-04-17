@@ -97,8 +97,7 @@ pub struct FoxgloveServerOptions<'a> {
     pub port: u16,
     pub callbacks: Option<&'a FoxgloveServerCallbacks>,
     pub capabilities: FoxgloveServerCapability,
-    pub supported_encodings: *const *const c_char,
-    pub supported_encoding_lengths: *const usize,
+    pub supported_encodings: *const FoxgloveString,
     pub supported_encodings_count: usize,
 }
 
@@ -170,11 +169,8 @@ pub struct FoxgloveSchema {
 /// # Safety
 /// If `name` is supplied in options, it must be valid UTF8.
 /// If `host` is supplied in options, it must be valid UTF8.
-/// If `supported_encodings` is supplied in options, all `supported_encodings` must be valid UTF8;
-/// `supported_encoding_lengths` must define the length of each encoding in `supported_encodings`;
-/// and both `supported_encodings` and `supported_encoding_lengths` must have the same length, equal
-/// to `supported_encodings_count`.
-/// "Length" here refers to the number of characters in the string.
+/// If `supported_encodings` is supplied in options, all `supported_encodings` must be valid UTF8,
+/// and `supported_encodings` must have length equal to `supported_encodings_count`.
 #[unsafe(no_mangle)]
 #[must_use]
 pub unsafe extern "C" fn foxglove_server_start(
@@ -191,12 +187,6 @@ pub unsafe extern "C" fn foxglove_server_start(
         )
         .bind(host, options.port);
     if options.supported_encodings_count > 0 {
-        let enc_lengths = unsafe {
-            std::slice::from_raw_parts(
-                options.supported_encoding_lengths,
-                options.supported_encodings_count,
-            )
-        };
         server = server.supported_encodings(
             unsafe {
                 std::slice::from_raw_parts(
@@ -205,13 +195,9 @@ pub unsafe extern "C" fn foxglove_server_start(
                 )
             }
             .iter()
-            .enumerate()
-            .map(|(i, &enc)| {
-                assert!(!enc.is_null());
-                std::str::from_utf8(unsafe {
-                    std::slice::from_raw_parts(enc as *const u8, enc_lengths[i])
-                })
-                .expect("encoding is invalid")
+            .map(|enc| {
+                assert!(!enc.data.is_null());
+                unsafe { enc.as_utf8_str().expect("encoding is invalid") }
             }),
         );
     }

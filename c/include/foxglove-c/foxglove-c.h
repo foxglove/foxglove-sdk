@@ -119,8 +119,7 @@ typedef struct foxglove_server_options {
   uint16_t port;
   const struct foxglove_server_callbacks *callbacks;
   foxglove_server_capability capabilities;
-  const char *const *supported_encodings;
-  const size_t *supported_encoding_lengths;
+  const struct FoxgloveString *supported_encodings;
   size_t supported_encodings_count;
 } foxglove_server_options;
 
@@ -165,11 +164,8 @@ extern "C" {
  * # Safety
  * If `name` is supplied in options, it must be valid UTF8.
  * If `host` is supplied in options, it must be valid UTF8.
- * If `supported_encodings` is supplied in options, all `supported_encodings` must be valid UTF8;
- * `supported_encoding_lengths` must define the length of each encoding in `supported_encodings`;
- * and both `supported_encodings` and `supported_encoding_lengths` must have the same length, equal
- * to `supported_encodings_count`.
- * "Length" here refers to the number of characters in the string.
+ * If `supported_encodings` is supplied in options, all `supported_encodings` must be valid UTF8,
+ * and `supported_encodings` must have length equal to `supported_encodings_count`.
  */
 struct foxglove_websocket_server *foxglove_server_start(const struct foxglove_server_options *FOXGLOVE_NONNULL options);
 
