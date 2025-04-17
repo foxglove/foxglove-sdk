@@ -49,8 +49,6 @@
  */
 #define FOXGLOVE_SERVER_CAPABILITY_SERVICES 16
 
-#define MARKER 77
-
 enum foxglove_error
 #ifdef __cplusplus
   : uint8_t
