@@ -15,7 +15,7 @@ const Audio: FoxgloveMessageSchema = {
       type: { type: "primitive", name: "bytes" },
       description: `Audio frame data
 For packet-based audio codecs this data must begin and end on packet boundaries (no partial packets).
-For PCM audio formats the samples in the data must be interleaved.
+For PCM audio formats the samples in the data must be interleaved and little-endian.
 `,
     },
     {
@@ -26,17 +26,17 @@ For PCM audio formats the samples in the data must be interleaved.
     {
       name: "description",
       type: { type: "primitive", name: "bytes" },
-      description: `Audio frame data`,
+      description: `Per-format metadata. Only needed for opus in an ogg container.`,
     },
     {
       name: "sample_rate",
       type: { type: "primitive", name: "uint32" },
-      description: "Sample rate in Hz"
+      description: "Sample rate in Hz. Only needed for PCM formats."
     },
     {
       name: "number_of_channels",
       type: { type: "primitive", name: "uint32" },
-      description: "Number of channels in the audio frame"
+      description: "Number of channels in the audio frame. Only needed for PCM formats."
     },
   ],
 };

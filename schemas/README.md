@@ -261,7 +261,7 @@ bytes
 
 Audio frame data
 For packet-based audio codecs this data must begin and end on packet boundaries (no partial packets).
-For PCM audio formats the samples in the data must be interleaved.
+For PCM audio formats the samples in the data must be interleaved and little-endian.
 
 
 </td>
@@ -288,7 +288,7 @@ bytes
 </td>
 <td>
 
-Audio frame data
+Per-format metadata. Only needed for opus in an ogg container.
 
 </td>
 </tr>
@@ -301,7 +301,7 @@ uint32
 </td>
 <td>
 
-Sample rate in Hz
+Sample rate in Hz. Only needed for PCM formats.
 
 </td>
 </tr>
@@ -314,7 +314,7 @@ uint32
 </td>
 <td>
 
-Number of channels in the audio frame
+Number of channels in the audio frame. Only needed for PCM formats.
 
 </td>
 </tr>

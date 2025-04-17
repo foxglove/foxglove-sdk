@@ -8,17 +8,17 @@ builtin_interfaces/Time timestamp
 
 # Audio frame data
 # For packet-based audio codecs this data must begin and end on packet boundaries (no partial packets).
-# For PCM audio formats the samples in the data must be interleaved.
+# For PCM audio formats the samples in the data must be interleaved and little-endian.
 uint8[] data
 
 # Audio format. One of 'pcm-s16', 'opus', or 'mp4a.40.2'
 string format
 
-# Audio frame data
+# Per-format metadata. Only needed for opus in an ogg container.
 uint8[] description
 
-# Sample rate in Hz
+# Sample rate in Hz. Only needed for PCM formats.
 uint32 sample_rate
 
-# Number of channels in the audio frame
+# Number of channels in the audio frame. Only needed for PCM formats.
 uint32 number_of_channels
