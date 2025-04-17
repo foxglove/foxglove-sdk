@@ -14,9 +14,9 @@ use std::sync::Arc;
 #[repr(C)]
 pub struct FoxgloveString {
     /// Pointer to valid UTF-8 data
-    pub data: *const c_char,
+    data: *const c_char,
     /// Number of characters in the string.
-    pub len: usize,
+    len: usize,
 }
 
 impl FoxgloveString {

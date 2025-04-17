@@ -75,7 +75,7 @@ WebSocketServer::WebSocketServer(const WebSocketServerOptions& options)
   cOptions.callbacks = hasAnyCallbacks ? &cCallbacks : nullptr;
   cOptions.capabilities =
     static_cast<std::underlying_type_t<decltype(options.capabilities)>>(options.capabilities);
-  std::vector<FoxgloveString> supportedEncodings;
+  std::vector<foxglove_string> supportedEncodings;
   supportedEncodings.reserve(options.supportedEncodings.size());
   for (const auto& encoding : options.supportedEncodings) {
     supportedEncodings.push_back({encoding.c_str(), encoding.length()});

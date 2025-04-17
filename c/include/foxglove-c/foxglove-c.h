@@ -72,7 +72,7 @@ typedef struct foxglove_websocket_server foxglove_websocket_server;
 /**
  * A string with associated length.
  */
-typedef struct FoxgloveString {
+typedef struct foxglove_string {
   /**
    * Pointer to valid UTF-8 data
    */
@@ -81,7 +81,7 @@ typedef struct FoxgloveString {
    * Number of characters in the string.
    */
   size_t len;
-} FoxgloveString;
+} foxglove_string;
 
 typedef struct foxglove_client_channel {
   uint32_t id;
@@ -114,21 +114,21 @@ typedef struct foxglove_server_callbacks {
 typedef uint8_t foxglove_server_capability;
 
 typedef struct foxglove_server_options {
-  struct FoxgloveString name;
-  struct FoxgloveString host;
+  struct foxglove_string name;
+  struct foxglove_string host;
   uint16_t port;
   const struct foxglove_server_callbacks *callbacks;
   foxglove_server_capability capabilities;
-  const struct FoxgloveString *supported_encodings;
+  const struct foxglove_string *supported_encodings;
   size_t supported_encodings_count;
 } foxglove_server_options;
 
 typedef struct foxglove_mcap_options {
-  struct FoxgloveString path;
+  struct foxglove_string path;
   bool create;
   bool truncate;
   FoxgloveMcapCompression compression;
-  struct FoxgloveString profile;
+  struct foxglove_string profile;
   /**
    * chunk_size of 0 is treated as if it was omitted (None)
    */
@@ -146,8 +146,8 @@ typedef struct foxglove_mcap_options {
 } foxglove_mcap_options;
 
 typedef struct foxglove_schema {
-  struct FoxgloveString name;
-  struct FoxgloveString encoding;
+  struct foxglove_string name;
+  struct foxglove_string encoding;
   const uint8_t *data;
   size_t data_len;
 } foxglove_schema;
@@ -218,8 +218,8 @@ void foxglove_server_stop(struct foxglove_websocket_server *server);
  * schema. The schema and the data it points to need only remain alive for the duration of this
  * function call (they will be copied).
  */
-foxglove_channel *foxglove_channel_create(struct FoxgloveString topic,
-                                          struct FoxgloveString message_encoding,
+foxglove_channel *foxglove_channel_create(struct foxglove_string topic,
+                                          struct foxglove_string message_encoding,
                                           const struct foxglove_schema *schema);
 
 /**

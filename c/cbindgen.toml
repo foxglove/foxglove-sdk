@@ -33,6 +33,7 @@ non_null_attribute = "FOXGLOVE_NONNULL"
 prefix_with_name = true
 
 [export.rename]
+FoxgloveString = "foxglove_string"
 FoxgloveWebSocketServer = "foxglove_websocket_server"
 FoxgloveChannel = "foxglove_channel"
 FoxgloveSchema = "foxglove_schema"
