@@ -78,9 +78,9 @@ pub(crate) enum LocationFixPositionCovarianceType {
 /// :param timestamp: Timestamp of audio frame
 /// :param data: Audio frame data
 /// :param format: Audio format. One of 'pcm-s16', 'opus', or 'mp4a.40.2'
-/// :param description: Audio frame data
-/// :param sample_rate: Sample rate in Hz
-/// :param number_of_channels: Number of channels in the audio frame
+/// :param description: Per-format metadata. Only needed for opus in an ogg container.
+/// :param sample_rate: Sample rate in Hz. Only needed for PCM formats.
+/// :param number_of_channels: Number of channels in the audio frame. Only needed for PCM formats.
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/audio
 #[pyclass(module = "foxglove.schemas")]

@@ -31,19 +31,19 @@ pub struct Audio {
     pub timestamp: ::core::option::Option<crate::schemas::Timestamp>,
     /// Audio frame data
     /// For packet-based audio codecs this data must begin and end on packet boundaries (no partial packets).
-    /// For PCM audio formats the samples in the data must be interleaved.
+    /// For PCM audio formats the samples in the data must be interleaved and little-endian.
     #[prost(bytes = "bytes", tag = "2")]
     pub data: ::prost::bytes::Bytes,
     /// Audio format. One of 'pcm-s16', 'opus', or 'mp4a.40.2'
     #[prost(string, tag = "3")]
     pub format: ::prost::alloc::string::String,
-    /// Audio frame data
+    /// Per-format metadata. Only needed for opus in an ogg container.
     #[prost(bytes = "bytes", tag = "4")]
     pub description: ::prost::bytes::Bytes,
-    /// Sample rate in Hz
+    /// Sample rate in Hz. Only needed for PCM formats.
     #[prost(fixed32, tag = "5")]
     pub sample_rate: u32,
-    /// Number of channels in the audio frame
+    /// Number of channels in the audio frame. Only needed for PCM formats.
     #[prost(fixed32, tag = "6")]
     pub number_of_channels: u32,
 }

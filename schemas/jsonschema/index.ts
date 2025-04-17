@@ -25,7 +25,7 @@ export const Audio = {
     "data": {
       "type": "string",
       "contentEncoding": "base64",
-      "description": "Audio frame data\nFor packet-based audio codecs this data must begin and end on packet boundaries (no partial packets).\nFor PCM audio formats the samples in the data must be interleaved.\n"
+      "description": "Audio frame data\nFor packet-based audio codecs this data must begin and end on packet boundaries (no partial packets).\nFor PCM audio formats the samples in the data must be interleaved and little-endian.\n"
     },
     "format": {
       "type": "string",
@@ -34,17 +34,17 @@ export const Audio = {
     "description": {
       "type": "string",
       "contentEncoding": "base64",
-      "description": "Audio frame data"
+      "description": "Per-format metadata. Only needed for opus in an ogg container."
     },
     "sample_rate": {
       "type": "integer",
       "minimum": 0,
-      "description": "Sample rate in Hz"
+      "description": "Sample rate in Hz. Only needed for PCM formats."
     },
     "number_of_channels": {
       "type": "integer",
       "minimum": 0,
-      "description": "Number of channels in the audio frame"
+      "description": "Number of channels in the audio frame. Only needed for PCM formats."
     }
   }
 };
