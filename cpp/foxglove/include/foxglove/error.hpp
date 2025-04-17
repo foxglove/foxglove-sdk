@@ -1,9 +1,9 @@
 #pragma once
 
-#include <tl/expected.hpp>
-
 #include <exception>
 #include <memory>
+
+#include "expected.hpp"
 
 namespace foxglove {
 
@@ -27,7 +27,7 @@ enum class FoxgloveError : uint8_t {
 };
 
 template<typename T>
-using FoxgloveResult = tl::expected<T, FoxgloveError>;
+using FoxgloveResult = expected<T, FoxgloveError>;
 
 const char* strerror(FoxgloveError error);
 

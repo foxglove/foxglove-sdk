@@ -380,7 +380,8 @@ unsafe fn do_foxglove_mcap_open(
 
     let writer = foxglove::McapWriter::with_options(mcap_options).create(BufWriter::new(file))?;
     // We can avoid this double indirection if we refactor McapWriterHandle to move the context into the Arc
-    // and then add into_raw and from_raw methods like with the WebSocketServerHandle
+    // and then add into_raw and from_raw methods to convert the Arc to and from a pointer.
+    // This is the simplest solution, and we don't call methods on this, so the double indirection doesn't matter much.
     Ok(Box::into_raw(Box::new(FoxgloveMcapWriter(Some(writer)))))
 }
 
@@ -398,6 +399,8 @@ pub unsafe extern "C" fn foxglove_mcap_close(
         tracing::error!("foxglove_mcap_close called with null writer");
         return FoxgloveError::ValueError;
     };
+    // Safety: undo the Box::into_raw in foxglove_mcap_open, safe if this was created by that method
+    let mut writer = unsafe { Box::from_raw(writer) };
     let Some(writer) = writer.take() else {
         tracing::error!("foxglove_mcap_close called with writer already closed");
         return FoxgloveError::SinkClosed;

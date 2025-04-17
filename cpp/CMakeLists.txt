@@ -57,13 +57,6 @@ FetchContent_Declare(asio
 )
 FetchContent_MakeAvailable(asio)
 
-FetchContent_Declare(expected
-  GIT_REPOSITORY https://github.com/TartanLlama/expected.git
-  GIT_TAG v1.1.0
-)
-set(EXPECTED_BUILD_TESTS OFF CACHE BOOL "Disable tl-expected tests" FORCE)
-FetchContent_MakeAvailable(expected)
-
 if(DEFINED SANITIZE)
   if(NOT CMAKE_CXX_COMPILER_ID MATCHES ".*Clang")
     message(FATAL_ERROR "Sanitizers are only supported with Clang, not ${CMAKE_CXX_COMPILER_ID}")
@@ -109,7 +102,6 @@ file(GLOB_RECURSE foxglove_cpp_srcs CONFIGURE_DEPENDS
 add_library(foxglove_cpp_obj OBJECT "${foxglove_cpp_srcs}")
 set_property(TARGET foxglove_cpp_obj PROPERTY POSITION_INDEPENDENT_CODE True)
 target_include_directories(foxglove_cpp_obj PUBLIC foxglove/include ${CMAKE_CURRENT_SOURCE_DIR}/../c/include)
-target_include_directories(foxglove_cpp_obj SYSTEM PRIVATE ${expected_SOURCE_DIR}/include)
 target_compile_options(foxglove_cpp_obj PUBLIC ${SANITIZER_COMPILE_OPTIONS})
 target_link_options(foxglove_cpp_obj PUBLIC ${SANITIZER_LINK_OPTIONS})
 
@@ -133,7 +125,6 @@ target_compile_options(tests PUBLIC ${SANITIZER_COMPILE_OPTIONS})
 target_link_options(tests PUBLIC ${SANITIZER_LINK_OPTIONS})
 target_include_directories(tests SYSTEM PRIVATE ${asio_SOURCE_DIR}/asio/include)
 target_include_directories(tests SYSTEM PRIVATE ${websocketpp_SOURCE_DIR})
-target_include_directories(tests SYSTEM PRIVATE ${expected_SOURCE_DIR}/include)
 target_link_libraries(tests PRIVATE foxglove_cpp_static Catch2::Catch2WithMain)
 catch_discover_tests(tests)
 if(MSVC)
@@ -145,19 +136,16 @@ endif()
 
 add_executable(example_server examples/ws-server/src/main.cpp)
 target_compile_options(example_server PUBLIC ${SANITIZER_COMPILE_OPTIONS})
-target_include_directories(example_server SYSTEM PRIVATE ${expected_SOURCE_DIR}/include)
 target_link_options(example_server PUBLIC ${SANITIZER_LINK_OPTIONS})
 target_link_libraries(example_server foxglove_cpp_static)
 
 add_executable(example_mcap examples/mcap/src/main.cpp)
 target_compile_options(example_mcap PUBLIC ${SANITIZER_COMPILE_OPTIONS})
-target_include_directories(example_mcap SYSTEM PRIVATE ${expected_SOURCE_DIR}/include)
 target_link_options(example_mcap PUBLIC ${SANITIZER_LINK_OPTIONS})
 target_link_libraries(example_mcap foxglove_cpp_static)
 
 add_executable(example_quickstart examples/quickstart/src/main.cpp)
 target_compile_options(example_quickstart PUBLIC ${SANITIZER_COMPILE_OPTIONS})
-target_include_directories(example_quickstart SYSTEM PRIVATE ${expected_SOURCE_DIR}/include)
 target_link_options(example_quickstart PUBLIC ${SANITIZER_LINK_OPTIONS})
 set_property(TARGET example_quickstart PROPERTY CXX_STANDARD 17)
 set_property(TARGET example_quickstart PROPERTY CXX_STANDARD_REQUIRED True)

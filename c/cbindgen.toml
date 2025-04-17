@@ -28,6 +28,7 @@ non_null_attribute = "FOXGLOVE_NONNULL"
 
 [enum]
 rename_variants = "QUALIFIED_SCREAMING_SNAKE_CASE"
+enum_class = true
 
 prefix_with_name = false
 [export.rename]

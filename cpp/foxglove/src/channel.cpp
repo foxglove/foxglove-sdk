@@ -19,7 +19,7 @@ FoxgloveResult<Channel> Channel::create(
     topic.data(), messageEncoding.data(), schema ? &cSchema : nullptr, &channel
   );
   if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
-    return tl::unexpected(FoxgloveError(error));
+    return foxglove::unexpected(FoxgloveError(error));
   }
   return Channel(channel);
 }

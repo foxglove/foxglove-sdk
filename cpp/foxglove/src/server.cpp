@@ -92,7 +92,7 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
   foxglove_websocket_server* server = nullptr;
   foxglove_error error = foxglove_server_start(&cOptions, &server);
   if (error != foxglove_error::FOXGLOVE_ERROR_OK || server == nullptr) {
-    return tl::unexpected(static_cast<FoxgloveError>(error));
+    return foxglove::unexpected(static_cast<FoxgloveError>(error));
   }
 
   return WebSocketServer(server, std::move(callbacks));

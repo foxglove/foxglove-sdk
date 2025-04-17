@@ -202,7 +202,8 @@ TEST_CASE("lz4 compression") {
   std::string data = "Hello, world!";
   channel.log(reinterpret_cast<const std::byte*>(data.data()), data.size());
 
-  writer->close();
+  auto error = writer->close();
+  REQUIRE(error == foxglove::FoxgloveError::Ok);
 
   // Check if test.mcap file exists
   REQUIRE(std::filesystem::exists("test.mcap"));
