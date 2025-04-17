@@ -6,27 +6,18 @@ import "google/protobuf/timestamp.proto";
 
 package foxglove;
 
-// A single frame of an audio bitstream
+// A single frame of an audio bit stream
 message Audio {
-  // An enumeration of supported audio formats
-  enum AudioFormat {
-    // Interleaved, signed 16-bit PCM
-    PCM_S16 = 0;
-
-    // Opus
-    OPUS = 1;
-
-    // MPEG-4 AAC LC
-    MP4A_40_2 = 2;
-  }
   // Timestamp of audio frame
   google.protobuf.Timestamp timestamp = 1;
 
   // Audio frame data
+  // For packet-based audio codecs this data must begin and end on packet boundaries (no partial packets).
+  // For PCM audio formats the samples in the data must be interleaved.
   bytes data = 2;
 
-  // Audio format
-  AudioFormat format = 3;
+  // Audio format. One of 'pcm-s16', 'opus', or 'mp4a.40.2'
+  string format = 3;
 
   // Audio frame data
   bytes description = 4;

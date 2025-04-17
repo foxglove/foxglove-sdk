@@ -8,15 +8,6 @@ use bytes::Bytes;
 use pyo3::prelude::*;
 use pyo3::types::PyBytes;
 
-/// An enumeration of supported audio formats
-#[pyclass(eq, eq_int, module = "foxglove.schemas")]
-#[derive(PartialEq, Clone)]
-pub(crate) enum AudioFormat {
-    PcmS16 = 0,
-    Opus = 1,
-    Mp4a402 = 2,
-}
-
 /// An enumeration indicating how input points should be interpreted to create lines
 #[pyclass(eq, eq_int, module = "foxglove.schemas")]
 #[derive(PartialEq, Clone)]
@@ -82,11 +73,11 @@ pub(crate) enum LocationFixPositionCovarianceType {
     Known = 3,
 }
 
-/// A single frame of an audio bitstream
+/// A single frame of an audio bit stream
 ///
 /// :param timestamp: Timestamp of audio frame
 /// :param data: Audio frame data
-/// :param format: Audio format
+/// :param format: Audio format. One of 'pcm-s16', 'opus', or 'mp4a.40.2'
 /// :param description: Audio frame data
 /// :param sample_rate: Sample rate in Hz
 /// :param number_of_channels: Number of channels in the audio frame
@@ -98,11 +89,11 @@ pub(crate) struct Audio(pub(crate) foxglove::schemas::Audio);
 #[pymethods]
 impl Audio {
     #[new]
-    #[pyo3(signature = (*, timestamp=None, data=None, format=AudioFormat::PcmS16, description=None, sample_rate=0, number_of_channels=0) )]
+    #[pyo3(signature = (*, timestamp=None, data=None, format="".to_string(), description=None, sample_rate=0, number_of_channels=0) )]
     fn new(
         timestamp: Option<Timestamp>,
         data: Option<Bound<'_, PyBytes>>,
-        format: AudioFormat,
+        format: String,
         description: Option<Bound<'_, PyBytes>>,
         sample_rate: u32,
         number_of_channels: u32,
@@ -112,7 +103,7 @@ impl Audio {
             data: data
                 .map(|x| Bytes::copy_from_slice(x.as_bytes()))
                 .unwrap_or_default(),
-            format: format as i32,
+            format,
             description: description
                 .map(|x| Bytes::copy_from_slice(x.as_bytes()))
                 .unwrap_or_default(),
@@ -1836,7 +1827,6 @@ pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
 
     module.add_class::<Duration>()?;
     module.add_class::<Timestamp>()?;
-    module.add_class::<AudioFormat>()?;
     module.add_class::<LinePrimitiveLineType>()?;
     module.add_class::<LogLevel>()?;
     module.add_class::<SceneEntityDeletionType>()?;

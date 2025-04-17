@@ -11,7 +11,6 @@ from typing import Union
 from foxglove._foxglove_py.schemas import (
     ArrowPrimitive,
     Audio,
-    AudioFormat,
     CameraCalibration,
     CircleAnnotation,
     Color,
@@ -105,7 +104,6 @@ __all__ = [
     "FoxgloveSchema",
     "ArrowPrimitive",
     "Audio",
-    "AudioFormat",
     "CameraCalibration",
     "CircleAnnotation",
     "Color",

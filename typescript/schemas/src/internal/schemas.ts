@@ -1,23 +1,9 @@
 import { FoxgloveEnumSchema, FoxgloveMessageSchema } from "./types";
 
-const AudioFormat: FoxgloveEnumSchema = {
-  type: "enum",
-  name: "AudioFormat",
-  parentSchemaName: "Audio",
-  protobufEnumName: "AudioFormat",
-  description:
-    "An enumeration of supported audio formats",
-  values: [
-    { value: 0, name: "PCM_S16", description: "Interleaved, signed 16-bit PCM" },
-    { value: 1, name: "OPUS", description: "Opus" },
-    { value: 2, name: "MP4A_40_2", description: "MPEG-4 AAC LC" },
-  ],
-};
-
 const Audio: FoxgloveMessageSchema = {
   type: "message",
   name: "Audio",
-  description: "A single frame of an audio bitstream",
+  description: "A single frame of an audio bit stream",
   fields: [
     {
       name: "timestamp",
@@ -27,12 +13,15 @@ const Audio: FoxgloveMessageSchema = {
     {
       name: "data",
       type: { type: "primitive", name: "bytes" },
-      description: `Audio frame data`,
+      description: `Audio frame data
+For packet-based audio codecs this data must begin and end on packet boundaries (no partial packets).
+For PCM audio formats the samples in the data must be interleaved.
+`,
     },
     {
       name: "format",
-      type: { type: "enum", enum: AudioFormat },
-      description: "Audio format",
+      type: { type: "primitive", name: "string" },
+      description: "Audio format. One of 'pcm-s16', 'opus', or 'mp4a.40.2'",
     },
     {
       name: "description",
@@ -1570,7 +1559,6 @@ export const foxgloveMessageSchemas = {
 };
 
 export const foxgloveEnumSchemas = {
-  AudioFormat,
   LineType,
   LogLevel,
   SceneEntityDeletionType,

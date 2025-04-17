@@ -4,27 +4,18 @@ include "Time.fbs";
 
 namespace foxglove;
 
-/// An enumeration of supported audio formats
-enum AudioFormat : ubyte {
-  /// Interleaved, signed 16-bit PCM
-  PCM_S16 = 0,
-
-  /// Opus
-  OPUS = 1,
-
-  /// MPEG-4 AAC LC
-  MP4A_40_2 = 2,
-}
-/// A single frame of an audio bitstream
+/// A single frame of an audio bit stream
 table Audio {
   /// Timestamp of audio frame
   timestamp:Time (id: 0);
 
   /// Audio frame data
+  /// For packet-based audio codecs this data must begin and end on packet boundaries (no partial packets).
+  /// For PCM audio formats the samples in the data must be interleaved.
   data:[uint8] (id: 1);
 
-  /// Audio format
-  format:AudioFormat (id: 2);
+  /// Audio format. One of 'pcm-s16', 'opus', or 'mp4a.40.2'
+  format:string (id: 2);
 
   /// Audio frame data
   description:[uint8] (id: 3);
