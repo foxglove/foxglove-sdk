@@ -328,6 +328,12 @@ pub enum FoxgloveError {
     /// An unspecified error.
     #[error("{0}")]
     Unspecified(#[source] Box<dyn std::error::Error + Send + Sync + 'static>),
+    /// A value or argument is invalid.
+    #[error("Value or argument is invalid: {0}")]
+    ValueError(String),
+    /// A UTF-8 error.
+    #[error("{0}")]
+    Utf8Error(String),
     /// The sink dropped a message because it is closed.
     #[error("Sink closed")]
     SinkClosed,
@@ -368,6 +374,18 @@ pub enum FoxgloveError {
 
 impl From<convert::RangeError> for FoxgloveError {
     fn from(err: convert::RangeError) -> Self {
-        FoxgloveError::Unspecified(err.into())
+        FoxgloveError::ValueError(err.to_string())
+    }
+}
+
+impl From<std::string::FromUtf8Error> for FoxgloveError {
+    fn from(err: std::string::FromUtf8Error) -> Self {
+        FoxgloveError::Utf8Error(err.to_string())
+    }
+}
+
+impl From<std::str::Utf8Error> for FoxgloveError {
+    fn from(err: std::str::Utf8Error) -> Self {
+        FoxgloveError::Utf8Error(err.to_string())
     }
 }

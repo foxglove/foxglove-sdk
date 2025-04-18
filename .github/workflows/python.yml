@@ -7,9 +7,6 @@ on:
   pull_request:
     branches: ["*"]
 
-env:
-  FOXGLOVE_SDK_LANGUAGE: python
-
 jobs:
   lint:
     runs-on: ubuntu-latest

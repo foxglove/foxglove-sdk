@@ -20,10 +20,6 @@
 #endif
 
 
-typedef struct foxglove_channel foxglove_channel;
-typedef struct foxglove_context foxglove_context;
-
-
 /**
  * Allow clients to advertise channels to send data messages to the server.
  */
@@ -53,22 +49,54 @@ typedef struct foxglove_context foxglove_context;
  */
 #define FOXGLOVE_SERVER_CAPABILITY_SERVICES (1 << 4)
 
-enum FoxgloveMcapCompression
+enum foxglove_error
 #ifdef __cplusplus
   : uint8_t
 #endif // __cplusplus
  {
-  FoxgloveMcapCompression_None,
-  FoxgloveMcapCompression_Zstd,
-  FoxgloveMcapCompression_Lz4,
+  FOXGLOVE_ERROR_OK,
+  FOXGLOVE_ERROR_UNSPECIFIED,
+  FOXGLOVE_ERROR_VALUE_ERROR,
+  FOXGLOVE_ERROR_UTF8_ERROR,
+  FOXGLOVE_ERROR_SINK_CLOSED,
+  FOXGLOVE_ERROR_SCHEMA_REQUIRED,
+  FOXGLOVE_ERROR_MESSAGE_ENCODING_REQUIRED,
+  FOXGLOVE_ERROR_SERVER_ALREADY_STARTED,
+  FOXGLOVE_ERROR_BIND,
+  FOXGLOVE_ERROR_DUPLICATE_CHANNEL,
+  FOXGLOVE_ERROR_DUPLICATE_SERVICE,
+  FOXGLOVE_ERROR_MISSING_REQUEST_ENCODING,
+  FOXGLOVE_ERROR_SERVICES_NOT_SUPPORTED,
+  FOXGLOVE_ERROR_CONNECTION_GRAPH_NOT_SUPPORTED,
+  FOXGLOVE_ERROR_IO_ERROR,
+  FOXGLOVE_ERROR_MCAP_ERROR,
 };
 #ifndef __cplusplus
-typedef uint8_t FoxgloveMcapCompression;
+typedef uint8_t foxglove_error;
 #endif // __cplusplus
+
+enum foxglove_mcap_compression
+#ifdef __cplusplus
+  : uint8_t
+#endif // __cplusplus
+ {
+  FOXGLOVE_MCAP_COMPRESSION_NONE,
+  FOXGLOVE_MCAP_COMPRESSION_ZSTD,
+  FOXGLOVE_MCAP_COMPRESSION_LZ4,
+};
+#ifndef __cplusplus
+typedef uint8_t foxglove_mcap_compression;
+#endif // __cplusplus
+
+typedef struct foxglove_channel foxglove_channel;
 
 typedef struct foxglove_mcap_writer foxglove_mcap_writer;
 
 typedef struct foxglove_websocket_server foxglove_websocket_server;
+
+typedef struct foxglove_context {
+  Context _0;
+} foxglove_context;
 
 typedef struct foxglove_client_channel {
   uint32_t id;
@@ -106,7 +134,7 @@ typedef struct foxglove_server_options {
    * `context` can be null, or a valid pointer to a context created via `foxglove_context_new` or
    * `foxglove_context_get_default`. If it's null, the server will be created with the default context.
    */
-  const foxglove_context *context;
+  const struct foxglove_context *context;
   const char *host;
   uint16_t port;
   const struct foxglove_server_callbacks *callbacks;
@@ -121,11 +149,10 @@ typedef struct foxglove_mcap_options {
    * `context` can be null, or a valid pointer to a context created via `foxglove_context_new` or
    * `foxglove_context_get_default`. If it's null, the mcap file will be created with the default context.
    */
-  const foxglove_context *context;
+  const struct foxglove_context *context;
   size_t path_len;
-  bool create;
   bool truncate;
-  FoxgloveMcapCompression compression;
+  foxglove_mcap_compression compression;
   const char *profile;
   size_t profile_len;
   /**
@@ -156,58 +183,55 @@ extern "C" {
 #endif // __cplusplus
 
 /**
- * Create and start a server. The server must later be freed with `foxglove_server_free`.
+ * Create and start a server.
+ * Resources must later be freed by calling `foxglove_server_stop`.
  *
  * `port` may be 0, in which case an available port will be automatically selected.
+ *
+ * Returns 0 on success, or returns a FoxgloveError code on error.
  *
  * # Safety
  * `name` and `host` must be null-terminated strings with valid UTF8.
  */
-struct foxglove_websocket_server *foxglove_server_start(const struct foxglove_server_options *FOXGLOVE_NONNULL options);
-
-/**
- * Create or open an MCAP file for writing. Must later be freed with `foxglove_mcap_free`.
- *
- * # Safety
- * `path`, `profile`, and `library` must be valid UTF8.
- */
-struct foxglove_mcap_writer *foxglove_mcap_open(const struct foxglove_mcap_options *FOXGLOVE_NONNULL options);
-
-/**
- * Close an MCAP file writer created via `foxglove_mcap_open`.
- *
- * # Safety
- * `writer` must be a valid pointer to a `FoxgloveMcapWriter` created via `foxglove_mcap_open`.
- */
-void foxglove_mcap_close(struct foxglove_mcap_writer *writer);
-
-/**
- * Free an MCAP file writer created via `foxglove_mcap_open`.
- *
- * # Safety
- * `writer` must be a valid pointer to a `FoxgloveMcapWriter` created via `foxglove_mcap_open`.
- */
-void foxglove_mcap_free(struct foxglove_mcap_writer *writer);
-
-/**
- * Free a server created via `foxglove_server_start`.
- *
- * If the server has not already been stopped, it will be stopped automatically.
- */
-void foxglove_server_free(struct foxglove_websocket_server *server);
+foxglove_error foxglove_server_start(const struct foxglove_server_options *FOXGLOVE_NONNULL options,
+                                     struct foxglove_websocket_server **server);
 
 /**
  * Get the port on which the server is listening.
  */
-uint16_t foxglove_server_get_port(const struct foxglove_websocket_server *server);
+uint16_t foxglove_server_get_port(struct foxglove_websocket_server *server);
 
 /**
- * Stop and shut down a server.
+ * Stop and shut down `server` and free the resources associated with it.
  */
-void foxglove_server_stop(struct foxglove_websocket_server *server);
+foxglove_error foxglove_server_stop(struct foxglove_websocket_server *server);
+
+/**
+ * Create or open an MCAP file for writing.
+ * Resources must later be freed with `foxglove_mcap_close`.
+ *
+ * Returns 0 on success, or returns a FoxgloveError code on error.
+ *
+ * # Safety
+ * `path` and `profile` must be valid UTF8.
+ */
+foxglove_error foxglove_mcap_open(const struct foxglove_mcap_options *FOXGLOVE_NONNULL options,
+                                  struct foxglove_mcap_writer **writer);
+
+/**
+ * Close an MCAP file writer created via `foxglove_mcap_open`.
+ *
+ * Returns 0 on success, or returns a FoxgloveError code on error.
+ *
+ * # Safety
+ * `writer` must be a valid pointer to a `FoxgloveMcapWriter` created via `foxglove_mcap_open`.
+ */
+foxglove_error foxglove_mcap_close(struct foxglove_mcap_writer *writer);
 
 /**
  * Create a new channel. The channel must later be freed with `foxglove_channel_free`.
+ *
+ * Returns 0 on success, or returns a FoxgloveError code on error.
  *
  * # Safety
  * `topic` and `message_encoding` must be null-terminated strings with valid UTF8.
@@ -216,17 +240,29 @@ void foxglove_server_stop(struct foxglove_websocket_server *server);
  * `context` can be null, or a valid pointer to a context created via `foxglove_context_new` or
  * `foxglove_context_get_default`. If it's null, the channel will be created in the default context.
  */
-foxglove_channel *foxglove_channel_create(const char *topic,
-                                          const char *message_encoding,
-                                          const struct foxglove_schema *schema,
-                                          const foxglove_context *context);
+foxglove_error foxglove_channel_create(const char *topic,
+                                       const char *message_encoding,
+                                       const struct foxglove_schema *schema,
+                                       const struct foxglove_context *context,
+                                       const struct foxglove_channel **channel);
 
 /**
  * Free a channel created via `foxglove_channel_create`.
+ * # Safety
+ * `channel` must be a valid pointer to a `FoxgloveChannel` created via `foxglove_channel_create`.
+ * If channel is null, this does nothing.
  */
-void foxglove_channel_free(foxglove_channel *channel);
+void foxglove_channel_free(const struct foxglove_channel *channel);
 
-uint64_t foxglove_channel_get_id(const foxglove_channel *channel);
+/**
+ * Get the ID of a channel.
+ *
+ * # Safety
+ * `channel` must be a valid pointer to a `FoxgloveChannel` created via `foxglove_channel_create`.
+ *
+ * If the passed channel is null, an invalid id of 0 is returned.
+ */
+uint64_t foxglove_channel_get_id(const struct foxglove_channel *channel);
 
 /**
  * Log a message on a channel.
@@ -237,22 +273,22 @@ uint64_t foxglove_channel_get_id(const foxglove_channel *channel);
  *
  * `log_time` may be null or may point to a valid value.
  */
-void foxglove_channel_log(const foxglove_channel *channel,
-                          const uint8_t *data,
-                          size_t data_len,
-                          const uint64_t *log_time);
+foxglove_error foxglove_channel_log(const struct foxglove_channel *channel,
+                                    const uint8_t *data,
+                                    size_t data_len,
+                                    const uint64_t *log_time);
 
 /**
  * Create a new context. This never fails.
  * You must pass this to `foxglove_context_free` when done with it.
  */
-const foxglove_context *foxglove_context_new(void);
+const struct foxglove_context *foxglove_context_new(void);
 
 /**
  * Get the default context. This never fails.
  * You must pass this to `foxglove_context_free` when done with it.
  */
-const foxglove_context *foxglove_context_get_default(void);
+const struct foxglove_context *foxglove_context_get_default(void);
 
 /**
  * Free a context created via `foxglove_context_new` or `foxglove_context_free`.
@@ -261,12 +297,17 @@ const foxglove_context *foxglove_context_get_default(void);
  * `context` must be a valid pointer to a context created via `foxglove_context_new` or
  * `foxglove_context_get_default`.
  */
-void foxglove_context_free(const foxglove_context *context);
+void foxglove_context_free(const struct foxglove_context *context);
 
 /**
  * For use by the C++ SDK. Identifies that wrapper as the source of logs.
  */
 void foxglove_internal_register_cpp_wrapper(void);
+
+/**
+ * Convert a `FoxgloveError` code to a C string.
+ */
+const char *foxglove_error_to_cstr(foxglove_error error);
 
 #ifdef __cplusplus
 }  // extern "C"

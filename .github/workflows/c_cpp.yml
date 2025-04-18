@@ -5,6 +5,15 @@ on:
     branches: [main]
     tags: ["**"]
   pull_request: {}
+  workflow_call:
+    inputs:
+      sdk-version:
+        required: true
+        type: string
+    outputs:
+      artifact_pattern:
+        description: "pattern to match all uploaded artifact names"
+        value: ${{ jobs.build.outputs.artifact_pattern }}
 
 jobs:
   lint:
@@ -99,6 +108,9 @@ jobs:
     env:
       CARGO_BUILD_TARGET: ${{ matrix.target }}
 
+    outputs:
+      artifact_pattern: "*.zip"
+
     steps:
       - uses: actions/checkout@v4
       - uses: actions-rust-lang/setup-rust-toolchain@v1
@@ -123,17 +135,40 @@ jobs:
         run: make test
         working-directory: cpp
 
-      - name: Upload static library to artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.staticlib_artifact_name }}
-          path: target/${{ matrix.target }}/release/${{ matrix.staticlib_name }}
+      - name: Organize artifacts for zip
+        shell: bash
+        run: |
+          mkdir -p artifacts/foxglove/lib
+          mkdir -p artifacts/foxglove/include
+          mkdir -p artifacts/foxglove/src
+          mv target/${{ matrix.target }}/release/${{ matrix.staticlib_name }} artifacts/foxglove/lib/
+          mv target/${{ matrix.target }}/release/${{ matrix.cdylib_name }} artifacts/foxglove/lib/
+          cp -R c/include/foxglove-c artifacts/foxglove/include/
+          cp -R cpp/foxglove/include/foxglove artifacts/foxglove/include/
+          cp -R cpp/foxglove/src/* artifacts/foxglove/src/
 
-      - name: Upload shared library to artifacts
+      - name: Zip libraries for artifact
+        if: runner.os != 'Windows'
+        working-directory: artifacts
+        run: |
+          zip -r \
+            foxglove-${{inputs.sdk-version || github.sha}}-cpp-${{ matrix.target }}.zip \
+            foxglove/
+
+      - name: Zip libraries for artifact (Windows)
+        if: runner.os == 'Windows'
+        working-directory: artifacts
+        run: |
+          7z a -tzip -sse `
+            foxglove-${{inputs.sdk-version || github.sha}}-cpp-${{ matrix.target }}.zip `
+            foxglove/
+
+      - name: Upload static & shared library to artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.cdylib_artifact_name }}
-          path: target/${{ matrix.target }}/release/${{ matrix.cdylib_name }}
+          name: foxglove-${{inputs.sdk-version || github.sha}}-cpp-${{ matrix.target }}.zip
+          path: artifacts/foxglove-${{inputs.sdk-version || github.sha}}-cpp-${{ matrix.target }}.zip
+          if-no-files-found: error
 
   test-asan-ubsan:
     runs-on: ubuntu-latest

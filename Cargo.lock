@@ -678,7 +678,7 @@ checksum = "3f9eec918d3f24069decb9af1554cad7c880e2da24a9afd88aca000531ab82c1"
 
 [[package]]
 name = "foxglove"
-version = "0.5.0"
+version = "0.6.1"
 dependencies = [
  "arc-swap",
  "assert_matches",
@@ -718,16 +718,18 @@ name = "foxglove-proto-gen"
 version = "0.0.0"
 dependencies = [
  "anyhow",
+ "itertools 0.14.0",
  "prost",
  "prost-build",
  "prost-types",
+ "regex",
  "tempfile",
  "walkdir",
 ]
 
 [[package]]
 name = "foxglove-sdk-python"
-version = "0.5.0"
+version = "0.6.1"
 dependencies = [
  "bytes",
  "env_logger",
@@ -746,12 +748,13 @@ dependencies = [
 
 [[package]]
 name = "foxglove_c"
-version = "0.5.0"
+version = "0.6.1"
 dependencies = [
  "bitflags",
  "cbindgen",
  "foxglove",
  "mcap 0.15.1",
+ "tracing",
 ]
 
 [[package]]
@@ -1019,6 +1022,15 @@ name = "itertools"
 version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "413ee7dfc52ee1a4949ceeb7dbc8a33f2d6c088194d9f922fb8318faf1f01186"
+dependencies = [
+ "either",
+]
+
+[[package]]
+name = "itertools"
+version = "0.14.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2b192c782037fadd9cfa75548310488aabdbf3d2da73885b31bd0abd03351285"
 dependencies = [
  "either",
 ]
@@ -1426,7 +1438,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d0f3e5beed80eb580c68e2c600937ac2c4eedabdfd5ef1e5b7ea4f3fba84497b"
 dependencies = [
  "heck 0.5.0",
- "itertools",
+ "itertools 0.13.0",
  "log",
  "multimap",
  "once_cell",
@@ -1446,7 +1458,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "157c5a9d7ea5c2ed2d9fb8f495b64759f7816c7eaea54ba3978f0d63000162e3"
 dependencies = [
  "anyhow",
- "itertools",
+ "itertools 0.13.0",
  "proc-macro2",
  "quote",
  "syn 2.0.96",

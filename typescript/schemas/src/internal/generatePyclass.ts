@@ -567,6 +567,21 @@ impl ${channelClass} {
         Ok(Self(base))
     }
 
+    /// The unique ID of the channel.
+    fn id(&self) -> u64 {
+        self.0.id().into()
+    }
+
+    /// The topic name of the channel.
+    fn topic(&self) -> &str {
+        self.0.topic()
+    }
+
+    /// The name of the schema for the channel.
+    fn schema_name(&self) -> Option<&str> {
+        Some(self.0.schema()?.name.as_str())
+    }
+
     /// Close the channel.
     ///
     /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
@@ -594,7 +609,7 @@ impl ${channelClass} {
     }
 
     fn __repr__(&self) -> String {
-        format!("${channelClass}(topic='{}')", self.0.topic()).to_string()
+        format!("${channelClass}(id={}, topic='{}')", self.id(), self.topic()).to_string()
     }
 }
 `;
@@ -628,13 +643,26 @@ export function generatePyChannelStub(messageSchemas: FoxgloveMessageSchema[]): 
         `        cls,`,
         `        topic: str,`,
         `    ) -> "${channelClass}": ...\n`,
-        `    def close(self) -> None: ...`,
+        `    def id(self) -> int:`,
+        `        """The unique ID of the channel."""`,
+        `        ...`,
+        `    def topic(self) -> str:`,
+        `        """The topic name of the channel."""`,
+        `        ...`,
+        `    def schema_name(self) -> str | None:`,
+        `        """The name of the schema for the channel."""`,
+        `        ...`,
+        `    def close(self) -> None:`,
+        `        """Close the channel."""`,
+        `        ...`,
         `    def log(`,
         `        self,`,
         `        message: "${schemaClass}",`,
         `        *,`,
         `        log_time: int | None = None,`,
-        `    ) -> None: ...\n`,
+        `    ) -> None:`,
+        `        """Log a Foxglove ${schemaClass} message on the channel."""`,
+        `        ...`,
       ].join("\n"),
     };
   });

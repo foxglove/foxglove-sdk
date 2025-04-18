@@ -21,18 +21,16 @@ after_includes = """
 #ifndef FOXGLOVE_NONNULL
 #define FOXGLOVE_NONNULL
 #endif
-
-
-typedef struct foxglove_channel foxglove_channel;
-typedef struct foxglove_context foxglove_context;
 """
 
 [ptr]
 non_null_attribute = "FOXGLOVE_NONNULL"
 
 [enum]
-prefix_with_name = true
+rename_variants = "QUALIFIED_SCREAMING_SNAKE_CASE"
+enum_class = true
 
+prefix_with_name = false
 [export.rename]
 FoxgloveWebSocketServer = "foxglove_websocket_server"
 FoxgloveChannel = "foxglove_channel"
@@ -40,7 +38,9 @@ FoxgloveSchema = "foxglove_schema"
 FoxgloveServerCallbacks = "foxglove_server_callbacks"
 FoxgloveServerOptions = "foxglove_server_options"
 FoxgloveMcapOptions = "foxglove_mcap_options"
+FoxgloveMcapCompression = "foxglove_mcap_compression"
 FoxgloveMcapWriter = "foxglove_mcap_writer"
 FoxgloveServerCapability = "foxglove_server_capability"
 FoxgloveClientChannel = "foxglove_client_channel"
 FoxgloveContext = "foxglove_context"
+FoxgloveError = "foxglove_error"

@@ -135,6 +135,18 @@ impl BaseChannel {
         Ok(())
     }
 
+    fn id(&self) -> u64 {
+        self.0.id().into()
+    }
+
+    fn topic(&self) -> &str {
+        self.0.topic()
+    }
+
+    fn schema_name(&self) -> Option<&str> {
+        Some(self.0.schema()?.name.as_str())
+    }
+
     fn close(&mut self) {
         self.0.close();
     }
@@ -200,6 +212,7 @@ fn shutdown(py: Python<'_>) {
 /// Rust bindings are exported as `_foxglove_py` and should not be imported directly.
 #[pymodule]
 fn _foxglove_py(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    foxglove::library_version::set_sdk_language("python");
     pyo3_log::init();
     m.add_function(wrap_pyfunction!(enable_logging, m)?)?;
     m.add_function(wrap_pyfunction!(disable_logging, m)?)?;

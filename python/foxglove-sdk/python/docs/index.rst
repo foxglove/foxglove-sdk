@@ -14,14 +14,6 @@ events to local `MCAP <https://mcap.dev/>`_ files or a local visualization serve
 with the Foxglove app.
 
 
-Unstable
---------
-
-This package is currently under active development and not recommended for production use. See
-`foxglove-websocket <https://github.com/foxglove/ws-protocol/tree/main/python>`_ for the currently
-recommended approach.
-
-
 Overview
 --------
 

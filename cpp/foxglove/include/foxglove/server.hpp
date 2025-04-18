@@ -1,11 +1,14 @@
 #pragma once
 
+#include <foxglove/error.hpp>
+
 #include <cstdint>
 #include <functional>
 #include <memory>
 #include <optional>
 #include <string>
 
+enum foxglove_error : uint8_t;
 struct foxglove_websocket_server;
 
 namespace foxglove {
@@ -64,33 +67,31 @@ struct WebSocketServerCallbacks {
 struct WebSocketServerOptions {
   friend class WebSocketServer;
 
+  Context context;
   std::string name;
   std::string host = "127.0.0.1";
   uint16_t port = 0;
   WebSocketServerCallbacks callbacks;
   WebSocketServerCapabilities capabilities = WebSocketServerCapabilities(0);
   std::vector<std::string> supportedEncodings;
-
-  WebSocketServerOptions() = default;
-  explicit WebSocketServerOptions(const Context& context);
-
-private:
-  // TODO start here, make this a unique_ptr?
-  const ContextInner* context = nullptr;
 };
 
 class WebSocketServer final {
 public:
-  explicit WebSocketServer(WebSocketServerOptions options);
+  static FoxgloveResult<WebSocketServer> create(WebSocketServerOptions&& options);
 
   // Get the port on which the server is listening.
   uint16_t port() const;
 
-  void stop();
+  FoxgloveError stop();
 
 private:
-  WebSocketServerCallbacks _callbacks;
-  std::unique_ptr<foxglove_websocket_server, void (*)(foxglove_websocket_server*)> _impl;
+  WebSocketServer(
+    foxglove_websocket_server* server, std::unique_ptr<WebSocketServerCallbacks> callbacks
+  );
+
+  std::unique_ptr<WebSocketServerCallbacks> _callbacks;
+  std::unique_ptr<foxglove_websocket_server, foxglove_error (*)(foxglove_websocket_server*)> _impl;
 };
 
 }  // namespace foxglove

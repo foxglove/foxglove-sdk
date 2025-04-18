@@ -41,13 +41,30 @@ class CameraCalibrationChannel:
         cls,
         topic: str,
     ) -> "CameraCalibrationChannel": ...
-    def close(self) -> None: ...
+    def id(self) -> int:
+        """The unique ID of the channel."""
+        ...
+
+    def topic(self) -> str:
+        """The topic name of the channel."""
+        ...
+
+    def schema_name(self) -> str | None:
+        """The name of the schema for the channel."""
+        ...
+
+    def close(self) -> None:
+        """Close the channel."""
+        ...
+
     def log(
         self,
         message: "CameraCalibration",
         *,
         log_time: int | None = None,
-    ) -> None: ...
+    ) -> None:
+        """Log a Foxglove CameraCalibration message on the channel."""
+        ...
 
 class CircleAnnotationChannel:
     """
@@ -58,13 +75,30 @@ class CircleAnnotationChannel:
         cls,
         topic: str,
     ) -> "CircleAnnotationChannel": ...
-    def close(self) -> None: ...
+    def id(self) -> int:
+        """The unique ID of the channel."""
+        ...
+
+    def topic(self) -> str:
+        """The topic name of the channel."""
+        ...
+
+    def schema_name(self) -> str | None:
+        """The name of the schema for the channel."""
+        ...
+
+    def close(self) -> None:
+        """Close the channel."""
+        ...
+
     def log(
         self,
         message: "CircleAnnotation",
         *,
         log_time: int | None = None,
-    ) -> None: ...
+    ) -> None:
+        """Log a Foxglove CircleAnnotation message on the channel."""
+        ...
 
 class ColorChannel:
     """
@@ -75,13 +109,30 @@ class ColorChannel:
         cls,
         topic: str,
     ) -> "ColorChannel": ...
-    def close(self) -> None: ...
+    def id(self) -> int:
+        """The unique ID of the channel."""
+        ...
+
+    def topic(self) -> str:
+        """The topic name of the channel."""
+        ...
+
+    def schema_name(self) -> str | None:
+        """The name of the schema for the channel."""
+        ...
+
+    def close(self) -> None:
+        """Close the channel."""
+        ...
+
     def log(
         self,
         message: "Color",
         *,
         log_time: int | None = None,
-    ) -> None: ...
+    ) -> None:
+        """Log a Foxglove Color message on the channel."""
+        ...
 
 class CompressedImageChannel:
     """
@@ -92,13 +143,30 @@ class CompressedImageChannel:
         cls,
         topic: str,
     ) -> "CompressedImageChannel": ...
-    def close(self) -> None: ...
+    def id(self) -> int:
+        """The unique ID of the channel."""
+        ...
+
+    def topic(self) -> str:
+        """The topic name of the channel."""
+        ...
+
+    def schema_name(self) -> str | None:
+        """The name of the schema for the channel."""
+        ...
+
+    def close(self) -> None:
+        """Close the channel."""
+        ...
+
     def log(
         self,
         message: "CompressedImage",
         *,
         log_time: int | None = None,
-    ) -> None: ...
+    ) -> None:
+        """Log a Foxglove CompressedImage message on the channel."""
+        ...
 
 class CompressedVideoChannel:
     """
@@ -109,13 +177,30 @@ class CompressedVideoChannel:
         cls,
         topic: str,
     ) -> "CompressedVideoChannel": ...
-    def close(self) -> None: ...
+    def id(self) -> int:
+        """The unique ID of the channel."""
+        ...
+
+    def topic(self) -> str:
+        """The topic name of the channel."""
+        ...
+
+    def schema_name(self) -> str | None:
+        """The name of the schema for the channel."""
+        ...
+
+    def close(self) -> None:
+        """Close the channel."""
+        ...
+
     def log(
         self,
         message: "CompressedVideo",
         *,
         log_time: int | None = None,
-    ) -> None: ...
+    ) -> None:
+        """Log a Foxglove CompressedVideo message on the channel."""
+        ...
 
 class FrameTransformChannel:
     """
@@ -126,13 +211,30 @@ class FrameTransformChannel:
         cls,
         topic: str,
     ) -> "FrameTransformChannel": ...
-    def close(self) -> None: ...
+    def id(self) -> int:
+        """The unique ID of the channel."""
+        ...
+
+    def topic(self) -> str:
+        """The topic name of the channel."""
+        ...
+
+    def schema_name(self) -> str | None:
+        """The name of the schema for the channel."""
+        ...
+
+    def close(self) -> None:
+        """Close the channel."""
+        ...
+
     def log(
         self,
         message: "FrameTransform",
         *,
         log_time: int | None = None,
-    ) -> None: ...
+    ) -> None:
+        """Log a Foxglove FrameTransform message on the channel."""
+        ...
 
 class FrameTransformsChannel:
     """
@@ -143,13 +245,30 @@ class FrameTransformsChannel:
         cls,
         topic: str,
     ) -> "FrameTransformsChannel": ...
-    def close(self) -> None: ...
+    def id(self) -> int:
+        """The unique ID of the channel."""
+        ...
+
+    def topic(self) -> str:
+        """The topic name of the channel."""
+        ...
+
+    def schema_name(self) -> str | None:
+        """The name of the schema for the channel."""
+        ...
+
+    def close(self) -> None:
+        """Close the channel."""
+        ...
+
     def log(
         self,
         message: "FrameTransforms",
         *,
         log_time: int | None = None,
-    ) -> None: ...
+    ) -> None:
+        """Log a Foxglove FrameTransforms message on the channel."""
+        ...
 
 class GeoJsonChannel:
     """
@@ -160,13 +279,30 @@ class GeoJsonChannel:
         cls,
         topic: str,
     ) -> "GeoJsonChannel": ...
-    def close(self) -> None: ...
+    def id(self) -> int:
+        """The unique ID of the channel."""
+        ...
+
+    def topic(self) -> str:
+        """The topic name of the channel."""
+        ...
+
+    def schema_name(self) -> str | None:
+        """The name of the schema for the channel."""
+        ...
+
+    def close(self) -> None:
+        """Close the channel."""
+        ...
+
     def log(
         self,
         message: "GeoJson",
         *,
         log_time: int | None = None,
-    ) -> None: ...
+    ) -> None:
+        """Log a Foxglove GeoJson message on the channel."""
+        ...
 
 class GridChannel:
     """
@@ -177,13 +313,30 @@ class GridChannel:
         cls,
         topic: str,
     ) -> "GridChannel": ...
-    def close(self) -> None: ...
+    def id(self) -> int:
+        """The unique ID of the channel."""
+        ...
+
+    def topic(self) -> str:
+        """The topic name of the channel."""
+        ...
+
+    def schema_name(self) -> str | None:
+        """The name of the schema for the channel."""
+        ...
+
+    def close(self) -> None:
+        """Close the channel."""
+        ...
+
     def log(
         self,
         message: "Grid",
         *,
         log_time: int | None = None,
-    ) -> None: ...
+    ) -> None:
+        """Log a Foxglove Grid message on the channel."""
+        ...
 
 class ImageAnnotationsChannel:
     """
@@ -194,13 +347,30 @@ class ImageAnnotationsChannel:
         cls,
         topic: str,
     ) -> "ImageAnnotationsChannel": ...
-    def close(self) -> None: ...
+    def id(self) -> int:
+        """The unique ID of the channel."""
+        ...
+
+    def topic(self) -> str:
+        """The topic name of the channel."""
+        ...
+
+    def schema_name(self) -> str | None:
+        """The name of the schema for the channel."""
+        ...
+
+    def close(self) -> None:
+        """Close the channel."""
+        ...
+
     def log(
         self,
         message: "ImageAnnotations",
         *,
         log_time: int | None = None,
-    ) -> None: ...
+    ) -> None:
+        """Log a Foxglove ImageAnnotations message on the channel."""
+        ...
 
 class KeyValuePairChannel:
     """
@@ -211,13 +381,30 @@ class KeyValuePairChannel:
         cls,
         topic: str,
     ) -> "KeyValuePairChannel": ...
-    def close(self) -> None: ...
+    def id(self) -> int:
+        """The unique ID of the channel."""
+        ...
+
+    def topic(self) -> str:
+        """The topic name of the channel."""
+        ...
+
+    def schema_name(self) -> str | None:
+        """The name of the schema for the channel."""
+        ...
+
+    def close(self) -> None:
+        """Close the channel."""
+        ...
+
     def log(
         self,
         message: "KeyValuePair",
         *,
         log_time: int | None = None,
-    ) -> None: ...
+    ) -> None:
+        """Log a Foxglove KeyValuePair message on the channel."""
+        ...
 
 class LaserScanChannel:
     """
@@ -228,13 +415,30 @@ class LaserScanChannel:
         cls,
         topic: str,
     ) -> "LaserScanChannel": ...
-    def close(self) -> None: ...
+    def id(self) -> int:
+        """The unique ID of the channel."""
+        ...
+
+    def topic(self) -> str:
+        """The topic name of the channel."""
+        ...
+
+    def schema_name(self) -> str | None:
+        """The name of the schema for the channel."""
+        ...
+
+    def close(self) -> None:
+        """Close the channel."""
+        ...
+
     def log(
         self,
         message: "LaserScan",
         *,
         log_time: int | None = None,
-    ) -> None: ...
+    ) -> None:
+        """Log a Foxglove LaserScan message on the channel."""
+        ...
 
 class LocationFixChannel:
     """
@@ -245,13 +449,30 @@ class LocationFixChannel:
         cls,
         topic: str,
     ) -> "LocationFixChannel": ...
-    def close(self) -> None: ...
+    def id(self) -> int:
+        """The unique ID of the channel."""
+        ...
+
+    def topic(self) -> str:
+        """The topic name of the channel."""
+        ...
+
+    def schema_name(self) -> str | None:
+        """The name of the schema for the channel."""
+        ...
+
+    def close(self) -> None:
+        """Close the channel."""
+        ...
+
     def log(
         self,
         message: "LocationFix",
         *,
         log_time: int | None = None,
-    ) -> None: ...
+    ) -> None:
+        """Log a Foxglove LocationFix message on the channel."""
+        ...
 
 class LogChannel:
     """
@@ -262,13 +483,30 @@ class LogChannel:
         cls,
         topic: str,
     ) -> "LogChannel": ...
-    def close(self) -> None: ...
+    def id(self) -> int:
+        """The unique ID of the channel."""
+        ...
+
+    def topic(self) -> str:
+        """The topic name of the channel."""
+        ...
+
+    def schema_name(self) -> str | None:
+        """The name of the schema for the channel."""
+        ...
+
+    def close(self) -> None:
+        """Close the channel."""
+        ...
+
     def log(
         self,
         message: "Log",
         *,
         log_time: int | None = None,
-    ) -> None: ...
+    ) -> None:
+        """Log a Foxglove Log message on the channel."""
+        ...
 
 class PackedElementFieldChannel:
     """
@@ -279,13 +517,30 @@ class PackedElementFieldChannel:
         cls,
         topic: str,
     ) -> "PackedElementFieldChannel": ...
-    def close(self) -> None: ...
+    def id(self) -> int:
+        """The unique ID of the channel."""
+        ...
+
+    def topic(self) -> str:
+        """The topic name of the channel."""
+        ...
+
+    def schema_name(self) -> str | None:
+        """The name of the schema for the channel."""
+        ...
+
+    def close(self) -> None:
+        """Close the channel."""
+        ...
+
     def log(
         self,
         message: "PackedElementField",
         *,
         log_time: int | None = None,
-    ) -> None: ...
+    ) -> None:
+        """Log a Foxglove PackedElementField message on the channel."""
+        ...
 
 class Point2Channel:
     """
@@ -296,13 +551,30 @@ class Point2Channel:
         cls,
         topic: str,
     ) -> "Point2Channel": ...
-    def close(self) -> None: ...
+    def id(self) -> int:
+        """The unique ID of the channel."""
+        ...
+
+    def topic(self) -> str:
+        """The topic name of the channel."""
+        ...
+
+    def schema_name(self) -> str | None:
+        """The name of the schema for the channel."""
+        ...
+
+    def close(self) -> None:
+        """Close the channel."""
+        ...
+
     def log(
         self,
         message: "Point2",
         *,
         log_time: int | None = None,
-    ) -> None: ...
+    ) -> None:
+        """Log a Foxglove Point2 message on the channel."""
+        ...
 
 class Point3Channel:
     """
@@ -313,13 +585,30 @@ class Point3Channel:
         cls,
         topic: str,
     ) -> "Point3Channel": ...
-    def close(self) -> None: ...
+    def id(self) -> int:
+        """The unique ID of the channel."""
+        ...
+
+    def topic(self) -> str:
+        """The topic name of the channel."""
+        ...
+
+    def schema_name(self) -> str | None:
+        """The name of the schema for the channel."""
+        ...
+
+    def close(self) -> None:
+        """Close the channel."""
+        ...
+
     def log(
         self,
         message: "Point3",
         *,
         log_time: int | None = None,
-    ) -> None: ...
+    ) -> None:
+        """Log a Foxglove Point3 message on the channel."""
+        ...
 
 class PointCloudChannel:
     """
@@ -330,13 +619,30 @@ class PointCloudChannel:
         cls,
         topic: str,
     ) -> "PointCloudChannel": ...
-    def close(self) -> None: ...
+    def id(self) -> int:
+        """The unique ID of the channel."""
+        ...
+
+    def topic(self) -> str:
+        """The topic name of the channel."""
+        ...
+
+    def schema_name(self) -> str | None:
+        """The name of the schema for the channel."""
+        ...
+
+    def close(self) -> None:
+        """Close the channel."""
+        ...
+
     def log(
         self,
         message: "PointCloud",
         *,
         log_time: int | None = None,
-    ) -> None: ...
+    ) -> None:
+        """Log a Foxglove PointCloud message on the channel."""
+        ...
 
 class PointsAnnotationChannel:
     """
@@ -347,13 +653,30 @@ class PointsAnnotationChannel:
         cls,
         topic: str,
     ) -> "PointsAnnotationChannel": ...
-    def close(self) -> None: ...
+    def id(self) -> int:
+        """The unique ID of the channel."""
+        ...
+
+    def topic(self) -> str:
+        """The topic name of the channel."""
+        ...
+
+    def schema_name(self) -> str | None:
+        """The name of the schema for the channel."""
+        ...
+
+    def close(self) -> None:
+        """Close the channel."""
+        ...
+
     def log(
         self,
         message: "PointsAnnotation",
         *,
         log_time: int | None = None,
-    ) -> None: ...
+    ) -> None:
+        """Log a Foxglove PointsAnnotation message on the channel."""
+        ...
 
 class PoseChannel:
     """
@@ -364,13 +687,30 @@ class PoseChannel:
         cls,
         topic: str,
     ) -> "PoseChannel": ...
-    def close(self) -> None: ...
+    def id(self) -> int:
+        """The unique ID of the channel."""
+        ...
+
+    def topic(self) -> str:
+        """The topic name of the channel."""
+        ...
+
+    def schema_name(self) -> str | None:
+        """The name of the schema for the channel."""
+        ...
+
+    def close(self) -> None:
+        """Close the channel."""
+        ...
+
     def log(
         self,
         message: "Pose",
         *,
         log_time: int | None = None,
-    ) -> None: ...
+    ) -> None:
+        """Log a Foxglove Pose message on the channel."""
+        ...
 
 class PoseInFrameChannel:
     """
@@ -381,13 +721,30 @@ class PoseInFrameChannel:
         cls,
         topic: str,
     ) -> "PoseInFrameChannel": ...
-    def close(self) -> None: ...
+    def id(self) -> int:
+        """The unique ID of the channel."""
+        ...
+
+    def topic(self) -> str:
+        """The topic name of the channel."""
+        ...
+
+    def schema_name(self) -> str | None:
+        """The name of the schema for the channel."""
+        ...
+
+    def close(self) -> None:
+        """Close the channel."""
+        ...
+
     def log(
         self,
         message: "PoseInFrame",
         *,
         log_time: int | None = None,
-    ) -> None: ...
+    ) -> None:
+        """Log a Foxglove PoseInFrame message on the channel."""
+        ...
 
 class PosesInFrameChannel:
     """
@@ -398,13 +755,30 @@ class PosesInFrameChannel:
         cls,
         topic: str,
     ) -> "PosesInFrameChannel": ...
-    def close(self) -> None: ...
+    def id(self) -> int:
+        """The unique ID of the channel."""
+        ...
+
+    def topic(self) -> str:
+        """The topic name of the channel."""
+        ...
+
+    def schema_name(self) -> str | None:
+        """The name of the schema for the channel."""
+        ...
+
+    def close(self) -> None:
+        """Close the channel."""
+        ...
+
     def log(
         self,
         message: "PosesInFrame",
         *,
         log_time: int | None = None,
-    ) -> None: ...
+    ) -> None:
+        """Log a Foxglove PosesInFrame message on the channel."""
+        ...
 
 class QuaternionChannel:
     """
@@ -415,13 +789,30 @@ class QuaternionChannel:
         cls,
         topic: str,
     ) -> "QuaternionChannel": ...
-    def close(self) -> None: ...
+    def id(self) -> int:
+        """The unique ID of the channel."""
+        ...
+
+    def topic(self) -> str:
+        """The topic name of the channel."""
+        ...
+
+    def schema_name(self) -> str | None:
+        """The name of the schema for the channel."""
+        ...
+
+    def close(self) -> None:
+        """Close the channel."""
+        ...
+
     def log(
         self,
         message: "Quaternion",
         *,
         log_time: int | None = None,
-    ) -> None: ...
+    ) -> None:
+        """Log a Foxglove Quaternion message on the channel."""
+        ...
 
 class RawImageChannel:
     """
@@ -432,13 +823,30 @@ class RawImageChannel:
         cls,
         topic: str,
     ) -> "RawImageChannel": ...
-    def close(self) -> None: ...
+    def id(self) -> int:
+        """The unique ID of the channel."""
+        ...
+
+    def topic(self) -> str:
+        """The topic name of the channel."""
+        ...
+
+    def schema_name(self) -> str | None:
+        """The name of the schema for the channel."""
+        ...
+
+    def close(self) -> None:
+        """Close the channel."""
+        ...
+
     def log(
         self,
         message: "RawImage",
         *,
         log_time: int | None = None,
-    ) -> None: ...
+    ) -> None:
+        """Log a Foxglove RawImage message on the channel."""
+        ...
 
 class SceneEntityChannel:
     """
@@ -449,13 +857,30 @@ class SceneEntityChannel:
         cls,
         topic: str,
     ) -> "SceneEntityChannel": ...
-    def close(self) -> None: ...
+    def id(self) -> int:
+        """The unique ID of the channel."""
+        ...
+
+    def topic(self) -> str:
+        """The topic name of the channel."""
+        ...
+
+    def schema_name(self) -> str | None:
+        """The name of the schema for the channel."""
+        ...
+
+    def close(self) -> None:
+        """Close the channel."""
+        ...
+
     def log(
         self,
         message: "SceneEntity",
         *,
         log_time: int | None = None,
-    ) -> None: ...
+    ) -> None:
+        """Log a Foxglove SceneEntity message on the channel."""
+        ...
 
 class SceneEntityDeletionChannel:
     """
@@ -466,13 +891,30 @@ class SceneEntityDeletionChannel:
         cls,
         topic: str,
     ) -> "SceneEntityDeletionChannel": ...
-    def close(self) -> None: ...
+    def id(self) -> int:
+        """The unique ID of the channel."""
+        ...
+
+    def topic(self) -> str:
+        """The topic name of the channel."""
+        ...
+
+    def schema_name(self) -> str | None:
+        """The name of the schema for the channel."""
+        ...
+
+    def close(self) -> None:
+        """Close the channel."""
+        ...
+
     def log(
         self,
         message: "SceneEntityDeletion",
         *,
         log_time: int | None = None,
-    ) -> None: ...
+    ) -> None:
+        """Log a Foxglove SceneEntityDeletion message on the channel."""
+        ...
 
 class SceneUpdateChannel:
     """
@@ -483,13 +925,30 @@ class SceneUpdateChannel:
         cls,
         topic: str,
     ) -> "SceneUpdateChannel": ...
-    def close(self) -> None: ...
+    def id(self) -> int:
+        """The unique ID of the channel."""
+        ...
+
+    def topic(self) -> str:
+        """The topic name of the channel."""
+        ...
+
+    def schema_name(self) -> str | None:
+        """The name of the schema for the channel."""
+        ...
+
+    def close(self) -> None:
+        """Close the channel."""
+        ...
+
     def log(
         self,
         message: "SceneUpdate",
         *,
         log_time: int | None = None,
-    ) -> None: ...
+    ) -> None:
+        """Log a Foxglove SceneUpdate message on the channel."""
+        ...
 
 class TextAnnotationChannel:
     """
@@ -500,13 +959,30 @@ class TextAnnotationChannel:
         cls,
         topic: str,
     ) -> "TextAnnotationChannel": ...
-    def close(self) -> None: ...
+    def id(self) -> int:
+        """The unique ID of the channel."""
+        ...
+
+    def topic(self) -> str:
+        """The topic name of the channel."""
+        ...
+
+    def schema_name(self) -> str | None:
+        """The name of the schema for the channel."""
+        ...
+
+    def close(self) -> None:
+        """Close the channel."""
+        ...
+
     def log(
         self,
         message: "TextAnnotation",
         *,
         log_time: int | None = None,
-    ) -> None: ...
+    ) -> None:
+        """Log a Foxglove TextAnnotation message on the channel."""
+        ...
 
 class Vector2Channel:
     """
@@ -517,13 +993,30 @@ class Vector2Channel:
         cls,
         topic: str,
     ) -> "Vector2Channel": ...
-    def close(self) -> None: ...
+    def id(self) -> int:
+        """The unique ID of the channel."""
+        ...
+
+    def topic(self) -> str:
+        """The topic name of the channel."""
+        ...
+
+    def schema_name(self) -> str | None:
+        """The name of the schema for the channel."""
+        ...
+
+    def close(self) -> None:
+        """Close the channel."""
+        ...
+
     def log(
         self,
         message: "Vector2",
         *,
         log_time: int | None = None,
-    ) -> None: ...
+    ) -> None:
+        """Log a Foxglove Vector2 message on the channel."""
+        ...
 
 class Vector3Channel:
     """
@@ -534,10 +1027,27 @@ class Vector3Channel:
         cls,
         topic: str,
     ) -> "Vector3Channel": ...
-    def close(self) -> None: ...
+    def id(self) -> int:
+        """The unique ID of the channel."""
+        ...
+
+    def topic(self) -> str:
+        """The topic name of the channel."""
+        ...
+
+    def schema_name(self) -> str | None:
+        """The name of the schema for the channel."""
+        ...
+
+    def close(self) -> None:
+        """Close the channel."""
+        ...
+
     def log(
         self,
         message: "Vector3",
         *,
         log_time: int | None = None,
-    ) -> None: ...
+    ) -> None:
+        """Log a Foxglove Vector3 message on the channel."""
+        ...
