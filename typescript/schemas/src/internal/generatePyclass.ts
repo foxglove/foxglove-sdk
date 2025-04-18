@@ -173,7 +173,7 @@ function generateMessageClass(schema: FoxgloveMessageSchema): string {
   function fieldValue(field: FoxgloveMessageField): string {
     if (field.type.type === "primitive" && field.type.name === "bytes") {
       // Special case — this is an `Option<Bound<'_, PyBytes>>`; see `rustOutputType`
-      return `data.map(|x| Bytes::copy_from_slice(x.as_bytes())).unwrap_or_default()`;
+      return `${field.name}.map(|x| Bytes::copy_from_slice(x.as_bytes())).unwrap_or_default()`;
     }
     switch (field.type.type) {
       case "primitive":
