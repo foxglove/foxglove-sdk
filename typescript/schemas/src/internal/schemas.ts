@@ -1,42 +1,34 @@
 import { FoxgloveEnumSchema, FoxgloveMessageSchema } from "./types";
 
-const Audio: FoxgloveMessageSchema = {
+const RawAudio: FoxgloveMessageSchema = {
   type: "message",
-  name: "Audio",
+  name: "RawAudio",
   description: "A single frame of an audio bit stream",
   fields: [
     {
       name: "timestamp",
       type: { type: "primitive", name: "time" },
-      description: "Timestamp of audio frame",
+      description: "Timestamp of the audio frame",
     },
     {
       name: "data",
       type: { type: "primitive", name: "bytes" },
-      description: `Audio frame data
-For packet-based audio codecs this data must begin and end on packet boundaries (no partial packets).
-For PCM audio formats the samples in the data must be interleaved and little-endian.
-`,
+      description: `Audio frame data. The samples in the data must be interleaved and little-endian`,
     },
     {
       name: "format",
       type: { type: "primitive", name: "string" },
-      description: "Audio format. One of 'pcm-s16', 'opus', or 'mp4a.40.2'",
-    },
-    {
-      name: "description",
-      type: { type: "primitive", name: "bytes" },
-      description: `Per-format metadata. Only needed for opus in an ogg container.`,
+      description: "Audio format. Only 'pcm-s16' is currently supported",
     },
     {
       name: "sample_rate",
       type: { type: "primitive", name: "uint32" },
-      description: "Sample rate in Hz. Only needed for PCM formats."
+      description: "Sample rate in Hz"
     },
     {
       name: "number_of_channels",
       type: { type: "primitive", name: "uint32" },
-      description: "Number of channels in the audio frame. Only needed for PCM formats."
+      description: "Number of channels in the audio frame"
     },
   ],
 };
@@ -1517,7 +1509,6 @@ const LaserScan: FoxgloveMessageSchema = {
 };
 
 export const foxgloveMessageSchemas = {
-  Audio,
   ArrowPrimitive,
   CameraCalibration,
   CircleAnnotation,
@@ -1549,6 +1540,7 @@ export const foxgloveMessageSchemas = {
   PoseInFrame,
   PosesInFrame,
   Quaternion,
+  RawAudio,
   RawImage,
   SpherePrimitive,
   TextAnnotation,

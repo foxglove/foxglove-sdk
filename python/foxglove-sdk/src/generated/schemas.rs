@@ -73,63 +73,6 @@ pub(crate) enum LocationFixPositionCovarianceType {
     Known = 3,
 }
 
-/// A single frame of an audio bit stream
-///
-/// :param timestamp: Timestamp of audio frame
-/// :param data: Audio frame data
-/// :param format: Audio format. One of 'pcm-s16', 'opus', or 'mp4a.40.2'
-/// :param description: Per-format metadata. Only needed for opus in an ogg container.
-/// :param sample_rate: Sample rate in Hz. Only needed for PCM formats.
-/// :param number_of_channels: Number of channels in the audio frame. Only needed for PCM formats.
-///
-/// See https://docs.foxglove.dev/docs/visualization/message-schemas/audio
-#[pyclass(module = "foxglove.schemas")]
-#[derive(Clone)]
-pub(crate) struct Audio(pub(crate) foxglove::schemas::Audio);
-#[pymethods]
-impl Audio {
-    #[new]
-    #[pyo3(signature = (*, timestamp=None, data=None, format="".to_string(), description=None, sample_rate=0, number_of_channels=0) )]
-    fn new(
-        timestamp: Option<Timestamp>,
-        data: Option<Bound<'_, PyBytes>>,
-        format: String,
-        description: Option<Bound<'_, PyBytes>>,
-        sample_rate: u32,
-        number_of_channels: u32,
-    ) -> Self {
-        Self(foxglove::schemas::Audio {
-            timestamp: timestamp.map(Into::into),
-            data: data
-                .map(|x| Bytes::copy_from_slice(x.as_bytes()))
-                .unwrap_or_default(),
-            format,
-            description: description
-                .map(|x| Bytes::copy_from_slice(x.as_bytes()))
-                .unwrap_or_default(),
-            sample_rate,
-            number_of_channels,
-        })
-    }
-    fn __repr__(&self) -> String {
-        format!(
-            "Audio(timestamp={:?}, data={:?}, format={:?}, description={:?}, sample_rate={:?}, number_of_channels={:?})",
-            self.0.timestamp,
-            self.0.data,
-            self.0.format,
-            self.0.description,
-            self.0.sample_rate,
-            self.0.number_of_channels,
-        )
-    }
-}
-
-impl From<Audio> for foxglove::schemas::Audio {
-    fn from(value: Audio) -> Self {
-        value.0
-    }
-}
-
 /// A primitive representing an arrow
 ///
 /// :param pose: Position of the arrow's tail and orientation of the arrow. Identity orientation means the arrow points in the +x direction.
@@ -1519,6 +1462,57 @@ impl From<Quaternion> for foxglove::schemas::Quaternion {
     }
 }
 
+/// A single frame of an audio bit stream
+///
+/// :param timestamp: Timestamp of the audio frame
+/// :param data: Audio frame data. The samples in the data must be interleaved and little-endian
+/// :param format: Audio format. Only 'pcm-s16' is currently supported
+/// :param sample_rate: Sample rate in Hz
+/// :param number_of_channels: Number of channels in the audio frame
+///
+/// See https://docs.foxglove.dev/docs/visualization/message-schemas/raw-audio
+#[pyclass(module = "foxglove.schemas")]
+#[derive(Clone)]
+pub(crate) struct RawAudio(pub(crate) foxglove::schemas::RawAudio);
+#[pymethods]
+impl RawAudio {
+    #[new]
+    #[pyo3(signature = (*, timestamp=None, data=None, format="".to_string(), sample_rate=0, number_of_channels=0) )]
+    fn new(
+        timestamp: Option<Timestamp>,
+        data: Option<Bound<'_, PyBytes>>,
+        format: String,
+        sample_rate: u32,
+        number_of_channels: u32,
+    ) -> Self {
+        Self(foxglove::schemas::RawAudio {
+            timestamp: timestamp.map(Into::into),
+            data: data
+                .map(|x| Bytes::copy_from_slice(x.as_bytes()))
+                .unwrap_or_default(),
+            format,
+            sample_rate,
+            number_of_channels,
+        })
+    }
+    fn __repr__(&self) -> String {
+        format!(
+            "RawAudio(timestamp={:?}, data={:?}, format={:?}, sample_rate={:?}, number_of_channels={:?})",
+            self.0.timestamp,
+            self.0.data,
+            self.0.format,
+            self.0.sample_rate,
+            self.0.number_of_channels,
+        )
+    }
+}
+
+impl From<RawAudio> for foxglove::schemas::RawAudio {
+    fn from(value: RawAudio) -> Self {
+        value.0
+    }
+}
+
 /// A raw image
 ///
 /// :param timestamp: Timestamp of image
@@ -1833,7 +1827,6 @@ pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<PackedElementFieldNumericType>()?;
     module.add_class::<PointsAnnotationType>()?;
     module.add_class::<LocationFixPositionCovarianceType>()?;
-    module.add_class::<Audio>()?;
     module.add_class::<ArrowPrimitive>()?;
     module.add_class::<CameraCalibration>()?;
     module.add_class::<CircleAnnotation>()?;
@@ -1865,6 +1858,7 @@ pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<PoseInFrame>()?;
     module.add_class::<PosesInFrame>()?;
     module.add_class::<Quaternion>()?;
+    module.add_class::<RawAudio>()?;
     module.add_class::<RawImage>()?;
     module.add_class::<SpherePrimitive>()?;
     module.add_class::<TextAnnotation>()?;
