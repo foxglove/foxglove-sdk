@@ -137,12 +137,12 @@ pub struct FoxgloveServerCallbacks {
     pub on_client_unadvertise: Option<
         unsafe extern "C" fn(client_id: u32, client_channel_id: u32, context: *const c_void),
     >,
+    pub on_connection_graph_subscribe: Option<unsafe extern "C" fn(context: *const c_void)>,
+    pub on_connection_graph_unsubscribe: Option<unsafe extern "C" fn(context: *const c_void)>,
     // pub on_get_parameters: Option<unsafe extern "C" fn()>
     // pub on_set_parameters: Option<unsafe extern "C" fn()>
     // pub on_parameters_subscribe: Option<unsafe extern "C" fn()>
     // pub on_parameters_unsubscribe: Option<unsafe extern "C" fn()>
-    // pub on_connection_graph_subscribe: Option<unsafe extern "C" fn()>
-    // pub on_connection_graph_unsubscribe: Option<unsafe extern "C" fn()>
 }
 unsafe impl Send for FoxgloveServerCallbacks {}
 unsafe impl Sync for FoxgloveServerCallbacks {}
@@ -641,6 +641,18 @@ impl foxglove::websocket::ServerListener for FoxgloveServerCallbacks {
     ) {
         if let Some(on_client_unadvertise) = self.on_client_unadvertise {
             unsafe { on_client_unadvertise(client.id().into(), channel.id.into(), self.context) };
+        }
+    }
+
+    fn on_connection_graph_subscribe(&self) {
+        if let Some(on_connection_graph_subscribe) = self.on_connection_graph_subscribe {
+            unsafe { on_connection_graph_subscribe(self.context) };
+        }
+    }
+
+    fn on_connection_graph_unsubscribe(&self) {
+        if let Some(on_connection_graph_unsubscribe) = self.on_connection_graph_unsubscribe {
+            unsafe { on_connection_graph_unsubscribe(self.context) };
         }
     }
 }

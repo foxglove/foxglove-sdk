@@ -14,7 +14,8 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
 
   bool hasAnyCallbacks = options.callbacks.onSubscribe || options.callbacks.onUnsubscribe ||
                          options.callbacks.onClientAdvertise || options.callbacks.onMessageData ||
-                         options.callbacks.onClientUnadvertise;
+                         options.callbacks.onClientUnadvertise || options.callbacks.onConnectionGraphSubscribe ||
+                         options.callbacks.onConnectionGraphUnsubscribe;
 
   std::unique_ptr<WebSocketServerCallbacks> callbacks;
 
@@ -71,6 +72,16 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
           (static_cast<const WebSocketServerCallbacks*>(context))
             ->onClientUnadvertise(client_id, client_channel_id);
         };
+    }
+    if (callbacks->onConnectionGraphSubscribe) {
+      cCallbacks.on_connection_graph_subscribe = [](const void* context) {
+        (static_cast<const WebSocketServerCallbacks*>(context))->onConnectionGraphSubscribe();
+      };
+    }
+    if (callbacks->onConnectionGraphUnsubscribe) {
+      cCallbacks.on_connection_graph_unsubscribe = [](const void* context) {
+        (static_cast<const WebSocketServerCallbacks*>(context))->onConnectionGraphUnsubscribe();
+      };
     }
   }
 

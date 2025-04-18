@@ -59,6 +59,8 @@ struct WebSocketServerCallbacks {
     void(uint32_t clientId, uint32_t clientChannelId, const std::byte* data, size_t dataLen)>
     onMessageData;
   std::function<void(uint32_t clientId, uint32_t clientChannelId)> onClientUnadvertise;
+  std::function<void()> onConnectionGraphSubscribe;
+  std::function<void()> onConnectionGraphUnsubscribe;
 };
 
 struct WebSocketServerOptions {

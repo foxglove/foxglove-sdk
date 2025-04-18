@@ -134,6 +134,8 @@ typedef struct foxglove_server_callbacks {
                           size_t payload_len,
                           const void *context);
   void (*on_client_unadvertise)(uint32_t client_id, uint32_t client_channel_id, const void *context);
+  void (*on_connection_graph_subscribe)(const void *context);
+  void (*on_connection_graph_unsubscribe)(const void *context);
 } foxglove_server_callbacks;
 
 typedef uint8_t foxglove_server_capability;
