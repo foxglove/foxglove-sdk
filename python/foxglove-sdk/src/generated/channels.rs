@@ -35,6 +35,7 @@ pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<PoseInFrameChannel>()?;
     module.add_class::<PosesInFrameChannel>()?;
     module.add_class::<QuaternionChannel>()?;
+    module.add_class::<RawAudioChannel>()?;
     module.add_class::<RawImageChannel>()?;
     module.add_class::<TextAnnotationChannel>()?;
     module.add_class::<Vector2Channel>()?;
@@ -1620,6 +1621,68 @@ impl QuaternionChannel {
     fn __repr__(&self) -> String {
         format!(
             "QuaternionChannel(id={}, topic='{}')",
+            self.id(),
+            self.topic()
+        )
+        .to_string()
+    }
+}
+
+/// A channel for logging :py:class:`foxglove.schemas.RawAudio` messages.
+#[pyclass(module = "foxglove.channels")]
+struct RawAudioChannel(Channel<foxglove::schemas::RawAudio>);
+
+#[pymethods]
+impl RawAudioChannel {
+    /// Create a new channel.
+    ///
+    /// :param topic: The topic to log messages to.
+    #[new]
+    fn new(topic: &str) -> PyResult<Self> {
+        let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
+        Ok(Self(base))
+    }
+
+    /// The unique ID of the channel.
+    fn id(&self) -> u64 {
+        self.0.id().into()
+    }
+
+    /// The topic name of the channel.
+    fn topic(&self) -> &str {
+        self.0.topic()
+    }
+
+    /// The name of the schema for the channel.
+    fn schema_name(&self) -> Option<&str> {
+        Some(self.0.schema()?.name.as_str())
+    }
+
+    /// Close the channel.
+    ///
+    /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
+    /// channels dynamically, such as the :py:class:`foxglove.websocket.WebSocketServer`.
+    ///
+    /// Attempts to log on a closed channel will elicit a throttled warning message.
+    fn close(&mut self) {
+        self.0.close();
+    }
+
+    /// Log a :py:class:`foxglove.schemas.RawAudio` message to the channel.
+    ///
+    /// :param msg: The message to log.
+    /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
+    ///     message was recorded. Usually this is the time log() is called. If omitted, the
+    ///     current time is used.
+    #[pyo3(signature = (msg, *, log_time=None))]
+    fn log(&self, msg: &schemas::RawAudio, log_time: Option<u64>) {
+        let metadata = PartialMetadata { log_time };
+        self.0.log_with_meta(&msg.0, metadata);
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "RawAudioChannel(id={}, topic='{}')",
             self.id(),
             self.topic()
         )

@@ -1,5 +1,38 @@
 import { FoxgloveEnumSchema, FoxgloveMessageSchema } from "./types";
 
+const RawAudio: FoxgloveMessageSchema = {
+  type: "message",
+  name: "RawAudio",
+  description: "A single frame of an audio bit stream",
+  fields: [
+    {
+      name: "timestamp",
+      type: { type: "primitive", name: "time" },
+      description: "Timestamp of the audio frame",
+    },
+    {
+      name: "data",
+      type: { type: "primitive", name: "bytes" },
+      description: `Audio frame data. The samples in the data must be interleaved and little-endian`,
+    },
+    {
+      name: "format",
+      type: { type: "primitive", name: "string" },
+      description: "Audio format. Only 'pcm-s16' is currently supported",
+    },
+    {
+      name: "sample_rate",
+      type: { type: "primitive", name: "uint32" },
+      description: "Sample rate in Hz"
+    },
+    {
+      name: "number_of_channels",
+      type: { type: "primitive", name: "uint32" },
+      description: "Number of channels in the audio frame"
+    },
+  ],
+};
+
 const Color: FoxgloveMessageSchema = {
   type: "message",
   name: "Color",
@@ -1507,6 +1540,7 @@ export const foxgloveMessageSchemas = {
   PoseInFrame,
   PosesInFrame,
   Quaternion,
+  RawAudio,
   RawImage,
   SpherePrimitive,
   TextAnnotation,

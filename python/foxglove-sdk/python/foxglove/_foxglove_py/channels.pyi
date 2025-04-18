@@ -23,6 +23,7 @@ from .schemas import (
     PoseInFrame,
     PosesInFrame,
     Quaternion,
+    RawAudio,
     RawImage,
     SceneEntity,
     SceneEntityDeletion,
@@ -812,6 +813,40 @@ class QuaternionChannel:
         log_time: int | None = None,
     ) -> None:
         """Log a Foxglove Quaternion message on the channel."""
+        ...
+
+class RawAudioChannel:
+    """
+    A channel for logging RawAudio messages
+    """
+
+    def __new__(
+        cls,
+        topic: str,
+    ) -> "RawAudioChannel": ...
+    def id(self) -> int:
+        """The unique ID of the channel."""
+        ...
+
+    def topic(self) -> str:
+        """The topic name of the channel."""
+        ...
+
+    def schema_name(self) -> str | None:
+        """The name of the schema for the channel."""
+        ...
+
+    def close(self) -> None:
+        """Close the channel."""
+        ...
+
+    def log(
+        self,
+        message: "RawAudio",
+        *,
+        log_time: int | None = None,
+    ) -> None:
+        """Log a Foxglove RawAudio message on the channel."""
         ...
 
 class RawImageChannel:

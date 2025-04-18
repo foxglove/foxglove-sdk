@@ -40,6 +40,7 @@ All schemas are generated from [schemas.ts](/internal/schemas.ts).
 - [PoseInFrame](#poseinframe)
 - [PosesInFrame](#posesinframe)
 - [Quaternion](#quaternion)
+- [RawAudio](#rawaudio)
 - [RawImage](#rawimage)
 - [SceneEntity](#sceneentity)
 - [SceneEntityDeletion](#sceneentitydeletion)
@@ -2231,6 +2232,83 @@ float64
 <td>
 
 w value
+
+</td>
+</tr>
+</table>
+
+## RawAudio
+
+A single frame of an audio bit stream
+
+<table>
+  <tr>
+    <th>field</th>
+    <th>type</th>
+    <th>description</th>
+  </tr>
+<tr>
+<td><code>timestamp</code></td>
+<td>
+
+time
+
+</td>
+<td>
+
+Timestamp of the audio frame
+
+</td>
+</tr>
+<tr>
+<td><code>data</code></td>
+<td>
+
+bytes
+
+</td>
+<td>
+
+Audio frame data. The samples in the data must be interleaved and little-endian
+
+</td>
+</tr>
+<tr>
+<td><code>format</code></td>
+<td>
+
+string
+
+</td>
+<td>
+
+Audio format. Only 'pcm-s16' is currently supported
+
+</td>
+</tr>
+<tr>
+<td><code>sample_rate</code></td>
+<td>
+
+uint32
+
+</td>
+<td>
+
+Sample rate in Hz
+
+</td>
+</tr>
+<tr>
+<td><code>number_of_channels</code></td>
+<td>
+
+uint32
+
+</td>
+<td>
+
+Number of channels in the audio frame
 
 </td>
 </tr>
