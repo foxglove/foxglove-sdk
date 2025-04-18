@@ -96,6 +96,7 @@ def shutdown() -> None:
 
 def open_mcap(
     path: str | Path,
+    *,
     allow_overwrite: bool = False,
     writer_options: Optional[MCAPWriteOptions] = None,
 ) -> MCAPWriter:
