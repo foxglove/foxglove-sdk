@@ -10,7 +10,9 @@ endif
 
 .PHONY: lint
 lint:
-	find . -path './build*' -prune -name '*.h' -o -name '*.hpp' -o -name '*.cpp' | xargs clang-format --dry-run -Werror --color=1
+	find . -path './build*' -prune -name '*.h' -o -name '*.hpp' -o -name '*.cpp' |\
+		grep -v 'foxglove/expected.hpp' |\
+		xargs clang-format --dry-run -Werror --color=1
 
 .PHONY: clean
 clean:
