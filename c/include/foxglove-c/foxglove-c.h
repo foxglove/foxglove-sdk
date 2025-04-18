@@ -103,7 +103,7 @@ typedef struct foxglove_string {
    */
   const char *data;
   /**
-   * Number of characters in the string.
+   * Number of bytes in the string
    */
   size_t len;
 } foxglove_string;

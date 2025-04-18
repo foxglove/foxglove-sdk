@@ -15,7 +15,7 @@ use std::sync::Arc;
 pub struct FoxgloveString {
     /// Pointer to valid UTF-8 data
     data: *const c_char,
-    /// Number of characters in the string.
+    /// Number of bytes in the string
     len: usize,
 }
 
@@ -741,4 +741,26 @@ unsafe fn result_to_c<T>(
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_error_to_cstr(error: FoxgloveError) -> *const c_char {
     error.to_cstr().as_ptr() as *const _
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_foxglove_string_as_utf8_str() {
+        let string = FoxgloveString {
+            data: c"test".as_ptr(),
+            len: 4,
+        };
+        let utf8_str = unsafe { string.as_utf8_str() };
+        assert_eq!(utf8_str, Ok("test"));
+
+        let string = FoxgloveString {
+            data: c"💖".as_ptr(),
+            len: 4,
+        };
+        let utf8_str = unsafe { string.as_utf8_str() };
+        assert_eq!(utf8_str, Ok("💖"));
+    }
 }
