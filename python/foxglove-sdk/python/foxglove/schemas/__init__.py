@@ -10,7 +10,6 @@ from typing import Union
 
 from foxglove._foxglove_py.schemas import (
     ArrowPrimitive,
-    Audio,
     CameraCalibration,
     CircleAnnotation,
     Color,
@@ -44,6 +43,7 @@ from foxglove._foxglove_py.schemas import (
     PoseInFrame,
     PosesInFrame,
     Quaternion,
+    RawAudio,
     RawImage,
     SceneEntity,
     SceneEntityDeletion,
@@ -60,7 +60,6 @@ from foxglove._foxglove_py.schemas import (
 
 FoxgloveSchema = Union[
     ArrowPrimitive,
-    Audio,
     CameraCalibration,
     CircleAnnotation,
     Color,
@@ -88,6 +87,7 @@ FoxgloveSchema = Union[
     PoseInFrame,
     PosesInFrame,
     Quaternion,
+    RawAudio,
     RawImage,
     SceneEntity,
     SceneEntityDeletion,
@@ -103,7 +103,6 @@ FoxgloveSchema = Union[
 __all__ = [
     "FoxgloveSchema",
     "ArrowPrimitive",
-    "Audio",
     "CameraCalibration",
     "CircleAnnotation",
     "Color",
@@ -137,6 +136,7 @@ __all__ = [
     "PoseInFrame",
     "PosesInFrame",
     "Quaternion",
+    "RawAudio",
     "RawImage",
     "SceneEntity",
     "SceneEntityDeletion",

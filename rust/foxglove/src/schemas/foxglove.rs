@@ -22,31 +22,6 @@ pub struct ArrowPrimitive {
     #[prost(message, optional, tag = "6")]
     pub color: ::core::option::Option<Color>,
 }
-/// A single frame of an audio bit stream
-/// <https://docs.foxglove.dev/docs/visualization/message-schemas/audio>
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct Audio {
-    /// Timestamp of audio frame
-    #[prost(message, optional, tag = "1")]
-    pub timestamp: ::core::option::Option<crate::schemas::Timestamp>,
-    /// Audio frame data
-    /// For packet-based audio codecs this data must begin and end on packet boundaries (no partial packets).
-    /// For PCM audio formats the samples in the data must be interleaved and little-endian.
-    #[prost(bytes = "bytes", tag = "2")]
-    pub data: ::prost::bytes::Bytes,
-    /// Audio format. One of 'pcm-s16', 'opus', or 'mp4a.40.2'
-    #[prost(string, tag = "3")]
-    pub format: ::prost::alloc::string::String,
-    /// Per-format metadata. Only needed for opus in an ogg container.
-    #[prost(bytes = "bytes", tag = "4")]
-    pub description: ::prost::bytes::Bytes,
-    /// Sample rate in Hz. Only needed for PCM formats.
-    #[prost(fixed32, tag = "5")]
-    pub sample_rate: u32,
-    /// Number of channels in the audio frame. Only needed for PCM formats.
-    #[prost(fixed32, tag = "6")]
-    pub number_of_channels: u32,
-}
 /// Camera calibration parameters
 /// <https://docs.foxglove.dev/docs/visualization/message-schemas/camera-calibration>
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -891,6 +866,26 @@ pub struct Quaternion {
     /// w value
     #[prost(double, tag = "4")]
     pub w: f64,
+}
+/// A single frame of an audio bit stream
+/// <https://docs.foxglove.dev/docs/visualization/message-schemas/raw-audio>
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct RawAudio {
+    /// Timestamp of the audio frame
+    #[prost(message, optional, tag = "1")]
+    pub timestamp: ::core::option::Option<crate::schemas::Timestamp>,
+    /// Audio frame data. The samples in the data must be interleaved and little-endian
+    #[prost(bytes = "bytes", tag = "2")]
+    pub data: ::prost::bytes::Bytes,
+    /// Audio format. Only 'pcm-s16' is currently supported
+    #[prost(string, tag = "3")]
+    pub format: ::prost::alloc::string::String,
+    /// Sample rate in Hz
+    #[prost(fixed32, tag = "4")]
+    pub sample_rate: u32,
+    /// Number of channels in the audio frame
+    #[prost(fixed32, tag = "5")]
+    pub number_of_channels: u32,
 }
 /// A raw image
 /// <https://docs.foxglove.dev/docs/visualization/message-schemas/raw-image>

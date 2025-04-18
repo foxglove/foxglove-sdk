@@ -94,22 +94,6 @@ class ArrowPrimitive:
         color: "Optional[Color]" = None,
     ) -> "ArrowPrimitive": ...
 
-class Audio:
-    """
-    A single frame of an audio bit stream
-    """
-
-    def __new__(
-        cls,
-        *,
-        timestamp: "Optional[Timestamp]" = None,
-        data: "Optional[bytes]" = b"",
-        format: "Optional[str]" = "",
-        description: "Optional[bytes]" = b"",
-        sample_rate: "Optional[int]" = 0,
-        number_of_channels: "Optional[int]" = 0,
-    ) -> "Audio": ...
-
 class CameraCalibration:
     """
     Camera calibration parameters
@@ -492,6 +476,21 @@ class Quaternion:
         w: "Optional[float]" = 0.0,
     ) -> "Quaternion": ...
 
+class RawAudio:
+    """
+    A single frame of an audio bit stream
+    """
+
+    def __new__(
+        cls,
+        *,
+        timestamp: "Optional[Timestamp]" = None,
+        data: "Optional[bytes]" = b"",
+        format: "Optional[str]" = "",
+        sample_rate: "Optional[int]" = 0,
+        number_of_channels: "Optional[int]" = 0,
+    ) -> "RawAudio": ...
+
 class RawImage:
     """
     A raw image
@@ -641,7 +640,6 @@ class Vector3:
     ) -> "Vector3": ...
 
 FoxgloveSchema = Union[
-    Audio,
     ArrowPrimitive,
     CameraCalibration,
     CircleAnnotation,
@@ -673,6 +671,7 @@ FoxgloveSchema = Union[
     PoseInFrame,
     PosesInFrame,
     Quaternion,
+    RawAudio,
     RawImage,
     SpherePrimitive,
     TextAnnotation,
