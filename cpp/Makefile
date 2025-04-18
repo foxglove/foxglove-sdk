@@ -20,6 +20,7 @@ clean:
 build:
 	cmake \
 		-DCMAKE_BUILD_TYPE=RelWithDebInfo \
+		-DCMAKE_EXPORT_COMPILE_COMMANDS=true \
 		$(if $(SANITIZE),-DSANITIZE=$(SANITIZE)) \
 		$(if $(CLANG_TIDY),-DCLANG_TIDY=$(CLANG_TIDY)) \
 		-B $(BUILD_DIR)
