@@ -8,6 +8,8 @@
 #include <memory>
 #include <string>
 
+#include "foxglove/parameter.hpp"
+
 enum foxglove_error : uint8_t;
 struct foxglove_websocket_server;
 struct foxglove_connection_graph;
@@ -61,6 +63,14 @@ struct WebSocketServerCallbacks {
     void(uint32_t clientId, uint32_t clientChannelId, const std::byte* data, size_t dataLen)>
     onMessageData;
   std::function<void(uint32_t clientId, uint32_t clientChannelId)> onClientUnadvertise;
+  std::function<std::vector<Parameter>(
+    uint32_t clientId, std::string_view request_id, const std::vector<std::string>& param_names
+  )>
+    onGetParameters;
+  std::function<std::vector<Parameter>(
+    uint32_t clientId, std::string_view request_id, const std::vector<ParameterView>& params
+  )>
+    onSetParameters;
   std::function<void()> onConnectionGraphSubscribe;
   std::function<void()> onConnectionGraphUnsubscribe;
 };

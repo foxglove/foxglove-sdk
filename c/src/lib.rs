@@ -11,7 +11,12 @@ use std::io::BufWriter;
 use std::mem::ManuallyDrop;
 use std::sync::Arc;
 
-pub mod connection_graph;
+mod bytes;
+mod connection_graph;
+mod parameter;
+
+use bytes::FoxgloveBytes;
+use parameter::FoxgloveParameterArray;
 
 /// A string with associated length.
 #[repr(C)]
@@ -30,6 +35,29 @@ impl FoxgloveString {
     /// The [`data`] field must be valid UTF-8, and have a length equal to [`FoxgloveString.len`].
     unsafe fn as_utf8_str(&self) -> Result<&str, std::str::Utf8Error> {
         std::str::from_utf8(unsafe { std::slice::from_raw_parts(self.data.cast(), self.len) })
+    }
+
+    /// Creates a new `FoxgloveString` from the provided string.
+    ///
+    /// Caller is responsible for freeing the underlying storage for the string with
+    /// [`Self::into_string`].
+    fn from_string(s: String) -> Self {
+        let mut s = ManuallyDrop::new(s);
+        s.shrink_to_fit();
+        Self {
+            data: s.as_ptr().cast(),
+            len: s.len(),
+        }
+    }
+
+    /// Extracts and returns the inner string.
+    ///
+    /// # Safety
+    ///
+    /// Must only be used for strings created with [`Self::from_string`].
+    unsafe fn into_string(self) -> String {
+        assert!(!self.data.is_null());
+        unsafe { String::from_raw_parts(self.data as *mut u8, self.len, self.len) }
     }
 }
 
@@ -150,10 +178,25 @@ pub struct FoxgloveServerCallbacks {
     pub on_client_unadvertise: Option<
         unsafe extern "C" fn(client_id: u32, client_channel_id: u32, context: *const c_void),
     >,
+    pub on_get_parameters: Option<
+        unsafe extern "C" fn(
+            context: *const c_void,
+            client_id: u32,
+            request_id: *const c_char,
+            param_names: *const *const c_char,
+            param_names_len: usize,
+        ) -> *mut FoxgloveParameterArray,
+    >,
+    pub on_set_parameters: Option<
+        unsafe extern "C" fn(
+            context: *const c_void,
+            client_id: u32,
+            request_id: *const c_char,
+            params: *const FoxgloveParameterArray,
+        ) -> *mut FoxgloveParameterArray,
+    >,
     pub on_connection_graph_subscribe: Option<unsafe extern "C" fn(context: *const c_void)>,
     pub on_connection_graph_unsubscribe: Option<unsafe extern "C" fn(context: *const c_void)>,
-    // pub on_get_parameters: Option<unsafe extern "C" fn()>
-    // pub on_set_parameters: Option<unsafe extern "C" fn()>
     // pub on_parameters_subscribe: Option<unsafe extern "C" fn()>
     // pub on_parameters_unsubscribe: Option<unsafe extern "C" fn()>
 }
@@ -683,6 +726,78 @@ impl foxglove::websocket::ServerListener for FoxgloveServerCallbacks {
         }
     }
 
+    fn on_get_parameters(
+        &self,
+        client: foxglove::websocket::Client,
+        param_names: Vec<String>,
+        request_id: Option<&str>,
+    ) -> Vec<foxglove::websocket::Parameter> {
+        let Some(on_get_parameters) = self.on_get_parameters else {
+            return vec![];
+        };
+
+        let request_id = request_id.map(|id| CString::new(id).unwrap());
+        let param_names: Vec<_> = param_names
+            .into_iter()
+            .map(|n| CString::new(n).unwrap())
+            .collect();
+        let param_names_ptrs: Vec<_> = param_names.iter().map(|n| n.as_ptr()).collect();
+        let raw = unsafe {
+            on_get_parameters(
+                self.context,
+                client.id().into(),
+                request_id
+                    .as_ref()
+                    .map(|id| id.as_ptr())
+                    .unwrap_or_else(std::ptr::null),
+                param_names_ptrs.as_ptr(),
+                param_names_ptrs.len(),
+            )
+        };
+        if raw.is_null() {
+            vec![]
+        } else {
+            // SAFETY: The caller must return a valid pointer to an array allocated by
+            // `foxglove_parameter_array_create`.
+            unsafe { FoxgloveParameterArray::from_raw(raw).into_native() }
+        }
+    }
+
+    fn on_set_parameters(
+        &self,
+        client: foxglove::websocket::Client,
+        params: Vec<foxglove::websocket::Parameter>,
+        request_id: Option<&str>,
+    ) -> Vec<foxglove::websocket::Parameter> {
+        let Some(on_set_parameters) = self.on_set_parameters else {
+            return vec![];
+        };
+
+        let request_id = request_id.map(|id| CString::new(id).unwrap());
+        let params: FoxgloveParameterArray = params.into_iter().collect();
+        let c_params = params.into_raw();
+        let raw = unsafe {
+            on_set_parameters(
+                self.context,
+                client.id().into(),
+                request_id
+                    .as_ref()
+                    .map(|id| id.as_ptr())
+                    .unwrap_or_else(std::ptr::null),
+                c_params,
+            )
+        };
+        // SAFETY: This is the same pointer we just converted into raw.
+        drop(unsafe { FoxgloveParameterArray::from_raw(c_params) });
+        if raw.is_null() {
+            vec![]
+        } else {
+            // SAFETY: The caller must return a valid pointer to an array allocated by
+            // `foxglove_parameter_array_create`.
+            unsafe { FoxgloveParameterArray::from_raw(raw).into_native() }
+        }
+    }
+
     fn on_connection_graph_subscribe(&self) {
         if let Some(on_connection_graph_subscribe) = self.on_connection_graph_subscribe {
             unsafe { on_connection_graph_subscribe(self.context) };
@@ -697,8 +812,8 @@ impl foxglove::websocket::ServerListener for FoxgloveServerCallbacks {
 }
 
 #[repr(u8)]
-#[derive(PartialEq, Eq, Debug)]
 #[non_exhaustive]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FoxgloveError {
     Ok,
     Unspecified,
@@ -747,7 +862,7 @@ impl From<foxglove::FoxgloveError> for FoxgloveError {
 }
 
 impl FoxgloveError {
-    fn to_cstr(&self) -> &'static std::ffi::CStr {
+    fn to_cstr(self) -> &'static std::ffi::CStr {
         match self {
             FoxgloveError::Ok => c"Ok",
             FoxgloveError::ValueError => c"Value Error",

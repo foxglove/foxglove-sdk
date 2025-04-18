@@ -3,7 +3,6 @@
 #include <foxglove/server.hpp>
 #include <foxglove/server/connection_graph.hpp>
 
-#include <iostream>
 #include <type_traits>
 
 namespace foxglove {
@@ -16,6 +15,7 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
   bool hasAnyCallbacks = options.callbacks.onSubscribe || options.callbacks.onUnsubscribe ||
                          options.callbacks.onClientAdvertise || options.callbacks.onMessageData ||
                          options.callbacks.onClientUnadvertise ||
+                         options.callbacks.onGetParameters || options.callbacks.onSetParameters ||
                          options.callbacks.onConnectionGraphSubscribe ||
                          options.callbacks.onConnectionGraphUnsubscribe;
 
@@ -74,6 +74,41 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
           (static_cast<const WebSocketServerCallbacks*>(context))
             ->onClientUnadvertise(client_id, client_channel_id);
         };
+    }
+    if (callbacks->onGetParameters) {
+      cCallbacks.on_get_parameters = [](
+                                       const void* context,
+                                       uint32_t client_id,
+                                       const char* _request_id,
+                                       const char* const* _param_names,
+                                       size_t param_names_len
+                                     ) -> foxglove_parameter_array* {
+        std::string request_id(_request_id);
+        std::vector<std::string> param_names;
+        param_names.reserve(param_names_len);
+        for (auto i = 0; i < param_names_len; ++i) {
+          param_names.emplace_back(_param_names[i]);
+        }
+        auto params = (static_cast<const WebSocketServerCallbacks*>(context))
+                        ->onGetParameters(client_id, request_id, param_names);
+        auto array = ParameterArray(std::move(params));
+        return array.release();
+      };
+    }
+    if (callbacks->onSetParameters) {
+      cCallbacks.on_set_parameters = [](
+                                       const void* context,
+                                       uint32_t client_id,
+                                       const char* _request_id,
+                                       const foxglove_parameter_array* _params
+                                     ) -> foxglove_parameter_array* {
+        std::string request_id(_request_id);
+        auto params =
+          (static_cast<const WebSocketServerCallbacks*>(context))
+            ->onSetParameters(client_id, request_id, ParameterArrayView(_params).parameters());
+        auto array = ParameterArray(std::move(params));
+        return array.release();
+      };
     }
     if (callbacks->onConnectionGraphSubscribe) {
       cCallbacks.on_connection_graph_subscribe = [](const void* context) {

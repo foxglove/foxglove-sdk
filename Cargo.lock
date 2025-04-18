@@ -750,9 +750,11 @@ dependencies = [
 name = "foxglove_c"
 version = "0.6.2"
 dependencies = [
+ "base64",
  "bitflags",
  "cbindgen",
  "foxglove",
+ "maplit",
  "mcap 0.15.1",
  "tracing",
 ]

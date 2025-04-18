@@ -21,9 +21,11 @@ clean:
 .PHONY: build
 build:
 	cmake \
+		-DCMAKE_C_COMPILER=clang \
+		-DCMAKE_CXX_COMPILER=clang++ \
 		-DCMAKE_BUILD_TYPE=RelWithDebInfo \
 		-DCMAKE_EXPORT_COMPILE_COMMANDS=true \
-		$(if $(SANITIZE),-DSANITIZE=$(SANITIZE)) \
+		$(if $(SANITIZE),-DSANITIZE=$(SANITIZE) -DRust_TOOLCHAIN=nightly) \
 		$(if $(CLANG_TIDY),-DCLANG_TIDY=$(CLANG_TIDY)) \
 		-B $(BUILD_DIR)
 	cmake --build $(BUILD_DIR) -j 8 --config RelWithDebInfo

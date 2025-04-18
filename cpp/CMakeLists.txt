@@ -152,6 +152,13 @@ target_compile_options(example_mcap PUBLIC ${SANITIZER_COMPILE_OPTIONS})
 target_link_options(example_mcap PUBLIC ${SANITIZER_LINK_OPTIONS})
 target_link_libraries(example_mcap foxglove_cpp_static)
 
+add_executable(example_param-server examples/param-server/src/main.cpp)
+set_property(TARGET example_param-server PROPERTY CXX_STANDARD 17)
+set_property(TARGET example_param-server PROPERTY CXX_STANDARD_REQUIRED True)
+target_compile_options(example_param-server PUBLIC ${SANITIZER_COMPILE_OPTIONS})
+target_link_options(example_param-server PUBLIC ${SANITIZER_LINK_OPTIONS})
+target_link_libraries(example_param-server foxglove_cpp_static)
+
 add_executable(example_quickstart examples/quickstart/src/main.cpp)
 set_property(TARGET example_quickstart PROPERTY CXX_STANDARD 17)
 set_property(TARGET example_quickstart PROPERTY CXX_STANDARD_REQUIRED True)
