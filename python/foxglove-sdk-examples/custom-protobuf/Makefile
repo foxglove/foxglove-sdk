@@ -1,3 +1,3 @@
 .PHONY: protoc
 protoc:
-	protoc --python_out=. fruit.proto
+	poetry run protoc --python_out=. --pyi_out=. fruit.proto

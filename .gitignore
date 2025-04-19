@@ -12,6 +12,7 @@
 /python/foxglove-schemas-flatbuffer/foxglove_schemas_flatbuffer/*.py
 /python/foxglove-schemas-protobuf/foxglove_schemas_protobuf/*.py
 /python/foxglove-schemas-protobuf/foxglove_schemas_protobuf/*.pyi
+/python/foxglove-sdk-examples/**/*.mcap
 /target/
 /typescript/*/dist/
 /typescript/schemas/src/jsonschema/
