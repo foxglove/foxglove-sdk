@@ -31,10 +31,12 @@ public:
 
   FoxgloveError setPublishedTopic(std::string_view topic, std::vector<std::string> publisher_ids);
   FoxgloveError setSubscribedTopic(std::string_view topic, std::vector<std::string> subscriber_ids);
-  FoxgloveError setAdvertisedService(std::string_view service, std::vector<std::string> provider_ids);
+  FoxgloveError setAdvertisedService(
+    std::string_view service, std::vector<std::string> provider_ids
+  );
 
 private:
-  std::unique_ptr<foxglove_connection_graph, void(*)(foxglove_connection_graph*)> _impl;
+  std::unique_ptr<foxglove_connection_graph, void (*)(foxglove_connection_graph*)> _impl;
 };
 
 enum class WebSocketServerCapabilities : uint8_t {

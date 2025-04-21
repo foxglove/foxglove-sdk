@@ -42,8 +42,6 @@ int main(int argc, const char* argv[]) {
   connectionGraph.setSubscribedTopic("/subscribed-topic", {"3", "4"});
   connectionGraph.setAdvertisedService("example-service", {"5", "6"});
 
-
-
   auto serverResult = foxglove::WebSocketServer::create(std::move(options));
   if (!serverResult.has_value()) {
     std::cerr << "Failed to create server: " << foxglove::strerror(serverResult.error()) << '\n';
