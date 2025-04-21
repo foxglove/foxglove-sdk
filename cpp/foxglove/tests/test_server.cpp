@@ -70,7 +70,7 @@ TEST_CASE("supported encoding is invalid utf-8") {
 
 TEST_CASE("Log a message with and without metadata") {
   auto context = foxglove::Context::create();
-  foxglove::WebSocketServerOptions options{context : context};
+  foxglove::WebSocketServerOptions options{.context = context};
   options.name = "unit-test";
   options.host = "127.0.0.1";
   options.port = 0;
@@ -104,7 +104,7 @@ TEST_CASE("Subscribe and unsubscribe callbacks") {
 
   std::unique_lock lock{mutex};
 
-  foxglove::WebSocketServerOptions options{context : context};
+  foxglove::WebSocketServerOptions options{.context = context};
   options.name = "unit-test";
   options.host = "127.0.0.1";
   options.port = 0;
@@ -222,7 +222,7 @@ TEST_CASE("Client advertise/publish callbacks") {
 
   std::unique_lock lock{mutex};
 
-  foxglove::WebSocketServerOptions options{context : context};
+  foxglove::WebSocketServerOptions options{.context = context};
   options.name = "unit-test";
   options.host = "127.0.0.1";
   options.port = 0;
