@@ -11,6 +11,11 @@
 
 using namespace std::chrono_literals;
 
+/**
+ * This example constructs a connection graph which can be viewed as a Topic Graph in Foxglove:
+ * https://docs.foxglove.dev/docs/visualization/panels/topic-graph
+ */
+
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 static std::function<void()> sigintHandler;
 
