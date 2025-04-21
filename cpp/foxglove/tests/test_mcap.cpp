@@ -130,7 +130,7 @@ TEST_CASE("different contexts") {
   auto context1 = foxglove::Context::create();
   auto context2 = foxglove::Context::create();
 
-  foxglove::McapWriterOptions options{.context = context1};
+  foxglove::McapWriterOptions options{context1};
   options.path = "test.mcap";
   auto writer = foxglove::McapWriter::create(options);
   REQUIRE(writer.has_value());
