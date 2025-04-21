@@ -143,7 +143,7 @@ foxglove_connection_graph& ConnectionGraph::impl() {
 }
 
 FoxgloveError ConnectionGraph::setPublishedTopic(
-  std::string_view topic, const std::vector<std::string> &publisherIds
+  std::string_view topic, const std::vector<std::string>& publisherIds
 ) {
   std::vector<foxglove_string> ids;
   ids.reserve(publisherIds.size());
@@ -157,7 +157,7 @@ FoxgloveError ConnectionGraph::setPublishedTopic(
 }
 
 FoxgloveError ConnectionGraph::setSubscribedTopic(
-  std::string_view topic, const std::vector<std::string> &subscriberIds
+  std::string_view topic, const std::vector<std::string>& subscriberIds
 ) {
   std::vector<foxglove_string> ids;
   ids.reserve(subscriberIds.size());
@@ -172,7 +172,7 @@ FoxgloveError ConnectionGraph::setSubscribedTopic(
 }
 
 FoxgloveError ConnectionGraph::setAdvertisedService(
-  std::string_view service, const std::vector<std::string> &providerIds
+  std::string_view service, const std::vector<std::string>& providerIds
 ) {
   std::vector<foxglove_string> ids;
   ids.reserve(providerIds.size());
