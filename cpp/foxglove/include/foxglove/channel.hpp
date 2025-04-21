@@ -24,7 +24,7 @@ class Channel final {
 public:
   static FoxgloveResult<Channel> create(
     const std::string& topic, const std::string& messageEncoding,
-    std::optional<Schema> schema = std::nullopt, Context context = Context()
+    std::optional<Schema> schema = std::nullopt, const Context& context = Context()
   );
 
   FoxgloveError log(

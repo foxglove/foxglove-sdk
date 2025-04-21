@@ -7,7 +7,7 @@ namespace foxglove {
 
 FoxgloveResult<Channel> Channel::create(
   const std::string& topic, const std::string& messageEncoding, std::optional<Schema> schema,
-  Context context
+  const Context& context
 ) {
   foxglove_schema cSchema = {};
   if (schema) {
