@@ -90,13 +90,11 @@ typedef uint8_t foxglove_mcap_compression;
 
 typedef struct foxglove_channel foxglove_channel;
 
+typedef struct foxglove_context foxglove_context;
+
 typedef struct foxglove_mcap_writer foxglove_mcap_writer;
 
 typedef struct foxglove_websocket_server foxglove_websocket_server;
-
-typedef struct foxglove_context {
-  Context _0;
-} foxglove_context;
 
 typedef struct foxglove_client_channel {
   uint32_t id;
@@ -283,12 +281,6 @@ foxglove_error foxglove_channel_log(const struct foxglove_channel *channel,
  * You must pass this to `foxglove_context_free` when done with it.
  */
 const struct foxglove_context *foxglove_context_new(void);
-
-/**
- * Get the default context. This never fails.
- * You must pass this to `foxglove_context_free` when done with it.
- */
-const struct foxglove_context *foxglove_context_get_default(void);
 
 /**
  * Free a context created via `foxglove_context_new` or `foxglove_context_free`.

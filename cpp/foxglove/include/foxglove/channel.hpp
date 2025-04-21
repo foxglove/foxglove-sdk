@@ -1,5 +1,6 @@
 #pragma once
 
+#include <foxglove/context.hpp>
 #include <foxglove/error.hpp>
 
 #include <cstdint>
@@ -11,9 +12,6 @@ struct foxglove_channel;
 struct foxglove_context;
 
 namespace foxglove {
-
-struct Context;
-typedef foxglove_context ContextInner;
 
 struct Schema {
   std::string name;

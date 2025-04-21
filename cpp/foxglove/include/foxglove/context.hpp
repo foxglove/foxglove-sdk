@@ -10,9 +10,9 @@ struct foxglove_context;
 namespace foxglove {
 
 class Context final {
-  friend class McapWriterOptions;
+  friend class McapWriter;
   friend class Channel;
-  friend class WebSocketServerOptions;
+  friend class WebSocketServer;
 
 public:
   /// The default global context
@@ -28,7 +28,7 @@ private:
     return _impl.get();
   }
 
-  std::shared_ptr<const foxglove_context, void (*)(const foxglove_context*)> _impl;
+  std::shared_ptr<const foxglove_context> _impl;
 };
 
 }  // namespace foxglove

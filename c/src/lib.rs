@@ -561,8 +561,7 @@ pub unsafe extern "C" fn foxglove_channel_log(
     FoxgloveError::Ok
 }
 
-#[repr(C)]
-pub struct FoxgloveContext(foxglove::Context);
+pub struct FoxgloveContext(#[allow(unused)] foxglove::Context);
 
 /// Create a new context. This never fails.
 /// You must pass this to `foxglove_context_free` when done with it.
