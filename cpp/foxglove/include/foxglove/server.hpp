@@ -29,10 +29,10 @@ public:
 
   foxglove_connection_graph& impl();
 
-  FoxgloveError setPublishedTopic(std::string_view topic, std::vector<std::string> publisher_ids);
-  FoxgloveError setSubscribedTopic(std::string_view topic, std::vector<std::string> subscriber_ids);
+  FoxgloveError setPublishedTopic(std::string_view topic, const std::vector<std::string> &publisherIds);
+  FoxgloveError setSubscribedTopic(std::string_view topic, const std::vector<std::string> &subscriberIds);
   FoxgloveError setAdvertisedService(
-    std::string_view service, std::vector<std::string> provider_ids
+    std::string_view service, const std::vector<std::string> &providerIds
   );
 
 private:

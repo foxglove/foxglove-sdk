@@ -131,7 +131,6 @@ void WebSocketServer::publishConnectionGraph(ConnectionGraph& graph) {
 
 ConnectionGraph::ConnectionGraph()
     : _impl(nullptr, foxglove_connection_graph_free) {
-  std::cerr << "Creating ConnectionGraph" << std::endl;
   foxglove_connection_graph* impl = nullptr;
   foxglove_connection_graph_create(&impl);
   _impl = std::unique_ptr<foxglove_connection_graph, void (*)(foxglove_connection_graph*)>(
@@ -140,11 +139,11 @@ ConnectionGraph::ConnectionGraph()
 }
 
 foxglove_connection_graph& ConnectionGraph::impl() {
-  return *_impl.get();
+  return *_impl;
 }
 
 FoxgloveError ConnectionGraph::setPublishedTopic(
-  std::string_view topic, std::vector<std::string> publisherIds
+  std::string_view topic, const std::vector<std::string> &publisherIds
 ) {
   std::vector<foxglove_string> ids;
   ids.reserve(publisherIds.size());
@@ -158,7 +157,7 @@ FoxgloveError ConnectionGraph::setPublishedTopic(
 }
 
 FoxgloveError ConnectionGraph::setSubscribedTopic(
-  std::string_view topic, std::vector<std::string> subscriberIds
+  std::string_view topic, const std::vector<std::string> &subscriberIds
 ) {
   std::vector<foxglove_string> ids;
   ids.reserve(subscriberIds.size());
@@ -173,7 +172,7 @@ FoxgloveError ConnectionGraph::setSubscribedTopic(
 }
 
 FoxgloveError ConnectionGraph::setAdvertisedService(
-  std::string_view service, std::vector<std::string> providerIds
+  std::string_view service, const std::vector<std::string> &providerIds
 ) {
   std::vector<foxglove_string> ids;
   ids.reserve(providerIds.size());
