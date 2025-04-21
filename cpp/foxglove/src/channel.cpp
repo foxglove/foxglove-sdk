@@ -11,14 +11,18 @@ FoxgloveResult<Channel> Channel::create(
 ) {
   foxglove_schema cSchema = {};
   if (schema) {
-    cSchema.name = schema->name.data();
-    cSchema.encoding = schema->encoding.data();
+    cSchema.name = {schema->name.data(), schema->name.length()};
+    cSchema.encoding = {schema->encoding.data(), schema->encoding.length()};
     cSchema.data = reinterpret_cast<const uint8_t*>(schema->data);
     cSchema.data_len = schema->dataLen;
   }
   const foxglove_channel* channel = nullptr;
   foxglove_error error = foxglove_channel_create(
-    topic.data(), messageEncoding.data(), schema ? &cSchema : nullptr, context.get_inner(), &channel
+    {topic.data(), topic.length()},
+    {messageEncoding.data(), messageEncoding.length()},
+    schema ? &cSchema : nullptr,
+    context.get_inner(),
+    &channel
   );
   if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
     return foxglove::unexpected(FoxgloveError(error));

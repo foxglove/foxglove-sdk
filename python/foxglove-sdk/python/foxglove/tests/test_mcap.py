@@ -1,21 +1,40 @@
-import os
 from pathlib import Path
-from typing import Generator
+from typing import Callable, Generator, Optional
 
 import pytest
 from foxglove import open_mcap
 from foxglove.channel import Channel
+from foxglove.mcap import MCAPWriteOptions
 
 chan = Channel("test", schema={"type": "object"})
 
 
 @pytest.fixture
-def tmp_mcap(tmpdir: os.PathLike[str]) -> Generator[Path, None, None]:
-    dir = Path(tmpdir)
-    mcap = dir / "test.mcap"
-    yield mcap
-    mcap.unlink()
-    dir.rmdir()
+def make_tmp_mcap(
+    tmp_path_factory: pytest.TempPathFactory,
+) -> Generator[Callable[[], Path], None, None]:
+    mcap: Optional[Path] = None
+    dir: Optional[Path] = None
+
+    def _make_tmp_mcap() -> Path:
+        nonlocal dir, mcap
+        dir = tmp_path_factory.mktemp("test", numbered=True)
+        mcap = dir / "test.mcap"
+        return mcap
+
+    yield _make_tmp_mcap
+
+    if mcap is not None and dir is not None:
+        try:
+            mcap.unlink()
+            dir.rmdir()
+        except FileNotFoundError:
+            pass
+
+
+@pytest.fixture
+def tmp_mcap(make_tmp_mcap: Callable[[], Path]) -> Generator[Path, None, None]:
+    yield make_tmp_mcap()
 
 
 def test_open_with_str(tmp_mcap: Path) -> None:
@@ -44,3 +63,29 @@ def test_context_manager(tmp_mcap: Path) -> None:
             chan.log({"foo": ii})
         size_before_close = tmp_mcap.stat().st_size
     assert tmp_mcap.stat().st_size > size_before_close
+
+
+def test_writer_compression(make_tmp_mcap: Callable[[], Path]) -> None:
+    tmp_1 = make_tmp_mcap()
+    tmp_2 = make_tmp_mcap()
+
+    # Compression is enabled by default
+    mcap_1 = open_mcap(tmp_1)
+    mcap_2 = open_mcap(tmp_2, writer_options=MCAPWriteOptions(compression=None))
+
+    for _ in range(20):
+        chan.log({"foo": "bar"})
+
+    mcap_1.close()
+    mcap_2.close()
+
+    assert tmp_1.stat().st_size < tmp_2.stat().st_size
+
+
+def test_writer_custom_profile(tmp_mcap: Path) -> None:
+    options = MCAPWriteOptions(profile="--custom-profile-1--")
+    with open_mcap(tmp_mcap, writer_options=options):
+        chan.log({"foo": "bar"})
+
+    contents = tmp_mcap.read_bytes()
+    assert contents.find(b"--custom-profile-1--") > -1

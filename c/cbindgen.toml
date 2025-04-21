@@ -32,6 +32,7 @@ enum_class = true
 
 prefix_with_name = false
 [export.rename]
+FoxgloveString = "foxglove_string"
 FoxgloveWebSocketServer = "foxglove_websocket_server"
 FoxgloveChannel = "foxglove_channel"
 FoxgloveSchema = "foxglove_schema"
