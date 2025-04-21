@@ -3,12 +3,15 @@
 #![warn(unsafe_attr_outside_unsafe)]
 
 use bitflags::bitflags;
+use connection_graph::FoxgloveConnectionGraph;
 use mcap::{Compression, WriteOptions};
 use std::ffi::{c_char, c_void, CString};
 use std::fs::File;
 use std::io::BufWriter;
 use std::mem::ManuallyDrop;
 use std::sync::Arc;
+
+pub mod connection_graph;
 
 /// A string with associated length.
 #[repr(C)]
@@ -26,7 +29,17 @@ impl FoxgloveString {
     ///
     /// The [`data`] field must be valid UTF-8, and have a length equal to [`FoxgloveString.len`].
     unsafe fn as_utf8_str(&self) -> Result<&str, std::str::Utf8Error> {
-        std::str::from_utf8(unsafe { std::slice::from_raw_parts(self.data as *const u8, self.len) })
+        std::str::from_utf8(unsafe { std::slice::from_raw_parts(self.data.cast(), self.len) })
+    }
+}
+
+#[cfg(test)]
+impl From<&str> for FoxgloveString {
+    fn from(s: &str) -> Self {
+        Self {
+            data: s.as_ptr().cast(),
+            len: s.len(),
+        }
     }
 }
 
@@ -285,6 +298,29 @@ pub extern "C" fn foxglove_server_stop(
     };
     server.stop();
     FoxgloveError::Ok
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn foxglove_server_publish_connection_graph(
+    server: Option<&mut FoxgloveWebSocketServer>,
+    graph: Option<&mut FoxgloveConnectionGraph>,
+) -> FoxgloveError {
+    let Some(server) = server else {
+        tracing::error!("foxglove_server_publish_connection_graph called with null server");
+        return FoxgloveError::ValueError;
+    };
+    let Some(graph) = graph else {
+        tracing::error!("foxglove_server_publish_connection_graph called with null graph");
+        return FoxgloveError::ValueError;
+    };
+    let Some(server) = server.as_ref() else {
+        tracing::error!("foxglove_server_publish_connection_graph called with closed server");
+        return FoxgloveError::SinkClosed;
+    };
+    match server.publish_connection_graph(graph.0.clone()) {
+        Ok(_) => FoxgloveError::Ok,
+        Err(e) => FoxgloveError::from(e),
+    }
 }
 
 #[repr(u8)]
@@ -658,6 +694,7 @@ impl foxglove::websocket::ServerListener for FoxgloveServerCallbacks {
 }
 
 #[repr(u8)]
+#[derive(PartialEq, Eq, Debug)]
 #[non_exhaustive]
 pub enum FoxgloveError {
     Ok,

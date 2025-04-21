@@ -9,6 +9,7 @@
 
 enum foxglove_error : uint8_t;
 struct foxglove_websocket_server;
+struct foxglove_connection_graph;
 
 namespace foxglove {
 
@@ -20,6 +21,20 @@ struct ClientChannel {
   std::string_view schemaEncoding;
   const std::byte* schema;
   size_t schemaLen;
+};
+
+class ConnectionGraph final {
+public:
+  ConnectionGraph();
+
+  foxglove_connection_graph& impl();
+
+  FoxgloveError setPublishedTopic(std::string_view topic, std::vector<std::string> publisher_ids);
+  FoxgloveError setSubscribedTopic(std::string_view topic, std::vector<std::string> subscriber_ids);
+  FoxgloveError setAdvertisedService(std::string_view service, std::vector<std::string> provider_ids);
+
+private:
+  std::unique_ptr<foxglove_connection_graph, void(*)(foxglove_connection_graph*)> _impl;
 };
 
 enum class WebSocketServerCapabilities : uint8_t {
@@ -80,6 +95,8 @@ public:
   uint16_t port() const;
 
   FoxgloveError stop();
+
+  void publishConnectionGraph(ConnectionGraph& graph);
 
 private:
   WebSocketServer(
