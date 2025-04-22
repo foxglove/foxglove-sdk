@@ -3,17 +3,17 @@ import { FoxgloveEnumSchema, FoxgloveMessageSchema } from "./types";
 const RawAudio: FoxgloveMessageSchema = {
   type: "message",
   name: "RawAudio",
-  description: "A single frame of an audio bit stream",
+  description: "A single block of an audio bitstream",
   fields: [
     {
       name: "timestamp",
       type: { type: "primitive", name: "time" },
-      description: "Timestamp of the audio frame",
+      description: "Timestamp of the start of the audio block",
     },
     {
       name: "data",
       type: { type: "primitive", name: "bytes" },
-      description: `Audio frame data. The samples in the data must be interleaved and little-endian`,
+      description: `Audio data. The samples in the data must be interleaved and little-endian`,
     },
     {
       name: "format",
@@ -28,7 +28,7 @@ const RawAudio: FoxgloveMessageSchema = {
     {
       name: "number_of_channels",
       type: { type: "primitive", name: "uint32" },
-      description: "Number of channels in the audio frame"
+      description: "Number of channels in the audio block"
     },
   ],
 };

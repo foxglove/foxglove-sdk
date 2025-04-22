@@ -6,12 +6,12 @@ import "google/protobuf/timestamp.proto";
 
 package foxglove;
 
-// A single frame of an audio bit stream
+// A single block of an audio bitstream
 message RawAudio {
-  // Timestamp of the audio frame
+  // Timestamp of the start of the audio block
   google.protobuf.Timestamp timestamp = 1;
 
-  // Audio frame data. The samples in the data must be interleaved and little-endian
+  // Audio data. The samples in the data must be interleaved and little-endian
   bytes data = 2;
 
   // Audio format. Only 'pcm-s16' is currently supported
@@ -20,6 +20,6 @@ message RawAudio {
   // Sample rate in Hz
   fixed32 sample_rate = 4;
 
-  // Number of channels in the audio frame
+  // Number of channels in the audio block
   fixed32 number_of_channels = 5;
 }

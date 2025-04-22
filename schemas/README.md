@@ -2239,7 +2239,7 @@ w value
 
 ## RawAudio
 
-A single frame of an audio bit stream
+A single block of an audio bitstream
 
 <table>
   <tr>
@@ -2256,7 +2256,7 @@ time
 </td>
 <td>
 
-Timestamp of the audio frame
+Timestamp of the start of the audio block
 
 </td>
 </tr>
@@ -2269,7 +2269,7 @@ bytes
 </td>
 <td>
 
-Audio frame data. The samples in the data must be interleaved and little-endian
+Audio data. The samples in the data must be interleaved and little-endian
 
 </td>
 </tr>
@@ -2308,7 +2308,7 @@ uint32
 </td>
 <td>
 
-Number of channels in the audio frame
+Number of channels in the audio block
 
 </td>
 </tr>

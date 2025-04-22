@@ -1462,13 +1462,13 @@ impl From<Quaternion> for foxglove::schemas::Quaternion {
     }
 }
 
-/// A single frame of an audio bit stream
+/// A single block of an audio bitstream
 ///
-/// :param timestamp: Timestamp of the audio frame
-/// :param data: Audio frame data. The samples in the data must be interleaved and little-endian
+/// :param timestamp: Timestamp of the start of the audio block
+/// :param data: Audio data. The samples in the data must be interleaved and little-endian
 /// :param format: Audio format. Only 'pcm-s16' is currently supported
 /// :param sample_rate: Sample rate in Hz
-/// :param number_of_channels: Number of channels in the audio frame
+/// :param number_of_channels: Number of channels in the audio block
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/raw-audio
 #[pyclass(module = "foxglove.schemas")]

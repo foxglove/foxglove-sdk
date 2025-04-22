@@ -3,12 +3,12 @@
 
 import { Time } from "./Time";
 
-/** A single frame of an audio bit stream */
+/** A single block of an audio bitstream */
 export type RawAudio = {
-  /** Timestamp of the audio frame */
+  /** Timestamp of the start of the audio block */
   timestamp: Time;
 
-  /** Audio frame data. The samples in the data must be interleaved and little-endian */
+  /** Audio data. The samples in the data must be interleaved and little-endian */
   data: Uint8Array;
 
   /** Audio format. Only 'pcm-s16' is currently supported */
@@ -17,6 +17,6 @@ export type RawAudio = {
   /** Sample rate in Hz */
   sample_rate: number;
 
-  /** Number of channels in the audio frame */
+  /** Number of channels in the audio block */
   number_of_channels: number;
 };

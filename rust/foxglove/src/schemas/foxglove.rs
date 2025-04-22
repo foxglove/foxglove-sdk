@@ -867,14 +867,14 @@ pub struct Quaternion {
     #[prost(double, tag = "4")]
     pub w: f64,
 }
-/// A single frame of an audio bit stream
+/// A single block of an audio bitstream
 /// <https://docs.foxglove.dev/docs/visualization/message-schemas/raw-audio>
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct RawAudio {
-    /// Timestamp of the audio frame
+    /// Timestamp of the start of the audio block
     #[prost(message, optional, tag = "1")]
     pub timestamp: ::core::option::Option<crate::schemas::Timestamp>,
-    /// Audio frame data. The samples in the data must be interleaved and little-endian
+    /// Audio data. The samples in the data must be interleaved and little-endian
     #[prost(bytes = "bytes", tag = "2")]
     pub data: ::prost::bytes::Bytes,
     /// Audio format. Only 'pcm-s16' is currently supported
@@ -883,7 +883,7 @@ pub struct RawAudio {
     /// Sample rate in Hz
     #[prost(fixed32, tag = "4")]
     pub sample_rate: u32,
-    /// Number of channels in the audio frame
+    /// Number of channels in the audio block
     #[prost(fixed32, tag = "5")]
     pub number_of_channels: u32,
 }

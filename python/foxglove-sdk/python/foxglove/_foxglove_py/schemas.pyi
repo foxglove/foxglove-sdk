@@ -478,7 +478,7 @@ class Quaternion:
 
 class RawAudio:
     """
-    A single frame of an audio bit stream
+    A single block of an audio bitstream
     """
 
     def __new__(
