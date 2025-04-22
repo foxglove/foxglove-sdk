@@ -366,7 +366,8 @@ impl FoxgloveMcapWriter {
 /// Returns 0 on success, or returns a FoxgloveError code on error.
 ///
 /// # Safety
-/// `path` and `profile` must contain valid UTF8.
+/// `path` and `profile` must contain valid UTF8. If `context` is non-null,
+/// it must have been created by `foxglove_context_new`.
 #[unsafe(no_mangle)]
 #[must_use]
 pub unsafe extern "C" fn foxglove_mcap_open(
@@ -573,14 +574,22 @@ pub unsafe extern "C" fn foxglove_channel_log(
     FoxgloveError::Ok
 }
 
-pub struct FoxgloveContext(#[allow(unused)] foxglove::Context);
+// This generates a `typedef struct foxglove_context foxglove_context`
+// for the opaque type that we want to expose to C, but does so under
+// a module to avoid collision with the actual type.
+pub mod export {
+    pub struct FoxgloveContext;
+}
+
+// This aligns our internal type name with the exported opaque type.
+use foxglove::Context as FoxgloveContext;
 
 /// Create a new context. This never fails.
 /// You must pass this to `foxglove_context_free` when done with it.
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_context_new() -> *const FoxgloveContext {
     let context = foxglove::Context::new();
-    Arc::into_raw(context) as *const _
+    Arc::into_raw(context)
 }
 
 /// Free a context created via `foxglove_context_new` or `foxglove_context_free`.
@@ -592,7 +601,7 @@ pub unsafe extern "C" fn foxglove_context_free(context: *const FoxgloveContext) 
     if context.is_null() {
         return;
     }
-    drop(unsafe { Arc::from_raw(context as *const foxglove::Context) });
+    drop(unsafe { Arc::from_raw(context) });
 }
 
 /// For use by the C++ SDK. Identifies that wrapper as the source of logs.

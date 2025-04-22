@@ -226,7 +226,8 @@ foxglove_error foxglove_server_stop(struct foxglove_websocket_server *server);
  * Returns 0 on success, or returns a FoxgloveError code on error.
  *
  * # Safety
- * `path` and `profile` must contain valid UTF8.
+ * `path` and `profile` must contain valid UTF8. If `context` is non-null,
+ * it must have been created by `foxglove_context_new`.
  */
 foxglove_error foxglove_mcap_open(const struct foxglove_mcap_options *FOXGLOVE_NONNULL options,
                                   struct foxglove_mcap_writer **writer);

@@ -130,12 +130,13 @@ TEST_CASE("different contexts") {
   auto context1 = foxglove::Context::create();
   auto context2 = foxglove::Context::create();
 
+  // Create writer on context1
   foxglove::McapWriterOptions options{context1};
   options.path = "test.mcap";
   auto writer = foxglove::McapWriter::create(options);
   REQUIRE(writer.has_value());
 
-  // Write message, but on default global context
+  // Log on context2 (should not be output to the file)
   foxglove::Schema schema;
   schema.name = "ExampleSchema";
   auto channelResult = foxglove::Channel::create("example1", "json", schema, context2);

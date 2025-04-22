@@ -70,7 +70,7 @@ struct WebSocketServerOptions {
   Context context;
   std::string name;
   std::string host = "127.0.0.1";
-  uint16_t port = 0;
+  uint16_t port = 8765;  // default foxglove WebSocket port
   WebSocketServerCallbacks callbacks;
   WebSocketServerCapabilities capabilities = WebSocketServerCapabilities(0);
   std::vector<std::string> supportedEncodings;
