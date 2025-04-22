@@ -32,7 +32,8 @@ fn main() {
         .create_new_buffered_file(FILE_NAME)
         .expect("Failed to start mcap writer");
 
-    // Start a server to communicate with the Foxglove app.
+    // Start a server to communicate with the Foxglove app. This will run indefinitely, even if
+    // references are dropped.
     foxglove::WebSocketServer::new()
         .start_blocking()
         .expect("Server failed to start");
