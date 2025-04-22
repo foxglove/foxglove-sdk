@@ -1,6 +1,7 @@
 #pragma once
 
 #include <foxglove/error.hpp>
+#include <foxglove/server/connection_graph.hpp>
 
 #include <cstdint>
 #include <functional>
@@ -21,26 +22,6 @@ struct ClientChannel {
   std::string_view schemaEncoding;
   const std::byte* schema;
   size_t schemaLen;
-};
-
-class ConnectionGraph final {
-public:
-  ConnectionGraph();
-
-  foxglove_connection_graph& impl();
-
-  FoxgloveError setPublishedTopic(
-    std::string_view topic, const std::vector<std::string>& publisherIds
-  );
-  FoxgloveError setSubscribedTopic(
-    std::string_view topic, const std::vector<std::string>& subscriberIds
-  );
-  FoxgloveError setAdvertisedService(
-    std::string_view service, const std::vector<std::string>& providerIds
-  );
-
-private:
-  std::unique_ptr<foxglove_connection_graph, void (*)(foxglove_connection_graph*)> _impl;
 };
 
 enum class WebSocketServerCapabilities : uint8_t {
