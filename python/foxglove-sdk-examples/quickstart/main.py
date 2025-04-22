@@ -1,4 +1,3 @@
-import json
 import math
 import time
 
@@ -31,7 +30,7 @@ while True:
 
     # Log messages on both channels until interrupted. By default, each message
     # is stamped with the current time.
-    size_channel.log(json.dumps({"size": size}).encode("utf-8"))
+    size_channel.log({"size": size})
     scene_channel.log(
         SceneUpdate(
             entities=[
