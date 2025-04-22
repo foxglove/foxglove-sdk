@@ -8,10 +8,12 @@ impl Default for FoxgloveConnectionGraph {
     }
 }
 
-/// Create a new `FoxgloveConnectionGraph`.
+/// Create a new connection graph.
+///
+/// The graph must later be freed with `foxglove_connection_graph_free`.
 ///
 /// # Safety
-/// `graph` must be a valid pointer to a pointer to a `FoxgloveConnectionGraph`.
+/// `graph` must be a valid pointer to a pointer to a `foxglove_connection_graph`.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_connection_graph_create(
     graph: *mut *mut FoxgloveConnectionGraph,
@@ -25,22 +27,25 @@ pub unsafe extern "C" fn foxglove_connection_graph_create(
     FoxgloveError::Ok
 }
 
-/// Free the `FoxgloveConnectionGraph` and the memory it occupies.
+/// Free the connection graph.
 ///
 /// # Safety
-/// `graph` must be a valid pointer to a `FoxgloveConnectionGraph` created by
+/// `graph` must be a valid pointer to a `foxglove_connection_graph` created by
 /// `foxglove_connection_graph_create`.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_connection_graph_free(graph: *mut FoxgloveConnectionGraph) {
     drop(unsafe { Box::from_raw(graph) });
 }
 
-/// Set a published topic and its associated publisher ids.
-/// Overwrites any existing topic with the same name.
+/// Set a published topic and its associated publisher ids. Overwrites any existing topic with the
+/// same name.
 ///
 /// # Safety
-/// `topic`, and each ID in `publisher_ids` must adhere to the safety rules of `FoxgloveString`.
+/// `topic`, and each ID in `publisher_ids` must adhere to the safety rules of `foxglove_string`.
 /// `publisher_ids_count` must be the number of elements in the `publisher_ids` array.
+///
+/// These strings are copied from the pointers, and need only be valid for the duration of this
+/// function call.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_connection_graph_set_published_topic(
     graph: &mut FoxgloveConnectionGraph,
@@ -96,11 +101,11 @@ unsafe fn do_foxglove_connection_graph_set_published_topic(
     Ok(())
 }
 
-/// Set a subscribed topic and its associated subscriber ids.
-/// Overwrites any existing topic with the same name.
+/// Set a subscribed topic and its associated subscriber ids. Overwrites any existing topic with the
+/// same name.
 ///
 /// # Safety
-/// `topic`, and each ID in `subscriber_ids` must adhere to the safety rules of `FoxgloveString`.
+/// `topic`, and each ID in `subscriber_ids` must adhere to the safety rules of `foxglove_string`.
 /// `subscriber_ids_count` must be the number of elements in the `subscriber_ids` array.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_connection_graph_set_subscribed_topic(
@@ -157,13 +162,14 @@ unsafe fn do_foxglove_connection_graph_set_subscribed_topic(
     Ok(())
 }
 
-/// Set an advertised service and its associated provider ids.
-/// Overwrites any existing service with the same name.
+/// Set an advertised service and its associated provider ids. Overwrites any existing service with
+/// the same name.
 ///
 /// # Safety
-/// `graph` must be a valid pointer to a `FoxgloveConnectionGraph` created by `foxglove_connection_graph_create`.
-/// `service`, and each ID in `provider_ids` must adhere to the safety rules of `FoxgloveString`.
-/// `provider_ids_count` must be the number of elements in the `provider_ids` array.
+/// `graph` must be a valid pointer to a `foxglove_connection_graph` created by
+/// `foxglove_connection_graph_create`. `service`, and each ID in `provider_ids` must adhere to the
+/// safety rules of `FoxgloveString`. `provider_ids_count` must be the number of elements in the
+/// `provider_ids` array.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_connection_graph_set_advertised_service(
     graph: &mut FoxgloveConnectionGraph,

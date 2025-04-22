@@ -189,6 +189,7 @@ impl FoxgloveWebSocketServer {
 }
 
 /// Create and start a server.
+///
 /// Resources must later be freed by calling `foxglove_server_stop`.
 ///
 /// `port` may be 0, in which case an available port will be automatically selected.
@@ -300,6 +301,7 @@ pub extern "C" fn foxglove_server_stop(
     FoxgloveError::Ok
 }
 
+/// Publish a connection graph to the server.
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_server_publish_connection_graph(
     server: Option<&mut FoxgloveWebSocketServer>,
@@ -523,8 +525,9 @@ unsafe fn do_foxglove_channel_create(
 }
 
 /// Free a channel created via `foxglove_channel_create`.
+///
 /// # Safety
-/// `channel` must be a valid pointer to a `FoxgloveChannel` created via `foxglove_channel_create`.
+/// `channel` must be a valid pointer to a `foxglove_channel` created via `foxglove_channel_create`.
 /// If channel is null, this does nothing.
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_free(channel: Option<&FoxgloveChannel>) {
@@ -537,7 +540,7 @@ pub extern "C" fn foxglove_channel_free(channel: Option<&FoxgloveChannel>) {
 /// Get the ID of a channel.
 ///
 /// # Safety
-/// `channel` must be a valid pointer to a `FoxgloveChannel` created via `foxglove_channel_create`.
+/// `channel` must be a valid pointer to a `foxglove_channel` created via `foxglove_channel_create`.
 ///
 /// If the passed channel is null, an invalid id of 0 is returned.
 #[unsafe(no_mangle)]
