@@ -243,9 +243,7 @@ unsafe fn do_foxglove_server_start(
         server = server.listener(Arc::new(callbacks.clone()))
     }
     if !options.context.is_null() {
-        let context = ManuallyDrop::new(unsafe {
-            Arc::from_raw(options.context as *const foxglove::Context)
-        });
+        let context = ManuallyDrop::new(unsafe { Arc::from_raw(options.context) });
         server = server.context(&context);
     }
     let server = server.start_blocking()?;
@@ -403,8 +401,7 @@ unsafe fn do_foxglove_mcap_open(
 
     let mut builder = foxglove::McapWriter::with_options(mcap_options);
     if !context.is_null() {
-        let context =
-            ManuallyDrop::new(unsafe { Arc::from_raw(context as *const foxglove::Context) });
+        let context = ManuallyDrop::new(unsafe { Arc::from_raw(context) });
         builder = builder.context(&context);
     }
     let writer = builder
@@ -501,8 +498,7 @@ unsafe fn do_foxglove_channel_create(
         .message_encoding(message_encoding)
         .schema(maybe_schema);
     if !context.is_null() {
-        let context =
-            ManuallyDrop::new(unsafe { Arc::from_raw(context as *const foxglove::Context) });
+        let context = ManuallyDrop::new(unsafe { Arc::from_raw(context) });
         builder = builder.context(&context);
     }
     builder
