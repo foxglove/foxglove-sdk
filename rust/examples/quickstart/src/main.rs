@@ -9,8 +9,8 @@ use foxglove::{LazyChannel, LazyRawChannel, McapWriter};
 const FILE_NAME: &str = "quickstart-rust.mcap";
 
 // Our example logs data on a couple of different topics, so we'll create a
-// channel for each. We can use a channel like SceneUpdateChannel to log
-// Foxglove schemas, or a generic Channel to log custom data.
+// channel for each. We can use a channel like Channel<SceneUpdate> to log
+// Foxglove schemas, or a generic RawChannel to log custom data.
 static SCENE: LazyChannel<SceneUpdate> = LazyChannel::new("/scene");
 static SIZE: LazyRawChannel = LazyRawChannel::new("/size", "json");
 
