@@ -18,6 +18,10 @@ pub unsafe extern "C" fn foxglove_connection_graph_create(
 ) -> FoxgloveError {
     let graph_box = Box::new(FoxgloveConnectionGraph::default());
     unsafe { *graph = Box::into_raw(graph_box) };
+
+    if graph.is_null() {
+        return FoxgloveError::Unspecified;
+    }
     FoxgloveError::Ok
 }
 
