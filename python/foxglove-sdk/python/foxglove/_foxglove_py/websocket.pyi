@@ -148,10 +148,15 @@ class ParameterValue:
 
         def __new__(cls, value: float) -> "ParameterValue.Number": ...
 
-    class Bytes:
-        """A byte array."""
+    class String:
+        """
+        A string value.
 
-        def __new__(cls, value: bytes) -> "ParameterValue.Bytes": ...
+        For parameters of type :py:attr:ParameterType.ByteArray, this is a
+        base64 encoding of the byte array.
+        """
+
+        def __new__(cls, value: str) -> "ParameterValue.String": ...
 
     class Array:
         """An array of parameter values."""
@@ -170,7 +175,7 @@ class ParameterValue:
 AnyParameterValue = Union[
     ParameterValue.Bool,
     ParameterValue.Number,
-    ParameterValue.Bytes,
+    ParameterValue.String,
     ParameterValue.Array,
     ParameterValue.Dict,
 ]

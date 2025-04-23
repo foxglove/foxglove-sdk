@@ -4,5 +4,5 @@ expression: "Parameter::string(\"string\", \"howdy\")"
 ---
 {
   "name": "string",
-  "value": "aG93ZHk="
+  "value": "howdy"
 }

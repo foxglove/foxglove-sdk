@@ -19,7 +19,7 @@ from foxglove.websocket import (
 )
 
 
-class ParameterStore(foxglove.ServerListener):
+class ParameterStore(foxglove.websocket.ServerListener):
     def __init__(self, parameters: list[Parameter]) -> None:
         # In this example our parameters are unique by name
         self.parameters = {param.name: param for param in parameters}
@@ -78,7 +78,7 @@ def main() -> None:
                 {
                     "a": ParameterValue.Number(1),
                     "b": ParameterValue.Bool(True),
-                    "c": ParameterValue.Bytes(b"hello"),
+                    "c": ParameterValue.String("hello"),
                     "arr": ParameterValue.Array(
                         [ParameterValue.Number(1), ParameterValue.Bool(True)]
                     ),

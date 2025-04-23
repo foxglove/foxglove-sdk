@@ -46,7 +46,8 @@ mod tests {
             Parameter::empty("empty"),
             Parameter::float64("f64", 1.23),
             Parameter::float64_array("f64[]", [1.23, 4.56]),
-            Parameter::byte_array("byte[]", [0x10, 0x20, 0x30]),
+            Parameter::string("str", "hello"),
+            Parameter::byte_array("byte[]", &[0x10, 0x20, 0x30]),
             Parameter::bool("bool", true),
         ])
     }

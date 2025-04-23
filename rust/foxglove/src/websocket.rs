@@ -30,5 +30,7 @@ pub use fetch_asset::{AssetHandler, AssetResponder};
 pub(crate) use fetch_asset::{AsyncAssetHandlerFn, BlockingAssetHandlerFn};
 pub(crate) use server::{create_server, Server, ServerOptions};
 pub use server_listener::ServerListener;
-pub use ws_protocol::parameter::{Parameter, ParameterType, ParameterValue};
+pub use ws_protocol::parameter::{
+    DecodeError as ParameterDecodeError, Parameter, ParameterType, ParameterValue,
+};
 pub use ws_protocol::server::status::{Level as StatusLevel, Status};

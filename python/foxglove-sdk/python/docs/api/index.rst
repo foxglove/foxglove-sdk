@@ -56,9 +56,12 @@ Used with the parameter service during live visualization. Requires the :py:data
 
       A boolean value.
 
-   .. py:class:: Bytes(value: bytes)
+   .. py:class:: String(value: str)
 
-      A byte array.
+      A string value.
+
+      For parameters of type :py:attr:`ParameterType.ByteArray`, this is a
+      base64 encoding of the byte array.
 
    .. py:class:: Array(value: list[ParameterValue])
 

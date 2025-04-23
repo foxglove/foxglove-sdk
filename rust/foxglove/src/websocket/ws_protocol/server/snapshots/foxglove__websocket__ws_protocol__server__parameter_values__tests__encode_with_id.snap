@@ -22,6 +22,10 @@ expression: message_with_id()
       ]
     },
     {
+      "name": "str",
+      "value": "hello"
+    },
+    {
       "name": "byte[]",
       "type": "byte_array",
       "value": "ECAw"

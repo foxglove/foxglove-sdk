@@ -822,8 +822,10 @@ pub enum PyParameterValue {
     Number(f64),
     /// A boolean value.
     Bool(bool),
-    /// A byte array, which will be encoded as a base64-encoded string.
-    Bytes(Vec<u8>),
+    /// A string value.
+    ///
+    /// For parameters of type ByteArray, this is a base64-encoding of the byte array.
+    String(String),
     /// An array of parameter values.
     Array(Vec<PyParameterValue>),
     /// An associative map of parameter values.
@@ -835,7 +837,7 @@ impl From<PyParameterValue> for foxglove::websocket::ParameterValue {
         match value {
             PyParameterValue::Number(n) => foxglove::websocket::ParameterValue::Number(n),
             PyParameterValue::Bool(b) => foxglove::websocket::ParameterValue::Bool(b),
-            PyParameterValue::Bytes(items) => foxglove::websocket::ParameterValue::String(items),
+            PyParameterValue::String(s) => foxglove::websocket::ParameterValue::String(s),
             PyParameterValue::Array(py_parameter_values) => {
                 foxglove::websocket::ParameterValue::Array(
                     py_parameter_values.into_iter().map(Into::into).collect(),
@@ -853,7 +855,7 @@ impl From<foxglove::websocket::ParameterValue> for PyParameterValue {
         match value {
             foxglove::websocket::ParameterValue::Number(n) => PyParameterValue::Number(n),
             foxglove::websocket::ParameterValue::Bool(b) => PyParameterValue::Bool(b),
-            foxglove::websocket::ParameterValue::String(items) => PyParameterValue::Bytes(items),
+            foxglove::websocket::ParameterValue::String(s) => PyParameterValue::String(s),
             foxglove::websocket::ParameterValue::Array(parameter_values) => {
                 PyParameterValue::Array(parameter_values.into_iter().map(Into::into).collect())
             }
