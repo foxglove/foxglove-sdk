@@ -11,10 +11,10 @@ struct foxglove_connection_graph;
 namespace foxglove {
 
 class ConnectionGraph final {
+  friend class WebSocketServer;
+
 public:
   ConnectionGraph();
-
-  foxglove_connection_graph& impl();
 
   FoxgloveError setPublishedTopic(
     std::string_view topic, const std::vector<std::string>& publisherIds

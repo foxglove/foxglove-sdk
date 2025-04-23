@@ -127,7 +127,7 @@ uint16_t WebSocketServer::port() const {
 }
 
 void WebSocketServer::publishConnectionGraph(ConnectionGraph& graph) {
-  foxglove_server_publish_connection_graph(_impl.get(), &graph.impl());
+  foxglove_server_publish_connection_graph(_impl.get(), graph._impl.get());
 }
 
 }  // namespace foxglove

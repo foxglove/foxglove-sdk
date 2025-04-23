@@ -12,10 +12,6 @@ ConnectionGraph::ConnectionGraph()
   );
 }
 
-foxglove_connection_graph& ConnectionGraph::impl() {
-  return *_impl;
-}
-
 FoxgloveError ConnectionGraph::setPublishedTopic(
   std::string_view topic, const std::vector<std::string>& publisherIds
 ) {
