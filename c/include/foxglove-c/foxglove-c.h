@@ -634,8 +634,6 @@ foxglove_error foxglove_parameter_create_float64(struct foxglove_parameter **par
 /**
  * Creates a new boolean parameter.
  *
- * `name` is copied, and only needs to be valid for the duration of this call.
- *
  * The value must be freed with `foxglove_parameter_free`, or by passing it to a consuming
  * function such as `foxglove_parameter_array_push`.
  *
@@ -649,8 +647,6 @@ foxglove_error foxglove_parameter_create_boolean(struct foxglove_parameter **par
 
 /**
  * Creates a new string parameter.
- *
- * `name` is copied, and only needs to be valid for the duration of this call.
  *
  * The value must be freed with `foxglove_parameter_free`, or by passing it to a consuming
  * function such as `foxglove_parameter_array_push`.
@@ -666,8 +662,6 @@ foxglove_error foxglove_parameter_create_string(struct foxglove_parameter **para
 
 /**
  * Creates a new byte array parameter.
- *
- * `name` is copied, and only needs to be valid for the duration of this call.
  *
  * The value must be freed with `foxglove_parameter_free`, or by passing it to a consuming
  * function such as `foxglove_parameter_array_push`.

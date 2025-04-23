@@ -364,8 +364,6 @@ pub unsafe extern "C" fn foxglove_parameter_create_float64(
 
 /// Creates a new boolean parameter.
 ///
-/// `name` is copied, and only needs to be valid for the duration of this call.
-///
 /// The value must be freed with `foxglove_parameter_free`, or by passing it to a consuming
 /// function such as `foxglove_parameter_array_push`.
 ///
@@ -383,8 +381,6 @@ pub unsafe extern "C" fn foxglove_parameter_create_boolean(
 }
 
 /// Creates a new string parameter.
-///
-/// `name` is copied, and only needs to be valid for the duration of this call.
 ///
 /// The value must be freed with `foxglove_parameter_free`, or by passing it to a consuming
 /// function such as `foxglove_parameter_array_push`.
@@ -408,8 +404,6 @@ pub unsafe extern "C" fn foxglove_parameter_create_string(
 }
 
 /// Creates a new byte array parameter.
-///
-/// `name` is copied, and only needs to be valid for the duration of this call.
 ///
 /// The value must be freed with `foxglove_parameter_free`, or by passing it to a consuming
 /// function such as `foxglove_parameter_array_push`.
