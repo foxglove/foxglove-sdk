@@ -68,7 +68,7 @@ impl Parameter {
     }
 
     /// Creates a new parameter with a float64 array value.
-    pub fn float64_array(name: impl Into<String>, values: Vec<f64>) -> Self {
+    pub fn float64_array(name: impl Into<String>, values: impl IntoIterator<Item = f64>) -> Self {
         Self {
             name: name.into(),
             r#type: Some(ParameterType::Float64Array),
@@ -80,7 +80,11 @@ impl Parameter {
 
     /// Creates a new parameter with a string value.
     pub fn string(name: impl Into<String>, value: impl Into<String>) -> Self {
-        Self::byte_array(name, value.into().into_bytes())
+        Self {
+            name: name.into(),
+            r#type: None,
+            value: Some(ParameterValue::String(value.into().into_bytes())),
+        }
     }
 
     /// Creates a new parameter with a byte array value.
@@ -127,7 +131,7 @@ mod tests {
 
     #[test]
     fn test_float_array() {
-        insta::assert_json_snapshot!(Parameter::float64_array("f64[]", vec![1.23, 4.56]));
+        insta::assert_json_snapshot!(Parameter::float64_array("f64[]", [1.23, 4.56]));
     }
 
     #[test]
