@@ -350,8 +350,8 @@ pub enum FoxgloveError {
     #[error("Failed to bind port: {0}")]
     Bind(std::io::Error),
     /// A channel for the same topic has already been registered.
-    #[error("Channel for topic {0} already exists in registry")]
-    DuplicateChannel(String),
+    #[error("Channel for id {0} (topic {1}) already exists in registry")]
+    DuplicateChannel(ChannelId, String),
     /// A service with the same name is already registered.
     #[error("Service {0} already exists in registry")]
     DuplicateService(String),

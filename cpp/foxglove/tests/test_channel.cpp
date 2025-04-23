@@ -22,6 +22,6 @@ TEST_CASE("duplicate topic") {
   auto channel = foxglove::Channel::create("test", "json", std::nullopt);
   REQUIRE(channel.has_value());
   auto channel2 = foxglove::Channel::create("test", "json", std::nullopt);
-  REQUIRE(!channel2.has_value());
-  REQUIRE(channel2.error() == foxglove::FoxgloveError::DuplicateChannel);
+  REQUIRE(channel2.has_value());
+  REQUIRE(channel.value().id() != channel2.value().id());
 }

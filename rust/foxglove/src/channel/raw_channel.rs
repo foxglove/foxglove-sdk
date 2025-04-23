@@ -31,6 +31,8 @@ static WARN_THROTTLER_INTERVAL: Duration = Duration::from_secs(10);
 /// immutable, returned as `Arc<Channel>` and can be shared between threads.
 ///
 /// Channels are created using [`ChannelBuilder`](crate::ChannelBuilder).
+///
+/// You should choose a unique topic name per channel for compatibility with the Foxglove app.
 pub struct RawChannel {
     id: ChannelId,
     context: Weak<Context>,

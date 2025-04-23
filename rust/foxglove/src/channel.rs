@@ -67,6 +67,8 @@ impl<T: Encode> Channel<T> {
     /// Constructs a new typed channel with default settings.
     ///
     /// If you want to override the channel configuration, use [`ChannelBuilder`].
+    ///
+    /// You should choose a unique topic name per channel for compatibility with the Foxglove app.
     pub fn new(topic: impl Into<String>) -> Result<Self, FoxgloveError> {
         ChannelBuilder::new(topic).build()
     }

@@ -730,7 +730,7 @@ impl From<foxglove::FoxgloveError> for FoxgloveError {
             }
             foxglove::FoxgloveError::ServerAlreadyStarted => FoxgloveError::ServerAlreadyStarted,
             foxglove::FoxgloveError::Bind(_) => FoxgloveError::Bind,
-            foxglove::FoxgloveError::DuplicateChannel(_) => FoxgloveError::DuplicateChannel,
+            foxglove::FoxgloveError::DuplicateChannel(_, _) => FoxgloveError::DuplicateChannel,
             foxglove::FoxgloveError::DuplicateService(_) => FoxgloveError::DuplicateService,
             foxglove::FoxgloveError::MissingRequestEncoding(_) => {
                 FoxgloveError::MissingRequestEncoding

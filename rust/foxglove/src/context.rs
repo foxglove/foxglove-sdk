@@ -22,6 +22,9 @@ struct ContextInner {
 }
 impl ContextInner {
     /// Returns the channel for the specified topic, if there is one.
+    ///
+    /// If multiple channels use the same topic name, this will return the first channel that was
+    /// added to this context.
     fn get_channel_by_topic(&self, topic: &str) -> Option<&Arc<RawChannel>> {
         self.channels_by_topic.get(topic)
     }
@@ -30,11 +33,19 @@ impl ContextInner {
     fn add_channel(&mut self, channel: Arc<RawChannel>) -> Result<(), FoxgloveError> {
         // Insert channel.
         let topic = channel.topic();
-        let Entry::Vacant(entry) = self.channels_by_topic.entry(topic.to_string()) else {
-            return Err(FoxgloveError::DuplicateChannel(topic.to_string()));
+        let Entry::Vacant(entry) = self.channels.entry(channel.id()) else {
+            return Err(FoxgloveError::DuplicateChannel(
+                channel.id(),
+                topic.to_string(),
+            ));
         };
         entry.insert(channel.clone());
         self.channels.insert(channel.id(), channel.clone());
+
+        // Index the channel by topic name if we don't already have a channel with this topic.
+        self.channels_by_topic
+            .entry(topic.to_string())
+            .or_insert(channel.clone());
 
         // Notify sinks of new channel. Sinks that dynamically manage subscriptions may return true
         // from `add_channel` to add a subscription synchronously.
@@ -235,6 +246,9 @@ impl Context {
     }
 
     /// Returns the channel for the specified topic, if there is one.
+    ///
+    /// If multiple channels use the same topic name, this will return the first channel that was
+    /// added to this context.
     pub fn get_channel_by_topic(&self, topic: &str) -> Option<Arc<RawChannel>> {
         self.0.read().get_channel_by_topic(topic).cloned()
     }
@@ -593,5 +607,24 @@ mod tests {
         let ctx = Context::new();
         let s1 = Arc::new(RecordingSink::new().add_channels(|_| unreachable!("no channels!")));
         ctx.add_sink(s1.clone());
+    }
+
+    #[test]
+    fn test_supports_multiple_channels_with_same_topic() {
+        let ctx = Context::new();
+        let c1 = new_test_channel(&ctx, "topic").unwrap();
+        let c2 = new_test_channel(&ctx, "topic").unwrap();
+        assert_ne!(c1.id(), c2.id());
+        assert_eq!(c1.topic(), c2.topic());
+    }
+
+    #[test]
+    fn get_channel_by_topic_with_duplicate() {
+        let ctx = Context::new();
+        let c1 = new_test_channel(&ctx, "topic").unwrap();
+        let _c2 = new_test_channel(&ctx, "topic").unwrap();
+        let channel = ctx.get_channel_by_topic("topic");
+        assert!(channel.is_some());
+        assert_eq!(channel.unwrap().id(), c1.id());
     }
 }
