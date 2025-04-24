@@ -33,10 +33,8 @@ impl ContextInner {
     /// Adds a channel to the context.
     fn add_channel(&mut self, channel: Arc<RawChannel>) -> Result<(), FoxgloveError> {
         let topic = channel.topic();
-        let Entry::Vacant(entry) = self.channels.entry(channel.id()) else {
-            return Err(FoxgloveError::DuplicateChannel(topic.to_string()));
-        };
-        entry.insert(channel.clone());
+
+        self.channels.insert(channel.id(), channel.clone());
 
         // Index the channel by topic name if we haven't seen it before
         if !self.channels_by_topic.contains_key(topic) {
