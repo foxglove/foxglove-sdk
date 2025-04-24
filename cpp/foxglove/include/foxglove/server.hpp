@@ -1,14 +1,13 @@
 #pragma once
 
 #include <foxglove/error.hpp>
+#include <foxglove/parameter.hpp>
 #include <foxglove/server/connection_graph.hpp>
 
 #include <cstdint>
 #include <functional>
 #include <memory>
 #include <string>
-
-#include "foxglove/parameter.hpp"
 
 enum foxglove_error : uint8_t;
 struct foxglove_websocket_server;
