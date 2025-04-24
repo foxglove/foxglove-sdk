@@ -240,8 +240,6 @@ TEST_CASE("Subscribe and unsubscribe callbacks") {
     return !unsubscribeCalls.empty();
   });
   REQUIRE_THAT(unsubscribeCalls, Equals(std::vector<uint64_t>{1}));
-
-  client.close();
 }
 
 TEST_CASE("Capability enums") {
@@ -365,8 +363,6 @@ TEST_CASE("Client advertise/publish callbacks") {
   cv.wait(lock, [&] {
     return !advertised;
   });
-
-  client.close();
 }
 
 TEST_CASE("Parameter callbacks") {
@@ -575,8 +571,6 @@ TEST_CASE("Parameter callbacks") {
       ]
     })");
   REQUIRE(parsed == expected);
-
-  client.close();
 }
 
 TEST_CASE("Publish a connection graph") {
