@@ -57,6 +57,12 @@ FetchContent_Declare(asio
 )
 FetchContent_MakeAvailable(asio)
 
+FetchContent_Declare(json
+  GIT_REPOSITORY https://github.com/nlohmann/json.git
+  GIT_TAG v3.12.0
+)
+FetchContent_MakeAvailable(json)
+
 if(DEFINED SANITIZE)
   if(NOT CMAKE_CXX_COMPILER_ID MATCHES ".*Clang")
     message(FATAL_ERROR "Sanitizers are only supported with Clang, not ${CMAKE_CXX_COMPILER_ID}")
@@ -128,6 +134,7 @@ target_compile_definitions(tests PRIVATE ASIO_STANDALONE)
 target_compile_options(tests PUBLIC ${SANITIZER_COMPILE_OPTIONS})
 target_link_options(tests PUBLIC ${SANITIZER_LINK_OPTIONS})
 target_include_directories(tests SYSTEM PRIVATE ${asio_SOURCE_DIR}/asio/include)
+target_include_directories(tests SYSTEM PRIVATE ${json_SOURCE_DIR}/include)
 target_include_directories(tests SYSTEM PRIVATE ${websocketpp_SOURCE_DIR})
 target_link_libraries(tests PRIVATE foxglove_cpp_static Catch2::Catch2WithMain)
 catch_discover_tests(tests)
