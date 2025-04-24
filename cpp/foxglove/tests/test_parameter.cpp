@@ -1,5 +1,5 @@
 #include <foxglove/error.hpp>
-#include <foxglove/parameter.hpp>
+#include <foxglove/server/parameter.hpp>
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>

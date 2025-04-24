@@ -1,5 +1,5 @@
-#include <foxglove/parameter.hpp>
 #include <foxglove/server.hpp>
+#include <foxglove/server/parameter.hpp>
 
 #include <atomic>
 #include <chrono>

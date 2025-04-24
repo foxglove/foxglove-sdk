@@ -1,8 +1,8 @@
 #pragma once
 
 #include <foxglove/error.hpp>
-#include <foxglove/parameter.hpp>
 #include <foxglove/server/connection_graph.hpp>
+#include <foxglove/server/parameter.hpp>
 
 #include <cstdint>
 #include <functional>

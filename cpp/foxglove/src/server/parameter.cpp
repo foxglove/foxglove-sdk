@@ -1,6 +1,6 @@
 #include <foxglove-c/foxglove-c.h>
 #include <foxglove/error.hpp>
-#include <foxglove/parameter.hpp>
+#include <foxglove/server/parameter.hpp>
 
 #include <cstring>
 #include <stdexcept>
