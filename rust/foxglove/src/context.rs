@@ -34,7 +34,7 @@ impl ContextInner {
     fn add_channel(&mut self, channel: Arc<RawChannel>) -> Result<(), FoxgloveError> {
         let topic = channel.topic();
         let Entry::Vacant(entry) = self.channels.entry(channel.id()) else {
-            return Err(FoxgloveError::DuplicateChannel(channel.id()));
+            return Err(FoxgloveError::DuplicateChannel(topic.to_string()));
         };
         entry.insert(channel.clone());
 
@@ -197,16 +197,16 @@ impl ContextInner {
 /// // Create a channel for the "/log" topic.
 /// let topic = "/topic";
 /// let ctx_a = Context::new();
-/// let chan_a = ctx_a.channel_builder(topic).build().unwrap();
+/// let chan_a = ctx_a.channel_builder(topic).unwrap().build().unwrap();
 /// chan_a.log(&Log{ message: "hello a".into(), ..Log::default() });
 ///
 /// // Attempting to create another channel with the same topic on the same context will fail.
-/// let err = ctx_a.channel_builder(topic).build::<Log>().unwrap_err();
+/// let err = ctx_a.channel_builder(topic).unwrap_err();
 /// assert!(matches!(err, FoxgloveError::DuplicateChannel(_)));
 ///
 /// // Create a channel for the "/log" topic on a different context.
 /// let ctx_b = Context::new();
-/// let chan_b = ctx_b.channel_builder(topic).build().unwrap();
+/// let chan_b = ctx_b.channel_builder(topic).unwrap().build().unwrap();
 /// chan_b.log(&Log{ message: "hello b".into(), ..Log::default() });
 /// ```
 pub struct Context(RwLock<ContextInner>);
@@ -231,9 +231,17 @@ impl Context {
         Arc::clone(LazyContext::get_default())
     }
 
-    /// Returns a channel builder for a channel in this context.
-    pub fn channel_builder(self: &Arc<Self>, topic: impl Into<String>) -> ChannelBuilder {
-        ChannelBuilder::new(topic).context(self)
+    /// Creates a builder for a channel in this context. Results in a
+    /// [`FoxgloveError::DuplicateChannel`] if a channel with the same topic already exists.
+    pub fn channel_builder(
+        self: &Arc<Self>,
+        topic: impl Into<String>,
+    ) -> Result<ChannelBuilder, FoxgloveError> {
+        let topic_str: String = topic.into();
+        if self.get_channel_by_topic(&topic_str).is_some() {
+            return Err(FoxgloveError::DuplicateChannel(topic_str));
+        }
+        Ok(ChannelBuilder::new(topic_str).context(self))
     }
 
     /// Returns a builder for an MCAP writer in this context.

@@ -59,7 +59,7 @@
 //! let mcap = ctx.mcap_writer().create_new_buffered_file("test.mcap")?;
 //!
 //! // Create a new channel for the topic "/log" for `Log` messages.
-//! let channel = ctx.channel_builder("/log").build()?;
+//! let channel = ctx.channel_builder("/log").unwrap().build()?;
 //! channel.log(&Log{
 //!     message: "Hello, Foxglove!".to_string(),
 //!     ..Default::default()
@@ -350,8 +350,8 @@ pub enum FoxgloveError {
     #[error("Failed to bind port: {0}")]
     Bind(std::io::Error),
     /// A channel for the same topic has already been registered.
-    #[error("Channel id {0} already exists in this context")]
-    DuplicateChannel(ChannelId),
+    #[error("Channel with topic {0} already exists in this context")]
+    DuplicateChannel(String),
     /// A service with the same name is already registered.
     #[error("Service {0} has already been registered")]
     DuplicateService(String),
