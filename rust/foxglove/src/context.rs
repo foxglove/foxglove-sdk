@@ -4,6 +4,7 @@ use std::fmt::Debug;
 use std::sync::Arc;
 
 use parking_lot::RwLock;
+use tracing::warn;
 
 use crate::{ChannelBuilder, ChannelId, FoxgloveError, McapWriter, RawChannel, Sink, SinkId};
 
@@ -31,21 +32,22 @@ impl ContextInner {
 
     /// Adds a channel to the context.
     fn add_channel(&mut self, channel: Arc<RawChannel>) -> Result<(), FoxgloveError> {
-        // Insert channel.
         let topic = channel.topic();
         let Entry::Vacant(entry) = self.channels.entry(channel.id()) else {
-            return Err(FoxgloveError::DuplicateChannel(
-                channel.id(),
-                topic.to_string(),
-            ));
+            return Err(FoxgloveError::DuplicateChannel(channel.id()));
         };
         entry.insert(channel.clone());
-        self.channels.insert(channel.id(), channel.clone());
 
-        // Index the channel by topic name if we don't already have a channel with this topic.
-        self.channels_by_topic
-            .entry(topic.to_string())
-            .or_insert(channel.clone());
+        // Index the channel by topic name if we haven't seen it before
+        if !self.channels_by_topic.contains_key(topic) {
+            self.channels_by_topic
+                .insert(topic.to_string(), channel.clone());
+        } else {
+            warn!(
+                "Channel with topic {} already exists in this context; use a unique topic for each channel",
+                topic
+            );
+        }
 
         // Notify sinks of new channel. Sinks that dynamically manage subscriptions may return true
         // from `add_channel` to add a subscription synchronously.
