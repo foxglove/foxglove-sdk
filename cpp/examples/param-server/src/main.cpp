@@ -104,6 +104,18 @@ int main(int argc, const char* argv[]) {
     }
     return result;
   };
+  options.callbacks.onParametersSubscribe = [](const std::vector<std::string>& names) {
+    std::cerr << "onParametersSubscribe called for parameters:\n";
+    for (const auto& name : names) {
+      std::cerr << " - " << name << "\n";
+    }
+  };
+  options.callbacks.onParametersUnsubscribe = [](const std::vector<std::string>& names) {
+    std::cerr << "onParametersUnsubscribe called for parameters:\n";
+    for (const auto& name : names) {
+      std::cerr << " - " << name << "\n";
+    }
+  };
 
   auto server_result = foxglove::WebSocketServer::create(std::move(options));
   if (!server_result.has_value()) {
@@ -127,7 +139,11 @@ int main(int argc, const char* argv[]) {
     // Update elapsed time
     auto now = std::chrono::steady_clock::now();
     auto elapsed = std::chrono::duration<double>(now - start_time).count();
-    param_store.insert_or_assign("elapsed", foxglove::Parameter("elapsed", elapsed));
+    auto param = foxglove::Parameter("elapsed", elapsed);
+    param_store.insert_or_assign("elapsed", param.clone());
+    std::vector<foxglove::Parameter> params;
+    params.emplace_back(std::move(param));
+    server.publishParameterValues(std::move(params));
   }
 
   std::cerr << "Done\n";

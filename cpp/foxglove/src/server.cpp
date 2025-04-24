@@ -13,12 +13,13 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
 ) {
   foxglove_internal_register_cpp_wrapper();
 
-  bool has_any_callbacks = options.callbacks.onSubscribe || options.callbacks.onUnsubscribe ||
-                           options.callbacks.onClientAdvertise || options.callbacks.onMessageData ||
-                           options.callbacks.onClientUnadvertise ||
-                           options.callbacks.onGetParameters || options.callbacks.onSetParameters ||
-                           options.callbacks.onConnectionGraphSubscribe ||
-                           options.callbacks.onConnectionGraphUnsubscribe;
+  bool has_any_callbacks =
+    options.callbacks.onSubscribe || options.callbacks.onUnsubscribe ||
+    options.callbacks.onClientAdvertise || options.callbacks.onMessageData ||
+    options.callbacks.onClientUnadvertise || options.callbacks.onGetParameters ||
+    options.callbacks.onSetParameters || options.callbacks.onParametersSubscribe ||
+    options.callbacks.onParametersUnsubscribe || options.callbacks.onConnectionGraphSubscribe ||
+    options.callbacks.onConnectionGraphUnsubscribe;
 
   std::unique_ptr<WebSocketServerCallbacks> callbacks;
 
@@ -154,6 +155,28 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
         return array.release();
       };
     }
+    if (callbacks->onParametersSubscribe) {
+      c_callbacks.on_parameters_subscribe =
+        [](const void* context, const char* const* c_names, size_t names_len) {
+          std::vector<std::string> names;
+          names.reserve(names_len);
+          for (auto i = 0; i < names_len; ++i) {
+            names.emplace_back(c_names[i]);
+          }
+          (static_cast<const WebSocketServerCallbacks*>(context))->onParametersSubscribe(names);
+        };
+    }
+    if (callbacks->onParametersUnsubscribe) {
+      c_callbacks.on_parameters_unsubscribe =
+        [](const void* context, const char* const* c_names, size_t names_len) {
+          std::vector<std::string> names;
+          names.reserve(names_len);
+          for (auto i = 0; i < names_len; ++i) {
+            names.emplace_back(c_names[i]);
+          }
+          (static_cast<const WebSocketServerCallbacks*>(context))->onParametersUnsubscribe(names);
+        };
+    }
     if (callbacks->onConnectionGraphSubscribe) {
       c_callbacks.on_connection_graph_subscribe = [](const void* context) {
         try {
@@ -212,6 +235,11 @@ FoxgloveError WebSocketServer::stop() {
 
 uint16_t WebSocketServer::port() const {
   return foxglove_server_get_port(impl_.get());
+}
+
+void WebSocketServer::publishParameterValues(std::vector<Parameter>&& params) {
+  ParameterArray array(std::move(params));
+  foxglove_server_publish_parameter_values(impl_.get(), array.release());
 }
 
 void WebSocketServer::publishConnectionGraph(ConnectionGraph& graph) {

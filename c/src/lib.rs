@@ -280,10 +280,22 @@ pub struct FoxgloveServerCallbacks {
             params: *const FoxgloveParameterArray,
         ) -> *mut FoxgloveParameterArray,
     >,
+    pub on_parameters_subscribe: Option<
+        unsafe extern "C" fn(
+            context: *const c_void,
+            param_names: *const *const c_char,
+            param_names_len: usize,
+        ),
+    >,
+    pub on_parameters_unsubscribe: Option<
+        unsafe extern "C" fn(
+            context: *const c_void,
+            param_names: *const *const c_char,
+            param_names_len: usize,
+        ),
+    >,
     pub on_connection_graph_subscribe: Option<unsafe extern "C" fn(context: *const c_void)>,
     pub on_connection_graph_unsubscribe: Option<unsafe extern "C" fn(context: *const c_void)>,
-    // pub on_parameters_subscribe: Option<unsafe extern "C" fn()>
-    // pub on_parameters_unsubscribe: Option<unsafe extern "C" fn()>
 }
 unsafe impl Send for FoxgloveServerCallbacks {}
 unsafe impl Sync for FoxgloveServerCallbacks {}
@@ -422,6 +434,33 @@ pub extern "C" fn foxglove_server_stop(
         return FoxgloveError::SinkClosed;
     };
     server.stop().wait_blocking();
+    FoxgloveError::Ok
+}
+
+/// Publish parameter values to all subscribed clients.
+///
+/// # Safety
+/// - `params` must be a valid parameter to a value allocated by `foxglove_parameter_array_create`.
+///   This value is moved into this function, and must not be accessed afterwards.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_server_publish_parameter_values(
+    server: Option<&mut FoxgloveWebSocketServer>,
+    params: *mut FoxgloveParameterArray,
+) -> FoxgloveError {
+    if params.is_null() {
+        tracing::error!("foxglove_server_publish_parameter_values called with null params");
+        return FoxgloveError::ValueError;
+    };
+    let params = unsafe { FoxgloveParameterArray::from_raw(params) };
+    let Some(server) = server else {
+        tracing::error!("foxglove_server_publish_parameter_values called with null server");
+        return FoxgloveError::ValueError;
+    };
+    let Some(server) = server.as_ref() else {
+        tracing::error!("foxglove_server_publish_connection_graph called with closed server");
+        return FoxgloveError::SinkClosed;
+    };
+    server.publish_parameter_values(params.into_native());
     FoxgloveError::Ok
 }
 
@@ -931,6 +970,42 @@ impl foxglove::websocket::ServerListener for FoxgloveServerCallbacks {
             // `foxglove_parameter_array_create`.
             unsafe { FoxgloveParameterArray::from_raw(raw).into_native() }
         }
+    }
+
+    fn on_parameters_subscribe(&self, param_names: Vec<String>) {
+        let Some(on_parameters_subscribe) = self.on_parameters_subscribe else {
+            return;
+        };
+        let param_names: Vec<_> = param_names
+            .into_iter()
+            .map(|n| CString::new(n).unwrap())
+            .collect();
+        let param_names_ptrs: Vec<_> = param_names.iter().map(|n| n.as_ptr()).collect();
+        unsafe {
+            on_parameters_subscribe(
+                self.context,
+                param_names_ptrs.as_ptr(),
+                param_names_ptrs.len(),
+            )
+        };
+    }
+
+    fn on_parameters_unsubscribe(&self, param_names: Vec<String>) {
+        let Some(on_parameters_unsubscribe) = self.on_parameters_unsubscribe else {
+            return;
+        };
+        let param_names: Vec<_> = param_names
+            .into_iter()
+            .map(|n| CString::new(n).unwrap())
+            .collect();
+        let param_names_ptrs: Vec<_> = param_names.iter().map(|n| n.as_ptr()).collect();
+        unsafe {
+            on_parameters_unsubscribe(
+                self.context,
+                param_names_ptrs.as_ptr(),
+                param_names_ptrs.len(),
+            )
+        };
     }
 
     fn on_connection_graph_subscribe(&self) {

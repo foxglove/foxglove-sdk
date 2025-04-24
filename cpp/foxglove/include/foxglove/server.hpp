@@ -130,6 +130,9 @@ struct WebSocketServerCallbacks {
   )>
     onSetParameters;
 
+  std::function<void(const std::vector<std::string>& param_names)> onParametersSubscribe;
+  std::function<void(const std::vector<std::string>& param_names)> onParametersUnsubscribe;
+
   /// @brief Callback invoked when a client requests connection graph updates.
   ///
   /// Requires the capability WebSocketServerCapabilities::ConnectionGraph
@@ -177,6 +180,8 @@ public:
 
   /// @brief Gracefully shut down the websocket server.
   FoxgloveError stop();
+
+  void publishParameterValues(std::vector<Parameter>&& params);
 
   /// @brief Publish a connection graph to all subscribed clients.
   ///

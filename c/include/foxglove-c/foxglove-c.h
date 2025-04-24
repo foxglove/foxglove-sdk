@@ -369,6 +369,12 @@ typedef struct foxglove_server_callbacks {
                                                         uint32_t client_id,
                                                         const struct foxglove_string *request_id,
                                                         const struct foxglove_parameter_array *params);
+  void (*on_parameters_subscribe)(const void *context,
+                                  const char *const *param_names,
+                                  size_t param_names_len);
+  void (*on_parameters_unsubscribe)(const void *context,
+                                    const char *const *param_names,
+                                    size_t param_names_len);
   void (*on_connection_graph_subscribe)(const void *context);
   void (*on_connection_graph_unsubscribe)(const void *context);
 } foxglove_server_callbacks;
@@ -468,6 +474,16 @@ uint16_t foxglove_server_get_port(struct foxglove_websocket_server *server);
  * Stop and shut down `server` and free the resources associated with it.
  */
 foxglove_error foxglove_server_stop(struct foxglove_websocket_server *server);
+
+/**
+ * Publish parameter values to all subscribed clients.
+ *
+ * # Safety
+ * - `params` must be a valid parameter to a value allocated by `foxglove_parameter_array_create`.
+ *   This value is moved into this function, and must not be accessed afterwards.
+ */
+foxglove_error foxglove_server_publish_parameter_values(struct foxglove_websocket_server *server,
+                                                        struct foxglove_parameter_array *params);
 
 /**
  * Publish a connection graph to the server.

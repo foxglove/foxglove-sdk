@@ -102,17 +102,36 @@ private:
   bool closed_{};
 };
 
+foxglove::WebSocketServer startServer(foxglove::WebSocketServerOptions&& options) {
+  auto result = foxglove::WebSocketServer::create(std::move(options));
+  REQUIRE(result.has_value());
+  auto server = std::move(result.value());
+  REQUIRE(server.port() != 0);
+  return server;
+}
+
+foxglove::WebSocketServer startServer(
+  foxglove::Context context,
+  foxglove::WebSocketServerCapabilities capabilities = foxglove::WebSocketServerCapabilities(0),
+  foxglove::WebSocketServerCallbacks&& callbacks = {},
+  std::vector<std::string> supported_encodings = {}
+) {
+  return startServer({
+    std::move(context),
+    "unit-test",
+    "127.0.0.1",
+    0,
+    std::move(callbacks),
+    capabilities,
+    std::move(supported_encodings),
+  });
+}
+
 }  // namespace
 
 TEST_CASE("Start and stop server") {
-  foxglove::WebSocketServerOptions options;
-  options.name = "unit-test";
-  options.host = "127.0.0.1";
-  options.port = 0;
-  auto server_result = foxglove::WebSocketServer::create(std::move(options));
-  REQUIRE(server_result.has_value());
-  auto& server = server_result.value();
-  REQUIRE(server.port() != 0);
+  auto context = foxglove::Context::create();
+  auto server = startServer(context);
   REQUIRE(server.stop() == foxglove::FoxgloveError::Ok);
 }
 
@@ -148,14 +167,7 @@ TEST_CASE("supported encoding is invalid utf-8") {
 
 TEST_CASE("Log a message with and without metadata") {
   auto context = foxglove::Context::create();
-  foxglove::WebSocketServerOptions options{context};
-  options.name = "unit-test";
-  options.host = "127.0.0.1";
-  options.port = 0;
-  auto server_result = foxglove::WebSocketServer::create(std::move(options));
-  REQUIRE(server_result.has_value());
-  auto& server = server_result.value();
-  REQUIRE(server.port() != 0);
+  auto server = startServer(context);
 
   auto channel_result = foxglove::Channel::create("example", "json", std::nullopt, context);
   REQUIRE(channel_result.has_value());
@@ -182,24 +194,18 @@ TEST_CASE("Subscribe and unsubscribe callbacks") {
 
   std::unique_lock lock{mutex};
 
-  foxglove::WebSocketServerOptions options{context};
-  options.name = "unit-test";
-  options.host = "127.0.0.1";
-  options.port = 0;
-  options.callbacks.onSubscribe = [&](uint64_t channel_id) {
+  foxglove::WebSocketServerCallbacks callbacks;
+  callbacks.onSubscribe = [&](uint64_t channel_id) {
     std::scoped_lock lock{mutex};
     subscribe_calls.push_back(channel_id);
     cv.notify_all();
   };
-  options.callbacks.onUnsubscribe = [&](uint64_t channel_id) {
+  callbacks.onUnsubscribe = [&](uint64_t channel_id) {
     std::scoped_lock lock{mutex};
     unsubscribe_calls.push_back(channel_id);
     cv.notify_all();
   };
-  auto server_result = foxglove::WebSocketServer::create(std::move(options));
-  REQUIRE(server_result.has_value());
-  auto& server = server_result.value();
-  REQUIRE(server.port() != 0);
+  auto server = startServer(context, {}, std::move(callbacks));
 
   foxglove::Schema schema;
   schema.name = "ExampleSchema";
@@ -278,29 +284,23 @@ TEST_CASE("Client advertise/publish callbacks") {
 
   std::unique_lock lock{mutex};
 
-  foxglove::WebSocketServerOptions options{context};
-  options.name = "unit-test";
-  options.host = "127.0.0.1";
-  options.port = 0;
-  options.capabilities = foxglove::WebSocketServerCapabilities::ClientPublish;
-  options.supported_encodings = {"schema encoding", "another"};
-  options.callbacks.onClientAdvertise =
-    [&](uint32_t client_id, const foxglove::ClientChannel& channel) {
-      std::scoped_lock lock{mutex};
-      advertised = true;
-      REQUIRE(client_id == 1);
-      REQUIRE(channel.id == 100);
-      REQUIRE(channel.topic == "topic");
-      REQUIRE(channel.encoding == "encoding");
-      REQUIRE(channel.schema_name == "schema name");
-      REQUIRE(channel.schema_encoding == "schema encoding");
-      REQUIRE(
-        std::string_view(reinterpret_cast<const char*>(channel.schema), channel.schema_len) ==
-        "schema data"
-      );
-      cv.notify_all();
-    };
-  options.callbacks.onMessageData =
+  foxglove::WebSocketServerCallbacks callbacks;
+  callbacks.onClientAdvertise = [&](uint32_t client_id, const foxglove::ClientChannel& channel) {
+    std::scoped_lock lock{mutex};
+    advertised = true;
+    REQUIRE(client_id == 1);
+    REQUIRE(channel.id == 100);
+    REQUIRE(channel.topic == "topic");
+    REQUIRE(channel.encoding == "encoding");
+    REQUIRE(channel.schema_name == "schema name");
+    REQUIRE(channel.schema_encoding == "schema encoding");
+    REQUIRE(
+      std::string_view(reinterpret_cast<const char*>(channel.schema), channel.schema_len) ==
+      "schema data"
+    );
+    cv.notify_all();
+  };
+  callbacks.onMessageData =
     // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
     [&](uint32_t client_id, uint32_t client_channel_id, const std::byte* data, size_t data_len) {
       std::scoped_lock lock{mutex};
@@ -312,17 +312,19 @@ TEST_CASE("Client advertise/publish callbacks") {
       REQUIRE(char(data[2]) == 'c');
       cv.notify_all();
     };
-  options.callbacks.onClientUnadvertise = [&](uint32_t client_id, uint32_t client_channel_id) {
+  callbacks.onClientUnadvertise = [&](uint32_t client_id, uint32_t client_channel_id) {
     std::scoped_lock lock{mutex};
     advertised = false;
     REQUIRE(client_id == 1);
     REQUIRE(client_channel_id == 100);
     cv.notify_all();
   };
-  auto server_result = foxglove::WebSocketServer::create(std::move(options));
-  REQUIRE(server_result.has_value());
-  auto& server = server_result.value();
-  REQUIRE(server.port() != 0);
+  auto server = startServer(
+    context,
+    foxglove::WebSocketServerCapabilities::ClientPublish,
+    std::move(callbacks),
+    {"schema encoding", "another"}
+  );
 
   WebSocketClient client;
   client.inner().set_open_handler([&](const auto& hdl) {
@@ -380,17 +382,13 @@ TEST_CASE("Parameter callbacks") {
     server_set_parameters;
   std::queue<std::string> client_rx;
 
-  foxglove::WebSocketServerOptions options;
-  options.name = "unit-test";
-  options.host = "127.0.0.1";
-  options.port = 0;
-  options.capabilities = foxglove::WebSocketServerCapabilities::Parameters;
-  options.callbacks.onGetParameters = [&](
-                                        uint32_t client_id,
-                                        std::optional<std::string_view>
-                                          request_id,
-                                        const std::vector<std::string_view>& param_names
-                                      ) -> std::vector<foxglove::Parameter> {
+  foxglove::WebSocketServerCallbacks callbacks;
+  callbacks.onGetParameters = [&](
+                                uint32_t client_id,
+                                std::optional<std::string_view>
+                                  request_id,
+                                const std::vector<std::string_view>& param_names
+                              ) -> std::vector<foxglove::Parameter> {
     std::scoped_lock lock{mutex};
     std::optional<std::string> owned_request_id;
     if (request_id.has_value()) {
@@ -409,12 +407,12 @@ TEST_CASE("Parameter callbacks") {
     result.emplace_back("baz", 1.234);
     return result;
   };
-  options.callbacks.onSetParameters = [&](
-                                        uint32_t client_id,
-                                        std::optional<std::string_view>
-                                          request_id,
-                                        const std::vector<foxglove::ParameterView>& params
-                                      ) -> std::vector<foxglove::Parameter> {
+  callbacks.onSetParameters = [&](
+                                uint32_t client_id,
+                                std::optional<std::string_view>
+                                  request_id,
+                                const std::vector<foxglove::ParameterView>& params
+                              ) -> std::vector<foxglove::Parameter> {
     std::scoped_lock lock{mutex};
     std::optional<std::string> owned_request_id;
     if (request_id.has_value()) {
@@ -434,10 +432,9 @@ TEST_CASE("Parameter callbacks") {
     result.emplace_back("bytes", data.data(), data.size());
     return result;
   };
-  auto server_result = foxglove::WebSocketServer::create(std::move(options));
-  REQUIRE(server_result.has_value());
-  auto& server = server_result.value();
-  REQUIRE(server.port() != 0);
+  auto context = foxglove::Context::create();
+  auto server =
+    startServer(context, foxglove::WebSocketServerCapabilities::Parameters, std::move(callbacks));
 
   WebSocketClient client;
   client.inner().set_open_handler([&](const auto& hdl) {
@@ -599,22 +596,122 @@ TEST_CASE("Parameter callbacks") {
   REQUIRE(parsed == expected);
 }
 
-TEST_CASE("Publish a connection graph") {
-  foxglove::WebSocketServerOptions options;
-  options.name = "unit-test";
-  options.host = "127.0.0.1";
-  options.port = 0;
-  options.capabilities = foxglove::WebSocketServerCapabilities::ConnectionGraph;
-  auto server_result = foxglove::WebSocketServer::create(std::move(options));
-  REQUIRE(server_result.has_value());
-  auto& server = server_result.value();
-  REQUIRE(server.port() != 0);
+TEST_CASE("Parameter subscription callbacks") {
+  std::mutex mutex;
+  std::condition_variable cv;
+  // the following variables are protected by the mutex:
+  bool connection_opened = false;
+  std::optional<std::vector<std::string>> server_sub_names;
+  std::optional<std::vector<std::string>> server_unsub_names;
+  std::queue<std::string> client_rx;
 
+  foxglove::WebSocketServerCallbacks callbacks;
+  callbacks.onParametersSubscribe = [&](const std::vector<std::string>& names) {
+    std::scoped_lock lock{mutex};
+    server_sub_names = names;
+    cv.notify_one();
+  };
+  callbacks.onParametersUnsubscribe = [&](const std::vector<std::string>& names) {
+    std::scoped_lock lock{mutex};
+    server_unsub_names = names;
+    cv.notify_one();
+  };
+  auto context = foxglove::Context::create();
+  auto server =
+    startServer(context, foxglove::WebSocketServerCapabilities::Parameters, std::move(callbacks));
+
+  WebSocketClient client;
+  client.inner().set_open_handler([&](const auto& hdl) {
+    std::scoped_lock lock{mutex};
+    connection_opened = true;
+    cv.notify_one();
+  });
+  client.inner().set_message_handler(
+    [&](const websocketpp::connection_hdl&, const WebSocketMessage& msg) {
+      std::scoped_lock lock{mutex};
+      client_rx.push(msg->get_payload());
+      cv.notify_one();
+    }
+  );
+  client.start(server.port());
+
+  // Wait for the connection to be opened.
+  {
+    std::unique_lock lock{mutex};
+    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
+      return connection_opened;
+    });
+    REQUIRE(wait_result);
+  }
+
+  // Wait for the the serverInfo message.
+  std::string payload;
+  {
+    std::unique_lock lock{mutex};
+    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
+      return !client_rx.empty();
+    });
+    REQUIRE(wait_result);
+    payload = client_rx.front();
+    client_rx.pop();
+  }
+  Json parsed = Json::parse(payload);
+  REQUIRE(parsed.contains("op"));
+  REQUIRE(parsed["op"] == "serverInfo");
+
+  // Send subscribeParameterUpdates.
+  client.send(
+    R"({
+      "op": "subscribeParameterUpdates",
+      "parameterNames": ["foo", "beep"]
+    })"
+  );
+
+  // Wait for the server to process the callback.
+  {
+    std::unique_lock lock{mutex};
+    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
+      if (server_sub_names.has_value()) {
+        auto names = *server_sub_names;
+        REQUIRE_THAT(names, Equals(std::vector<std::string>{"foo", "beep"}));
+        return true;
+      }
+      return false;
+    });
+    REQUIRE(wait_result);
+  }
+
+  // Send a parameter update from the server, including some parameters that we
+  // expect to be filtered out, since they aren't subscribed.
+  std::vector<foxglove::Parameter> params;
+  params.emplace_back("baz", 1.234);
+  params.emplace_back("beep", "boop");
+  server.publishParameterValues(std::move(params));
+
+  // Wait for the server to send the parameterValues message and validate it.
+  {
+    std::unique_lock lock{mutex};
+    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
+      return !client_rx.empty();
+    });
+    REQUIRE(wait_result);
+    payload = client_rx.front();
+    client_rx.pop();
+  }
+  parsed = Json::parse(payload);
+  auto expected = Json::parse(R"({
+      "op": "parameterValues",
+      "parameters": [{ "name": "beep", "value": "boop" }]
+    })");
+  REQUIRE(parsed == expected);
+}
+
+TEST_CASE("Publish a connection graph") {
+  auto context = foxglove::Context::create();
+  auto server = startServer(context, foxglove::WebSocketServerCapabilities::ConnectionGraph);
   foxglove::ConnectionGraph graph;
   graph.setPublishedTopic("topic", {"publisher1", "publisher2"});
   graph.setSubscribedTopic("topic", {"subscriber1", "subscriber2"});
   graph.setAdvertisedService("service", {"provider1", "provider2"});
   server.publishConnectionGraph(graph);
-
-  REQUIRE(server.stop() == foxglove::FoxgloveError::Ok);
 }
