@@ -1,3 +1,14 @@
+/**
+ * Foxglove Parameter Server
+ *
+ * An example from the Foxglove SDK.
+ *
+ * This implements a parameter server for live visualization.
+ *
+ * View and edit parameters from a Parameters panel in Foxglove:
+ * https://docs.foxglove.dev/docs/visualization/panels/parameters
+ */
+
 #include <foxglove/server.hpp>
 #include <foxglove/server/parameter.hpp>
 
