@@ -59,7 +59,7 @@
 //! let mcap = ctx.mcap_writer().create_new_buffered_file("test.mcap")?;
 //!
 //! // Create a new channel for the topic "/log" for `Log` messages.
-//! let channel = ctx.channel_builder("/log").unwrap().build()?;
+//! let channel = ctx.channel_builder("/log").build()?;
 //! channel.log(&Log{
 //!     message: "Hello, Foxglove!".to_string(),
 //!     ..Default::default()
