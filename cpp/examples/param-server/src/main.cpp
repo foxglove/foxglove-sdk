@@ -34,16 +34,15 @@ int main(int argc, const char* argv[]) {
   });
 
   // Initialize parameter store
+  std::vector<foxglove::Parameter> params;
+  params.emplace_back("read_only_str", std::string("can't change me"));
+  params.emplace_back("elapsed", 1.0);
+  params.emplace_back("float_array", std::vector<double>{1.0, 2.0, 3.0});
+
   std::unordered_map<std::string, foxglove::Parameter> paramStore;
-  paramStore.emplace(
-    "read_only_str_param",
-    foxglove::Parameter("read_only_str_param", std::string("can't change me"))
-  );
-  paramStore.emplace("elapsed", foxglove::Parameter("elapsed", 1.0));
-  paramStore.emplace(
-    "float_array_param",
-    foxglove::Parameter("float_array_param", std::vector<double>{1.0, 2.0, 3.0})
-  );
+  for (auto&& param : std::move(params)) {
+    paramStore.emplace(param.name(), std::move(param));
+  }
 
   foxglove::WebSocketServerOptions options = {};
   options.name = "param-server";
