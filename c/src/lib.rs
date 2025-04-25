@@ -709,7 +709,6 @@ pub enum FoxgloveError {
     MessageEncodingRequired,
     ServerAlreadyStarted,
     Bind,
-    DuplicateChannel,
     DuplicateService,
     MissingRequestEncoding,
     ServicesNotSupported,
@@ -730,7 +729,6 @@ impl From<foxglove::FoxgloveError> for FoxgloveError {
             }
             foxglove::FoxgloveError::ServerAlreadyStarted => FoxgloveError::ServerAlreadyStarted,
             foxglove::FoxgloveError::Bind(_) => FoxgloveError::Bind,
-            foxglove::FoxgloveError::DuplicateChannel(_) => FoxgloveError::DuplicateChannel,
             foxglove::FoxgloveError::DuplicateService(_) => FoxgloveError::DuplicateService,
             foxglove::FoxgloveError::MissingRequestEncoding(_) => {
                 FoxgloveError::MissingRequestEncoding
@@ -757,7 +755,6 @@ impl FoxgloveError {
             FoxgloveError::MessageEncodingRequired => c"Message Encoding Required",
             FoxgloveError::ServerAlreadyStarted => c"Server Already Started",
             FoxgloveError::Bind => c"Bind Error",
-            FoxgloveError::DuplicateChannel => c"Duplicate Channel",
             FoxgloveError::DuplicateService => c"Duplicate Service",
             FoxgloveError::MissingRequestEncoding => c"Missing Request Encoding",
             FoxgloveError::ServicesNotSupported => c"Services Not Supported",
