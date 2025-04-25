@@ -108,8 +108,11 @@ class Parameter:
 
     :param name: The parameter name.
     :type name: str
-    :param value: Optional value, represented as a native python object.
-    :type value: AnyNativeParameterValue
+    :param value: Optional value, represented as a native python object, or a ParameterValue.
+    :type value: None|bool|float|str|bytes|list|dict|ParameterValue
+    :param type: Optional parameter type. This is automatically derived when passing a native
+                 python object as the value.
+    :type type: ParameterType|None
     """
 
     name: str
@@ -121,27 +124,9 @@ class Parameter:
         name: str,
         *,
         value: Optional["AnyNativeParameterValue"] = None,
+        type: Optional["ParameterType"] = None,
     ) -> None: ...
-    @staticmethod
-    def raw(
-        name: str,
-        *,
-        type: Optional["ParameterType"],
-        value: Optional["AnyParameterValue"],
-    ) -> "Parameter":
-        """
-        Constructs a parameter from raw parts
-
-        :param name: The parameter name.
-        :type name: str
-        :param type: Optional type.
-        :type type: ParameterType
-        :param value: Optional value, represented as a raw parameter value.
-        :type value: ParameterValue
-        """
-        ...
-
-    def get_value(self) -> "AnyNativeParameterValue":
+    def get_value(self) -> Optional["AnyNativeParameterValue"]:
         """Returns the parameter value as a native python object."""
         ...
 
@@ -161,7 +146,7 @@ class ParameterType(Enum):
 
 class ParameterValue:
     """
-    The raw value of a parameter, as it is represented on the wire.
+    A parameter value.
     """
 
     class Bool:
@@ -206,21 +191,18 @@ AnyParameterValue = Union[
     ParameterValue.Dict,
 ]
 
-AnyNativeParameterValue = Union[
+AnyInnerParameterValue = Union[
+    AnyParameterValue,
     bool,
     float,
     str,
-    bytes,
     List["AnyInnerParameterValue"],
     Dict[str, "AnyInnerParameterValue"],
 ]
 
-AnyInnerParameterValue = Union[
-    bool,
-    float,
-    str,
-    List["AnyInnerParameterValue"],
-    Dict[str, "AnyInnerParameterValue"],
+AnyNativeParameterValue = Union[
+    AnyInnerParameterValue,
+    bytes,
 ]
 
 AssetHandler = Callable[[str], Optional[bytes]]

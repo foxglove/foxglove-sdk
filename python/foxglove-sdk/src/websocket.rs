@@ -818,7 +818,7 @@ impl From<foxglove::websocket::ParameterType> for PyParameterType {
     }
 }
 
-/// The raw value of a parameter, as it is represented on the wire.
+/// A parameter value.
 #[pyclass(name = "ParameterValue", module = "foxglove", eq)]
 #[derive(Clone, PartialEq)]
 pub enum PyParameterValue {
@@ -874,8 +874,11 @@ impl From<foxglove::websocket::ParameterValue> for PyParameterValue {
 ///
 /// :param name: The parameter name.
 /// :type name: str
-/// :param value: Optional value, represented as a native python object.
-/// :type value: None|bool|float|str|bytes|list|dict
+/// :param value: Optional value, represented as a native python object, or a ParameterValue.
+/// :type value: None|bool|float|str|bytes|list|dict|ParameterValue
+/// :param type: Optional parameter type. This is automatically derived when passing a native
+///              python object as the value.
+/// :type type: ParameterType|None
 #[pyclass(name = "Parameter", module = "foxglove")]
 #[derive(Clone)]
 pub struct PyParameter {
@@ -885,7 +888,7 @@ pub struct PyParameter {
     /// The parameter type.
     #[pyo3(get)]
     pub r#type: Option<PyParameterType>,
-    /// The raw parameter value.
+    /// The parameter value.
     #[pyo3(get)]
     pub value: Option<PyParameterValue>,
 }
@@ -893,35 +896,28 @@ pub struct PyParameter {
 #[pymethods]
 impl PyParameter {
     #[new]
-    #[pyo3(signature = (name, *, value=None))]
-    pub fn new(name: String, value: Option<ParameterTypeValueConverter>) -> Self {
-        Self::raw(
-            name,
-            value.as_ref().and_then(|tv| tv.0),
-            value.map(|tv| tv.1),
-        )
-    }
-
-    /// Constructs a parameter from raw parts.
-    ///
-    /// :param name: The parameter name.
-    /// :type name: str
-    /// :param type: The parameter type.
-    /// :type type: ParameterType|None
-    /// :param value: The raw parameter value.
-    /// :type value: ParameterValue|None
-    #[staticmethod]
-    #[pyo3(signature = (name, *, r#type=None, value=None))]
-    pub fn raw(
+    #[pyo3(signature = (name, *, value=None, **kwargs))]
+    pub fn new(
         name: String,
-        r#type: Option<PyParameterType>,
-        value: Option<PyParameterValue>,
-    ) -> Self {
-        Self {
+        value: Option<ParameterTypeValueConverter>,
+        kwargs: Option<&Bound<'_, PyDict>>,
+    ) -> PyResult<Self> {
+        // Use the derived type, unless there's a kwarg override.
+        let mut r#type = value.as_ref().and_then(|tv| tv.0);
+        if let Some(dict) = kwargs {
+            if let Some(kw_type) = dict.get_item("type")? {
+                if kw_type.is_none() {
+                    r#type = None
+                } else {
+                    r#type = kw_type.extract()?;
+                }
+            }
+        }
+        Ok(Self {
             name,
             r#type,
-            value,
-        }
+            value: value.map(|tv| tv.1),
+        })
     }
 
     /// Returns the parameter value as a native python object.
@@ -1045,7 +1041,9 @@ impl<'py> FromPyObject<'py> for ParameterTypeValueConverter {
         if let Ok(val) = obj.extract::<ParameterValueConverter>() {
             let val = val.0;
             let (typ, val) = match val {
+                // If the value is a number, the type is float64.
                 PyParameterValue::Number(_) => (Some(PyParameterType::Float64), val),
+                // If the value is an array of numbers, then the type is float64 array.
                 PyParameterValue::Array(ref vec)
                     if vec.iter().all(|v| matches!(v, PyParameterValue::Number(_))) =>
                 {

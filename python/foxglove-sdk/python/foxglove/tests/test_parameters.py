@@ -1,3 +1,4 @@
+import pytest
 from foxglove.websocket import (
     AnyNativeParameterValue,
     Parameter,
@@ -109,3 +110,45 @@ def test_dict() -> None:
         }
     )
     assert p.get_value() == v
+
+
+def test_explicit() -> None:
+    # Derive type from value
+    p = Parameter("float", value=ParameterValue.Number(1))
+    assert p.type == ParameterType.Float64
+    assert p.get_value() == 1
+
+    # Override derived type.
+    p = Parameter(
+        "bad float array",
+        value=ParameterValue.Number(1),
+        type=ParameterType.Float64Array,
+    )
+    assert p.type == ParameterType.Float64Array
+    assert p.get_value() == 1
+
+    # Override derived type in a different way.
+    p = Parameter(
+        "bad float",
+        value=ParameterValue.String("1"),
+        type=ParameterType.Float64,
+    )
+    assert p.type == ParameterType.Float64
+    assert p.get_value() == "1"
+
+    # Override derived type with None.
+    p = Parameter("underspecified float", value=ParameterValue.Number(1), type=None)
+    assert p.type is None
+    assert p.get_value() == 1
+
+
+def test_base64_decode_error() -> None:
+    p = Parameter(
+        "bad bytes",
+        value=ParameterValue.String("!!!"),
+        type=ParameterType.ByteArray,
+    )
+    assert p.type == ParameterType.ByteArray
+    assert p.value == ParameterValue.String("!!!")
+    with pytest.raises(ValueError, match=r"Failed to decode base64"):
+        p.get_value()

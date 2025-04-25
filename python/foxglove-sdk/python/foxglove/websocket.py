@@ -28,20 +28,18 @@ AnyParameterValue = Union[
     ParameterValue.Array,
     ParameterValue.Dict,
 ]
-AnyNativeParameterValue = Union[
+AnyInnerParameterValue = Union[
+    AnyParameterValue,
     bool,
     float,
     str,
-    bytes,
     List["AnyInnerParameterValue"],
     Dict[str, "AnyInnerParameterValue"],
 ]
-AnyInnerParameterValue = Union[
-    bool,
-    float,
-    str,
-    List["AnyInnerParameterValue"],
-    Dict[str, "AnyInnerParameterValue"],
+
+AnyNativeParameterValue = Union[
+    AnyInnerParameterValue,
+    bytes,
 ]
 
 
