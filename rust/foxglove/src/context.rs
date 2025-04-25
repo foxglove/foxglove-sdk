@@ -37,14 +37,15 @@ impl ContextInner {
         self.channels.insert(channel.id(), channel.clone());
 
         // Index the channel by topic name if we haven't seen it before
-        if !self.channels_by_topic.contains_key(topic) {
-            self.channels_by_topic
-                .insert(topic.to_string(), channel.clone());
-        } else {
-            warn!(
-                "Channel with topic {} already exists in this context; use a unique topic for each channel",
-                topic
-            );
+        match self.channels_by_topic.entry(topic.to_string()) {
+            Entry::Vacant(entry) => {
+                entry.insert(channel.clone());
+            }
+            Entry::Occupied(_) => {
+                warn!(
+                    "Channel with topic {topic} already exists in this context; use a unique topic for each channel"
+                );
+            }
         }
 
         // Notify sinks of new channel. Sinks that dynamically manage subscriptions may return true
@@ -627,12 +628,16 @@ mod tests {
     }
 
     #[test]
+    #[traced_test]
     fn get_channel_by_topic_with_duplicate() {
         let ctx = Context::new();
-        let c1 = new_test_channel(&ctx, "topic").unwrap();
-        let _c2 = new_test_channel(&ctx, "topic").unwrap();
-        let channel = ctx.get_channel_by_topic("topic");
+        let c1 = new_test_channel(&ctx, "dupe").unwrap();
+        let _c2 = new_test_channel(&ctx, "dupe").unwrap();
+        let channel = ctx.get_channel_by_topic("dupe");
         assert!(channel.is_some());
         assert_eq!(channel.unwrap().id(), c1.id());
+        assert!(logs_contain(
+            "Channel with topic dupe already exists in this context"
+        ));
     }
 }
