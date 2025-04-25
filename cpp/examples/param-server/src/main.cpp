@@ -80,7 +80,7 @@ int main(int argc, const char* argv[]) {
     std::vector<foxglove::Parameter> result;
     for (const auto& param : params) {
       std::cerr << " - " << param.name();
-      const std::string name = param.name();
+      const std::string name(param.name());
       if (auto it = paramStore.find(name); it != paramStore.end()) {
         if (name.find("read_only_") == 0) {
           std::cerr << " - not updated\n";

@@ -10,19 +10,6 @@ namespace foxglove {
 /**
  * ParameterValueView implementation
  */
-ParameterValueView ParameterValue::view() const {
-  return ParameterValueView(_impl.get());
-}
-
-ParameterValue ParameterValueView::clone() const {
-  foxglove_parameter_value* ptr = nullptr;
-  auto error = foxglove_parameter_value_clone(&ptr, _impl);
-  if (error != foxglove_error::FOXGLOVE_ERROR_OK) {
-    throw std::runtime_error(foxglove_error_to_cstr(error));
-  }
-  return ParameterValue(ptr);
-}
-
 ParameterValueView::Value ParameterValueView::value() const {
   // Accessing union members is safe, because the tag serves as a valid
   // discriminator.
@@ -63,11 +50,27 @@ ParameterValueView::Value ParameterValueView::value() const {
   }
 }
 
+ParameterValue ParameterValueView::clone() const {
+  foxglove_parameter_value* ptr = nullptr;
+  auto error = foxglove_parameter_value_clone(&ptr, _impl);
+  if (error != foxglove_error::FOXGLOVE_ERROR_OK) {
+    throw std::runtime_error(foxglove_error_to_cstr(error));
+  }
+  return ParameterValue(ptr);
+}
+
 /**
  * ParameterValue implementation
  */
+void ParameterValue::Deleter::operator()(foxglove_parameter_value* ptr) const noexcept {
+  foxglove_parameter_value_free(ptr);
+}
+
+ParameterValue::ParameterValue(foxglove_parameter_value* value)
+    : _impl(value) {}
+
 ParameterValue::ParameterValue(double value)
-    : _impl(nullptr, foxglove_parameter_value_free) {
+    : _impl(nullptr) {
   foxglove_parameter_value* ptr = nullptr;
   auto error = foxglove_parameter_value_create_number(&ptr, value);
   if (error != foxglove_error::FOXGLOVE_ERROR_OK) {
@@ -77,7 +80,7 @@ ParameterValue::ParameterValue(double value)
 }
 
 ParameterValue::ParameterValue(bool value)
-    : _impl(nullptr, foxglove_parameter_value_free) {
+    : _impl(nullptr) {
   foxglove_parameter_value* ptr = nullptr;
   auto error = foxglove_parameter_value_create_boolean(&ptr, value);
   if (error != foxglove_error::FOXGLOVE_ERROR_OK) {
@@ -87,7 +90,7 @@ ParameterValue::ParameterValue(bool value)
 }
 
 ParameterValue::ParameterValue(std::string_view value)
-    : _impl(nullptr, foxglove_parameter_value_free) {
+    : _impl(nullptr) {
   foxglove_parameter_value* ptr = nullptr;
   auto error = foxglove_parameter_value_create_string(&ptr, {value.data(), value.length()});
   if (error != foxglove_error::FOXGLOVE_ERROR_OK) {
@@ -97,7 +100,7 @@ ParameterValue::ParameterValue(std::string_view value)
 }
 
 ParameterValue::ParameterValue(std::vector<ParameterValue> values)
-    : _impl(nullptr, foxglove_parameter_value_free) {
+    : _impl(nullptr) {
   foxglove_parameter_value_array* array_ptr = nullptr;
   auto error = foxglove_parameter_value_array_create(&array_ptr, values.size());
   if (error != foxglove_error::FOXGLOVE_ERROR_OK) {
@@ -123,7 +126,7 @@ ParameterValue::ParameterValue(std::vector<ParameterValue> values)
 }
 
 ParameterValue::ParameterValue(std::map<std::string, ParameterValue> value)
-    : _impl(nullptr, foxglove_parameter_value_free) {
+    : _impl(nullptr) {
   foxglove_parameter_value_dict* dict_ptr = nullptr;
   auto error = foxglove_parameter_value_dict_create(&dict_ptr, value.size());
   if (error != foxglove_error::FOXGLOVE_ERROR_OK) {
@@ -149,19 +152,31 @@ ParameterValue::ParameterValue(std::map<std::string, ParameterValue> value)
   _impl.reset(ptr);
 }
 
-ParameterValue::ParameterValue(foxglove_parameter_value* value)
-    : _impl(value, foxglove_parameter_value_free) {}
+ParameterValueView ParameterValue::view() const noexcept {
+  return ParameterValueView(_impl.get());
+}
 
-foxglove_parameter_value* ParameterValue::release() {
+foxglove_parameter_value* ParameterValue::release() noexcept {
   return _impl.release();
 }
 
 /**
  * ParameterView implementation
  */
-std::string ParameterView::name() const {
+std::string_view ParameterView::name() const noexcept {
   const auto& name = _impl->name;
   return {name.data, name.len};
+}
+
+ParameterType ParameterView::type() const noexcept {
+  return static_cast<ParameterType>(_impl->type);
+}
+
+std::optional<ParameterValueView> ParameterView::valueView() const noexcept {
+  if (_impl->value == nullptr) {
+    return {};
+  }
+  return ParameterValueView(_impl->value);
 }
 
 Parameter ParameterView::clone() const {
@@ -173,22 +188,18 @@ Parameter ParameterView::clone() const {
   return Parameter(ptr);
 }
 
-ParameterType ParameterView::type() const {
-  return static_cast<ParameterType>(_impl->type);
-}
-
-std::optional<ParameterValueView> ParameterView::valueView() const {
-  if (_impl->value == nullptr) {
-    return {};
-  }
-  return ParameterValueView(_impl->value);
-}
-
 /**
  * Parameter implementation
  */
+void Parameter::Deleter::operator()(foxglove_parameter* ptr) const noexcept {
+  foxglove_parameter_free(ptr);
+}
+
+Parameter::Parameter(foxglove_parameter* param)
+    : _impl(param) {}
+
 Parameter::Parameter(std::string_view name)
-    : _impl(nullptr, foxglove_parameter_free) {
+    : _impl(nullptr) {
   foxglove_parameter* ptr = nullptr;
   auto error = foxglove_parameter_create_empty(&ptr, {name.data(), name.length()});
   if (error != foxglove_error::FOXGLOVE_ERROR_OK) {
@@ -198,7 +209,7 @@ Parameter::Parameter(std::string_view name)
 }
 
 Parameter::Parameter(std::string_view name, bool value)
-    : _impl(nullptr, foxglove_parameter_free) {
+    : _impl(nullptr) {
   foxglove_parameter* ptr = nullptr;
   auto error = foxglove_parameter_create_boolean(&ptr, {name.data(), name.length()}, value);
   if (error != foxglove_error::FOXGLOVE_ERROR_OK) {
@@ -208,7 +219,7 @@ Parameter::Parameter(std::string_view name, bool value)
 }
 
 Parameter::Parameter(std::string_view name, double value)
-    : _impl(nullptr, foxglove_parameter_free) {
+    : _impl(nullptr) {
   foxglove_parameter* ptr = nullptr;
   auto error = foxglove_parameter_create_float64(&ptr, {name.data(), name.length()}, value);
   if (error != foxglove_error::FOXGLOVE_ERROR_OK) {
@@ -218,7 +229,7 @@ Parameter::Parameter(std::string_view name, double value)
 }
 
 Parameter::Parameter(std::string_view name, std::string_view value)
-    : _impl(nullptr, foxglove_parameter_free) {
+    : _impl(nullptr) {
   foxglove_parameter* ptr = nullptr;
   auto error = foxglove_parameter_create_string(
     &ptr, {name.data(), name.length()}, {value.data(), value.length()}
@@ -230,7 +241,7 @@ Parameter::Parameter(std::string_view name, std::string_view value)
 }
 
 Parameter::Parameter(std::string_view name, const uint8_t* data, size_t data_length)
-    : _impl(nullptr, foxglove_parameter_free) {
+    : _impl(nullptr) {
   foxglove_parameter* ptr = nullptr;
   auto error =
     foxglove_parameter_create_byte_array(&ptr, {name.data(), name.length()}, {data, data_length});
@@ -241,7 +252,7 @@ Parameter::Parameter(std::string_view name, const uint8_t* data, size_t data_len
 }
 
 Parameter::Parameter(std::string_view name, const std::vector<double>& values)
-    : _impl(nullptr, foxglove_parameter_free) {
+    : _impl(nullptr) {
   foxglove_parameter* ptr = nullptr;
   auto error = foxglove_parameter_create_float64_array(
     &ptr, {name.data(), name.length()}, values.data(), values.size()
@@ -256,7 +267,7 @@ Parameter::Parameter(std::string_view name, std::map<std::string, ParameterValue
     : Parameter::Parameter(name, ParameterType::None, ParameterValue(std::move(values))) {}
 
 Parameter::Parameter(std::string_view name, ParameterType type, ParameterValue&& value)
-    : _impl(nullptr, foxglove_parameter_free) {
+    : _impl(nullptr) {
   // Explicit move to make the linter happy.
   foxglove_parameter_value* value_ptr = std::move(value).release();
   foxglove_parameter* ptr = nullptr;
@@ -269,14 +280,11 @@ Parameter::Parameter(std::string_view name, ParameterType type, ParameterValue&&
   _impl.reset(ptr);
 }
 
-Parameter::Parameter(foxglove_parameter* param)
-    : _impl(param, foxglove_parameter_free) {}
-
-ParameterView Parameter::view() const {
+ParameterView Parameter::view() const noexcept {
   return ParameterView(_impl.get());
 }
 
-foxglove_parameter* Parameter::release() {
+foxglove_parameter* Parameter::release() noexcept {
   return _impl.release();
 }
 
@@ -298,8 +306,14 @@ std::vector<ParameterView> ParameterArrayView::parameters() const {
 /**
  * ParameterArray implementation.
  */
-ParameterArray::ParameterArray(std::vector<Parameter> params)
-    : _impl(nullptr, foxglove_parameter_array_free) {
+void ParameterArray::Deleter::operator()(foxglove_parameter_array* ptr) const noexcept {
+  foxglove_parameter_array_free(ptr);
+}
+
+// We're consuming the contents of the vector, even though we're not moving it.
+// NOLINTNEXTLINE(cppcoreguidelines-rvalue-reference-param-not-moved)
+ParameterArray::ParameterArray(std::vector<Parameter>&& params)
+    : _impl(nullptr) {
   foxglove_parameter_array* ptr = nullptr;
   auto error = foxglove_parameter_array_create(&ptr, params.size());
   if (error != foxglove_error::FOXGLOVE_ERROR_OK) {
@@ -317,11 +331,11 @@ ParameterArray::ParameterArray(std::vector<Parameter> params)
   _impl.reset(ptr);
 }
 
-ParameterArrayView ParameterArray::view() const {
+ParameterArrayView ParameterArray::view() const noexcept {
   return ParameterArrayView(_impl.get());
 }
 
-foxglove_parameter_array* ParameterArray::release() {
+foxglove_parameter_array* ParameterArray::release() noexcept {
   return _impl.release();
 }
 

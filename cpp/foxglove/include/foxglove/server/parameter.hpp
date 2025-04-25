@@ -30,9 +30,6 @@ enum class ParameterType : uint8_t {
  * A view over an unowned parameter value.
  */
 class ParameterValueView final {
-  friend class ParameterView;
-  friend class ParameterValue;
-
 public:
   using Number = double;
   using Boolean = bool;
@@ -41,10 +38,16 @@ public:
   using Dict = std::map<std::string, ParameterValueView>;
   using Value = std::variant<Number, Boolean, String, Array, Dict>;
 
-  [[nodiscard]] class ParameterValue clone() const;
+  // Accessors
   [[nodiscard]] Value value() const;
 
+  // Creates a deep clone of this parameter value.
+  [[nodiscard]] class ParameterValue clone() const;
+
 private:
+  friend class ParameterView;
+  friend class ParameterValue;
+
   const foxglove_parameter_value* _impl;
   explicit ParameterValueView(const foxglove_parameter_value* ptr)
       : _impl(ptr) {}
@@ -54,10 +57,8 @@ private:
  * An owned parameter value.
  */
 class ParameterValue final {
-  friend class ParameterValueView;
-  friend class Parameter;
-
 public:
+  // Constructors
   explicit ParameterValue(double value);
   explicit ParameterValue(bool value);
   explicit ParameterValue(std::string_view value);
@@ -73,34 +74,43 @@ public:
   ParameterValue(const ParameterValue&) = delete;
   ParameterValue& operator=(const ParameterValue&) = delete;
 
-  [[nodiscard]] ParameterValueView view() const;
+  // Accessors
+  [[nodiscard]] ParameterValueView view() const noexcept;
+  [[nodiscard]] ParameterValueView::Value getValue() const {
+    return this->view().value();
+  }
+
+  // Creates a deep clone of this parameter value.
   [[nodiscard]] ParameterValue clone() const {
     return this->view().clone();
   }
-  [[nodiscard]] ParameterValueView::Value getValue() const {
-    return this->view().value();
-  };
 
 private:
-  std::unique_ptr<foxglove_parameter_value, void (*)(foxglove_parameter_value*)> _impl;
+  friend class ParameterValueView;
+  friend class Parameter;
 
+  struct Deleter {
+    void operator()(foxglove_parameter_value* ptr) const noexcept;
+  };
+
+  std::unique_ptr<foxglove_parameter_value, Deleter> _impl;
+
+  // Constructor from raw pointer.
   explicit ParameterValue(foxglove_parameter_value*);
 
-  foxglove_parameter_value* release();
+  // Releases ownership of the underlying storage.
+  [[nodiscard]] foxglove_parameter_value* release() noexcept;
 };
 
 /**
- * A view over an unowned paramter.
+ * A view over an unowned parameter.
  */
 class ParameterView final {
-  friend class Parameter;
-  friend class ParameterArrayView;
-
 public:
-  [[nodiscard]] class Parameter clone() const;
-  [[nodiscard]] std::string name() const;
-  [[nodiscard]] ParameterType type() const;
-  [[nodiscard]] std::optional<ParameterValueView> valueView() const;
+  // Accessors
+  [[nodiscard]] std::string_view name() const noexcept;
+  [[nodiscard]] ParameterType type() const noexcept;
+  [[nodiscard]] std::optional<ParameterValueView> valueView() const noexcept;
   [[nodiscard]] std::optional<ParameterValueView::Value> value() const {
     if (auto valueView = this->valueView()) {
       return valueView->value();
@@ -108,7 +118,13 @@ public:
     return {};
   }
 
+  // Creates a deep clone of this parameter.
+  [[nodiscard]] class Parameter clone() const;
+
 private:
+  friend class Parameter;
+  friend class ParameterArrayView;
+
   const foxglove_parameter* _impl;
   explicit ParameterView(const foxglove_parameter* ptr)
       : _impl(ptr) {}
@@ -118,9 +134,6 @@ private:
  * An owned parameter.
  */
 class Parameter final {
-  friend class ParameterView;
-  friend class ParameterArray;
-
 public:
   explicit Parameter(std::string_view);
   explicit Parameter(std::string_view name, double value);
@@ -140,26 +153,37 @@ public:
   Parameter(const Parameter&) = delete;
   Parameter& operator=(const Parameter&) = delete;
 
-  [[nodiscard]] ParameterView view() const;
-  [[nodiscard]] Parameter clone() const {
-    return this->view().clone();
-  };
-  [[nodiscard]] std::string name() const {
+  // Accessors
+  [[nodiscard]] ParameterView view() const noexcept;
+  [[nodiscard]] std::string_view name() const noexcept {
     return this->view().name();
-  };
-  [[nodiscard]] ParameterType type() const {
+  }
+  [[nodiscard]] ParameterType type() const noexcept {
     return this->view().type();
-  };
+  }
   [[nodiscard]] std::optional<ParameterValueView::Value> value() const {
     return this->view().value();
   }
 
+  // Creates a deep clone of this parameter.
+  [[nodiscard]] Parameter clone() const {
+    return this->view().clone();
+  }
+
 private:
-  std::unique_ptr<foxglove_parameter, void (*)(foxglove_parameter*)> _impl;
+  friend class ParameterView;
+  friend class ParameterArray;
+
+  struct Deleter {
+    void operator()(foxglove_parameter* ptr) const noexcept;
+  };
+
+  std::unique_ptr<foxglove_parameter, Deleter> _impl;
 
   explicit Parameter(foxglove_parameter* param);
 
-  foxglove_parameter* release();
+  // Releases ownership of the underlying storage.
+  [[nodiscard]] foxglove_parameter* release() noexcept;
 };
 
 /**
@@ -180,7 +204,7 @@ private:
  */
 class ParameterArray final {
 public:
-  explicit ParameterArray(std::vector<Parameter>);
+  explicit ParameterArray(std::vector<Parameter>&&);
 
   // Default destructor & move, disable copy.
   ~ParameterArray() = default;
@@ -189,15 +213,21 @@ public:
   ParameterArray(const ParameterArray&) = delete;
   ParameterArray& operator=(const ParameterArray&) = delete;
 
-  [[nodiscard]] ParameterArrayView view() const;
+  // Accessors
+  [[nodiscard]] ParameterArrayView view() const noexcept;
   [[nodiscard]] std::vector<ParameterView> parameters() const {
     return this->view().parameters();
   }
 
-  foxglove_parameter_array* release();
+  // Releases ownership of the underlying storage.
+  [[nodiscard]] foxglove_parameter_array* release() noexcept;
 
 private:
-  std::unique_ptr<foxglove_parameter_array, void (*)(foxglove_parameter_array*)> _impl;
+  struct Deleter {
+    void operator()(foxglove_parameter_array* ptr) const noexcept;
+  };
+
+  std::unique_ptr<foxglove_parameter_array, Deleter> _impl;
 };
 
 }  // namespace foxglove
