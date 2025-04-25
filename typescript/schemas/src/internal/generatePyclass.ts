@@ -542,7 +542,6 @@ export function generateChannelClasses(messageSchemas: FoxgloveMessageSchema[]):
   const imports = [
     `use foxglove::{Channel, PartialMetadata};`,
     `use pyo3::prelude::*;`,
-    `use crate::errors::PyFoxgloveError;`,
     `use super::schemas;`,
   ].join("\n");
 
@@ -562,9 +561,9 @@ impl ${channelClass} {
     ///
     /// :param topic: The topic to log messages to.
     #[new]
-    fn new(topic: &str) -> PyResult<Self> {
-        let base = Channel::new(topic).map_err(PyFoxgloveError::from)?;
-        Ok(Self(base))
+    fn new(topic: &str) -> Self {
+        let base = Channel::new(topic);
+        Self(base)
     }
 
     /// The unique ID of the channel.

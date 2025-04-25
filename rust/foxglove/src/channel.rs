@@ -7,7 +7,7 @@ use delegate::delegate;
 use serde::{Deserialize, Serialize};
 use smallbytes::SmallBytes;
 
-use crate::{ChannelBuilder, Encode, FoxgloveError, PartialMetadata, Schema};
+use crate::{ChannelBuilder, Encode, PartialMetadata, Schema};
 
 mod lazy_channel;
 mod raw_channel;
@@ -69,7 +69,7 @@ impl<T: Encode> Channel<T> {
     /// If you want to override the channel configuration, use [`ChannelBuilder`].
     ///
     /// You should choose a unique topic name per channel for compatibility with the Foxglove app.
-    pub fn new(topic: impl Into<String>) -> Result<Self, FoxgloveError> {
+    pub fn new(topic: impl Into<String>) -> Self {
         ChannelBuilder::new(topic).build()
     }
 

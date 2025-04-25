@@ -63,12 +63,6 @@ impl<T: Encode> LazyChannel<T> {
             ChannelBuilder::new(self.topic)
                 .context(self.context)
                 .build()
-                .unwrap_or_else(|e| {
-                    panic!(
-                        "Failed to lazily initialize channel for {}: {e:?}",
-                        self.topic
-                    )
-                })
         })
     }
 }

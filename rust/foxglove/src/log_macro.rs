@@ -195,7 +195,7 @@ mod tests {
         let sink = Arc::new(RecordingSink::new());
         Context::get_default().add_sink(sink.clone());
 
-        let _channel = ChannelBuilder::new("foo").build::<LaserScan>().unwrap();
+        let _channel = ChannelBuilder::new("foo").build::<LaserScan>();
 
         log!(
             "foo",
@@ -264,7 +264,7 @@ mod tests {
             }
         }
 
-        let _channel = ChannelBuilder::new("foo").build::<Foo>().unwrap();
+        let _channel = ChannelBuilder::new("foo").build::<Foo>();
 
         log!("foo", Bar { x: 1 });
 

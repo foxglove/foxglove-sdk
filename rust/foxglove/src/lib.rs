@@ -59,7 +59,7 @@
 //! let mcap = ctx.mcap_writer().create_new_buffered_file("test.mcap")?;
 //!
 //! // Create a new channel for the topic "/log" for `Log` messages.
-//! let channel = ctx.channel_builder("/log").build()?;
+//! let channel = ctx.channel_builder("/log").build();
 //! channel.log(&Log{
 //!     message: "Hello, Foxglove!".to_string(),
 //!     ..Default::default()
@@ -95,7 +95,7 @@
 //! let mcap = McapWriter::new().create_new_buffered_file("test.mcap")?;
 //!
 //! // Create a new channel for the topic "/log" for `Log` messages.
-//! let channel = Channel::new("/log")?;
+//! let channel = Channel::new("/log");
 //! channel.log(&Log{
 //!     message: "Hello, Foxglove!".to_string(),
 //!     ..Default::default()
@@ -130,7 +130,7 @@
 //! }
 //!
 //! # fn func() -> Result<(), foxglove::FoxgloveError> {
-//! let channel = foxglove::Channel::new("/custom")?;
+//! let channel = foxglove::Channel::new("/custom");
 //! channel.log(&Custom{
 //!     msg: "custom",
 //!     count: 42

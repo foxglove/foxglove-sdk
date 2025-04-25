@@ -114,8 +114,7 @@ mod test {
         let ctx = Context::new();
         let channel = ChannelBuilder::new("topic2")
             .context(&ctx)
-            .build::<TestMessage>()
-            .expect("failed to build channel");
+            .build::<TestMessage>();
 
         let message = TestMessage {
             msg: "Hello, world!".to_string(),
