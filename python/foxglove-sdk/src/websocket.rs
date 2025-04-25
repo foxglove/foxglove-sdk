@@ -818,7 +818,7 @@ impl From<foxglove::websocket::ParameterType> for PyParameterType {
     }
 }
 
-/// A parameter value.
+/// The raw value of a parameter, as it is represented on the wire.
 #[pyclass(name = "ParameterValue", module = "foxglove", eq)]
 #[derive(Clone, PartialEq)]
 pub enum PyParameterValue {
@@ -871,6 +871,11 @@ impl From<foxglove::websocket::ParameterValue> for PyParameterValue {
 }
 
 /// A parameter which can be sent to a client.
+///
+/// :param name: The parameter name.
+/// :type name: str
+/// :param value: Optional value, represented as a native python object.
+/// :type value: None|bool|float|str|bytes|list|dict
 #[pyclass(name = "Parameter", module = "foxglove")]
 #[derive(Clone)]
 pub struct PyParameter {
@@ -880,7 +885,7 @@ pub struct PyParameter {
     /// The parameter type.
     #[pyo3(get)]
     pub r#type: Option<PyParameterType>,
-    /// The parameter value.
+    /// The raw parameter value.
     #[pyo3(get)]
     pub value: Option<PyParameterValue>,
 }
@@ -897,6 +902,14 @@ impl PyParameter {
         )
     }
 
+    /// Constructs a parameter from raw parts.
+    ///
+    /// :param name: The parameter name.
+    /// :type name: str
+    /// :param type: The parameter type.
+    /// :type type: ParameterType|None
+    /// :param value: The raw parameter value.
+    /// :type value: ParameterValue|None
     #[staticmethod]
     #[pyo3(signature = (name, *, r#type=None, value=None))]
     pub fn raw(
@@ -911,11 +924,13 @@ impl PyParameter {
         }
     }
 
-    pub fn get_value(&self, py: Python) -> PyResult<Option<Py<PyAny>>> {
+    /// Returns the parameter value as a native python object.
+    ///
+    /// :rtype: None|bool|float|str|bytes|list|dict
+    pub fn get_value(&self) -> Option<ParameterTypeValueConverter> {
         self.value
             .clone()
-            .map(|v| ParameterTypeValueConverter(self.r#type, v).into_py_any(py))
-            .transpose()
+            .map(|v| ParameterTypeValueConverter(self.r#type, v))
     }
 }
 

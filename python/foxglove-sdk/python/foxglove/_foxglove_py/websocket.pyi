@@ -104,7 +104,12 @@ class MessageSchema:
 
 class Parameter:
     """
-    A parameter.
+    A parameter which can be sent to a client.
+
+    :param name: The parameter name.
+    :type name: str
+    :param value: Optional value, represented as a native python object.
+    :type value: AnyNativeParameterValue
     """
 
     name: str
@@ -123,8 +128,22 @@ class Parameter:
         *,
         type: Optional["ParameterType"],
         value: Optional["AnyParameterValue"],
-    ) -> "Parameter": ...
-    def get_value(self) -> "AnyNativeParameterValue": ...
+    ) -> "Parameter":
+        """
+        Constructs a parameter from raw parts
+
+        :param name: The parameter name.
+        :type name: str
+        :param type: Optional type.
+        :type type: ParameterType
+        :param value: Optional value, represented as a raw parameter value.
+        :type value: ParameterValue
+        """
+        ...
+
+    def get_value(self) -> "AnyNativeParameterValue":
+        """Returns the parameter value as a native python object."""
+        ...
 
 class ParameterType(Enum):
     """
@@ -142,7 +161,7 @@ class ParameterType(Enum):
 
 class ParameterValue:
     """
-    The value of a parameter, as it is represented on the wire.
+    The raw value of a parameter, as it is represented on the wire.
     """
 
     class Bool:
