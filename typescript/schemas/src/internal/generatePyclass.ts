@@ -559,7 +559,7 @@ struct ${channelClass}(Channel<foxglove::schemas::${schemaClass}>);
 impl ${channelClass} {
     /// Create a new channel.
     ///
-    /// :param topic: The topic to log messages to.
+    /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
     #[new]
     fn new(topic: &str) -> Self {
         let base = Channel::new(topic);
@@ -631,7 +631,13 @@ export function generatePyChannelStub(messageSchemas: FoxgloveMessageSchema[]): 
   const classes = schemas.map((schema) => {
     const schemaClass = structName(schema.name);
     const channelClass = `${schemaClass}Channel`;
-    const doc = ['    """', `    A channel for logging ${schemaClass} messages`, '    """'];
+    const doc = [
+      `    """`,
+      `    A channel for logging ${schemaClass} messages`,
+      ``,
+      `    You should choose a unique topic name per channel.`,
+      `    """`
+    ];
 
     return {
       name: channelClass,

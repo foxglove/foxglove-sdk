@@ -58,7 +58,7 @@ struct CameraCalibrationChannel(Channel<foxglove::schemas::CameraCalibration>);
 impl CameraCalibrationChannel {
     /// Create a new channel.
     ///
-    /// :param topic: The topic to log messages to.
+    /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
     #[new]
     fn new(topic: &str) -> Self {
         let base = Channel::new(topic);
@@ -120,7 +120,7 @@ struct CircleAnnotationChannel(Channel<foxglove::schemas::CircleAnnotation>);
 impl CircleAnnotationChannel {
     /// Create a new channel.
     ///
-    /// :param topic: The topic to log messages to.
+    /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
     #[new]
     fn new(topic: &str) -> Self {
         let base = Channel::new(topic);
@@ -182,7 +182,7 @@ struct ColorChannel(Channel<foxglove::schemas::Color>);
 impl ColorChannel {
     /// Create a new channel.
     ///
-    /// :param topic: The topic to log messages to.
+    /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
     #[new]
     fn new(topic: &str) -> Self {
         let base = Channel::new(topic);
@@ -239,7 +239,7 @@ struct CompressedImageChannel(Channel<foxglove::schemas::CompressedImage>);
 impl CompressedImageChannel {
     /// Create a new channel.
     ///
-    /// :param topic: The topic to log messages to.
+    /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
     #[new]
     fn new(topic: &str) -> Self {
         let base = Channel::new(topic);
@@ -301,7 +301,7 @@ struct CompressedVideoChannel(Channel<foxglove::schemas::CompressedVideo>);
 impl CompressedVideoChannel {
     /// Create a new channel.
     ///
-    /// :param topic: The topic to log messages to.
+    /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
     #[new]
     fn new(topic: &str) -> Self {
         let base = Channel::new(topic);
@@ -363,7 +363,7 @@ struct FrameTransformChannel(Channel<foxglove::schemas::FrameTransform>);
 impl FrameTransformChannel {
     /// Create a new channel.
     ///
-    /// :param topic: The topic to log messages to.
+    /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
     #[new]
     fn new(topic: &str) -> Self {
         let base = Channel::new(topic);
@@ -425,7 +425,7 @@ struct FrameTransformsChannel(Channel<foxglove::schemas::FrameTransforms>);
 impl FrameTransformsChannel {
     /// Create a new channel.
     ///
-    /// :param topic: The topic to log messages to.
+    /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
     #[new]
     fn new(topic: &str) -> Self {
         let base = Channel::new(topic);
@@ -487,7 +487,7 @@ struct GeoJsonChannel(Channel<foxglove::schemas::GeoJson>);
 impl GeoJsonChannel {
     /// Create a new channel.
     ///
-    /// :param topic: The topic to log messages to.
+    /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
     #[new]
     fn new(topic: &str) -> Self {
         let base = Channel::new(topic);
@@ -544,7 +544,7 @@ struct GridChannel(Channel<foxglove::schemas::Grid>);
 impl GridChannel {
     /// Create a new channel.
     ///
-    /// :param topic: The topic to log messages to.
+    /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
     #[new]
     fn new(topic: &str) -> Self {
         let base = Channel::new(topic);
@@ -601,7 +601,7 @@ struct ImageAnnotationsChannel(Channel<foxglove::schemas::ImageAnnotations>);
 impl ImageAnnotationsChannel {
     /// Create a new channel.
     ///
-    /// :param topic: The topic to log messages to.
+    /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
     #[new]
     fn new(topic: &str) -> Self {
         let base = Channel::new(topic);
@@ -663,7 +663,7 @@ struct KeyValuePairChannel(Channel<foxglove::schemas::KeyValuePair>);
 impl KeyValuePairChannel {
     /// Create a new channel.
     ///
-    /// :param topic: The topic to log messages to.
+    /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
     #[new]
     fn new(topic: &str) -> Self {
         let base = Channel::new(topic);
@@ -725,7 +725,7 @@ struct LaserScanChannel(Channel<foxglove::schemas::LaserScan>);
 impl LaserScanChannel {
     /// Create a new channel.
     ///
-    /// :param topic: The topic to log messages to.
+    /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
     #[new]
     fn new(topic: &str) -> Self {
         let base = Channel::new(topic);
@@ -787,7 +787,7 @@ struct LocationFixChannel(Channel<foxglove::schemas::LocationFix>);
 impl LocationFixChannel {
     /// Create a new channel.
     ///
-    /// :param topic: The topic to log messages to.
+    /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
     #[new]
     fn new(topic: &str) -> Self {
         let base = Channel::new(topic);
@@ -849,7 +849,7 @@ struct LogChannel(Channel<foxglove::schemas::Log>);
 impl LogChannel {
     /// Create a new channel.
     ///
-    /// :param topic: The topic to log messages to.
+    /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
     #[new]
     fn new(topic: &str) -> Self {
         let base = Channel::new(topic);
@@ -906,7 +906,7 @@ struct SceneEntityDeletionChannel(Channel<foxglove::schemas::SceneEntityDeletion
 impl SceneEntityDeletionChannel {
     /// Create a new channel.
     ///
-    /// :param topic: The topic to log messages to.
+    /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
     #[new]
     fn new(topic: &str) -> Self {
         let base = Channel::new(topic);
@@ -968,7 +968,7 @@ struct SceneEntityChannel(Channel<foxglove::schemas::SceneEntity>);
 impl SceneEntityChannel {
     /// Create a new channel.
     ///
-    /// :param topic: The topic to log messages to.
+    /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
     #[new]
     fn new(topic: &str) -> Self {
         let base = Channel::new(topic);
@@ -1030,7 +1030,7 @@ struct SceneUpdateChannel(Channel<foxglove::schemas::SceneUpdate>);
 impl SceneUpdateChannel {
     /// Create a new channel.
     ///
-    /// :param topic: The topic to log messages to.
+    /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
     #[new]
     fn new(topic: &str) -> Self {
         let base = Channel::new(topic);
@@ -1092,7 +1092,7 @@ struct PackedElementFieldChannel(Channel<foxglove::schemas::PackedElementField>)
 impl PackedElementFieldChannel {
     /// Create a new channel.
     ///
-    /// :param topic: The topic to log messages to.
+    /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
     #[new]
     fn new(topic: &str) -> Self {
         let base = Channel::new(topic);
@@ -1154,7 +1154,7 @@ struct Point2Channel(Channel<foxglove::schemas::Point2>);
 impl Point2Channel {
     /// Create a new channel.
     ///
-    /// :param topic: The topic to log messages to.
+    /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
     #[new]
     fn new(topic: &str) -> Self {
         let base = Channel::new(topic);
@@ -1211,7 +1211,7 @@ struct Point3Channel(Channel<foxglove::schemas::Point3>);
 impl Point3Channel {
     /// Create a new channel.
     ///
-    /// :param topic: The topic to log messages to.
+    /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
     #[new]
     fn new(topic: &str) -> Self {
         let base = Channel::new(topic);
@@ -1268,7 +1268,7 @@ struct PointCloudChannel(Channel<foxglove::schemas::PointCloud>);
 impl PointCloudChannel {
     /// Create a new channel.
     ///
-    /// :param topic: The topic to log messages to.
+    /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
     #[new]
     fn new(topic: &str) -> Self {
         let base = Channel::new(topic);
@@ -1330,7 +1330,7 @@ struct PointsAnnotationChannel(Channel<foxglove::schemas::PointsAnnotation>);
 impl PointsAnnotationChannel {
     /// Create a new channel.
     ///
-    /// :param topic: The topic to log messages to.
+    /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
     #[new]
     fn new(topic: &str) -> Self {
         let base = Channel::new(topic);
@@ -1392,7 +1392,7 @@ struct PoseChannel(Channel<foxglove::schemas::Pose>);
 impl PoseChannel {
     /// Create a new channel.
     ///
-    /// :param topic: The topic to log messages to.
+    /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
     #[new]
     fn new(topic: &str) -> Self {
         let base = Channel::new(topic);
@@ -1449,7 +1449,7 @@ struct PoseInFrameChannel(Channel<foxglove::schemas::PoseInFrame>);
 impl PoseInFrameChannel {
     /// Create a new channel.
     ///
-    /// :param topic: The topic to log messages to.
+    /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
     #[new]
     fn new(topic: &str) -> Self {
         let base = Channel::new(topic);
@@ -1511,7 +1511,7 @@ struct PosesInFrameChannel(Channel<foxglove::schemas::PosesInFrame>);
 impl PosesInFrameChannel {
     /// Create a new channel.
     ///
-    /// :param topic: The topic to log messages to.
+    /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
     #[new]
     fn new(topic: &str) -> Self {
         let base = Channel::new(topic);
@@ -1573,7 +1573,7 @@ struct QuaternionChannel(Channel<foxglove::schemas::Quaternion>);
 impl QuaternionChannel {
     /// Create a new channel.
     ///
-    /// :param topic: The topic to log messages to.
+    /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
     #[new]
     fn new(topic: &str) -> Self {
         let base = Channel::new(topic);
@@ -1635,7 +1635,7 @@ struct RawAudioChannel(Channel<foxglove::schemas::RawAudio>);
 impl RawAudioChannel {
     /// Create a new channel.
     ///
-    /// :param topic: The topic to log messages to.
+    /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
     #[new]
     fn new(topic: &str) -> Self {
         let base = Channel::new(topic);
@@ -1697,7 +1697,7 @@ struct RawImageChannel(Channel<foxglove::schemas::RawImage>);
 impl RawImageChannel {
     /// Create a new channel.
     ///
-    /// :param topic: The topic to log messages to.
+    /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
     #[new]
     fn new(topic: &str) -> Self {
         let base = Channel::new(topic);
@@ -1759,7 +1759,7 @@ struct TextAnnotationChannel(Channel<foxglove::schemas::TextAnnotation>);
 impl TextAnnotationChannel {
     /// Create a new channel.
     ///
-    /// :param topic: The topic to log messages to.
+    /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
     #[new]
     fn new(topic: &str) -> Self {
         let base = Channel::new(topic);
@@ -1821,7 +1821,7 @@ struct Vector2Channel(Channel<foxglove::schemas::Vector2>);
 impl Vector2Channel {
     /// Create a new channel.
     ///
-    /// :param topic: The topic to log messages to.
+    /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
     #[new]
     fn new(topic: &str) -> Self {
         let base = Channel::new(topic);
@@ -1878,7 +1878,7 @@ struct Vector3Channel(Channel<foxglove::schemas::Vector3>);
 impl Vector3Channel {
     /// Create a new channel.
     ///
-    /// :param topic: The topic to log messages to.
+    /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
     #[new]
     fn new(topic: &str) -> Self {
         let base = Channel::new(topic);
