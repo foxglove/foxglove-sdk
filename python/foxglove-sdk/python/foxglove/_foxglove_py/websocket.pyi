@@ -1,6 +1,6 @@
 from collections.abc import Callable
 from enum import Enum
-from typing import List, Optional, Union
+from typing import Dict, List, Optional, Union
 
 import foxglove
 
@@ -115,9 +115,16 @@ class Parameter:
         self,
         name: str,
         *,
-        type: Optional["ParameterType"] = None,
-        value: Optional["AnyParameterValue"] = None,
+        value: Optional["AnyNativeParameterValue"] = None,
     ) -> None: ...
+    @staticmethod
+    def raw(
+        name: str,
+        *,
+        type: Optional["ParameterType"],
+        value: Optional["AnyParameterValue"],
+    ) -> "Parameter": ...
+    def get_value(self) -> "AnyNativeParameterValue": ...
 
 class ParameterType(Enum):
     """
@@ -135,7 +142,7 @@ class ParameterType(Enum):
 
 class ParameterValue:
     """
-    The value of a parameter.
+    The value of a parameter, as it is represented on the wire.
     """
 
     class Bool:
@@ -178,6 +185,23 @@ AnyParameterValue = Union[
     ParameterValue.String,
     ParameterValue.Array,
     ParameterValue.Dict,
+]
+
+AnyNativeParameterValue = Union[
+    bool,
+    float,
+    str,
+    bytes,
+    List["AnyInnerParameterValue"],
+    Dict[str, "AnyInnerParameterValue"],
+]
+
+AnyInnerParameterValue = Union[
+    bool,
+    float,
+    str,
+    List["AnyInnerParameterValue"],
+    Dict[str, "AnyInnerParameterValue"],
 ]
 
 AssetHandler = Callable[[str], Optional[bytes]]
