@@ -53,7 +53,6 @@ impl From<&str> for FoxgloveString {
 /// This struct is aliased as `foxglove_string` in the C API.
 ///
 /// cbindgen:no-export
-#[repr(C)]
 pub struct FoxgloveStringBuf(FoxgloveString);
 
 impl FoxgloveStringBuf {
