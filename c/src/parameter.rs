@@ -118,21 +118,9 @@ impl Drop for FoxgloveParameterArray {
 /// Creates a new parameter array with the specified capacity.
 ///
 /// The array must be freed with `foxglove_parameter_array_free`.
-///
-/// # Safety
-/// - `array` must be a valid pointer.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn foxglove_parameter_array_create(
-    array: *mut *mut FoxgloveParameterArray,
-    capacity: usize,
-) -> FoxgloveError {
-    if array.is_null() {
-        return FoxgloveError::ValueError;
-    }
-    let ptr = FoxgloveParameterArray::with_capacity(capacity).into_raw();
-    // SAFETY: array is a valid pointer.
-    unsafe { *array = ptr };
-    FoxgloveError::Ok
+pub extern "C" fn foxglove_parameter_array_create(capacity: usize) -> *mut FoxgloveParameterArray {
+    FoxgloveParameterArray::with_capacity(capacity).into_raw()
 }
 
 /// Pushes a parameter into the array.
@@ -1013,20 +1001,11 @@ impl Drop for FoxgloveParameterValueArray {
 ///
 /// The parameter must be freed with `foxglove_parameter_value_array_free`, or by passing it to a
 /// consuming function such as `foxglove_parameter_value_create_array`.
-///
-/// # Safety
-/// - `array` must be a valid pointer.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn foxglove_parameter_value_array_create(
-    array: *mut *mut FoxgloveParameterValueArray,
+pub extern "C" fn foxglove_parameter_value_array_create(
     capacity: usize,
-) -> FoxgloveError {
-    if array.is_null() {
-        return FoxgloveError::ValueError;
-    }
-    let ptr = FoxgloveParameterValueArray::with_capacity(capacity).into_raw();
-    unsafe { *array = ptr };
-    FoxgloveError::Ok
+) -> *mut FoxgloveParameterValueArray {
+    FoxgloveParameterValueArray::with_capacity(capacity).into_raw()
 }
 
 /// Pushes a parameter value into the array.
@@ -1162,20 +1141,11 @@ impl Drop for FoxgloveParameterValueDict {
 ///
 /// The parameter must be freed with `foxglove_parameter_value_dict_free`, or by passing it to a
 /// consuming function such as `foxglove_parameter_value_create_dict`.
-///
-/// # Safety
-/// - `dict` must be a valid pointer.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn foxglove_parameter_value_dict_create(
-    dict: *mut *mut FoxgloveParameterValueDict,
+pub extern "C" fn foxglove_parameter_value_dict_create(
     capacity: usize,
-) -> FoxgloveError {
-    if dict.is_null() {
-        return FoxgloveError::ValueError;
-    }
-    let ptr = FoxgloveParameterValueDict::with_capacity(capacity).into_raw();
-    unsafe { *dict = ptr };
-    FoxgloveError::Ok
+) -> *mut FoxgloveParameterValueDict {
+    FoxgloveParameterValueDict::with_capacity(capacity).into_raw()
 }
 
 /// Inserts an entry into the parameter value dict.

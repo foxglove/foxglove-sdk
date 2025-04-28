@@ -108,13 +108,13 @@ macro_rules! dict_insert {
 }
 
 fn make_dict_param() -> *mut FoxgloveParameter {
-    let inner = make_value!(foxglove_parameter_value_dict_create, 2);
+    let inner = foxglove_parameter_value_dict_create(2);
     dict_insert!(
         inner,
         "string",
         make_value!(foxglove_parameter_value_create_string, "xyzzy".into())
     );
-    let array_ptr = make_value!(foxglove_parameter_value_array_create, 2);
+    let array_ptr = foxglove_parameter_value_array_create(2);
     array_insert!(
         array_ptr,
         make_value!(foxglove_parameter_value_create_number, std::f64::consts::E)
@@ -129,7 +129,7 @@ fn make_dict_param() -> *mut FoxgloveParameter {
         make_value!(foxglove_parameter_value_create_array, array_ptr)
     );
 
-    let outer = make_value!(foxglove_parameter_value_dict_create, 3);
+    let outer = foxglove_parameter_value_dict_create(3);
     dict_insert!(
         outer,
         "bool",

@@ -101,15 +101,14 @@ ParameterValue::ParameterValue(std::string_view value)
 
 ParameterValue::ParameterValue(std::vector<ParameterValue> values)
     : _impl(nullptr) {
-  foxglove_parameter_value_array* array_ptr = nullptr;
-  auto error = foxglove_parameter_value_array_create(&array_ptr, values.size());
-  if (error != foxglove_error::FOXGLOVE_ERROR_OK) {
-    throw std::runtime_error(foxglove_error_to_cstr(error));
+  foxglove_parameter_value_array* array_ptr = foxglove_parameter_value_array_create(values.size());
+  if (array_ptr == nullptr) {
+    throw std::runtime_error("allocation failed");
   }
 
   for (auto& value : values) {
     foxglove_parameter_value* value_ptr = value.release();
-    error = foxglove_parameter_value_array_push(array_ptr, value_ptr);
+    auto error = foxglove_parameter_value_array_push(array_ptr, value_ptr);
     if (error != foxglove_error::FOXGLOVE_ERROR_OK) {
       foxglove_parameter_value_array_free(array_ptr);
       throw std::runtime_error(foxglove_error_to_cstr(error));
@@ -117,7 +116,7 @@ ParameterValue::ParameterValue(std::vector<ParameterValue> values)
   }
 
   foxglove_parameter_value* ptr = nullptr;
-  error = foxglove_parameter_value_create_array(&ptr, array_ptr);
+  auto error = foxglove_parameter_value_create_array(&ptr, array_ptr);
   if (error != foxglove_error::FOXGLOVE_ERROR_OK) {
     throw std::runtime_error(foxglove_error_to_cstr(error));
   }
@@ -127,16 +126,16 @@ ParameterValue::ParameterValue(std::vector<ParameterValue> values)
 
 ParameterValue::ParameterValue(std::map<std::string, ParameterValue> value)
     : _impl(nullptr) {
-  foxglove_parameter_value_dict* dict_ptr = nullptr;
-  auto error = foxglove_parameter_value_dict_create(&dict_ptr, value.size());
-  if (error != foxglove_error::FOXGLOVE_ERROR_OK) {
-    throw std::runtime_error(foxglove_error_to_cstr(error));
+  foxglove_parameter_value_dict* dict_ptr = foxglove_parameter_value_dict_create(value.size());
+  if (dict_ptr == nullptr) {
+    throw std::runtime_error("allocation failed");
   }
 
   for (auto& pair : value) {
     std::string_view key = pair.first;
     foxglove_parameter_value* value_ptr = pair.second.release();
-    error = foxglove_parameter_value_dict_insert(dict_ptr, {key.data(), key.length()}, value_ptr);
+    auto error =
+      foxglove_parameter_value_dict_insert(dict_ptr, {key.data(), key.length()}, value_ptr);
     if (error != foxglove_error::FOXGLOVE_ERROR_OK) {
       foxglove_parameter_value_dict_free(dict_ptr);
       throw std::runtime_error(foxglove_error_to_cstr(error));
@@ -144,7 +143,7 @@ ParameterValue::ParameterValue(std::map<std::string, ParameterValue> value)
   }
 
   foxglove_parameter_value* ptr = nullptr;
-  error = foxglove_parameter_value_create_dict(&ptr, dict_ptr);
+  auto error = foxglove_parameter_value_create_dict(&ptr, dict_ptr);
   if (error != foxglove_error::FOXGLOVE_ERROR_OK) {
     throw std::runtime_error(foxglove_error_to_cstr(error));
   }
@@ -314,21 +313,20 @@ void ParameterArray::Deleter::operator()(foxglove_parameter_array* ptr) const no
 // NOLINTNEXTLINE(cppcoreguidelines-rvalue-reference-param-not-moved)
 ParameterArray::ParameterArray(std::vector<Parameter>&& params)
     : _impl(nullptr) {
-  foxglove_parameter_array* ptr = nullptr;
-  auto error = foxglove_parameter_array_create(&ptr, params.size());
-  if (error != foxglove_error::FOXGLOVE_ERROR_OK) {
-    throw std::runtime_error(foxglove_error_to_cstr(error));
+  foxglove_parameter_array* array_ptr = foxglove_parameter_array_create(params.size());
+  if (array_ptr == nullptr) {
+    throw std::runtime_error("allocation failed");
   }
 
   for (auto& param : params) {
-    error = foxglove_parameter_array_push(ptr, param.release());
+    auto error = foxglove_parameter_array_push(array_ptr, param.release());
     if (error != foxglove_error::FOXGLOVE_ERROR_OK) {
-      foxglove_parameter_array_free(ptr);
+      foxglove_parameter_array_free(array_ptr);
       throw std::runtime_error(foxglove_error_to_cstr(error));
     }
   }
 
-  _impl.reset(ptr);
+  _impl.reset(array_ptr);
 }
 
 ParameterArrayView ParameterArray::view() const noexcept {

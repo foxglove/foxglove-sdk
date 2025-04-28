@@ -559,12 +559,8 @@ foxglove_error foxglove_connection_graph_set_advertised_service(struct foxglove_
  * Creates a new parameter array with the specified capacity.
  *
  * The array must be freed with `foxglove_parameter_array_free`.
- *
- * # Safety
- * - `array` must be a valid pointer.
  */
-foxglove_error foxglove_parameter_array_create(struct foxglove_parameter_array **array,
-                                               size_t capacity);
+struct foxglove_parameter_array *foxglove_parameter_array_create(size_t capacity);
 
 /**
  * Pushes a parameter into the array.
@@ -826,12 +822,8 @@ void foxglove_parameter_value_free(struct foxglove_parameter_value *value);
  *
  * The parameter must be freed with `foxglove_parameter_value_array_free`, or by passing it to a
  * consuming function such as `foxglove_parameter_value_create_array`.
- *
- * # Safety
- * - `array` must be a valid pointer.
  */
-foxglove_error foxglove_parameter_value_array_create(struct foxglove_parameter_value_array **array,
-                                                     size_t capacity);
+struct foxglove_parameter_value_array *foxglove_parameter_value_array_create(size_t capacity);
 
 /**
  * Pushes a parameter value into the array.
@@ -858,12 +850,8 @@ void foxglove_parameter_value_array_free(struct foxglove_parameter_value_array *
  *
  * The parameter must be freed with `foxglove_parameter_value_dict_free`, or by passing it to a
  * consuming function such as `foxglove_parameter_value_create_dict`.
- *
- * # Safety
- * - `dict` must be a valid pointer.
  */
-foxglove_error foxglove_parameter_value_dict_create(struct foxglove_parameter_value_dict **dict,
-                                                    size_t capacity);
+struct foxglove_parameter_value_dict *foxglove_parameter_value_dict_create(size_t capacity);
 
 /**
  * Inserts an entry into the parameter value dict.
