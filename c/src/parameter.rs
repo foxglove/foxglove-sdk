@@ -8,6 +8,23 @@ use crate::{FoxgloveBytes, FoxgloveError, FoxgloveString};
 #[cfg(test)]
 mod tests;
 
+/// Pushes an element into a raw Vec<T>.
+unsafe fn raw_vec_push<T>(ptr: &mut *const T, len: &mut usize, cap: &mut usize, elem: T) {
+    let mut vec = ManuallyDrop::new(unsafe { Vec::from_raw_parts((*ptr).cast_mut(), *len, *cap) });
+    vec.push(elem);
+    *ptr = vec.as_ptr();
+    *len = vec.len();
+    *cap = vec.capacity();
+}
+
+/// Clones a raw Vec<T> into a new Vec<T>.
+unsafe fn raw_vec_clone<T: Clone>(ptr: *const T, len: usize, cap: usize) -> Vec<T> {
+    ManuallyDrop::new(unsafe { Vec::from_raw_parts(ptr.cast_mut(), len, cap) })
+        .iter()
+        .cloned()
+        .collect()
+}
+
 /// An array of websocket parameters.
 ///
 /// Constructed with `foxglove_parameter_array_create`.
@@ -61,13 +78,8 @@ impl FoxgloveParameterArray {
         // SAFETY: We're consuming the underlying values, so don't drop self.
         let this = ManuallyDrop::new(self);
         // SAFETY: The raw parts are maintained correctly.
-        let vec = unsafe {
-            Vec::from_raw_parts(
-                this.parameters as *mut FoxgloveParameter,
-                this.len,
-                this.capacity,
-            )
-        };
+        let vec =
+            unsafe { Vec::from_raw_parts(this.parameters.cast_mut(), this.len, this.capacity) };
         vec.into_iter()
             .map(FoxgloveParameter::into_native)
             .collect()
@@ -76,19 +88,14 @@ impl FoxgloveParameterArray {
     /// Pushes a parameter into the array.
     fn push(&mut self, param: FoxgloveParameter) {
         // SAFETY: The raw parts are maintained correctly.
-        let vec = unsafe {
-            Vec::from_raw_parts(
-                self.parameters as *mut FoxgloveParameter,
-                self.len,
-                self.capacity,
+        unsafe {
+            raw_vec_push(
+                &mut self.parameters,
+                &mut self.len,
+                &mut self.capacity,
+                param,
             )
         };
-        // SAFETY: We're just modifying the vec. Don't drop it.
-        let mut vec = ManuallyDrop::new(vec);
-        vec.push(param);
-        self.parameters = vec.as_ptr();
-        self.len = vec.len();
-        self.capacity = vec.capacity();
     }
 }
 
@@ -102,13 +109,8 @@ impl FromIterator<Parameter> for FoxgloveParameterArray {
 impl Drop for FoxgloveParameterArray {
     fn drop(&mut self) {
         // SAFETY: The raw parts are maintained correctly.
-        let vec = unsafe {
-            Vec::from_raw_parts(
-                self.parameters as *mut FoxgloveParameter,
-                self.len,
-                self.capacity,
-            )
-        };
+        let vec =
+            unsafe { Vec::from_raw_parts(self.parameters.cast_mut(), self.len, self.capacity) };
         drop(vec)
     }
 }
@@ -971,13 +973,7 @@ impl FoxgloveParameterValueArray {
         // SAFETY: We're consuming the underlying values, so don't drop self.
         let this = ManuallyDrop::new(self);
         // SAFETY: The raw parts are maintained correctly.
-        let vec = unsafe {
-            Vec::from_raw_parts(
-                this.values as *mut FoxgloveParameterValue,
-                this.len,
-                this.len,
-            )
-        };
+        let vec = unsafe { Vec::from_raw_parts(this.values.cast_mut(), this.len, this.len) };
         vec.into_iter()
             .map(FoxgloveParameterValue::into_native)
             .collect()
@@ -986,19 +982,7 @@ impl FoxgloveParameterValueArray {
     /// Pushes a value into the array.
     fn push(&mut self, value: FoxgloveParameterValue) {
         // SAFETY: The raw parts are maintained correctly.
-        let vec = unsafe {
-            Vec::from_raw_parts(
-                self.values as *mut FoxgloveParameterValue,
-                self.len,
-                self.capacity,
-            )
-        };
-        // SAFETY: We're just modifying the vec. Don't drop it.
-        let mut vec = ManuallyDrop::new(vec);
-        vec.push(value);
-        self.values = vec.as_ptr();
-        self.len = vec.len();
-        self.capacity = vec.capacity();
+        unsafe { raw_vec_push(&mut self.values, &mut self.len, &mut self.capacity, value) };
     }
 }
 
@@ -1012,17 +996,7 @@ impl FromIterator<ParameterValue> for FoxgloveParameterValueArray {
 impl Clone for FoxgloveParameterValueArray {
     fn clone(&self) -> Self {
         // SAFETY: The raw parts are maintained correctly.
-        let vec = unsafe {
-            Vec::from_raw_parts(
-                self.values as *mut FoxgloveParameterValue,
-                self.len,
-                self.capacity,
-            )
-        };
-        // SAFETY: Don't drop our vec.
-        let vec = ManuallyDrop::new(vec);
-        // Clone entries into a new vec,
-        let vec = vec.iter().cloned().collect();
+        let vec = unsafe { raw_vec_clone(self.values, self.len, self.capacity) };
         Self::from_vec(vec)
     }
 }
@@ -1030,13 +1004,7 @@ impl Clone for FoxgloveParameterValueArray {
 impl Drop for FoxgloveParameterValueArray {
     fn drop(&mut self) {
         // SAFETY: The raw parts are maintained correctly.
-        let vec = unsafe {
-            Vec::from_raw_parts(
-                self.values as *mut FoxgloveParameterValue,
-                self.len,
-                self.capacity,
-            )
-        };
+        let vec = unsafe { Vec::from_raw_parts(self.values.cast_mut(), self.len, self.capacity) };
         drop(vec)
     }
 }
@@ -1151,13 +1119,7 @@ impl FoxgloveParameterValueDict {
         // SAFETY: We're consuming the underlying values, so don't drop self.
         let this = ManuallyDrop::new(self);
         // SAFETY: The raw parts are maintained correctly.
-        let vec = unsafe {
-            Vec::from_raw_parts(
-                this.entries as *mut FoxgloveParameterValueDictEntry,
-                this.len,
-                this.capacity,
-            )
-        };
+        let vec = unsafe { Vec::from_raw_parts(this.entries.cast_mut(), this.len, this.capacity) };
         vec.into_iter()
             .map(FoxgloveParameterValueDictEntry::into_native)
             .collect()
@@ -1166,19 +1128,7 @@ impl FoxgloveParameterValueDict {
     /// Inserts a value into the dict.
     fn push(&mut self, entry: FoxgloveParameterValueDictEntry) {
         // SAFETY: The raw parts are maintained correctly.
-        let vec = unsafe {
-            Vec::from_raw_parts(
-                self.entries as *mut FoxgloveParameterValueDictEntry,
-                self.len,
-                self.capacity,
-            )
-        };
-        // SAFETY: We're just modifying the vec. Don't drop it.
-        let mut vec = ManuallyDrop::new(vec);
-        vec.push(entry);
-        self.entries = vec.as_ptr();
-        self.len = vec.len();
-        self.capacity = vec.capacity();
+        unsafe { raw_vec_push(&mut self.entries, &mut self.len, &mut self.capacity, entry) };
     }
 }
 
@@ -1195,17 +1145,7 @@ impl FromIterator<(String, ParameterValue)> for FoxgloveParameterValueDict {
 impl Clone for FoxgloveParameterValueDict {
     fn clone(&self) -> Self {
         // SAFETY: The raw parts are maintained correctly.
-        let vec = unsafe {
-            Vec::from_raw_parts(
-                self.entries as *mut FoxgloveParameterValueDictEntry,
-                self.len,
-                self.capacity,
-            )
-        };
-        // SAFETY: Don't drop our vec.
-        let vec = ManuallyDrop::new(vec);
-        // Clone entries into a new vec,
-        let vec = vec.iter().cloned().collect();
+        let vec = unsafe { raw_vec_clone(self.entries, self.len, self.capacity) };
         Self::from_vec(vec)
     }
 }
@@ -1213,13 +1153,7 @@ impl Clone for FoxgloveParameterValueDict {
 impl Drop for FoxgloveParameterValueDict {
     fn drop(&mut self) {
         // SAFETY: The raw parts are maintained correctly.
-        let vec = unsafe {
-            Vec::from_raw_parts(
-                self.entries as *mut FoxgloveParameterValueDictEntry,
-                self.len,
-                self.capacity,
-            )
-        };
+        let vec = unsafe { Vec::from_raw_parts(self.entries.cast_mut(), self.len, self.capacity) };
         drop(vec)
     }
 }
