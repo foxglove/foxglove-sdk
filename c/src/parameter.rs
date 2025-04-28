@@ -127,7 +127,7 @@ pub unsafe extern "C" fn foxglove_parameter_array_create(
     capacity: usize,
 ) -> FoxgloveError {
     if array.is_null() {
-        return FoxgloveError::Unspecified;
+        return FoxgloveError::ValueError;
     }
     let ptr = FoxgloveParameterArray::with_capacity(capacity).into_raw();
     // SAFETY: array is a valid pointer.
@@ -148,14 +148,14 @@ pub unsafe extern "C" fn foxglove_parameter_array_push(
     param: *mut FoxgloveParameter,
 ) -> FoxgloveError {
     if param.is_null() {
-        return FoxgloveError::Unspecified;
+        return FoxgloveError::ValueError;
     }
     let param = unsafe { FoxgloveParameter::from_raw(param) };
     if let Some(array) = array {
         array.push(*param);
         FoxgloveError::Ok
     } else {
-        FoxgloveError::Unspecified
+        FoxgloveError::ValueError
     }
 }
 
@@ -308,7 +308,7 @@ pub unsafe extern "C" fn foxglove_parameter_create(
     };
 
     if param.is_null() {
-        return FoxgloveError::Unspecified;
+        return FoxgloveError::ValueError;
     }
 
     // Ensure the name is UTF-8, and copy it to the heap.
@@ -491,10 +491,10 @@ pub unsafe extern "C" fn foxglove_parameter_clone(
     src: Option<&FoxgloveParameter>,
 ) -> FoxgloveError {
     if dst.is_null() {
-        return FoxgloveError::Unspecified;
+        return FoxgloveError::ValueError;
     }
     let Some(src) = src else {
-        return FoxgloveError::Unspecified;
+        return FoxgloveError::ValueError;
     };
     let this = src.clone().into_raw();
     unsafe { *dst = this };
@@ -783,7 +783,7 @@ pub unsafe extern "C" fn foxglove_parameter_value_create_number(
     number: f64,
 ) -> FoxgloveError {
     if value.is_null() {
-        return FoxgloveError::Unspecified;
+        return FoxgloveError::ValueError;
     }
     let ptr = FoxgloveParameterValue::number(number).into_raw();
     unsafe { *value = ptr };
@@ -803,7 +803,7 @@ pub unsafe extern "C" fn foxglove_parameter_value_create_boolean(
     boolean: bool,
 ) -> FoxgloveError {
     if value.is_null() {
-        return FoxgloveError::Unspecified;
+        return FoxgloveError::ValueError;
     }
     let ptr = FoxgloveParameterValue::boolean(boolean).into_raw();
     unsafe { *value = ptr };
@@ -824,7 +824,7 @@ pub unsafe extern "C" fn foxglove_parameter_value_create_string(
     string: FoxgloveString,
 ) -> FoxgloveError {
     if value.is_null() {
-        return FoxgloveError::Unspecified;
+        return FoxgloveError::ValueError;
     }
     let string = unsafe { string.as_utf8_str() };
     let Ok(string) = string else {
@@ -852,7 +852,7 @@ pub unsafe extern "C" fn foxglove_parameter_value_create_array(
 ) -> FoxgloveError {
     let array = unsafe { FoxgloveParameterValueArray::from_raw(array) };
     if value.is_null() {
-        return FoxgloveError::Unspecified;
+        return FoxgloveError::ValueError;
     }
     let ptr = FoxgloveParameterValue::array(*array).into_raw();
     unsafe { *value = ptr };
@@ -876,7 +876,7 @@ pub unsafe extern "C" fn foxglove_parameter_value_create_dict(
 ) -> FoxgloveError {
     let dict = unsafe { FoxgloveParameterValueDict::from_raw(dict) };
     if value.is_null() {
-        return FoxgloveError::Unspecified;
+        return FoxgloveError::ValueError;
     }
     let ptr = FoxgloveParameterValue::dict(*dict).into_raw();
     unsafe { *value = ptr };
@@ -898,10 +898,10 @@ pub unsafe extern "C" fn foxglove_parameter_value_clone(
     src: Option<&FoxgloveParameterValue>,
 ) -> FoxgloveError {
     if dst.is_null() {
-        return FoxgloveError::Unspecified;
+        return FoxgloveError::ValueError;
     }
     let Some(src) = src else {
-        return FoxgloveError::Unspecified;
+        return FoxgloveError::ValueError;
     };
     let this = src.clone().into_raw();
     unsafe { *dst = this };
@@ -1022,7 +1022,7 @@ pub unsafe extern "C" fn foxglove_parameter_value_array_create(
     capacity: usize,
 ) -> FoxgloveError {
     if array.is_null() {
-        return FoxgloveError::Unspecified;
+        return FoxgloveError::ValueError;
     }
     let ptr = FoxgloveParameterValueArray::with_capacity(capacity).into_raw();
     unsafe { *array = ptr };
@@ -1042,14 +1042,14 @@ pub unsafe extern "C" fn foxglove_parameter_value_array_push(
     value: *mut FoxgloveParameterValue,
 ) -> FoxgloveError {
     if value.is_null() {
-        return FoxgloveError::Unspecified;
+        return FoxgloveError::ValueError;
     }
     let value = unsafe { FoxgloveParameterValue::from_raw(value) };
     if let Some(array) = array {
         array.push(*value);
         FoxgloveError::Ok
     } else {
-        FoxgloveError::Unspecified
+        FoxgloveError::ValueError
     }
 }
 
@@ -1171,7 +1171,7 @@ pub unsafe extern "C" fn foxglove_parameter_value_dict_create(
     capacity: usize,
 ) -> FoxgloveError {
     if dict.is_null() {
-        return FoxgloveError::Unspecified;
+        return FoxgloveError::ValueError;
     }
     let ptr = FoxgloveParameterValueDict::with_capacity(capacity).into_raw();
     unsafe { *dict = ptr };
@@ -1191,12 +1191,12 @@ pub unsafe extern "C" fn foxglove_parameter_value_dict_insert(
     value: *mut FoxgloveParameterValue,
 ) -> FoxgloveError {
     if value.is_null() {
-        return FoxgloveError::Unspecified;
+        return FoxgloveError::ValueError;
     }
     let value = unsafe { FoxgloveParameterValue::from_raw(value) };
 
     let Some(dict) = dict else {
-        return FoxgloveError::Unspecified;
+        return FoxgloveError::ValueError;
     };
 
     let key = unsafe { key.as_utf8_str() };
