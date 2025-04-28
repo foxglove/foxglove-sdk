@@ -36,28 +36,75 @@ impl FoxgloveString {
     unsafe fn as_utf8_str(&self) -> Result<&str, std::str::Utf8Error> {
         std::str::from_utf8(unsafe { std::slice::from_raw_parts(self.data.cast(), self.len) })
     }
+}
 
+/// An owned string buffer.
+///
+/// This struct is aliased as `foxglove_string` in the C API.
+///
+/// cbindgen:no-export
+#[repr(C)]
+pub struct FoxgloveStringBuf(FoxgloveString);
+
+impl FoxgloveStringBuf {
     /// Creates a new `FoxgloveString` from the provided string.
     ///
     /// Caller is responsible for freeing the underlying storage for the string with
     /// [`Self::into_string`].
-    fn from_string(s: String) -> Self {
-        let mut s = ManuallyDrop::new(s);
-        s.shrink_to_fit();
-        Self {
-            data: s.as_ptr().cast(),
-            len: s.len(),
-        }
+    fn new(str: String) -> Self {
+        // SAFETY: Freed on drop.
+        let mut str = ManuallyDrop::new(str);
+        str.shrink_to_fit();
+        Self(FoxgloveString {
+            data: str.as_ptr().cast(),
+            len: str.len(),
+        })
+    }
+
+    /// Wrapper around [`std::str::from_utf8`].
+    fn as_str(&self) -> &str {
+        // SAFETY: This was constructed from a valid `String`.
+        unsafe { self.0.as_utf8_str() }.expect("valid utf-8")
     }
 
     /// Extracts and returns the inner string.
-    ///
-    /// # Safety
-    ///
-    /// Must only be used for strings created with [`Self::from_string`].
-    unsafe fn into_string(self) -> String {
-        assert!(!self.data.is_null());
-        unsafe { String::from_raw_parts(self.data as *mut u8, self.len, self.len) }
+    fn into_string(self) -> String {
+        // SAFETY: We're consuming the underlying values, so don't drop self.
+        let this = ManuallyDrop::new(self);
+        // SAFETY: This was constructed from a valid `String`.
+        unsafe { String::from_raw_parts(this.0.data as *mut u8, this.0.len, this.0.len) }
+    }
+}
+
+impl From<String> for FoxgloveStringBuf {
+    fn from(str: String) -> Self {
+        Self::new(str)
+    }
+}
+
+impl From<FoxgloveStringBuf> for String {
+    fn from(buf: FoxgloveStringBuf) -> Self {
+        buf.into_string()
+    }
+}
+
+impl AsRef<str> for FoxgloveStringBuf {
+    fn as_ref(&self) -> &str {
+        self.as_str()
+    }
+}
+
+impl Clone for FoxgloveStringBuf {
+    fn clone(&self) -> Self {
+        self.as_str().to_string().into()
+    }
+}
+
+impl Drop for FoxgloveStringBuf {
+    fn drop(&mut self) {
+        let FoxgloveString { data, len } = self.0;
+        assert!(!data.is_null());
+        drop(unsafe { String::from_raw_parts(data as *mut u8, len, len) })
     }
 }
 

@@ -3,7 +3,7 @@ use std::{collections::BTreeMap, mem::ManuallyDrop};
 use base64::prelude::*;
 use foxglove::websocket::{Parameter, ParameterType, ParameterValue};
 
-use crate::{FoxgloveBytes, FoxgloveError, FoxgloveString};
+use crate::{FoxgloveBytes, FoxgloveError, FoxgloveString, FoxgloveStringBuf};
 
 #[cfg(test)]
 mod tests;
@@ -164,7 +164,9 @@ pub unsafe extern "C" fn foxglove_parameter_array_free(array: *mut FoxgloveParam
 #[repr(C)]
 pub struct FoxgloveParameter {
     /// Parameter name.
-    name: ManuallyDrop<FoxgloveString>,
+    // This is wrapped in a ManuallyDrop so that we can move it out, even though we have a custom
+    // Drop implementation.
+    name: ManuallyDrop<FoxgloveStringBuf>,
     /// Parameter type.
     r#type: FoxgloveParameterType,
     /// Parameter value.
@@ -180,7 +182,7 @@ impl FoxgloveParameter {
         r#type: FoxgloveParameterType,
         value: Option<Box<FoxgloveParameterValue>>,
     ) -> Self {
-        let name = ManuallyDrop::new(FoxgloveString::from_string(name.into()));
+        let name = ManuallyDrop::new(FoxgloveStringBuf::new(name.into()));
         let value = value.map(Box::into_raw).unwrap_or_else(std::ptr::null_mut);
         Self {
             name,
@@ -211,8 +213,6 @@ impl FoxgloveParameter {
         let mut this = ManuallyDrop::new(self);
         // SAFETY: The name will not be accessed again.
         let name = unsafe { ManuallyDrop::take(&mut this.name) };
-        // SAFETY: The name was allocated using `FoxgloveString::from_string` in [`Self::new`].
-        let name = unsafe { name.into_string() };
         let value = if this.value.is_null() {
             None
         } else {
@@ -221,7 +221,7 @@ impl FoxgloveParameter {
             Some(value.into_native())
         };
         Parameter {
-            name,
+            name: name.into(),
             r#type: this.r#type.to_native(),
             value,
         }
@@ -240,18 +240,20 @@ impl From<Parameter> for FoxgloveParameter {
 
 impl Clone for FoxgloveParameter {
     fn clone(&self) -> Self {
-        // SAFETY: The name is valid pointer to UTF-8.
-        let name = unsafe { self.name.as_utf8_str() }.expect("valid utf8");
         let value = if self.value.is_null() {
-            None
+            std::ptr::null_mut()
         } else {
             // SAFETY: The value pointer is valid.
-            let value = unsafe { FoxgloveParameterValue::from_raw(self.value.cast_mut()) };
-            // SAFETY: Don't drop our value.
-            let value = ManuallyDrop::new(value);
-            Some(Box::new((**value).clone()))
+            let value = ManuallyDrop::new(unsafe {
+                FoxgloveParameterValue::from_raw(self.value.cast_mut())
+            });
+            Box::new((**value).clone()).into_raw()
         };
-        Self::new(name, self.r#type, value)
+        Self {
+            name: self.name.clone(),
+            r#type: self.r#type,
+            value,
+        }
     }
 }
 
@@ -259,8 +261,6 @@ impl Drop for FoxgloveParameter {
     fn drop(&mut self) {
         // SAFETY: The name will not be accessed again.
         let name = unsafe { ManuallyDrop::take(&mut self.name) };
-        // SAFETY: The name was allocated using `FoxgloveString::from_string` in [`Self::new`].
-        let name = unsafe { name.into_string() };
         drop(name);
         if !self.value.is_null() {
             // SAFETY: The value pointer is valid.
@@ -571,7 +571,7 @@ pub enum FoxgloveParameterValueTag {
 pub union FoxgloveParameterValueData {
     number: f64,
     boolean: bool,
-    string: ManuallyDrop<FoxgloveString>,
+    string: ManuallyDrop<FoxgloveStringBuf>,
     array: ManuallyDrop<FoxgloveParameterValueArray>,
     dict: ManuallyDrop<FoxgloveParameterValueDict>,
 }
@@ -600,7 +600,7 @@ impl FoxgloveParameterValue {
     /// Constructs a new "string" (actually byte array) value.
     fn string(string: impl Into<String>) -> Self {
         // SAFETY: Freed on drop.
-        let string = ManuallyDrop::new(FoxgloveString::from_string(string.into()));
+        let string = ManuallyDrop::new(FoxgloveStringBuf::new(string.into()));
         Self::new(
             FoxgloveParameterValueTag::String,
             FoxgloveParameterValueData { string },
@@ -659,9 +659,7 @@ impl FoxgloveParameterValue {
                 let string = unsafe { &mut this.data.string };
                 // SAFETY: The string will not be accessed again.
                 let string = unsafe { ManuallyDrop::take(string) };
-                // SAFETY: The string was allocated by [`FoxgloveString::from_string`].
-                let string = unsafe { string.into_string() };
-                ParameterValue::String(string)
+                ParameterValue::String(string.into())
             }
             FoxgloveParameterValueTag::Array => {
                 // SAFETY: Constructed by [`Self::array`].
@@ -709,9 +707,7 @@ impl Clone for FoxgloveParameterValue {
             FoxgloveParameterValueTag::String => {
                 // SAFETY: Constructed by [`Self::string`].
                 let string = unsafe { &self.data.string };
-                // SAFETY: The string is valid pointer to UTF-8.
-                let string = unsafe { string.as_utf8_str() }.expect("valid utf8");
-                Self::string(string)
+                Self::string(string.as_str())
             }
             FoxgloveParameterValueTag::Array => {
                 // SAFETY: Constructed by [`Self::array`].
@@ -736,8 +732,6 @@ impl Drop for FoxgloveParameterValue {
                 let string = unsafe { &mut self.data.string };
                 // SAFETY: The string will not be accessed again.
                 let string = unsafe { ManuallyDrop::take(string) };
-                // SAFETY: The string was allocated by [`FoxgloveString::from_string`].
-                let string = unsafe { string.into_string() };
                 drop(string);
             }
             FoxgloveParameterValueTag::Array => {
@@ -1196,7 +1190,9 @@ pub unsafe extern "C" fn foxglove_parameter_value_dict_free(dict: *mut FoxgloveP
 #[repr(C)]
 pub struct FoxgloveParameterValueDictEntry {
     /// The dictionary entry's key.
-    key: ManuallyDrop<FoxgloveString>,
+    // This is wrapped in a ManuallyDrop so that we can move it out, even though we have a custom
+    // Drop implementation.
+    key: ManuallyDrop<FoxgloveStringBuf>,
     /// The dictionary entry's value.
     value: *const FoxgloveParameterValue,
 }
@@ -1204,7 +1200,7 @@ pub struct FoxgloveParameterValueDictEntry {
 impl FoxgloveParameterValueDictEntry {
     fn new(key: impl Into<String>, value: Box<FoxgloveParameterValue>) -> Self {
         Self {
-            key: ManuallyDrop::new(FoxgloveString::from_string(key.into())),
+            key: ManuallyDrop::new(FoxgloveStringBuf::new(key.into())),
             value: Box::into_raw(value),
         }
     }
@@ -1214,12 +1210,10 @@ impl FoxgloveParameterValueDictEntry {
         let mut this = ManuallyDrop::new(self);
         // SAFETY: The key will not be accessed again.
         let key = unsafe { ManuallyDrop::take(&mut this.key) };
-        // SAFETY: The key was allocated using `FoxgloveString::from_string` in [`Self::new`].
-        let key = unsafe { key.into_string() };
         // SAFETY: The value must be a valid pointer.
         let value = unsafe { FoxgloveParameterValue::from_raw(this.value.cast_mut()) };
         let value = value.into_native();
-        (key, value)
+        (key.into(), value)
     }
 }
 
@@ -1231,13 +1225,10 @@ impl From<(String, ParameterValue)> for FoxgloveParameterValueDictEntry {
 
 impl Clone for FoxgloveParameterValueDictEntry {
     fn clone(&self) -> Self {
-        // SAFETY: The key is valid pointer to UTF-8.
-        let key = unsafe { self.key.as_utf8_str() }.expect("valid utf8");
         // SAFETY: The value must be a valid pointer.
-        let value = unsafe { FoxgloveParameterValue::from_raw(self.value.cast_mut()) };
-        // SAFETY: Don't drop our value.
-        let value = ManuallyDrop::new(value);
-        Self::new(key, Box::new((**value).clone()))
+        let value =
+            ManuallyDrop::new(unsafe { FoxgloveParameterValue::from_raw(self.value.cast_mut()) });
+        Self::new(self.key.as_str(), Box::new((**value).clone()))
     }
 }
 
@@ -1245,8 +1236,6 @@ impl Drop for FoxgloveParameterValueDictEntry {
     fn drop(&mut self) {
         // SAFETY: The key will not be accessed again.
         let key = unsafe { ManuallyDrop::take(&mut self.key) };
-        // SAFETY: The key was allocated using `FoxgloveString::from_string` in [`Self::new`].
-        let key = unsafe { key.into_string() };
         drop(key);
         // SAFETY: The value must be a valid pointer.
         let value = unsafe { FoxgloveParameterValue::from_raw(self.value.cast_mut()) };
