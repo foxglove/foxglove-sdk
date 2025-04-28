@@ -1,9 +1,13 @@
 use crate::{errors::PyFoxgloveError, PySchema};
+use base64::prelude::*;
 use bytes::Bytes;
 use foxglove::websocket::{
     AssetHandler, ChannelView, Client, ClientChannel, ServerListener, Status, StatusLevel,
 };
 use foxglove::{WebSocketServer, WebSocketServerHandle};
+use pyo3::exceptions::{PyTypeError, PyValueError};
+use pyo3::types::{PyDict, PyList};
+use pyo3::IntoPyObjectExt;
 use pyo3::{
     exceptions::PyIOError,
     prelude::*,
@@ -784,7 +788,7 @@ impl PyMessageSchema {
 
 /// A parameter type.
 #[pyclass(name = "ParameterType", module = "foxglove", eq, eq_int)]
-#[derive(Clone, PartialEq)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub enum PyParameterType {
     /// A byte array.
     ByteArray,
@@ -815,8 +819,8 @@ impl From<foxglove::websocket::ParameterType> for PyParameterType {
 }
 
 /// A parameter value.
-#[pyclass(name = "ParameterValue", module = "foxglove")]
-#[derive(Clone)]
+#[pyclass(name = "ParameterValue", module = "foxglove", eq)]
+#[derive(Clone, PartialEq)]
 pub enum PyParameterValue {
     /// A decimal or integer value.
     Number(f64),
@@ -867,6 +871,14 @@ impl From<foxglove::websocket::ParameterValue> for PyParameterValue {
 }
 
 /// A parameter which can be sent to a client.
+///
+/// :param name: The parameter name.
+/// :type name: str
+/// :param value: Optional value, represented as a native python object, or a ParameterValue.
+/// :type value: None|bool|float|str|bytes|list|dict|ParameterValue
+/// :param type: Optional parameter type. This is automatically derived when passing a native
+///              python object as the value.
+/// :type type: ParameterType|None
 #[pyclass(name = "Parameter", module = "foxglove")]
 #[derive(Clone)]
 pub struct PyParameter {
@@ -884,17 +896,37 @@ pub struct PyParameter {
 #[pymethods]
 impl PyParameter {
     #[new]
-    #[pyo3(signature = (name, *, r#type=None, value=None))]
+    #[pyo3(signature = (name, *, value=None, **kwargs))]
     pub fn new(
         name: String,
-        r#type: Option<PyParameterType>,
-        value: Option<PyParameterValue>,
-    ) -> Self {
-        Self {
+        value: Option<ParameterTypeValueConverter>,
+        kwargs: Option<&Bound<'_, PyDict>>,
+    ) -> PyResult<Self> {
+        // Use the derived type, unless there's a kwarg override.
+        let mut r#type = value.as_ref().and_then(|tv| tv.0);
+        if let Some(dict) = kwargs {
+            if let Some(kw_type) = dict.get_item("type")? {
+                if kw_type.is_none() {
+                    r#type = None
+                } else {
+                    r#type = kw_type.extract()?;
+                }
+            }
+        }
+        Ok(Self {
             name,
             r#type,
-            value,
-        }
+            value: value.map(|tv| tv.1),
+        })
+    }
+
+    /// Returns the parameter value as a native python object.
+    ///
+    /// :rtype: None|bool|float|str|bytes|list|dict
+    pub fn get_value(&self) -> Option<ParameterTypeValueConverter> {
+        self.value
+            .clone()
+            .map(|v| ParameterTypeValueConverter(self.r#type, v))
     }
 }
 
@@ -914,6 +946,123 @@ impl From<foxglove::websocket::Parameter> for PyParameter {
             name: value.name,
             r#type: value.r#type.map(Into::into),
             value: value.value.map(Into::into),
+        }
+    }
+}
+
+/// A shim type for converting between PyParameterValue and native python types.
+///
+/// Note that we can't implement this on PyParameterValue directly, because it has its own
+/// implementation by virtue of being exposed as a `#[pyclass]` enum.
+pub struct ParameterValueConverter(PyParameterValue);
+
+impl<'py> IntoPyObject<'py> for ParameterValueConverter {
+    type Target = PyAny;
+    type Output = Bound<'py, Self::Target>;
+    type Error = PyErr;
+
+    fn into_pyobject(self, py: Python<'py>) -> Result<Self::Output, Self::Error> {
+        match self.0 {
+            PyParameterValue::Number(v) => v.into_bound_py_any(py),
+            PyParameterValue::Bool(v) => v.into_bound_py_any(py),
+            PyParameterValue::String(v) => v.into_bound_py_any(py),
+            PyParameterValue::Array(values) => {
+                let elems = values.into_iter().map(ParameterValueConverter);
+                PyList::new(py, elems)?.into_bound_py_any(py)
+            }
+            PyParameterValue::Dict(values) => {
+                let dict = PyDict::new(py);
+                for (k, v) in values {
+                    dict.set_item(k, ParameterValueConverter(v))?;
+                }
+                dict.into_bound_py_any(py)
+            }
+        }
+    }
+}
+
+impl<'py> FromPyObject<'py> for ParameterValueConverter {
+    fn extract_bound(obj: &Bound<'py, PyAny>) -> PyResult<Self> {
+        if let Ok(val) = obj.extract::<PyParameterValue>() {
+            Ok(Self(val))
+        } else if let Ok(val) = obj.extract::<bool>() {
+            Ok(Self(PyParameterValue::Bool(val)))
+        } else if let Ok(val) = obj.extract::<f64>() {
+            Ok(Self(PyParameterValue::Number(val)))
+        } else if let Ok(val) = obj.extract::<String>() {
+            Ok(Self(PyParameterValue::String(val)))
+        } else if let Ok(list) = obj.downcast::<PyList>() {
+            let mut values = Vec::with_capacity(list.len());
+            for item in list.iter() {
+                let value: ParameterValueConverter = item.extract()?;
+                values.push(value.0);
+            }
+            return Ok(Self(PyParameterValue::Array(values)));
+        } else if let Ok(dict) = obj.downcast::<PyDict>() {
+            let mut values = HashMap::new();
+            for (key, value) in dict {
+                let key: String = key.extract()?;
+                let value: ParameterValueConverter = value.extract()?;
+                values.insert(key, value.0);
+            }
+            Ok(Self(PyParameterValue::Dict(values)))
+        } else {
+            Err(PyErr::new::<PyTypeError, _>(format!(
+                "Unsupported type for ParamaterValue: {}",
+                obj.get_type().name()?
+            )))
+        }
+    }
+}
+
+/// A shim type for converting between (PyParameterType, PyParameterValue) and native python types.
+pub struct ParameterTypeValueConverter(Option<PyParameterType>, PyParameterValue);
+
+impl<'py> IntoPyObject<'py> for ParameterTypeValueConverter {
+    type Target = PyAny;
+    type Output = Bound<'py, Self::Target>;
+    type Error = PyErr;
+
+    fn into_pyobject(self, py: Python<'py>) -> Result<Self::Output, Self::Error> {
+        match (self.0, self.1) {
+            (Some(PyParameterType::ByteArray), PyParameterValue::String(v)) => {
+                let data = BASE64_STANDARD
+                    .decode(v)
+                    .map_err(|e| PyValueError::new_err(format!("Failed to decode base64: {e}")))?;
+                PyBytes::new(py, &data).into_bound_py_any(py)
+            }
+            (_, v) => ParameterValueConverter(v).into_bound_py_any(py),
+        }
+    }
+}
+
+impl<'py> FromPyObject<'py> for ParameterTypeValueConverter {
+    fn extract_bound(obj: &Bound<'py, PyAny>) -> PyResult<Self> {
+        if let Ok(val) = obj.extract::<ParameterValueConverter>() {
+            let val = val.0;
+            let (typ, val) = match val {
+                // If the value is a number, the type is float64.
+                PyParameterValue::Number(_) => (Some(PyParameterType::Float64), val),
+                // If the value is an array of numbers, then the type is float64 array.
+                PyParameterValue::Array(ref vec)
+                    if vec.iter().all(|v| matches!(v, PyParameterValue::Number(_))) =>
+                {
+                    (Some(PyParameterType::Float64Array), val)
+                }
+                _ => (None, val),
+            };
+            Ok(Self(typ, val))
+        } else if let Ok(val) = obj.extract::<Vec<u8>>() {
+            let b64 = BASE64_STANDARD.encode(val);
+            Ok(Self(
+                Some(PyParameterType::ByteArray),
+                PyParameterValue::String(b64),
+            ))
+        } else {
+            Err(PyErr::new::<PyTypeError, _>(format!(
+                "Unsupported type for ParamaterValue: {}",
+                obj.get_type().name()?
+            )))
         }
     }
 }

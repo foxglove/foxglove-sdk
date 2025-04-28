@@ -10,13 +10,7 @@ import time
 from typing import List, Optional
 
 import foxglove
-from foxglove.websocket import (
-    Capability,
-    Client,
-    Parameter,
-    ParameterType,
-    ParameterValue,
-)
+from foxglove.websocket import Capability, Client, Parameter
 
 
 class ParameterStore(foxglove.websocket.ServerListener):
@@ -72,21 +66,21 @@ def main() -> None:
     foxglove.set_log_level(logging.DEBUG)
 
     initial_values: list[Parameter] = [
+        Parameter("p0"),
         Parameter(
-            "param1",
-            value=ParameterValue.Dict(
-                {
-                    "a": ParameterValue.Number(1),
-                    "b": ParameterValue.Bool(True),
-                    "c": ParameterValue.String("hello"),
-                    "arr": ParameterValue.Array(
-                        [ParameterValue.Number(1), ParameterValue.Bool(True)]
-                    ),
-                }
-            ),
+            "p1",
+            value={
+                "a": 1,
+                "b": True,
+                "c": "hello",
+                "arr": [1, True],
+            },
         ),
-        Parameter("param2"),
-        Parameter("p3", value=ParameterValue.Number(0.124), type=ParameterType.Float64),
+        Parameter("p2", value=True),
+        Parameter("p3", value=0.124),
+        Parameter("p4", value=[1, 1, 2, 3, 5]),
+        Parameter("p5", value=b"data"),
+        Parameter("p6", value="hello"),
     ]
 
     store = ParameterStore(initial_values)

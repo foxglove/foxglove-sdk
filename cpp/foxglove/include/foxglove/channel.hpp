@@ -1,5 +1,6 @@
 #pragma once
 
+#include <foxglove/context.hpp>
 #include <foxglove/error.hpp>
 
 #include <cstdint>
@@ -8,6 +9,7 @@
 #include <string>
 
 struct foxglove_channel;
+struct foxglove_context;
 
 namespace foxglove {
 
@@ -21,7 +23,8 @@ struct Schema {
 class Channel final {
 public:
   static FoxgloveResult<Channel> create(
-    const std::string& topic, const std::string& messageEncoding, std::optional<Schema> schema
+    const std::string& topic, const std::string& messageEncoding,
+    std::optional<Schema> schema = std::nullopt, const Context& context = Context()
   );
 
   FoxgloveError log(

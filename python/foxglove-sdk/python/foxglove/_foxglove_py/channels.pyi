@@ -36,6 +36,8 @@ from .schemas import (
 class CameraCalibrationChannel:
     """
     A channel for logging CameraCalibration messages
+
+    You should choose a unique topic name per channel.
     """
 
     def __new__(
@@ -70,6 +72,8 @@ class CameraCalibrationChannel:
 class CircleAnnotationChannel:
     """
     A channel for logging CircleAnnotation messages
+
+    You should choose a unique topic name per channel.
     """
 
     def __new__(
@@ -104,6 +108,8 @@ class CircleAnnotationChannel:
 class ColorChannel:
     """
     A channel for logging Color messages
+
+    You should choose a unique topic name per channel.
     """
 
     def __new__(
@@ -138,6 +144,8 @@ class ColorChannel:
 class CompressedImageChannel:
     """
     A channel for logging CompressedImage messages
+
+    You should choose a unique topic name per channel.
     """
 
     def __new__(
@@ -172,6 +180,8 @@ class CompressedImageChannel:
 class CompressedVideoChannel:
     """
     A channel for logging CompressedVideo messages
+
+    You should choose a unique topic name per channel.
     """
 
     def __new__(
@@ -206,6 +216,8 @@ class CompressedVideoChannel:
 class FrameTransformChannel:
     """
     A channel for logging FrameTransform messages
+
+    You should choose a unique topic name per channel.
     """
 
     def __new__(
@@ -240,6 +252,8 @@ class FrameTransformChannel:
 class FrameTransformsChannel:
     """
     A channel for logging FrameTransforms messages
+
+    You should choose a unique topic name per channel.
     """
 
     def __new__(
@@ -274,6 +288,8 @@ class FrameTransformsChannel:
 class GeoJsonChannel:
     """
     A channel for logging GeoJson messages
+
+    You should choose a unique topic name per channel.
     """
 
     def __new__(
@@ -308,6 +324,8 @@ class GeoJsonChannel:
 class GridChannel:
     """
     A channel for logging Grid messages
+
+    You should choose a unique topic name per channel.
     """
 
     def __new__(
@@ -342,6 +360,8 @@ class GridChannel:
 class ImageAnnotationsChannel:
     """
     A channel for logging ImageAnnotations messages
+
+    You should choose a unique topic name per channel.
     """
 
     def __new__(
@@ -376,6 +396,8 @@ class ImageAnnotationsChannel:
 class KeyValuePairChannel:
     """
     A channel for logging KeyValuePair messages
+
+    You should choose a unique topic name per channel.
     """
 
     def __new__(
@@ -410,6 +432,8 @@ class KeyValuePairChannel:
 class LaserScanChannel:
     """
     A channel for logging LaserScan messages
+
+    You should choose a unique topic name per channel.
     """
 
     def __new__(
@@ -444,6 +468,8 @@ class LaserScanChannel:
 class LocationFixChannel:
     """
     A channel for logging LocationFix messages
+
+    You should choose a unique topic name per channel.
     """
 
     def __new__(
@@ -478,6 +504,8 @@ class LocationFixChannel:
 class LogChannel:
     """
     A channel for logging Log messages
+
+    You should choose a unique topic name per channel.
     """
 
     def __new__(
@@ -512,6 +540,8 @@ class LogChannel:
 class PackedElementFieldChannel:
     """
     A channel for logging PackedElementField messages
+
+    You should choose a unique topic name per channel.
     """
 
     def __new__(
@@ -546,6 +576,8 @@ class PackedElementFieldChannel:
 class Point2Channel:
     """
     A channel for logging Point2 messages
+
+    You should choose a unique topic name per channel.
     """
 
     def __new__(
@@ -580,6 +612,8 @@ class Point2Channel:
 class Point3Channel:
     """
     A channel for logging Point3 messages
+
+    You should choose a unique topic name per channel.
     """
 
     def __new__(
@@ -614,6 +648,8 @@ class Point3Channel:
 class PointCloudChannel:
     """
     A channel for logging PointCloud messages
+
+    You should choose a unique topic name per channel.
     """
 
     def __new__(
@@ -648,6 +684,8 @@ class PointCloudChannel:
 class PointsAnnotationChannel:
     """
     A channel for logging PointsAnnotation messages
+
+    You should choose a unique topic name per channel.
     """
 
     def __new__(
@@ -682,6 +720,8 @@ class PointsAnnotationChannel:
 class PoseChannel:
     """
     A channel for logging Pose messages
+
+    You should choose a unique topic name per channel.
     """
 
     def __new__(
@@ -716,6 +756,8 @@ class PoseChannel:
 class PoseInFrameChannel:
     """
     A channel for logging PoseInFrame messages
+
+    You should choose a unique topic name per channel.
     """
 
     def __new__(
@@ -750,6 +792,8 @@ class PoseInFrameChannel:
 class PosesInFrameChannel:
     """
     A channel for logging PosesInFrame messages
+
+    You should choose a unique topic name per channel.
     """
 
     def __new__(
@@ -784,6 +828,8 @@ class PosesInFrameChannel:
 class QuaternionChannel:
     """
     A channel for logging Quaternion messages
+
+    You should choose a unique topic name per channel.
     """
 
     def __new__(
@@ -818,6 +864,8 @@ class QuaternionChannel:
 class RawAudioChannel:
     """
     A channel for logging RawAudio messages
+
+    You should choose a unique topic name per channel.
     """
 
     def __new__(
@@ -852,6 +900,8 @@ class RawAudioChannel:
 class RawImageChannel:
     """
     A channel for logging RawImage messages
+
+    You should choose a unique topic name per channel.
     """
 
     def __new__(
@@ -886,6 +936,8 @@ class RawImageChannel:
 class SceneEntityChannel:
     """
     A channel for logging SceneEntity messages
+
+    You should choose a unique topic name per channel.
     """
 
     def __new__(
@@ -920,6 +972,8 @@ class SceneEntityChannel:
 class SceneEntityDeletionChannel:
     """
     A channel for logging SceneEntityDeletion messages
+
+    You should choose a unique topic name per channel.
     """
 
     def __new__(
@@ -954,6 +1008,8 @@ class SceneEntityDeletionChannel:
 class SceneUpdateChannel:
     """
     A channel for logging SceneUpdate messages
+
+    You should choose a unique topic name per channel.
     """
 
     def __new__(
@@ -988,6 +1044,8 @@ class SceneUpdateChannel:
 class TextAnnotationChannel:
     """
     A channel for logging TextAnnotation messages
+
+    You should choose a unique topic name per channel.
     """
 
     def __new__(
@@ -1022,6 +1080,8 @@ class TextAnnotationChannel:
 class Vector2Channel:
     """
     A channel for logging Vector2 messages
+
+    You should choose a unique topic name per channel.
     """
 
     def __new__(
@@ -1056,6 +1116,8 @@ class Vector2Channel:
 class Vector3Channel:
     """
     A channel for logging Vector3 messages
+
+    You should choose a unique topic name per channel.
     """
 
     def __new__(

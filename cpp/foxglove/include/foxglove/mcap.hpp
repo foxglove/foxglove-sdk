@@ -1,21 +1,28 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 #include <string>
 
 enum foxglove_error : uint8_t;
 enum class FoxgloveError : uint8_t;
 struct foxglove_mcap_writer;
+struct foxglove_context;
 
 namespace foxglove {
 
-enum McapCompression : uint8_t {
+struct Context;
+
+enum class McapCompression : uint8_t {
   None,
   Zstd,
   Lz4,
 };
 
 struct McapWriterOptions {
+  friend class McapWriter;
+
+  Context context;
   std::string_view path;
   std::string_view profile;
   uint64_t chunkSize = 1024 * 768;
@@ -31,6 +38,8 @@ struct McapWriterOptions {
   bool repeatChannels = true;
   bool repeatSchemas = true;
   bool truncate = false;
+
+  McapWriterOptions() = default;
 };
 
 class McapWriter final {

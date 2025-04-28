@@ -1,4 +1,5 @@
 #include <foxglove-c/foxglove-c.h>
+#include <foxglove/context.hpp>
 #include <foxglove/error.hpp>
 #include <foxglove/mcap.hpp>
 
@@ -8,6 +9,7 @@ FoxgloveResult<McapWriter> McapWriter::create(const McapWriterOptions& options) 
   foxglove_internal_register_cpp_wrapper();
 
   foxglove_mcap_options cOptions = {};
+  cOptions.context = options.context.get_inner();
   cOptions.path = {options.path.data(), options.path.length()};
   cOptions.profile = {options.profile.data(), options.profile.length()};
   // TODO FG-11215: generate the enum for C++ from the C enum

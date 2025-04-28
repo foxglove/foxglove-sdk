@@ -154,7 +154,7 @@ pub struct CompressedImage {
     pub data: ::prost::bytes::Bytes,
     /// Image format
     ///
-    /// Supported values: image media types supported by Chrome, such as `webp`, `jpeg`, `png`
+    /// Supported values: `jpeg`, `png`, `webp`, `avif`
     #[prost(string, tag = "3")]
     pub format: ::prost::alloc::string::String,
 }

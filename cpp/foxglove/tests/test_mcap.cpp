@@ -1,4 +1,5 @@
 #include <foxglove/channel.hpp>
+#include <foxglove/context.hpp>
 #include <foxglove/error.hpp>
 #include <foxglove/mcap.hpp>
 
@@ -124,10 +125,41 @@ std::string readFile(const std::string& path) {
   return {std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>()};
 }
 
+TEST_CASE("different contexts") {
+  FileCleanup cleanup("test.mcap");
+  auto context1 = foxglove::Context::create();
+  auto context2 = foxglove::Context::create();
+
+  // Create writer on context1
+  foxglove::McapWriterOptions options{context1};
+  options.path = "test.mcap";
+  auto writer = foxglove::McapWriter::create(options);
+  REQUIRE(writer.has_value());
+
+  // Log on context2 (should not be output to the file)
+  foxglove::Schema schema;
+  schema.name = "ExampleSchema";
+  auto channelResult = foxglove::Channel::create("example1", "json", schema, context2);
+  REQUIRE(channelResult.has_value());
+  auto channel = std::move(channelResult.value());
+  std::string data = "Hello, world!";
+  channel.log(reinterpret_cast<const std::byte*>(data.data()), data.size());
+
+  writer->close();
+
+  // Check if test.mcap file exists
+  REQUIRE(std::filesystem::exists("test.mcap"));
+
+  // Check that it does not contain the message
+  std::string content = readFile("test.mcap");
+  REQUIRE_THAT(content, !ContainsSubstring("Hello, world!"));
+}
+
 TEST_CASE("specify profile") {
   FileCleanup cleanup("test.mcap");
+  auto context = foxglove::Context::create();
 
-  foxglove::McapWriterOptions options = {};
+  foxglove::McapWriterOptions options{context};
   options.path = "test.mcap";
   options.profile = "test_profile";
   auto writer = foxglove::McapWriter::create(options);
@@ -136,7 +168,7 @@ TEST_CASE("specify profile") {
   // Write message
   foxglove::Schema schema;
   schema.name = "ExampleSchema";
-  auto channelResult = foxglove::Channel::create("example1", "json", schema);
+  auto channelResult = foxglove::Channel::create("example1", "json", schema, context);
   REQUIRE(channelResult.has_value());
   auto& channel = channelResult.value();
   std::string data = "Hello, world!";
@@ -154,8 +186,9 @@ TEST_CASE("specify profile") {
 
 TEST_CASE("zstd compression") {
   FileCleanup cleanup("test.mcap");
+  auto context = foxglove::Context::create();
 
-  foxglove::McapWriterOptions options = {};
+  foxglove::McapWriterOptions options{context};
   options.path = "test.mcap";
   options.compression = foxglove::McapCompression::Zstd;
   options.chunkSize = 10000;
@@ -166,9 +199,9 @@ TEST_CASE("zstd compression") {
   // Write message
   foxglove::Schema schema;
   schema.name = "ExampleSchema";
-  auto channelResult = foxglove::Channel::create("example2", "json", schema);
+  auto channelResult = foxglove::Channel::create("example2", "json", schema, context);
   REQUIRE(channelResult.has_value());
-  auto& channel = channelResult.value();
+  auto channel = std::move(channelResult.value());
   std::string data = "Hello, world!";
   channel.log(reinterpret_cast<const std::byte*>(data.data()), data.size());
 
@@ -184,8 +217,9 @@ TEST_CASE("zstd compression") {
 
 TEST_CASE("lz4 compression") {
   FileCleanup cleanup("test.mcap");
+  auto context = foxglove::Context::create();
 
-  foxglove::McapWriterOptions options = {};
+  foxglove::McapWriterOptions options{context};
   options.path = "test.mcap";
   options.compression = foxglove::McapCompression::Lz4;
   options.chunkSize = 10000;
@@ -196,7 +230,7 @@ TEST_CASE("lz4 compression") {
   // Write message
   foxglove::Schema schema;
   schema.name = "ExampleSchema";
-  auto channelResult = foxglove::Channel::create("example3", "json", schema);
+  auto channelResult = foxglove::Channel::create("example3", "json", schema, context);
   REQUIRE(channelResult.has_value());
   auto& channel = channelResult.value();
   std::string data = "Hello, world!";
@@ -215,8 +249,9 @@ TEST_CASE("lz4 compression") {
 
 TEST_CASE("Channel can outlive Schema") {
   FileCleanup cleanup("test.mcap");
+  auto context = foxglove::Context::create();
 
-  foxglove::McapWriterOptions options = {};
+  foxglove::McapWriterOptions options{context};
   options.path = "test.mcap";
   auto writer = foxglove::McapWriter::create(options);
   REQUIRE(writer.has_value());
@@ -230,7 +265,7 @@ TEST_CASE("Channel can outlive Schema") {
     std::string data = "FAKESCHEMA";
     schema.data = reinterpret_cast<const std::byte*>(data.data());
     schema.dataLen = data.size();
-    auto result = foxglove::Channel::create("example", "json", schema);
+    auto result = foxglove::Channel::create("example", "json", schema, context);
     REQUIRE(result.has_value());
     // Channel should copy the schema, so this modification has no effect on the output
     data[2] = 'I';

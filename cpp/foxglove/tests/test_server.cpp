@@ -1,5 +1,6 @@
 #include <foxglove-c/foxglove-c.h>
 #include <foxglove/channel.hpp>
+#include <foxglove/context.hpp>
 #include <foxglove/error.hpp>
 #include <foxglove/server.hpp>
 
@@ -146,7 +147,8 @@ TEST_CASE("supported encoding is invalid utf-8") {
 }
 
 TEST_CASE("Log a message with and without metadata") {
-  foxglove::WebSocketServerOptions options;
+  auto context = foxglove::Context::create();
+  foxglove::WebSocketServerOptions options{context};
   options.name = "unit-test";
   options.host = "127.0.0.1";
   options.port = 0;
@@ -155,7 +157,7 @@ TEST_CASE("Log a message with and without metadata") {
   auto& server = serverResult.value();
   REQUIRE(server.port() != 0);
 
-  auto channelResult = foxglove::Channel::create("example", "json", std::nullopt);
+  auto channelResult = foxglove::Channel::create("example", "json", std::nullopt, context);
   REQUIRE(channelResult.has_value());
   auto channel = std::move(channelResult.value());
   const std::array<uint8_t, 3> data = {1, 2, 3};
@@ -170,6 +172,7 @@ TEST_CASE("Log a message with and without metadata") {
 }
 
 TEST_CASE("Subscribe and unsubscribe callbacks") {
+  auto context = foxglove::Context::create();
   std::mutex mutex;
   std::condition_variable cv;
   // the following variables are protected by the mutex:
@@ -179,7 +182,7 @@ TEST_CASE("Subscribe and unsubscribe callbacks") {
 
   std::unique_lock lock{mutex};
 
-  foxglove::WebSocketServerOptions options;
+  foxglove::WebSocketServerOptions options{context};
   options.name = "unit-test";
   options.host = "127.0.0.1";
   options.port = 0;
@@ -200,7 +203,7 @@ TEST_CASE("Subscribe and unsubscribe callbacks") {
 
   foxglove::Schema schema;
   schema.name = "ExampleSchema";
-  auto channelResult = foxglove::Channel::create("example", "json", schema);
+  auto channelResult = foxglove::Channel::create("example", "json", schema, context);
   REQUIRE(channelResult.has_value());
   auto channel = std::move(channelResult.value());
 
@@ -265,6 +268,7 @@ TEST_CASE("Capability enums") {
 }
 
 TEST_CASE("Client advertise/publish callbacks") {
+  auto context = foxglove::Context::create();
   std::mutex mutex;
   std::condition_variable cv;
   // the following variables are protected by the mutex:
@@ -274,7 +278,7 @@ TEST_CASE("Client advertise/publish callbacks") {
 
   std::unique_lock lock{mutex};
 
-  foxglove::WebSocketServerOptions options;
+  foxglove::WebSocketServerOptions options{context};
   options.name = "unit-test";
   options.host = "127.0.0.1";
   options.port = 0;

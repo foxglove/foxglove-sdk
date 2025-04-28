@@ -48,7 +48,7 @@ All SDK languages are versioned and released together.
 ### TypeScript
 
 1. Create and merge a PR bumping the version number in `package.json` file(s).
-2. Manually create a new Release in the GitHub UI. Ensure the tag uses the form `[language]/[package-name]/vX.Y.Z`.
+2. Manually create a new Release in the GitHub UI. Ensure the tag uses the form `typescript/schemas/vX.Y.Z`.
 3. GitHub Actions will take care of the rest.
 
 ### ROS

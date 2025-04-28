@@ -1,4 +1,5 @@
 #include <foxglove-c/foxglove-c.h>
+#include <foxglove/context.hpp>
 #include <foxglove/error.hpp>
 #include <foxglove/server.hpp>
 #include <foxglove/server/connection_graph.hpp>
@@ -136,6 +137,7 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
   }
 
   foxglove_server_options cOptions = {};
+  cOptions.context = options.context.get_inner();
   cOptions.name = {options.name.c_str(), options.name.length()};
   cOptions.host = {options.host.c_str(), options.host.length()};
   cOptions.port = options.port;

@@ -819,7 +819,7 @@ const CompressedImage: FoxgloveMessageSchema = {
       name: "format",
       type: { type: "primitive", name: "string" },
       description:
-        "Image format\n\nSupported values: image media types supported by Chrome, such as `webp`, `jpeg`, `png`",
+        "Image format\n\nSupported values: `jpeg`, `png`, `webp`, `avif`",
     },
   ],
 };

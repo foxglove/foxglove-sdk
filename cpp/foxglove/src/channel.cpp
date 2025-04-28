@@ -1,11 +1,13 @@
 #include <foxglove-c/foxglove-c.h>
 #include <foxglove/channel.hpp>
+#include <foxglove/context.hpp>
 #include <foxglove/error.hpp>
 
 namespace foxglove {
 
 FoxgloveResult<Channel> Channel::create(
-  const std::string& topic, const std::string& messageEncoding, std::optional<Schema> schema
+  const std::string& topic, const std::string& messageEncoding, std::optional<Schema> schema,
+  const Context& context
 ) {
   foxglove_schema cSchema = {};
   if (schema) {
@@ -19,6 +21,7 @@ FoxgloveResult<Channel> Channel::create(
     {topic.data(), topic.length()},
     {messageEncoding.data(), messageEncoding.length()},
     schema ? &cSchema : nullptr,
+    context.get_inner(),
     &channel
   );
   if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {

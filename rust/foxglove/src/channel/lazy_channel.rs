@@ -17,6 +17,8 @@ use super::{Channel, RawChannel};
 /// initialized, which is guaranteed to happen when the channel is first used. If you need to
 /// ensure the channel is initialized _before_ using it, you can use [`LazyChannel::init`].
 ///
+/// You should choose a unique topic name per channel for compatibility with the Foxglove app.
+///
 /// # Example
 /// ```
 /// use foxglove::LazyChannel;
@@ -61,12 +63,6 @@ impl<T: Encode> LazyChannel<T> {
             ChannelBuilder::new(self.topic)
                 .context(self.context)
                 .build()
-                .unwrap_or_else(|e| {
-                    panic!(
-                        "Failed to lazily initialize channel for {}: {e:?}",
-                        self.topic
-                    )
-                })
         })
     }
 }

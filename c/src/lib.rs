@@ -186,6 +186,9 @@ impl From<FoxgloveServerCapability> for FoxgloveServerCapabilityBitFlags {
 
 #[repr(C)]
 pub struct FoxgloveServerOptions<'a> {
+    /// `context` can be null, or a valid pointer to a context created via `foxglove_context_new`.
+    /// If it's null, the server will be created with the default context.
+    pub context: *const FoxgloveContext,
     pub name: FoxgloveString,
     pub host: FoxgloveString,
     pub port: u16,
@@ -282,14 +285,6 @@ pub struct FoxgloveServerCallbacks {
 unsafe impl Send for FoxgloveServerCallbacks {}
 unsafe impl Sync for FoxgloveServerCallbacks {}
 
-// cbindgen does not actually generate a declaration for these,
-// so we manually add them in after_includes. If we use type aliases
-// instead, cbindgen will generate them, but verbatim naming the rust
-// types which don't exist in C.
-// pub use foxglove::RawChannel as FoxgloveChannel;
-// pub use foxglove::RawWebSocketServerHandle as FoxgloveWebSocketServer;
-// pub use foxglove::McapWriterHandle<BufWriter<File>> as FoxgloveMcapWriter;
-
 #[repr(C)]
 pub struct FoxgloveSchema {
     pub name: FoxgloveString,
@@ -383,6 +378,10 @@ unsafe fn do_foxglove_server_start(
     if let Some(callbacks) = options.callbacks {
         server = server.listener(Arc::new(callbacks.clone()))
     }
+    if !options.context.is_null() {
+        let context = ManuallyDrop::new(unsafe { Arc::from_raw(options.context) });
+        server = server.context(&context);
+    }
     let server = server.start_blocking()?;
     Ok(Box::into_raw(Box::new(FoxgloveWebSocketServer(Some(
         server,
@@ -456,8 +455,10 @@ pub enum FoxgloveMcapCompression {
 
 #[repr(C)]
 pub struct FoxgloveMcapOptions {
+    /// `context` can be null, or a valid pointer to a context created via `foxglove_context_new`.
+    /// If it's null, the mcap file will be created with the default context.
+    pub context: *const FoxgloveContext,
     pub path: FoxgloveString,
-    pub path_len: usize,
     pub truncate: bool,
     pub compression: FoxgloveMcapCompression,
     pub profile: FoxgloveString,
@@ -523,7 +524,8 @@ impl FoxgloveMcapWriter {
 /// Returns 0 on success, or returns a FoxgloveError code on error.
 ///
 /// # Safety
-/// `path` and `profile` must contain valid UTF8.
+/// `path` and `profile` must contain valid UTF8. If `context` is non-null,
+/// it must have been created by `foxglove_context_new`.
 #[unsafe(no_mangle)]
 #[must_use]
 pub unsafe extern "C" fn foxglove_mcap_open(
@@ -541,6 +543,7 @@ unsafe fn do_foxglove_mcap_open(
 ) -> Result<*mut FoxgloveMcapWriter, foxglove::FoxgloveError> {
     let path = unsafe { options.path.as_utf8_str() }
         .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("path is invalid: {}", e)))?;
+    let context = options.context;
 
     // Safety: this is safe if the options struct contains valid strings
     let mcap_options = unsafe { options.to_write_options() }?;
@@ -556,7 +559,14 @@ unsafe fn do_foxglove_mcap_open(
         .open(path)
         .map_err(foxglove::FoxgloveError::IoError)?;
 
-    let writer = foxglove::McapWriter::with_options(mcap_options).create(BufWriter::new(file))?;
+    let mut builder = foxglove::McapWriter::with_options(mcap_options);
+    if !context.is_null() {
+        let context = ManuallyDrop::new(unsafe { Arc::from_raw(context) });
+        builder = builder.context(&context);
+    }
+    let writer = builder
+        .create(BufWriter::new(file))
+        .expect("Failed to create writer");
     // We can avoid this double indirection if we refactor McapWriterHandle to move the context into the Arc
     // and then add into_raw and from_raw methods to convert the Arc to and from a pointer.
     // This is the simplest solution, and we don't call methods on this, so the double indirection doesn't matter much.
@@ -595,14 +605,18 @@ pub struct FoxgloveChannel(foxglove::RawChannel);
 /// Returns 0 on success, or returns a FoxgloveError code on error.
 ///
 /// # Safety
-/// `topic` and `message_encoding` must contain valid UTF8. `schema` is an optional pointer to a
-/// schema. The schema and the data it points to need only remain alive for the duration of this
-/// function call (they will be copied).
+/// `topic` and `message_encoding` must contain valid UTF8.
+/// `schema` is an optional pointer to a schema. The schema and the data it points to
+/// need only remain alive for the duration of this function call (they will be copied).
+/// `context` can be null, or a valid pointer to a context created via `foxglove_context_new`.
+/// `channel` is an out **FoxgloveChannel pointer, which will be set to the created channel
+/// if the function returns success.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_channel_create(
     topic: FoxgloveString,
     message_encoding: FoxgloveString,
     schema: *const FoxgloveSchema,
+    context: *const FoxgloveContext,
     channel: *mut *const FoxgloveChannel,
 ) -> FoxgloveError {
     if channel.is_null() {
@@ -610,7 +624,7 @@ pub unsafe extern "C" fn foxglove_channel_create(
         return FoxgloveError::ValueError;
     }
     unsafe {
-        let result = do_foxglove_channel_create(topic, message_encoding, schema);
+        let result = do_foxglove_channel_create(topic, message_encoding, schema, context);
         result_to_c(result, channel)
     }
 }
@@ -619,6 +633,7 @@ unsafe fn do_foxglove_channel_create(
     topic: FoxgloveString,
     message_encoding: FoxgloveString,
     schema: *const FoxgloveSchema,
+    context: *const FoxgloveContext,
 ) -> Result<*const FoxgloveChannel, foxglove::FoxgloveError> {
     let topic = unsafe { topic.as_utf8_str() }
         .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("topic invalid: {}", e)))?;
@@ -639,9 +654,14 @@ unsafe fn do_foxglove_channel_create(
         maybe_schema = Some(foxglove::Schema::new(name, encoding, data.to_owned()));
     }
 
-    foxglove::ChannelBuilder::new(topic)
+    let mut builder = foxglove::ChannelBuilder::new(topic)
         .message_encoding(message_encoding)
-        .schema(maybe_schema)
+        .schema(maybe_schema);
+    if !context.is_null() {
+        let context = ManuallyDrop::new(unsafe { Arc::from_raw(context) });
+        builder = builder.context(&context);
+    }
+    builder
         .build_raw()
         .map(|raw_channel| Arc::into_raw(raw_channel) as *const FoxgloveChannel)
 }
@@ -709,6 +729,36 @@ pub unsafe extern "C" fn foxglove_channel_log(
         },
     );
     FoxgloveError::Ok
+}
+
+// This generates a `typedef struct foxglove_context foxglove_context`
+// for the opaque type that we want to expose to C, but does so under
+// a module to avoid collision with the actual type.
+pub mod export {
+    pub struct FoxgloveContext;
+}
+
+// This aligns our internal type name with the exported opaque type.
+use foxglove::Context as FoxgloveContext;
+
+/// Create a new context. This never fails.
+/// You must pass this to `foxglove_context_free` when done with it.
+#[unsafe(no_mangle)]
+pub extern "C" fn foxglove_context_new() -> *const FoxgloveContext {
+    let context = foxglove::Context::new();
+    Arc::into_raw(context)
+}
+
+/// Free a context created via `foxglove_context_new` or `foxglove_context_free`.
+///
+/// # Safety
+/// `context` must be a valid pointer to a context created via `foxglove_context_new`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_context_free(context: *const FoxgloveContext) {
+    if context.is_null() {
+        return;
+    }
+    drop(unsafe { Arc::from_raw(context) });
 }
 
 /// For use by the C++ SDK. Identifies that wrapper as the source of logs.
@@ -899,7 +949,6 @@ pub enum FoxgloveError {
     MessageEncodingRequired,
     ServerAlreadyStarted,
     Bind,
-    DuplicateChannel,
     DuplicateService,
     MissingRequestEncoding,
     ServicesNotSupported,
@@ -920,7 +969,6 @@ impl From<foxglove::FoxgloveError> for FoxgloveError {
             }
             foxglove::FoxgloveError::ServerAlreadyStarted => FoxgloveError::ServerAlreadyStarted,
             foxglove::FoxgloveError::Bind(_) => FoxgloveError::Bind,
-            foxglove::FoxgloveError::DuplicateChannel(_) => FoxgloveError::DuplicateChannel,
             foxglove::FoxgloveError::DuplicateService(_) => FoxgloveError::DuplicateService,
             foxglove::FoxgloveError::MissingRequestEncoding(_) => {
                 FoxgloveError::MissingRequestEncoding
@@ -947,7 +995,6 @@ impl FoxgloveError {
             FoxgloveError::MessageEncodingRequired => c"Message Encoding Required",
             FoxgloveError::ServerAlreadyStarted => c"Server Already Started",
             FoxgloveError::Bind => c"Bind Error",
-            FoxgloveError::DuplicateChannel => c"Duplicate Channel",
             FoxgloveError::DuplicateService => c"Duplicate Service",
             FoxgloveError::MissingRequestEncoding => c"Missing Request Encoding",
             FoxgloveError::ServicesNotSupported => c"Services Not Supported",

@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <functional>
 #include <memory>
+#include <optional>
 #include <string>
 
 enum foxglove_error : uint8_t;
@@ -14,6 +15,8 @@ struct foxglove_websocket_server;
 struct foxglove_connection_graph;
 
 namespace foxglove {
+
+struct Context;
 
 struct ClientChannel {
   uint32_t id;
@@ -77,9 +80,12 @@ struct WebSocketServerCallbacks {
 };
 
 struct WebSocketServerOptions {
+  friend class WebSocketServer;
+
+  Context context;
   std::string name;
-  std::string host;
-  uint16_t port;
+  std::string host = "127.0.0.1";
+  uint16_t port = 8765;  // default foxglove WebSocket port
   WebSocketServerCallbacks callbacks;
   WebSocketServerCapabilities capabilities = WebSocketServerCapabilities(0);
   std::vector<std::string> supportedEncodings;
