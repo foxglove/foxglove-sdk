@@ -125,16 +125,21 @@ export function generatePySchemaModule(schemas: FoxgloveSchema[]): string {
     "from typing import Union",
   ];
   const imports = classNames.map((name) =>  `from foxglove._foxglove_py.schemas import ${name}`);
+  const aliases = [
+    `FoxgloveSchema = Union[${allSchemas.join(", ")}];\n`,
+    ``,
+    `Time = Timestamp`,
+    '"""An alias for :py:class:`Timestamp`."""',
+    ``,
+  ];
+  const all = [...classNames, "Time", "FoxgloveSchema"].sort();
   const exports = [
     "__all__ = [",
-    "    'FoxgloveSchema',",
-    ...classNames.map((name) => `    "${name}",`),
+    ...all.map((name) => `    "${name}",`),
     "]",
   ];
 
-  const alias = `FoxgloveSchema = Union[${allSchemas.join(", ")}];\n`;
-
-  return [...headers, ...imports, alias, ...exports, ""].join("\n");
+  return [...headers, ...imports, ...aliases, ...exports, ""].join("\n");
 }
 
 function rustDoc(str: string, opts: { indent?: number } = {}): string {

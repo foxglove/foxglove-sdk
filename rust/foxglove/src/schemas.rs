@@ -14,4 +14,4 @@ mod foxglove;
 mod impls;
 
 pub use self::foxglove::*;
-pub use crate::schemas_wkt::{Duration, Timestamp};
+pub use crate::schemas_wkt::{Duration, Time, Timestamp};
