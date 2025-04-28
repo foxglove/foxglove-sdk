@@ -38,6 +38,16 @@ impl FoxgloveString {
     }
 }
 
+#[cfg(test)]
+impl From<&str> for FoxgloveString {
+    fn from(s: &str) -> Self {
+        Self {
+            data: s.as_ptr().cast(),
+            len: s.len(),
+        }
+    }
+}
+
 /// An owned string buffer.
 ///
 /// This struct is aliased as `foxglove_string` in the C API.
@@ -105,16 +115,6 @@ impl Drop for FoxgloveStringBuf {
         let FoxgloveString { data, len } = self.0;
         assert!(!data.is_null());
         drop(unsafe { String::from_raw_parts(data as *mut u8, len, len) })
-    }
-}
-
-#[cfg(test)]
-impl From<&str> for FoxgloveString {
-    fn from(s: &str) -> Self {
-        Self {
-            data: s.as_ptr().cast(),
-            len: s.len(),
-        }
     }
 }
 
