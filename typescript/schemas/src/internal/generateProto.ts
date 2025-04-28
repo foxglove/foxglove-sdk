@@ -7,6 +7,8 @@ import {
 
 function primitiveToProto(type: Exclude<FoxglovePrimitive, "time" | "duration">) {
   switch (type) {
+    case "int32":
+      return "sfixed32";
     case "uint32":
       return "fixed32";
     case "bytes":

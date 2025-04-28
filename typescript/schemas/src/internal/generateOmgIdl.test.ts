@@ -1,6 +1,6 @@
 import { parseIdl } from "@foxglove/omgidl-parser";
 
-import { DURATION_IDL, TIME_IDL, generateOmgIdl } from "./generateOmgIdl";
+import { generateOmgIdl } from "./generateOmgIdl";
 import { foxgloveEnumSchemas, foxgloveMessageSchemas } from "./schemas";
 import { exampleEnum, exampleMessage } from "./testFixtures";
 
@@ -128,8 +128,6 @@ describe("generateOmgIdl", () => {
   });
 
   const allIdlFiles = new Map<string, string>([
-    ["Time", TIME_IDL],
-    ["Duration", DURATION_IDL],
     ...Object.entries(foxgloveMessageSchemas).map(([name, schema]): [string, string] => [
       name,
       generateOmgIdl(schema),

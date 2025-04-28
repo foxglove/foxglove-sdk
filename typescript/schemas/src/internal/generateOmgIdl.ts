@@ -10,32 +10,12 @@ function primitiveToIdl(type: Exclude<FoxglovePrimitive, "time" | "duration">) {
       return "boolean";
     case "float64":
       return "double";
+    case "int32":
+      return "int32";
     case "uint32":
       return "uint32";
   }
 }
-
-export const TIME_IDL = `\
-module foxglove {
-
-struct Time {
-  uint32 sec;
-  uint32 nsec;
-};
-
-};
-`;
-
-export const DURATION_IDL = `\
-module foxglove {
-
-struct Duration {
-  int32 sec;
-  uint32 nsec;
-};
-
-};
-`;
 
 export function generateOmgIdl(schema: FoxgloveSchema): string {
   const imports = new Set<string>();

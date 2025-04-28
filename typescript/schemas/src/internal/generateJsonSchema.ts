@@ -8,6 +8,8 @@ function primitiveToJsonSchema(type: Exclude<FoxglovePrimitive, "bytes">) {
       return { type: "boolean" };
     case "float64":
       return { type: "number" };
+    case "int32":
+      return { type: "integer" };
     case "uint32":
       return { type: "integer", minimum: 0 };
     case "time":

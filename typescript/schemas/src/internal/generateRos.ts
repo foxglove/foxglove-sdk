@@ -17,7 +17,7 @@ type RosMsgDefinitionWithDescription = {
 };
 
 function primitiveToRos(
-  type: Exclude<FoxglovePrimitive, "uint32" | "bytes" | "time" | "duration">,
+  type: Exclude<FoxglovePrimitive, "int32" | "uint32" | "bytes" | "time" | "duration">,
 ) {
   switch (type) {
     case "string":
@@ -177,6 +177,8 @@ export function generateRosMsgDefinition(
             throw new Error("Array of bytes is not supported in ROS msg");
           }
           isArray = true;
+        } else if (field.type.name === "int32") {
+          fieldType = "int32";
         } else if (field.type.name === "uint32") {
           fieldType = "uint32";
         } else if (field.type.name === "time") {

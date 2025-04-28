@@ -20,6 +20,7 @@ All schemas are generated from [schemas.ts](/internal/schemas.ts).
 - [CompressedVideo](#compressedvideo)
 - [CubePrimitive](#cubeprimitive)
 - [CylinderPrimitive](#cylinderprimitive)
+- [Duration](#duration)
 - [FrameTransform](#frametransform)
 - [FrameTransforms](#frametransforms)
 - [GeoJSON](#geojson)
@@ -48,6 +49,7 @@ All schemas are generated from [schemas.ts](/internal/schemas.ts).
 - [SpherePrimitive](#sphereprimitive)
 - [TextAnnotation](#textannotation)
 - [TextPrimitive](#textprimitive)
+- [Time](#time)
 - [TriangleListPrimitive](#trianglelistprimitive)
 - [Vector2](#vector2)
 - [Vector3](#vector3)
@@ -832,6 +834,44 @@ float64
 <td>
 
 Color of the cylinder
+
+</td>
+</tr>
+</table>
+
+## Duration
+
+A duration of time, composed of seconds and nanoseconds
+
+<table>
+  <tr>
+    <th>field</th>
+    <th>type</th>
+    <th>description</th>
+  </tr>
+<tr>
+<td><code>sec</code></td>
+<td>
+
+int32
+
+</td>
+<td>
+
+The number of seconds in the duration
+
+</td>
+</tr>
+<tr>
+<td><code>nsec</code></td>
+<td>
+
+uint32
+
+</td>
+<td>
+
+The number of nanoseconds in the positive direction
 
 </td>
 </tr>
@@ -2929,6 +2969,44 @@ string
 <td>
 
 Text
+
+</td>
+</tr>
+</table>
+
+## Time
+
+A timestamp composed of seconds and nanoseconds
+
+<table>
+  <tr>
+    <th>field</th>
+    <th>type</th>
+    <th>description</th>
+  </tr>
+<tr>
+<td><code>sec</code></td>
+<td>
+
+uint32
+
+</td>
+<td>
+
+The number of seconds since a user-defined epoch
+
+</td>
+</tr>
+<tr>
+<td><code>nsec</code></td>
+<td>
+
+uint32
+
+</td>
+<td>
+
+The number of nanoseconds since the sec value
 
 </td>
 </tr>

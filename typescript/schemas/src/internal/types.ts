@@ -1,6 +1,7 @@
 export type FoxglovePrimitive =
   | "string"
   | "float64"
+  | "int32"
   | "uint32"
   | "boolean"
   | "bytes"
@@ -38,6 +39,7 @@ export type FoxgloveMessageSchema = {
   name: string;
   description: string;
   rosEquivalent?: keyof typeof import("@foxglove/rosmsg-msgs-common").ros1;
+  protoEquivalent?: "Timestamp" | "Duration";
   fields: ReadonlyArray<FoxgloveMessageField>;
 };
 

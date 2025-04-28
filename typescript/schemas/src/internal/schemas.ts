@@ -1,5 +1,45 @@
 import { FoxgloveEnumSchema, FoxgloveMessageSchema } from "./types";
 
+const Duration: FoxgloveMessageSchema = {
+  type: "message",
+  name: "Duration",
+  description: "A duration of time, composed of seconds and nanoseconds",
+  rosEquivalent: "std_msgs/Duration",
+  protoEquivalent: "Duration",
+  fields: [
+    {
+      name: "sec",
+      type: { type: "primitive", name: "int32" },
+      description: "The number of seconds in the duration",
+    },
+    {
+      name: "nsec",
+      type: { type: "primitive", name: "uint32" },
+      description: "The number of nanoseconds in the positive direction",
+    },
+  ],
+};
+
+const Time: FoxgloveMessageSchema = {
+  type: "message",
+  name: "Time",
+  description: "A timestamp composed of seconds and nanoseconds",
+  rosEquivalent: "std_msgs/Time",
+  protoEquivalent: "Timestamp",
+  fields: [
+    {
+      name: "sec",
+      type: { type: "primitive", name: "uint32" },
+      description: "The number of seconds since a user-defined epoch",
+    },
+    {
+      name: "nsec",
+      type: { type: "primitive", name: "uint32" },
+      description: "The number of nanoseconds since the sec value",
+    },
+  ],
+};
+
 const RawAudio: FoxgloveMessageSchema = {
   type: "message",
   name: "RawAudio",
@@ -1517,6 +1557,7 @@ export const foxgloveMessageSchemas = {
   CompressedVideo,
   CylinderPrimitive,
   CubePrimitive,
+  Duration,
   FrameTransform,
   FrameTransforms,
   GeoJSON,
@@ -1545,6 +1586,7 @@ export const foxgloveMessageSchemas = {
   SpherePrimitive,
   TextAnnotation,
   TextPrimitive,
+  Time,
   TriangleListPrimitive,
   Vector2,
   Vector3,
