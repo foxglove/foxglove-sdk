@@ -6,23 +6,20 @@
 namespace foxglove {
 
 FoxgloveResult<Channel> Channel::create(
-  const std::string& topic, const std::string& messageEncoding, std::optional<Schema> schema,
+  const std::string& topic, const std::string& message_encoding, std::optional<Schema> schema,
   const Context& context
 ) {
-  foxglove_schema cSchema = {};
+  foxglove_schema c_schema = {};
   if (schema) {
-    cSchema.name = {schema->name.data(), schema->name.length()};
-    cSchema.encoding = {schema->encoding.data(), schema->encoding.length()};
-    cSchema.data = reinterpret_cast<const uint8_t*>(schema->data);
-    cSchema.data_len = schema->dataLen;
+    c_schema.name = {schema->name.data(), schema->name.length()};
+    c_schema.encoding = {schema->encoding.data(), schema->encoding.length()};
+    c_schema.data = reinterpret_cast<const uint8_t*>(schema->data);
+    c_schema.data_len = schema->data_len;
   }
   const foxglove_channel* channel = nullptr;
   foxglove_error error = foxglove_channel_create(
-    {topic.data(), topic.length()},
-    {messageEncoding.data(), messageEncoding.length()},
-    schema ? &cSchema : nullptr,
-    context.get_inner(),
-    &channel
+    {topic.data(), topic.length()}, {message_encoding.data(), message_encoding.length()},
+    schema ? &c_schema : nullptr, context.get_inner(), &channel
   );
   if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
     return foxglove::unexpected(FoxgloveError(error));
@@ -37,9 +34,15 @@ uint64_t Channel::id() const {
   return foxglove_channel_get_id(_impl.get());
 }
 
-FoxgloveError Channel::log(const std::byte* data, size_t dataLen, std::optional<uint64_t> logTime) {
+uint64_t Channel::test_ID() const {
+  return foxglove_channel_get_id(_impl.get());
+}
+
+FoxgloveError Channel::log(
+  const std::byte* data, size_t data_len, std::optional<uint64_t> log_time
+) {
   foxglove_error error = foxglove_channel_log(
-    _impl.get(), reinterpret_cast<const uint8_t*>(data), dataLen, logTime ? &*logTime : nullptr
+    _impl.get(), reinterpret_cast<const uint8_t*>(data), data_len, log_time ? &*log_time : nullptr
   );
   return FoxgloveError(error);
 }

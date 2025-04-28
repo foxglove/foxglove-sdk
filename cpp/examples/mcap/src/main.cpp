@@ -7,30 +7,30 @@ int main(int argc, const char* argv[]) {
   foxglove::McapWriterOptions options = {};
   options.path = "test.mcap";
   options.truncate = true;
-  auto writerResult = foxglove::McapWriter::create(options);
-  if (!writerResult.has_value()) {
-    std::cerr << "Failed to create writer: " << foxglove::strerror(writerResult.error()) << '\n';
+  auto writer_result = foxglove::McapWriter::create(options);
+  if (!writer_result.has_value()) {
+    std::cerr << "Failed to create writer: " << foxglove::strerror(writer_result.error()) << '\n';
     return 1;
   }
-  auto writer = std::move(writerResult.value());
+  auto writer = std::move(writer_result.value());
 
   foxglove::Schema schema;
   schema.name = "Test";
   schema.encoding = "jsonschema";
-  std::string schemaData = R"({
+  std::string schema_data = R"({
     "type": "object",
     "properties": {
         "val": { "type": "number" }
     }
     })";
-  schema.data = reinterpret_cast<const std::byte*>(schemaData.data());
-  schema.dataLen = schemaData.size();
-  auto channelResult = foxglove::Channel::create("example", "json", std::move(schema));
-  if (!channelResult.has_value()) {
-    std::cerr << "Failed to create channel: " << foxglove::strerror(channelResult.error()) << '\n';
+  schema.data = reinterpret_cast<const std::byte*>(schema_data.data());
+  schema.data_len = schema_data.size();
+  auto channel_result = foxglove::Channel::create("example", "json", std::move(schema));
+  if (!channel_result.has_value()) {
+    std::cerr << "Failed to create channel: " << foxglove::strerror(channel_result.error()) << '\n';
     return 1;
   }
-  auto channel = std::move(channelResult.value());
+  auto channel = std::move(channel_result.value());
 
   for (int i = 0; i < 100; ++i) {
     std::string msg = "{\"val\": " + std::to_string(i) + "}";

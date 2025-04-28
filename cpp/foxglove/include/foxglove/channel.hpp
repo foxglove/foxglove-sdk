@@ -17,19 +17,21 @@ struct Schema {
   std::string name;
   std::string encoding;
   const std::byte* data = nullptr;
-  size_t dataLen = 0;
+  size_t data_len = 0;
 };
 
 class Channel final {
 public:
   static FoxgloveResult<Channel> create(
-    const std::string& topic, const std::string& messageEncoding,
+    const std::string& topic, const std::string& message_encoding,
     std::optional<Schema> schema = std::nullopt, const Context& context = Context()
   );
 
   FoxgloveError log(
-    const std::byte* data, size_t dataLen, std::optional<uint64_t> logTime = std::nullopt
+    const std::byte* data, size_t data_len, std::optional<uint64_t> log_time = std::nullopt
   );
+
+  uint64_t test_ID() const;
 
   uint64_t id() const;
 

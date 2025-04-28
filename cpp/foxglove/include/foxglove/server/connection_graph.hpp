@@ -17,13 +17,13 @@ public:
   ConnectionGraph();
 
   FoxgloveError setPublishedTopic(
-    std::string_view topic, const std::vector<std::string>& publisherIds
+    std::string_view topic, const std::vector<std::string>& publisher_ids
   );
   FoxgloveError setSubscribedTopic(
-    std::string_view topic, const std::vector<std::string>& subscriberIds
+    std::string_view topic, const std::vector<std::string>& subscriber_ids
   );
   FoxgloveError setAdvertisedService(
-    std::string_view service, const std::vector<std::string>& providerIds
+    std::string_view service, const std::vector<std::string>& provider_ids
   );
 
 private:

@@ -17,19 +17,19 @@ using Catch::Matchers::Equals;
 class FileCleanup {
 public:
   explicit FileCleanup(std::string&& path)
-      : _path(std::move(path)) {}
+      : path_(std::move(path)) {}
   FileCleanup(const FileCleanup&) = delete;
   FileCleanup& operator=(const FileCleanup&) = delete;
   FileCleanup(FileCleanup&&) = delete;
   FileCleanup& operator=(FileCleanup&&) = delete;
   ~FileCleanup() {
-    if (std::filesystem::exists(_path)) {
-      std::filesystem::remove(_path);
+    if (std::filesystem::exists(path_)) {
+      std::filesystem::remove(path_);
     }
   }
 
 private:
-  std::string _path;
+  std::string path_;
 };
 
 TEST_CASE("Open new file and close mcap writer") {
@@ -139,9 +139,9 @@ TEST_CASE("different contexts") {
   // Log on context2 (should not be output to the file)
   foxglove::Schema schema;
   schema.name = "ExampleSchema";
-  auto channelResult = foxglove::Channel::create("example1", "json", schema, context2);
-  REQUIRE(channelResult.has_value());
-  auto channel = std::move(channelResult.value());
+  auto channel_result = foxglove::Channel::create("example1", "json", schema, context2);
+  REQUIRE(channel_result.has_value());
+  auto channel = std::move(channel_result.value());
   std::string data = "Hello, world!";
   channel.log(reinterpret_cast<const std::byte*>(data.data()), data.size());
 
@@ -168,9 +168,9 @@ TEST_CASE("specify profile") {
   // Write message
   foxglove::Schema schema;
   schema.name = "ExampleSchema";
-  auto channelResult = foxglove::Channel::create("example1", "json", schema, context);
-  REQUIRE(channelResult.has_value());
-  auto& channel = channelResult.value();
+  auto channel_result = foxglove::Channel::create("example1", "json", schema, context);
+  REQUIRE(channel_result.has_value());
+  auto& channel = channel_result.value();
   std::string data = "Hello, world!";
   channel.log(reinterpret_cast<const std::byte*>(data.data()), data.size());
 
@@ -199,9 +199,9 @@ TEST_CASE("zstd compression") {
   // Write message
   foxglove::Schema schema;
   schema.name = "ExampleSchema";
-  auto channelResult = foxglove::Channel::create("example2", "json", schema, context);
-  REQUIRE(channelResult.has_value());
-  auto channel = std::move(channelResult.value());
+  auto channel_result = foxglove::Channel::create("example2", "json", schema, context);
+  REQUIRE(channel_result.has_value());
+  auto channel = std::move(channel_result.value());
   std::string data = "Hello, world!";
   channel.log(reinterpret_cast<const std::byte*>(data.data()), data.size());
 
@@ -230,9 +230,9 @@ TEST_CASE("lz4 compression") {
   // Write message
   foxglove::Schema schema;
   schema.name = "ExampleSchema";
-  auto channelResult = foxglove::Channel::create("example3", "json", schema, context);
-  REQUIRE(channelResult.has_value());
-  auto& channel = channelResult.value();
+  auto channel_result = foxglove::Channel::create("example3", "json", schema, context);
+  REQUIRE(channel_result.has_value());
+  auto& channel = channel_result.value();
   std::string data = "Hello, world!";
   channel.log(reinterpret_cast<const std::byte*>(data.data()), data.size());
 
@@ -264,7 +264,7 @@ TEST_CASE("Channel can outlive Schema") {
     schema.encoding = "unknown";
     std::string data = "FAKESCHEMA";
     schema.data = reinterpret_cast<const std::byte*>(data.data());
-    schema.dataLen = data.size();
+    schema.data_len = data.size();
     auto result = foxglove::Channel::create("example", "json", schema, context);
     REQUIRE(result.has_value());
     // Channel should copy the schema, so this modification has no effect on the output

@@ -23,3 +23,31 @@ Checks:
 CheckOptions:
   # See discussion at https://stackoverflow.com/a/58845898/23649 & https://stackoverflow.com/a/78343833/23649
   hicpp-signed-bitwise.IgnorePositiveIntegerLiterals: true
+  # Naming
+  readability-identifier-naming.AbstractClassCase: CamelCase
+  readability-identifier-naming.ClassCase: CamelCase
+  readability-identifier-naming.ClassConstantCase: CamelCase
+  readability-identifier-naming.ClassMemberCase: CamelCase
+  readability-identifier-naming.ClassMethodCase: camelBack
+  readability-identifier-naming.ConceptCase: CamelCase
+  readability-identifier-naming.ConstantCase: CamelCase
+  readability-identifier-naming.ConstantMemberCase: CamelCase
+  readability-identifier-naming.ConstantParameterCase: lower_case
+  readability-identifier-naming.ConstantPointerParameterCase: lower_case
+  readability-identifier-naming.ConstexprMethodCase: camelBack
+  readability-identifier-naming.ConstexprVariableCase: lower_case
+  readability-identifier-naming.EnumCase: CamelCase
+  readability-identifier-naming.EnumConstantCase: CamelCase
+  readability-identifier-naming.FunctionCase: camelBack
+  readability-identifier-naming.MacroDefinitionCase: UPPER_CASE
+  readability-identifier-naming.MemberCase: lower_case
+  readability-identifier-naming.MethodCase: camelBack
+  readability-identifier-naming.NamespaceCase: lower_case
+  readability-identifier-naming.ParameterCase: lower_case
+  readability-identifier-naming.PrivateMemberSuffix: _
+  readability-identifier-naming.StaticConstantCase: CamelCase
+  readability-identifier-naming.StaticVariableCase: lower_case
+  readability-identifier-naming.StructCase: lower_case
+  readability-identifier-naming.TypeAliasCase: CamelCase
+  readability-identifier-naming.TypedefCase: CamelCase
+  readability-identifier-naming.VariableCase: lower_case
