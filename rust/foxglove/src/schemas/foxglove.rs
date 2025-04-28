@@ -154,7 +154,7 @@ pub struct CompressedImage {
     pub data: ::prost::bytes::Bytes,
     /// Image format
     ///
-    /// Supported values: image media types supported by Chrome, such as `webp`, `jpeg`, `png`
+    /// Supported values: `jpeg`, `png`, `webp`, `avif`
     #[prost(string, tag = "3")]
     pub format: ::prost::alloc::string::String,
 }
@@ -866,6 +866,26 @@ pub struct Quaternion {
     /// w value
     #[prost(double, tag = "4")]
     pub w: f64,
+}
+/// A single block of an audio bitstream
+/// <https://docs.foxglove.dev/docs/visualization/message-schemas/raw-audio>
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct RawAudio {
+    /// Timestamp of the start of the audio block
+    #[prost(message, optional, tag = "1")]
+    pub timestamp: ::core::option::Option<crate::schemas::Timestamp>,
+    /// Audio data. The samples in the data must be interleaved and little-endian
+    #[prost(bytes = "bytes", tag = "2")]
+    pub data: ::prost::bytes::Bytes,
+    /// Audio format. Only 'pcm-s16' is currently supported
+    #[prost(string, tag = "3")]
+    pub format: ::prost::alloc::string::String,
+    /// Sample rate in Hz
+    #[prost(fixed32, tag = "4")]
+    pub sample_rate: u32,
+    /// Number of channels in the audio block
+    #[prost(fixed32, tag = "5")]
+    pub number_of_channels: u32,
 }
 /// A raw image
 /// <https://docs.foxglove.dev/docs/visualization/message-schemas/raw-image>

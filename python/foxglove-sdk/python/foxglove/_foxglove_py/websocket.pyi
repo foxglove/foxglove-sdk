@@ -1,6 +1,6 @@
 from collections.abc import Callable
 from enum import Enum
-from typing import List, Optional, Union
+from typing import Dict, List, Optional, Union
 
 import foxglove
 
@@ -104,7 +104,15 @@ class MessageSchema:
 
 class Parameter:
     """
-    A parameter.
+    A parameter which can be sent to a client.
+
+    :param name: The parameter name.
+    :type name: str
+    :param value: Optional value, represented as a native python object, or a ParameterValue.
+    :type value: None|bool|float|str|bytes|list|dict|ParameterValue
+    :param type: Optional parameter type. This is automatically derived when passing a native
+                 python object as the value.
+    :type type: ParameterType|None
     """
 
     name: str
@@ -115,9 +123,12 @@ class Parameter:
         self,
         name: str,
         *,
+        value: Optional["AnyNativeParameterValue"] = None,
         type: Optional["ParameterType"] = None,
-        value: Optional["AnyParameterValue"] = None,
     ) -> None: ...
+    def get_value(self) -> Optional["AnyNativeParameterValue"]:
+        """Returns the parameter value as a native python object."""
+        ...
 
 class ParameterType(Enum):
     """
@@ -135,7 +146,7 @@ class ParameterType(Enum):
 
 class ParameterValue:
     """
-    The value of a parameter.
+    A parameter value.
     """
 
     class Bool:
@@ -148,10 +159,15 @@ class ParameterValue:
 
         def __new__(cls, value: float) -> "ParameterValue.Number": ...
 
-    class Bytes:
-        """A byte array."""
+    class String:
+        """
+        A string value.
 
-        def __new__(cls, value: bytes) -> "ParameterValue.Bytes": ...
+        For parameters of type :py:attr:ParameterType.ByteArray, this is a
+        base64 encoding of the byte array.
+        """
+
+        def __new__(cls, value: str) -> "ParameterValue.String": ...
 
     class Array:
         """An array of parameter values."""
@@ -170,9 +186,23 @@ class ParameterValue:
 AnyParameterValue = Union[
     ParameterValue.Bool,
     ParameterValue.Number,
-    ParameterValue.Bytes,
+    ParameterValue.String,
     ParameterValue.Array,
     ParameterValue.Dict,
+]
+
+AnyInnerParameterValue = Union[
+    AnyParameterValue,
+    bool,
+    float,
+    str,
+    List["AnyInnerParameterValue"],
+    Dict[str, "AnyInnerParameterValue"],
+]
+
+AnyNativeParameterValue = Union[
+    AnyInnerParameterValue,
+    bytes,
 ]
 
 AssetHandler = Callable[[str], Optional[bytes]]

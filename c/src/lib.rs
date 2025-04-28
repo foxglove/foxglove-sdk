@@ -3,12 +3,15 @@
 #![warn(unsafe_attr_outside_unsafe)]
 
 use bitflags::bitflags;
+use connection_graph::FoxgloveConnectionGraph;
 use mcap::{Compression, WriteOptions};
 use std::ffi::{c_char, c_void, CString};
 use std::fs::File;
 use std::io::BufWriter;
 use std::mem::ManuallyDrop;
 use std::sync::Arc;
+
+pub mod connection_graph;
 
 /// A string with associated length.
 #[repr(C)]
@@ -26,7 +29,17 @@ impl FoxgloveString {
     ///
     /// The [`data`] field must be valid UTF-8, and have a length equal to [`FoxgloveString.len`].
     unsafe fn as_utf8_str(&self) -> Result<&str, std::str::Utf8Error> {
-        std::str::from_utf8(unsafe { std::slice::from_raw_parts(self.data as *const u8, self.len) })
+        std::str::from_utf8(unsafe { std::slice::from_raw_parts(self.data.cast(), self.len) })
+    }
+}
+
+#[cfg(test)]
+impl From<&str> for FoxgloveString {
+    fn from(s: &str) -> Self {
+        Self {
+            data: s.as_ptr().cast(),
+            len: s.len(),
+        }
     }
 }
 
@@ -140,12 +153,12 @@ pub struct FoxgloveServerCallbacks {
     pub on_client_unadvertise: Option<
         unsafe extern "C" fn(client_id: u32, client_channel_id: u32, context: *const c_void),
     >,
+    pub on_connection_graph_subscribe: Option<unsafe extern "C" fn(context: *const c_void)>,
+    pub on_connection_graph_unsubscribe: Option<unsafe extern "C" fn(context: *const c_void)>,
     // pub on_get_parameters: Option<unsafe extern "C" fn()>
     // pub on_set_parameters: Option<unsafe extern "C" fn()>
     // pub on_parameters_subscribe: Option<unsafe extern "C" fn()>
     // pub on_parameters_unsubscribe: Option<unsafe extern "C" fn()>
-    // pub on_connection_graph_subscribe: Option<unsafe extern "C" fn()>
-    // pub on_connection_graph_unsubscribe: Option<unsafe extern "C" fn()>
 }
 unsafe impl Send for FoxgloveServerCallbacks {}
 unsafe impl Sync for FoxgloveServerCallbacks {}
@@ -171,6 +184,7 @@ impl FoxgloveWebSocketServer {
 }
 
 /// Create and start a server.
+///
 /// Resources must later be freed by calling `foxglove_server_stop`.
 ///
 /// `port` may be 0, in which case an available port will be automatically selected.
@@ -284,6 +298,30 @@ pub extern "C" fn foxglove_server_stop(
     };
     server.stop();
     FoxgloveError::Ok
+}
+
+/// Publish a connection graph to the server.
+#[unsafe(no_mangle)]
+pub extern "C" fn foxglove_server_publish_connection_graph(
+    server: Option<&mut FoxgloveWebSocketServer>,
+    graph: Option<&mut FoxgloveConnectionGraph>,
+) -> FoxgloveError {
+    let Some(server) = server else {
+        tracing::error!("foxglove_server_publish_connection_graph called with null server");
+        return FoxgloveError::ValueError;
+    };
+    let Some(graph) = graph else {
+        tracing::error!("foxglove_server_publish_connection_graph called with null graph");
+        return FoxgloveError::ValueError;
+    };
+    let Some(server) = server.as_ref() else {
+        tracing::error!("foxglove_server_publish_connection_graph called with closed server");
+        return FoxgloveError::SinkClosed;
+    };
+    match server.publish_connection_graph(graph.0.clone()) {
+        Ok(_) => FoxgloveError::Ok,
+        Err(e) => FoxgloveError::from(e),
+    }
 }
 
 #[repr(u8)]
@@ -507,8 +545,9 @@ unsafe fn do_foxglove_channel_create(
 }
 
 /// Free a channel created via `foxglove_channel_create`.
+///
 /// # Safety
-/// `channel` must be a valid pointer to a `FoxgloveChannel` created via `foxglove_channel_create`.
+/// `channel` must be a valid pointer to a `foxglove_channel` created via `foxglove_channel_create`.
 /// If channel is null, this does nothing.
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_free(channel: Option<&FoxgloveChannel>) {
@@ -521,7 +560,7 @@ pub extern "C" fn foxglove_channel_free(channel: Option<&FoxgloveChannel>) {
 /// Get the ID of a channel.
 ///
 /// # Safety
-/// `channel` must be a valid pointer to a `FoxgloveChannel` created via `foxglove_channel_create`.
+/// `channel` must be a valid pointer to a `foxglove_channel` created via `foxglove_channel_create`.
 ///
 /// If the passed channel is null, an invalid id of 0 is returned.
 #[unsafe(no_mangle)]
@@ -693,9 +732,22 @@ impl foxglove::websocket::ServerListener for FoxgloveServerCallbacks {
             unsafe { on_client_unadvertise(client.id().into(), channel.id.into(), self.context) };
         }
     }
+
+    fn on_connection_graph_subscribe(&self) {
+        if let Some(on_connection_graph_subscribe) = self.on_connection_graph_subscribe {
+            unsafe { on_connection_graph_subscribe(self.context) };
+        }
+    }
+
+    fn on_connection_graph_unsubscribe(&self) {
+        if let Some(on_connection_graph_unsubscribe) = self.on_connection_graph_unsubscribe {
+            unsafe { on_connection_graph_unsubscribe(self.context) };
+        }
+    }
 }
 
 #[repr(u8)]
+#[derive(PartialEq, Eq, Debug)]
 #[non_exhaustive]
 pub enum FoxgloveError {
     Ok,
@@ -707,7 +759,6 @@ pub enum FoxgloveError {
     MessageEncodingRequired,
     ServerAlreadyStarted,
     Bind,
-    DuplicateChannel,
     DuplicateService,
     MissingRequestEncoding,
     ServicesNotSupported,
@@ -728,7 +779,6 @@ impl From<foxglove::FoxgloveError> for FoxgloveError {
             }
             foxglove::FoxgloveError::ServerAlreadyStarted => FoxgloveError::ServerAlreadyStarted,
             foxglove::FoxgloveError::Bind(_) => FoxgloveError::Bind,
-            foxglove::FoxgloveError::DuplicateChannel(_) => FoxgloveError::DuplicateChannel,
             foxglove::FoxgloveError::DuplicateService(_) => FoxgloveError::DuplicateService,
             foxglove::FoxgloveError::MissingRequestEncoding(_) => {
                 FoxgloveError::MissingRequestEncoding
@@ -755,7 +805,6 @@ impl FoxgloveError {
             FoxgloveError::MessageEncodingRequired => c"Message Encoding Required",
             FoxgloveError::ServerAlreadyStarted => c"Server Already Started",
             FoxgloveError::Bind => c"Bind Error",
-            FoxgloveError::DuplicateChannel => c"Duplicate Channel",
             FoxgloveError::DuplicateService => c"Duplicate Service",
             FoxgloveError::MissingRequestEncoding => c"Missing Request Encoding",
             FoxgloveError::ServicesNotSupported => c"Services Not Supported",

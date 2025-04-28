@@ -109,6 +109,7 @@ macro_rules! log_with_meta {
 #[cfg(test)]
 mod tests {
     use bytes::BufMut;
+    use tracing_test::traced_test;
 
     use crate::nanoseconds_since_epoch;
     use crate::schemas::{LaserScan, Log};
@@ -187,14 +188,14 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "Channel foo already exists with different schema")]
-    fn test_log_existing_channel_different_schema_panics() {
+    #[traced_test]
+    fn test_log_existing_channel_different_schema_warns() {
         let _cleanup = GlobalContextTest::new();
 
         let sink = Arc::new(RecordingSink::new());
         Context::get_default().add_sink(sink.clone());
 
-        let _channel = ChannelBuilder::new("foo").build::<LaserScan>().unwrap();
+        let _channel = ChannelBuilder::new("foo").build::<LaserScan>();
 
         log!(
             "foo",
@@ -207,11 +208,15 @@ mod tests {
                 line: 1,
             }
         );
+
+        assert!(logs_contain(
+            "Channel with topic foo already exists in this context"
+        ));
     }
 
     #[test]
-    #[should_panic(expected = "Channel foo already exists with different message encoding")]
-    fn test_log_existing_channel_different_encoding_panics() {
+    #[traced_test]
+    fn test_log_existing_channel_different_encoding_warns() {
         let _cleanup = GlobalContextTest::new();
 
         let sink = Arc::new(RecordingSink::new());
@@ -259,8 +264,12 @@ mod tests {
             }
         }
 
-        let _channel = ChannelBuilder::new("foo").build::<Foo>().unwrap();
+        let _channel = ChannelBuilder::new("foo").build::<Foo>();
 
         log!("foo", Bar { x: 1 });
+
+        assert!(logs_contain(
+            "Channel with topic foo already exists in this context"
+        ));
     }
 }

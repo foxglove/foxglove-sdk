@@ -678,7 +678,7 @@ checksum = "3f9eec918d3f24069decb9af1554cad7c880e2da24a9afd88aca000531ab82c1"
 
 [[package]]
 name = "foxglove"
-version = "0.6.2"
+version = "0.7.0"
 dependencies = [
  "arc-swap",
  "assert_matches",
@@ -729,8 +729,9 @@ dependencies = [
 
 [[package]]
 name = "foxglove-sdk-python"
-version = "0.6.2"
+version = "0.7.0"
 dependencies = [
+ "base64",
  "bytes",
  "env_logger",
  "foxglove",
@@ -748,7 +749,7 @@ dependencies = [
 
 [[package]]
 name = "foxglove_c"
-version = "0.6.2"
+version = "0.7.0"
 dependencies = [
  "bitflags",
  "cbindgen",

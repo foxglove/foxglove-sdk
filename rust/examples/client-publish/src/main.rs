@@ -81,7 +81,7 @@ async fn main() {
 }
 
 async fn log_forever() {
-    let channel = Channel::new("/log").expect("Failed to create channel");
+    let channel = Channel::new("/log");
     let start = Instant::now();
     let mut interval = tokio::time::interval(Duration::from_secs(1));
     loop {

@@ -30,7 +30,7 @@ class Channel:
         """
         Create a new channel for logging messages on a topic.
 
-        :param topic: The topic name.
+        :param topic: The topic name. You should choose a unique topic name per channel.
         :param message_encoding: The message encoding. Optional if
             :py:param:`schema` is a dictionary, in which case the message
             encoding is presumed to be "json".

@@ -17,7 +17,6 @@ enum class FoxgloveError : uint8_t {
   MessageEncodingRequired,
   ServerAlreadyStarted,
   Bind,
-  DuplicateChannel,
   DuplicateService,
   MissingRequestEncoding,
   ServicesNotSupported,

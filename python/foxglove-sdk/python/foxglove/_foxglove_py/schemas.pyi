@@ -476,6 +476,21 @@ class Quaternion:
         w: "Optional[float]" = 0.0,
     ) -> "Quaternion": ...
 
+class RawAudio:
+    """
+    A single block of an audio bitstream
+    """
+
+    def __new__(
+        cls,
+        *,
+        timestamp: "Optional[Timestamp]" = None,
+        data: "Optional[bytes]" = b"",
+        format: "Optional[str]" = "",
+        sample_rate: "Optional[int]" = 0,
+        number_of_channels: "Optional[int]" = 0,
+    ) -> "RawAudio": ...
+
 class RawImage:
     """
     A raw image
@@ -656,6 +671,7 @@ FoxgloveSchema = Union[
     PoseInFrame,
     PosesInFrame,
     Quaternion,
+    RawAudio,
     RawImage,
     SpherePrimitive,
     TextAnnotation,

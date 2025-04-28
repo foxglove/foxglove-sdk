@@ -16,6 +16,8 @@ pub struct ChannelBuilder {
 
 impl ChannelBuilder {
     /// Creates a new channel builder for the specified topic.
+    ///
+    /// You should choose a unique topic name per channel for compatibility with the Foxglove app.
     pub fn new<T: Into<String>>(topic: T) -> Self {
         Self {
             topic: topic.into(),
@@ -65,8 +67,7 @@ impl ChannelBuilder {
 
     /// Builds a [`RawChannel`].
     ///
-    /// Returns [`FoxgloveError::DuplicateChannel`] if a channel with the same topic already exists,
-    /// or [`FoxgloveError::MessageEncodingRequired`] if no message encoding was specified.
+    /// Returns [`FoxgloveError::MessageEncodingRequired`] if no message encoding was specified.
     pub fn build_raw(self) -> Result<Arc<RawChannel>, FoxgloveError> {
         let channel = RawChannel::new(
             &self.context,
@@ -83,17 +84,27 @@ impl ChannelBuilder {
     /// Builds a [`Channel`].
     ///
     /// `T` must implement [`Encode`].
-    ///
-    /// Returns [`FoxgloveError::DuplicateChannel`] if a channel with the same topic already
-    /// exists.
-    pub fn build<T: Encode>(mut self) -> Result<Channel<T>, FoxgloveError> {
+    pub fn build<T: Encode>(mut self) -> Channel<T> {
         if self.message_encoding.is_none() {
-            self.message_encoding = Some(<T as Encode>::get_message_encoding());
+            self.message_encoding = Some(T::get_message_encoding());
         }
         if self.schema.is_none() {
             self.schema = <T as Encode>::get_schema();
         }
-        let channel = self.build_raw()?;
-        Ok(Channel::from_raw_channel(channel))
+        // We know that message_encoding is set and build_raw will succeed.
+        let channel = self.build_raw().expect("Failed to build raw channel");
+        Channel::from_raw_channel(channel)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_build_with_no_options() {
+        let builder = ChannelBuilder::new("topic");
+        let channel = builder.build::<String>();
+        assert_eq!(channel.topic(), "topic");
     }
 }

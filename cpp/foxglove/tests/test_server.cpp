@@ -339,3 +339,23 @@ TEST_CASE("Client advertise/publish callbacks") {
   REQUIRE(!ec);
   clientThread.join();
 }
+
+TEST_CASE("Publish a connection graph") {
+  foxglove::WebSocketServerOptions options;
+  options.name = "unit-test";
+  options.host = "127.0.0.1";
+  options.port = 0;
+  options.capabilities = foxglove::WebSocketServerCapabilities::ConnectionGraph;
+  auto serverResult = foxglove::WebSocketServer::create(std::move(options));
+  REQUIRE(serverResult.has_value());
+  auto& server = serverResult.value();
+  REQUIRE(server.port() != 0);
+
+  foxglove::ConnectionGraph graph;
+  graph.setPublishedTopic("topic", {"publisher1", "publisher2"});
+  graph.setSubscribedTopic("topic", {"subscriber1", "subscriber2"});
+  graph.setAdvertisedService("service", {"provider1", "provider2"});
+  server.publishConnectionGraph(graph);
+
+  REQUIRE(server.stop() == foxglove::FoxgloveError::Ok);
+}

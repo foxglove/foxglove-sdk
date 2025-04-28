@@ -8,12 +8,17 @@ use std::fmt::Debug;
 use std::io::{Seek, Write};
 use std::sync::Arc;
 
+type McapChannelId = u16;
+
 struct WriterState<W: Write + Seek> {
     writer: mcap::Writer<W>,
-    // ChannelId -> mcap file channel id
-    channel_map: HashMap<ChannelId, u16>,
-    // Current message sequence number for each channel
-    channel_sequence: HashMap<ChannelId, u32>,
+    // ChannelId -> mcap file channel id.
+    // Note that the underlying writer may re-use channel_ids based on the metadata of the channel,
+    // so multiple `ChannelIds` may map to the same `McapChannelId`.
+    channel_map: HashMap<ChannelId, McapChannelId>,
+    // Current message sequence number for each channel.
+    // Indexed by `McapChannelId` to ensure increasing sequence within each MCAP channel.
+    channel_sequence: HashMap<McapChannelId, u32>,
 }
 
 impl<W: Write + Seek> WriterState<W> {
@@ -25,7 +30,7 @@ impl<W: Write + Seek> WriterState<W> {
         }
     }
 
-    fn next_sequence(&mut self, channel_id: ChannelId) -> u32 {
+    fn next_sequence(&mut self, channel_id: McapChannelId) -> u32 {
         *self
             .channel_sequence
             .entry(channel_id)
@@ -65,7 +70,8 @@ impl<W: Write + Seek> WriterState<W> {
                 mcap_channel_id
             }
         };
-        let sequence = self.next_sequence(channel_id);
+
+        let sequence = self.next_sequence(mcap_channel_id);
 
         self.writer
             .write_to_known_channel(
@@ -258,8 +264,10 @@ mod tests {
     fn test_message_sequence_increases_by_channel() {
         let ctx = Context::new();
 
+        // MCAP writer will re-use the same channel internally for ch2 & ch3 since topic and schema are the same.
         let ch1 = new_test_channel(&ctx, "foo".to_string(), "foo_schema".to_string());
         let ch2 = new_test_channel(&ctx, "bar".to_string(), "bar_schema".to_string());
+        let ch3 = new_test_channel(&ctx, "bar".to_string(), "bar_schema".to_string());
 
         // Generate a temporary file path without creating the file
         let temp_file = NamedTempFile::new().expect("failed to create tempfile");
@@ -276,11 +284,17 @@ mod tests {
             .log(&ch2, b"msg2", &metadata)
             .expect("failed to log to channel 2");
         writer
-            .log(&ch1, b"msg3", &metadata)
+            .log(&ch3, b"msg3", &metadata)
+            .expect("failed to log to channel 3");
+        writer
+            .log(&ch1, b"msg4", &metadata)
             .expect("failed to log to channel 1");
         writer
-            .log(&ch2, b"msg4", &metadata)
+            .log(&ch2, b"msg5", &metadata)
             .expect("failed to log to channel 2");
+        writer
+            .log(&ch2, b"msg6", &metadata)
+            .expect("failed to log to channel 3");
         writer.finish().expect("failed to finish recording");
 
         let contents = std::fs::read(&temp_path)
@@ -291,14 +305,24 @@ mod tests {
             .collect::<Result<Vec<_>, _>>()
             .expect("failed to collect messages");
 
-        assert_eq!(messages.len(), 4);
+        assert_eq!(messages.len(), 6);
+
+        // Channel 2 and 3 share the same mcap_channel_id
         assert_eq!(messages[0].channel.id, 1);
         assert_eq!(messages[1].channel.id, 2);
-        assert_eq!(messages[2].channel.id, 1);
-        assert_eq!(messages[3].channel.id, 2);
+        assert_eq!(messages[2].channel.id, 2);
+        assert_eq!(messages[3].channel.id, 1);
+        assert_eq!(messages[4].channel.id, 2);
+        assert_eq!(messages[5].channel.id, 2);
+
+        // Channel 1 has independent sequence numbers
         assert_eq!(messages[0].sequence, 1);
+        assert_eq!(messages[3].sequence, 2);
+
+        // Channel 2 and 3 share an MCAP channel_id, so increment together
         assert_eq!(messages[1].sequence, 1);
         assert_eq!(messages[2].sequence, 2);
-        assert_eq!(messages[3].sequence, 2);
+        assert_eq!(messages[4].sequence, 3);
+        assert_eq!(messages[5].sequence, 4);
     }
 }

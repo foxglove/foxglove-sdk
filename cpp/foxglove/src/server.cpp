@@ -2,6 +2,7 @@
 #include <foxglove/context.hpp>
 #include <foxglove/error.hpp>
 #include <foxglove/server.hpp>
+#include <foxglove/server/connection_graph.hpp>
 
 #include <iostream>
 #include <type_traits>
@@ -15,7 +16,9 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
 
   bool hasAnyCallbacks = options.callbacks.onSubscribe || options.callbacks.onUnsubscribe ||
                          options.callbacks.onClientAdvertise || options.callbacks.onMessageData ||
-                         options.callbacks.onClientUnadvertise;
+                         options.callbacks.onClientUnadvertise ||
+                         options.callbacks.onConnectionGraphSubscribe ||
+                         options.callbacks.onConnectionGraphUnsubscribe;
 
   std::unique_ptr<WebSocketServerCallbacks> callbacks;
 
@@ -73,6 +76,16 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
             ->onClientUnadvertise(client_id, client_channel_id);
         };
     }
+    if (callbacks->onConnectionGraphSubscribe) {
+      cCallbacks.on_connection_graph_subscribe = [](const void* context) {
+        (static_cast<const WebSocketServerCallbacks*>(context))->onConnectionGraphSubscribe();
+      };
+    }
+    if (callbacks->onConnectionGraphUnsubscribe) {
+      cCallbacks.on_connection_graph_unsubscribe = [](const void* context) {
+        (static_cast<const WebSocketServerCallbacks*>(context))->onConnectionGraphUnsubscribe();
+      };
+    }
   }
 
   foxglove_server_options cOptions = {};
@@ -113,6 +126,10 @@ FoxgloveError WebSocketServer::stop() {
 
 uint16_t WebSocketServer::port() const {
   return foxglove_server_get_port(_impl.get());
+}
+
+void WebSocketServer::publishConnectionGraph(ConnectionGraph& graph) {
+  foxglove_server_publish_connection_graph(_impl.get(), graph._impl.get());
 }
 
 }  // namespace foxglove

@@ -59,7 +59,7 @@
 //! let mcap = ctx.mcap_writer().create_new_buffered_file("test.mcap")?;
 //!
 //! // Create a new channel for the topic "/log" for `Log` messages.
-//! let channel = ctx.channel_builder("/log").build()?;
+//! let channel = ctx.channel_builder("/log").build();
 //! channel.log(&Log{
 //!     message: "Hello, Foxglove!".to_string(),
 //!     ..Default::default()
@@ -95,7 +95,7 @@
 //! let mcap = McapWriter::new().create_new_buffered_file("test.mcap")?;
 //!
 //! // Create a new channel for the topic "/log" for `Log` messages.
-//! let channel = Channel::new("/log")?;
+//! let channel = Channel::new("/log");
 //! channel.log(&Log{
 //!     message: "Hello, Foxglove!".to_string(),
 //!     ..Default::default()
@@ -130,7 +130,7 @@
 //! }
 //!
 //! # fn func() -> Result<(), foxglove::FoxgloveError> {
-//! let channel = foxglove::Channel::new("/custom")?;
+//! let channel = foxglove::Channel::new("/custom");
 //! channel.log(&Custom{
 //!     msg: "custom",
 //!     count: 42
@@ -349,11 +349,8 @@ pub enum FoxgloveError {
     /// Failed to bind to the specified host and port.
     #[error("Failed to bind port: {0}")]
     Bind(std::io::Error),
-    /// A channel for the same topic has already been registered.
-    #[error("Channel for topic {0} already exists in registry")]
-    DuplicateChannel(String),
     /// A service with the same name is already registered.
-    #[error("Service {0} already exists in registry")]
+    #[error("Service {0} has already been registered")]
     DuplicateService(String),
     /// Niether the service nor the server declared supported encodings.
     #[error("Neither service {0} nor the server declared a supported request encoding")]

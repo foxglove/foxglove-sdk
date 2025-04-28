@@ -1,5 +1,38 @@
 import { FoxgloveEnumSchema, FoxgloveMessageSchema } from "./types";
 
+const RawAudio: FoxgloveMessageSchema = {
+  type: "message",
+  name: "RawAudio",
+  description: "A single block of an audio bitstream",
+  fields: [
+    {
+      name: "timestamp",
+      type: { type: "primitive", name: "time" },
+      description: "Timestamp of the start of the audio block",
+    },
+    {
+      name: "data",
+      type: { type: "primitive", name: "bytes" },
+      description: `Audio data. The samples in the data must be interleaved and little-endian`,
+    },
+    {
+      name: "format",
+      type: { type: "primitive", name: "string" },
+      description: "Audio format. Only 'pcm-s16' is currently supported",
+    },
+    {
+      name: "sample_rate",
+      type: { type: "primitive", name: "uint32" },
+      description: "Sample rate in Hz"
+    },
+    {
+      name: "number_of_channels",
+      type: { type: "primitive", name: "uint32" },
+      description: "Number of channels in the audio block"
+    },
+  ],
+};
+
 const Color: FoxgloveMessageSchema = {
   type: "message",
   name: "Color",
@@ -786,7 +819,7 @@ const CompressedImage: FoxgloveMessageSchema = {
       name: "format",
       type: { type: "primitive", name: "string" },
       description:
-        "Image format\n\nSupported values: image media types supported by Chrome, such as `webp`, `jpeg`, `png`",
+        "Image format\n\nSupported values: `jpeg`, `png`, `webp`, `avif`",
     },
   ],
 };
@@ -1507,6 +1540,7 @@ export const foxgloveMessageSchemas = {
   PoseInFrame,
   PosesInFrame,
   Quaternion,
+  RawAudio,
   RawImage,
   SpherePrimitive,
   TextAnnotation,

@@ -119,37 +119,13 @@ async fn main() {
 
     // Initialize the parameter store with some example parameters
     {
+        let params = [
+            Parameter::string("read_only_str_param", "can't change me"),
+            Parameter::float64("elapsed", 0.0),
+            Parameter::float64_array("float_array_param", [1.0, 2.0, 3.0]),
+        ];
         let mut param_store = listener.param_store.lock().unwrap();
-        param_store.insert(
-            "read_only_str_param".to_string(),
-            Parameter {
-                name: "read_only_str_param".to_string(),
-                value: Some(ParameterValue::String(
-                    "can't change me".as_bytes().to_vec(),
-                )),
-                r#type: None,
-            },
-        );
-        param_store.insert(
-            "elapsed".to_string(),
-            Parameter {
-                name: "elapsed".to_string(),
-                value: Some(ParameterValue::Number(0.0)),
-                r#type: None,
-            },
-        );
-        param_store.insert(
-            "float_array_param".to_string(),
-            Parameter {
-                name: "float_array_param".to_string(),
-                value: Some(ParameterValue::Array(vec![
-                    ParameterValue::Number(1.0),
-                    ParameterValue::Number(2.0),
-                    ParameterValue::Number(3.0),
-                ])),
-                r#type: Some(ParameterType::Float64Array),
-            },
-        );
+        param_store.extend(params.into_iter().map(|p| (p.name.clone(), p)));
     }
 
     let server = WebSocketServer::new()

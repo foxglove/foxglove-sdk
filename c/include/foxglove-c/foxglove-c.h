@@ -63,7 +63,6 @@ enum foxglove_error
   FOXGLOVE_ERROR_MESSAGE_ENCODING_REQUIRED,
   FOXGLOVE_ERROR_SERVER_ALREADY_STARTED,
   FOXGLOVE_ERROR_BIND,
-  FOXGLOVE_ERROR_DUPLICATE_CHANNEL,
   FOXGLOVE_ERROR_DUPLICATE_SERVICE,
   FOXGLOVE_ERROR_MISSING_REQUEST_ENCODING,
   FOXGLOVE_ERROR_SERVICES_NOT_SUPPORTED,
@@ -89,6 +88,8 @@ typedef uint8_t foxglove_mcap_compression;
 #endif // __cplusplus
 
 typedef struct foxglove_channel foxglove_channel;
+
+typedef struct foxglove_connection_graph foxglove_connection_graph;
 
 typedef struct foxglove_context foxglove_context;
 
@@ -136,6 +137,8 @@ typedef struct foxglove_server_callbacks {
                           size_t payload_len,
                           const void *context);
   void (*on_client_unadvertise)(uint32_t client_id, uint32_t client_channel_id, const void *context);
+  void (*on_connection_graph_subscribe)(const void *context);
+  void (*on_connection_graph_unsubscribe)(const void *context);
 } foxglove_server_callbacks;
 
 typedef uint8_t foxglove_server_capability;
@@ -194,6 +197,7 @@ extern "C" {
 
 /**
  * Create and start a server.
+ *
  * Resources must later be freed by calling `foxglove_server_stop`.
  *
  * `port` may be 0, in which case an available port will be automatically selected.
@@ -218,6 +222,12 @@ uint16_t foxglove_server_get_port(struct foxglove_websocket_server *server);
  * Stop and shut down `server` and free the resources associated with it.
  */
 foxglove_error foxglove_server_stop(struct foxglove_websocket_server *server);
+
+/**
+ * Publish a connection graph to the server.
+ */
+foxglove_error foxglove_server_publish_connection_graph(struct foxglove_websocket_server *server,
+                                                        struct foxglove_connection_graph *graph);
 
 /**
  * Create or open an MCAP file for writing.
@@ -263,8 +273,9 @@ foxglove_error foxglove_channel_create(struct foxglove_string topic,
 
 /**
  * Free a channel created via `foxglove_channel_create`.
+ *
  * # Safety
- * `channel` must be a valid pointer to a `FoxgloveChannel` created via `foxglove_channel_create`.
+ * `channel` must be a valid pointer to a `foxglove_channel` created via `foxglove_channel_create`.
  * If channel is null, this does nothing.
  */
 void foxglove_channel_free(const struct foxglove_channel *channel);
@@ -273,7 +284,7 @@ void foxglove_channel_free(const struct foxglove_channel *channel);
  * Get the ID of a channel.
  *
  * # Safety
- * `channel` must be a valid pointer to a `FoxgloveChannel` created via `foxglove_channel_create`.
+ * `channel` must be a valid pointer to a `foxglove_channel` created via `foxglove_channel_create`.
  *
  * If the passed channel is null, an invalid id of 0 is returned.
  */
@@ -316,6 +327,69 @@ void foxglove_internal_register_cpp_wrapper(void);
  * Convert a `FoxgloveError` code to a C string.
  */
 const char *foxglove_error_to_cstr(foxglove_error error);
+
+/**
+ * Create a new connection graph.
+ *
+ * The graph must later be freed with `foxglove_connection_graph_free`.
+ *
+ * # Safety
+ * `graph` must be a valid pointer to a pointer to a `foxglove_connection_graph`.
+ */
+foxglove_error foxglove_connection_graph_create(struct foxglove_connection_graph **graph);
+
+/**
+ * Free the connection graph.
+ *
+ * # Safety
+ * `graph` must be a valid pointer to a `foxglove_connection_graph` created by
+ * `foxglove_connection_graph_create`.
+ */
+void foxglove_connection_graph_free(struct foxglove_connection_graph *graph);
+
+/**
+ * Set a published topic and its associated publisher ids. Overwrites any existing topic with the
+ * same name.
+ *
+ * # Safety
+ * `topic`, and each ID in `publisher_ids` must adhere to the safety rules of `foxglove_string`.
+ * `publisher_ids_count` must be the number of elements in the `publisher_ids` array.
+ *
+ * These strings are copied from the pointers, and need only be valid for the duration of this
+ * function call.
+ */
+foxglove_error foxglove_connection_graph_set_published_topic(struct foxglove_connection_graph *FOXGLOVE_NONNULL graph,
+                                                             struct foxglove_string topic,
+                                                             const struct foxglove_string *publisher_ids,
+                                                             size_t publisher_ids_count);
+
+/**
+ * Set a subscribed topic and its associated subscriber ids. Overwrites any existing topic with the
+ * same name.
+ *
+ * # Safety
+ * `topic`, and each ID in `subscriber_ids` must adhere to the safety rules of `foxglove_string`.
+ * `subscriber_ids_count` must be the number of elements in the `subscriber_ids` array.
+ */
+foxglove_error foxglove_connection_graph_set_subscribed_topic(struct foxglove_connection_graph *FOXGLOVE_NONNULL graph,
+                                                              struct foxglove_string topic,
+                                                              const struct foxglove_string *subscriber_ids,
+                                                              size_t subscriber_ids_count);
+
+/**
+ * Set an advertised service and its associated provider ids. Overwrites any existing service with
+ * the same name.
+ *
+ * # Safety
+ * `graph` must be a valid pointer to a `foxglove_connection_graph` created by
+ * `foxglove_connection_graph_create`. `service`, and each ID in `provider_ids` must adhere to the
+ * safety rules of `FoxgloveString`. `provider_ids_count` must be the number of elements in the
+ * `provider_ids` array.
+ */
+foxglove_error foxglove_connection_graph_set_advertised_service(struct foxglove_connection_graph *FOXGLOVE_NONNULL graph,
+                                                                struct foxglove_string service,
+                                                                const struct foxglove_string *provider_ids,
+                                                                size_t provider_ids_count);
 
 #ifdef __cplusplus
 }  // extern "C"
