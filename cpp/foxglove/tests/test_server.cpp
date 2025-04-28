@@ -370,8 +370,10 @@ TEST_CASE("Parameter callbacks") {
   std::condition_variable cv;
   // the following variables are protected by the mutex:
   bool connectionOpened = false;
-  std::optional<std::pair<std::string, std::vector<std::string>>> serverGetParameters;
-  std::optional<std::pair<std::string, std::vector<foxglove::Parameter>>> serverSetParameters;
+  std::optional<std::pair<std::optional<std::string>, std::vector<std::string>>>
+    serverGetParameters;
+  std::optional<std::pair<std::optional<std::string>, std::vector<foxglove::Parameter>>>
+    serverSetParameters;
   std::queue<std::string> clientRx;
 
   foxglove::WebSocketServerOptions options;
@@ -379,12 +381,23 @@ TEST_CASE("Parameter callbacks") {
   options.host = "127.0.0.1";
   options.port = 0;
   options.capabilities = foxglove::WebSocketServerCapabilities::Parameters;
-  options.callbacks.onGetParameters =
-    [&](
-      uint32_t clientId, std::string_view requestId, const std::vector<std::string>& paramNames
-    ) -> std::vector<foxglove::Parameter> {
+  options.callbacks.onGetParameters = [&](
+                                        uint32_t clientId,
+                                        std::optional<std::string_view>
+                                          requestId,
+                                        const std::vector<std::string_view>& paramNames
+                                      ) -> std::vector<foxglove::Parameter> {
     std::scoped_lock lock{mutex};
-    serverGetParameters = std::make_pair(requestId, paramNames);
+    std::optional<std::string> ownedRequestId;
+    if (requestId.has_value()) {
+      ownedRequestId.emplace(*requestId);
+    }
+    std::vector<std::string> ownedParamNames;
+    ownedParamNames.reserve(paramNames.size());
+    for (const auto& name : paramNames) {
+      ownedParamNames.emplace_back(name);
+    }
+    serverGetParameters = std::make_pair(ownedRequestId, ownedParamNames);
     cv.notify_one();
     std::vector<foxglove::Parameter> result;
     result.emplace_back("foo");
@@ -394,16 +407,21 @@ TEST_CASE("Parameter callbacks") {
   };
   options.callbacks.onSetParameters = [&](
                                         uint32_t clientId,
-                                        std::string_view requestId,
+                                        std::optional<std::string_view>
+                                          requestId,
                                         const std::vector<foxglove::ParameterView>& params
                                       ) -> std::vector<foxglove::Parameter> {
     std::scoped_lock lock{mutex};
+    std::optional<std::string> ownedRequestId;
+    if (requestId.has_value()) {
+      ownedRequestId.emplace(*requestId);
+    }
     std::vector<foxglove::Parameter> ownedParams;
     ownedParams.reserve(params.size());
     for (const auto& param : params) {
       ownedParams.emplace_back(std::move(param.clone()));
     }
-    serverSetParameters = std::make_pair(requestId, std::move(ownedParams));
+    serverSetParameters = std::make_pair(ownedRequestId, std::move(ownedParams));
     cv.notify_one();
     std::array<uint8_t, 6> data{115, 101, 99, 114, 101, 116};
     std::vector<foxglove::Parameter> result;
@@ -472,7 +490,8 @@ TEST_CASE("Parameter callbacks") {
       if (serverGetParameters.has_value()) {
         auto requestId = (*serverGetParameters).first;
         auto paramNames = (*serverGetParameters).second;
-        REQUIRE(requestId == "get-request");
+        REQUIRE(requestId.has_value());
+        REQUIRE(*requestId == "get-request");
         REQUIRE(paramNames.size() == 4);
         REQUIRE(paramNames[0] == "foo");
         REQUIRE(paramNames[1] == "bar");
@@ -526,7 +545,8 @@ TEST_CASE("Parameter callbacks") {
     auto waitResult = cv.wait_for(lock, std::chrono::seconds(1), [&] {
       if (serverSetParameters.has_value()) {
         auto [requestId, params] = *std::move(serverSetParameters);
-        REQUIRE(requestId == "set-request");
+        REQUIRE(requestId.has_value());
+        REQUIRE(*requestId == "set-request");
         REQUIRE(params.size() == 3);
         REQUIRE(params[0].name() == "zip");
         REQUIRE(!params[0].value().has_value());

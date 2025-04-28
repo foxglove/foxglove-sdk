@@ -38,7 +38,15 @@ impl FoxgloveString {
     }
 }
 
-#[cfg(test)]
+impl From<&String> for FoxgloveString {
+    fn from(s: &String) -> Self {
+        Self {
+            data: s.as_ptr().cast(),
+            len: s.len(),
+        }
+    }
+}
+
 impl From<&str> for FoxgloveString {
     fn from(s: &str) -> Self {
         Self {
@@ -224,20 +232,45 @@ pub struct FoxgloveServerCallbacks {
     pub on_client_unadvertise: Option<
         unsafe extern "C" fn(client_id: u32, client_channel_id: u32, context: *const c_void),
     >,
+    /// Callback invoked when a client requests parameters.
+    ///
+    /// Requires `FOXGLOVE_CAPABILITY_PARAMETERS`.
+    ///
+    /// The `request_id` and `param_names` arguments are guaranteed to be non-NULL. These arguments
+    /// point to buffers that are valid and immutable for the duration of the call. If the callback
+    /// wishes to store these values, they must be copied out.
+    ///
+    /// This function should return the named parameters, or all parameters if `param_names` is
+    /// empty. The return value must be allocated with `foxglove_parameter_array_create`. Ownership
+    /// of this value is transfered to the callee, who is responsible for freeing it. A NULL return
+    /// value is treated as an empty array.
     pub on_get_parameters: Option<
         unsafe extern "C" fn(
             context: *const c_void,
             client_id: u32,
-            request_id: *const c_char,
-            param_names: *const *const c_char,
+            request_id: *const FoxgloveString,
+            param_names: *const FoxgloveString,
             param_names_len: usize,
         ) -> *mut FoxgloveParameterArray,
     >,
+    /// Callback invoked when a client sets parameters.
+    ///
+    /// Requires `FOXGLOVE_CAPABILITY_PARAMETERS`.
+    ///
+    /// The `request_id` and `params` arguments are guaranteed to be non-NULL. These arguments
+    /// point to buffers that are valid and immutable for the duration of the call. If the callback
+    /// wishes to store these values, they must be copied out.
+    ///
+    /// This function should return the updated parameters. The return value must be allocated with
+    /// `foxglove_parameter_array_create`. Ownership of this value is transfered to the callee, who
+    /// is responsible for freeing it. A NULL return value is treated as an empty array.
+    ///
+    /// All clients subscribed to updates for the returned parameters will be notified.
     pub on_set_parameters: Option<
         unsafe extern "C" fn(
             context: *const c_void,
             client_id: u32,
-            request_id: *const c_char,
+            request_id: *const FoxgloveString,
             params: *const FoxgloveParameterArray,
         ) -> *mut FoxgloveParameterArray,
     >,
@@ -782,22 +815,18 @@ impl foxglove::websocket::ServerListener for FoxgloveServerCallbacks {
             return vec![];
         };
 
-        let request_id = request_id.map(|id| CString::new(id).unwrap());
-        let param_names: Vec<_> = param_names
-            .into_iter()
-            .map(|n| CString::new(n).unwrap())
-            .collect();
-        let param_names_ptrs: Vec<_> = param_names.iter().map(|n| n.as_ptr()).collect();
+        let c_request_id = request_id.map(FoxgloveString::from);
+        let c_param_names: Vec<_> = param_names.iter().map(FoxgloveString::from).collect();
         let raw = unsafe {
             on_get_parameters(
                 self.context,
                 client.id().into(),
-                request_id
+                c_request_id
                     .as_ref()
-                    .map(|id| id.as_ptr())
+                    .map(|id| id as *const _)
                     .unwrap_or_else(std::ptr::null),
-                param_names_ptrs.as_ptr(),
-                param_names_ptrs.len(),
+                c_param_names.as_ptr(),
+                c_param_names.len(),
             )
         };
         if raw.is_null() {
@@ -819,16 +848,16 @@ impl foxglove::websocket::ServerListener for FoxgloveServerCallbacks {
             return vec![];
         };
 
-        let request_id = request_id.map(|id| CString::new(id).unwrap());
+        let c_request_id = request_id.map(FoxgloveString::from);
         let params: FoxgloveParameterArray = params.into_iter().collect();
         let c_params = params.into_raw();
         let raw = unsafe {
             on_set_parameters(
                 self.context,
                 client.id().into(),
-                request_id
+                c_request_id
                     .as_ref()
-                    .map(|id| id.as_ptr())
+                    .map(|id| id as *const _)
                     .unwrap_or_else(std::ptr::null),
                 c_params,
             )

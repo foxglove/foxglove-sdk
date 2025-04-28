@@ -306,14 +306,43 @@ typedef struct foxglove_server_callbacks {
                           size_t payload_len,
                           const void *context);
   void (*on_client_unadvertise)(uint32_t client_id, uint32_t client_channel_id, const void *context);
+  /**
+   * Callback invoked when a client requests parameters.
+   *
+   * Requires `FOXGLOVE_CAPABILITY_PARAMETERS`.
+   *
+   * The `request_id` and `param_names` arguments are guaranteed to be non-NULL. These arguments
+   * point to buffers that are valid and immutable for the duration of the call. If the callback
+   * wishes to store these values, they must be copied out.
+   *
+   * This function should return the named parameters, or all parameters if `param_names` is
+   * empty. The return value must be allocated with `foxglove_parameter_array_create`. Ownership
+   * of this value is transfered to the callee, who is responsible for freeing it. A NULL return
+   * value is treated as an empty array.
+   */
   struct foxglove_parameter_array *(*on_get_parameters)(const void *context,
                                                         uint32_t client_id,
-                                                        const char *request_id,
-                                                        const char *const *param_names,
+                                                        const struct foxglove_string *request_id,
+                                                        const struct foxglove_string *param_names,
                                                         size_t param_names_len);
+  /**
+   * Callback invoked when a client sets parameters.
+   *
+   * Requires `FOXGLOVE_CAPABILITY_PARAMETERS`.
+   *
+   * The `request_id` and `params` arguments are guaranteed to be non-NULL. These arguments
+   * point to buffers that are valid and immutable for the duration of the call. If the callback
+   * wishes to store these values, they must be copied out.
+   *
+   * This function should return the updated parameters. The return value must be allocated with
+   * `foxglove_parameter_array_create`. Ownership of this value is transfered to the callee, who
+   * is responsible for freeing it. A NULL return value is treated as an empty array.
+   *
+   * All clients subscribed to updates for the returned parameters will be notified.
+   */
   struct foxglove_parameter_array *(*on_set_parameters)(const void *context,
                                                         uint32_t client_id,
-                                                        const char *request_id,
+                                                        const struct foxglove_string *request_id,
                                                         const struct foxglove_parameter_array *params);
   void (*on_connection_graph_subscribe)(const void *context);
   void (*on_connection_graph_unsubscribe)(const void *context);

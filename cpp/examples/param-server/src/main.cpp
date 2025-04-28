@@ -49,12 +49,17 @@ int main(int argc, const char* argv[]) {
   options.host = "127.0.0.1";
   options.port = 8765;
   options.capabilities = foxglove::WebSocketServerCapabilities::Parameters;
-  options.callbacks.onGetParameters =
-    [&paramStore](
-      uint32_t clientId, std::string_view request_id, const std::vector<std::string>& param_names
-    ) -> std::vector<foxglove::Parameter> {
+  options.callbacks.onGetParameters = [&paramStore](
+                                        uint32_t clientId,
+                                        std::optional<std::string_view>
+                                          request_id,
+                                        const std::vector<std::string_view>& param_names
+                                      ) -> std::vector<foxglove::Parameter> {
     std::vector<foxglove::Parameter> result;
-    std::cerr << "onGetParameters called with request_id '" << request_id << "'";
+    std::cerr << "onGetParameters called";
+    if (request_id.has_value()) {
+      std::cerr << " with request_id '" << *request_id << "'";
+    }
     if (param_names.empty()) {
       std::cerr << " for all parameters\n";
       for (const auto& it : paramStore) {
@@ -64,7 +69,7 @@ int main(int argc, const char* argv[]) {
       std::cerr << " for parameters:\n";
       for (const auto& name : param_names) {
         std::cerr << " - " << name << "\n";
-        if (auto it = paramStore.find(name); it != paramStore.end()) {
+        if (auto it = paramStore.find(std::string(name)); it != paramStore.end()) {
           result.push_back(it->second.clone());
         }
       }
@@ -73,10 +78,15 @@ int main(int argc, const char* argv[]) {
   };
   options.callbacks.onSetParameters = [&paramStore](
                                         uint32_t clientId,
-                                        std::string_view request_id,
+                                        std::optional<std::string_view>
+                                          request_id,
                                         const std::vector<foxglove::ParameterView>& params
                                       ) -> std::vector<foxglove::Parameter> {
-    std::cerr << "onSetParameters called with request_id '" << request_id << "' for parameters:\n";
+    std::cerr << "onSetParameters called";
+    if (request_id.has_value()) {
+      std::cerr << " with request_id '" << *request_id << "'";
+    }
+    std::cerr << " for parameters:\n";
     std::vector<foxglove::Parameter> result;
     for (const auto& param : params) {
       std::cerr << " - " << param.name();

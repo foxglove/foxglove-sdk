@@ -63,11 +63,13 @@ struct WebSocketServerCallbacks {
     onMessageData;
   std::function<void(uint32_t clientId, uint32_t clientChannelId)> onClientUnadvertise;
   std::function<std::vector<Parameter>(
-    uint32_t clientId, std::string_view request_id, const std::vector<std::string>& param_names
+    uint32_t clientId, std::optional<std::string_view> requestId,
+    const std::vector<std::string_view>& paramNames
   )>
     onGetParameters;
   std::function<std::vector<Parameter>(
-    uint32_t clientId, std::string_view request_id, const std::vector<ParameterView>& params
+    uint32_t clientId, std::optional<std::string_view> requestId,
+    const std::vector<ParameterView>& params
   )>
     onSetParameters;
   std::function<void()> onConnectionGraphSubscribe;
