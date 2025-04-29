@@ -27,11 +27,11 @@ CheckOptions:
   readability-identifier-naming.AbstractClassCase: CamelCase
   readability-identifier-naming.ClassCase: CamelCase
   readability-identifier-naming.ClassConstantCase: CamelCase
-  readability-identifier-naming.ClassMemberCase: CamelCase
+  readability-identifier-naming.ClassMemberCase: lower_case
   readability-identifier-naming.ClassMethodCase: camelBack
   readability-identifier-naming.ConceptCase: CamelCase
-  readability-identifier-naming.ConstantCase: CamelCase
-  readability-identifier-naming.ConstantMemberCase: CamelCase
+  readability-identifier-naming.ConstantCase: lower_case
+  readability-identifier-naming.ConstantMemberCase: lower_case
   readability-identifier-naming.ConstantParameterCase: lower_case
   readability-identifier-naming.ConstantPointerParameterCase: lower_case
   readability-identifier-naming.ConstexprMethodCase: camelBack
