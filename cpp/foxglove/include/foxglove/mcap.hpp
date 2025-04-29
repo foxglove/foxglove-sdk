@@ -3,6 +3,7 @@
 #include <foxglove/context.hpp>
 
 #include <memory>
+#include <string_view>
 
 enum foxglove_error : uint8_t;
 enum class FoxgloveError : uint8_t;
