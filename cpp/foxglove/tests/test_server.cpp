@@ -606,14 +606,22 @@ TEST_CASE("Parameter subscription callbacks") {
   std::queue<std::string> client_rx;
 
   foxglove::WebSocketServerCallbacks callbacks;
-  callbacks.onParametersSubscribe = [&](const std::vector<std::string>& names) {
+  callbacks.onParametersSubscribe = [&](const std::vector<std::string_view>& names) {
     std::scoped_lock lock{mutex};
-    server_sub_names = names;
+    server_sub_names.emplace();
+    server_sub_names->reserve(names.size());
+    for (const auto& name : names) {
+      server_sub_names->emplace_back(name);
+    }
     cv.notify_one();
   };
-  callbacks.onParametersUnsubscribe = [&](const std::vector<std::string>& names) {
+  callbacks.onParametersUnsubscribe = [&](const std::vector<std::string_view>& names) {
     std::scoped_lock lock{mutex};
-    server_unsub_names = names;
+    server_unsub_names.emplace();
+    server_unsub_names->reserve(names.size());
+    for (const auto& name : names) {
+      server_unsub_names->emplace_back(name);
+    }
     cv.notify_one();
   };
   auto context = foxglove::Context::create();

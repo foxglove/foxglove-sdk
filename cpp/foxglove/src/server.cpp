@@ -157,22 +157,22 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
     }
     if (callbacks->onParametersSubscribe) {
       c_callbacks.on_parameters_subscribe =
-        [](const void* context, const char* const* c_names, size_t names_len) {
-          std::vector<std::string> names;
+        [](const void* context, const struct foxglove_string* c_names, size_t names_len) {
+          std::vector<std::string_view> names;
           names.reserve(names_len);
           for (auto i = 0; i < names_len; ++i) {
-            names.emplace_back(c_names[i]);
+            names.emplace_back(c_names[i].data, c_names[i].len);
           }
           (static_cast<const WebSocketServerCallbacks*>(context))->onParametersSubscribe(names);
         };
     }
     if (callbacks->onParametersUnsubscribe) {
       c_callbacks.on_parameters_unsubscribe =
-        [](const void* context, const char* const* c_names, size_t names_len) {
-          std::vector<std::string> names;
+        [](const void* context, const struct foxglove_string* c_names, size_t names_len) {
+          std::vector<std::string_view> names;
           names.reserve(names_len);
           for (auto i = 0; i < names_len; ++i) {
-            names.emplace_back(c_names[i]);
+            names.emplace_back(c_names[i].data, c_names[i].len);
           }
           (static_cast<const WebSocketServerCallbacks*>(context))->onParametersUnsubscribe(names);
         };

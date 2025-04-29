@@ -369,11 +369,29 @@ typedef struct foxglove_server_callbacks {
                                                         uint32_t client_id,
                                                         const struct foxglove_string *request_id,
                                                         const struct foxglove_parameter_array *params);
+  /**
+   * Callback invoked when a client subscribes to the named parameters for the first time.
+   *
+   * Requires `FOXGLOVE_CAPABILITY_PARAMETERS`.
+   *
+   * The `params` argument is guaranteed to be non-NULL. This argument points to buffers that
+   * are valid and immutable for the duration of the call. If the callback wishes to store these
+   * values, they must be copied out.
+   */
   void (*on_parameters_subscribe)(const void *context,
-                                  const char *const *param_names,
+                                  const struct foxglove_string *param_names,
                                   size_t param_names_len);
+  /**
+   * Callback invoked when the last client unsubscribes from the named parameters.
+   *
+   * Requires `FOXGLOVE_CAPABILITY_PARAMETERS`.
+   *
+   * The `params` argument is guaranteed to be non-NULL. This argument points to buffers that
+   * are valid and immutable for the duration of the call. If the callback wishes to store these
+   * values, they must be copied out.
+   */
   void (*on_parameters_unsubscribe)(const void *context,
-                                    const char *const *param_names,
+                                    const struct foxglove_string *param_names,
                                     size_t param_names_len);
   void (*on_connection_graph_subscribe)(const void *context);
   void (*on_connection_graph_unsubscribe)(const void *context);

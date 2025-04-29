@@ -104,13 +104,13 @@ int main(int argc, const char* argv[]) {
     }
     return result;
   };
-  options.callbacks.onParametersSubscribe = [](const std::vector<std::string>& names) {
+  options.callbacks.onParametersSubscribe = [](const std::vector<std::string_view>& names) {
     std::cerr << "onParametersSubscribe called for parameters:\n";
     for (const auto& name : names) {
       std::cerr << " - " << name << "\n";
     }
   };
-  options.callbacks.onParametersUnsubscribe = [](const std::vector<std::string>& names) {
+  options.callbacks.onParametersUnsubscribe = [](const std::vector<std::string_view>& names) {
     std::cerr << "onParametersUnsubscribe called for parameters:\n";
     for (const auto& name : names) {
       std::cerr << " - " << name << "\n";

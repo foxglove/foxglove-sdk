@@ -130,8 +130,8 @@ struct WebSocketServerCallbacks {
   )>
     onSetParameters;
 
-  std::function<void(const std::vector<std::string>& param_names)> onParametersSubscribe;
-  std::function<void(const std::vector<std::string>& param_names)> onParametersUnsubscribe;
+  std::function<void(const std::vector<std::string_view>& param_names)> onParametersSubscribe;
+  std::function<void(const std::vector<std::string_view>& param_names)> onParametersUnsubscribe;
 
   /// @brief Callback invoked when a client requests connection graph updates.
   ///

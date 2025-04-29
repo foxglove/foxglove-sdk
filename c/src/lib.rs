@@ -280,17 +280,31 @@ pub struct FoxgloveServerCallbacks {
             params: *const FoxgloveParameterArray,
         ) -> *mut FoxgloveParameterArray,
     >,
+    /// Callback invoked when a client subscribes to the named parameters for the first time.
+    ///
+    /// Requires `FOXGLOVE_CAPABILITY_PARAMETERS`.
+    ///
+    /// The `params` argument is guaranteed to be non-NULL. This argument points to buffers that
+    /// are valid and immutable for the duration of the call. If the callback wishes to store these
+    /// values, they must be copied out.
     pub on_parameters_subscribe: Option<
         unsafe extern "C" fn(
             context: *const c_void,
-            param_names: *const *const c_char,
+            param_names: *const FoxgloveString,
             param_names_len: usize,
         ),
     >,
+    /// Callback invoked when the last client unsubscribes from the named parameters.
+    ///
+    /// Requires `FOXGLOVE_CAPABILITY_PARAMETERS`.
+    ///
+    /// The `params` argument is guaranteed to be non-NULL. This argument points to buffers that
+    /// are valid and immutable for the duration of the call. If the callback wishes to store these
+    /// values, they must be copied out.
     pub on_parameters_unsubscribe: Option<
         unsafe extern "C" fn(
             context: *const c_void,
-            param_names: *const *const c_char,
+            param_names: *const FoxgloveString,
             param_names_len: usize,
         ),
     >,
@@ -976,17 +990,9 @@ impl foxglove::websocket::ServerListener for FoxgloveServerCallbacks {
         let Some(on_parameters_subscribe) = self.on_parameters_subscribe else {
             return;
         };
-        let param_names: Vec<_> = param_names
-            .into_iter()
-            .map(|n| CString::new(n).unwrap())
-            .collect();
-        let param_names_ptrs: Vec<_> = param_names.iter().map(|n| n.as_ptr()).collect();
+        let c_param_names: Vec<_> = param_names.iter().map(FoxgloveString::from).collect();
         unsafe {
-            on_parameters_subscribe(
-                self.context,
-                param_names_ptrs.as_ptr(),
-                param_names_ptrs.len(),
-            )
+            on_parameters_subscribe(self.context, c_param_names.as_ptr(), c_param_names.len())
         };
     }
 
@@ -994,17 +1000,9 @@ impl foxglove::websocket::ServerListener for FoxgloveServerCallbacks {
         let Some(on_parameters_unsubscribe) = self.on_parameters_unsubscribe else {
             return;
         };
-        let param_names: Vec<_> = param_names
-            .into_iter()
-            .map(|n| CString::new(n).unwrap())
-            .collect();
-        let param_names_ptrs: Vec<_> = param_names.iter().map(|n| n.as_ptr()).collect();
+        let c_param_names: Vec<_> = param_names.iter().map(FoxgloveString::from).collect();
         unsafe {
-            on_parameters_unsubscribe(
-                self.context,
-                param_names_ptrs.as_ptr(),
-                param_names_ptrs.len(),
-            )
+            on_parameters_unsubscribe(self.context, c_param_names.as_ptr(), c_param_names.len())
         };
     }
 
