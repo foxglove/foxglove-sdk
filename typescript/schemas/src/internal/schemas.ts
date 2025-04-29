@@ -5,7 +5,7 @@ const Duration: FoxgloveMessageSchema = {
   name: "Duration",
   description: "A duration of time, composed of seconds and nanoseconds",
   rosEquivalent: "std_msgs/Duration",
-  protoEquivalent: "Duration",
+  protoEquivalent: "google.protobuf.Duration",
   fields: [
     {
       name: "sec",
@@ -25,7 +25,7 @@ const Time: FoxgloveMessageSchema = {
   name: "Time",
   description: "A timestamp composed of seconds and nanoseconds",
   rosEquivalent: "std_msgs/Time",
-  protoEquivalent: "Timestamp",
+  protoEquivalent: "google.protobuf.Timestamp",
   fields: [
     {
       name: "sec",
