@@ -15,8 +15,6 @@ struct foxglove_connection_graph;
 
 namespace foxglove {
 
-struct Context;
-
 struct ClientChannel {
   uint32_t id;
   std::string_view topic;

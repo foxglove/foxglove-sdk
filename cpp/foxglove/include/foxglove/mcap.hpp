@@ -11,8 +11,6 @@ struct foxglove_context;
 
 namespace foxglove {
 
-struct Context;
-
 enum class McapCompression : uint8_t {
   None,
   Zstd,
