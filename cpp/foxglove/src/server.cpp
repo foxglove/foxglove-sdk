@@ -56,8 +56,10 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
     if (callbacks->onMessageData) {
       c_callbacks.on_message_data = [](
                                       // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
-                                      uint32_t client_id, uint32_t client_channel_id,
-                                      const uint8_t* payload, size_t payload_len,
+                                      uint32_t client_id,
+                                      uint32_t client_channel_id,
+                                      const uint8_t* payload,
+                                      size_t payload_len,
                                       const void* context
                                     ) {
         (static_cast<const WebSocketServerCallbacks*>(context))

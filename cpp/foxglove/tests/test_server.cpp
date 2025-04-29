@@ -159,7 +159,8 @@ TEST_CASE("Subscribe and unsubscribe callbacks") {
       std::to_string(channel.id()) + R"( }
       ]
     })",
-    websocketpp::frame::opcode::text, ec
+    websocketpp::frame::opcode::text,
+    ec
   );
   UNSCOPED_INFO(ec.message());
   REQUIRE(!ec);
@@ -174,7 +175,8 @@ TEST_CASE("Subscribe and unsubscribe callbacks") {
       "op": "unsubscribe",
       "subscriptionIds": [100]
     })",
-    websocketpp::frame::opcode::text, ec
+    websocketpp::frame::opcode::text,
+    ec
   );
   cv.wait_for(lock, std::chrono::seconds(1), [&] {
     return !unsubscribe_calls.empty();
@@ -301,7 +303,8 @@ TEST_CASE("Client advertise/publish callbacks") {
         }
       ]
     })",
-    websocketpp::frame::opcode::text, ec
+    websocketpp::frame::opcode::text,
+    ec
   );
   UNSCOPED_INFO(ec.message());
   REQUIRE(!ec);
@@ -324,7 +327,8 @@ TEST_CASE("Client advertise/publish callbacks") {
       "op": "unadvertise",
       "channelIds": [100]
     })",
-    websocketpp::frame::opcode::text, ec
+    websocketpp::frame::opcode::text,
+    ec
   );
   cv.wait(lock, [&] {
     return !advertised;

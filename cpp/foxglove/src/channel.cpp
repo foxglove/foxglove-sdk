@@ -18,8 +18,11 @@ FoxgloveResult<Channel> Channel::create(
   }
   const foxglove_channel* channel = nullptr;
   foxglove_error error = foxglove_channel_create(
-    {topic.data(), topic.length()}, {message_encoding.data(), message_encoding.length()},
-    schema ? &c_schema : nullptr, context.get_inner(), &channel
+    {topic.data(), topic.length()},
+    {message_encoding.data(), message_encoding.length()},
+    schema ? &c_schema : nullptr,
+    context.get_inner(),
+    &channel
   );
   if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
     return foxglove::unexpected(FoxgloveError(error));
