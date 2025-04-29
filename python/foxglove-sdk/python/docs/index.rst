@@ -5,19 +5,13 @@
 Foxglove SDK documentation
 ==========================
 
+Version: |release|
+
 The official `Foxglove <https://docs.foxglove.dev/docs>`_ SDK for Python.
 
 This package provides support for integrating with the Foxglove platform. It can be used to log
 events to local `MCAP <https://mcap.dev/>`_ files or a local visualization server that communicates
 with the Foxglove app.
-
-
-Unstable
---------
-
-This package is currently under active development and not recommended for production use. See
-`foxglove-websocket <https://github.com/foxglove/ws-protocol/tree/main/python>`_ for the currently
-recommended approach.
 
 
 Overview

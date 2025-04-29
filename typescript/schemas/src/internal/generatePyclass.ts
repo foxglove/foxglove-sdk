@@ -173,7 +173,7 @@ function generateMessageClass(schema: FoxgloveMessageSchema): string {
   function fieldValue(field: FoxgloveMessageField): string {
     if (field.type.type === "primitive" && field.type.name === "bytes") {
       // Special case — this is an `Option<Bound<'_, PyBytes>>`; see `rustOutputType`
-      return `data.map(|x| Bytes::copy_from_slice(x.as_bytes())).unwrap_or_default()`;
+      return `${field.name}.map(|x| Bytes::copy_from_slice(x.as_bytes())).unwrap_or_default()`;
     }
     switch (field.type.type) {
       case "primitive":
@@ -540,9 +540,8 @@ export function generateChannelClasses(messageSchemas: FoxgloveMessageSchema[]):
   ].join("\n");
 
   const imports = [
-    `use foxglove::{TypedChannel, PartialMetadata};`,
+    `use foxglove::{Channel, PartialMetadata};`,
     `use pyo3::prelude::*;`,
-    `use crate::errors::PyFoxgloveError;`,
     `use super::schemas;`,
   ].join("\n");
 
@@ -554,27 +553,42 @@ export function generateChannelClasses(messageSchemas: FoxgloveMessageSchema[]):
     return `
 /// A channel for logging :py:class:\`foxglove.schemas.${schemaClass}\` messages.
 #[pyclass(module = "foxglove.channels")]
-struct ${channelClass}(Option<TypedChannel<foxglove::schemas::${schemaClass}>>);
+struct ${channelClass}(Channel<foxglove::schemas::${schemaClass}>);
 
 #[pymethods]
 impl ${channelClass} {
     /// Create a new channel.
     ///
-    /// :param topic: The topic to log messages to.
+    /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
     #[new]
-    fn new(topic: &str) -> PyResult<Self> {
-        let base = TypedChannel::new(topic).map_err(PyFoxgloveError::from)?;
-        Ok(Self(Some(base)))
+    fn new(topic: &str) -> Self {
+        let base = Channel::new(topic);
+        Self(base)
+    }
+
+    /// The unique ID of the channel.
+    fn id(&self) -> u64 {
+        self.0.id().into()
+    }
+
+    /// The topic name of the channel.
+    fn topic(&self) -> &str {
+        self.0.topic()
+    }
+
+    /// The name of the schema for the channel.
+    fn schema_name(&self) -> Option<&str> {
+        Some(self.0.schema()?.name.as_str())
     }
 
     /// Close the channel.
     ///
-    /// You do not need to call this unless you explicitly want to remove advertisements from live
-    /// visualization clients. Destroying all references to the channel will also close it.
+    /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
+    /// channels dynamically, such as the :py:class:\`foxglove.websocket.WebSocketServer\`.
     ///
-    /// It is an error to call :py:meth:\`log\` after closing the channel.
+    /// Attempts to log on a closed channel will elicit a throttled warning message.
     fn close(&mut self) {
-        self.0 = None;
+        self.0.close();
     }
 
     /// Log a :py:class:\`foxglove.schemas.${schemaClass}\` message to the channel.
@@ -583,33 +597,18 @@ impl ${channelClass} {
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
     ///     message was recorded. Usually this is the time log() is called. If omitted, the
     ///     current time is used.
-    /// :param publish_time: The publish_time is the time at which the message was published. e.g.
-    ///     the timestamp at which the sensor reading was taken. If omitted, log time is used.
-    /// :param sequence: The sequence number is unique per channel and allows for ordering of
-    ///     messages as well as detecting missing messages. If omitted, a monotonically increasing
-    ///     sequence number unique to the channel is used.
-    #[pyo3(signature = (msg, *, log_time=None, publish_time=None, sequence=None))]
+    #[pyo3(signature = (msg, *, log_time=None))]
     fn log(
         &self,
         msg: &schemas::${schemaClass},
         log_time: Option<u64>,
-        publish_time: Option<u64>,
-        sequence: Option<u32>,
     ) {
-        let metadata = PartialMetadata{ log_time, publish_time, sequence };
-        if let Some(channel) = &self.0 {
-          channel.log_with_meta(&msg.0, metadata);
-        } else {
-          tracing::debug!(target: "foxglove.channels", "Cannot log() on a closed ${channelClass}");
-        }
+        let metadata = PartialMetadata{ log_time };
+        self.0.log_with_meta(&msg.0, metadata);
     }
 
     fn __repr__(&self) -> String {
-        if let Some(channel) = &self.0 {
-            format!("${channelClass}(topic='{}')", channel.topic()).to_string()
-        } else {
-            "${channelClass} (closed)".to_string()
-        }
+        format!("${channelClass}(id={}, topic='{}')", self.id(), self.topic()).to_string()
     }
 }
 `;
@@ -632,7 +631,13 @@ export function generatePyChannelStub(messageSchemas: FoxgloveMessageSchema[]): 
   const classes = schemas.map((schema) => {
     const schemaClass = structName(schema.name);
     const channelClass = `${schemaClass}Channel`;
-    const doc = ['    """', `    A channel for logging ${schemaClass} messages`, '    """'];
+    const doc = [
+      `    """`,
+      `    A channel for logging ${schemaClass} messages`,
+      ``,
+      `    You should choose a unique topic name per channel.`,
+      `    """`
+    ];
 
     return {
       name: channelClass,
@@ -643,15 +648,26 @@ export function generatePyChannelStub(messageSchemas: FoxgloveMessageSchema[]): 
         `        cls,`,
         `        topic: str,`,
         `    ) -> "${channelClass}": ...\n`,
-        `    def close(self) -> None: ...`,
+        `    def id(self) -> int:`,
+        `        """The unique ID of the channel."""`,
+        `        ...`,
+        `    def topic(self) -> str:`,
+        `        """The topic name of the channel."""`,
+        `        ...`,
+        `    def schema_name(self) -> str | None:`,
+        `        """The name of the schema for the channel."""`,
+        `        ...`,
+        `    def close(self) -> None:`,
+        `        """Close the channel."""`,
+        `        ...`,
         `    def log(`,
         `        self,`,
         `        message: "${schemaClass}",`,
         `        *,`,
         `        log_time: int | None = None,`,
-        `        publish_time: int | None = None,`,
-        `        sequence: int | None = None,`,
-        `    ) -> None: ...\n`,
+        `    ) -> None:`,
+        `        """Log a Foxglove ${schemaClass} message on the channel."""`,
+        `        ...`,
       ].join("\n"),
     };
   });

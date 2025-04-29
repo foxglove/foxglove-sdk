@@ -6,10 +6,14 @@ use std::{
 };
 
 use anyhow::Context;
+use itertools::Itertools;
 use prost::Message;
 use prost_types::{FileDescriptorProto, FileDescriptorSet};
+use regex::Regex;
 use tempfile::NamedTempFile;
 use walkdir::WalkDir;
+
+const DOC_REF: &str = "<https://docs.foxglove.dev/docs/visualization/message-schemas/introduction>";
 
 /// Recursively builds a file descriptor set for a file descriptor and its dependencies.
 fn build_fds(
@@ -66,6 +70,12 @@ fn camel_case_to_constant_case(camel: &str) -> String {
         first = false;
     }
     output
+}
+
+/// Helper function to convert `CamelCase` to `kebab-case`.
+fn camel_case_to_kebab_case(camel: &str) -> String {
+    let const_case = camel_case_to_constant_case(camel);
+    const_case.replace('_', "-").to_lowercase()
 }
 
 /// Generates base64-encoded file descriptor sets for each foxglove message.
@@ -143,7 +153,7 @@ fn generate_impls(out_dir: &Path, fds: &FileDescriptorSet) -> anyhow::Result<()>
             continue;
         };
         let schema_name = name;
-        // Special case for GeoJSON casing
+        // Use rust casing for the struct name, but preserve the original casing for the schema.
         if name == "GeoJSON" {
             name = "GeoJson";
         }
@@ -200,6 +210,7 @@ pub fn generate_protos(proto_path: &Path, out_dir: &Path) -> anyhow::Result<()> 
     }
 
     let mut config = prost_build::Config::new();
+    config.message_attribute(".", format!("/// {}", DOC_REF));
     config.extern_path(".google.protobuf.Duration", "crate::schemas::Duration");
     config.extern_path(".google.protobuf.Timestamp", "crate::schemas::Timestamp");
     config.out_dir(out_dir);
@@ -229,11 +240,31 @@ fn fix_generated_comments(out_dir: &Path) -> anyhow::Result<()> {
 
     let mut tmpfile = NamedTempFile::new_in(out_dir).context("Failed to create tempfile")?;
     let input = File::open(schema_path.clone()).context("Failed to open schema file")?;
-    let input = io::BufReader::new(input).lines();
-    let mut in_code_block = false;
+    let mut input = io::BufReader::new(input).lines().multipeek();
 
-    for line in input {
+    let mut in_code_block = false;
+    let struct_pattern = Regex::new(r"pub struct (?<struct>\w+)").unwrap();
+
+    while let Some(line) = input.next() {
         let mut line = line.context("Failed to read line")?;
+
+        // Replace the intro doc URL with one to specific schema docs.
+        if line.contains(DOC_REF) {
+            while let Some(Ok(next_line)) = input.peek() {
+                if let Some(captures) = struct_pattern.captures(next_line) {
+                    let struct_name = captures.name("struct").context("Unexpected match")?;
+                    let doc_slug = camel_case_to_kebab_case(struct_name.as_str());
+                    line = line.replace(
+                        "message-schemas/introduction",
+                        &format!("message-schemas/{doc_slug}"),
+                    );
+                    break;
+                } else if next_line.contains(DOC_REF) {
+                    break;
+                }
+            }
+        }
+
         if line.trim_start().eq("/// ```") {
             if !in_code_block {
                 line = format!("{line}text");

@@ -1,6 +1,6 @@
 [package]
 name = "foxglove_c"
-version = "0.4.1"
+version = "0.7.0"
 edition = "2021"
 publish = false
 
@@ -15,6 +15,7 @@ workspace = true
 bitflags = "2.9.0"
 foxglove = { path = "../rust/foxglove", features = ["unstable"] }
 mcap.workspace = true
+tracing.workspace = true
 
 [build-dependencies]
 cbindgen = "0.28.0"

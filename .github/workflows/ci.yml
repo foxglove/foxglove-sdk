@@ -21,14 +21,21 @@ jobs:
           version: "29.x"
 
       - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          # The last-specified toolchain is the default.
+          toolchain: 1.83.0,nightly,stable
 
       - name: Ensure generated protobuf schemas are up to date
         run: cargo run --bin foxglove-proto-gen && git diff --exit-code
 
       - run: cargo fmt --all --check
       - run: cargo build --verbose
+      # Validate that we can build without live visualization
+      - run: cargo build -p foxglove --verbose --no-default-features
+      # Validate that we can build against the MSRV (minimum specified rust version).
+      - run: cargo +1.83.0 build -p foxglove --verbose
       - run: cargo clippy --no-deps --all-targets --tests -- -D warnings
-      - run: cargo rustdoc -p foxglove -- -D warnings
+      - run: cargo +nightly rustdoc -p foxglove --all-features -- -D warnings --cfg docsrs
       - run: cargo test --features unstable --verbose
         timeout-minutes: 10
       - run: cargo publish --package foxglove --dry-run
@@ -39,6 +46,11 @@ jobs:
 
   typescript:
     runs-on: ubuntu-latest
+
+    permissions:
+      # https://docs.npmjs.com/generating-provenance-statements#publishing-packages-with-provenance-via-github-actions
+      id-token: write
+
     steps:
       - uses: actions/checkout@v4
 
@@ -109,9 +121,11 @@ jobs:
       - name: Validate protobuf definitions
         run: protoc --proto_path=schemas/proto schemas/proto/**/*.proto --descriptor_set_out=/dev/null
 
-      - name: Publish to NPM
-        if: startsWith(github.ref, 'refs/tags/typescript/v')
-        run: yarn npm publish --access public
+      - run: yarn workspace @foxglove/schemas pack
+      - name: Publish @foxglove/schemas to NPM
+        if: startsWith(github.ref, 'refs/tags/typescript/schemas/v')
+        # `yarn npm publish` does not currently support --provenance: https://github.com/yarnpkg/berry/issues/5430
+        run: npm publish typescript/schemas/package.tgz --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
 

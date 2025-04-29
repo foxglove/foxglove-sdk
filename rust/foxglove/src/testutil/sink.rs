@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
-use crate::channel::ChannelId;
-use crate::{Channel, FoxgloveError, Metadata, Sink, SinkId};
+use crate::{ChannelId, FoxgloveError, Metadata, RawChannel, Sink, SinkId};
 use parking_lot::Mutex;
 
 pub struct MockSink(SinkId);
@@ -18,7 +17,7 @@ impl Sink for MockSink {
 
     fn log(
         &self,
-        _channel: &Channel,
+        _channel: &RawChannel,
         _msg: &[u8],
         _metadata: &Metadata,
     ) -> Result<(), FoxgloveError> {
@@ -32,11 +31,13 @@ pub struct LogCall {
     pub metadata: Metadata,
 }
 
+type AddChannelFn = Box<dyn Fn(&[&Arc<RawChannel>]) -> Option<Vec<ChannelId>> + Send + Sync>;
+
 pub struct RecordingSink {
     id: SinkId,
     auto_subscribe: bool,
-    add_channel_rval: bool,
-    pub recorded: Mutex<Vec<LogCall>>,
+    add_channels_func: Option<AddChannelFn>,
+    recorded: Mutex<Vec<LogCall>>,
 }
 
 impl RecordingSink {
@@ -44,19 +45,26 @@ impl RecordingSink {
         Self {
             id: SinkId::next(),
             auto_subscribe: true,
-            add_channel_rval: false,
+            add_channels_func: None,
             recorded: Mutex::new(Vec::new()),
         }
     }
 
-    pub fn add_channel_rval(mut self, value: bool) -> Self {
-        self.add_channel_rval = value;
+    pub fn add_channels<F>(mut self, func: F) -> Self
+    where
+        F: Fn(&[&Arc<RawChannel>]) -> Option<Vec<ChannelId>> + Send + Sync + 'static,
+    {
+        self.add_channels_func = Some(Box::new(func));
         self
     }
 
     pub fn auto_subscribe(mut self, value: bool) -> Self {
         self.auto_subscribe = value;
         self
+    }
+
+    pub fn take_messages(&self) -> Vec<LogCall> {
+        std::mem::take(&mut *self.recorded.lock())
     }
 }
 
@@ -69,11 +77,20 @@ impl Sink for RecordingSink {
         self.auto_subscribe
     }
 
-    fn add_channel(&self, _channel: &Arc<Channel>) -> bool {
-        self.add_channel_rval
+    fn add_channels(&self, channels: &[&Arc<RawChannel>]) -> Option<Vec<ChannelId>> {
+        if let Some(func) = self.add_channels_func.as_ref() {
+            func(channels)
+        } else {
+            None
+        }
     }
 
-    fn log(&self, channel: &Channel, msg: &[u8], metadata: &Metadata) -> Result<(), FoxgloveError> {
+    fn log(
+        &self,
+        channel: &RawChannel,
+        msg: &[u8],
+        metadata: &Metadata,
+    ) -> Result<(), FoxgloveError> {
         let mut recorded = self.recorded.lock();
         recorded.push(LogCall {
             channel_id: channel.id(),
@@ -107,7 +124,7 @@ impl Sink for ErrorSink {
 
     fn log(
         &self,
-        _channel: &Channel,
+        _channel: &RawChannel,
         _msg: &[u8],
         _metadata: &Metadata,
     ) -> Result<(), FoxgloveError> {

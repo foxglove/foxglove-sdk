@@ -1,13 +1,21 @@
 #pragma once
 
+#include <foxglove/error.hpp>
+#include <foxglove/server/connection_graph.hpp>
+
 #include <cstdint>
 #include <functional>
 #include <memory>
+#include <optional>
 #include <string>
 
+enum foxglove_error : uint8_t;
 struct foxglove_websocket_server;
+struct foxglove_connection_graph;
 
 namespace foxglove {
+
+struct Context;
 
 struct ClientChannel {
   uint32_t id;
@@ -56,12 +64,17 @@ struct WebSocketServerCallbacks {
     void(uint32_t clientId, uint32_t clientChannelId, const std::byte* data, size_t dataLen)>
     onMessageData;
   std::function<void(uint32_t clientId, uint32_t clientChannelId)> onClientUnadvertise;
+  std::function<void()> onConnectionGraphSubscribe;
+  std::function<void()> onConnectionGraphUnsubscribe;
 };
 
 struct WebSocketServerOptions {
+  friend class WebSocketServer;
+
+  Context context;
   std::string name;
-  std::string host;
-  uint16_t port;
+  std::string host = "127.0.0.1";
+  uint16_t port = 8765;  // default foxglove WebSocket port
   WebSocketServerCallbacks callbacks;
   WebSocketServerCapabilities capabilities = WebSocketServerCapabilities(0);
   std::vector<std::string> supportedEncodings;
@@ -69,16 +82,22 @@ struct WebSocketServerOptions {
 
 class WebSocketServer final {
 public:
-  explicit WebSocketServer(const WebSocketServerOptions& options);
+  static FoxgloveResult<WebSocketServer> create(WebSocketServerOptions&& options);
 
   // Get the port on which the server is listening.
   uint16_t port() const;
 
-  void stop();
+  FoxgloveError stop();
+
+  void publishConnectionGraph(ConnectionGraph& graph);
 
 private:
-  WebSocketServerCallbacks _callbacks;
-  std::unique_ptr<foxglove_websocket_server, void (*)(foxglove_websocket_server*)> _impl;
+  WebSocketServer(
+    foxglove_websocket_server* server, std::unique_ptr<WebSocketServerCallbacks> callbacks
+  );
+
+  std::unique_ptr<WebSocketServerCallbacks> _callbacks;
+  std::unique_ptr<foxglove_websocket_server, foxglove_error (*)(foxglove_websocket_server*)> _impl;
 };
 
 }  // namespace foxglove

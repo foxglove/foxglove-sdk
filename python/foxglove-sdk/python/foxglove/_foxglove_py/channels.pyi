@@ -23,6 +23,7 @@ from .schemas import (
     PoseInFrame,
     PosesInFrame,
     Quaternion,
+    RawAudio,
     RawImage,
     SceneEntity,
     SceneEntityDeletion,
@@ -35,569 +36,1115 @@ from .schemas import (
 class CameraCalibrationChannel:
     """
     A channel for logging CameraCalibration messages
+
+    You should choose a unique topic name per channel.
     """
 
     def __new__(
         cls,
         topic: str,
     ) -> "CameraCalibrationChannel": ...
-    def close(self) -> None: ...
+    def id(self) -> int:
+        """The unique ID of the channel."""
+        ...
+
+    def topic(self) -> str:
+        """The topic name of the channel."""
+        ...
+
+    def schema_name(self) -> str | None:
+        """The name of the schema for the channel."""
+        ...
+
+    def close(self) -> None:
+        """Close the channel."""
+        ...
+
     def log(
         self,
         message: "CameraCalibration",
         *,
         log_time: int | None = None,
-        publish_time: int | None = None,
-        sequence: int | None = None,
-    ) -> None: ...
+    ) -> None:
+        """Log a Foxglove CameraCalibration message on the channel."""
+        ...
 
 class CircleAnnotationChannel:
     """
     A channel for logging CircleAnnotation messages
+
+    You should choose a unique topic name per channel.
     """
 
     def __new__(
         cls,
         topic: str,
     ) -> "CircleAnnotationChannel": ...
-    def close(self) -> None: ...
+    def id(self) -> int:
+        """The unique ID of the channel."""
+        ...
+
+    def topic(self) -> str:
+        """The topic name of the channel."""
+        ...
+
+    def schema_name(self) -> str | None:
+        """The name of the schema for the channel."""
+        ...
+
+    def close(self) -> None:
+        """Close the channel."""
+        ...
+
     def log(
         self,
         message: "CircleAnnotation",
         *,
         log_time: int | None = None,
-        publish_time: int | None = None,
-        sequence: int | None = None,
-    ) -> None: ...
+    ) -> None:
+        """Log a Foxglove CircleAnnotation message on the channel."""
+        ...
 
 class ColorChannel:
     """
     A channel for logging Color messages
+
+    You should choose a unique topic name per channel.
     """
 
     def __new__(
         cls,
         topic: str,
     ) -> "ColorChannel": ...
-    def close(self) -> None: ...
+    def id(self) -> int:
+        """The unique ID of the channel."""
+        ...
+
+    def topic(self) -> str:
+        """The topic name of the channel."""
+        ...
+
+    def schema_name(self) -> str | None:
+        """The name of the schema for the channel."""
+        ...
+
+    def close(self) -> None:
+        """Close the channel."""
+        ...
+
     def log(
         self,
         message: "Color",
         *,
         log_time: int | None = None,
-        publish_time: int | None = None,
-        sequence: int | None = None,
-    ) -> None: ...
+    ) -> None:
+        """Log a Foxglove Color message on the channel."""
+        ...
 
 class CompressedImageChannel:
     """
     A channel for logging CompressedImage messages
+
+    You should choose a unique topic name per channel.
     """
 
     def __new__(
         cls,
         topic: str,
     ) -> "CompressedImageChannel": ...
-    def close(self) -> None: ...
+    def id(self) -> int:
+        """The unique ID of the channel."""
+        ...
+
+    def topic(self) -> str:
+        """The topic name of the channel."""
+        ...
+
+    def schema_name(self) -> str | None:
+        """The name of the schema for the channel."""
+        ...
+
+    def close(self) -> None:
+        """Close the channel."""
+        ...
+
     def log(
         self,
         message: "CompressedImage",
         *,
         log_time: int | None = None,
-        publish_time: int | None = None,
-        sequence: int | None = None,
-    ) -> None: ...
+    ) -> None:
+        """Log a Foxglove CompressedImage message on the channel."""
+        ...
 
 class CompressedVideoChannel:
     """
     A channel for logging CompressedVideo messages
+
+    You should choose a unique topic name per channel.
     """
 
     def __new__(
         cls,
         topic: str,
     ) -> "CompressedVideoChannel": ...
-    def close(self) -> None: ...
+    def id(self) -> int:
+        """The unique ID of the channel."""
+        ...
+
+    def topic(self) -> str:
+        """The topic name of the channel."""
+        ...
+
+    def schema_name(self) -> str | None:
+        """The name of the schema for the channel."""
+        ...
+
+    def close(self) -> None:
+        """Close the channel."""
+        ...
+
     def log(
         self,
         message: "CompressedVideo",
         *,
         log_time: int | None = None,
-        publish_time: int | None = None,
-        sequence: int | None = None,
-    ) -> None: ...
+    ) -> None:
+        """Log a Foxglove CompressedVideo message on the channel."""
+        ...
 
 class FrameTransformChannel:
     """
     A channel for logging FrameTransform messages
+
+    You should choose a unique topic name per channel.
     """
 
     def __new__(
         cls,
         topic: str,
     ) -> "FrameTransformChannel": ...
-    def close(self) -> None: ...
+    def id(self) -> int:
+        """The unique ID of the channel."""
+        ...
+
+    def topic(self) -> str:
+        """The topic name of the channel."""
+        ...
+
+    def schema_name(self) -> str | None:
+        """The name of the schema for the channel."""
+        ...
+
+    def close(self) -> None:
+        """Close the channel."""
+        ...
+
     def log(
         self,
         message: "FrameTransform",
         *,
         log_time: int | None = None,
-        publish_time: int | None = None,
-        sequence: int | None = None,
-    ) -> None: ...
+    ) -> None:
+        """Log a Foxglove FrameTransform message on the channel."""
+        ...
 
 class FrameTransformsChannel:
     """
     A channel for logging FrameTransforms messages
+
+    You should choose a unique topic name per channel.
     """
 
     def __new__(
         cls,
         topic: str,
     ) -> "FrameTransformsChannel": ...
-    def close(self) -> None: ...
+    def id(self) -> int:
+        """The unique ID of the channel."""
+        ...
+
+    def topic(self) -> str:
+        """The topic name of the channel."""
+        ...
+
+    def schema_name(self) -> str | None:
+        """The name of the schema for the channel."""
+        ...
+
+    def close(self) -> None:
+        """Close the channel."""
+        ...
+
     def log(
         self,
         message: "FrameTransforms",
         *,
         log_time: int | None = None,
-        publish_time: int | None = None,
-        sequence: int | None = None,
-    ) -> None: ...
+    ) -> None:
+        """Log a Foxglove FrameTransforms message on the channel."""
+        ...
 
 class GeoJsonChannel:
     """
     A channel for logging GeoJson messages
+
+    You should choose a unique topic name per channel.
     """
 
     def __new__(
         cls,
         topic: str,
     ) -> "GeoJsonChannel": ...
-    def close(self) -> None: ...
+    def id(self) -> int:
+        """The unique ID of the channel."""
+        ...
+
+    def topic(self) -> str:
+        """The topic name of the channel."""
+        ...
+
+    def schema_name(self) -> str | None:
+        """The name of the schema for the channel."""
+        ...
+
+    def close(self) -> None:
+        """Close the channel."""
+        ...
+
     def log(
         self,
         message: "GeoJson",
         *,
         log_time: int | None = None,
-        publish_time: int | None = None,
-        sequence: int | None = None,
-    ) -> None: ...
+    ) -> None:
+        """Log a Foxglove GeoJson message on the channel."""
+        ...
 
 class GridChannel:
     """
     A channel for logging Grid messages
+
+    You should choose a unique topic name per channel.
     """
 
     def __new__(
         cls,
         topic: str,
     ) -> "GridChannel": ...
-    def close(self) -> None: ...
+    def id(self) -> int:
+        """The unique ID of the channel."""
+        ...
+
+    def topic(self) -> str:
+        """The topic name of the channel."""
+        ...
+
+    def schema_name(self) -> str | None:
+        """The name of the schema for the channel."""
+        ...
+
+    def close(self) -> None:
+        """Close the channel."""
+        ...
+
     def log(
         self,
         message: "Grid",
         *,
         log_time: int | None = None,
-        publish_time: int | None = None,
-        sequence: int | None = None,
-    ) -> None: ...
+    ) -> None:
+        """Log a Foxglove Grid message on the channel."""
+        ...
 
 class ImageAnnotationsChannel:
     """
     A channel for logging ImageAnnotations messages
+
+    You should choose a unique topic name per channel.
     """
 
     def __new__(
         cls,
         topic: str,
     ) -> "ImageAnnotationsChannel": ...
-    def close(self) -> None: ...
+    def id(self) -> int:
+        """The unique ID of the channel."""
+        ...
+
+    def topic(self) -> str:
+        """The topic name of the channel."""
+        ...
+
+    def schema_name(self) -> str | None:
+        """The name of the schema for the channel."""
+        ...
+
+    def close(self) -> None:
+        """Close the channel."""
+        ...
+
     def log(
         self,
         message: "ImageAnnotations",
         *,
         log_time: int | None = None,
-        publish_time: int | None = None,
-        sequence: int | None = None,
-    ) -> None: ...
+    ) -> None:
+        """Log a Foxglove ImageAnnotations message on the channel."""
+        ...
 
 class KeyValuePairChannel:
     """
     A channel for logging KeyValuePair messages
+
+    You should choose a unique topic name per channel.
     """
 
     def __new__(
         cls,
         topic: str,
     ) -> "KeyValuePairChannel": ...
-    def close(self) -> None: ...
+    def id(self) -> int:
+        """The unique ID of the channel."""
+        ...
+
+    def topic(self) -> str:
+        """The topic name of the channel."""
+        ...
+
+    def schema_name(self) -> str | None:
+        """The name of the schema for the channel."""
+        ...
+
+    def close(self) -> None:
+        """Close the channel."""
+        ...
+
     def log(
         self,
         message: "KeyValuePair",
         *,
         log_time: int | None = None,
-        publish_time: int | None = None,
-        sequence: int | None = None,
-    ) -> None: ...
+    ) -> None:
+        """Log a Foxglove KeyValuePair message on the channel."""
+        ...
 
 class LaserScanChannel:
     """
     A channel for logging LaserScan messages
+
+    You should choose a unique topic name per channel.
     """
 
     def __new__(
         cls,
         topic: str,
     ) -> "LaserScanChannel": ...
-    def close(self) -> None: ...
+    def id(self) -> int:
+        """The unique ID of the channel."""
+        ...
+
+    def topic(self) -> str:
+        """The topic name of the channel."""
+        ...
+
+    def schema_name(self) -> str | None:
+        """The name of the schema for the channel."""
+        ...
+
+    def close(self) -> None:
+        """Close the channel."""
+        ...
+
     def log(
         self,
         message: "LaserScan",
         *,
         log_time: int | None = None,
-        publish_time: int | None = None,
-        sequence: int | None = None,
-    ) -> None: ...
+    ) -> None:
+        """Log a Foxglove LaserScan message on the channel."""
+        ...
 
 class LocationFixChannel:
     """
     A channel for logging LocationFix messages
+
+    You should choose a unique topic name per channel.
     """
 
     def __new__(
         cls,
         topic: str,
     ) -> "LocationFixChannel": ...
-    def close(self) -> None: ...
+    def id(self) -> int:
+        """The unique ID of the channel."""
+        ...
+
+    def topic(self) -> str:
+        """The topic name of the channel."""
+        ...
+
+    def schema_name(self) -> str | None:
+        """The name of the schema for the channel."""
+        ...
+
+    def close(self) -> None:
+        """Close the channel."""
+        ...
+
     def log(
         self,
         message: "LocationFix",
         *,
         log_time: int | None = None,
-        publish_time: int | None = None,
-        sequence: int | None = None,
-    ) -> None: ...
+    ) -> None:
+        """Log a Foxglove LocationFix message on the channel."""
+        ...
 
 class LogChannel:
     """
     A channel for logging Log messages
+
+    You should choose a unique topic name per channel.
     """
 
     def __new__(
         cls,
         topic: str,
     ) -> "LogChannel": ...
-    def close(self) -> None: ...
+    def id(self) -> int:
+        """The unique ID of the channel."""
+        ...
+
+    def topic(self) -> str:
+        """The topic name of the channel."""
+        ...
+
+    def schema_name(self) -> str | None:
+        """The name of the schema for the channel."""
+        ...
+
+    def close(self) -> None:
+        """Close the channel."""
+        ...
+
     def log(
         self,
         message: "Log",
         *,
         log_time: int | None = None,
-        publish_time: int | None = None,
-        sequence: int | None = None,
-    ) -> None: ...
+    ) -> None:
+        """Log a Foxglove Log message on the channel."""
+        ...
 
 class PackedElementFieldChannel:
     """
     A channel for logging PackedElementField messages
+
+    You should choose a unique topic name per channel.
     """
 
     def __new__(
         cls,
         topic: str,
     ) -> "PackedElementFieldChannel": ...
-    def close(self) -> None: ...
+    def id(self) -> int:
+        """The unique ID of the channel."""
+        ...
+
+    def topic(self) -> str:
+        """The topic name of the channel."""
+        ...
+
+    def schema_name(self) -> str | None:
+        """The name of the schema for the channel."""
+        ...
+
+    def close(self) -> None:
+        """Close the channel."""
+        ...
+
     def log(
         self,
         message: "PackedElementField",
         *,
         log_time: int | None = None,
-        publish_time: int | None = None,
-        sequence: int | None = None,
-    ) -> None: ...
+    ) -> None:
+        """Log a Foxglove PackedElementField message on the channel."""
+        ...
 
 class Point2Channel:
     """
     A channel for logging Point2 messages
+
+    You should choose a unique topic name per channel.
     """
 
     def __new__(
         cls,
         topic: str,
     ) -> "Point2Channel": ...
-    def close(self) -> None: ...
+    def id(self) -> int:
+        """The unique ID of the channel."""
+        ...
+
+    def topic(self) -> str:
+        """The topic name of the channel."""
+        ...
+
+    def schema_name(self) -> str | None:
+        """The name of the schema for the channel."""
+        ...
+
+    def close(self) -> None:
+        """Close the channel."""
+        ...
+
     def log(
         self,
         message: "Point2",
         *,
         log_time: int | None = None,
-        publish_time: int | None = None,
-        sequence: int | None = None,
-    ) -> None: ...
+    ) -> None:
+        """Log a Foxglove Point2 message on the channel."""
+        ...
 
 class Point3Channel:
     """
     A channel for logging Point3 messages
+
+    You should choose a unique topic name per channel.
     """
 
     def __new__(
         cls,
         topic: str,
     ) -> "Point3Channel": ...
-    def close(self) -> None: ...
+    def id(self) -> int:
+        """The unique ID of the channel."""
+        ...
+
+    def topic(self) -> str:
+        """The topic name of the channel."""
+        ...
+
+    def schema_name(self) -> str | None:
+        """The name of the schema for the channel."""
+        ...
+
+    def close(self) -> None:
+        """Close the channel."""
+        ...
+
     def log(
         self,
         message: "Point3",
         *,
         log_time: int | None = None,
-        publish_time: int | None = None,
-        sequence: int | None = None,
-    ) -> None: ...
+    ) -> None:
+        """Log a Foxglove Point3 message on the channel."""
+        ...
 
 class PointCloudChannel:
     """
     A channel for logging PointCloud messages
+
+    You should choose a unique topic name per channel.
     """
 
     def __new__(
         cls,
         topic: str,
     ) -> "PointCloudChannel": ...
-    def close(self) -> None: ...
+    def id(self) -> int:
+        """The unique ID of the channel."""
+        ...
+
+    def topic(self) -> str:
+        """The topic name of the channel."""
+        ...
+
+    def schema_name(self) -> str | None:
+        """The name of the schema for the channel."""
+        ...
+
+    def close(self) -> None:
+        """Close the channel."""
+        ...
+
     def log(
         self,
         message: "PointCloud",
         *,
         log_time: int | None = None,
-        publish_time: int | None = None,
-        sequence: int | None = None,
-    ) -> None: ...
+    ) -> None:
+        """Log a Foxglove PointCloud message on the channel."""
+        ...
 
 class PointsAnnotationChannel:
     """
     A channel for logging PointsAnnotation messages
+
+    You should choose a unique topic name per channel.
     """
 
     def __new__(
         cls,
         topic: str,
     ) -> "PointsAnnotationChannel": ...
-    def close(self) -> None: ...
+    def id(self) -> int:
+        """The unique ID of the channel."""
+        ...
+
+    def topic(self) -> str:
+        """The topic name of the channel."""
+        ...
+
+    def schema_name(self) -> str | None:
+        """The name of the schema for the channel."""
+        ...
+
+    def close(self) -> None:
+        """Close the channel."""
+        ...
+
     def log(
         self,
         message: "PointsAnnotation",
         *,
         log_time: int | None = None,
-        publish_time: int | None = None,
-        sequence: int | None = None,
-    ) -> None: ...
+    ) -> None:
+        """Log a Foxglove PointsAnnotation message on the channel."""
+        ...
 
 class PoseChannel:
     """
     A channel for logging Pose messages
+
+    You should choose a unique topic name per channel.
     """
 
     def __new__(
         cls,
         topic: str,
     ) -> "PoseChannel": ...
-    def close(self) -> None: ...
+    def id(self) -> int:
+        """The unique ID of the channel."""
+        ...
+
+    def topic(self) -> str:
+        """The topic name of the channel."""
+        ...
+
+    def schema_name(self) -> str | None:
+        """The name of the schema for the channel."""
+        ...
+
+    def close(self) -> None:
+        """Close the channel."""
+        ...
+
     def log(
         self,
         message: "Pose",
         *,
         log_time: int | None = None,
-        publish_time: int | None = None,
-        sequence: int | None = None,
-    ) -> None: ...
+    ) -> None:
+        """Log a Foxglove Pose message on the channel."""
+        ...
 
 class PoseInFrameChannel:
     """
     A channel for logging PoseInFrame messages
+
+    You should choose a unique topic name per channel.
     """
 
     def __new__(
         cls,
         topic: str,
     ) -> "PoseInFrameChannel": ...
-    def close(self) -> None: ...
+    def id(self) -> int:
+        """The unique ID of the channel."""
+        ...
+
+    def topic(self) -> str:
+        """The topic name of the channel."""
+        ...
+
+    def schema_name(self) -> str | None:
+        """The name of the schema for the channel."""
+        ...
+
+    def close(self) -> None:
+        """Close the channel."""
+        ...
+
     def log(
         self,
         message: "PoseInFrame",
         *,
         log_time: int | None = None,
-        publish_time: int | None = None,
-        sequence: int | None = None,
-    ) -> None: ...
+    ) -> None:
+        """Log a Foxglove PoseInFrame message on the channel."""
+        ...
 
 class PosesInFrameChannel:
     """
     A channel for logging PosesInFrame messages
+
+    You should choose a unique topic name per channel.
     """
 
     def __new__(
         cls,
         topic: str,
     ) -> "PosesInFrameChannel": ...
-    def close(self) -> None: ...
+    def id(self) -> int:
+        """The unique ID of the channel."""
+        ...
+
+    def topic(self) -> str:
+        """The topic name of the channel."""
+        ...
+
+    def schema_name(self) -> str | None:
+        """The name of the schema for the channel."""
+        ...
+
+    def close(self) -> None:
+        """Close the channel."""
+        ...
+
     def log(
         self,
         message: "PosesInFrame",
         *,
         log_time: int | None = None,
-        publish_time: int | None = None,
-        sequence: int | None = None,
-    ) -> None: ...
+    ) -> None:
+        """Log a Foxglove PosesInFrame message on the channel."""
+        ...
 
 class QuaternionChannel:
     """
     A channel for logging Quaternion messages
+
+    You should choose a unique topic name per channel.
     """
 
     def __new__(
         cls,
         topic: str,
     ) -> "QuaternionChannel": ...
-    def close(self) -> None: ...
+    def id(self) -> int:
+        """The unique ID of the channel."""
+        ...
+
+    def topic(self) -> str:
+        """The topic name of the channel."""
+        ...
+
+    def schema_name(self) -> str | None:
+        """The name of the schema for the channel."""
+        ...
+
+    def close(self) -> None:
+        """Close the channel."""
+        ...
+
     def log(
         self,
         message: "Quaternion",
         *,
         log_time: int | None = None,
-        publish_time: int | None = None,
-        sequence: int | None = None,
-    ) -> None: ...
+    ) -> None:
+        """Log a Foxglove Quaternion message on the channel."""
+        ...
+
+class RawAudioChannel:
+    """
+    A channel for logging RawAudio messages
+
+    You should choose a unique topic name per channel.
+    """
+
+    def __new__(
+        cls,
+        topic: str,
+    ) -> "RawAudioChannel": ...
+    def id(self) -> int:
+        """The unique ID of the channel."""
+        ...
+
+    def topic(self) -> str:
+        """The topic name of the channel."""
+        ...
+
+    def schema_name(self) -> str | None:
+        """The name of the schema for the channel."""
+        ...
+
+    def close(self) -> None:
+        """Close the channel."""
+        ...
+
+    def log(
+        self,
+        message: "RawAudio",
+        *,
+        log_time: int | None = None,
+    ) -> None:
+        """Log a Foxglove RawAudio message on the channel."""
+        ...
 
 class RawImageChannel:
     """
     A channel for logging RawImage messages
+
+    You should choose a unique topic name per channel.
     """
 
     def __new__(
         cls,
         topic: str,
     ) -> "RawImageChannel": ...
-    def close(self) -> None: ...
+    def id(self) -> int:
+        """The unique ID of the channel."""
+        ...
+
+    def topic(self) -> str:
+        """The topic name of the channel."""
+        ...
+
+    def schema_name(self) -> str | None:
+        """The name of the schema for the channel."""
+        ...
+
+    def close(self) -> None:
+        """Close the channel."""
+        ...
+
     def log(
         self,
         message: "RawImage",
         *,
         log_time: int | None = None,
-        publish_time: int | None = None,
-        sequence: int | None = None,
-    ) -> None: ...
+    ) -> None:
+        """Log a Foxglove RawImage message on the channel."""
+        ...
 
 class SceneEntityChannel:
     """
     A channel for logging SceneEntity messages
+
+    You should choose a unique topic name per channel.
     """
 
     def __new__(
         cls,
         topic: str,
     ) -> "SceneEntityChannel": ...
-    def close(self) -> None: ...
+    def id(self) -> int:
+        """The unique ID of the channel."""
+        ...
+
+    def topic(self) -> str:
+        """The topic name of the channel."""
+        ...
+
+    def schema_name(self) -> str | None:
+        """The name of the schema for the channel."""
+        ...
+
+    def close(self) -> None:
+        """Close the channel."""
+        ...
+
     def log(
         self,
         message: "SceneEntity",
         *,
         log_time: int | None = None,
-        publish_time: int | None = None,
-        sequence: int | None = None,
-    ) -> None: ...
+    ) -> None:
+        """Log a Foxglove SceneEntity message on the channel."""
+        ...
 
 class SceneEntityDeletionChannel:
     """
     A channel for logging SceneEntityDeletion messages
+
+    You should choose a unique topic name per channel.
     """
 
     def __new__(
         cls,
         topic: str,
     ) -> "SceneEntityDeletionChannel": ...
-    def close(self) -> None: ...
+    def id(self) -> int:
+        """The unique ID of the channel."""
+        ...
+
+    def topic(self) -> str:
+        """The topic name of the channel."""
+        ...
+
+    def schema_name(self) -> str | None:
+        """The name of the schema for the channel."""
+        ...
+
+    def close(self) -> None:
+        """Close the channel."""
+        ...
+
     def log(
         self,
         message: "SceneEntityDeletion",
         *,
         log_time: int | None = None,
-        publish_time: int | None = None,
-        sequence: int | None = None,
-    ) -> None: ...
+    ) -> None:
+        """Log a Foxglove SceneEntityDeletion message on the channel."""
+        ...
 
 class SceneUpdateChannel:
     """
     A channel for logging SceneUpdate messages
+
+    You should choose a unique topic name per channel.
     """
 
     def __new__(
         cls,
         topic: str,
     ) -> "SceneUpdateChannel": ...
-    def close(self) -> None: ...
+    def id(self) -> int:
+        """The unique ID of the channel."""
+        ...
+
+    def topic(self) -> str:
+        """The topic name of the channel."""
+        ...
+
+    def schema_name(self) -> str | None:
+        """The name of the schema for the channel."""
+        ...
+
+    def close(self) -> None:
+        """Close the channel."""
+        ...
+
     def log(
         self,
         message: "SceneUpdate",
         *,
         log_time: int | None = None,
-        publish_time: int | None = None,
-        sequence: int | None = None,
-    ) -> None: ...
+    ) -> None:
+        """Log a Foxglove SceneUpdate message on the channel."""
+        ...
 
 class TextAnnotationChannel:
     """
     A channel for logging TextAnnotation messages
+
+    You should choose a unique topic name per channel.
     """
 
     def __new__(
         cls,
         topic: str,
     ) -> "TextAnnotationChannel": ...
-    def close(self) -> None: ...
+    def id(self) -> int:
+        """The unique ID of the channel."""
+        ...
+
+    def topic(self) -> str:
+        """The topic name of the channel."""
+        ...
+
+    def schema_name(self) -> str | None:
+        """The name of the schema for the channel."""
+        ...
+
+    def close(self) -> None:
+        """Close the channel."""
+        ...
+
     def log(
         self,
         message: "TextAnnotation",
         *,
         log_time: int | None = None,
-        publish_time: int | None = None,
-        sequence: int | None = None,
-    ) -> None: ...
+    ) -> None:
+        """Log a Foxglove TextAnnotation message on the channel."""
+        ...
 
 class Vector2Channel:
     """
     A channel for logging Vector2 messages
+
+    You should choose a unique topic name per channel.
     """
 
     def __new__(
         cls,
         topic: str,
     ) -> "Vector2Channel": ...
-    def close(self) -> None: ...
+    def id(self) -> int:
+        """The unique ID of the channel."""
+        ...
+
+    def topic(self) -> str:
+        """The topic name of the channel."""
+        ...
+
+    def schema_name(self) -> str | None:
+        """The name of the schema for the channel."""
+        ...
+
+    def close(self) -> None:
+        """Close the channel."""
+        ...
+
     def log(
         self,
         message: "Vector2",
         *,
         log_time: int | None = None,
-        publish_time: int | None = None,
-        sequence: int | None = None,
-    ) -> None: ...
+    ) -> None:
+        """Log a Foxglove Vector2 message on the channel."""
+        ...
 
 class Vector3Channel:
     """
     A channel for logging Vector3 messages
+
+    You should choose a unique topic name per channel.
     """
 
     def __new__(
         cls,
         topic: str,
     ) -> "Vector3Channel": ...
-    def close(self) -> None: ...
+    def id(self) -> int:
+        """The unique ID of the channel."""
+        ...
+
+    def topic(self) -> str:
+        """The topic name of the channel."""
+        ...
+
+    def schema_name(self) -> str | None:
+        """The name of the schema for the channel."""
+        ...
+
+    def close(self) -> None:
+        """Close the channel."""
+        ...
+
     def log(
         self,
         message: "Vector3",
         *,
         log_time: int | None = None,
-        publish_time: int | None = None,
-        sequence: int | None = None,
-    ) -> None: ...
+    ) -> None:
+        """Log a Foxglove Vector3 message on the channel."""
+        ...

@@ -5,12 +5,22 @@ on:
     branches: [main]
     tags: ["**"]
   pull_request: {}
+  workflow_call:
+    inputs:
+      sdk-version:
+        required: true
+        type: string
+    outputs:
+      artifact_pattern:
+        description: "pattern to match all uploaded artifact names"
+        value: ${{ jobs.build.outputs.artifact_pattern }}
 
 jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - run: clang-format --version
       - run: make lint
         working-directory: cpp
       - run: make CLANG_TIDY=true build
@@ -21,6 +31,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # Linux
           - runner: ubuntu-24.04
             target: aarch64-unknown-linux-gnu
             staticlib_name: libfoxglove.a
@@ -35,6 +46,8 @@ jobs:
             staticlib_artifact_name: libfoxglove-x86_64-unknown-linux-gnu.a
             cdylib_artifact_name: libfoxglove-x86_64-unknown-linux-gnu.so
             cross: false
+
+          # macOS
           - runner: macos-15
             target: aarch64-apple-darwin
             staticlib_name: libfoxglove.a
@@ -49,6 +62,8 @@ jobs:
             staticlib_artifact_name: libfoxglove-x86_64-apple-darwin.a
             cdylib_artifact_name: libfoxglove-x86_64-apple-darwin.dylib
             cross: true
+
+          # Windows
           - runner: windows-2025
             target: x86_64-pc-windows-msvc
             staticlib_name: foxglove.lib
@@ -64,11 +79,38 @@ jobs:
             cdylib_artifact_name: foxglove-aarch64-pc-windows-msvc.dll
             cross: true
 
+          # iOS
+          - runner: macos-15
+            target: aarch64-apple-ios
+            staticlib_name: libfoxglove.a
+            cdylib_name: libfoxglove.dylib
+            staticlib_artifact_name: libfoxglove-aarch64-apple-ios.a
+            cdylib_artifact_name: libfoxglove-aarch64-apple-ios.dylib
+            cross: true
+          # iOS simulator
+          - runner: macos-15
+            target: aarch64-apple-ios-sim
+            staticlib_name: libfoxglove.a
+            cdylib_name: libfoxglove.dylib
+            staticlib_artifact_name: libfoxglove-aarch64-apple-ios-sim.a
+            cdylib_artifact_name: libfoxglove-aarch64-apple-ios-sim.dylib
+            cross: true
+          - runner: macos-15
+            target: x86_64-apple-ios
+            staticlib_name: libfoxglove.a
+            cdylib_name: libfoxglove.dylib
+            staticlib_artifact_name: libfoxglove-x86_64-apple-ios.a
+            cdylib_artifact_name: libfoxglove-x86_64-apple-ios.dylib
+            cross: true
+
     name: build (${{ matrix.target }})
     runs-on: ${{ matrix.runner }}
 
     env:
       CARGO_BUILD_TARGET: ${{ matrix.target }}
+
+    outputs:
+      artifact_pattern: "*.zip"
 
     steps:
       - uses: actions/checkout@v4
@@ -82,6 +124,8 @@ jobs:
         if: matrix.target == 'aarch64-unknown-linux-gnu'
 
       - name: Build C library for ${{ matrix.target }}
+        env:
+          FOXGLOVE_SDK_LANGUAGE: c
         run: cargo build --release
         working-directory: c
       - name: Ensure generated files are up to date
@@ -92,17 +136,40 @@ jobs:
         run: make test
         working-directory: cpp
 
-      - name: Upload static library to artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.staticlib_artifact_name }}
-          path: target/${{ matrix.target }}/release/${{ matrix.staticlib_name }}
+      - name: Organize artifacts for zip
+        shell: bash
+        run: |
+          mkdir -p artifacts/foxglove/lib
+          mkdir -p artifacts/foxglove/include
+          mkdir -p artifacts/foxglove/src
+          mv target/${{ matrix.target }}/release/${{ matrix.staticlib_name }} artifacts/foxglove/lib/
+          mv target/${{ matrix.target }}/release/${{ matrix.cdylib_name }} artifacts/foxglove/lib/
+          cp -R c/include/foxglove-c artifacts/foxglove/include/
+          cp -R cpp/foxglove/include/foxglove artifacts/foxglove/include/
+          cp -R cpp/foxglove/src/* artifacts/foxglove/src/
 
-      - name: Upload shared library to artifacts
+      - name: Zip libraries for artifact
+        if: runner.os != 'Windows'
+        working-directory: artifacts
+        run: |
+          zip -r \
+            foxglove-${{inputs.sdk-version || github.sha}}-cpp-${{ matrix.target }}.zip \
+            foxglove/
+
+      - name: Zip libraries for artifact (Windows)
+        if: runner.os == 'Windows'
+        working-directory: artifacts
+        run: |
+          7z a -tzip -sse `
+            foxglove-${{inputs.sdk-version || github.sha}}-cpp-${{ matrix.target }}.zip `
+            foxglove/
+
+      - name: Upload static & shared library to artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.cdylib_artifact_name }}
-          path: target/${{ matrix.target }}/release/${{ matrix.cdylib_name }}
+          name: foxglove-${{inputs.sdk-version || github.sha}}-cpp-${{ matrix.target }}.zip
+          path: artifacts/foxglove-${{inputs.sdk-version || github.sha}}-cpp-${{ matrix.target }}.zip
+          if-no-files-found: error
 
   test-asan-ubsan:
     runs-on: ubuntu-latest

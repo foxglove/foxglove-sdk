@@ -1462,6 +1462,57 @@ impl From<Quaternion> for foxglove::schemas::Quaternion {
     }
 }
 
+/// A single block of an audio bitstream
+///
+/// :param timestamp: Timestamp of the start of the audio block
+/// :param data: Audio data. The samples in the data must be interleaved and little-endian
+/// :param format: Audio format. Only 'pcm-s16' is currently supported
+/// :param sample_rate: Sample rate in Hz
+/// :param number_of_channels: Number of channels in the audio block
+///
+/// See https://docs.foxglove.dev/docs/visualization/message-schemas/raw-audio
+#[pyclass(module = "foxglove.schemas")]
+#[derive(Clone)]
+pub(crate) struct RawAudio(pub(crate) foxglove::schemas::RawAudio);
+#[pymethods]
+impl RawAudio {
+    #[new]
+    #[pyo3(signature = (*, timestamp=None, data=None, format="".to_string(), sample_rate=0, number_of_channels=0) )]
+    fn new(
+        timestamp: Option<Timestamp>,
+        data: Option<Bound<'_, PyBytes>>,
+        format: String,
+        sample_rate: u32,
+        number_of_channels: u32,
+    ) -> Self {
+        Self(foxglove::schemas::RawAudio {
+            timestamp: timestamp.map(Into::into),
+            data: data
+                .map(|x| Bytes::copy_from_slice(x.as_bytes()))
+                .unwrap_or_default(),
+            format,
+            sample_rate,
+            number_of_channels,
+        })
+    }
+    fn __repr__(&self) -> String {
+        format!(
+            "RawAudio(timestamp={:?}, data={:?}, format={:?}, sample_rate={:?}, number_of_channels={:?})",
+            self.0.timestamp,
+            self.0.data,
+            self.0.format,
+            self.0.sample_rate,
+            self.0.number_of_channels,
+        )
+    }
+}
+
+impl From<RawAudio> for foxglove::schemas::RawAudio {
+    fn from(value: RawAudio) -> Self {
+        value.0
+    }
+}
+
 /// A raw image
 ///
 /// :param timestamp: Timestamp of image
@@ -1807,6 +1858,7 @@ pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<PoseInFrame>()?;
     module.add_class::<PosesInFrame>()?;
     module.add_class::<Quaternion>()?;
+    module.add_class::<RawAudio>()?;
     module.add_class::<RawImage>()?;
     module.add_class::<SpherePrimitive>()?;
     module.add_class::<TextAnnotation>()?;

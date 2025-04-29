@@ -103,7 +103,7 @@ impl NormalizeResult {
 /// let duration: Duration = std::time::Duration::from_secs(u64::MAX).saturating_into();
 /// assert_eq!(duration, Duration::MAX);
 /// ```
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Duration {
     /// Seconds offset.
     sec: i32,
@@ -130,8 +130,9 @@ impl Duration {
 
     /// Creates a new normalized duration.
     ///
-    /// Returns `None` if the result is out of range. This can only happen if `nsec` is greater
-    /// than `999_999_999`.
+    /// This constructor normalizes the duration by converting excess nanoseconds into seconds.
+    ///
+    /// Returns `None` if the attempt to convert excess nanoseconds causes `sec` to overflow.
     pub fn new_checked(sec: i32, nsec: u32) -> Option<Self> {
         normalize_nsec(nsec)
             .carry_i32(sec)
@@ -140,8 +141,9 @@ impl Duration {
 
     /// Creates a new normalized duration.
     ///
-    /// Panics if the result is out of range. This can only happen if `nsec` is greater than
-    /// `999_999_999`.
+    /// This constructor normalizes the duration by converting excess nanoseconds into seconds.
+    ///
+    /// Panics if the attempt to convert excess nanoseconds causes `sec` to overflow.
     pub fn new(sec: i32, nsec: u32) -> Self {
         Self::new_checked(sec, nsec).unwrap()
     }
@@ -297,7 +299,7 @@ where
 ///     .saturating_into();
 /// assert_eq!(timestamp, Timestamp::MIN);
 /// ```
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Timestamp {
     /// Seconds since epoch.
     sec: u32,
@@ -321,8 +323,9 @@ impl Timestamp {
 
     /// Creates a new normalized timestamp.
     ///
-    /// Returns `None` if the result is out of range. This can only happen if `nsec` is greater
-    /// than `999_999_999`.
+    /// This constructor normalizes the timestamp by converting excess nanoseconds into seconds.
+    ///
+    /// Returns `None` if the attempt to convert excess nanoseconds causes `sec` to overflow.
     pub fn new_checked(sec: u32, nsec: u32) -> Option<Self> {
         normalize_nsec(nsec)
             .carry_u32(sec)
@@ -331,10 +334,17 @@ impl Timestamp {
 
     /// Creates a new normalized timestamp.
     ///
-    /// Panics if the result is out of range. This can only happen if `nsec` is greater than
-    /// `999_999_999`.
+    /// This constructor normalizes the timestamp by converting excess nanoseconds into seconds.
+    ///
+    /// Panics if the attempt to convert excess nanoseconds causes `sec` to overflow.
     pub fn new(sec: u32, nsec: u32) -> Self {
         Self::new_checked(sec, nsec).unwrap()
+    }
+
+    /// Returns the current timestamp using [`SystemTime::now`][std::time::SystemTime::now].
+    pub fn now() -> Self {
+        let now = std::time::SystemTime::now();
+        Self::try_from(now).expect("timestamp out of range")
     }
 
     /// Returns the number of seconds in the timestamp.

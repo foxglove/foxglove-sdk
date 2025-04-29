@@ -1,11 +1,15 @@
 #pragma once
 
+#include <foxglove/context.hpp>
+#include <foxglove/error.hpp>
+
 #include <cstdint>
 #include <memory>
 #include <optional>
 #include <string>
 
 struct foxglove_channel;
+struct foxglove_context;
 
 namespace foxglove {
 
@@ -18,20 +22,26 @@ struct Schema {
 
 class Channel final {
 public:
-  Channel(
-    const std::string& topic, const std::string& messageEncoding, std::optional<Schema> schema
+  static FoxgloveResult<Channel> create(
+    const std::string& topic, const std::string& messageEncoding,
+    std::optional<Schema> schema = std::nullopt, const Context& context = Context()
   );
 
-  void log(
-    const std::byte* data, size_t dataLen, std::optional<uint64_t> logTime = std::nullopt,
-    std::optional<uint64_t> publishTime = std::nullopt,
-    std::optional<uint32_t> sequence = std::nullopt
+  FoxgloveError log(
+    const std::byte* data, size_t dataLen, std::optional<uint64_t> logTime = std::nullopt
   );
 
   uint64_t id() const;
 
+  Channel(const Channel&) = delete;
+  Channel& operator=(const Channel&) = delete;
+
+  Channel(Channel&& other) noexcept = default;
+
 private:
-  std::unique_ptr<foxglove_channel, void (*)(foxglove_channel*)> _impl;
+  explicit Channel(const foxglove_channel* channel);
+
+  std::unique_ptr<const foxglove_channel, void (*const)(const foxglove_channel*)> _impl;
 };
 
 }  // namespace foxglove

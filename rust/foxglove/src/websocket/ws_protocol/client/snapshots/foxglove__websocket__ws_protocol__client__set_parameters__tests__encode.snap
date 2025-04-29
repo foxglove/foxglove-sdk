@@ -1,0 +1,38 @@
+---
+source: rust/foxglove/src/websocket/ws_protocol/client/set_parameters.rs
+expression: message()
+---
+{
+  "op": "setParameters",
+  "parameters": [
+    {
+      "name": "empty"
+    },
+    {
+      "name": "f64",
+      "type": "float64",
+      "value": 1.23
+    },
+    {
+      "name": "f64[]",
+      "type": "float64_array",
+      "value": [
+        1.23,
+        4.56
+      ]
+    },
+    {
+      "name": "str",
+      "value": "hello"
+    },
+    {
+      "name": "byte[]",
+      "type": "byte_array",
+      "value": "ECAw"
+    },
+    {
+      "name": "bool",
+      "value": true
+    }
+  ]
+}

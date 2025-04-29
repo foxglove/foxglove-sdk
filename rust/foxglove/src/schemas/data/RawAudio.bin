@@ -1,0 +1,16 @@
+
+ÿ
+google/protobuf/timestamp.protogoogle.protobuf";
+	Timestamp
+seconds (Rseconds
+nanos (RnanosB…
+com.google.protobufBTimestampProtoPZ2google.golang.org/protobuf/types/known/timestamppbø¢GPBªGoogle.Protobuf.WellKnownTypesbproto3
+Ž
+foxglove/RawAudio.protofoxglovegoogle/protobuf/timestamp.proto"¿
+RawAudio8
+	timestamp (2.google.protobuf.TimestampR	timestamp
+data (Rdata
+format (	Rformat
+sample_rate (R
+sampleRate,
+number_of_channels (RnumberOfChannelsbproto3

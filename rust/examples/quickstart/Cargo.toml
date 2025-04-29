@@ -7,6 +7,6 @@ publish = false
 workspace = true
 
 [dependencies]
-foxglove = { path = "../../foxglove", features = ["unstable"] }
+foxglove = { path = "../../foxglove" }
 ctrlc = "3.4.5"
 env_logger = "0.11.5"

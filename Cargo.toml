@@ -18,7 +18,7 @@ prost-build = "0.13"
 prost-types = "0.13"
 serde = { version = "1.0", features = ["derive"] }
 thiserror = "1.0"
-tokio = { version = "1.40", features = ["macros", "rt-multi-thread", "signal", "time"] }
+tokio = { version = "1.43", features = ["macros", "rt-multi-thread", "signal", "time"] }
 tokio-tungstenite = "0.26"
 tokio-util = { version = "0.7", features = ["rt"] }
 tracing = { version = "0.1", features = ["log"] }

@@ -57,7 +57,12 @@ int main(int argc, const char* argv[]) {
   options.callbacks.onClientUnadvertise = [](uint32_t clientId, uint32_t clientChannelId) {
     std::cerr << "Client " << clientId << " unadvertised channel " << clientChannelId << '\n';
   };
-  foxglove::WebSocketServer server{options};
+  auto serverResult = foxglove::WebSocketServer::create(std::move(options));
+  if (!serverResult.has_value()) {
+    std::cerr << "Failed to create server: " << foxglove::strerror(serverResult.error()) << '\n';
+    return 1;
+  }
+  auto server = std::move(serverResult.value());
   std::cerr << "Server listening on port " << server.port() << '\n';
 
   std::atomic_bool done = false;
@@ -78,7 +83,12 @@ int main(int argc, const char* argv[]) {
   })";
   schema.data = reinterpret_cast<const std::byte*>(schemaData.data());
   schema.dataLen = schemaData.size();
-  foxglove::Channel channel{"example", "json", std::move(schema)};
+  auto channelResult = foxglove::Channel::create("example", "json", std::move(schema));
+  if (!channelResult.has_value()) {
+    std::cerr << "Failed to create channel: " << foxglove::strerror(channelResult.error()) << '\n';
+    return 1;
+  }
+  auto channel = std::move(channelResult.value());
 
   uint32_t i = 0;
   while (!done) {
@@ -86,7 +96,7 @@ int main(int argc, const char* argv[]) {
     std::string msg = "{\"val\": " + std::to_string(i) + "}";
     auto now =
       std::chrono::nanoseconds(std::chrono::system_clock::now().time_since_epoch()).count();
-    channel.log(reinterpret_cast<const std::byte*>(msg.data()), msg.size(), now, now, i);
+    channel.log(reinterpret_cast<const std::byte*>(msg.data()), msg.size(), now);
     ++i;
   }
 

@@ -36,18 +36,19 @@ For more details, refer to the [Python SDK contributing guide](python/foxglove-s
 
 Releases are published via GitHub Actions.
 
-### Rust & Python
+### Rust, Python, and C/C++
 
 All SDK languages are versioned and released together.
 
 1. Manually trigger the "Draft Release" workflow in GitHub Actions, specifying the new version number.
-2. Check the release notes, and hit publish on the new release.
-3. Ensure the post-release and tag workflows complete successfully.
+2. Ensure that the draft release workflow completes successfully.
+3. Check the release notes, and hit publish on the new release.
+4. Ensure the post-release and tag workflows complete successfully.
 
 ### TypeScript
 
 1. Create and merge a PR bumping the version number in `package.json` file(s).
-2. Manually create a new Release in the GitHub UI. Ensure the tag uses the form `[language]/[package-name]/vX.Y.Z`.
+2. Manually create a new Release in the GitHub UI. Ensure the tag uses the form `typescript/schemas/vX.Y.Z`.
 3. GitHub Actions will take care of the rest.
 
 ### ROS

@@ -1,11 +1,13 @@
 use crate::{errors::PyFoxgloveError, PySchema};
+use base64::prelude::*;
 use bytes::Bytes;
-use foxglove::{
-    websocket::{
-        AssetHandler, ChannelView, Client, ClientChannel, ServerListener, Status, StatusLevel,
-    },
-    WebSocketServer, WebSocketServerBlockingHandle,
+use foxglove::websocket::{
+    AssetHandler, ChannelView, Client, ClientChannel, ServerListener, Status, StatusLevel,
 };
+use foxglove::{WebSocketServer, WebSocketServerHandle};
+use pyo3::exceptions::{PyTypeError, PyValueError};
+use pyo3::types::{PyDict, PyList};
+use pyo3::IntoPyObjectExt;
 use pyo3::{
     exceptions::PyIOError,
     prelude::*,
@@ -359,7 +361,7 @@ impl foxglove::websocket::service::Handler for ServiceHandler {
 /// :param host: The host to bind to.
 /// :param port: The port to bind to.
 /// :param capabilities: A list of capabilities to advertise to clients.
-/// :param server_listener: A Python object that implements the :py:class:`ServerListener` protocol.
+/// :param server_listener: A Python object that implements the :py:class:`foxglove.websocket.ServerListener` protocol.
 /// :param supported_encodings: A list of encodings to advertise to clients.
 ///    Foxglove currently supports "json", "ros1", and "cdr" for client-side publishing.
 ///
@@ -423,19 +425,20 @@ pub fn start_server(
     Ok(PyWebSocketServer(Some(handle)))
 }
 
-/// A live visualization server. Obtain an instance by calling :py:func:`start_server`.
+/// A live visualization server. Obtain an instance by calling :py:func:`foxglove.start_server`.
 #[pyclass(name = "WebSocketServer", module = "foxglove")]
-pub struct PyWebSocketServer(pub Option<WebSocketServerBlockingHandle>);
+pub struct PyWebSocketServer(pub Option<WebSocketServerHandle>);
 
 #[pymethods]
 impl PyWebSocketServer {
+    /// Explicitly stop the server.
     pub fn stop(&mut self, py: Python<'_>) {
         if let Some(server) = self.0.take() {
             py.allow_threads(|| server.stop())
         }
     }
 
-    // Get the port on which the server is listening.
+    /// Get the port on which the server is listening.
     #[getter]
     pub fn port(&self) -> u16 {
         self.0.as_ref().map_or(0, |handle| handle.port())
@@ -446,7 +449,6 @@ impl PyWebSocketServer {
     /// If the server has been stopped, this has no effect.
     ///
     /// :param session_id: An optional session ID.
-    /// :type session_id: Optional[str]
     #[pyo3(signature = (session_id=None))]
     pub fn clear_session(&self, session_id: Option<String>) {
         if let Some(server) = &self.0 {
@@ -458,7 +460,6 @@ impl PyWebSocketServer {
     /// If the server has been stopped, this has no effect.
     ///
     /// :param timestamp_nanos: The timestamp to broadcast, in nanoseconds.
-    /// :type timestamp_nanos: int
     #[pyo3(signature = (timestamp_nanos))]
     pub fn broadcast_time(&self, timestamp_nanos: u64) {
         if let Some(server) = &self.0 {
@@ -470,11 +471,8 @@ impl PyWebSocketServer {
     /// If the server has been stopped, this has no effect.
     ///
     /// :param message: The message to send.
-    /// :type message: str
     /// :param level: The level of the status message.
-    /// :type level: :py:enum:`StatusLevel`
     /// :param id: An optional id for the status message.
-    /// :type id: Optional[str]
     #[pyo3(signature = (message, level, id=None))]
     pub fn publish_status(&self, message: String, level: &PyStatusLevel, id: Option<String>) {
         let Some(server) = &self.0 else {
@@ -516,7 +514,6 @@ impl PyWebSocketServer {
     /// This method will fail if the server was not configured with :py:attr:`Capability.Services`.
     ///
     /// :param services: Services to add.
-    /// :type services: list[:py:class:`Service`]
     pub fn add_services(&self, py: Python<'_>, services: Vec<PyService>) -> PyResult<()> {
         if let Some(server) = &self.0 {
             py.allow_threads(move || {
@@ -531,13 +528,17 @@ impl PyWebSocketServer {
     /// Removes services that were previously advertised.
     ///
     /// :param names: Names of services to remove.
-    /// :type names: list[str]
     pub fn remove_services(&self, py: Python<'_>, names: Vec<String>) {
         if let Some(server) = &self.0 {
             py.allow_threads(move || server.remove_services(names));
         }
     }
 
+    /// Publishes a connection graph update to all subscribed clients. An update is published to
+    /// clients as a difference from the current graph to the replacement graph. When a client first
+    /// subscribes to connection graph updates, it receives the current graph.
+    ///
+    /// :param graph: The connection graph to publish.
     pub fn publish_connection_graph(&self, graph: Bound<'_, PyConnectionGraph>) -> PyResult<()> {
         let Some(server) = &self.0 else {
             return Ok(());
@@ -550,7 +551,7 @@ impl PyWebSocketServer {
     }
 }
 
-/// A level for :py:meth:`WebSocketServer.publish_status`.
+/// A level for :py:meth:`websocket.WebSocketServer.publish_status`.
 #[pyclass(name = "StatusLevel", module = "foxglove", eq, eq_int)]
 #[derive(Clone, PartialEq)]
 pub enum PyStatusLevel {
@@ -763,7 +764,7 @@ impl From<PyServiceSchema> for foxglove::websocket::service::ServiceSchema {
 /// :param encoding: The encoding of the message.
 /// :type encoding: str
 /// :param schema: The message schema.
-/// :type schema: :py:class:`Schema`
+/// :type schema: :py:class:`foxglove.Schema`
 #[pyclass(name = "MessageSchema", module = "foxglove", get_all, set_all)]
 #[derive(Clone)]
 pub struct PyMessageSchema {
@@ -787,7 +788,7 @@ impl PyMessageSchema {
 
 /// A parameter type.
 #[pyclass(name = "ParameterType", module = "foxglove", eq, eq_int)]
-#[derive(Clone, PartialEq)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub enum PyParameterType {
     /// A byte array.
     ByteArray,
@@ -818,15 +819,17 @@ impl From<foxglove::websocket::ParameterType> for PyParameterType {
 }
 
 /// A parameter value.
-#[pyclass(name = "ParameterValue", module = "foxglove")]
-#[derive(Clone)]
+#[pyclass(name = "ParameterValue", module = "foxglove", eq)]
+#[derive(Clone, PartialEq)]
 pub enum PyParameterValue {
     /// A decimal or integer value.
     Number(f64),
     /// A boolean value.
     Bool(bool),
-    /// A byte array, which will be encoded as a base64-encoded string.
-    Bytes(Vec<u8>),
+    /// A string value.
+    ///
+    /// For parameters of type ByteArray, this is a base64-encoding of the byte array.
+    String(String),
     /// An array of parameter values.
     Array(Vec<PyParameterValue>),
     /// An associative map of parameter values.
@@ -838,7 +841,7 @@ impl From<PyParameterValue> for foxglove::websocket::ParameterValue {
         match value {
             PyParameterValue::Number(n) => foxglove::websocket::ParameterValue::Number(n),
             PyParameterValue::Bool(b) => foxglove::websocket::ParameterValue::Bool(b),
-            PyParameterValue::Bytes(items) => foxglove::websocket::ParameterValue::String(items),
+            PyParameterValue::String(s) => foxglove::websocket::ParameterValue::String(s),
             PyParameterValue::Array(py_parameter_values) => {
                 foxglove::websocket::ParameterValue::Array(
                     py_parameter_values.into_iter().map(Into::into).collect(),
@@ -856,7 +859,7 @@ impl From<foxglove::websocket::ParameterValue> for PyParameterValue {
         match value {
             foxglove::websocket::ParameterValue::Number(n) => PyParameterValue::Number(n),
             foxglove::websocket::ParameterValue::Bool(b) => PyParameterValue::Bool(b),
-            foxglove::websocket::ParameterValue::String(items) => PyParameterValue::Bytes(items),
+            foxglove::websocket::ParameterValue::String(s) => PyParameterValue::String(s),
             foxglove::websocket::ParameterValue::Array(parameter_values) => {
                 PyParameterValue::Array(parameter_values.into_iter().map(Into::into).collect())
             }
@@ -868,6 +871,14 @@ impl From<foxglove::websocket::ParameterValue> for PyParameterValue {
 }
 
 /// A parameter which can be sent to a client.
+///
+/// :param name: The parameter name.
+/// :type name: str
+/// :param value: Optional value, represented as a native python object, or a ParameterValue.
+/// :type value: None|bool|float|str|bytes|list|dict|ParameterValue
+/// :param type: Optional parameter type. This is automatically derived when passing a native
+///              python object as the value.
+/// :type type: ParameterType|None
 #[pyclass(name = "Parameter", module = "foxglove")]
 #[derive(Clone)]
 pub struct PyParameter {
@@ -885,17 +896,37 @@ pub struct PyParameter {
 #[pymethods]
 impl PyParameter {
     #[new]
-    #[pyo3(signature = (name, *, r#type=None, value=None))]
+    #[pyo3(signature = (name, *, value=None, **kwargs))]
     pub fn new(
         name: String,
-        r#type: Option<PyParameterType>,
-        value: Option<PyParameterValue>,
-    ) -> Self {
-        Self {
+        value: Option<ParameterTypeValueConverter>,
+        kwargs: Option<&Bound<'_, PyDict>>,
+    ) -> PyResult<Self> {
+        // Use the derived type, unless there's a kwarg override.
+        let mut r#type = value.as_ref().and_then(|tv| tv.0);
+        if let Some(dict) = kwargs {
+            if let Some(kw_type) = dict.get_item("type")? {
+                if kw_type.is_none() {
+                    r#type = None
+                } else {
+                    r#type = kw_type.extract()?;
+                }
+            }
+        }
+        Ok(Self {
             name,
             r#type,
-            value,
-        }
+            value: value.map(|tv| tv.1),
+        })
+    }
+
+    /// Returns the parameter value as a native python object.
+    ///
+    /// :rtype: None|bool|float|str|bytes|list|dict
+    pub fn get_value(&self) -> Option<ParameterTypeValueConverter> {
+        self.value
+            .clone()
+            .map(|v| ParameterTypeValueConverter(self.r#type, v))
     }
 }
 
@@ -919,6 +950,124 @@ impl From<foxglove::websocket::Parameter> for PyParameter {
     }
 }
 
+/// A shim type for converting between PyParameterValue and native python types.
+///
+/// Note that we can't implement this on PyParameterValue directly, because it has its own
+/// implementation by virtue of being exposed as a `#[pyclass]` enum.
+pub struct ParameterValueConverter(PyParameterValue);
+
+impl<'py> IntoPyObject<'py> for ParameterValueConverter {
+    type Target = PyAny;
+    type Output = Bound<'py, Self::Target>;
+    type Error = PyErr;
+
+    fn into_pyobject(self, py: Python<'py>) -> Result<Self::Output, Self::Error> {
+        match self.0 {
+            PyParameterValue::Number(v) => v.into_bound_py_any(py),
+            PyParameterValue::Bool(v) => v.into_bound_py_any(py),
+            PyParameterValue::String(v) => v.into_bound_py_any(py),
+            PyParameterValue::Array(values) => {
+                let elems = values.into_iter().map(ParameterValueConverter);
+                PyList::new(py, elems)?.into_bound_py_any(py)
+            }
+            PyParameterValue::Dict(values) => {
+                let dict = PyDict::new(py);
+                for (k, v) in values {
+                    dict.set_item(k, ParameterValueConverter(v))?;
+                }
+                dict.into_bound_py_any(py)
+            }
+        }
+    }
+}
+
+impl<'py> FromPyObject<'py> for ParameterValueConverter {
+    fn extract_bound(obj: &Bound<'py, PyAny>) -> PyResult<Self> {
+        if let Ok(val) = obj.extract::<PyParameterValue>() {
+            Ok(Self(val))
+        } else if let Ok(val) = obj.extract::<bool>() {
+            Ok(Self(PyParameterValue::Bool(val)))
+        } else if let Ok(val) = obj.extract::<f64>() {
+            Ok(Self(PyParameterValue::Number(val)))
+        } else if let Ok(val) = obj.extract::<String>() {
+            Ok(Self(PyParameterValue::String(val)))
+        } else if let Ok(list) = obj.downcast::<PyList>() {
+            let mut values = Vec::with_capacity(list.len());
+            for item in list.iter() {
+                let value: ParameterValueConverter = item.extract()?;
+                values.push(value.0);
+            }
+            return Ok(Self(PyParameterValue::Array(values)));
+        } else if let Ok(dict) = obj.downcast::<PyDict>() {
+            let mut values = HashMap::new();
+            for (key, value) in dict {
+                let key: String = key.extract()?;
+                let value: ParameterValueConverter = value.extract()?;
+                values.insert(key, value.0);
+            }
+            Ok(Self(PyParameterValue::Dict(values)))
+        } else {
+            Err(PyErr::new::<PyTypeError, _>(format!(
+                "Unsupported type for ParamaterValue: {}",
+                obj.get_type().name()?
+            )))
+        }
+    }
+}
+
+/// A shim type for converting between (PyParameterType, PyParameterValue) and native python types.
+pub struct ParameterTypeValueConverter(Option<PyParameterType>, PyParameterValue);
+
+impl<'py> IntoPyObject<'py> for ParameterTypeValueConverter {
+    type Target = PyAny;
+    type Output = Bound<'py, Self::Target>;
+    type Error = PyErr;
+
+    fn into_pyobject(self, py: Python<'py>) -> Result<Self::Output, Self::Error> {
+        match (self.0, self.1) {
+            (Some(PyParameterType::ByteArray), PyParameterValue::String(v)) => {
+                let data = BASE64_STANDARD
+                    .decode(v)
+                    .map_err(|e| PyValueError::new_err(format!("Failed to decode base64: {e}")))?;
+                PyBytes::new(py, &data).into_bound_py_any(py)
+            }
+            (_, v) => ParameterValueConverter(v).into_bound_py_any(py),
+        }
+    }
+}
+
+impl<'py> FromPyObject<'py> for ParameterTypeValueConverter {
+    fn extract_bound(obj: &Bound<'py, PyAny>) -> PyResult<Self> {
+        if let Ok(val) = obj.extract::<ParameterValueConverter>() {
+            let val = val.0;
+            let (typ, val) = match val {
+                // If the value is a number, the type is float64.
+                PyParameterValue::Number(_) => (Some(PyParameterType::Float64), val),
+                // If the value is an array of numbers, then the type is float64 array.
+                PyParameterValue::Array(ref vec)
+                    if vec.iter().all(|v| matches!(v, PyParameterValue::Number(_))) =>
+                {
+                    (Some(PyParameterType::Float64Array), val)
+                }
+                _ => (None, val),
+            };
+            Ok(Self(typ, val))
+        } else if let Ok(val) = obj.extract::<Vec<u8>>() {
+            let b64 = BASE64_STANDARD.encode(val);
+            Ok(Self(
+                Some(PyParameterType::ByteArray),
+                PyParameterValue::String(b64),
+            ))
+        } else {
+            Err(PyErr::new::<PyTypeError, _>(format!(
+                "Unsupported type for ParamaterValue: {}",
+                obj.get_type().name()?
+            )))
+        }
+    }
+}
+
+/// A connection graph.
 #[pyclass(name = "ConnectionGraph", module = "foxglove")]
 #[derive(Clone)]
 pub struct PyConnectionGraph(foxglove::websocket::ConnectionGraph);
@@ -933,30 +1082,27 @@ impl PyConnectionGraph {
 
     /// Set a published topic and its associated publisher ids.
     /// Overwrites any existing topic with the same name.
+    ///
     /// :param topic: The topic name.
-    /// :type topic: str
     /// :param publisher_ids: The set of publisher ids.
-    /// :type publisher_ids: list[str]
     pub fn set_published_topic(&mut self, topic: &str, publisher_ids: Vec<String>) {
         self.0.set_published_topic(topic, publisher_ids);
     }
 
     /// Set a subscribed topic and its associated subscriber ids.
     /// Overwrites any existing topic with the same name.
+    ///
     /// :param topic: The topic name.
-    /// :type topic: str
     /// :param subscriber_ids: The set of subscriber ids.
-    /// :type subscriber_ids: list[str]
     pub fn set_subscribed_topic(&mut self, topic: &str, subscriber_ids: Vec<String>) {
         self.0.set_subscribed_topic(topic, subscriber_ids);
     }
 
     /// Set an advertised service and its associated provider ids.
     /// Overwrites any existing service with the same name.
+    ///
     /// :param service: The service name.
-    /// :type service: str
     /// :param provider_ids: The set of provider ids.
-    /// :type provider_ids: list[str]
     pub fn set_advertised_service(&mut self, service: &str, provider_ids: Vec<String>) {
         self.0.set_advertised_service(service, provider_ids);
     }

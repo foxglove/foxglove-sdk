@@ -1,0 +1,31 @@
+---
+source: rust/foxglove/src/websocket/ws_protocol/client/advertise.rs
+expression: message()
+---
+{
+  "op": "advertise",
+  "channels": [
+    {
+      "id": 10,
+      "topic": "/t1",
+      "encoding": "json",
+      "schemaName": ""
+    },
+    {
+      "id": 20,
+      "topic": "/t2",
+      "encoding": "json",
+      "schemaName": "t2-schema",
+      "schemaEncoding": "jsonschema",
+      "schema": "{\"type\": \"object\"}"
+    },
+    {
+      "id": 30,
+      "topic": "/t3",
+      "encoding": "protobuf",
+      "schemaName": "t3-schema",
+      "schemaEncoding": "protobuf",
+      "schema": "3q2+7w=="
+    }
+  ]
+}

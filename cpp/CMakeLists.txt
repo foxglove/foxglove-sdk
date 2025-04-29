@@ -27,14 +27,28 @@ FetchContent_Declare(
   GIT_REPOSITORY https://github.com/corrosion-rs/corrosion.git
   GIT_TAG v0.5.1
 )
+# Clear CMAKE_CONFIGURATION_TYPES before making Corrosion available
+if(CMAKE_GENERATOR MATCHES "Unix Makefiles|Ninja")
+  unset(CMAKE_CONFIGURATION_TYPES CACHE)
+endif()
 FetchContent_MakeAvailable(Corrosion)
-
 
 FetchContent_Declare(
   websocketpp
   GIT_REPOSITORY https://github.com/zaphoyd/websocketpp.git
   GIT_TAG 0.8.2
+  OVERRIDE_FIND_PACKAGE
 )
+# Set WebSocketPP CMake policy to suppress the warning
+set(FETCHCONTENT_TRY_FIND_PACKAGE_MODE NEVER)
+FetchContent_GetProperties(websocketpp)
+if(NOT websocketpp_POPULATED)
+  FetchContent_Populate(websocketpp)
+  # Don't call add_subdirectory to avoid running the original CMakeLists.txt
+  # Just set up the include directory
+  add_library(websocketpp INTERFACE)
+  target_include_directories(websocketpp INTERFACE ${websocketpp_SOURCE_DIR})
+endif()
 FetchContent_MakeAvailable(websocketpp)
 
 FetchContent_Declare(asio
@@ -87,6 +101,8 @@ file(GLOB_RECURSE foxglove_cpp_srcs CONFIGURE_DEPENDS
 
 add_library(foxglove_cpp_obj OBJECT "${foxglove_cpp_srcs}")
 set_property(TARGET foxglove_cpp_obj PROPERTY POSITION_INDEPENDENT_CODE True)
+set_property(TARGET foxglove_cpp_obj PROPERTY CXX_STANDARD 17)
+set_property(TARGET foxglove_cpp_obj PROPERTY CXX_STANDARD_REQUIRED True)
 target_include_directories(foxglove_cpp_obj PUBLIC foxglove/include ${CMAKE_CURRENT_SOURCE_DIR}/../c/include)
 target_compile_options(foxglove_cpp_obj PUBLIC ${SANITIZER_COMPILE_OPTIONS})
 target_link_options(foxglove_cpp_obj PUBLIC ${SANITIZER_LINK_OPTIONS})
@@ -106,6 +122,8 @@ file(GLOB_RECURSE foxglove_test_srcs CONFIGURE_DEPENDS
     "foxglove/tests/*.cpp"
 )
 add_executable(tests "${foxglove_test_srcs}")
+set_property(TARGET tests PROPERTY CXX_STANDARD 17)
+set_property(TARGET tests PROPERTY CXX_STANDARD_REQUIRED True)
 target_compile_definitions(tests PRIVATE ASIO_STANDALONE)
 target_compile_options(tests PUBLIC ${SANITIZER_COMPILE_OPTIONS})
 target_link_options(tests PUBLIC ${SANITIZER_LINK_OPTIONS})
@@ -121,18 +139,29 @@ endif()
 ### Examples
 
 add_executable(example_server examples/ws-server/src/main.cpp)
+set_property(TARGET example_server PROPERTY CXX_STANDARD 17)
+set_property(TARGET example_server PROPERTY CXX_STANDARD_REQUIRED True)
 target_compile_options(example_server PUBLIC ${SANITIZER_COMPILE_OPTIONS})
 target_link_options(example_server PUBLIC ${SANITIZER_LINK_OPTIONS})
 target_link_libraries(example_server foxglove_cpp_static)
 
 add_executable(example_mcap examples/mcap/src/main.cpp)
+set_property(TARGET example_mcap PROPERTY CXX_STANDARD 17)
+set_property(TARGET example_mcap PROPERTY CXX_STANDARD_REQUIRED True)
 target_compile_options(example_mcap PUBLIC ${SANITIZER_COMPILE_OPTIONS})
 target_link_options(example_mcap PUBLIC ${SANITIZER_LINK_OPTIONS})
 target_link_libraries(example_mcap foxglove_cpp_static)
 
 add_executable(example_quickstart examples/quickstart/src/main.cpp)
-target_compile_options(example_quickstart PUBLIC ${SANITIZER_COMPILE_OPTIONS})
-target_link_options(example_quickstart PUBLIC ${SANITIZER_LINK_OPTIONS})
 set_property(TARGET example_quickstart PROPERTY CXX_STANDARD 17)
 set_property(TARGET example_quickstart PROPERTY CXX_STANDARD_REQUIRED True)
+target_compile_options(example_quickstart PUBLIC ${SANITIZER_COMPILE_OPTIONS})
+target_link_options(example_quickstart PUBLIC ${SANITIZER_LINK_OPTIONS})
 target_link_libraries(example_quickstart foxglove_cpp_static)
+
+add_executable(example_connection_graph examples/connection-graph/src/main.cpp)
+set_property(TARGET example_connection_graph PROPERTY CXX_STANDARD 17)
+set_property(TARGET example_connection_graph PROPERTY CXX_STANDARD_REQUIRED True)
+target_compile_options(example_connection_graph PUBLIC ${SANITIZER_COMPILE_OPTIONS})
+target_link_options(example_connection_graph PUBLIC ${SANITIZER_LINK_OPTIONS})
+target_link_libraries(example_connection_graph foxglove_cpp_static)

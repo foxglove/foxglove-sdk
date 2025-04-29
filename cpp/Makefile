@@ -10,7 +10,9 @@ endif
 
 .PHONY: lint
 lint:
-	find . -path './build*' -prune -name '*.h' -o -name '*.hpp' -o -name '*.cpp' | xargs clang-format --dry-run -Werror --color=1
+	find . -path './build*' -prune -name '*.h' -o -name '*.hpp' -o -name '*.cpp' |\
+		grep -v 'foxglove/expected.hpp' |\
+		xargs clang-format --dry-run -Werror --color=1
 
 .PHONY: clean
 clean:
@@ -20,6 +22,7 @@ clean:
 build:
 	cmake \
 		-DCMAKE_BUILD_TYPE=RelWithDebInfo \
+		-DCMAKE_EXPORT_COMPILE_COMMANDS=true \
 		$(if $(SANITIZE),-DSANITIZE=$(SANITIZE)) \
 		$(if $(CLANG_TIDY),-DCLANG_TIDY=$(CLANG_TIDY)) \
 		-B $(BUILD_DIR)

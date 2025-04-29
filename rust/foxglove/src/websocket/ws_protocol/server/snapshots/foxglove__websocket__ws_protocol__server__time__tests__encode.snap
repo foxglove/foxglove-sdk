@@ -1,0 +1,15 @@
+---
+source: rust/foxglove/src/websocket/ws_protocol/server/time.rs
+expression: "format!(\"{:#04x?}\", message().to_bytes())"
+---
+[
+    0x02,
+    0xd2,
+    0x02,
+    0x96,
+    0x49,
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+]

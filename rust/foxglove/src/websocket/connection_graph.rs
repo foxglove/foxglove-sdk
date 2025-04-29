@@ -1,7 +1,9 @@
-use crate::websocket::protocol::server::{
-    ConnectionGraphDiff, NewAdvertisedService, NewPublishedTopic, NewSubscribedTopic,
-};
 use std::collections::{HashMap, HashSet};
+
+use super::ws_protocol::server::connection_graph_update::{
+    AdvertisedService, ConnectionGraphUpdate, PublishedTopic, SubscribedTopic,
+};
+use super::ClientId;
 
 /// A HashMap where the keys are the topic or service name and the value is a set of string ids.
 type MapOfSets = HashMap<String, HashSet<String>>;
@@ -16,6 +18,8 @@ pub struct ConnectionGraph {
     subscribed_topics: MapOfSets,
     /// A map of active service names to the set of string provider ids.
     advertised_services: MapOfSets,
+    /// A set of subscribers.
+    subscribers: HashSet<ClientId>,
 }
 
 impl ConnectionGraph {
@@ -63,13 +67,36 @@ impl ConnectionGraph {
         );
     }
 
-    /// Replace self with replacement_graph, computing the difference and returning it as JSON
-    /// See: https://github.com/foxglove/ws-protocol/blob/main/docs/spec.md#connection-graph-update
-    pub(crate) fn update(&mut self, replacement_graph: ConnectionGraph) -> String {
-        let mut diff = ConnectionGraphDiff::new();
+    /// Adds a connection graph subscription for the client.
+    ///
+    /// Returns false if this client is already subscribed.
+    pub(crate) fn add_subscriber(&mut self, client_id: ClientId) -> bool {
+        self.subscribers.insert(client_id)
+    }
+
+    /// Removes a connection graph subscription for the client.
+    ///
+    /// Returns false if this client is already unsubscribed.
+    pub(crate) fn remove_subscriber(&mut self, client_id: ClientId) -> bool {
+        self.subscribers.remove(&client_id)
+    }
+
+    /// Returns true if the graph has subscribers.
+    pub(crate) fn has_subscribers(&self) -> bool {
+        !self.subscribers.is_empty()
+    }
+
+    /// Returns true if the client is a subscriber.
+    pub(crate) fn is_subscriber(&self, client_id: ClientId) -> bool {
+        self.subscribers.contains(&client_id)
+    }
+
+    /// Computes a diff of this connection graph against the other.
+    pub(crate) fn diff(&self, other: &ConnectionGraph) -> ConnectionGraphUpdate {
+        let mut diff = ConnectionGraphUpdate::default();
 
         // Get new or changed published topics
-        for (name, publisher_ids) in &replacement_graph.published_topics {
+        for (name, publisher_ids) in &other.published_topics {
             if let Some(self_publisher_ids) = self.published_topics.get(name) {
                 if self_publisher_ids == publisher_ids {
                     // No change
@@ -77,14 +104,14 @@ impl ConnectionGraph {
                 }
             }
 
-            diff.published_topics.push(NewPublishedTopic {
-                name,
-                publisher_ids,
+            diff.published_topics.push(PublishedTopic {
+                name: name.clone(),
+                publisher_ids: publisher_ids.iter().cloned().collect(),
             });
         }
 
         // Get new or changed subscribed topics
-        for (name, subscriber_ids) in &replacement_graph.subscribed_topics {
+        for (name, subscriber_ids) in &other.subscribed_topics {
             if let Some(self_subscriber_ids) = self.subscribed_topics.get(name) {
                 if self_subscriber_ids == subscriber_ids {
                     // No change
@@ -92,14 +119,14 @@ impl ConnectionGraph {
                 }
             }
 
-            diff.subscribed_topics.push(NewSubscribedTopic {
-                name,
-                subscriber_ids,
+            diff.subscribed_topics.push(SubscribedTopic {
+                name: name.clone(),
+                subscriber_ids: subscriber_ids.iter().cloned().collect(),
             });
         }
 
         // Get new or changed advertised services
-        for (name, provider_ids) in &replacement_graph.advertised_services {
+        for (name, provider_ids) in &other.advertised_services {
             if let Some(self_provider_ids) = self.advertised_services.get(name) {
                 if self_provider_ids == provider_ids {
                     // No change
@@ -107,64 +134,65 @@ impl ConnectionGraph {
                 }
             }
 
-            diff.advertised_services
-                .push(NewAdvertisedService { name, provider_ids });
+            diff.advertised_services.push(AdvertisedService {
+                name: name.clone(),
+                provider_ids: provider_ids.iter().cloned().collect(),
+            });
         }
 
         // Get removed advertised services
-        for name in std::mem::take(&mut self.advertised_services).into_keys() {
-            if !replacement_graph.advertised_services.contains_key(&name) {
-                diff.removed_services.push(name);
-            }
-        }
+        diff.removed_services = self
+            .advertised_services
+            .keys()
+            .filter(|name| !other.advertised_services.contains_key(*name))
+            .cloned()
+            .collect();
 
-        // Get the topics from both published_topics and subscribed_topics that are no longer in either
-        for name in std::mem::take(&mut self.published_topics)
-            .into_keys()
-            .chain(std::mem::take(&mut self.subscribed_topics).into_keys())
-        {
-            if replacement_graph.published_topics.contains_key(&name) {
-                continue;
-            }
-            if replacement_graph.subscribed_topics.contains_key(&name) {
-                continue;
-            }
-            diff.removed_topics.insert(name);
-        }
+        // Get the topics from both published_topics and subscribed_topics that are no longer in
+        // either. There may be duplicates, so collect into a hashset first.
+        let removed_topics: HashSet<_> = self
+            .published_topics
+            .keys()
+            .chain(self.subscribed_topics.keys())
+            .filter(|name| {
+                !other.published_topics.contains_key(*name)
+                    && !other.subscribed_topics.contains_key(*name)
+            })
+            .collect();
+        diff.removed_topics = removed_topics.into_iter().cloned().collect();
 
-        let json_diff = diff.to_json();
-        *self = replacement_graph;
-        json_diff
+        diff
+    }
+
+    /// Returns a `ConnectionGraphUpdate` message for the initial state of the graph.
+    pub(crate) fn as_initial_update(&self) -> ConnectionGraphUpdate {
+        ConnectionGraph::default().diff(self)
+    }
+
+    /// Replaces the connection graph content.
+    ///
+    /// The set of subscribers is not modified.
+    ///
+    /// Returns a `ConnectionGraphUpdate` message describing the delta update.
+    pub(crate) fn update(&mut self, new: ConnectionGraph) -> ConnectionGraphUpdate {
+        let diff = self.diff(&new);
+        self.published_topics = new.published_topics;
+        self.subscribed_topics = new.subscribed_topics;
+        self.advertised_services = new.advertised_services;
+        diff
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serde_json::{json, Value};
-
-    fn assert_json_eq(left: String, right: Value) {
-        let left: Value = serde_json::from_str(&left).unwrap();
-        assert_eq!(left, right);
-    }
 
     #[test]
     fn test_empty_update() {
         let mut graph = ConnectionGraph::new();
         let updated = ConnectionGraph::new();
         let diff = graph.update(updated);
-
-        assert_json_eq(
-            diff,
-            json!({
-                "op": "connectionGraphUpdate",
-                "publishedTopics": [],
-                "subscribedTopics": [],
-                "advertisedServices": [],
-                "removedTopics": [],
-                "removedServices": []
-            }),
-        );
+        assert_eq!(diff, ConnectionGraphUpdate::default());
     }
 
     #[test]
@@ -179,19 +207,12 @@ mod tests {
 
         let diff = graph.update(updated);
 
-        assert_json_eq(
+        assert_eq!(
             diff,
-            json!({
-                "op": "connectionGraphUpdate",
-                "publishedTopics": [{
-                    "name": "topic1",
-                    "publisherIds": ["publisher1"]
-                }],
-                "subscribedTopics": [],
-                "advertisedServices": [],
-                "removedTopics": [],
-                "removedServices": []
-            }),
+            ConnectionGraphUpdate {
+                published_topics: vec![PublishedTopic::new("topic1", ["publisher1"])],
+                ..Default::default()
+            },
         );
     }
 
@@ -206,16 +227,12 @@ mod tests {
         let updated = ConnectionGraph::new();
         let diff = graph.update(updated);
 
-        assert_json_eq(
+        assert_eq!(
             diff,
-            json!({
-                "op": "connectionGraphUpdate",
-                "publishedTopics": [],
-                "subscribedTopics": [],
-                "advertisedServices": [],
-                "removedTopics": ["topic1"],
-                "removedServices": []
-            }),
+            ConnectionGraphUpdate {
+                removed_topics: vec!["topic1".into()],
+                ..Default::default()
+            }
         );
     }
 
@@ -235,19 +252,12 @@ mod tests {
 
         let diff = graph.update(updated);
 
-        assert_json_eq(
+        assert_eq!(
             diff,
-            json!({
-                "op": "connectionGraphUpdate",
-                "publishedTopics": [{
-                    "name": "topic1",
-                    "publisherIds": ["publisher2"]
-                }],
-                "subscribedTopics": [],
-                "advertisedServices": [],
-                "removedTopics": [],
-                "removedServices": []
-            }),
+            ConnectionGraphUpdate {
+                published_topics: vec![PublishedTopic::new("topic1", ["publisher2"])],
+                ..Default::default()
+            }
         );
     }
 
@@ -267,19 +277,13 @@ mod tests {
 
         let diff = graph.update(updated);
 
-        assert_json_eq(
+        assert_eq!(
             diff,
-            json!({
-                "op": "connectionGraphUpdate",
-                "publishedTopics": [],
-                "subscribedTopics": [],
-                "advertisedServices": [{
-                    "name": "service2",
-                    "providerIds": ["provider2"]
-                }],
-                "removedTopics": [],
-                "removedServices": ["service1"]
-            }),
+            ConnectionGraphUpdate {
+                advertised_services: vec![AdvertisedService::new("service2", ["provider2"])],
+                removed_services: vec!["service1".into()],
+                ..Default::default()
+            }
         );
     }
 
@@ -315,25 +319,15 @@ mod tests {
 
         let diff = graph.update(updated);
 
-        assert_json_eq(
+        assert_eq!(
             diff,
-            json!({
-                "op": "connectionGraphUpdate",
-                "publishedTopics": [{
-                    "name": "topic2",
-                    "publisherIds": ["publisher2"]
-                }],
-                "subscribedTopics": [{
-                    "name": "topic2",
-                    "subscriberIds": ["subscriber2"]
-                }],
-                "advertisedServices": [{
-                    "name": "service2",
-                    "providerIds": ["provider2"]
-                }],
-                "removedTopics": ["topic1"],
-                "removedServices": ["service1"]
-            }),
+            ConnectionGraphUpdate {
+                published_topics: vec![PublishedTopic::new("topic2", ["publisher2"])],
+                subscribed_topics: vec![SubscribedTopic::new("topic2", ["subscriber2"])],
+                advertised_services: vec![AdvertisedService::new("service2", ["provider2"])],
+                removed_topics: vec!["topic1".into()],
+                removed_services: vec!["service1".into()],
+            }
         );
     }
 }

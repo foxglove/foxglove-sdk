@@ -1,4 +1,3 @@
-import json
 import math
 import time
 
@@ -15,9 +14,13 @@ from foxglove.schemas import (
 
 foxglove.set_log_level("DEBUG")
 
+# Our example logs data on a couple of different topics, so we'll create a
+# channel for each. We can use a channel like SceneUpdateChannel to log
+# Foxglove schemas, or a generic Channel to log custom data.
 scene_channel = SceneUpdateChannel("/scene")
-json_channel = Channel("/info", message_encoding="json")
+size_channel = Channel("/size", message_encoding="json")
 
+# We'll log to both an MCAP file, and to a running Foxglove app via a server.
 file_name = "quickstart-python.mcap"
 writer = foxglove.open_mcap(file_name)
 server = foxglove.start_server()
@@ -25,7 +28,9 @@ server = foxglove.start_server()
 while True:
     size = abs(math.sin(time.time())) + 1
 
-    json_channel.log(json.dumps({"size": size}).encode("utf-8"))
+    # Log messages on both channels until interrupted. By default, each message
+    # is stamped with the current time.
+    size_channel.log({"size": size})
     scene_channel.log(
         SceneUpdate(
             entities=[
