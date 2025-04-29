@@ -9,6 +9,7 @@ function primitiveToTypeScript(type: Exclude<FoxglovePrimitive, "time" | "durati
     case "boolean":
       return "boolean";
     case "float64":
+    case "int32":
     case "uint32":
       return "number";
   }
@@ -24,22 +25,12 @@ function primitiveToTypedArray(type: FoxglovePrimitive) {
       return [];
     case "float64":
       return ["Float32Array", "Float64Array"];
+    case "int32":
+      return ["Int32Array"];
     case "uint32":
       return ["Uint32Array"];
   }
 }
-
-export const TIME_TS = `export type Time = {
-  sec: number;
-  nsec: number;
-};
-`;
-
-export const DURATION_TS = `export type Duration = {
-  sec: number;
-  nsec: number;
-};
-`;
 
 export type GenerateTypeScriptOptions = {
   /**

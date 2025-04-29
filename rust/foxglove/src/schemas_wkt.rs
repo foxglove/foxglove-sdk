@@ -258,6 +258,9 @@ where
     }
 }
 
+/// An alias for [`Timestamp`].
+pub type Time = Timestamp;
+
 /// A timestamp, represented as an offset from a user-defined epoch.
 ///
 /// # Example
