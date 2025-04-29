@@ -191,6 +191,1130 @@ typedef struct foxglove_schema {
   size_t data_len;
 } foxglove_schema;
 
+/**
+ * A timestamp, represented as an offset from a user-defined epoch.
+ */
+typedef struct Timestamp {
+  /**
+   * Seconds since epoch.
+   */
+  uint32_t sec;
+  /**
+   * Additional nanoseconds since epoch.
+   */
+  uint32_t nsec;
+} Timestamp;
+
+/**
+ * Camera calibration parameters
+ */
+typedef struct foxglove_camera_calibration {
+  /**
+   * Timestamp of calibration data
+   */
+  const struct Timestamp *timestamp;
+  /**
+   * Frame of reference for the camera. The origin of the frame is the optical center of the camera. +x points to the right in the image, +y points down, and +z points into the plane of the image.
+   */
+  struct foxglove_string frame_id;
+  /**
+   * Image width
+   */
+  uint32_t width;
+  /**
+   * Image height
+   */
+  uint32_t height;
+  /**
+   * Name of distortion model
+   *
+   * Supported parameters: `plumb_bob` (k1, k2, p1, p2, k3) and `rational_polynomial` (k1, k2, p1, p2, k3, k4, k5, k6). Distortion models are based on [OpenCV's](https://docs.opencv.org/2.4/modules/calib3d/doc/camera_calibration_and_3d_reconstruction.html) [pinhole camera model](https://en.wikipedia.org/wiki/Distortion_%28optics%29#Software_correction). This is the same [implementation used by ROS](http://docs.ros.org/en/diamondback/api/image_geometry/html/c++/pinhole__camera__model_8cpp_source.html)
+   */
+  struct foxglove_string distortion_model;
+  /**
+   * Distortion parameters
+   */
+  const double *d;
+  size_t d_count;
+  /**
+   * Intrinsic camera matrix (3x3 row-major matrix)
+   *
+   * A 3x3 row-major matrix for the raw (distorted) image.
+   *
+   * Projects 3D points in the camera coordinate frame to 2D pixel coordinates using the focal lengths (fx, fy) and principal point (cx, cy).
+   *
+   * ```
+   *     [fx  0 cx]
+   * K = [ 0 fy cy]
+   *     [ 0  0  1]
+   * ```
+   *
+   */
+  double k[9];
+  /**
+   * Rectification matrix (stereo cameras only, 3x3 row-major matrix)
+   *
+   * A rotation matrix aligning the camera coordinate system to the ideal stereo image plane so that epipolar lines in both stereo images are parallel.
+   */
+  double r[9];
+  /**
+   * Projection/camera matrix (3x4 row-major matrix)
+   *
+   * ```
+   *     [fx'  0  cx' Tx]
+   * P = [ 0  fy' cy' Ty]
+   *     [ 0   0   1   0]
+   * ```
+   *
+   * By convention, this matrix specifies the intrinsic (camera) matrix of the processed (rectified) image. That is, the left 3x3 portion is the normal camera intrinsic matrix for the rectified image.
+   *
+   * It projects 3D points in the camera coordinate frame to 2D pixel coordinates using the focal lengths (fx', fy') and principal point (cx', cy') - these may differ from the values in K.
+   *
+   * For monocular cameras, Tx = Ty = 0. Normally, monocular cameras will also have R = the identity and P[1:3,1:3] = K.
+   *
+   * For a stereo pair, the fourth column [Tx Ty 0]' is related to the position of the optical center of the second camera in the first camera's frame. We assume Tz = 0 so both cameras are in the same stereo image plane. The first camera always has Tx = Ty = 0. For the right (second) camera of a horizontal stereo pair, Ty = 0 and Tx = -fx' * B, where B is the baseline between the cameras.
+   *
+   * Given a 3D point [X Y Z]', the projection (x, y) of the point onto the rectified image is given by:
+   *
+   * ```
+   * [u v w]' = P * [X Y Z 1]'
+   *        x = u / w
+   *        y = v / w
+   * ```
+   *
+   * This holds for both images of a stereo pair.
+   *
+   */
+  double p[12];
+} foxglove_camera_calibration;
+
+/**
+ * A point representing a position in 2D space
+ */
+typedef struct foxglove_point2 {
+  /**
+   * x coordinate position
+   */
+  double x;
+  /**
+   * y coordinate position
+   */
+  double y;
+} foxglove_point2;
+
+/**
+ * A color in RGBA format
+ */
+typedef struct foxglove_color {
+  /**
+   * Red value between 0 and 1
+   */
+  double r;
+  /**
+   * Green value between 0 and 1
+   */
+  double g;
+  /**
+   * Blue value between 0 and 1
+   */
+  double b;
+  /**
+   * Alpha value between 0 and 1
+   */
+  double a;
+} foxglove_color;
+
+/**
+ * A circle annotation on a 2D image
+ */
+typedef struct foxglove_circle_annotation {
+  /**
+   * Timestamp of circle
+   */
+  const struct Timestamp *timestamp;
+  /**
+   * Center of the circle in 2D image coordinates (pixels).
+   * The coordinate uses the top-left corner of the top-left pixel of the image as the origin.
+   */
+  const struct foxglove_point2 *position;
+  /**
+   * Circle diameter in pixels
+   */
+  double diameter;
+  /**
+   * Line thickness in pixels
+   */
+  double thickness;
+  /**
+   * Fill color
+   */
+  const struct foxglove_color *fill_color;
+  /**
+   * Outline color
+   */
+  const struct foxglove_color *outline_color;
+} foxglove_circle_annotation;
+
+/**
+ * A compressed image
+ */
+typedef struct foxglove_compressed_image {
+  /**
+   * Timestamp of image
+   */
+  const struct Timestamp *timestamp;
+  /**
+   * Frame of reference for the image. The origin of the frame is the optical center of the camera. +x points to the right in the image, +y points down, and +z points into the plane of the image.
+   */
+  struct foxglove_string frame_id;
+  /**
+   * Compressed image data
+   */
+  const unsigned char *data;
+  size_t data_len;
+  /**
+   * Image format
+   *
+   * Supported values: `jpeg`, `png`, `webp`, `avif`
+   */
+  struct foxglove_string format;
+} foxglove_compressed_image;
+
+/**
+ * A single frame of a compressed video bitstream
+ */
+typedef struct foxglove_compressed_video {
+  /**
+   * Timestamp of video frame
+   */
+  const struct Timestamp *timestamp;
+  /**
+   * Frame of reference for the video.
+   *
+   * The origin of the frame is the optical center of the camera. +x points to the right in the video, +y points down, and +z points into the plane of the video.
+   */
+  struct foxglove_string frame_id;
+  /**
+   * Compressed video frame data.
+   *
+   * For packet-based video codecs this data must begin and end on packet boundaries (no partial packets), and must contain enough video packets to decode exactly one image (either a keyframe or delta frame). Note: Foxglove does not support video streams that include B frames because they require lookahead.
+   *
+   * Specifically, the requirements for different `format` values are:
+   *
+   * - `h264`
+   *   - Use Annex B formatted data
+   *   - Each CompressedVideo message should contain enough NAL units to decode exactly one video frame
+   *   - Each message containing a key frame (IDR) must also include a SPS NAL unit
+   *
+   * - `h265` (HEVC)
+   *   - Use Annex B formatted data
+   *   - Each CompressedVideo message should contain enough NAL units to decode exactly one video frame
+   *   - Each message containing a key frame (IRAP) must also include relevant VPS/SPS/PPS NAL units
+   *
+   * - `vp9`
+   *   - Each CompressedVideo message should contain exactly one video frame
+   *
+   * - `av1`
+   *   - Use the "Low overhead bitstream format" (section 5.2)
+   *   - Each CompressedVideo message should contain enough OBUs to decode exactly one video frame
+   *   - Each message containing a key frame must also include a Sequence Header OBU
+   */
+  const unsigned char *data;
+  size_t data_len;
+  /**
+   * Video format.
+   *
+   * Supported values: `h264`, `h265`, `vp9`, `av1`.
+   *
+   * Note: compressed video support is subject to hardware limitations and patent licensing, so not all encodings may be supported on all platforms. See more about [H.265 support](https://caniuse.com/hevc), [VP9 support](https://caniuse.com/webm), and [AV1 support](https://caniuse.com/av1).
+   */
+  struct foxglove_string format;
+} foxglove_compressed_video;
+
+/**
+ * A vector in 3D space that represents a direction only
+ */
+typedef struct foxglove_vector3 {
+  /**
+   * x coordinate length
+   */
+  double x;
+  /**
+   * y coordinate length
+   */
+  double y;
+  /**
+   * z coordinate length
+   */
+  double z;
+} foxglove_vector3;
+
+/**
+ * A [quaternion](https://eater.net/quaternions) representing a rotation in 3D space
+ */
+typedef struct foxglove_quaternion {
+  /**
+   * x value
+   */
+  double x;
+  /**
+   * y value
+   */
+  double y;
+  /**
+   * z value
+   */
+  double z;
+  /**
+   * w value
+   */
+  double w;
+} foxglove_quaternion;
+
+/**
+ * A transform between two reference frames in 3D space
+ */
+typedef struct foxglove_frame_transform {
+  /**
+   * Timestamp of transform
+   */
+  const struct Timestamp *timestamp;
+  /**
+   * Name of the parent frame
+   */
+  struct foxglove_string parent_frame_id;
+  /**
+   * Name of the child frame
+   */
+  struct foxglove_string child_frame_id;
+  /**
+   * Translation component of the transform
+   */
+  const struct foxglove_vector3 *translation;
+  /**
+   * Rotation component of the transform
+   */
+  const struct foxglove_quaternion *rotation;
+} foxglove_frame_transform;
+
+/**
+ * An array of FrameTransform messages
+ */
+typedef struct foxglove_frame_transforms {
+  /**
+   * Array of transforms
+   */
+  const struct foxglove_frame_transform *const *transforms;
+  size_t transforms_count;
+} foxglove_frame_transforms;
+
+/**
+ * GeoJSON data for annotating maps
+ */
+typedef struct foxglove_geo_json {
+  /**
+   * GeoJSON data encoded as a UTF-8 string
+   */
+  struct foxglove_string geojson;
+} foxglove_geo_json;
+
+/**
+ * A position and orientation for an object or reference frame in 3D space
+ */
+typedef struct foxglove_pose {
+  /**
+   * Point denoting position in 3D space
+   */
+  const struct foxglove_vector3 *position;
+  /**
+   * Quaternion denoting orientation in 3D space
+   */
+  const struct foxglove_quaternion *orientation;
+} foxglove_pose;
+
+/**
+ * A vector in 2D space that represents a direction only
+ */
+typedef struct foxglove_vector2 {
+  /**
+   * x coordinate length
+   */
+  double x;
+  /**
+   * y coordinate length
+   */
+  double y;
+} foxglove_vector2;
+
+/**
+ * A field present within each element in a byte array of packed elements.
+ */
+typedef struct foxglove_packed_element_field {
+  /**
+   * Name of the field
+   */
+  struct foxglove_string name;
+  /**
+   * Byte offset from start of data buffer
+   */
+  uint32_t offset;
+  /**
+   * Type of data in the field. Integers are stored using little-endian byte order.
+   */
+  int32_t type;
+} foxglove_packed_element_field;
+
+/**
+ * A 2D grid of data
+ */
+typedef struct foxglove_grid {
+  /**
+   * Timestamp of grid
+   */
+  const struct Timestamp *timestamp;
+  /**
+   * Frame of reference
+   */
+  struct foxglove_string frame_id;
+  /**
+   * Origin of grid's corner relative to frame of reference; grid is positioned in the x-y plane relative to this origin
+   */
+  const struct foxglove_pose *pose;
+  /**
+   * Number of grid columns
+   */
+  uint32_t column_count;
+  /**
+   * Size of single grid cell along x and y axes, relative to `pose`
+   */
+  const struct foxglove_vector2 *cell_size;
+  /**
+   * Number of bytes between rows in `data`
+   */
+  uint32_t row_stride;
+  /**
+   * Number of bytes between cells within a row in `data`
+   */
+  uint32_t cell_stride;
+  /**
+   * Fields in `data`. `red`, `green`, `blue`, and `alpha` are optional for customizing the grid's color.
+   */
+  const struct foxglove_packed_element_field *const *fields;
+  size_t fields_count;
+  /**
+   * Grid cell data, interpreted using `fields`, in row-major (y-major) order
+   */
+  const unsigned char *data;
+  size_t data_len;
+} foxglove_grid;
+
+/**
+ * An array of points on a 2D image
+ */
+typedef struct foxglove_points_annotation {
+  /**
+   * Timestamp of annotation
+   */
+  const struct Timestamp *timestamp;
+  /**
+   * Type of points annotation to draw
+   */
+  int32_t type;
+  /**
+   * Points in 2D image coordinates (pixels).
+   * These coordinates use the top-left corner of the top-left pixel of the image as the origin.
+   */
+  const struct foxglove_point2 *const *points;
+  size_t points_count;
+  /**
+   * Outline color
+   */
+  const struct foxglove_color *outline_color;
+  /**
+   * Per-point colors, if `type` is `POINTS`, or per-segment stroke colors, if `type` is `LINE_LIST`, `LINE_STRIP` or `LINE_LOOP`.
+   */
+  const struct foxglove_color *const *outline_colors;
+  size_t outline_colors_count;
+  /**
+   * Fill color
+   */
+  const struct foxglove_color *fill_color;
+  /**
+   * Stroke thickness in pixels
+   */
+  double thickness;
+} foxglove_points_annotation;
+
+/**
+ * A text label on a 2D image
+ */
+typedef struct foxglove_text_annotation {
+  /**
+   * Timestamp of annotation
+   */
+  const struct Timestamp *timestamp;
+  /**
+   * Bottom-left origin of the text label in 2D image coordinates (pixels).
+   * The coordinate uses the top-left corner of the top-left pixel of the image as the origin.
+   */
+  const struct foxglove_point2 *position;
+  /**
+   * Text to display
+   */
+  struct foxglove_string text;
+  /**
+   * Font size in pixels
+   */
+  double font_size;
+  /**
+   * Text color
+   */
+  const struct foxglove_color *text_color;
+  /**
+   * Background fill color
+   */
+  const struct foxglove_color *background_color;
+} foxglove_text_annotation;
+
+/**
+ * Array of annotations for a 2D image
+ */
+typedef struct foxglove_image_annotations {
+  /**
+   * Circle annotations
+   */
+  const struct foxglove_circle_annotation *const *circles;
+  size_t circles_count;
+  /**
+   * Points annotations
+   */
+  const struct foxglove_points_annotation *const *points;
+  size_t points_count;
+  /**
+   * Text annotations
+   */
+  const struct foxglove_text_annotation *const *texts;
+  size_t texts_count;
+} foxglove_image_annotations;
+
+/**
+ * A key with its associated value
+ */
+typedef struct foxglove_key_value_pair {
+  /**
+   * Key
+   */
+  struct foxglove_string key;
+  /**
+   * Value
+   */
+  struct foxglove_string value;
+} foxglove_key_value_pair;
+
+/**
+ * A single scan from a planar laser range-finder
+ */
+typedef struct foxglove_laser_scan {
+  /**
+   * Timestamp of scan
+   */
+  const struct Timestamp *timestamp;
+  /**
+   * Frame of reference
+   */
+  struct foxglove_string frame_id;
+  /**
+   * Origin of scan relative to frame of reference; points are positioned in the x-y plane relative to this origin; angles are interpreted as counterclockwise rotations around the z axis with 0 rad being in the +x direction
+   */
+  const struct foxglove_pose *pose;
+  /**
+   * Bearing of first point, in radians
+   */
+  double start_angle;
+  /**
+   * Bearing of last point, in radians
+   */
+  double end_angle;
+  /**
+   * Distance of detections from origin; assumed to be at equally-spaced angles between `start_angle` and `end_angle`
+   */
+  const double *ranges;
+  size_t ranges_count;
+  /**
+   * Intensity of detections
+   */
+  const double *intensities;
+  size_t intensities_count;
+} foxglove_laser_scan;
+
+/**
+ * A navigation satellite fix for any Global Navigation Satellite System
+ */
+typedef struct foxglove_location_fix {
+  /**
+   * Timestamp of the message
+   */
+  const struct Timestamp *timestamp;
+  /**
+   * Frame for the sensor. Latitude and longitude readings are at the origin of the frame.
+   */
+  struct foxglove_string frame_id;
+  /**
+   * Latitude in degrees
+   */
+  double latitude;
+  /**
+   * Longitude in degrees
+   */
+  double longitude;
+  /**
+   * Altitude in meters
+   */
+  double altitude;
+  /**
+   * Position covariance (m^2) defined relative to a tangential plane through the reported position. The components are East, North, and Up (ENU), in row-major order.
+   */
+  double position_covariance[9];
+  /**
+   * If `position_covariance` is available, `position_covariance_type` must be set to indicate the type of covariance.
+   */
+  int32_t position_covariance_type;
+} foxglove_location_fix;
+
+/**
+ * A log message
+ */
+typedef struct foxglove_log {
+  /**
+   * Timestamp of log message
+   */
+  const struct Timestamp *timestamp;
+  /**
+   * Log level
+   */
+  int32_t level;
+  /**
+   * Log message
+   */
+  struct foxglove_string message;
+  /**
+   * Process or node name
+   */
+  struct foxglove_string name;
+  /**
+   * Filename
+   */
+  struct foxglove_string file;
+  /**
+   * Line number in the file
+   */
+  uint32_t line;
+} foxglove_log;
+
+/**
+ * Command to remove previously published entities
+ */
+typedef struct foxglove_scene_entity_deletion {
+  /**
+   * Timestamp of the deletion. Only matching entities earlier than this timestamp will be deleted.
+   */
+  const struct Timestamp *timestamp;
+  /**
+   * Type of deletion action to perform
+   */
+  int32_t type;
+  /**
+   * Identifier which must match if `type` is `MATCHING_ID`.
+   */
+  struct foxglove_string id;
+} foxglove_scene_entity_deletion;
+
+/**
+ * A signed, fixed-length span of time.
+ *
+ * The duration is represented by a count of seconds (which may be negative), and a count of
+ * fractional seconds at nanosecond resolution (which are always positive).
+ */
+typedef struct Duration {
+  /**
+   * Seconds offset.
+   */
+  int32_t sec;
+  /**
+   * Nanoseconds offset in the positive direction.
+   */
+  uint32_t nsec;
+} Duration;
+
+/**
+ * A primitive representing an arrow
+ */
+typedef struct ArrowPrimitive {
+  /**
+   * Position of the arrow's tail and orientation of the arrow. Identity orientation means the arrow points in the +x direction.
+   */
+  const struct foxglove_pose *pose;
+  /**
+   * Length of the arrow shaft
+   */
+  double shaft_length;
+  /**
+   * Diameter of the arrow shaft
+   */
+  double shaft_diameter;
+  /**
+   * Length of the arrow head
+   */
+  double head_length;
+  /**
+   * Diameter of the arrow head
+   */
+  double head_diameter;
+  /**
+   * Color of the arrow
+   */
+  const struct foxglove_color *color;
+} ArrowPrimitive;
+
+/**
+ * A primitive representing a cube or rectangular prism
+ */
+typedef struct CubePrimitive {
+  /**
+   * Position of the center of the cube and orientation of the cube
+   */
+  const struct foxglove_pose *pose;
+  /**
+   * Size of the cube along each axis
+   */
+  const struct foxglove_vector3 *size;
+  /**
+   * Color of the cube
+   */
+  const struct foxglove_color *color;
+} CubePrimitive;
+
+/**
+ * A primitive representing a sphere or ellipsoid
+ */
+typedef struct SpherePrimitive {
+  /**
+   * Position of the center of the sphere and orientation of the sphere
+   */
+  const struct foxglove_pose *pose;
+  /**
+   * Size (diameter) of the sphere along each axis
+   */
+  const struct foxglove_vector3 *size;
+  /**
+   * Color of the sphere
+   */
+  const struct foxglove_color *color;
+} SpherePrimitive;
+
+/**
+ * A primitive representing a cylinder, elliptic cylinder, or truncated cone
+ */
+typedef struct CylinderPrimitive {
+  /**
+   * Position of the center of the cylinder and orientation of the cylinder. The flat face(s) are perpendicular to the z-axis.
+   */
+  const struct foxglove_pose *pose;
+  /**
+   * Size of the cylinder's bounding box
+   */
+  const struct foxglove_vector3 *size;
+  /**
+   * 0-1, ratio of the diameter of the cylinder's bottom face (min z) to the bottom of the bounding box
+   */
+  double bottom_scale;
+  /**
+   * 0-1, ratio of the diameter of the cylinder's top face (max z) to the top of the bounding box
+   */
+  double top_scale;
+  /**
+   * Color of the cylinder
+   */
+  const struct foxglove_color *color;
+} CylinderPrimitive;
+
+/**
+ * A point representing a position in 3D space
+ */
+typedef struct foxglove_point3 {
+  /**
+   * x coordinate position
+   */
+  double x;
+  /**
+   * y coordinate position
+   */
+  double y;
+  /**
+   * z coordinate position
+   */
+  double z;
+} foxglove_point3;
+
+/**
+ * A primitive representing a series of points connected by lines
+ */
+typedef struct LinePrimitive {
+  /**
+   * Drawing primitive to use for lines
+   */
+  int32_t type;
+  /**
+   * Origin of lines relative to reference frame
+   */
+  const struct foxglove_pose *pose;
+  /**
+   * Line thickness
+   */
+  double thickness;
+  /**
+   * Indicates whether `thickness` is a fixed size in screen pixels (true), or specified in world coordinates and scales with distance from the camera (false)
+   */
+  bool scale_invariant;
+  /**
+   * Points along the line
+   */
+  const struct foxglove_point3 *const *points;
+  size_t points_count;
+  /**
+   * Solid color to use for the whole line. One of `color` or `colors` must be provided.
+   */
+  const struct foxglove_color *color;
+  /**
+   * Per-point colors (if specified, must have the same length as `points`). One of `color` or `colors` must be provided.
+   */
+  const struct foxglove_color *const *colors;
+  size_t colors_count;
+  /**
+   * Indices into the `points` and `colors` attribute arrays, which can be used to avoid duplicating attribute data.
+   *
+   * If omitted or empty, indexing will not be used. This default behavior is equivalent to specifying [0, 1, ..., N-1] for the indices (where N is the number of `points` provided).
+   */
+  const uint32_t *indices;
+  size_t indices_count;
+} LinePrimitive;
+
+/**
+ * A primitive representing a set of triangles or a surface tiled by triangles
+ */
+typedef struct TriangleListPrimitive {
+  /**
+   * Origin of triangles relative to reference frame
+   */
+  const struct foxglove_pose *pose;
+  /**
+   * Vertices to use for triangles, interpreted as a list of triples (0-1-2, 3-4-5, ...)
+   */
+  const struct foxglove_point3 *const *points;
+  size_t points_count;
+  /**
+   * Solid color to use for the whole shape. One of `color` or `colors` must be provided.
+   */
+  const struct foxglove_color *color;
+  /**
+   * Per-vertex colors (if specified, must have the same length as `points`). One of `color` or `colors` must be provided.
+   */
+  const struct foxglove_color *const *colors;
+  size_t colors_count;
+  /**
+   * Indices into the `points` and `colors` attribute arrays, which can be used to avoid duplicating attribute data.
+   *
+   * If omitted or empty, indexing will not be used. This default behavior is equivalent to specifying [0, 1, ..., N-1] for the indices (where N is the number of `points` provided).
+   */
+  const uint32_t *indices;
+  size_t indices_count;
+} TriangleListPrimitive;
+
+/**
+ * A primitive representing a text label
+ */
+typedef struct TextPrimitive {
+  /**
+   * Position of the center of the text box and orientation of the text. Identity orientation means the text is oriented in the xy-plane and flows from -x to +x.
+   */
+  const struct foxglove_pose *pose;
+  /**
+   * Whether the text should respect `pose.orientation` (false) or always face the camera (true)
+   */
+  bool billboard;
+  /**
+   * Font size (height of one line of text)
+   */
+  double font_size;
+  /**
+   * Indicates whether `font_size` is a fixed size in screen pixels (true), or specified in world coordinates and scales with distance from the camera (false)
+   */
+  bool scale_invariant;
+  /**
+   * Color of the text
+   */
+  const struct foxglove_color *color;
+  /**
+   * Text
+   */
+  struct foxglove_string text;
+} TextPrimitive;
+
+/**
+ * A primitive representing a 3D model file loaded from an external URL or embedded data
+ */
+typedef struct ModelPrimitive {
+  /**
+   * Origin of model relative to reference frame
+   */
+  const struct foxglove_pose *pose;
+  /**
+   * Scale factor to apply to the model along each axis
+   */
+  const struct foxglove_vector3 *scale;
+  /**
+   * Solid color to use for the whole model if `override_color` is true.
+   */
+  const struct foxglove_color *color;
+  /**
+   * Whether to use the color specified in `color` instead of any materials embedded in the original model.
+   */
+  bool override_color;
+  /**
+   * URL pointing to model file. One of `url` or `data` should be provided.
+   */
+  struct foxglove_string url;
+  /**
+   * [Media type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types) of embedded model (e.g. `model/gltf-binary`). Required if `data` is provided instead of `url`. Overrides the inferred media type if `url` is provided.
+   */
+  struct foxglove_string media_type;
+  /**
+   * Embedded model. One of `url` or `data` should be provided. If `data` is provided, `media_type` must be set to indicate the type of the data.
+   */
+  const unsigned char *data;
+  size_t data_len;
+} ModelPrimitive;
+
+/**
+ * A visual element in a 3D scene. An entity may be composed of multiple primitives which all share the same frame of reference.
+ */
+typedef struct foxglove_scene_entity {
+  /**
+   * Timestamp of the entity
+   */
+  const struct Timestamp *timestamp;
+  /**
+   * Frame of reference
+   */
+  struct foxglove_string frame_id;
+  /**
+   * Identifier for the entity. A entity will replace any prior entity on the same topic with the same `id`.
+   */
+  struct foxglove_string id;
+  /**
+   * Length of time (relative to `timestamp`) after which the entity should be automatically removed. Zero value indicates the entity should remain visible until it is replaced or deleted.
+   */
+  const struct Duration *lifetime;
+  /**
+   * Whether the entity should keep its location in the fixed frame (false) or follow the frame specified in `frame_id` as it moves relative to the fixed frame (true)
+   */
+  bool frame_locked;
+  /**
+   * Additional user-provided metadata associated with the entity. Keys must be unique.
+   */
+  const struct foxglove_key_value_pair *const *metadata;
+  size_t metadata_count;
+  /**
+   * Arrow primitives
+   */
+  const struct ArrowPrimitive *const *arrows;
+  size_t arrows_count;
+  /**
+   * Cube primitives
+   */
+  const struct CubePrimitive *const *cubes;
+  size_t cubes_count;
+  /**
+   * Sphere primitives
+   */
+  const struct SpherePrimitive *const *spheres;
+  size_t spheres_count;
+  /**
+   * Cylinder primitives
+   */
+  const struct CylinderPrimitive *const *cylinders;
+  size_t cylinders_count;
+  /**
+   * Line primitives
+   */
+  const struct LinePrimitive *const *lines;
+  size_t lines_count;
+  /**
+   * Triangle list primitives
+   */
+  const struct TriangleListPrimitive *const *triangles;
+  size_t triangles_count;
+  /**
+   * Text primitives
+   */
+  const struct TextPrimitive *const *texts;
+  size_t texts_count;
+  /**
+   * Model primitives
+   */
+  const struct ModelPrimitive *const *models;
+  size_t models_count;
+} foxglove_scene_entity;
+
+/**
+ * An update to the entities displayed in a 3D scene
+ */
+typedef struct foxglove_scene_update {
+  /**
+   * Scene entities to delete
+   */
+  const struct foxglove_scene_entity_deletion *const *deletions;
+  size_t deletions_count;
+  /**
+   * Scene entities to add or replace
+   */
+  const struct foxglove_scene_entity *const *entities;
+  size_t entities_count;
+} foxglove_scene_update;
+
+/**
+ * A collection of N-dimensional points, which may contain additional fields with information like normals, intensity, etc.
+ */
+typedef struct foxglove_point_cloud {
+  /**
+   * Timestamp of point cloud
+   */
+  const struct Timestamp *timestamp;
+  /**
+   * Frame of reference
+   */
+  struct foxglove_string frame_id;
+  /**
+   * The origin of the point cloud relative to the frame of reference
+   */
+  const struct foxglove_pose *pose;
+  /**
+   * Number of bytes between points in the `data`
+   */
+  uint32_t point_stride;
+  /**
+   * Fields in `data`. At least 2 coordinate fields from `x`, `y`, and `z` are required for each point's position; `red`, `green`, `blue`, and `alpha` are optional for customizing each point's color.
+   */
+  const struct foxglove_packed_element_field *const *fields;
+  size_t fields_count;
+  /**
+   * Point data, interpreted using `fields`
+   */
+  const unsigned char *data;
+  size_t data_len;
+} foxglove_point_cloud;
+
+/**
+ * A timestamped pose for an object or reference frame in 3D space
+ */
+typedef struct foxglove_pose_in_frame {
+  /**
+   * Timestamp of pose
+   */
+  const struct Timestamp *timestamp;
+  /**
+   * Frame of reference for pose position and orientation
+   */
+  struct foxglove_string frame_id;
+  /**
+   * Pose in 3D space
+   */
+  const struct foxglove_pose *pose;
+} foxglove_pose_in_frame;
+
+/**
+ * An array of timestamped poses for an object or reference frame in 3D space
+ */
+typedef struct foxglove_poses_in_frame {
+  /**
+   * Timestamp of pose
+   */
+  const struct Timestamp *timestamp;
+  /**
+   * Frame of reference for pose position and orientation
+   */
+  struct foxglove_string frame_id;
+  /**
+   * Poses in 3D space
+   */
+  const struct foxglove_pose *const *poses;
+  size_t poses_count;
+} foxglove_poses_in_frame;
+
+/**
+ * A single block of an audio bitstream
+ */
+typedef struct foxglove_raw_audio {
+  /**
+   * Timestamp of the start of the audio block
+   */
+  const struct Timestamp *timestamp;
+  /**
+   * Audio data. The samples in the data must be interleaved and little-endian
+   */
+  const unsigned char *data;
+  size_t data_len;
+  /**
+   * Audio format. Only 'pcm-s16' is currently supported
+   */
+  struct foxglove_string format;
+  /**
+   * Sample rate in Hz
+   */
+  uint32_t sample_rate;
+  /**
+   * Number of channels in the audio block
+   */
+  uint32_t number_of_channels;
+} foxglove_raw_audio;
+
+/**
+ * A raw image
+ */
+typedef struct foxglove_raw_image {
+  /**
+   * Timestamp of image
+   */
+  const struct Timestamp *timestamp;
+  /**
+   * Frame of reference for the image. The origin of the frame is the optical center of the camera. +x points to the right in the image, +y points down, and +z points into the plane of the image.
+   */
+  struct foxglove_string frame_id;
+  /**
+   * Image width
+   */
+  uint32_t width;
+  /**
+   * Image height
+   */
+  uint32_t height;
+  /**
+   * Encoding of the raw image data
+   *
+   * Supported values: `8UC1`, `8UC3`, `16UC1` (little endian), `32FC1` (little endian), `bayer_bggr8`, `bayer_gbrg8`, `bayer_grbg8`, `bayer_rggb8`, `bgr8`, `bgra8`, `mono8`, `mono16`, `rgb8`, `rgba8`, `uyvy` or `yuv422`, `yuyv` or `yuv422_yuy2`
+   */
+  struct foxglove_string encoding;
+  /**
+   * Byte length of a single row
+   */
+  uint32_t step;
+  /**
+   * Raw image data
+   */
+  const unsigned char *data;
+  size_t data_len;
+} foxglove_raw_image;
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
@@ -390,6 +1514,130 @@ foxglove_error foxglove_connection_graph_set_advertised_service(struct foxglove_
                                                                 struct foxglove_string service,
                                                                 const struct foxglove_string *provider_ids,
                                                                 size_t provider_ids_count);
+
+foxglove_error foxglove_channel_log_camera_calibration(const struct foxglove_channel *channel,
+                                                       const struct foxglove_camera_calibration *msg,
+                                                       const uint64_t *log_time);
+
+foxglove_error foxglove_channel_log_circle_annotation(const struct foxglove_channel *channel,
+                                                      const struct foxglove_circle_annotation *msg,
+                                                      const uint64_t *log_time);
+
+foxglove_error foxglove_channel_log_color(const struct foxglove_channel *channel,
+                                          const struct foxglove_color *msg,
+                                          const uint64_t *log_time);
+
+foxglove_error foxglove_channel_log_compressed_image(const struct foxglove_channel *channel,
+                                                     const struct foxglove_compressed_image *msg,
+                                                     const uint64_t *log_time);
+
+foxglove_error foxglove_channel_log_compressed_video(const struct foxglove_channel *channel,
+                                                     const struct foxglove_compressed_video *msg,
+                                                     const uint64_t *log_time);
+
+foxglove_error foxglove_channel_log_frame_transform(const struct foxglove_channel *channel,
+                                                    const struct foxglove_frame_transform *msg,
+                                                    const uint64_t *log_time);
+
+foxglove_error foxglove_channel_log_frame_transforms(const struct foxglove_channel *channel,
+                                                     const struct foxglove_frame_transforms *msg,
+                                                     const uint64_t *log_time);
+
+foxglove_error foxglove_channel_log_geo_json(const struct foxglove_channel *channel,
+                                             const struct foxglove_geo_json *msg,
+                                             const uint64_t *log_time);
+
+foxglove_error foxglove_channel_log_grid(const struct foxglove_channel *channel,
+                                         const struct foxglove_grid *msg,
+                                         const uint64_t *log_time);
+
+foxglove_error foxglove_channel_log_image_annotations(const struct foxglove_channel *channel,
+                                                      const struct foxglove_image_annotations *msg,
+                                                      const uint64_t *log_time);
+
+foxglove_error foxglove_channel_log_key_value_pair(const struct foxglove_channel *channel,
+                                                   const struct foxglove_key_value_pair *msg,
+                                                   const uint64_t *log_time);
+
+foxglove_error foxglove_channel_log_laser_scan(const struct foxglove_channel *channel,
+                                               const struct foxglove_laser_scan *msg,
+                                               const uint64_t *log_time);
+
+foxglove_error foxglove_channel_log_location_fix(const struct foxglove_channel *channel,
+                                                 const struct foxglove_location_fix *msg,
+                                                 const uint64_t *log_time);
+
+foxglove_error foxglove_channel_log_log(const struct foxglove_channel *channel,
+                                        const struct foxglove_log *msg,
+                                        const uint64_t *log_time);
+
+foxglove_error foxglove_channel_log_scene_entity_deletion(const struct foxglove_channel *channel,
+                                                          const struct foxglove_scene_entity_deletion *msg,
+                                                          const uint64_t *log_time);
+
+foxglove_error foxglove_channel_log_scene_entity(const struct foxglove_channel *channel,
+                                                 const struct foxglove_scene_entity *msg,
+                                                 const uint64_t *log_time);
+
+foxglove_error foxglove_channel_log_scene_update(const struct foxglove_channel *channel,
+                                                 const struct foxglove_scene_update *msg,
+                                                 const uint64_t *log_time);
+
+foxglove_error foxglove_channel_log_packed_element_field(const struct foxglove_channel *channel,
+                                                         const struct foxglove_packed_element_field *msg,
+                                                         const uint64_t *log_time);
+
+foxglove_error foxglove_channel_log_point2(const struct foxglove_channel *channel,
+                                           const struct foxglove_point2 *msg,
+                                           const uint64_t *log_time);
+
+foxglove_error foxglove_channel_log_point3(const struct foxglove_channel *channel,
+                                           const struct foxglove_point3 *msg,
+                                           const uint64_t *log_time);
+
+foxglove_error foxglove_channel_log_point_cloud(const struct foxglove_channel *channel,
+                                                const struct foxglove_point_cloud *msg,
+                                                const uint64_t *log_time);
+
+foxglove_error foxglove_channel_log_points_annotation(const struct foxglove_channel *channel,
+                                                      const struct foxglove_points_annotation *msg,
+                                                      const uint64_t *log_time);
+
+foxglove_error foxglove_channel_log_pose(const struct foxglove_channel *channel,
+                                         const struct foxglove_pose *msg,
+                                         const uint64_t *log_time);
+
+foxglove_error foxglove_channel_log_pose_in_frame(const struct foxglove_channel *channel,
+                                                  const struct foxglove_pose_in_frame *msg,
+                                                  const uint64_t *log_time);
+
+foxglove_error foxglove_channel_log_poses_in_frame(const struct foxglove_channel *channel,
+                                                   const struct foxglove_poses_in_frame *msg,
+                                                   const uint64_t *log_time);
+
+foxglove_error foxglove_channel_log_quaternion(const struct foxglove_channel *channel,
+                                               const struct foxglove_quaternion *msg,
+                                               const uint64_t *log_time);
+
+foxglove_error foxglove_channel_log_raw_audio(const struct foxglove_channel *channel,
+                                              const struct foxglove_raw_audio *msg,
+                                              const uint64_t *log_time);
+
+foxglove_error foxglove_channel_log_raw_image(const struct foxglove_channel *channel,
+                                              const struct foxglove_raw_image *msg,
+                                              const uint64_t *log_time);
+
+foxglove_error foxglove_channel_log_text_annotation(const struct foxglove_channel *channel,
+                                                    const struct foxglove_text_annotation *msg,
+                                                    const uint64_t *log_time);
+
+foxglove_error foxglove_channel_log_vector2(const struct foxglove_channel *channel,
+                                            const struct foxglove_vector2 *msg,
+                                            const uint64_t *log_time);
+
+foxglove_error foxglove_channel_log_vector3(const struct foxglove_channel *channel,
+                                            const struct foxglove_vector3 *msg,
+                                            const uint64_t *log_time);
 
 #ifdef __cplusplus
 }  // extern "C"

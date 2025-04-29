@@ -12,6 +12,8 @@ use std::mem::ManuallyDrop;
 use std::sync::Arc;
 
 pub mod connection_graph;
+mod generated_types;
+pub use generated_types::*;
 
 /// A string with associated length.
 #[repr(C)]
@@ -31,6 +33,14 @@ impl FoxgloveString {
     unsafe fn as_utf8_str(&self) -> Result<&str, std::str::Utf8Error> {
         std::str::from_utf8(unsafe { std::slice::from_raw_parts(self.data.cast(), self.len) })
     }
+
+    pub fn as_ptr(&self) -> *const c_char {
+        self.data
+    }
+
+    pub fn len(&self) -> usize {
+        self.len
+    }
 }
 
 #[cfg(test)]
@@ -40,6 +50,14 @@ impl From<&str> for FoxgloveString {
             data: s.as_ptr().cast(),
             len: s.len(),
         }
+    }
+
+    pub fn as_ptr(&self) -> *const c_char {
+        self.data
+    }
+
+    pub fn len(&self) -> usize {
+        self.len
     }
 }
 
@@ -583,7 +601,7 @@ pub unsafe extern "C" fn foxglove_channel_log(
     channel: Option<&FoxgloveChannel>,
     data: *const u8,
     data_len: usize,
-    log_time: *const u64,
+    log_time: Option<&u64>,
 ) -> FoxgloveError {
     // An assert might be reasonable under different circumstances, but here
     // we don't want to crash the program using the library, on a robot in the field,
@@ -603,7 +621,7 @@ pub unsafe extern "C" fn foxglove_channel_log(
     channel.log_with_meta(
         unsafe { std::slice::from_raw_parts(data, data_len) },
         foxglove::PartialMetadata {
-            log_time: unsafe { log_time.as_ref() }.copied(),
+            log_time: log_time.copied(),
         },
     );
     FoxgloveError::Ok
@@ -840,6 +858,65 @@ unsafe fn result_to_c<T>(
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_error_to_cstr(error: FoxgloveError) -> *const c_char {
     error.to_cstr().as_ptr() as *const _
+}
+
+pub(crate) fn log_msg_to_channel<T: foxglove::Encode>(
+    channel: Option<&FoxgloveChannel>,
+    msg: &T,
+    log_time: Option<&u64>,
+) -> FoxgloveError {
+    let Some(channel) = channel else {
+        tracing::error!("log called with null channel");
+        return FoxgloveError::ValueError;
+    };
+    let channel = ManuallyDrop::new(unsafe {
+        // Safety: we're restoring the Arc<RawChannel> we leaked into_raw in foxglove_channel_create
+        let channel_arc = Arc::from_raw(channel as *const _ as *mut foxglove::RawChannel);
+        // We can safely create a Channel from any Arc<RawChannel>
+        foxglove::Channel::<T>::from_raw_channel(channel_arc)
+    });
+    channel.log_with_meta(
+        msg,
+        foxglove::PartialMetadata {
+            log_time: log_time.copied(),
+        },
+    );
+    FoxgloveError::Ok
+}
+
+/// A timestamp, represented as an offset from a user-defined epoch.
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct Timestamp {
+    /// Seconds since epoch.
+    pub sec: u32,
+    /// Additional nanoseconds since epoch.
+    pub nsec: u32,
+}
+
+impl From<Timestamp> for foxglove::schemas::Timestamp {
+    fn from(other: Timestamp) -> Self {
+        Self::new(other.sec, other.nsec)
+    }
+}
+
+/// A signed, fixed-length span of time.
+///
+/// The duration is represented by a count of seconds (which may be negative), and a count of
+/// fractional seconds at nanosecond resolution (which are always positive).
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct Duration {
+    /// Seconds offset.
+    sec: i32,
+    /// Nanoseconds offset in the positive direction.
+    nsec: u32,
+}
+
+impl From<Duration> for foxglove::schemas::Duration {
+    fn from(other: Duration) -> Self {
+        Self::new(other.sec, other.nsec)
+    }
 }
 
 #[cfg(test)]

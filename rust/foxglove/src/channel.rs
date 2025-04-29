@@ -73,7 +73,8 @@ impl<T: Encode> Channel<T> {
         ChannelBuilder::new(topic).build()
     }
 
-    pub(crate) fn from_raw_channel(raw_channel: Arc<RawChannel>) -> Self {
+    #[doc(hidden)]
+    pub fn from_raw_channel(raw_channel: Arc<RawChannel>) -> Self {
         Self {
             inner: raw_channel,
             _phantom: std::marker::PhantomData,
