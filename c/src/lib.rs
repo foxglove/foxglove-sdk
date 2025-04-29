@@ -6,6 +6,7 @@ use bitflags::bitflags;
 use connection_graph::FoxgloveConnectionGraph;
 pub use logging::foxglove_set_log_level;
 use mcap::{Compression, WriteOptions};
+use service::FoxgloveService;
 use std::ffi::{c_char, c_void, CString};
 use std::fs::File;
 use std::io::BufWriter;
@@ -16,6 +17,7 @@ mod bytes;
 mod connection_graph;
 mod logging;
 mod parameter;
+mod service;
 
 use parameter::FoxgloveParameterArray;
 
@@ -321,6 +323,24 @@ pub struct FoxgloveSchema {
     pub data: *const u8,
     pub data_len: usize,
 }
+impl FoxgloveSchema {
+    /// Converts a schema to the native type.
+    ///
+    /// # Safety
+    /// - `name` must be a valid pointer to a UTF-8 string.
+    /// - `encoding` must be a valid pointer to a UTF-8 string.
+    /// - `data` must be a valid pointer to a buffer of `data_len` bytes.
+    unsafe fn to_native(&self) -> Result<foxglove::Schema, foxglove::FoxgloveError> {
+        let name = unsafe { self.name.as_utf8_str() }.map_err(|e| {
+            foxglove::FoxgloveError::Utf8Error(format!("schema name invalid: {}", e))
+        })?;
+        let encoding = unsafe { self.encoding.as_utf8_str() }.map_err(|e| {
+            foxglove::FoxgloveError::Utf8Error(format!("schema encoding invalid: {}", e))
+        })?;
+        let data = unsafe { std::slice::from_raw_parts(self.data, self.data_len) };
+        Ok(foxglove::Schema::new(name, encoding, data.to_owned()))
+    }
+}
 
 pub struct FoxgloveWebSocketServer(Option<foxglove::WebSocketServerHandle>);
 
@@ -415,6 +435,55 @@ unsafe fn do_foxglove_server_start(
     Ok(Box::into_raw(Box::new(FoxgloveWebSocketServer(Some(
         server,
     )))))
+}
+
+/// Adds a service to the server.
+///
+/// # Safety
+/// - `server` must be a valid pointer to a server started with `foxglove_server_start`.
+/// - `service` must be a valid pointer to a service allocated by `foxglove_service_create`. This
+///   value is moved into this function, and must not be accessed afterwards.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_server_add_service(
+    server: Option<&FoxgloveWebSocketServer>,
+    service: *mut FoxgloveService,
+) -> FoxgloveError {
+    let Some(server) = server else {
+        return FoxgloveError::ValueError;
+    };
+    let Some(server) = server.as_ref() else {
+        return FoxgloveError::SinkClosed;
+    };
+    let service = unsafe { FoxgloveService::from_raw(service) };
+    server
+        .add_services([service.into_inner()])
+        .err()
+        .map(FoxgloveError::from)
+        .unwrap_or(FoxgloveError::Ok)
+}
+
+/// Removes a service from the server.
+///
+/// # Safety
+/// - `server` must be a valid pointer to a server started with `foxglove_server_start`.
+/// - `service_name` must be a valid pointer to a UTF-8 string.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_server_remove_service(
+    server: Option<&FoxgloveWebSocketServer>,
+    service_name: FoxgloveString,
+) -> FoxgloveError {
+    let Some(server) = server else {
+        return FoxgloveError::ValueError;
+    };
+    let Some(server) = server.as_ref() else {
+        return FoxgloveError::SinkClosed;
+    };
+    let service_name = unsafe { service_name.as_utf8_str() };
+    let Ok(service_name) = service_name else {
+        return FoxgloveError::Utf8Error;
+    };
+    server.remove_services([service_name]);
+    FoxgloveError::Ok
 }
 
 /// Get the port on which the server is listening.
@@ -699,15 +768,8 @@ unsafe fn do_foxglove_channel_create(
 
     let mut maybe_schema = None;
     if let Some(schema) = unsafe { schema.as_ref() } {
-        let name = unsafe { schema.name.as_utf8_str() }.map_err(|e| {
-            foxglove::FoxgloveError::Utf8Error(format!("schema name invalid: {}", e))
-        })?;
-        let encoding = unsafe { schema.encoding.as_utf8_str() }.map_err(|e| {
-            foxglove::FoxgloveError::Utf8Error(format!("schema encoding invalid: {}", e))
-        })?;
-
-        let data = unsafe { std::slice::from_raw_parts(schema.data, schema.data_len) };
-        maybe_schema = Some(foxglove::Schema::new(name, encoding, data.to_owned()));
+        let schema = unsafe { schema.to_native() }?;
+        maybe_schema = Some(schema);
     }
 
     let mut builder = foxglove::ChannelBuilder::new(topic)

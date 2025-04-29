@@ -18,6 +18,9 @@ using Catch::Matchers::Equals;
 
 using Json = nlohmann::json;
 
+using namespace std::string_literals;
+using namespace std::string_view_literals;
+
 using WebSocketClientInner = websocketpp::client<websocketpp::config::asio_client>;
 using WebSocketConnection =
   std::shared_ptr<websocketpp::connection<websocketpp::config::asio_client>>;
@@ -80,6 +83,10 @@ public:
     client_.send(connection_, payload, len, websocketpp::frame::opcode::binary, ec);
     UNSCOPED_INFO(ec.message());
     REQUIRE(!ec);
+  }
+
+  void send(std::vector<std::byte>& payload) {
+    this->send(payload.data(), payload.size());
   }
 
   void close() {
@@ -730,4 +737,316 @@ TEST_CASE("Publish a connection graph") {
   graph.setSubscribedTopic("topic", {"subscriber1", "subscriber2"});
   graph.setAdvertisedService("service", {"provider1", "provider2"});
   server.publishConnectionGraph(graph);
+}
+
+std::vector<std::byte> makeBytes(std::string_view sv) {
+  const auto* data = reinterpret_cast<const std::byte*>(sv.data());
+  return {data, data + sv.size()};
+}
+
+foxglove::ServiceMessageSchema makeServiceMessageSchema(std::string_view name) {
+  static auto json_schema = makeBytes(R"({"type": "object"})");
+  return foxglove::ServiceMessageSchema{
+    "json"s,
+    foxglove::Schema{
+      std::string(name),
+      "jsonschema"s,
+      json_schema.data(),
+      json_schema.size(),
+    }
+  };
+}
+
+foxglove::ServiceSchema makeServiceSchema(std::string_view name) {
+  return foxglove::ServiceSchema{
+    std::string(name),
+    makeServiceMessageSchema("request"),
+    makeServiceMessageSchema("response"),
+  };
+}
+
+void writeUint32LE(std::vector<std::byte>& buffer, uint32_t value) {
+  buffer.push_back(static_cast<std::byte>(value & 0xffU));
+  buffer.push_back(static_cast<std::byte>((value >> 8) & 0xffU));
+  buffer.push_back(static_cast<std::byte>((value >> 16) & 0xffU));
+  buffer.push_back(static_cast<std::byte>((value >> 24) & 0xffU));
+}
+
+uint32_t readUint32LE(const std::vector<std::byte>& buffer, size_t offset) {
+  REQUIRE(offset + 4 <= buffer.size());
+  return (static_cast<uint32_t>(buffer[offset + 0]) << 0) |
+         (static_cast<uint32_t>(buffer[offset + 1]) << 8) |
+         (static_cast<uint32_t>(buffer[offset + 2]) << 16) |
+         (static_cast<uint32_t>(buffer[offset + 3]) << 24);
+}
+
+std::vector<std::byte> makeServiceRequest(
+  uint32_t service_id, uint32_t call_id, std::string_view encoding,
+  const std::vector<std::byte>& payload
+) {
+  std::vector<std::byte> buffer;
+  buffer.reserve(1 + 4 + 4 + 4 + encoding.size() + payload.size());
+  buffer.emplace_back(static_cast<std::byte>(2));  // Service call request opcode
+  writeUint32LE(buffer, service_id);
+  writeUint32LE(buffer, call_id);
+  writeUint32LE(buffer, encoding.size());
+  for (char c : encoding) {
+    buffer.emplace_back(static_cast<std::byte>(c));
+  }
+  for (auto b : payload) {
+    buffer.emplace_back(b);
+  }
+  return buffer;
+}
+
+void validateServiceResponse(
+  // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
+  const std::string_view response, uint32_t service_id, uint32_t call_id, std::string_view encoding,
+  const std::vector<std::byte>& payload
+) {
+  std::vector<std::byte> bytes(response.size());
+  std::memcpy(bytes.data(), response.data(), response.size());
+  REQUIRE(response.size() >= 1 + 4 + 4 + 4);
+  REQUIRE(static_cast<uint8_t>(bytes[0]) == 3);  // Service call response opcode
+  REQUIRE(readUint32LE(bytes, 1) == service_id);
+  REQUIRE(readUint32LE(bytes, 5) == call_id);
+  REQUIRE(readUint32LE(bytes, 9) == encoding.size());
+  REQUIRE(response.size() >= 13 + encoding.size());
+  REQUIRE(memcmp(response.data() + 13, encoding.data(), encoding.size()) == 0);
+  REQUIRE(response.size() >= 13 + encoding.size() + payload.size());
+  REQUIRE(memcmp(response.data() + 13 + encoding.size(), payload.data(), payload.size()) == 0);
+}
+
+TEST_CASE("Service callbacks") {
+  std::mutex mutex;
+  std::condition_variable cv;
+  // the following variables are protected by the mutex:
+  bool connection_opened = false;
+  std::optional<foxglove::ServiceRequest> last_request;
+  std::queue<std::string> client_rx;
+
+  auto context = foxglove::Context::create();
+  auto server = startServer(context, foxglove::WebSocketServerCapabilities::Services, {}, {"json"});
+
+  // Register an echo service.
+  foxglove::ServiceSchema echo_schema{"echo schema"};
+  foxglove::ServiceHandler echo_handler(
+    [&](const foxglove::ServiceRequest& request, foxglove::ServiceResponder&& responder) {
+      std::scoped_lock lock{mutex};
+      last_request = request;
+      std::move(responder).respondOk(request.payload);
+    }
+  );
+  auto service = foxglove::Service::create("/echo", echo_schema, echo_handler);
+  REQUIRE(service.has_value());
+  auto error = server.addService(std::move(*service));
+  REQUIRE(error == foxglove::FoxgloveError::Ok);
+
+  // Register a service with a more complicated schema that returns errors.
+  foxglove::ServiceSchema error_schema = makeServiceSchema("error schema");
+  foxglove::ServiceHandler error_handler(
+    [&](const foxglove::ServiceRequest& request, foxglove::ServiceResponder&& responder) {
+      std::scoped_lock lock{mutex};
+      last_request = request;
+      std::move(responder).respondError("oh noes"sv);
+    }
+  );
+  service = foxglove::Service::create("/error", error_schema, error_handler);
+  REQUIRE(service.has_value());
+  error = server.addService(std::move(*service));
+  REQUIRE(error == foxglove::FoxgloveError::Ok);
+
+  WebSocketClient client;
+  client.inner().set_open_handler([&](const auto& hdl) {
+    std::scoped_lock lock{mutex};
+    connection_opened = true;
+    cv.notify_one();
+  });
+  client.inner().set_message_handler(
+    [&](const websocketpp::connection_hdl&, const WebSocketMessage& msg) {
+      std::scoped_lock lock{mutex};
+      client_rx.push(msg->get_payload());
+      cv.notify_one();
+    }
+  );
+  client.start(server.port());
+
+  // Wait for the connection to be opened.
+  {
+    std::unique_lock lock{mutex};
+    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
+      return connection_opened;
+    });
+    REQUIRE(wait_result);
+  }
+
+  // Wait for the the serverInfo message.
+  std::string rx_payload;
+  {
+    std::unique_lock lock{mutex};
+    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
+      return !client_rx.empty();
+    });
+    REQUIRE(wait_result);
+    rx_payload = client_rx.front();
+    client_rx.pop();
+  }
+  Json parsed = Json::parse(rx_payload);
+  REQUIRE(parsed.contains("op"));
+  REQUIRE(parsed["op"] == "serverInfo");
+
+  // Wait for the service advertisement message.
+  {
+    std::unique_lock lock{mutex};
+    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
+      return !client_rx.empty();
+    });
+    REQUIRE(wait_result);
+    rx_payload = client_rx.front();
+    client_rx.pop();
+  }
+  parsed = Json::parse(rx_payload);
+  REQUIRE(parsed.contains("op"));
+  REQUIRE(parsed["op"] == "advertiseServices");
+  REQUIRE(parsed.contains("services"));
+  std::map<std::string, uint32_t> service_ids;
+  for (const auto& service : parsed["services"]) {
+    REQUIRE(service.contains("id"));
+    REQUIRE(service.contains("name"));
+    uint8_t id(service["id"]);
+    std::string name(service["name"]);
+    service_ids[name] = id;
+    Json expected;
+    if (name == "/echo") {
+      expected = Json::parse(R"({
+          "id": 0,
+          "name": "/echo",
+          "type": "echo schema",
+          "requestSchema": "",
+          "responseSchema": ""
+       })");
+    } else if (name == "/error") {
+      expected = Json::parse(R"({
+          "id": 0,
+          "name": "/error",
+          "type": "error schema",
+          "request": {
+            "encoding": "json",
+            "schemaName": "request",
+            "schemaEncoding": "jsonschema",
+            "schema": "{\"type\": \"object\"}"
+          },
+          "response": {
+            "encoding": "json",
+            "schemaName": "response",
+            "schemaEncoding": "jsonschema",
+            "schema": "{\"type\": \"object\"}"
+          }
+       })");
+    } else {
+    }
+    expected["id"] = id;
+    REQUIRE(service == expected);
+  }
+  REQUIRE(service_ids.count("/echo") == 1);
+  REQUIRE(service_ids.count("/error") == 1);
+
+  // Make an echo service call.
+  auto request_payload = makeBytes(R"({"hello": "there"})");
+  auto service_request = makeServiceRequest(service_ids["/echo"], 99, "json", request_payload);
+  client.send(service_request);
+
+  // Wait for the server to process the callback.
+  {
+    std::unique_lock lock{mutex};
+    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
+      if (last_request.has_value()) {
+        REQUIRE(last_request->service_name == "/echo");
+        REQUIRE(last_request->call_id == 99);
+        REQUIRE(last_request->encoding == "json");
+        REQUIRE(last_request->payload == request_payload);
+        last_request.reset();
+        return true;
+      }
+      return false;
+    });
+    REQUIRE(wait_result);
+  }
+
+  // Wait for the response.
+  {
+    std::unique_lock lock{mutex};
+    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
+      return !client_rx.empty();
+    });
+    REQUIRE(wait_result);
+    rx_payload = client_rx.front();
+    client_rx.pop();
+  }
+  validateServiceResponse(rx_payload, service_ids["/echo"], 99, "json", request_payload);
+
+  // Make an error service call.
+  service_request = makeServiceRequest(service_ids["/error"], 123, "json", request_payload);
+  client.send(service_request);
+
+  // Wait for the server to process the callback.
+  {
+    std::unique_lock lock{mutex};
+    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
+      if (last_request.has_value()) {
+        REQUIRE(last_request->service_name == "/error");
+        REQUIRE(last_request->call_id == 123);
+        REQUIRE(last_request->encoding == "json");
+        REQUIRE(last_request->payload == request_payload);
+        last_request.reset();
+        return true;
+      }
+      return false;
+    });
+    REQUIRE(wait_result);
+  }
+
+  // Wait for the response.
+  {
+    std::unique_lock lock{mutex};
+    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
+      return !client_rx.empty();
+    });
+    REQUIRE(wait_result);
+    rx_payload = client_rx.front();
+    client_rx.pop();
+  }
+  parsed = Json::parse(rx_payload);
+  auto expected_response = Json::parse(R"({
+    "op": "serviceCallFailure",
+    "serviceId": 0,
+    "callId": 123,
+    "message": "oh noes"
+  })");
+  expected_response["serviceId"] = service_ids["/error"];
+  REQUIRE(parsed == expected_response);
+
+  // Remove a service.
+  error = server.removeService("/error");
+  REQUIRE(error == foxglove::FoxgloveError::Ok);
+
+  // Wait for the unadvertise message.
+  {
+    std::unique_lock lock{mutex};
+    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
+      return !client_rx.empty();
+    });
+    REQUIRE(wait_result);
+    rx_payload = client_rx.front();
+    client_rx.pop();
+  }
+  parsed = Json::parse(rx_payload);
+  auto expected = Json::parse(R"({
+    "op": "unadvertiseServices",
+    "serviceIds": [1]
+  })");
+  expected["serviceIds"][0] = service_ids["/error"];
+  REQUIRE(parsed == expected);
+
+  REQUIRE(server.stop() == foxglove::FoxgloveError::Ok);
 }

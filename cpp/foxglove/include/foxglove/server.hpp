@@ -4,6 +4,7 @@
 #include <foxglove/error.hpp>
 #include <foxglove/server/connection_graph.hpp>
 #include <foxglove/server/parameter.hpp>
+#include <foxglove/server/service.hpp>
 
 #include <cstdint>
 #include <functional>
@@ -193,6 +194,31 @@ public:
 
   /// @brief Gracefully shut down the websocket server.
   FoxgloveError stop();
+
+  /**
+   * Advertises support for the provided service.
+   *
+   * This service will be available for clients to use until it is removed with
+   * `removeService()`, or the server is stopped.
+   *
+   * This method will fail for various reasons, with the following error codes:
+   *
+   * - `DuplicateService`: A service with the same name is already registered.
+   * - `MissingRequestedEncoding`: The service didn't declare a request
+   *   encoding, and the server was not configured with a global list of
+   *   supported encodings.
+   * - `ServicesNotSupported`: The server was not convfigured with the
+   *   `Services` capability.
+   */
+  [[nodiscard]] FoxgloveError addService(Service&& service) const noexcept;
+
+  /**
+   * Removes a service that was previously advertised.
+   *
+   * This method will fail with `FoxgloveError::Utf8Error` if the service name
+   * is not a valid UTF-8 string.
+   */
+  [[nodiscard]] FoxgloveError removeService(std::string_view name) const noexcept;
 
   /// @brief Publishes parameter values to all subscribed clients.
   ///

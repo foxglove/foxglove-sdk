@@ -18,9 +18,14 @@ impl FoxgloveBytes {
 
     #[cfg(test)]
     pub(crate) fn from_slice(data: &[u8]) -> Self {
+        data.into()
+    }
+}
+impl From<&[u8]> for FoxgloveBytes {
+    fn from(value: &[u8]) -> Self {
         Self {
-            data: data.as_ptr(),
-            len: data.len(),
+            data: value.as_ptr(),
+            len: value.len(),
         }
     }
 }

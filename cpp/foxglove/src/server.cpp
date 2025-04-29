@@ -245,6 +245,17 @@ uint16_t WebSocketServer::port() const {
   return foxglove_server_get_port(impl_.get());
 }
 
+// NOLINTNEXTLINE(cppcoreguidelines-rvalue-reference-param-not-moved)
+FoxgloveError WebSocketServer::addService(Service&& service) const noexcept {
+  auto error = foxglove_server_add_service(impl_.get(), service.release());
+  return FoxgloveError(error);
+}
+
+FoxgloveError WebSocketServer::removeService(std::string_view name) const noexcept {
+  auto error = foxglove_server_remove_service(impl_.get(), {name.data(), name.length()});
+  return FoxgloveError(error);
+}
+
 void WebSocketServer::publishParameterValues(std::vector<Parameter>&& params) {
   ParameterArray array(std::move(params));
   foxglove_server_publish_parameter_values(impl_.get(), array.release());
