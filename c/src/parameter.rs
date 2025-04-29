@@ -465,9 +465,7 @@ pub unsafe extern "C" fn foxglove_parameter_create_dict(
     name: FoxgloveString,
     dict: *mut FoxgloveParameterValueDict,
 ) -> FoxgloveError {
-    let mut value = std::ptr::null_mut();
-    let err = unsafe { foxglove_parameter_value_create_dict(&mut value, dict) };
-    assert_eq!(err, FoxgloveError::Ok, "valid pointer");
+    let value = unsafe { foxglove_parameter_value_create_dict(dict) };
     unsafe { foxglove_parameter_create(param, name, FoxgloveParameterType::None, value) }
 }
 
@@ -477,23 +475,17 @@ pub unsafe extern "C" fn foxglove_parameter_create_dict(
 /// function such as `foxglove_parameter_array_push`.
 ///
 /// # Safety
-/// - `dst` must be a valid pointer.
-/// - `src` must be a valid pointer to a value allocated by `foxglove_parameter_create` or
+/// - `param` must be a valid pointer to a value allocated by `foxglove_parameter_create` or
 ///   `foxglove_parameter_clone`.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_parameter_clone(
-    dst: *mut *mut FoxgloveParameter,
-    src: Option<&FoxgloveParameter>,
-) -> FoxgloveError {
-    if dst.is_null() {
-        return FoxgloveError::ValueError;
+    param: Option<&FoxgloveParameter>,
+) -> *mut FoxgloveParameter {
+    if let Some(param) = param {
+        param.clone().into_raw()
+    } else {
+        std::ptr::null_mut()
     }
-    let Some(src) = src else {
-        return FoxgloveError::ValueError;
-    };
-    let this = src.clone().into_raw();
-    unsafe { *dst = this };
-    FoxgloveError::Ok
 }
 
 /// Frees a parameter.
@@ -763,40 +755,22 @@ impl Drop for FoxgloveParameterValue {
 ///
 /// The value must be freed with `foxglove_parameter_value_free`, or by passing it to a consuming
 /// function such as `foxglove_parameter_create`.
-///
-/// # Safety
-/// - `value` must be a valid pointer.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn foxglove_parameter_value_create_number(
-    value: *mut *mut FoxgloveParameterValue,
+pub extern "C" fn foxglove_parameter_value_create_number(
     number: f64,
-) -> FoxgloveError {
-    if value.is_null() {
-        return FoxgloveError::ValueError;
-    }
-    let ptr = FoxgloveParameterValue::number(number).into_raw();
-    unsafe { *value = ptr };
-    FoxgloveError::Ok
+) -> *mut FoxgloveParameterValue {
+    FoxgloveParameterValue::number(number).into_raw()
 }
 
 /// Creates a new boolean parameter value.
 ///
 /// The value must be freed with `foxglove_parameter_value_free`, or by passing it to a consuming
 /// function such as `foxglove_parameter_create`.
-///
-/// # Safety
-/// - `value` must be a valid pointer.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_parameter_value_create_boolean(
-    value: *mut *mut FoxgloveParameterValue,
     boolean: bool,
-) -> FoxgloveError {
-    if value.is_null() {
-        return FoxgloveError::ValueError;
-    }
-    let ptr = FoxgloveParameterValue::boolean(boolean).into_raw();
-    unsafe { *value = ptr };
-    FoxgloveError::Ok
+) -> *mut FoxgloveParameterValue {
+    FoxgloveParameterValue::boolean(boolean).into_raw()
 }
 
 /// Creates a new string parameter value.
@@ -805,7 +779,6 @@ pub unsafe extern "C" fn foxglove_parameter_value_create_boolean(
 /// function such as `foxglove_parameter_create`.
 ///
 /// # Safety
-/// - `value` must be a valid pointer.
 /// - `string` must be a valid `foxglove_string`. This value is copied by this function.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_parameter_value_create_string(
@@ -830,22 +803,15 @@ pub unsafe extern "C" fn foxglove_parameter_value_create_string(
 /// function such as `foxglove_parameter_create`.
 ///
 /// # Safety
-/// - `value` must be a valid pointer.
 /// - `array` must be a valid pointer to a value allocated by
 ///   `foxglove_parameter_value_array_create`. This value is moved into this function, and must not
 ///   be accessed afterwards.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_parameter_value_create_array(
-    value: *mut *mut FoxgloveParameterValue,
     array: *mut FoxgloveParameterValueArray,
-) -> FoxgloveError {
+) -> *mut FoxgloveParameterValue {
     let array = unsafe { FoxgloveParameterValueArray::from_raw(array) };
-    if value.is_null() {
-        return FoxgloveError::ValueError;
-    }
-    let ptr = FoxgloveParameterValue::array(*array).into_raw();
-    unsafe { *value = ptr };
-    FoxgloveError::Ok
+    FoxgloveParameterValue::array(*array).into_raw()
 }
 
 /// Creates a new dict parameter value.
@@ -854,22 +820,15 @@ pub unsafe extern "C" fn foxglove_parameter_value_create_array(
 /// function such as `foxglove_parameter_create`.
 ///
 /// # Safety
-/// - `value` must be a valid pointer.
 /// - `dict` must be a valid pointer to a value allocated by
 ///   `foxglove_parameter_value_dict_create`. This value is moved into this function, and must not be
 ///   accessed afterwards.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_parameter_value_create_dict(
-    value: *mut *mut FoxgloveParameterValue,
     dict: *mut FoxgloveParameterValueDict,
-) -> FoxgloveError {
+) -> *mut FoxgloveParameterValue {
     let dict = unsafe { FoxgloveParameterValueDict::from_raw(dict) };
-    if value.is_null() {
-        return FoxgloveError::ValueError;
-    }
-    let ptr = FoxgloveParameterValue::dict(*dict).into_raw();
-    unsafe { *value = ptr };
-    FoxgloveError::Ok
+    FoxgloveParameterValue::dict(*dict).into_raw()
 }
 
 /// Clones a parameter value.
@@ -878,23 +837,17 @@ pub unsafe extern "C" fn foxglove_parameter_value_create_dict(
 /// function such as `foxglove_parameter_create`.
 ///
 /// # Safety
-/// - `dst` must be a valid pointer.
-/// - `src` must be a valid pointer to a value allocated by `foxglove_parameter_value_create` or
+/// - `value` must be a valid pointer to a value allocated by `foxglove_parameter_value_create` or
 ///   `foxglove_parameter_value_clone`.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_parameter_value_clone(
-    dst: *mut *mut FoxgloveParameterValue,
-    src: Option<&FoxgloveParameterValue>,
-) -> FoxgloveError {
-    if dst.is_null() {
-        return FoxgloveError::ValueError;
+    value: Option<&FoxgloveParameterValue>,
+) -> *mut FoxgloveParameterValue {
+    if let Some(value) = value {
+        value.clone().into_raw()
+    } else {
+        std::ptr::null_mut()
     }
-    let Some(src) = src else {
-        return FoxgloveError::ValueError;
-    };
-    let this = src.clone().into_raw();
-    unsafe { *dst = this };
-    FoxgloveError::Ok
 }
 
 /// Frees a paramter value.

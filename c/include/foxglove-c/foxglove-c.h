@@ -770,12 +770,10 @@ foxglove_error foxglove_parameter_create_dict(struct foxglove_parameter **param,
  * function such as `foxglove_parameter_array_push`.
  *
  * # Safety
- * - `dst` must be a valid pointer.
- * - `src` must be a valid pointer to a value allocated by `foxglove_parameter_create` or
+ * - `param` must be a valid pointer to a value allocated by `foxglove_parameter_create` or
  *   `foxglove_parameter_clone`.
  */
-foxglove_error foxglove_parameter_clone(struct foxglove_parameter **dst,
-                                        const struct foxglove_parameter *src);
+struct foxglove_parameter *foxglove_parameter_clone(const struct foxglove_parameter *param);
 
 /**
  * Frees a parameter.
@@ -791,24 +789,16 @@ void foxglove_parameter_free(struct foxglove_parameter *param);
  *
  * The value must be freed with `foxglove_parameter_value_free`, or by passing it to a consuming
  * function such as `foxglove_parameter_create`.
- *
- * # Safety
- * - `value` must be a valid pointer.
  */
-foxglove_error foxglove_parameter_value_create_number(struct foxglove_parameter_value **value,
-                                                      double number);
+struct foxglove_parameter_value *foxglove_parameter_value_create_number(double number);
 
 /**
  * Creates a new boolean parameter value.
  *
  * The value must be freed with `foxglove_parameter_value_free`, or by passing it to a consuming
  * function such as `foxglove_parameter_create`.
- *
- * # Safety
- * - `value` must be a valid pointer.
  */
-foxglove_error foxglove_parameter_value_create_boolean(struct foxglove_parameter_value **value,
-                                                       bool boolean);
+struct foxglove_parameter_value *foxglove_parameter_value_create_boolean(bool boolean);
 
 /**
  * Creates a new string parameter value.
@@ -817,7 +807,6 @@ foxglove_error foxglove_parameter_value_create_boolean(struct foxglove_parameter
  * function such as `foxglove_parameter_create`.
  *
  * # Safety
- * - `value` must be a valid pointer.
  * - `string` must be a valid `foxglove_string`. This value is copied by this function.
  */
 foxglove_error foxglove_parameter_value_create_string(struct foxglove_parameter_value **value,
@@ -830,13 +819,11 @@ foxglove_error foxglove_parameter_value_create_string(struct foxglove_parameter_
  * function such as `foxglove_parameter_create`.
  *
  * # Safety
- * - `value` must be a valid pointer.
  * - `array` must be a valid pointer to a value allocated by
  *   `foxglove_parameter_value_array_create`. This value is moved into this function, and must not
  *   be accessed afterwards.
  */
-foxglove_error foxglove_parameter_value_create_array(struct foxglove_parameter_value **value,
-                                                     struct foxglove_parameter_value_array *array);
+struct foxglove_parameter_value *foxglove_parameter_value_create_array(struct foxglove_parameter_value_array *array);
 
 /**
  * Creates a new dict parameter value.
@@ -845,13 +832,11 @@ foxglove_error foxglove_parameter_value_create_array(struct foxglove_parameter_v
  * function such as `foxglove_parameter_create`.
  *
  * # Safety
- * - `value` must be a valid pointer.
  * - `dict` must be a valid pointer to a value allocated by
  *   `foxglove_parameter_value_dict_create`. This value is moved into this function, and must not be
  *   accessed afterwards.
  */
-foxglove_error foxglove_parameter_value_create_dict(struct foxglove_parameter_value **value,
-                                                    struct foxglove_parameter_value_dict *dict);
+struct foxglove_parameter_value *foxglove_parameter_value_create_dict(struct foxglove_parameter_value_dict *dict);
 
 /**
  * Clones a parameter value.
@@ -860,12 +845,10 @@ foxglove_error foxglove_parameter_value_create_dict(struct foxglove_parameter_va
  * function such as `foxglove_parameter_create`.
  *
  * # Safety
- * - `dst` must be a valid pointer.
- * - `src` must be a valid pointer to a value allocated by `foxglove_parameter_value_create` or
+ * - `value` must be a valid pointer to a value allocated by `foxglove_parameter_value_create` or
  *   `foxglove_parameter_value_clone`.
  */
-foxglove_error foxglove_parameter_value_clone(struct foxglove_parameter_value **dst,
-                                              const struct foxglove_parameter_value *src);
+struct foxglove_parameter_value *foxglove_parameter_value_clone(const struct foxglove_parameter_value *value);
 
 /**
  * Frees a paramter value.

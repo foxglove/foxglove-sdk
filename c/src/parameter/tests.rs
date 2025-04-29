@@ -117,34 +117,30 @@ fn make_dict_param() -> *mut FoxgloveParameter {
     let array_ptr = foxglove_parameter_value_array_create(2);
     array_insert!(
         array_ptr,
-        make_value!(foxglove_parameter_value_create_number, std::f64::consts::E)
+        foxglove_parameter_value_create_number(std::f64::consts::E)
     );
     array_insert!(
         array_ptr,
-        make_value!(foxglove_parameter_value_create_number, std::f64::consts::PI)
+        foxglove_parameter_value_create_number(std::f64::consts::PI)
     );
     dict_insert!(
         inner,
         "f64[]",
-        make_value!(foxglove_parameter_value_create_array, array_ptr)
+        foxglove_parameter_value_create_array(array_ptr)
     );
 
     let outer = foxglove_parameter_value_dict_create(3);
     dict_insert!(
         outer,
         "bool",
-        make_value!(foxglove_parameter_value_create_boolean, false)
+        foxglove_parameter_value_create_boolean(false)
     );
     dict_insert!(
         outer,
         "number",
-        make_value!(foxglove_parameter_value_create_number, 1.23)
+        foxglove_parameter_value_create_number(1.23)
     );
-    dict_insert!(
-        outer,
-        "nested",
-        make_value!(foxglove_parameter_value_create_dict, inner)
-    );
+    dict_insert!(outer, "nested", foxglove_parameter_value_create_dict(inner));
 
     let mut param = std::ptr::null_mut();
     let err = unsafe { foxglove_parameter_create_dict(&mut param, "outer".into(), outer) };
@@ -181,8 +177,7 @@ fn test_dict() {
 #[test]
 fn test_clone() {
     let src = make_dict_param();
-    let mut dst = std::ptr::null_mut();
-    unsafe { foxglove_parameter_clone(&mut dst, Some(&*src)) };
+    let dst = unsafe { foxglove_parameter_clone(Some(&*src)) };
     unsafe { foxglove_parameter_free(src) };
     let param = unsafe { FoxgloveParameter::from_raw(dst) };
     assert_eq!(param.into_native(), make_dict_native());

@@ -51,10 +51,9 @@ ParameterValueView::Value ParameterValueView::value() const {
 }
 
 ParameterValue ParameterValueView::clone() const {
-  foxglove_parameter_value* ptr = nullptr;
-  auto error = foxglove_parameter_value_clone(&ptr, _impl);
-  if (error != foxglove_error::FOXGLOVE_ERROR_OK) {
-    throw std::runtime_error(foxglove_error_to_cstr(error));
+  foxglove_parameter_value* ptr = foxglove_parameter_value_clone(_impl);
+  if (ptr == nullptr) {
+    throw std::runtime_error("allocation failed");
   }
   return ParameterValue(ptr);
 }
@@ -71,20 +70,18 @@ ParameterValue::ParameterValue(foxglove_parameter_value* value)
 
 ParameterValue::ParameterValue(double value)
     : _impl(nullptr) {
-  foxglove_parameter_value* ptr = nullptr;
-  auto error = foxglove_parameter_value_create_number(&ptr, value);
-  if (error != foxglove_error::FOXGLOVE_ERROR_OK) {
-    throw std::runtime_error(foxglove_error_to_cstr(error));
+  foxglove_parameter_value* ptr = foxglove_parameter_value_create_number(value);
+  if (ptr == nullptr) {
+    throw std::runtime_error("allocation failed");
   }
   _impl.reset(ptr);
 }
 
 ParameterValue::ParameterValue(bool value)
     : _impl(nullptr) {
-  foxglove_parameter_value* ptr = nullptr;
-  auto error = foxglove_parameter_value_create_boolean(&ptr, value);
-  if (error != foxglove_error::FOXGLOVE_ERROR_OK) {
-    throw std::runtime_error(foxglove_error_to_cstr(error));
+  foxglove_parameter_value* ptr = foxglove_parameter_value_create_boolean(value);
+  if (ptr == nullptr) {
+    throw std::runtime_error("allocation failed");
   }
   _impl.reset(ptr);
 }
@@ -115,10 +112,9 @@ ParameterValue::ParameterValue(std::vector<ParameterValue> values)
     }
   }
 
-  foxglove_parameter_value* ptr = nullptr;
-  auto error = foxglove_parameter_value_create_array(&ptr, array_ptr);
-  if (error != foxglove_error::FOXGLOVE_ERROR_OK) {
-    throw std::runtime_error(foxglove_error_to_cstr(error));
+  foxglove_parameter_value* ptr = foxglove_parameter_value_create_array(array_ptr);
+  if (ptr == nullptr) {
+    throw std::runtime_error("allocation failed");
   }
 
   _impl.reset(ptr);
@@ -142,10 +138,9 @@ ParameterValue::ParameterValue(std::map<std::string, ParameterValue> value)
     }
   }
 
-  foxglove_parameter_value* ptr = nullptr;
-  auto error = foxglove_parameter_value_create_dict(&ptr, dict_ptr);
-  if (error != foxglove_error::FOXGLOVE_ERROR_OK) {
-    throw std::runtime_error(foxglove_error_to_cstr(error));
+  foxglove_parameter_value* ptr = foxglove_parameter_value_create_dict(dict_ptr);
+  if (ptr == nullptr) {
+    throw std::runtime_error("allocation failed");
   }
 
   _impl.reset(ptr);
@@ -179,10 +174,9 @@ std::optional<ParameterValueView> ParameterView::valueView() const noexcept {
 }
 
 Parameter ParameterView::clone() const {
-  foxglove_parameter* ptr = nullptr;
-  auto error = foxglove_parameter_clone(&ptr, _impl);
-  if (error != foxglove_error::FOXGLOVE_ERROR_OK) {
-    throw std::runtime_error(foxglove_error_to_cstr(error));
+  foxglove_parameter* ptr = foxglove_parameter_clone(_impl);
+  if (ptr == nullptr) {
+    throw std::runtime_error("allocation failed");
   }
   return Parameter(ptr);
 }
