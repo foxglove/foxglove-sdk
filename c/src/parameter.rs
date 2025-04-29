@@ -3,7 +3,8 @@ use std::{collections::BTreeMap, mem::ManuallyDrop};
 use base64::prelude::*;
 use foxglove::websocket::{Parameter, ParameterType, ParameterValue};
 
-use crate::{FoxgloveBytes, FoxgloveError, FoxgloveString, FoxgloveStringBuf};
+use crate::bytes::FoxgloveBytes;
+use crate::{FoxgloveError, FoxgloveString, FoxgloveStringBuf};
 
 #[cfg(test)]
 mod tests;

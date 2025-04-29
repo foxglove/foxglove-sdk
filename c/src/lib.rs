@@ -15,7 +15,6 @@ mod bytes;
 mod connection_graph;
 mod parameter;
 
-use bytes::FoxgloveBytes;
 use parameter::FoxgloveParameterArray;
 
 /// A string with associated length.
@@ -65,9 +64,6 @@ pub struct FoxgloveStringBuf(FoxgloveString);
 
 impl FoxgloveStringBuf {
     /// Creates a new `FoxgloveString` from the provided string.
-    ///
-    /// Caller is responsible for freeing the underlying storage for the string with
-    /// [`Self::into_string`].
     fn new(str: String) -> Self {
         // SAFETY: Freed on drop.
         let mut str = ManuallyDrop::new(str);
@@ -121,6 +117,7 @@ impl Drop for FoxgloveStringBuf {
     fn drop(&mut self) {
         let FoxgloveString { data, len } = self.0;
         assert!(!data.is_null());
+        // SAFETY: This was constructed from valid `String`.
         drop(unsafe { String::from_raw_parts(data as *mut u8, len, len) })
     }
 }
