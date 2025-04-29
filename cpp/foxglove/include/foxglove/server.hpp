@@ -1,5 +1,6 @@
 #pragma once
 
+#include <foxglove/context.hpp>
 #include <foxglove/error.hpp>
 #include <foxglove/server/connection_graph.hpp>
 #include <foxglove/server/parameter.hpp>
@@ -7,7 +8,6 @@
 #include <cstdint>
 #include <functional>
 #include <memory>
-#include <optional>
 #include <string>
 
 enum foxglove_error : uint8_t;
@@ -15,8 +15,6 @@ struct foxglove_websocket_server;
 struct foxglove_connection_graph;
 
 namespace foxglove {
-
-struct Context;
 
 struct ClientChannel {
   uint32_t id;
