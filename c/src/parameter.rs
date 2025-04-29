@@ -9,6 +9,9 @@ use crate::{FoxgloveBytes, FoxgloveError, FoxgloveString, FoxgloveStringBuf};
 mod tests;
 
 /// Pushes an element into a raw Vec<T>.
+///
+/// # Safety
+/// The raw parts must be consistent.
 unsafe fn raw_vec_push<T>(ptr: &mut *const T, len: &mut usize, cap: &mut usize, elem: T) {
     let mut vec = ManuallyDrop::new(unsafe { Vec::from_raw_parts((*ptr).cast_mut(), *len, *cap) });
     vec.push(elem);
@@ -18,6 +21,9 @@ unsafe fn raw_vec_push<T>(ptr: &mut *const T, len: &mut usize, cap: &mut usize, 
 }
 
 /// Clones a raw Vec<T> into a new Vec<T>.
+///
+/// # Safety
+/// The raw parts must be consistent.
 unsafe fn raw_vec_clone<T: Clone>(ptr: *const T, len: usize, cap: usize) -> Vec<T> {
     ManuallyDrop::new(unsafe { Vec::from_raw_parts(ptr.cast_mut(), len, cap) })
         .iter()
