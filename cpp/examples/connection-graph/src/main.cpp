@@ -65,7 +65,7 @@ int main(int argc, const char* argv[]) {
   uint32_t i = 0;
   while (!done) {
     std::this_thread::sleep_for(1s);
-    server.publish_connection_graph(graph);
+    server.publishConnectionGraph(graph);
 
     ++i;
   }

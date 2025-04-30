@@ -128,7 +128,7 @@ uint16_t WebSocketServer::port() const {
   return foxglove_server_get_port(_impl.get());
 }
 
-void WebSocketServer::publish_connection_graph(ConnectionGraph& graph) {
+void WebSocketServer::publishConnectionGraph(ConnectionGraph& graph) {
   foxglove_server_publish_connection_graph(_impl.get(), graph._impl.get());
 }
 
