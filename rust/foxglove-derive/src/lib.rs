@@ -2,7 +2,7 @@ extern crate proc_macro;
 
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{parse_macro_input, Data, DeriveInput, Fields};
+use syn::{parse_macro_input, parse_quote, Data, DeriveInput, Fields, GenericParam, Generics};
 
 /// Derive macro for enums and structs allowing them to be logged to a Foxglove channel.
 #[proc_macro_derive(Encode)]
@@ -75,13 +75,26 @@ fn derive_enum_impl(input: DeriveInput) -> TokenStream {
     TokenStream::from(expanded)
 }
 
+// Add a bound `T: ProtobufField` to every type parameter T.
+fn add_trait_bounds(mut generics: Generics) -> Generics {
+    for param in &mut generics.params {
+        if let GenericParam::Type(ref mut type_param) = *param {
+            type_param
+                .bounds
+                .push(parse_quote!(foxglove::ProtobufField));
+        }
+    }
+    generics
+}
+
 fn derive_struct_impl(input: DeriveInput) -> TokenStream {
     let name = &input.ident;
     let name_str = name.to_string();
     let package_name = name_str.to_lowercase();
     let full_name = format!("{package_name}.{name_str}");
 
-    let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
+    let generics = add_trait_bounds(input.generics);
+    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
     // Extract fields from the struct
     let fields = match &input.data {
@@ -209,7 +222,7 @@ fn derive_struct_impl(input: DeriveInput) -> TokenStream {
                     ..Default::default()
                 };
 
-                if let Some(message_descriptor) = <#name as ::foxglove::ProtobufField>::message_descriptor() {
+                if let Some(message_descriptor) = <#name #ty_generics as ::foxglove::ProtobufField>::message_descriptor() {
                     file.message_type.push(message_descriptor);
                 }
 

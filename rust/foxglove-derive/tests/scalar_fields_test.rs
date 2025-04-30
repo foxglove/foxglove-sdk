@@ -32,6 +32,11 @@ struct TestMessageVector {
     numbers: Vec<u64>,
 }
 
+#[derive(Encode)]
+struct GenericMessage<T> {
+    val: T,
+}
+
 #[test]
 fn test_primitive_serialization() {
     let test_struct = TestMessagePrimitives {
@@ -214,6 +219,31 @@ fn test_vector_of_u64_field_serialization() {
     assert_eq!(list_value[0].as_u64().unwrap(), 42);
     assert_eq!(list_value[1].as_u64().unwrap(), 84);
     assert_eq!(list_value[2].as_u64().unwrap(), 126);
+}
+
+#[test]
+fn test_generics() {
+    let test_struct = GenericMessage::<u32> { val: 42 };
+
+    let mut buf = BytesMut::new();
+    test_struct.encode(&mut buf).expect("Failed to encode");
+
+    let schema = GenericMessage::<u32>::get_schema().expect("Failed to get schema");
+    assert_eq!(schema.encoding, "protobuf");
+    assert_eq!(schema.name, "genericmessage.GenericMessage");
+
+    let message_descriptor = get_message_descriptor(&schema);
+    let deserialized_message = DynamicMessage::decode(message_descriptor.clone(), buf.as_ref())
+        .expect("Failed to deserialize");
+
+    let field_descriptor = message_descriptor
+        .get_field_by_name("val")
+        .expect("Field 'val' not found");
+
+    let field_value = deserialized_message.get_field(&field_descriptor);
+    let number_value = field_value.as_u32().expect("Field value is not a u32");
+    assert_eq!(field_descriptor.name(), "val");
+    assert_eq!(number_value, 42);
 }
 
 fn get_message_descriptor(schema: &Schema) -> MessageDescriptor {
