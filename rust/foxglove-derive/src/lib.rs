@@ -79,7 +79,9 @@ fn derive_struct_impl(input: DeriveInput) -> TokenStream {
     let name = &input.ident;
     let name_str = name.to_string();
     let package_name = name_str.to_lowercase();
-    let full_name = format!("{}.{}", package_name, name_str);
+    let full_name = format!("{package_name}.{name_str}");
+
+    let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
 
     // Extract fields from the struct
     let fields = match &input.data {
@@ -136,7 +138,8 @@ fn derive_struct_impl(input: DeriveInput) -> TokenStream {
 
     // Generate the output tokens
     let expanded = quote! {
-        impl foxglove::ProtobufField for #name {
+        #[automatically_derived]
+        impl #impl_generics foxglove::ProtobufField for #name #ty_generics #where_clause {
             fn field_type() -> foxglove::prost_types::field_descriptor_proto::Type {
                 foxglove::prost_types::field_descriptor_proto::Type::Message
             }
@@ -193,7 +196,8 @@ fn derive_struct_impl(input: DeriveInput) -> TokenStream {
             }
         }
 
-        impl foxglove::Encode for #name {
+        #[automatically_derived]
+        impl #impl_generics foxglove::Encode for #name #ty_generics #where_clause {
             type Error = std::io::Error;
 
             fn get_schema() -> Option<foxglove::Schema> {

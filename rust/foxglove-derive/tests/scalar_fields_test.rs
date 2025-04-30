@@ -3,11 +3,29 @@ use foxglove::{Encode, Schema};
 use foxglove_derive::Loggable;
 use prost::Message;
 use prost_reflect::{DescriptorPool, DynamicMessage, MessageDescriptor};
+use tracing_test::traced_test;
+
+mod common;
+use common::FixedSizeBuffer;
 
 #[derive(Loggable)]
-struct TestMessage {
-    number: u64,
-    float32: f32,
+struct TestMessagePrimitives {
+    u64: u64,
+    u32: u32,
+    u16: u16,
+    u8: u8,
+    i64: i64,
+    i32: i32,
+    i16: i16,
+    i8: i8,
+    f64: f64,
+    f32: f32,
+    bool: bool,
+}
+
+#[derive(Loggable)]
+struct TestMessageBytes {
+    bytes: bytes::Bytes,
 }
 
 #[derive(Loggable)]
@@ -16,45 +34,131 @@ struct TestMessageVector {
 }
 
 #[test]
-fn test_single_u64_field_serialization() {
-    let test_struct = TestMessage {
-        number: 42,
-        float32: 1234.5678,
+fn test_primitive_serialization() {
+    let test_struct = TestMessagePrimitives {
+        u64: u32::MAX as u64 + 1,
+        u32: 42,
+        u16: 43,
+        u8: 44,
+        i64: i64::MIN,
+        i32: 42,
+        i16: 43,
+        i8: 44,
+        f64: -33.5,
+        f32: 1234.5678,
+        bool: true,
     };
 
     let mut buf = BytesMut::new();
     test_struct.encode(&mut buf).expect("Failed to encode");
 
-    let schema = TestMessage::get_schema().expect("Failed to get schema");
+    let schema = TestMessagePrimitives::get_schema().expect("Failed to get schema");
     assert_eq!(schema.encoding, "protobuf");
-
-    assert_eq!(schema.name, "testmessage.TestMessage");
+    assert_eq!(schema.name, "testmessageprimitives.TestMessagePrimitives");
 
     let message_descriptor = get_message_descriptor(&schema);
-
     let deserialized_message = DynamicMessage::decode(message_descriptor.clone(), buf.as_ref())
         .expect("Failed to deserialize");
 
-    {
-        let field_descriptor = message_descriptor
-            .get_field_by_name("number")
-            .expect("Field 'number' not found");
-        assert_eq!(field_descriptor.name(), "number");
+    let field_descriptor = message_descriptor
+        .get_field_by_name("u64")
+        .expect("Field 'u64' not found");
+    let field_value = deserialized_message.get_field(&field_descriptor);
+    let number_value = field_value.as_u64().expect("Field value is not a u64");
+    assert_eq!(field_descriptor.name(), "u64");
+    assert_eq!(number_value, (u32::MAX as u64 + 1));
 
+    let unsigned_32_types = [("u8", 44), ("u16", 43), ("u32", 42)];
+    for (field_name, expected_value) in unsigned_32_types {
+        let field_descriptor = message_descriptor
+            .get_field_by_name(field_name)
+            .unwrap_or_else(|| panic!("Field '{}' not found", field_name));
         let field_value = deserialized_message.get_field(&field_descriptor);
-        let number_value = field_value.as_u64().expect("Field value is not a u64");
-        assert_eq!(number_value, 42);
+        let number_value = field_value.as_u32().expect("Field value is not a u32");
+        assert_eq!(field_descriptor.name(), field_name);
+        assert_eq!(number_value, expected_value);
     }
 
-    {
-        let field_descriptor = message_descriptor
-            .get_field_by_name("float32")
-            .expect("Field 'float32' not found");
+    let field_descriptor = message_descriptor
+        .get_field_by_name("i64")
+        .expect("Field 'i64' not found");
+    let field_value = deserialized_message.get_field(&field_descriptor);
+    let number_value = field_value.as_i64().expect("Field value is not a i64");
+    assert_eq!(field_descriptor.name(), "i64");
+    assert_eq!(number_value, i64::MIN);
 
+    let signed_32_types = [("i8", 44), ("i16", 43), ("i32", 42)];
+    for (field_name, expected_value) in signed_32_types {
+        let field_descriptor = message_descriptor
+            .get_field_by_name(field_name)
+            .unwrap_or_else(|| panic!("Field '{}' not found", field_name));
         let field_value = deserialized_message.get_field(&field_descriptor);
-        let number_value = field_value.as_f32().expect("Field value is not a f32");
-        assert_eq!(number_value, 1234.5678);
+        let number_value = field_value.as_i32().expect("Field value is not a i32");
+        assert_eq!(field_descriptor.name(), field_name);
+        assert_eq!(number_value, expected_value);
     }
+
+    let field_descriptor = message_descriptor
+        .get_field_by_name("f32")
+        .expect("Field 'f32' not found");
+    let field_value = deserialized_message.get_field(&field_descriptor);
+    let number_value = field_value.as_f32().expect("Field value is not a f32");
+    assert_eq!(field_descriptor.name(), "f32");
+    assert_eq!(number_value, 1234.5678);
+
+    let field_descriptor = message_descriptor
+        .get_field_by_name("f64")
+        .expect("Field 'f64' not found");
+    let field_value = deserialized_message.get_field(&field_descriptor);
+    let number_value = field_value.as_f64().expect("Field value is not a f64");
+    assert_eq!(field_descriptor.name(), "f64");
+    assert_eq!(number_value, -33.5);
+
+    let field_descriptor = message_descriptor
+        .get_field_by_name("bool")
+        .expect("Field 'bool' not found");
+    let field_value = deserialized_message.get_field(&field_descriptor);
+    let bool_value = field_value.as_bool().expect("Field value is not a bool");
+    assert_eq!(field_descriptor.name(), "bool");
+    assert!(bool_value);
+}
+
+#[test]
+fn test_bytes_serialization() {
+    let test_struct = TestMessageBytes {
+        bytes: bytes::Bytes::from_static(&[1, 2, 3]),
+    };
+    let mut buf = BytesMut::new();
+    test_struct.encode(&mut buf).expect("Failed to encode");
+
+    let schema = TestMessageBytes::get_schema().expect("Failed to get schema");
+    assert_eq!(schema.encoding, "protobuf");
+    assert_eq!(schema.name, "testmessagebytes.TestMessageBytes");
+
+    let message_descriptor = get_message_descriptor(&schema);
+    let deserialized_message = DynamicMessage::decode(message_descriptor.clone(), buf.as_ref())
+        .expect("Failed to deserialize");
+
+    let field_descriptor = message_descriptor
+        .get_field_by_name("bytes")
+        .expect("Field 'bytes' not found");
+    let field_value = deserialized_message.get_field(&field_descriptor);
+    let bytes_value = field_value.as_bytes().expect("Field value is not bytes");
+    assert_eq!(field_descriptor.name(), "bytes");
+    assert_eq!(bytes_value.as_ref(), &[1, 2, 3]);
+}
+
+#[traced_test]
+#[test]
+fn test_insufficient_bytes_buffer_warns() {
+    let test_struct = TestMessageBytes {
+        bytes: bytes::Bytes::from_static(&[1, 2, 3, 4]),
+    };
+    let mut buf = FixedSizeBuffer::with_capacity(3);
+    test_struct.encode(&mut buf).expect("Failed to encode");
+
+    assert!(logs_contain("Failed to write bytes"));
+    assert!(logs_contain("insufficient buffer capacity"));
 }
 
 #[test]

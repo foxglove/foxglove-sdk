@@ -123,8 +123,8 @@
 //!
 //! ```no_run
 //! #[derive(foxglove::Loggable)]
-//! struct Custom {
-//!     msg: String,
+//! struct Custom<'a> {
+//!     msg: &'a str,
 //!     count: u32,
 //! }
 //!
