@@ -31,11 +31,11 @@ import {
   generatePySchemaModule,
   generatePyChannelModule,
 } from "../typescript/schemas/src/internal/generatePyclass";
+import { generateRustTypes } from "../typescript/schemas/src/internal/generateRust";
 import {
   foxgloveEnumSchemas,
   foxgloveMessageSchemas,
 } from "../typescript/schemas/src/internal/schemas";
-import { generateRustTypes } from "../typescript/schemas/src/internal/generateRust";
 
 async function logProgress(message: string, body: () => Promise<void>) {
   process.stderr.write(`${message}... `);
@@ -273,7 +273,10 @@ async function main({ clean }: { clean: boolean }) {
 
   await logProgress("Generating Rust code", async () => {
     const typesFile = path.join(repoRoot, "c", "src", "generated_types.rs");
-    await fs.writeFile(typesFile, generateRustTypes(Object.values(foxgloveMessageSchemas), Object.values(foxgloveEnumSchemas)));
+    await fs.writeFile(
+      typesFile,
+      generateRustTypes(Object.values(foxgloveMessageSchemas), Object.values(foxgloveEnumSchemas)),
+    );
     // await fs.writeFile(
     //   path.join(repoRoot, 'cpp','foxglove','schema_traits_generated.hpp'),
     //   generateCppSchemaTraits(Object.values(foxgloveMessageSchemas), Object.values(foxgloveEnumSchemas)),

@@ -1,4 +1,5 @@
 import assert from "assert";
+
 import { FoxgloveEnumSchema, FoxgloveMessageSchema, FoxglovePrimitive } from "./types";
 
 function primitiveToRust(type: FoxglovePrimitive) {
@@ -32,12 +33,12 @@ function escapeId(id: string) {
 }
 
 function toSnakeCase(name: string) {
-  name = name.replace(/([A-Z])/g, "_$1").toLowerCase();
-  return name.startsWith("_") ? name.substring(1) : name;
+  const snakeName = name.replace(/([A-Z])/g, "_$1").toLowerCase();
+  return snakeName.startsWith("_") ? snakeName.substring(1) : snakeName;
 }
 
 function toTitleCase(name: string) {
-  return name.toLowerCase().replace(/(?:^|_)([a-z])/g, (_, letter) => letter.toUpperCase());
+  return name.toLowerCase().replace(/(?:^|_)([a-z])/g, (_, letter: string) => letter.toUpperCase());
 }
 
 export function generateRustTypes(schemas: readonly FoxgloveMessageSchema[], enums: readonly FoxgloveEnumSchema[]): string {
@@ -45,8 +46,8 @@ export function generateRustTypes(schemas: readonly FoxgloveMessageSchema[], enu
   // because we had to allocate the vector to map the C NestedSchema type to the Rust NestedSchema type,
   // as the two don't have the same layout, so we can't just re-use the C array.
   const needsFree = new Set(schemas.map((schema) => {
-    const needsFree = schema.fields.some((field) => field.array !== undefined && typeof field.array !== "number" && field.type.type === "nested");
-    return needsFree ? schema.name : "";
+    const result = schema.fields.some((field) => field.array != undefined && typeof field.array !== "number" && field.type.type === "nested");
+    return result ? schema.name : "";
   }).filter((name) => name.length > 0));
 
   const schemaStructs = schemas.map(
@@ -84,7 +85,7 @@ pub struct ${name} {
           fieldType = `*const ${field.type.schema.name.replace("JSON", "Json")}`;
           break;
       }
-      let lines: string[] = [comment];
+      const lines: string[] = [comment];
       if (typeof field.array === "number") {
         lines.push(`pub ${identName}: [${fieldType}; ${field.array}],`);
         if (fieldHasLen) {
@@ -123,7 +124,7 @@ ${name.endsWith("Primitive") ? "" : `
       .map((field) => {
         const srcName = escapeId(toSnakeCase(field.name));
         const dstName = escapeId(toSnakeCase(field.name));
-        if (field.array !== undefined) {
+        if (field.array != undefined) {
           if (typeof field.array === "number") {
             return `${dstName}: unsafe { Vec::from_raw_parts(self.${srcName}.as_ptr() as *mut ${(field.type.type === "primitive") ? primitiveToRust(field.type.name) : "todo!()"}, self.${srcName}.len(), self.${srcName}.len()) }`;
           } else {
@@ -184,11 +185,11 @@ fn free_${snakeName}(mut msg: ManuallyDrop<foxglove::schemas::${name}>) {
     // The only allocations we made were for Vec<Nested> fields, which may also include Vec<Nested> fields in a couple cases.
     ${fields
       .map((field) => {
-        const name = escapeId(toSnakeCase(field.name));
-        if (field.array !== undefined) {
+        const fieldName = escapeId(toSnakeCase(field.name));
+        if (field.array != undefined) {
           if (typeof field.array !== "number" && field.type.type === "nested") {
               const nestedName = escapeId(toSnakeCase(field.type.schema.name));
-              return `    for nested in std::mem::take(&mut msg.${name}) {
+              return `    for nested in std::mem::take(&mut msg.${fieldName}) {
         ${needsFree.has(field.type.schema.name) ?
         `free_${nestedName}(ManuallyDrop::new(nested));` :
         `std::mem::forget(nested);`

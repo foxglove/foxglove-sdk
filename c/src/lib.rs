@@ -41,6 +41,10 @@ impl FoxgloveString {
     pub fn len(&self) -> usize {
         self.len
     }
+
+    pub fn is_empty(&self) -> bool {
+        self.len == 0
+    }
 }
 
 #[cfg(test)]
@@ -50,14 +54,6 @@ impl From<&str> for FoxgloveString {
             data: s.as_ptr().cast(),
             len: s.len(),
         }
-    }
-
-    pub fn as_ptr(&self) -> *const c_char {
-        self.data
-    }
-
-    pub fn len(&self) -> usize {
-        self.len
     }
 }
 
