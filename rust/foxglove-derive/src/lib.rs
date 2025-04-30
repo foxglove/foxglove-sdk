@@ -198,10 +198,12 @@ fn derive_struct_impl(input: DeriveInput) -> TokenStream {
 
             fn get_schema() -> Option<foxglove::Schema> {
                 let mut file_descriptor_set = foxglove::prost_types::FileDescriptorSet::default();
-                let mut file = foxglove::prost_types::FileDescriptorProto::default();
-                file.name = Some(String::from(concat!(stringify!(#name), ".proto")));
-                file.package = Some(String::from(stringify!(#name).to_lowercase()));
-                file.syntax = Some(String::from("proto3"));
+                let mut file = foxglove::prost_types::FileDescriptorProto {
+                    name: Some(String::from(concat!(stringify!(#name), ".proto"))),
+                    package: Some(String::from(stringify!(#name).to_lowercase())),
+                    syntax: Some(String::from("proto3")),
+                    ..Default::default()
+                };
 
                 if let Some(message_descriptor) = <#name as ::foxglove::ProtobufField>::message_descriptor() {
                     file.message_type.push(message_descriptor);
