@@ -1,6 +1,6 @@
-use std::{fmt::Display, future::Future, sync::Arc};
-
-use bytes::Bytes;
+use std::fmt::Display;
+use std::future::Future;
+use std::sync::Arc;
 
 use super::semaphore::SemaphoreGuard;
 use super::Client;
@@ -17,33 +17,35 @@ pub trait AssetHandler: Send + Sync + 'static {
 
 pub(crate) struct BlockingAssetHandlerFn<F>(pub Arc<F>);
 
-impl<F, Err> AssetHandler for BlockingAssetHandlerFn<F>
+impl<F, T, Err> AssetHandler for BlockingAssetHandlerFn<F>
 where
-    F: Fn(Client, String) -> Result<Bytes, Err> + Send + Sync + 'static,
+    F: Fn(Client, String) -> Result<T, Err> + Send + Sync + 'static,
+    T: AsRef<[u8]>,
     Err: Display,
 {
     fn fetch(&self, uri: String, responder: AssetResponder) {
         let func = self.0.clone();
         tokio::task::spawn_blocking(move || {
             let result = (func)(responder.client(), uri);
-            responder.respond(result.map_err(|e| e.to_string()));
+            responder.respond(result);
         });
     }
 }
 
 pub(crate) struct AsyncAssetHandlerFn<F>(pub Arc<F>);
 
-impl<F, Fut, Err> AssetHandler for AsyncAssetHandlerFn<F>
+impl<F, Fut, T, Err> AssetHandler for AsyncAssetHandlerFn<F>
 where
     F: Fn(Client, String) -> Fut + Send + Sync + 'static,
-    Fut: Future<Output = Result<Bytes, Err>> + Send + 'static,
+    Fut: Future<Output = Result<T, Err>> + Send + 'static,
+    T: AsRef<[u8]>,
     Err: Display,
 {
     fn fetch(&self, uri: String, responder: AssetResponder) {
         let func = self.0.clone();
         tokio::spawn(async move {
             let result = (func)(responder.client(), uri).await;
-            responder.respond(result.map_err(|e| e.to_string()));
+            responder.respond(result);
         });
     }
 }
@@ -74,10 +76,29 @@ impl AssetResponder {
         self.client.clone()
     }
 
-    /// Send a response to the client.
-    pub fn respond(mut self, result: Result<Bytes, String>) {
+    /// Send a result to the client.
+    pub fn respond<T, Err>(self, result: Result<T, Err>)
+    where
+        T: AsRef<[u8]>,
+        Err: Display,
+    {
+        match result {
+            Ok(data) => self.respond_ok(data.as_ref()),
+            Err(e) => self.respond_err(e.to_string()),
+        }
+    }
+
+    /// Send response data to the client.
+    pub fn respond_ok(mut self, data: impl AsRef<[u8]>) {
         if let Some(inner) = self.inner.take() {
-            inner.respond(&self.client, result)
+            inner.respond(&self.client, Ok(data.as_ref()))
+        }
+    }
+
+    /// Send an error response to the client.
+    pub fn respond_err(mut self, message: impl AsRef<str>) {
+        if let Some(inner) = self.inner.take() {
+            inner.respond(&self.client, Err(message.as_ref()))
         }
     }
 }
@@ -89,7 +110,7 @@ impl Drop for AssetResponder {
             // a panic or some other flaw in implementation. Reply with a generic error message.
             inner.respond(
                 &self.client,
-                Err("Internal server error: asset handler failed to send a response".into()),
+                Err("Internal server error: asset handler failed to send a response"),
             )
         }
     }
@@ -103,7 +124,7 @@ struct AssetResponderInner {
 
 impl AssetResponderInner {
     /// Send an response to the client.
-    pub fn respond(self, client: &Client, result: Result<Bytes, String>) {
+    fn respond(self, client: &Client, result: Result<&[u8], &str>) {
         client.send_asset_response(result, self.request_id);
     }
 }

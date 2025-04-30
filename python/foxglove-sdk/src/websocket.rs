@@ -1,6 +1,5 @@
 use crate::{errors::PyFoxgloveError, PySchema};
 use base64::prelude::*;
-use bytes::Bytes;
 use foxglove::websocket::{
     AssetHandler, ChannelView, Client, ClientChannel, ServerListener, Status, StatusLevel,
 };
@@ -347,9 +346,7 @@ impl foxglove::websocket::service::Handler for ServiceHandler {
                     .bind(py)
                     .call((request,), None)
                     .and_then(|data| data.extract::<Vec<u8>>())
-            })
-            .map(Bytes::from)
-            .map_err(|e| e.to_string());
+            });
             responder.respond(result);
         });
     }
@@ -628,9 +625,7 @@ impl AssetHandler for CallbackAssetHandler {
                         data.extract::<Vec<u8>>()
                     }
                 })
-            })
-            .map(Bytes::from)
-            .map_err(|e| e.to_string());
+            });
             responder.respond(result);
         });
     }

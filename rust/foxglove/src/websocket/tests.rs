@@ -588,12 +588,16 @@ async fn test_error_status_message() {
     server.stop();
 }
 
+fn svc_unreachable(_: super::service::Request) -> Result<Bytes, String> {
+    unreachable!("this service handler is never invoked")
+}
+
 #[tokio::test]
 async fn test_service_registration_not_supported() {
     // Can't register services if we don't declare support.
     let ctx = Context::new();
     let server = create_server(&ctx, ServerOptions::default());
-    let svc = Service::builder("/s", ServiceSchema::new("")).handler_fn(|_| Err(""));
+    let svc = Service::builder("/s", ServiceSchema::new("")).handler_fn(svc_unreachable);
     assert_matches!(
         server.add_services(vec![svc]),
         Err(FoxgloveError::ServicesNotSupported)
@@ -611,7 +615,7 @@ async fn test_service_registration_missing_request_encoding() {
             ..Default::default()
         },
     );
-    let svc = Service::builder("/s", ServiceSchema::new("")).handler_fn(|_| Err(""));
+    let svc = Service::builder("/s", ServiceSchema::new("")).handler_fn(svc_unreachable);
     assert_matches!(
         server.add_services(vec![svc]),
         Err(FoxgloveError::MissingRequestEncoding(_))
@@ -622,7 +626,7 @@ async fn test_service_registration_missing_request_encoding() {
 async fn test_service_registration_duplicate_name() {
     // Can't register a service with no encoding unless we declare global encodings.
     let ctx = Context::new();
-    let sa1 = Service::builder("/a", ServiceSchema::new("")).handler_fn(|_| Err(""));
+    let sa1 = Service::builder("/a", ServiceSchema::new("")).handler_fn(svc_unreachable);
     let server = create_server(
         &ctx,
         ServerOptions {
@@ -633,14 +637,14 @@ async fn test_service_registration_duplicate_name() {
         },
     );
 
-    let sa2 = Service::builder("/a", ServiceSchema::new("")).handler_fn(|_| Err(""));
+    let sa2 = Service::builder("/a", ServiceSchema::new("")).handler_fn(svc_unreachable);
     assert_matches!(
         server.add_services(vec![sa2]),
         Err(FoxgloveError::DuplicateService(_))
     );
 
-    let sb1 = Service::builder("/b", ServiceSchema::new("")).handler_fn(|_| Err(""));
-    let sb2 = Service::builder("/b", ServiceSchema::new("")).handler_fn(|_| Err(""));
+    let sb1 = Service::builder("/b", ServiceSchema::new("")).handler_fn(svc_unreachable);
+    let sb2 = Service::builder("/b", ServiceSchema::new("")).handler_fn(svc_unreachable);
     assert_matches!(
         server.add_services(vec![sb1, sb2]),
         Err(FoxgloveError::DuplicateService(_))
@@ -1071,8 +1075,8 @@ async fn test_services() {
     );
 
     // Register a new service.
-    let err_svc =
-        Service::builder("/err", ServiceSchema::new("plain")).handler_fn(|_| Err("oh noes"));
+    let err_svc = Service::builder("/err", ServiceSchema::new("plain"))
+        .handler_fn(|_| Err::<&[u8], _>("oh noes"));
     let err_svc_id = u32::from(err_svc.id());
     server
         .add_services(vec![err_svc])
@@ -1177,11 +1181,11 @@ async fn test_fetch_asset() {
             fetch_asset_handler: Some(Box::new(BlockingAssetHandlerFn(Arc::new(
                 |_client, uri: String| {
                     if uri.ends_with("error") {
-                        Err("test error".to_string())
+                        Err("test error")
                     } else if uri.ends_with("panic") {
                         panic!("oh no")
                     } else {
-                        Ok(Bytes::from_static(b"test data"))
+                        Ok(b"test data")
                     }
                 },
             )))),

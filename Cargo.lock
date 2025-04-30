@@ -605,7 +605,6 @@ dependencies = [
 name = "example-ws-server-fetch-asset"
 version = "0.0.0"
 dependencies = [
- "bytes",
  "clap",
  "env_logger",
  "foxglove",

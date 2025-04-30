@@ -3,7 +3,7 @@ use super::{Service, ServiceId, ServiceMap, ServiceSchema};
 fn make_service(name: &str, id: u32) -> Service {
     Service::builder(name, ServiceSchema::new("schema"))
         .with_id(ServiceId::new(id))
-        .handler_fn(|_| Err(""))
+        .handler_fn(|_| Err::<&[u8], _>(""))
 }
 
 #[test]
