@@ -135,7 +135,7 @@ ${name.endsWith("Primitive") ? "" : `
               assert(field.type.name !== "bytes");
               return `${dstName}: unsafe { Vec::from_raw_parts(self.${srcName} as *mut ${primitiveToRust(field.type.name)}, self.${srcName}_count, self.${srcName}_count) }`;
             } else {
-              return `${dstName}: todo!()`;
+              throw Error(`unsupported array type: ${field.type.type}`);
             }
           }
         }
