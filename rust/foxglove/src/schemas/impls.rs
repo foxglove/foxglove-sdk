@@ -69,6 +69,28 @@ impl Encode for Color {
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
 }
 
+impl Encode for CompressedAudio {
+    type Error = ::prost::EncodeError;
+
+    fn get_schema() -> Option<Schema> {
+        Some(Schema::new(
+            "foxglove.CompressedAudio",
+            "protobuf",
+            descriptors::COMPRESSED_AUDIO,
+        ))
+    }
+
+    fn get_message_encoding() -> String {
+        "protobuf".to_string()
+    }
+
+    fn encode(&self, buf: &mut impl BufMut) -> Result<(), prost::EncodeError> {
+        ::prost::Message::encode(self, buf)
+    }
+
+    fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
+}
+
 impl Encode for CompressedImage {
     type Error = ::prost::EncodeError;
 

@@ -12,6 +12,7 @@ pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<CameraCalibrationChannel>()?;
     module.add_class::<CircleAnnotationChannel>()?;
     module.add_class::<ColorChannel>()?;
+    module.add_class::<CompressedAudioChannel>()?;
     module.add_class::<CompressedImageChannel>()?;
     module.add_class::<CompressedVideoChannel>()?;
     module.add_class::<FrameTransformChannel>()?;
@@ -250,6 +251,75 @@ impl ColorChannel {
 
     fn __repr__(&self) -> String {
         format!("ColorChannel(id={}, topic='{}')", self.id(), self.topic()).to_string()
+    }
+}
+
+/// A channel for logging :py:class:`foxglove.schemas.CompressedAudio` messages.
+#[pyclass(module = "foxglove.channels")]
+struct CompressedAudioChannel(Channel<foxglove::schemas::CompressedAudio>);
+
+#[pymethods]
+impl CompressedAudioChannel {
+    /// Create a new channel.
+    ///
+    /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
+    #[new]
+    #[pyo3(signature = (topic, *, context=None))]
+    fn new(topic: &str, context: Option<&PyContext>) -> Self {
+        let base = if let Some(context) = context {
+            ChannelBuilder::new(topic)
+                .context(&context.0.clone())
+                .build()
+        } else {
+            Channel::new(topic)
+        };
+        Self(base)
+    }
+
+    /// The unique ID of the channel.
+    fn id(&self) -> u64 {
+        self.0.id().into()
+    }
+
+    /// The topic name of the channel.
+    fn topic(&self) -> &str {
+        self.0.topic()
+    }
+
+    /// The name of the schema for the channel.
+    fn schema_name(&self) -> Option<&str> {
+        Some(self.0.schema()?.name.as_str())
+    }
+
+    /// Close the channel.
+    ///
+    /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
+    /// channels dynamically, such as the :py:class:`foxglove.websocket.WebSocketServer`.
+    ///
+    /// Attempts to log on a closed channel will elicit a throttled warning message.
+    fn close(&mut self) {
+        self.0.close();
+    }
+
+    /// Log a :py:class:`foxglove.schemas.CompressedAudio` message to the channel.
+    ///
+    /// :param msg: The message to log.
+    /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
+    ///     message was recorded. Usually this is the time log() is called. If omitted, the
+    ///     current time is used.
+    #[pyo3(signature = (msg, *, log_time=None))]
+    fn log(&self, msg: &schemas::CompressedAudio, log_time: Option<u64>) {
+        let metadata = PartialMetadata { log_time };
+        self.0.log_with_meta(&msg.0, metadata);
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "CompressedAudioChannel(id={}, topic='{}')",
+            self.id(),
+            self.topic()
+        )
+        .to_string()
     }
 }
 

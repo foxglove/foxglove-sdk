@@ -139,6 +139,29 @@ pub struct Color {
     #[prost(double, tag = "4")]
     pub a: f64,
 }
+/// A single chunk of a compressed audio bitstream
+/// <https://docs.foxglove.dev/docs/visualization/message-schemas/compressed-audio>
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct CompressedAudio {
+    /// Timestamp of the start of the audio chunk
+    #[prost(message, optional, tag = "1")]
+    pub timestamp: ::core::option::Option<crate::schemas::Timestamp>,
+    /// Audio format. Both 'opus' and 'mp4a.40.2' are currently supported.
+    #[prost(string, tag = "2")]
+    pub format: ::prost::alloc::string::String,
+    /// Compressed audio data
+    ///
+    /// Specifically, the requirements for different `format` values are:
+    ///
+    /// - `opus`
+    ///    - Each message should contain a complete opus packet as described in <https://datatracker.ietf.org/doc/html/rfc6716#section-3.>
+    /// - `mp4a.40.2`
+    ///    - Each message should contain a complete MPEG-4 AAC LC ADTS audio packet as described in section 1.A.3.2 of ISO/IEC 14496-3:2019
+    ///
+    /// Any combination of sample rate and number of channels allowed by the respective audio format is supported.
+    #[prost(bytes = "bytes", tag = "3")]
+    pub data: ::prost::bytes::Bytes,
+}
 /// A compressed image
 /// <https://docs.foxglove.dev/docs/visualization/message-schemas/compressed-image>
 #[derive(Clone, PartialEq, ::prost::Message)]

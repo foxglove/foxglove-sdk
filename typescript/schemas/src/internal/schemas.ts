@@ -33,6 +33,39 @@ const RawAudio: FoxgloveMessageSchema = {
   ],
 };
 
+const CompressedAudio: FoxgloveMessageSchema = {
+  type: "message",
+  name: "CompressedAudio",
+  description: "A single chunk of a compressed audio bitstream",
+  fields: [
+    {
+      name: "timestamp",
+      type: { type: "primitive", name: "time" },
+      description: "Timestamp of the start of the audio chunk",
+    },
+    {
+      name: "format",
+      type: { type: "primitive", name: "string" },
+      description: "Audio format. Both 'opus' and 'mp4a.40.2' are currently supported.",
+    },
+    {
+      name: "data",
+      type: { type: "primitive", name: "bytes" },
+      description: `Compressed audio data
+
+Specifically, the requirements for different \`format\` values are:
+
+- \`opus\`
+  - Each message should contain a complete opus packet as described in https://datatracker.ietf.org/doc/html/rfc6716#section-3.
+- \`mp4a.40.2\`
+  - Each message should contain a complete MPEG-4 AAC LC ADTS audio packet as described in section 1.A.3.2 of ISO/IEC 14496-3:2019
+
+Any combination of sample rate and number of channels allowed by the respective audio format is supported.
+`,
+    },
+  ],
+};
+
 const Color: FoxgloveMessageSchema = {
   type: "message",
   name: "Color",
@@ -1512,6 +1545,7 @@ export const foxgloveMessageSchemas = {
   CameraCalibration,
   CircleAnnotation,
   Color,
+  CompressedAudio,
   CompressedImage,
   CompressedVideo,
   CylinderPrimitive,
