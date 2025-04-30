@@ -182,6 +182,10 @@ fn derive_struct_impl(input: DeriveInput) -> TokenStream {
                 }
                 out.put_u8(len_value as u8);
 
+                if buf.remaining_mut() < len {
+                    return;
+                }
+
                 out.put_slice(&buf);
             }
 
