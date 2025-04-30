@@ -2,6 +2,7 @@
 
 #include <foxglove/context.hpp>
 #include <foxglove/error.hpp>
+#include <foxglove/schemas.hpp>
 
 #include <cstdint>
 #include <memory>
@@ -20,9 +21,9 @@ struct Schema {
   size_t dataLen = 0;
 };
 
-class Channel final {
+class RawChannel final {
 public:
-  static FoxgloveResult<Channel> create(
+  static FoxgloveResult<RawChannel> create(
     const std::string& topic, const std::string& messageEncoding,
     std::optional<Schema> schema = std::nullopt, const Context& context = Context()
   );
@@ -33,10 +34,31 @@ public:
 
   uint64_t id() const;
 
-  Channel(const Channel&) = delete;
-  Channel& operator=(const Channel&) = delete;
+  RawChannel(const RawChannel&) = delete;
+  RawChannel& operator=(const RawChannel&) = delete;
 
-  Channel(Channel&& other) noexcept = default;
+  RawChannel(RawChannel&& other) noexcept = default;
+
+private:
+  explicit RawChannel(const foxglove_channel* channel);
+
+  std::unique_ptr<const foxglove_channel, void (*const)(const foxglove_channel*)> _impl;
+};
+
+template<class T, class = void>
+class Channel final {
+public:
+  static_assert(false, "Only schemas defined in foxglove::schemas are currently supported");
+};
+
+template<class T>
+class Channel<T, std::enable_if_t<internal::BuiltinSchema<T>::value>> final {
+public:
+  Channel(const RawChannel& rawChannel);
+
+  FoxgloveError log(const T& value, std::optional<uint64_t> logTime = std::nullopt) {
+    return internal::BuiltinSchema<T>::log_to(_impl.get(), value);
+  }
 
 private:
   explicit Channel(const foxglove_channel* channel);

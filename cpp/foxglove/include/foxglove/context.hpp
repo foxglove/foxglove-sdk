@@ -1,6 +1,9 @@
 #pragma once
 
+#include <cstdint>
 #include <memory>
+#include <optional>
+#include <string>
 
 struct foxglove_context;
 
@@ -8,7 +11,7 @@ namespace foxglove {
 
 class Context final {
   friend class McapWriter;
-  friend class Channel;
+  friend class RawChannel;
   friend class WebSocketServer;
 
 public:

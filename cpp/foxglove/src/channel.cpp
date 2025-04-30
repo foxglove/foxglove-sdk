@@ -5,7 +5,7 @@
 
 namespace foxglove {
 
-FoxgloveResult<Channel> Channel::create(
+FoxgloveResult<RawChannel> RawChannel::create(
   const std::string& topic, const std::string& messageEncoding, std::optional<Schema> schema,
   const Context& context
 ) {
@@ -27,17 +27,19 @@ FoxgloveResult<Channel> Channel::create(
   if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
     return foxglove::unexpected(FoxgloveError(error));
   }
-  return Channel(channel);
+  return RawChannel(channel);
 }
 
-Channel::Channel(const foxglove_channel* channel)
+RawChannel::RawChannel(const foxglove_channel* channel)
     : _impl(channel, foxglove_channel_free) {}
 
-uint64_t Channel::id() const {
+uint64_t RawChannel::id() const {
   return foxglove_channel_get_id(_impl.get());
 }
 
-FoxgloveError Channel::log(const std::byte* data, size_t dataLen, std::optional<uint64_t> logTime) {
+FoxgloveError RawChannel::log(
+  const std::byte* data, size_t dataLen, std::optional<uint64_t> logTime
+) {
   foxglove_error error = foxglove_channel_log(
     _impl.get(), reinterpret_cast<const uint8_t*>(data), dataLen, logTime ? &*logTime : nullptr
   );

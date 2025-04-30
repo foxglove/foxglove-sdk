@@ -139,7 +139,7 @@ TEST_CASE("different contexts") {
   // Log on context2 (should not be output to the file)
   foxglove::Schema schema;
   schema.name = "ExampleSchema";
-  auto channelResult = foxglove::Channel::create("example1", "json", schema, context2);
+  auto channelResult = foxglove::RawChannel::create("example1", "json", schema, context2);
   REQUIRE(channelResult.has_value());
   auto channel = std::move(channelResult.value());
   std::string data = "Hello, world!";
@@ -168,7 +168,7 @@ TEST_CASE("specify profile") {
   // Write message
   foxglove::Schema schema;
   schema.name = "ExampleSchema";
-  auto channelResult = foxglove::Channel::create("example1", "json", schema, context);
+  auto channelResult = foxglove::RawChannel::create("example1", "json", schema, context);
   REQUIRE(channelResult.has_value());
   auto& channel = channelResult.value();
   std::string data = "Hello, world!";
@@ -199,7 +199,7 @@ TEST_CASE("zstd compression") {
   // Write message
   foxglove::Schema schema;
   schema.name = "ExampleSchema";
-  auto channelResult = foxglove::Channel::create("example2", "json", schema, context);
+  auto channelResult = foxglove::RawChannel::create("example2", "json", schema, context);
   REQUIRE(channelResult.has_value());
   auto channel = std::move(channelResult.value());
   std::string data = "Hello, world!";
@@ -230,7 +230,7 @@ TEST_CASE("lz4 compression") {
   // Write message
   foxglove::Schema schema;
   schema.name = "ExampleSchema";
-  auto channelResult = foxglove::Channel::create("example3", "json", schema, context);
+  auto channelResult = foxglove::RawChannel::create("example3", "json", schema, context);
   REQUIRE(channelResult.has_value());
   auto& channel = channelResult.value();
   std::string data = "Hello, world!";
@@ -257,7 +257,7 @@ TEST_CASE("Channel can outlive Schema") {
   REQUIRE(writer.has_value());
 
   // Write message
-  std::optional<foxglove::Channel> channel;
+  std::optional<foxglove::RawChannel> channel;
   {
     foxglove::Schema schema;
     schema.name = "ExampleSchema";
@@ -265,7 +265,7 @@ TEST_CASE("Channel can outlive Schema") {
     std::string data = "FAKESCHEMA";
     schema.data = reinterpret_cast<const std::byte*>(data.data());
     schema.dataLen = data.size();
-    auto result = foxglove::Channel::create("example", "json", schema, context);
+    auto result = foxglove::RawChannel::create("example", "json", schema, context);
     REQUIRE(result.has_value());
     // Channel should copy the schema, so this modification has no effect on the output
     data[2] = 'I';
