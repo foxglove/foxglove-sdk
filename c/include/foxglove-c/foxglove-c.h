@@ -74,6 +74,35 @@ enum foxglove_error
 typedef uint8_t foxglove_error;
 #endif // __cplusplus
 
+enum FoxgloveLineType
+#ifdef __cplusplus
+  : int32_t
+#endif // __cplusplus
+ {
+  FOXGLOVE_LINE_TYPE_LINE_STRIP = 0,
+  FOXGLOVE_LINE_TYPE_LINE_LOOP = 1,
+  FOXGLOVE_LINE_TYPE_LINE_LIST = 2,
+};
+#ifndef __cplusplus
+typedef int32_t FoxgloveLineType;
+#endif // __cplusplus
+
+enum FoxgloveLogLevel
+#ifdef __cplusplus
+  : int32_t
+#endif // __cplusplus
+ {
+  FOXGLOVE_LOG_LEVEL_UNKNOWN = 0,
+  FOXGLOVE_LOG_LEVEL_DEBUG = 1,
+  FOXGLOVE_LOG_LEVEL_INFO = 2,
+  FOXGLOVE_LOG_LEVEL_WARNING = 3,
+  FOXGLOVE_LOG_LEVEL_ERROR = 4,
+  FOXGLOVE_LOG_LEVEL_FATAL = 5,
+};
+#ifndef __cplusplus
+typedef int32_t FoxgloveLogLevel;
+#endif // __cplusplus
+
 enum foxglove_mcap_compression
 #ifdef __cplusplus
   : uint8_t
@@ -85,6 +114,66 @@ enum foxglove_mcap_compression
 };
 #ifndef __cplusplus
 typedef uint8_t foxglove_mcap_compression;
+#endif // __cplusplus
+
+enum FoxgloveNumericType
+#ifdef __cplusplus
+  : int32_t
+#endif // __cplusplus
+ {
+  FOXGLOVE_NUMERIC_TYPE_UNKNOWN = 0,
+  FOXGLOVE_NUMERIC_TYPE_UINT8 = 1,
+  FOXGLOVE_NUMERIC_TYPE_INT8 = 2,
+  FOXGLOVE_NUMERIC_TYPE_UINT16 = 3,
+  FOXGLOVE_NUMERIC_TYPE_INT16 = 4,
+  FOXGLOVE_NUMERIC_TYPE_UINT32 = 5,
+  FOXGLOVE_NUMERIC_TYPE_INT32 = 6,
+  FOXGLOVE_NUMERIC_TYPE_FLOAT32 = 7,
+  FOXGLOVE_NUMERIC_TYPE_FLOAT64 = 8,
+};
+#ifndef __cplusplus
+typedef int32_t FoxgloveNumericType;
+#endif // __cplusplus
+
+enum FoxglovePointsAnnotationType
+#ifdef __cplusplus
+  : int32_t
+#endif // __cplusplus
+ {
+  FOXGLOVE_POINTS_ANNOTATION_TYPE_UNKNOWN = 0,
+  FOXGLOVE_POINTS_ANNOTATION_TYPE_POINTS = 1,
+  FOXGLOVE_POINTS_ANNOTATION_TYPE_LINE_LOOP = 2,
+  FOXGLOVE_POINTS_ANNOTATION_TYPE_LINE_STRIP = 3,
+  FOXGLOVE_POINTS_ANNOTATION_TYPE_LINE_LIST = 4,
+};
+#ifndef __cplusplus
+typedef int32_t FoxglovePointsAnnotationType;
+#endif // __cplusplus
+
+enum FoxglovePositionCovarianceType
+#ifdef __cplusplus
+  : int32_t
+#endif // __cplusplus
+ {
+  FOXGLOVE_POSITION_COVARIANCE_TYPE_UNKNOWN = 0,
+  FOXGLOVE_POSITION_COVARIANCE_TYPE_APPROXIMATED = 1,
+  FOXGLOVE_POSITION_COVARIANCE_TYPE_DIAGONAL_KNOWN = 2,
+  FOXGLOVE_POSITION_COVARIANCE_TYPE_KNOWN = 3,
+};
+#ifndef __cplusplus
+typedef int32_t FoxglovePositionCovarianceType;
+#endif // __cplusplus
+
+enum FoxgloveSceneEntityDeletionType
+#ifdef __cplusplus
+  : int32_t
+#endif // __cplusplus
+ {
+  FOXGLOVE_SCENE_ENTITY_DELETION_TYPE_MATCHING_ID = 0,
+  FOXGLOVE_SCENE_ENTITY_DELETION_TYPE_ALL = 1,
+};
+#ifndef __cplusplus
+typedef int32_t FoxgloveSceneEntityDeletionType;
 #endif // __cplusplus
 
 typedef struct foxglove_channel foxglove_channel;
@@ -561,7 +650,7 @@ typedef struct foxglove_packed_element_field {
   /**
    * Type of data in the field. Integers are stored using little-endian byte order.
    */
-  int32_t type;
+  FoxgloveNumericType type;
 } foxglove_packed_element_field;
 
 /**
@@ -619,7 +708,7 @@ typedef struct foxglove_points_annotation {
   /**
    * Type of points annotation to draw
    */
-  int32_t type;
+  FoxglovePointsAnnotationType type;
   /**
    * Points in 2D image coordinates (pixels).
    * These coordinates use the top-left corner of the top-left pixel of the image as the origin.
@@ -778,7 +867,7 @@ typedef struct foxglove_location_fix {
   /**
    * If `position_covariance` is available, `position_covariance_type` must be set to indicate the type of covariance.
    */
-  int32_t position_covariance_type;
+  FoxglovePositionCovarianceType position_covariance_type;
 } foxglove_location_fix;
 
 /**
@@ -792,7 +881,7 @@ typedef struct foxglove_log {
   /**
    * Log level
    */
-  int32_t level;
+  FoxgloveLogLevel level;
   /**
    * Log message
    */
@@ -822,7 +911,7 @@ typedef struct foxglove_scene_entity_deletion {
   /**
    * Type of deletion action to perform
    */
-  int32_t type;
+  FoxgloveSceneEntityDeletionType type;
   /**
    * Identifier which must match if `type` is `MATCHING_ID`.
    */
@@ -963,7 +1052,7 @@ typedef struct LinePrimitive {
   /**
    * Drawing primitive to use for lines
    */
-  int32_t type;
+  FoxgloveLineType type;
   /**
    * Origin of lines relative to reference frame
    */

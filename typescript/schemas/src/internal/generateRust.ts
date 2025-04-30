@@ -1,5 +1,5 @@
 import assert from "assert";
-import { FoxgloveMessageSchema, FoxglovePrimitive } from "./types";
+import { FoxgloveEnumSchema, FoxgloveMessageSchema, FoxglovePrimitive } from "./types";
 
 function primitiveToRust(type: FoxglovePrimitive) {
   switch (type) {
@@ -36,7 +36,19 @@ function toSnakeCase(name: string) {
   return name.startsWith("_") ? name.substring(1) : name;
 }
 
-export function generateRustTypes(schemas: readonly FoxgloveMessageSchema[]): string {
+function toTitleCase(name: string) {
+  return name.toLowerCase().replace(/(?:^|_)([a-z])/g, (_, letter) => letter.toUpperCase());
+}
+
+export function generateRustTypes(schemas: readonly FoxgloveMessageSchema[], enums: readonly FoxgloveEnumSchema[]): string {
+  // A schema needs a custom free function if it has a Vec<NestedSchema> field,
+  // because we had to allocate the vector to map the C NestedSchema type to the Rust NestedSchema type,
+  // as the two don't have the same layout, so we can't just re-use the C array.
+  const needsFree = new Set(schemas.map((schema) => {
+    const needsFree = schema.fields.some((field) => field.array !== undefined && typeof field.array !== "number" && field.type.type === "nested");
+    return needsFree ? schema.name : "";
+  }).filter((name) => name.length > 0));
+
   const schemaStructs = schemas.map(
     (schema) => {
       const { fields, description } = schema;
@@ -66,7 +78,7 @@ pub struct ${name} {
           }
           break;
         case "enum":
-          fieldType = "i32"; // TODO: pick something better?
+          fieldType = `Foxglove${field.type.enum.name}`;
           break;
         case "nested":
           fieldType = `*const ${field.type.schema.name.replace("JSON", "Json")}`;
@@ -117,7 +129,7 @@ ${name.endsWith("Primitive") ? "" : `
           } else {
             if (field.type.type === "nested") {
               return `${dstName}: unsafe { std::slice::from_raw_parts(self.${srcName}, self.${srcName}_count) }
-                .iter().flat_map(|m| unsafe { m.as_ref().map(|m| m.borrow_to_native().map(|m| ManuallyDrop::into_inner(m))) }).collect::<Result<Vec<_>, _>>()?`;
+                .iter().filter_map(|m| unsafe { m.as_ref().map(|m| m.borrow_to_native().map(ManuallyDrop::into_inner)) }).collect::<Result<Vec<_>, _>>()?`;
             } else if (field.type.type === "primitive") {
               assert(field.type.name !== "bytes");
               return `${dstName}: unsafe { Vec::from_raw_parts(self.${srcName} as *mut ${primitiveToRust(field.type.name)}, self.${srcName}_count, self.${srcName}_count) }`;
@@ -138,9 +150,9 @@ ${name.endsWith("Primitive") ? "" : `
             }
             return `${dstName}: self.${srcName}`;
           case "enum":
-            return `${dstName}: self.${srcName}`;
+            return `${dstName}: self.${srcName} as i32`;
           case "nested":
-            return `${dstName}: unsafe { self.${srcName}.as_ref().map(|m| m.borrow_to_native()) }.transpose()?.map(|m| ManuallyDrop::into_inner(m))`;
+            return `${dstName}: unsafe { self.${srcName}.as_ref().map(|m| m.borrow_to_native()) }.transpose()?.map(ManuallyDrop::into_inner)`;
         }
       })
       .join(",      \n")}
@@ -154,9 +166,9 @@ pub extern "C" fn foxglove_channel_log_${snakeName}(channel: Option<&FoxgloveCha
   // Safety: we're borrowing from the msg, but discard the borrowed message before returning
   match unsafe { ${name}::borrow_option_to_native(msg) } {
     Ok(msg) => {
-      let e = log_msg_to_channel(channel, &*msg, log_time);
+      ${needsFree.has(name) ? `let e = log_msg_to_channel(channel, &*msg, log_time);
       free_${snakeName}(msg);
-      e
+      e` : "log_msg_to_channel(channel, &*msg, log_time)"}
     },
     Err(e) => {
       tracing::error!("${name}: {}", e);
@@ -166,8 +178,8 @@ pub extern "C" fn foxglove_channel_log_${snakeName}(channel: Option<&FoxgloveCha
 }
 `}
 
-#[allow(unused_mut)]
-#[allow(unused_variables)]
+${needsFree.has(schema.name) ? `
+#[allow(forgetting_copy_types)]
 fn free_${snakeName}(mut msg: ManuallyDrop<foxglove::schemas::${name}>) {
     // The only allocations we made were for Vec<Nested> fields, which may also include Vec<Nested> fields in a couple cases.
     ${fields
@@ -175,17 +187,19 @@ fn free_${snakeName}(mut msg: ManuallyDrop<foxglove::schemas::${name}>) {
         const name = escapeId(toSnakeCase(field.name));
         if (field.array !== undefined) {
           if (typeof field.array !== "number" && field.type.type === "nested") {
-            const nestedName = escapeId(toSnakeCase(field.type.schema.name));
-            return `    for nested in std::mem::take(&mut msg.${name}) {
-        free_${nestedName}(ManuallyDrop::new(nested));
-    }`;
+              const nestedName = escapeId(toSnakeCase(field.type.schema.name));
+              return `    for nested in std::mem::take(&mut msg.${name}) {
+        ${needsFree.has(field.type.schema.name) ?
+        `free_${nestedName}(ManuallyDrop::new(nested));` :
+        `std::mem::forget(nested);`
+}}`;
           }
         }
         return "";
       })
       .filter((line) => line.length > 0)
       .join("\n")}
-}
+}` : ""}
 `},
   );
 
@@ -197,10 +211,21 @@ fn free_${snakeName}(mut msg: ManuallyDrop<foxglove::schemas::${name}>) {
     "use crate::{FoxgloveString, FoxgloveError, FoxgloveChannel, Timestamp, Duration, log_msg_to_channel};"
   ];
 
+  const enumDefs = enums.map((enumSchema) => {
+    return `
+    #[derive(Clone, Copy, Debug)]
+    #[repr(i32)]
+    pub enum Foxglove${enumSchema.name} {
+      ${enumSchema.values.map((value) => `${toTitleCase(value.name)} = ${value.value},`).join("\n")}
+    }`;
+  });
+
   const outputSections = [
     "// Generated by https://github.com/foxglove/foxglove-sdk",
 
     imports.join("\n"),
+
+    enumDefs.join("\n"),
 
     ...schemaStructs,
     "",

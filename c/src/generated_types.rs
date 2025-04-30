@@ -8,6 +8,65 @@ use crate::{
     log_msg_to_channel, Duration, FoxgloveChannel, FoxgloveError, FoxgloveString, Timestamp,
 };
 
+#[derive(Clone, Copy, Debug)]
+#[repr(i32)]
+pub enum FoxgloveLineType {
+    LineStrip = 0,
+    LineLoop = 1,
+    LineList = 2,
+}
+
+#[derive(Clone, Copy, Debug)]
+#[repr(i32)]
+pub enum FoxgloveLogLevel {
+    Unknown = 0,
+    Debug = 1,
+    Info = 2,
+    Warning = 3,
+    Error = 4,
+    Fatal = 5,
+}
+
+#[derive(Clone, Copy, Debug)]
+#[repr(i32)]
+pub enum FoxgloveSceneEntityDeletionType {
+    MatchingId = 0,
+    All = 1,
+}
+
+#[derive(Clone, Copy, Debug)]
+#[repr(i32)]
+pub enum FoxgloveNumericType {
+    Unknown = 0,
+    Uint8 = 1,
+    Int8 = 2,
+    Uint16 = 3,
+    Int16 = 4,
+    Uint32 = 5,
+    Int32 = 6,
+    Float32 = 7,
+    Float64 = 8,
+}
+
+#[derive(Clone, Copy, Debug)]
+#[repr(i32)]
+pub enum FoxglovePointsAnnotationType {
+    Unknown = 0,
+    Points = 1,
+    LineLoop = 2,
+    LineStrip = 3,
+    LineList = 4,
+}
+
+#[derive(Clone, Copy, Debug)]
+#[repr(i32)]
+pub enum FoxglovePositionCovarianceType {
+    Unknown = 0,
+    Approximated = 1,
+    DiagonalKnown = 2,
+    Known = 3,
+}
+
 /// A primitive representing an arrow
 #[repr(C)]
 pub struct ArrowPrimitive {
@@ -37,22 +96,16 @@ impl ArrowPrimitive {
         Ok(ManuallyDrop::new(foxglove::schemas::ArrowPrimitive {
             pose: unsafe { self.pose.as_ref().map(|m| m.borrow_to_native()) }
                 .transpose()?
-                .map(|m| ManuallyDrop::into_inner(m)),
+                .map(ManuallyDrop::into_inner),
             shaft_length: self.shaft_length,
             shaft_diameter: self.shaft_diameter,
             head_length: self.head_length,
             head_diameter: self.head_diameter,
             color: unsafe { self.color.as_ref().map(|m| m.borrow_to_native()) }
                 .transpose()?
-                .map(|m| ManuallyDrop::into_inner(m)),
+                .map(ManuallyDrop::into_inner),
         }))
     }
-}
-
-#[allow(unused_mut)]
-#[allow(unused_variables)]
-fn free_arrow_primitive(mut msg: ManuallyDrop<foxglove::schemas::ArrowPrimitive>) {
-    // The only allocations we made were for Vec<Nested> fields, which may also include Vec<Nested> fields in a couple cases.
 }
 
 /// Camera calibration parameters
@@ -186,22 +239,12 @@ pub extern "C" fn foxglove_channel_log_camera_calibration(
 ) -> FoxgloveError {
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { CameraCalibration::borrow_option_to_native(msg) } {
-        Ok(msg) => {
-            let e = log_msg_to_channel(channel, &*msg, log_time);
-            free_camera_calibration(msg);
-            e
-        }
+        Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
         Err(e) => {
             tracing::error!("CameraCalibration: {}", e);
             e.into()
         }
     }
-}
-
-#[allow(unused_mut)]
-#[allow(unused_variables)]
-fn free_camera_calibration(mut msg: ManuallyDrop<foxglove::schemas::CameraCalibration>) {
-    // The only allocations we made were for Vec<Nested> fields, which may also include Vec<Nested> fields in a couple cases.
 }
 
 /// A circle annotation on a 2D image
@@ -246,15 +289,15 @@ impl CircleAnnotation {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
             position: unsafe { self.position.as_ref().map(|m| m.borrow_to_native()) }
                 .transpose()?
-                .map(|m| ManuallyDrop::into_inner(m)),
+                .map(ManuallyDrop::into_inner),
             diameter: self.diameter,
             thickness: self.thickness,
             fill_color: unsafe { self.fill_color.as_ref().map(|m| m.borrow_to_native()) }
                 .transpose()?
-                .map(|m| ManuallyDrop::into_inner(m)),
+                .map(ManuallyDrop::into_inner),
             outline_color: unsafe { self.outline_color.as_ref().map(|m| m.borrow_to_native()) }
                 .transpose()?
-                .map(|m| ManuallyDrop::into_inner(m)),
+                .map(ManuallyDrop::into_inner),
         }))
     }
 }
@@ -267,22 +310,12 @@ pub extern "C" fn foxglove_channel_log_circle_annotation(
 ) -> FoxgloveError {
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { CircleAnnotation::borrow_option_to_native(msg) } {
-        Ok(msg) => {
-            let e = log_msg_to_channel(channel, &*msg, log_time);
-            free_circle_annotation(msg);
-            e
-        }
+        Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
         Err(e) => {
             tracing::error!("CircleAnnotation: {}", e);
             e.into()
         }
     }
-}
-
-#[allow(unused_mut)]
-#[allow(unused_variables)]
-fn free_circle_annotation(mut msg: ManuallyDrop<foxglove::schemas::CircleAnnotation>) {
-    // The only allocations we made were for Vec<Nested> fields, which may also include Vec<Nested> fields in a couple cases.
 }
 
 /// A color in RGBA format
@@ -333,22 +366,12 @@ pub extern "C" fn foxglove_channel_log_color(
 ) -> FoxgloveError {
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { Color::borrow_option_to_native(msg) } {
-        Ok(msg) => {
-            let e = log_msg_to_channel(channel, &*msg, log_time);
-            free_color(msg);
-            e
-        }
+        Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
         Err(e) => {
             tracing::error!("Color: {}", e);
             e.into()
         }
     }
-}
-
-#[allow(unused_mut)]
-#[allow(unused_variables)]
-fn free_color(mut msg: ManuallyDrop<foxglove::schemas::Color>) {
-    // The only allocations we made were for Vec<Nested> fields, which may also include Vec<Nested> fields in a couple cases.
 }
 
 /// A compressed image
@@ -418,22 +441,12 @@ pub extern "C" fn foxglove_channel_log_compressed_image(
 ) -> FoxgloveError {
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { CompressedImage::borrow_option_to_native(msg) } {
-        Ok(msg) => {
-            let e = log_msg_to_channel(channel, &*msg, log_time);
-            free_compressed_image(msg);
-            e
-        }
+        Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
         Err(e) => {
             tracing::error!("CompressedImage: {}", e);
             e.into()
         }
     }
-}
-
-#[allow(unused_mut)]
-#[allow(unused_variables)]
-fn free_compressed_image(mut msg: ManuallyDrop<foxglove::schemas::CompressedImage>) {
-    // The only allocations we made were for Vec<Nested> fields, which may also include Vec<Nested> fields in a couple cases.
 }
 
 /// A single frame of a compressed video bitstream
@@ -529,22 +542,12 @@ pub extern "C" fn foxglove_channel_log_compressed_video(
 ) -> FoxgloveError {
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { CompressedVideo::borrow_option_to_native(msg) } {
-        Ok(msg) => {
-            let e = log_msg_to_channel(channel, &*msg, log_time);
-            free_compressed_video(msg);
-            e
-        }
+        Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
         Err(e) => {
             tracing::error!("CompressedVideo: {}", e);
             e.into()
         }
     }
-}
-
-#[allow(unused_mut)]
-#[allow(unused_variables)]
-fn free_compressed_video(mut msg: ManuallyDrop<foxglove::schemas::CompressedVideo>) {
-    // The only allocations we made were for Vec<Nested> fields, which may also include Vec<Nested> fields in a couple cases.
 }
 
 /// A primitive representing a cylinder, elliptic cylinder, or truncated cone
@@ -573,23 +576,17 @@ impl CylinderPrimitive {
         Ok(ManuallyDrop::new(foxglove::schemas::CylinderPrimitive {
             pose: unsafe { self.pose.as_ref().map(|m| m.borrow_to_native()) }
                 .transpose()?
-                .map(|m| ManuallyDrop::into_inner(m)),
+                .map(ManuallyDrop::into_inner),
             size: unsafe { self.size.as_ref().map(|m| m.borrow_to_native()) }
                 .transpose()?
-                .map(|m| ManuallyDrop::into_inner(m)),
+                .map(ManuallyDrop::into_inner),
             bottom_scale: self.bottom_scale,
             top_scale: self.top_scale,
             color: unsafe { self.color.as_ref().map(|m| m.borrow_to_native()) }
                 .transpose()?
-                .map(|m| ManuallyDrop::into_inner(m)),
+                .map(ManuallyDrop::into_inner),
         }))
     }
-}
-
-#[allow(unused_mut)]
-#[allow(unused_variables)]
-fn free_cylinder_primitive(mut msg: ManuallyDrop<foxglove::schemas::CylinderPrimitive>) {
-    // The only allocations we made were for Vec<Nested> fields, which may also include Vec<Nested> fields in a couple cases.
 }
 
 /// A primitive representing a cube or rectangular prism
@@ -612,21 +609,15 @@ impl CubePrimitive {
         Ok(ManuallyDrop::new(foxglove::schemas::CubePrimitive {
             pose: unsafe { self.pose.as_ref().map(|m| m.borrow_to_native()) }
                 .transpose()?
-                .map(|m| ManuallyDrop::into_inner(m)),
+                .map(ManuallyDrop::into_inner),
             size: unsafe { self.size.as_ref().map(|m| m.borrow_to_native()) }
                 .transpose()?
-                .map(|m| ManuallyDrop::into_inner(m)),
+                .map(ManuallyDrop::into_inner),
             color: unsafe { self.color.as_ref().map(|m| m.borrow_to_native()) }
                 .transpose()?
-                .map(|m| ManuallyDrop::into_inner(m)),
+                .map(ManuallyDrop::into_inner),
         }))
     }
-}
-
-#[allow(unused_mut)]
-#[allow(unused_variables)]
-fn free_cube_primitive(mut msg: ManuallyDrop<foxglove::schemas::CubePrimitive>) {
-    // The only allocations we made were for Vec<Nested> fields, which may also include Vec<Nested> fields in a couple cases.
 }
 
 /// A transform between two reference frames in 3D space
@@ -687,10 +678,10 @@ impl FrameTransform {
             })?,
             translation: unsafe { self.translation.as_ref().map(|m| m.borrow_to_native()) }
                 .transpose()?
-                .map(|m| ManuallyDrop::into_inner(m)),
+                .map(ManuallyDrop::into_inner),
             rotation: unsafe { self.rotation.as_ref().map(|m| m.borrow_to_native()) }
                 .transpose()?
-                .map(|m| ManuallyDrop::into_inner(m)),
+                .map(ManuallyDrop::into_inner),
         }))
     }
 }
@@ -703,22 +694,12 @@ pub extern "C" fn foxglove_channel_log_frame_transform(
 ) -> FoxgloveError {
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { FrameTransform::borrow_option_to_native(msg) } {
-        Ok(msg) => {
-            let e = log_msg_to_channel(channel, &*msg, log_time);
-            free_frame_transform(msg);
-            e
-        }
+        Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
         Err(e) => {
             tracing::error!("FrameTransform: {}", e);
             e.into()
         }
     }
-}
-
-#[allow(unused_mut)]
-#[allow(unused_variables)]
-fn free_frame_transform(mut msg: ManuallyDrop<foxglove::schemas::FrameTransform>) {
-    // The only allocations we made were for Vec<Nested> fields, which may also include Vec<Nested> fields in a couple cases.
 }
 
 /// An array of FrameTransform messages
@@ -749,9 +730,9 @@ impl FrameTransforms {
                 std::slice::from_raw_parts(self.transforms, self.transforms_count)
             }
             .iter()
-            .flat_map(|m| unsafe {
+            .filter_map(|m| unsafe {
                 m.as_ref()
-                    .map(|m| m.borrow_to_native().map(|m| ManuallyDrop::into_inner(m)))
+                    .map(|m| m.borrow_to_native().map(ManuallyDrop::into_inner))
             })
             .collect::<Result<Vec<_>, _>>()?,
         }))
@@ -778,12 +759,11 @@ pub extern "C" fn foxglove_channel_log_frame_transforms(
     }
 }
 
-#[allow(unused_mut)]
-#[allow(unused_variables)]
+#[allow(forgetting_copy_types)]
 fn free_frame_transforms(mut msg: ManuallyDrop<foxglove::schemas::FrameTransforms>) {
     // The only allocations we made were for Vec<Nested> fields, which may also include Vec<Nested> fields in a couple cases.
     for nested in std::mem::take(&mut msg.transforms) {
-        free_frame_transform(ManuallyDrop::new(nested));
+        std::mem::forget(nested);
     }
 }
 
@@ -830,22 +810,12 @@ pub extern "C" fn foxglove_channel_log_geo_json(
 ) -> FoxgloveError {
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { GeoJson::borrow_option_to_native(msg) } {
-        Ok(msg) => {
-            let e = log_msg_to_channel(channel, &*msg, log_time);
-            free_geo_json(msg);
-            e
-        }
+        Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
         Err(e) => {
             tracing::error!("GeoJson: {}", e);
             e.into()
         }
     }
-}
-
-#[allow(unused_mut)]
-#[allow(unused_variables)]
-fn free_geo_json(mut msg: ManuallyDrop<foxglove::schemas::GeoJson>) {
-    // The only allocations we made were for Vec<Nested> fields, which may also include Vec<Nested> fields in a couple cases.
 }
 
 /// A 2D grid of data
@@ -908,18 +878,18 @@ impl Grid {
             .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("frame_id invalid: {}", e)))?,
             pose: unsafe { self.pose.as_ref().map(|m| m.borrow_to_native()) }
                 .transpose()?
-                .map(|m| ManuallyDrop::into_inner(m)),
+                .map(ManuallyDrop::into_inner),
             column_count: self.column_count,
             cell_size: unsafe { self.cell_size.as_ref().map(|m| m.borrow_to_native()) }
                 .transpose()?
-                .map(|m| ManuallyDrop::into_inner(m)),
+                .map(ManuallyDrop::into_inner),
             row_stride: self.row_stride,
             cell_stride: self.cell_stride,
             fields: unsafe { std::slice::from_raw_parts(self.fields, self.fields_count) }
                 .iter()
-                .flat_map(|m| unsafe {
+                .filter_map(|m| unsafe {
                     m.as_ref()
-                        .map(|m| m.borrow_to_native().map(|m| ManuallyDrop::into_inner(m)))
+                        .map(|m| m.borrow_to_native().map(ManuallyDrop::into_inner))
                 })
                 .collect::<Result<Vec<_>, _>>()?,
             data: unsafe {
@@ -949,12 +919,11 @@ pub extern "C" fn foxglove_channel_log_grid(
     }
 }
 
-#[allow(unused_mut)]
-#[allow(unused_variables)]
+#[allow(forgetting_copy_types)]
 fn free_grid(mut msg: ManuallyDrop<foxglove::schemas::Grid>) {
     // The only allocations we made were for Vec<Nested> fields, which may also include Vec<Nested> fields in a couple cases.
     for nested in std::mem::take(&mut msg.fields) {
-        free_packed_element_field(ManuallyDrop::new(nested));
+        std::mem::forget(nested);
     }
 }
 
@@ -992,23 +961,23 @@ impl ImageAnnotations {
         Ok(ManuallyDrop::new(foxglove::schemas::ImageAnnotations {
             circles: unsafe { std::slice::from_raw_parts(self.circles, self.circles_count) }
                 .iter()
-                .flat_map(|m| unsafe {
+                .filter_map(|m| unsafe {
                     m.as_ref()
-                        .map(|m| m.borrow_to_native().map(|m| ManuallyDrop::into_inner(m)))
+                        .map(|m| m.borrow_to_native().map(ManuallyDrop::into_inner))
                 })
                 .collect::<Result<Vec<_>, _>>()?,
             points: unsafe { std::slice::from_raw_parts(self.points, self.points_count) }
                 .iter()
-                .flat_map(|m| unsafe {
+                .filter_map(|m| unsafe {
                     m.as_ref()
-                        .map(|m| m.borrow_to_native().map(|m| ManuallyDrop::into_inner(m)))
+                        .map(|m| m.borrow_to_native().map(ManuallyDrop::into_inner))
                 })
                 .collect::<Result<Vec<_>, _>>()?,
             texts: unsafe { std::slice::from_raw_parts(self.texts, self.texts_count) }
                 .iter()
-                .flat_map(|m| unsafe {
+                .filter_map(|m| unsafe {
                     m.as_ref()
-                        .map(|m| m.borrow_to_native().map(|m| ManuallyDrop::into_inner(m)))
+                        .map(|m| m.borrow_to_native().map(ManuallyDrop::into_inner))
                 })
                 .collect::<Result<Vec<_>, _>>()?,
         }))
@@ -1035,18 +1004,17 @@ pub extern "C" fn foxglove_channel_log_image_annotations(
     }
 }
 
-#[allow(unused_mut)]
-#[allow(unused_variables)]
+#[allow(forgetting_copy_types)]
 fn free_image_annotations(mut msg: ManuallyDrop<foxglove::schemas::ImageAnnotations>) {
     // The only allocations we made were for Vec<Nested> fields, which may also include Vec<Nested> fields in a couple cases.
     for nested in std::mem::take(&mut msg.circles) {
-        free_circle_annotation(ManuallyDrop::new(nested));
+        std::mem::forget(nested);
     }
     for nested in std::mem::take(&mut msg.points) {
         free_points_annotation(ManuallyDrop::new(nested));
     }
     for nested in std::mem::take(&mut msg.texts) {
-        free_text_annotation(ManuallyDrop::new(nested));
+        std::mem::forget(nested);
     }
 }
 
@@ -1104,22 +1072,12 @@ pub extern "C" fn foxglove_channel_log_key_value_pair(
 ) -> FoxgloveError {
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { KeyValuePair::borrow_option_to_native(msg) } {
-        Ok(msg) => {
-            let e = log_msg_to_channel(channel, &*msg, log_time);
-            free_key_value_pair(msg);
-            e
-        }
+        Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
         Err(e) => {
             tracing::error!("KeyValuePair: {}", e);
             e.into()
         }
     }
-}
-
-#[allow(unused_mut)]
-#[allow(unused_variables)]
-fn free_key_value_pair(mut msg: ManuallyDrop<foxglove::schemas::KeyValuePair>) {
-    // The only allocations we made were for Vec<Nested> fields, which may also include Vec<Nested> fields in a couple cases.
 }
 
 /// A single scan from a planar laser range-finder
@@ -1176,7 +1134,7 @@ impl LaserScan {
             .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("frame_id invalid: {}", e)))?,
             pose: unsafe { self.pose.as_ref().map(|m| m.borrow_to_native()) }
                 .transpose()?
-                .map(|m| ManuallyDrop::into_inner(m)),
+                .map(ManuallyDrop::into_inner),
             start_angle: self.start_angle,
             end_angle: self.end_angle,
             ranges: unsafe {
@@ -1205,11 +1163,7 @@ pub extern "C" fn foxglove_channel_log_laser_scan(
 ) -> FoxgloveError {
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { LaserScan::borrow_option_to_native(msg) } {
-        Ok(msg) => {
-            let e = log_msg_to_channel(channel, &*msg, log_time);
-            free_laser_scan(msg);
-            e
-        }
+        Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
         Err(e) => {
             tracing::error!("LaserScan: {}", e);
             e.into()
@@ -1217,17 +1171,11 @@ pub extern "C" fn foxglove_channel_log_laser_scan(
     }
 }
 
-#[allow(unused_mut)]
-#[allow(unused_variables)]
-fn free_laser_scan(mut msg: ManuallyDrop<foxglove::schemas::LaserScan>) {
-    // The only allocations we made were for Vec<Nested> fields, which may also include Vec<Nested> fields in a couple cases.
-}
-
 /// A primitive representing a series of points connected by lines
 #[repr(C)]
 pub struct LinePrimitive {
     /// Drawing primitive to use for lines
-    pub r#type: i32,
+    pub r#type: FoxgloveLineType,
 
     /// Origin of lines relative to reference frame
     pub pose: *const Pose,
@@ -1261,27 +1209,27 @@ impl LinePrimitive {
         &self,
     ) -> Result<ManuallyDrop<foxglove::schemas::LinePrimitive>, foxglove::FoxgloveError> {
         Ok(ManuallyDrop::new(foxglove::schemas::LinePrimitive {
-            r#type: self.r#type,
+            r#type: self.r#type as i32,
             pose: unsafe { self.pose.as_ref().map(|m| m.borrow_to_native()) }
                 .transpose()?
-                .map(|m| ManuallyDrop::into_inner(m)),
+                .map(ManuallyDrop::into_inner),
             thickness: self.thickness,
             scale_invariant: self.scale_invariant,
             points: unsafe { std::slice::from_raw_parts(self.points, self.points_count) }
                 .iter()
-                .flat_map(|m| unsafe {
+                .filter_map(|m| unsafe {
                     m.as_ref()
-                        .map(|m| m.borrow_to_native().map(|m| ManuallyDrop::into_inner(m)))
+                        .map(|m| m.borrow_to_native().map(ManuallyDrop::into_inner))
                 })
                 .collect::<Result<Vec<_>, _>>()?,
             color: unsafe { self.color.as_ref().map(|m| m.borrow_to_native()) }
                 .transpose()?
-                .map(|m| ManuallyDrop::into_inner(m)),
+                .map(ManuallyDrop::into_inner),
             colors: unsafe { std::slice::from_raw_parts(self.colors, self.colors_count) }
                 .iter()
-                .flat_map(|m| unsafe {
+                .filter_map(|m| unsafe {
                     m.as_ref()
-                        .map(|m| m.borrow_to_native().map(|m| ManuallyDrop::into_inner(m)))
+                        .map(|m| m.borrow_to_native().map(ManuallyDrop::into_inner))
                 })
                 .collect::<Result<Vec<_>, _>>()?,
             indices: unsafe {
@@ -1295,15 +1243,14 @@ impl LinePrimitive {
     }
 }
 
-#[allow(unused_mut)]
-#[allow(unused_variables)]
+#[allow(forgetting_copy_types)]
 fn free_line_primitive(mut msg: ManuallyDrop<foxglove::schemas::LinePrimitive>) {
     // The only allocations we made were for Vec<Nested> fields, which may also include Vec<Nested> fields in a couple cases.
     for nested in std::mem::take(&mut msg.points) {
-        free_point3(ManuallyDrop::new(nested));
+        std::mem::forget(nested);
     }
     for nested in std::mem::take(&mut msg.colors) {
-        free_color(ManuallyDrop::new(nested));
+        std::mem::forget(nested);
     }
 }
 
@@ -1329,7 +1276,7 @@ pub struct LocationFix {
     pub position_covariance: [f64; 9],
 
     /// If `position_covariance` is available, `position_covariance_type` must be set to indicate the type of covariance.
-    pub position_covariance_type: i32,
+    pub position_covariance_type: FoxglovePositionCovarianceType,
 }
 
 impl LocationFix {
@@ -1367,7 +1314,7 @@ impl LocationFix {
                     self.position_covariance.len(),
                 )
             },
-            position_covariance_type: self.position_covariance_type,
+            position_covariance_type: self.position_covariance_type as i32,
         }))
     }
 }
@@ -1380,22 +1327,12 @@ pub extern "C" fn foxglove_channel_log_location_fix(
 ) -> FoxgloveError {
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { LocationFix::borrow_option_to_native(msg) } {
-        Ok(msg) => {
-            let e = log_msg_to_channel(channel, &*msg, log_time);
-            free_location_fix(msg);
-            e
-        }
+        Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
         Err(e) => {
             tracing::error!("LocationFix: {}", e);
             e.into()
         }
     }
-}
-
-#[allow(unused_mut)]
-#[allow(unused_variables)]
-fn free_location_fix(mut msg: ManuallyDrop<foxglove::schemas::LocationFix>) {
-    // The only allocations we made were for Vec<Nested> fields, which may also include Vec<Nested> fields in a couple cases.
 }
 
 /// A log message
@@ -1405,7 +1342,7 @@ pub struct Log {
     pub timestamp: *const Timestamp,
 
     /// Log level
-    pub level: i32,
+    pub level: FoxgloveLogLevel,
 
     /// Log message
     pub message: FoxgloveString,
@@ -1437,7 +1374,7 @@ impl Log {
     ) -> Result<ManuallyDrop<foxglove::schemas::Log>, foxglove::FoxgloveError> {
         Ok(ManuallyDrop::new(foxglove::schemas::Log {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
-            level: self.level,
+            level: self.level as i32,
             message: unsafe {
                 String::from_utf8(Vec::from_raw_parts(
                     self.message.as_ptr() as *mut _,
@@ -1475,22 +1412,12 @@ pub extern "C" fn foxglove_channel_log_log(
 ) -> FoxgloveError {
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { Log::borrow_option_to_native(msg) } {
-        Ok(msg) => {
-            let e = log_msg_to_channel(channel, &*msg, log_time);
-            free_log(msg);
-            e
-        }
+        Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
         Err(e) => {
             tracing::error!("Log: {}", e);
             e.into()
         }
     }
-}
-
-#[allow(unused_mut)]
-#[allow(unused_variables)]
-fn free_log(mut msg: ManuallyDrop<foxglove::schemas::Log>) {
-    // The only allocations we made were for Vec<Nested> fields, which may also include Vec<Nested> fields in a couple cases.
 }
 
 /// Command to remove previously published entities
@@ -1500,7 +1427,7 @@ pub struct SceneEntityDeletion {
     pub timestamp: *const Timestamp,
 
     /// Type of deletion action to perform
-    pub r#type: i32,
+    pub r#type: FoxgloveSceneEntityDeletionType,
 
     /// Identifier which must match if `type` is `MATCHING_ID`.
     pub id: FoxgloveString,
@@ -1523,7 +1450,7 @@ impl SceneEntityDeletion {
     ) -> Result<ManuallyDrop<foxglove::schemas::SceneEntityDeletion>, foxglove::FoxgloveError> {
         Ok(ManuallyDrop::new(foxglove::schemas::SceneEntityDeletion {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
-            r#type: self.r#type,
+            r#type: self.r#type as i32,
             id: unsafe {
                 String::from_utf8(Vec::from_raw_parts(
                     self.id.as_ptr() as *mut _,
@@ -1544,22 +1471,12 @@ pub extern "C" fn foxglove_channel_log_scene_entity_deletion(
 ) -> FoxgloveError {
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { SceneEntityDeletion::borrow_option_to_native(msg) } {
-        Ok(msg) => {
-            let e = log_msg_to_channel(channel, &*msg, log_time);
-            free_scene_entity_deletion(msg);
-            e
-        }
+        Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
         Err(e) => {
             tracing::error!("SceneEntityDeletion: {}", e);
             e.into()
         }
     }
-}
-
-#[allow(unused_mut)]
-#[allow(unused_variables)]
-fn free_scene_entity_deletion(mut msg: ManuallyDrop<foxglove::schemas::SceneEntityDeletion>) {
-    // The only allocations we made were for Vec<Nested> fields, which may also include Vec<Nested> fields in a couple cases.
 }
 
 /// A visual element in a 3D scene. An entity may be composed of multiple primitives which all share the same frame of reference.
@@ -1654,65 +1571,65 @@ impl SceneEntity {
             frame_locked: self.frame_locked,
             metadata: unsafe { std::slice::from_raw_parts(self.metadata, self.metadata_count) }
                 .iter()
-                .flat_map(|m| unsafe {
+                .filter_map(|m| unsafe {
                     m.as_ref()
-                        .map(|m| m.borrow_to_native().map(|m| ManuallyDrop::into_inner(m)))
+                        .map(|m| m.borrow_to_native().map(ManuallyDrop::into_inner))
                 })
                 .collect::<Result<Vec<_>, _>>()?,
             arrows: unsafe { std::slice::from_raw_parts(self.arrows, self.arrows_count) }
                 .iter()
-                .flat_map(|m| unsafe {
+                .filter_map(|m| unsafe {
                     m.as_ref()
-                        .map(|m| m.borrow_to_native().map(|m| ManuallyDrop::into_inner(m)))
+                        .map(|m| m.borrow_to_native().map(ManuallyDrop::into_inner))
                 })
                 .collect::<Result<Vec<_>, _>>()?,
             cubes: unsafe { std::slice::from_raw_parts(self.cubes, self.cubes_count) }
                 .iter()
-                .flat_map(|m| unsafe {
+                .filter_map(|m| unsafe {
                     m.as_ref()
-                        .map(|m| m.borrow_to_native().map(|m| ManuallyDrop::into_inner(m)))
+                        .map(|m| m.borrow_to_native().map(ManuallyDrop::into_inner))
                 })
                 .collect::<Result<Vec<_>, _>>()?,
             spheres: unsafe { std::slice::from_raw_parts(self.spheres, self.spheres_count) }
                 .iter()
-                .flat_map(|m| unsafe {
+                .filter_map(|m| unsafe {
                     m.as_ref()
-                        .map(|m| m.borrow_to_native().map(|m| ManuallyDrop::into_inner(m)))
+                        .map(|m| m.borrow_to_native().map(ManuallyDrop::into_inner))
                 })
                 .collect::<Result<Vec<_>, _>>()?,
             cylinders: unsafe { std::slice::from_raw_parts(self.cylinders, self.cylinders_count) }
                 .iter()
-                .flat_map(|m| unsafe {
+                .filter_map(|m| unsafe {
                     m.as_ref()
-                        .map(|m| m.borrow_to_native().map(|m| ManuallyDrop::into_inner(m)))
+                        .map(|m| m.borrow_to_native().map(ManuallyDrop::into_inner))
                 })
                 .collect::<Result<Vec<_>, _>>()?,
             lines: unsafe { std::slice::from_raw_parts(self.lines, self.lines_count) }
                 .iter()
-                .flat_map(|m| unsafe {
+                .filter_map(|m| unsafe {
                     m.as_ref()
-                        .map(|m| m.borrow_to_native().map(|m| ManuallyDrop::into_inner(m)))
+                        .map(|m| m.borrow_to_native().map(ManuallyDrop::into_inner))
                 })
                 .collect::<Result<Vec<_>, _>>()?,
             triangles: unsafe { std::slice::from_raw_parts(self.triangles, self.triangles_count) }
                 .iter()
-                .flat_map(|m| unsafe {
+                .filter_map(|m| unsafe {
                     m.as_ref()
-                        .map(|m| m.borrow_to_native().map(|m| ManuallyDrop::into_inner(m)))
+                        .map(|m| m.borrow_to_native().map(ManuallyDrop::into_inner))
                 })
                 .collect::<Result<Vec<_>, _>>()?,
             texts: unsafe { std::slice::from_raw_parts(self.texts, self.texts_count) }
                 .iter()
-                .flat_map(|m| unsafe {
+                .filter_map(|m| unsafe {
                     m.as_ref()
-                        .map(|m| m.borrow_to_native().map(|m| ManuallyDrop::into_inner(m)))
+                        .map(|m| m.borrow_to_native().map(ManuallyDrop::into_inner))
                 })
                 .collect::<Result<Vec<_>, _>>()?,
             models: unsafe { std::slice::from_raw_parts(self.models, self.models_count) }
                 .iter()
-                .flat_map(|m| unsafe {
+                .filter_map(|m| unsafe {
                     m.as_ref()
-                        .map(|m| m.borrow_to_native().map(|m| ManuallyDrop::into_inner(m)))
+                        .map(|m| m.borrow_to_native().map(ManuallyDrop::into_inner))
                 })
                 .collect::<Result<Vec<_>, _>>()?,
         }))
@@ -1739,24 +1656,23 @@ pub extern "C" fn foxglove_channel_log_scene_entity(
     }
 }
 
-#[allow(unused_mut)]
-#[allow(unused_variables)]
+#[allow(forgetting_copy_types)]
 fn free_scene_entity(mut msg: ManuallyDrop<foxglove::schemas::SceneEntity>) {
     // The only allocations we made were for Vec<Nested> fields, which may also include Vec<Nested> fields in a couple cases.
     for nested in std::mem::take(&mut msg.metadata) {
-        free_key_value_pair(ManuallyDrop::new(nested));
+        std::mem::forget(nested);
     }
     for nested in std::mem::take(&mut msg.arrows) {
-        free_arrow_primitive(ManuallyDrop::new(nested));
+        std::mem::forget(nested);
     }
     for nested in std::mem::take(&mut msg.cubes) {
-        free_cube_primitive(ManuallyDrop::new(nested));
+        std::mem::forget(nested);
     }
     for nested in std::mem::take(&mut msg.spheres) {
-        free_sphere_primitive(ManuallyDrop::new(nested));
+        std::mem::forget(nested);
     }
     for nested in std::mem::take(&mut msg.cylinders) {
-        free_cylinder_primitive(ManuallyDrop::new(nested));
+        std::mem::forget(nested);
     }
     for nested in std::mem::take(&mut msg.lines) {
         free_line_primitive(ManuallyDrop::new(nested));
@@ -1765,10 +1681,10 @@ fn free_scene_entity(mut msg: ManuallyDrop<foxglove::schemas::SceneEntity>) {
         free_triangle_list_primitive(ManuallyDrop::new(nested));
     }
     for nested in std::mem::take(&mut msg.texts) {
-        free_text_primitive(ManuallyDrop::new(nested));
+        std::mem::forget(nested);
     }
     for nested in std::mem::take(&mut msg.models) {
-        free_model_primitive(ManuallyDrop::new(nested));
+        std::mem::forget(nested);
     }
 }
 
@@ -1802,16 +1718,16 @@ impl SceneUpdate {
         Ok(ManuallyDrop::new(foxglove::schemas::SceneUpdate {
             deletions: unsafe { std::slice::from_raw_parts(self.deletions, self.deletions_count) }
                 .iter()
-                .flat_map(|m| unsafe {
+                .filter_map(|m| unsafe {
                     m.as_ref()
-                        .map(|m| m.borrow_to_native().map(|m| ManuallyDrop::into_inner(m)))
+                        .map(|m| m.borrow_to_native().map(ManuallyDrop::into_inner))
                 })
                 .collect::<Result<Vec<_>, _>>()?,
             entities: unsafe { std::slice::from_raw_parts(self.entities, self.entities_count) }
                 .iter()
-                .flat_map(|m| unsafe {
+                .filter_map(|m| unsafe {
                     m.as_ref()
-                        .map(|m| m.borrow_to_native().map(|m| ManuallyDrop::into_inner(m)))
+                        .map(|m| m.borrow_to_native().map(ManuallyDrop::into_inner))
                 })
                 .collect::<Result<Vec<_>, _>>()?,
         }))
@@ -1838,12 +1754,11 @@ pub extern "C" fn foxglove_channel_log_scene_update(
     }
 }
 
-#[allow(unused_mut)]
-#[allow(unused_variables)]
+#[allow(forgetting_copy_types)]
 fn free_scene_update(mut msg: ManuallyDrop<foxglove::schemas::SceneUpdate>) {
     // The only allocations we made were for Vec<Nested> fields, which may also include Vec<Nested> fields in a couple cases.
     for nested in std::mem::take(&mut msg.deletions) {
-        free_scene_entity_deletion(ManuallyDrop::new(nested));
+        std::mem::forget(nested);
     }
     for nested in std::mem::take(&mut msg.entities) {
         free_scene_entity(ManuallyDrop::new(nested));
@@ -1883,13 +1798,13 @@ impl ModelPrimitive {
         Ok(ManuallyDrop::new(foxglove::schemas::ModelPrimitive {
             pose: unsafe { self.pose.as_ref().map(|m| m.borrow_to_native()) }
                 .transpose()?
-                .map(|m| ManuallyDrop::into_inner(m)),
+                .map(ManuallyDrop::into_inner),
             scale: unsafe { self.scale.as_ref().map(|m| m.borrow_to_native()) }
                 .transpose()?
-                .map(|m| ManuallyDrop::into_inner(m)),
+                .map(ManuallyDrop::into_inner),
             color: unsafe { self.color.as_ref().map(|m| m.borrow_to_native()) }
                 .transpose()?
-                .map(|m| ManuallyDrop::into_inner(m)),
+                .map(ManuallyDrop::into_inner),
             override_color: self.override_color,
             url: unsafe {
                 String::from_utf8(Vec::from_raw_parts(
@@ -1916,12 +1831,6 @@ impl ModelPrimitive {
     }
 }
 
-#[allow(unused_mut)]
-#[allow(unused_variables)]
-fn free_model_primitive(mut msg: ManuallyDrop<foxglove::schemas::ModelPrimitive>) {
-    // The only allocations we made were for Vec<Nested> fields, which may also include Vec<Nested> fields in a couple cases.
-}
-
 /// A field present within each element in a byte array of packed elements.
 #[repr(C)]
 pub struct PackedElementField {
@@ -1932,7 +1841,7 @@ pub struct PackedElementField {
     pub offset: u32,
 
     /// Type of data in the field. Integers are stored using little-endian byte order.
-    pub r#type: i32,
+    pub r#type: FoxgloveNumericType,
 }
 
 impl PackedElementField {
@@ -1960,7 +1869,7 @@ impl PackedElementField {
             }
             .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("name invalid: {}", e)))?,
             offset: self.offset,
-            r#type: self.r#type,
+            r#type: self.r#type as i32,
         }))
     }
 }
@@ -1973,22 +1882,12 @@ pub extern "C" fn foxglove_channel_log_packed_element_field(
 ) -> FoxgloveError {
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { PackedElementField::borrow_option_to_native(msg) } {
-        Ok(msg) => {
-            let e = log_msg_to_channel(channel, &*msg, log_time);
-            free_packed_element_field(msg);
-            e
-        }
+        Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
         Err(e) => {
             tracing::error!("PackedElementField: {}", e);
             e.into()
         }
     }
-}
-
-#[allow(unused_mut)]
-#[allow(unused_variables)]
-fn free_packed_element_field(mut msg: ManuallyDrop<foxglove::schemas::PackedElementField>) {
-    // The only allocations we made were for Vec<Nested> fields, which may also include Vec<Nested> fields in a couple cases.
 }
 
 /// A point representing a position in 2D space
@@ -2031,22 +1930,12 @@ pub extern "C" fn foxglove_channel_log_point2(
 ) -> FoxgloveError {
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { Point2::borrow_option_to_native(msg) } {
-        Ok(msg) => {
-            let e = log_msg_to_channel(channel, &*msg, log_time);
-            free_point2(msg);
-            e
-        }
+        Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
         Err(e) => {
             tracing::error!("Point2: {}", e);
             e.into()
         }
     }
-}
-
-#[allow(unused_mut)]
-#[allow(unused_variables)]
-fn free_point2(mut msg: ManuallyDrop<foxglove::schemas::Point2>) {
-    // The only allocations we made were for Vec<Nested> fields, which may also include Vec<Nested> fields in a couple cases.
 }
 
 /// A point representing a position in 3D space
@@ -2093,22 +1982,12 @@ pub extern "C" fn foxglove_channel_log_point3(
 ) -> FoxgloveError {
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { Point3::borrow_option_to_native(msg) } {
-        Ok(msg) => {
-            let e = log_msg_to_channel(channel, &*msg, log_time);
-            free_point3(msg);
-            e
-        }
+        Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
         Err(e) => {
             tracing::error!("Point3: {}", e);
             e.into()
         }
     }
-}
-
-#[allow(unused_mut)]
-#[allow(unused_variables)]
-fn free_point3(mut msg: ManuallyDrop<foxglove::schemas::Point3>) {
-    // The only allocations we made were for Vec<Nested> fields, which may also include Vec<Nested> fields in a couple cases.
 }
 
 /// A collection of N-dimensional points, which may contain additional fields with information like normals, intensity, etc.
@@ -2162,13 +2041,13 @@ impl PointCloud {
             .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("frame_id invalid: {}", e)))?,
             pose: unsafe { self.pose.as_ref().map(|m| m.borrow_to_native()) }
                 .transpose()?
-                .map(|m| ManuallyDrop::into_inner(m)),
+                .map(ManuallyDrop::into_inner),
             point_stride: self.point_stride,
             fields: unsafe { std::slice::from_raw_parts(self.fields, self.fields_count) }
                 .iter()
-                .flat_map(|m| unsafe {
+                .filter_map(|m| unsafe {
                     m.as_ref()
-                        .map(|m| m.borrow_to_native().map(|m| ManuallyDrop::into_inner(m)))
+                        .map(|m| m.borrow_to_native().map(ManuallyDrop::into_inner))
                 })
                 .collect::<Result<Vec<_>, _>>()?,
             data: unsafe {
@@ -2198,12 +2077,11 @@ pub extern "C" fn foxglove_channel_log_point_cloud(
     }
 }
 
-#[allow(unused_mut)]
-#[allow(unused_variables)]
+#[allow(forgetting_copy_types)]
 fn free_point_cloud(mut msg: ManuallyDrop<foxglove::schemas::PointCloud>) {
     // The only allocations we made were for Vec<Nested> fields, which may also include Vec<Nested> fields in a couple cases.
     for nested in std::mem::take(&mut msg.fields) {
-        free_packed_element_field(ManuallyDrop::new(nested));
+        std::mem::forget(nested);
     }
 }
 
@@ -2214,7 +2092,7 @@ pub struct PointsAnnotation {
     pub timestamp: *const Timestamp,
 
     /// Type of points annotation to draw
-    pub r#type: i32,
+    pub r#type: FoxglovePointsAnnotationType,
 
     /// Points in 2D image coordinates (pixels).
     /// These coordinates use the top-left corner of the top-left pixel of the image as the origin.
@@ -2252,29 +2130,29 @@ impl PointsAnnotation {
     ) -> Result<ManuallyDrop<foxglove::schemas::PointsAnnotation>, foxglove::FoxgloveError> {
         Ok(ManuallyDrop::new(foxglove::schemas::PointsAnnotation {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
-            r#type: self.r#type,
+            r#type: self.r#type as i32,
             points: unsafe { std::slice::from_raw_parts(self.points, self.points_count) }
                 .iter()
-                .flat_map(|m| unsafe {
+                .filter_map(|m| unsafe {
                     m.as_ref()
-                        .map(|m| m.borrow_to_native().map(|m| ManuallyDrop::into_inner(m)))
+                        .map(|m| m.borrow_to_native().map(ManuallyDrop::into_inner))
                 })
                 .collect::<Result<Vec<_>, _>>()?,
             outline_color: unsafe { self.outline_color.as_ref().map(|m| m.borrow_to_native()) }
                 .transpose()?
-                .map(|m| ManuallyDrop::into_inner(m)),
+                .map(ManuallyDrop::into_inner),
             outline_colors: unsafe {
                 std::slice::from_raw_parts(self.outline_colors, self.outline_colors_count)
             }
             .iter()
-            .flat_map(|m| unsafe {
+            .filter_map(|m| unsafe {
                 m.as_ref()
-                    .map(|m| m.borrow_to_native().map(|m| ManuallyDrop::into_inner(m)))
+                    .map(|m| m.borrow_to_native().map(ManuallyDrop::into_inner))
             })
             .collect::<Result<Vec<_>, _>>()?,
             fill_color: unsafe { self.fill_color.as_ref().map(|m| m.borrow_to_native()) }
                 .transpose()?
-                .map(|m| ManuallyDrop::into_inner(m)),
+                .map(ManuallyDrop::into_inner),
             thickness: self.thickness,
         }))
     }
@@ -2300,15 +2178,14 @@ pub extern "C" fn foxglove_channel_log_points_annotation(
     }
 }
 
-#[allow(unused_mut)]
-#[allow(unused_variables)]
+#[allow(forgetting_copy_types)]
 fn free_points_annotation(mut msg: ManuallyDrop<foxglove::schemas::PointsAnnotation>) {
     // The only allocations we made were for Vec<Nested> fields, which may also include Vec<Nested> fields in a couple cases.
     for nested in std::mem::take(&mut msg.points) {
-        free_point2(ManuallyDrop::new(nested));
+        std::mem::forget(nested);
     }
     for nested in std::mem::take(&mut msg.outline_colors) {
-        free_color(ManuallyDrop::new(nested));
+        std::mem::forget(nested);
     }
 }
 
@@ -2340,10 +2217,10 @@ impl Pose {
         Ok(ManuallyDrop::new(foxglove::schemas::Pose {
             position: unsafe { self.position.as_ref().map(|m| m.borrow_to_native()) }
                 .transpose()?
-                .map(|m| ManuallyDrop::into_inner(m)),
+                .map(ManuallyDrop::into_inner),
             orientation: unsafe { self.orientation.as_ref().map(|m| m.borrow_to_native()) }
                 .transpose()?
-                .map(|m| ManuallyDrop::into_inner(m)),
+                .map(ManuallyDrop::into_inner),
         }))
     }
 }
@@ -2356,22 +2233,12 @@ pub extern "C" fn foxglove_channel_log_pose(
 ) -> FoxgloveError {
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { Pose::borrow_option_to_native(msg) } {
-        Ok(msg) => {
-            let e = log_msg_to_channel(channel, &*msg, log_time);
-            free_pose(msg);
-            e
-        }
+        Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
         Err(e) => {
             tracing::error!("Pose: {}", e);
             e.into()
         }
     }
-}
-
-#[allow(unused_mut)]
-#[allow(unused_variables)]
-fn free_pose(mut msg: ManuallyDrop<foxglove::schemas::Pose>) {
-    // The only allocations we made were for Vec<Nested> fields, which may also include Vec<Nested> fields in a couple cases.
 }
 
 /// A timestamped pose for an object or reference frame in 3D space
@@ -2414,7 +2281,7 @@ impl PoseInFrame {
             .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("frame_id invalid: {}", e)))?,
             pose: unsafe { self.pose.as_ref().map(|m| m.borrow_to_native()) }
                 .transpose()?
-                .map(|m| ManuallyDrop::into_inner(m)),
+                .map(ManuallyDrop::into_inner),
         }))
     }
 }
@@ -2427,22 +2294,12 @@ pub extern "C" fn foxglove_channel_log_pose_in_frame(
 ) -> FoxgloveError {
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { PoseInFrame::borrow_option_to_native(msg) } {
-        Ok(msg) => {
-            let e = log_msg_to_channel(channel, &*msg, log_time);
-            free_pose_in_frame(msg);
-            e
-        }
+        Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
         Err(e) => {
             tracing::error!("PoseInFrame: {}", e);
             e.into()
         }
     }
-}
-
-#[allow(unused_mut)]
-#[allow(unused_variables)]
-fn free_pose_in_frame(mut msg: ManuallyDrop<foxglove::schemas::PoseInFrame>) {
-    // The only allocations we made were for Vec<Nested> fields, which may also include Vec<Nested> fields in a couple cases.
 }
 
 /// An array of timestamped poses for an object or reference frame in 3D space
@@ -2486,9 +2343,9 @@ impl PosesInFrame {
             .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("frame_id invalid: {}", e)))?,
             poses: unsafe { std::slice::from_raw_parts(self.poses, self.poses_count) }
                 .iter()
-                .flat_map(|m| unsafe {
+                .filter_map(|m| unsafe {
                     m.as_ref()
-                        .map(|m| m.borrow_to_native().map(|m| ManuallyDrop::into_inner(m)))
+                        .map(|m| m.borrow_to_native().map(ManuallyDrop::into_inner))
                 })
                 .collect::<Result<Vec<_>, _>>()?,
         }))
@@ -2515,12 +2372,11 @@ pub extern "C" fn foxglove_channel_log_poses_in_frame(
     }
 }
 
-#[allow(unused_mut)]
-#[allow(unused_variables)]
+#[allow(forgetting_copy_types)]
 fn free_poses_in_frame(mut msg: ManuallyDrop<foxglove::schemas::PosesInFrame>) {
     // The only allocations we made were for Vec<Nested> fields, which may also include Vec<Nested> fields in a couple cases.
     for nested in std::mem::take(&mut msg.poses) {
-        free_pose(ManuallyDrop::new(nested));
+        std::mem::forget(nested);
     }
 }
 
@@ -2572,22 +2428,12 @@ pub extern "C" fn foxglove_channel_log_quaternion(
 ) -> FoxgloveError {
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { Quaternion::borrow_option_to_native(msg) } {
-        Ok(msg) => {
-            let e = log_msg_to_channel(channel, &*msg, log_time);
-            free_quaternion(msg);
-            e
-        }
+        Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
         Err(e) => {
             tracing::error!("Quaternion: {}", e);
             e.into()
         }
     }
-}
-
-#[allow(unused_mut)]
-#[allow(unused_variables)]
-fn free_quaternion(mut msg: ManuallyDrop<foxglove::schemas::Quaternion>) {
-    // The only allocations we made were for Vec<Nested> fields, which may also include Vec<Nested> fields in a couple cases.
 }
 
 /// A single block of an audio bitstream
@@ -2652,22 +2498,12 @@ pub extern "C" fn foxglove_channel_log_raw_audio(
 ) -> FoxgloveError {
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { RawAudio::borrow_option_to_native(msg) } {
-        Ok(msg) => {
-            let e = log_msg_to_channel(channel, &*msg, log_time);
-            free_raw_audio(msg);
-            e
-        }
+        Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
         Err(e) => {
             tracing::error!("RawAudio: {}", e);
             e.into()
         }
     }
-}
-
-#[allow(unused_mut)]
-#[allow(unused_variables)]
-fn free_raw_audio(mut msg: ManuallyDrop<foxglove::schemas::RawAudio>) {
-    // The only allocations we made were for Vec<Nested> fields, which may also include Vec<Nested> fields in a couple cases.
 }
 
 /// A raw image
@@ -2749,22 +2585,12 @@ pub extern "C" fn foxglove_channel_log_raw_image(
 ) -> FoxgloveError {
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { RawImage::borrow_option_to_native(msg) } {
-        Ok(msg) => {
-            let e = log_msg_to_channel(channel, &*msg, log_time);
-            free_raw_image(msg);
-            e
-        }
+        Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
         Err(e) => {
             tracing::error!("RawImage: {}", e);
             e.into()
         }
     }
-}
-
-#[allow(unused_mut)]
-#[allow(unused_variables)]
-fn free_raw_image(mut msg: ManuallyDrop<foxglove::schemas::RawImage>) {
-    // The only allocations we made were for Vec<Nested> fields, which may also include Vec<Nested> fields in a couple cases.
 }
 
 /// A primitive representing a sphere or ellipsoid
@@ -2787,21 +2613,15 @@ impl SpherePrimitive {
         Ok(ManuallyDrop::new(foxglove::schemas::SpherePrimitive {
             pose: unsafe { self.pose.as_ref().map(|m| m.borrow_to_native()) }
                 .transpose()?
-                .map(|m| ManuallyDrop::into_inner(m)),
+                .map(ManuallyDrop::into_inner),
             size: unsafe { self.size.as_ref().map(|m| m.borrow_to_native()) }
                 .transpose()?
-                .map(|m| ManuallyDrop::into_inner(m)),
+                .map(ManuallyDrop::into_inner),
             color: unsafe { self.color.as_ref().map(|m| m.borrow_to_native()) }
                 .transpose()?
-                .map(|m| ManuallyDrop::into_inner(m)),
+                .map(ManuallyDrop::into_inner),
         }))
     }
-}
-
-#[allow(unused_mut)]
-#[allow(unused_variables)]
-fn free_sphere_primitive(mut msg: ManuallyDrop<foxglove::schemas::SpherePrimitive>) {
-    // The only allocations we made were for Vec<Nested> fields, which may also include Vec<Nested> fields in a couple cases.
 }
 
 /// A text label on a 2D image
@@ -2846,7 +2666,7 @@ impl TextAnnotation {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
             position: unsafe { self.position.as_ref().map(|m| m.borrow_to_native()) }
                 .transpose()?
-                .map(|m| ManuallyDrop::into_inner(m)),
+                .map(ManuallyDrop::into_inner),
             text: unsafe {
                 String::from_utf8(Vec::from_raw_parts(
                     self.text.as_ptr() as *mut _,
@@ -2858,12 +2678,12 @@ impl TextAnnotation {
             font_size: self.font_size,
             text_color: unsafe { self.text_color.as_ref().map(|m| m.borrow_to_native()) }
                 .transpose()?
-                .map(|m| ManuallyDrop::into_inner(m)),
+                .map(ManuallyDrop::into_inner),
             background_color: unsafe {
                 self.background_color.as_ref().map(|m| m.borrow_to_native())
             }
             .transpose()?
-            .map(|m| ManuallyDrop::into_inner(m)),
+            .map(ManuallyDrop::into_inner),
         }))
     }
 }
@@ -2876,22 +2696,12 @@ pub extern "C" fn foxglove_channel_log_text_annotation(
 ) -> FoxgloveError {
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { TextAnnotation::borrow_option_to_native(msg) } {
-        Ok(msg) => {
-            let e = log_msg_to_channel(channel, &*msg, log_time);
-            free_text_annotation(msg);
-            e
-        }
+        Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
         Err(e) => {
             tracing::error!("TextAnnotation: {}", e);
             e.into()
         }
     }
-}
-
-#[allow(unused_mut)]
-#[allow(unused_variables)]
-fn free_text_annotation(mut msg: ManuallyDrop<foxglove::schemas::TextAnnotation>) {
-    // The only allocations we made were for Vec<Nested> fields, which may also include Vec<Nested> fields in a couple cases.
 }
 
 /// A primitive representing a text label
@@ -2923,13 +2733,13 @@ impl TextPrimitive {
         Ok(ManuallyDrop::new(foxglove::schemas::TextPrimitive {
             pose: unsafe { self.pose.as_ref().map(|m| m.borrow_to_native()) }
                 .transpose()?
-                .map(|m| ManuallyDrop::into_inner(m)),
+                .map(ManuallyDrop::into_inner),
             billboard: self.billboard,
             font_size: self.font_size,
             scale_invariant: self.scale_invariant,
             color: unsafe { self.color.as_ref().map(|m| m.borrow_to_native()) }
                 .transpose()?
-                .map(|m| ManuallyDrop::into_inner(m)),
+                .map(ManuallyDrop::into_inner),
             text: unsafe {
                 String::from_utf8(Vec::from_raw_parts(
                     self.text.as_ptr() as *mut _,
@@ -2940,12 +2750,6 @@ impl TextPrimitive {
             .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("text invalid: {}", e)))?,
         }))
     }
-}
-
-#[allow(unused_mut)]
-#[allow(unused_variables)]
-fn free_text_primitive(mut msg: ManuallyDrop<foxglove::schemas::TextPrimitive>) {
-    // The only allocations we made were for Vec<Nested> fields, which may also include Vec<Nested> fields in a couple cases.
 }
 
 /// A primitive representing a set of triangles or a surface tiled by triangles
@@ -2981,22 +2785,22 @@ impl TriangleListPrimitive {
             foxglove::schemas::TriangleListPrimitive {
                 pose: unsafe { self.pose.as_ref().map(|m| m.borrow_to_native()) }
                     .transpose()?
-                    .map(|m| ManuallyDrop::into_inner(m)),
+                    .map(ManuallyDrop::into_inner),
                 points: unsafe { std::slice::from_raw_parts(self.points, self.points_count) }
                     .iter()
-                    .flat_map(|m| unsafe {
+                    .filter_map(|m| unsafe {
                         m.as_ref()
-                            .map(|m| m.borrow_to_native().map(|m| ManuallyDrop::into_inner(m)))
+                            .map(|m| m.borrow_to_native().map(ManuallyDrop::into_inner))
                     })
                     .collect::<Result<Vec<_>, _>>()?,
                 color: unsafe { self.color.as_ref().map(|m| m.borrow_to_native()) }
                     .transpose()?
-                    .map(|m| ManuallyDrop::into_inner(m)),
+                    .map(ManuallyDrop::into_inner),
                 colors: unsafe { std::slice::from_raw_parts(self.colors, self.colors_count) }
                     .iter()
-                    .flat_map(|m| unsafe {
+                    .filter_map(|m| unsafe {
                         m.as_ref()
-                            .map(|m| m.borrow_to_native().map(|m| ManuallyDrop::into_inner(m)))
+                            .map(|m| m.borrow_to_native().map(ManuallyDrop::into_inner))
                     })
                     .collect::<Result<Vec<_>, _>>()?,
                 indices: unsafe {
@@ -3011,15 +2815,14 @@ impl TriangleListPrimitive {
     }
 }
 
-#[allow(unused_mut)]
-#[allow(unused_variables)]
+#[allow(forgetting_copy_types)]
 fn free_triangle_list_primitive(mut msg: ManuallyDrop<foxglove::schemas::TriangleListPrimitive>) {
     // The only allocations we made were for Vec<Nested> fields, which may also include Vec<Nested> fields in a couple cases.
     for nested in std::mem::take(&mut msg.points) {
-        free_point3(ManuallyDrop::new(nested));
+        std::mem::forget(nested);
     }
     for nested in std::mem::take(&mut msg.colors) {
-        free_color(ManuallyDrop::new(nested));
+        std::mem::forget(nested);
     }
 }
 
@@ -3063,22 +2866,12 @@ pub extern "C" fn foxglove_channel_log_vector2(
 ) -> FoxgloveError {
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { Vector2::borrow_option_to_native(msg) } {
-        Ok(msg) => {
-            let e = log_msg_to_channel(channel, &*msg, log_time);
-            free_vector2(msg);
-            e
-        }
+        Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
         Err(e) => {
             tracing::error!("Vector2: {}", e);
             e.into()
         }
     }
-}
-
-#[allow(unused_mut)]
-#[allow(unused_variables)]
-fn free_vector2(mut msg: ManuallyDrop<foxglove::schemas::Vector2>) {
-    // The only allocations we made were for Vec<Nested> fields, which may also include Vec<Nested> fields in a couple cases.
 }
 
 /// A vector in 3D space that represents a direction only
@@ -3125,20 +2918,10 @@ pub extern "C" fn foxglove_channel_log_vector3(
 ) -> FoxgloveError {
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { Vector3::borrow_option_to_native(msg) } {
-        Ok(msg) => {
-            let e = log_msg_to_channel(channel, &*msg, log_time);
-            free_vector3(msg);
-            e
-        }
+        Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
         Err(e) => {
             tracing::error!("Vector3: {}", e);
             e.into()
         }
     }
-}
-
-#[allow(unused_mut)]
-#[allow(unused_variables)]
-fn free_vector3(mut msg: ManuallyDrop<foxglove::schemas::Vector3>) {
-    // The only allocations we made were for Vec<Nested> fields, which may also include Vec<Nested> fields in a couple cases.
 }

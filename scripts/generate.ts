@@ -273,7 +273,7 @@ async function main({ clean }: { clean: boolean }) {
 
   await logProgress("Generating Rust code", async () => {
     const typesFile = path.join(repoRoot, "c", "src", "generated_types.rs");
-    await fs.writeFile(typesFile, generateRustTypes(Object.values(foxgloveMessageSchemas)));
+    await fs.writeFile(typesFile, generateRustTypes(Object.values(foxgloveMessageSchemas), Object.values(foxgloveEnumSchemas)));
     // await fs.writeFile(
     //   path.join(repoRoot, 'cpp','foxglove','schema_traits_generated.hpp'),
     //   generateCppSchemaTraits(Object.values(foxgloveMessageSchemas), Object.values(foxgloveEnumSchemas)),
