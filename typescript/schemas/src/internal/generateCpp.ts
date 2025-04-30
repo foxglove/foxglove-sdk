@@ -1,3 +1,4 @@
+import assert from "assert";
 import { FoxgloveEnumSchema, FoxgloveMessageSchema, FoxglovePrimitive } from "./types";
 
 function primitiveToCpp(type: FoxglovePrimitive) {
@@ -184,6 +185,42 @@ export function generateHppSchemas(
   return outputSections.join("\n\n") + "\n";
 }
 
+function cppToC(schema: FoxgloveMessageSchema) {
+  return schema.fields.map((field) => {
+    const srcName = toSnakeCase(field.name);
+    const dstName = srcName;
+    if (field.array != undefined) {
+      if (typeof field.array === "number") {
+        return `${dstName}: ${srcName};`;
+      } else {
+        if (field.type.type === "nested") {
+          return `${dstName}: ${srcName};`;
+        } else if (field.type.type === "primitive") {
+          assert(field.type.name !== "bytes");
+          return `${dstName}: ${srcName};`;
+        } else {
+          throw Error(`unsupported array type: ${field.type.type}`);
+        }
+      }
+    }
+    switch (field.type.type) {
+      case "primitive":
+        if (field.type.name === "string") {
+          return `${dstName}: ${srcName};`;
+        } else if (field.type.name === "bytes") {
+          return `${dstName}: ${srcName};`;
+        } else if (field.type.name === "time" || field.type.name === "duration") {
+          return `${dstName}: ${srcName};`;
+        }
+        return `${dstName}: ${srcName};`;
+      case "enum":
+        return `${dstName}: ${srcName};`;
+      case "nested":
+        return `${dstName}: ${srcName};`;
+    }
+  }).join("\n    ");
+}
+
 export function generateCppSchemas(
   schemas: FoxgloveMessageSchema[],
 ): string {
@@ -200,7 +237,7 @@ export function generateCppSchemas(
         `struct BuiltinSchema<${schema.name}> : std::true_type {`,
         `  inline FoxgloveError log_to(foxglove_channel * const channel, const ${schema.name}& msg, std::optional<uint64_t> logTime = std::nullopt) {`,
         `    foxglove_${toSnakeCase(schema.name)} cMsg;`,
-        `    // TODO`,
+        `    ${cppToC(schema)}`,
         `    return FoxgloveError(foxglove_channel_log_${toSnakeCase(schema.name)}(channel, &cMsg, logTime ? &*logTime : nullptr));`,
         "  }\n};",
       ]

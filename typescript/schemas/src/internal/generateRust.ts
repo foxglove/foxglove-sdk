@@ -123,7 +123,7 @@ ${name.endsWith("Primitive") ? "" : `
     ${fields
       .map((field) => {
         const srcName = escapeId(toSnakeCase(field.name));
-        const dstName = escapeId(toSnakeCase(field.name));
+        const dstName = srcName;
         if (field.array != undefined) {
           if (typeof field.array === "number") {
             return `${dstName}: unsafe { Vec::from_raw_parts(self.${srcName}.as_ptr() as *mut ${(field.type.type === "primitive") ? primitiveToRust(field.type.name) : "todo!()"}, self.${srcName}.len(), self.${srcName}.len()) }`;

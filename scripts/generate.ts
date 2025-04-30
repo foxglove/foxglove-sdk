@@ -286,6 +286,8 @@ async function main({ clean }: { clean: boolean }) {
     });
   });
 
+  
+
   await logProgressLn("Updating Jest snapshots", async () => {
     await exec("yarn", ["test", "--updateSnapshot"], {
       cwd: repoRoot,
