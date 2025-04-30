@@ -1,33 +1,32 @@
 use bytes::BytesMut;
 use foxglove::{Encode, Schema};
-use foxglove_derive::Loggable;
 use prost::Message;
 use prost_reflect::{DescriptorPool, DynamicMessage, MessageDescriptor, ReflectMessage};
 
-#[derive(Loggable, Debug)]
+#[derive(Encode, Debug)]
 struct InnerTestMessage {
     number: u64,
     name: String,
 }
 
-#[derive(Loggable, Debug)]
+#[derive(Encode, Debug)]
 struct MiddleTestMessage {
     last: InnerTestMessage,
     description: String,
 }
 
-#[derive(Loggable, Debug)]
+#[derive(Encode, Debug)]
 struct NestedTestMessage {
     middle: MiddleTestMessage,
     id: u32,
 }
 
-#[derive(Loggable, Debug)]
+#[derive(Encode, Debug)]
 struct TestMessage {
     inner: InnerTestMessage,
 }
 
-#[derive(Loggable, Debug)]
+#[derive(Encode, Debug)]
 struct TestMessageVectorOfStructs {
     items: Vec<InnerTestMessage>,
 }

@@ -1,6 +1,5 @@
 use bytes::BytesMut;
 use foxglove::{Encode, Schema};
-use foxglove_derive::Loggable;
 use prost::Message;
 use prost_reflect::{DescriptorPool, DynamicMessage, MessageDescriptor};
 use tracing_test::traced_test;
@@ -8,7 +7,7 @@ use tracing_test::traced_test;
 mod common;
 use common::FixedSizeBuffer;
 
-#[derive(Loggable)]
+#[derive(Encode)]
 struct TestMessagePrimitives {
     u64: u64,
     u32: u32,
@@ -23,12 +22,12 @@ struct TestMessagePrimitives {
     bool: bool,
 }
 
-#[derive(Loggable)]
+#[derive(Encode)]
 struct TestMessageBytes {
     bytes: bytes::Bytes,
 }
 
-#[derive(Loggable)]
+#[derive(Encode)]
 struct TestMessageVector {
     numbers: Vec<u64>,
 }

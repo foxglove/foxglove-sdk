@@ -24,7 +24,7 @@ pub fn prost_file_descriptor_set_to_vec(
 /// The `ProtobufField` trait defines the interface for types that can be serialized to Protocol
 /// Buffer format.
 ///
-/// This trait is automatically implemented for custom types when using the `#[derive(Loggable)]`
+/// This trait is automatically implemented for custom types when using the `#[derive(Encode)]`
 /// attribute. It provides the necessary methods to serialize data according to Protocol Buffer
 /// encoding rules and generate appropriate Protocol Buffer schema information.
 ///
@@ -33,11 +33,11 @@ pub fn prost_file_descriptor_set_to_vec(
 ///
 /// # Usage
 ///
-/// This trait is typically implemented automatically by using the `#[derive(Loggable)]` attribute
+/// This trait is typically implemented automatically by using the `#[derive(Encode)]` attribute
 /// on your custom types:
 ///
 /// ```rust
-/// #[derive(foxglove::Loggable)]
+/// #[derive(foxglove::Encode)]
 /// struct MyMessage {
 ///     number: u64,
 ///     text: String,

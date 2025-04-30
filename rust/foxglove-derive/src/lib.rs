@@ -5,14 +5,14 @@ use quote::quote;
 use syn::{parse_macro_input, Data, DeriveInput, Fields};
 
 /// Derive macro for enums and structs allowing them to be logged to a Foxglove channel.
-#[proc_macro_derive(Loggable)]
+#[proc_macro_derive(Encode)]
 pub fn derive_loggable(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
 
     match &input.data {
         Data::Enum(_) => derive_enum_impl(input),
         Data::Struct(_) => derive_struct_impl(input),
-        _ => panic!("Loggable can only be used with enums or structs"),
+        _ => panic!("Encode can only be used with enums or structs"),
     }
 }
 

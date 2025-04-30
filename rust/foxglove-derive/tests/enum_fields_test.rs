@@ -1,17 +1,16 @@
 use bytes::BytesMut;
 use foxglove::{Encode, Schema};
-use foxglove_derive::Loggable;
 use prost::Message;
 use prost_reflect::{DescriptorPool, DynamicMessage, MessageDescriptor};
 
-#[derive(Debug, Clone, Copy, Loggable)]
+#[derive(Debug, Clone, Copy, Encode)]
 enum TestEnum {
     #[allow(dead_code)]
     ValueOne,
     Value2,
 }
 
-#[derive(Loggable)]
+#[derive(Encode)]
 struct TestMessage {
     val: TestEnum,
 }

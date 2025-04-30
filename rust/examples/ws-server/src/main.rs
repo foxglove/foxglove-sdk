@@ -7,14 +7,14 @@ use foxglove::schemas::{
 use foxglove::{LazyChannel, LazyRawChannel};
 use std::time::Duration;
 
-#[derive(Debug, Clone, Copy, foxglove::Loggable)]
+#[derive(Debug, Clone, Copy, foxglove::Encode)]
 enum MessageLevel {
     Debug,
     #[allow(dead_code)]
     Info,
 }
 
-#[derive(foxglove::Loggable)]
+#[derive(foxglove::Encode)]
 struct Message {
     level: MessageLevel,
     msg: String,

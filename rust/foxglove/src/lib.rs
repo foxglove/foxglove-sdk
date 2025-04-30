@@ -123,7 +123,7 @@
 //! and allow you to log your struct to a channel. This currently uses protobuf encoding.
 //!
 //! ```no_run
-//! #[derive(foxglove::Loggable)]
+//! #[derive(foxglove::Encode)]
 //! struct Custom<'a> {
 //!     msg: &'a str,
 //!     count: u32,
@@ -328,7 +328,7 @@ pub use websocket_server::{WebSocketServer, WebSocketServerHandle};
 
 extern crate foxglove_derive;
 #[doc(hidden)]
-pub use foxglove_derive::Loggable;
+pub use foxglove_derive::Encode;
 #[doc(hidden)]
 pub use prost_types;
 

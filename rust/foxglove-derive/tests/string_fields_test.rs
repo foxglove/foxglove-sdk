@@ -1,6 +1,5 @@
 use bytes::BytesMut;
 use foxglove::{Encode, Schema};
-use foxglove_derive::Loggable;
 use prost::Message;
 use prost_reflect::{DescriptorPool, DynamicMessage, MessageDescriptor};
 use tracing_test::traced_test;
@@ -8,12 +7,12 @@ use tracing_test::traced_test;
 mod common;
 use common::FixedSizeBuffer;
 
-#[derive(Loggable)]
+#[derive(Encode)]
 struct TestMessage {
     field: String,
 }
 
-#[derive(Loggable)]
+#[derive(Encode)]
 struct TestMessageWithLifetime<'a> {
     field_ref: &'a str,
 }
