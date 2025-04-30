@@ -89,7 +89,7 @@ public:
 
   FoxgloveError stop();
 
-  void publishConnectionGraph(ConnectionGraph& graph);
+  void publish_connection_graph(ConnectionGraph& graph);
 
 private:
   WebSocketServer(

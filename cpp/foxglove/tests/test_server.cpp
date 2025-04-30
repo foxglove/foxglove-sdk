@@ -355,7 +355,7 @@ TEST_CASE("Publish a connection graph") {
   graph.setPublishedTopic("topic", {"publisher1", "publisher2"});
   graph.setSubscribedTopic("topic", {"subscriber1", "subscriber2"});
   graph.setAdvertisedService("service", {"provider1", "provider2"});
-  server.publishConnectionGraph(graph);
+  server.publish_connection_graph(graph);
 
   REQUIRE(server.stop() == foxglove::FoxgloveError::Ok);
 }
