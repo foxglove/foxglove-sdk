@@ -76,7 +76,7 @@ fn derive_enum_impl(input: DeriveInput) -> TokenStream {
 }
 
 // Add a bound `T: ProtobufField` to every type parameter T.
-fn add_trait_bounds(mut generics: Generics) -> Generics {
+fn add_protobuf_bound(mut generics: Generics) -> Generics {
     for param in &mut generics.params {
         if let GenericParam::Type(ref mut type_param) = *param {
             type_param
@@ -93,7 +93,7 @@ fn derive_struct_impl(input: DeriveInput) -> TokenStream {
     let package_name = name_str.to_lowercase();
     let full_name = format!("{package_name}.{name_str}");
 
-    let generics = add_trait_bounds(input.generics);
+    let generics = add_protobuf_bound(input.generics);
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
     // Extract fields from the struct
