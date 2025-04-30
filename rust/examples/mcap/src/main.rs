@@ -47,7 +47,14 @@ struct Message {
     count: u32,
 }
 
+#[derive(Debug, serde::Serialize, schemars::JsonSchema)]
+struct JsonMessage {
+    msg: String,
+    count: u32,
+}
+
 static MSG_CHANNEL: LazyChannel<Message> = LazyChannel::new("/msg");
+static JSON_CHANNEL: LazyChannel<JsonMessage> = LazyChannel::new("/json");
 
 fn log_until(fps: u8, stop: Arc<AtomicBool>) {
     let mut count: u32 = 0;
@@ -55,6 +62,10 @@ fn log_until(fps: u8, stop: Arc<AtomicBool>) {
     while !stop.load(Ordering::Relaxed) {
         MSG_CHANNEL.log(&Message {
             msg: "Hello, world!".to_string(),
+            count,
+        });
+        JSON_CHANNEL.log(&JsonMessage {
+            msg: "Hello, JSON!".to_string(),
             count,
         });
         std::thread::sleep(duration);

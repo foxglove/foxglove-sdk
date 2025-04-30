@@ -551,6 +551,8 @@ dependencies = [
  "ctrlc",
  "env_logger",
  "foxglove",
+ "schemars",
+ "serde",
 ]
 
 [[package]]

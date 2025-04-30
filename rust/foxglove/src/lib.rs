@@ -117,9 +117,10 @@
 //!
 //! ### Custom data
 //!
-//! You can also define your own custom data types by annotating a struct with
-//! `#derive(foxglove::Loggable)`. This will automatically implement the [`Encode`] trait, which
-//! allows you to log your struct to a channel.
+//! You can also define your own custom data types by implementing the [`Encode`] trait.
+//!
+//! The easiest way to do this is to derive the [`Encode`] trait, which will generate a schema
+//! and allow you to log your struct to a channel. This currently uses protobuf encoding.
 //!
 //! ```no_run
 //! #[derive(foxglove::Loggable)]
@@ -136,6 +137,10 @@
 //! });
 //! # Ok(()) }
 //! ```
+//!
+//! This currently uses protobuf encoding. If you'd like to use JSON encoding for integration with
+//! particular tooling, you can instead implement or derive [`Serialize`](serde::Serialize) and
+//! [`JsonSchema`][jsonschema-trait] traits.
 //!
 //! [jsonschema-trait]: https://docs.rs/schemars/latest/schemars/trait.JsonSchema.html
 //!
