@@ -143,6 +143,21 @@ class Color:
         a: "Optional[float]" = 0.0,
     ) -> "Color": ...
 
+class CompressedAudio:
+    """
+    A single block of a compressed audio bitstream
+    """
+
+    def __new__(
+        cls,
+        *,
+        timestamp: "Optional[Timestamp]" = None,
+        data: "Optional[bytes]" = b"",
+        format: "Optional[str]" = "",
+        sample_rate: "Optional[int]" = 0,
+        number_of_channels: "Optional[int]" = 0,
+    ) -> "CompressedAudio": ...
+
 class CompressedImage:
     """
     A compressed image
@@ -644,6 +659,7 @@ FoxgloveSchema = Union[
     CameraCalibration,
     CircleAnnotation,
     Color,
+    CompressedAudio,
     CompressedImage,
     CompressedVideo,
     CylinderPrimitive,

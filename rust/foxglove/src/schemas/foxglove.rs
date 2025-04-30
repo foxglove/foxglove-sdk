@@ -139,6 +139,26 @@ pub struct Color {
     #[prost(double, tag = "4")]
     pub a: f64,
 }
+/// A single block of a compressed audio bitstream
+/// <https://docs.foxglove.dev/docs/visualization/message-schemas/compressed-audio>
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct CompressedAudio {
+    /// Timestamp of the start of the audio block
+    #[prost(message, optional, tag = "1")]
+    pub timestamp: ::core::option::Option<crate::schemas::Timestamp>,
+    /// Audio data
+    #[prost(bytes = "bytes", tag = "2")]
+    pub data: ::prost::bytes::Bytes,
+    /// Audio format. Only 'opus' is currently supported
+    #[prost(string, tag = "3")]
+    pub format: ::prost::alloc::string::String,
+    /// Sample rate in Hz
+    #[prost(fixed32, tag = "4")]
+    pub sample_rate: u32,
+    /// Number of channels in the audio block
+    #[prost(fixed32, tag = "5")]
+    pub number_of_channels: u32,
+}
 /// A compressed image
 /// <https://docs.foxglove.dev/docs/visualization/message-schemas/compressed-image>
 #[derive(Clone, PartialEq, ::prost::Message)]

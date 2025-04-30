@@ -276,6 +276,57 @@ impl From<Color> for foxglove::schemas::Color {
     }
 }
 
+/// A single block of a compressed audio bitstream
+///
+/// :param timestamp: Timestamp of the start of the audio block
+/// :param data: Audio data
+/// :param format: Audio format. Only 'opus' is currently supported
+/// :param sample_rate: Sample rate in Hz
+/// :param number_of_channels: Number of channels in the audio block
+///
+/// See https://docs.foxglove.dev/docs/visualization/message-schemas/compressed-audio
+#[pyclass(module = "foxglove.schemas")]
+#[derive(Clone)]
+pub(crate) struct CompressedAudio(pub(crate) foxglove::schemas::CompressedAudio);
+#[pymethods]
+impl CompressedAudio {
+    #[new]
+    #[pyo3(signature = (*, timestamp=None, data=None, format="".to_string(), sample_rate=0, number_of_channels=0) )]
+    fn new(
+        timestamp: Option<Timestamp>,
+        data: Option<Bound<'_, PyBytes>>,
+        format: String,
+        sample_rate: u32,
+        number_of_channels: u32,
+    ) -> Self {
+        Self(foxglove::schemas::CompressedAudio {
+            timestamp: timestamp.map(Into::into),
+            data: data
+                .map(|x| Bytes::copy_from_slice(x.as_bytes()))
+                .unwrap_or_default(),
+            format,
+            sample_rate,
+            number_of_channels,
+        })
+    }
+    fn __repr__(&self) -> String {
+        format!(
+            "CompressedAudio(timestamp={:?}, data={:?}, format={:?}, sample_rate={:?}, number_of_channels={:?})",
+            self.0.timestamp,
+            self.0.data,
+            self.0.format,
+            self.0.sample_rate,
+            self.0.number_of_channels,
+        )
+    }
+}
+
+impl From<CompressedAudio> for foxglove::schemas::CompressedAudio {
+    fn from(value: CompressedAudio) -> Self {
+        value.0
+    }
+}
+
 /// A compressed image
 ///
 /// :param timestamp: Timestamp of image
@@ -1831,6 +1882,7 @@ pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<CameraCalibration>()?;
     module.add_class::<CircleAnnotation>()?;
     module.add_class::<Color>()?;
+    module.add_class::<CompressedAudio>()?;
     module.add_class::<CompressedImage>()?;
     module.add_class::<CompressedVideo>()?;
     module.add_class::<CylinderPrimitive>()?;

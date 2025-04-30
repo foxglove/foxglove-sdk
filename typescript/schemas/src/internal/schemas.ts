@@ -33,6 +33,39 @@ const RawAudio: FoxgloveMessageSchema = {
   ],
 };
 
+const CompressedAudio: FoxgloveMessageSchema = {
+  type: "message",
+  name: "CompressedAudio",
+  description: "A single block of a compressed audio bitstream",
+  fields: [
+    {
+      name: "timestamp",
+      type: { type: "primitive", name: "time" },
+      description: "Timestamp of the start of the audio block",
+    },
+    {
+      name: "data",
+      type: { type: "primitive", name: "bytes" },
+      description: `Audio data`,
+    },
+    {
+      name: "format",
+      type: { type: "primitive", name: "string" },
+      description: "Audio format. Only 'opus' is currently supported",
+    },
+    {
+      name: "sample_rate",
+      type: { type: "primitive", name: "uint32" },
+      description: "Sample rate in Hz"
+    },
+    {
+      name: "number_of_channels",
+      type: { type: "primitive", name: "uint32" },
+      description: "Number of channels in the audio block"
+    },
+  ],
+};
+
 const Color: FoxgloveMessageSchema = {
   type: "message",
   name: "Color",
@@ -1513,6 +1546,7 @@ export const foxgloveMessageSchemas = {
   CameraCalibration,
   CircleAnnotation,
   Color,
+  CompressedAudio,
   CompressedImage,
   CompressedVideo,
   CylinderPrimitive,

@@ -16,6 +16,7 @@ All schemas are generated from [schemas.ts](/internal/schemas.ts).
 - [CameraCalibration](#cameracalibration)
 - [CircleAnnotation](#circleannotation)
 - [Color](#color)
+- [CompressedAudio](#compressedaudio)
 - [CompressedImage](#compressedimage)
 - [CompressedVideo](#compressedvideo)
 - [CubePrimitive](#cubeprimitive)
@@ -546,6 +547,83 @@ float64
 <td>
 
 Alpha value between 0 and 1
+
+</td>
+</tr>
+</table>
+
+## CompressedAudio
+
+A single block of a compressed audio bitstream
+
+<table>
+  <tr>
+    <th>field</th>
+    <th>type</th>
+    <th>description</th>
+  </tr>
+<tr>
+<td><code>timestamp</code></td>
+<td>
+
+time
+
+</td>
+<td>
+
+Timestamp of the start of the audio block
+
+</td>
+</tr>
+<tr>
+<td><code>data</code></td>
+<td>
+
+bytes
+
+</td>
+<td>
+
+Audio data
+
+</td>
+</tr>
+<tr>
+<td><code>format</code></td>
+<td>
+
+string
+
+</td>
+<td>
+
+Audio format. Only 'opus' is currently supported
+
+</td>
+</tr>
+<tr>
+<td><code>sample_rate</code></td>
+<td>
+
+uint32
+
+</td>
+<td>
+
+Sample rate in Hz
+
+</td>
+</tr>
+<tr>
+<td><code>number_of_channels</code></td>
+<td>
+
+uint32
+
+</td>
+<td>
+
+Number of channels in the audio block
 
 </td>
 </tr>
