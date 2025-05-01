@@ -6,6 +6,7 @@
 #include <foxglove/schemas.hpp>
 
 #include <optional>
+#include <cstring>
 
 namespace foxglove::internal {
 
@@ -16,7 +17,16 @@ template<>
 struct BuiltinSchema<CameraCalibration> : std::true_type {
   inline FoxgloveError log_to(foxglove_channel * const channel, const CameraCalibration& msg, std::optional<uint64_t> logTime = std::nullopt) {
     foxglove_camera_calibration cMsg;
-    // TODO
+    cMsg.timestamp = msg.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*msg.timestamp) : nullptr;
+    cMsg.frame_id = {msg.frame_id.data(), msg.frame_id.size()};
+    cMsg.width = msg.width;
+    cMsg.height = msg.height;
+    cMsg.distortion_model = {msg.distortion_model.data(), msg.distortion_model.size()};
+    cMsg.d = msg.d.data();
+    cMsg.d_count = msg.d.size();
+    ::memcpy(cMsg.k, msg.k.data(), msg.k.size() * sizeof(*msg.k.data()));
+    ::memcpy(cMsg.r, msg.r.data(), msg.r.size() * sizeof(*msg.r.data()));
+    ::memcpy(cMsg.p, msg.p.data(), msg.p.size() * sizeof(*msg.p.data()));
     return FoxgloveError(foxglove_channel_log_camera_calibration(channel, &cMsg, logTime ? &*logTime : nullptr));
   }
 };
@@ -24,7 +34,12 @@ template<>
 struct BuiltinSchema<CircleAnnotation> : std::true_type {
   inline FoxgloveError log_to(foxglove_channel * const channel, const CircleAnnotation& msg, std::optional<uint64_t> logTime = std::nullopt) {
     foxglove_circle_annotation cMsg;
-    // TODO
+    cMsg.timestamp = msg.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*msg.timestamp) : nullptr;
+    cMsg.position = msg.position ? reinterpret_cast<const foxglove_point2*>(&*msg.position) : nullptr;
+    cMsg.diameter = msg.diameter;
+    cMsg.thickness = msg.thickness;
+    cMsg.fill_color = msg.fill_color ? reinterpret_cast<const foxglove_color*>(&*msg.fill_color) : nullptr;
+    cMsg.outline_color = msg.outline_color ? reinterpret_cast<const foxglove_color*>(&*msg.outline_color) : nullptr;
     return FoxgloveError(foxglove_channel_log_circle_annotation(channel, &cMsg, logTime ? &*logTime : nullptr));
   }
 };
@@ -32,7 +47,10 @@ template<>
 struct BuiltinSchema<Color> : std::true_type {
   inline FoxgloveError log_to(foxglove_channel * const channel, const Color& msg, std::optional<uint64_t> logTime = std::nullopt) {
     foxglove_color cMsg;
-    // TODO
+    cMsg.r = msg.r;
+    cMsg.g = msg.g;
+    cMsg.b = msg.b;
+    cMsg.a = msg.a;
     return FoxgloveError(foxglove_channel_log_color(channel, &cMsg, logTime ? &*logTime : nullptr));
   }
 };
@@ -40,7 +58,11 @@ template<>
 struct BuiltinSchema<CompressedImage> : std::true_type {
   inline FoxgloveError log_to(foxglove_channel * const channel, const CompressedImage& msg, std::optional<uint64_t> logTime = std::nullopt) {
     foxglove_compressed_image cMsg;
-    // TODO
+    cMsg.timestamp = msg.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*msg.timestamp) : nullptr;
+    cMsg.frame_id = {msg.frame_id.data(), msg.frame_id.size()};
+    cMsg.data = reinterpret_cast<const unsigned char *>(msg.data.data());
+    cMsg.data_len = msg.data.size();
+    cMsg.format = {msg.format.data(), msg.format.size()};
     return FoxgloveError(foxglove_channel_log_compressed_image(channel, &cMsg, logTime ? &*logTime : nullptr));
   }
 };
@@ -48,7 +70,11 @@ template<>
 struct BuiltinSchema<CompressedVideo> : std::true_type {
   inline FoxgloveError log_to(foxglove_channel * const channel, const CompressedVideo& msg, std::optional<uint64_t> logTime = std::nullopt) {
     foxglove_compressed_video cMsg;
-    // TODO
+    cMsg.timestamp = msg.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*msg.timestamp) : nullptr;
+    cMsg.frame_id = {msg.frame_id.data(), msg.frame_id.size()};
+    cMsg.data = reinterpret_cast<const unsigned char *>(msg.data.data());
+    cMsg.data_len = msg.data.size();
+    cMsg.format = {msg.format.data(), msg.format.size()};
     return FoxgloveError(foxglove_channel_log_compressed_video(channel, &cMsg, logTime ? &*logTime : nullptr));
   }
 };
@@ -56,7 +82,11 @@ template<>
 struct BuiltinSchema<FrameTransform> : std::true_type {
   inline FoxgloveError log_to(foxglove_channel * const channel, const FrameTransform& msg, std::optional<uint64_t> logTime = std::nullopt) {
     foxglove_frame_transform cMsg;
-    // TODO
+    cMsg.timestamp = msg.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*msg.timestamp) : nullptr;
+    cMsg.parent_frame_id = {msg.parent_frame_id.data(), msg.parent_frame_id.size()};
+    cMsg.child_frame_id = {msg.child_frame_id.data(), msg.child_frame_id.size()};
+    cMsg.translation = msg.translation ? reinterpret_cast<const foxglove_vector3*>(&*msg.translation) : nullptr;
+    cMsg.rotation = msg.rotation ? reinterpret_cast<const foxglove_quaternion*>(&*msg.rotation) : nullptr;
     return FoxgloveError(foxglove_channel_log_frame_transform(channel, &cMsg, logTime ? &*logTime : nullptr));
   }
 };
@@ -64,7 +94,8 @@ template<>
 struct BuiltinSchema<FrameTransforms> : std::true_type {
   inline FoxgloveError log_to(foxglove_channel * const channel, const FrameTransforms& msg, std::optional<uint64_t> logTime = std::nullopt) {
     foxglove_frame_transforms cMsg;
-    // TODO
+    cMsg.transforms = reinterpret_cast<const foxglove_frame_transform*>(msg.transforms.data());
+    cMsg.transforms_count = msg.transforms.size();
     return FoxgloveError(foxglove_channel_log_frame_transforms(channel, &cMsg, logTime ? &*logTime : nullptr));
   }
 };
@@ -72,7 +103,7 @@ template<>
 struct BuiltinSchema<GeoJSON> : std::true_type {
   inline FoxgloveError log_to(foxglove_channel * const channel, const GeoJSON& msg, std::optional<uint64_t> logTime = std::nullopt) {
     foxglove_geo_json cMsg;
-    // TODO
+    cMsg.geojson = {msg.geojson.data(), msg.geojson.size()};
     return FoxgloveError(foxglove_channel_log_geo_json(channel, &cMsg, logTime ? &*logTime : nullptr));
   }
 };
@@ -80,7 +111,17 @@ template<>
 struct BuiltinSchema<Grid> : std::true_type {
   inline FoxgloveError log_to(foxglove_channel * const channel, const Grid& msg, std::optional<uint64_t> logTime = std::nullopt) {
     foxglove_grid cMsg;
-    // TODO
+    cMsg.timestamp = msg.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*msg.timestamp) : nullptr;
+    cMsg.frame_id = {msg.frame_id.data(), msg.frame_id.size()};
+    cMsg.pose = msg.pose ? reinterpret_cast<const foxglove_pose*>(&*msg.pose) : nullptr;
+    cMsg.column_count = msg.column_count;
+    cMsg.cell_size = msg.cell_size ? reinterpret_cast<const foxglove_vector2*>(&*msg.cell_size) : nullptr;
+    cMsg.row_stride = msg.row_stride;
+    cMsg.cell_stride = msg.cell_stride;
+    cMsg.fields = reinterpret_cast<const foxglove_packed_element_field*>(msg.fields.data());
+    cMsg.fields_count = msg.fields.size();
+    cMsg.data = reinterpret_cast<const unsigned char *>(msg.data.data());
+    cMsg.data_len = msg.data.size();
     return FoxgloveError(foxglove_channel_log_grid(channel, &cMsg, logTime ? &*logTime : nullptr));
   }
 };
@@ -88,7 +129,12 @@ template<>
 struct BuiltinSchema<ImageAnnotations> : std::true_type {
   inline FoxgloveError log_to(foxglove_channel * const channel, const ImageAnnotations& msg, std::optional<uint64_t> logTime = std::nullopt) {
     foxglove_image_annotations cMsg;
-    // TODO
+    cMsg.circles = reinterpret_cast<const foxglove_circle_annotation*>(msg.circles.data());
+    cMsg.circles_count = msg.circles.size();
+    cMsg.points = reinterpret_cast<const foxglove_points_annotation*>(msg.points.data());
+    cMsg.points_count = msg.points.size();
+    cMsg.texts = reinterpret_cast<const foxglove_text_annotation*>(msg.texts.data());
+    cMsg.texts_count = msg.texts.size();
     return FoxgloveError(foxglove_channel_log_image_annotations(channel, &cMsg, logTime ? &*logTime : nullptr));
   }
 };
@@ -96,7 +142,8 @@ template<>
 struct BuiltinSchema<KeyValuePair> : std::true_type {
   inline FoxgloveError log_to(foxglove_channel * const channel, const KeyValuePair& msg, std::optional<uint64_t> logTime = std::nullopt) {
     foxglove_key_value_pair cMsg;
-    // TODO
+    cMsg.key = {msg.key.data(), msg.key.size()};
+    cMsg.value = {msg.value.data(), msg.value.size()};
     return FoxgloveError(foxglove_channel_log_key_value_pair(channel, &cMsg, logTime ? &*logTime : nullptr));
   }
 };
@@ -104,7 +151,15 @@ template<>
 struct BuiltinSchema<LaserScan> : std::true_type {
   inline FoxgloveError log_to(foxglove_channel * const channel, const LaserScan& msg, std::optional<uint64_t> logTime = std::nullopt) {
     foxglove_laser_scan cMsg;
-    // TODO
+    cMsg.timestamp = msg.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*msg.timestamp) : nullptr;
+    cMsg.frame_id = {msg.frame_id.data(), msg.frame_id.size()};
+    cMsg.pose = msg.pose ? reinterpret_cast<const foxglove_pose*>(&*msg.pose) : nullptr;
+    cMsg.start_angle = msg.start_angle;
+    cMsg.end_angle = msg.end_angle;
+    cMsg.ranges = msg.ranges.data();
+    cMsg.ranges_count = msg.ranges.size();
+    cMsg.intensities = msg.intensities.data();
+    cMsg.intensities_count = msg.intensities.size();
     return FoxgloveError(foxglove_channel_log_laser_scan(channel, &cMsg, logTime ? &*logTime : nullptr));
   }
 };
@@ -112,7 +167,13 @@ template<>
 struct BuiltinSchema<LocationFix> : std::true_type {
   inline FoxgloveError log_to(foxglove_channel * const channel, const LocationFix& msg, std::optional<uint64_t> logTime = std::nullopt) {
     foxglove_location_fix cMsg;
-    // TODO
+    cMsg.timestamp = msg.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*msg.timestamp) : nullptr;
+    cMsg.frame_id = {msg.frame_id.data(), msg.frame_id.size()};
+    cMsg.latitude = msg.latitude;
+    cMsg.longitude = msg.longitude;
+    cMsg.altitude = msg.altitude;
+    ::memcpy(cMsg.position_covariance, msg.position_covariance.data(), msg.position_covariance.size() * sizeof(*msg.position_covariance.data()));
+    cMsg.position_covariance_type = static_cast<foxglove_position_covariance_type>(msg.position_covariance_type);
     return FoxgloveError(foxglove_channel_log_location_fix(channel, &cMsg, logTime ? &*logTime : nullptr));
   }
 };
@@ -120,7 +181,12 @@ template<>
 struct BuiltinSchema<Log> : std::true_type {
   inline FoxgloveError log_to(foxglove_channel * const channel, const Log& msg, std::optional<uint64_t> logTime = std::nullopt) {
     foxglove_log cMsg;
-    // TODO
+    cMsg.timestamp = msg.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*msg.timestamp) : nullptr;
+    cMsg.level = static_cast<foxglove_log_level>(msg.level);
+    cMsg.message = {msg.message.data(), msg.message.size()};
+    cMsg.name = {msg.name.data(), msg.name.size()};
+    cMsg.file = {msg.file.data(), msg.file.size()};
+    cMsg.line = msg.line;
     return FoxgloveError(foxglove_channel_log_log(channel, &cMsg, logTime ? &*logTime : nullptr));
   }
 };
@@ -128,7 +194,9 @@ template<>
 struct BuiltinSchema<PackedElementField> : std::true_type {
   inline FoxgloveError log_to(foxglove_channel * const channel, const PackedElementField& msg, std::optional<uint64_t> logTime = std::nullopt) {
     foxglove_packed_element_field cMsg;
-    // TODO
+    cMsg.name = {msg.name.data(), msg.name.size()};
+    cMsg.offset = msg.offset;
+    cMsg.type = static_cast<foxglove_numeric_type>(msg.type);
     return FoxgloveError(foxglove_channel_log_packed_element_field(channel, &cMsg, logTime ? &*logTime : nullptr));
   }
 };
@@ -136,7 +204,8 @@ template<>
 struct BuiltinSchema<Point2> : std::true_type {
   inline FoxgloveError log_to(foxglove_channel * const channel, const Point2& msg, std::optional<uint64_t> logTime = std::nullopt) {
     foxglove_point2 cMsg;
-    // TODO
+    cMsg.x = msg.x;
+    cMsg.y = msg.y;
     return FoxgloveError(foxglove_channel_log_point2(channel, &cMsg, logTime ? &*logTime : nullptr));
   }
 };
@@ -144,7 +213,9 @@ template<>
 struct BuiltinSchema<Point3> : std::true_type {
   inline FoxgloveError log_to(foxglove_channel * const channel, const Point3& msg, std::optional<uint64_t> logTime = std::nullopt) {
     foxglove_point3 cMsg;
-    // TODO
+    cMsg.x = msg.x;
+    cMsg.y = msg.y;
+    cMsg.z = msg.z;
     return FoxgloveError(foxglove_channel_log_point3(channel, &cMsg, logTime ? &*logTime : nullptr));
   }
 };
@@ -152,7 +223,14 @@ template<>
 struct BuiltinSchema<PointCloud> : std::true_type {
   inline FoxgloveError log_to(foxglove_channel * const channel, const PointCloud& msg, std::optional<uint64_t> logTime = std::nullopt) {
     foxglove_point_cloud cMsg;
-    // TODO
+    cMsg.timestamp = msg.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*msg.timestamp) : nullptr;
+    cMsg.frame_id = {msg.frame_id.data(), msg.frame_id.size()};
+    cMsg.pose = msg.pose ? reinterpret_cast<const foxglove_pose*>(&*msg.pose) : nullptr;
+    cMsg.point_stride = msg.point_stride;
+    cMsg.fields = reinterpret_cast<const foxglove_packed_element_field*>(msg.fields.data());
+    cMsg.fields_count = msg.fields.size();
+    cMsg.data = reinterpret_cast<const unsigned char *>(msg.data.data());
+    cMsg.data_len = msg.data.size();
     return FoxgloveError(foxglove_channel_log_point_cloud(channel, &cMsg, logTime ? &*logTime : nullptr));
   }
 };
@@ -160,7 +238,15 @@ template<>
 struct BuiltinSchema<PointsAnnotation> : std::true_type {
   inline FoxgloveError log_to(foxglove_channel * const channel, const PointsAnnotation& msg, std::optional<uint64_t> logTime = std::nullopt) {
     foxglove_points_annotation cMsg;
-    // TODO
+    cMsg.timestamp = msg.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*msg.timestamp) : nullptr;
+    cMsg.type = static_cast<foxglove_points_annotation_type>(msg.type);
+    cMsg.points = reinterpret_cast<const foxglove_point2*>(msg.points.data());
+    cMsg.points_count = msg.points.size();
+    cMsg.outline_color = msg.outline_color ? reinterpret_cast<const foxglove_color*>(&*msg.outline_color) : nullptr;
+    cMsg.outline_colors = reinterpret_cast<const foxglove_color*>(msg.outline_colors.data());
+    cMsg.outline_colors_count = msg.outline_colors.size();
+    cMsg.fill_color = msg.fill_color ? reinterpret_cast<const foxglove_color*>(&*msg.fill_color) : nullptr;
+    cMsg.thickness = msg.thickness;
     return FoxgloveError(foxglove_channel_log_points_annotation(channel, &cMsg, logTime ? &*logTime : nullptr));
   }
 };
@@ -168,7 +254,8 @@ template<>
 struct BuiltinSchema<Pose> : std::true_type {
   inline FoxgloveError log_to(foxglove_channel * const channel, const Pose& msg, std::optional<uint64_t> logTime = std::nullopt) {
     foxglove_pose cMsg;
-    // TODO
+    cMsg.position = msg.position ? reinterpret_cast<const foxglove_vector3*>(&*msg.position) : nullptr;
+    cMsg.orientation = msg.orientation ? reinterpret_cast<const foxglove_quaternion*>(&*msg.orientation) : nullptr;
     return FoxgloveError(foxglove_channel_log_pose(channel, &cMsg, logTime ? &*logTime : nullptr));
   }
 };
@@ -176,7 +263,9 @@ template<>
 struct BuiltinSchema<PoseInFrame> : std::true_type {
   inline FoxgloveError log_to(foxglove_channel * const channel, const PoseInFrame& msg, std::optional<uint64_t> logTime = std::nullopt) {
     foxglove_pose_in_frame cMsg;
-    // TODO
+    cMsg.timestamp = msg.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*msg.timestamp) : nullptr;
+    cMsg.frame_id = {msg.frame_id.data(), msg.frame_id.size()};
+    cMsg.pose = msg.pose ? reinterpret_cast<const foxglove_pose*>(&*msg.pose) : nullptr;
     return FoxgloveError(foxglove_channel_log_pose_in_frame(channel, &cMsg, logTime ? &*logTime : nullptr));
   }
 };
@@ -184,7 +273,10 @@ template<>
 struct BuiltinSchema<PosesInFrame> : std::true_type {
   inline FoxgloveError log_to(foxglove_channel * const channel, const PosesInFrame& msg, std::optional<uint64_t> logTime = std::nullopt) {
     foxglove_poses_in_frame cMsg;
-    // TODO
+    cMsg.timestamp = msg.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*msg.timestamp) : nullptr;
+    cMsg.frame_id = {msg.frame_id.data(), msg.frame_id.size()};
+    cMsg.poses = reinterpret_cast<const foxglove_pose*>(msg.poses.data());
+    cMsg.poses_count = msg.poses.size();
     return FoxgloveError(foxglove_channel_log_poses_in_frame(channel, &cMsg, logTime ? &*logTime : nullptr));
   }
 };
@@ -192,7 +284,10 @@ template<>
 struct BuiltinSchema<Quaternion> : std::true_type {
   inline FoxgloveError log_to(foxglove_channel * const channel, const Quaternion& msg, std::optional<uint64_t> logTime = std::nullopt) {
     foxglove_quaternion cMsg;
-    // TODO
+    cMsg.x = msg.x;
+    cMsg.y = msg.y;
+    cMsg.z = msg.z;
+    cMsg.w = msg.w;
     return FoxgloveError(foxglove_channel_log_quaternion(channel, &cMsg, logTime ? &*logTime : nullptr));
   }
 };
@@ -200,7 +295,12 @@ template<>
 struct BuiltinSchema<RawAudio> : std::true_type {
   inline FoxgloveError log_to(foxglove_channel * const channel, const RawAudio& msg, std::optional<uint64_t> logTime = std::nullopt) {
     foxglove_raw_audio cMsg;
-    // TODO
+    cMsg.timestamp = msg.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*msg.timestamp) : nullptr;
+    cMsg.data = reinterpret_cast<const unsigned char *>(msg.data.data());
+    cMsg.data_len = msg.data.size();
+    cMsg.format = {msg.format.data(), msg.format.size()};
+    cMsg.sample_rate = msg.sample_rate;
+    cMsg.number_of_channels = msg.number_of_channels;
     return FoxgloveError(foxglove_channel_log_raw_audio(channel, &cMsg, logTime ? &*logTime : nullptr));
   }
 };
@@ -208,7 +308,14 @@ template<>
 struct BuiltinSchema<RawImage> : std::true_type {
   inline FoxgloveError log_to(foxglove_channel * const channel, const RawImage& msg, std::optional<uint64_t> logTime = std::nullopt) {
     foxglove_raw_image cMsg;
-    // TODO
+    cMsg.timestamp = msg.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*msg.timestamp) : nullptr;
+    cMsg.frame_id = {msg.frame_id.data(), msg.frame_id.size()};
+    cMsg.width = msg.width;
+    cMsg.height = msg.height;
+    cMsg.encoding = {msg.encoding.data(), msg.encoding.size()};
+    cMsg.step = msg.step;
+    cMsg.data = reinterpret_cast<const unsigned char *>(msg.data.data());
+    cMsg.data_len = msg.data.size();
     return FoxgloveError(foxglove_channel_log_raw_image(channel, &cMsg, logTime ? &*logTime : nullptr));
   }
 };
@@ -216,7 +323,29 @@ template<>
 struct BuiltinSchema<SceneEntity> : std::true_type {
   inline FoxgloveError log_to(foxglove_channel * const channel, const SceneEntity& msg, std::optional<uint64_t> logTime = std::nullopt) {
     foxglove_scene_entity cMsg;
-    // TODO
+    cMsg.timestamp = msg.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*msg.timestamp) : nullptr;
+    cMsg.frame_id = {msg.frame_id.data(), msg.frame_id.size()};
+    cMsg.id = {msg.id.data(), msg.id.size()};
+    cMsg.lifetime = msg.lifetime ? reinterpret_cast<const foxglove_duration*>(&*msg.lifetime) : nullptr;
+    cMsg.frame_locked = msg.frame_locked;
+    cMsg.metadata = reinterpret_cast<const foxglove_key_value_pair*>(msg.metadata.data());
+    cMsg.metadata_count = msg.metadata.size();
+    cMsg.arrows = reinterpret_cast<const foxglove_arrow_primitive*>(msg.arrows.data());
+    cMsg.arrows_count = msg.arrows.size();
+    cMsg.cubes = reinterpret_cast<const foxglove_cube_primitive*>(msg.cubes.data());
+    cMsg.cubes_count = msg.cubes.size();
+    cMsg.spheres = reinterpret_cast<const foxglove_sphere_primitive*>(msg.spheres.data());
+    cMsg.spheres_count = msg.spheres.size();
+    cMsg.cylinders = reinterpret_cast<const foxglove_cylinder_primitive*>(msg.cylinders.data());
+    cMsg.cylinders_count = msg.cylinders.size();
+    cMsg.lines = reinterpret_cast<const foxglove_line_primitive*>(msg.lines.data());
+    cMsg.lines_count = msg.lines.size();
+    cMsg.triangles = reinterpret_cast<const foxglove_triangle_list_primitive*>(msg.triangles.data());
+    cMsg.triangles_count = msg.triangles.size();
+    cMsg.texts = reinterpret_cast<const foxglove_text_primitive*>(msg.texts.data());
+    cMsg.texts_count = msg.texts.size();
+    cMsg.models = reinterpret_cast<const foxglove_model_primitive*>(msg.models.data());
+    cMsg.models_count = msg.models.size();
     return FoxgloveError(foxglove_channel_log_scene_entity(channel, &cMsg, logTime ? &*logTime : nullptr));
   }
 };
@@ -224,7 +353,9 @@ template<>
 struct BuiltinSchema<SceneEntityDeletion> : std::true_type {
   inline FoxgloveError log_to(foxglove_channel * const channel, const SceneEntityDeletion& msg, std::optional<uint64_t> logTime = std::nullopt) {
     foxglove_scene_entity_deletion cMsg;
-    // TODO
+    cMsg.timestamp = msg.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*msg.timestamp) : nullptr;
+    cMsg.type = static_cast<foxglove_scene_entity_deletion_type>(msg.type);
+    cMsg.id = {msg.id.data(), msg.id.size()};
     return FoxgloveError(foxglove_channel_log_scene_entity_deletion(channel, &cMsg, logTime ? &*logTime : nullptr));
   }
 };
@@ -232,7 +363,10 @@ template<>
 struct BuiltinSchema<SceneUpdate> : std::true_type {
   inline FoxgloveError log_to(foxglove_channel * const channel, const SceneUpdate& msg, std::optional<uint64_t> logTime = std::nullopt) {
     foxglove_scene_update cMsg;
-    // TODO
+    cMsg.deletions = reinterpret_cast<const foxglove_scene_entity_deletion*>(msg.deletions.data());
+    cMsg.deletions_count = msg.deletions.size();
+    cMsg.entities = reinterpret_cast<const foxglove_scene_entity*>(msg.entities.data());
+    cMsg.entities_count = msg.entities.size();
     return FoxgloveError(foxglove_channel_log_scene_update(channel, &cMsg, logTime ? &*logTime : nullptr));
   }
 };
@@ -240,7 +374,12 @@ template<>
 struct BuiltinSchema<TextAnnotation> : std::true_type {
   inline FoxgloveError log_to(foxglove_channel * const channel, const TextAnnotation& msg, std::optional<uint64_t> logTime = std::nullopt) {
     foxglove_text_annotation cMsg;
-    // TODO
+    cMsg.timestamp = msg.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*msg.timestamp) : nullptr;
+    cMsg.position = msg.position ? reinterpret_cast<const foxglove_point2*>(&*msg.position) : nullptr;
+    cMsg.text = {msg.text.data(), msg.text.size()};
+    cMsg.font_size = msg.font_size;
+    cMsg.text_color = msg.text_color ? reinterpret_cast<const foxglove_color*>(&*msg.text_color) : nullptr;
+    cMsg.background_color = msg.background_color ? reinterpret_cast<const foxglove_color*>(&*msg.background_color) : nullptr;
     return FoxgloveError(foxglove_channel_log_text_annotation(channel, &cMsg, logTime ? &*logTime : nullptr));
   }
 };
@@ -248,7 +387,8 @@ template<>
 struct BuiltinSchema<Vector2> : std::true_type {
   inline FoxgloveError log_to(foxglove_channel * const channel, const Vector2& msg, std::optional<uint64_t> logTime = std::nullopt) {
     foxglove_vector2 cMsg;
-    // TODO
+    cMsg.x = msg.x;
+    cMsg.y = msg.y;
     return FoxgloveError(foxglove_channel_log_vector2(channel, &cMsg, logTime ? &*logTime : nullptr));
   }
 };
@@ -256,7 +396,9 @@ template<>
 struct BuiltinSchema<Vector3> : std::true_type {
   inline FoxgloveError log_to(foxglove_channel * const channel, const Vector3& msg, std::optional<uint64_t> logTime = std::nullopt) {
     foxglove_vector3 cMsg;
-    // TODO
+    cMsg.x = msg.x;
+    cMsg.y = msg.y;
+    cMsg.z = msg.z;
     return FoxgloveError(foxglove_channel_log_vector3(channel, &cMsg, logTime ? &*logTime : nullptr));
   }
 };

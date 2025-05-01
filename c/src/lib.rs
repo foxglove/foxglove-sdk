@@ -883,15 +883,15 @@ pub(crate) fn log_msg_to_channel<T: foxglove::Encode>(
 /// A timestamp, represented as an offset from a user-defined epoch.
 #[repr(C)]
 #[derive(Debug, Clone, Copy)]
-pub struct Timestamp {
+pub struct FoxgloveTimestamp {
     /// Seconds since epoch.
     pub sec: u32,
     /// Additional nanoseconds since epoch.
     pub nsec: u32,
 }
 
-impl From<Timestamp> for foxglove::schemas::Timestamp {
-    fn from(other: Timestamp) -> Self {
+impl From<FoxgloveTimestamp> for foxglove::schemas::Timestamp {
+    fn from(other: FoxgloveTimestamp) -> Self {
         Self::new(other.sec, other.nsec)
     }
 }
@@ -902,15 +902,15 @@ impl From<Timestamp> for foxglove::schemas::Timestamp {
 /// fractional seconds at nanosecond resolution (which are always positive).
 #[repr(C)]
 #[derive(Debug, Clone, Copy)]
-pub struct Duration {
+pub struct FoxgloveDuration {
     /// Seconds offset.
     sec: i32,
     /// Nanoseconds offset in the positive direction.
     nsec: u32,
 }
 
-impl From<Duration> for foxglove::schemas::Duration {
-    fn from(other: Duration) -> Self {
+impl From<FoxgloveDuration> for foxglove::schemas::Duration {
+    fn from(other: FoxgloveDuration) -> Self {
         Self::new(other.sec, other.nsec)
     }
 }

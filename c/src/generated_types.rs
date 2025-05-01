@@ -5,7 +5,8 @@ use std::ffi::c_uchar;
 use std::mem::ManuallyDrop;
 
 use crate::{
-    log_msg_to_channel, Duration, FoxgloveChannel, FoxgloveError, FoxgloveString, Timestamp,
+    log_msg_to_channel, FoxgloveChannel, FoxgloveDuration, FoxgloveError, FoxgloveString,
+    FoxgloveTimestamp,
 };
 
 #[derive(Clone, Copy, Debug)]
@@ -112,7 +113,7 @@ impl ArrowPrimitive {
 #[repr(C)]
 pub struct CameraCalibration {
     /// Timestamp of calibration data
-    pub timestamp: *const Timestamp,
+    pub timestamp: *const FoxgloveTimestamp,
 
     /// Frame of reference for the camera. The origin of the frame is the optical center of the camera. +x points to the right in the image, +y points down, and +z points into the plane of the image.
     pub frame_id: FoxgloveString,
@@ -251,7 +252,7 @@ pub extern "C" fn foxglove_channel_log_camera_calibration(
 #[repr(C)]
 pub struct CircleAnnotation {
     /// Timestamp of circle
-    pub timestamp: *const Timestamp,
+    pub timestamp: *const FoxgloveTimestamp,
 
     /// Center of the circle in 2D image coordinates (pixels).
     /// The coordinate uses the top-left corner of the top-left pixel of the image as the origin.
@@ -378,7 +379,7 @@ pub extern "C" fn foxglove_channel_log_color(
 #[repr(C)]
 pub struct CompressedImage {
     /// Timestamp of image
-    pub timestamp: *const Timestamp,
+    pub timestamp: *const FoxgloveTimestamp,
 
     /// Frame of reference for the image. The origin of the frame is the optical center of the camera. +x points to the right in the image, +y points down, and +z points into the plane of the image.
     pub frame_id: FoxgloveString,
@@ -453,7 +454,7 @@ pub extern "C" fn foxglove_channel_log_compressed_image(
 #[repr(C)]
 pub struct CompressedVideo {
     /// Timestamp of video frame
-    pub timestamp: *const Timestamp,
+    pub timestamp: *const FoxgloveTimestamp,
 
     /// Frame of reference for the video.
     ///
@@ -624,7 +625,7 @@ impl CubePrimitive {
 #[repr(C)]
 pub struct FrameTransform {
     /// Timestamp of transform
-    pub timestamp: *const Timestamp,
+    pub timestamp: *const FoxgloveTimestamp,
 
     /// Name of the parent frame
     pub parent_frame_id: FoxgloveString,
@@ -706,7 +707,7 @@ pub extern "C" fn foxglove_channel_log_frame_transform(
 #[repr(C)]
 pub struct FrameTransforms {
     /// Array of transforms
-    pub transforms: *const *const FrameTransform,
+    pub transforms: *const FrameTransform,
     pub transforms_count: usize,
 }
 
@@ -730,10 +731,7 @@ impl FrameTransforms {
                 std::slice::from_raw_parts(self.transforms, self.transforms_count)
             }
             .iter()
-            .filter_map(|m| unsafe {
-                m.as_ref()
-                    .map(|m| m.borrow_to_native().map(ManuallyDrop::into_inner))
-            })
+            .map(|m| unsafe { m.borrow_to_native().map(ManuallyDrop::into_inner) })
             .collect::<Result<Vec<_>, _>>()?,
         }))
     }
@@ -822,7 +820,7 @@ pub extern "C" fn foxglove_channel_log_geo_json(
 #[repr(C)]
 pub struct Grid {
     /// Timestamp of grid
-    pub timestamp: *const Timestamp,
+    pub timestamp: *const FoxgloveTimestamp,
 
     /// Frame of reference
     pub frame_id: FoxgloveString,
@@ -843,7 +841,7 @@ pub struct Grid {
     pub cell_stride: u32,
 
     /// Fields in `data`. `red`, `green`, `blue`, and `alpha` are optional for customizing the grid's color.
-    pub fields: *const *const PackedElementField,
+    pub fields: *const PackedElementField,
     pub fields_count: usize,
 
     /// Grid cell data, interpreted using `fields`, in row-major (y-major) order
@@ -887,10 +885,7 @@ impl Grid {
             cell_stride: self.cell_stride,
             fields: unsafe { std::slice::from_raw_parts(self.fields, self.fields_count) }
                 .iter()
-                .filter_map(|m| unsafe {
-                    m.as_ref()
-                        .map(|m| m.borrow_to_native().map(ManuallyDrop::into_inner))
-                })
+                .map(|m| unsafe { m.borrow_to_native().map(ManuallyDrop::into_inner) })
                 .collect::<Result<Vec<_>, _>>()?,
             data: unsafe {
                 Bytes::from_static(std::slice::from_raw_parts(self.data, self.data_len))
@@ -931,15 +926,15 @@ fn free_grid(mut msg: ManuallyDrop<foxglove::schemas::Grid>) {
 #[repr(C)]
 pub struct ImageAnnotations {
     /// Circle annotations
-    pub circles: *const *const CircleAnnotation,
+    pub circles: *const CircleAnnotation,
     pub circles_count: usize,
 
     /// Points annotations
-    pub points: *const *const PointsAnnotation,
+    pub points: *const PointsAnnotation,
     pub points_count: usize,
 
     /// Text annotations
-    pub texts: *const *const TextAnnotation,
+    pub texts: *const TextAnnotation,
     pub texts_count: usize,
 }
 
@@ -961,24 +956,15 @@ impl ImageAnnotations {
         Ok(ManuallyDrop::new(foxglove::schemas::ImageAnnotations {
             circles: unsafe { std::slice::from_raw_parts(self.circles, self.circles_count) }
                 .iter()
-                .filter_map(|m| unsafe {
-                    m.as_ref()
-                        .map(|m| m.borrow_to_native().map(ManuallyDrop::into_inner))
-                })
+                .map(|m| unsafe { m.borrow_to_native().map(ManuallyDrop::into_inner) })
                 .collect::<Result<Vec<_>, _>>()?,
             points: unsafe { std::slice::from_raw_parts(self.points, self.points_count) }
                 .iter()
-                .filter_map(|m| unsafe {
-                    m.as_ref()
-                        .map(|m| m.borrow_to_native().map(ManuallyDrop::into_inner))
-                })
+                .map(|m| unsafe { m.borrow_to_native().map(ManuallyDrop::into_inner) })
                 .collect::<Result<Vec<_>, _>>()?,
             texts: unsafe { std::slice::from_raw_parts(self.texts, self.texts_count) }
                 .iter()
-                .filter_map(|m| unsafe {
-                    m.as_ref()
-                        .map(|m| m.borrow_to_native().map(ManuallyDrop::into_inner))
-                })
+                .map(|m| unsafe { m.borrow_to_native().map(ManuallyDrop::into_inner) })
                 .collect::<Result<Vec<_>, _>>()?,
         }))
     }
@@ -1084,7 +1070,7 @@ pub extern "C" fn foxglove_channel_log_key_value_pair(
 #[repr(C)]
 pub struct LaserScan {
     /// Timestamp of scan
-    pub timestamp: *const Timestamp,
+    pub timestamp: *const FoxgloveTimestamp,
 
     /// Frame of reference
     pub frame_id: FoxgloveString,
@@ -1187,14 +1173,14 @@ pub struct LinePrimitive {
     pub scale_invariant: bool,
 
     /// Points along the line
-    pub points: *const *const Point3,
+    pub points: *const Point3,
     pub points_count: usize,
 
     /// Solid color to use for the whole line. One of `color` or `colors` must be provided.
     pub color: *const Color,
 
     /// Per-point colors (if specified, must have the same length as `points`). One of `color` or `colors` must be provided.
-    pub colors: *const *const Color,
+    pub colors: *const Color,
     pub colors_count: usize,
 
     /// Indices into the `points` and `colors` attribute arrays, which can be used to avoid duplicating attribute data.
@@ -1217,20 +1203,14 @@ impl LinePrimitive {
             scale_invariant: self.scale_invariant,
             points: unsafe { std::slice::from_raw_parts(self.points, self.points_count) }
                 .iter()
-                .filter_map(|m| unsafe {
-                    m.as_ref()
-                        .map(|m| m.borrow_to_native().map(ManuallyDrop::into_inner))
-                })
+                .map(|m| unsafe { m.borrow_to_native().map(ManuallyDrop::into_inner) })
                 .collect::<Result<Vec<_>, _>>()?,
             color: unsafe { self.color.as_ref().map(|m| m.borrow_to_native()) }
                 .transpose()?
                 .map(ManuallyDrop::into_inner),
             colors: unsafe { std::slice::from_raw_parts(self.colors, self.colors_count) }
                 .iter()
-                .filter_map(|m| unsafe {
-                    m.as_ref()
-                        .map(|m| m.borrow_to_native().map(ManuallyDrop::into_inner))
-                })
+                .map(|m| unsafe { m.borrow_to_native().map(ManuallyDrop::into_inner) })
                 .collect::<Result<Vec<_>, _>>()?,
             indices: unsafe {
                 Vec::from_raw_parts(
@@ -1258,7 +1238,7 @@ fn free_line_primitive(mut msg: ManuallyDrop<foxglove::schemas::LinePrimitive>) 
 #[repr(C)]
 pub struct LocationFix {
     /// Timestamp of the message
-    pub timestamp: *const Timestamp,
+    pub timestamp: *const FoxgloveTimestamp,
 
     /// Frame for the sensor. Latitude and longitude readings are at the origin of the frame.
     pub frame_id: FoxgloveString,
@@ -1339,7 +1319,7 @@ pub extern "C" fn foxglove_channel_log_location_fix(
 #[repr(C)]
 pub struct Log {
     /// Timestamp of log message
-    pub timestamp: *const Timestamp,
+    pub timestamp: *const FoxgloveTimestamp,
 
     /// Log level
     pub level: FoxgloveLogLevel,
@@ -1424,7 +1404,7 @@ pub extern "C" fn foxglove_channel_log_log(
 #[repr(C)]
 pub struct SceneEntityDeletion {
     /// Timestamp of the deletion. Only matching entities earlier than this timestamp will be deleted.
-    pub timestamp: *const Timestamp,
+    pub timestamp: *const FoxgloveTimestamp,
 
     /// Type of deletion action to perform
     pub r#type: FoxgloveSceneEntityDeletionType,
@@ -1483,7 +1463,7 @@ pub extern "C" fn foxglove_channel_log_scene_entity_deletion(
 #[repr(C)]
 pub struct SceneEntity {
     /// Timestamp of the entity
-    pub timestamp: *const Timestamp,
+    pub timestamp: *const FoxgloveTimestamp,
 
     /// Frame of reference
     pub frame_id: FoxgloveString,
@@ -1492,45 +1472,45 @@ pub struct SceneEntity {
     pub id: FoxgloveString,
 
     /// Length of time (relative to `timestamp`) after which the entity should be automatically removed. Zero value indicates the entity should remain visible until it is replaced or deleted.
-    pub lifetime: *const Duration,
+    pub lifetime: *const FoxgloveDuration,
 
     /// Whether the entity should keep its location in the fixed frame (false) or follow the frame specified in `frame_id` as it moves relative to the fixed frame (true)
     pub frame_locked: bool,
 
     /// Additional user-provided metadata associated with the entity. Keys must be unique.
-    pub metadata: *const *const KeyValuePair,
+    pub metadata: *const KeyValuePair,
     pub metadata_count: usize,
 
     /// Arrow primitives
-    pub arrows: *const *const ArrowPrimitive,
+    pub arrows: *const ArrowPrimitive,
     pub arrows_count: usize,
 
     /// Cube primitives
-    pub cubes: *const *const CubePrimitive,
+    pub cubes: *const CubePrimitive,
     pub cubes_count: usize,
 
     /// Sphere primitives
-    pub spheres: *const *const SpherePrimitive,
+    pub spheres: *const SpherePrimitive,
     pub spheres_count: usize,
 
     /// Cylinder primitives
-    pub cylinders: *const *const CylinderPrimitive,
+    pub cylinders: *const CylinderPrimitive,
     pub cylinders_count: usize,
 
     /// Line primitives
-    pub lines: *const *const LinePrimitive,
+    pub lines: *const LinePrimitive,
     pub lines_count: usize,
 
     /// Triangle list primitives
-    pub triangles: *const *const TriangleListPrimitive,
+    pub triangles: *const TriangleListPrimitive,
     pub triangles_count: usize,
 
     /// Text primitives
-    pub texts: *const *const TextPrimitive,
+    pub texts: *const TextPrimitive,
     pub texts_count: usize,
 
     /// Model primitives
-    pub models: *const *const ModelPrimitive,
+    pub models: *const ModelPrimitive,
     pub models_count: usize,
 }
 
@@ -1571,66 +1551,39 @@ impl SceneEntity {
             frame_locked: self.frame_locked,
             metadata: unsafe { std::slice::from_raw_parts(self.metadata, self.metadata_count) }
                 .iter()
-                .filter_map(|m| unsafe {
-                    m.as_ref()
-                        .map(|m| m.borrow_to_native().map(ManuallyDrop::into_inner))
-                })
+                .map(|m| unsafe { m.borrow_to_native().map(ManuallyDrop::into_inner) })
                 .collect::<Result<Vec<_>, _>>()?,
             arrows: unsafe { std::slice::from_raw_parts(self.arrows, self.arrows_count) }
                 .iter()
-                .filter_map(|m| unsafe {
-                    m.as_ref()
-                        .map(|m| m.borrow_to_native().map(ManuallyDrop::into_inner))
-                })
+                .map(|m| unsafe { m.borrow_to_native().map(ManuallyDrop::into_inner) })
                 .collect::<Result<Vec<_>, _>>()?,
             cubes: unsafe { std::slice::from_raw_parts(self.cubes, self.cubes_count) }
                 .iter()
-                .filter_map(|m| unsafe {
-                    m.as_ref()
-                        .map(|m| m.borrow_to_native().map(ManuallyDrop::into_inner))
-                })
+                .map(|m| unsafe { m.borrow_to_native().map(ManuallyDrop::into_inner) })
                 .collect::<Result<Vec<_>, _>>()?,
             spheres: unsafe { std::slice::from_raw_parts(self.spheres, self.spheres_count) }
                 .iter()
-                .filter_map(|m| unsafe {
-                    m.as_ref()
-                        .map(|m| m.borrow_to_native().map(ManuallyDrop::into_inner))
-                })
+                .map(|m| unsafe { m.borrow_to_native().map(ManuallyDrop::into_inner) })
                 .collect::<Result<Vec<_>, _>>()?,
             cylinders: unsafe { std::slice::from_raw_parts(self.cylinders, self.cylinders_count) }
                 .iter()
-                .filter_map(|m| unsafe {
-                    m.as_ref()
-                        .map(|m| m.borrow_to_native().map(ManuallyDrop::into_inner))
-                })
+                .map(|m| unsafe { m.borrow_to_native().map(ManuallyDrop::into_inner) })
                 .collect::<Result<Vec<_>, _>>()?,
             lines: unsafe { std::slice::from_raw_parts(self.lines, self.lines_count) }
                 .iter()
-                .filter_map(|m| unsafe {
-                    m.as_ref()
-                        .map(|m| m.borrow_to_native().map(ManuallyDrop::into_inner))
-                })
+                .map(|m| unsafe { m.borrow_to_native().map(ManuallyDrop::into_inner) })
                 .collect::<Result<Vec<_>, _>>()?,
             triangles: unsafe { std::slice::from_raw_parts(self.triangles, self.triangles_count) }
                 .iter()
-                .filter_map(|m| unsafe {
-                    m.as_ref()
-                        .map(|m| m.borrow_to_native().map(ManuallyDrop::into_inner))
-                })
+                .map(|m| unsafe { m.borrow_to_native().map(ManuallyDrop::into_inner) })
                 .collect::<Result<Vec<_>, _>>()?,
             texts: unsafe { std::slice::from_raw_parts(self.texts, self.texts_count) }
                 .iter()
-                .filter_map(|m| unsafe {
-                    m.as_ref()
-                        .map(|m| m.borrow_to_native().map(ManuallyDrop::into_inner))
-                })
+                .map(|m| unsafe { m.borrow_to_native().map(ManuallyDrop::into_inner) })
                 .collect::<Result<Vec<_>, _>>()?,
             models: unsafe { std::slice::from_raw_parts(self.models, self.models_count) }
                 .iter()
-                .filter_map(|m| unsafe {
-                    m.as_ref()
-                        .map(|m| m.borrow_to_native().map(ManuallyDrop::into_inner))
-                })
+                .map(|m| unsafe { m.borrow_to_native().map(ManuallyDrop::into_inner) })
                 .collect::<Result<Vec<_>, _>>()?,
         }))
     }
@@ -1692,11 +1645,11 @@ fn free_scene_entity(mut msg: ManuallyDrop<foxglove::schemas::SceneEntity>) {
 #[repr(C)]
 pub struct SceneUpdate {
     /// Scene entities to delete
-    pub deletions: *const *const SceneEntityDeletion,
+    pub deletions: *const SceneEntityDeletion,
     pub deletions_count: usize,
 
     /// Scene entities to add or replace
-    pub entities: *const *const SceneEntity,
+    pub entities: *const SceneEntity,
     pub entities_count: usize,
 }
 
@@ -1718,17 +1671,11 @@ impl SceneUpdate {
         Ok(ManuallyDrop::new(foxglove::schemas::SceneUpdate {
             deletions: unsafe { std::slice::from_raw_parts(self.deletions, self.deletions_count) }
                 .iter()
-                .filter_map(|m| unsafe {
-                    m.as_ref()
-                        .map(|m| m.borrow_to_native().map(ManuallyDrop::into_inner))
-                })
+                .map(|m| unsafe { m.borrow_to_native().map(ManuallyDrop::into_inner) })
                 .collect::<Result<Vec<_>, _>>()?,
             entities: unsafe { std::slice::from_raw_parts(self.entities, self.entities_count) }
                 .iter()
-                .filter_map(|m| unsafe {
-                    m.as_ref()
-                        .map(|m| m.borrow_to_native().map(ManuallyDrop::into_inner))
-                })
+                .map(|m| unsafe { m.borrow_to_native().map(ManuallyDrop::into_inner) })
                 .collect::<Result<Vec<_>, _>>()?,
         }))
     }
@@ -1994,7 +1941,7 @@ pub extern "C" fn foxglove_channel_log_point3(
 #[repr(C)]
 pub struct PointCloud {
     /// Timestamp of point cloud
-    pub timestamp: *const Timestamp,
+    pub timestamp: *const FoxgloveTimestamp,
 
     /// Frame of reference
     pub frame_id: FoxgloveString,
@@ -2006,7 +1953,7 @@ pub struct PointCloud {
     pub point_stride: u32,
 
     /// Fields in `data`. At least 2 coordinate fields from `x`, `y`, and `z` are required for each point's position; `red`, `green`, `blue`, and `alpha` are optional for customizing each point's color.
-    pub fields: *const *const PackedElementField,
+    pub fields: *const PackedElementField,
     pub fields_count: usize,
 
     /// Point data, interpreted using `fields`
@@ -2045,10 +1992,7 @@ impl PointCloud {
             point_stride: self.point_stride,
             fields: unsafe { std::slice::from_raw_parts(self.fields, self.fields_count) }
                 .iter()
-                .filter_map(|m| unsafe {
-                    m.as_ref()
-                        .map(|m| m.borrow_to_native().map(ManuallyDrop::into_inner))
-                })
+                .map(|m| unsafe { m.borrow_to_native().map(ManuallyDrop::into_inner) })
                 .collect::<Result<Vec<_>, _>>()?,
             data: unsafe {
                 Bytes::from_static(std::slice::from_raw_parts(self.data, self.data_len))
@@ -2089,21 +2033,21 @@ fn free_point_cloud(mut msg: ManuallyDrop<foxglove::schemas::PointCloud>) {
 #[repr(C)]
 pub struct PointsAnnotation {
     /// Timestamp of annotation
-    pub timestamp: *const Timestamp,
+    pub timestamp: *const FoxgloveTimestamp,
 
     /// Type of points annotation to draw
     pub r#type: FoxglovePointsAnnotationType,
 
     /// Points in 2D image coordinates (pixels).
     /// These coordinates use the top-left corner of the top-left pixel of the image as the origin.
-    pub points: *const *const Point2,
+    pub points: *const Point2,
     pub points_count: usize,
 
     /// Outline color
     pub outline_color: *const Color,
 
     /// Per-point colors, if `type` is `POINTS`, or per-segment stroke colors, if `type` is `LINE_LIST`, `LINE_STRIP` or `LINE_LOOP`.
-    pub outline_colors: *const *const Color,
+    pub outline_colors: *const Color,
     pub outline_colors_count: usize,
 
     /// Fill color
@@ -2133,10 +2077,7 @@ impl PointsAnnotation {
             r#type: self.r#type as i32,
             points: unsafe { std::slice::from_raw_parts(self.points, self.points_count) }
                 .iter()
-                .filter_map(|m| unsafe {
-                    m.as_ref()
-                        .map(|m| m.borrow_to_native().map(ManuallyDrop::into_inner))
-                })
+                .map(|m| unsafe { m.borrow_to_native().map(ManuallyDrop::into_inner) })
                 .collect::<Result<Vec<_>, _>>()?,
             outline_color: unsafe { self.outline_color.as_ref().map(|m| m.borrow_to_native()) }
                 .transpose()?
@@ -2145,10 +2086,7 @@ impl PointsAnnotation {
                 std::slice::from_raw_parts(self.outline_colors, self.outline_colors_count)
             }
             .iter()
-            .filter_map(|m| unsafe {
-                m.as_ref()
-                    .map(|m| m.borrow_to_native().map(ManuallyDrop::into_inner))
-            })
+            .map(|m| unsafe { m.borrow_to_native().map(ManuallyDrop::into_inner) })
             .collect::<Result<Vec<_>, _>>()?,
             fill_color: unsafe { self.fill_color.as_ref().map(|m| m.borrow_to_native()) }
                 .transpose()?
@@ -2245,7 +2183,7 @@ pub extern "C" fn foxglove_channel_log_pose(
 #[repr(C)]
 pub struct PoseInFrame {
     /// Timestamp of pose
-    pub timestamp: *const Timestamp,
+    pub timestamp: *const FoxgloveTimestamp,
 
     /// Frame of reference for pose position and orientation
     pub frame_id: FoxgloveString,
@@ -2306,13 +2244,13 @@ pub extern "C" fn foxglove_channel_log_pose_in_frame(
 #[repr(C)]
 pub struct PosesInFrame {
     /// Timestamp of pose
-    pub timestamp: *const Timestamp,
+    pub timestamp: *const FoxgloveTimestamp,
 
     /// Frame of reference for pose position and orientation
     pub frame_id: FoxgloveString,
 
     /// Poses in 3D space
-    pub poses: *const *const Pose,
+    pub poses: *const Pose,
     pub poses_count: usize,
 }
 
@@ -2343,10 +2281,7 @@ impl PosesInFrame {
             .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("frame_id invalid: {}", e)))?,
             poses: unsafe { std::slice::from_raw_parts(self.poses, self.poses_count) }
                 .iter()
-                .filter_map(|m| unsafe {
-                    m.as_ref()
-                        .map(|m| m.borrow_to_native().map(ManuallyDrop::into_inner))
-                })
+                .map(|m| unsafe { m.borrow_to_native().map(ManuallyDrop::into_inner) })
                 .collect::<Result<Vec<_>, _>>()?,
         }))
     }
@@ -2440,7 +2375,7 @@ pub extern "C" fn foxglove_channel_log_quaternion(
 #[repr(C)]
 pub struct RawAudio {
     /// Timestamp of the start of the audio block
-    pub timestamp: *const Timestamp,
+    pub timestamp: *const FoxgloveTimestamp,
 
     /// Audio data. The samples in the data must be interleaved and little-endian
     pub data: *const c_uchar,
@@ -2510,7 +2445,7 @@ pub extern "C" fn foxglove_channel_log_raw_audio(
 #[repr(C)]
 pub struct RawImage {
     /// Timestamp of image
-    pub timestamp: *const Timestamp,
+    pub timestamp: *const FoxgloveTimestamp,
 
     /// Frame of reference for the image. The origin of the frame is the optical center of the camera. +x points to the right in the image, +y points down, and +z points into the plane of the image.
     pub frame_id: FoxgloveString,
@@ -2628,7 +2563,7 @@ impl SpherePrimitive {
 #[repr(C)]
 pub struct TextAnnotation {
     /// Timestamp of annotation
-    pub timestamp: *const Timestamp,
+    pub timestamp: *const FoxgloveTimestamp,
 
     /// Bottom-left origin of the text label in 2D image coordinates (pixels).
     /// The coordinate uses the top-left corner of the top-left pixel of the image as the origin.
@@ -2759,14 +2694,14 @@ pub struct TriangleListPrimitive {
     pub pose: *const Pose,
 
     /// Vertices to use for triangles, interpreted as a list of triples (0-1-2, 3-4-5, ...)
-    pub points: *const *const Point3,
+    pub points: *const Point3,
     pub points_count: usize,
 
     /// Solid color to use for the whole shape. One of `color` or `colors` must be provided.
     pub color: *const Color,
 
     /// Per-vertex colors (if specified, must have the same length as `points`). One of `color` or `colors` must be provided.
-    pub colors: *const *const Color,
+    pub colors: *const Color,
     pub colors_count: usize,
 
     /// Indices into the `points` and `colors` attribute arrays, which can be used to avoid duplicating attribute data.
@@ -2788,20 +2723,14 @@ impl TriangleListPrimitive {
                     .map(ManuallyDrop::into_inner),
                 points: unsafe { std::slice::from_raw_parts(self.points, self.points_count) }
                     .iter()
-                    .filter_map(|m| unsafe {
-                        m.as_ref()
-                            .map(|m| m.borrow_to_native().map(ManuallyDrop::into_inner))
-                    })
+                    .map(|m| unsafe { m.borrow_to_native().map(ManuallyDrop::into_inner) })
                     .collect::<Result<Vec<_>, _>>()?,
                 color: unsafe { self.color.as_ref().map(|m| m.borrow_to_native()) }
                     .transpose()?
                     .map(ManuallyDrop::into_inner),
                 colors: unsafe { std::slice::from_raw_parts(self.colors, self.colors_count) }
                     .iter()
-                    .filter_map(|m| unsafe {
-                        m.as_ref()
-                            .map(|m| m.borrow_to_native().map(ManuallyDrop::into_inner))
-                    })
+                    .map(|m| unsafe { m.borrow_to_native().map(ManuallyDrop::into_inner) })
                     .collect::<Result<Vec<_>, _>>()?,
                 indices: unsafe {
                     Vec::from_raw_parts(

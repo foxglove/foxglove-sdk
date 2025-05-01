@@ -45,10 +45,10 @@ struct Quaternion {
 /// A position and orientation for an object or reference frame in 3D space
 struct Pose {
   /// Point denoting position in 3D space
-  Vector3 position;
+  std::optional<Vector3> position;
 
   /// Quaternion denoting orientation in 3D space
-  Quaternion orientation;
+  std::optional<Quaternion> orientation;
 };
 
 /// A color in RGBA format
@@ -69,7 +69,7 @@ struct Color {
 /// A primitive representing an arrow
 struct ArrowPrimitive {
   /// Position of the arrow's tail and orientation of the arrow. Identity orientation means the arrow points in the +x direction.
-  Pose pose;
+  std::optional<Pose> pose;
 
   /// Length of the arrow shaft
   double shaft_length = 0;
@@ -84,13 +84,13 @@ struct ArrowPrimitive {
   double head_diameter = 0;
 
   /// Color of the arrow
-  Color color;
+  std::optional<Color> color;
 };
 
 /// Camera calibration parameters
 struct CameraCalibration {
   /// Timestamp of calibration data
-  foxglove::Timestamp timestamp;
+  std::optional<foxglove::Timestamp> timestamp;
 
   /// Frame of reference for the camera. The origin of the frame is the optical center of the camera. +x points to the right in the image, +y points down, and +z points into the plane of the image.
   std::string frame_id;
@@ -107,7 +107,7 @@ struct CameraCalibration {
   std::string distortion_model;
 
   /// Distortion parameters
-  std::vector<double> D;
+  std::vector<double> d;
 
   /// Intrinsic camera matrix (3x3 row-major matrix)
   /// 
@@ -121,12 +121,12 @@ struct CameraCalibration {
   ///     [ 0  0  1]
   /// ```
   /// 
-  std::array<double, 9> K;
+  std::array<double, 9> k;
 
   /// Rectification matrix (stereo cameras only, 3x3 row-major matrix)
   /// 
   /// A rotation matrix aligning the camera coordinate system to the ideal stereo image plane so that epipolar lines in both stereo images are parallel.
-  std::array<double, 9> R;
+  std::array<double, 9> r;
 
   /// Projection/camera matrix (3x4 row-major matrix)
   /// 
@@ -154,7 +154,7 @@ struct CameraCalibration {
   /// 
   /// This holds for both images of a stereo pair.
   /// 
-  std::array<double, 12> P;
+  std::array<double, 12> p;
 };
 
 /// A point representing a position in 2D space
@@ -169,11 +169,11 @@ struct Point2 {
 /// A circle annotation on a 2D image
 struct CircleAnnotation {
   /// Timestamp of circle
-  foxglove::Timestamp timestamp;
+  std::optional<foxglove::Timestamp> timestamp;
 
   /// Center of the circle in 2D image coordinates (pixels).
   /// The coordinate uses the top-left corner of the top-left pixel of the image as the origin.
-  Point2 position;
+  std::optional<Point2> position;
 
   /// Circle diameter in pixels
   double diameter = 0;
@@ -182,16 +182,16 @@ struct CircleAnnotation {
   double thickness = 0;
 
   /// Fill color
-  Color fill_color;
+  std::optional<Color> fill_color;
 
   /// Outline color
-  Color outline_color;
+  std::optional<Color> outline_color;
 };
 
 /// A compressed image
 struct CompressedImage {
   /// Timestamp of image
-  foxglove::Timestamp timestamp;
+  std::optional<foxglove::Timestamp> timestamp;
 
   /// Frame of reference for the image. The origin of the frame is the optical center of the camera. +x points to the right in the image, +y points down, and +z points into the plane of the image.
   std::string frame_id;
@@ -208,7 +208,7 @@ struct CompressedImage {
 /// A single frame of a compressed video bitstream
 struct CompressedVideo {
   /// Timestamp of video frame
-  foxglove::Timestamp timestamp;
+  std::optional<foxglove::Timestamp> timestamp;
 
   /// Frame of reference for the video.
   /// 
@@ -251,10 +251,10 @@ struct CompressedVideo {
 /// A primitive representing a cylinder, elliptic cylinder, or truncated cone
 struct CylinderPrimitive {
   /// Position of the center of the cylinder and orientation of the cylinder. The flat face(s) are perpendicular to the z-axis.
-  Pose pose;
+  std::optional<Pose> pose;
 
   /// Size of the cylinder's bounding box
-  Vector3 size;
+  std::optional<Vector3> size;
 
   /// 0-1, ratio of the diameter of the cylinder's bottom face (min z) to the bottom of the bounding box
   double bottom_scale = 0;
@@ -263,25 +263,25 @@ struct CylinderPrimitive {
   double top_scale = 0;
 
   /// Color of the cylinder
-  Color color;
+  std::optional<Color> color;
 };
 
 /// A primitive representing a cube or rectangular prism
 struct CubePrimitive {
   /// Position of the center of the cube and orientation of the cube
-  Pose pose;
+  std::optional<Pose> pose;
 
   /// Size of the cube along each axis
-  Vector3 size;
+  std::optional<Vector3> size;
 
   /// Color of the cube
-  Color color;
+  std::optional<Color> color;
 };
 
 /// A transform between two reference frames in 3D space
 struct FrameTransform {
   /// Timestamp of transform
-  foxglove::Timestamp timestamp;
+  std::optional<foxglove::Timestamp> timestamp;
 
   /// Name of the parent frame
   std::string parent_frame_id;
@@ -290,10 +290,10 @@ struct FrameTransform {
   std::string child_frame_id;
 
   /// Translation component of the transform
-  Vector3 translation;
+  std::optional<Vector3> translation;
 
   /// Rotation component of the transform
-  Quaternion rotation;
+  std::optional<Quaternion> rotation;
 };
 
 /// An array of FrameTransform messages
@@ -344,19 +344,19 @@ struct PackedElementField {
 /// A 2D grid of data
 struct Grid {
   /// Timestamp of grid
-  foxglove::Timestamp timestamp;
+  std::optional<foxglove::Timestamp> timestamp;
 
   /// Frame of reference
   std::string frame_id;
 
   /// Origin of grid's corner relative to frame of reference; grid is positioned in the x-y plane relative to this origin
-  Pose pose;
+  std::optional<Pose> pose;
 
   /// Number of grid columns
   uint32_t column_count = 0;
 
   /// Size of single grid cell along x and y axes, relative to `pose`
-  Vector2 cell_size;
+  std::optional<Vector2> cell_size;
 
   /// Number of bytes between rows in `data`
   uint32_t row_stride = 0;
@@ -386,7 +386,7 @@ struct PointsAnnotation {
     LINE_LIST = 4,
   };
   /// Timestamp of annotation
-  foxglove::Timestamp timestamp;
+  std::optional<foxglove::Timestamp> timestamp;
 
   /// Type of points annotation to draw
   PointsAnnotationType type;
@@ -396,13 +396,13 @@ struct PointsAnnotation {
   std::vector<Point2> points;
 
   /// Outline color
-  Color outline_color;
+  std::optional<Color> outline_color;
 
   /// Per-point colors, if `type` is `POINTS`, or per-segment stroke colors, if `type` is `LINE_LIST`, `LINE_STRIP` or `LINE_LOOP`.
   std::vector<Color> outline_colors;
 
   /// Fill color
-  Color fill_color;
+  std::optional<Color> fill_color;
 
   /// Stroke thickness in pixels
   double thickness = 0;
@@ -411,11 +411,11 @@ struct PointsAnnotation {
 /// A text label on a 2D image
 struct TextAnnotation {
   /// Timestamp of annotation
-  foxglove::Timestamp timestamp;
+  std::optional<foxglove::Timestamp> timestamp;
 
   /// Bottom-left origin of the text label in 2D image coordinates (pixels).
   /// The coordinate uses the top-left corner of the top-left pixel of the image as the origin.
-  Point2 position;
+  std::optional<Point2> position;
 
   /// Text to display
   std::string text;
@@ -424,10 +424,10 @@ struct TextAnnotation {
   double font_size = 12;
 
   /// Text color
-  Color text_color;
+  std::optional<Color> text_color;
 
   /// Background fill color
-  Color background_color;
+  std::optional<Color> background_color;
 };
 
 /// Array of annotations for a 2D image
@@ -454,13 +454,13 @@ struct KeyValuePair {
 /// A single scan from a planar laser range-finder
 struct LaserScan {
   /// Timestamp of scan
-  foxglove::Timestamp timestamp;
+  std::optional<foxglove::Timestamp> timestamp;
 
   /// Frame of reference
   std::string frame_id;
 
   /// Origin of scan relative to frame of reference; points are positioned in the x-y plane relative to this origin; angles are interpreted as counterclockwise rotations around the z axis with 0 rad being in the +x direction
-  Pose pose;
+  std::optional<Pose> pose;
 
   /// Bearing of first point, in radians
   double start_angle = 0;
@@ -502,7 +502,7 @@ struct LinePrimitive {
   LineType type;
 
   /// Origin of lines relative to reference frame
-  Pose pose;
+  std::optional<Pose> pose;
 
   /// Line thickness
   double thickness = 0;
@@ -514,7 +514,7 @@ struct LinePrimitive {
   std::vector<Point3> points;
 
   /// Solid color to use for the whole line. One of `color` or `colors` must be provided.
-  Color color;
+  std::optional<Color> color;
 
   /// Per-point colors (if specified, must have the same length as `points`). One of `color` or `colors` must be provided.
   std::vector<Color> colors;
@@ -535,7 +535,7 @@ struct LocationFix {
     KNOWN = 3,
   };
   /// Timestamp of the message
-  foxglove::Timestamp timestamp;
+  std::optional<foxglove::Timestamp> timestamp;
 
   /// Frame for the sensor. Latitude and longitude readings are at the origin of the frame.
   std::string frame_id;
@@ -568,7 +568,7 @@ struct Log {
     FATAL = 5,
   };
   /// Timestamp of log message
-  foxglove::Timestamp timestamp;
+  std::optional<foxglove::Timestamp> timestamp;
 
   /// Log level
   LogLevel level;
@@ -596,7 +596,7 @@ struct SceneEntityDeletion {
     ALL = 1,
   };
   /// Timestamp of the deletion. Only matching entities earlier than this timestamp will be deleted.
-  foxglove::Timestamp timestamp;
+  std::optional<foxglove::Timestamp> timestamp;
 
   /// Type of deletion action to perform
   SceneEntityDeletionType type;
@@ -608,25 +608,25 @@ struct SceneEntityDeletion {
 /// A primitive representing a sphere or ellipsoid
 struct SpherePrimitive {
   /// Position of the center of the sphere and orientation of the sphere
-  Pose pose;
+  std::optional<Pose> pose;
 
   /// Size (diameter) of the sphere along each axis
-  Vector3 size;
+  std::optional<Vector3> size;
 
   /// Color of the sphere
-  Color color;
+  std::optional<Color> color;
 };
 
 /// A primitive representing a set of triangles or a surface tiled by triangles
 struct TriangleListPrimitive {
   /// Origin of triangles relative to reference frame
-  Pose pose;
+  std::optional<Pose> pose;
 
   /// Vertices to use for triangles, interpreted as a list of triples (0-1-2, 3-4-5, ...)
   std::vector<Point3> points;
 
   /// Solid color to use for the whole shape. One of `color` or `colors` must be provided.
-  Color color;
+  std::optional<Color> color;
 
   /// Per-vertex colors (if specified, must have the same length as `points`). One of `color` or `colors` must be provided.
   std::vector<Color> colors;
@@ -640,7 +640,7 @@ struct TriangleListPrimitive {
 /// A primitive representing a text label
 struct TextPrimitive {
   /// Position of the center of the text box and orientation of the text. Identity orientation means the text is oriented in the xy-plane and flows from -x to +x.
-  Pose pose;
+  std::optional<Pose> pose;
 
   /// Whether the text should respect `pose.orientation` (false) or always face the camera (true)
   bool billboard = false;
@@ -652,7 +652,7 @@ struct TextPrimitive {
   bool scale_invariant = false;
 
   /// Color of the text
-  Color color;
+  std::optional<Color> color;
 
   /// Text
   std::string text;
@@ -661,13 +661,13 @@ struct TextPrimitive {
 /// A primitive representing a 3D model file loaded from an external URL or embedded data
 struct ModelPrimitive {
   /// Origin of model relative to reference frame
-  Pose pose;
+  std::optional<Pose> pose;
 
   /// Scale factor to apply to the model along each axis
-  Vector3 scale;
+  std::optional<Vector3> scale;
 
   /// Solid color to use for the whole model if `override_color` is true.
-  Color color;
+  std::optional<Color> color;
 
   /// Whether to use the color specified in `color` instead of any materials embedded in the original model.
   bool override_color = false;
@@ -685,7 +685,7 @@ struct ModelPrimitive {
 /// A visual element in a 3D scene. An entity may be composed of multiple primitives which all share the same frame of reference.
 struct SceneEntity {
   /// Timestamp of the entity
-  foxglove::Timestamp timestamp;
+  std::optional<foxglove::Timestamp> timestamp;
 
   /// Frame of reference
   std::string frame_id;
@@ -694,7 +694,7 @@ struct SceneEntity {
   std::string id;
 
   /// Length of time (relative to `timestamp`) after which the entity should be automatically removed. Zero value indicates the entity should remain visible until it is replaced or deleted.
-  foxglove::Duration lifetime;
+  std::optional<foxglove::Duration> lifetime;
 
   /// Whether the entity should keep its location in the fixed frame (false) or follow the frame specified in `frame_id` as it moves relative to the fixed frame (true)
   bool frame_locked = false;
@@ -739,13 +739,13 @@ struct SceneUpdate {
 /// A collection of N-dimensional points, which may contain additional fields with information like normals, intensity, etc.
 struct PointCloud {
   /// Timestamp of point cloud
-  foxglove::Timestamp timestamp;
+  std::optional<foxglove::Timestamp> timestamp;
 
   /// Frame of reference
   std::string frame_id;
 
   /// The origin of the point cloud relative to the frame of reference
-  Pose pose;
+  std::optional<Pose> pose;
 
   /// Number of bytes between points in the `data`
   uint32_t point_stride = 0;
@@ -760,19 +760,19 @@ struct PointCloud {
 /// A timestamped pose for an object or reference frame in 3D space
 struct PoseInFrame {
   /// Timestamp of pose
-  foxglove::Timestamp timestamp;
+  std::optional<foxglove::Timestamp> timestamp;
 
   /// Frame of reference for pose position and orientation
   std::string frame_id;
 
   /// Pose in 3D space
-  Pose pose;
+  std::optional<Pose> pose;
 };
 
 /// An array of timestamped poses for an object or reference frame in 3D space
 struct PosesInFrame {
   /// Timestamp of pose
-  foxglove::Timestamp timestamp;
+  std::optional<foxglove::Timestamp> timestamp;
 
   /// Frame of reference for pose position and orientation
   std::string frame_id;
@@ -784,7 +784,7 @@ struct PosesInFrame {
 /// A single block of an audio bitstream
 struct RawAudio {
   /// Timestamp of the start of the audio block
-  foxglove::Timestamp timestamp;
+  std::optional<foxglove::Timestamp> timestamp;
 
   /// Audio data. The samples in the data must be interleaved and little-endian
   std::vector<std::byte> data;
@@ -802,7 +802,7 @@ struct RawAudio {
 /// A raw image
 struct RawImage {
   /// Timestamp of image
-  foxglove::Timestamp timestamp;
+  std::optional<foxglove::Timestamp> timestamp;
 
   /// Frame of reference for the image. The origin of the frame is the optical center of the camera. +x points to the right in the image, +y points down, and +z points into the plane of the image.
   std::string frame_id;

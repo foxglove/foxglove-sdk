@@ -36,6 +36,10 @@ import {
   foxgloveEnumSchemas,
   foxgloveMessageSchemas,
 } from "../typescript/schemas/src/internal/schemas";
+import {
+  generateCppSchemas,
+  generateHppSchemas,
+} from "../typescript/schemas/src/internal/generateCpp";
 
 async function logProgress(message: string, body: () => Promise<void>) {
   process.stderr.write(`${message}... `);
@@ -286,7 +290,16 @@ async function main({ clean }: { clean: boolean }) {
     });
   });
 
-  
+  await logProgress("Generating C++ schemas", async () => {
+    await fs.writeFile(
+      path.join(repoRoot, "cpp", "foxglove", "include", "foxglove", "schemas.hpp"),
+      generateHppSchemas(Object.values(foxgloveMessageSchemas), Object.values(foxgloveEnumSchemas)),
+    );
+    await fs.writeFile(
+      path.join(repoRoot, "cpp", "foxglove", "src", "schemas.cpp"),
+      generateCppSchemas(Object.values(foxgloveMessageSchemas)),
+    );
+  });
 
   await logProgressLn("Updating Jest snapshots", async () => {
     await exec("yarn", ["test", "--updateSnapshot"], {

@@ -71,9 +71,9 @@ pub struct ${name} {
             fieldType = "*const c_uchar";
             fieldHasLen = true;
           } else if (field.type.name === "time") {
-            fieldType = "*const Timestamp";
+            fieldType = "*const FoxgloveTimestamp";
           } else if (field.type.name === "duration") {
-            fieldType = "*const Duration";
+            fieldType = "*const FoxgloveDuration";
           } else {
             fieldType = primitiveToRust(field.type.name);
           }
@@ -82,7 +82,7 @@ pub struct ${name} {
           fieldType = `Foxglove${field.type.enum.name}`;
           break;
         case "nested":
-          fieldType = `*const ${field.type.schema.name.replace("JSON", "Json")}`;
+          fieldType = `${field.type.schema.name.replace("JSON", "Json")}`;
           break;
       }
       const lines: string[] = [comment];
@@ -98,6 +98,9 @@ pub struct ${name} {
         }
         lines.push(`pub ${identName}_count: usize,`);
       } else {
+        if (field.type.type === "nested") {
+          fieldType = `*const ${fieldType}`;
+        }
         lines.push(`pub ${identName}: ${fieldType},`);
         if (fieldHasLen) {
           lines.push(`pub ${identName}_len: usize,`);
@@ -130,7 +133,7 @@ ${name.endsWith("Primitive") ? "" : `
           } else {
             if (field.type.type === "nested") {
               return `${dstName}: unsafe { std::slice::from_raw_parts(self.${srcName}, self.${srcName}_count) }
-                .iter().filter_map(|m| unsafe { m.as_ref().map(|m| m.borrow_to_native().map(ManuallyDrop::into_inner)) }).collect::<Result<Vec<_>, _>>()?`;
+                .iter().map(|m| unsafe { m.borrow_to_native().map(ManuallyDrop::into_inner) }).collect::<Result<Vec<_>, _>>()?`;
             } else if (field.type.type === "primitive") {
               assert(field.type.name !== "bytes");
               return `${dstName}: unsafe { Vec::from_raw_parts(self.${srcName} as *mut ${primitiveToRust(field.type.name)}, self.${srcName}_count, self.${srcName}_count) }`;
@@ -209,7 +212,7 @@ fn free_${snakeName}(mut msg: ManuallyDrop<foxglove::schemas::${name}>) {
     "use foxglove::bytes::Bytes;",
     "use std::mem::ManuallyDrop;",
     "",
-    "use crate::{FoxgloveString, FoxgloveError, FoxgloveChannel, Timestamp, Duration, log_msg_to_channel};"
+    "use crate::{FoxgloveString, FoxgloveError, FoxgloveChannel, FoxgloveTimestamp, FoxgloveDuration, log_msg_to_channel};"
   ];
 
   const enumDefs = enums.map((enumSchema) => {

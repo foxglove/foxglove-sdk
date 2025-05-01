@@ -14,9 +14,9 @@ function primitiveToCpp(type: FoxglovePrimitive) {
     case "float64":
       return "double";
     case "time":
-      return "foxglove::Timestamp";
+      return "std::optional<foxglove::Timestamp>";
     case "duration":
-      return "foxglove::Duration";
+      return "std::optional<foxglove::Duration>";
   }
 }
 
@@ -45,7 +45,8 @@ function formatComment(comment: string, indent: number) {
 }
 
 function toSnakeCase(name: string) {
-  return name.replace("JSON", "_json").replace(/([A-Z])/g, "_$1").toLowerCase().substring(1);
+  const snakeName = name.replace("JSON", "Json").replace(/([A-Z])/g, "_$1").toLowerCase();
+  return snakeName.startsWith("_") ? snakeName.substring(1) : snakeName;
 }
 
 /**
@@ -120,7 +121,7 @@ export function generateHppSchemas(
               fieldType = field.type.enum.name;
               break;
             case "nested":
-              fieldType = field.type.schema.name;
+              fieldType = `${field.type.schema.name}`;
               break;
             case "primitive": {
               const defaultValue =
@@ -136,8 +137,10 @@ export function generateHppSchemas(
             fieldType = `std::array<${fieldType}, ${field.array}>`;
           } else if (field.array) {
             fieldType = `std::vector<${fieldType}>`;
+          } else if (field.type.type === "nested") {
+            fieldType = `std::optional<${fieldType}>`;
           }
-          return `${formatComment(field.description, 2)}\n  ${fieldType} ${field.name}${defaultStr};`;
+          return `${formatComment(field.description, 2)}\n  ${fieldType} ${toSnakeCase(field.name)}${defaultStr};`;
         })
         .join("\n\n"),
       `};`,
@@ -191,13 +194,13 @@ function cppToC(schema: FoxgloveMessageSchema) {
     const dstName = srcName;
     if (field.array != undefined) {
       if (typeof field.array === "number") {
-        return `${dstName}: ${srcName};`;
+        return `::memcpy(cMsg.${dstName}, msg.${srcName}.data(), msg.${srcName}.size() * sizeof(*msg.${srcName}.data()));`;
       } else {
         if (field.type.type === "nested") {
-          return `${dstName}: ${srcName};`;
+          return `cMsg.${dstName} = reinterpret_cast<const foxglove_${toSnakeCase(field.type.schema.name)}*>(msg.${srcName}.data());\n    cMsg.${dstName}_count = msg.${srcName}.size();`;
         } else if (field.type.type === "primitive") {
           assert(field.type.name !== "bytes");
-          return `${dstName}: ${srcName};`;
+          return `cMsg.${dstName} = msg.${srcName}.data();\n    cMsg.${dstName}_count = msg.${srcName}.size();`;
         } else {
           throw Error(`unsupported array type: ${field.type.type}`);
         }
@@ -206,17 +209,19 @@ function cppToC(schema: FoxgloveMessageSchema) {
     switch (field.type.type) {
       case "primitive":
         if (field.type.name === "string") {
-          return `${dstName}: ${srcName};`;
+          return `cMsg.${dstName} = {msg.${srcName}.data(), msg.${srcName}.size()};`;
         } else if (field.type.name === "bytes") {
-          return `${dstName}: ${srcName};`;
-        } else if (field.type.name === "time" || field.type.name === "duration") {
-          return `${dstName}: ${srcName};`;
+          return `cMsg.${dstName} = reinterpret_cast<const unsigned char *>(msg.${srcName}.data());\n    cMsg.${dstName}_len = msg.${srcName}.size();`;
+        } else if (field.type.name === "time") {
+          return `cMsg.${dstName} = msg.${srcName} ? reinterpret_cast<const foxglove_timestamp*>(&*msg.${srcName}) : nullptr;`;
+        } else if (field.type.name === "duration") {
+          return `cMsg.${dstName} = msg.${srcName} ? reinterpret_cast<const foxglove_duration*>(&*msg.${srcName}) : nullptr;`;
         }
-        return `${dstName}: ${srcName};`;
+        return `cMsg.${dstName} = msg.${srcName};`;
       case "enum":
-        return `${dstName}: ${srcName};`;
+        return `cMsg.${dstName} = static_cast<foxglove_${toSnakeCase(field.type.enum.name)}>(msg.${srcName});`;
       case "nested":
-        return `${dstName}: ${srcName};`;
+        return `cMsg.${dstName} = msg.${srcName} ? reinterpret_cast<const foxglove_${toSnakeCase(field.type.schema.name)}*>(&*msg.${srcName}) : nullptr;`;
     }
   }).join("\n    ");
 }
@@ -246,6 +251,7 @@ export function generateCppSchemas(
 
   const systemIncludes = [
     "#include <optional>",
+    "#include <cstring>",
   ];
 
   const includes = [
