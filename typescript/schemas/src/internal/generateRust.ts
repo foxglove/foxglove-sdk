@@ -41,6 +41,10 @@ function toTitleCase(name: string) {
   return name.toLowerCase().replace(/(?:^|_)([a-z])/g, (_, letter: string) => letter.toUpperCase());
 }
 
+function isCopyType(schema: FoxgloveMessageSchema): boolean {
+  return schema.fields.every((field) => (field.type.type === "primitive" && field.type.name !== "bytes" && field.type.name !== "string") || (field.type.type === "nested" && isCopyType(field.type.schema)));
+}
+
 export function generateRustTypes(schemas: readonly FoxgloveMessageSchema[], enums: readonly FoxgloveEnumSchema[]): string {
   // A schema needs a custom free function if it has a Vec<NestedSchema> field,
   // because we had to allocate the vector to map the C NestedSchema type to the Rust NestedSchema type,
@@ -48,6 +52,10 @@ export function generateRustTypes(schemas: readonly FoxgloveMessageSchema[], enu
   const needsFree = new Set(schemas.map((schema) => {
     const result = schema.fields.some((field) => field.array != undefined && typeof field.array !== "number" && field.type.type === "nested");
     return result ? schema.name : "";
+  }).filter((name) => name.length > 0));
+
+  const copyTypes = new Set(schemas.map((schema) => {
+    return isCopyType(schema) ? schema.name : "";
   }).filter((name) => name.length > 0));
 
   const schemaStructs = schemas.map(
@@ -183,7 +191,6 @@ pub extern "C" fn foxglove_channel_log_${snakeName}(channel: Option<&FoxgloveCha
 `}
 
 ${needsFree.has(schema.name) ? `
-#[allow(forgetting_copy_types)]
 fn free_${snakeName}(mut msg: ManuallyDrop<foxglove::schemas::${name}>) {
     // The only allocations we made were for Vec<Nested> fields, which may also include Vec<Nested> fields in a couple cases.
     ${fields
@@ -192,11 +199,17 @@ fn free_${snakeName}(mut msg: ManuallyDrop<foxglove::schemas::${name}>) {
         if (field.array != undefined) {
           if (typeof field.array !== "number" && field.type.type === "nested") {
               const nestedName = escapeId(toSnakeCase(field.type.schema.name));
-              return `    for nested in std::mem::take(&mut msg.${fieldName}) {
-        ${needsFree.has(field.type.schema.name) ?
-        `free_${nestedName}(ManuallyDrop::new(nested));` :
-        `std::mem::forget(nested);`
-}}`;
+              if (needsFree.has(field.type.schema.name)) {
+                return `    for nested in std::mem::take(&mut msg.${fieldName}) {
+        free_${nestedName}(ManuallyDrop::new(nested));
+    }`;
+              } else if (copyTypes.has(field.type.schema.name)) {
+                return `    std::mem::take(&mut msg.${fieldName});`;
+              } else {
+                return `    for nested in std::mem::take(&mut msg.${fieldName}) {
+        std::mem::forget(nested);
+    }`;
+            }
           }
         }
         return "";

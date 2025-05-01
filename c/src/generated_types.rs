@@ -757,7 +757,6 @@ pub extern "C" fn foxglove_channel_log_frame_transforms(
     }
 }
 
-#[allow(forgetting_copy_types)]
 fn free_frame_transforms(mut msg: ManuallyDrop<foxglove::schemas::FrameTransforms>) {
     // The only allocations we made were for Vec<Nested> fields, which may also include Vec<Nested> fields in a couple cases.
     for nested in std::mem::take(&mut msg.transforms) {
@@ -914,7 +913,6 @@ pub extern "C" fn foxglove_channel_log_grid(
     }
 }
 
-#[allow(forgetting_copy_types)]
 fn free_grid(mut msg: ManuallyDrop<foxglove::schemas::Grid>) {
     // The only allocations we made were for Vec<Nested> fields, which may also include Vec<Nested> fields in a couple cases.
     for nested in std::mem::take(&mut msg.fields) {
@@ -990,12 +988,9 @@ pub extern "C" fn foxglove_channel_log_image_annotations(
     }
 }
 
-#[allow(forgetting_copy_types)]
 fn free_image_annotations(mut msg: ManuallyDrop<foxglove::schemas::ImageAnnotations>) {
     // The only allocations we made were for Vec<Nested> fields, which may also include Vec<Nested> fields in a couple cases.
-    for nested in std::mem::take(&mut msg.circles) {
-        std::mem::forget(nested);
-    }
+    std::mem::take(&mut msg.circles);
     for nested in std::mem::take(&mut msg.points) {
         free_points_annotation(ManuallyDrop::new(nested));
     }
@@ -1223,15 +1218,10 @@ impl LinePrimitive {
     }
 }
 
-#[allow(forgetting_copy_types)]
 fn free_line_primitive(mut msg: ManuallyDrop<foxglove::schemas::LinePrimitive>) {
     // The only allocations we made were for Vec<Nested> fields, which may also include Vec<Nested> fields in a couple cases.
-    for nested in std::mem::take(&mut msg.points) {
-        std::mem::forget(nested);
-    }
-    for nested in std::mem::take(&mut msg.colors) {
-        std::mem::forget(nested);
-    }
+    std::mem::take(&mut msg.points);
+    std::mem::take(&mut msg.colors);
 }
 
 /// A navigation satellite fix for any Global Navigation Satellite System
@@ -1609,24 +1599,15 @@ pub extern "C" fn foxglove_channel_log_scene_entity(
     }
 }
 
-#[allow(forgetting_copy_types)]
 fn free_scene_entity(mut msg: ManuallyDrop<foxglove::schemas::SceneEntity>) {
     // The only allocations we made were for Vec<Nested> fields, which may also include Vec<Nested> fields in a couple cases.
     for nested in std::mem::take(&mut msg.metadata) {
         std::mem::forget(nested);
     }
-    for nested in std::mem::take(&mut msg.arrows) {
-        std::mem::forget(nested);
-    }
-    for nested in std::mem::take(&mut msg.cubes) {
-        std::mem::forget(nested);
-    }
-    for nested in std::mem::take(&mut msg.spheres) {
-        std::mem::forget(nested);
-    }
-    for nested in std::mem::take(&mut msg.cylinders) {
-        std::mem::forget(nested);
-    }
+    std::mem::take(&mut msg.arrows);
+    std::mem::take(&mut msg.cubes);
+    std::mem::take(&mut msg.spheres);
+    std::mem::take(&mut msg.cylinders);
     for nested in std::mem::take(&mut msg.lines) {
         free_line_primitive(ManuallyDrop::new(nested));
     }
@@ -1701,7 +1682,6 @@ pub extern "C" fn foxglove_channel_log_scene_update(
     }
 }
 
-#[allow(forgetting_copy_types)]
 fn free_scene_update(mut msg: ManuallyDrop<foxglove::schemas::SceneUpdate>) {
     // The only allocations we made were for Vec<Nested> fields, which may also include Vec<Nested> fields in a couple cases.
     for nested in std::mem::take(&mut msg.deletions) {
@@ -2021,7 +2001,6 @@ pub extern "C" fn foxglove_channel_log_point_cloud(
     }
 }
 
-#[allow(forgetting_copy_types)]
 fn free_point_cloud(mut msg: ManuallyDrop<foxglove::schemas::PointCloud>) {
     // The only allocations we made were for Vec<Nested> fields, which may also include Vec<Nested> fields in a couple cases.
     for nested in std::mem::take(&mut msg.fields) {
@@ -2116,15 +2095,10 @@ pub extern "C" fn foxglove_channel_log_points_annotation(
     }
 }
 
-#[allow(forgetting_copy_types)]
 fn free_points_annotation(mut msg: ManuallyDrop<foxglove::schemas::PointsAnnotation>) {
     // The only allocations we made were for Vec<Nested> fields, which may also include Vec<Nested> fields in a couple cases.
-    for nested in std::mem::take(&mut msg.points) {
-        std::mem::forget(nested);
-    }
-    for nested in std::mem::take(&mut msg.outline_colors) {
-        std::mem::forget(nested);
-    }
+    std::mem::take(&mut msg.points);
+    std::mem::take(&mut msg.outline_colors);
 }
 
 /// A position and orientation for an object or reference frame in 3D space
@@ -2307,12 +2281,9 @@ pub extern "C" fn foxglove_channel_log_poses_in_frame(
     }
 }
 
-#[allow(forgetting_copy_types)]
 fn free_poses_in_frame(mut msg: ManuallyDrop<foxglove::schemas::PosesInFrame>) {
     // The only allocations we made were for Vec<Nested> fields, which may also include Vec<Nested> fields in a couple cases.
-    for nested in std::mem::take(&mut msg.poses) {
-        std::mem::forget(nested);
-    }
+    std::mem::take(&mut msg.poses);
 }
 
 /// A [quaternion](https://eater.net/quaternions) representing a rotation in 3D space
@@ -2744,15 +2715,10 @@ impl TriangleListPrimitive {
     }
 }
 
-#[allow(forgetting_copy_types)]
 fn free_triangle_list_primitive(mut msg: ManuallyDrop<foxglove::schemas::TriangleListPrimitive>) {
     // The only allocations we made were for Vec<Nested> fields, which may also include Vec<Nested> fields in a couple cases.
-    for nested in std::mem::take(&mut msg.points) {
-        std::mem::forget(nested);
-    }
-    for nested in std::mem::take(&mut msg.colors) {
-        std::mem::forget(nested);
-    }
+    std::mem::take(&mut msg.points);
+    std::mem::take(&mut msg.colors);
 }
 
 /// A vector in 2D space that represents a direction only
