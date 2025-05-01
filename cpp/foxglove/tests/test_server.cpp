@@ -249,6 +249,8 @@ TEST_CASE("Subscribe and unsubscribe callbacks") {
     return !unsubscribe_calls.empty();
   });
   REQUIRE_THAT(unsubscribe_calls, Equals(std::vector<uint64_t>{1}));
+
+  REQUIRE(server.stop() == foxglove::FoxgloveError::Ok);
 }
 
 TEST_CASE("Capability enums") {
@@ -369,6 +371,8 @@ TEST_CASE("Client advertise/publish callbacks") {
   cv.wait(lock, [&] {
     return !advertised;
   });
+
+  REQUIRE(server.stop() == foxglove::FoxgloveError::Ok);
 }
 
 TEST_CASE("Parameter callbacks") {
@@ -594,6 +598,8 @@ TEST_CASE("Parameter callbacks") {
       ]
     })");
   REQUIRE(parsed == expected);
+
+  REQUIRE(server.stop() == foxglove::FoxgloveError::Ok);
 }
 
 TEST_CASE("Parameter subscription callbacks") {
@@ -712,6 +718,8 @@ TEST_CASE("Parameter subscription callbacks") {
       "parameters": [{ "name": "beep", "value": "boop" }]
     })");
   REQUIRE(parsed == expected);
+
+  REQUIRE(server.stop() == foxglove::FoxgloveError::Ok);
 }
 
 TEST_CASE("Publish a connection graph") {
