@@ -117,7 +117,6 @@ struct PyContext(Arc<foxglove::Context>);
 
 #[pymethods]
 impl PyContext {
-    /// Create a new context for logging messages.
     #[new]
     fn new() -> Self {
         Self(foxglove::Context::new())

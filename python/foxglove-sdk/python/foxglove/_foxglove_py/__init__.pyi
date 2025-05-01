@@ -77,14 +77,23 @@ class Context:
         message_encoding: str,
         schema: Optional["Schema"] = None,
         metadata: Optional[List[Tuple[str, str]]] = None,
-    ) -> "BaseChannel": ...
+    ) -> "BaseChannel":
+        """
+        Instead of calling this method, pass a context to a channel constructor.
+        """
+        ...
+
     def open_mcap(
         self,
         path: str | Path,
         *,
         allow_overwrite: bool = False,
         writer_options: Optional[MCAPWriteOptions] = None,
-    ) -> "MCAPWriter": ...
+    ) -> "MCAPWriter":
+        """
+        Open a new mcap file for recording, and associate it with this context.
+        """
+        ...
 
 def start_server(
     *,
