@@ -106,6 +106,84 @@ impl BaseChannel {
     }
 }
 
+/// A context for logging messages.
+///
+/// A context is the binding between channels and sinks. By default, the SDK will use a single
+/// global context for logging, but you can create multiple contexts in order to log to different
+/// topics to different MCAP sinks. To do so, create a new context, pass it to the channel
+/// constructor, and open an mcap with :py:meth:`Context.open_mcap`.
+#[pyclass(module = "foxglove", name = "Context")]
+struct PyContext(Arc<foxglove::Context>);
+
+#[pymethods]
+impl PyContext {
+    /// Create a new context for logging messages.
+    #[new]
+    fn new() -> Self {
+        Self(foxglove::Context::new())
+    }
+
+    #[staticmethod]
+    fn default() -> Self {
+        Self(foxglove::Context::get_default())
+    }
+
+    /// Create a new channel for logging messages on a topic.
+    ///
+    /// Python users should pass a Context to a channel constructor instead of calling this method
+    /// directly.
+    #[pyo3(signature = (topic, *, message_encoding, schema=None, metadata=None))]
+    fn _create_channel(
+        &self,
+        topic: &str,
+        // todo: option?
+        message_encoding: &str,
+        schema: Option<PySchema>,
+        metadata: Option<BTreeMap<String, String>>,
+    ) -> PyResult<BaseChannel> {
+        let channel = self
+            .0
+            .channel_builder(topic)
+            .message_encoding(message_encoding)
+            .schema(schema.map(Schema::from))
+            .metadata(metadata.unwrap_or_default())
+            .build_raw()
+            .map_err(PyFoxgloveError::from)?;
+        Ok(BaseChannel(channel))
+    }
+
+    /// Open a new mcap file for recording, and associate it with this context.
+    ///
+    /// :param path: The path to the MCAP file. This file will be created and must not already exist.
+    /// :type path: str | Path
+    /// :param allow_overwrite: Set this flag in order to overwrite an existing file at this path.
+    /// :type allow_overwrite: Optional[bool]
+    /// :param writer_options: Options for the MCAP writer.
+    /// :type writer_options: :py:class:`mcap.MCAPWriteOptions`
+    /// :rtype: :py:class:`mcap.MCAPWriter`
+    #[pyo3(signature = (path, *, allow_overwrite = false, writer_options = None))]
+    fn open_mcap(
+        &self,
+        path: PathBuf,
+        allow_overwrite: bool,
+        writer_options: Option<PyMcapWriteOptions>,
+    ) -> PyResult<PyMcapWriter> {
+        let file = if allow_overwrite {
+            File::create(path)?
+        } else {
+            File::create_new(path)?
+        };
+
+        let options = writer_options.map_or_else(McapWriteOptions::default, |opts| opts.into());
+        let writer = BufWriter::new(file);
+        let handle = McapWriter::with_options(options)
+            .context(&self.0)
+            .create(writer)
+            .map_err(PyFoxgloveError::from)?;
+        Ok(PyMcapWriter(Some(handle)))
+    }
+}
+
 /// Open a new mcap file for recording.
 ///
 /// :param path: The path to the MCAP file. This file will be created and must not already exist.
@@ -186,7 +264,7 @@ fn _foxglove_py(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(get_channel_for_topic, m)?)?;
     m.add_class::<BaseChannel>()?;
     m.add_class::<PySchema>()?;
-
+    m.add_class::<PyContext>()?;
     // Register nested modules.
     schemas::register_submodule(m)?;
     channels::register_submodule(m)?;

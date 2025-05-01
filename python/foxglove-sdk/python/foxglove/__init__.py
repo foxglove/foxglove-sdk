@@ -12,7 +12,7 @@ from typing import List, Optional, Union
 from . import _foxglove_py as _foxglove
 
 # Re-export these imports
-from ._foxglove_py import Schema, open_mcap
+from ._foxglove_py import Context, Schema, open_mcap
 from .channel import Channel, log
 
 # Deprecated. Use foxglove.mcap.MCAPWriter instead.
@@ -111,6 +111,7 @@ def _level_names() -> dict[str, int]:
 
 __all__ = [
     "Channel",
+    "Context",
     "MCAPWriter",
     "Schema",
     "log",

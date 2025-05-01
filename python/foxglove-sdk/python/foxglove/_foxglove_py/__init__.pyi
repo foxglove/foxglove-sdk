@@ -60,6 +60,32 @@ class Schema:
         data: bytes,
     ) -> "Schema": ...
 
+class Context:
+    """
+    A context for logging messages.
+
+    A context is the binding between channels and sinks. By default, the SDK will use a single
+    global context for logging, but you can create multiple contexts in order to log to different
+    topics to different MCAP sinks. To do so, create a new context, pass it to the channel
+    constructor, and open an mcap with `Context.open_mcap`.
+    """
+
+    def __new__(cls) -> "Context": ...
+    def _create_channel(
+        self,
+        topic: str,
+        message_encoding: str,
+        schema: Optional["Schema"] = None,
+        metadata: Optional[List[Tuple[str, str]]] = None,
+    ) -> "BaseChannel": ...
+    def open_mcap(
+        self,
+        path: str | Path,
+        *,
+        allow_overwrite: bool = False,
+        writer_options: Optional[MCAPWriteOptions] = None,
+    ) -> "MCAPWriter": ...
+
 def start_server(
     *,
     name: Optional[str] = None,
@@ -110,7 +136,7 @@ def open_mcap(
     """
     ...
 
-def get_channel_for_topic(topic: str) -> BaseChannel:
+def get_channel_for_topic(topic: str) -> Optional[BaseChannel]:
     """
     Get a previously-registered channel.
     """
