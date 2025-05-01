@@ -3,10 +3,10 @@ import json
 from base64 import b64encode
 from typing import Any, Dict, Optional, Union, cast
 
+from . import Context
 from . import _foxglove_py as _foxglove
 from . import channels as _channels
 from . import schemas as _schemas
-from . import Context
 
 JsonSchema = Dict[str, Any]
 JsonMessage = Dict[str, Any]
