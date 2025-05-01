@@ -1,9 +1,9 @@
 import time
 
+import foxglove.schemas
 from foxglove import Context
 from foxglove.channel import Channel
 from foxglove.channels import SceneUpdateChannel
-import foxglove.schemas
 
 ctx1 = Context()
 ctx2 = Context()
