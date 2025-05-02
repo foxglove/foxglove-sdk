@@ -50,7 +50,7 @@ pub fn create_channel<T: Encode>(
 /// If a channel for the topic already exists in the default Context, it will be used.
 /// Otherwise, a new channel will be created. Either way, the channel is never removed
 /// from the Context. Panics if the existing channel schema or message_encoding
-/// is incomptable with $msg.
+/// is incompatible with $msg.
 ///
 /// Panics if a channel can't be created for $msg.
 #[macro_export]

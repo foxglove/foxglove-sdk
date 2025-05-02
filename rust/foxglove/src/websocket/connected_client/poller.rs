@@ -10,7 +10,7 @@ use super::{ConnectedClient, ShutdownReason};
 
 /// A poller for a connected client.
 ///
-/// The poller is repsonsible for:
+/// The poller is responsible for:
 /// - Sending messages (from `data_plane` and `control_plane`) to the websocket.
 /// - Receiving messages from the websocket and invoking [`ConnectedClient::handle_message`].
 /// - Waiting for a shutdown signal, and closing the websocket.

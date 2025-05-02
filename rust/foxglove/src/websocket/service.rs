@@ -197,7 +197,7 @@ impl Service {
         self.schema().request().map(|rs| rs.encoding.as_str())
     }
 
-    /// The declared repsonse encoding.
+    /// The declared response encoding.
     pub(crate) fn response_encoding(&self) -> Option<&str> {
         self.schema().response().map(|rs| rs.encoding.as_str())
     }

@@ -15,7 +15,7 @@ pub fn set_sdk_language(language: &'static str) {
     CELL.get_or_init(|| language);
 }
 
-/// Returns an identifer for this library, for use in log sinks.
+/// Returns an identifier for this library, for use in log sinks.
 /// Note that `set_sdk_language` must be called before this for it to have an effect.
 pub(crate) fn get_library_version() -> String {
     let language = CELL.get_or_init(|| COMPILED_SDK_LANGUAGE.as_str());

@@ -960,8 +960,8 @@ async fn test_set_parameters() {
     let msg = expect_recv!(client, ServerMessage::ParameterValues);
     assert_eq!(msg, ParameterValues::new(parameters.clone()).with_id("123"));
 
-    // it will also publish the updated paramters returned from on_set_parameters
-    // which will send just the paramters we're subscribed to.
+    // it will also publish the updated parameters returned from on_set_parameters
+    // which will send just the parameters we're subscribed to.
     let msg = expect_recv!(client, ServerMessage::ParameterValues);
     assert_eq!(msg, ParameterValues::new(parameters[..2].to_vec()));
 

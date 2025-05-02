@@ -22,7 +22,7 @@ pub trait ServerListener: Send + Sync {
     fn on_client_unadvertise(&self, _client: Client, _channel: &ClientChannel) {}
     /// Callback invoked when a client requests parameters. Requires
     /// [`Capability::Parameters`][super::Capability::Parameters]. Should return the named
-    /// paramters, or all paramters if param_names is empty.
+    /// parameters, or all parameters if param_names is empty.
     fn on_get_parameters(
         &self,
         _client: Client,

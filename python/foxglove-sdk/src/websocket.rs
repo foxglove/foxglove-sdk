@@ -1009,7 +1009,7 @@ impl<'py> FromPyObject<'py> for ParameterValueConverter {
             Ok(Self(PyParameterValue::Dict(values)))
         } else {
             Err(PyErr::new::<PyTypeError, _>(format!(
-                "Unsupported type for ParamaterValue: {}",
+                "Unsupported type for ParameterValue: {}",
                 obj.get_type().name()?
             )))
         }
@@ -1061,7 +1061,7 @@ impl<'py> FromPyObject<'py> for ParameterTypeValueConverter {
             ))
         } else {
             Err(PyErr::new::<PyTypeError, _>(format!(
-                "Unsupported type for ParamaterValue: {}",
+                "Unsupported type for ParameterValue: {}",
                 obj.get_type().name()?
             )))
         }
