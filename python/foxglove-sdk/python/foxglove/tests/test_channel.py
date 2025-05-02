@@ -2,7 +2,7 @@ import logging
 import random
 
 import pytest
-from foxglove import Schema
+from foxglove import Context, Schema
 from foxglove.channel import Channel
 from foxglove.channels import LogChannel
 from foxglove.schemas import Log
@@ -13,11 +13,33 @@ def new_topic() -> str:
     return f"/{random.random()}"
 
 
-def test_prohibits_duplicate_topics() -> None:
+def test_warns_on_duplicate_topics(caplog: pytest.LogCaptureFixture) -> None:
     schema = {"type": "object"}
     _ = Channel("test-duplicate", schema=schema)
-    with pytest.raises(ValueError, match="already exists"):
+
+    with caplog.at_level(logging.WARNING):
         Channel("test-duplicate", schema=schema)
+
+    assert len(caplog.records) == 1
+    for _, _, message in caplog.record_tuples:
+        assert (
+            "Channel with topic test-duplicate already exists in this context"
+            in message
+        )
+
+
+def test_does_not_warn_on_duplicate_topics_in_contexts(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    ctx1 = Context()
+    ctx2 = Context()
+
+    _ = Channel("test-duplicate", context=ctx1)
+
+    with caplog.at_level(logging.WARNING):
+        Channel("test-duplicate", context=ctx2)
+
+    assert len(caplog.records) == 0
 
 
 def test_requires_an_object_schema(new_topic: str) -> None:
