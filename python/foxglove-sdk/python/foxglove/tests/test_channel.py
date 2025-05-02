@@ -15,10 +15,20 @@ def new_topic() -> str:
 
 def test_warns_on_duplicate_topics(caplog: pytest.LogCaptureFixture) -> None:
     schema = {"type": "object"}
-    _ = Channel("test-duplicate", schema=schema)
+    c1 = Channel("test-duplicate", schema=schema)
+    c2 = Channel("test-duplicate", schema=schema)
+    assert c1.id() == c2.id()
 
     with caplog.at_level(logging.WARNING):
-        Channel("test-duplicate", schema=schema)
+        # Same topic, different schema
+        c3 = Channel(
+            "test-duplicate",
+            schema={
+                "type": "object",
+                "additionalProperties": False,
+            },
+        )
+        assert c1.id() != c3.id()
 
     assert len(caplog.records) == 1
     for _, _, message in caplog.record_tuples:
