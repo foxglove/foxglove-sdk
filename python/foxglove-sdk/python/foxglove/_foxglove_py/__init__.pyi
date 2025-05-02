@@ -66,8 +66,8 @@ class Context:
 
     A context is the binding between channels and sinks. By default, the SDK will use a single
     global context for logging, but you can create multiple contexts in order to log to different
-    topics to different MCAP sinks. To do so, create a new context, pass it to the channel
-    constructor, and open an mcap with `Context.open_mcap`.
+    topics to different sinks or servers. To do so, associate the context by passing it to the
+    channel constructor and to :py:func:`open_mcap` or :py:func:`start_server`.
     """
 
     def __new__(cls) -> "Context": ...
@@ -83,18 +83,6 @@ class Context:
         """
         ...
 
-    def open_mcap(
-        self,
-        path: str | Path,
-        *,
-        allow_overwrite: bool = False,
-        writer_options: Optional[MCAPWriteOptions] = None,
-    ) -> "MCAPWriter":
-        """
-        Open a new mcap file for recording, and associate it with this context.
-        """
-        ...
-
 def start_server(
     *,
     name: Optional[str] = None,
@@ -105,6 +93,7 @@ def start_server(
     supported_encodings: Optional[List[str]] = None,
     services: Optional[List["Service"]] = None,
     asset_handler: Optional["AssetHandler"] = None,
+    context: Optional["Context"] = None,
 ) -> WebSocketServer:
     """
     Start a websocket server for live visualization.
@@ -133,15 +122,14 @@ def open_mcap(
     path: str | Path,
     *,
     allow_overwrite: bool = False,
+    context: Optional["Context"] = None,
     writer_options: Optional[MCAPWriteOptions] = None,
 ) -> MCAPWriter:
     """
     Creates a new MCAP file for recording.
 
-    :param path: The path to the MCAP file. This file will be created and must not already exist.
-    :param allow_overwrite: Set this flag in order to overwrite an existing file at this path.
-    :param writer_options: Options for the MCAP writer.
-    :rtype: :py:class:`MCAPWriter`
+    If a context is provided, the MCAP file will be associated with that context. Otherwise, the
+    global context will be used.
     """
     ...
 

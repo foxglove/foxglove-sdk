@@ -38,6 +38,7 @@ def start_server(
     supported_encodings: Optional[List[str]] = None,
     services: Optional[List[Service]] = None,
     asset_handler: Optional[AssetHandler] = None,
+    context: Optional[Context] = None,
 ) -> WebSocketServer:
     """
     Start a websocket server for live visualization.
@@ -52,6 +53,7 @@ def start_server(
     :param services: A list of services to advertise to clients.
     :param asset_handler: A callback function that returns the asset for a given URI, or None if
         it doesn't exist.
+    :param context: The context to use for logging. If None, the global context is used.
     """
     return _foxglove.start_server(
         name=name,
@@ -62,6 +64,7 @@ def start_server(
         supported_encodings=supported_encodings,
         services=services,
         asset_handler=asset_handler,
+        context=context,
     )
 
 

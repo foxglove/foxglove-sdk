@@ -110,10 +110,10 @@ impl BaseChannel {
 ///
 /// A context is the binding between channels and sinks. By default, the SDK will use a single
 /// global context for logging, but you can create multiple contexts in order to log to different
-/// topics to different MCAP sinks. To do so, create a new context, pass it to the channel
-/// constructor, and open an mcap with :py:meth:`Context.open_mcap`.
+/// topics to different sinks or servers. To do so, associate the context by passing it to the
+/// channel constructor and to :py:func:`open_mcap` or :py:func:`start_server`.
 #[pyclass(module = "foxglove", name = "Context")]
-struct PyContext(Arc<foxglove::Context>);
+struct PyContext(pub(crate) Arc<foxglove::Context>);
 
 #[pymethods]
 impl PyContext {
@@ -135,7 +135,6 @@ impl PyContext {
     fn _create_channel(
         &self,
         topic: &str,
-        // todo: option?
         message_encoding: &str,
         schema: Option<PySchema>,
         metadata: Option<BTreeMap<String, String>>,
@@ -150,37 +149,6 @@ impl PyContext {
             .map_err(PyFoxgloveError::from)?;
         Ok(BaseChannel(channel))
     }
-
-    /// Open a new mcap file for recording, and associate it with this context.
-    ///
-    /// :param path: The path to the MCAP file. This file will be created and must not already exist.
-    /// :type path: str | Path
-    /// :param allow_overwrite: Set this flag in order to overwrite an existing file at this path.
-    /// :type allow_overwrite: Optional[bool]
-    /// :param writer_options: Options for the MCAP writer.
-    /// :type writer_options: :py:class:`mcap.MCAPWriteOptions`
-    /// :rtype: :py:class:`mcap.MCAPWriter`
-    #[pyo3(signature = (path, *, allow_overwrite = false, writer_options = None))]
-    fn open_mcap(
-        &self,
-        path: PathBuf,
-        allow_overwrite: bool,
-        writer_options: Option<PyMcapWriteOptions>,
-    ) -> PyResult<PyMcapWriter> {
-        let file = if allow_overwrite {
-            File::create(path)?
-        } else {
-            File::create_new(path)?
-        };
-
-        let options = writer_options.map_or_else(McapWriteOptions::default, |opts| opts.into());
-        let writer = BufWriter::new(file);
-        let handle = McapWriter::with_options(options)
-            .context(&self.0)
-            .create(writer)
-            .map_err(PyFoxgloveError::from)?;
-        Ok(PyMcapWriter(Some(handle)))
-    }
 }
 
 /// Open a new mcap file for recording.
@@ -189,14 +157,17 @@ impl PyContext {
 /// :type path: str | Path
 /// :param allow_overwrite: Set this flag in order to overwrite an existing file at this path.
 /// :type allow_overwrite: Optional[bool]
+/// :param context: The context to use for logging. If None, the global context is used.
+/// :type context: :py:class:`Context`
 /// :param writer_options: Options for the MCAP writer.
 /// :type writer_options: :py:class:`mcap.MCAPWriteOptions`
 /// :rtype: :py:class:`mcap.MCAPWriter`
 #[pyfunction]
-#[pyo3(signature = (path, *, allow_overwrite = false, writer_options = None))]
+#[pyo3(signature = (path, *, allow_overwrite = false, context = None, writer_options = None))]
 fn open_mcap(
     path: PathBuf,
     allow_overwrite: bool,
+    context: Option<PyRef<PyContext>>,
     writer_options: Option<PyMcapWriteOptions>,
 ) -> PyResult<PyMcapWriter> {
     let file = if allow_overwrite {
@@ -207,9 +178,12 @@ fn open_mcap(
 
     let options = writer_options.map_or_else(McapWriteOptions::default, |opts| opts.into());
     let writer = BufWriter::new(file);
-    let handle = McapWriter::with_options(options)
-        .create(writer)
-        .map_err(PyFoxgloveError::from)?;
+    let handle = if let Some(context) = context {
+        McapWriter::with_options(options).context(&context.0)
+    } else {
+        McapWriter::with_options(options)
+    };
+    let handle = handle.create(writer).map_err(PyFoxgloveError::from)?;
     Ok(PyMcapWriter(Some(handle)))
 }
 

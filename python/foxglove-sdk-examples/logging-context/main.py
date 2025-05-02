@@ -1,15 +1,15 @@
 import time
 
 import foxglove.schemas
-from foxglove import Context
+from foxglove import Context, open_mcap
 from foxglove.channel import Channel
 from foxglove.channels import SceneUpdateChannel
 
 ctx1 = Context()
 ctx2 = Context()
 
-mcap1 = ctx1.open_mcap("file1.mcap")
-mcap2 = ctx2.open_mcap("file2.mcap")
+mcap1 = open_mcap("file1.mcap", context=ctx1)
+mcap2 = open_mcap("file2.mcap", context=ctx2)
 
 foo = SceneUpdateChannel("/foo", context=ctx1)
 bar = Channel("/bar", context=ctx1)

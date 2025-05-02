@@ -3,10 +3,12 @@ import time
 import pytest
 from foxglove import (
     Capability,
+    Context,
     ServerListener,
     Service,
     start_server,
 )
+from foxglove.channel import Channel
 from foxglove.websocket import ServiceSchema, StatusLevel
 
 
@@ -66,3 +68,19 @@ def test_services_interface() -> None:
     server.add_services([test_svc])
 
     server.stop()
+
+
+def test_context_can_be_attached_to_server() -> None:
+    ctx1 = Context()
+    ctx2 = Context()
+
+    server1 = start_server(port=0, context=ctx1)
+    server2 = start_server(port=0, context=ctx2)
+
+    ch1 = Channel("/1", context=ctx1)
+    ch2 = Channel("/2", context=ctx2)
+    ch1.log("test")
+    ch2.log("test")
+
+    server1.stop()
+    server2.stop()

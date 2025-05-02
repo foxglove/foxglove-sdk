@@ -99,8 +99,8 @@ def test_write_to_different_contexts(make_tmp_mcap: Callable[[], Path]) -> None:
     ctx2 = Context()
 
     options = MCAPWriteOptions(compression=None)
-    mcap1 = ctx1.open_mcap(tmp_1, writer_options=options)
-    mcap2 = ctx2.open_mcap(tmp_2, writer_options=options)
+    mcap1 = open_mcap(tmp_1, writer_options=options, context=ctx1)
+    mcap2 = open_mcap(tmp_2, writer_options=options, context=ctx2)
 
     ch1 = Channel("ctx1", context=ctx1)
     ch1.log({"a": "b"})
