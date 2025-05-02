@@ -502,11 +502,14 @@ pub unsafe extern "C" fn foxglove_parameter_free(param: *mut FoxgloveParameter) 
     drop(param);
 }
 
-/// A websocket parameter type.
+/// A parameter type.
+///
+/// This enum is used to disambiguate `foxglove_parameter` values, in situations where the wire
+/// representation is ambiguous.
 #[derive(Clone, Copy)]
 #[repr(u8)]
 pub enum FoxgloveParameterType {
-    /// The paramter value can be inferred from the inner parameter value tag.
+    /// The parameter value can be inferred from the inner parameter value tag.
     None,
     /// An array of bytes.
     ByteArray,
@@ -850,7 +853,7 @@ pub unsafe extern "C" fn foxglove_parameter_value_clone(
     }
 }
 
-/// Frees a paramter value.
+/// Frees a parameter value.
 ///
 /// # Safety
 /// - `value` must be a valid pointer to a value allocated by `foxglove_parameter_value_create_*`.

@@ -63,11 +63,27 @@ struct WebSocketServerCallbacks {
     void(uint32_t clientId, uint32_t clientChannelId, const std::byte* data, size_t dataLen)>
     onMessageData;
   std::function<void(uint32_t clientId, uint32_t clientChannelId)> onClientUnadvertise;
+
+  /// Callback invoked when a client requests parameters.
+  ///
+  /// Requires `FOXGLOVE_CAPABILITY_PARAMETERS`.
+  ///
+  /// The `request_id` argument may be NULL.
+  ///
+  /// This function should return the named parameters, or all parameters if
+  /// `paramNames` is empty.
   std::function<std::vector<Parameter>(
     uint32_t clientId, std::optional<std::string_view> requestId,
     const std::vector<std::string_view>& paramNames
   )>
     onGetParameters;
+
+  /// Callback invoked when a client sets parameters.
+  ///
+  /// Requires `FOXGLOVE_CAPABILITY_PARAMETERS`.
+  ///
+  /// This function should return the updated parameters. All clients subscribed
+  /// to updates for the returned parameters will be notified.
   std::function<std::vector<Parameter>(
     uint32_t clientId, std::optional<std::string_view> requestId,
     const std::vector<ParameterView>& params

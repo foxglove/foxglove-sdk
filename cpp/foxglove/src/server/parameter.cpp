@@ -166,7 +166,7 @@ ParameterType ParameterView::type() const noexcept {
   return static_cast<ParameterType>(_impl->type);
 }
 
-std::optional<ParameterValueView> ParameterView::valueView() const noexcept {
+std::optional<ParameterValueView> ParameterView::value() const noexcept {
   if (_impl->value == nullptr) {
     return {};
   }

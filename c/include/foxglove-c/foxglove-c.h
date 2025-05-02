@@ -88,7 +88,10 @@ typedef uint8_t foxglove_mcap_compression;
 #endif // __cplusplus
 
 /**
- * A websocket parameter type.
+ * A parameter type.
+ *
+ * This enum is used to disambiguate `foxglove_parameter` values, in situations where the wire
+ * representation is ambiguous.
  */
 enum foxglove_parameter_type
 #ifdef __cplusplus
@@ -96,7 +99,7 @@ enum foxglove_parameter_type
 #endif // __cplusplus
  {
   /**
-   * The paramter value can be inferred from the inner parameter value tag.
+   * The parameter value can be inferred from the inner parameter value tag.
    */
   FOXGLOVE_PARAMETER_TYPE_NONE,
   /**
@@ -312,9 +315,11 @@ typedef struct foxglove_server_callbacks {
    *
    * Requires `FOXGLOVE_CAPABILITY_PARAMETERS`.
    *
-   * The `request_id` and `param_names` arguments are guaranteed to be non-NULL. These arguments
-   * point to buffers that are valid and immutable for the duration of the call. If the callback
-   * wishes to store these values, they must be copied out.
+   * The `request_id` argument may be NULL.
+   *
+   * The `param_names` argument is guaranteed to be non-NULL. These arguments point to buffers
+   * that are valid and immutable for the duration of the call. If the callback wishes to store
+   * these values, they must be copied out.
    *
    * This function should return the named parameters, or all parameters if `param_names` is
    * empty. The return value must be allocated with `foxglove_parameter_array_create`. Ownership
@@ -331,9 +336,11 @@ typedef struct foxglove_server_callbacks {
    *
    * Requires `FOXGLOVE_CAPABILITY_PARAMETERS`.
    *
-   * The `request_id` and `params` arguments are guaranteed to be non-NULL. These arguments
-   * point to buffers that are valid and immutable for the duration of the call. If the callback
-   * wishes to store these values, they must be copied out.
+   * The `request_id` argument may be NULL.
+   *
+   * The `params` argument is guaranteed to be non-NULL. These arguments point to buffers that
+   * are valid and immutable for the duration of the call. If the callback wishes to store these
+   * values, they must be copied out.
    *
    * This function should return the updated parameters. The return value must be allocated with
    * `foxglove_parameter_array_create`. Ownership of this value is transfered to the callee, who
@@ -851,7 +858,7 @@ struct foxglove_parameter_value *foxglove_parameter_value_create_dict(struct fox
 struct foxglove_parameter_value *foxglove_parameter_value_clone(const struct foxglove_parameter_value *value);
 
 /**
- * Frees a paramter value.
+ * Frees a parameter value.
  *
  * # Safety
  * - `value` must be a valid pointer to a value allocated by `foxglove_parameter_value_create_*`.

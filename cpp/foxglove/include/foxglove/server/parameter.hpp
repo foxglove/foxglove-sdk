@@ -17,17 +17,28 @@ struct foxglove_parameter_array;
 namespace foxglove {
 
 /**
- * A parameter type
+ * A parameter type.
+ *
+ * This enum is used to disambiguate `Parameter` values, in situations where the
+ * wire representation is ambiguous.
  */
 enum class ParameterType : uint8_t {
+  // The parameter value can be inferred from the inner parameter value tag.
   None,
+  // An array of bytes.
   ByteArray,
+  // A decimal or integer value that can be represented as a `float64`.
   Float64,
+  // An array of decimal or integer values that can be represented as `float64`s.
   Float64Array,
 };
 
 /**
  * A view over an unowned parameter value.
+ *
+ * This lifetime of this view is tied to the `ParameterValue` from which it was
+ * derived. It is the caller's responsibility to ensure the validity of this
+ * lifetime when accessing the view.
  */
 class ParameterValueView final {
 public:
@@ -38,7 +49,7 @@ public:
   using Dict = std::map<std::string, ParameterValueView>;
   using Value = std::variant<Number, Boolean, String, Array, Dict>;
 
-  // Accessors
+  // Returns a C++ native representation of the value.
   [[nodiscard]] Value value() const;
 
   // Creates a deep clone of this parameter value.
@@ -104,19 +115,17 @@ private:
 
 /**
  * A view over an unowned parameter.
+ *
+ * This lifetime of this view is tied to the `Parameter` from which it was
+ * derived. It is the caller's responsibility to ensure the validity of this
+ * lifetime when accessing the view.
  */
 class ParameterView final {
 public:
   // Accessors
   [[nodiscard]] std::string_view name() const noexcept;
   [[nodiscard]] ParameterType type() const noexcept;
-  [[nodiscard]] std::optional<ParameterValueView> valueView() const noexcept;
-  [[nodiscard]] std::optional<ParameterValueView::Value> value() const {
-    if (auto valueView = this->valueView()) {
-      return valueView->value();
-    }
-    return {};
-  }
+  [[nodiscard]] std::optional<ParameterValueView> value() const noexcept;
 
   // Creates a deep clone of this parameter.
   [[nodiscard]] class Parameter clone() const;
@@ -161,7 +170,7 @@ public:
   [[nodiscard]] ParameterType type() const noexcept {
     return this->view().type();
   }
-  [[nodiscard]] std::optional<ParameterValueView::Value> value() const {
+  [[nodiscard]] std::optional<ParameterValueView> value() const noexcept {
     return this->view().value();
   }
 
@@ -188,6 +197,10 @@ private:
 
 /**
  * A view over an unowned parameter array.
+ *
+ * This lifetime of this view is tied to the `ParameterArray` from which it was
+ * derived. It is the caller's responsibility to ensure the validity of this
+ * lifetime when accessing the view.
  */
 class ParameterArrayView final {
 public:

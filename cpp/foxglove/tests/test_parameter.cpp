@@ -81,8 +81,9 @@ TEST_CASE("Parameter construction and access") {
     auto value = param.value();
     REQUIRE(value.has_value());
     if (value.has_value()) {
-      REQUIRE(std::holds_alternative<double>(*value));
-      REQUIRE(std::get<double>(*value) == 42.0);
+      auto inner = (*value).value();
+      REQUIRE(std::holds_alternative<double>(inner));
+      REQUIRE(std::get<double>(inner) == 42.0);
     }
   }
 
@@ -93,8 +94,9 @@ TEST_CASE("Parameter construction and access") {
     auto value = param.value();
     REQUIRE(value.has_value());
     if (value.has_value()) {
-      REQUIRE(std::holds_alternative<bool>(*value));
-      REQUIRE(std::get<bool>(*value) == true);
+      auto inner = (*value).value();
+      REQUIRE(std::holds_alternative<bool>(inner));
+      REQUIRE(std::get<bool>(inner) == true);
     }
   }
 
@@ -105,8 +107,9 @@ TEST_CASE("Parameter construction and access") {
     auto value = param.value();
     REQUIRE(value.has_value());
     if (value.has_value()) {
-      REQUIRE(std::holds_alternative<std::string>(*value));
-      REQUIRE(std::get<std::string>(*value) == "test string");
+      auto inner = (*value).value();
+      REQUIRE(std::holds_alternative<std::string>(inner));
+      REQUIRE(std::get<std::string>(inner) == "test string");
     }
   }
 
@@ -118,8 +121,9 @@ TEST_CASE("Parameter construction and access") {
     auto value = param.value();
     REQUIRE(value.has_value());
     if (value.has_value()) {
-      REQUIRE(std::holds_alternative<std::string>(*value));
-      REQUIRE(std::get<std::string>(*value) == "AQIDBA==");
+      auto inner = (*value).value();
+      REQUIRE(std::holds_alternative<std::string>(inner));
+      REQUIRE(std::get<std::string>(inner) == "AQIDBA==");
     }
   }
 
@@ -131,8 +135,9 @@ TEST_CASE("Parameter construction and access") {
     auto value = param.value();
     REQUIRE(value.has_value());
     if (value.has_value()) {
-      REQUIRE(std::holds_alternative<foxglove::ParameterValueView::Array>(*value));
-      const auto& array = std::get<foxglove::ParameterValueView::Array>(*value);
+      auto inner = (*value).value();
+      REQUIRE(std::holds_alternative<foxglove::ParameterValueView::Array>(inner));
+      const auto& array = std::get<foxglove::ParameterValueView::Array>(inner);
       REQUIRE(array.size() == 3);
       REQUIRE(std::get<double>(array[0].value()) == 1.0);
       REQUIRE(std::get<double>(array[1].value()) == 2.0);
@@ -150,8 +155,9 @@ TEST_CASE("Parameter construction and access") {
     auto value = param.value();
     REQUIRE(value.has_value());
     if (value.has_value()) {
-      REQUIRE(std::holds_alternative<foxglove::ParameterValueView::Dict>(*value));
-      const auto& dict = std::get<foxglove::ParameterValueView::Dict>(*value);
+      auto inner = (*value).value();
+      REQUIRE(std::holds_alternative<foxglove::ParameterValueView::Dict>(inner));
+      const auto& dict = std::get<foxglove::ParameterValueView::Dict>(inner);
       REQUIRE(dict.size() == 2);
       REQUIRE(std::get<double>(dict.at("key1").value()) == 1.0);
       REQUIRE(std::get<std::string>(dict.at("key2").value()) == "value");
@@ -182,12 +188,15 @@ TEST_CASE("ParameterArray functionality") {
   REQUIRE(value3.has_value());
 
   if (value1.has_value()) {
-    REQUIRE(std::get<double>(*value1) == 1.0);
+    auto inner = (*value1).value();
+    REQUIRE(std::get<double>(inner) == 1.0);
   }
   if (value2.has_value()) {
-    REQUIRE(std::get<double>(*value2) == 2.0);
+    auto inner = (*value2).value();
+    REQUIRE(std::get<double>(inner) == 2.0);
   }
   if (value3.has_value()) {
-    REQUIRE(std::get<double>(*value3) == 3.0);
+    auto inner = (*value3).value();
+    REQUIRE(std::get<double>(inner) == 3.0);
   }
 }
