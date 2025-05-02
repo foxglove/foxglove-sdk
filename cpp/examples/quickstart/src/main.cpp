@@ -13,6 +13,8 @@ using namespace std::chrono_literals;
 
 // This example logs custom data on an "example" topic. Open Foxglove and connect to the running
 // server. Then add a Raw Message panel, and choose the "example" topic.
+
+// NOLINTNEXTLINE(bugprone-exception-escape)
 int main(int argc, const char* argv[]) {
   static std::function<void()> sigint_handler;
 

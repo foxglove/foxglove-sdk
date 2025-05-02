@@ -3,6 +3,7 @@
 
 #include <iostream>
 
+// NOLINTNEXTLINE(bugprone-exception-escape)
 int main(int argc, const char* argv[]) {
   foxglove::McapWriterOptions options = {};
   options.path = "test.mcap";
