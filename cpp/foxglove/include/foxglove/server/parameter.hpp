@@ -76,7 +76,7 @@ public:
 
   // Accessors
   [[nodiscard]] ParameterValueView view() const noexcept;
-  [[nodiscard]] ParameterValueView::Value getValue() const {
+  [[nodiscard]] ParameterValueView::Value value() const {
     return this->view().value();
   }
 
