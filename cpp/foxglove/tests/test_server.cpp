@@ -297,8 +297,8 @@ TEST_CASE("Client advertise/publish callbacks") {
           "id": 100,
           "topic": "topic",
           "encoding": "encoding",
-          "schema_name": "schema name",
-          "schema_encoding": "schema encoding",
+          "schemaName": "schema name",
+          "schemaEncoding": "schema encoding",
           "schema": "schema data"
         }
       ]
