@@ -1,0 +1,1192 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>API Reference &#8212; Foxglove SDK 0.7.1 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=12dfc556" />
+    <script src="../_static/documentation_options.js?v=5a057da9"></script>
+    <script src="../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="&lt;no title&gt;" href="schemas.html" />
+    <link rel="prev" title="Examples" href="../examples.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="api-reference">
+<h1>API Reference<a class="headerlink" href="#api-reference" title="Link to this heading">¶</a></h1>
+<p>Version: 0.7.1</p>
+<section id="module-foxglove">
+<span id="foxglove"></span><h2>foxglove<a class="headerlink" href="#module-foxglove" title="Link to this heading">¶</a></h2>
+<p>This module provides interfaces for logging messages to Foxglove.</p>
+<p>See <a class="reference internal" href="schemas.html#module-foxglove.schemas" title="foxglove.schemas"><code class="xref py py-mod docutils literal notranslate"><span class="pre">foxglove.schemas</span></code></a> and <a class="reference internal" href="channels.html#module-foxglove.channels" title="foxglove.channels"><code class="xref py py-mod docutils literal notranslate"><span class="pre">foxglove.channels</span></code></a> for working with well-known Foxglove
+schemas.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.Channel">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.</span></span><span class="sig-name descname"><span class="pre">Channel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">topic</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">schema</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">message_encoding</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">context</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.Channel" title="Link to this definition">¶</a></dt>
+<dd><p>A channel that can be used to log binary messages or JSON messages.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.Channel.close">
+<span class="sig-name descname"><span class="pre">close</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.Channel.close" title="Link to this definition">¶</a></dt>
+<dd><p>Close the channel.</p>
+<p>You can use this to explicitly unadvertise the channel to sinks that subscribe to
+channels dynamically, such as the <a class="reference internal" href="#foxglove.websocket.WebSocketServer" title="foxglove.websocket.WebSocketServer"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.websocket.WebSocketServer</span></code></a>.</p>
+<p>Attempts to log on a closed channel will elicit a throttled warning message.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.Channel.id">
+<span class="sig-name descname"><span class="pre">id</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.Channel.id" title="Link to this definition">¶</a></dt>
+<dd><p>The unique ID of the channel</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.Channel.log">
+<span class="sig-name descname"><span class="pre">log</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">msg</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_time</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.Channel.log" title="Link to this definition">¶</a></dt>
+<dd><p>Log a message on the channel.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>msg</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">Dict</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, <code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code>], <code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code>[<code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code>], <code class="xref py py-class docutils literal notranslate"><span class="pre">bytes</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]</span>) – the message to log. If the channel uses JSON encoding, you may pass a
+dictionary or list. Otherwise, you are responsible for serializing the message.</p></li>
+<li><p><strong>log_time</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>]</span> (default: <code class="docutils literal notranslate"><span class="pre">None</span></code>)) – The optional time the message was logged.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.Channel.schema_name">
+<span class="sig-name descname"><span class="pre">schema_name</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.Channel.schema_name" title="Link to this definition">¶</a></dt>
+<dd><p>The name of the schema for the channel</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]</span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.Channel.topic">
+<span class="sig-name descname"><span class="pre">topic</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.Channel.topic" title="Link to this definition">¶</a></dt>
+<dd><p>The topic name of the channel</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.Context">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.</span></span><span class="sig-name descname"><span class="pre">Context</span></span><a class="headerlink" href="#foxglove.Context" title="Link to this definition">¶</a></dt>
+<dd><p>A context for logging messages.</p>
+<p>A context is the binding between channels and sinks. By default, the SDK will use a single
+global context for logging, but you can create multiple contexts in order to log to different
+topics to different sinks or servers. To do so, associate the context by passing it to the
+channel constructor and to <a class="reference internal" href="#foxglove.open_mcap" title="foxglove.open_mcap"><code class="xref py py-func docutils literal notranslate"><span class="pre">open_mcap()</span></code></a> or <a class="reference internal" href="#foxglove.start_server" title="foxglove.start_server"><code class="xref py py-func docutils literal notranslate"><span class="pre">start_server()</span></code></a>.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.Schema">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.</span></span><span class="sig-name descname"><span class="pre">Schema</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">encoding</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.Schema" title="Link to this definition">¶</a></dt>
+<dd><p>A Schema is a description of the data format of messages or service calls.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>name</strong> (<em>str</em>) – The name of the schema.</p></li>
+<li><p><strong>encoding</strong> (<em>str</em>) – The encoding of the schema.</p></li>
+<li><p><strong>data</strong> (<em>bytes</em>) – Schema data.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="foxglove.Schema.data">
+<span class="sig-name descname"><span class="pre">data</span></span><a class="headerlink" href="#foxglove.Schema.data" title="Link to this definition">¶</a></dt>
+<dd><p>Schema data.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="foxglove.Schema.encoding">
+<span class="sig-name descname"><span class="pre">encoding</span></span><a class="headerlink" href="#foxglove.Schema.encoding" title="Link to this definition">¶</a></dt>
+<dd><p>The encoding of the schema.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="foxglove.Schema.name">
+<span class="sig-name descname"><span class="pre">name</span></span><a class="headerlink" href="#foxglove.Schema.name" title="Link to this definition">¶</a></dt>
+<dd><p>The name of the schema.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="foxglove.log">
+<span class="sig-prename descclassname"><span class="pre">foxglove.</span></span><span class="sig-name descname"><span class="pre">log</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">topic</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">message</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_time</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.log" title="Link to this definition">¶</a></dt>
+<dd><p>Log a message on a topic.</p>
+<p>Creates a new channel the first time called for a given topic.
+For Foxglove types in the schemas module, this creates a typed channel
+(see <a class="reference internal" href="channels.html#module-foxglove.channels" title="foxglove.channels"><code class="xref py py-mod docutils literal notranslate"><span class="pre">foxglove.channels</span></code></a> for supported types).
+For bytes and str, this creates a simple schemaless channel and logs the bytes as-is.
+For dict and list, this creates a schemaless json channel.</p>
+<p>The type of the message must be kept consistent for each topic or an error will be raised.
+This can be avoided by creating and using the channels directly instead of using this function.</p>
+<p>Note: this raises an error if a channel with the same topic was created by other means.
+This limitation may be lifted in the future.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>topic</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – The topic name.</p></li>
+<li><p><strong>message</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">Dict</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, <code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code>], <code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code>[<code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code>], <code class="xref py py-class docutils literal notranslate"><span class="pre">bytes</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, <a class="reference internal" href="schemas.html#foxglove.schemas.ArrowPrimitive" title="foxglove.schemas.ArrowPrimitive"><code class="xref py py-class docutils literal notranslate"><span class="pre">ArrowPrimitive</span></code></a>, <a class="reference internal" href="schemas.html#foxglove.schemas.CameraCalibration" title="foxglove.schemas.CameraCalibration"><code class="xref py py-class docutils literal notranslate"><span class="pre">CameraCalibration</span></code></a>, <a class="reference internal" href="schemas.html#foxglove.schemas.CircleAnnotation" title="foxglove.schemas.CircleAnnotation"><code class="xref py py-class docutils literal notranslate"><span class="pre">CircleAnnotation</span></code></a>, <a class="reference internal" href="schemas.html#foxglove.schemas.Color" title="foxglove.schemas.Color"><code class="xref py py-class docutils literal notranslate"><span class="pre">Color</span></code></a>, <a class="reference internal" href="schemas.html#foxglove.schemas.CompressedImage" title="foxglove.schemas.CompressedImage"><code class="xref py py-class docutils literal notranslate"><span class="pre">CompressedImage</span></code></a>, <a class="reference internal" href="schemas.html#foxglove.schemas.CompressedVideo" title="foxglove.schemas.CompressedVideo"><code class="xref py py-class docutils literal notranslate"><span class="pre">CompressedVideo</span></code></a>, <a class="reference internal" href="schemas.html#foxglove.schemas.CubePrimitive" title="foxglove.schemas.CubePrimitive"><code class="xref py py-class docutils literal notranslate"><span class="pre">CubePrimitive</span></code></a>, <a class="reference internal" href="schemas.html#foxglove.schemas.CylinderPrimitive" title="foxglove.schemas.CylinderPrimitive"><code class="xref py py-class docutils literal notranslate"><span class="pre">CylinderPrimitive</span></code></a>, <a class="reference internal" href="schemas.html#foxglove.schemas.FrameTransform" title="foxglove.schemas.FrameTransform"><code class="xref py py-class docutils literal notranslate"><span class="pre">FrameTransform</span></code></a>, <a class="reference internal" href="schemas.html#foxglove.schemas.FrameTransforms" title="foxglove.schemas.FrameTransforms"><code class="xref py py-class docutils literal notranslate"><span class="pre">FrameTransforms</span></code></a>, <a class="reference internal" href="schemas.html#foxglove.schemas.GeoJson" title="foxglove.schemas.GeoJson"><code class="xref py py-class docutils literal notranslate"><span class="pre">GeoJson</span></code></a>, <a class="reference internal" href="schemas.html#foxglove.schemas.Grid" title="foxglove.schemas.Grid"><code class="xref py py-class docutils literal notranslate"><span class="pre">Grid</span></code></a>, <a class="reference internal" href="schemas.html#foxglove.schemas.ImageAnnotations" title="foxglove.schemas.ImageAnnotations"><code class="xref py py-class docutils literal notranslate"><span class="pre">ImageAnnotations</span></code></a>, <a class="reference internal" href="schemas.html#foxglove.schemas.KeyValuePair" title="foxglove.schemas.KeyValuePair"><code class="xref py py-class docutils literal notranslate"><span class="pre">KeyValuePair</span></code></a>, <a class="reference internal" href="schemas.html#foxglove.schemas.LaserScan" title="foxglove.schemas.LaserScan"><code class="xref py py-class docutils literal notranslate"><span class="pre">LaserScan</span></code></a>, <a class="reference internal" href="schemas.html#foxglove.schemas.LinePrimitive" title="foxglove.schemas.LinePrimitive"><code class="xref py py-class docutils literal notranslate"><span class="pre">LinePrimitive</span></code></a>, <a class="reference internal" href="schemas.html#foxglove.schemas.LocationFix" title="foxglove.schemas.LocationFix"><code class="xref py py-class docutils literal notranslate"><span class="pre">LocationFix</span></code></a>, <a class="reference internal" href="schemas.html#foxglove.schemas.Log" title="foxglove.schemas.Log"><code class="xref py py-class docutils literal notranslate"><span class="pre">Log</span></code></a>, <a class="reference internal" href="schemas.html#foxglove.schemas.ModelPrimitive" title="foxglove.schemas.ModelPrimitive"><code class="xref py py-class docutils literal notranslate"><span class="pre">ModelPrimitive</span></code></a>, <a class="reference internal" href="schemas.html#foxglove.schemas.PackedElementField" title="foxglove.schemas.PackedElementField"><code class="xref py py-class docutils literal notranslate"><span class="pre">PackedElementField</span></code></a>, <a class="reference internal" href="schemas.html#foxglove.schemas.Point2" title="foxglove.schemas.Point2"><code class="xref py py-class docutils literal notranslate"><span class="pre">Point2</span></code></a>, <a class="reference internal" href="schemas.html#foxglove.schemas.Point3" title="foxglove.schemas.Point3"><code class="xref py py-class docutils literal notranslate"><span class="pre">Point3</span></code></a>, <a class="reference internal" href="schemas.html#foxglove.schemas.PointCloud" title="foxglove.schemas.PointCloud"><code class="xref py py-class docutils literal notranslate"><span class="pre">PointCloud</span></code></a>, <a class="reference internal" href="schemas.html#foxglove.schemas.PointsAnnotation" title="foxglove.schemas.PointsAnnotation"><code class="xref py py-class docutils literal notranslate"><span class="pre">PointsAnnotation</span></code></a>, <a class="reference internal" href="schemas.html#foxglove.schemas.Pose" title="foxglove.schemas.Pose"><code class="xref py py-class docutils literal notranslate"><span class="pre">Pose</span></code></a>, <a class="reference internal" href="schemas.html#foxglove.schemas.PoseInFrame" title="foxglove.schemas.PoseInFrame"><code class="xref py py-class docutils literal notranslate"><span class="pre">PoseInFrame</span></code></a>, <a class="reference internal" href="schemas.html#foxglove.schemas.PosesInFrame" title="foxglove.schemas.PosesInFrame"><code class="xref py py-class docutils literal notranslate"><span class="pre">PosesInFrame</span></code></a>, <a class="reference internal" href="schemas.html#foxglove.schemas.Quaternion" title="foxglove.schemas.Quaternion"><code class="xref py py-class docutils literal notranslate"><span class="pre">Quaternion</span></code></a>, <a class="reference internal" href="schemas.html#foxglove.schemas.RawAudio" title="foxglove.schemas.RawAudio"><code class="xref py py-class docutils literal notranslate"><span class="pre">RawAudio</span></code></a>, <a class="reference internal" href="schemas.html#foxglove.schemas.RawImage" title="foxglove.schemas.RawImage"><code class="xref py py-class docutils literal notranslate"><span class="pre">RawImage</span></code></a>, <a class="reference internal" href="schemas.html#foxglove.schemas.SceneEntity" title="foxglove.schemas.SceneEntity"><code class="xref py py-class docutils literal notranslate"><span class="pre">SceneEntity</span></code></a>, <a class="reference internal" href="schemas.html#foxglove.schemas.SceneEntityDeletion" title="foxglove.schemas.SceneEntityDeletion"><code class="xref py py-class docutils literal notranslate"><span class="pre">SceneEntityDeletion</span></code></a>, <a class="reference internal" href="schemas.html#foxglove.schemas.SceneUpdate" title="foxglove.schemas.SceneUpdate"><code class="xref py py-class docutils literal notranslate"><span class="pre">SceneUpdate</span></code></a>, <a class="reference internal" href="schemas.html#foxglove.schemas.SpherePrimitive" title="foxglove.schemas.SpherePrimitive"><code class="xref py py-class docutils literal notranslate"><span class="pre">SpherePrimitive</span></code></a>, <a class="reference internal" href="schemas.html#foxglove.schemas.TextAnnotation" title="foxglove.schemas.TextAnnotation"><code class="xref py py-class docutils literal notranslate"><span class="pre">TextAnnotation</span></code></a>, <a class="reference internal" href="schemas.html#foxglove.schemas.TextPrimitive" title="foxglove.schemas.TextPrimitive"><code class="xref py py-class docutils literal notranslate"><span class="pre">TextPrimitive</span></code></a>, <a class="reference internal" href="schemas.html#foxglove.schemas.TriangleListPrimitive" title="foxglove.schemas.TriangleListPrimitive"><code class="xref py py-class docutils literal notranslate"><span class="pre">TriangleListPrimitive</span></code></a>, <a class="reference internal" href="schemas.html#foxglove.schemas.Vector2" title="foxglove.schemas.Vector2"><code class="xref py py-class docutils literal notranslate"><span class="pre">Vector2</span></code></a>, <a class="reference internal" href="schemas.html#foxglove.schemas.Vector3" title="foxglove.schemas.Vector3"><code class="xref py py-class docutils literal notranslate"><span class="pre">Vector3</span></code></a>]</span>) – The message to log.</p></li>
+<li><p><strong>log_time</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>]</span> (default: <code class="docutils literal notranslate"><span class="pre">None</span></code>)) – The optional time the message was logged.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="foxglove.open_mcap">
+<span class="sig-prename descclassname"><span class="pre">foxglove.</span></span><span class="sig-name descname"><span class="pre">open_mcap</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">allow_overwrite</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">context</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">writer_options</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.open_mcap" title="Link to this definition">¶</a></dt>
+<dd><p>Open a new mcap file for recording.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> (<em>str</em><em> | </em><em>Path</em>) – The path to the MCAP file. This file will be created and must not already exist.</p></li>
+<li><p><strong>allow_overwrite</strong> (<em>Optional</em><em>[</em><em>bool</em><em>]</em>) – Set this flag in order to overwrite an existing file at this path.</p></li>
+<li><p><strong>context</strong> (<a class="reference internal" href="#foxglove.Context" title="foxglove.Context"><code class="xref py py-class docutils literal notranslate"><span class="pre">Context</span></code></a>) – The context to use for logging. If None, the global context is used.</p></li>
+<li><p><strong>writer_options</strong> (<a class="reference internal" href="#foxglove.mcap.MCAPWriteOptions" title="foxglove.mcap.MCAPWriteOptions"><code class="xref py py-class docutils literal notranslate"><span class="pre">mcap.MCAPWriteOptions</span></code></a>) – Options for the MCAP writer.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="#foxglove.mcap.MCAPWriter" title="foxglove.mcap.MCAPWriter"><code class="xref py py-class docutils literal notranslate"><span class="pre">mcap.MCAPWriter</span></code></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="foxglove.set_log_level">
+<span class="sig-prename descclassname"><span class="pre">foxglove.</span></span><span class="sig-name descname"><span class="pre">set_log_level</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">level</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'INFO'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.set_log_level" title="Link to this definition">¶</a></dt>
+<dd><p>Enable SDK logging.</p>
+<p>This function will call logging.basicConfig() for convenience in scripts, but in general you
+should configure logging yourself before calling this function:
+<a class="reference external" href="https://docs.python.org/3/library/logging.html">https://docs.python.org/3/library/logging.html</a></p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>level</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]</span> (default: <code class="docutils literal notranslate"><span class="pre">'INFO'</span></code>)) – The logging level to set. This accepts the same values as <cite>logging.setLevel</cite> and
+defaults to “INFO”. The SDK will not log at levels “CRITICAL” or higher.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="foxglove.start_server">
+<span class="sig-prename descclassname"><span class="pre">foxglove.</span></span><span class="sig-name descname"><span class="pre">start_server</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">host</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'127.0.0.1'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">port</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">8765</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">capabilities</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">server_listener</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">supported_encodings</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">services</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">asset_handler</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">context</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.start_server" title="Link to this definition">¶</a></dt>
+<dd><p>Start a websocket server for live visualization.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>name</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]</span> (default: <code class="docutils literal notranslate"><span class="pre">None</span></code>)) – The name of the server.</p></li>
+<li><p><strong>host</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]</span> (default: <code class="docutils literal notranslate"><span class="pre">'127.0.0.1'</span></code>)) – The host to bind to.</p></li>
+<li><p><strong>port</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>]</span> (default: <code class="docutils literal notranslate"><span class="pre">8765</span></code>)) – The port to bind to.</p></li>
+<li><p><strong>capabilities</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">Capability</span></code>]]</span> (default: <code class="docutils literal notranslate"><span class="pre">None</span></code>)) – A list of capabilities to advertise to clients.</p></li>
+<li><p><strong>server_listener</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<a class="reference internal" href="#foxglove.websocket.ServerListener" title="foxglove.websocket.ServerListener"><code class="xref py py-class docutils literal notranslate"><span class="pre">ServerListener</span></code></a>]</span> (default: <code class="docutils literal notranslate"><span class="pre">None</span></code>)) – A Python object that implements the <a class="reference internal" href="#foxglove.websocket.ServerListener" title="foxglove.websocket.ServerListener"><code class="xref py py-class docutils literal notranslate"><span class="pre">websocket.ServerListener</span></code></a>
+protocol.</p></li>
+<li><p><strong>supported_encodings</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]]</span> (default: <code class="docutils literal notranslate"><span class="pre">None</span></code>)) – A list of encodings to advertise to clients.</p></li>
+<li><p><strong>services</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code>[<a class="reference internal" href="#foxglove.websocket.Service" title="foxglove.Service"><code class="xref py py-class docutils literal notranslate"><span class="pre">Service</span></code></a>]]</span> (default: <code class="docutils literal notranslate"><span class="pre">None</span></code>)) – A list of services to advertise to clients.</p></li>
+<li><p><strong>asset_handler</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">Callable</span></code>[[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>], <code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">bytes</span></code>]]]</span> (default: <code class="docutils literal notranslate"><span class="pre">None</span></code>)) – A callback function that returns the asset for a given URI, or None if
+it doesn’t exist.</p></li>
+<li><p><strong>context</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<a class="reference internal" href="#foxglove.Context" title="foxglove.Context"><code class="xref py py-class docutils literal notranslate"><span class="pre">Context</span></code></a>]</span> (default: <code class="docutils literal notranslate"><span class="pre">None</span></code>)) – The context to use for logging. If None, the global context is used.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#foxglove.websocket.WebSocketServer" title="foxglove.WebSocketServer"><code class="xref py py-class docutils literal notranslate"><span class="pre">WebSocketServer</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<section id="schemas">
+<h3>Schemas<a class="headerlink" href="#schemas" title="Link to this heading">¶</a></h3>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="schemas.html"><code class="docutils literal notranslate"><span class="pre">ArrowPrimitive</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="schemas.html#foxglove.schemas.CameraCalibration"><code class="docutils literal notranslate"><span class="pre">CameraCalibration</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="schemas.html#foxglove.schemas.CircleAnnotation"><code class="docutils literal notranslate"><span class="pre">CircleAnnotation</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="schemas.html#foxglove.schemas.Color"><code class="docutils literal notranslate"><span class="pre">Color</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="schemas.html#foxglove.schemas.CompressedImage"><code class="docutils literal notranslate"><span class="pre">CompressedImage</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="schemas.html#foxglove.schemas.CompressedVideo"><code class="docutils literal notranslate"><span class="pre">CompressedVideo</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="schemas.html#foxglove.schemas.CubePrimitive"><code class="docutils literal notranslate"><span class="pre">CubePrimitive</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="schemas.html#foxglove.schemas.CylinderPrimitive"><code class="docutils literal notranslate"><span class="pre">CylinderPrimitive</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="schemas.html#foxglove.schemas.Duration"><code class="docutils literal notranslate"><span class="pre">Duration</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="schemas.html#foxglove.schemas.FrameTransform"><code class="docutils literal notranslate"><span class="pre">FrameTransform</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="schemas.html#foxglove.schemas.FrameTransforms"><code class="docutils literal notranslate"><span class="pre">FrameTransforms</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="schemas.html#foxglove.schemas.GeoJson"><code class="docutils literal notranslate"><span class="pre">GeoJson</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="schemas.html#foxglove.schemas.Grid"><code class="docutils literal notranslate"><span class="pre">Grid</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="schemas.html#foxglove.schemas.ImageAnnotations"><code class="docutils literal notranslate"><span class="pre">ImageAnnotations</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="schemas.html#foxglove.schemas.KeyValuePair"><code class="docutils literal notranslate"><span class="pre">KeyValuePair</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="schemas.html#foxglove.schemas.LaserScan"><code class="docutils literal notranslate"><span class="pre">LaserScan</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="schemas.html#foxglove.schemas.LinePrimitive"><code class="docutils literal notranslate"><span class="pre">LinePrimitive</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="schemas.html#foxglove.schemas.LinePrimitiveLineType"><code class="docutils literal notranslate"><span class="pre">LinePrimitiveLineType</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="schemas.html#foxglove.schemas.LocationFix"><code class="docutils literal notranslate"><span class="pre">LocationFix</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="schemas.html#foxglove.schemas.LocationFixPositionCovarianceType"><code class="docutils literal notranslate"><span class="pre">LocationFixPositionCovarianceType</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="schemas.html#foxglove.schemas.Log"><code class="docutils literal notranslate"><span class="pre">Log</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="schemas.html#foxglove.schemas.LogLevel"><code class="docutils literal notranslate"><span class="pre">LogLevel</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="schemas.html#foxglove.schemas.ModelPrimitive"><code class="docutils literal notranslate"><span class="pre">ModelPrimitive</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="schemas.html#foxglove.schemas.PackedElementField"><code class="docutils literal notranslate"><span class="pre">PackedElementField</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="schemas.html#foxglove.schemas.PackedElementFieldNumericType"><code class="docutils literal notranslate"><span class="pre">PackedElementFieldNumericType</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="schemas.html#foxglove.schemas.Point2"><code class="docutils literal notranslate"><span class="pre">Point2</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="schemas.html#foxglove.schemas.Point3"><code class="docutils literal notranslate"><span class="pre">Point3</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="schemas.html#foxglove.schemas.PointCloud"><code class="docutils literal notranslate"><span class="pre">PointCloud</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="schemas.html#foxglove.schemas.PointsAnnotation"><code class="docutils literal notranslate"><span class="pre">PointsAnnotation</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="schemas.html#foxglove.schemas.PointsAnnotationType"><code class="docutils literal notranslate"><span class="pre">PointsAnnotationType</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="schemas.html#foxglove.schemas.Pose"><code class="docutils literal notranslate"><span class="pre">Pose</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="schemas.html#foxglove.schemas.PoseInFrame"><code class="docutils literal notranslate"><span class="pre">PoseInFrame</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="schemas.html#foxglove.schemas.PosesInFrame"><code class="docutils literal notranslate"><span class="pre">PosesInFrame</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="schemas.html#foxglove.schemas.Quaternion"><code class="docutils literal notranslate"><span class="pre">Quaternion</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="schemas.html#foxglove.schemas.RawAudio"><code class="docutils literal notranslate"><span class="pre">RawAudio</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="schemas.html#foxglove.schemas.RawImage"><code class="docutils literal notranslate"><span class="pre">RawImage</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="schemas.html#foxglove.schemas.SceneEntity"><code class="docutils literal notranslate"><span class="pre">SceneEntity</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="schemas.html#foxglove.schemas.SceneEntityDeletion"><code class="docutils literal notranslate"><span class="pre">SceneEntityDeletion</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="schemas.html#foxglove.schemas.SceneEntityDeletionType"><code class="docutils literal notranslate"><span class="pre">SceneEntityDeletionType</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="schemas.html#foxglove.schemas.SceneUpdate"><code class="docutils literal notranslate"><span class="pre">SceneUpdate</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="schemas.html#foxglove.schemas.SpherePrimitive"><code class="docutils literal notranslate"><span class="pre">SpherePrimitive</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="schemas.html#foxglove.schemas.TextAnnotation"><code class="docutils literal notranslate"><span class="pre">TextAnnotation</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="schemas.html#foxglove.schemas.TextPrimitive"><code class="docutils literal notranslate"><span class="pre">TextPrimitive</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="schemas.html#foxglove.schemas.Timestamp"><code class="docutils literal notranslate"><span class="pre">Timestamp</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="schemas.html#foxglove.schemas.TriangleListPrimitive"><code class="docutils literal notranslate"><span class="pre">TriangleListPrimitive</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="schemas.html#foxglove.schemas.Vector2"><code class="docutils literal notranslate"><span class="pre">Vector2</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="schemas.html#foxglove.schemas.Vector3"><code class="docutils literal notranslate"><span class="pre">Vector3</span></code></a></li>
+</ul>
+</div>
+</section>
+<section id="channels">
+<h3>Channels<a class="headerlink" href="#channels" title="Link to this heading">¶</a></h3>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="channels.html"><code class="docutils literal notranslate"><span class="pre">CameraCalibrationChannel</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="channels.html#foxglove.channels.CircleAnnotationChannel"><code class="docutils literal notranslate"><span class="pre">CircleAnnotationChannel</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="channels.html#foxglove.channels.ColorChannel"><code class="docutils literal notranslate"><span class="pre">ColorChannel</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="channels.html#foxglove.channels.CompressedImageChannel"><code class="docutils literal notranslate"><span class="pre">CompressedImageChannel</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="channels.html#foxglove.channels.CompressedVideoChannel"><code class="docutils literal notranslate"><span class="pre">CompressedVideoChannel</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="channels.html#foxglove.channels.FrameTransformChannel"><code class="docutils literal notranslate"><span class="pre">FrameTransformChannel</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="channels.html#foxglove.channels.FrameTransformsChannel"><code class="docutils literal notranslate"><span class="pre">FrameTransformsChannel</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="channels.html#foxglove.channels.GeoJsonChannel"><code class="docutils literal notranslate"><span class="pre">GeoJsonChannel</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="channels.html#foxglove.channels.GridChannel"><code class="docutils literal notranslate"><span class="pre">GridChannel</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="channels.html#foxglove.channels.ImageAnnotationsChannel"><code class="docutils literal notranslate"><span class="pre">ImageAnnotationsChannel</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="channels.html#foxglove.channels.KeyValuePairChannel"><code class="docutils literal notranslate"><span class="pre">KeyValuePairChannel</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="channels.html#foxglove.channels.LaserScanChannel"><code class="docutils literal notranslate"><span class="pre">LaserScanChannel</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="channels.html#foxglove.channels.LocationFixChannel"><code class="docutils literal notranslate"><span class="pre">LocationFixChannel</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="channels.html#foxglove.channels.LogChannel"><code class="docutils literal notranslate"><span class="pre">LogChannel</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="channels.html#foxglove.channels.PackedElementFieldChannel"><code class="docutils literal notranslate"><span class="pre">PackedElementFieldChannel</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="channels.html#foxglove.channels.Point2Channel"><code class="docutils literal notranslate"><span class="pre">Point2Channel</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="channels.html#foxglove.channels.Point3Channel"><code class="docutils literal notranslate"><span class="pre">Point3Channel</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="channels.html#foxglove.channels.PointCloudChannel"><code class="docutils literal notranslate"><span class="pre">PointCloudChannel</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="channels.html#foxglove.channels.PointsAnnotationChannel"><code class="docutils literal notranslate"><span class="pre">PointsAnnotationChannel</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="channels.html#foxglove.channels.PoseChannel"><code class="docutils literal notranslate"><span class="pre">PoseChannel</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="channels.html#foxglove.channels.PoseInFrameChannel"><code class="docutils literal notranslate"><span class="pre">PoseInFrameChannel</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="channels.html#foxglove.channels.PosesInFrameChannel"><code class="docutils literal notranslate"><span class="pre">PosesInFrameChannel</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="channels.html#foxglove.channels.QuaternionChannel"><code class="docutils literal notranslate"><span class="pre">QuaternionChannel</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="channels.html#foxglove.channels.RawAudioChannel"><code class="docutils literal notranslate"><span class="pre">RawAudioChannel</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="channels.html#foxglove.channels.RawImageChannel"><code class="docutils literal notranslate"><span class="pre">RawImageChannel</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="channels.html#foxglove.channels.SceneEntityChannel"><code class="docutils literal notranslate"><span class="pre">SceneEntityChannel</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="channels.html#foxglove.channels.SceneEntityDeletionChannel"><code class="docutils literal notranslate"><span class="pre">SceneEntityDeletionChannel</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="channels.html#foxglove.channels.SceneUpdateChannel"><code class="docutils literal notranslate"><span class="pre">SceneUpdateChannel</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="channels.html#foxglove.channels.TextAnnotationChannel"><code class="docutils literal notranslate"><span class="pre">TextAnnotationChannel</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="channels.html#foxglove.channels.Vector2Channel"><code class="docutils literal notranslate"><span class="pre">Vector2Channel</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="channels.html#foxglove.channels.Vector3Channel"><code class="docutils literal notranslate"><span class="pre">Vector3Channel</span></code></a></li>
+</ul>
+</div>
+</section>
+<section id="parameters">
+<h3>Parameters<a class="headerlink" href="#parameters" title="Link to this heading">¶</a></h3>
+<p>Used with the parameter service during live visualization. Requires the <a class="reference internal" href="#foxglove.websocket.Capability.Parameters" title="foxglove.websocket.Capability.Parameters"><code class="xref py py-data docutils literal notranslate"><span class="pre">websocket.Capability.Parameters</span></code></a> capability.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.websocket.ParameterType">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.websocket.</span></span><span class="sig-name descname"><span class="pre">ParameterType</span></span><a class="headerlink" href="#foxglove.websocket.ParameterType" title="Link to this definition">¶</a></dt>
+<dd><p>A parameter type.</p>
+<dl class="py data">
+<dt class="sig sig-object py" id="foxglove.websocket.ParameterType.ByteArray">
+<span class="sig-name descname"><span class="pre">ByteArray</span></span><a class="headerlink" href="#foxglove.websocket.ParameterType.ByteArray" title="Link to this definition">¶</a></dt>
+<dd><p>A byte array.</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="foxglove.websocket.ParameterType.Float64">
+<span class="sig-name descname"><span class="pre">Float64</span></span><a class="headerlink" href="#foxglove.websocket.ParameterType.Float64" title="Link to this definition">¶</a></dt>
+<dd><p>A decimal or integer value that can be represented as a 64-bit floating point number.</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="foxglove.websocket.ParameterType.Float64Array">
+<span class="sig-name descname"><span class="pre">Float64Array</span></span><a class="headerlink" href="#foxglove.websocket.ParameterType.Float64Array" title="Link to this definition">¶</a></dt>
+<dd><p>An array of decimal or integer values that can be represented as 64-bit floating point numbers.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.websocket.ParameterValue">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.websocket.</span></span><span class="sig-name descname"><span class="pre">ParameterValue</span></span><a class="headerlink" href="#foxglove.websocket.ParameterValue" title="Link to this definition">¶</a></dt>
+<dd><p>A parameter value.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.websocket.ParameterValue.Number">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">Number</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.websocket.ParameterValue.Number" title="Link to this definition">¶</a></dt>
+<dd><p>A decimal or integer value.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.websocket.ParameterValue.Bool">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">Bool</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.websocket.ParameterValue.Bool" title="Link to this definition">¶</a></dt>
+<dd><p>A boolean value.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.websocket.ParameterValue.String">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">String</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.websocket.ParameterValue.String" title="Link to this definition">¶</a></dt>
+<dd><p>A string value.</p>
+<p>For parameters of type <a class="reference internal" href="#foxglove.websocket.ParameterType.ByteArray" title="foxglove.websocket.ParameterType.ByteArray"><code class="xref py py-attr docutils literal notranslate"><span class="pre">ParameterType.ByteArray</span></code></a>, this is a
+base64 encoding of the byte array.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.websocket.ParameterValue.Array">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">Array</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#foxglove.websocket.ParameterValue" title="foxglove.websocket.ParameterValue"><span class="pre">ParameterValue</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.websocket.ParameterValue.Array" title="Link to this definition">¶</a></dt>
+<dd><p>An array of parameter values.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.websocket.ParameterValue.Dict">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">Dict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="#foxglove.websocket.ParameterValue" title="foxglove.websocket.ParameterValue"><span class="pre">ParameterValue</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.websocket.ParameterValue.Dict" title="Link to this definition">¶</a></dt>
+<dd><p>An associative map of parameter values.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="asset-handling">
+<h3>Asset handling<a class="headerlink" href="#asset-handling" title="Link to this heading">¶</a></h3>
+<p>You can provide an optional <a class="reference internal" href="#foxglove.AssetHandler" title="foxglove.AssetHandler"><code class="xref py py-class docutils literal notranslate"><span class="pre">AssetHandler</span></code></a> to <a class="reference internal" href="#foxglove.start_server" title="foxglove.start_server"><code class="xref py py-func docutils literal notranslate"><span class="pre">start_server()</span></code></a> to serve assets such
+as URDFs for live visualization. The asset handler is a <code class="xref py py-class docutils literal notranslate"><span class="pre">Callable</span></code> that returns the asset
+for a given URI, or None if it doesn’t exist.</p>
+<p>Foxglove assets will be requested with the <cite>package://</cite> scheme.
+See <a class="reference external" href="https://docs.foxglove.dev/docs/visualization/panels/3d#resolution-of-urdf-assets-with-package-urls">https://docs.foxglove.dev/docs/visualization/panels/3d#resolution-of-urdf-assets-with-package-urls</a></p>
+<p>This handler will be run on a separate thread; a typical implementation will load the asset from
+disk and return its contents.</p>
+<p>See the Asset Server example for more information.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="foxglove.AssetHandler">
+<span class="sig-prename descclassname"><span class="pre">foxglove.</span></span><span class="sig-name descname"><span class="pre">AssetHandler</span></span><a class="headerlink" href="#foxglove.AssetHandler" title="Link to this definition">¶</a></dt>
+<dd><p>alias of <code class="xref py py-class docutils literal notranslate"><span class="pre">Callable</span></code>[[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>], <code class="xref py py-class docutils literal notranslate"><span class="pre">bytes</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code>]</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.MCAPCompression">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.</span></span><span class="sig-name descname"><span class="pre">MCAPCompression</span></span><a class="headerlink" href="#foxglove.MCAPCompression" title="Link to this definition">¶</a></dt>
+<dd><p>Deprecated. Use <a class="reference internal" href="#foxglove.mcap.MCAPCompression" title="foxglove.mcap.MCAPCompression"><code class="xref py py-class docutils literal notranslate"><span class="pre">mcap.MCAPCompression</span></code></a> instead.</p>
+</dd></dl>
+
+</section>
+</section>
+<section id="foxglove-mcap">
+<h2>foxglove.mcap<a class="headerlink" href="#foxglove-mcap" title="Link to this heading">¶</a></h2>
+<dl class="py class" id="module-foxglove.mcap">
+<dt class="sig sig-object py" id="foxglove.mcap.MCAPWriteOptions">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.mcap.</span></span><span class="sig-name descname"><span class="pre">MCAPWriteOptions</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">compression</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">profile</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chunk_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_chunks</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">emit_statistics</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">emit_summary_offsets</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">emit_message_indexes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">emit_chunk_indexes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">repeat_channels</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">repeat_schemas</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">calculate_chunk_crcs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">calculate_data_section_crc</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">calculate_summary_section_crc</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.mcap.MCAPWriteOptions" title="Link to this definition">¶</a></dt>
+<dd><p>Options for the MCAP writer.</p>
+<p>All parameters are optional.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>compression</strong> (<a class="reference internal" href="#foxglove.mcap.MCAPCompression" title="foxglove.mcap.MCAPCompression"><em>MCAPCompression</em></a>) – Specifies the compression that should be used on chunks. Defaults to Zstd.
+Pass <cite>None</cite> to disable compression.</p></li>
+<li><p><strong>profile</strong> (<em>str</em>) – Specifies the profile that should be written to the MCAP Header record.</p></li>
+<li><p><strong>chunk_size</strong> (<em>int</em>) – Specifies the target uncompressed size of each chunk.</p></li>
+<li><p><strong>use_chunks</strong> (<em>bool</em>) – Specifies whether to use chunks for storing messages.</p></li>
+<li><p><strong>emit_statistics</strong> (<em>bool</em>) – Specifies whether to write a statistics record in the summary section.</p></li>
+<li><p><strong>emit_summary_offsets</strong> (<em>bool</em>) – Specifies whether to write summary offset records.</p></li>
+<li><p><strong>emit_message_indexes</strong> (<em>bool</em>) – Specifies whether to write message index records after each chunk.</p></li>
+<li><p><strong>emit_chunk_indexes</strong> (<em>bool</em>) – Specifies whether to write chunk index records in the summary section.</p></li>
+<li><p><strong>repeat_channels</strong> (<em>bool</em>) – Specifies whether to repeat each channel record from the data section in the summary section.</p></li>
+<li><p><strong>repeat_schemas</strong> (<em>bool</em>) – Specifies whether to repeat each schema record from the data section in the summary section.</p></li>
+<li><p><strong>calculate_chunk_crcs</strong> (<em>bool</em>) – Specifies whether to calculate and write CRCs for chunk records.</p></li>
+<li><p><strong>calculate_data_section_crc</strong> (<em>bool</em>) – Specifies whether to calculate and write a data section CRC into the DataEnd record.</p></li>
+<li><p><strong>calculate_summary_section_crc</strong> (<em>bool</em>) – Specifies whether to calculate and write a summary section CRC into the Footer record.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.mcap.MCAPWriter">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.mcap.</span></span><span class="sig-name descname"><span class="pre">MCAPWriter</span></span><a class="headerlink" href="#foxglove.mcap.MCAPWriter" title="Link to this definition">¶</a></dt>
+<dd><p>A writer for logging messages to an MCAP file.</p>
+<p>Obtain an instance by calling <a class="reference internal" href="#foxglove.open_mcap" title="foxglove.open_mcap"><code class="xref py py-func docutils literal notranslate"><span class="pre">foxglove.open_mcap()</span></code></a>.</p>
+<p>This class may be used as a context manager, in which case the writer will
+be closed when you exit the context.</p>
+<p>If the writer is not closed by the time it is garbage collected, it will be
+closed automatically, and any errors will be logged.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.mcap.MCAPWriter.close">
+<span class="sig-name descname"><span class="pre">close</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.mcap.MCAPWriter.close" title="Link to this definition">¶</a></dt>
+<dd><p>Close the MCAP writer.</p>
+<p>You may call this to explicitly close the writer. Note that the writer will be automatically
+closed for you when it is garbage collected, or when exiting the context manager.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class enum">
+<dt class="sig sig-object py" id="foxglove.mcap.MCAPCompression">
+<em class="property"><span class="pre">enum</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.mcap.</span></span><span class="sig-name descname"><span class="pre">MCAPCompression</span></span><a class="headerlink" href="#foxglove.mcap.MCAPCompression" title="Link to this definition">¶</a></dt>
+<dd><dl class="py data">
+<dt class="sig sig-object py" id="foxglove.mcap.MCAPCompression.Zstd">
+<span class="sig-name descname"><span class="pre">Zstd</span></span><a class="headerlink" href="#foxglove.mcap.MCAPCompression.Zstd" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="foxglove.mcap.MCAPCompression.Lz4">
+<span class="sig-name descname"><span class="pre">Lz4</span></span><a class="headerlink" href="#foxglove.mcap.MCAPCompression.Lz4" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="foxglove-websocket">
+<h2>foxglove.websocket<a class="headerlink" href="#foxglove-websocket" title="Link to this heading">¶</a></h2>
+<dl class="py class" id="module-foxglove.websocket">
+<dt class="sig sig-object py" id="foxglove.websocket.ChannelView">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.websocket.</span></span><span class="sig-name descname"><span class="pre">ChannelView</span></span><a class="headerlink" href="#foxglove.websocket.ChannelView" title="Link to this definition">¶</a></dt>
+<dd><p>Information about a channel.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.websocket.Client">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.websocket.</span></span><span class="sig-name descname"><span class="pre">Client</span></span><a class="headerlink" href="#foxglove.websocket.Client" title="Link to this definition">¶</a></dt>
+<dd><p>A client connected to a running websocket server.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="foxglove.websocket.Client.id">
+<span class="sig-name descname"><span class="pre">id</span></span><a class="headerlink" href="#foxglove.websocket.Client.id" title="Link to this definition">¶</a></dt>
+<dd><p>A client identifier that is unique within the scope of this server.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.websocket.ClientChannel">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.websocket.</span></span><span class="sig-name descname"><span class="pre">ClientChannel</span></span><a class="headerlink" href="#foxglove.websocket.ClientChannel" title="Link to this definition">¶</a></dt>
+<dd><p>Information about a client channel.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.websocket.ConnectionGraph">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.websocket.</span></span><span class="sig-name descname"><span class="pre">ConnectionGraph</span></span><a class="headerlink" href="#foxglove.websocket.ConnectionGraph" title="Link to this definition">¶</a></dt>
+<dd><p>A connection graph.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.websocket.ConnectionGraph.set_advertised_service">
+<span class="sig-name descname"><span class="pre">set_advertised_service</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">service</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">provider_ids</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.websocket.ConnectionGraph.set_advertised_service" title="Link to this definition">¶</a></dt>
+<dd><p>Set an advertised service and its associated provider ids.
+Overwrites any existing service with the same name.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>service</strong> – The service name.</p></li>
+<li><p><strong>provider_ids</strong> – The set of provider ids.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.websocket.ConnectionGraph.set_published_topic">
+<span class="sig-name descname"><span class="pre">set_published_topic</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">topic</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">publisher_ids</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.websocket.ConnectionGraph.set_published_topic" title="Link to this definition">¶</a></dt>
+<dd><p>Set a published topic and its associated publisher ids.
+Overwrites any existing topic with the same name.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>topic</strong> – The topic name.</p></li>
+<li><p><strong>publisher_ids</strong> – The set of publisher ids.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.websocket.ConnectionGraph.set_subscribed_topic">
+<span class="sig-name descname"><span class="pre">set_subscribed_topic</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">topic</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">subscriber_ids</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.websocket.ConnectionGraph.set_subscribed_topic" title="Link to this definition">¶</a></dt>
+<dd><p>Set a subscribed topic and its associated subscriber ids.
+Overwrites any existing topic with the same name.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>topic</strong> – The topic name.</p></li>
+<li><p><strong>subscriber_ids</strong> – The set of subscriber ids.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.websocket.MessageSchema">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.websocket.</span></span><span class="sig-name descname"><span class="pre">MessageSchema</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">encoding</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">schema</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.websocket.MessageSchema" title="Link to this definition">¶</a></dt>
+<dd><p>A service request or response schema.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>encoding</strong> (<em>str</em>) – The encoding of the message.</p></li>
+<li><p><strong>schema</strong> (<a class="reference internal" href="#foxglove.Schema" title="foxglove.Schema"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.Schema</span></code></a>) – The message schema.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="foxglove.websocket.MessageSchema.encoding">
+<span class="sig-name descname"><span class="pre">encoding</span></span><a class="headerlink" href="#foxglove.websocket.MessageSchema.encoding" title="Link to this definition">¶</a></dt>
+<dd><p>The encoding of the message.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="foxglove.websocket.MessageSchema.schema">
+<span class="sig-name descname"><span class="pre">schema</span></span><a class="headerlink" href="#foxglove.websocket.MessageSchema.schema" title="Link to this definition">¶</a></dt>
+<dd><p>The message schema.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.websocket.Parameter">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.websocket.</span></span><span class="sig-name descname"><span class="pre">Parameter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.websocket.Parameter" title="Link to this definition">¶</a></dt>
+<dd><p>A parameter which can be sent to a client.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>name</strong> (<em>str</em>) – The parameter name.</p></li>
+<li><p><strong>value</strong> (<em>None</em><em>|</em><em>bool</em><em>|</em><em>float</em><em>|</em><em>str</em><em>|</em><em>bytes</em><em>|</em><em>list</em><em>|</em><em>dict</em><em>|</em><a class="reference internal" href="#foxglove.websocket.ParameterValue" title="foxglove.websocket.ParameterValue"><em>ParameterValue</em></a>) – Optional value, represented as a native python object, or a ParameterValue.</p></li>
+<li><p><strong>type</strong> (<a class="reference internal" href="#foxglove.websocket.ParameterType" title="foxglove.websocket.ParameterType"><em>ParameterType</em></a><em>|</em><em>None</em>) – Optional parameter type. This is automatically derived when passing a native
+python object as the value.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.websocket.Parameter.get_value">
+<span class="sig-name descname"><span class="pre">get_value</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.websocket.Parameter.get_value" title="Link to this definition">¶</a></dt>
+<dd><p>Returns the parameter value as a native python object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>None|bool|float|str|bytes|list|dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="foxglove.websocket.Parameter.name">
+<span class="sig-name descname"><span class="pre">name</span></span><a class="headerlink" href="#foxglove.websocket.Parameter.name" title="Link to this definition">¶</a></dt>
+<dd><p>The name of the parameter.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="foxglove.websocket.Parameter.type">
+<span class="sig-name descname"><span class="pre">type</span></span><a class="headerlink" href="#foxglove.websocket.Parameter.type" title="Link to this definition">¶</a></dt>
+<dd><p>The parameter type.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="foxglove.websocket.Parameter.value">
+<span class="sig-name descname"><span class="pre">value</span></span><a class="headerlink" href="#foxglove.websocket.Parameter.value" title="Link to this definition">¶</a></dt>
+<dd><p>The parameter value.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.websocket.ServerListener">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.websocket.</span></span><span class="sig-name descname"><span class="pre">ServerListener</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.websocket.ServerListener" title="Link to this definition">¶</a></dt>
+<dd><p>A mechanism to register callbacks for handling client message events.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.websocket.ServerListener.on_client_advertise">
+<span class="sig-name descname"><span class="pre">on_client_advertise</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">client</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">channel</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.websocket.ServerListener.on_client_advertise" title="Link to this definition">¶</a></dt>
+<dd><p>Called by the server when a client advertises a channel.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>client</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#foxglove.websocket.Client" title="foxglove.Client"><code class="xref py py-class docutils literal notranslate"><span class="pre">Client</span></code></a></span>) – The client (id) that sent the message.</p></li>
+<li><p><strong>channel</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#foxglove.websocket.ClientChannel" title="foxglove.ClientChannel"><code class="xref py py-class docutils literal notranslate"><span class="pre">ClientChannel</span></code></a></span>) – The client channel that is being advertised.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.websocket.ServerListener.on_client_unadvertise">
+<span class="sig-name descname"><span class="pre">on_client_unadvertise</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">client</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">client_channel_id</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.websocket.ServerListener.on_client_unadvertise" title="Link to this definition">¶</a></dt>
+<dd><p>Called by the server when a client unadvertises a channel.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>client</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#foxglove.websocket.Client" title="foxglove.Client"><code class="xref py py-class docutils literal notranslate"><span class="pre">Client</span></code></a></span>) – The client (id) that is unadvertising the channel.</p></li>
+<li><p><strong>client_channel_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – The client channel id that is being unadvertised.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.websocket.ServerListener.on_connection_graph_subscribe">
+<span class="sig-name descname"><span class="pre">on_connection_graph_subscribe</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.websocket.ServerListener.on_connection_graph_subscribe" title="Link to this definition">¶</a></dt>
+<dd><p>Called by the server when the first client subscribes to the connection graph.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.websocket.ServerListener.on_connection_graph_unsubscribe">
+<span class="sig-name descname"><span class="pre">on_connection_graph_unsubscribe</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.websocket.ServerListener.on_connection_graph_unsubscribe" title="Link to this definition">¶</a></dt>
+<dd><p>Called by the server when the last client unsubscribes from the connection graph.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.websocket.ServerListener.on_get_parameters">
+<span class="sig-name descname"><span class="pre">on_get_parameters</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">client</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">param_names</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">request_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.websocket.ServerListener.on_get_parameters" title="Link to this definition">¶</a></dt>
+<dd><p>Called by the server when a client requests parameters.</p>
+<p>Requires <a class="reference internal" href="#foxglove.websocket.Capability.Parameters" title="foxglove.websocket.Capability.Parameters"><code class="xref py py-data docutils literal notranslate"><span class="pre">Capability.Parameters</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>client</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#foxglove.websocket.Client" title="foxglove.Client"><code class="xref py py-class docutils literal notranslate"><span class="pre">Client</span></code></a></span>) – The client (id) that sent the message.</p></li>
+<li><p><strong>param_names</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]</span>) – The names of the parameters to get.</p></li>
+<li><p><strong>request_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]</span> (default: <code class="docutils literal notranslate"><span class="pre">None</span></code>)) – An optional request id.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code>[<a class="reference internal" href="#foxglove.websocket.Parameter" title="foxglove.Parameter"><code class="xref py py-class docutils literal notranslate"><span class="pre">Parameter</span></code></a>]</span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.websocket.ServerListener.on_message_data">
+<span class="sig-name descname"><span class="pre">on_message_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">client</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">client_channel_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.websocket.ServerListener.on_message_data" title="Link to this definition">¶</a></dt>
+<dd><p>Called by the server when a message is received from a client.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>client</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#foxglove.websocket.Client" title="foxglove.Client"><code class="xref py py-class docutils literal notranslate"><span class="pre">Client</span></code></a></span>) – The client (id) that sent the message.</p></li>
+<li><p><strong>client_channel_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – The client channel id that the message was sent on.</p></li>
+<li><p><strong>data</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bytes</span></code></span>) – The message data.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.websocket.ServerListener.on_parameters_subscribe">
+<span class="sig-name descname"><span class="pre">on_parameters_subscribe</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">param_names</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.websocket.ServerListener.on_parameters_subscribe" title="Link to this definition">¶</a></dt>
+<dd><p>Called by the server when a client subscribes to one or more parameters for the first time.</p>
+<p>Requires <a class="reference internal" href="#foxglove.websocket.Capability.Parameters" title="foxglove.websocket.Capability.Parameters"><code class="xref py py-data docutils literal notranslate"><span class="pre">Capability.Parameters</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>param_names</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]</span>) – The names of the parameters to subscribe to.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.websocket.ServerListener.on_parameters_unsubscribe">
+<span class="sig-name descname"><span class="pre">on_parameters_unsubscribe</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">param_names</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.websocket.ServerListener.on_parameters_unsubscribe" title="Link to this definition">¶</a></dt>
+<dd><p>Called by the server when the last client subscription to one or more parameters has been
+removed.</p>
+<p>Requires <a class="reference internal" href="#foxglove.websocket.Capability.Parameters" title="foxglove.websocket.Capability.Parameters"><code class="xref py py-data docutils literal notranslate"><span class="pre">Capability.Parameters</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>param_names</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]</span>) – The names of the parameters to unsubscribe from.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.websocket.ServerListener.on_set_parameters">
+<span class="sig-name descname"><span class="pre">on_set_parameters</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">client</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parameters</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">request_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.websocket.ServerListener.on_set_parameters" title="Link to this definition">¶</a></dt>
+<dd><p>Called by the server when a client sets parameters.
+Note that only <cite>parameters</cite> which have changed are included in the callback, but the return
+value must include all parameters.</p>
+<p>Requires <a class="reference internal" href="#foxglove.websocket.Capability.Parameters" title="foxglove.websocket.Capability.Parameters"><code class="xref py py-data docutils literal notranslate"><span class="pre">Capability.Parameters</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>client</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#foxglove.websocket.Client" title="foxglove.Client"><code class="xref py py-class docutils literal notranslate"><span class="pre">Client</span></code></a></span>) – The client (id) that sent the message.</p></li>
+<li><p><strong>parameters</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code>[<a class="reference internal" href="#foxglove.websocket.Parameter" title="foxglove.Parameter"><code class="xref py py-class docutils literal notranslate"><span class="pre">Parameter</span></code></a>]</span>) – The parameters to set.</p></li>
+<li><p><strong>request_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]</span> (default: <code class="docutils literal notranslate"><span class="pre">None</span></code>)) – An optional request id.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code>[<a class="reference internal" href="#foxglove.websocket.Parameter" title="foxglove.Parameter"><code class="xref py py-class docutils literal notranslate"><span class="pre">Parameter</span></code></a>]</span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.websocket.ServerListener.on_subscribe">
+<span class="sig-name descname"><span class="pre">on_subscribe</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">client</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">channel</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.websocket.ServerListener.on_subscribe" title="Link to this definition">¶</a></dt>
+<dd><p>Called by the server when a client subscribes to a channel.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>client</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#foxglove.websocket.Client" title="foxglove.Client"><code class="xref py py-class docutils literal notranslate"><span class="pre">Client</span></code></a></span>) – The client (id) that sent the message.</p></li>
+<li><p><strong>channel</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#foxglove.websocket.ChannelView" title="foxglove.ChannelView"><code class="xref py py-class docutils literal notranslate"><span class="pre">ChannelView</span></code></a></span>) – The channel (id, topic) that the message was sent on.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.websocket.ServerListener.on_unsubscribe">
+<span class="sig-name descname"><span class="pre">on_unsubscribe</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">client</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">channel</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.websocket.ServerListener.on_unsubscribe" title="Link to this definition">¶</a></dt>
+<dd><p>Called by the server when a client unsubscribes from a channel or disconnects.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>client</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#foxglove.websocket.Client" title="foxglove.Client"><code class="xref py py-class docutils literal notranslate"><span class="pre">Client</span></code></a></span>) – The client (id) that sent the message.</p></li>
+<li><p><strong>channel</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#foxglove.websocket.ChannelView" title="foxglove.ChannelView"><code class="xref py py-class docutils literal notranslate"><span class="pre">ChannelView</span></code></a></span>) – The channel (id, topic) that the message was sent on.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.websocket.Service">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.websocket.</span></span><span class="sig-name descname"><span class="pre">Service</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">schema</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">handler</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.websocket.Service" title="Link to this definition">¶</a></dt>
+<dd><p>A websocket service.</p>
+<p>The handler must be a callback function which takes the <a class="reference internal" href="#foxglove.websocket.ServiceRequest" title="foxglove.websocket.ServiceRequest"><code class="xref py py-class docutils literal notranslate"><span class="pre">ServiceRequest</span></code></a> as its
+argument, and returns <cite>bytes</cite> as a response. If the handler raises an exception, the stringified
+exception message will be returned to the client as an error.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.websocket.ServiceRequest">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.websocket.</span></span><span class="sig-name descname"><span class="pre">ServiceRequest</span></span><a class="headerlink" href="#foxglove.websocket.ServiceRequest" title="Link to this definition">¶</a></dt>
+<dd><p>A websocket service request.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="foxglove.websocket.ServiceRequest.call_id">
+<span class="sig-name descname"><span class="pre">call_id</span></span><a class="headerlink" href="#foxglove.websocket.ServiceRequest.call_id" title="Link to this definition">¶</a></dt>
+<dd><p>The call ID that uniquely identifies this request for this client.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="foxglove.websocket.ServiceRequest.client_id">
+<span class="sig-name descname"><span class="pre">client_id</span></span><a class="headerlink" href="#foxglove.websocket.ServiceRequest.client_id" title="Link to this definition">¶</a></dt>
+<dd><p>The client ID.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="foxglove.websocket.ServiceRequest.encoding">
+<span class="sig-name descname"><span class="pre">encoding</span></span><a class="headerlink" href="#foxglove.websocket.ServiceRequest.encoding" title="Link to this definition">¶</a></dt>
+<dd><p>The request encoding.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="foxglove.websocket.ServiceRequest.payload">
+<span class="sig-name descname"><span class="pre">payload</span></span><a class="headerlink" href="#foxglove.websocket.ServiceRequest.payload" title="Link to this definition">¶</a></dt>
+<dd><p>The request payload.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="foxglove.websocket.ServiceRequest.service_name">
+<span class="sig-name descname"><span class="pre">service_name</span></span><a class="headerlink" href="#foxglove.websocket.ServiceRequest.service_name" title="Link to this definition">¶</a></dt>
+<dd><p>The service name.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.websocket.ServiceSchema">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.websocket.</span></span><span class="sig-name descname"><span class="pre">ServiceSchema</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">request</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">response</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.websocket.ServiceSchema" title="Link to this definition">¶</a></dt>
+<dd><p>A service schema.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>name</strong> (<em>str</em>) – The name of the service.</p></li>
+<li><p><strong>request</strong> (<a class="reference internal" href="#foxglove.websocket.MessageSchema" title="foxglove.websocket.MessageSchema"><code class="xref py py-class docutils literal notranslate"><span class="pre">MessageSchema</span></code></a> | <cite>None</cite>) – The request schema.</p></li>
+<li><p><strong>response</strong> (<a class="reference internal" href="#foxglove.websocket.MessageSchema" title="foxglove.websocket.MessageSchema"><code class="xref py py-class docutils literal notranslate"><span class="pre">MessageSchema</span></code></a> | <cite>None</cite>) – The response schema.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="foxglove.websocket.ServiceSchema.name">
+<span class="sig-name descname"><span class="pre">name</span></span><a class="headerlink" href="#foxglove.websocket.ServiceSchema.name" title="Link to this definition">¶</a></dt>
+<dd><p>The name of the service.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="foxglove.websocket.ServiceSchema.request">
+<span class="sig-name descname"><span class="pre">request</span></span><a class="headerlink" href="#foxglove.websocket.ServiceSchema.request" title="Link to this definition">¶</a></dt>
+<dd><p>The request schema.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="foxglove.websocket.ServiceSchema.response">
+<span class="sig-name descname"><span class="pre">response</span></span><a class="headerlink" href="#foxglove.websocket.ServiceSchema.response" title="Link to this definition">¶</a></dt>
+<dd><p>The response schema.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.websocket.WebSocketServer">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.websocket.</span></span><span class="sig-name descname"><span class="pre">WebSocketServer</span></span><a class="headerlink" href="#foxglove.websocket.WebSocketServer" title="Link to this definition">¶</a></dt>
+<dd><p>A live visualization server. Obtain an instance by calling <a class="reference internal" href="#foxglove.start_server" title="foxglove.start_server"><code class="xref py py-func docutils literal notranslate"><span class="pre">foxglove.start_server()</span></code></a>.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.websocket.WebSocketServer.add_services">
+<span class="sig-name descname"><span class="pre">add_services</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">services</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.websocket.WebSocketServer.add_services" title="Link to this definition">¶</a></dt>
+<dd><p>Advertises support for the provided services.</p>
+<p>These services will be available for clients to use until they are removed with
+<a class="reference internal" href="#foxglove.websocket.WebSocketServer.remove_services" title="foxglove.websocket.WebSocketServer.remove_services"><code class="xref py py-meth docutils literal notranslate"><span class="pre">remove_services()</span></code></a>.</p>
+<p>This method will fail if the server was not configured with <a class="reference internal" href="#foxglove.websocket.Capability.Services" title="foxglove.websocket.Capability.Services"><code class="xref py py-attr docutils literal notranslate"><span class="pre">Capability.Services</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>services</strong> – Services to add.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.websocket.WebSocketServer.broadcast_time">
+<span class="sig-name descname"><span class="pre">broadcast_time</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">timestamp_nanos</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.websocket.WebSocketServer.broadcast_time" title="Link to this definition">¶</a></dt>
+<dd><p>Publishes the current server timestamp to all clients.
+If the server has been stopped, this has no effect.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>timestamp_nanos</strong> – The timestamp to broadcast, in nanoseconds.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.websocket.WebSocketServer.clear_session">
+<span class="sig-name descname"><span class="pre">clear_session</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">session_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.websocket.WebSocketServer.clear_session" title="Link to this definition">¶</a></dt>
+<dd><p>Sets a new session ID and notifies all clients, causing them to reset their state.
+If no session ID is provided, generates a new one based on the current timestamp.
+If the server has been stopped, this has no effect.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>session_id</strong> (default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – An optional session ID.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="foxglove.websocket.WebSocketServer.port">
+<span class="sig-name descname"><span class="pre">port</span></span><a class="headerlink" href="#foxglove.websocket.WebSocketServer.port" title="Link to this definition">¶</a></dt>
+<dd><p>Get the port on which the server is listening.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.websocket.WebSocketServer.publish_connection_graph">
+<span class="sig-name descname"><span class="pre">publish_connection_graph</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">graph</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.websocket.WebSocketServer.publish_connection_graph" title="Link to this definition">¶</a></dt>
+<dd><p>Publishes a connection graph update to all subscribed clients. An update is published to
+clients as a difference from the current graph to the replacement graph. When a client first
+subscribes to connection graph updates, it receives the current graph.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>graph</strong> – The connection graph to publish.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.websocket.WebSocketServer.publish_parameter_values">
+<span class="sig-name descname"><span class="pre">publish_parameter_values</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">parameters</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.websocket.WebSocketServer.publish_parameter_values" title="Link to this definition">¶</a></dt>
+<dd><p>Publishes parameter values to all subscribed clients.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>parameters</strong> (list[<a class="reference internal" href="#foxglove.websocket.Parameter" title="foxglove.websocket.Parameter"><code class="xref py py-class docutils literal notranslate"><span class="pre">Parameter</span></code></a>]) – The parameters to publish.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.websocket.WebSocketServer.publish_status">
+<span class="sig-name descname"><span class="pre">publish_status</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">message</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">level</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.websocket.WebSocketServer.publish_status" title="Link to this definition">¶</a></dt>
+<dd><p>Send a status message to all clients.
+If the server has been stopped, this has no effect.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>message</strong> – The message to send.</p></li>
+<li><p><strong>level</strong> – The level of the status message.</p></li>
+<li><p><strong>id</strong> (default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – An optional id for the status message.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.websocket.WebSocketServer.remove_services">
+<span class="sig-name descname"><span class="pre">remove_services</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">names</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.websocket.WebSocketServer.remove_services" title="Link to this definition">¶</a></dt>
+<dd><p>Removes services that were previously advertised.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>names</strong> – Names of services to remove.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.websocket.WebSocketServer.remove_status">
+<span class="sig-name descname"><span class="pre">remove_status</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">status_ids</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.websocket.WebSocketServer.remove_status" title="Link to this definition">¶</a></dt>
+<dd><p>Remove status messages by id from all clients.
+If the server has been stopped, this has no effect.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>status_ids</strong> (<em>list</em><em>[</em><em>str</em><em>]</em>) – The ids of the status messages to remove.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.websocket.WebSocketServer.stop">
+<span class="sig-name descname"><span class="pre">stop</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.websocket.WebSocketServer.stop" title="Link to this definition">¶</a></dt>
+<dd><p>Explicitly stop the server.</p>
+</dd></dl>
+
+</dd></dl>
+
+<section id="enums">
+<h3>Enums<a class="headerlink" href="#enums" title="Link to this heading">¶</a></h3>
+<dl class="py class enum">
+<dt class="sig sig-object py" id="foxglove.websocket.Capability">
+<em class="property"><span class="pre">enum</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.websocket.</span></span><span class="sig-name descname"><span class="pre">Capability</span></span><a class="headerlink" href="#foxglove.websocket.Capability" title="Link to this definition">¶</a></dt>
+<dd><p>An enumeration of capabilities that you may choose to support for live visualization.</p>
+<p>Specify the capabilities you support when calling <a class="reference internal" href="#foxglove.start_server" title="foxglove.start_server"><code class="xref py py-func docutils literal notranslate"><span class="pre">foxglove.start_server()</span></code></a>. These will be
+advertised to the Foxglove app when connected as a WebSocket client.</p>
+<dl class="py data">
+<dt class="sig sig-object py" id="foxglove.websocket.Capability.ClientPublish">
+<span class="sig-name descname"><span class="pre">ClientPublish</span></span><a class="headerlink" href="#foxglove.websocket.Capability.ClientPublish" title="Link to this definition">¶</a></dt>
+<dd><p>Allow clients to advertise channels to send data messages to the server.</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="foxglove.websocket.Capability.Parameters">
+<span class="sig-name descname"><span class="pre">Parameters</span></span><a class="headerlink" href="#foxglove.websocket.Capability.Parameters" title="Link to this definition">¶</a></dt>
+<dd><p>Allow clients to get &amp; set parameters.</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="foxglove.websocket.Capability.Services">
+<span class="sig-name descname"><span class="pre">Services</span></span><a class="headerlink" href="#foxglove.websocket.Capability.Services" title="Link to this definition">¶</a></dt>
+<dd><p>Allow clients to call services.</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="foxglove.websocket.Capability.Time">
+<span class="sig-name descname"><span class="pre">Time</span></span><a class="headerlink" href="#foxglove.websocket.Capability.Time" title="Link to this definition">¶</a></dt>
+<dd><p>Inform clients about the latest server time.</p>
+<p>This allows accelerated, slowed, or stepped control over the progress of time. If the
+server publishes time data, then timestamps of published messages must originate from the
+same time source.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class enum">
+<dt class="sig sig-object py" id="foxglove.websocket.StatusLevel">
+<em class="property"><span class="pre">enum</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.websocket.</span></span><span class="sig-name descname"><span class="pre">StatusLevel</span></span><a class="headerlink" href="#foxglove.websocket.StatusLevel" title="Link to this definition">¶</a></dt>
+<dd><p>A level for <a class="reference internal" href="#foxglove.websocket.WebSocketServer.publish_status" title="foxglove.websocket.WebSocketServer.publish_status"><code class="xref py py-meth docutils literal notranslate"><span class="pre">WebSocketServer.publish_status()</span></code></a>.</p>
+<dl class="py data">
+<dt class="sig sig-object py" id="foxglove.websocket.StatusLevel.Info">
+<span class="sig-name descname"><span class="pre">Info</span></span><a class="headerlink" href="#foxglove.websocket.StatusLevel.Info" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="foxglove.websocket.StatusLevel.Warning">
+<span class="sig-name descname"><span class="pre">Warning</span></span><a class="headerlink" href="#foxglove.websocket.StatusLevel.Warning" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="foxglove.websocket.StatusLevel.Error">
+<span class="sig-name descname"><span class="pre">Error</span></span><a class="headerlink" href="#foxglove.websocket.StatusLevel.Error" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">Foxglove SDK</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">API Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#module-foxglove">foxglove</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#foxglove.Channel"><code class="docutils literal notranslate"><span class="pre">Channel</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#foxglove.Context"><code class="docutils literal notranslate"><span class="pre">Context</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#foxglove.Schema"><code class="docutils literal notranslate"><span class="pre">Schema</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#foxglove.log"><code class="docutils literal notranslate"><span class="pre">log()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#foxglove.open_mcap"><code class="docutils literal notranslate"><span class="pre">open_mcap()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#foxglove.set_log_level"><code class="docutils literal notranslate"><span class="pre">set_log_level()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#foxglove.start_server"><code class="docutils literal notranslate"><span class="pre">start_server()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#schemas">Schemas</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#channels">Channels</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#parameters">Parameters</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#asset-handling">Asset handling</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#foxglove-mcap">foxglove.mcap</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#foxglove.mcap.MCAPWriteOptions"><code class="docutils literal notranslate"><span class="pre">MCAPWriteOptions</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#foxglove.mcap.MCAPWriter"><code class="docutils literal notranslate"><span class="pre">MCAPWriter</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#foxglove.mcap.MCAPCompression"><code class="docutils literal notranslate"><span class="pre">MCAPCompression</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#foxglove-websocket">foxglove.websocket</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#foxglove.websocket.ChannelView"><code class="docutils literal notranslate"><span class="pre">ChannelView</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#foxglove.websocket.Client"><code class="docutils literal notranslate"><span class="pre">Client</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#foxglove.websocket.ClientChannel"><code class="docutils literal notranslate"><span class="pre">ClientChannel</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#foxglove.websocket.ConnectionGraph"><code class="docutils literal notranslate"><span class="pre">ConnectionGraph</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#foxglove.websocket.MessageSchema"><code class="docutils literal notranslate"><span class="pre">MessageSchema</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#foxglove.websocket.Parameter"><code class="docutils literal notranslate"><span class="pre">Parameter</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#foxglove.websocket.ServerListener"><code class="docutils literal notranslate"><span class="pre">ServerListener</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#foxglove.websocket.Service"><code class="docutils literal notranslate"><span class="pre">Service</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#foxglove.websocket.ServiceRequest"><code class="docutils literal notranslate"><span class="pre">ServiceRequest</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#foxglove.websocket.ServiceSchema"><code class="docutils literal notranslate"><span class="pre">ServiceSchema</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#foxglove.websocket.WebSocketServer"><code class="docutils literal notranslate"><span class="pre">WebSocketServer</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#enums">Enums</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="../examples.html" title="previous chapter">Examples</a></li>
+      <li>Next: <a href="schemas.html" title="next chapter">&lt;no title&gt;</a></li>
+  </ul></li>
+</ul>
+</div>
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025, Foxglove.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 7.4.7</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 0.7.16</a>
+      
+      |
+      <a href="../_sources/api/index.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

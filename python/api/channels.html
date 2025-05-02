@@ -1,0 +1,1644 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>&lt;no title&gt; &#8212; Foxglove SDK 0.7.1 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=12dfc556" />
+    <script src="../_static/documentation_options.js?v=5a057da9"></script>
+    <script src="../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="prev" title="&lt;no title&gt;" href="schemas.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <p id="module-foxglove.channels">This defines channels to easily log messages conforming to well-known Foxglove schemas.</p>
+<p>See the <a class="reference internal" href="schemas.html#module-foxglove.schemas" title="foxglove.schemas"><code class="xref py py-mod docutils literal notranslate"><span class="pre">foxglove.schemas</span></code></a> module for available definitions.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.channels.CameraCalibrationChannel">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.channels.</span></span><span class="sig-name descname"><span class="pre">CameraCalibrationChannel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">topic</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">context</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.CameraCalibrationChannel" title="Link to this definition">¶</a></dt>
+<dd><p>A channel for logging <a class="reference internal" href="schemas.html#foxglove.schemas.CameraCalibration" title="foxglove.schemas.CameraCalibration"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.schemas.CameraCalibration</span></code></a> messages.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.CameraCalibrationChannel.close">
+<span class="sig-name descname"><span class="pre">close</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.CameraCalibrationChannel.close" title="Link to this definition">¶</a></dt>
+<dd><p>Close the channel.</p>
+<p>You can use this to explicitly unadvertise the channel to sinks that subscribe to
+channels dynamically, such as the <a class="reference internal" href="index.html#foxglove.websocket.WebSocketServer" title="foxglove.websocket.WebSocketServer"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.websocket.WebSocketServer</span></code></a>.</p>
+<p>Attempts to log on a closed channel will elicit a throttled warning message.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.CameraCalibrationChannel.id">
+<span class="sig-name descname"><span class="pre">id</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.CameraCalibrationChannel.id" title="Link to this definition">¶</a></dt>
+<dd><p>The unique ID of the channel.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.CameraCalibrationChannel.log">
+<span class="sig-name descname"><span class="pre">log</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">msg</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_time</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.CameraCalibrationChannel.log" title="Link to this definition">¶</a></dt>
+<dd><p>Log a <a class="reference internal" href="schemas.html#foxglove.schemas.CameraCalibration" title="foxglove.schemas.CameraCalibration"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.schemas.CameraCalibration</span></code></a> message to the channel.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>msg</strong> – The message to log.</p></li>
+<li><p><strong>log_time</strong> (default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – The log time is the time, as nanoseconds from the unix epoch, that the
+message was recorded. Usually this is the time log() is called. If omitted, the
+current time is used.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.CameraCalibrationChannel.schema_name">
+<span class="sig-name descname"><span class="pre">schema_name</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.CameraCalibrationChannel.schema_name" title="Link to this definition">¶</a></dt>
+<dd><p>The name of the schema for the channel.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.CameraCalibrationChannel.topic">
+<span class="sig-name descname"><span class="pre">topic</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.CameraCalibrationChannel.topic" title="Link to this definition">¶</a></dt>
+<dd><p>The topic name of the channel.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.channels.CircleAnnotationChannel">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.channels.</span></span><span class="sig-name descname"><span class="pre">CircleAnnotationChannel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">topic</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">context</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.CircleAnnotationChannel" title="Link to this definition">¶</a></dt>
+<dd><p>A channel for logging <a class="reference internal" href="schemas.html#foxglove.schemas.CircleAnnotation" title="foxglove.schemas.CircleAnnotation"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.schemas.CircleAnnotation</span></code></a> messages.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.CircleAnnotationChannel.close">
+<span class="sig-name descname"><span class="pre">close</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.CircleAnnotationChannel.close" title="Link to this definition">¶</a></dt>
+<dd><p>Close the channel.</p>
+<p>You can use this to explicitly unadvertise the channel to sinks that subscribe to
+channels dynamically, such as the <a class="reference internal" href="index.html#foxglove.websocket.WebSocketServer" title="foxglove.websocket.WebSocketServer"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.websocket.WebSocketServer</span></code></a>.</p>
+<p>Attempts to log on a closed channel will elicit a throttled warning message.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.CircleAnnotationChannel.id">
+<span class="sig-name descname"><span class="pre">id</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.CircleAnnotationChannel.id" title="Link to this definition">¶</a></dt>
+<dd><p>The unique ID of the channel.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.CircleAnnotationChannel.log">
+<span class="sig-name descname"><span class="pre">log</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">msg</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_time</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.CircleAnnotationChannel.log" title="Link to this definition">¶</a></dt>
+<dd><p>Log a <a class="reference internal" href="schemas.html#foxglove.schemas.CircleAnnotation" title="foxglove.schemas.CircleAnnotation"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.schemas.CircleAnnotation</span></code></a> message to the channel.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>msg</strong> – The message to log.</p></li>
+<li><p><strong>log_time</strong> (default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – The log time is the time, as nanoseconds from the unix epoch, that the
+message was recorded. Usually this is the time log() is called. If omitted, the
+current time is used.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.CircleAnnotationChannel.schema_name">
+<span class="sig-name descname"><span class="pre">schema_name</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.CircleAnnotationChannel.schema_name" title="Link to this definition">¶</a></dt>
+<dd><p>The name of the schema for the channel.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.CircleAnnotationChannel.topic">
+<span class="sig-name descname"><span class="pre">topic</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.CircleAnnotationChannel.topic" title="Link to this definition">¶</a></dt>
+<dd><p>The topic name of the channel.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.channels.ColorChannel">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.channels.</span></span><span class="sig-name descname"><span class="pre">ColorChannel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">topic</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">context</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.ColorChannel" title="Link to this definition">¶</a></dt>
+<dd><p>A channel for logging <a class="reference internal" href="schemas.html#foxglove.schemas.Color" title="foxglove.schemas.Color"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.schemas.Color</span></code></a> messages.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.ColorChannel.close">
+<span class="sig-name descname"><span class="pre">close</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.ColorChannel.close" title="Link to this definition">¶</a></dt>
+<dd><p>Close the channel.</p>
+<p>You can use this to explicitly unadvertise the channel to sinks that subscribe to
+channels dynamically, such as the <a class="reference internal" href="index.html#foxglove.websocket.WebSocketServer" title="foxglove.websocket.WebSocketServer"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.websocket.WebSocketServer</span></code></a>.</p>
+<p>Attempts to log on a closed channel will elicit a throttled warning message.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.ColorChannel.id">
+<span class="sig-name descname"><span class="pre">id</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.ColorChannel.id" title="Link to this definition">¶</a></dt>
+<dd><p>The unique ID of the channel.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.ColorChannel.log">
+<span class="sig-name descname"><span class="pre">log</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">msg</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_time</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.ColorChannel.log" title="Link to this definition">¶</a></dt>
+<dd><p>Log a <a class="reference internal" href="schemas.html#foxglove.schemas.Color" title="foxglove.schemas.Color"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.schemas.Color</span></code></a> message to the channel.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>msg</strong> – The message to log.</p></li>
+<li><p><strong>log_time</strong> (default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – The log time is the time, as nanoseconds from the unix epoch, that the
+message was recorded. Usually this is the time log() is called. If omitted, the
+current time is used.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.ColorChannel.schema_name">
+<span class="sig-name descname"><span class="pre">schema_name</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.ColorChannel.schema_name" title="Link to this definition">¶</a></dt>
+<dd><p>The name of the schema for the channel.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.ColorChannel.topic">
+<span class="sig-name descname"><span class="pre">topic</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.ColorChannel.topic" title="Link to this definition">¶</a></dt>
+<dd><p>The topic name of the channel.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.channels.CompressedImageChannel">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.channels.</span></span><span class="sig-name descname"><span class="pre">CompressedImageChannel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">topic</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">context</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.CompressedImageChannel" title="Link to this definition">¶</a></dt>
+<dd><p>A channel for logging <a class="reference internal" href="schemas.html#foxglove.schemas.CompressedImage" title="foxglove.schemas.CompressedImage"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.schemas.CompressedImage</span></code></a> messages.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.CompressedImageChannel.close">
+<span class="sig-name descname"><span class="pre">close</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.CompressedImageChannel.close" title="Link to this definition">¶</a></dt>
+<dd><p>Close the channel.</p>
+<p>You can use this to explicitly unadvertise the channel to sinks that subscribe to
+channels dynamically, such as the <a class="reference internal" href="index.html#foxglove.websocket.WebSocketServer" title="foxglove.websocket.WebSocketServer"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.websocket.WebSocketServer</span></code></a>.</p>
+<p>Attempts to log on a closed channel will elicit a throttled warning message.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.CompressedImageChannel.id">
+<span class="sig-name descname"><span class="pre">id</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.CompressedImageChannel.id" title="Link to this definition">¶</a></dt>
+<dd><p>The unique ID of the channel.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.CompressedImageChannel.log">
+<span class="sig-name descname"><span class="pre">log</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">msg</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_time</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.CompressedImageChannel.log" title="Link to this definition">¶</a></dt>
+<dd><p>Log a <a class="reference internal" href="schemas.html#foxglove.schemas.CompressedImage" title="foxglove.schemas.CompressedImage"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.schemas.CompressedImage</span></code></a> message to the channel.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>msg</strong> – The message to log.</p></li>
+<li><p><strong>log_time</strong> (default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – The log time is the time, as nanoseconds from the unix epoch, that the
+message was recorded. Usually this is the time log() is called. If omitted, the
+current time is used.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.CompressedImageChannel.schema_name">
+<span class="sig-name descname"><span class="pre">schema_name</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.CompressedImageChannel.schema_name" title="Link to this definition">¶</a></dt>
+<dd><p>The name of the schema for the channel.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.CompressedImageChannel.topic">
+<span class="sig-name descname"><span class="pre">topic</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.CompressedImageChannel.topic" title="Link to this definition">¶</a></dt>
+<dd><p>The topic name of the channel.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.channels.CompressedVideoChannel">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.channels.</span></span><span class="sig-name descname"><span class="pre">CompressedVideoChannel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">topic</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">context</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.CompressedVideoChannel" title="Link to this definition">¶</a></dt>
+<dd><p>A channel for logging <a class="reference internal" href="schemas.html#foxglove.schemas.CompressedVideo" title="foxglove.schemas.CompressedVideo"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.schemas.CompressedVideo</span></code></a> messages.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.CompressedVideoChannel.close">
+<span class="sig-name descname"><span class="pre">close</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.CompressedVideoChannel.close" title="Link to this definition">¶</a></dt>
+<dd><p>Close the channel.</p>
+<p>You can use this to explicitly unadvertise the channel to sinks that subscribe to
+channels dynamically, such as the <a class="reference internal" href="index.html#foxglove.websocket.WebSocketServer" title="foxglove.websocket.WebSocketServer"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.websocket.WebSocketServer</span></code></a>.</p>
+<p>Attempts to log on a closed channel will elicit a throttled warning message.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.CompressedVideoChannel.id">
+<span class="sig-name descname"><span class="pre">id</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.CompressedVideoChannel.id" title="Link to this definition">¶</a></dt>
+<dd><p>The unique ID of the channel.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.CompressedVideoChannel.log">
+<span class="sig-name descname"><span class="pre">log</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">msg</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_time</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.CompressedVideoChannel.log" title="Link to this definition">¶</a></dt>
+<dd><p>Log a <a class="reference internal" href="schemas.html#foxglove.schemas.CompressedVideo" title="foxglove.schemas.CompressedVideo"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.schemas.CompressedVideo</span></code></a> message to the channel.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>msg</strong> – The message to log.</p></li>
+<li><p><strong>log_time</strong> (default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – The log time is the time, as nanoseconds from the unix epoch, that the
+message was recorded. Usually this is the time log() is called. If omitted, the
+current time is used.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.CompressedVideoChannel.schema_name">
+<span class="sig-name descname"><span class="pre">schema_name</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.CompressedVideoChannel.schema_name" title="Link to this definition">¶</a></dt>
+<dd><p>The name of the schema for the channel.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.CompressedVideoChannel.topic">
+<span class="sig-name descname"><span class="pre">topic</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.CompressedVideoChannel.topic" title="Link to this definition">¶</a></dt>
+<dd><p>The topic name of the channel.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.channels.FrameTransformChannel">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.channels.</span></span><span class="sig-name descname"><span class="pre">FrameTransformChannel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">topic</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">context</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.FrameTransformChannel" title="Link to this definition">¶</a></dt>
+<dd><p>A channel for logging <a class="reference internal" href="schemas.html#foxglove.schemas.FrameTransform" title="foxglove.schemas.FrameTransform"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.schemas.FrameTransform</span></code></a> messages.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.FrameTransformChannel.close">
+<span class="sig-name descname"><span class="pre">close</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.FrameTransformChannel.close" title="Link to this definition">¶</a></dt>
+<dd><p>Close the channel.</p>
+<p>You can use this to explicitly unadvertise the channel to sinks that subscribe to
+channels dynamically, such as the <a class="reference internal" href="index.html#foxglove.websocket.WebSocketServer" title="foxglove.websocket.WebSocketServer"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.websocket.WebSocketServer</span></code></a>.</p>
+<p>Attempts to log on a closed channel will elicit a throttled warning message.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.FrameTransformChannel.id">
+<span class="sig-name descname"><span class="pre">id</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.FrameTransformChannel.id" title="Link to this definition">¶</a></dt>
+<dd><p>The unique ID of the channel.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.FrameTransformChannel.log">
+<span class="sig-name descname"><span class="pre">log</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">msg</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_time</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.FrameTransformChannel.log" title="Link to this definition">¶</a></dt>
+<dd><p>Log a <a class="reference internal" href="schemas.html#foxglove.schemas.FrameTransform" title="foxglove.schemas.FrameTransform"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.schemas.FrameTransform</span></code></a> message to the channel.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>msg</strong> – The message to log.</p></li>
+<li><p><strong>log_time</strong> (default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – The log time is the time, as nanoseconds from the unix epoch, that the
+message was recorded. Usually this is the time log() is called. If omitted, the
+current time is used.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.FrameTransformChannel.schema_name">
+<span class="sig-name descname"><span class="pre">schema_name</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.FrameTransformChannel.schema_name" title="Link to this definition">¶</a></dt>
+<dd><p>The name of the schema for the channel.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.FrameTransformChannel.topic">
+<span class="sig-name descname"><span class="pre">topic</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.FrameTransformChannel.topic" title="Link to this definition">¶</a></dt>
+<dd><p>The topic name of the channel.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.channels.FrameTransformsChannel">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.channels.</span></span><span class="sig-name descname"><span class="pre">FrameTransformsChannel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">topic</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">context</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.FrameTransformsChannel" title="Link to this definition">¶</a></dt>
+<dd><p>A channel for logging <a class="reference internal" href="schemas.html#foxglove.schemas.FrameTransforms" title="foxglove.schemas.FrameTransforms"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.schemas.FrameTransforms</span></code></a> messages.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.FrameTransformsChannel.close">
+<span class="sig-name descname"><span class="pre">close</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.FrameTransformsChannel.close" title="Link to this definition">¶</a></dt>
+<dd><p>Close the channel.</p>
+<p>You can use this to explicitly unadvertise the channel to sinks that subscribe to
+channels dynamically, such as the <a class="reference internal" href="index.html#foxglove.websocket.WebSocketServer" title="foxglove.websocket.WebSocketServer"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.websocket.WebSocketServer</span></code></a>.</p>
+<p>Attempts to log on a closed channel will elicit a throttled warning message.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.FrameTransformsChannel.id">
+<span class="sig-name descname"><span class="pre">id</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.FrameTransformsChannel.id" title="Link to this definition">¶</a></dt>
+<dd><p>The unique ID of the channel.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.FrameTransformsChannel.log">
+<span class="sig-name descname"><span class="pre">log</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">msg</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_time</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.FrameTransformsChannel.log" title="Link to this definition">¶</a></dt>
+<dd><p>Log a <a class="reference internal" href="schemas.html#foxglove.schemas.FrameTransforms" title="foxglove.schemas.FrameTransforms"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.schemas.FrameTransforms</span></code></a> message to the channel.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>msg</strong> – The message to log.</p></li>
+<li><p><strong>log_time</strong> (default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – The log time is the time, as nanoseconds from the unix epoch, that the
+message was recorded. Usually this is the time log() is called. If omitted, the
+current time is used.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.FrameTransformsChannel.schema_name">
+<span class="sig-name descname"><span class="pre">schema_name</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.FrameTransformsChannel.schema_name" title="Link to this definition">¶</a></dt>
+<dd><p>The name of the schema for the channel.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.FrameTransformsChannel.topic">
+<span class="sig-name descname"><span class="pre">topic</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.FrameTransformsChannel.topic" title="Link to this definition">¶</a></dt>
+<dd><p>The topic name of the channel.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.channels.GeoJsonChannel">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.channels.</span></span><span class="sig-name descname"><span class="pre">GeoJsonChannel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">topic</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">context</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.GeoJsonChannel" title="Link to this definition">¶</a></dt>
+<dd><p>A channel for logging <a class="reference internal" href="schemas.html#foxglove.schemas.GeoJson" title="foxglove.schemas.GeoJson"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.schemas.GeoJson</span></code></a> messages.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.GeoJsonChannel.close">
+<span class="sig-name descname"><span class="pre">close</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.GeoJsonChannel.close" title="Link to this definition">¶</a></dt>
+<dd><p>Close the channel.</p>
+<p>You can use this to explicitly unadvertise the channel to sinks that subscribe to
+channels dynamically, such as the <a class="reference internal" href="index.html#foxglove.websocket.WebSocketServer" title="foxglove.websocket.WebSocketServer"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.websocket.WebSocketServer</span></code></a>.</p>
+<p>Attempts to log on a closed channel will elicit a throttled warning message.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.GeoJsonChannel.id">
+<span class="sig-name descname"><span class="pre">id</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.GeoJsonChannel.id" title="Link to this definition">¶</a></dt>
+<dd><p>The unique ID of the channel.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.GeoJsonChannel.log">
+<span class="sig-name descname"><span class="pre">log</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">msg</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_time</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.GeoJsonChannel.log" title="Link to this definition">¶</a></dt>
+<dd><p>Log a <a class="reference internal" href="schemas.html#foxglove.schemas.GeoJson" title="foxglove.schemas.GeoJson"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.schemas.GeoJson</span></code></a> message to the channel.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>msg</strong> – The message to log.</p></li>
+<li><p><strong>log_time</strong> (default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – The log time is the time, as nanoseconds from the unix epoch, that the
+message was recorded. Usually this is the time log() is called. If omitted, the
+current time is used.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.GeoJsonChannel.schema_name">
+<span class="sig-name descname"><span class="pre">schema_name</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.GeoJsonChannel.schema_name" title="Link to this definition">¶</a></dt>
+<dd><p>The name of the schema for the channel.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.GeoJsonChannel.topic">
+<span class="sig-name descname"><span class="pre">topic</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.GeoJsonChannel.topic" title="Link to this definition">¶</a></dt>
+<dd><p>The topic name of the channel.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.channels.GridChannel">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.channels.</span></span><span class="sig-name descname"><span class="pre">GridChannel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">topic</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">context</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.GridChannel" title="Link to this definition">¶</a></dt>
+<dd><p>A channel for logging <a class="reference internal" href="schemas.html#foxglove.schemas.Grid" title="foxglove.schemas.Grid"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.schemas.Grid</span></code></a> messages.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.GridChannel.close">
+<span class="sig-name descname"><span class="pre">close</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.GridChannel.close" title="Link to this definition">¶</a></dt>
+<dd><p>Close the channel.</p>
+<p>You can use this to explicitly unadvertise the channel to sinks that subscribe to
+channels dynamically, such as the <a class="reference internal" href="index.html#foxglove.websocket.WebSocketServer" title="foxglove.websocket.WebSocketServer"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.websocket.WebSocketServer</span></code></a>.</p>
+<p>Attempts to log on a closed channel will elicit a throttled warning message.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.GridChannel.id">
+<span class="sig-name descname"><span class="pre">id</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.GridChannel.id" title="Link to this definition">¶</a></dt>
+<dd><p>The unique ID of the channel.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.GridChannel.log">
+<span class="sig-name descname"><span class="pre">log</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">msg</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_time</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.GridChannel.log" title="Link to this definition">¶</a></dt>
+<dd><p>Log a <a class="reference internal" href="schemas.html#foxglove.schemas.Grid" title="foxglove.schemas.Grid"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.schemas.Grid</span></code></a> message to the channel.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>msg</strong> – The message to log.</p></li>
+<li><p><strong>log_time</strong> (default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – The log time is the time, as nanoseconds from the unix epoch, that the
+message was recorded. Usually this is the time log() is called. If omitted, the
+current time is used.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.GridChannel.schema_name">
+<span class="sig-name descname"><span class="pre">schema_name</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.GridChannel.schema_name" title="Link to this definition">¶</a></dt>
+<dd><p>The name of the schema for the channel.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.GridChannel.topic">
+<span class="sig-name descname"><span class="pre">topic</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.GridChannel.topic" title="Link to this definition">¶</a></dt>
+<dd><p>The topic name of the channel.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.channels.ImageAnnotationsChannel">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.channels.</span></span><span class="sig-name descname"><span class="pre">ImageAnnotationsChannel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">topic</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">context</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.ImageAnnotationsChannel" title="Link to this definition">¶</a></dt>
+<dd><p>A channel for logging <a class="reference internal" href="schemas.html#foxglove.schemas.ImageAnnotations" title="foxglove.schemas.ImageAnnotations"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.schemas.ImageAnnotations</span></code></a> messages.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.ImageAnnotationsChannel.close">
+<span class="sig-name descname"><span class="pre">close</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.ImageAnnotationsChannel.close" title="Link to this definition">¶</a></dt>
+<dd><p>Close the channel.</p>
+<p>You can use this to explicitly unadvertise the channel to sinks that subscribe to
+channels dynamically, such as the <a class="reference internal" href="index.html#foxglove.websocket.WebSocketServer" title="foxglove.websocket.WebSocketServer"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.websocket.WebSocketServer</span></code></a>.</p>
+<p>Attempts to log on a closed channel will elicit a throttled warning message.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.ImageAnnotationsChannel.id">
+<span class="sig-name descname"><span class="pre">id</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.ImageAnnotationsChannel.id" title="Link to this definition">¶</a></dt>
+<dd><p>The unique ID of the channel.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.ImageAnnotationsChannel.log">
+<span class="sig-name descname"><span class="pre">log</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">msg</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_time</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.ImageAnnotationsChannel.log" title="Link to this definition">¶</a></dt>
+<dd><p>Log a <a class="reference internal" href="schemas.html#foxglove.schemas.ImageAnnotations" title="foxglove.schemas.ImageAnnotations"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.schemas.ImageAnnotations</span></code></a> message to the channel.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>msg</strong> – The message to log.</p></li>
+<li><p><strong>log_time</strong> (default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – The log time is the time, as nanoseconds from the unix epoch, that the
+message was recorded. Usually this is the time log() is called. If omitted, the
+current time is used.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.ImageAnnotationsChannel.schema_name">
+<span class="sig-name descname"><span class="pre">schema_name</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.ImageAnnotationsChannel.schema_name" title="Link to this definition">¶</a></dt>
+<dd><p>The name of the schema for the channel.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.ImageAnnotationsChannel.topic">
+<span class="sig-name descname"><span class="pre">topic</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.ImageAnnotationsChannel.topic" title="Link to this definition">¶</a></dt>
+<dd><p>The topic name of the channel.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.channels.KeyValuePairChannel">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.channels.</span></span><span class="sig-name descname"><span class="pre">KeyValuePairChannel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">topic</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">context</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.KeyValuePairChannel" title="Link to this definition">¶</a></dt>
+<dd><p>A channel for logging <a class="reference internal" href="schemas.html#foxglove.schemas.KeyValuePair" title="foxglove.schemas.KeyValuePair"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.schemas.KeyValuePair</span></code></a> messages.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.KeyValuePairChannel.close">
+<span class="sig-name descname"><span class="pre">close</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.KeyValuePairChannel.close" title="Link to this definition">¶</a></dt>
+<dd><p>Close the channel.</p>
+<p>You can use this to explicitly unadvertise the channel to sinks that subscribe to
+channels dynamically, such as the <a class="reference internal" href="index.html#foxglove.websocket.WebSocketServer" title="foxglove.websocket.WebSocketServer"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.websocket.WebSocketServer</span></code></a>.</p>
+<p>Attempts to log on a closed channel will elicit a throttled warning message.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.KeyValuePairChannel.id">
+<span class="sig-name descname"><span class="pre">id</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.KeyValuePairChannel.id" title="Link to this definition">¶</a></dt>
+<dd><p>The unique ID of the channel.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.KeyValuePairChannel.log">
+<span class="sig-name descname"><span class="pre">log</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">msg</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_time</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.KeyValuePairChannel.log" title="Link to this definition">¶</a></dt>
+<dd><p>Log a <a class="reference internal" href="schemas.html#foxglove.schemas.KeyValuePair" title="foxglove.schemas.KeyValuePair"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.schemas.KeyValuePair</span></code></a> message to the channel.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>msg</strong> – The message to log.</p></li>
+<li><p><strong>log_time</strong> (default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – The log time is the time, as nanoseconds from the unix epoch, that the
+message was recorded. Usually this is the time log() is called. If omitted, the
+current time is used.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.KeyValuePairChannel.schema_name">
+<span class="sig-name descname"><span class="pre">schema_name</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.KeyValuePairChannel.schema_name" title="Link to this definition">¶</a></dt>
+<dd><p>The name of the schema for the channel.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.KeyValuePairChannel.topic">
+<span class="sig-name descname"><span class="pre">topic</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.KeyValuePairChannel.topic" title="Link to this definition">¶</a></dt>
+<dd><p>The topic name of the channel.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.channels.LaserScanChannel">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.channels.</span></span><span class="sig-name descname"><span class="pre">LaserScanChannel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">topic</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">context</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.LaserScanChannel" title="Link to this definition">¶</a></dt>
+<dd><p>A channel for logging <a class="reference internal" href="schemas.html#foxglove.schemas.LaserScan" title="foxglove.schemas.LaserScan"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.schemas.LaserScan</span></code></a> messages.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.LaserScanChannel.close">
+<span class="sig-name descname"><span class="pre">close</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.LaserScanChannel.close" title="Link to this definition">¶</a></dt>
+<dd><p>Close the channel.</p>
+<p>You can use this to explicitly unadvertise the channel to sinks that subscribe to
+channels dynamically, such as the <a class="reference internal" href="index.html#foxglove.websocket.WebSocketServer" title="foxglove.websocket.WebSocketServer"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.websocket.WebSocketServer</span></code></a>.</p>
+<p>Attempts to log on a closed channel will elicit a throttled warning message.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.LaserScanChannel.id">
+<span class="sig-name descname"><span class="pre">id</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.LaserScanChannel.id" title="Link to this definition">¶</a></dt>
+<dd><p>The unique ID of the channel.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.LaserScanChannel.log">
+<span class="sig-name descname"><span class="pre">log</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">msg</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_time</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.LaserScanChannel.log" title="Link to this definition">¶</a></dt>
+<dd><p>Log a <a class="reference internal" href="schemas.html#foxglove.schemas.LaserScan" title="foxglove.schemas.LaserScan"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.schemas.LaserScan</span></code></a> message to the channel.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>msg</strong> – The message to log.</p></li>
+<li><p><strong>log_time</strong> (default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – The log time is the time, as nanoseconds from the unix epoch, that the
+message was recorded. Usually this is the time log() is called. If omitted, the
+current time is used.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.LaserScanChannel.schema_name">
+<span class="sig-name descname"><span class="pre">schema_name</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.LaserScanChannel.schema_name" title="Link to this definition">¶</a></dt>
+<dd><p>The name of the schema for the channel.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.LaserScanChannel.topic">
+<span class="sig-name descname"><span class="pre">topic</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.LaserScanChannel.topic" title="Link to this definition">¶</a></dt>
+<dd><p>The topic name of the channel.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.channels.LocationFixChannel">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.channels.</span></span><span class="sig-name descname"><span class="pre">LocationFixChannel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">topic</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">context</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.LocationFixChannel" title="Link to this definition">¶</a></dt>
+<dd><p>A channel for logging <a class="reference internal" href="schemas.html#foxglove.schemas.LocationFix" title="foxglove.schemas.LocationFix"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.schemas.LocationFix</span></code></a> messages.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.LocationFixChannel.close">
+<span class="sig-name descname"><span class="pre">close</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.LocationFixChannel.close" title="Link to this definition">¶</a></dt>
+<dd><p>Close the channel.</p>
+<p>You can use this to explicitly unadvertise the channel to sinks that subscribe to
+channels dynamically, such as the <a class="reference internal" href="index.html#foxglove.websocket.WebSocketServer" title="foxglove.websocket.WebSocketServer"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.websocket.WebSocketServer</span></code></a>.</p>
+<p>Attempts to log on a closed channel will elicit a throttled warning message.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.LocationFixChannel.id">
+<span class="sig-name descname"><span class="pre">id</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.LocationFixChannel.id" title="Link to this definition">¶</a></dt>
+<dd><p>The unique ID of the channel.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.LocationFixChannel.log">
+<span class="sig-name descname"><span class="pre">log</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">msg</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_time</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.LocationFixChannel.log" title="Link to this definition">¶</a></dt>
+<dd><p>Log a <a class="reference internal" href="schemas.html#foxglove.schemas.LocationFix" title="foxglove.schemas.LocationFix"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.schemas.LocationFix</span></code></a> message to the channel.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>msg</strong> – The message to log.</p></li>
+<li><p><strong>log_time</strong> (default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – The log time is the time, as nanoseconds from the unix epoch, that the
+message was recorded. Usually this is the time log() is called. If omitted, the
+current time is used.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.LocationFixChannel.schema_name">
+<span class="sig-name descname"><span class="pre">schema_name</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.LocationFixChannel.schema_name" title="Link to this definition">¶</a></dt>
+<dd><p>The name of the schema for the channel.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.LocationFixChannel.topic">
+<span class="sig-name descname"><span class="pre">topic</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.LocationFixChannel.topic" title="Link to this definition">¶</a></dt>
+<dd><p>The topic name of the channel.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.channels.LogChannel">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.channels.</span></span><span class="sig-name descname"><span class="pre">LogChannel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">topic</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">context</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.LogChannel" title="Link to this definition">¶</a></dt>
+<dd><p>A channel for logging <a class="reference internal" href="schemas.html#foxglove.schemas.Log" title="foxglove.schemas.Log"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.schemas.Log</span></code></a> messages.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.LogChannel.close">
+<span class="sig-name descname"><span class="pre">close</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.LogChannel.close" title="Link to this definition">¶</a></dt>
+<dd><p>Close the channel.</p>
+<p>You can use this to explicitly unadvertise the channel to sinks that subscribe to
+channels dynamically, such as the <a class="reference internal" href="index.html#foxglove.websocket.WebSocketServer" title="foxglove.websocket.WebSocketServer"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.websocket.WebSocketServer</span></code></a>.</p>
+<p>Attempts to log on a closed channel will elicit a throttled warning message.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.LogChannel.id">
+<span class="sig-name descname"><span class="pre">id</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.LogChannel.id" title="Link to this definition">¶</a></dt>
+<dd><p>The unique ID of the channel.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.LogChannel.log">
+<span class="sig-name descname"><span class="pre">log</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">msg</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_time</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.LogChannel.log" title="Link to this definition">¶</a></dt>
+<dd><p>Log a <a class="reference internal" href="schemas.html#foxglove.schemas.Log" title="foxglove.schemas.Log"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.schemas.Log</span></code></a> message to the channel.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>msg</strong> – The message to log.</p></li>
+<li><p><strong>log_time</strong> (default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – The log time is the time, as nanoseconds from the unix epoch, that the
+message was recorded. Usually this is the time log() is called. If omitted, the
+current time is used.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.LogChannel.schema_name">
+<span class="sig-name descname"><span class="pre">schema_name</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.LogChannel.schema_name" title="Link to this definition">¶</a></dt>
+<dd><p>The name of the schema for the channel.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.LogChannel.topic">
+<span class="sig-name descname"><span class="pre">topic</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.LogChannel.topic" title="Link to this definition">¶</a></dt>
+<dd><p>The topic name of the channel.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.channels.PackedElementFieldChannel">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.channels.</span></span><span class="sig-name descname"><span class="pre">PackedElementFieldChannel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">topic</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">context</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.PackedElementFieldChannel" title="Link to this definition">¶</a></dt>
+<dd><p>A channel for logging <a class="reference internal" href="schemas.html#foxglove.schemas.PackedElementField" title="foxglove.schemas.PackedElementField"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.schemas.PackedElementField</span></code></a> messages.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.PackedElementFieldChannel.close">
+<span class="sig-name descname"><span class="pre">close</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.PackedElementFieldChannel.close" title="Link to this definition">¶</a></dt>
+<dd><p>Close the channel.</p>
+<p>You can use this to explicitly unadvertise the channel to sinks that subscribe to
+channels dynamically, such as the <a class="reference internal" href="index.html#foxglove.websocket.WebSocketServer" title="foxglove.websocket.WebSocketServer"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.websocket.WebSocketServer</span></code></a>.</p>
+<p>Attempts to log on a closed channel will elicit a throttled warning message.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.PackedElementFieldChannel.id">
+<span class="sig-name descname"><span class="pre">id</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.PackedElementFieldChannel.id" title="Link to this definition">¶</a></dt>
+<dd><p>The unique ID of the channel.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.PackedElementFieldChannel.log">
+<span class="sig-name descname"><span class="pre">log</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">msg</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_time</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.PackedElementFieldChannel.log" title="Link to this definition">¶</a></dt>
+<dd><p>Log a <a class="reference internal" href="schemas.html#foxglove.schemas.PackedElementField" title="foxglove.schemas.PackedElementField"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.schemas.PackedElementField</span></code></a> message to the channel.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>msg</strong> – The message to log.</p></li>
+<li><p><strong>log_time</strong> (default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – The log time is the time, as nanoseconds from the unix epoch, that the
+message was recorded. Usually this is the time log() is called. If omitted, the
+current time is used.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.PackedElementFieldChannel.schema_name">
+<span class="sig-name descname"><span class="pre">schema_name</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.PackedElementFieldChannel.schema_name" title="Link to this definition">¶</a></dt>
+<dd><p>The name of the schema for the channel.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.PackedElementFieldChannel.topic">
+<span class="sig-name descname"><span class="pre">topic</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.PackedElementFieldChannel.topic" title="Link to this definition">¶</a></dt>
+<dd><p>The topic name of the channel.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.channels.Point2Channel">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.channels.</span></span><span class="sig-name descname"><span class="pre">Point2Channel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">topic</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">context</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.Point2Channel" title="Link to this definition">¶</a></dt>
+<dd><p>A channel for logging <a class="reference internal" href="schemas.html#foxglove.schemas.Point2" title="foxglove.schemas.Point2"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.schemas.Point2</span></code></a> messages.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.Point2Channel.close">
+<span class="sig-name descname"><span class="pre">close</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.Point2Channel.close" title="Link to this definition">¶</a></dt>
+<dd><p>Close the channel.</p>
+<p>You can use this to explicitly unadvertise the channel to sinks that subscribe to
+channels dynamically, such as the <a class="reference internal" href="index.html#foxglove.websocket.WebSocketServer" title="foxglove.websocket.WebSocketServer"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.websocket.WebSocketServer</span></code></a>.</p>
+<p>Attempts to log on a closed channel will elicit a throttled warning message.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.Point2Channel.id">
+<span class="sig-name descname"><span class="pre">id</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.Point2Channel.id" title="Link to this definition">¶</a></dt>
+<dd><p>The unique ID of the channel.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.Point2Channel.log">
+<span class="sig-name descname"><span class="pre">log</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">msg</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_time</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.Point2Channel.log" title="Link to this definition">¶</a></dt>
+<dd><p>Log a <a class="reference internal" href="schemas.html#foxglove.schemas.Point2" title="foxglove.schemas.Point2"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.schemas.Point2</span></code></a> message to the channel.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>msg</strong> – The message to log.</p></li>
+<li><p><strong>log_time</strong> (default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – The log time is the time, as nanoseconds from the unix epoch, that the
+message was recorded. Usually this is the time log() is called. If omitted, the
+current time is used.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.Point2Channel.schema_name">
+<span class="sig-name descname"><span class="pre">schema_name</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.Point2Channel.schema_name" title="Link to this definition">¶</a></dt>
+<dd><p>The name of the schema for the channel.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.Point2Channel.topic">
+<span class="sig-name descname"><span class="pre">topic</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.Point2Channel.topic" title="Link to this definition">¶</a></dt>
+<dd><p>The topic name of the channel.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.channels.Point3Channel">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.channels.</span></span><span class="sig-name descname"><span class="pre">Point3Channel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">topic</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">context</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.Point3Channel" title="Link to this definition">¶</a></dt>
+<dd><p>A channel for logging <a class="reference internal" href="schemas.html#foxglove.schemas.Point3" title="foxglove.schemas.Point3"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.schemas.Point3</span></code></a> messages.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.Point3Channel.close">
+<span class="sig-name descname"><span class="pre">close</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.Point3Channel.close" title="Link to this definition">¶</a></dt>
+<dd><p>Close the channel.</p>
+<p>You can use this to explicitly unadvertise the channel to sinks that subscribe to
+channels dynamically, such as the <a class="reference internal" href="index.html#foxglove.websocket.WebSocketServer" title="foxglove.websocket.WebSocketServer"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.websocket.WebSocketServer</span></code></a>.</p>
+<p>Attempts to log on a closed channel will elicit a throttled warning message.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.Point3Channel.id">
+<span class="sig-name descname"><span class="pre">id</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.Point3Channel.id" title="Link to this definition">¶</a></dt>
+<dd><p>The unique ID of the channel.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.Point3Channel.log">
+<span class="sig-name descname"><span class="pre">log</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">msg</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_time</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.Point3Channel.log" title="Link to this definition">¶</a></dt>
+<dd><p>Log a <a class="reference internal" href="schemas.html#foxglove.schemas.Point3" title="foxglove.schemas.Point3"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.schemas.Point3</span></code></a> message to the channel.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>msg</strong> – The message to log.</p></li>
+<li><p><strong>log_time</strong> (default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – The log time is the time, as nanoseconds from the unix epoch, that the
+message was recorded. Usually this is the time log() is called. If omitted, the
+current time is used.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.Point3Channel.schema_name">
+<span class="sig-name descname"><span class="pre">schema_name</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.Point3Channel.schema_name" title="Link to this definition">¶</a></dt>
+<dd><p>The name of the schema for the channel.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.Point3Channel.topic">
+<span class="sig-name descname"><span class="pre">topic</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.Point3Channel.topic" title="Link to this definition">¶</a></dt>
+<dd><p>The topic name of the channel.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.channels.PointCloudChannel">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.channels.</span></span><span class="sig-name descname"><span class="pre">PointCloudChannel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">topic</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">context</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.PointCloudChannel" title="Link to this definition">¶</a></dt>
+<dd><p>A channel for logging <a class="reference internal" href="schemas.html#foxglove.schemas.PointCloud" title="foxglove.schemas.PointCloud"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.schemas.PointCloud</span></code></a> messages.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.PointCloudChannel.close">
+<span class="sig-name descname"><span class="pre">close</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.PointCloudChannel.close" title="Link to this definition">¶</a></dt>
+<dd><p>Close the channel.</p>
+<p>You can use this to explicitly unadvertise the channel to sinks that subscribe to
+channels dynamically, such as the <a class="reference internal" href="index.html#foxglove.websocket.WebSocketServer" title="foxglove.websocket.WebSocketServer"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.websocket.WebSocketServer</span></code></a>.</p>
+<p>Attempts to log on a closed channel will elicit a throttled warning message.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.PointCloudChannel.id">
+<span class="sig-name descname"><span class="pre">id</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.PointCloudChannel.id" title="Link to this definition">¶</a></dt>
+<dd><p>The unique ID of the channel.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.PointCloudChannel.log">
+<span class="sig-name descname"><span class="pre">log</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">msg</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_time</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.PointCloudChannel.log" title="Link to this definition">¶</a></dt>
+<dd><p>Log a <a class="reference internal" href="schemas.html#foxglove.schemas.PointCloud" title="foxglove.schemas.PointCloud"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.schemas.PointCloud</span></code></a> message to the channel.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>msg</strong> – The message to log.</p></li>
+<li><p><strong>log_time</strong> (default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – The log time is the time, as nanoseconds from the unix epoch, that the
+message was recorded. Usually this is the time log() is called. If omitted, the
+current time is used.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.PointCloudChannel.schema_name">
+<span class="sig-name descname"><span class="pre">schema_name</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.PointCloudChannel.schema_name" title="Link to this definition">¶</a></dt>
+<dd><p>The name of the schema for the channel.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.PointCloudChannel.topic">
+<span class="sig-name descname"><span class="pre">topic</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.PointCloudChannel.topic" title="Link to this definition">¶</a></dt>
+<dd><p>The topic name of the channel.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.channels.PointsAnnotationChannel">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.channels.</span></span><span class="sig-name descname"><span class="pre">PointsAnnotationChannel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">topic</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">context</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.PointsAnnotationChannel" title="Link to this definition">¶</a></dt>
+<dd><p>A channel for logging <a class="reference internal" href="schemas.html#foxglove.schemas.PointsAnnotation" title="foxglove.schemas.PointsAnnotation"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.schemas.PointsAnnotation</span></code></a> messages.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.PointsAnnotationChannel.close">
+<span class="sig-name descname"><span class="pre">close</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.PointsAnnotationChannel.close" title="Link to this definition">¶</a></dt>
+<dd><p>Close the channel.</p>
+<p>You can use this to explicitly unadvertise the channel to sinks that subscribe to
+channels dynamically, such as the <a class="reference internal" href="index.html#foxglove.websocket.WebSocketServer" title="foxglove.websocket.WebSocketServer"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.websocket.WebSocketServer</span></code></a>.</p>
+<p>Attempts to log on a closed channel will elicit a throttled warning message.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.PointsAnnotationChannel.id">
+<span class="sig-name descname"><span class="pre">id</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.PointsAnnotationChannel.id" title="Link to this definition">¶</a></dt>
+<dd><p>The unique ID of the channel.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.PointsAnnotationChannel.log">
+<span class="sig-name descname"><span class="pre">log</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">msg</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_time</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.PointsAnnotationChannel.log" title="Link to this definition">¶</a></dt>
+<dd><p>Log a <a class="reference internal" href="schemas.html#foxglove.schemas.PointsAnnotation" title="foxglove.schemas.PointsAnnotation"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.schemas.PointsAnnotation</span></code></a> message to the channel.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>msg</strong> – The message to log.</p></li>
+<li><p><strong>log_time</strong> (default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – The log time is the time, as nanoseconds from the unix epoch, that the
+message was recorded. Usually this is the time log() is called. If omitted, the
+current time is used.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.PointsAnnotationChannel.schema_name">
+<span class="sig-name descname"><span class="pre">schema_name</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.PointsAnnotationChannel.schema_name" title="Link to this definition">¶</a></dt>
+<dd><p>The name of the schema for the channel.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.PointsAnnotationChannel.topic">
+<span class="sig-name descname"><span class="pre">topic</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.PointsAnnotationChannel.topic" title="Link to this definition">¶</a></dt>
+<dd><p>The topic name of the channel.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.channels.PoseChannel">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.channels.</span></span><span class="sig-name descname"><span class="pre">PoseChannel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">topic</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">context</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.PoseChannel" title="Link to this definition">¶</a></dt>
+<dd><p>A channel for logging <a class="reference internal" href="schemas.html#foxglove.schemas.Pose" title="foxglove.schemas.Pose"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.schemas.Pose</span></code></a> messages.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.PoseChannel.close">
+<span class="sig-name descname"><span class="pre">close</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.PoseChannel.close" title="Link to this definition">¶</a></dt>
+<dd><p>Close the channel.</p>
+<p>You can use this to explicitly unadvertise the channel to sinks that subscribe to
+channels dynamically, such as the <a class="reference internal" href="index.html#foxglove.websocket.WebSocketServer" title="foxglove.websocket.WebSocketServer"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.websocket.WebSocketServer</span></code></a>.</p>
+<p>Attempts to log on a closed channel will elicit a throttled warning message.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.PoseChannel.id">
+<span class="sig-name descname"><span class="pre">id</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.PoseChannel.id" title="Link to this definition">¶</a></dt>
+<dd><p>The unique ID of the channel.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.PoseChannel.log">
+<span class="sig-name descname"><span class="pre">log</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">msg</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_time</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.PoseChannel.log" title="Link to this definition">¶</a></dt>
+<dd><p>Log a <a class="reference internal" href="schemas.html#foxglove.schemas.Pose" title="foxglove.schemas.Pose"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.schemas.Pose</span></code></a> message to the channel.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>msg</strong> – The message to log.</p></li>
+<li><p><strong>log_time</strong> (default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – The log time is the time, as nanoseconds from the unix epoch, that the
+message was recorded. Usually this is the time log() is called. If omitted, the
+current time is used.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.PoseChannel.schema_name">
+<span class="sig-name descname"><span class="pre">schema_name</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.PoseChannel.schema_name" title="Link to this definition">¶</a></dt>
+<dd><p>The name of the schema for the channel.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.PoseChannel.topic">
+<span class="sig-name descname"><span class="pre">topic</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.PoseChannel.topic" title="Link to this definition">¶</a></dt>
+<dd><p>The topic name of the channel.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.channels.PoseInFrameChannel">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.channels.</span></span><span class="sig-name descname"><span class="pre">PoseInFrameChannel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">topic</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">context</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.PoseInFrameChannel" title="Link to this definition">¶</a></dt>
+<dd><p>A channel for logging <a class="reference internal" href="schemas.html#foxglove.schemas.PoseInFrame" title="foxglove.schemas.PoseInFrame"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.schemas.PoseInFrame</span></code></a> messages.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.PoseInFrameChannel.close">
+<span class="sig-name descname"><span class="pre">close</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.PoseInFrameChannel.close" title="Link to this definition">¶</a></dt>
+<dd><p>Close the channel.</p>
+<p>You can use this to explicitly unadvertise the channel to sinks that subscribe to
+channels dynamically, such as the <a class="reference internal" href="index.html#foxglove.websocket.WebSocketServer" title="foxglove.websocket.WebSocketServer"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.websocket.WebSocketServer</span></code></a>.</p>
+<p>Attempts to log on a closed channel will elicit a throttled warning message.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.PoseInFrameChannel.id">
+<span class="sig-name descname"><span class="pre">id</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.PoseInFrameChannel.id" title="Link to this definition">¶</a></dt>
+<dd><p>The unique ID of the channel.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.PoseInFrameChannel.log">
+<span class="sig-name descname"><span class="pre">log</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">msg</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_time</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.PoseInFrameChannel.log" title="Link to this definition">¶</a></dt>
+<dd><p>Log a <a class="reference internal" href="schemas.html#foxglove.schemas.PoseInFrame" title="foxglove.schemas.PoseInFrame"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.schemas.PoseInFrame</span></code></a> message to the channel.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>msg</strong> – The message to log.</p></li>
+<li><p><strong>log_time</strong> (default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – The log time is the time, as nanoseconds from the unix epoch, that the
+message was recorded. Usually this is the time log() is called. If omitted, the
+current time is used.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.PoseInFrameChannel.schema_name">
+<span class="sig-name descname"><span class="pre">schema_name</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.PoseInFrameChannel.schema_name" title="Link to this definition">¶</a></dt>
+<dd><p>The name of the schema for the channel.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.PoseInFrameChannel.topic">
+<span class="sig-name descname"><span class="pre">topic</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.PoseInFrameChannel.topic" title="Link to this definition">¶</a></dt>
+<dd><p>The topic name of the channel.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.channels.PosesInFrameChannel">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.channels.</span></span><span class="sig-name descname"><span class="pre">PosesInFrameChannel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">topic</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">context</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.PosesInFrameChannel" title="Link to this definition">¶</a></dt>
+<dd><p>A channel for logging <a class="reference internal" href="schemas.html#foxglove.schemas.PosesInFrame" title="foxglove.schemas.PosesInFrame"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.schemas.PosesInFrame</span></code></a> messages.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.PosesInFrameChannel.close">
+<span class="sig-name descname"><span class="pre">close</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.PosesInFrameChannel.close" title="Link to this definition">¶</a></dt>
+<dd><p>Close the channel.</p>
+<p>You can use this to explicitly unadvertise the channel to sinks that subscribe to
+channels dynamically, such as the <a class="reference internal" href="index.html#foxglove.websocket.WebSocketServer" title="foxglove.websocket.WebSocketServer"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.websocket.WebSocketServer</span></code></a>.</p>
+<p>Attempts to log on a closed channel will elicit a throttled warning message.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.PosesInFrameChannel.id">
+<span class="sig-name descname"><span class="pre">id</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.PosesInFrameChannel.id" title="Link to this definition">¶</a></dt>
+<dd><p>The unique ID of the channel.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.PosesInFrameChannel.log">
+<span class="sig-name descname"><span class="pre">log</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">msg</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_time</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.PosesInFrameChannel.log" title="Link to this definition">¶</a></dt>
+<dd><p>Log a <a class="reference internal" href="schemas.html#foxglove.schemas.PosesInFrame" title="foxglove.schemas.PosesInFrame"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.schemas.PosesInFrame</span></code></a> message to the channel.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>msg</strong> – The message to log.</p></li>
+<li><p><strong>log_time</strong> (default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – The log time is the time, as nanoseconds from the unix epoch, that the
+message was recorded. Usually this is the time log() is called. If omitted, the
+current time is used.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.PosesInFrameChannel.schema_name">
+<span class="sig-name descname"><span class="pre">schema_name</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.PosesInFrameChannel.schema_name" title="Link to this definition">¶</a></dt>
+<dd><p>The name of the schema for the channel.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.PosesInFrameChannel.topic">
+<span class="sig-name descname"><span class="pre">topic</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.PosesInFrameChannel.topic" title="Link to this definition">¶</a></dt>
+<dd><p>The topic name of the channel.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.channels.QuaternionChannel">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.channels.</span></span><span class="sig-name descname"><span class="pre">QuaternionChannel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">topic</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">context</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.QuaternionChannel" title="Link to this definition">¶</a></dt>
+<dd><p>A channel for logging <a class="reference internal" href="schemas.html#foxglove.schemas.Quaternion" title="foxglove.schemas.Quaternion"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.schemas.Quaternion</span></code></a> messages.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.QuaternionChannel.close">
+<span class="sig-name descname"><span class="pre">close</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.QuaternionChannel.close" title="Link to this definition">¶</a></dt>
+<dd><p>Close the channel.</p>
+<p>You can use this to explicitly unadvertise the channel to sinks that subscribe to
+channels dynamically, such as the <a class="reference internal" href="index.html#foxglove.websocket.WebSocketServer" title="foxglove.websocket.WebSocketServer"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.websocket.WebSocketServer</span></code></a>.</p>
+<p>Attempts to log on a closed channel will elicit a throttled warning message.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.QuaternionChannel.id">
+<span class="sig-name descname"><span class="pre">id</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.QuaternionChannel.id" title="Link to this definition">¶</a></dt>
+<dd><p>The unique ID of the channel.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.QuaternionChannel.log">
+<span class="sig-name descname"><span class="pre">log</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">msg</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_time</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.QuaternionChannel.log" title="Link to this definition">¶</a></dt>
+<dd><p>Log a <a class="reference internal" href="schemas.html#foxglove.schemas.Quaternion" title="foxglove.schemas.Quaternion"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.schemas.Quaternion</span></code></a> message to the channel.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>msg</strong> – The message to log.</p></li>
+<li><p><strong>log_time</strong> (default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – The log time is the time, as nanoseconds from the unix epoch, that the
+message was recorded. Usually this is the time log() is called. If omitted, the
+current time is used.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.QuaternionChannel.schema_name">
+<span class="sig-name descname"><span class="pre">schema_name</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.QuaternionChannel.schema_name" title="Link to this definition">¶</a></dt>
+<dd><p>The name of the schema for the channel.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.QuaternionChannel.topic">
+<span class="sig-name descname"><span class="pre">topic</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.QuaternionChannel.topic" title="Link to this definition">¶</a></dt>
+<dd><p>The topic name of the channel.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.channels.RawAudioChannel">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.channels.</span></span><span class="sig-name descname"><span class="pre">RawAudioChannel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">topic</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">context</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.RawAudioChannel" title="Link to this definition">¶</a></dt>
+<dd><p>A channel for logging <a class="reference internal" href="schemas.html#foxglove.schemas.RawAudio" title="foxglove.schemas.RawAudio"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.schemas.RawAudio</span></code></a> messages.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.RawAudioChannel.close">
+<span class="sig-name descname"><span class="pre">close</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.RawAudioChannel.close" title="Link to this definition">¶</a></dt>
+<dd><p>Close the channel.</p>
+<p>You can use this to explicitly unadvertise the channel to sinks that subscribe to
+channels dynamically, such as the <a class="reference internal" href="index.html#foxglove.websocket.WebSocketServer" title="foxglove.websocket.WebSocketServer"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.websocket.WebSocketServer</span></code></a>.</p>
+<p>Attempts to log on a closed channel will elicit a throttled warning message.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.RawAudioChannel.id">
+<span class="sig-name descname"><span class="pre">id</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.RawAudioChannel.id" title="Link to this definition">¶</a></dt>
+<dd><p>The unique ID of the channel.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.RawAudioChannel.log">
+<span class="sig-name descname"><span class="pre">log</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">msg</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_time</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.RawAudioChannel.log" title="Link to this definition">¶</a></dt>
+<dd><p>Log a <a class="reference internal" href="schemas.html#foxglove.schemas.RawAudio" title="foxglove.schemas.RawAudio"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.schemas.RawAudio</span></code></a> message to the channel.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>msg</strong> – The message to log.</p></li>
+<li><p><strong>log_time</strong> (default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – The log time is the time, as nanoseconds from the unix epoch, that the
+message was recorded. Usually this is the time log() is called. If omitted, the
+current time is used.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.RawAudioChannel.schema_name">
+<span class="sig-name descname"><span class="pre">schema_name</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.RawAudioChannel.schema_name" title="Link to this definition">¶</a></dt>
+<dd><p>The name of the schema for the channel.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.RawAudioChannel.topic">
+<span class="sig-name descname"><span class="pre">topic</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.RawAudioChannel.topic" title="Link to this definition">¶</a></dt>
+<dd><p>The topic name of the channel.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.channels.RawImageChannel">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.channels.</span></span><span class="sig-name descname"><span class="pre">RawImageChannel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">topic</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">context</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.RawImageChannel" title="Link to this definition">¶</a></dt>
+<dd><p>A channel for logging <a class="reference internal" href="schemas.html#foxglove.schemas.RawImage" title="foxglove.schemas.RawImage"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.schemas.RawImage</span></code></a> messages.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.RawImageChannel.close">
+<span class="sig-name descname"><span class="pre">close</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.RawImageChannel.close" title="Link to this definition">¶</a></dt>
+<dd><p>Close the channel.</p>
+<p>You can use this to explicitly unadvertise the channel to sinks that subscribe to
+channels dynamically, such as the <a class="reference internal" href="index.html#foxglove.websocket.WebSocketServer" title="foxglove.websocket.WebSocketServer"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.websocket.WebSocketServer</span></code></a>.</p>
+<p>Attempts to log on a closed channel will elicit a throttled warning message.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.RawImageChannel.id">
+<span class="sig-name descname"><span class="pre">id</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.RawImageChannel.id" title="Link to this definition">¶</a></dt>
+<dd><p>The unique ID of the channel.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.RawImageChannel.log">
+<span class="sig-name descname"><span class="pre">log</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">msg</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_time</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.RawImageChannel.log" title="Link to this definition">¶</a></dt>
+<dd><p>Log a <a class="reference internal" href="schemas.html#foxglove.schemas.RawImage" title="foxglove.schemas.RawImage"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.schemas.RawImage</span></code></a> message to the channel.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>msg</strong> – The message to log.</p></li>
+<li><p><strong>log_time</strong> (default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – The log time is the time, as nanoseconds from the unix epoch, that the
+message was recorded. Usually this is the time log() is called. If omitted, the
+current time is used.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.RawImageChannel.schema_name">
+<span class="sig-name descname"><span class="pre">schema_name</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.RawImageChannel.schema_name" title="Link to this definition">¶</a></dt>
+<dd><p>The name of the schema for the channel.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.RawImageChannel.topic">
+<span class="sig-name descname"><span class="pre">topic</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.RawImageChannel.topic" title="Link to this definition">¶</a></dt>
+<dd><p>The topic name of the channel.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.channels.SceneEntityChannel">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.channels.</span></span><span class="sig-name descname"><span class="pre">SceneEntityChannel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">topic</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">context</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.SceneEntityChannel" title="Link to this definition">¶</a></dt>
+<dd><p>A channel for logging <a class="reference internal" href="schemas.html#foxglove.schemas.SceneEntity" title="foxglove.schemas.SceneEntity"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.schemas.SceneEntity</span></code></a> messages.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.SceneEntityChannel.close">
+<span class="sig-name descname"><span class="pre">close</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.SceneEntityChannel.close" title="Link to this definition">¶</a></dt>
+<dd><p>Close the channel.</p>
+<p>You can use this to explicitly unadvertise the channel to sinks that subscribe to
+channels dynamically, such as the <a class="reference internal" href="index.html#foxglove.websocket.WebSocketServer" title="foxglove.websocket.WebSocketServer"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.websocket.WebSocketServer</span></code></a>.</p>
+<p>Attempts to log on a closed channel will elicit a throttled warning message.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.SceneEntityChannel.id">
+<span class="sig-name descname"><span class="pre">id</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.SceneEntityChannel.id" title="Link to this definition">¶</a></dt>
+<dd><p>The unique ID of the channel.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.SceneEntityChannel.log">
+<span class="sig-name descname"><span class="pre">log</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">msg</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_time</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.SceneEntityChannel.log" title="Link to this definition">¶</a></dt>
+<dd><p>Log a <a class="reference internal" href="schemas.html#foxglove.schemas.SceneEntity" title="foxglove.schemas.SceneEntity"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.schemas.SceneEntity</span></code></a> message to the channel.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>msg</strong> – The message to log.</p></li>
+<li><p><strong>log_time</strong> (default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – The log time is the time, as nanoseconds from the unix epoch, that the
+message was recorded. Usually this is the time log() is called. If omitted, the
+current time is used.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.SceneEntityChannel.schema_name">
+<span class="sig-name descname"><span class="pre">schema_name</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.SceneEntityChannel.schema_name" title="Link to this definition">¶</a></dt>
+<dd><p>The name of the schema for the channel.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.SceneEntityChannel.topic">
+<span class="sig-name descname"><span class="pre">topic</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.SceneEntityChannel.topic" title="Link to this definition">¶</a></dt>
+<dd><p>The topic name of the channel.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.channels.SceneEntityDeletionChannel">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.channels.</span></span><span class="sig-name descname"><span class="pre">SceneEntityDeletionChannel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">topic</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">context</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.SceneEntityDeletionChannel" title="Link to this definition">¶</a></dt>
+<dd><p>A channel for logging <a class="reference internal" href="schemas.html#foxglove.schemas.SceneEntityDeletion" title="foxglove.schemas.SceneEntityDeletion"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.schemas.SceneEntityDeletion</span></code></a> messages.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.SceneEntityDeletionChannel.close">
+<span class="sig-name descname"><span class="pre">close</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.SceneEntityDeletionChannel.close" title="Link to this definition">¶</a></dt>
+<dd><p>Close the channel.</p>
+<p>You can use this to explicitly unadvertise the channel to sinks that subscribe to
+channels dynamically, such as the <a class="reference internal" href="index.html#foxglove.websocket.WebSocketServer" title="foxglove.websocket.WebSocketServer"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.websocket.WebSocketServer</span></code></a>.</p>
+<p>Attempts to log on a closed channel will elicit a throttled warning message.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.SceneEntityDeletionChannel.id">
+<span class="sig-name descname"><span class="pre">id</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.SceneEntityDeletionChannel.id" title="Link to this definition">¶</a></dt>
+<dd><p>The unique ID of the channel.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.SceneEntityDeletionChannel.log">
+<span class="sig-name descname"><span class="pre">log</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">msg</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_time</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.SceneEntityDeletionChannel.log" title="Link to this definition">¶</a></dt>
+<dd><p>Log a <a class="reference internal" href="schemas.html#foxglove.schemas.SceneEntityDeletion" title="foxglove.schemas.SceneEntityDeletion"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.schemas.SceneEntityDeletion</span></code></a> message to the channel.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>msg</strong> – The message to log.</p></li>
+<li><p><strong>log_time</strong> (default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – The log time is the time, as nanoseconds from the unix epoch, that the
+message was recorded. Usually this is the time log() is called. If omitted, the
+current time is used.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.SceneEntityDeletionChannel.schema_name">
+<span class="sig-name descname"><span class="pre">schema_name</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.SceneEntityDeletionChannel.schema_name" title="Link to this definition">¶</a></dt>
+<dd><p>The name of the schema for the channel.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.SceneEntityDeletionChannel.topic">
+<span class="sig-name descname"><span class="pre">topic</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.SceneEntityDeletionChannel.topic" title="Link to this definition">¶</a></dt>
+<dd><p>The topic name of the channel.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.channels.SceneUpdateChannel">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.channels.</span></span><span class="sig-name descname"><span class="pre">SceneUpdateChannel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">topic</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">context</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.SceneUpdateChannel" title="Link to this definition">¶</a></dt>
+<dd><p>A channel for logging <a class="reference internal" href="schemas.html#foxglove.schemas.SceneUpdate" title="foxglove.schemas.SceneUpdate"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.schemas.SceneUpdate</span></code></a> messages.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.SceneUpdateChannel.close">
+<span class="sig-name descname"><span class="pre">close</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.SceneUpdateChannel.close" title="Link to this definition">¶</a></dt>
+<dd><p>Close the channel.</p>
+<p>You can use this to explicitly unadvertise the channel to sinks that subscribe to
+channels dynamically, such as the <a class="reference internal" href="index.html#foxglove.websocket.WebSocketServer" title="foxglove.websocket.WebSocketServer"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.websocket.WebSocketServer</span></code></a>.</p>
+<p>Attempts to log on a closed channel will elicit a throttled warning message.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.SceneUpdateChannel.id">
+<span class="sig-name descname"><span class="pre">id</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.SceneUpdateChannel.id" title="Link to this definition">¶</a></dt>
+<dd><p>The unique ID of the channel.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.SceneUpdateChannel.log">
+<span class="sig-name descname"><span class="pre">log</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">msg</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_time</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.SceneUpdateChannel.log" title="Link to this definition">¶</a></dt>
+<dd><p>Log a <a class="reference internal" href="schemas.html#foxglove.schemas.SceneUpdate" title="foxglove.schemas.SceneUpdate"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.schemas.SceneUpdate</span></code></a> message to the channel.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>msg</strong> – The message to log.</p></li>
+<li><p><strong>log_time</strong> (default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – The log time is the time, as nanoseconds from the unix epoch, that the
+message was recorded. Usually this is the time log() is called. If omitted, the
+current time is used.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.SceneUpdateChannel.schema_name">
+<span class="sig-name descname"><span class="pre">schema_name</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.SceneUpdateChannel.schema_name" title="Link to this definition">¶</a></dt>
+<dd><p>The name of the schema for the channel.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.SceneUpdateChannel.topic">
+<span class="sig-name descname"><span class="pre">topic</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.SceneUpdateChannel.topic" title="Link to this definition">¶</a></dt>
+<dd><p>The topic name of the channel.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.channels.TextAnnotationChannel">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.channels.</span></span><span class="sig-name descname"><span class="pre">TextAnnotationChannel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">topic</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">context</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.TextAnnotationChannel" title="Link to this definition">¶</a></dt>
+<dd><p>A channel for logging <a class="reference internal" href="schemas.html#foxglove.schemas.TextAnnotation" title="foxglove.schemas.TextAnnotation"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.schemas.TextAnnotation</span></code></a> messages.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.TextAnnotationChannel.close">
+<span class="sig-name descname"><span class="pre">close</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.TextAnnotationChannel.close" title="Link to this definition">¶</a></dt>
+<dd><p>Close the channel.</p>
+<p>You can use this to explicitly unadvertise the channel to sinks that subscribe to
+channels dynamically, such as the <a class="reference internal" href="index.html#foxglove.websocket.WebSocketServer" title="foxglove.websocket.WebSocketServer"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.websocket.WebSocketServer</span></code></a>.</p>
+<p>Attempts to log on a closed channel will elicit a throttled warning message.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.TextAnnotationChannel.id">
+<span class="sig-name descname"><span class="pre">id</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.TextAnnotationChannel.id" title="Link to this definition">¶</a></dt>
+<dd><p>The unique ID of the channel.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.TextAnnotationChannel.log">
+<span class="sig-name descname"><span class="pre">log</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">msg</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_time</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.TextAnnotationChannel.log" title="Link to this definition">¶</a></dt>
+<dd><p>Log a <a class="reference internal" href="schemas.html#foxglove.schemas.TextAnnotation" title="foxglove.schemas.TextAnnotation"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.schemas.TextAnnotation</span></code></a> message to the channel.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>msg</strong> – The message to log.</p></li>
+<li><p><strong>log_time</strong> (default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – The log time is the time, as nanoseconds from the unix epoch, that the
+message was recorded. Usually this is the time log() is called. If omitted, the
+current time is used.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.TextAnnotationChannel.schema_name">
+<span class="sig-name descname"><span class="pre">schema_name</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.TextAnnotationChannel.schema_name" title="Link to this definition">¶</a></dt>
+<dd><p>The name of the schema for the channel.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.TextAnnotationChannel.topic">
+<span class="sig-name descname"><span class="pre">topic</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.TextAnnotationChannel.topic" title="Link to this definition">¶</a></dt>
+<dd><p>The topic name of the channel.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.channels.Vector2Channel">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.channels.</span></span><span class="sig-name descname"><span class="pre">Vector2Channel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">topic</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">context</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.Vector2Channel" title="Link to this definition">¶</a></dt>
+<dd><p>A channel for logging <a class="reference internal" href="schemas.html#foxglove.schemas.Vector2" title="foxglove.schemas.Vector2"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.schemas.Vector2</span></code></a> messages.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.Vector2Channel.close">
+<span class="sig-name descname"><span class="pre">close</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.Vector2Channel.close" title="Link to this definition">¶</a></dt>
+<dd><p>Close the channel.</p>
+<p>You can use this to explicitly unadvertise the channel to sinks that subscribe to
+channels dynamically, such as the <a class="reference internal" href="index.html#foxglove.websocket.WebSocketServer" title="foxglove.websocket.WebSocketServer"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.websocket.WebSocketServer</span></code></a>.</p>
+<p>Attempts to log on a closed channel will elicit a throttled warning message.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.Vector2Channel.id">
+<span class="sig-name descname"><span class="pre">id</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.Vector2Channel.id" title="Link to this definition">¶</a></dt>
+<dd><p>The unique ID of the channel.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.Vector2Channel.log">
+<span class="sig-name descname"><span class="pre">log</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">msg</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_time</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.Vector2Channel.log" title="Link to this definition">¶</a></dt>
+<dd><p>Log a <a class="reference internal" href="schemas.html#foxglove.schemas.Vector2" title="foxglove.schemas.Vector2"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.schemas.Vector2</span></code></a> message to the channel.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>msg</strong> – The message to log.</p></li>
+<li><p><strong>log_time</strong> (default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – The log time is the time, as nanoseconds from the unix epoch, that the
+message was recorded. Usually this is the time log() is called. If omitted, the
+current time is used.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.Vector2Channel.schema_name">
+<span class="sig-name descname"><span class="pre">schema_name</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.Vector2Channel.schema_name" title="Link to this definition">¶</a></dt>
+<dd><p>The name of the schema for the channel.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.Vector2Channel.topic">
+<span class="sig-name descname"><span class="pre">topic</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.Vector2Channel.topic" title="Link to this definition">¶</a></dt>
+<dd><p>The topic name of the channel.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.channels.Vector3Channel">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.channels.</span></span><span class="sig-name descname"><span class="pre">Vector3Channel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">topic</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">context</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.Vector3Channel" title="Link to this definition">¶</a></dt>
+<dd><p>A channel for logging <a class="reference internal" href="schemas.html#foxglove.schemas.Vector3" title="foxglove.schemas.Vector3"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.schemas.Vector3</span></code></a> messages.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.Vector3Channel.close">
+<span class="sig-name descname"><span class="pre">close</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.Vector3Channel.close" title="Link to this definition">¶</a></dt>
+<dd><p>Close the channel.</p>
+<p>You can use this to explicitly unadvertise the channel to sinks that subscribe to
+channels dynamically, such as the <a class="reference internal" href="index.html#foxglove.websocket.WebSocketServer" title="foxglove.websocket.WebSocketServer"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.websocket.WebSocketServer</span></code></a>.</p>
+<p>Attempts to log on a closed channel will elicit a throttled warning message.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.Vector3Channel.id">
+<span class="sig-name descname"><span class="pre">id</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.Vector3Channel.id" title="Link to this definition">¶</a></dt>
+<dd><p>The unique ID of the channel.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.Vector3Channel.log">
+<span class="sig-name descname"><span class="pre">log</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">msg</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_time</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.Vector3Channel.log" title="Link to this definition">¶</a></dt>
+<dd><p>Log a <a class="reference internal" href="schemas.html#foxglove.schemas.Vector3" title="foxglove.schemas.Vector3"><code class="xref py py-class docutils literal notranslate"><span class="pre">foxglove.schemas.Vector3</span></code></a> message to the channel.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>msg</strong> – The message to log.</p></li>
+<li><p><strong>log_time</strong> (default: <code class="docutils literal notranslate"><span class="pre">None</span></code>) – The log time is the time, as nanoseconds from the unix epoch, that the
+message was recorded. Usually this is the time log() is called. If omitted, the
+current time is used.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.Vector3Channel.schema_name">
+<span class="sig-name descname"><span class="pre">schema_name</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.Vector3Channel.schema_name" title="Link to this definition">¶</a></dt>
+<dd><p>The name of the schema for the channel.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.channels.Vector3Channel.topic">
+<span class="sig-name descname"><span class="pre">topic</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.channels.Vector3Channel.topic" title="Link to this definition">¶</a></dt>
+<dd><p>The topic name of the channel.</p>
+</dd></dl>
+
+</dd></dl>
+
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">Foxglove SDK</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">API Reference</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="index.html#module-foxglove">foxglove</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="index.html#foxglove.Channel"><code class="docutils literal notranslate"><span class="pre">Channel</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="index.html#foxglove.Context"><code class="docutils literal notranslate"><span class="pre">Context</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="index.html#foxglove.Schema"><code class="docutils literal notranslate"><span class="pre">Schema</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="index.html#foxglove.log"><code class="docutils literal notranslate"><span class="pre">log()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="index.html#foxglove.open_mcap"><code class="docutils literal notranslate"><span class="pre">open_mcap()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="index.html#foxglove.set_log_level"><code class="docutils literal notranslate"><span class="pre">set_log_level()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="index.html#foxglove.start_server"><code class="docutils literal notranslate"><span class="pre">start_server()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="index.html#schemas">Schemas</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="index.html#channels">Channels</a></li>
+<li class="toctree-l3"><a class="reference internal" href="index.html#parameters">Parameters</a></li>
+<li class="toctree-l3"><a class="reference internal" href="index.html#asset-handling">Asset handling</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#foxglove-mcap">foxglove.mcap</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#foxglove-websocket">foxglove.websocket</a></li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">API Reference</a><ul>
+      <li>Previous: <a href="schemas.html" title="previous chapter">&lt;no title&gt;</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025, Foxglove.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 7.4.7</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 0.7.16</a>
+      
+      |
+      <a href="../_sources/api/channels.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
