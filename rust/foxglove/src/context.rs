@@ -32,15 +32,13 @@ impl ContextInner {
     }
 
     /// Adds a channel to the context.
-    fn add_channel(&mut self, channel: Arc<RawChannel>, return_matching: bool) -> Arc<RawChannel> {
+    fn add_channel(&mut self, channel: Arc<RawChannel>) -> Arc<RawChannel> {
         let topic = channel.topic();
 
-        // If the caller requested a matching channel, use the topic index to find the first match.
+        // If a substantially identical channel already exists, just return that.
         let topic_channels = self.channels_by_topic.entry(topic.to_string()).or_default();
-        if return_matching {
-            if let Some(matching) = topic_channels.iter().find(|c| channel.matches(c)) {
-                return matching.clone();
-            }
+        if let Some(matching) = topic_channels.iter().find(|c| channel.matches(c)) {
+            return matching.clone();
         }
 
         // Friends don't let friends create multiple channels on the same topic.
@@ -266,25 +264,13 @@ impl Context {
         self.0.read().get_channel_by_topic(topic).cloned()
     }
 
-    /// Adds a channel to the context.
-    ///
-    /// This is deliberately `pub(crate)` to ensure that the channel's context linkage remains
-    /// consistent. Publicly, the only way to add a channel to a context is by constructing it via
-    /// a [`ChannelBuilder`][crate::ChannelBuilder].
-    pub(crate) fn add_channel(&self, channel: Arc<RawChannel>) {
-        let _ = self.0.write().add_channel(channel, false);
-    }
-
     /// Adds a channel to the context, or returns a channel with the same topic and schema.
     ///
     /// This is deliberately `pub(crate)` to ensure that the channel's context linkage remains
     /// consistent. Publicly, the only way to add a channel to a context is by constructing it via
     /// a [`ChannelBuilder`][crate::ChannelBuilder].
-    pub(crate) fn add_channel_or_return_matching(
-        &self,
-        channel: Arc<RawChannel>,
-    ) -> Arc<RawChannel> {
-        self.0.write().add_channel(channel, true)
+    pub(crate) fn add_channel(&self, channel: Arc<RawChannel>) -> Arc<RawChannel> {
+        self.0.write().add_channel(channel)
     }
 
     /// Removes a channel from the context.
@@ -642,7 +628,10 @@ mod tests {
     fn test_supports_multiple_channels_with_same_topic() {
         let ctx = Context::new();
         let c1 = new_test_channel(&ctx, "topic").unwrap();
-        let c2 = new_test_channel(&ctx, "topic").unwrap();
+        let c2 = new_test_channel_builder(&ctx, "topic")
+            .schema(None)
+            .build_raw()
+            .unwrap();
         assert_ne!(c1.id(), c2.id());
         assert_eq!(c1.topic(), c2.topic());
     }
@@ -652,7 +641,10 @@ mod tests {
     fn test_get_channel_by_topic_with_duplicate() {
         let ctx = Context::new();
         let c1 = new_test_channel(&ctx, "dupe").unwrap();
-        let c2 = new_test_channel(&ctx, "dupe").unwrap();
+        let c2 = new_test_channel_builder(&ctx, "dupe")
+            .message_encoding("different")
+            .build_raw()
+            .unwrap();
         assert!(logs_contain(
             "Channel with topic dupe already exists in this context"
         ));
@@ -686,7 +678,7 @@ mod tests {
 
         // Same topic, different properties.
         let _ = new_test_channel_builder(&ctx, "dupe")
-            .message_encoding("json")
+            .message_encoding("different")
             .build_raw()
             .unwrap();
         let _ = new_test_channel_builder(&ctx, "dupe")
@@ -700,36 +692,18 @@ mod tests {
 
         // Actual matches.
         let c1 = new_test_channel(&ctx, "dupe").unwrap();
-        let c2 = new_test_channel(&ctx, "dupe").unwrap();
-        assert_eq!(ctx.0.read().channels.len(), 5);
-
-        // Reuses the oldest matching channel.
-        let c3 = new_test_channel_builder(&ctx, "dupe")
-            .return_matching_channel(true)
-            .build_raw()
-            .unwrap();
-        assert_eq!(c1.id(), c3.id());
-        assert_eq!(Arc::as_ptr(&c1), Arc::as_ptr(&c3));
-        assert_eq!(ctx.0.read().channels.len(), 5);
-
-        // Reuses the next oldest matching channel.
-        assert!(ctx.remove_channel(c1.id()));
         assert_eq!(ctx.0.read().channels.len(), 4);
-        let c4 = new_test_channel_builder(&ctx, "dupe")
-            .return_matching_channel(true)
-            .build_raw()
-            .unwrap();
-        assert_eq!(c2.id(), c4.id());
-        assert_eq!(Arc::as_ptr(&c2), Arc::as_ptr(&c4));
+
+        // Reuses the matching channel.
+        let c2 = new_test_channel(&ctx, "dupe").unwrap();
+        assert_eq!(c1.id(), c2.id());
+        assert_eq!(Arc::as_ptr(&c1), Arc::as_ptr(&c2));
         assert_eq!(ctx.0.read().channels.len(), 4);
 
         // No matches, creates a new channel.
-        assert!(ctx.remove_channel(c2.id()));
+        assert!(ctx.remove_channel(c1.id()));
         assert_eq!(ctx.0.read().channels.len(), 3);
-        let _ = new_test_channel_builder(&ctx, "dupe")
-            .return_matching_channel(true)
-            .build_raw()
-            .unwrap();
+        let _ = new_test_channel(&ctx, "dupe").unwrap();
         assert_eq!(ctx.0.read().channels.len(), 4);
     }
 }

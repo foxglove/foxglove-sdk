@@ -31,7 +31,6 @@ pub fn create_channel<T: Encode>(
         .schema(T::get_schema())
         .message_encoding(T::get_message_encoding())
         .context(context)
-        .return_matching_channel(true)
         .build_raw()
         .unwrap_or_else(|e| {
             // We specified a message encoding, so the builder cannot fail.

@@ -12,7 +12,6 @@ pub struct ChannelBuilder {
     schema: Option<Schema>,
     metadata: BTreeMap<String, String>,
     context: Arc<Context>,
-    return_matching_channel: bool,
 }
 
 impl ChannelBuilder {
@@ -26,7 +25,6 @@ impl ChannelBuilder {
             schema: None,
             metadata: BTreeMap::new(),
             context: Context::get_default(),
-            return_matching_channel: false,
         }
     }
 
@@ -67,14 +65,6 @@ impl ChannelBuilder {
         self
     }
 
-    /// Returns an existing channel, if a matching one is found.
-    ///
-    /// See [`RawChannel::matches`] for the criteria used to identify a match.
-    pub(crate) fn return_matching_channel(mut self, value: bool) -> Self {
-        self.return_matching_channel = value;
-        self
-    }
-
     /// Builds a [`RawChannel`].
     ///
     /// Returns [`FoxgloveError::MessageEncodingRequired`] if no message encoding was specified.
@@ -87,11 +77,7 @@ impl ChannelBuilder {
             self.schema,
             self.metadata,
         );
-        if self.return_matching_channel {
-            channel = self.context.add_channel_or_return_matching(channel);
-        } else {
-            self.context.add_channel(channel.clone());
-        }
+        channel = self.context.add_channel(channel);
         Ok(channel)
     }
 
