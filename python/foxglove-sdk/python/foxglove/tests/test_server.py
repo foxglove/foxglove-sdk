@@ -3,12 +3,12 @@ import time
 import pytest
 from foxglove import (
     Capability,
+    Channel,
     Context,
     ServerListener,
     Service,
     start_server,
 )
-from foxglove.channel import Channel
 from foxglove.websocket import ServiceSchema, StatusLevel
 
 

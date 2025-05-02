@@ -2,8 +2,7 @@ import logging
 import random
 
 import pytest
-from foxglove import Context, Schema
-from foxglove.channel import Channel
+from foxglove import Channel, Context, Schema
 from foxglove.channels import LogChannel
 from foxglove.schemas import Log
 

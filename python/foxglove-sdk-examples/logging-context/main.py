@@ -1,8 +1,7 @@
 import time
 
 import foxglove.schemas
-from foxglove import Context, open_mcap
-from foxglove.channel import Channel
+from foxglove import Channel, Context, open_mcap
 from foxglove.channels import SceneUpdateChannel
 
 ctx1 = Context()

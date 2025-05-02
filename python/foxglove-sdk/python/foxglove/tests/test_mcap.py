@@ -2,8 +2,7 @@ from pathlib import Path
 from typing import Callable, Generator, Optional
 
 import pytest
-from foxglove import Context, open_mcap
-from foxglove.channel import Channel
+from foxglove import Channel, Context, open_mcap
 from foxglove.mcap import MCAPWriteOptions
 
 chan = Channel("test", schema={"type": "object"})
