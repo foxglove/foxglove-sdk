@@ -21,7 +21,7 @@ FoxgloveResult<Channel> Channel::create(
     {topic.data(), topic.length()},
     {message_encoding.data(), message_encoding.length()},
     schema ? &c_schema : nullptr,
-    context.get_inner(),
+    context.getInner(),
     &channel
   );
   if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
@@ -31,21 +31,21 @@ FoxgloveResult<Channel> Channel::create(
 }
 
 Channel::Channel(const foxglove_channel* channel)
-    : _impl(channel, foxglove_channel_free) {}
+    : impl_(channel, foxglove_channel_free) {}
 
 uint64_t Channel::id() const {
-  return foxglove_channel_get_id(_impl.get());
+  return foxglove_channel_get_id(impl_.get());
 }
 
-uint64_t Channel::test_ID() const {
-  return foxglove_channel_get_id(_impl.get());
+uint64_t Channel::testId() const {
+  return foxglove_channel_get_id(impl_.get());
 }
 
 FoxgloveError Channel::log(
   const std::byte* data, size_t data_len, std::optional<uint64_t> log_time
 ) {
   foxglove_error error = foxglove_channel_log(
-    _impl.get(), reinterpret_cast<const uint8_t*>(data), data_len, log_time ? &*log_time : nullptr
+    impl_.get(), reinterpret_cast<const uint8_t*>(data), data_len, log_time ? &*log_time : nullptr
   );
   return FoxgloveError(error);
 }

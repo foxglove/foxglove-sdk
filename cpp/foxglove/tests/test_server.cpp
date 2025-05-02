@@ -61,7 +61,7 @@ TEST_CASE("supported encoding is invalid utf-8") {
   options.name = "unit-test";
   options.host = "127.0.0.1";
   options.port = 0;
-  options.supportedEncodings.emplace_back("\x80\x80\x80\x80");
+  options.supported_encodings.emplace_back("\x80\x80\x80\x80");
   auto server_result = foxglove::WebSocketServer::create(std::move(options));
   REQUIRE(!server_result.has_value());
   REQUIRE(server_result.error() == foxglove::FoxgloveError::Utf8Error);
@@ -227,7 +227,7 @@ TEST_CASE("Client advertise/publish callbacks") {
   options.host = "127.0.0.1";
   options.port = 0;
   options.capabilities = foxglove::WebSocketServerCapabilities::ClientPublish;
-  options.supportedEncodings = {"schema encoding", "another"};
+  options.supported_encodings = {"schema encoding", "another"};
   options.callbacks.onClientAdvertise =
     [&](uint32_t client_id, const foxglove::ClientChannel& channel) {
       std::scoped_lock lock{mutex};
@@ -236,10 +236,10 @@ TEST_CASE("Client advertise/publish callbacks") {
       REQUIRE(channel.id == 100);
       REQUIRE(channel.topic == "topic");
       REQUIRE(channel.encoding == "encoding");
-      REQUIRE(channel.schemaName == "schema name");
-      REQUIRE(channel.schemaEncoding == "schema encoding");
+      REQUIRE(channel.schema_name == "schema name");
+      REQUIRE(channel.schema_encoding == "schema encoding");
       REQUIRE(
-        std::string_view(reinterpret_cast<const char*>(channel.schema), channel.schemaLen) ==
+        std::string_view(reinterpret_cast<const char*>(channel.schema), channel.schema_len) ==
         "schema data"
       );
       cv.notify_all();
@@ -297,8 +297,8 @@ TEST_CASE("Client advertise/publish callbacks") {
           "id": 100,
           "topic": "topic",
           "encoding": "encoding",
-          "schemaName": "schema name",
-          "schemaEncoding": "schema encoding",
+          "schema_name": "schema name",
+          "schema_encoding": "schema encoding",
           "schema": "schema data"
         }
       ]

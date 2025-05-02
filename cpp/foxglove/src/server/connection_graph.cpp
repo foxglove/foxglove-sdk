@@ -4,10 +4,10 @@
 namespace foxglove {
 
 ConnectionGraph::ConnectionGraph()
-    : _impl(nullptr, foxglove_connection_graph_free) {
+    : impl_(nullptr, foxglove_connection_graph_free) {
   foxglove_connection_graph* impl = nullptr;
   foxglove_connection_graph_create(&impl);
-  _impl = std::unique_ptr<foxglove_connection_graph, void (*)(foxglove_connection_graph*)>(
+  impl_ = std::unique_ptr<foxglove_connection_graph, void (*)(foxglove_connection_graph*)>(
     impl, foxglove_connection_graph_free
   );
 }
@@ -21,7 +21,7 @@ FoxgloveError ConnectionGraph::setPublishedTopic(
     ids.push_back({id.c_str(), id.length()});
   }
   auto err = foxglove_connection_graph_set_published_topic(
-    _impl.get(), {topic.data(), topic.length()}, ids.data(), ids.size()
+    impl_.get(), {topic.data(), topic.length()}, ids.data(), ids.size()
   );
   return FoxgloveError(err);
 }
@@ -36,7 +36,7 @@ FoxgloveError ConnectionGraph::setSubscribedTopic(
   }
 
   auto err = foxglove_connection_graph_set_subscribed_topic(
-    _impl.get(), {topic.data(), topic.length()}, ids.data(), ids.size()
+    impl_.get(), {topic.data(), topic.length()}, ids.data(), ids.size()
   );
   return FoxgloveError(err);
 }
@@ -51,7 +51,7 @@ FoxgloveError ConnectionGraph::setAdvertisedService(
   }
 
   auto err = foxglove_connection_graph_set_advertised_service(
-    _impl.get(), {service.data(), service.length()}, ids.data(), ids.size()
+    impl_.get(), {service.data(), service.length()}, ids.data(), ids.size()
   );
   return FoxgloveError(err);
 }

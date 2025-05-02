@@ -191,8 +191,8 @@ TEST_CASE("zstd compression") {
   foxglove::McapWriterOptions options{context};
   options.path = "test.mcap";
   options.compression = foxglove::McapCompression::Zstd;
-  options.chunkSize = 10000;
-  options.useChunks = true;
+  options.chunk_size = 10000;
+  options.use_chunks = true;
   auto writer = foxglove::McapWriter::create(options);
   REQUIRE(writer.has_value());
 
@@ -222,8 +222,8 @@ TEST_CASE("lz4 compression") {
   foxglove::McapWriterOptions options{context};
   options.path = "test.mcap";
   options.compression = foxglove::McapCompression::Lz4;
-  options.chunkSize = 10000;
-  options.useChunks = true;
+  options.chunk_size = 10000;
+  options.use_chunks = true;
   auto writer = foxglove::McapWriter::create(options);
   REQUIRE(writer.has_value());
 

@@ -27,7 +27,7 @@ public:
   );
 
 private:
-  std::unique_ptr<foxglove_connection_graph, void (*)(foxglove_connection_graph*)> _impl;
+  std::unique_ptr<foxglove_connection_graph, void (*)(foxglove_connection_graph*)> impl_;
 };
 
 }  // namespace foxglove

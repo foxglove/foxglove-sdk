@@ -31,19 +31,22 @@ public:
     const std::byte* data, size_t data_len, std::optional<uint64_t> log_time = std::nullopt
   );
 
-  uint64_t test_ID() const;
+  [[nodiscard]] uint64_t testId() const;
 
-  uint64_t id() const;
+  [[nodiscard]] uint64_t id() const;
 
   Channel(const Channel&) = delete;
   Channel& operator=(const Channel&) = delete;
 
   Channel(Channel&& other) noexcept = default;
+  Channel& operator=(Channel&& other) noexcept = default;
+
+  ~Channel() = default;
 
 private:
   explicit Channel(const foxglove_channel* channel);
 
-  std::unique_ptr<const foxglove_channel, void (*const)(const foxglove_channel*)> _impl;
+  std::unique_ptr<const foxglove_channel, void (*const)(const foxglove_channel*)> impl_;
 };
 
 }  // namespace foxglove

@@ -89,7 +89,7 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
   }
 
   foxglove_server_options c_cptions = {};
-  c_cptions.context = options.context.get_inner();
+  c_cptions.context = options.context.getInner();
   c_cptions.name = {options.name.c_str(), options.name.length()};
   c_cptions.host = {options.host.c_str(), options.host.length()};
   c_cptions.port = options.port;
@@ -97,8 +97,8 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
   c_cptions.capabilities =
     static_cast<std::underlying_type_t<decltype(options.capabilities)>>(options.capabilities);
   std::vector<foxglove_string> supported_encodings;
-  supported_encodings.reserve(options.supportedEncodings.size());
-  for (const auto& encoding : options.supportedEncodings) {
+  supported_encodings.reserve(options.supported_encodings.size());
+  for (const auto& encoding : options.supported_encodings) {
     supported_encodings.push_back({encoding.c_str(), encoding.length()});
   }
   c_cptions.supported_encodings = supported_encodings.data();
@@ -116,20 +116,20 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
 WebSocketServer::WebSocketServer(
   foxglove_websocket_server* server, std::unique_ptr<WebSocketServerCallbacks> callbacks
 )
-    : _impl(server, foxglove_server_stop)
-    , _callbacks(std::move(callbacks)) {}
+    : impl_(server, foxglove_server_stop)
+    , callbacks_(std::move(callbacks)) {}
 
 FoxgloveError WebSocketServer::stop() {
-  foxglove_error error = foxglove_server_stop(_impl.release());
+  foxglove_error error = foxglove_server_stop(impl_.release());
   return FoxgloveError(error);
 }
 
 uint16_t WebSocketServer::port() const {
-  return foxglove_server_get_port(_impl.get());
+  return foxglove_server_get_port(impl_.get());
 }
 
 void WebSocketServer::publishConnectionGraph(ConnectionGraph& graph) {
-  foxglove_server_publish_connection_graph(_impl.get(), graph._impl.get());
+  foxglove_server_publish_connection_graph(impl_.get(), graph.impl_.get());
 }
 
 }  // namespace foxglove

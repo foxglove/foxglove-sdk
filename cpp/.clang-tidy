@@ -1,6 +1,8 @@
 ---
 WarningsAsErrors: "*"
 UseColor: true
+HeaderFilterRegex: "\\/include\\/foxglove\\/"
+ExcludeHeaderFilterRegex: "expected\\.hpp"
 Checks:
   - -*
   - clang-analyzer-*
@@ -24,7 +26,6 @@ CheckOptions:
   # See discussion at https://stackoverflow.com/a/58845898/23649 & https://stackoverflow.com/a/78343833/23649
   hicpp-signed-bitwise.IgnorePositiveIntegerLiterals: true
   # Naming
-  readability-identifier-naming.AbstractClassCase: CamelCase
   readability-identifier-naming.ClassCase: CamelCase
   readability-identifier-naming.ClassConstantCase: CamelCase
   readability-identifier-naming.ClassMemberCase: lower_case
@@ -37,17 +38,19 @@ CheckOptions:
   readability-identifier-naming.ConstexprMethodCase: camelBack
   readability-identifier-naming.ConstexprVariableCase: lower_case
   readability-identifier-naming.EnumCase: CamelCase
+  readability-identifier-naming.EnumIgnoredRegexp: foxglove_error
   readability-identifier-naming.EnumConstantCase: CamelCase
   readability-identifier-naming.FunctionCase: camelBack
   readability-identifier-naming.MacroDefinitionCase: UPPER_CASE
   readability-identifier-naming.MemberCase: lower_case
+  readability-identifier-naming.MemberIgnoredRegexp: "^on[A-Z].*" # std::function members of callback struct
   readability-identifier-naming.MethodCase: camelBack
   readability-identifier-naming.NamespaceCase: lower_case
   readability-identifier-naming.ParameterCase: lower_case
   readability-identifier-naming.PrivateMemberSuffix: _
   readability-identifier-naming.StaticConstantCase: CamelCase
   readability-identifier-naming.StaticVariableCase: lower_case
-  readability-identifier-naming.StructCase: lower_case
+  readability-identifier-naming.StructCase: CamelCase
   readability-identifier-naming.TypeAliasCase: CamelCase
   readability-identifier-naming.TypedefCase: CamelCase
   readability-identifier-naming.VariableCase: lower_case

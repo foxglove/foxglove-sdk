@@ -27,7 +27,7 @@ int main(int argc, const char* argv[]) {
   options.host = "127.0.0.1";
   options.port = 8765;
   options.capabilities = foxglove::WebSocketServerCapabilities::ClientPublish;
-  options.supportedEncodings = {"json"};
+  options.supported_encodings = {"json"};
   options.callbacks.onSubscribe = [](uint64_t channel_id) {
     std::cerr << "Subscribed to channel " << channel_id << '\n';
   };
@@ -40,12 +40,12 @@ int main(int argc, const char* argv[]) {
     std::cerr << "Client " << client_id << " advertised channel " << channel.id << ":\n";
     std::cerr << "  Topic: " << channel.topic << '\n';
     std::cerr << "  Encoding: " << channel.encoding << '\n';
-    std::cerr << "  Schema name: " << channel.schemaName << '\n';
+    std::cerr << "  Schema name: " << channel.schema_name << '\n';
     std::cerr << "  Schema encoding: "
-              << (!channel.schemaEncoding.empty() ? channel.schemaEncoding : "(none)") << '\n';
+              << (!channel.schema_encoding.empty() ? channel.schema_encoding : "(none)") << '\n';
     std::cerr << "  Schema: "
               << (channel.schema != nullptr
-                    ? std::string(reinterpret_cast<const char*>(channel.schema), channel.schemaLen)
+                    ? std::string(reinterpret_cast<const char*>(channel.schema), channel.schema_len)
                     : "(none)")
               << '\n';
   };
