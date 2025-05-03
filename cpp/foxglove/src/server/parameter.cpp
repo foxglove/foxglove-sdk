@@ -181,6 +181,23 @@ Parameter ParameterView::clone() const {
   return Parameter(ptr);
 }
 
+FoxgloveResult<std::vector<std::byte>> ParameterView::getByteArray() const {
+  size_t len = 0;
+  auto error = foxglove_parameter_get_byte_array_decoded_size(_impl, &len);
+  if (error != foxglove_error::FOXGLOVE_ERROR_OK) {
+    return foxglove::unexpected(FoxgloveError(error));
+  }
+  std::vector<std::byte> bytes;
+  bytes.resize(len);
+  error =
+    foxglove_parameter_decode_byte_array(_impl, reinterpret_cast<uint8_t*>(bytes.data()), &len);
+  if (error != foxglove_error::FOXGLOVE_ERROR_OK) {
+    return foxglove::unexpected(FoxgloveError(error));
+  }
+  bytes.resize(len);
+  return bytes;
+}
+
 /**
  * Parameter implementation
  */

@@ -556,16 +556,18 @@ TEST_CASE("Parameter callbacks") {
         REQUIRE(!params[0].value().has_value());
         REQUIRE(params[1].name() == "bar");
         REQUIRE(params[1].value().has_value());
-        if (params[1].value().has_value()) {
-          REQUIRE(std::holds_alternative<double>(*params[1].value()));
-          REQUIRE(std::get<double>(*params[1].value()) == 99.99);
+        if (params[1].is<double>()) {
+          REQUIRE(params[1].get<double>() == 99.99);
         }
         REQUIRE(params[2].name() == "bytes");
         REQUIRE(params[2].type() == foxglove::ParameterType::ByteArray);
         REQUIRE(params[2].value().has_value());
-        if (params[2].value().has_value()) {
-          REQUIRE(std::holds_alternative<std::string>(*params[2].value()));
-          REQUIRE(std::get<std::string>(*params[2].value()) == "c2VjcmV0");
+        if (params[2].isByteArray()) {
+          auto result = params[2].getByteArray();
+          REQUIRE(result.has_value());
+          auto bytes = result.value();
+          REQUIRE(bytes.size() == 6);
+          REQUIRE(memcmp(bytes.data(), "secret", 6) == 0);
         }
         return true;
       }

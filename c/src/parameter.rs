@@ -233,6 +233,25 @@ impl FoxgloveParameter {
             value,
         }
     }
+
+    /// Returns a reference to the inner string of a byte array.
+    ///
+    /// Returns None if the parameter has no value, or the value is not a byte array.
+    fn get_byte_array_as_str(&self) -> Option<&str> {
+        // SAFETY: Param value pointer is either null or valid.
+        let value = unsafe { self.value.as_ref() }?;
+        if !matches!(
+            (self.r#type, value.tag),
+            (
+                FoxgloveParameterType::ByteArray,
+                FoxgloveParameterValueTag::String
+            )
+        ) {
+            return None;
+        }
+        // SAFETY: Value was constructed by [`ParameterValue::string`], tag is a valid discriminator.
+        Some(unsafe { &value.data.string }.as_str())
+    }
 }
 
 impl From<Parameter> for FoxgloveParameter {
@@ -467,6 +486,69 @@ pub unsafe extern "C" fn foxglove_parameter_create_dict(
 ) -> FoxgloveError {
     let value = unsafe { foxglove_parameter_value_create_dict(dict) };
     unsafe { foxglove_parameter_create(param, name, FoxgloveParameterType::None, value) }
+}
+
+/// Returns an estimate of the decoded length for the byte array in bytes.
+///
+/// # Safety
+/// - `param` must be a valid pointer to a value allocated by `foxglove_parameter_create` or
+///   `foxglove_parameter_clone`.
+/// - `size` must be a valid pointer.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_parameter_get_byte_array_decoded_size(
+    param: Option<&FoxgloveParameter>,
+    len: *mut usize,
+) -> FoxgloveError {
+    let Some(param) = param else {
+        return FoxgloveError::ValueError;
+    };
+    let Some(encoded) = param.get_byte_array_as_str() else {
+        return FoxgloveError::ValueError;
+    };
+    let decoded_len = base64::decoded_len_estimate(encoded.len());
+    unsafe { *len = decoded_len };
+    FoxgloveError::Ok
+}
+
+/// Decodes a byte array into the provided buffer.
+///
+/// The buffer should be at least the size returned by
+/// `foxglove_parameter_get_byte_array_decoded_size`.
+///
+/// On success, updates `len` with the number of bytes written to the provided buffer.
+///
+/// # Safety
+/// - `param` must be a valid pointer to a value allocated by `foxglove_parameter_create` or
+///   `foxglove_parameter_clone`.
+/// - `data` must be a valid pointer to a writable buffer of size `len`.
+/// - `len` must be a valid pointer.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_parameter_decode_byte_array(
+    param: Option<&FoxgloveParameter>,
+    data: *mut u8,
+    len: *mut usize,
+) -> FoxgloveError {
+    let Some(param) = param else {
+        return FoxgloveError::ValueError;
+    };
+    let Some(encoded) = param.get_byte_array_as_str() else {
+        return FoxgloveError::ValueError;
+    };
+    let capacity = unsafe { *len };
+    if capacity < base64::decoded_len_estimate(encoded.len()) {
+        return FoxgloveError::BufferTooShort;
+    }
+    let buffer = unsafe { std::slice::from_raw_parts_mut(data, capacity) };
+    match BASE64_STANDARD.decode_slice_unchecked(encoded, buffer) {
+        Ok(written) => {
+            unsafe { *len = written };
+            FoxgloveError::Ok
+        }
+        Err(e) => {
+            tracing::warn!("Failed to decode base64: {e}");
+            FoxgloveError::Base64DecodeError
+        }
+    }
 }
 
 /// Clones a parameter.

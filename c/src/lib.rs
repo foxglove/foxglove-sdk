@@ -938,7 +938,6 @@ impl foxglove::websocket::ServerListener for FoxgloveServerCallbacks {
 }
 
 #[repr(u8)]
-#[non_exhaustive]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FoxgloveError {
     Ok,
@@ -956,6 +955,8 @@ pub enum FoxgloveError {
     ConnectionGraphNotSupported,
     IoError,
     McapError,
+    BufferTooShort,
+    Base64DecodeError,
 }
 
 impl From<foxglove::FoxgloveError> for FoxgloveError {
@@ -1002,7 +1003,9 @@ impl FoxgloveError {
             FoxgloveError::ConnectionGraphNotSupported => c"Connection Graph Not Supported",
             FoxgloveError::IoError => c"IO Error",
             FoxgloveError::McapError => c"MCAP Error",
-            _ => c"Unspecified Error",
+            FoxgloveError::BufferTooShort => c"Buffer too short",
+            FoxgloveError::Base64DecodeError => c"Base64 decode error",
+            FoxgloveError::Unspecified => c"Unspecified Error",
         }
     }
 }

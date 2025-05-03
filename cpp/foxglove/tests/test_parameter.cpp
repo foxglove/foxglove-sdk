@@ -14,26 +14,20 @@ using Catch::Matchers::Equals;
 TEST_CASE("ParameterValue construction and access") {
   SECTION("double value") {
     foxglove::ParameterValue value(42.0);
-    auto view = value.view();
-    auto variant = view.value();
-    REQUIRE(std::holds_alternative<double>(variant));
-    REQUIRE(std::get<double>(variant) == 42.0);
+    REQUIRE(value.is<double>());
+    REQUIRE(value.get<double>() == 42.0);
   }
 
   SECTION("bool value") {
     foxglove::ParameterValue value(true);
-    auto view = value.view();
-    auto variant = view.value();
-    REQUIRE(std::holds_alternative<bool>(variant));
-    REQUIRE(std::get<bool>(variant) == true);
+    REQUIRE(value.is<bool>());
+    REQUIRE(value.get<bool>());
   }
 
   SECTION("string value") {
     foxglove::ParameterValue value("test string");
-    auto view = value.view();
-    auto variant = view.value();
-    REQUIRE(std::holds_alternative<std::string>(variant));
-    REQUIRE(std::get<std::string>(variant) == "test string");
+    REQUIRE(value.is<std::string>());
+    REQUIRE(value.get<std::string>() == "test string");
   }
 
   SECTION("array value") {
@@ -41,13 +35,11 @@ TEST_CASE("ParameterValue construction and access") {
     values.emplace_back(1.0);
     values.emplace_back(2.0);
     foxglove::ParameterValue value(std::move(values));
-    auto view = value.view();
-    auto variant = view.value();
-    REQUIRE(std::holds_alternative<foxglove::ParameterValueView::Array>(variant));
-    const auto& array = std::get<foxglove::ParameterValueView::Array>(variant);
+    REQUIRE(value.is<foxglove::ParameterValueView::Array>());
+    const auto& array = value.get<foxglove::ParameterValueView::Array>();
     REQUIRE(array.size() == 2);
-    REQUIRE(std::get<double>(array[0].value()) == 1.0);
-    REQUIRE(std::get<double>(array[1].value()) == 2.0);
+    REQUIRE(array[0].get<double>() == 1.0);
+    REQUIRE(array[1].get<double>() == 2.0);
   }
 
   SECTION("dict value") {
@@ -55,13 +47,11 @@ TEST_CASE("ParameterValue construction and access") {
     values.insert(std::make_pair("key1", foxglove::ParameterValue(1.0)));
     values.insert(std::make_pair("key2", foxglove::ParameterValue("value")));
     foxglove::ParameterValue value(std::move(values));
-    auto view = value.view();
-    auto variant = view.value();
-    REQUIRE(std::holds_alternative<foxglove::ParameterValueView::Dict>(variant));
-    const auto& dict = std::get<foxglove::ParameterValueView::Dict>(variant);
+    REQUIRE(value.is<foxglove::ParameterValueView::Dict>());
+    const auto& dict = value.get<foxglove::ParameterValueView::Dict>();
     REQUIRE(dict.size() == 2);
-    REQUIRE(std::get<double>(dict.at("key1").value()) == 1.0);
-    REQUIRE(std::get<std::string>(dict.at("key2").value()) == "value");
+    REQUIRE(dict.at("key1").get<double>() == 1.0);
+    REQUIRE(dict.at("key2").get<std::string>() == "value");
   }
 }
 
@@ -70,47 +60,31 @@ TEST_CASE("Parameter construction and access") {
     foxglove::Parameter param("test_param");
     REQUIRE(param.name() == "test_param");
     REQUIRE(param.type() == foxglove::ParameterType::None);
-    auto value = param.value();
-    REQUIRE(!value.has_value());
+    REQUIRE(!param.hasValue());
   }
 
   SECTION("parameter with double value") {
     foxglove::Parameter param("test_param", 42.0);
     REQUIRE(param.name() == "test_param");
     REQUIRE(param.type() == foxglove::ParameterType::Float64);
-    auto value = param.value();
-    REQUIRE(value.has_value());
-    if (value.has_value()) {
-      auto inner = (*value).value();
-      REQUIRE(std::holds_alternative<double>(inner));
-      REQUIRE(std::get<double>(inner) == 42.0);
-    }
+    REQUIRE(param.is<double>());
+    REQUIRE(param.get<double>() == 42.0);
   }
 
   SECTION("parameter with bool value") {
     foxglove::Parameter param("test_param", true);
     REQUIRE(param.name() == "test_param");
-    REQUIRE(param.type() == foxglove::ParameterType::None);  // bool is not a supported type
-    auto value = param.value();
-    REQUIRE(value.has_value());
-    if (value.has_value()) {
-      auto inner = (*value).value();
-      REQUIRE(std::holds_alternative<bool>(inner));
-      REQUIRE(std::get<bool>(inner) == true);
-    }
+    REQUIRE(param.type() == foxglove::ParameterType::None);
+    REQUIRE(param.is<bool>());
+    REQUIRE(param.get<bool>());
   }
 
   SECTION("parameter with string value") {
     foxglove::Parameter param("test_param", "test string");
     REQUIRE(param.name() == "test_param");
-    REQUIRE(param.type() == foxglove::ParameterType::None);  // string is not a supported type
-    auto value = param.value();
-    REQUIRE(value.has_value());
-    if (value.has_value()) {
-      auto inner = (*value).value();
-      REQUIRE(std::holds_alternative<std::string>(inner));
-      REQUIRE(std::get<std::string>(inner) == "test string");
-    }
+    REQUIRE(param.type() == foxglove::ParameterType::None);
+    REQUIRE(param.is<std::string>());
+    REQUIRE(param.get<std::string>() == "test string");
   }
 
   SECTION("parameter with byte array value") {
@@ -118,13 +92,12 @@ TEST_CASE("Parameter construction and access") {
     foxglove::Parameter param("test_param", data.data(), data.size());
     REQUIRE(param.name() == "test_param");
     REQUIRE(param.type() == foxglove::ParameterType::ByteArray);
-    auto value = param.value();
-    REQUIRE(value.has_value());
-    if (value.has_value()) {
-      auto inner = (*value).value();
-      REQUIRE(std::holds_alternative<std::string>(inner));
-      REQUIRE(std::get<std::string>(inner) == "AQIDBA==");
-    }
+    REQUIRE(param.isByteArray());
+    auto result = param.getByteArray();
+    REQUIRE(result.has_value());
+    auto decoded = result.value();
+    REQUIRE(decoded.size() == data.size());
+    REQUIRE(memcmp(decoded.data(), data.data(), data.size()) == 0);
   }
 
   SECTION("parameter with float64 array value") {
@@ -132,36 +105,22 @@ TEST_CASE("Parameter construction and access") {
     foxglove::Parameter param("test_param", values);
     REQUIRE(param.name() == "test_param");
     REQUIRE(param.type() == foxglove::ParameterType::Float64Array);
-    auto value = param.value();
-    REQUIRE(value.has_value());
-    if (value.has_value()) {
-      auto inner = (*value).value();
-      REQUIRE(std::holds_alternative<foxglove::ParameterValueView::Array>(inner));
-      const auto& array = std::get<foxglove::ParameterValueView::Array>(inner);
-      REQUIRE(array.size() == 3);
-      REQUIRE(std::get<double>(array[0].value()) == 1.0);
-      REQUIRE(std::get<double>(array[1].value()) == 2.0);
-      REQUIRE(std::get<double>(array[2].value()) == 3.0);
-    }
+    REQUIRE(param.hasValue());
+    REQUIRE(param.getArray<double>() == values);
   }
 
   SECTION("parameter with dict value") {
     std::map<std::string, foxglove::ParameterValue> values;
     values.insert(std::make_pair("key1", foxglove::ParameterValue(1.0)));
-    values.insert(std::make_pair("key2", foxglove::ParameterValue("value")));
+    values.insert(std::make_pair("key2", foxglove::ParameterValue(2.0)));
     foxglove::Parameter param("test_param", std::move(values));
     REQUIRE(param.name() == "test_param");
     REQUIRE(param.type() == foxglove::ParameterType::None);
-    auto value = param.value();
-    REQUIRE(value.has_value());
-    if (value.has_value()) {
-      auto inner = (*value).value();
-      REQUIRE(std::holds_alternative<foxglove::ParameterValueView::Dict>(inner));
-      const auto& dict = std::get<foxglove::ParameterValueView::Dict>(inner);
-      REQUIRE(dict.size() == 2);
-      REQUIRE(std::get<double>(dict.at("key1").value()) == 1.0);
-      REQUIRE(std::get<std::string>(dict.at("key2").value()) == "value");
-    }
+    REQUIRE(param.hasValue());
+    auto dict = param.getDict<double>();
+    REQUIRE(dict.size() == 2);
+    REQUIRE(dict["key1"] == 1.0);
+    REQUIRE(dict["key2"] == 2.0);
   }
 }
 
@@ -178,25 +137,7 @@ TEST_CASE("ParameterArray functionality") {
   REQUIRE(parameters[0].name() == "param1");
   REQUIRE(parameters[1].name() == "param2");
   REQUIRE(parameters[2].name() == "param3");
-
-  auto value1 = parameters[0].value();
-  auto value2 = parameters[1].value();
-  auto value3 = parameters[2].value();
-
-  REQUIRE(value1.has_value());
-  REQUIRE(value2.has_value());
-  REQUIRE(value3.has_value());
-
-  if (value1.has_value()) {
-    auto inner = (*value1).value();
-    REQUIRE(std::get<double>(inner) == 1.0);
-  }
-  if (value2.has_value()) {
-    auto inner = (*value2).value();
-    REQUIRE(std::get<double>(inner) == 2.0);
-  }
-  if (value3.has_value()) {
-    auto inner = (*value3).value();
-    REQUIRE(std::get<double>(inner) == 3.0);
-  }
+  REQUIRE(parameters[0].get<double>() == 1.0);
+  REQUIRE(parameters[1].get<double>() == 2.0);
+  REQUIRE(parameters[2].get<double>() == 3.0);
 }

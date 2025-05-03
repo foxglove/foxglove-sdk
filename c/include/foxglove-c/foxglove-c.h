@@ -69,6 +69,8 @@ enum foxglove_error
   FOXGLOVE_ERROR_CONNECTION_GRAPH_NOT_SUPPORTED,
   FOXGLOVE_ERROR_IO_ERROR,
   FOXGLOVE_ERROR_MCAP_ERROR,
+  FOXGLOVE_ERROR_BUFFER_TOO_SHORT,
+  FOXGLOVE_ERROR_BASE64_DECODE_ERROR,
 };
 #ifndef __cplusplus
 typedef uint8_t foxglove_error;
@@ -769,6 +771,35 @@ foxglove_error foxglove_parameter_create_float64_array(struct foxglove_parameter
 foxglove_error foxglove_parameter_create_dict(struct foxglove_parameter **param,
                                               struct foxglove_string name,
                                               struct foxglove_parameter_value_dict *dict);
+
+/**
+ * Returns an estimate of the decoded length for the byte array in bytes.
+ *
+ * # Safety
+ * - `param` must be a valid pointer to a value allocated by `foxglove_parameter_create` or
+ *   `foxglove_parameter_clone`.
+ * - `size` must be a valid pointer.
+ */
+foxglove_error foxglove_parameter_get_byte_array_decoded_size(const struct foxglove_parameter *param,
+                                                              size_t *len);
+
+/**
+ * Decodes a byte array into the provided buffer.
+ *
+ * The buffer should be at least the size returned by
+ * `foxglove_parameter_get_byte_array_decoded_size`.
+ *
+ * On success, updates `len` with the number of bytes written to the provided buffer.
+ *
+ * # Safety
+ * - `param` must be a valid pointer to a value allocated by `foxglove_parameter_create` or
+ *   `foxglove_parameter_clone`.
+ * - `data` must be a valid pointer to a writable buffer of size `len`.
+ * - `len` must be a valid pointer.
+ */
+foxglove_error foxglove_parameter_decode_byte_array(const struct foxglove_parameter *param,
+                                                    uint8_t *data,
+                                                    size_t *len);
 
 /**
  * Clones a parameter.

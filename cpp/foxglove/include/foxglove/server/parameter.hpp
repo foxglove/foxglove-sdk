@@ -6,6 +6,7 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <variant>
 #include <vector>
@@ -42,18 +43,52 @@ enum class ParameterType : uint8_t {
  */
 class ParameterValueView final {
 public:
-  using Number = double;
-  using Boolean = bool;
-  using String = std::string;
   using Array = std::vector<ParameterValueView>;
   using Dict = std::map<std::string, ParameterValueView>;
-  using Value = std::variant<Number, Boolean, String, Array, Dict>;
-
-  // Returns a C++ native representation of the value.
-  [[nodiscard]] Value value() const;
+  using Value = std::variant<double, bool, std::string, Array, Dict>;
 
   // Creates a deep clone of this parameter value.
   [[nodiscard]] class ParameterValue clone() const;
+
+  // Returns a variant representation of the value.
+  [[nodiscard]] Value value() const;
+
+  // Value type checker.
+  template<typename T>
+  [[nodiscard]] bool is() const {
+    auto value = this->value();
+    return std::holds_alternative<T>(value);
+  }
+
+  // Value extractor.
+  template<typename T>
+  [[nodiscard]] T get() const {
+    throw std::runtime_error("Unsupported type");
+  }
+  template<>
+  [[nodiscard]] ParameterValueView get<ParameterValueView>() const {
+    return *this;
+  }
+  template<>
+  [[nodiscard]] double get<double>() const {
+    return std::get<double>(this->value());
+  }
+  template<>
+  [[nodiscard]] bool get<bool>() const {
+    return std::get<bool>(this->value());
+  }
+  template<>
+  [[nodiscard]] std::string get<std::string>() const {
+    return std::get<std::string>(this->value());
+  }
+  template<>
+  [[nodiscard]] Array get<Array>() const {
+    return std::get<Array>(this->value());
+  }
+  template<>
+  [[nodiscard]] Dict get<Dict>() const {
+    return std::get<Dict>(this->value());
+  }
 
 private:
   friend class ParameterView;
@@ -85,15 +120,27 @@ public:
   ParameterValue(const ParameterValue&) = delete;
   ParameterValue& operator=(const ParameterValue&) = delete;
 
+  // Creates a deep clone of this parameter value.
+  [[nodiscard]] ParameterValue clone() const {
+    return this->view().clone();
+  }
+
   // Accessors
   [[nodiscard]] ParameterValueView view() const noexcept;
   [[nodiscard]] ParameterValueView::Value value() const {
     return this->view().value();
   }
 
-  // Creates a deep clone of this parameter value.
-  [[nodiscard]] ParameterValue clone() const {
-    return this->view().clone();
+  // Value type checker.
+  template<typename T>
+  [[nodiscard]] bool is() const {
+    return this->view().is<T>();
+  }
+
+  // Value extractor.
+  template<typename T>
+  [[nodiscard]] T get() const {
+    return this->view().get<T>();
   }
 
 private:
@@ -122,13 +169,86 @@ private:
  */
 class ParameterView final {
 public:
+  // Creates a deep clone of this parameter.
+  [[nodiscard]] class Parameter clone() const;
+
   // Accessors
   [[nodiscard]] std::string_view name() const noexcept;
   [[nodiscard]] ParameterType type() const noexcept;
   [[nodiscard]] std::optional<ParameterValueView> value() const noexcept;
+  [[nodiscard]] bool hasValue() const noexcept {
+    return this->value().has_value();
+  };
 
-  // Creates a deep clone of this parameter.
-  [[nodiscard]] class Parameter clone() const;
+  // Value type checkers.
+  template<typename T>
+  [[nodiscard]] bool is() const {
+    return this->hasValue() && this->value()->is<T>();
+  }
+  template<>
+  [[nodiscard]] bool is<std::string>() const {
+    return this->hasValue() && this->type() != ParameterType::ByteArray &&
+           this->value()->is<std::string>();
+  }
+  [[nodiscard]] bool isArray() const noexcept {
+    return this->hasValue() && this->value()->is<ParameterValueView::Array>();
+  }
+  [[nodiscard]] bool isDict() const noexcept {
+    return this->hasValue() && this->value()->is<ParameterValueView::Dict>();
+  }
+  [[nodiscard]] bool isFloat64Array() const noexcept {
+    return this->hasValue() && this->type() == ParameterType::Float64Array && this->isArray();
+  }
+  [[nodiscard]] bool isByteArray() const noexcept {
+    return this->hasValue() && this->type() == ParameterType::ByteArray &&
+           this->value()->is<std::string>();
+  }
+
+  // Value extractor.
+  template<typename T>
+  [[nodiscard]] T get() const {
+    auto value = this->value();
+    if (!value) {
+      throw std::bad_optional_access();
+    }
+    return value->template get<T>();
+  }
+
+  // Value array extractor.
+  template<typename T>
+  [[nodiscard]] std::vector<T> getArray() const {
+    auto value = this->value();
+    if (!value) {
+      throw std::bad_optional_access();
+    }
+    const auto& arr = value->get<ParameterValueView::Array>();
+    std::vector<T> result;
+    result.reserve(arr.size());
+    for (const auto& elem : arr) {
+      result.push_back(elem.get<T>());
+    }
+    return result;
+  }
+
+  // Value dict extractor.
+  template<typename T>
+  [[nodiscard]] std::map<std::string, T> getDict() const {
+    auto value = this->value();
+    if (!value) {
+      throw std::bad_optional_access();
+    }
+    const auto& dict = value->get<ParameterValueView::Dict>();
+    std::map<std::string, T> result;
+    for (const auto& elem : dict) {
+      std::string key(elem.first);
+      auto value = elem.second.get<T>();
+      result.emplace(key, value);
+    }
+    return result;
+  }
+
+  // Value byte array extractor.
+  [[nodiscard]] FoxgloveResult<std::vector<std::byte>> getByteArray() const;
 
 private:
   friend class Parameter;
@@ -151,6 +271,8 @@ public:
   explicit Parameter(std::string_view name, const char* value)
       : Parameter(name, std::string_view(value)) {}
   explicit Parameter(std::string_view name, const uint8_t* data, size_t data_length);
+  explicit Parameter(std::string_view name, const std::vector<std::byte>& bytes)
+      : Parameter(name, reinterpret_cast<const uint8_t*>(bytes.data()), bytes.size()) {}
   explicit Parameter(std::string_view name, const std::vector<double>& values);
   explicit Parameter(std::string_view name, std::map<std::string, ParameterValue> values);
   explicit Parameter(std::string_view name, ParameterType, ParameterValue&& value);
@@ -161,6 +283,11 @@ public:
   Parameter& operator=(Parameter&& other) noexcept = default;
   Parameter(const Parameter&) = delete;
   Parameter& operator=(const Parameter&) = delete;
+
+  // Creates a deep clone of this parameter.
+  [[nodiscard]] Parameter clone() const {
+    return this->view().clone();
+  }
 
   // Accessors
   [[nodiscard]] ParameterView view() const noexcept;
@@ -173,10 +300,49 @@ public:
   [[nodiscard]] std::optional<ParameterValueView> value() const noexcept {
     return this->view().value();
   }
+  [[nodiscard]] bool hasValue() const noexcept {
+    return this->view().hasValue();
+  };
 
-  // Creates a deep clone of this parameter.
-  [[nodiscard]] Parameter clone() const {
-    return this->view().clone();
+  // Value type checkers.
+  template<typename T>
+  [[nodiscard]] bool is() const {
+    return this->view().is<T>();
+  }
+  [[nodiscard]] bool isArray() const noexcept {
+    return this->view().isArray();
+  }
+  [[nodiscard]] bool isDict() const noexcept {
+    return this->view().isDict();
+  }
+  [[nodiscard]] bool isFloat64Array() const noexcept {
+    return this->view().isFloat64Array();
+  }
+  [[nodiscard]] bool isByteArray() const noexcept {
+    return this->view().isByteArray();
+  }
+
+  // Value extractor.
+  template<typename T>
+  [[nodiscard]] T get() const {
+    return this->view().get<T>();
+  }
+
+  // Value array extractor.
+  template<typename T>
+  [[nodiscard]] std::vector<T> getArray() const {
+    return this->view().getArray<T>();
+  }
+
+  // Value dict extractor.
+  template<typename T>
+  [[nodiscard]] std::map<std::string, T> getDict() const {
+    return this->view().getDict<T>();
+  }
+
+  // Value byte array extractor.
+  [[nodiscard]] FoxgloveResult<std::vector<std::byte>> getByteArray() const {
+    return this->view().getByteArray();
   }
 
 private:
