@@ -203,22 +203,25 @@ fn derive_struct_impl(input: DeriveInput) -> TokenStream {
             }
 
             fn message_descriptor() -> Option<::foxglove::prost_types::DescriptorProto> {
-                let mut message = ::foxglove::prost_types::DescriptorProto::default();
-                message.name = Some(String::from(stringify!(#name)));
+                static DESCRIPTOR: ::std::sync::OnceLock<Option<::foxglove::prost_types::DescriptorProto>> = ::std::sync::OnceLock::new();
+                DESCRIPTOR.get_or_init(|| {
+                    let mut message = ::foxglove::prost_types::DescriptorProto::default();
+                    message.name = Some(String::from(stringify!(#name)));
 
-                #(#field_defs)*
+                    #(#field_defs)*
 
-                {
-                    let mut enum_type = &mut message.enum_type;
-                    #(#enum_defs)*
-                }
+                    {
+                        let mut enum_type = &mut message.enum_type;
+                        #(#enum_defs)*
+                    }
 
-                {
-                    let mut nested_type = &mut message.nested_type;
-                    #(#message_defs)*
-                }
+                    {
+                        let mut nested_type = &mut message.nested_type;
+                        #(#message_defs)*
+                    }
 
-                Some(message)
+                    Some(message)
+                }).clone()
             }
 
             fn type_name() -> Option<String> {
@@ -231,27 +234,30 @@ fn derive_struct_impl(input: DeriveInput) -> TokenStream {
             type Error = std::io::Error;
 
             fn get_schema() -> Option<::foxglove::Schema> {
-                let mut file_descriptor_set = ::foxglove::prost_types::FileDescriptorSet::default();
-                let mut file = ::foxglove::prost_types::FileDescriptorProto {
-                    name: Some(String::from(concat!(stringify!(#name), ".proto"))),
-                    package: Some(String::from(stringify!(#name).to_lowercase())),
-                    syntax: Some(String::from("proto3")),
-                    ..Default::default()
-                };
+                static SCHEMA: ::std::sync::OnceLock<Option<::foxglove::Schema>> = ::std::sync::OnceLock::new();
+                SCHEMA.get_or_init(|| {
+                    let mut file_descriptor_set = ::foxglove::prost_types::FileDescriptorSet::default();
+                    let mut file = ::foxglove::prost_types::FileDescriptorProto {
+                        name: Some(String::from(concat!(stringify!(#name), ".proto"))),
+                        package: Some(String::from(stringify!(#name).to_lowercase())),
+                        syntax: Some(String::from("proto3")),
+                        ..Default::default()
+                    };
 
-                if let Some(message_descriptor) = <#name #ty_generics as ::foxglove::ProtobufField>::message_descriptor() {
-                    file.message_type.push(message_descriptor);
-                }
+                    if let Some(message_descriptor) = <#name #ty_generics as ::foxglove::ProtobufField>::message_descriptor() {
+                        file.message_type.push(message_descriptor);
+                    }
 
-                file_descriptor_set.file.push(file);
+                    file_descriptor_set.file.push(file);
 
-                let bytes = ::foxglove::prost_file_descriptor_set_to_vec(&file_descriptor_set);
+                    let bytes = ::foxglove::prost_file_descriptor_set_to_vec(&file_descriptor_set);
 
-                Some(::foxglove::Schema {
-                    name: String::from(#full_name),
-                    encoding: String::from("protobuf"),
-                    data: std::borrow::Cow::Owned(bytes),
-                })
+                    Some(::foxglove::Schema {
+                        name: String::from(#full_name),
+                        encoding: String::from("protobuf"),
+                        data: std::borrow::Cow::Owned(bytes),
+                    })
+                }).clone()
             }
 
             fn get_message_encoding() -> String {
