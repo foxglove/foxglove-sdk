@@ -308,7 +308,7 @@ pub use context::{Context, LazyContext};
 pub use encode::Encode;
 pub use mcap_writer::{McapCompression, McapWriteOptions, McapWriter, McapWriterHandle};
 pub use metadata::{Metadata, PartialMetadata};
-pub use protobuf::{prost_file_descriptor_set_to_vec, ProtobufField};
+pub use protobuf::{encode_varint, prost_file_descriptor_set_to_vec, ProtobufField};
 pub use schema::Schema;
 pub use sink::{Sink, SinkId};
 pub(crate) use time::nanoseconds_since_epoch;

@@ -22,6 +22,14 @@ pub fn prost_file_descriptor_set_to_vec(
     file_descriptor_set.encode_to_vec()
 }
 
+/// Encodes a u64 value as a varint and writes it to the buffer.
+///
+/// Requires up to 10 bytes of buffer space.
+#[doc(hidden)]
+pub fn encode_varint(value: u64, buf: &mut impl bytes::BufMut) {
+    prost::encoding::encode_varint(value, buf);
+}
+
 /// The `ProtobufField` trait defines the interface for types that can be serialized to Protocol
 /// Buffer format.
 ///
@@ -99,7 +107,7 @@ impl ProtobufField for u64 {
     }
 
     fn write(&self, buf: &mut impl bytes::BufMut) {
-        prost::encoding::encode_varint(*self, buf);
+        encode_varint(*self, buf);
     }
 }
 
@@ -113,7 +121,7 @@ impl ProtobufField for u32 {
     }
 
     fn write(&self, buf: &mut impl bytes::BufMut) {
-        prost::encoding::encode_varint((*self).into(), buf);
+        encode_varint((*self).into(), buf);
     }
 }
 
@@ -127,7 +135,7 @@ impl ProtobufField for u16 {
     }
 
     fn write(&self, buf: &mut impl bytes::BufMut) {
-        prost::encoding::encode_varint((*self).into(), buf);
+        encode_varint((*self).into(), buf);
     }
 }
 
@@ -141,7 +149,7 @@ impl ProtobufField for u8 {
     }
 
     fn write(&self, buf: &mut impl bytes::BufMut) {
-        prost::encoding::encode_varint((*self).into(), buf);
+        encode_varint((*self).into(), buf);
     }
 }
 
@@ -158,7 +166,7 @@ impl ProtobufField for i64 {
         // https://protobuf.dev/programming-guides/encoding/#signed-ints
         let n = *self;
         let encoded = ((n << 1) ^ (n >> 63)) as u64;
-        prost::encoding::encode_varint(encoded, buf);
+        encode_varint(encoded, buf);
     }
 }
 
@@ -175,7 +183,7 @@ impl ProtobufField for i32 {
         // https://protobuf.dev/programming-guides/encoding/#signed-ints
         let n = *self;
         let encoded = ((n << 1) ^ (n >> 31)) as u64;
-        prost::encoding::encode_varint(encoded, buf);
+        encode_varint(encoded, buf);
     }
 }
 
@@ -192,7 +200,7 @@ impl ProtobufField for i16 {
         // https://protobuf.dev/programming-guides/encoding/#signed-ints
         let n = *self;
         let encoded = ((n << 1) ^ (n >> 15)) as u64;
-        prost::encoding::encode_varint(encoded, buf);
+        encode_varint(encoded, buf);
     }
 }
 
@@ -209,7 +217,7 @@ impl ProtobufField for i8 {
         // https://protobuf.dev/programming-guides/encoding/#signed-ints
         let n = *self;
         let encoded = ((n << 1) ^ (n >> 7)) as u64;
-        prost::encoding::encode_varint(encoded, buf);
+        encode_varint(encoded, buf);
     }
 }
 

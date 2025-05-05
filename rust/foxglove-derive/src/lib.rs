@@ -52,12 +52,7 @@ fn derive_enum_impl(input: &DeriveInput, data: &DataEnum) -> TokenStream {
             }
 
             fn write(&self, buf: &mut impl ::foxglove::bytes::BufMut) {
-                let mut value = *self as u64;
-                while value >= 0x80 {
-                    buf.put_u8((value as u8) | 0x80);
-                    value >>= 7;
-                }
-                buf.put_u8(value as u8);
+                ::foxglove::encode_varint(*self as u64, buf);
             }
 
             fn enum_descriptor() -> Option<::foxglove::prost_types::EnumDescriptorProto> {
@@ -188,12 +183,7 @@ fn derive_struct_impl(input: DeriveInput) -> TokenStream {
 
                 // Write the length as a varint
                 let len = buf.len();
-                let mut len_value = len as u64;
-                while len_value >= 0x80 {
-                    out.put_u8((len_value as u8) | 0x80);
-                    len_value >>= 7;
-                }
-                out.put_u8(len_value as u8);
+                ::foxglove::encode_varint(len as u64, out);
 
                 if buf.remaining_mut() < len {
                     return;
