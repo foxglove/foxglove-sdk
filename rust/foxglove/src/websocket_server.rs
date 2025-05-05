@@ -10,8 +10,6 @@ use crate::websocket::{
     ConnectionGraph, Parameter, Server, ServerOptions, Status,
 };
 use crate::{get_runtime_handle, Context, FoxgloveError};
-use bytes::Bytes;
-use tracing::warn;
 
 /// A websocket server for live visualization.
 ///
@@ -97,10 +95,12 @@ impl WebSocketServer {
 
     /// Configure a synchronous, blocking function as a fetch asset handler.
     /// There can only be one asset handler, exclusive with the other fetch_asset_handler methods.
-    pub fn fetch_asset_handler_blocking_fn<Err: Display>(
-        mut self,
-        handler: impl Fn(Client, String) -> Result<Bytes, Err> + Send + Sync + 'static,
-    ) -> Self {
+    pub fn fetch_asset_handler_blocking_fn<F, T, Err>(mut self, handler: F) -> Self
+    where
+        F: Fn(Client, String) -> Result<T, Err> + Send + Sync + 'static,
+        T: AsRef<[u8]>,
+        Err: Display,
+    {
         self.options.fetch_asset_handler =
             Some(Box::new(BlockingAssetHandlerFn(Arc::new(handler))));
         self
@@ -108,10 +108,11 @@ impl WebSocketServer {
 
     /// Configure an asynchronous function as a fetch asset handler.
     /// There can only be one asset handler, exclusive with the other fetch_asset_handler methods.
-    pub fn fetch_asset_handler_async_fn<F, Fut, Err>(mut self, handler: F) -> Self
+    pub fn fetch_asset_handler_async_fn<F, Fut, T, Err>(mut self, handler: F) -> Self
     where
         F: Fn(Client, String) -> Fut + Send + Sync + 'static,
-        Fut: Future<Output = Result<Bytes, Err>> + Send + 'static,
+        Fut: Future<Output = Result<T, Err>> + Send + 'static,
+        T: AsRef<[u8]>,
         Err: Display,
     {
         self.options.fetch_asset_handler = Some(Box::new(AsyncAssetHandlerFn(Arc::new(handler))));
@@ -140,7 +141,7 @@ impl WebSocketServer {
         for service in services {
             let name = service.name().to_string();
             if let Some(s) = self.options.services.insert(name.clone(), service) {
-                warn!("Redefining service {}", s.name());
+                tracing::warn!("Redefining service {}", s.name());
             }
         }
         self

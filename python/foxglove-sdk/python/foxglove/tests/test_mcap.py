@@ -2,8 +2,7 @@ from pathlib import Path
 from typing import Callable, Generator, Optional
 
 import pytest
-from foxglove import open_mcap
-from foxglove.channel import Channel
+from foxglove import Channel, Context, open_mcap
 from foxglove.mcap import MCAPWriteOptions
 
 chan = Channel("test", schema={"type": "object"})
@@ -89,3 +88,29 @@ def test_writer_custom_profile(tmp_mcap: Path) -> None:
 
     contents = tmp_mcap.read_bytes()
     assert contents.find(b"--custom-profile-1--") > -1
+
+
+def test_write_to_different_contexts(make_tmp_mcap: Callable[[], Path]) -> None:
+    tmp_1 = make_tmp_mcap()
+    tmp_2 = make_tmp_mcap()
+
+    ctx1 = Context()
+    ctx2 = Context()
+
+    options = MCAPWriteOptions(compression=None)
+    mcap1 = open_mcap(tmp_1, writer_options=options, context=ctx1)
+    mcap2 = open_mcap(tmp_2, writer_options=options, context=ctx2)
+
+    ch1 = Channel("ctx1", context=ctx1)
+    ch1.log({"a": "b"})
+
+    ch2 = Channel("ctx2", context=ctx2)
+    ch2.log({"has-more-data": "true"})
+
+    mcap1.close()
+    mcap2.close()
+
+    contents1 = tmp_1.read_bytes()
+    contents2 = tmp_2.read_bytes()
+
+    assert len(contents1) < len(contents2)

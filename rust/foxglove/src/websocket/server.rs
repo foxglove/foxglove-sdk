@@ -443,7 +443,7 @@ impl Server {
     /// - Send ServerInfo
     /// - Advertise existing channels
     /// - Advertise existing services
-    /// - Listen for client meesages
+    /// - Listen for client messages
     async fn handle_connection(self: Arc<Self>, stream: TcpStream, addr: SocketAddr) {
         let Ok(mut ws_stream) = handshake::do_handshake(stream).await else {
             tracing::error!("Dropping client {addr}: handshake failed");

@@ -33,22 +33,8 @@ pub fn create_channel<T: Encode>(
         .context(context)
         .build_raw()
         .unwrap_or_else(|e| {
-            // If the channel already exists, we can use the existing channel
-            // only if the schema and message encoding are compatible.
-            let existing_channel = context.get_channel_by_topic(topic).unwrap_or_else(|| {
-                panic!("Failed to create channel: {}", e);
-            });
-            let schema = T::get_schema();
-            if existing_channel.schema() != schema.as_ref() {
-                panic!("Channel {} already exists with different schema", topic);
-            }
-            if existing_channel.message_encoding() != T::get_message_encoding() {
-                panic!(
-                    "Channel {} already exists with different message encoding",
-                    topic
-                );
-            }
-            existing_channel
+            // We specified a message encoding, so the builder cannot fail.
+            unreachable!("Failed to create channel {e}")
         });
     ChannelPlaceholder::new(channel)
 }
@@ -64,7 +50,7 @@ pub fn create_channel<T: Encode>(
 /// If a channel for the topic already exists in the default Context, it will be used.
 /// Otherwise, a new channel will be created. Either way, the channel is never removed
 /// from the Context. Panics if the existing channel schema or message_encoding
-/// is incomptable with $msg.
+/// is incompatible with $msg.
 ///
 /// Panics if a channel can't be created for $msg.
 #[macro_export]
@@ -112,16 +98,16 @@ mod tests {
     use tracing_test::traced_test;
 
     use crate::nanoseconds_since_epoch;
-    use crate::schemas::{LaserScan, Log};
+    use crate::schemas::{Color, LaserScan, Log};
     use crate::{testutil::RecordingSink, Context};
     use crate::{FoxgloveError, Schema};
 
     use super::*;
     use crate::testutil::GlobalContextTest;
 
-    fn serialize_log(log: &Log) -> Vec<u8> {
+    fn serialize<T: Encode>(msg: &T) -> Vec<u8> {
         let mut buf = Vec::new();
-        log.encode(&mut buf).unwrap();
+        msg.encode(&mut buf).unwrap();
         buf
     }
 
@@ -148,14 +134,26 @@ mod tests {
 
         log!("foo", log_messages[0], log_time = 123);
         log!("foo", log_messages[1]);
+        log!("foo", Color::default());
 
         let messages = sink.take_messages();
-        assert_eq!(messages.len(), 2);
-        assert_eq!(messages[0].msg, serialize_log(&log_messages[0]));
+        assert_eq!(messages.len(), 3);
+        assert_eq!(messages[0].msg, serialize(&log_messages[0]));
         assert_eq!(messages[0].metadata.log_time, 123);
 
-        assert_eq!(messages[1].msg, serialize_log(&log_messages[1]));
+        assert_eq!(messages[1].msg, serialize(&log_messages[1]));
         assert!(messages[1].metadata.log_time >= now);
+
+        assert_eq!(messages[2].msg, serialize(&Color::default()));
+        assert!(messages[2].metadata.log_time >= now);
+
+        // Even though there are two log! callsites, which each construct separate channels, the
+        // channels were exactly the same, and we properly deduped the second one when it was
+        // registered to the context.
+        assert_eq!(messages[0].channel_id, messages[1].channel_id);
+
+        // The third callsite used a different schema, and so it is a distinct channel.
+        assert_ne!(messages[0].channel_id, messages[2].channel_id);
     }
 
     #[test]
@@ -181,9 +179,9 @@ mod tests {
 
         let messages = sink.take_messages();
         assert_eq!(messages.len(), 2);
-        assert_eq!(messages[0].msg, serialize_log(&log_messages[0]));
+        assert_eq!(messages[0].msg, serialize(&log_messages[0]));
         assert_eq!(messages[0].metadata.log_time, 123);
-        assert_eq!(messages[1].msg, serialize_log(&log_messages[1]));
+        assert_eq!(messages[1].msg, serialize(&log_messages[1]));
         assert_eq!(messages[1].metadata.log_time, 123);
     }
 

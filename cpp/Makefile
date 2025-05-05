@@ -14,6 +14,12 @@ lint:
 		grep -v 'foxglove/expected.hpp' |\
 		xargs clang-format --dry-run -Werror --color=1
 
+.PHONY: lint-fix
+lint-fix:
+	find . -path './build*' -prune -name '*.h' -o -name '*.hpp' -o -name '*.cpp' |\
+		grep -v 'foxglove/expected.hpp' |\
+		xargs clang-format -i -Werror --color=1
+
 .PHONY: clean
 clean:
 	rm -rf $(BUILD_DIR)

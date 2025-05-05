@@ -1,4 +1,4 @@
-//! Example websocket server with client publsih
+//! Example websocket server with client publish
 //!
 //! This example uses the 'unstable' feature to expose capabilities.
 //!
