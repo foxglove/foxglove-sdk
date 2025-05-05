@@ -284,9 +284,9 @@ pub struct FoxgloveServerCallbacks {
     ///
     /// Requires `FOXGLOVE_CAPABILITY_PARAMETERS`.
     ///
-    /// The `params` argument is guaranteed to be non-NULL. This argument points to buffers that
-    /// are valid and immutable for the duration of the call. If the callback wishes to store these
-    /// values, they must be copied out.
+    /// The `param_names` argument is guaranteed to be non-NULL. This argument points to buffers
+    /// that are valid and immutable for the duration of the call. If the callback wishes to store
+    /// these values, they must be copied out.
     pub on_parameters_subscribe: Option<
         unsafe extern "C" fn(
             context: *const c_void,
@@ -298,9 +298,9 @@ pub struct FoxgloveServerCallbacks {
     ///
     /// Requires `FOXGLOVE_CAPABILITY_PARAMETERS`.
     ///
-    /// The `params` argument is guaranteed to be non-NULL. This argument points to buffers that
-    /// are valid and immutable for the duration of the call. If the callback wishes to store these
-    /// values, they must be copied out.
+    /// The `param_names` argument is guaranteed to be non-NULL. This argument points to buffers
+    /// that are valid and immutable for the duration of the call. If the callback wishes to store
+    /// these values, they must be copied out.
     pub on_parameters_unsubscribe: Option<
         unsafe extern "C" fn(
             context: *const c_void,

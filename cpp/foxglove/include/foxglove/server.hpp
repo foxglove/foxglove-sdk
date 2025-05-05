@@ -130,7 +130,16 @@ struct WebSocketServerCallbacks {
   )>
     onSetParameters;
 
+  /// Callback invoked when a client subscribes to the named parameters for the
+  /// first time.
+  ///
+  /// Requires `FOXGLOVE_CAPABILITY_PARAMETERS`.
   std::function<void(const std::vector<std::string_view>& param_names)> onParametersSubscribe;
+
+  /// Callback invoked when the last client unsubscribes from the named
+  /// parameters.
+  ///
+  /// Requires `FOXGLOVE_CAPABILITY_PARAMETERS`.
   std::function<void(const std::vector<std::string_view>& param_names)> onParametersUnsubscribe;
 
   /// @brief Callback invoked when a client requests connection graph updates.

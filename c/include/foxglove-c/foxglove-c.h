@@ -374,9 +374,9 @@ typedef struct foxglove_server_callbacks {
    *
    * Requires `FOXGLOVE_CAPABILITY_PARAMETERS`.
    *
-   * The `params` argument is guaranteed to be non-NULL. This argument points to buffers that
-   * are valid and immutable for the duration of the call. If the callback wishes to store these
-   * values, they must be copied out.
+   * The `param_names` argument is guaranteed to be non-NULL. This argument points to buffers
+   * that are valid and immutable for the duration of the call. If the callback wishes to store
+   * these values, they must be copied out.
    */
   void (*on_parameters_subscribe)(const void *context,
                                   const struct foxglove_string *param_names,
@@ -386,9 +386,9 @@ typedef struct foxglove_server_callbacks {
    *
    * Requires `FOXGLOVE_CAPABILITY_PARAMETERS`.
    *
-   * The `params` argument is guaranteed to be non-NULL. This argument points to buffers that
-   * are valid and immutable for the duration of the call. If the callback wishes to store these
-   * values, they must be copied out.
+   * The `param_names` argument is guaranteed to be non-NULL. This argument points to buffers
+   * that are valid and immutable for the duration of the call. If the callback wishes to store
+   * these values, they must be copied out.
    */
   void (*on_parameters_unsubscribe)(const void *context,
                                     const struct foxglove_string *param_names,
