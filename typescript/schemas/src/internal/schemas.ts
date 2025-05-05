@@ -5,6 +5,7 @@ const Duration: FoxgloveMessageSchema = {
   name: "Duration",
   description: "A duration of time, composed of seconds and nanoseconds",
   rosEquivalent: "std_msgs/Duration",
+  ros2Equivalent: "builtin_interfaces/Duration",
   protoEquivalent: "google.protobuf.Duration",
   fields: [
     {
@@ -25,6 +26,7 @@ const Time: FoxgloveMessageSchema = {
   name: "Time",
   description: "A timestamp composed of seconds and nanoseconds",
   rosEquivalent: "std_msgs/Time",
+  ros2Equivalent: "builtin_interfaces/Time",
   protoEquivalent: "google.protobuf.Timestamp",
   fields: [
     {
@@ -130,6 +132,7 @@ const Vector3: FoxgloveMessageSchema = {
   name: "Vector3",
   description: "A vector in 3D space that represents a direction only",
   rosEquivalent: "geometry_msgs/Vector3",
+  ros2Equivalent: "geometry_msgs/Vector3",
   fields: [
     {
       name: "x",
@@ -175,6 +178,7 @@ const Point3: FoxgloveMessageSchema = {
   name: "Point3",
   description: "A point representing a position in 3D space",
   rosEquivalent: "geometry_msgs/Point",
+  ros2Equivalent: "geometry_msgs/Point",
   fields: [
     {
       name: "x",
@@ -199,6 +203,7 @@ const Quaternion: FoxgloveMessageSchema = {
   name: "Quaternion",
   description: "A [quaternion](https://eater.net/quaternions) representing a rotation in 3D space",
   rosEquivalent: "geometry_msgs/Quaternion",
+  ros2Equivalent: "geometry_msgs/Quaternion",
   fields: [
     {
       name: "x",
@@ -229,6 +234,7 @@ const Pose: FoxgloveMessageSchema = {
   name: "Pose",
   description: "A position and orientation for an object or reference frame in 3D space",
   rosEquivalent: "geometry_msgs/Pose",
+  ros2Equivalent: "geometry_msgs/Pose",
   fields: [
     {
       name: "position",

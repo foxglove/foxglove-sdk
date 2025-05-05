@@ -39,6 +39,7 @@ export type FoxgloveMessageSchema = {
   name: string;
   description: string;
   rosEquivalent?: keyof typeof import("@foxglove/rosmsg-msgs-common").ros1;
+  ros2Equivalent?: keyof typeof import("@foxglove/rosmsg-msgs-common").ros2jazzy;
   protoEquivalent?: "google.protobuf.Timestamp" | "google.protobuf.Duration";
   fields: ReadonlyArray<FoxgloveMessageField>;
 };
