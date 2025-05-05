@@ -21,7 +21,9 @@ enum class FoxgloveError : uint8_t {
   ServicesNotSupported,
   ConnectionGraphNotSupported,
   IoError,
-  McapError
+  McapError,
+  BufferTooShort,
+  Base64DecodeError
 };
 
 template<typename T>

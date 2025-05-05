@@ -186,7 +186,9 @@ public:
     return this->value().has_value();
   };
 
-  // Value type checkers.
+  // Value type checker.
+  //
+  // Returns true if the value is of type T.
   template<typename T>
   [[nodiscard]] bool is() const noexcept {
     auto value = this->value();
@@ -206,34 +208,72 @@ public:
   }
   template<>
   [[nodiscard]] bool is<std::vector<double>>() const noexcept {
-    if (!this->isArray()) {
+    return this->isArray<double>();
+  }
+
+  // Array value type checker.
+  //
+  // Returns true if the value is an array, in which all elements are of type T.
+  // Always returns true for an empty array.
+  template<typename T>
+  [[nodiscard]] bool isArray() const noexcept {
+    if (!this->isArray<ParameterValueView>()) {
       return false;
     }
     try {
+      auto value = this->value();
       const auto& arr = this->get<ParameterValueView::Array>();
-      if (arr.empty()) {
-        return this->type() == ParameterType::Float64Array;
-      }
       return std::all_of(arr.begin(), arr.end(), [](const ParameterValueView& elem) noexcept {
-        return elem.is<double>();
+        return elem.is<T>();
       });
     } catch (...) {
       return false;
     }
   }
-  [[nodiscard]] bool isByteArray() const noexcept {
-    return this->is<std::vector<std::byte>>();
-  }
-  [[nodiscard]] bool isArray() const noexcept {
+  template<>
+  [[nodiscard]] bool isArray<ParameterValueView>() const noexcept {
     auto value = this->value();
     return value.has_value() && value->is<ParameterValueView::Array>();
   }
+
+  // Dict value type checker.
+  //
+  // Returns true if the value is a dict, in which all values are of type T.
+  // Always returns true for an empty dict.
+  template<typename T>
   [[nodiscard]] bool isDict() const noexcept {
+    if (!this->isDict<ParameterValueView>()) {
+      return false;
+    }
+    try {
+      const auto& dict = this->get<ParameterValueView::Dict>();
+      return std::all_of(
+        dict.begin(),
+        dict.end(),
+        [](const std::pair<std::string, ParameterValueView>& elem) noexcept {
+          return elem.second.is<T>();
+        }
+      );
+    } catch (...) {
+      return false;
+    }
+  }
+  template<>
+  [[nodiscard]] bool isDict<ParameterValueView>() const noexcept {
     auto value = this->value();
     return value.has_value() && value->is<ParameterValueView::Dict>();
   }
 
+  // Byte array type checker.
+  //
+  // Returns true if the value is a byte array.
+  [[nodiscard]] bool isByteArray() const noexcept {
+    return this->is<std::vector<std::byte>>();
+  }
+
   // Value extractor.
+  //
+  // Raises an exception if the value is not of type T.
   template<typename T>
   [[nodiscard]] T get() const {
     auto value = this->value();
@@ -241,6 +281,26 @@ public:
       throw std::bad_optional_access();
     }
     return value->template get<T>();
+  }
+  template<>
+  [[nodiscard]] std::vector<std::byte> get() const {
+    auto result = this->getByteArray();
+    if (!result.has_value()) {
+      throw std::runtime_error(strerror(result.error()));
+    }
+    return result.value();
+  }
+  template<>
+  [[nodiscard]] std::vector<double> get() const {
+    return this->getArray<double>();
+  }
+  template<>
+  [[nodiscard]] std::vector<ParameterValueView> get() const {
+    return this->getArray<ParameterValueView>();
+  }
+  template<>
+  [[nodiscard]] std::map<std::string, ParameterValueView> get() const {
+    return this->getDict<ParameterValueView>();
   }
 
   // Value array extractor.
@@ -278,7 +338,7 @@ public:
 
   // Value byte array extractor.
   //
-  // This may fail
+  // Returns `Base64DecodeError` if the value cannot be base64-decoded.
   [[nodiscard]] FoxgloveResult<std::vector<std::byte>> getByteArray() const;
 
 private:
@@ -336,16 +396,34 @@ public:
   };
 
   // Value type checkers.
+  //
+  // Returns true if the value is of type T.
   template<typename T>
   [[nodiscard]] bool is() const {
     return this->view().is<T>();
   }
+
+  // Array value type checker.
+  //
+  // Returns true if the value is an array, in which all elements are of type T.
+  // Always returns true for an empty array.
+  template<typename T>
   [[nodiscard]] bool isArray() const noexcept {
-    return this->view().isArray();
+    return this->view().isArray<T>();
   }
+
+  // Dict value type checker.
+  //
+  // Returns true if the value is a dict, in which all values are of type T.
+  // Always returns true for an empty dict.
+  template<typename T>
   [[nodiscard]] bool isDict() const noexcept {
-    return this->view().isDict();
+    return this->view().isDict<T>();
   }
+
+  // Byte array type checker.
+  //
+  // Returns true if the value is a byte array.
   [[nodiscard]] bool isByteArray() const noexcept {
     return this->view().isByteArray();
   }
@@ -369,6 +447,8 @@ public:
   }
 
   // Value byte array extractor.
+  //
+  // Returns `Base64DecodeError` if the value cannot be base64-decoded.
   [[nodiscard]] FoxgloveResult<std::vector<std::byte>> getByteArray() const {
     return this->view().getByteArray();
   }

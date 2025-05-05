@@ -92,10 +92,16 @@ TEST_CASE("Parameter construction and access") {
     foxglove::Parameter param("test_param", data.data(), data.size());
     REQUIRE(param.name() == "test_param");
     REQUIRE(param.type() == foxglove::ParameterType::ByteArray);
+    REQUIRE(param.is<std::vector<std::byte>>());
+    auto decoded = param.get<std::vector<std::byte>>();
+    REQUIRE(decoded.size() == data.size());
+    REQUIRE(memcmp(decoded.data(), data.data(), data.size()) == 0);
+
+    // Alternative checkers/extractors.
     REQUIRE(param.isByteArray());
     auto result = param.getByteArray();
     REQUIRE(result.has_value());
-    auto decoded = result.value();
+    decoded = result.value();
     REQUIRE(decoded.size() == data.size());
     REQUIRE(memcmp(decoded.data(), data.data(), data.size()) == 0);
   }
@@ -105,8 +111,47 @@ TEST_CASE("Parameter construction and access") {
     foxglove::Parameter param("test_param", values);
     REQUIRE(param.name() == "test_param");
     REQUIRE(param.type() == foxglove::ParameterType::Float64Array);
-    REQUIRE(param.hasValue());
+    REQUIRE(param.is<std::vector<double>>());
+    REQUIRE(param.get<std::vector<double>>() == values);
+
+    // Alternative checkers/extractors.
+    REQUIRE(param.isArray<double>());
     REQUIRE(param.getArray<double>() == values);
+
+    REQUIRE(param.isArray<foxglove::ParameterValueView>());
+    auto generic_array = param.getArray<foxglove::ParameterValueView>();
+    REQUIRE(generic_array.size() == 3);
+    REQUIRE(generic_array[0].get<double>() == 1.0);
+    REQUIRE(generic_array[1].get<double>() == 2.0);
+    REQUIRE(generic_array[2].get<double>() == 3.0);
+
+    REQUIRE(param.is<foxglove::ParameterValueView::Array>());
+    generic_array = param.get<foxglove::ParameterValueView::Array>();
+    REQUIRE(generic_array.size() == 3);
+    REQUIRE(generic_array[0].get<double>() == 1.0);
+    REQUIRE(generic_array[1].get<double>() == 2.0);
+    REQUIRE(generic_array[2].get<double>() == 3.0);
+  }
+
+  SECTION("parameter with empty float64 array value") {
+    std::vector<double> values;
+    foxglove::Parameter param("test_param", values);
+    REQUIRE(param.name() == "test_param");
+    REQUIRE(param.type() == foxglove::ParameterType::Float64Array);
+    REQUIRE(param.is<std::vector<double>>());
+    REQUIRE(param.get<std::vector<double>>() == values);
+
+    // Alternative checkers/extractors.
+    REQUIRE(param.isArray<double>());
+    REQUIRE(param.getArray<double>() == values);
+
+    REQUIRE(param.isArray<foxglove::ParameterValueView>());
+    auto generic_array = param.getArray<foxglove::ParameterValueView>();
+    REQUIRE(generic_array.size() == 0);
+
+    REQUIRE(param.is<foxglove::ParameterValueView::Array>());
+    generic_array = param.get<foxglove::ParameterValueView::Array>();
+    REQUIRE(generic_array.size() == 0);
   }
 
   SECTION("parameter with dict value") {
@@ -116,11 +161,24 @@ TEST_CASE("Parameter construction and access") {
     foxglove::Parameter param("test_param", std::move(values));
     REQUIRE(param.name() == "test_param");
     REQUIRE(param.type() == foxglove::ParameterType::None);
-    REQUIRE(param.hasValue());
+    REQUIRE(param.isDict<double>());
     auto dict = param.getDict<double>();
     REQUIRE(dict.size() == 2);
     REQUIRE(dict["key1"] == 1.0);
     REQUIRE(dict["key2"] == 2.0);
+
+    // Alternative checkers/extractors.
+    REQUIRE(param.isDict<foxglove::ParameterValueView>());
+    auto generic_dict = param.getDict<foxglove::ParameterValueView>();
+    REQUIRE(generic_dict.size() == 2);
+    REQUIRE(generic_dict.at("key1").get<double>() == 1.0);
+    REQUIRE(generic_dict.at("key2").get<double>() == 2.0);
+
+    REQUIRE(param.is<foxglove::ParameterValueView::Dict>());
+    generic_dict = param.get<foxglove::ParameterValueView::Dict>();
+    REQUIRE(generic_dict.size() == 2);
+    REQUIRE(generic_dict.at("key1").get<double>() == 1.0);
+    REQUIRE(generic_dict.at("key2").get<double>() == 2.0);
   }
 }
 
