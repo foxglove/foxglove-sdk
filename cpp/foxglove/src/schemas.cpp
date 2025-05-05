@@ -4,6 +4,7 @@
 
 #include <foxglove/error.hpp>
 #include <foxglove/schemas.hpp>
+#include <foxglove/arena.hpp>
 
 #include <optional>
 #include <cstring>
@@ -13,394 +14,604 @@ namespace foxglove::internal {
 using namespace foxglove;
 using namespace foxglove::schemas;
 
+void arrowPrimitiveToC(foxglove_arrow_primitive& dest, const ArrowPrimitive& src, foxglove::Arena& arena);
+void cameraCalibrationToC(foxglove_camera_calibration& dest, const CameraCalibration& src, foxglove::Arena& arena);
+void circleAnnotationToC(foxglove_circle_annotation& dest, const CircleAnnotation& src, foxglove::Arena& arena);
+void compressedImageToC(foxglove_compressed_image& dest, const CompressedImage& src, foxglove::Arena& arena);
+void compressedVideoToC(foxglove_compressed_video& dest, const CompressedVideo& src, foxglove::Arena& arena);
+void cubePrimitiveToC(foxglove_cube_primitive& dest, const CubePrimitive& src, foxglove::Arena& arena);
+void cylinderPrimitiveToC(foxglove_cylinder_primitive& dest, const CylinderPrimitive& src, foxglove::Arena& arena);
+void frameTransformToC(foxglove_frame_transform& dest, const FrameTransform& src, foxglove::Arena& arena);
+void frameTransformsToC(foxglove_frame_transforms& dest, const FrameTransforms& src, foxglove::Arena& arena);
+void geoJSONToC(foxglove_geo_json& dest, const GeoJSON& src, foxglove::Arena& arena);
+void gridToC(foxglove_grid& dest, const Grid& src, foxglove::Arena& arena);
+void imageAnnotationsToC(foxglove_image_annotations& dest, const ImageAnnotations& src, foxglove::Arena& arena);
+void keyValuePairToC(foxglove_key_value_pair& dest, const KeyValuePair& src, foxglove::Arena& arena);
+void laserScanToC(foxglove_laser_scan& dest, const LaserScan& src, foxglove::Arena& arena);
+void linePrimitiveToC(foxglove_line_primitive& dest, const LinePrimitive& src, foxglove::Arena& arena);
+void locationFixToC(foxglove_location_fix& dest, const LocationFix& src, foxglove::Arena& arena);
+void logToC(foxglove_log& dest, const Log& src, foxglove::Arena& arena);
+void modelPrimitiveToC(foxglove_model_primitive& dest, const ModelPrimitive& src, foxglove::Arena& arena);
+void packedElementFieldToC(foxglove_packed_element_field& dest, const PackedElementField& src, foxglove::Arena& arena);
+void pointCloudToC(foxglove_point_cloud& dest, const PointCloud& src, foxglove::Arena& arena);
+void pointsAnnotationToC(foxglove_points_annotation& dest, const PointsAnnotation& src, foxglove::Arena& arena);
+void poseToC(foxglove_pose& dest, const Pose& src, foxglove::Arena& arena);
+void poseInFrameToC(foxglove_pose_in_frame& dest, const PoseInFrame& src, foxglove::Arena& arena);
+void posesInFrameToC(foxglove_poses_in_frame& dest, const PosesInFrame& src, foxglove::Arena& arena);
+void rawAudioToC(foxglove_raw_audio& dest, const RawAudio& src, foxglove::Arena& arena);
+void rawImageToC(foxglove_raw_image& dest, const RawImage& src, foxglove::Arena& arena);
+void sceneEntityToC(foxglove_scene_entity& dest, const SceneEntity& src, foxglove::Arena& arena);
+void sceneEntityDeletionToC(foxglove_scene_entity_deletion& dest, const SceneEntityDeletion& src, foxglove::Arena& arena);
+void sceneUpdateToC(foxglove_scene_update& dest, const SceneUpdate& src, foxglove::Arena& arena);
+void spherePrimitiveToC(foxglove_sphere_primitive& dest, const SpherePrimitive& src, foxglove::Arena& arena);
+void textAnnotationToC(foxglove_text_annotation& dest, const TextAnnotation& src, foxglove::Arena& arena);
+void textPrimitiveToC(foxglove_text_primitive& dest, const TextPrimitive& src, foxglove::Arena& arena);
+void triangleListPrimitiveToC(foxglove_triangle_list_primitive& dest, const TriangleListPrimitive& src, foxglove::Arena& arena);
+
 template<>
 struct BuiltinSchema<CameraCalibration> : std::true_type {
-  inline FoxgloveError log_to(foxglove_channel * const channel, const CameraCalibration& msg, std::optional<uint64_t> logTime = std::nullopt) {
-    foxglove_camera_calibration cMsg;
-    cMsg.timestamp = msg.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*msg.timestamp) : nullptr;
-    cMsg.frame_id = {msg.frame_id.data(), msg.frame_id.size()};
-    cMsg.width = msg.width;
-    cMsg.height = msg.height;
-    cMsg.distortion_model = {msg.distortion_model.data(), msg.distortion_model.size()};
-    cMsg.d = msg.d.data();
-    cMsg.d_count = msg.d.size();
-    ::memcpy(cMsg.k, msg.k.data(), msg.k.size() * sizeof(*msg.k.data()));
-    ::memcpy(cMsg.r, msg.r.data(), msg.r.size() * sizeof(*msg.r.data()));
-    ::memcpy(cMsg.p, msg.p.data(), msg.p.size() * sizeof(*msg.p.data()));
-    return FoxgloveError(foxglove_channel_log_camera_calibration(channel, &cMsg, logTime ? &*logTime : nullptr));
+  inline FoxgloveError logTo(foxglove_channel * const channel, const CameraCalibration& msg, std::optional<uint64_t> logTime = std::nullopt) {
+    foxglove::Arena arena;
+    foxglove_camera_calibration c_msg;
+    cameraCalibrationToC(c_msg, msg, arena);
+    return FoxgloveError(foxglove_channel_log_camera_calibration(channel, &c_msg, logTime ? &*logTime : nullptr));
   }
 };
 template<>
 struct BuiltinSchema<CircleAnnotation> : std::true_type {
-  inline FoxgloveError log_to(foxglove_channel * const channel, const CircleAnnotation& msg, std::optional<uint64_t> logTime = std::nullopt) {
-    foxglove_circle_annotation cMsg;
-    cMsg.timestamp = msg.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*msg.timestamp) : nullptr;
-    cMsg.position = msg.position ? reinterpret_cast<const foxglove_point2*>(&*msg.position) : nullptr;
-    cMsg.diameter = msg.diameter;
-    cMsg.thickness = msg.thickness;
-    cMsg.fill_color = msg.fill_color ? reinterpret_cast<const foxglove_color*>(&*msg.fill_color) : nullptr;
-    cMsg.outline_color = msg.outline_color ? reinterpret_cast<const foxglove_color*>(&*msg.outline_color) : nullptr;
-    return FoxgloveError(foxglove_channel_log_circle_annotation(channel, &cMsg, logTime ? &*logTime : nullptr));
+  inline FoxgloveError logTo(foxglove_channel * const channel, const CircleAnnotation& msg, std::optional<uint64_t> logTime = std::nullopt) {
+    foxglove::Arena arena;
+    foxglove_circle_annotation c_msg;
+    circleAnnotationToC(c_msg, msg, arena);
+    return FoxgloveError(foxglove_channel_log_circle_annotation(channel, &c_msg, logTime ? &*logTime : nullptr));
   }
 };
 template<>
 struct BuiltinSchema<Color> : std::true_type {
-  inline FoxgloveError log_to(foxglove_channel * const channel, const Color& msg, std::optional<uint64_t> logTime = std::nullopt) {
-    foxglove_color cMsg;
-    cMsg.r = msg.r;
-    cMsg.g = msg.g;
-    cMsg.b = msg.b;
-    cMsg.a = msg.a;
-    return FoxgloveError(foxglove_channel_log_color(channel, &cMsg, logTime ? &*logTime : nullptr));
+  inline FoxgloveError logTo(foxglove_channel * const channel, const Color& msg, std::optional<uint64_t> logTime = std::nullopt) {
+    return FoxgloveError(foxglove_channel_log_color(channel, reinterpret_cast<const foxglove_color*>(&msg), logTime ? &*logTime : nullptr));
   }
 };
 template<>
 struct BuiltinSchema<CompressedImage> : std::true_type {
-  inline FoxgloveError log_to(foxglove_channel * const channel, const CompressedImage& msg, std::optional<uint64_t> logTime = std::nullopt) {
-    foxglove_compressed_image cMsg;
-    cMsg.timestamp = msg.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*msg.timestamp) : nullptr;
-    cMsg.frame_id = {msg.frame_id.data(), msg.frame_id.size()};
-    cMsg.data = reinterpret_cast<const unsigned char *>(msg.data.data());
-    cMsg.data_len = msg.data.size();
-    cMsg.format = {msg.format.data(), msg.format.size()};
-    return FoxgloveError(foxglove_channel_log_compressed_image(channel, &cMsg, logTime ? &*logTime : nullptr));
+  inline FoxgloveError logTo(foxglove_channel * const channel, const CompressedImage& msg, std::optional<uint64_t> logTime = std::nullopt) {
+    foxglove::Arena arena;
+    foxglove_compressed_image c_msg;
+    compressedImageToC(c_msg, msg, arena);
+    return FoxgloveError(foxglove_channel_log_compressed_image(channel, &c_msg, logTime ? &*logTime : nullptr));
   }
 };
 template<>
 struct BuiltinSchema<CompressedVideo> : std::true_type {
-  inline FoxgloveError log_to(foxglove_channel * const channel, const CompressedVideo& msg, std::optional<uint64_t> logTime = std::nullopt) {
-    foxglove_compressed_video cMsg;
-    cMsg.timestamp = msg.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*msg.timestamp) : nullptr;
-    cMsg.frame_id = {msg.frame_id.data(), msg.frame_id.size()};
-    cMsg.data = reinterpret_cast<const unsigned char *>(msg.data.data());
-    cMsg.data_len = msg.data.size();
-    cMsg.format = {msg.format.data(), msg.format.size()};
-    return FoxgloveError(foxglove_channel_log_compressed_video(channel, &cMsg, logTime ? &*logTime : nullptr));
+  inline FoxgloveError logTo(foxglove_channel * const channel, const CompressedVideo& msg, std::optional<uint64_t> logTime = std::nullopt) {
+    foxglove::Arena arena;
+    foxglove_compressed_video c_msg;
+    compressedVideoToC(c_msg, msg, arena);
+    return FoxgloveError(foxglove_channel_log_compressed_video(channel, &c_msg, logTime ? &*logTime : nullptr));
   }
 };
 template<>
 struct BuiltinSchema<FrameTransform> : std::true_type {
-  inline FoxgloveError log_to(foxglove_channel * const channel, const FrameTransform& msg, std::optional<uint64_t> logTime = std::nullopt) {
-    foxglove_frame_transform cMsg;
-    cMsg.timestamp = msg.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*msg.timestamp) : nullptr;
-    cMsg.parent_frame_id = {msg.parent_frame_id.data(), msg.parent_frame_id.size()};
-    cMsg.child_frame_id = {msg.child_frame_id.data(), msg.child_frame_id.size()};
-    cMsg.translation = msg.translation ? reinterpret_cast<const foxglove_vector3*>(&*msg.translation) : nullptr;
-    cMsg.rotation = msg.rotation ? reinterpret_cast<const foxglove_quaternion*>(&*msg.rotation) : nullptr;
-    return FoxgloveError(foxglove_channel_log_frame_transform(channel, &cMsg, logTime ? &*logTime : nullptr));
+  inline FoxgloveError logTo(foxglove_channel * const channel, const FrameTransform& msg, std::optional<uint64_t> logTime = std::nullopt) {
+    foxglove::Arena arena;
+    foxglove_frame_transform c_msg;
+    frameTransformToC(c_msg, msg, arena);
+    return FoxgloveError(foxglove_channel_log_frame_transform(channel, &c_msg, logTime ? &*logTime : nullptr));
   }
 };
 template<>
 struct BuiltinSchema<FrameTransforms> : std::true_type {
-  inline FoxgloveError log_to(foxglove_channel * const channel, const FrameTransforms& msg, std::optional<uint64_t> logTime = std::nullopt) {
-    foxglove_frame_transforms cMsg;
-    cMsg.transforms = reinterpret_cast<const foxglove_frame_transform*>(msg.transforms.data());
-    cMsg.transforms_count = msg.transforms.size();
-    return FoxgloveError(foxglove_channel_log_frame_transforms(channel, &cMsg, logTime ? &*logTime : nullptr));
+  inline FoxgloveError logTo(foxglove_channel * const channel, const FrameTransforms& msg, std::optional<uint64_t> logTime = std::nullopt) {
+    foxglove::Arena arena;
+    foxglove_frame_transforms c_msg;
+    frameTransformsToC(c_msg, msg, arena);
+    return FoxgloveError(foxglove_channel_log_frame_transforms(channel, &c_msg, logTime ? &*logTime : nullptr));
   }
 };
 template<>
 struct BuiltinSchema<GeoJSON> : std::true_type {
-  inline FoxgloveError log_to(foxglove_channel * const channel, const GeoJSON& msg, std::optional<uint64_t> logTime = std::nullopt) {
-    foxglove_geo_json cMsg;
-    cMsg.geojson = {msg.geojson.data(), msg.geojson.size()};
-    return FoxgloveError(foxglove_channel_log_geo_json(channel, &cMsg, logTime ? &*logTime : nullptr));
+  inline FoxgloveError logTo(foxglove_channel * const channel, const GeoJSON& msg, std::optional<uint64_t> logTime = std::nullopt) {
+    foxglove::Arena arena;
+    foxglove_geo_json c_msg;
+    geoJSONToC(c_msg, msg, arena);
+    return FoxgloveError(foxglove_channel_log_geo_json(channel, &c_msg, logTime ? &*logTime : nullptr));
   }
 };
 template<>
 struct BuiltinSchema<Grid> : std::true_type {
-  inline FoxgloveError log_to(foxglove_channel * const channel, const Grid& msg, std::optional<uint64_t> logTime = std::nullopt) {
-    foxglove_grid cMsg;
-    cMsg.timestamp = msg.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*msg.timestamp) : nullptr;
-    cMsg.frame_id = {msg.frame_id.data(), msg.frame_id.size()};
-    cMsg.pose = msg.pose ? reinterpret_cast<const foxglove_pose*>(&*msg.pose) : nullptr;
-    cMsg.column_count = msg.column_count;
-    cMsg.cell_size = msg.cell_size ? reinterpret_cast<const foxglove_vector2*>(&*msg.cell_size) : nullptr;
-    cMsg.row_stride = msg.row_stride;
-    cMsg.cell_stride = msg.cell_stride;
-    cMsg.fields = reinterpret_cast<const foxglove_packed_element_field*>(msg.fields.data());
-    cMsg.fields_count = msg.fields.size();
-    cMsg.data = reinterpret_cast<const unsigned char *>(msg.data.data());
-    cMsg.data_len = msg.data.size();
-    return FoxgloveError(foxglove_channel_log_grid(channel, &cMsg, logTime ? &*logTime : nullptr));
+  inline FoxgloveError logTo(foxglove_channel * const channel, const Grid& msg, std::optional<uint64_t> logTime = std::nullopt) {
+    foxglove::Arena arena;
+    foxglove_grid c_msg;
+    gridToC(c_msg, msg, arena);
+    return FoxgloveError(foxglove_channel_log_grid(channel, &c_msg, logTime ? &*logTime : nullptr));
   }
 };
 template<>
 struct BuiltinSchema<ImageAnnotations> : std::true_type {
-  inline FoxgloveError log_to(foxglove_channel * const channel, const ImageAnnotations& msg, std::optional<uint64_t> logTime = std::nullopt) {
-    foxglove_image_annotations cMsg;
-    cMsg.circles = reinterpret_cast<const foxglove_circle_annotation*>(msg.circles.data());
-    cMsg.circles_count = msg.circles.size();
-    cMsg.points = reinterpret_cast<const foxglove_points_annotation*>(msg.points.data());
-    cMsg.points_count = msg.points.size();
-    cMsg.texts = reinterpret_cast<const foxglove_text_annotation*>(msg.texts.data());
-    cMsg.texts_count = msg.texts.size();
-    return FoxgloveError(foxglove_channel_log_image_annotations(channel, &cMsg, logTime ? &*logTime : nullptr));
+  inline FoxgloveError logTo(foxglove_channel * const channel, const ImageAnnotations& msg, std::optional<uint64_t> logTime = std::nullopt) {
+    foxglove::Arena arena;
+    foxglove_image_annotations c_msg;
+    imageAnnotationsToC(c_msg, msg, arena);
+    return FoxgloveError(foxglove_channel_log_image_annotations(channel, &c_msg, logTime ? &*logTime : nullptr));
   }
 };
 template<>
 struct BuiltinSchema<KeyValuePair> : std::true_type {
-  inline FoxgloveError log_to(foxglove_channel * const channel, const KeyValuePair& msg, std::optional<uint64_t> logTime = std::nullopt) {
-    foxglove_key_value_pair cMsg;
-    cMsg.key = {msg.key.data(), msg.key.size()};
-    cMsg.value = {msg.value.data(), msg.value.size()};
-    return FoxgloveError(foxglove_channel_log_key_value_pair(channel, &cMsg, logTime ? &*logTime : nullptr));
+  inline FoxgloveError logTo(foxglove_channel * const channel, const KeyValuePair& msg, std::optional<uint64_t> logTime = std::nullopt) {
+    foxglove::Arena arena;
+    foxglove_key_value_pair c_msg;
+    keyValuePairToC(c_msg, msg, arena);
+    return FoxgloveError(foxglove_channel_log_key_value_pair(channel, &c_msg, logTime ? &*logTime : nullptr));
   }
 };
 template<>
 struct BuiltinSchema<LaserScan> : std::true_type {
-  inline FoxgloveError log_to(foxglove_channel * const channel, const LaserScan& msg, std::optional<uint64_t> logTime = std::nullopt) {
-    foxglove_laser_scan cMsg;
-    cMsg.timestamp = msg.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*msg.timestamp) : nullptr;
-    cMsg.frame_id = {msg.frame_id.data(), msg.frame_id.size()};
-    cMsg.pose = msg.pose ? reinterpret_cast<const foxglove_pose*>(&*msg.pose) : nullptr;
-    cMsg.start_angle = msg.start_angle;
-    cMsg.end_angle = msg.end_angle;
-    cMsg.ranges = msg.ranges.data();
-    cMsg.ranges_count = msg.ranges.size();
-    cMsg.intensities = msg.intensities.data();
-    cMsg.intensities_count = msg.intensities.size();
-    return FoxgloveError(foxglove_channel_log_laser_scan(channel, &cMsg, logTime ? &*logTime : nullptr));
+  inline FoxgloveError logTo(foxglove_channel * const channel, const LaserScan& msg, std::optional<uint64_t> logTime = std::nullopt) {
+    foxglove::Arena arena;
+    foxglove_laser_scan c_msg;
+    laserScanToC(c_msg, msg, arena);
+    return FoxgloveError(foxglove_channel_log_laser_scan(channel, &c_msg, logTime ? &*logTime : nullptr));
   }
 };
 template<>
 struct BuiltinSchema<LocationFix> : std::true_type {
-  inline FoxgloveError log_to(foxglove_channel * const channel, const LocationFix& msg, std::optional<uint64_t> logTime = std::nullopt) {
-    foxglove_location_fix cMsg;
-    cMsg.timestamp = msg.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*msg.timestamp) : nullptr;
-    cMsg.frame_id = {msg.frame_id.data(), msg.frame_id.size()};
-    cMsg.latitude = msg.latitude;
-    cMsg.longitude = msg.longitude;
-    cMsg.altitude = msg.altitude;
-    ::memcpy(cMsg.position_covariance, msg.position_covariance.data(), msg.position_covariance.size() * sizeof(*msg.position_covariance.data()));
-    cMsg.position_covariance_type = static_cast<foxglove_position_covariance_type>(msg.position_covariance_type);
-    return FoxgloveError(foxglove_channel_log_location_fix(channel, &cMsg, logTime ? &*logTime : nullptr));
+  inline FoxgloveError logTo(foxglove_channel * const channel, const LocationFix& msg, std::optional<uint64_t> logTime = std::nullopt) {
+    foxglove::Arena arena;
+    foxglove_location_fix c_msg;
+    locationFixToC(c_msg, msg, arena);
+    return FoxgloveError(foxglove_channel_log_location_fix(channel, &c_msg, logTime ? &*logTime : nullptr));
   }
 };
 template<>
 struct BuiltinSchema<Log> : std::true_type {
-  inline FoxgloveError log_to(foxglove_channel * const channel, const Log& msg, std::optional<uint64_t> logTime = std::nullopt) {
-    foxglove_log cMsg;
-    cMsg.timestamp = msg.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*msg.timestamp) : nullptr;
-    cMsg.level = static_cast<foxglove_log_level>(msg.level);
-    cMsg.message = {msg.message.data(), msg.message.size()};
-    cMsg.name = {msg.name.data(), msg.name.size()};
-    cMsg.file = {msg.file.data(), msg.file.size()};
-    cMsg.line = msg.line;
-    return FoxgloveError(foxglove_channel_log_log(channel, &cMsg, logTime ? &*logTime : nullptr));
+  inline FoxgloveError logTo(foxglove_channel * const channel, const Log& msg, std::optional<uint64_t> logTime = std::nullopt) {
+    foxglove::Arena arena;
+    foxglove_log c_msg;
+    logToC(c_msg, msg, arena);
+    return FoxgloveError(foxglove_channel_log_log(channel, &c_msg, logTime ? &*logTime : nullptr));
   }
 };
 template<>
 struct BuiltinSchema<PackedElementField> : std::true_type {
-  inline FoxgloveError log_to(foxglove_channel * const channel, const PackedElementField& msg, std::optional<uint64_t> logTime = std::nullopt) {
-    foxglove_packed_element_field cMsg;
-    cMsg.name = {msg.name.data(), msg.name.size()};
-    cMsg.offset = msg.offset;
-    cMsg.type = static_cast<foxglove_numeric_type>(msg.type);
-    return FoxgloveError(foxglove_channel_log_packed_element_field(channel, &cMsg, logTime ? &*logTime : nullptr));
+  inline FoxgloveError logTo(foxglove_channel * const channel, const PackedElementField& msg, std::optional<uint64_t> logTime = std::nullopt) {
+    foxglove::Arena arena;
+    foxglove_packed_element_field c_msg;
+    packedElementFieldToC(c_msg, msg, arena);
+    return FoxgloveError(foxglove_channel_log_packed_element_field(channel, &c_msg, logTime ? &*logTime : nullptr));
   }
 };
 template<>
 struct BuiltinSchema<Point2> : std::true_type {
-  inline FoxgloveError log_to(foxglove_channel * const channel, const Point2& msg, std::optional<uint64_t> logTime = std::nullopt) {
-    foxglove_point2 cMsg;
-    cMsg.x = msg.x;
-    cMsg.y = msg.y;
-    return FoxgloveError(foxglove_channel_log_point2(channel, &cMsg, logTime ? &*logTime : nullptr));
+  inline FoxgloveError logTo(foxglove_channel * const channel, const Point2& msg, std::optional<uint64_t> logTime = std::nullopt) {
+    return FoxgloveError(foxglove_channel_log_point2(channel, reinterpret_cast<const foxglove_point2*>(&msg), logTime ? &*logTime : nullptr));
   }
 };
 template<>
 struct BuiltinSchema<Point3> : std::true_type {
-  inline FoxgloveError log_to(foxglove_channel * const channel, const Point3& msg, std::optional<uint64_t> logTime = std::nullopt) {
-    foxglove_point3 cMsg;
-    cMsg.x = msg.x;
-    cMsg.y = msg.y;
-    cMsg.z = msg.z;
-    return FoxgloveError(foxglove_channel_log_point3(channel, &cMsg, logTime ? &*logTime : nullptr));
+  inline FoxgloveError logTo(foxglove_channel * const channel, const Point3& msg, std::optional<uint64_t> logTime = std::nullopt) {
+    return FoxgloveError(foxglove_channel_log_point3(channel, reinterpret_cast<const foxglove_point3*>(&msg), logTime ? &*logTime : nullptr));
   }
 };
 template<>
 struct BuiltinSchema<PointCloud> : std::true_type {
-  inline FoxgloveError log_to(foxglove_channel * const channel, const PointCloud& msg, std::optional<uint64_t> logTime = std::nullopt) {
-    foxglove_point_cloud cMsg;
-    cMsg.timestamp = msg.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*msg.timestamp) : nullptr;
-    cMsg.frame_id = {msg.frame_id.data(), msg.frame_id.size()};
-    cMsg.pose = msg.pose ? reinterpret_cast<const foxglove_pose*>(&*msg.pose) : nullptr;
-    cMsg.point_stride = msg.point_stride;
-    cMsg.fields = reinterpret_cast<const foxglove_packed_element_field*>(msg.fields.data());
-    cMsg.fields_count = msg.fields.size();
-    cMsg.data = reinterpret_cast<const unsigned char *>(msg.data.data());
-    cMsg.data_len = msg.data.size();
-    return FoxgloveError(foxglove_channel_log_point_cloud(channel, &cMsg, logTime ? &*logTime : nullptr));
+  inline FoxgloveError logTo(foxglove_channel * const channel, const PointCloud& msg, std::optional<uint64_t> logTime = std::nullopt) {
+    foxglove::Arena arena;
+    foxglove_point_cloud c_msg;
+    pointCloudToC(c_msg, msg, arena);
+    return FoxgloveError(foxglove_channel_log_point_cloud(channel, &c_msg, logTime ? &*logTime : nullptr));
   }
 };
 template<>
 struct BuiltinSchema<PointsAnnotation> : std::true_type {
-  inline FoxgloveError log_to(foxglove_channel * const channel, const PointsAnnotation& msg, std::optional<uint64_t> logTime = std::nullopt) {
-    foxglove_points_annotation cMsg;
-    cMsg.timestamp = msg.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*msg.timestamp) : nullptr;
-    cMsg.type = static_cast<foxglove_points_annotation_type>(msg.type);
-    cMsg.points = reinterpret_cast<const foxglove_point2*>(msg.points.data());
-    cMsg.points_count = msg.points.size();
-    cMsg.outline_color = msg.outline_color ? reinterpret_cast<const foxglove_color*>(&*msg.outline_color) : nullptr;
-    cMsg.outline_colors = reinterpret_cast<const foxglove_color*>(msg.outline_colors.data());
-    cMsg.outline_colors_count = msg.outline_colors.size();
-    cMsg.fill_color = msg.fill_color ? reinterpret_cast<const foxglove_color*>(&*msg.fill_color) : nullptr;
-    cMsg.thickness = msg.thickness;
-    return FoxgloveError(foxglove_channel_log_points_annotation(channel, &cMsg, logTime ? &*logTime : nullptr));
+  inline FoxgloveError logTo(foxglove_channel * const channel, const PointsAnnotation& msg, std::optional<uint64_t> logTime = std::nullopt) {
+    foxglove::Arena arena;
+    foxglove_points_annotation c_msg;
+    pointsAnnotationToC(c_msg, msg, arena);
+    return FoxgloveError(foxglove_channel_log_points_annotation(channel, &c_msg, logTime ? &*logTime : nullptr));
   }
 };
 template<>
 struct BuiltinSchema<Pose> : std::true_type {
-  inline FoxgloveError log_to(foxglove_channel * const channel, const Pose& msg, std::optional<uint64_t> logTime = std::nullopt) {
-    foxglove_pose cMsg;
-    cMsg.position = msg.position ? reinterpret_cast<const foxglove_vector3*>(&*msg.position) : nullptr;
-    cMsg.orientation = msg.orientation ? reinterpret_cast<const foxglove_quaternion*>(&*msg.orientation) : nullptr;
-    return FoxgloveError(foxglove_channel_log_pose(channel, &cMsg, logTime ? &*logTime : nullptr));
+  inline FoxgloveError logTo(foxglove_channel * const channel, const Pose& msg, std::optional<uint64_t> logTime = std::nullopt) {
+    foxglove::Arena arena;
+    foxglove_pose c_msg;
+    poseToC(c_msg, msg, arena);
+    return FoxgloveError(foxglove_channel_log_pose(channel, &c_msg, logTime ? &*logTime : nullptr));
   }
 };
 template<>
 struct BuiltinSchema<PoseInFrame> : std::true_type {
-  inline FoxgloveError log_to(foxglove_channel * const channel, const PoseInFrame& msg, std::optional<uint64_t> logTime = std::nullopt) {
-    foxglove_pose_in_frame cMsg;
-    cMsg.timestamp = msg.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*msg.timestamp) : nullptr;
-    cMsg.frame_id = {msg.frame_id.data(), msg.frame_id.size()};
-    cMsg.pose = msg.pose ? reinterpret_cast<const foxglove_pose*>(&*msg.pose) : nullptr;
-    return FoxgloveError(foxglove_channel_log_pose_in_frame(channel, &cMsg, logTime ? &*logTime : nullptr));
+  inline FoxgloveError logTo(foxglove_channel * const channel, const PoseInFrame& msg, std::optional<uint64_t> logTime = std::nullopt) {
+    foxglove::Arena arena;
+    foxglove_pose_in_frame c_msg;
+    poseInFrameToC(c_msg, msg, arena);
+    return FoxgloveError(foxglove_channel_log_pose_in_frame(channel, &c_msg, logTime ? &*logTime : nullptr));
   }
 };
 template<>
 struct BuiltinSchema<PosesInFrame> : std::true_type {
-  inline FoxgloveError log_to(foxglove_channel * const channel, const PosesInFrame& msg, std::optional<uint64_t> logTime = std::nullopt) {
-    foxglove_poses_in_frame cMsg;
-    cMsg.timestamp = msg.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*msg.timestamp) : nullptr;
-    cMsg.frame_id = {msg.frame_id.data(), msg.frame_id.size()};
-    cMsg.poses = reinterpret_cast<const foxglove_pose*>(msg.poses.data());
-    cMsg.poses_count = msg.poses.size();
-    return FoxgloveError(foxglove_channel_log_poses_in_frame(channel, &cMsg, logTime ? &*logTime : nullptr));
+  inline FoxgloveError logTo(foxglove_channel * const channel, const PosesInFrame& msg, std::optional<uint64_t> logTime = std::nullopt) {
+    foxglove::Arena arena;
+    foxglove_poses_in_frame c_msg;
+    posesInFrameToC(c_msg, msg, arena);
+    return FoxgloveError(foxglove_channel_log_poses_in_frame(channel, &c_msg, logTime ? &*logTime : nullptr));
   }
 };
 template<>
 struct BuiltinSchema<Quaternion> : std::true_type {
-  inline FoxgloveError log_to(foxglove_channel * const channel, const Quaternion& msg, std::optional<uint64_t> logTime = std::nullopt) {
-    foxglove_quaternion cMsg;
-    cMsg.x = msg.x;
-    cMsg.y = msg.y;
-    cMsg.z = msg.z;
-    cMsg.w = msg.w;
-    return FoxgloveError(foxglove_channel_log_quaternion(channel, &cMsg, logTime ? &*logTime : nullptr));
+  inline FoxgloveError logTo(foxglove_channel * const channel, const Quaternion& msg, std::optional<uint64_t> logTime = std::nullopt) {
+    return FoxgloveError(foxglove_channel_log_quaternion(channel, reinterpret_cast<const foxglove_quaternion*>(&msg), logTime ? &*logTime : nullptr));
   }
 };
 template<>
 struct BuiltinSchema<RawAudio> : std::true_type {
-  inline FoxgloveError log_to(foxglove_channel * const channel, const RawAudio& msg, std::optional<uint64_t> logTime = std::nullopt) {
-    foxglove_raw_audio cMsg;
-    cMsg.timestamp = msg.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*msg.timestamp) : nullptr;
-    cMsg.data = reinterpret_cast<const unsigned char *>(msg.data.data());
-    cMsg.data_len = msg.data.size();
-    cMsg.format = {msg.format.data(), msg.format.size()};
-    cMsg.sample_rate = msg.sample_rate;
-    cMsg.number_of_channels = msg.number_of_channels;
-    return FoxgloveError(foxglove_channel_log_raw_audio(channel, &cMsg, logTime ? &*logTime : nullptr));
+  inline FoxgloveError logTo(foxglove_channel * const channel, const RawAudio& msg, std::optional<uint64_t> logTime = std::nullopt) {
+    foxglove::Arena arena;
+    foxglove_raw_audio c_msg;
+    rawAudioToC(c_msg, msg, arena);
+    return FoxgloveError(foxglove_channel_log_raw_audio(channel, &c_msg, logTime ? &*logTime : nullptr));
   }
 };
 template<>
 struct BuiltinSchema<RawImage> : std::true_type {
-  inline FoxgloveError log_to(foxglove_channel * const channel, const RawImage& msg, std::optional<uint64_t> logTime = std::nullopt) {
-    foxglove_raw_image cMsg;
-    cMsg.timestamp = msg.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*msg.timestamp) : nullptr;
-    cMsg.frame_id = {msg.frame_id.data(), msg.frame_id.size()};
-    cMsg.width = msg.width;
-    cMsg.height = msg.height;
-    cMsg.encoding = {msg.encoding.data(), msg.encoding.size()};
-    cMsg.step = msg.step;
-    cMsg.data = reinterpret_cast<const unsigned char *>(msg.data.data());
-    cMsg.data_len = msg.data.size();
-    return FoxgloveError(foxglove_channel_log_raw_image(channel, &cMsg, logTime ? &*logTime : nullptr));
+  inline FoxgloveError logTo(foxglove_channel * const channel, const RawImage& msg, std::optional<uint64_t> logTime = std::nullopt) {
+    foxglove::Arena arena;
+    foxglove_raw_image c_msg;
+    rawImageToC(c_msg, msg, arena);
+    return FoxgloveError(foxglove_channel_log_raw_image(channel, &c_msg, logTime ? &*logTime : nullptr));
   }
 };
 template<>
 struct BuiltinSchema<SceneEntity> : std::true_type {
-  inline FoxgloveError log_to(foxglove_channel * const channel, const SceneEntity& msg, std::optional<uint64_t> logTime = std::nullopt) {
-    foxglove_scene_entity cMsg;
-    cMsg.timestamp = msg.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*msg.timestamp) : nullptr;
-    cMsg.frame_id = {msg.frame_id.data(), msg.frame_id.size()};
-    cMsg.id = {msg.id.data(), msg.id.size()};
-    cMsg.lifetime = msg.lifetime ? reinterpret_cast<const foxglove_duration*>(&*msg.lifetime) : nullptr;
-    cMsg.frame_locked = msg.frame_locked;
-    cMsg.metadata = reinterpret_cast<const foxglove_key_value_pair*>(msg.metadata.data());
-    cMsg.metadata_count = msg.metadata.size();
-    cMsg.arrows = reinterpret_cast<const foxglove_arrow_primitive*>(msg.arrows.data());
-    cMsg.arrows_count = msg.arrows.size();
-    cMsg.cubes = reinterpret_cast<const foxglove_cube_primitive*>(msg.cubes.data());
-    cMsg.cubes_count = msg.cubes.size();
-    cMsg.spheres = reinterpret_cast<const foxglove_sphere_primitive*>(msg.spheres.data());
-    cMsg.spheres_count = msg.spheres.size();
-    cMsg.cylinders = reinterpret_cast<const foxglove_cylinder_primitive*>(msg.cylinders.data());
-    cMsg.cylinders_count = msg.cylinders.size();
-    cMsg.lines = reinterpret_cast<const foxglove_line_primitive*>(msg.lines.data());
-    cMsg.lines_count = msg.lines.size();
-    cMsg.triangles = reinterpret_cast<const foxglove_triangle_list_primitive*>(msg.triangles.data());
-    cMsg.triangles_count = msg.triangles.size();
-    cMsg.texts = reinterpret_cast<const foxglove_text_primitive*>(msg.texts.data());
-    cMsg.texts_count = msg.texts.size();
-    cMsg.models = reinterpret_cast<const foxglove_model_primitive*>(msg.models.data());
-    cMsg.models_count = msg.models.size();
-    return FoxgloveError(foxglove_channel_log_scene_entity(channel, &cMsg, logTime ? &*logTime : nullptr));
+  inline FoxgloveError logTo(foxglove_channel * const channel, const SceneEntity& msg, std::optional<uint64_t> logTime = std::nullopt) {
+    foxglove::Arena arena;
+    foxglove_scene_entity c_msg;
+    sceneEntityToC(c_msg, msg, arena);
+    return FoxgloveError(foxglove_channel_log_scene_entity(channel, &c_msg, logTime ? &*logTime : nullptr));
   }
 };
 template<>
 struct BuiltinSchema<SceneEntityDeletion> : std::true_type {
-  inline FoxgloveError log_to(foxglove_channel * const channel, const SceneEntityDeletion& msg, std::optional<uint64_t> logTime = std::nullopt) {
-    foxglove_scene_entity_deletion cMsg;
-    cMsg.timestamp = msg.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*msg.timestamp) : nullptr;
-    cMsg.type = static_cast<foxglove_scene_entity_deletion_type>(msg.type);
-    cMsg.id = {msg.id.data(), msg.id.size()};
-    return FoxgloveError(foxglove_channel_log_scene_entity_deletion(channel, &cMsg, logTime ? &*logTime : nullptr));
+  inline FoxgloveError logTo(foxglove_channel * const channel, const SceneEntityDeletion& msg, std::optional<uint64_t> logTime = std::nullopt) {
+    foxglove::Arena arena;
+    foxglove_scene_entity_deletion c_msg;
+    sceneEntityDeletionToC(c_msg, msg, arena);
+    return FoxgloveError(foxglove_channel_log_scene_entity_deletion(channel, &c_msg, logTime ? &*logTime : nullptr));
   }
 };
 template<>
 struct BuiltinSchema<SceneUpdate> : std::true_type {
-  inline FoxgloveError log_to(foxglove_channel * const channel, const SceneUpdate& msg, std::optional<uint64_t> logTime = std::nullopt) {
-    foxglove_scene_update cMsg;
-    cMsg.deletions = reinterpret_cast<const foxglove_scene_entity_deletion*>(msg.deletions.data());
-    cMsg.deletions_count = msg.deletions.size();
-    cMsg.entities = reinterpret_cast<const foxglove_scene_entity*>(msg.entities.data());
-    cMsg.entities_count = msg.entities.size();
-    return FoxgloveError(foxglove_channel_log_scene_update(channel, &cMsg, logTime ? &*logTime : nullptr));
+  inline FoxgloveError logTo(foxglove_channel * const channel, const SceneUpdate& msg, std::optional<uint64_t> logTime = std::nullopt) {
+    foxglove::Arena arena;
+    foxglove_scene_update c_msg;
+    sceneUpdateToC(c_msg, msg, arena);
+    return FoxgloveError(foxglove_channel_log_scene_update(channel, &c_msg, logTime ? &*logTime : nullptr));
   }
 };
 template<>
 struct BuiltinSchema<TextAnnotation> : std::true_type {
-  inline FoxgloveError log_to(foxglove_channel * const channel, const TextAnnotation& msg, std::optional<uint64_t> logTime = std::nullopt) {
-    foxglove_text_annotation cMsg;
-    cMsg.timestamp = msg.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*msg.timestamp) : nullptr;
-    cMsg.position = msg.position ? reinterpret_cast<const foxglove_point2*>(&*msg.position) : nullptr;
-    cMsg.text = {msg.text.data(), msg.text.size()};
-    cMsg.font_size = msg.font_size;
-    cMsg.text_color = msg.text_color ? reinterpret_cast<const foxglove_color*>(&*msg.text_color) : nullptr;
-    cMsg.background_color = msg.background_color ? reinterpret_cast<const foxglove_color*>(&*msg.background_color) : nullptr;
-    return FoxgloveError(foxglove_channel_log_text_annotation(channel, &cMsg, logTime ? &*logTime : nullptr));
+  inline FoxgloveError logTo(foxglove_channel * const channel, const TextAnnotation& msg, std::optional<uint64_t> logTime = std::nullopt) {
+    foxglove::Arena arena;
+    foxglove_text_annotation c_msg;
+    textAnnotationToC(c_msg, msg, arena);
+    return FoxgloveError(foxglove_channel_log_text_annotation(channel, &c_msg, logTime ? &*logTime : nullptr));
   }
 };
 template<>
 struct BuiltinSchema<Vector2> : std::true_type {
-  inline FoxgloveError log_to(foxglove_channel * const channel, const Vector2& msg, std::optional<uint64_t> logTime = std::nullopt) {
-    foxglove_vector2 cMsg;
-    cMsg.x = msg.x;
-    cMsg.y = msg.y;
-    return FoxgloveError(foxglove_channel_log_vector2(channel, &cMsg, logTime ? &*logTime : nullptr));
+  inline FoxgloveError logTo(foxglove_channel * const channel, const Vector2& msg, std::optional<uint64_t> logTime = std::nullopt) {
+    return FoxgloveError(foxglove_channel_log_vector2(channel, reinterpret_cast<const foxglove_vector2*>(&msg), logTime ? &*logTime : nullptr));
   }
 };
 template<>
 struct BuiltinSchema<Vector3> : std::true_type {
-  inline FoxgloveError log_to(foxglove_channel * const channel, const Vector3& msg, std::optional<uint64_t> logTime = std::nullopt) {
-    foxglove_vector3 cMsg;
-    cMsg.x = msg.x;
-    cMsg.y = msg.y;
-    cMsg.z = msg.z;
-    return FoxgloveError(foxglove_channel_log_vector3(channel, &cMsg, logTime ? &*logTime : nullptr));
+  inline FoxgloveError logTo(foxglove_channel * const channel, const Vector3& msg, std::optional<uint64_t> logTime = std::nullopt) {
+    return FoxgloveError(foxglove_channel_log_vector3(channel, reinterpret_cast<const foxglove_vector3*>(&msg), logTime ? &*logTime : nullptr));
   }
 };
+
+void arrowPrimitiveToC(foxglove_arrow_primitive& dest, const ArrowPrimitive& src, Arena& arena) {
+    dest.pose = src.pose ? arena.map_one<foxglove_pose>(src.pose.value(), poseToC) : nullptr;
+    dest.shaft_length = src.shaft_length;
+    dest.shaft_diameter = src.shaft_diameter;
+    dest.head_length = src.head_length;
+    dest.head_diameter = src.head_diameter;
+    dest.color = src.color ? reinterpret_cast<const foxglove_color*>(&*src.color) : nullptr;
+}
+
+void cameraCalibrationToC(foxglove_camera_calibration& dest, const CameraCalibration& src, Arena& arena) {
+    dest.timestamp = src.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*src.timestamp) : nullptr;
+    dest.frame_id = {src.frame_id.data(), src.frame_id.size()};
+    dest.width = src.width;
+    dest.height = src.height;
+    dest.distortion_model = {src.distortion_model.data(), src.distortion_model.size()};
+    dest.d = src.d.data();
+    dest.d_count = src.d.size();
+    ::memcpy(dest.k, src.k.data(), src.k.size() * sizeof(*src.k.data()));
+    ::memcpy(dest.r, src.r.data(), src.r.size() * sizeof(*src.r.data()));
+    ::memcpy(dest.p, src.p.data(), src.p.size() * sizeof(*src.p.data()));
+}
+
+void circleAnnotationToC(foxglove_circle_annotation& dest, const CircleAnnotation& src, Arena& arena) {
+    dest.timestamp = src.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*src.timestamp) : nullptr;
+    dest.position = src.position ? reinterpret_cast<const foxglove_point2*>(&*src.position) : nullptr;
+    dest.diameter = src.diameter;
+    dest.thickness = src.thickness;
+    dest.fill_color = src.fill_color ? reinterpret_cast<const foxglove_color*>(&*src.fill_color) : nullptr;
+    dest.outline_color = src.outline_color ? reinterpret_cast<const foxglove_color*>(&*src.outline_color) : nullptr;
+}
+
+void compressedImageToC(foxglove_compressed_image& dest, const CompressedImage& src, Arena& arena) {
+    dest.timestamp = src.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*src.timestamp) : nullptr;
+    dest.frame_id = {src.frame_id.data(), src.frame_id.size()};
+    dest.data = reinterpret_cast<const unsigned char *>(src.data.data());
+    dest.data_len = src.data.size();
+    dest.format = {src.format.data(), src.format.size()};
+}
+
+void compressedVideoToC(foxglove_compressed_video& dest, const CompressedVideo& src, Arena& arena) {
+    dest.timestamp = src.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*src.timestamp) : nullptr;
+    dest.frame_id = {src.frame_id.data(), src.frame_id.size()};
+    dest.data = reinterpret_cast<const unsigned char *>(src.data.data());
+    dest.data_len = src.data.size();
+    dest.format = {src.format.data(), src.format.size()};
+}
+
+void cubePrimitiveToC(foxglove_cube_primitive& dest, const CubePrimitive& src, Arena& arena) {
+    dest.pose = src.pose ? arena.map_one<foxglove_pose>(src.pose.value(), poseToC) : nullptr;
+    dest.size = src.size ? reinterpret_cast<const foxglove_vector3*>(&*src.size) : nullptr;
+    dest.color = src.color ? reinterpret_cast<const foxglove_color*>(&*src.color) : nullptr;
+}
+
+void cylinderPrimitiveToC(foxglove_cylinder_primitive& dest, const CylinderPrimitive& src, Arena& arena) {
+    dest.pose = src.pose ? arena.map_one<foxglove_pose>(src.pose.value(), poseToC) : nullptr;
+    dest.size = src.size ? reinterpret_cast<const foxglove_vector3*>(&*src.size) : nullptr;
+    dest.bottom_scale = src.bottom_scale;
+    dest.top_scale = src.top_scale;
+    dest.color = src.color ? reinterpret_cast<const foxglove_color*>(&*src.color) : nullptr;
+}
+
+void frameTransformToC(foxglove_frame_transform& dest, const FrameTransform& src, Arena& arena) {
+    dest.timestamp = src.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*src.timestamp) : nullptr;
+    dest.parent_frame_id = {src.parent_frame_id.data(), src.parent_frame_id.size()};
+    dest.child_frame_id = {src.child_frame_id.data(), src.child_frame_id.size()};
+    dest.translation = src.translation ? reinterpret_cast<const foxglove_vector3*>(&*src.translation) : nullptr;
+    dest.rotation = src.rotation ? reinterpret_cast<const foxglove_quaternion*>(&*src.rotation) : nullptr;
+}
+
+void frameTransformsToC(foxglove_frame_transforms& dest, const FrameTransforms& src, Arena& arena) {
+    dest.transforms = arena.map<foxglove_frame_transform>(src.transforms, frameTransformToC);
+    dest.transforms_count = src.transforms.size();
+}
+
+void geoJSONToC(foxglove_geo_json& dest, const GeoJSON& src, Arena& arena) {
+    dest.geojson = {src.geojson.data(), src.geojson.size()};
+}
+
+void gridToC(foxglove_grid& dest, const Grid& src, Arena& arena) {
+    dest.timestamp = src.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*src.timestamp) : nullptr;
+    dest.frame_id = {src.frame_id.data(), src.frame_id.size()};
+    dest.pose = src.pose ? arena.map_one<foxglove_pose>(src.pose.value(), poseToC) : nullptr;
+    dest.column_count = src.column_count;
+    dest.cell_size = src.cell_size ? reinterpret_cast<const foxglove_vector2*>(&*src.cell_size) : nullptr;
+    dest.row_stride = src.row_stride;
+    dest.cell_stride = src.cell_stride;
+    dest.fields = arena.map<foxglove_packed_element_field>(src.fields, packedElementFieldToC);
+    dest.fields_count = src.fields.size();
+    dest.data = reinterpret_cast<const unsigned char *>(src.data.data());
+    dest.data_len = src.data.size();
+}
+
+void imageAnnotationsToC(foxglove_image_annotations& dest, const ImageAnnotations& src, Arena& arena) {
+    dest.circles = arena.map<foxglove_circle_annotation>(src.circles, circleAnnotationToC);
+    dest.circles_count = src.circles.size();
+    dest.points = arena.map<foxglove_points_annotation>(src.points, pointsAnnotationToC);
+    dest.points_count = src.points.size();
+    dest.texts = arena.map<foxglove_text_annotation>(src.texts, textAnnotationToC);
+    dest.texts_count = src.texts.size();
+}
+
+void keyValuePairToC(foxglove_key_value_pair& dest, const KeyValuePair& src, Arena& arena) {
+    dest.key = {src.key.data(), src.key.size()};
+    dest.value = {src.value.data(), src.value.size()};
+}
+
+void laserScanToC(foxglove_laser_scan& dest, const LaserScan& src, Arena& arena) {
+    dest.timestamp = src.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*src.timestamp) : nullptr;
+    dest.frame_id = {src.frame_id.data(), src.frame_id.size()};
+    dest.pose = src.pose ? arena.map_one<foxglove_pose>(src.pose.value(), poseToC) : nullptr;
+    dest.start_angle = src.start_angle;
+    dest.end_angle = src.end_angle;
+    dest.ranges = src.ranges.data();
+    dest.ranges_count = src.ranges.size();
+    dest.intensities = src.intensities.data();
+    dest.intensities_count = src.intensities.size();
+}
+
+void linePrimitiveToC(foxglove_line_primitive& dest, const LinePrimitive& src, Arena& arena) {
+    dest.type = static_cast<foxglove_line_type>(src.type);
+    dest.pose = src.pose ? arena.map_one<foxglove_pose>(src.pose.value(), poseToC) : nullptr;
+    dest.thickness = src.thickness;
+    dest.scale_invariant = src.scale_invariant;
+    dest.points = reinterpret_cast<const foxglove_point3*>(src.points.data());
+    dest.points_count = src.points.size();
+    dest.color = src.color ? reinterpret_cast<const foxglove_color*>(&*src.color) : nullptr;
+    dest.colors = reinterpret_cast<const foxglove_color*>(src.colors.data());
+    dest.colors_count = src.colors.size();
+    dest.indices = src.indices.data();
+    dest.indices_count = src.indices.size();
+}
+
+void locationFixToC(foxglove_location_fix& dest, const LocationFix& src, Arena& arena) {
+    dest.timestamp = src.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*src.timestamp) : nullptr;
+    dest.frame_id = {src.frame_id.data(), src.frame_id.size()};
+    dest.latitude = src.latitude;
+    dest.longitude = src.longitude;
+    dest.altitude = src.altitude;
+    ::memcpy(dest.position_covariance, src.position_covariance.data(), src.position_covariance.size() * sizeof(*src.position_covariance.data()));
+    dest.position_covariance_type = static_cast<foxglove_position_covariance_type>(src.position_covariance_type);
+}
+
+void logToC(foxglove_log& dest, const Log& src, Arena& arena) {
+    dest.timestamp = src.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*src.timestamp) : nullptr;
+    dest.level = static_cast<foxglove_log_level>(src.level);
+    dest.message = {src.message.data(), src.message.size()};
+    dest.name = {src.name.data(), src.name.size()};
+    dest.file = {src.file.data(), src.file.size()};
+    dest.line = src.line;
+}
+
+void modelPrimitiveToC(foxglove_model_primitive& dest, const ModelPrimitive& src, Arena& arena) {
+    dest.pose = src.pose ? arena.map_one<foxglove_pose>(src.pose.value(), poseToC) : nullptr;
+    dest.scale = src.scale ? reinterpret_cast<const foxglove_vector3*>(&*src.scale) : nullptr;
+    dest.color = src.color ? reinterpret_cast<const foxglove_color*>(&*src.color) : nullptr;
+    dest.override_color = src.override_color;
+    dest.url = {src.url.data(), src.url.size()};
+    dest.media_type = {src.media_type.data(), src.media_type.size()};
+    dest.data = reinterpret_cast<const unsigned char *>(src.data.data());
+    dest.data_len = src.data.size();
+}
+
+void packedElementFieldToC(foxglove_packed_element_field& dest, const PackedElementField& src, Arena& arena) {
+    dest.name = {src.name.data(), src.name.size()};
+    dest.offset = src.offset;
+    dest.type = static_cast<foxglove_numeric_type>(src.type);
+}
+
+void pointCloudToC(foxglove_point_cloud& dest, const PointCloud& src, Arena& arena) {
+    dest.timestamp = src.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*src.timestamp) : nullptr;
+    dest.frame_id = {src.frame_id.data(), src.frame_id.size()};
+    dest.pose = src.pose ? arena.map_one<foxglove_pose>(src.pose.value(), poseToC) : nullptr;
+    dest.point_stride = src.point_stride;
+    dest.fields = arena.map<foxglove_packed_element_field>(src.fields, packedElementFieldToC);
+    dest.fields_count = src.fields.size();
+    dest.data = reinterpret_cast<const unsigned char *>(src.data.data());
+    dest.data_len = src.data.size();
+}
+
+void pointsAnnotationToC(foxglove_points_annotation& dest, const PointsAnnotation& src, Arena& arena) {
+    dest.timestamp = src.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*src.timestamp) : nullptr;
+    dest.type = static_cast<foxglove_points_annotation_type>(src.type);
+    dest.points = reinterpret_cast<const foxglove_point2*>(src.points.data());
+    dest.points_count = src.points.size();
+    dest.outline_color = src.outline_color ? reinterpret_cast<const foxglove_color*>(&*src.outline_color) : nullptr;
+    dest.outline_colors = reinterpret_cast<const foxglove_color*>(src.outline_colors.data());
+    dest.outline_colors_count = src.outline_colors.size();
+    dest.fill_color = src.fill_color ? reinterpret_cast<const foxglove_color*>(&*src.fill_color) : nullptr;
+    dest.thickness = src.thickness;
+}
+
+void poseToC(foxglove_pose& dest, const Pose& src, Arena& arena) {
+    dest.position = src.position ? reinterpret_cast<const foxglove_vector3*>(&*src.position) : nullptr;
+    dest.orientation = src.orientation ? reinterpret_cast<const foxglove_quaternion*>(&*src.orientation) : nullptr;
+}
+
+void poseInFrameToC(foxglove_pose_in_frame& dest, const PoseInFrame& src, Arena& arena) {
+    dest.timestamp = src.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*src.timestamp) : nullptr;
+    dest.frame_id = {src.frame_id.data(), src.frame_id.size()};
+    dest.pose = src.pose ? arena.map_one<foxglove_pose>(src.pose.value(), poseToC) : nullptr;
+}
+
+void posesInFrameToC(foxglove_poses_in_frame& dest, const PosesInFrame& src, Arena& arena) {
+    dest.timestamp = src.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*src.timestamp) : nullptr;
+    dest.frame_id = {src.frame_id.data(), src.frame_id.size()};
+    dest.poses = arena.map<foxglove_pose>(src.poses, poseToC);
+    dest.poses_count = src.poses.size();
+}
+
+void rawAudioToC(foxglove_raw_audio& dest, const RawAudio& src, Arena& arena) {
+    dest.timestamp = src.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*src.timestamp) : nullptr;
+    dest.data = reinterpret_cast<const unsigned char *>(src.data.data());
+    dest.data_len = src.data.size();
+    dest.format = {src.format.data(), src.format.size()};
+    dest.sample_rate = src.sample_rate;
+    dest.number_of_channels = src.number_of_channels;
+}
+
+void rawImageToC(foxglove_raw_image& dest, const RawImage& src, Arena& arena) {
+    dest.timestamp = src.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*src.timestamp) : nullptr;
+    dest.frame_id = {src.frame_id.data(), src.frame_id.size()};
+    dest.width = src.width;
+    dest.height = src.height;
+    dest.encoding = {src.encoding.data(), src.encoding.size()};
+    dest.step = src.step;
+    dest.data = reinterpret_cast<const unsigned char *>(src.data.data());
+    dest.data_len = src.data.size();
+}
+
+void sceneEntityToC(foxglove_scene_entity& dest, const SceneEntity& src, Arena& arena) {
+    dest.timestamp = src.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*src.timestamp) : nullptr;
+    dest.frame_id = {src.frame_id.data(), src.frame_id.size()};
+    dest.id = {src.id.data(), src.id.size()};
+    dest.lifetime = src.lifetime ? reinterpret_cast<const foxglove_duration*>(&*src.lifetime) : nullptr;
+    dest.frame_locked = src.frame_locked;
+    dest.metadata = arena.map<foxglove_key_value_pair>(src.metadata, keyValuePairToC);
+    dest.metadata_count = src.metadata.size();
+    dest.arrows = arena.map<foxglove_arrow_primitive>(src.arrows, arrowPrimitiveToC);
+    dest.arrows_count = src.arrows.size();
+    dest.cubes = arena.map<foxglove_cube_primitive>(src.cubes, cubePrimitiveToC);
+    dest.cubes_count = src.cubes.size();
+    dest.spheres = arena.map<foxglove_sphere_primitive>(src.spheres, spherePrimitiveToC);
+    dest.spheres_count = src.spheres.size();
+    dest.cylinders = arena.map<foxglove_cylinder_primitive>(src.cylinders, cylinderPrimitiveToC);
+    dest.cylinders_count = src.cylinders.size();
+    dest.lines = arena.map<foxglove_line_primitive>(src.lines, linePrimitiveToC);
+    dest.lines_count = src.lines.size();
+    dest.triangles = arena.map<foxglove_triangle_list_primitive>(src.triangles, triangleListPrimitiveToC);
+    dest.triangles_count = src.triangles.size();
+    dest.texts = arena.map<foxglove_text_primitive>(src.texts, textPrimitiveToC);
+    dest.texts_count = src.texts.size();
+    dest.models = arena.map<foxglove_model_primitive>(src.models, modelPrimitiveToC);
+    dest.models_count = src.models.size();
+}
+
+void sceneEntityDeletionToC(foxglove_scene_entity_deletion& dest, const SceneEntityDeletion& src, Arena& arena) {
+    dest.timestamp = src.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*src.timestamp) : nullptr;
+    dest.type = static_cast<foxglove_scene_entity_deletion_type>(src.type);
+    dest.id = {src.id.data(), src.id.size()};
+}
+
+void sceneUpdateToC(foxglove_scene_update& dest, const SceneUpdate& src, Arena& arena) {
+    dest.deletions = arena.map<foxglove_scene_entity_deletion>(src.deletions, sceneEntityDeletionToC);
+    dest.deletions_count = src.deletions.size();
+    dest.entities = arena.map<foxglove_scene_entity>(src.entities, sceneEntityToC);
+    dest.entities_count = src.entities.size();
+}
+
+void spherePrimitiveToC(foxglove_sphere_primitive& dest, const SpherePrimitive& src, Arena& arena) {
+    dest.pose = src.pose ? arena.map_one<foxglove_pose>(src.pose.value(), poseToC) : nullptr;
+    dest.size = src.size ? reinterpret_cast<const foxglove_vector3*>(&*src.size) : nullptr;
+    dest.color = src.color ? reinterpret_cast<const foxglove_color*>(&*src.color) : nullptr;
+}
+
+void textAnnotationToC(foxglove_text_annotation& dest, const TextAnnotation& src, Arena& arena) {
+    dest.timestamp = src.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*src.timestamp) : nullptr;
+    dest.position = src.position ? reinterpret_cast<const foxglove_point2*>(&*src.position) : nullptr;
+    dest.text = {src.text.data(), src.text.size()};
+    dest.font_size = src.font_size;
+    dest.text_color = src.text_color ? reinterpret_cast<const foxglove_color*>(&*src.text_color) : nullptr;
+    dest.background_color = src.background_color ? reinterpret_cast<const foxglove_color*>(&*src.background_color) : nullptr;
+}
+
+void textPrimitiveToC(foxglove_text_primitive& dest, const TextPrimitive& src, Arena& arena) {
+    dest.pose = src.pose ? arena.map_one<foxglove_pose>(src.pose.value(), poseToC) : nullptr;
+    dest.billboard = src.billboard;
+    dest.font_size = src.font_size;
+    dest.scale_invariant = src.scale_invariant;
+    dest.color = src.color ? reinterpret_cast<const foxglove_color*>(&*src.color) : nullptr;
+    dest.text = {src.text.data(), src.text.size()};
+}
+
+void triangleListPrimitiveToC(foxglove_triangle_list_primitive& dest, const TriangleListPrimitive& src, Arena& arena) {
+    dest.pose = src.pose ? arena.map_one<foxglove_pose>(src.pose.value(), poseToC) : nullptr;
+    dest.points = reinterpret_cast<const foxglove_point3*>(src.points.data());
+    dest.points_count = src.points.size();
+    dest.color = src.color ? reinterpret_cast<const foxglove_color*>(&*src.color) : nullptr;
+    dest.colors = reinterpret_cast<const foxglove_color*>(src.colors.data());
+    dest.colors_count = src.colors.size();
+    dest.indices = src.indices.data();
+    dest.indices_count = src.indices.size();
+}
+
 
 } // namespace foxglove::schemas

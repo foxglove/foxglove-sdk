@@ -7,6 +7,7 @@
 #include <string>
 #include <type_traits>
 #include <vector>
+#include <optional>
 
 #include <foxglove/time.hpp>
 #include <foxglove/error.hpp>

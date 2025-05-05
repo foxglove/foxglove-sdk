@@ -44,9 +44,17 @@ function formatComment(comment: string, indent: number) {
     .join("\n");
 }
 
+function toCamelCase(name: string) {
+  return name.substring(0, 1).toLowerCase() + name.substring(1);
+}
+
 function toSnakeCase(name: string) {
   const snakeName = name.replace("JSON", "Json").replace(/([A-Z])/g, "_$1").toLowerCase();
   return snakeName.startsWith("_") ? snakeName.substring(1) : snakeName;
+}
+
+function isSameAsCType(schema: FoxgloveMessageSchema): boolean {
+  return schema.fields.every((field) => field.type.type === "primitive" && field.type.name !== "bytes" && field.type.name !== "string");
 }
 
 /**
@@ -158,6 +166,7 @@ export function generateHppSchemas(
     "#include <string>",
     "#include <type_traits>",
     "#include <vector>",
+    "#include <optional>",
     "",
     "#include <foxglove/time.hpp>",
     "#include <foxglove/error.hpp>",
@@ -188,19 +197,24 @@ export function generateHppSchemas(
   return outputSections.join("\n\n") + "\n";
 }
 
-function cppToC(schema: FoxgloveMessageSchema) {
+function cppToC(schema: FoxgloveMessageSchema, copyTypes: Set<string>): string[] {
   return schema.fields.map((field) => {
     const srcName = toSnakeCase(field.name);
     const dstName = srcName;
     if (field.array != undefined) {
       if (typeof field.array === "number") {
-        return `::memcpy(cMsg.${dstName}, msg.${srcName}.data(), msg.${srcName}.size() * sizeof(*msg.${srcName}.data()));`;
+        return `::memcpy(dest.${dstName}, src.${srcName}.data(), src.${srcName}.size() * sizeof(*src.${srcName}.data()));`;
       } else {
         if (field.type.type === "nested") {
-          return `cMsg.${dstName} = reinterpret_cast<const foxglove_${toSnakeCase(field.type.schema.name)}*>(msg.${srcName}.data());\n    cMsg.${dstName}_count = msg.${srcName}.size();`;
+          if (copyTypes.has(field.type.schema.name)) {
+            return `dest.${dstName} = reinterpret_cast<const foxglove_${toSnakeCase(field.type.schema.name)}*>(src.${srcName}.data());\n    dest.${dstName}_count = src.${srcName}.size();`;
+          } else {
+            return `dest.${dstName} = arena.map<foxglove_${toSnakeCase(field.type.schema.name)}>(src.${srcName}, ${toCamelCase(field.type.schema.name)}ToC);
+    dest.${dstName}_count = src.${srcName}.size();`;
+          }
         } else if (field.type.type === "primitive") {
           assert(field.type.name !== "bytes");
-          return `cMsg.${dstName} = msg.${srcName}.data();\n    cMsg.${dstName}_count = msg.${srcName}.size();`;
+          return `dest.${dstName} = src.${srcName}.data();\n    dest.${dstName}_count = src.${srcName}.size();`;
         } else {
           throw Error(`unsupported array type: ${field.type.type}`);
         }
@@ -209,21 +223,25 @@ function cppToC(schema: FoxgloveMessageSchema) {
     switch (field.type.type) {
       case "primitive":
         if (field.type.name === "string") {
-          return `cMsg.${dstName} = {msg.${srcName}.data(), msg.${srcName}.size()};`;
+          return `dest.${dstName} = {src.${srcName}.data(), src.${srcName}.size()};`;
         } else if (field.type.name === "bytes") {
-          return `cMsg.${dstName} = reinterpret_cast<const unsigned char *>(msg.${srcName}.data());\n    cMsg.${dstName}_len = msg.${srcName}.size();`;
+          return `dest.${dstName} = reinterpret_cast<const unsigned char *>(src.${srcName}.data());\n    dest.${dstName}_len = src.${srcName}.size();`;
         } else if (field.type.name === "time") {
-          return `cMsg.${dstName} = msg.${srcName} ? reinterpret_cast<const foxglove_timestamp*>(&*msg.${srcName}) : nullptr;`;
+          return `dest.${dstName} = src.${srcName} ? reinterpret_cast<const foxglove_timestamp*>(&*src.${srcName}) : nullptr;`;
         } else if (field.type.name === "duration") {
-          return `cMsg.${dstName} = msg.${srcName} ? reinterpret_cast<const foxglove_duration*>(&*msg.${srcName}) : nullptr;`;
+          return `dest.${dstName} = src.${srcName} ? reinterpret_cast<const foxglove_duration*>(&*src.${srcName}) : nullptr;`;
         }
-        return `cMsg.${dstName} = msg.${srcName};`;
+        return `dest.${dstName} = src.${srcName};`;
       case "enum":
-        return `cMsg.${dstName} = static_cast<foxglove_${toSnakeCase(field.type.enum.name)}>(msg.${srcName});`;
+        return `dest.${dstName} = static_cast<foxglove_${toSnakeCase(field.type.enum.name)}>(src.${srcName});`;
       case "nested":
-        return `cMsg.${dstName} = msg.${srcName} ? reinterpret_cast<const foxglove_${toSnakeCase(field.type.schema.name)}*>(&*msg.${srcName}) : nullptr;`;
+        if (copyTypes.has(field.type.schema.name)) {
+          return `dest.${dstName} = src.${srcName} ? reinterpret_cast<const foxglove_${toSnakeCase(field.type.schema.name)}*>(&*src.${srcName}) : nullptr;`;
+        } else {
+          return `dest.${dstName} = src.${srcName} ? arena.map_one<foxglove_${toSnakeCase(field.type.schema.name)}>(src.${srcName}.value(), ${toCamelCase(field.type.schema.name)}ToC) : nullptr;`;
+        }
     }
-  }).join("\n    ");
+  });
 }
 
 export function generateCppSchemas(
@@ -232,19 +250,56 @@ export function generateCppSchemas(
   // Sort by name
   schemas.sort((a, b) => a.name.localeCompare(b.name));
 
+  const copyTypes = new Set(schemas.map((schema) => {
+    return isSameAsCType(schema) ? schema.name : "";
+  }).filter((name) => name.length > 0));
+
+  const conversionFuncDecls = schemas.flatMap(
+    (schema) => {
+      if (isSameAsCType(schema)) {
+        return [];
+      }
+      return [`void ${toCamelCase(schema.name)}ToC(foxglove_${toSnakeCase(schema.name)}& dest, const ${schema.name}& src, foxglove::Arena& arena);`];
+    }
+  );
+
   const traitSpecializations = schemas.flatMap(
     (schema) => {
       if (schema.name.endsWith("Primitive")) {
         return [];
       }
+
+      let conversionCode;
+      if (isSameAsCType(schema)) {
+        conversionCode = [
+          `    return FoxgloveError(foxglove_channel_log_${toSnakeCase(schema.name)}(channel, reinterpret_cast<const foxglove_${toSnakeCase(schema.name)}*>(&msg), logTime ? &*logTime : nullptr));`
+        ];
+      } else {
+        conversionCode = ["    foxglove::Arena arena;",
+        `    foxglove_${toSnakeCase(schema.name)} c_msg;`,
+        `    ${toCamelCase(schema.name)}ToC(c_msg, msg, arena);`,
+        `    return FoxgloveError(foxglove_channel_log_${toSnakeCase(schema.name)}(channel, &c_msg, logTime ? &*logTime : nullptr));`];
+      }
+
       return [
         "template<>",
         `struct BuiltinSchema<${schema.name}> : std::true_type {`,
-        `  inline FoxgloveError log_to(foxglove_channel * const channel, const ${schema.name}& msg, std::optional<uint64_t> logTime = std::nullopt) {`,
-        `    foxglove_${toSnakeCase(schema.name)} cMsg;`,
-        `    ${cppToC(schema)}`,
-        `    return FoxgloveError(foxglove_channel_log_${toSnakeCase(schema.name)}(channel, &cMsg, logTime ? &*logTime : nullptr));`,
+        `  inline FoxgloveError logTo(foxglove_channel * const channel, const ${schema.name}& msg, std::optional<uint64_t> logTime = std::nullopt) {`,
+        ...conversionCode,
         "  }\n};",
+      ]
+    }
+  );
+
+  const conversionFuncs = schemas.flatMap(
+    (schema) => {
+      if (isSameAsCType(schema)) {
+        return [];
+      }
+      return [
+        `void ${toCamelCase(schema.name)}ToC(foxglove_${toSnakeCase(schema.name)}& dest, const ${schema.name}& src, Arena& arena) {`,
+        `    ${cppToC(schema, copyTypes).join("\n    ")}`,
+        "}\n",
       ]
     }
   );
@@ -257,6 +312,7 @@ export function generateCppSchemas(
   const includes = [
     "#include <foxglove/error.hpp>",
     "#include <foxglove/schemas.hpp>",
+    "#include <foxglove/arena.hpp>",
   ];
 
   const usings = [
@@ -277,7 +333,11 @@ export function generateCppSchemas(
 
     usings.join("\n"),
 
+    conversionFuncDecls.join("\n"),
+
     traitSpecializations.join("\n"),
+
+    conversionFuncs.join("\n"),
 
     "} // namespace foxglove::schemas",
   ];

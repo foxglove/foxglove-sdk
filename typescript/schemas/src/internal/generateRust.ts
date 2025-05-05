@@ -41,8 +41,8 @@ function toTitleCase(name: string) {
   return name.toLowerCase().replace(/(?:^|_)([a-z])/g, (_, letter: string) => letter.toUpperCase());
 }
 
-function isCopyType(schema: FoxgloveMessageSchema): boolean {
-  return schema.fields.every((field) => (field.type.type === "primitive" && field.type.name !== "bytes" && field.type.name !== "string") || (field.type.type === "nested" && isCopyType(field.type.schema)));
+function isSameAsCType(schema: FoxgloveMessageSchema): boolean {
+  return schema.fields.every((field) => (field.type.type === "primitive" && field.type.name !== "bytes" && field.type.name !== "string") || (field.type.type === "nested" && isSameAsCType(field.type.schema)));
 }
 
 export function generateRustTypes(schemas: readonly FoxgloveMessageSchema[], enums: readonly FoxgloveEnumSchema[]): string {
@@ -55,7 +55,7 @@ export function generateRustTypes(schemas: readonly FoxgloveMessageSchema[], enu
   }).filter((name) => name.length > 0));
 
   const copyTypes = new Set(schemas.map((schema) => {
-    return isCopyType(schema) ? schema.name : "";
+    return isSameAsCType(schema) ? schema.name : "";
   }).filter((name) => name.length > 0));
 
   const schemaStructs = schemas.map(

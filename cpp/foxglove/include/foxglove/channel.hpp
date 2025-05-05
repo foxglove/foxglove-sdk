@@ -57,7 +57,7 @@ public:
   Channel(const RawChannel& rawChannel);
 
   FoxgloveError log(const T& value, std::optional<uint64_t> logTime = std::nullopt) {
-    return internal::BuiltinSchema<T>::log_to(_impl.get(), value);
+    return internal::BuiltinSchema<T>::logTo(_impl.get(), value, logTime);
   }
 
 private:
