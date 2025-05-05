@@ -29,12 +29,20 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
     c_callbacks.context = callbacks.get();
     if (callbacks->onSubscribe) {
       c_callbacks.on_subscribe = [](uint64_t channel_id, const void* context) {
-        (static_cast<const WebSocketServerCallbacks*>(context))->onSubscribe(channel_id);
+        try {
+          (static_cast<const WebSocketServerCallbacks*>(context))->onSubscribe(channel_id);
+        } catch (const std::exception& exc) {
+          std::cerr << "onSubscribe callback failed: " << exc.what() << "\n";
+        }
       };
     }
     if (callbacks->onUnsubscribe) {
       c_callbacks.on_unsubscribe = [](uint64_t channel_id, const void* context) {
-        (static_cast<const WebSocketServerCallbacks*>(context))->onUnsubscribe(channel_id);
+        try {
+          (static_cast<const WebSocketServerCallbacks*>(context))->onUnsubscribe(channel_id);
+        } catch (const std::exception& exc) {
+          std::cerr << "onUnsubscribe callback failed: " << exc.what() << "\n";
+        }
       };
     }
     if (callbacks->onClientAdvertise) {
@@ -49,8 +57,12 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
             reinterpret_cast<const std::byte*>(channel->schema),
             channel->schema_len
           };
-          (static_cast<const WebSocketServerCallbacks*>(context))
-            ->onClientAdvertise(client_id, cpp_channel);
+          try {
+            (static_cast<const WebSocketServerCallbacks*>(context))
+              ->onClientAdvertise(client_id, cpp_channel);
+          } catch (const std::exception& exc) {
+            std::cerr << "onClientAdvertise callback failed: " << exc.what() << "\n";
+          }
         };
     }
     if (callbacks->onMessageData) {
@@ -62,28 +74,44 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
                                       size_t payload_len,
                                       const void* context
                                     ) {
-        (static_cast<const WebSocketServerCallbacks*>(context))
-          ->onMessageData(
-            client_id, client_channel_id, reinterpret_cast<const std::byte*>(payload), payload_len
-          );
+        try {
+          (static_cast<const WebSocketServerCallbacks*>(context))
+            ->onMessageData(
+              client_id, client_channel_id, reinterpret_cast<const std::byte*>(payload), payload_len
+            );
+        } catch (const std::exception& exc) {
+          std::cerr << "onMessageData callback failed: " << exc.what() << "\n";
+        }
       };
     }
     if (callbacks->onClientUnadvertise) {
       c_callbacks.on_client_unadvertise =
         // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
         [](uint32_t client_id, uint32_t client_channel_id, const void* context) {
-          (static_cast<const WebSocketServerCallbacks*>(context))
-            ->onClientUnadvertise(client_id, client_channel_id);
+          try {
+            (static_cast<const WebSocketServerCallbacks*>(context))
+              ->onClientUnadvertise(client_id, client_channel_id);
+          } catch (const std::exception& exc) {
+            std::cerr << "onClientUnadvertise callback failed: " << exc.what() << "\n";
+          }
         };
     }
     if (callbacks->onConnectionGraphSubscribe) {
       c_callbacks.on_connection_graph_subscribe = [](const void* context) {
-        (static_cast<const WebSocketServerCallbacks*>(context))->onConnectionGraphSubscribe();
+        try {
+          (static_cast<const WebSocketServerCallbacks*>(context))->onConnectionGraphSubscribe();
+        } catch (const std::exception& exc) {
+          std::cerr << "onConnectionGraphSubscribe callback failed: " << exc.what() << "\n";
+        }
       };
     }
     if (callbacks->onConnectionGraphUnsubscribe) {
       c_callbacks.on_connection_graph_unsubscribe = [](const void* context) {
-        (static_cast<const WebSocketServerCallbacks*>(context))->onConnectionGraphUnsubscribe();
+        try {
+          (static_cast<const WebSocketServerCallbacks*>(context))->onConnectionGraphUnsubscribe();
+        } catch (const std::exception& exc) {
+          std::cerr << "onConnectionGraphUnsubscribe callback failed: " << exc.what() << "\n";
+        }
       };
     }
   }
