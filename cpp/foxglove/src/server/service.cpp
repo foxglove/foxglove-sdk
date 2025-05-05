@@ -1,6 +1,7 @@
 #include <foxglove-c/foxglove-c.h>
 #include <foxglove/server/service.hpp>
 
+#include <iostream>
 #include <memory>
 
 using std::string_view_literals::operator""sv;
@@ -98,7 +99,11 @@ FoxgloveResult<Service> Service::create(
       const auto* handler = static_cast<const ServiceHandler*>(context);
       ServiceRequest request(c_request);
       ServiceResponder responder(c_responder);
-      (*handler)(request, std::move(responder));
+      try {
+        (*handler)(request, std::move(responder));
+      } catch (const std::exception& exc) {
+        std::cerr << "Service handler failed: " << exc.what() << "\n";
+      }
     }
   );
   if (error != foxglove_error::FOXGLOVE_ERROR_OK) {
