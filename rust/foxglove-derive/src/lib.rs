@@ -2,7 +2,9 @@ extern crate proc_macro;
 
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{parse_macro_input, parse_quote, Data, DeriveInput, Fields, GenericParam, Generics};
+use syn::{
+    parse_macro_input, parse_quote, Data, DataEnum, DeriveInput, Fields, GenericParam, Generics,
+};
 
 /// Derive macro for enums and structs allowing them to be logged to a Foxglove channel.
 #[proc_macro_derive(Encode)]
@@ -10,20 +12,15 @@ pub fn derive_loggable(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
 
     match &input.data {
-        Data::Enum(_) => derive_enum_impl(input),
+        Data::Enum(data) => derive_enum_impl(&input, data),
         Data::Struct(_) => derive_struct_impl(input),
         _ => panic!("Encode can only be used with enums or structs"),
     }
 }
 
-fn derive_enum_impl(input: DeriveInput) -> TokenStream {
+fn derive_enum_impl(input: &DeriveInput, data: &DataEnum) -> TokenStream {
     let name = &input.ident;
-
-    // Extract variants from the enum
-    let variants = match &input.data {
-        Data::Enum(data) => &data.variants,
-        _ => unreachable!(),
-    };
+    let variants = &data.variants;
 
     // Generate variant name and number pairs for enum descriptor
     let variant_descriptors = variants.iter().enumerate().map(|(i, v)| {
