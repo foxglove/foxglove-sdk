@@ -4,6 +4,7 @@
 #include <foxglove/server.hpp>
 #include <foxglove/server/connection_graph.hpp>
 
+#include <iostream>
 #include <type_traits>
 
 namespace foxglove {
@@ -96,8 +97,13 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
             param_names.emplace_back(c_param_names[i].data, c_param_names[i].len);
           }
         }
-        auto params = (static_cast<const WebSocketServerCallbacks*>(context))
-                        ->onGetParameters(client_id, request_id, param_names);
+        std::vector<foxglove::Parameter> params;
+        try {
+          params = (static_cast<const WebSocketServerCallbacks*>(context))
+                     ->onGetParameters(client_id, request_id, param_names);
+        } catch (const std::exception& exc) {
+          std::cerr << "onGetParameters callback failed: " << exc.what() << "\n";
+        }
         auto array = ParameterArray(std::move(params));
         return array.release();
       };
@@ -117,9 +123,14 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
           // Should not happen; the C implementation never passes a null pointer.
           return nullptr;
         }
-        auto params =
-          (static_cast<const WebSocketServerCallbacks*>(context))
-            ->onSetParameters(client_id, request_id, ParameterArrayView(c_params).parameters());
+        std::vector<foxglove::Parameter> params;
+        try {
+          params =
+            (static_cast<const WebSocketServerCallbacks*>(context))
+              ->onSetParameters(client_id, request_id, ParameterArrayView(c_params).parameters());
+        } catch (const std::exception& exc) {
+          std::cerr << "onSetParameters callback failed: " << exc.what() << "\n";
+        }
         auto array = ParameterArray(std::move(params));
         return array.release();
       };
