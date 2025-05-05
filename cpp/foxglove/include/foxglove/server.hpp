@@ -3,6 +3,7 @@
 #include <foxglove/context.hpp>
 #include <foxglove/error.hpp>
 #include <foxglove/server/connection_graph.hpp>
+#include <foxglove/server/fetch_asset.hpp>
 #include <foxglove/server/parameter.hpp>
 #include <foxglove/server/service.hpp>
 
@@ -54,6 +55,9 @@ enum class WebSocketServerCapabilities : uint8_t {
   Time = 1 << 3,
   /// Allow clients to call services.
   Services = 1 << 4,
+  /// Allow clients to request assets. If you supply an asset handler to the
+  /// server, this capability will be advertised automatically.
+  Assets = 1 << 5,
 };
 
 /// @brief Combine two capabilities.
@@ -176,6 +180,7 @@ struct WebSocketServerOptions {
   WebSocketServerCapabilities capabilities = WebSocketServerCapabilities(0);
   /// @brief The supported encodings of the server.
   std::vector<std::string> supported_encodings;
+  FetchAssetHandler fetch_asset;
 };
 
 /// @brief A WebSocket server for visualization in Foxglove.
@@ -236,10 +241,12 @@ public:
 
 private:
   WebSocketServer(
-    foxglove_websocket_server* server, std::unique_ptr<WebSocketServerCallbacks> callbacks
+    foxglove_websocket_server* server, std::unique_ptr<WebSocketServerCallbacks> callbacks,
+    std::unique_ptr<FetchAssetHandler> fetch_asset
   );
 
   std::unique_ptr<WebSocketServerCallbacks> callbacks_;
+  std::unique_ptr<FetchAssetHandler> fetch_asset_;
   std::unique_ptr<foxglove_websocket_server, foxglove_error (*)(foxglove_websocket_server*)> impl_;
 };
 

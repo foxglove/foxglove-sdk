@@ -4,6 +4,7 @@
 
 use bitflags::bitflags;
 use connection_graph::FoxgloveConnectionGraph;
+use fetch_asset::{FetchAssetHandler, FoxgloveFetchAssetResponder};
 pub use logging::foxglove_set_log_level;
 use mcap::{Compression, WriteOptions};
 use service::FoxgloveService;
@@ -15,6 +16,7 @@ use std::sync::Arc;
 
 mod bytes;
 mod connection_graph;
+mod fetch_asset;
 mod logging;
 mod parameter;
 mod service;
@@ -146,6 +148,9 @@ pub const FOXGLOVE_SERVER_CAPABILITY_PARAMETERS: u8 = 1 << 2;
 pub const FOXGLOVE_SERVER_CAPABILITY_TIME: u8 = 1 << 3;
 /// Allow clients to call services.
 pub const FOXGLOVE_SERVER_CAPABILITY_SERVICES: u8 = 1 << 4;
+/// Allow clients to request assets. If you supply an asset handler to the server, this capability
+/// will be advertised automatically.
+pub const FOXGLOVE_SERVER_CAPABILITY_ASSETS: u8 = 1 << 5;
 
 bitflags! {
     #[derive(Clone, Copy, PartialEq, Eq)]
@@ -155,6 +160,7 @@ bitflags! {
         const Parameters = FOXGLOVE_SERVER_CAPABILITY_PARAMETERS;
         const Time = FOXGLOVE_SERVER_CAPABILITY_TIME;
         const Services = FOXGLOVE_SERVER_CAPABILITY_SERVICES;
+        const Assets = FOXGLOVE_SERVER_CAPABILITY_ASSETS;
     }
 }
 
@@ -173,6 +179,9 @@ impl FoxgloveServerCapabilityBitFlags {
             FoxgloveServerCapabilityBitFlags::Time => Some(foxglove::websocket::Capability::Time),
             FoxgloveServerCapabilityBitFlags::Services => {
                 Some(foxglove::websocket::Capability::Services)
+            }
+            FoxgloveServerCapabilityBitFlags::Assets => {
+                Some(foxglove::websocket::Capability::Assets)
             }
             _ => None,
         })
@@ -197,6 +206,35 @@ pub struct FoxgloveServerOptions<'a> {
     pub capabilities: FoxgloveServerCapability,
     pub supported_encodings: *const FoxgloveString,
     pub supported_encodings_count: usize,
+
+    /// Context provided to the `fetch_asset` callback.
+    pub fetch_asset_context: *const c_void,
+
+    /// Fetch an asset with the given URI and return it via the responder.
+    ///
+    /// This method is invoked from the client's main poll loop and must not block. If blocking or
+    /// long-running behavior is required, the implementation should return immediately and handle
+    /// the request asynchronously.
+    ///
+    /// The `uri` provided to the callback is only valid for the duration of the callback. If the
+    /// implementation wishes to retain its data for a longer lifetime, it must copy data out of
+    /// it.
+    ///
+    /// The `responder` provided to the callback represents an unfulfilled response. The
+    /// implementation must eventually call either `foxglove_fetch_asset_respond_ok` or
+    /// `foxglove_fetch_asset_respond_error`, exactly once, in order to complete the request. It is
+    /// safe to invoke these completion functions synchronously from the context of the callback.
+    ///
+    /// # Safety
+    /// - If provided, the handler callback must be a pointer to the fetch asset callback function,
+    ///   and must remain valid until the server is stopped.
+    pub fetch_asset: Option<
+        unsafe extern "C" fn(
+            context: *const c_void,
+            uri: *const FoxgloveString,
+            responder: *mut FoxgloveFetchAssetResponder,
+        ),
+    >,
 }
 
 #[repr(C)]
@@ -426,6 +464,12 @@ unsafe fn do_foxglove_server_start(
     }
     if let Some(callbacks) = options.callbacks {
         server = server.listener(Arc::new(callbacks.clone()))
+    }
+    if let Some(fetch_asset) = options.fetch_asset {
+        server = server.fetch_asset_handler(Box::new(FetchAssetHandler::new(
+            options.fetch_asset_context,
+            fetch_asset,
+        )));
     }
     if !options.context.is_null() {
         let context = ManuallyDrop::new(unsafe { Arc::from_raw(options.context) });

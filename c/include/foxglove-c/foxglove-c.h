@@ -49,6 +49,12 @@
  */
 #define FOXGLOVE_SERVER_CAPABILITY_SERVICES (1 << 4)
 
+/**
+ * Allow clients to request assets. If you supply an asset handler to the server, this capability
+ * will be advertised automatically.
+ */
+#define FOXGLOVE_SERVER_CAPABILITY_ASSETS (1 << 5)
+
 enum foxglove_error
 #ifdef __cplusplus
   : uint8_t
@@ -159,6 +165,8 @@ typedef struct foxglove_channel foxglove_channel;
 typedef struct foxglove_connection_graph foxglove_connection_graph;
 
 typedef struct foxglove_context foxglove_context;
+
+typedef struct foxglove_fetch_asset_responder foxglove_fetch_asset_responder;
 
 typedef struct foxglove_mcap_writer foxglove_mcap_writer;
 
@@ -416,6 +424,33 @@ typedef struct foxglove_server_options {
   foxglove_server_capability capabilities;
   const struct foxglove_string *supported_encodings;
   size_t supported_encodings_count;
+  /**
+   * Context provided to the `fetch_asset` callback.
+   */
+  const void *fetch_asset_context;
+  /**
+   * Fetch an asset with the given URI and return it via the responder.
+   *
+   * This method is invoked from the client's main poll loop and must not block. If blocking or
+   * long-running behavior is required, the implementation should return immediately and handle
+   * the request asynchronously.
+   *
+   * The `uri` provided to the callback is only valid for the duration of the callback. If the
+   * implementation wishes to retain its data for a longer lifetime, it must copy data out of
+   * it.
+   *
+   * The `responder` provided to the callback represents an unfulfilled response. The
+   * implementation must eventually call either `foxglove_fetch_asset_respond_ok` or
+   * `foxglove_fetch_asset_respond_error`, exactly once, in order to complete the request. It is
+   * safe to invoke these completion functions synchronously from the context of the callback.
+   *
+   * # Safety
+   * - If provided, the handler callback must be a pointer to the fetch asset callback function,
+   *   and must remain valid until the server is stopped.
+   */
+  void (*fetch_asset)(const void *context,
+                      const struct foxglove_string *uri,
+                      struct foxglove_fetch_asset_responder *responder);
 } foxglove_server_options;
 
 typedef struct foxglove_mcap_options {
@@ -753,6 +788,30 @@ foxglove_error foxglove_connection_graph_set_advertised_service(struct foxglove_
                                                                 struct foxglove_string service,
                                                                 const struct foxglove_string *provider_ids,
                                                                 size_t provider_ids_count);
+
+/**
+ * Completes a fetch asset request by sending asset data to the client.
+ *
+ * # Safety
+ * - `responder` must be a pointer to a `foxglove_fetch_asset_responder` obtained via the
+ *   `foxglove_server_options.fetch_asset` callback. This value is moved into this
+ *   function, and must not accessed afterwards.
+ * - `data` must be a pointer to the response data. This value is copied by this function.
+ */
+void foxglove_fetch_asset_respond_ok(struct foxglove_fetch_asset_responder *responder,
+                                     struct foxglove_bytes data);
+
+/**
+ * Completes a request by sending an error message to the client.
+ *
+ * # Safety
+ * - `responder` must be a pointer to a `foxglove_fetch_asset_responder` obtained via the
+ *   `foxglove_server_options.fetch_asset` callback. This value is moved into this
+ *   function, and must not accessed afterwards.
+ * - `message` must be a pointer to a valid UTF-8 string. This value is copied by this function.
+ */
+void foxglove_fetch_asset_respond_error(struct foxglove_fetch_asset_responder *responder,
+                                        struct foxglove_string message);
 
 /**
  * Initialize SDK logging with the given severity level.

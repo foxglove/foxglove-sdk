@@ -131,6 +131,22 @@ foxglove::WebSocketServer startServer(
     std::move(callbacks),
     capabilities,
     std::move(supported_encodings),
+    {},
+  });
+}
+
+foxglove::WebSocketServer startServer(
+  foxglove::Context context, foxglove::FetchAssetHandler&& fetch_asset
+) {
+  return startServer({
+    std::move(context),
+    "unit-test",
+    "127.0.0.1",
+    0,
+    {},
+    {},
+    {},
+    std::move(fetch_asset),
   });
 }
 
@@ -1047,6 +1063,227 @@ TEST_CASE("Service callbacks") {
   })");
   expected["serviceIds"][0] = service_ids["/error"];
   REQUIRE(parsed == expected);
+
+  REQUIRE(server.stop() == foxglove::FoxgloveError::Ok);
+}
+
+void validateFetchAssetOkResponse(
+  const std::string_view response, uint32_t request_id, const std::vector<std::byte>& payload
+) {
+  std::vector<std::byte> bytes(response.size());
+  std::memcpy(bytes.data(), response.data(), response.size());
+  REQUIRE(response.size() >= 1 + 4 + 1 + 4);
+  REQUIRE(static_cast<uint8_t>(bytes[0]) == 4);  // Fetch asset response opcode
+  REQUIRE(readUint32LE(bytes, 1) == request_id);
+  REQUIRE(bytes[5] == std::byte{0});     // Success
+  REQUIRE(readUint32LE(bytes, 6) == 0);  // Error message length
+  REQUIRE(response.size() >= 10 + payload.size());
+  REQUIRE(memcmp(response.data() + 10, payload.data(), payload.size()) == 0);
+}
+
+TEST_CASE("Fetch asset callback") {
+  std::mutex mutex;
+  std::condition_variable cv;
+  // the following variables are protected by the mutex:
+  bool connection_opened = false;
+  std::optional<std::string> last_uri;
+  std::queue<std::string> client_rx;
+
+  auto context = foxglove::Context::create();
+  auto server =
+    startServer(context, [&](std::string_view uri, foxglove::FetchAssetResponder&& responder) {
+      std::scoped_lock lock{mutex};
+      last_uri.emplace(uri);
+      auto data = makeBytes("data");
+      std::move(responder).respondOk(data);
+      cv.notify_one();
+    });
+
+  WebSocketClient client;
+  client.inner().set_open_handler([&](const auto& hdl) {
+    std::scoped_lock lock{mutex};
+    connection_opened = true;
+    cv.notify_one();
+  });
+  client.inner().set_message_handler(
+    [&](const websocketpp::connection_hdl&, const WebSocketMessage& msg) {
+      std::scoped_lock lock{mutex};
+      client_rx.push(msg->get_payload());
+      cv.notify_one();
+    }
+  );
+  client.start(server.port());
+
+  // Wait for the connection to be opened.
+  {
+    std::unique_lock lock{mutex};
+    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
+      return connection_opened;
+    });
+    REQUIRE(wait_result);
+  }
+
+  // Wait for the the serverInfo message.
+  std::string rx_payload;
+  {
+    std::unique_lock lock{mutex};
+    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
+      return !client_rx.empty();
+    });
+    REQUIRE(wait_result);
+    rx_payload = client_rx.front();
+    client_rx.pop();
+  }
+  Json parsed = Json::parse(rx_payload);
+  REQUIRE(parsed.contains("op"));
+  REQUIRE(parsed["op"] == "serverInfo");
+  REQUIRE(parsed.contains("capabilities"));
+  auto capabilities = parsed["capabilities"].get<std::vector<std::string>>();
+  REQUIRE(capabilities.size() == 1);
+  REQUIRE(capabilities[0] == "assets");
+
+  // Make a fetch asset call.
+  client.send(R"({
+      "op": "fetchAsset",
+      "uri": "package://foo/robot.urdf",
+      "requestId": 42
+  })");
+
+  // Wait for the server to process the callback.
+  {
+    std::unique_lock lock{mutex};
+    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
+      if (last_uri.has_value()) {
+        REQUIRE(last_uri == "package://foo/robot.urdf");
+        last_uri.reset();
+        return true;
+      }
+      return false;
+    });
+    REQUIRE(wait_result);
+  }
+
+  // Wait for the response.
+  {
+    std::unique_lock lock{mutex};
+    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
+      return !client_rx.empty();
+    });
+    REQUIRE(wait_result);
+    rx_payload = client_rx.front();
+    client_rx.pop();
+  }
+  validateFetchAssetOkResponse(rx_payload, 42, makeBytes("data"));
+
+  REQUIRE(server.stop() == foxglove::FoxgloveError::Ok);
+}
+
+void validateFetchAssetErrorResponse(
+  const std::string_view response, uint32_t request_id, std::string_view error_message
+) {
+  std::vector<std::byte> bytes(response.size());
+  std::memcpy(bytes.data(), response.data(), response.size());
+  REQUIRE(response.size() >= 1 + 4 + 1 + 4);
+  REQUIRE(static_cast<uint8_t>(bytes[0]) == 4);  // Fetch asset response opcode
+  REQUIRE(readUint32LE(bytes, 1) == request_id);
+  REQUIRE(bytes[5] == std::byte{1});  // Error
+  REQUIRE(readUint32LE(bytes, 6) == error_message.size());
+  REQUIRE(response.size() >= 10 + error_message.size());
+  REQUIRE(memcmp(response.data() + 10, error_message.data(), error_message.size()) == 0);
+}
+
+TEST_CASE("Fetch asset error") {
+  std::mutex mutex;
+  std::condition_variable cv;
+  // the following variables are protected by the mutex:
+  bool connection_opened = false;
+  std::optional<std::string> last_uri;
+  std::queue<std::string> client_rx;
+
+  auto context = foxglove::Context::create();
+  auto server =
+    startServer(context, [&](std::string_view uri, foxglove::FetchAssetResponder&& responder) {
+      std::scoped_lock lock{mutex};
+      last_uri.emplace(uri);
+      std::move(responder).respondError("oh no");
+      cv.notify_one();
+    });
+
+  WebSocketClient client;
+  client.inner().set_open_handler([&](const auto& hdl) {
+    std::scoped_lock lock{mutex};
+    connection_opened = true;
+    cv.notify_one();
+  });
+  client.inner().set_message_handler(
+    [&](const websocketpp::connection_hdl&, const WebSocketMessage& msg) {
+      std::scoped_lock lock{mutex};
+      client_rx.push(msg->get_payload());
+      cv.notify_one();
+    }
+  );
+  client.start(server.port());
+
+  // Wait for the connection to be opened.
+  {
+    std::unique_lock lock{mutex};
+    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
+      return connection_opened;
+    });
+    REQUIRE(wait_result);
+  }
+
+  // Wait for the the serverInfo message.
+  std::string rx_payload;
+  {
+    std::unique_lock lock{mutex};
+    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
+      return !client_rx.empty();
+    });
+    REQUIRE(wait_result);
+    rx_payload = client_rx.front();
+    client_rx.pop();
+  }
+  Json parsed = Json::parse(rx_payload);
+  REQUIRE(parsed.contains("op"));
+  REQUIRE(parsed["op"] == "serverInfo");
+  REQUIRE(parsed.contains("capabilities"));
+  auto capabilities = parsed["capabilities"].get<std::vector<std::string>>();
+  REQUIRE(capabilities.size() == 1);
+  REQUIRE(capabilities[0] == "assets");
+
+  // Make a fetch asset call.
+  client.send(R"({
+      "op": "fetchAsset",
+      "uri": "package://foo/robot.urdf",
+      "requestId": 42
+  })");
+
+  // Wait for the server to process the callback.
+  {
+    std::unique_lock lock{mutex};
+    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
+      if (last_uri.has_value()) {
+        REQUIRE(last_uri == "package://foo/robot.urdf");
+        last_uri.reset();
+        return true;
+      }
+      return false;
+    });
+    REQUIRE(wait_result);
+  }
+
+  // Wait for the response.
+  {
+    std::unique_lock lock{mutex};
+    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
+      return !client_rx.empty();
+    });
+    REQUIRE(wait_result);
+    rx_payload = client_rx.front();
+    client_rx.pop();
+  }
+  validateFetchAssetErrorResponse(rx_payload, 42, "oh no"sv);
 
   REQUIRE(server.stop() == foxglove::FoxgloveError::Ok);
 }
