@@ -14,7 +14,9 @@ pub fn derive_loggable(input: TokenStream) -> TokenStream {
     match &input.data {
         Data::Enum(data) => derive_enum_impl(&input, data),
         Data::Struct(_) => derive_struct_impl(input),
-        _ => panic!("Encode can only be used with enums or structs"),
+        _ => TokenStream::from(quote! {
+            compile_error!("Encode can only be used with enums or structs");
+        }),
     }
 }
 
@@ -97,7 +99,11 @@ fn derive_struct_impl(input: DeriveInput) -> TokenStream {
     let fields = match &input.data {
         Data::Struct(data) => match &data.fields {
             Fields::Named(fields) => &fields.named,
-            _ => panic!("Only named fields are supported"),
+            _ => {
+                return TokenStream::from(quote! {
+                    compile_error!("Only named struct fields are supported");
+                })
+            }
         },
         _ => unreachable!(),
     };
