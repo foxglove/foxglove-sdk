@@ -8,20 +8,24 @@ mod foxglove {}
 
 #[derive(Debug, Clone, Copy, Encode)]
 enum TestEnum {
-    #[allow(dead_code)]
-    ValueOne,
-    Value2,
+    ValueNeg = -10,
+    ValueOne = 1,
+    Value2 = 2,
 }
 
 #[derive(Encode)]
 struct TestMessage {
-    val: TestEnum,
+    a: TestEnum,
+    b: TestEnum,
+    c: TestEnum,
 }
 
 #[test]
 fn test_single_enum_field_serialization() {
     let test_struct = TestMessage {
-        val: TestEnum::Value2,
+        a: TestEnum::ValueNeg,
+        b: TestEnum::Value2,
+        c: TestEnum::ValueOne,
     };
 
     let mut buf = BytesMut::new();
@@ -37,23 +41,20 @@ fn test_single_enum_field_serialization() {
     let deserialized_message = DynamicMessage::decode(message_descriptor.clone(), buf.as_ref())
         .expect("Failed to deserialize");
 
-    let field_descriptor = message_descriptor
-        .get_field_by_name("val")
-        .expect("Field 'val' not found");
-    assert_eq!(field_descriptor.name(), "val");
+    let fields = [("a", -10), ("b", 2), ("c", 1)];
+    for (field_name, expected_value) in fields {
+        let field_descriptor = message_descriptor
+            .get_field_by_name(field_name)
+            .unwrap_or_else(|| panic!("Field '{}' not found", field_name));
 
-    let field_value = deserialized_message.get_field(&field_descriptor);
-    println!("Field value type: {:?}", field_value);
+        let field_value = deserialized_message.get_field(&field_descriptor);
 
-    // Try to access the value as an enum number
-    if let Some(value) = field_value.as_enum_number() {
-        println!("Value as enum number: {}", value);
-        assert_eq!(value, 1); // MessageLevel::Info should be encoded as 1
-    } else if let Some(value) = field_value.as_i32() {
-        println!("Value as i32: {}", value);
-        assert_eq!(value, 1); // MessageLevel::Info should be encoded as 1
-    } else {
-        panic!("Couldn't access field value as enum number or i32");
+        // Try to access the value as an enum number
+        if let Some(value) = field_value.as_enum_number() {
+            assert_eq!(value, expected_value);
+        } else {
+            panic!("Couldn't access field value as enum number");
+        }
     }
 }
 
