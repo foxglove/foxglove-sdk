@@ -34,6 +34,12 @@ struct TestMessageVectorOfStructs {
     items: Vec<InnerTestMessage>,
 }
 
+#[derive(Encode, Debug)]
+struct RepeatedTestMessage {
+    a: InnerTestMessage,
+    b: InnerTestMessage,
+}
+
 #[test]
 fn test_struct_field_serialization() {
     let test_struct = TestMessage {
@@ -327,6 +333,52 @@ fn test_nested_struct_serialization() {
         "foo",
         "Name field has wrong value"
     );
+}
+
+#[test]
+fn test_repeated_struct_serialization() {
+    let repeated_msg = RepeatedTestMessage {
+        a: InnerTestMessage {
+            number: 42,
+            name: "foo".to_string(),
+        },
+        b: InnerTestMessage {
+            number: 43,
+            name: "bar".to_string(),
+        },
+    };
+    let mut buf = BytesMut::new();
+    repeated_msg.encode(&mut buf).expect("Failed to encode");
+
+    let schema = RepeatedTestMessage::get_schema().expect("Failed to get schema");
+    assert_eq!(schema.encoding, "protobuf");
+    assert_eq!(schema.name, "repeatedtestmessage.RepeatedTestMessage");
+
+    let message_descriptor = get_message_descriptor(&schema);
+
+    let deserialized_message = DynamicMessage::decode(message_descriptor.clone(), buf.as_ref())
+        .expect("Failed to deserialize");
+
+    let fields = [("a", 42), ("b", 43)];
+    for (field_name, expected_value) in fields {
+        let field = message_descriptor
+            .get_field_by_name(field_name)
+            .unwrap_or_else(|| panic!("Field '{}' not found", field_name));
+
+        let field = deserialized_message.get_field(&field);
+        let inner_msg = field.as_message().expect("Expected a message");
+
+        let desc_field = inner_msg
+            .descriptor()
+            .get_field_by_name("number")
+            .expect("Field 'number' not found");
+        let desc_value = inner_msg.get_field(&desc_field);
+        assert_eq!(
+            desc_value.as_u64().unwrap(),
+            expected_value,
+            "Number field has wrong value"
+        );
+    }
 }
 
 fn get_message_descriptor(schema: &Schema) -> MessageDescriptor {

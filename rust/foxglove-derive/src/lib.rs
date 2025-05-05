@@ -2,6 +2,7 @@ extern crate proc_macro;
 
 use proc_macro::TokenStream;
 use quote::quote;
+use std::collections::HashMap;
 use syn::{
     parse_macro_input, parse_quote, Data, DataEnum, DeriveInput, Fields, GenericParam, Generics,
 };
@@ -26,12 +27,15 @@ fn derive_enum_impl(input: &DeriveInput, data: &DataEnum) -> TokenStream {
 
     // Generate variant name and number pairs for enum descriptor
     let variant_descriptors = variants.iter().enumerate().map(|(i, v)| {
-        let variant_name = v.ident.to_string();
+        let variant_ident = &v.ident;
+        let variant_name = variant_ident.to_string();
+
         let variant_value = i as i32;
+
         quote! {
             let mut value = ::foxglove::prost_types::EnumValueDescriptorProto::default();
             value.name = Some(String::from(#variant_name));
-            value.number = Some(#variant_value);
+            value.number = Some(#variant_value as i32);
             enum_desc.value.push(value);
         }
     });
@@ -110,21 +114,24 @@ fn derive_struct_impl(input: DeriveInput) -> TokenStream {
 
     let mut field_defs = Vec::new();
     let mut field_encoders = Vec::new();
-    let mut enum_defs = Vec::new();
-    let mut message_defs = Vec::new();
+
+    // If a struct nests multiple values of the same enum or message type, we
+    // only define them once, based on name.
+    let mut enum_defs: HashMap<&syn::Type, proc_macro2::TokenStream> = HashMap::new();
+    let mut message_defs: HashMap<&syn::Type, proc_macro2::TokenStream> = HashMap::new();
 
     for (i, field) in fields.iter().enumerate() {
         let field_name = &field.ident.as_ref().unwrap();
         let field_type = &field.ty;
         let field_number = i as u32 + 1;
 
-        enum_defs.push(quote! {
+        enum_defs.entry(field_type).or_insert_with(|| quote! {
             if let Some(enum_desc) = <#field_type as ::foxglove::ProtobufField>::enum_descriptor() {
                 enum_type.push(enum_desc);
             }
         });
 
-        message_defs.push(quote! {
+        message_defs.entry(field_type).or_insert_with(|| quote! {
             if let Some(message_descriptor) = <#field_type as ::foxglove::ProtobufField>::message_descriptor() {
                 nested_type.push(message_descriptor);
             }
@@ -151,6 +158,9 @@ fn derive_struct_impl(input: DeriveInput) -> TokenStream {
             ::foxglove::ProtobufField::write_tagged(&self.#field_name, #field_number, buf);
         });
     }
+
+    let enum_defs = enum_defs.into_values().collect::<Vec<_>>();
+    let message_defs = message_defs.into_values().collect::<Vec<_>>();
 
     // Generate the output tokens
     let expanded = quote! {

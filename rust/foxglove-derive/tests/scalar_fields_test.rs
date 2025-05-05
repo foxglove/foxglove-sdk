@@ -26,6 +26,12 @@ struct TestMessagePrimitives {
 }
 
 #[derive(Encode)]
+struct RepeatedPrimitive {
+    a: u32,
+    b: u32,
+}
+
+#[derive(Encode)]
 struct TestMessageBytes {
     bytes: bytes::Bytes,
 }
@@ -128,6 +134,32 @@ fn test_primitive_serialization() {
     let bool_value = field_value.as_bool().expect("Field value is not a bool");
     assert_eq!(field_descriptor.name(), "bool");
     assert!(bool_value);
+}
+
+#[test]
+fn test_repeated_primitive_serialization() {
+    let test_struct = RepeatedPrimitive { a: 1, b: 2 };
+    let mut buf = BytesMut::new();
+    test_struct.encode(&mut buf).expect("Failed to encode");
+
+    let schema = RepeatedPrimitive::get_schema().expect("Failed to get schema");
+    assert_eq!(schema.encoding, "protobuf");
+    assert_eq!(schema.name, "repeatedprimitive.RepeatedPrimitive");
+
+    let message_descriptor = get_message_descriptor(&schema);
+    let deserialized_message = DynamicMessage::decode(message_descriptor.clone(), buf.as_ref())
+        .expect("Failed to deserialize");
+
+    let fields = [("a", 1), ("b", 2)];
+    for (field_name, expected_value) in fields {
+        let field_descriptor = message_descriptor
+            .get_field_by_name(field_name)
+            .unwrap_or_else(|| panic!("Field '{}' not found", field_name));
+        let field_value = deserialized_message.get_field(&field_descriptor);
+        let number_value = field_value.as_u32().expect("Field value is not a u32");
+        assert_eq!(field_descriptor.name(), field_name);
+        assert_eq!(number_value, expected_value);
+    }
 }
 
 #[test]
