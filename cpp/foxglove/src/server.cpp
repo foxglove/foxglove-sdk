@@ -163,7 +163,11 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
           for (auto i = 0; i < names_len; ++i) {
             names.emplace_back(c_names[i].data, c_names[i].len);
           }
-          (static_cast<const WebSocketServerCallbacks*>(context))->onParametersSubscribe(names);
+          try {
+            (static_cast<const WebSocketServerCallbacks*>(context))->onParametersSubscribe(names);
+          } catch (const std::exception& exc) {
+            std::cerr << "onParametersSubscribe callback failed: " << exc.what() << "\n";
+          }
         };
     }
     if (callbacks->onParametersUnsubscribe) {
@@ -174,7 +178,11 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
           for (auto i = 0; i < names_len; ++i) {
             names.emplace_back(c_names[i].data, c_names[i].len);
           }
-          (static_cast<const WebSocketServerCallbacks*>(context))->onParametersUnsubscribe(names);
+          try {
+            (static_cast<const WebSocketServerCallbacks*>(context))->onParametersUnsubscribe(names);
+          } catch (const std::exception& exc) {
+            std::cerr << "onParametersUnsubscribe callback failed: " << exc.what() << "\n";
+          }
         };
     }
     if (callbacks->onConnectionGraphSubscribe) {
