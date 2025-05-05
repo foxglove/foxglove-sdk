@@ -32,7 +32,7 @@
     "tslib": "^2"
   },
   "devDependencies": {
-    "@foxglove/rosmsg-msgs-common": "^3.0.0",
+    "@foxglove/rosmsg-msgs-common": "^3.2.2",
     "rimraf": "^6.0.1",
     "typescript": "5.7.3"
   }
