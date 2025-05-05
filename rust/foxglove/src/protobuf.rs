@@ -1,3 +1,4 @@
+//! Interfaces for working with Protocol Buffers.
 use prost_types::field_descriptor_proto::Type as ProstFieldType;
 use tracing::warn;
 

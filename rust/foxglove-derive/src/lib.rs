@@ -42,7 +42,7 @@ fn derive_enum_impl(input: &DeriveInput, data: &DataEnum) -> TokenStream {
 
     // Generate implementation
     let expanded = quote! {
-        impl ::foxglove::ProtobufField for #name {
+        impl ::foxglove::protobuf::ProtobufField for #name {
             fn field_type() -> ::foxglove::prost_types::field_descriptor_proto::Type {
                 ::foxglove::prost_types::field_descriptor_proto::Type::Enum
             }
@@ -52,7 +52,7 @@ fn derive_enum_impl(input: &DeriveInput, data: &DataEnum) -> TokenStream {
             }
 
             fn write(&self, buf: &mut impl ::foxglove::bytes::BufMut) {
-                ::foxglove::encode_varint(*self as u64, buf);
+                ::foxglove::protobuf::encode_varint(*self as u64, buf);
             }
 
             fn enum_descriptor() -> Option<::foxglove::prost_types::EnumDescriptorProto> {
@@ -79,7 +79,7 @@ fn add_protobuf_bound(mut generics: Generics) -> Generics {
         if let GenericParam::Type(ref mut type_param) = *param {
             type_param
                 .bounds
-                .push(parse_quote!(::foxglove::ProtobufField));
+                .push(parse_quote!(::foxglove::protobuf::ProtobufField));
         }
     }
     generics
@@ -121,13 +121,13 @@ fn derive_struct_impl(input: DeriveInput) -> TokenStream {
         let field_number = i as u32 + 1;
 
         enum_defs.entry(field_type).or_insert_with(|| quote! {
-            if let Some(enum_desc) = <#field_type as ::foxglove::ProtobufField>::enum_descriptor() {
+            if let Some(enum_desc) = <#field_type as ::foxglove::protobuf::ProtobufField>::enum_descriptor() {
                 enum_type.push(enum_desc);
             }
         });
 
         message_defs.entry(field_type).or_insert_with(|| quote! {
-            if let Some(message_descriptor) = <#field_type as ::foxglove::ProtobufField>::message_descriptor() {
+            if let Some(message_descriptor) = <#field_type as ::foxglove::protobuf::ProtobufField>::message_descriptor() {
                 nested_type.push(message_descriptor);
             }
         });
@@ -137,20 +137,20 @@ fn derive_struct_impl(input: DeriveInput) -> TokenStream {
             field.name = Some(String::from(stringify!(#field_name)));
             field.number = Some(#field_number as i32);
 
-            if <#field_type as ::foxglove::ProtobufField>::repeating() {
+            if <#field_type as ::foxglove::protobuf::ProtobufField>::repeating() {
                 field.label = Some(::foxglove::prost_types::field_descriptor_proto::Label::Repeated as i32);
             } else {
                 field.label = Some(::foxglove::prost_types::field_descriptor_proto::Label::Required as i32);
             }
-            field.r#type = Some(<#field_type as ::foxglove::ProtobufField>::field_type() as i32);
+            field.r#type = Some(<#field_type as ::foxglove::protobuf::ProtobufField>::field_type() as i32);
 
-            field.type_name = <#field_type as ::foxglove::ProtobufField>::type_name();
+            field.type_name = <#field_type as ::foxglove::protobuf::ProtobufField>::type_name();
 
             message.field.push(field);
         });
 
         field_encoders.push(quote! {
-            ::foxglove::ProtobufField::write_tagged(&self.#field_name, #field_number, buf);
+            ::foxglove::protobuf::ProtobufField::write_tagged(&self.#field_name, #field_number, buf);
         });
     }
 
@@ -160,7 +160,7 @@ fn derive_struct_impl(input: DeriveInput) -> TokenStream {
     // Generate the output tokens
     let expanded = quote! {
         #[automatically_derived]
-        impl #impl_generics ::foxglove::ProtobufField for #name #ty_generics #where_clause {
+        impl #impl_generics ::foxglove::protobuf::ProtobufField for #name #ty_generics #where_clause {
             fn field_type() -> ::foxglove::prost_types::field_descriptor_proto::Type {
                 ::foxglove::prost_types::field_descriptor_proto::Type::Message
             }
@@ -183,7 +183,7 @@ fn derive_struct_impl(input: DeriveInput) -> TokenStream {
 
                 // Write the length as a varint
                 let len = buf.len();
-                ::foxglove::encode_varint(len as u64, out);
+                ::foxglove::protobuf::encode_varint(len as u64, out);
 
                 if buf.remaining_mut() < len {
                     return;
@@ -234,13 +234,13 @@ fn derive_struct_impl(input: DeriveInput) -> TokenStream {
                         ..Default::default()
                     };
 
-                    if let Some(message_descriptor) = <#name #ty_generics as ::foxglove::ProtobufField>::message_descriptor() {
+                    if let Some(message_descriptor) = <#name #ty_generics as ::foxglove::protobuf::ProtobufField>::message_descriptor() {
                         file.message_type.push(message_descriptor);
                     }
 
                     file_descriptor_set.file.push(file);
 
-                    let bytes = ::foxglove::prost_file_descriptor_set_to_vec(&file_descriptor_set);
+                    let bytes = ::foxglove::protobuf::prost_file_descriptor_set_to_vec(&file_descriptor_set);
 
                     Some(::foxglove::Schema {
                         name: String::from(#full_name),
