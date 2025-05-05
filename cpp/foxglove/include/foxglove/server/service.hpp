@@ -101,7 +101,7 @@ private:
  *
  * This callback is invoked from the client's main poll loop and must not block.
  * If blocking or long-running behavior is required, the implementation should
- * use use a thread to complete the request asynchronously.
+ * return immediately and handle the request asynchronously.
  *
  * The `responder` represents an unfulfilled response. The implementation must
  * eventually call either `respondOk` or `respondError`, exactly once, in order

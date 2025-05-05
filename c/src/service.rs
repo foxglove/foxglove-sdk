@@ -155,6 +155,10 @@ impl Handler for ServiceHandler {
 /// The service must be registered with a websocket server using `foxglove_server_add_service`, or
 /// freed with `foxglove_service_free`.
 ///
+/// The callback is invoked from the client's main poll loop and must not block. If blocking or
+/// long-running behavior is required, the implementation should return immediately and handle the
+/// request asynchronously.
+///
 /// The `request` structure provided to the callback is only valid for the duration of the
 /// callback. If the implementation wishes to retain its data for a longer lifetime, it must copy
 /// data out of it.
