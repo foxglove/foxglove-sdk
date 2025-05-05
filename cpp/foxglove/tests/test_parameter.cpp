@@ -147,11 +147,11 @@ TEST_CASE("Parameter construction and access") {
 
     REQUIRE(param.isArray<foxglove::ParameterValueView>());
     auto generic_array = param.getArray<foxglove::ParameterValueView>();
-    REQUIRE(generic_array.size() == 0);
+    REQUIRE(generic_array.empty());
 
     REQUIRE(param.is<foxglove::ParameterValueView::Array>());
     generic_array = param.get<foxglove::ParameterValueView::Array>();
-    REQUIRE(generic_array.size() == 0);
+    REQUIRE(generic_array.empty());
   }
 
   SECTION("parameter with dict value") {
