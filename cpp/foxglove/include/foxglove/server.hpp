@@ -73,8 +73,8 @@ struct WebSocketServerCallbacks {
   /// This function should return the named parameters, or all parameters if
   /// `paramNames` is empty.
   std::function<std::vector<Parameter>(
-    uint32_t clientId, std::optional<std::string_view> requestId,
-    const std::vector<std::string_view>& paramNames
+    uint32_t client_id, std::optional<std::string_view> request_id,
+    const std::vector<std::string_view>& param_names
   )>
     onGetParameters;
 
@@ -85,7 +85,7 @@ struct WebSocketServerCallbacks {
   /// This function should return the updated parameters. All clients subscribed
   /// to updates for the returned parameters will be notified.
   std::function<std::vector<Parameter>(
-    uint32_t clientId, std::optional<std::string_view> requestId,
+    uint32_t client_id, std::optional<std::string_view> request_id,
     const std::vector<ParameterView>& params
   )>
     onSetParameters;

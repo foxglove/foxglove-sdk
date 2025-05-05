@@ -16,7 +16,7 @@
 using Catch::Matchers::ContainsSubstring;
 using Catch::Matchers::Equals;
 
-using json = nlohmann::json;
+using Json = nlohmann::json;
 
 using WebSocketClientInner = websocketpp::client<websocketpp::config::asio_client>;
 using WebSocketConnection =
@@ -242,7 +242,7 @@ TEST_CASE("Subscribe and unsubscribe callbacks") {
   cv.wait_for(lock, std::chrono::seconds(1), [&] {
     return !unsubscribe_calls.empty();
   });
-  REQUIRE_THAT(unsubscribeCalls, Equals(std::vector<uint64_t>{1}));
+  REQUIRE_THAT(unsubscribe_calls, Equals(std::vector<uint64_t>{1}));
 }
 
 TEST_CASE("Capability enums") {
@@ -373,12 +373,12 @@ TEST_CASE("Parameter callbacks") {
   std::mutex mutex;
   std::condition_variable cv;
   // the following variables are protected by the mutex:
-  bool connectionOpened = false;
+  bool connection_opened = false;
   std::optional<std::pair<std::optional<std::string>, std::vector<std::string>>>
-    serverGetParameters;
+    server_get_parameters;
   std::optional<std::pair<std::optional<std::string>, std::vector<foxglove::Parameter>>>
-    serverSetParameters;
-  std::queue<std::string> clientRx;
+    server_set_parameters;
+  std::queue<std::string> client_rx;
 
   foxglove::WebSocketServerOptions options;
   options.name = "unit-test";
@@ -386,22 +386,22 @@ TEST_CASE("Parameter callbacks") {
   options.port = 0;
   options.capabilities = foxglove::WebSocketServerCapabilities::Parameters;
   options.callbacks.onGetParameters = [&](
-                                        uint32_t clientId,
+                                        uint32_t client_id,
                                         std::optional<std::string_view>
-                                          requestId,
-                                        const std::vector<std::string_view>& paramNames
+                                          request_id,
+                                        const std::vector<std::string_view>& param_names
                                       ) -> std::vector<foxglove::Parameter> {
     std::scoped_lock lock{mutex};
-    std::optional<std::string> ownedRequestId;
-    if (requestId.has_value()) {
-      ownedRequestId.emplace(*requestId);
+    std::optional<std::string> owned_request_id;
+    if (request_id.has_value()) {
+      owned_request_id.emplace(*request_id);
     }
-    std::vector<std::string> ownedParamNames;
-    ownedParamNames.reserve(paramNames.size());
-    for (const auto& name : paramNames) {
-      ownedParamNames.emplace_back(name);
+    std::vector<std::string> owned_param_names;
+    owned_param_names.reserve(param_names.size());
+    for (const auto& name : param_names) {
+      owned_param_names.emplace_back(name);
     }
-    serverGetParameters = std::make_pair(ownedRequestId, ownedParamNames);
+    server_get_parameters = std::make_pair(owned_request_id, owned_param_names);
     cv.notify_one();
     std::vector<foxglove::Parameter> result;
     result.emplace_back("foo");
@@ -410,22 +410,22 @@ TEST_CASE("Parameter callbacks") {
     return result;
   };
   options.callbacks.onSetParameters = [&](
-                                        uint32_t clientId,
+                                        uint32_t client_id,
                                         std::optional<std::string_view>
-                                          requestId,
+                                          request_id,
                                         const std::vector<foxglove::ParameterView>& params
                                       ) -> std::vector<foxglove::Parameter> {
     std::scoped_lock lock{mutex};
-    std::optional<std::string> ownedRequestId;
-    if (requestId.has_value()) {
-      ownedRequestId.emplace(*requestId);
+    std::optional<std::string> owned_request_id;
+    if (request_id.has_value()) {
+      owned_request_id.emplace(*request_id);
     }
-    std::vector<foxglove::Parameter> ownedParams;
-    ownedParams.reserve(params.size());
+    std::vector<foxglove::Parameter> owned_params;
+    owned_params.reserve(params.size());
     for (const auto& param : params) {
-      ownedParams.emplace_back(std::move(param.clone()));
+      owned_params.emplace_back(std::move(param.clone()));
     }
-    serverSetParameters = std::make_pair(ownedRequestId, std::move(ownedParams));
+    server_set_parameters = std::make_pair(owned_request_id, std::move(owned_params));
     cv.notify_one();
     std::array<uint8_t, 6> data{115, 101, 99, 114, 101, 116};
     std::vector<foxglove::Parameter> result;
@@ -434,21 +434,21 @@ TEST_CASE("Parameter callbacks") {
     result.emplace_back("bytes", data.data(), data.size());
     return result;
   };
-  auto serverResult = foxglove::WebSocketServer::create(std::move(options));
-  REQUIRE(serverResult.has_value());
-  auto& server = serverResult.value();
+  auto server_result = foxglove::WebSocketServer::create(std::move(options));
+  REQUIRE(server_result.has_value());
+  auto& server = server_result.value();
   REQUIRE(server.port() != 0);
 
   WebSocketClient client;
   client.inner().set_open_handler([&](const auto& hdl) {
     std::scoped_lock lock{mutex};
-    connectionOpened = true;
+    connection_opened = true;
     cv.notify_one();
   });
   client.inner().set_message_handler(
     [&](const websocketpp::connection_hdl&, const WebSocketMessage& msg) {
       std::scoped_lock lock{mutex};
-      clientRx.push(msg->get_payload());
+      client_rx.push(msg->get_payload());
       cv.notify_one();
     }
   );
@@ -457,24 +457,24 @@ TEST_CASE("Parameter callbacks") {
   // Wait for the connection to be opened.
   {
     std::unique_lock lock{mutex};
-    auto waitResult = cv.wait_for(lock, std::chrono::seconds(1), [&] {
-      return connectionOpened;
+    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
+      return connection_opened;
     });
-    REQUIRE(waitResult);
+    REQUIRE(wait_result);
   }
 
   // Wait for the the serverInfo message.
   std::string payload;
   {
     std::unique_lock lock{mutex};
-    auto waitResult = cv.wait_for(lock, std::chrono::seconds(1), [&] {
-      return !clientRx.empty();
+    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
+      return !client_rx.empty();
     });
-    REQUIRE(waitResult);
-    payload = clientRx.front();
-    clientRx.pop();
+    REQUIRE(wait_result);
+    payload = client_rx.front();
+    client_rx.pop();
   }
-  json parsed = json::parse(payload);
+  Json parsed = Json::parse(payload);
   REQUIRE(parsed.contains("op"));
   REQUIRE(parsed["op"] == "serverInfo");
 
@@ -490,36 +490,36 @@ TEST_CASE("Parameter callbacks") {
   // Wait for the server to process the callback.
   {
     std::unique_lock lock{mutex};
-    auto waitResult = cv.wait_for(lock, std::chrono::seconds(1), [&] {
-      if (serverGetParameters.has_value()) {
-        auto requestId = (*serverGetParameters).first;
-        auto paramNames = (*serverGetParameters).second;
-        REQUIRE(requestId.has_value());
-        REQUIRE(*requestId == "get-request");
-        REQUIRE(paramNames.size() == 4);
-        REQUIRE(paramNames[0] == "foo");
-        REQUIRE(paramNames[1] == "bar");
-        REQUIRE(paramNames[2] == "baz");
-        REQUIRE(paramNames[3] == "xxx");
+    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
+      if (server_get_parameters.has_value()) {
+        auto request_id = (*server_get_parameters).first;
+        auto param_names = (*server_get_parameters).second;
+        REQUIRE(request_id.has_value());
+        REQUIRE(*request_id == "get-request");
+        REQUIRE(param_names.size() == 4);
+        REQUIRE(param_names[0] == "foo");
+        REQUIRE(param_names[1] == "bar");
+        REQUIRE(param_names[2] == "baz");
+        REQUIRE(param_names[3] == "xxx");
         return true;
       }
       return false;
     });
-    REQUIRE(waitResult);
+    REQUIRE(wait_result);
   }
 
   // Wait for the response and validate it.
   {
     std::unique_lock lock{mutex};
-    auto waitResult = cv.wait_for(lock, std::chrono::seconds(1), [&] {
-      return !clientRx.empty();
+    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
+      return !client_rx.empty();
     });
-    REQUIRE(waitResult);
-    payload = clientRx.front();
-    clientRx.pop();
+    REQUIRE(wait_result);
+    payload = client_rx.front();
+    client_rx.pop();
   }
-  parsed = json::parse(payload);
-  auto expected = json::parse(R"({
+  parsed = Json::parse(payload);
+  auto expected = Json::parse(R"({
       "op": "parameterValues",
       "id": "get-request",
       "parameters": [
@@ -546,9 +546,9 @@ TEST_CASE("Parameter callbacks") {
   // Wait for the server to process the callback.
   {
     std::unique_lock lock{mutex};
-    auto waitResult = cv.wait_for(lock, std::chrono::seconds(1), [&] {
-      if (serverSetParameters.has_value()) {
-        auto [requestId, params] = *std::move(serverSetParameters);
+    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
+      if (server_set_parameters.has_value()) {
+        auto [requestId, params] = *std::move(server_set_parameters);
         REQUIRE(requestId.has_value());
         REQUIRE(*requestId == "set-request");
         REQUIRE(params.size() == 3);
@@ -573,21 +573,21 @@ TEST_CASE("Parameter callbacks") {
       }
       return false;
     });
-    REQUIRE(waitResult);
+    REQUIRE(wait_result);
   }
 
   // Wait for the response and validate it.
   {
     std::unique_lock lock{mutex};
-    auto waitResult = cv.wait_for(lock, std::chrono::seconds(1), [&] {
-      return !clientRx.empty();
+    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
+      return !client_rx.empty();
     });
-    REQUIRE(waitResult);
-    payload = clientRx.front();
-    clientRx.pop();
+    REQUIRE(wait_result);
+    payload = client_rx.front();
+    client_rx.pop();
   }
-  parsed = json::parse(payload);
-  expected = json::parse(R"({
+  parsed = Json::parse(payload);
+  expected = Json::parse(R"({
       "op": "parameterValues",
       "id": "set-request",
       "parameters": [

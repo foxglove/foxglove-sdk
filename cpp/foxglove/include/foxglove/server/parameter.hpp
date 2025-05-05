@@ -2,6 +2,7 @@
 
 #include <foxglove/error.hpp>
 
+#include <algorithm>
 #include <cstdint>
 #include <map>
 #include <memory>
@@ -55,9 +56,14 @@ public:
 
   // Value type checker.
   template<typename T>
-  [[nodiscard]] bool is() const {
-    auto value = this->value();
-    return std::holds_alternative<T>(value);
+  [[nodiscard]] bool is() const noexcept {
+    try {
+      auto value = this->value();
+      return std::holds_alternative<T>(value);
+    } catch (...) {
+      // Unknown value tag.
+      return false;
+    }
   }
 
   // Value extractor.
@@ -94,9 +100,9 @@ private:
   friend class ParameterView;
   friend class ParameterValue;
 
-  const foxglove_parameter_value* _impl;
+  const foxglove_parameter_value* impl_;
   explicit ParameterValueView(const foxglove_parameter_value* ptr)
-      : _impl(ptr) {}
+      : impl_(ptr) {}
 };
 
 /**
@@ -151,10 +157,10 @@ private:
     void operator()(foxglove_parameter_value* ptr) const noexcept;
   };
 
-  std::unique_ptr<foxglove_parameter_value, Deleter> _impl;
+  std::unique_ptr<foxglove_parameter_value, Deleter> impl_;
 
   // Constructor from raw pointer.
-  explicit ParameterValue(foxglove_parameter_value*);
+  explicit ParameterValue(foxglove_parameter_value* ptr);
 
   // Releases ownership of the underlying storage.
   [[nodiscard]] foxglove_parameter_value* release() noexcept;
@@ -182,26 +188,49 @@ public:
 
   // Value type checkers.
   template<typename T>
-  [[nodiscard]] bool is() const {
-    return this->hasValue() && this->value()->is<T>();
+  [[nodiscard]] bool is() const noexcept {
+    auto value = this->value();
+    return value.has_value() && value->is<T>();
   }
   template<>
-  [[nodiscard]] bool is<std::string>() const {
-    return this->hasValue() && this->type() != ParameterType::ByteArray &&
-           this->value()->is<std::string>();
+  [[nodiscard]] bool is<std::string>() const noexcept {
+    auto value = this->value();
+    return value.has_value() && value->is<std::string>() &&
+           this->type() != ParameterType::ByteArray;
   }
-  [[nodiscard]] bool isArray() const noexcept {
-    return this->hasValue() && this->value()->is<ParameterValueView::Array>();
+  template<>
+  [[nodiscard]] bool is<std::vector<std::byte>>() const noexcept {
+    auto value = this->value();
+    return value.has_value() && value->is<std::string>() &&
+           this->type() == ParameterType::ByteArray;
   }
-  [[nodiscard]] bool isDict() const noexcept {
-    return this->hasValue() && this->value()->is<ParameterValueView::Dict>();
-  }
-  [[nodiscard]] bool isFloat64Array() const noexcept {
-    return this->hasValue() && this->type() == ParameterType::Float64Array && this->isArray();
+  template<>
+  [[nodiscard]] bool is<std::vector<double>>() const noexcept {
+    if (!this->isArray()) {
+      return false;
+    }
+    try {
+      const auto& arr = this->get<ParameterValueView::Array>();
+      if (arr.empty()) {
+        return this->type() == ParameterType::Float64Array;
+      }
+      return std::all_of(arr.begin(), arr.end(), [](const ParameterValueView& elem) noexcept {
+        return elem.is<double>();
+      });
+    } catch (...) {
+      return false;
+    }
   }
   [[nodiscard]] bool isByteArray() const noexcept {
-    return this->hasValue() && this->type() == ParameterType::ByteArray &&
-           this->value()->is<std::string>();
+    return this->is<std::vector<std::byte>>();
+  }
+  [[nodiscard]] bool isArray() const noexcept {
+    auto value = this->value();
+    return value.has_value() && value->is<ParameterValueView::Array>();
+  }
+  [[nodiscard]] bool isDict() const noexcept {
+    auto value = this->value();
+    return value.has_value() && value->is<ParameterValueView::Dict>();
   }
 
   // Value extractor.
@@ -248,15 +277,17 @@ public:
   }
 
   // Value byte array extractor.
+  //
+  // This may fail
   [[nodiscard]] FoxgloveResult<std::vector<std::byte>> getByteArray() const;
 
 private:
   friend class Parameter;
   friend class ParameterArrayView;
 
-  const foxglove_parameter* _impl;
+  const foxglove_parameter* impl_;
   explicit ParameterView(const foxglove_parameter* ptr)
-      : _impl(ptr) {}
+      : impl_(ptr) {}
 };
 
 /**
@@ -264,7 +295,7 @@ private:
  */
 class Parameter final {
 public:
-  explicit Parameter(std::string_view);
+  explicit Parameter(std::string_view name);
   explicit Parameter(std::string_view name, double value);
   explicit Parameter(std::string_view name, bool value);
   explicit Parameter(std::string_view name, std::string_view value);
@@ -275,7 +306,7 @@ public:
       : Parameter(name, reinterpret_cast<const uint8_t*>(bytes.data()), bytes.size()) {}
   explicit Parameter(std::string_view name, const std::vector<double>& values);
   explicit Parameter(std::string_view name, std::map<std::string, ParameterValue> values);
-  explicit Parameter(std::string_view name, ParameterType, ParameterValue&& value);
+  explicit Parameter(std::string_view name, ParameterType type, ParameterValue&& value);
 
   // Default destructor & move, disable copy.
   ~Parameter() = default;
@@ -315,9 +346,6 @@ public:
   [[nodiscard]] bool isDict() const noexcept {
     return this->view().isDict();
   }
-  [[nodiscard]] bool isFloat64Array() const noexcept {
-    return this->view().isFloat64Array();
-  }
   [[nodiscard]] bool isByteArray() const noexcept {
     return this->view().isByteArray();
   }
@@ -353,7 +381,7 @@ private:
     void operator()(foxglove_parameter* ptr) const noexcept;
   };
 
-  std::unique_ptr<foxglove_parameter, Deleter> _impl;
+  std::unique_ptr<foxglove_parameter, Deleter> impl_;
 
   explicit Parameter(foxglove_parameter* param);
 
@@ -370,12 +398,12 @@ private:
  */
 class ParameterArrayView final {
 public:
-  explicit ParameterArrayView(const foxglove_parameter_array*);
+  explicit ParameterArrayView(const foxglove_parameter_array* ptr);
 
   [[nodiscard]] std::vector<ParameterView> parameters() const;
 
 private:
-  const foxglove_parameter_array* _impl;
+  const foxglove_parameter_array* impl_;
 };
 
 /**
@@ -383,7 +411,7 @@ private:
  */
 class ParameterArray final {
 public:
-  explicit ParameterArray(std::vector<Parameter>&&);
+  explicit ParameterArray(std::vector<Parameter>&& params);
 
   // Default destructor & move, disable copy.
   ~ParameterArray() = default;
@@ -406,7 +434,7 @@ private:
     void operator()(foxglove_parameter_array* ptr) const noexcept;
   };
 
-  std::unique_ptr<foxglove_parameter_array, Deleter> _impl;
+  std::unique_ptr<foxglove_parameter_array, Deleter> impl_;
 };
 
 }  // namespace foxglove

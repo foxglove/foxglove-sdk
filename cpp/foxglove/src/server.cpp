@@ -81,19 +81,19 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
                                         const void* context,
                                         uint32_t client_id,
                                         // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
-                                        const struct foxglove_string* _request_id,
-                                        const struct foxglove_string* _param_names,
+                                        const struct foxglove_string* c_request_id,
+                                        const struct foxglove_string* c_param_names,
                                         size_t param_names_len
                                       ) -> foxglove_parameter_array* {
         std::optional<std::string_view> request_id;
-        if (_request_id != nullptr) {
-          request_id.emplace(_request_id->data, _request_id->len);
+        if (c_request_id != nullptr) {
+          request_id.emplace(c_request_id->data, c_request_id->len);
         }
         std::vector<std::string_view> param_names;
-        if (_param_names != nullptr) {
+        if (c_param_names != nullptr) {
           param_names.reserve(param_names_len);
           for (auto i = 0; i < param_names_len; ++i) {
-            param_names.emplace_back(_param_names[i].data, _param_names[i].len);
+            param_names.emplace_back(c_param_names[i].data, c_param_names[i].len);
           }
         }
         auto params = (static_cast<const WebSocketServerCallbacks*>(context))
@@ -106,20 +106,20 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
       c_callbacks.on_set_parameters = [](
                                         const void* context,
                                         uint32_t client_id,
-                                        const struct foxglove_string* _request_id,
-                                        const foxglove_parameter_array* _params
+                                        const struct foxglove_string* c_request_id,
+                                        const foxglove_parameter_array* c_params
                                       ) -> foxglove_parameter_array* {
         std::optional<std::string_view> request_id;
-        if (_request_id != nullptr) {
-          request_id.emplace(_request_id->data, _request_id->len);
+        if (c_request_id != nullptr) {
+          request_id.emplace(c_request_id->data, c_request_id->len);
         }
-        if (_params == nullptr) {
+        if (c_params == nullptr) {
           // Should not happen; the C implementation never passes a null pointer.
           return nullptr;
         }
         auto params =
           (static_cast<const WebSocketServerCallbacks*>(context))
-            ->onSetParameters(client_id, request_id, ParameterArrayView(_params).parameters());
+            ->onSetParameters(client_id, request_id, ParameterArrayView(c_params).parameters());
         auto array = ParameterArray(std::move(params));
         return array.release();
       };
