@@ -59,9 +59,6 @@ ServiceRequest::ServiceRequest(const foxglove_service_request* r) noexcept
 /**
  * ServiceResponder implementation.
  */
-ServiceResponder::ServiceResponder(foxglove_service_responder* ptr)
-    : impl_(ptr) {}
-
 void ServiceResponder::Deleter::operator()(foxglove_service_responder* ptr) const noexcept {
   auto message = "Internal server error: Service failed to send a response"sv;
   foxglove_service_respond_error(ptr, {message.data(), message.length()});
@@ -110,15 +107,12 @@ FoxgloveResult<Service> Service::create(
   return Service(ptr);
 }
 
-Service::Service(foxglove_service* ptr)
-    : impl_(ptr) {}
+void Service::Deleter::operator()(foxglove_service* ptr) const noexcept {
+  foxglove_service_free(ptr);
+}
 
 foxglove_service* Service::release() noexcept {
   return impl_.release();
-}
-
-void Service::Deleter::operator()(foxglove_service* ptr) const noexcept {
-  foxglove_service_free(ptr);
 }
 
 }  // namespace foxglove

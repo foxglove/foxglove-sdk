@@ -94,12 +94,14 @@ public:
 
 private:
   friend class Service;
-  explicit ServiceResponder(foxglove_service_responder* ptr);
 
   struct Deleter {
     void operator()(foxglove_service_responder* ptr) const noexcept;
   };
   std::unique_ptr<foxglove_service_responder, Deleter> impl_;
+
+  explicit ServiceResponder(foxglove_service_responder* ptr) noexcept
+      : impl_(ptr) {}
 };
 
 /**
@@ -145,13 +147,15 @@ public:
 private:
   friend class WebSocketServer;
 
-  explicit Service(foxglove_service* ptr);
-  foxglove_service* release() noexcept;
-
   struct Deleter {
     void operator()(foxglove_service* ptr) const noexcept;
   };
   std::unique_ptr<foxglove_service, Deleter> impl_;
+
+  explicit Service(foxglove_service* ptr) noexcept
+      : impl_(ptr) {}
+
+  foxglove_service* release() noexcept;
 };
 
 }  // namespace foxglove
