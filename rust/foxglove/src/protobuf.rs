@@ -14,6 +14,7 @@ use tracing::warn;
 /// # Returns
 ///
 /// A `Vec<u8>` containing the binary protobuf encoding of the FileDescriptorSet
+#[doc(hidden)]
 pub fn prost_file_descriptor_set_to_vec(
     file_descriptor_set: &prost_types::FileDescriptorSet,
 ) -> Vec<u8> {
@@ -94,7 +95,7 @@ impl ProtobufField for u64 {
     }
 
     fn wire_type() -> u32 {
-        0 // Varint
+        prost::encoding::WireType::Varint as u32
     }
 
     fn write(&self, buf: &mut impl bytes::BufMut) {
@@ -108,7 +109,7 @@ impl ProtobufField for u32 {
     }
 
     fn wire_type() -> u32 {
-        0 // Varint
+        prost::encoding::WireType::Varint as u32
     }
 
     fn write(&self, buf: &mut impl bytes::BufMut) {
@@ -122,7 +123,7 @@ impl ProtobufField for u16 {
     }
 
     fn wire_type() -> u32 {
-        0 // Varint
+        prost::encoding::WireType::Varint as u32
     }
 
     fn write(&self, buf: &mut impl bytes::BufMut) {
@@ -136,7 +137,7 @@ impl ProtobufField for u8 {
     }
 
     fn wire_type() -> u32 {
-        0 // Varint
+        prost::encoding::WireType::Varint as u32
     }
 
     fn write(&self, buf: &mut impl bytes::BufMut) {
@@ -150,7 +151,7 @@ impl ProtobufField for i64 {
     }
 
     fn wire_type() -> u32 {
-        0 // Varint
+        prost::encoding::WireType::Varint as u32
     }
 
     fn write(&self, buf: &mut impl bytes::BufMut) {
@@ -167,7 +168,7 @@ impl ProtobufField for i32 {
     }
 
     fn wire_type() -> u32 {
-        0 // Varint
+        prost::encoding::WireType::Varint as u32
     }
 
     fn write(&self, buf: &mut impl bytes::BufMut) {
@@ -218,7 +219,7 @@ impl ProtobufField for bool {
     }
 
     fn wire_type() -> u32 {
-        0
+        prost::encoding::WireType::Varint as u32
     }
 
     fn write(&self, buf: &mut impl bytes::BufMut) {
@@ -232,7 +233,7 @@ impl ProtobufField for f32 {
     }
 
     fn wire_type() -> u32 {
-        5 // Float
+        prost::encoding::WireType::ThirtyTwoBit as u32
     }
 
     fn write(&self, buf: &mut impl bytes::BufMut) {
@@ -246,7 +247,7 @@ impl ProtobufField for f64 {
     }
 
     fn wire_type() -> u32 {
-        1 // Double
+        prost::encoding::WireType::SixtyFourBit as u32
     }
 
     fn write(&self, buf: &mut impl bytes::BufMut) {
@@ -261,7 +262,7 @@ impl ProtobufField for String {
     }
 
     fn wire_type() -> u32 {
-        2 // Length-delimited
+        prost::encoding::WireType::LengthDelimited as u32
     }
 
     fn write(&self, buf: &mut impl bytes::BufMut) {
@@ -308,7 +309,7 @@ impl ProtobufField for bytes::Bytes {
     }
 
     fn wire_type() -> u32 {
-        2 // Length-delimited
+        prost::encoding::WireType::LengthDelimited as u32
     }
 
     fn write(&self, buf: &mut impl bytes::BufMut) {
@@ -335,7 +336,7 @@ where
     }
 
     fn wire_type() -> u32 {
-        2 // Length-delimited
+        prost::encoding::WireType::LengthDelimited as u32
     }
 
     fn write_tagged(&self, field_number: u32, buf: &mut impl bytes::BufMut) {
