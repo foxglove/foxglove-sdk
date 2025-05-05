@@ -29,7 +29,7 @@ fn derive_enum_impl(input: &DeriveInput, data: &DataEnum) -> TokenStream {
         let variant_name = v.ident.to_string();
         let variant_value = i as i32;
         quote! {
-            let mut value = foxglove::prost_types::EnumValueDescriptorProto::default();
+            let mut value = ::foxglove::prost_types::EnumValueDescriptorProto::default();
             value.name = Some(String::from(#variant_name));
             value.number = Some(#variant_value);
             enum_desc.value.push(value);
@@ -38,16 +38,16 @@ fn derive_enum_impl(input: &DeriveInput, data: &DataEnum) -> TokenStream {
 
     // Generate implementation
     let expanded = quote! {
-        impl foxglove::ProtobufField for #name {
-            fn field_type() -> foxglove::prost_types::field_descriptor_proto::Type {
-                foxglove::prost_types::field_descriptor_proto::Type::Enum
+        impl ::foxglove::ProtobufField for #name {
+            fn field_type() -> ::foxglove::prost_types::field_descriptor_proto::Type {
+                ::foxglove::prost_types::field_descriptor_proto::Type::Enum
             }
 
             fn wire_type() -> u32 {
                 0 // Varint, same as integers
             }
 
-            fn write(&self, buf: &mut impl foxglove::bytes::BufMut) {
+            fn write(&self, buf: &mut impl ::foxglove::bytes::BufMut) {
                 let mut value = *self as u64;
                 while value >= 0x80 {
                     buf.put_u8((value as u8) | 0x80);
@@ -56,8 +56,8 @@ fn derive_enum_impl(input: &DeriveInput, data: &DataEnum) -> TokenStream {
                 buf.put_u8(value as u8);
             }
 
-            fn enum_descriptor() -> Option<foxglove::prost_types::EnumDescriptorProto> {
-                let mut enum_desc = foxglove::prost_types::EnumDescriptorProto::default();
+            fn enum_descriptor() -> Option<::foxglove::prost_types::EnumDescriptorProto> {
+                let mut enum_desc = ::foxglove::prost_types::EnumDescriptorProto::default();
                 enum_desc.name = Some(stringify!(#name).to_string());
 
                 #(#variant_descriptors)*
@@ -80,7 +80,7 @@ fn add_protobuf_bound(mut generics: Generics) -> Generics {
         if let GenericParam::Type(ref mut type_param) = *param {
             type_param
                 .bounds
-                .push(parse_quote!(foxglove::ProtobufField));
+                .push(parse_quote!(::foxglove::ProtobufField));
         }
     }
     generics
@@ -131,14 +131,14 @@ fn derive_struct_impl(input: DeriveInput) -> TokenStream {
         });
 
         field_defs.push(quote! {
-            let mut field = foxglove::prost_types::FieldDescriptorProto::default();
+            let mut field = ::foxglove::prost_types::FieldDescriptorProto::default();
             field.name = Some(String::from(stringify!(#field_name)));
             field.number = Some(#field_number as i32);
 
             if <#field_type as ::foxglove::ProtobufField>::repeating() {
-                field.label = Some(foxglove::prost_types::field_descriptor_proto::Label::Repeated as i32);
+                field.label = Some(::foxglove::prost_types::field_descriptor_proto::Label::Repeated as i32);
             } else {
-                field.label = Some(foxglove::prost_types::field_descriptor_proto::Label::Required as i32);
+                field.label = Some(::foxglove::prost_types::field_descriptor_proto::Label::Required as i32);
             }
             field.r#type = Some(<#field_type as ::foxglove::ProtobufField>::field_type() as i32);
 
@@ -155,17 +155,17 @@ fn derive_struct_impl(input: DeriveInput) -> TokenStream {
     // Generate the output tokens
     let expanded = quote! {
         #[automatically_derived]
-        impl #impl_generics foxglove::ProtobufField for #name #ty_generics #where_clause {
-            fn field_type() -> foxglove::prost_types::field_descriptor_proto::Type {
-                foxglove::prost_types::field_descriptor_proto::Type::Message
+        impl #impl_generics ::foxglove::ProtobufField for #name #ty_generics #where_clause {
+            fn field_type() -> ::foxglove::prost_types::field_descriptor_proto::Type {
+                ::foxglove::prost_types::field_descriptor_proto::Type::Message
             }
 
             fn wire_type() -> u32 {
                 2 // Length-delimited, same as strings and bytes
             }
 
-            fn write(&self, out: &mut impl foxglove::bytes::BufMut) {
-                use foxglove::bytes::BufMut;
+            fn write(&self, out: &mut impl ::foxglove::bytes::BufMut) {
+                use ::foxglove::bytes::BufMut;
 
                 let mut local_buf = vec![];
 
@@ -192,8 +192,8 @@ fn derive_struct_impl(input: DeriveInput) -> TokenStream {
                 out.put_slice(&buf);
             }
 
-            fn message_descriptor() -> Option<foxglove::prost_types::DescriptorProto> {
-                let mut message = foxglove::prost_types::DescriptorProto::default();
+            fn message_descriptor() -> Option<::foxglove::prost_types::DescriptorProto> {
+                let mut message = ::foxglove::prost_types::DescriptorProto::default();
                 message.name = Some(String::from(stringify!(#name)));
 
                 #(#field_defs)*
@@ -217,12 +217,12 @@ fn derive_struct_impl(input: DeriveInput) -> TokenStream {
         }
 
         #[automatically_derived]
-        impl #impl_generics foxglove::Encode for #name #ty_generics #where_clause {
+        impl #impl_generics ::foxglove::Encode for #name #ty_generics #where_clause {
             type Error = std::io::Error;
 
-            fn get_schema() -> Option<foxglove::Schema> {
-                let mut file_descriptor_set = foxglove::prost_types::FileDescriptorSet::default();
-                let mut file = foxglove::prost_types::FileDescriptorProto {
+            fn get_schema() -> Option<::foxglove::Schema> {
+                let mut file_descriptor_set = ::foxglove::prost_types::FileDescriptorSet::default();
+                let mut file = ::foxglove::prost_types::FileDescriptorProto {
                     name: Some(String::from(concat!(stringify!(#name), ".proto"))),
                     package: Some(String::from(stringify!(#name).to_lowercase())),
                     syntax: Some(String::from("proto3")),
@@ -235,9 +235,9 @@ fn derive_struct_impl(input: DeriveInput) -> TokenStream {
 
                 file_descriptor_set.file.push(file);
 
-                let bytes = foxglove::prost_file_descriptor_set_to_vec(&file_descriptor_set);
+                let bytes = ::foxglove::prost_file_descriptor_set_to_vec(&file_descriptor_set);
 
-                Some(foxglove::Schema {
+                Some(::foxglove::Schema {
                     name: String::from(#full_name),
                     encoding: String::from("protobuf"),
                     data: std::borrow::Cow::Owned(bytes),
@@ -248,7 +248,7 @@ fn derive_struct_impl(input: DeriveInput) -> TokenStream {
                 String::from("protobuf")
             }
 
-            fn encode(&self, buf: &mut impl foxglove::bytes::BufMut) -> Result<(), Self::Error> {
+            fn encode(&self, buf: &mut impl ::foxglove::bytes::BufMut) -> Result<(), Self::Error> {
                 // The top level message is encoded without a length prefix
                 #(#field_encoders)*
                 Ok(())

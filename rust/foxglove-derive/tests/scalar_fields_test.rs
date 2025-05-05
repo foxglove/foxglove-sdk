@@ -1,11 +1,14 @@
+use ::foxglove::{Encode, Schema};
 use bytes::BytesMut;
-use foxglove::{Encode, Schema};
 use prost::Message;
 use prost_reflect::{DescriptorPool, DynamicMessage, MessageDescriptor};
 use tracing_test::traced_test;
 
 mod common;
 use common::FixedSizeBuffer;
+
+// Ensure the macro properly references the foxglove crate
+mod foxglove {}
 
 #[derive(Encode)]
 struct TestMessagePrimitives {

@@ -1,7 +1,10 @@
+use ::foxglove::{Encode, Schema};
 use bytes::BytesMut;
-use foxglove::{Encode, Schema};
 use prost::Message;
 use prost_reflect::{DescriptorPool, DynamicMessage, MessageDescriptor, ReflectMessage};
+
+// Ensure the macro properly references the foxglove crate
+mod foxglove {}
 
 #[derive(Encode, Debug)]
 struct InnerTestMessage {
