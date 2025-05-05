@@ -1,9 +1,15 @@
 #pragma once
 
 #include <foxglove/channel.hpp>
+#include <foxglove/error.hpp>
 
+#include <cstdint>
+#include <functional>
 #include <memory>
+#include <optional>
+#include <string>
 #include <string_view>
+#include <vector>
 
 struct foxglove_service;
 struct foxglove_service_message_schema;
