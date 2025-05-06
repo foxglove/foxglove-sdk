@@ -70,7 +70,8 @@ inline WebSocketServerCapabilities operator&(
 struct WebSocketServerCallbacks {
   /// @brief Callback invoked when a client subscribes to a channel.
   ///
-  /// Only invoked if the channel is associated with the server and isn't already subscribed to by the client.
+  /// Only invoked if the channel is associated with the server and isn't already subscribed to by
+  /// the client.
   std::function<void(uint64_t channel_id)> onSubscribe;
   /// @brief Callback invoked when a client unsubscribes from a channel.
   ///
@@ -124,7 +125,8 @@ struct WebSocketServerOptions {
 
 /// @brief A WebSocket server for visualization in Foxglove.
 ///
-/// After your server is started, you can open the Foxglove app to visualize your data. See [Connecting to data].
+/// After your server is started, you can open the Foxglove app to visualize your data. See
+/// [Connecting to data].
 ///
 /// [Connecting to data]: https://docs.foxglove.dev/docs/connecting-to-data/introduction
 class WebSocketServer final {

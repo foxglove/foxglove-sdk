@@ -25,7 +25,8 @@ struct Schema {
   ///
   /// [well-known schema encodings]: https://mcap.dev/spec/registry#well-known-schema-encodings
   std::string encoding;
-  /// @brief Must conform to the schema encoding. If encoding is an empty string, data should be 0 length.
+  /// @brief Must conform to the schema encoding. If encoding is an empty string, data should be 0
+  /// length.
   const std::byte* data = nullptr;
   /// @brief The length of the schema data.
   size_t data_len = 0;
@@ -36,15 +37,16 @@ class Channel final {
 public:
   /// @brief Create a new channel.
   ///
-  /// @param topic The topic name. You should choose a unique topic name per channel for compatibility with the Foxglove app.
+  /// @param topic The topic name. You should choose a unique topic name per channel for
+  /// compatibility with the Foxglove app.
   /// @param message_encoding The encoding of messages logged to this channel.
   /// @param schema The schema of messages logged to this channel.
-  /// @param context The context which associates logs to a sink. If omitted, the default context is used.
+  /// @param context The context which associates logs to a sink. If omitted, the default context is
+  /// used.
   static FoxgloveResult<Channel> create(
     const std::string& topic, const std::string& message_encoding,
     std::optional<Schema> schema = std::nullopt, const Context& context = Context()
   );
-
 
   /// @brief Log a message to the channel.
   ///

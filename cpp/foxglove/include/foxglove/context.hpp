@@ -6,18 +6,18 @@ struct foxglove_context;
 
 namespace foxglove {
 
- /// @brief A context is the binding between channels and sinks.
- ///
- /// Each channel and each sink belongs to exactly one context. Sinks receive advertisements about
- /// channels on the context, and can optionally subscribe to receive logged messages on those
- /// channels.
- ///
- /// When the context is destroyed, its corresponding channels and sinks will be disconnected from one
- /// another, and logging will stop. Attempts to log on a channel after its context has been destroyed
- /// will elicit a throttled warning message.
- ///
- /// Since many applications only need a single context, the SDK provides a static default context
- /// for convenience.
+/// @brief A context is the binding between channels and sinks.
+///
+/// Each channel and each sink belongs to exactly one context. Sinks receive advertisements about
+/// channels on the context, and can optionally subscribe to receive logged messages on those
+/// channels.
+///
+/// When the context is destroyed, its corresponding channels and sinks will be disconnected from
+/// one another, and logging will stop. Attempts to log on a channel after its context has been
+/// destroyed will elicit a throttled warning message.
+///
+/// Since many applications only need a single context, the SDK provides a static default context
+/// for convenience.
 class Context final {
   friend class McapWriter;
   friend class Channel;
