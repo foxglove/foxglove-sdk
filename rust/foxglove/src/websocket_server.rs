@@ -297,7 +297,7 @@ impl WebSocketServerHandle {
 
     /// Publishes a [ConnectionGraph] update to all subscribed clients.
     ///
-    /// Requires the [`ConnectionGraph`](websocket::Capability::ConnectionGraph) capability.
+    /// Requires the [`ConnectionGraph`](crate::websocket::Capability::ConnectionGraph) capability.
     ///
     /// The update is published as a difference from the current graph to replacement_graph.
     /// When a client first subscribes to connection graph updates, it receives the current graph.
