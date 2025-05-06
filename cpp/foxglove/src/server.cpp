@@ -4,7 +4,6 @@
 #include <foxglove/server.hpp>
 #include <foxglove/server/connection_graph.hpp>
 
-#include <iostream>
 #include <type_traits>
 
 namespace foxglove {
@@ -30,12 +29,20 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
     c_callbacks.context = callbacks.get();
     if (callbacks->onSubscribe) {
       c_callbacks.on_subscribe = [](uint64_t channel_id, const void* context) {
-        (static_cast<const WebSocketServerCallbacks*>(context))->onSubscribe(channel_id);
+        try {
+          (static_cast<const WebSocketServerCallbacks*>(context))->onSubscribe(channel_id);
+        } catch (const std::exception& exc) {
+          warn() << "onSubscribe callback failed: " << exc.what();
+        }
       };
     }
     if (callbacks->onUnsubscribe) {
       c_callbacks.on_unsubscribe = [](uint64_t channel_id, const void* context) {
-        (static_cast<const WebSocketServerCallbacks*>(context))->onUnsubscribe(channel_id);
+        try {
+          (static_cast<const WebSocketServerCallbacks*>(context))->onUnsubscribe(channel_id);
+        } catch (const std::exception& exc) {
+          warn() << "onUnsubscribe callback failed: " << exc.what();
+        }
       };
     }
     if (callbacks->onClientAdvertise) {
@@ -50,8 +57,12 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
             reinterpret_cast<const std::byte*>(channel->schema),
             channel->schema_len
           };
-          (static_cast<const WebSocketServerCallbacks*>(context))
-            ->onClientAdvertise(client_id, cpp_channel);
+          try {
+            (static_cast<const WebSocketServerCallbacks*>(context))
+              ->onClientAdvertise(client_id, cpp_channel);
+          } catch (const std::exception& exc) {
+            warn() << "onClientAdvertise callback failed: " << exc.what();
+          }
         };
     }
     if (callbacks->onMessageData) {
@@ -63,18 +74,26 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
                                       size_t payload_len,
                                       const void* context
                                     ) {
-        (static_cast<const WebSocketServerCallbacks*>(context))
-          ->onMessageData(
-            client_id, client_channel_id, reinterpret_cast<const std::byte*>(payload), payload_len
-          );
+        try {
+          (static_cast<const WebSocketServerCallbacks*>(context))
+            ->onMessageData(
+              client_id, client_channel_id, reinterpret_cast<const std::byte*>(payload), payload_len
+            );
+        } catch (const std::exception& exc) {
+          warn() << "onMessageData callback failed: " << exc.what();
+        }
       };
     }
     if (callbacks->onClientUnadvertise) {
       c_callbacks.on_client_unadvertise =
         // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
         [](uint32_t client_id, uint32_t client_channel_id, const void* context) {
-          (static_cast<const WebSocketServerCallbacks*>(context))
-            ->onClientUnadvertise(client_id, client_channel_id);
+          try {
+            (static_cast<const WebSocketServerCallbacks*>(context))
+              ->onClientUnadvertise(client_id, client_channel_id);
+          } catch (const std::exception& exc) {
+            warn() << "onClientUnadvertise callback failed: " << exc.what();
+          }
         };
     }
     if (callbacks->onGetParameters) {
@@ -102,7 +121,7 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
           params = (static_cast<const WebSocketServerCallbacks*>(context))
                      ->onGetParameters(client_id, request_id, param_names);
         } catch (const std::exception& exc) {
-          std::cerr << "onGetParameters callback failed: " << exc.what() << "\n";
+          warn() << "onGetParameters callback failed: " << exc.what();
         }
         auto array = ParameterArray(std::move(params));
         return array.release();
@@ -129,7 +148,7 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
             (static_cast<const WebSocketServerCallbacks*>(context))
               ->onSetParameters(client_id, request_id, ParameterArrayView(c_params).parameters());
         } catch (const std::exception& exc) {
-          std::cerr << "onSetParameters callback failed: " << exc.what() << "\n";
+          warn() << "onSetParameters callback failed: " << exc.what();
         }
         auto array = ParameterArray(std::move(params));
         return array.release();
@@ -137,12 +156,20 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
     }
     if (callbacks->onConnectionGraphSubscribe) {
       c_callbacks.on_connection_graph_subscribe = [](const void* context) {
-        (static_cast<const WebSocketServerCallbacks*>(context))->onConnectionGraphSubscribe();
+        try {
+          (static_cast<const WebSocketServerCallbacks*>(context))->onConnectionGraphSubscribe();
+        } catch (const std::exception& exc) {
+          warn() << "onConnectionGraphSubscribe callback failed: " << exc.what();
+        }
       };
     }
     if (callbacks->onConnectionGraphUnsubscribe) {
       c_callbacks.on_connection_graph_unsubscribe = [](const void* context) {
-        (static_cast<const WebSocketServerCallbacks*>(context))->onConnectionGraphUnsubscribe();
+        try {
+          (static_cast<const WebSocketServerCallbacks*>(context))->onConnectionGraphUnsubscribe();
+        } catch (const std::exception& exc) {
+          warn() << "onConnectionGraphUnsubscribe callback failed: " << exc.what();
+        }
       };
     }
   }
