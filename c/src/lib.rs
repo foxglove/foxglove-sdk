@@ -4,6 +4,7 @@
 
 use bitflags::bitflags;
 use connection_graph::FoxgloveConnectionGraph;
+pub use logging::foxglove_set_log_severity_level;
 use mcap::{Compression, WriteOptions};
 use std::ffi::{c_char, c_void, CString};
 use std::fs::File;
@@ -12,6 +13,7 @@ use std::mem::ManuallyDrop;
 use std::sync::Arc;
 
 pub mod connection_graph;
+mod logging;
 
 /// A string with associated length.
 #[repr(C)]

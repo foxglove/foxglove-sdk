@@ -1,4 +1,5 @@
 #include <foxglove/channel.hpp>
+#include <foxglove/foxglove.hpp>
 #include <foxglove/server.hpp>
 
 #include <atomic>
@@ -27,6 +28,8 @@ int main(int argc, const char* argv[]) {
     }
   });
 
+  foxglove::setLogSeverityLevel(foxglove::LogSeverityLevel::Debug);
+
   foxglove::WebSocketServerOptions options = {};
   options.name = "ws-demo-cpp";
   options.host = "127.0.0.1";
@@ -53,7 +56,6 @@ int main(int argc, const char* argv[]) {
     return 1;
   }
   auto server = std::move(server_result.value());
-  std::cerr << "Server listening on port " << server.port() << '\n';
 
   std::atomic_bool done = false;
   sigint_handler = [&] {

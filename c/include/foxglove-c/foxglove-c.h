@@ -74,6 +74,21 @@ enum foxglove_error
 typedef uint8_t foxglove_error;
 #endif // __cplusplus
 
+enum foxglove_log_severity_level
+#ifdef __cplusplus
+  : uint8_t
+#endif // __cplusplus
+ {
+  FOXGLOVE_LOG_SEVERITY_LEVEL_OFF = 0,
+  FOXGLOVE_LOG_SEVERITY_LEVEL_DEBUG = 1,
+  FOXGLOVE_LOG_SEVERITY_LEVEL_INFO = 2,
+  FOXGLOVE_LOG_SEVERITY_LEVEL_WARN = 3,
+  FOXGLOVE_LOG_SEVERITY_LEVEL_ERROR = 4,
+};
+#ifndef __cplusplus
+typedef uint8_t foxglove_log_severity_level;
+#endif // __cplusplus
+
 enum foxglove_mcap_compression
 #ifdef __cplusplus
   : uint8_t
@@ -390,6 +405,8 @@ foxglove_error foxglove_connection_graph_set_advertised_service(struct foxglove_
                                                                 struct foxglove_string service,
                                                                 const struct foxglove_string *provider_ids,
                                                                 size_t provider_ids_count);
+
+void foxglove_set_log_severity_level(foxglove_log_severity_level level);
 
 #ifdef __cplusplus
 }  // extern "C"
