@@ -31,7 +31,11 @@ FoxgloveResult<Channel> Channel::create(
 }
 
 Channel::Channel(const foxglove_channel* channel)
-    : impl_(channel, foxglove_channel_free) {}
+    : impl_(channel) {}
+
+void Channel::Deleter::operator()(const foxglove_channel* ptr) const noexcept {
+  foxglove_channel_free(ptr);
+};
 
 uint64_t Channel::id() const {
   return foxglove_channel_get_id(impl_.get());
