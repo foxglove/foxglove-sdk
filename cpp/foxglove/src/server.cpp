@@ -4,7 +4,6 @@
 #include <foxglove/server.hpp>
 #include <foxglove/server/connection_graph.hpp>
 
-#include <iostream>
 #include <type_traits>
 
 namespace foxglove {
@@ -32,7 +31,7 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
         try {
           (static_cast<const WebSocketServerCallbacks*>(context))->onSubscribe(channel_id);
         } catch (const std::exception& exc) {
-          std::cerr << "onSubscribe callback failed: " << exc.what() << "\n";
+          warn() << "onSubscribe callback failed: " << exc.what();
         }
       };
     }
@@ -41,7 +40,7 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
         try {
           (static_cast<const WebSocketServerCallbacks*>(context))->onUnsubscribe(channel_id);
         } catch (const std::exception& exc) {
-          std::cerr << "onUnsubscribe callback failed: " << exc.what() << "\n";
+          warn() << "onUnsubscribe callback failed: " << exc.what();
         }
       };
     }
@@ -61,7 +60,7 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
             (static_cast<const WebSocketServerCallbacks*>(context))
               ->onClientAdvertise(client_id, cpp_channel);
           } catch (const std::exception& exc) {
-            std::cerr << "onClientAdvertise callback failed: " << exc.what() << "\n";
+            warn() << "onClientAdvertise callback failed: " << exc.what();
           }
         };
     }
@@ -80,7 +79,7 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
               client_id, client_channel_id, reinterpret_cast<const std::byte*>(payload), payload_len
             );
         } catch (const std::exception& exc) {
-          std::cerr << "onMessageData callback failed: " << exc.what() << "\n";
+          warn() << "onMessageData callback failed: " << exc.what();
         }
       };
     }
@@ -92,7 +91,7 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
             (static_cast<const WebSocketServerCallbacks*>(context))
               ->onClientUnadvertise(client_id, client_channel_id);
           } catch (const std::exception& exc) {
-            std::cerr << "onClientUnadvertise callback failed: " << exc.what() << "\n";
+            warn() << "onClientUnadvertise callback failed: " << exc.what();
           }
         };
     }
@@ -101,7 +100,7 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
         try {
           (static_cast<const WebSocketServerCallbacks*>(context))->onConnectionGraphSubscribe();
         } catch (const std::exception& exc) {
-          std::cerr << "onConnectionGraphSubscribe callback failed: " << exc.what() << "\n";
+          warn() << "onConnectionGraphSubscribe callback failed: " << exc.what();
         }
       };
     }
@@ -110,7 +109,7 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
         try {
           (static_cast<const WebSocketServerCallbacks*>(context))->onConnectionGraphUnsubscribe();
         } catch (const std::exception& exc) {
-          std::cerr << "onConnectionGraphUnsubscribe callback failed: " << exc.what() << "\n";
+          warn() << "onConnectionGraphUnsubscribe callback failed: " << exc.what();
         }
       };
     }
