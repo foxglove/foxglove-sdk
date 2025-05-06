@@ -64,12 +64,9 @@ int main(int argc, const char* argv[]) {
     done = true;
   };
 
-  uint32_t i = 0;
   while (!done) {
-    std::this_thread::sleep_for(1s);
     server.publishConnectionGraph(graph);
-
-    ++i;
+    std::this_thread::sleep_for(1s);
   }
 
   std::cerr << "Done\n";
