@@ -49,6 +49,8 @@
  */
 #define FOXGLOVE_SERVER_CAPABILITY_SERVICES (1 << 4)
 
+#define Arena_SIZE (512 * 1024)
+
 enum foxglove_error
 #ifdef __cplusplus
   : uint8_t

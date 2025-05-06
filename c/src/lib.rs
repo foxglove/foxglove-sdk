@@ -11,6 +11,7 @@ use std::io::BufWriter;
 use std::mem::ManuallyDrop;
 use std::sync::Arc;
 
+mod arena;
 pub mod connection_graph;
 mod generated_types;
 pub use generated_types::*;

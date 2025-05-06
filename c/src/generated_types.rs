@@ -3,7 +3,9 @@
 use foxglove::bytes::Bytes;
 use std::ffi::c_uchar;
 use std::mem::ManuallyDrop;
+use std::pin::{pin, Pin};
 
+use crate::arena::{Arena, BorrowToNative};
 use crate::{
     log_msg_to_channel, FoxgloveChannel, FoxgloveDuration, FoxgloveError, FoxgloveString,
     FoxgloveTimestamp,
@@ -90,21 +92,32 @@ pub struct ArrowPrimitive {
     pub color: *const Color,
 }
 
-impl ArrowPrimitive {
+impl BorrowToNative for ArrowPrimitive {
+    type NativeType = foxglove::schemas::ArrowPrimitive;
+
     unsafe fn borrow_to_native(
         &self,
-    ) -> Result<ManuallyDrop<foxglove::schemas::ArrowPrimitive>, foxglove::FoxgloveError> {
+        #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
+    ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
         Ok(ManuallyDrop::new(foxglove::schemas::ArrowPrimitive {
-            pose: unsafe { self.pose.as_ref().map(|m| m.borrow_to_native()) }
-                .transpose()?
-                .map(ManuallyDrop::into_inner),
+            pose: unsafe {
+                self.pose
+                    .as_ref()
+                    .map(|m| m.borrow_to_native(arena.as_mut()))
+            }
+            .transpose()?
+            .map(ManuallyDrop::into_inner),
             shaft_length: self.shaft_length,
             shaft_diameter: self.shaft_diameter,
             head_length: self.head_length,
             head_diameter: self.head_diameter,
-            color: unsafe { self.color.as_ref().map(|m| m.borrow_to_native()) }
-                .transpose()?
-                .map(ManuallyDrop::into_inner),
+            color: unsafe {
+                self.color
+                    .as_ref()
+                    .map(|m| m.borrow_to_native(arena.as_mut()))
+            }
+            .transpose()?
+            .map(ManuallyDrop::into_inner),
         }))
     }
 }
@@ -184,18 +197,24 @@ pub struct CameraCalibration {
 impl CameraCalibration {
     unsafe fn borrow_option_to_native(
         msg: Option<&Self>,
+        arena: Pin<&mut Arena>,
     ) -> Result<ManuallyDrop<foxglove::schemas::CameraCalibration>, foxglove::FoxgloveError> {
         let Some(msg) = msg else {
             return Err(foxglove::FoxgloveError::ValueError(
                 "msg is required".to_string(),
             ));
         };
-        unsafe { msg.borrow_to_native() }
+        unsafe { msg.borrow_to_native(arena) }
     }
+}
+
+impl BorrowToNative for CameraCalibration {
+    type NativeType = foxglove::schemas::CameraCalibration;
 
     unsafe fn borrow_to_native(
         &self,
-    ) -> Result<ManuallyDrop<foxglove::schemas::CameraCalibration>, foxglove::FoxgloveError> {
+        #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
+    ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
         Ok(ManuallyDrop::new(foxglove::schemas::CameraCalibration {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
             frame_id: unsafe {
@@ -238,8 +257,10 @@ pub extern "C" fn foxglove_channel_log_camera_calibration(
     msg: Option<&CameraCalibration>,
     log_time: Option<&u64>,
 ) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
-    match unsafe { CameraCalibration::borrow_option_to_native(msg) } {
+    match unsafe { CameraCalibration::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
         Err(e) => {
             tracing::error!("CameraCalibration: {}", e);
@@ -274,31 +295,49 @@ pub struct CircleAnnotation {
 impl CircleAnnotation {
     unsafe fn borrow_option_to_native(
         msg: Option<&Self>,
+        arena: Pin<&mut Arena>,
     ) -> Result<ManuallyDrop<foxglove::schemas::CircleAnnotation>, foxglove::FoxgloveError> {
         let Some(msg) = msg else {
             return Err(foxglove::FoxgloveError::ValueError(
                 "msg is required".to_string(),
             ));
         };
-        unsafe { msg.borrow_to_native() }
+        unsafe { msg.borrow_to_native(arena) }
     }
+}
+
+impl BorrowToNative for CircleAnnotation {
+    type NativeType = foxglove::schemas::CircleAnnotation;
 
     unsafe fn borrow_to_native(
         &self,
-    ) -> Result<ManuallyDrop<foxglove::schemas::CircleAnnotation>, foxglove::FoxgloveError> {
+        #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
+    ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
         Ok(ManuallyDrop::new(foxglove::schemas::CircleAnnotation {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
-            position: unsafe { self.position.as_ref().map(|m| m.borrow_to_native()) }
-                .transpose()?
-                .map(ManuallyDrop::into_inner),
+            position: unsafe {
+                self.position
+                    .as_ref()
+                    .map(|m| m.borrow_to_native(arena.as_mut()))
+            }
+            .transpose()?
+            .map(ManuallyDrop::into_inner),
             diameter: self.diameter,
             thickness: self.thickness,
-            fill_color: unsafe { self.fill_color.as_ref().map(|m| m.borrow_to_native()) }
-                .transpose()?
-                .map(ManuallyDrop::into_inner),
-            outline_color: unsafe { self.outline_color.as_ref().map(|m| m.borrow_to_native()) }
-                .transpose()?
-                .map(ManuallyDrop::into_inner),
+            fill_color: unsafe {
+                self.fill_color
+                    .as_ref()
+                    .map(|m| m.borrow_to_native(arena.as_mut()))
+            }
+            .transpose()?
+            .map(ManuallyDrop::into_inner),
+            outline_color: unsafe {
+                self.outline_color
+                    .as_ref()
+                    .map(|m| m.borrow_to_native(arena.as_mut()))
+            }
+            .transpose()?
+            .map(ManuallyDrop::into_inner),
         }))
     }
 }
@@ -309,8 +348,10 @@ pub extern "C" fn foxglove_channel_log_circle_annotation(
     msg: Option<&CircleAnnotation>,
     log_time: Option<&u64>,
 ) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
-    match unsafe { CircleAnnotation::borrow_option_to_native(msg) } {
+    match unsafe { CircleAnnotation::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
         Err(e) => {
             tracing::error!("CircleAnnotation: {}", e);
@@ -338,18 +379,24 @@ pub struct Color {
 impl Color {
     unsafe fn borrow_option_to_native(
         msg: Option<&Self>,
+        arena: Pin<&mut Arena>,
     ) -> Result<ManuallyDrop<foxglove::schemas::Color>, foxglove::FoxgloveError> {
         let Some(msg) = msg else {
             return Err(foxglove::FoxgloveError::ValueError(
                 "msg is required".to_string(),
             ));
         };
-        unsafe { msg.borrow_to_native() }
+        unsafe { msg.borrow_to_native(arena) }
     }
+}
+
+impl BorrowToNative for Color {
+    type NativeType = foxglove::schemas::Color;
 
     unsafe fn borrow_to_native(
         &self,
-    ) -> Result<ManuallyDrop<foxglove::schemas::Color>, foxglove::FoxgloveError> {
+        #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
+    ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
         Ok(ManuallyDrop::new(foxglove::schemas::Color {
             r: self.r,
             g: self.g,
@@ -365,8 +412,10 @@ pub extern "C" fn foxglove_channel_log_color(
     msg: Option<&Color>,
     log_time: Option<&u64>,
 ) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
-    match unsafe { Color::borrow_option_to_native(msg) } {
+    match unsafe { Color::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
         Err(e) => {
             tracing::error!("Color: {}", e);
@@ -397,18 +446,24 @@ pub struct CompressedImage {
 impl CompressedImage {
     unsafe fn borrow_option_to_native(
         msg: Option<&Self>,
+        arena: Pin<&mut Arena>,
     ) -> Result<ManuallyDrop<foxglove::schemas::CompressedImage>, foxglove::FoxgloveError> {
         let Some(msg) = msg else {
             return Err(foxglove::FoxgloveError::ValueError(
                 "msg is required".to_string(),
             ));
         };
-        unsafe { msg.borrow_to_native() }
+        unsafe { msg.borrow_to_native(arena) }
     }
+}
+
+impl BorrowToNative for CompressedImage {
+    type NativeType = foxglove::schemas::CompressedImage;
 
     unsafe fn borrow_to_native(
         &self,
-    ) -> Result<ManuallyDrop<foxglove::schemas::CompressedImage>, foxglove::FoxgloveError> {
+        #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
+    ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
         Ok(ManuallyDrop::new(foxglove::schemas::CompressedImage {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
             frame_id: unsafe {
@@ -440,8 +495,10 @@ pub extern "C" fn foxglove_channel_log_compressed_image(
     msg: Option<&CompressedImage>,
     log_time: Option<&u64>,
 ) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
-    match unsafe { CompressedImage::borrow_option_to_native(msg) } {
+    match unsafe { CompressedImage::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
         Err(e) => {
             tracing::error!("CompressedImage: {}", e);
@@ -498,18 +555,24 @@ pub struct CompressedVideo {
 impl CompressedVideo {
     unsafe fn borrow_option_to_native(
         msg: Option<&Self>,
+        arena: Pin<&mut Arena>,
     ) -> Result<ManuallyDrop<foxglove::schemas::CompressedVideo>, foxglove::FoxgloveError> {
         let Some(msg) = msg else {
             return Err(foxglove::FoxgloveError::ValueError(
                 "msg is required".to_string(),
             ));
         };
-        unsafe { msg.borrow_to_native() }
+        unsafe { msg.borrow_to_native(arena) }
     }
+}
+
+impl BorrowToNative for CompressedVideo {
+    type NativeType = foxglove::schemas::CompressedVideo;
 
     unsafe fn borrow_to_native(
         &self,
-    ) -> Result<ManuallyDrop<foxglove::schemas::CompressedVideo>, foxglove::FoxgloveError> {
+        #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
+    ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
         Ok(ManuallyDrop::new(foxglove::schemas::CompressedVideo {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
             frame_id: unsafe {
@@ -541,8 +604,10 @@ pub extern "C" fn foxglove_channel_log_compressed_video(
     msg: Option<&CompressedVideo>,
     log_time: Option<&u64>,
 ) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
-    match unsafe { CompressedVideo::borrow_option_to_native(msg) } {
+    match unsafe { CompressedVideo::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
         Err(e) => {
             tracing::error!("CompressedVideo: {}", e);
@@ -570,22 +635,37 @@ pub struct CylinderPrimitive {
     pub color: *const Color,
 }
 
-impl CylinderPrimitive {
+impl BorrowToNative for CylinderPrimitive {
+    type NativeType = foxglove::schemas::CylinderPrimitive;
+
     unsafe fn borrow_to_native(
         &self,
-    ) -> Result<ManuallyDrop<foxglove::schemas::CylinderPrimitive>, foxglove::FoxgloveError> {
+        #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
+    ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
         Ok(ManuallyDrop::new(foxglove::schemas::CylinderPrimitive {
-            pose: unsafe { self.pose.as_ref().map(|m| m.borrow_to_native()) }
-                .transpose()?
-                .map(ManuallyDrop::into_inner),
-            size: unsafe { self.size.as_ref().map(|m| m.borrow_to_native()) }
-                .transpose()?
-                .map(ManuallyDrop::into_inner),
+            pose: unsafe {
+                self.pose
+                    .as_ref()
+                    .map(|m| m.borrow_to_native(arena.as_mut()))
+            }
+            .transpose()?
+            .map(ManuallyDrop::into_inner),
+            size: unsafe {
+                self.size
+                    .as_ref()
+                    .map(|m| m.borrow_to_native(arena.as_mut()))
+            }
+            .transpose()?
+            .map(ManuallyDrop::into_inner),
             bottom_scale: self.bottom_scale,
             top_scale: self.top_scale,
-            color: unsafe { self.color.as_ref().map(|m| m.borrow_to_native()) }
-                .transpose()?
-                .map(ManuallyDrop::into_inner),
+            color: unsafe {
+                self.color
+                    .as_ref()
+                    .map(|m| m.borrow_to_native(arena.as_mut()))
+            }
+            .transpose()?
+            .map(ManuallyDrop::into_inner),
         }))
     }
 }
@@ -603,20 +683,35 @@ pub struct CubePrimitive {
     pub color: *const Color,
 }
 
-impl CubePrimitive {
+impl BorrowToNative for CubePrimitive {
+    type NativeType = foxglove::schemas::CubePrimitive;
+
     unsafe fn borrow_to_native(
         &self,
-    ) -> Result<ManuallyDrop<foxglove::schemas::CubePrimitive>, foxglove::FoxgloveError> {
+        #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
+    ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
         Ok(ManuallyDrop::new(foxglove::schemas::CubePrimitive {
-            pose: unsafe { self.pose.as_ref().map(|m| m.borrow_to_native()) }
-                .transpose()?
-                .map(ManuallyDrop::into_inner),
-            size: unsafe { self.size.as_ref().map(|m| m.borrow_to_native()) }
-                .transpose()?
-                .map(ManuallyDrop::into_inner),
-            color: unsafe { self.color.as_ref().map(|m| m.borrow_to_native()) }
-                .transpose()?
-                .map(ManuallyDrop::into_inner),
+            pose: unsafe {
+                self.pose
+                    .as_ref()
+                    .map(|m| m.borrow_to_native(arena.as_mut()))
+            }
+            .transpose()?
+            .map(ManuallyDrop::into_inner),
+            size: unsafe {
+                self.size
+                    .as_ref()
+                    .map(|m| m.borrow_to_native(arena.as_mut()))
+            }
+            .transpose()?
+            .map(ManuallyDrop::into_inner),
+            color: unsafe {
+                self.color
+                    .as_ref()
+                    .map(|m| m.borrow_to_native(arena.as_mut()))
+            }
+            .transpose()?
+            .map(ManuallyDrop::into_inner),
         }))
     }
 }
@@ -643,18 +738,24 @@ pub struct FrameTransform {
 impl FrameTransform {
     unsafe fn borrow_option_to_native(
         msg: Option<&Self>,
+        arena: Pin<&mut Arena>,
     ) -> Result<ManuallyDrop<foxglove::schemas::FrameTransform>, foxglove::FoxgloveError> {
         let Some(msg) = msg else {
             return Err(foxglove::FoxgloveError::ValueError(
                 "msg is required".to_string(),
             ));
         };
-        unsafe { msg.borrow_to_native() }
+        unsafe { msg.borrow_to_native(arena) }
     }
+}
+
+impl BorrowToNative for FrameTransform {
+    type NativeType = foxglove::schemas::FrameTransform;
 
     unsafe fn borrow_to_native(
         &self,
-    ) -> Result<ManuallyDrop<foxglove::schemas::FrameTransform>, foxglove::FoxgloveError> {
+        #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
+    ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
         Ok(ManuallyDrop::new(foxglove::schemas::FrameTransform {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
             parent_frame_id: unsafe {
@@ -677,12 +778,20 @@ impl FrameTransform {
             .map_err(|e| {
                 foxglove::FoxgloveError::Utf8Error(format!("child_frame_id invalid: {}", e))
             })?,
-            translation: unsafe { self.translation.as_ref().map(|m| m.borrow_to_native()) }
-                .transpose()?
-                .map(ManuallyDrop::into_inner),
-            rotation: unsafe { self.rotation.as_ref().map(|m| m.borrow_to_native()) }
-                .transpose()?
-                .map(ManuallyDrop::into_inner),
+            translation: unsafe {
+                self.translation
+                    .as_ref()
+                    .map(|m| m.borrow_to_native(arena.as_mut()))
+            }
+            .transpose()?
+            .map(ManuallyDrop::into_inner),
+            rotation: unsafe {
+                self.rotation
+                    .as_ref()
+                    .map(|m| m.borrow_to_native(arena.as_mut()))
+            }
+            .transpose()?
+            .map(ManuallyDrop::into_inner),
         }))
     }
 }
@@ -693,8 +802,10 @@ pub extern "C" fn foxglove_channel_log_frame_transform(
     msg: Option<&FrameTransform>,
     log_time: Option<&u64>,
 ) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
-    match unsafe { FrameTransform::borrow_option_to_native(msg) } {
+    match unsafe { FrameTransform::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
         Err(e) => {
             tracing::error!("FrameTransform: {}", e);
@@ -714,25 +825,31 @@ pub struct FrameTransforms {
 impl FrameTransforms {
     unsafe fn borrow_option_to_native(
         msg: Option<&Self>,
+        arena: Pin<&mut Arena>,
     ) -> Result<ManuallyDrop<foxglove::schemas::FrameTransforms>, foxglove::FoxgloveError> {
         let Some(msg) = msg else {
             return Err(foxglove::FoxgloveError::ValueError(
                 "msg is required".to_string(),
             ));
         };
-        unsafe { msg.borrow_to_native() }
+        unsafe { msg.borrow_to_native(arena) }
     }
+}
+
+impl BorrowToNative for FrameTransforms {
+    type NativeType = foxglove::schemas::FrameTransforms;
 
     unsafe fn borrow_to_native(
         &self,
-    ) -> Result<ManuallyDrop<foxglove::schemas::FrameTransforms>, foxglove::FoxgloveError> {
+        #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
+    ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
         Ok(ManuallyDrop::new(foxglove::schemas::FrameTransforms {
             transforms: unsafe {
-                std::slice::from_raw_parts(self.transforms, self.transforms_count)
-            }
-            .iter()
-            .map(|m| unsafe { m.borrow_to_native().map(ManuallyDrop::into_inner) })
-            .collect::<Result<Vec<_>, _>>()?,
+                ManuallyDrop::into_inner(arena.as_mut().map(std::slice::from_raw_parts(
+                    self.transforms,
+                    self.transforms_count,
+                ))?)
+            },
         }))
     }
 }
@@ -743,24 +860,15 @@ pub extern "C" fn foxglove_channel_log_frame_transforms(
     msg: Option<&FrameTransforms>,
     log_time: Option<&u64>,
 ) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
-    match unsafe { FrameTransforms::borrow_option_to_native(msg) } {
-        Ok(msg) => {
-            let e = log_msg_to_channel(channel, &*msg, log_time);
-            free_frame_transforms(msg);
-            e
-        }
+    match unsafe { FrameTransforms::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
         Err(e) => {
             tracing::error!("FrameTransforms: {}", e);
             e.into()
         }
-    }
-}
-
-fn free_frame_transforms(mut msg: ManuallyDrop<foxglove::schemas::FrameTransforms>) {
-    // The only allocations we made were for Vec<Nested> fields, which may also include Vec<Nested> fields in a couple cases.
-    for nested in std::mem::take(&mut msg.transforms) {
-        std::mem::forget(nested);
     }
 }
 
@@ -774,18 +882,24 @@ pub struct GeoJson {
 impl GeoJson {
     unsafe fn borrow_option_to_native(
         msg: Option<&Self>,
+        arena: Pin<&mut Arena>,
     ) -> Result<ManuallyDrop<foxglove::schemas::GeoJson>, foxglove::FoxgloveError> {
         let Some(msg) = msg else {
             return Err(foxglove::FoxgloveError::ValueError(
                 "msg is required".to_string(),
             ));
         };
-        unsafe { msg.borrow_to_native() }
+        unsafe { msg.borrow_to_native(arena) }
     }
+}
+
+impl BorrowToNative for GeoJson {
+    type NativeType = foxglove::schemas::GeoJson;
 
     unsafe fn borrow_to_native(
         &self,
-    ) -> Result<ManuallyDrop<foxglove::schemas::GeoJson>, foxglove::FoxgloveError> {
+        #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
+    ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
         Ok(ManuallyDrop::new(foxglove::schemas::GeoJson {
             geojson: unsafe {
                 String::from_utf8(Vec::from_raw_parts(
@@ -805,8 +919,10 @@ pub extern "C" fn foxglove_channel_log_geo_json(
     msg: Option<&GeoJson>,
     log_time: Option<&u64>,
 ) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
-    match unsafe { GeoJson::borrow_option_to_native(msg) } {
+    match unsafe { GeoJson::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
         Err(e) => {
             tracing::error!("GeoJson: {}", e);
@@ -851,18 +967,24 @@ pub struct Grid {
 impl Grid {
     unsafe fn borrow_option_to_native(
         msg: Option<&Self>,
+        arena: Pin<&mut Arena>,
     ) -> Result<ManuallyDrop<foxglove::schemas::Grid>, foxglove::FoxgloveError> {
         let Some(msg) = msg else {
             return Err(foxglove::FoxgloveError::ValueError(
                 "msg is required".to_string(),
             ));
         };
-        unsafe { msg.borrow_to_native() }
+        unsafe { msg.borrow_to_native(arena) }
     }
+}
+
+impl BorrowToNative for Grid {
+    type NativeType = foxglove::schemas::Grid;
 
     unsafe fn borrow_to_native(
         &self,
-    ) -> Result<ManuallyDrop<foxglove::schemas::Grid>, foxglove::FoxgloveError> {
+        #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
+    ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
         Ok(ManuallyDrop::new(foxglove::schemas::Grid {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
             frame_id: unsafe {
@@ -873,19 +995,30 @@ impl Grid {
                 ))
             }
             .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("frame_id invalid: {}", e)))?,
-            pose: unsafe { self.pose.as_ref().map(|m| m.borrow_to_native()) }
-                .transpose()?
-                .map(ManuallyDrop::into_inner),
+            pose: unsafe {
+                self.pose
+                    .as_ref()
+                    .map(|m| m.borrow_to_native(arena.as_mut()))
+            }
+            .transpose()?
+            .map(ManuallyDrop::into_inner),
             column_count: self.column_count,
-            cell_size: unsafe { self.cell_size.as_ref().map(|m| m.borrow_to_native()) }
-                .transpose()?
-                .map(ManuallyDrop::into_inner),
+            cell_size: unsafe {
+                self.cell_size
+                    .as_ref()
+                    .map(|m| m.borrow_to_native(arena.as_mut()))
+            }
+            .transpose()?
+            .map(ManuallyDrop::into_inner),
             row_stride: self.row_stride,
             cell_stride: self.cell_stride,
-            fields: unsafe { std::slice::from_raw_parts(self.fields, self.fields_count) }
-                .iter()
-                .map(|m| unsafe { m.borrow_to_native().map(ManuallyDrop::into_inner) })
-                .collect::<Result<Vec<_>, _>>()?,
+            fields: unsafe {
+                ManuallyDrop::into_inner(
+                    arena
+                        .as_mut()
+                        .map(std::slice::from_raw_parts(self.fields, self.fields_count))?,
+                )
+            },
             data: unsafe {
                 Bytes::from_static(std::slice::from_raw_parts(self.data, self.data_len))
             },
@@ -899,24 +1032,15 @@ pub extern "C" fn foxglove_channel_log_grid(
     msg: Option<&Grid>,
     log_time: Option<&u64>,
 ) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
-    match unsafe { Grid::borrow_option_to_native(msg) } {
-        Ok(msg) => {
-            let e = log_msg_to_channel(channel, &*msg, log_time);
-            free_grid(msg);
-            e
-        }
+    match unsafe { Grid::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
         Err(e) => {
             tracing::error!("Grid: {}", e);
             e.into()
         }
-    }
-}
-
-fn free_grid(mut msg: ManuallyDrop<foxglove::schemas::Grid>) {
-    // The only allocations we made were for Vec<Nested> fields, which may also include Vec<Nested> fields in a couple cases.
-    for nested in std::mem::take(&mut msg.fields) {
-        std::mem::forget(nested);
     }
 }
 
@@ -939,31 +1063,46 @@ pub struct ImageAnnotations {
 impl ImageAnnotations {
     unsafe fn borrow_option_to_native(
         msg: Option<&Self>,
+        arena: Pin<&mut Arena>,
     ) -> Result<ManuallyDrop<foxglove::schemas::ImageAnnotations>, foxglove::FoxgloveError> {
         let Some(msg) = msg else {
             return Err(foxglove::FoxgloveError::ValueError(
                 "msg is required".to_string(),
             ));
         };
-        unsafe { msg.borrow_to_native() }
+        unsafe { msg.borrow_to_native(arena) }
     }
+}
+
+impl BorrowToNative for ImageAnnotations {
+    type NativeType = foxglove::schemas::ImageAnnotations;
 
     unsafe fn borrow_to_native(
         &self,
-    ) -> Result<ManuallyDrop<foxglove::schemas::ImageAnnotations>, foxglove::FoxgloveError> {
+        #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
+    ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
         Ok(ManuallyDrop::new(foxglove::schemas::ImageAnnotations {
-            circles: unsafe { std::slice::from_raw_parts(self.circles, self.circles_count) }
-                .iter()
-                .map(|m| unsafe { m.borrow_to_native().map(ManuallyDrop::into_inner) })
-                .collect::<Result<Vec<_>, _>>()?,
-            points: unsafe { std::slice::from_raw_parts(self.points, self.points_count) }
-                .iter()
-                .map(|m| unsafe { m.borrow_to_native().map(ManuallyDrop::into_inner) })
-                .collect::<Result<Vec<_>, _>>()?,
-            texts: unsafe { std::slice::from_raw_parts(self.texts, self.texts_count) }
-                .iter()
-                .map(|m| unsafe { m.borrow_to_native().map(ManuallyDrop::into_inner) })
-                .collect::<Result<Vec<_>, _>>()?,
+            circles: unsafe {
+                ManuallyDrop::into_inner(
+                    arena
+                        .as_mut()
+                        .map(std::slice::from_raw_parts(self.circles, self.circles_count))?,
+                )
+            },
+            points: unsafe {
+                ManuallyDrop::into_inner(
+                    arena
+                        .as_mut()
+                        .map(std::slice::from_raw_parts(self.points, self.points_count))?,
+                )
+            },
+            texts: unsafe {
+                ManuallyDrop::into_inner(
+                    arena
+                        .as_mut()
+                        .map(std::slice::from_raw_parts(self.texts, self.texts_count))?,
+                )
+            },
         }))
     }
 }
@@ -974,28 +1113,15 @@ pub extern "C" fn foxglove_channel_log_image_annotations(
     msg: Option<&ImageAnnotations>,
     log_time: Option<&u64>,
 ) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
-    match unsafe { ImageAnnotations::borrow_option_to_native(msg) } {
-        Ok(msg) => {
-            let e = log_msg_to_channel(channel, &*msg, log_time);
-            free_image_annotations(msg);
-            e
-        }
+    match unsafe { ImageAnnotations::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
         Err(e) => {
             tracing::error!("ImageAnnotations: {}", e);
             e.into()
         }
-    }
-}
-
-fn free_image_annotations(mut msg: ManuallyDrop<foxglove::schemas::ImageAnnotations>) {
-    // The only allocations we made were for Vec<Nested> fields, which may also include Vec<Nested> fields in a couple cases.
-    std::mem::take(&mut msg.circles);
-    for nested in std::mem::take(&mut msg.points) {
-        free_points_annotation(ManuallyDrop::new(nested));
-    }
-    for nested in std::mem::take(&mut msg.texts) {
-        std::mem::forget(nested);
     }
 }
 
@@ -1012,18 +1138,24 @@ pub struct KeyValuePair {
 impl KeyValuePair {
     unsafe fn borrow_option_to_native(
         msg: Option<&Self>,
+        arena: Pin<&mut Arena>,
     ) -> Result<ManuallyDrop<foxglove::schemas::KeyValuePair>, foxglove::FoxgloveError> {
         let Some(msg) = msg else {
             return Err(foxglove::FoxgloveError::ValueError(
                 "msg is required".to_string(),
             ));
         };
-        unsafe { msg.borrow_to_native() }
+        unsafe { msg.borrow_to_native(arena) }
     }
+}
+
+impl BorrowToNative for KeyValuePair {
+    type NativeType = foxglove::schemas::KeyValuePair;
 
     unsafe fn borrow_to_native(
         &self,
-    ) -> Result<ManuallyDrop<foxglove::schemas::KeyValuePair>, foxglove::FoxgloveError> {
+        #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
+    ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
         Ok(ManuallyDrop::new(foxglove::schemas::KeyValuePair {
             key: unsafe {
                 String::from_utf8(Vec::from_raw_parts(
@@ -1051,8 +1183,10 @@ pub extern "C" fn foxglove_channel_log_key_value_pair(
     msg: Option<&KeyValuePair>,
     log_time: Option<&u64>,
 ) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
-    match unsafe { KeyValuePair::borrow_option_to_native(msg) } {
+    match unsafe { KeyValuePair::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
         Err(e) => {
             tracing::error!("KeyValuePair: {}", e);
@@ -1091,18 +1225,24 @@ pub struct LaserScan {
 impl LaserScan {
     unsafe fn borrow_option_to_native(
         msg: Option<&Self>,
+        arena: Pin<&mut Arena>,
     ) -> Result<ManuallyDrop<foxglove::schemas::LaserScan>, foxglove::FoxgloveError> {
         let Some(msg) = msg else {
             return Err(foxglove::FoxgloveError::ValueError(
                 "msg is required".to_string(),
             ));
         };
-        unsafe { msg.borrow_to_native() }
+        unsafe { msg.borrow_to_native(arena) }
     }
+}
+
+impl BorrowToNative for LaserScan {
+    type NativeType = foxglove::schemas::LaserScan;
 
     unsafe fn borrow_to_native(
         &self,
-    ) -> Result<ManuallyDrop<foxglove::schemas::LaserScan>, foxglove::FoxgloveError> {
+        #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
+    ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
         Ok(ManuallyDrop::new(foxglove::schemas::LaserScan {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
             frame_id: unsafe {
@@ -1113,9 +1253,13 @@ impl LaserScan {
                 ))
             }
             .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("frame_id invalid: {}", e)))?,
-            pose: unsafe { self.pose.as_ref().map(|m| m.borrow_to_native()) }
-                .transpose()?
-                .map(ManuallyDrop::into_inner),
+            pose: unsafe {
+                self.pose
+                    .as_ref()
+                    .map(|m| m.borrow_to_native(arena.as_mut()))
+            }
+            .transpose()?
+            .map(ManuallyDrop::into_inner),
             start_angle: self.start_angle,
             end_angle: self.end_angle,
             ranges: unsafe {
@@ -1142,8 +1286,10 @@ pub extern "C" fn foxglove_channel_log_laser_scan(
     msg: Option<&LaserScan>,
     log_time: Option<&u64>,
 ) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
-    match unsafe { LaserScan::borrow_option_to_native(msg) } {
+    match unsafe { LaserScan::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
         Err(e) => {
             tracing::error!("LaserScan: {}", e);
@@ -1185,28 +1331,45 @@ pub struct LinePrimitive {
     pub indices_count: usize,
 }
 
-impl LinePrimitive {
+impl BorrowToNative for LinePrimitive {
+    type NativeType = foxglove::schemas::LinePrimitive;
+
     unsafe fn borrow_to_native(
         &self,
-    ) -> Result<ManuallyDrop<foxglove::schemas::LinePrimitive>, foxglove::FoxgloveError> {
+        #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
+    ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
         Ok(ManuallyDrop::new(foxglove::schemas::LinePrimitive {
             r#type: self.r#type as i32,
-            pose: unsafe { self.pose.as_ref().map(|m| m.borrow_to_native()) }
-                .transpose()?
-                .map(ManuallyDrop::into_inner),
+            pose: unsafe {
+                self.pose
+                    .as_ref()
+                    .map(|m| m.borrow_to_native(arena.as_mut()))
+            }
+            .transpose()?
+            .map(ManuallyDrop::into_inner),
             thickness: self.thickness,
             scale_invariant: self.scale_invariant,
-            points: unsafe { std::slice::from_raw_parts(self.points, self.points_count) }
-                .iter()
-                .map(|m| unsafe { m.borrow_to_native().map(ManuallyDrop::into_inner) })
-                .collect::<Result<Vec<_>, _>>()?,
-            color: unsafe { self.color.as_ref().map(|m| m.borrow_to_native()) }
-                .transpose()?
-                .map(ManuallyDrop::into_inner),
-            colors: unsafe { std::slice::from_raw_parts(self.colors, self.colors_count) }
-                .iter()
-                .map(|m| unsafe { m.borrow_to_native().map(ManuallyDrop::into_inner) })
-                .collect::<Result<Vec<_>, _>>()?,
+            points: unsafe {
+                ManuallyDrop::into_inner(
+                    arena
+                        .as_mut()
+                        .map(std::slice::from_raw_parts(self.points, self.points_count))?,
+                )
+            },
+            color: unsafe {
+                self.color
+                    .as_ref()
+                    .map(|m| m.borrow_to_native(arena.as_mut()))
+            }
+            .transpose()?
+            .map(ManuallyDrop::into_inner),
+            colors: unsafe {
+                ManuallyDrop::into_inner(
+                    arena
+                        .as_mut()
+                        .map(std::slice::from_raw_parts(self.colors, self.colors_count))?,
+                )
+            },
             indices: unsafe {
                 Vec::from_raw_parts(
                     self.indices as *mut u32,
@@ -1216,12 +1379,6 @@ impl LinePrimitive {
             },
         }))
     }
-}
-
-fn free_line_primitive(mut msg: ManuallyDrop<foxglove::schemas::LinePrimitive>) {
-    // The only allocations we made were for Vec<Nested> fields, which may also include Vec<Nested> fields in a couple cases.
-    std::mem::take(&mut msg.points);
-    std::mem::take(&mut msg.colors);
 }
 
 /// A navigation satellite fix for any Global Navigation Satellite System
@@ -1252,18 +1409,24 @@ pub struct LocationFix {
 impl LocationFix {
     unsafe fn borrow_option_to_native(
         msg: Option<&Self>,
+        arena: Pin<&mut Arena>,
     ) -> Result<ManuallyDrop<foxglove::schemas::LocationFix>, foxglove::FoxgloveError> {
         let Some(msg) = msg else {
             return Err(foxglove::FoxgloveError::ValueError(
                 "msg is required".to_string(),
             ));
         };
-        unsafe { msg.borrow_to_native() }
+        unsafe { msg.borrow_to_native(arena) }
     }
+}
+
+impl BorrowToNative for LocationFix {
+    type NativeType = foxglove::schemas::LocationFix;
 
     unsafe fn borrow_to_native(
         &self,
-    ) -> Result<ManuallyDrop<foxglove::schemas::LocationFix>, foxglove::FoxgloveError> {
+        #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
+    ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
         Ok(ManuallyDrop::new(foxglove::schemas::LocationFix {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
             frame_id: unsafe {
@@ -1295,8 +1458,10 @@ pub extern "C" fn foxglove_channel_log_location_fix(
     msg: Option<&LocationFix>,
     log_time: Option<&u64>,
 ) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
-    match unsafe { LocationFix::borrow_option_to_native(msg) } {
+    match unsafe { LocationFix::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
         Err(e) => {
             tracing::error!("LocationFix: {}", e);
@@ -1330,18 +1495,24 @@ pub struct Log {
 impl Log {
     unsafe fn borrow_option_to_native(
         msg: Option<&Self>,
+        arena: Pin<&mut Arena>,
     ) -> Result<ManuallyDrop<foxglove::schemas::Log>, foxglove::FoxgloveError> {
         let Some(msg) = msg else {
             return Err(foxglove::FoxgloveError::ValueError(
                 "msg is required".to_string(),
             ));
         };
-        unsafe { msg.borrow_to_native() }
+        unsafe { msg.borrow_to_native(arena) }
     }
+}
+
+impl BorrowToNative for Log {
+    type NativeType = foxglove::schemas::Log;
 
     unsafe fn borrow_to_native(
         &self,
-    ) -> Result<ManuallyDrop<foxglove::schemas::Log>, foxglove::FoxgloveError> {
+        #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
+    ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
         Ok(ManuallyDrop::new(foxglove::schemas::Log {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
             level: self.level as i32,
@@ -1380,8 +1551,10 @@ pub extern "C" fn foxglove_channel_log_log(
     msg: Option<&Log>,
     log_time: Option<&u64>,
 ) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
-    match unsafe { Log::borrow_option_to_native(msg) } {
+    match unsafe { Log::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
         Err(e) => {
             tracing::error!("Log: {}", e);
@@ -1406,18 +1579,24 @@ pub struct SceneEntityDeletion {
 impl SceneEntityDeletion {
     unsafe fn borrow_option_to_native(
         msg: Option<&Self>,
+        arena: Pin<&mut Arena>,
     ) -> Result<ManuallyDrop<foxglove::schemas::SceneEntityDeletion>, foxglove::FoxgloveError> {
         let Some(msg) = msg else {
             return Err(foxglove::FoxgloveError::ValueError(
                 "msg is required".to_string(),
             ));
         };
-        unsafe { msg.borrow_to_native() }
+        unsafe { msg.borrow_to_native(arena) }
     }
+}
+
+impl BorrowToNative for SceneEntityDeletion {
+    type NativeType = foxglove::schemas::SceneEntityDeletion;
 
     unsafe fn borrow_to_native(
         &self,
-    ) -> Result<ManuallyDrop<foxglove::schemas::SceneEntityDeletion>, foxglove::FoxgloveError> {
+        #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
+    ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
         Ok(ManuallyDrop::new(foxglove::schemas::SceneEntityDeletion {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
             r#type: self.r#type as i32,
@@ -1439,8 +1618,10 @@ pub extern "C" fn foxglove_channel_log_scene_entity_deletion(
     msg: Option<&SceneEntityDeletion>,
     log_time: Option<&u64>,
 ) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
-    match unsafe { SceneEntityDeletion::borrow_option_to_native(msg) } {
+    match unsafe { SceneEntityDeletion::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
         Err(e) => {
             tracing::error!("SceneEntityDeletion: {}", e);
@@ -1507,18 +1688,24 @@ pub struct SceneEntity {
 impl SceneEntity {
     unsafe fn borrow_option_to_native(
         msg: Option<&Self>,
+        arena: Pin<&mut Arena>,
     ) -> Result<ManuallyDrop<foxglove::schemas::SceneEntity>, foxglove::FoxgloveError> {
         let Some(msg) = msg else {
             return Err(foxglove::FoxgloveError::ValueError(
                 "msg is required".to_string(),
             ));
         };
-        unsafe { msg.borrow_to_native() }
+        unsafe { msg.borrow_to_native(arena) }
     }
+}
+
+impl BorrowToNative for SceneEntity {
+    type NativeType = foxglove::schemas::SceneEntity;
 
     unsafe fn borrow_to_native(
         &self,
-    ) -> Result<ManuallyDrop<foxglove::schemas::SceneEntity>, foxglove::FoxgloveError> {
+        #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
+    ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
         Ok(ManuallyDrop::new(foxglove::schemas::SceneEntity {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
             frame_id: unsafe {
@@ -1539,42 +1726,66 @@ impl SceneEntity {
             .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("id invalid: {}", e)))?,
             lifetime: unsafe { self.lifetime.as_ref() }.map(|&m| m.into()),
             frame_locked: self.frame_locked,
-            metadata: unsafe { std::slice::from_raw_parts(self.metadata, self.metadata_count) }
-                .iter()
-                .map(|m| unsafe { m.borrow_to_native().map(ManuallyDrop::into_inner) })
-                .collect::<Result<Vec<_>, _>>()?,
-            arrows: unsafe { std::slice::from_raw_parts(self.arrows, self.arrows_count) }
-                .iter()
-                .map(|m| unsafe { m.borrow_to_native().map(ManuallyDrop::into_inner) })
-                .collect::<Result<Vec<_>, _>>()?,
-            cubes: unsafe { std::slice::from_raw_parts(self.cubes, self.cubes_count) }
-                .iter()
-                .map(|m| unsafe { m.borrow_to_native().map(ManuallyDrop::into_inner) })
-                .collect::<Result<Vec<_>, _>>()?,
-            spheres: unsafe { std::slice::from_raw_parts(self.spheres, self.spheres_count) }
-                .iter()
-                .map(|m| unsafe { m.borrow_to_native().map(ManuallyDrop::into_inner) })
-                .collect::<Result<Vec<_>, _>>()?,
-            cylinders: unsafe { std::slice::from_raw_parts(self.cylinders, self.cylinders_count) }
-                .iter()
-                .map(|m| unsafe { m.borrow_to_native().map(ManuallyDrop::into_inner) })
-                .collect::<Result<Vec<_>, _>>()?,
-            lines: unsafe { std::slice::from_raw_parts(self.lines, self.lines_count) }
-                .iter()
-                .map(|m| unsafe { m.borrow_to_native().map(ManuallyDrop::into_inner) })
-                .collect::<Result<Vec<_>, _>>()?,
-            triangles: unsafe { std::slice::from_raw_parts(self.triangles, self.triangles_count) }
-                .iter()
-                .map(|m| unsafe { m.borrow_to_native().map(ManuallyDrop::into_inner) })
-                .collect::<Result<Vec<_>, _>>()?,
-            texts: unsafe { std::slice::from_raw_parts(self.texts, self.texts_count) }
-                .iter()
-                .map(|m| unsafe { m.borrow_to_native().map(ManuallyDrop::into_inner) })
-                .collect::<Result<Vec<_>, _>>()?,
-            models: unsafe { std::slice::from_raw_parts(self.models, self.models_count) }
-                .iter()
-                .map(|m| unsafe { m.borrow_to_native().map(ManuallyDrop::into_inner) })
-                .collect::<Result<Vec<_>, _>>()?,
+            metadata: unsafe {
+                ManuallyDrop::into_inner(arena.as_mut().map(std::slice::from_raw_parts(
+                    self.metadata,
+                    self.metadata_count,
+                ))?)
+            },
+            arrows: unsafe {
+                ManuallyDrop::into_inner(
+                    arena
+                        .as_mut()
+                        .map(std::slice::from_raw_parts(self.arrows, self.arrows_count))?,
+                )
+            },
+            cubes: unsafe {
+                ManuallyDrop::into_inner(
+                    arena
+                        .as_mut()
+                        .map(std::slice::from_raw_parts(self.cubes, self.cubes_count))?,
+                )
+            },
+            spheres: unsafe {
+                ManuallyDrop::into_inner(
+                    arena
+                        .as_mut()
+                        .map(std::slice::from_raw_parts(self.spheres, self.spheres_count))?,
+                )
+            },
+            cylinders: unsafe {
+                ManuallyDrop::into_inner(arena.as_mut().map(std::slice::from_raw_parts(
+                    self.cylinders,
+                    self.cylinders_count,
+                ))?)
+            },
+            lines: unsafe {
+                ManuallyDrop::into_inner(
+                    arena
+                        .as_mut()
+                        .map(std::slice::from_raw_parts(self.lines, self.lines_count))?,
+                )
+            },
+            triangles: unsafe {
+                ManuallyDrop::into_inner(arena.as_mut().map(std::slice::from_raw_parts(
+                    self.triangles,
+                    self.triangles_count,
+                ))?)
+            },
+            texts: unsafe {
+                ManuallyDrop::into_inner(
+                    arena
+                        .as_mut()
+                        .map(std::slice::from_raw_parts(self.texts, self.texts_count))?,
+                )
+            },
+            models: unsafe {
+                ManuallyDrop::into_inner(
+                    arena
+                        .as_mut()
+                        .map(std::slice::from_raw_parts(self.models, self.models_count))?,
+                )
+            },
         }))
     }
 }
@@ -1585,40 +1796,15 @@ pub extern "C" fn foxglove_channel_log_scene_entity(
     msg: Option<&SceneEntity>,
     log_time: Option<&u64>,
 ) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
-    match unsafe { SceneEntity::borrow_option_to_native(msg) } {
-        Ok(msg) => {
-            let e = log_msg_to_channel(channel, &*msg, log_time);
-            free_scene_entity(msg);
-            e
-        }
+    match unsafe { SceneEntity::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
         Err(e) => {
             tracing::error!("SceneEntity: {}", e);
             e.into()
         }
-    }
-}
-
-fn free_scene_entity(mut msg: ManuallyDrop<foxglove::schemas::SceneEntity>) {
-    // The only allocations we made were for Vec<Nested> fields, which may also include Vec<Nested> fields in a couple cases.
-    for nested in std::mem::take(&mut msg.metadata) {
-        std::mem::forget(nested);
-    }
-    std::mem::take(&mut msg.arrows);
-    std::mem::take(&mut msg.cubes);
-    std::mem::take(&mut msg.spheres);
-    std::mem::take(&mut msg.cylinders);
-    for nested in std::mem::take(&mut msg.lines) {
-        free_line_primitive(ManuallyDrop::new(nested));
-    }
-    for nested in std::mem::take(&mut msg.triangles) {
-        free_triangle_list_primitive(ManuallyDrop::new(nested));
-    }
-    for nested in std::mem::take(&mut msg.texts) {
-        std::mem::forget(nested);
-    }
-    for nested in std::mem::take(&mut msg.models) {
-        std::mem::forget(nested);
     }
 }
 
@@ -1637,27 +1823,37 @@ pub struct SceneUpdate {
 impl SceneUpdate {
     unsafe fn borrow_option_to_native(
         msg: Option<&Self>,
+        arena: Pin<&mut Arena>,
     ) -> Result<ManuallyDrop<foxglove::schemas::SceneUpdate>, foxglove::FoxgloveError> {
         let Some(msg) = msg else {
             return Err(foxglove::FoxgloveError::ValueError(
                 "msg is required".to_string(),
             ));
         };
-        unsafe { msg.borrow_to_native() }
+        unsafe { msg.borrow_to_native(arena) }
     }
+}
+
+impl BorrowToNative for SceneUpdate {
+    type NativeType = foxglove::schemas::SceneUpdate;
 
     unsafe fn borrow_to_native(
         &self,
-    ) -> Result<ManuallyDrop<foxglove::schemas::SceneUpdate>, foxglove::FoxgloveError> {
+        #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
+    ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
         Ok(ManuallyDrop::new(foxglove::schemas::SceneUpdate {
-            deletions: unsafe { std::slice::from_raw_parts(self.deletions, self.deletions_count) }
-                .iter()
-                .map(|m| unsafe { m.borrow_to_native().map(ManuallyDrop::into_inner) })
-                .collect::<Result<Vec<_>, _>>()?,
-            entities: unsafe { std::slice::from_raw_parts(self.entities, self.entities_count) }
-                .iter()
-                .map(|m| unsafe { m.borrow_to_native().map(ManuallyDrop::into_inner) })
-                .collect::<Result<Vec<_>, _>>()?,
+            deletions: unsafe {
+                ManuallyDrop::into_inner(arena.as_mut().map(std::slice::from_raw_parts(
+                    self.deletions,
+                    self.deletions_count,
+                ))?)
+            },
+            entities: unsafe {
+                ManuallyDrop::into_inner(arena.as_mut().map(std::slice::from_raw_parts(
+                    self.entities,
+                    self.entities_count,
+                ))?)
+            },
         }))
     }
 }
@@ -1668,27 +1864,15 @@ pub extern "C" fn foxglove_channel_log_scene_update(
     msg: Option<&SceneUpdate>,
     log_time: Option<&u64>,
 ) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
-    match unsafe { SceneUpdate::borrow_option_to_native(msg) } {
-        Ok(msg) => {
-            let e = log_msg_to_channel(channel, &*msg, log_time);
-            free_scene_update(msg);
-            e
-        }
+    match unsafe { SceneUpdate::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
         Err(e) => {
             tracing::error!("SceneUpdate: {}", e);
             e.into()
         }
-    }
-}
-
-fn free_scene_update(mut msg: ManuallyDrop<foxglove::schemas::SceneUpdate>) {
-    // The only allocations we made were for Vec<Nested> fields, which may also include Vec<Nested> fields in a couple cases.
-    for nested in std::mem::take(&mut msg.deletions) {
-        std::mem::forget(nested);
-    }
-    for nested in std::mem::take(&mut msg.entities) {
-        free_scene_entity(ManuallyDrop::new(nested));
     }
 }
 
@@ -1718,20 +1902,35 @@ pub struct ModelPrimitive {
     pub data_len: usize,
 }
 
-impl ModelPrimitive {
+impl BorrowToNative for ModelPrimitive {
+    type NativeType = foxglove::schemas::ModelPrimitive;
+
     unsafe fn borrow_to_native(
         &self,
-    ) -> Result<ManuallyDrop<foxglove::schemas::ModelPrimitive>, foxglove::FoxgloveError> {
+        #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
+    ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
         Ok(ManuallyDrop::new(foxglove::schemas::ModelPrimitive {
-            pose: unsafe { self.pose.as_ref().map(|m| m.borrow_to_native()) }
-                .transpose()?
-                .map(ManuallyDrop::into_inner),
-            scale: unsafe { self.scale.as_ref().map(|m| m.borrow_to_native()) }
-                .transpose()?
-                .map(ManuallyDrop::into_inner),
-            color: unsafe { self.color.as_ref().map(|m| m.borrow_to_native()) }
-                .transpose()?
-                .map(ManuallyDrop::into_inner),
+            pose: unsafe {
+                self.pose
+                    .as_ref()
+                    .map(|m| m.borrow_to_native(arena.as_mut()))
+            }
+            .transpose()?
+            .map(ManuallyDrop::into_inner),
+            scale: unsafe {
+                self.scale
+                    .as_ref()
+                    .map(|m| m.borrow_to_native(arena.as_mut()))
+            }
+            .transpose()?
+            .map(ManuallyDrop::into_inner),
+            color: unsafe {
+                self.color
+                    .as_ref()
+                    .map(|m| m.borrow_to_native(arena.as_mut()))
+            }
+            .transpose()?
+            .map(ManuallyDrop::into_inner),
             override_color: self.override_color,
             url: unsafe {
                 String::from_utf8(Vec::from_raw_parts(
@@ -1774,18 +1973,24 @@ pub struct PackedElementField {
 impl PackedElementField {
     unsafe fn borrow_option_to_native(
         msg: Option<&Self>,
+        arena: Pin<&mut Arena>,
     ) -> Result<ManuallyDrop<foxglove::schemas::PackedElementField>, foxglove::FoxgloveError> {
         let Some(msg) = msg else {
             return Err(foxglove::FoxgloveError::ValueError(
                 "msg is required".to_string(),
             ));
         };
-        unsafe { msg.borrow_to_native() }
+        unsafe { msg.borrow_to_native(arena) }
     }
+}
+
+impl BorrowToNative for PackedElementField {
+    type NativeType = foxglove::schemas::PackedElementField;
 
     unsafe fn borrow_to_native(
         &self,
-    ) -> Result<ManuallyDrop<foxglove::schemas::PackedElementField>, foxglove::FoxgloveError> {
+        #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
+    ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
         Ok(ManuallyDrop::new(foxglove::schemas::PackedElementField {
             name: unsafe {
                 String::from_utf8(Vec::from_raw_parts(
@@ -1807,8 +2012,10 @@ pub extern "C" fn foxglove_channel_log_packed_element_field(
     msg: Option<&PackedElementField>,
     log_time: Option<&u64>,
 ) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
-    match unsafe { PackedElementField::borrow_option_to_native(msg) } {
+    match unsafe { PackedElementField::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
         Err(e) => {
             tracing::error!("PackedElementField: {}", e);
@@ -1830,18 +2037,24 @@ pub struct Point2 {
 impl Point2 {
     unsafe fn borrow_option_to_native(
         msg: Option<&Self>,
+        arena: Pin<&mut Arena>,
     ) -> Result<ManuallyDrop<foxglove::schemas::Point2>, foxglove::FoxgloveError> {
         let Some(msg) = msg else {
             return Err(foxglove::FoxgloveError::ValueError(
                 "msg is required".to_string(),
             ));
         };
-        unsafe { msg.borrow_to_native() }
+        unsafe { msg.borrow_to_native(arena) }
     }
+}
+
+impl BorrowToNative for Point2 {
+    type NativeType = foxglove::schemas::Point2;
 
     unsafe fn borrow_to_native(
         &self,
-    ) -> Result<ManuallyDrop<foxglove::schemas::Point2>, foxglove::FoxgloveError> {
+        #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
+    ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
         Ok(ManuallyDrop::new(foxglove::schemas::Point2 {
             x: self.x,
             y: self.y,
@@ -1855,8 +2068,10 @@ pub extern "C" fn foxglove_channel_log_point2(
     msg: Option<&Point2>,
     log_time: Option<&u64>,
 ) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
-    match unsafe { Point2::borrow_option_to_native(msg) } {
+    match unsafe { Point2::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
         Err(e) => {
             tracing::error!("Point2: {}", e);
@@ -1881,18 +2096,24 @@ pub struct Point3 {
 impl Point3 {
     unsafe fn borrow_option_to_native(
         msg: Option<&Self>,
+        arena: Pin<&mut Arena>,
     ) -> Result<ManuallyDrop<foxglove::schemas::Point3>, foxglove::FoxgloveError> {
         let Some(msg) = msg else {
             return Err(foxglove::FoxgloveError::ValueError(
                 "msg is required".to_string(),
             ));
         };
-        unsafe { msg.borrow_to_native() }
+        unsafe { msg.borrow_to_native(arena) }
     }
+}
+
+impl BorrowToNative for Point3 {
+    type NativeType = foxglove::schemas::Point3;
 
     unsafe fn borrow_to_native(
         &self,
-    ) -> Result<ManuallyDrop<foxglove::schemas::Point3>, foxglove::FoxgloveError> {
+        #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
+    ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
         Ok(ManuallyDrop::new(foxglove::schemas::Point3 {
             x: self.x,
             y: self.y,
@@ -1907,8 +2128,10 @@ pub extern "C" fn foxglove_channel_log_point3(
     msg: Option<&Point3>,
     log_time: Option<&u64>,
 ) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
-    match unsafe { Point3::borrow_option_to_native(msg) } {
+    match unsafe { Point3::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
         Err(e) => {
             tracing::error!("Point3: {}", e);
@@ -1944,18 +2167,24 @@ pub struct PointCloud {
 impl PointCloud {
     unsafe fn borrow_option_to_native(
         msg: Option<&Self>,
+        arena: Pin<&mut Arena>,
     ) -> Result<ManuallyDrop<foxglove::schemas::PointCloud>, foxglove::FoxgloveError> {
         let Some(msg) = msg else {
             return Err(foxglove::FoxgloveError::ValueError(
                 "msg is required".to_string(),
             ));
         };
-        unsafe { msg.borrow_to_native() }
+        unsafe { msg.borrow_to_native(arena) }
     }
+}
+
+impl BorrowToNative for PointCloud {
+    type NativeType = foxglove::schemas::PointCloud;
 
     unsafe fn borrow_to_native(
         &self,
-    ) -> Result<ManuallyDrop<foxglove::schemas::PointCloud>, foxglove::FoxgloveError> {
+        #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
+    ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
         Ok(ManuallyDrop::new(foxglove::schemas::PointCloud {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
             frame_id: unsafe {
@@ -1966,14 +2195,21 @@ impl PointCloud {
                 ))
             }
             .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("frame_id invalid: {}", e)))?,
-            pose: unsafe { self.pose.as_ref().map(|m| m.borrow_to_native()) }
-                .transpose()?
-                .map(ManuallyDrop::into_inner),
+            pose: unsafe {
+                self.pose
+                    .as_ref()
+                    .map(|m| m.borrow_to_native(arena.as_mut()))
+            }
+            .transpose()?
+            .map(ManuallyDrop::into_inner),
             point_stride: self.point_stride,
-            fields: unsafe { std::slice::from_raw_parts(self.fields, self.fields_count) }
-                .iter()
-                .map(|m| unsafe { m.borrow_to_native().map(ManuallyDrop::into_inner) })
-                .collect::<Result<Vec<_>, _>>()?,
+            fields: unsafe {
+                ManuallyDrop::into_inner(
+                    arena
+                        .as_mut()
+                        .map(std::slice::from_raw_parts(self.fields, self.fields_count))?,
+                )
+            },
             data: unsafe {
                 Bytes::from_static(std::slice::from_raw_parts(self.data, self.data_len))
             },
@@ -1987,24 +2223,15 @@ pub extern "C" fn foxglove_channel_log_point_cloud(
     msg: Option<&PointCloud>,
     log_time: Option<&u64>,
 ) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
-    match unsafe { PointCloud::borrow_option_to_native(msg) } {
-        Ok(msg) => {
-            let e = log_msg_to_channel(channel, &*msg, log_time);
-            free_point_cloud(msg);
-            e
-        }
+    match unsafe { PointCloud::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
         Err(e) => {
             tracing::error!("PointCloud: {}", e);
             e.into()
         }
-    }
-}
-
-fn free_point_cloud(mut msg: ManuallyDrop<foxglove::schemas::PointCloud>) {
-    // The only allocations we made were for Vec<Nested> fields, which may also include Vec<Nested> fields in a couple cases.
-    for nested in std::mem::take(&mut msg.fields) {
-        std::mem::forget(nested);
     }
 }
 
@@ -2039,37 +2266,54 @@ pub struct PointsAnnotation {
 impl PointsAnnotation {
     unsafe fn borrow_option_to_native(
         msg: Option<&Self>,
+        arena: Pin<&mut Arena>,
     ) -> Result<ManuallyDrop<foxglove::schemas::PointsAnnotation>, foxglove::FoxgloveError> {
         let Some(msg) = msg else {
             return Err(foxglove::FoxgloveError::ValueError(
                 "msg is required".to_string(),
             ));
         };
-        unsafe { msg.borrow_to_native() }
+        unsafe { msg.borrow_to_native(arena) }
     }
+}
+
+impl BorrowToNative for PointsAnnotation {
+    type NativeType = foxglove::schemas::PointsAnnotation;
 
     unsafe fn borrow_to_native(
         &self,
-    ) -> Result<ManuallyDrop<foxglove::schemas::PointsAnnotation>, foxglove::FoxgloveError> {
+        #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
+    ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
         Ok(ManuallyDrop::new(foxglove::schemas::PointsAnnotation {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
             r#type: self.r#type as i32,
-            points: unsafe { std::slice::from_raw_parts(self.points, self.points_count) }
-                .iter()
-                .map(|m| unsafe { m.borrow_to_native().map(ManuallyDrop::into_inner) })
-                .collect::<Result<Vec<_>, _>>()?,
-            outline_color: unsafe { self.outline_color.as_ref().map(|m| m.borrow_to_native()) }
-                .transpose()?
-                .map(ManuallyDrop::into_inner),
-            outline_colors: unsafe {
-                std::slice::from_raw_parts(self.outline_colors, self.outline_colors_count)
+            points: unsafe {
+                ManuallyDrop::into_inner(
+                    arena
+                        .as_mut()
+                        .map(std::slice::from_raw_parts(self.points, self.points_count))?,
+                )
+            },
+            outline_color: unsafe {
+                self.outline_color
+                    .as_ref()
+                    .map(|m| m.borrow_to_native(arena.as_mut()))
             }
-            .iter()
-            .map(|m| unsafe { m.borrow_to_native().map(ManuallyDrop::into_inner) })
-            .collect::<Result<Vec<_>, _>>()?,
-            fill_color: unsafe { self.fill_color.as_ref().map(|m| m.borrow_to_native()) }
-                .transpose()?
-                .map(ManuallyDrop::into_inner),
+            .transpose()?
+            .map(ManuallyDrop::into_inner),
+            outline_colors: unsafe {
+                ManuallyDrop::into_inner(arena.as_mut().map(std::slice::from_raw_parts(
+                    self.outline_colors,
+                    self.outline_colors_count,
+                ))?)
+            },
+            fill_color: unsafe {
+                self.fill_color
+                    .as_ref()
+                    .map(|m| m.borrow_to_native(arena.as_mut()))
+            }
+            .transpose()?
+            .map(ManuallyDrop::into_inner),
             thickness: self.thickness,
         }))
     }
@@ -2081,24 +2325,16 @@ pub extern "C" fn foxglove_channel_log_points_annotation(
     msg: Option<&PointsAnnotation>,
     log_time: Option<&u64>,
 ) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
-    match unsafe { PointsAnnotation::borrow_option_to_native(msg) } {
-        Ok(msg) => {
-            let e = log_msg_to_channel(channel, &*msg, log_time);
-            free_points_annotation(msg);
-            e
-        }
+    match unsafe { PointsAnnotation::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
         Err(e) => {
             tracing::error!("PointsAnnotation: {}", e);
             e.into()
         }
     }
-}
-
-fn free_points_annotation(mut msg: ManuallyDrop<foxglove::schemas::PointsAnnotation>) {
-    // The only allocations we made were for Vec<Nested> fields, which may also include Vec<Nested> fields in a couple cases.
-    std::mem::take(&mut msg.points);
-    std::mem::take(&mut msg.outline_colors);
 }
 
 /// A position and orientation for an object or reference frame in 3D space
@@ -2114,25 +2350,39 @@ pub struct Pose {
 impl Pose {
     unsafe fn borrow_option_to_native(
         msg: Option<&Self>,
+        arena: Pin<&mut Arena>,
     ) -> Result<ManuallyDrop<foxglove::schemas::Pose>, foxglove::FoxgloveError> {
         let Some(msg) = msg else {
             return Err(foxglove::FoxgloveError::ValueError(
                 "msg is required".to_string(),
             ));
         };
-        unsafe { msg.borrow_to_native() }
+        unsafe { msg.borrow_to_native(arena) }
     }
+}
+
+impl BorrowToNative for Pose {
+    type NativeType = foxglove::schemas::Pose;
 
     unsafe fn borrow_to_native(
         &self,
-    ) -> Result<ManuallyDrop<foxglove::schemas::Pose>, foxglove::FoxgloveError> {
+        #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
+    ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
         Ok(ManuallyDrop::new(foxglove::schemas::Pose {
-            position: unsafe { self.position.as_ref().map(|m| m.borrow_to_native()) }
-                .transpose()?
-                .map(ManuallyDrop::into_inner),
-            orientation: unsafe { self.orientation.as_ref().map(|m| m.borrow_to_native()) }
-                .transpose()?
-                .map(ManuallyDrop::into_inner),
+            position: unsafe {
+                self.position
+                    .as_ref()
+                    .map(|m| m.borrow_to_native(arena.as_mut()))
+            }
+            .transpose()?
+            .map(ManuallyDrop::into_inner),
+            orientation: unsafe {
+                self.orientation
+                    .as_ref()
+                    .map(|m| m.borrow_to_native(arena.as_mut()))
+            }
+            .transpose()?
+            .map(ManuallyDrop::into_inner),
         }))
     }
 }
@@ -2143,8 +2393,10 @@ pub extern "C" fn foxglove_channel_log_pose(
     msg: Option<&Pose>,
     log_time: Option<&u64>,
 ) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
-    match unsafe { Pose::borrow_option_to_native(msg) } {
+    match unsafe { Pose::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
         Err(e) => {
             tracing::error!("Pose: {}", e);
@@ -2169,18 +2421,24 @@ pub struct PoseInFrame {
 impl PoseInFrame {
     unsafe fn borrow_option_to_native(
         msg: Option<&Self>,
+        arena: Pin<&mut Arena>,
     ) -> Result<ManuallyDrop<foxglove::schemas::PoseInFrame>, foxglove::FoxgloveError> {
         let Some(msg) = msg else {
             return Err(foxglove::FoxgloveError::ValueError(
                 "msg is required".to_string(),
             ));
         };
-        unsafe { msg.borrow_to_native() }
+        unsafe { msg.borrow_to_native(arena) }
     }
+}
+
+impl BorrowToNative for PoseInFrame {
+    type NativeType = foxglove::schemas::PoseInFrame;
 
     unsafe fn borrow_to_native(
         &self,
-    ) -> Result<ManuallyDrop<foxglove::schemas::PoseInFrame>, foxglove::FoxgloveError> {
+        #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
+    ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
         Ok(ManuallyDrop::new(foxglove::schemas::PoseInFrame {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
             frame_id: unsafe {
@@ -2191,9 +2449,13 @@ impl PoseInFrame {
                 ))
             }
             .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("frame_id invalid: {}", e)))?,
-            pose: unsafe { self.pose.as_ref().map(|m| m.borrow_to_native()) }
-                .transpose()?
-                .map(ManuallyDrop::into_inner),
+            pose: unsafe {
+                self.pose
+                    .as_ref()
+                    .map(|m| m.borrow_to_native(arena.as_mut()))
+            }
+            .transpose()?
+            .map(ManuallyDrop::into_inner),
         }))
     }
 }
@@ -2204,8 +2466,10 @@ pub extern "C" fn foxglove_channel_log_pose_in_frame(
     msg: Option<&PoseInFrame>,
     log_time: Option<&u64>,
 ) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
-    match unsafe { PoseInFrame::borrow_option_to_native(msg) } {
+    match unsafe { PoseInFrame::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
         Err(e) => {
             tracing::error!("PoseInFrame: {}", e);
@@ -2231,18 +2495,24 @@ pub struct PosesInFrame {
 impl PosesInFrame {
     unsafe fn borrow_option_to_native(
         msg: Option<&Self>,
+        arena: Pin<&mut Arena>,
     ) -> Result<ManuallyDrop<foxglove::schemas::PosesInFrame>, foxglove::FoxgloveError> {
         let Some(msg) = msg else {
             return Err(foxglove::FoxgloveError::ValueError(
                 "msg is required".to_string(),
             ));
         };
-        unsafe { msg.borrow_to_native() }
+        unsafe { msg.borrow_to_native(arena) }
     }
+}
+
+impl BorrowToNative for PosesInFrame {
+    type NativeType = foxglove::schemas::PosesInFrame;
 
     unsafe fn borrow_to_native(
         &self,
-    ) -> Result<ManuallyDrop<foxglove::schemas::PosesInFrame>, foxglove::FoxgloveError> {
+        #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
+    ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
         Ok(ManuallyDrop::new(foxglove::schemas::PosesInFrame {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
             frame_id: unsafe {
@@ -2253,10 +2523,13 @@ impl PosesInFrame {
                 ))
             }
             .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("frame_id invalid: {}", e)))?,
-            poses: unsafe { std::slice::from_raw_parts(self.poses, self.poses_count) }
-                .iter()
-                .map(|m| unsafe { m.borrow_to_native().map(ManuallyDrop::into_inner) })
-                .collect::<Result<Vec<_>, _>>()?,
+            poses: unsafe {
+                ManuallyDrop::into_inner(
+                    arena
+                        .as_mut()
+                        .map(std::slice::from_raw_parts(self.poses, self.poses_count))?,
+                )
+            },
         }))
     }
 }
@@ -2267,23 +2540,16 @@ pub extern "C" fn foxglove_channel_log_poses_in_frame(
     msg: Option<&PosesInFrame>,
     log_time: Option<&u64>,
 ) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
-    match unsafe { PosesInFrame::borrow_option_to_native(msg) } {
-        Ok(msg) => {
-            let e = log_msg_to_channel(channel, &*msg, log_time);
-            free_poses_in_frame(msg);
-            e
-        }
+    match unsafe { PosesInFrame::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
         Err(e) => {
             tracing::error!("PosesInFrame: {}", e);
             e.into()
         }
     }
-}
-
-fn free_poses_in_frame(mut msg: ManuallyDrop<foxglove::schemas::PosesInFrame>) {
-    // The only allocations we made were for Vec<Nested> fields, which may also include Vec<Nested> fields in a couple cases.
-    std::mem::take(&mut msg.poses);
 }
 
 /// A [quaternion](https://eater.net/quaternions) representing a rotation in 3D space
@@ -2305,18 +2571,24 @@ pub struct Quaternion {
 impl Quaternion {
     unsafe fn borrow_option_to_native(
         msg: Option<&Self>,
+        arena: Pin<&mut Arena>,
     ) -> Result<ManuallyDrop<foxglove::schemas::Quaternion>, foxglove::FoxgloveError> {
         let Some(msg) = msg else {
             return Err(foxglove::FoxgloveError::ValueError(
                 "msg is required".to_string(),
             ));
         };
-        unsafe { msg.borrow_to_native() }
+        unsafe { msg.borrow_to_native(arena) }
     }
+}
+
+impl BorrowToNative for Quaternion {
+    type NativeType = foxglove::schemas::Quaternion;
 
     unsafe fn borrow_to_native(
         &self,
-    ) -> Result<ManuallyDrop<foxglove::schemas::Quaternion>, foxglove::FoxgloveError> {
+        #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
+    ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
         Ok(ManuallyDrop::new(foxglove::schemas::Quaternion {
             x: self.x,
             y: self.y,
@@ -2332,8 +2604,10 @@ pub extern "C" fn foxglove_channel_log_quaternion(
     msg: Option<&Quaternion>,
     log_time: Option<&u64>,
 ) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
-    match unsafe { Quaternion::borrow_option_to_native(msg) } {
+    match unsafe { Quaternion::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
         Err(e) => {
             tracing::error!("Quaternion: {}", e);
@@ -2365,18 +2639,24 @@ pub struct RawAudio {
 impl RawAudio {
     unsafe fn borrow_option_to_native(
         msg: Option<&Self>,
+        arena: Pin<&mut Arena>,
     ) -> Result<ManuallyDrop<foxglove::schemas::RawAudio>, foxglove::FoxgloveError> {
         let Some(msg) = msg else {
             return Err(foxglove::FoxgloveError::ValueError(
                 "msg is required".to_string(),
             ));
         };
-        unsafe { msg.borrow_to_native() }
+        unsafe { msg.borrow_to_native(arena) }
     }
+}
+
+impl BorrowToNative for RawAudio {
+    type NativeType = foxglove::schemas::RawAudio;
 
     unsafe fn borrow_to_native(
         &self,
-    ) -> Result<ManuallyDrop<foxglove::schemas::RawAudio>, foxglove::FoxgloveError> {
+        #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
+    ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
         Ok(ManuallyDrop::new(foxglove::schemas::RawAudio {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
             data: unsafe {
@@ -2402,8 +2682,10 @@ pub extern "C" fn foxglove_channel_log_raw_audio(
     msg: Option<&RawAudio>,
     log_time: Option<&u64>,
 ) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
-    match unsafe { RawAudio::borrow_option_to_native(msg) } {
+    match unsafe { RawAudio::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
         Err(e) => {
             tracing::error!("RawAudio: {}", e);
@@ -2443,18 +2725,24 @@ pub struct RawImage {
 impl RawImage {
     unsafe fn borrow_option_to_native(
         msg: Option<&Self>,
+        arena: Pin<&mut Arena>,
     ) -> Result<ManuallyDrop<foxglove::schemas::RawImage>, foxglove::FoxgloveError> {
         let Some(msg) = msg else {
             return Err(foxglove::FoxgloveError::ValueError(
                 "msg is required".to_string(),
             ));
         };
-        unsafe { msg.borrow_to_native() }
+        unsafe { msg.borrow_to_native(arena) }
     }
+}
+
+impl BorrowToNative for RawImage {
+    type NativeType = foxglove::schemas::RawImage;
 
     unsafe fn borrow_to_native(
         &self,
-    ) -> Result<ManuallyDrop<foxglove::schemas::RawImage>, foxglove::FoxgloveError> {
+        #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
+    ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
         Ok(ManuallyDrop::new(foxglove::schemas::RawImage {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
             frame_id: unsafe {
@@ -2489,8 +2777,10 @@ pub extern "C" fn foxglove_channel_log_raw_image(
     msg: Option<&RawImage>,
     log_time: Option<&u64>,
 ) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
-    match unsafe { RawImage::borrow_option_to_native(msg) } {
+    match unsafe { RawImage::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
         Err(e) => {
             tracing::error!("RawImage: {}", e);
@@ -2512,20 +2802,35 @@ pub struct SpherePrimitive {
     pub color: *const Color,
 }
 
-impl SpherePrimitive {
+impl BorrowToNative for SpherePrimitive {
+    type NativeType = foxglove::schemas::SpherePrimitive;
+
     unsafe fn borrow_to_native(
         &self,
-    ) -> Result<ManuallyDrop<foxglove::schemas::SpherePrimitive>, foxglove::FoxgloveError> {
+        #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
+    ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
         Ok(ManuallyDrop::new(foxglove::schemas::SpherePrimitive {
-            pose: unsafe { self.pose.as_ref().map(|m| m.borrow_to_native()) }
-                .transpose()?
-                .map(ManuallyDrop::into_inner),
-            size: unsafe { self.size.as_ref().map(|m| m.borrow_to_native()) }
-                .transpose()?
-                .map(ManuallyDrop::into_inner),
-            color: unsafe { self.color.as_ref().map(|m| m.borrow_to_native()) }
-                .transpose()?
-                .map(ManuallyDrop::into_inner),
+            pose: unsafe {
+                self.pose
+                    .as_ref()
+                    .map(|m| m.borrow_to_native(arena.as_mut()))
+            }
+            .transpose()?
+            .map(ManuallyDrop::into_inner),
+            size: unsafe {
+                self.size
+                    .as_ref()
+                    .map(|m| m.borrow_to_native(arena.as_mut()))
+            }
+            .transpose()?
+            .map(ManuallyDrop::into_inner),
+            color: unsafe {
+                self.color
+                    .as_ref()
+                    .map(|m| m.borrow_to_native(arena.as_mut()))
+            }
+            .transpose()?
+            .map(ManuallyDrop::into_inner),
         }))
     }
 }
@@ -2556,23 +2861,33 @@ pub struct TextAnnotation {
 impl TextAnnotation {
     unsafe fn borrow_option_to_native(
         msg: Option<&Self>,
+        arena: Pin<&mut Arena>,
     ) -> Result<ManuallyDrop<foxglove::schemas::TextAnnotation>, foxglove::FoxgloveError> {
         let Some(msg) = msg else {
             return Err(foxglove::FoxgloveError::ValueError(
                 "msg is required".to_string(),
             ));
         };
-        unsafe { msg.borrow_to_native() }
+        unsafe { msg.borrow_to_native(arena) }
     }
+}
+
+impl BorrowToNative for TextAnnotation {
+    type NativeType = foxglove::schemas::TextAnnotation;
 
     unsafe fn borrow_to_native(
         &self,
-    ) -> Result<ManuallyDrop<foxglove::schemas::TextAnnotation>, foxglove::FoxgloveError> {
+        #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
+    ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
         Ok(ManuallyDrop::new(foxglove::schemas::TextAnnotation {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
-            position: unsafe { self.position.as_ref().map(|m| m.borrow_to_native()) }
-                .transpose()?
-                .map(ManuallyDrop::into_inner),
+            position: unsafe {
+                self.position
+                    .as_ref()
+                    .map(|m| m.borrow_to_native(arena.as_mut()))
+            }
+            .transpose()?
+            .map(ManuallyDrop::into_inner),
             text: unsafe {
                 String::from_utf8(Vec::from_raw_parts(
                     self.text.as_ptr() as *mut _,
@@ -2582,11 +2897,17 @@ impl TextAnnotation {
             }
             .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("text invalid: {}", e)))?,
             font_size: self.font_size,
-            text_color: unsafe { self.text_color.as_ref().map(|m| m.borrow_to_native()) }
-                .transpose()?
-                .map(ManuallyDrop::into_inner),
+            text_color: unsafe {
+                self.text_color
+                    .as_ref()
+                    .map(|m| m.borrow_to_native(arena.as_mut()))
+            }
+            .transpose()?
+            .map(ManuallyDrop::into_inner),
             background_color: unsafe {
-                self.background_color.as_ref().map(|m| m.borrow_to_native())
+                self.background_color
+                    .as_ref()
+                    .map(|m| m.borrow_to_native(arena.as_mut()))
             }
             .transpose()?
             .map(ManuallyDrop::into_inner),
@@ -2600,8 +2921,10 @@ pub extern "C" fn foxglove_channel_log_text_annotation(
     msg: Option<&TextAnnotation>,
     log_time: Option<&u64>,
 ) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
-    match unsafe { TextAnnotation::borrow_option_to_native(msg) } {
+    match unsafe { TextAnnotation::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
         Err(e) => {
             tracing::error!("TextAnnotation: {}", e);
@@ -2632,20 +2955,31 @@ pub struct TextPrimitive {
     pub text: FoxgloveString,
 }
 
-impl TextPrimitive {
+impl BorrowToNative for TextPrimitive {
+    type NativeType = foxglove::schemas::TextPrimitive;
+
     unsafe fn borrow_to_native(
         &self,
-    ) -> Result<ManuallyDrop<foxglove::schemas::TextPrimitive>, foxglove::FoxgloveError> {
+        #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
+    ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
         Ok(ManuallyDrop::new(foxglove::schemas::TextPrimitive {
-            pose: unsafe { self.pose.as_ref().map(|m| m.borrow_to_native()) }
-                .transpose()?
-                .map(ManuallyDrop::into_inner),
+            pose: unsafe {
+                self.pose
+                    .as_ref()
+                    .map(|m| m.borrow_to_native(arena.as_mut()))
+            }
+            .transpose()?
+            .map(ManuallyDrop::into_inner),
             billboard: self.billboard,
             font_size: self.font_size,
             scale_invariant: self.scale_invariant,
-            color: unsafe { self.color.as_ref().map(|m| m.borrow_to_native()) }
-                .transpose()?
-                .map(ManuallyDrop::into_inner),
+            color: unsafe {
+                self.color
+                    .as_ref()
+                    .map(|m| m.borrow_to_native(arena.as_mut()))
+            }
+            .transpose()?
+            .map(ManuallyDrop::into_inner),
             text: unsafe {
                 String::from_utf8(Vec::from_raw_parts(
                     self.text.as_ptr() as *mut _,
@@ -2682,27 +3016,43 @@ pub struct TriangleListPrimitive {
     pub indices_count: usize,
 }
 
-impl TriangleListPrimitive {
+impl BorrowToNative for TriangleListPrimitive {
+    type NativeType = foxglove::schemas::TriangleListPrimitive;
+
     unsafe fn borrow_to_native(
         &self,
-    ) -> Result<ManuallyDrop<foxglove::schemas::TriangleListPrimitive>, foxglove::FoxgloveError>
-    {
+        #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
+    ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
         Ok(ManuallyDrop::new(
             foxglove::schemas::TriangleListPrimitive {
-                pose: unsafe { self.pose.as_ref().map(|m| m.borrow_to_native()) }
-                    .transpose()?
-                    .map(ManuallyDrop::into_inner),
-                points: unsafe { std::slice::from_raw_parts(self.points, self.points_count) }
-                    .iter()
-                    .map(|m| unsafe { m.borrow_to_native().map(ManuallyDrop::into_inner) })
-                    .collect::<Result<Vec<_>, _>>()?,
-                color: unsafe { self.color.as_ref().map(|m| m.borrow_to_native()) }
-                    .transpose()?
-                    .map(ManuallyDrop::into_inner),
-                colors: unsafe { std::slice::from_raw_parts(self.colors, self.colors_count) }
-                    .iter()
-                    .map(|m| unsafe { m.borrow_to_native().map(ManuallyDrop::into_inner) })
-                    .collect::<Result<Vec<_>, _>>()?,
+                pose: unsafe {
+                    self.pose
+                        .as_ref()
+                        .map(|m| m.borrow_to_native(arena.as_mut()))
+                }
+                .transpose()?
+                .map(ManuallyDrop::into_inner),
+                points: unsafe {
+                    ManuallyDrop::into_inner(
+                        arena
+                            .as_mut()
+                            .map(std::slice::from_raw_parts(self.points, self.points_count))?,
+                    )
+                },
+                color: unsafe {
+                    self.color
+                        .as_ref()
+                        .map(|m| m.borrow_to_native(arena.as_mut()))
+                }
+                .transpose()?
+                .map(ManuallyDrop::into_inner),
+                colors: unsafe {
+                    ManuallyDrop::into_inner(
+                        arena
+                            .as_mut()
+                            .map(std::slice::from_raw_parts(self.colors, self.colors_count))?,
+                    )
+                },
                 indices: unsafe {
                     Vec::from_raw_parts(
                         self.indices as *mut u32,
@@ -2713,12 +3063,6 @@ impl TriangleListPrimitive {
             },
         ))
     }
-}
-
-fn free_triangle_list_primitive(mut msg: ManuallyDrop<foxglove::schemas::TriangleListPrimitive>) {
-    // The only allocations we made were for Vec<Nested> fields, which may also include Vec<Nested> fields in a couple cases.
-    std::mem::take(&mut msg.points);
-    std::mem::take(&mut msg.colors);
 }
 
 /// A vector in 2D space that represents a direction only
@@ -2734,18 +3078,24 @@ pub struct Vector2 {
 impl Vector2 {
     unsafe fn borrow_option_to_native(
         msg: Option<&Self>,
+        arena: Pin<&mut Arena>,
     ) -> Result<ManuallyDrop<foxglove::schemas::Vector2>, foxglove::FoxgloveError> {
         let Some(msg) = msg else {
             return Err(foxglove::FoxgloveError::ValueError(
                 "msg is required".to_string(),
             ));
         };
-        unsafe { msg.borrow_to_native() }
+        unsafe { msg.borrow_to_native(arena) }
     }
+}
+
+impl BorrowToNative for Vector2 {
+    type NativeType = foxglove::schemas::Vector2;
 
     unsafe fn borrow_to_native(
         &self,
-    ) -> Result<ManuallyDrop<foxglove::schemas::Vector2>, foxglove::FoxgloveError> {
+        #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
+    ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
         Ok(ManuallyDrop::new(foxglove::schemas::Vector2 {
             x: self.x,
             y: self.y,
@@ -2759,8 +3109,10 @@ pub extern "C" fn foxglove_channel_log_vector2(
     msg: Option<&Vector2>,
     log_time: Option<&u64>,
 ) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
-    match unsafe { Vector2::borrow_option_to_native(msg) } {
+    match unsafe { Vector2::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
         Err(e) => {
             tracing::error!("Vector2: {}", e);
@@ -2785,18 +3137,24 @@ pub struct Vector3 {
 impl Vector3 {
     unsafe fn borrow_option_to_native(
         msg: Option<&Self>,
+        arena: Pin<&mut Arena>,
     ) -> Result<ManuallyDrop<foxglove::schemas::Vector3>, foxglove::FoxgloveError> {
         let Some(msg) = msg else {
             return Err(foxglove::FoxgloveError::ValueError(
                 "msg is required".to_string(),
             ));
         };
-        unsafe { msg.borrow_to_native() }
+        unsafe { msg.borrow_to_native(arena) }
     }
+}
+
+impl BorrowToNative for Vector3 {
+    type NativeType = foxglove::schemas::Vector3;
 
     unsafe fn borrow_to_native(
         &self,
-    ) -> Result<ManuallyDrop<foxglove::schemas::Vector3>, foxglove::FoxgloveError> {
+        #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
+    ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
         Ok(ManuallyDrop::new(foxglove::schemas::Vector3 {
             x: self.x,
             y: self.y,
@@ -2811,8 +3169,10 @@ pub extern "C" fn foxglove_channel_log_vector3(
     msg: Option<&Vector3>,
     log_time: Option<&u64>,
 ) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
-    match unsafe { Vector3::borrow_option_to_native(msg) } {
+    match unsafe { Vector3::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
         Err(e) => {
             tracing::error!("Vector3: {}", e);
