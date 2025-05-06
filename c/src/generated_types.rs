@@ -6,6 +6,7 @@ use std::mem::ManuallyDrop;
 use std::pin::{pin, Pin};
 
 use crate::arena::{Arena, BorrowToNative};
+use crate::util::{bytes_from_raw, string_from_raw, vec_from_raw};
 use crate::{
     log_msg_to_channel, FoxgloveChannel, FoxgloveDuration, FoxgloveError, FoxgloveString,
     FoxgloveTimestamp,
@@ -99,25 +100,26 @@ impl BorrowToNative for ArrowPrimitive {
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
     ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
+        let pose = unsafe {
+            self.pose
+                .as_ref()
+                .map(|m| m.borrow_to_native(arena.as_mut()))
+        }
+        .transpose()?;
+        let color = unsafe {
+            self.color
+                .as_ref()
+                .map(|m| m.borrow_to_native(arena.as_mut()))
+        }
+        .transpose()?;
+
         Ok(ManuallyDrop::new(foxglove::schemas::ArrowPrimitive {
-            pose: unsafe {
-                self.pose
-                    .as_ref()
-                    .map(|m| m.borrow_to_native(arena.as_mut()))
-            }
-            .transpose()?
-            .map(ManuallyDrop::into_inner),
+            pose: pose.map(ManuallyDrop::into_inner),
             shaft_length: self.shaft_length,
             shaft_diameter: self.shaft_diameter,
             head_length: self.head_length,
             head_diameter: self.head_diameter,
-            color: unsafe {
-                self.color
-                    .as_ref()
-                    .map(|m| m.borrow_to_native(arena.as_mut()))
-            }
-            .transpose()?
-            .map(ManuallyDrop::into_inner),
+            color: color.map(ManuallyDrop::into_inner),
         }))
     }
 }
@@ -215,38 +217,37 @@ impl BorrowToNative for CameraCalibration {
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
     ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
+        let frame_id = unsafe {
+            string_from_raw(
+                self.frame_id.as_ptr() as *const _,
+                self.frame_id.len(),
+                "frame_id",
+            )?
+        };
+        let distortion_model = unsafe {
+            string_from_raw(
+                self.distortion_model.as_ptr() as *const _,
+                self.distortion_model.len(),
+                "distortion_model",
+            )?
+        };
+
         Ok(ManuallyDrop::new(foxglove::schemas::CameraCalibration {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
-            frame_id: unsafe {
-                String::from_utf8(Vec::from_raw_parts(
-                    self.frame_id.as_ptr() as *mut _,
-                    self.frame_id.len(),
-                    self.frame_id.len(),
-                ))
-            }
-            .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("frame_id invalid: {}", e)))?,
+            frame_id: ManuallyDrop::into_inner(frame_id),
             width: self.width,
             height: self.height,
-            distortion_model: unsafe {
-                String::from_utf8(Vec::from_raw_parts(
-                    self.distortion_model.as_ptr() as *mut _,
-                    self.distortion_model.len(),
-                    self.distortion_model.len(),
-                ))
-            }
-            .map_err(|e| {
-                foxglove::FoxgloveError::Utf8Error(format!("distortion_model invalid: {}", e))
-            })?,
-            d: unsafe { Vec::from_raw_parts(self.d as *mut f64, self.d_count, self.d_count) },
-            k: unsafe {
-                Vec::from_raw_parts(self.k.as_ptr() as *mut f64, self.k.len(), self.k.len())
-            },
-            r: unsafe {
-                Vec::from_raw_parts(self.r.as_ptr() as *mut f64, self.r.len(), self.r.len())
-            },
-            p: unsafe {
-                Vec::from_raw_parts(self.p.as_ptr() as *mut f64, self.p.len(), self.p.len())
-            },
+            distortion_model: ManuallyDrop::into_inner(distortion_model),
+            d: ManuallyDrop::into_inner(unsafe { vec_from_raw(self.d as *mut f64, self.d_count) }),
+            k: ManuallyDrop::into_inner(unsafe {
+                vec_from_raw(self.k.as_ptr() as *mut f64, self.k.len())
+            }),
+            r: ManuallyDrop::into_inner(unsafe {
+                vec_from_raw(self.r.as_ptr() as *mut f64, self.r.len())
+            }),
+            p: ManuallyDrop::into_inner(unsafe {
+                vec_from_raw(self.p.as_ptr() as *mut f64, self.p.len())
+            }),
         }))
     }
 }
@@ -313,31 +314,32 @@ impl BorrowToNative for CircleAnnotation {
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
     ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
+        let position = unsafe {
+            self.position
+                .as_ref()
+                .map(|m| m.borrow_to_native(arena.as_mut()))
+        }
+        .transpose()?;
+        let fill_color = unsafe {
+            self.fill_color
+                .as_ref()
+                .map(|m| m.borrow_to_native(arena.as_mut()))
+        }
+        .transpose()?;
+        let outline_color = unsafe {
+            self.outline_color
+                .as_ref()
+                .map(|m| m.borrow_to_native(arena.as_mut()))
+        }
+        .transpose()?;
+
         Ok(ManuallyDrop::new(foxglove::schemas::CircleAnnotation {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
-            position: unsafe {
-                self.position
-                    .as_ref()
-                    .map(|m| m.borrow_to_native(arena.as_mut()))
-            }
-            .transpose()?
-            .map(ManuallyDrop::into_inner),
+            position: position.map(ManuallyDrop::into_inner),
             diameter: self.diameter,
             thickness: self.thickness,
-            fill_color: unsafe {
-                self.fill_color
-                    .as_ref()
-                    .map(|m| m.borrow_to_native(arena.as_mut()))
-            }
-            .transpose()?
-            .map(ManuallyDrop::into_inner),
-            outline_color: unsafe {
-                self.outline_color
-                    .as_ref()
-                    .map(|m| m.borrow_to_native(arena.as_mut()))
-            }
-            .transpose()?
-            .map(ManuallyDrop::into_inner),
+            fill_color: fill_color.map(ManuallyDrop::into_inner),
+            outline_color: outline_color.map(ManuallyDrop::into_inner),
         }))
     }
 }
@@ -464,27 +466,26 @@ impl BorrowToNative for CompressedImage {
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
     ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
+        let frame_id = unsafe {
+            string_from_raw(
+                self.frame_id.as_ptr() as *const _,
+                self.frame_id.len(),
+                "frame_id",
+            )?
+        };
+        let format = unsafe {
+            string_from_raw(
+                self.format.as_ptr() as *const _,
+                self.format.len(),
+                "format",
+            )?
+        };
+
         Ok(ManuallyDrop::new(foxglove::schemas::CompressedImage {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
-            frame_id: unsafe {
-                String::from_utf8(Vec::from_raw_parts(
-                    self.frame_id.as_ptr() as *mut _,
-                    self.frame_id.len(),
-                    self.frame_id.len(),
-                ))
-            }
-            .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("frame_id invalid: {}", e)))?,
-            data: unsafe {
-                Bytes::from_static(std::slice::from_raw_parts(self.data, self.data_len))
-            },
-            format: unsafe {
-                String::from_utf8(Vec::from_raw_parts(
-                    self.format.as_ptr() as *mut _,
-                    self.format.len(),
-                    self.format.len(),
-                ))
-            }
-            .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("format invalid: {}", e)))?,
+            frame_id: ManuallyDrop::into_inner(frame_id),
+            data: ManuallyDrop::into_inner(unsafe { bytes_from_raw(self.data, self.data_len) }),
+            format: ManuallyDrop::into_inner(format),
         }))
     }
 }
@@ -573,27 +574,26 @@ impl BorrowToNative for CompressedVideo {
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
     ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
+        let frame_id = unsafe {
+            string_from_raw(
+                self.frame_id.as_ptr() as *const _,
+                self.frame_id.len(),
+                "frame_id",
+            )?
+        };
+        let format = unsafe {
+            string_from_raw(
+                self.format.as_ptr() as *const _,
+                self.format.len(),
+                "format",
+            )?
+        };
+
         Ok(ManuallyDrop::new(foxglove::schemas::CompressedVideo {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
-            frame_id: unsafe {
-                String::from_utf8(Vec::from_raw_parts(
-                    self.frame_id.as_ptr() as *mut _,
-                    self.frame_id.len(),
-                    self.frame_id.len(),
-                ))
-            }
-            .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("frame_id invalid: {}", e)))?,
-            data: unsafe {
-                Bytes::from_static(std::slice::from_raw_parts(self.data, self.data_len))
-            },
-            format: unsafe {
-                String::from_utf8(Vec::from_raw_parts(
-                    self.format.as_ptr() as *mut _,
-                    self.format.len(),
-                    self.format.len(),
-                ))
-            }
-            .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("format invalid: {}", e)))?,
+            frame_id: ManuallyDrop::into_inner(frame_id),
+            data: ManuallyDrop::into_inner(unsafe { bytes_from_raw(self.data, self.data_len) }),
+            format: ManuallyDrop::into_inner(format),
         }))
     }
 }
@@ -642,30 +642,31 @@ impl BorrowToNative for CylinderPrimitive {
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
     ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
+        let pose = unsafe {
+            self.pose
+                .as_ref()
+                .map(|m| m.borrow_to_native(arena.as_mut()))
+        }
+        .transpose()?;
+        let size = unsafe {
+            self.size
+                .as_ref()
+                .map(|m| m.borrow_to_native(arena.as_mut()))
+        }
+        .transpose()?;
+        let color = unsafe {
+            self.color
+                .as_ref()
+                .map(|m| m.borrow_to_native(arena.as_mut()))
+        }
+        .transpose()?;
+
         Ok(ManuallyDrop::new(foxglove::schemas::CylinderPrimitive {
-            pose: unsafe {
-                self.pose
-                    .as_ref()
-                    .map(|m| m.borrow_to_native(arena.as_mut()))
-            }
-            .transpose()?
-            .map(ManuallyDrop::into_inner),
-            size: unsafe {
-                self.size
-                    .as_ref()
-                    .map(|m| m.borrow_to_native(arena.as_mut()))
-            }
-            .transpose()?
-            .map(ManuallyDrop::into_inner),
+            pose: pose.map(ManuallyDrop::into_inner),
+            size: size.map(ManuallyDrop::into_inner),
             bottom_scale: self.bottom_scale,
             top_scale: self.top_scale,
-            color: unsafe {
-                self.color
-                    .as_ref()
-                    .map(|m| m.borrow_to_native(arena.as_mut()))
-            }
-            .transpose()?
-            .map(ManuallyDrop::into_inner),
+            color: color.map(ManuallyDrop::into_inner),
         }))
     }
 }
@@ -690,28 +691,29 @@ impl BorrowToNative for CubePrimitive {
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
     ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
+        let pose = unsafe {
+            self.pose
+                .as_ref()
+                .map(|m| m.borrow_to_native(arena.as_mut()))
+        }
+        .transpose()?;
+        let size = unsafe {
+            self.size
+                .as_ref()
+                .map(|m| m.borrow_to_native(arena.as_mut()))
+        }
+        .transpose()?;
+        let color = unsafe {
+            self.color
+                .as_ref()
+                .map(|m| m.borrow_to_native(arena.as_mut()))
+        }
+        .transpose()?;
+
         Ok(ManuallyDrop::new(foxglove::schemas::CubePrimitive {
-            pose: unsafe {
-                self.pose
-                    .as_ref()
-                    .map(|m| m.borrow_to_native(arena.as_mut()))
-            }
-            .transpose()?
-            .map(ManuallyDrop::into_inner),
-            size: unsafe {
-                self.size
-                    .as_ref()
-                    .map(|m| m.borrow_to_native(arena.as_mut()))
-            }
-            .transpose()?
-            .map(ManuallyDrop::into_inner),
-            color: unsafe {
-                self.color
-                    .as_ref()
-                    .map(|m| m.borrow_to_native(arena.as_mut()))
-            }
-            .transpose()?
-            .map(ManuallyDrop::into_inner),
+            pose: pose.map(ManuallyDrop::into_inner),
+            size: size.map(ManuallyDrop::into_inner),
+            color: color.map(ManuallyDrop::into_inner),
         }))
     }
 }
@@ -756,42 +758,39 @@ impl BorrowToNative for FrameTransform {
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
     ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
+        let parent_frame_id = unsafe {
+            string_from_raw(
+                self.parent_frame_id.as_ptr() as *const _,
+                self.parent_frame_id.len(),
+                "parent_frame_id",
+            )?
+        };
+        let child_frame_id = unsafe {
+            string_from_raw(
+                self.child_frame_id.as_ptr() as *const _,
+                self.child_frame_id.len(),
+                "child_frame_id",
+            )?
+        };
+        let translation = unsafe {
+            self.translation
+                .as_ref()
+                .map(|m| m.borrow_to_native(arena.as_mut()))
+        }
+        .transpose()?;
+        let rotation = unsafe {
+            self.rotation
+                .as_ref()
+                .map(|m| m.borrow_to_native(arena.as_mut()))
+        }
+        .transpose()?;
+
         Ok(ManuallyDrop::new(foxglove::schemas::FrameTransform {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
-            parent_frame_id: unsafe {
-                String::from_utf8(Vec::from_raw_parts(
-                    self.parent_frame_id.as_ptr() as *mut _,
-                    self.parent_frame_id.len(),
-                    self.parent_frame_id.len(),
-                ))
-            }
-            .map_err(|e| {
-                foxglove::FoxgloveError::Utf8Error(format!("parent_frame_id invalid: {}", e))
-            })?,
-            child_frame_id: unsafe {
-                String::from_utf8(Vec::from_raw_parts(
-                    self.child_frame_id.as_ptr() as *mut _,
-                    self.child_frame_id.len(),
-                    self.child_frame_id.len(),
-                ))
-            }
-            .map_err(|e| {
-                foxglove::FoxgloveError::Utf8Error(format!("child_frame_id invalid: {}", e))
-            })?,
-            translation: unsafe {
-                self.translation
-                    .as_ref()
-                    .map(|m| m.borrow_to_native(arena.as_mut()))
-            }
-            .transpose()?
-            .map(ManuallyDrop::into_inner),
-            rotation: unsafe {
-                self.rotation
-                    .as_ref()
-                    .map(|m| m.borrow_to_native(arena.as_mut()))
-            }
-            .transpose()?
-            .map(ManuallyDrop::into_inner),
+            parent_frame_id: ManuallyDrop::into_inner(parent_frame_id),
+            child_frame_id: ManuallyDrop::into_inner(child_frame_id),
+            translation: translation.map(ManuallyDrop::into_inner),
+            rotation: rotation.map(ManuallyDrop::into_inner),
         }))
     }
 }
@@ -843,13 +842,10 @@ impl BorrowToNative for FrameTransforms {
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
     ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
+        let transforms = unsafe { arena.as_mut().map(self.transforms, self.transforms_count)? };
+
         Ok(ManuallyDrop::new(foxglove::schemas::FrameTransforms {
-            transforms: unsafe {
-                ManuallyDrop::into_inner(arena.as_mut().map(std::slice::from_raw_parts(
-                    self.transforms,
-                    self.transforms_count,
-                ))?)
-            },
+            transforms: ManuallyDrop::into_inner(transforms),
         }))
     }
 }
@@ -900,15 +896,16 @@ impl BorrowToNative for GeoJson {
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
     ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
+        let geojson = unsafe {
+            string_from_raw(
+                self.geojson.as_ptr() as *const _,
+                self.geojson.len(),
+                "geojson",
+            )?
+        };
+
         Ok(ManuallyDrop::new(foxglove::schemas::GeoJson {
-            geojson: unsafe {
-                String::from_utf8(Vec::from_raw_parts(
-                    self.geojson.as_ptr() as *mut _,
-                    self.geojson.len(),
-                    self.geojson.len(),
-                ))
-            }
-            .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("geojson invalid: {}", e)))?,
+            geojson: ManuallyDrop::into_inner(geojson),
         }))
     }
 }
@@ -985,43 +982,37 @@ impl BorrowToNative for Grid {
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
     ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
+        let frame_id = unsafe {
+            string_from_raw(
+                self.frame_id.as_ptr() as *const _,
+                self.frame_id.len(),
+                "frame_id",
+            )?
+        };
+        let pose = unsafe {
+            self.pose
+                .as_ref()
+                .map(|m| m.borrow_to_native(arena.as_mut()))
+        }
+        .transpose()?;
+        let cell_size = unsafe {
+            self.cell_size
+                .as_ref()
+                .map(|m| m.borrow_to_native(arena.as_mut()))
+        }
+        .transpose()?;
+        let fields = unsafe { arena.as_mut().map(self.fields, self.fields_count)? };
+
         Ok(ManuallyDrop::new(foxglove::schemas::Grid {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
-            frame_id: unsafe {
-                String::from_utf8(Vec::from_raw_parts(
-                    self.frame_id.as_ptr() as *mut _,
-                    self.frame_id.len(),
-                    self.frame_id.len(),
-                ))
-            }
-            .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("frame_id invalid: {}", e)))?,
-            pose: unsafe {
-                self.pose
-                    .as_ref()
-                    .map(|m| m.borrow_to_native(arena.as_mut()))
-            }
-            .transpose()?
-            .map(ManuallyDrop::into_inner),
+            frame_id: ManuallyDrop::into_inner(frame_id),
+            pose: pose.map(ManuallyDrop::into_inner),
             column_count: self.column_count,
-            cell_size: unsafe {
-                self.cell_size
-                    .as_ref()
-                    .map(|m| m.borrow_to_native(arena.as_mut()))
-            }
-            .transpose()?
-            .map(ManuallyDrop::into_inner),
+            cell_size: cell_size.map(ManuallyDrop::into_inner),
             row_stride: self.row_stride,
             cell_stride: self.cell_stride,
-            fields: unsafe {
-                ManuallyDrop::into_inner(
-                    arena
-                        .as_mut()
-                        .map(std::slice::from_raw_parts(self.fields, self.fields_count))?,
-                )
-            },
-            data: unsafe {
-                Bytes::from_static(std::slice::from_raw_parts(self.data, self.data_len))
-            },
+            fields: ManuallyDrop::into_inner(fields),
+            data: ManuallyDrop::into_inner(unsafe { bytes_from_raw(self.data, self.data_len) }),
         }))
     }
 }
@@ -1081,28 +1072,14 @@ impl BorrowToNative for ImageAnnotations {
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
     ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
+        let circles = unsafe { arena.as_mut().map(self.circles, self.circles_count)? };
+        let points = unsafe { arena.as_mut().map(self.points, self.points_count)? };
+        let texts = unsafe { arena.as_mut().map(self.texts, self.texts_count)? };
+
         Ok(ManuallyDrop::new(foxglove::schemas::ImageAnnotations {
-            circles: unsafe {
-                ManuallyDrop::into_inner(
-                    arena
-                        .as_mut()
-                        .map(std::slice::from_raw_parts(self.circles, self.circles_count))?,
-                )
-            },
-            points: unsafe {
-                ManuallyDrop::into_inner(
-                    arena
-                        .as_mut()
-                        .map(std::slice::from_raw_parts(self.points, self.points_count))?,
-                )
-            },
-            texts: unsafe {
-                ManuallyDrop::into_inner(
-                    arena
-                        .as_mut()
-                        .map(std::slice::from_raw_parts(self.texts, self.texts_count))?,
-                )
-            },
+            circles: ManuallyDrop::into_inner(circles),
+            points: ManuallyDrop::into_inner(points),
+            texts: ManuallyDrop::into_inner(texts),
         }))
     }
 }
@@ -1156,23 +1133,13 @@ impl BorrowToNative for KeyValuePair {
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
     ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
+        let key = unsafe { string_from_raw(self.key.as_ptr() as *const _, self.key.len(), "key")? };
+        let value =
+            unsafe { string_from_raw(self.value.as_ptr() as *const _, self.value.len(), "value")? };
+
         Ok(ManuallyDrop::new(foxglove::schemas::KeyValuePair {
-            key: unsafe {
-                String::from_utf8(Vec::from_raw_parts(
-                    self.key.as_ptr() as *mut _,
-                    self.key.len(),
-                    self.key.len(),
-                ))
-            }
-            .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("key invalid: {}", e)))?,
-            value: unsafe {
-                String::from_utf8(Vec::from_raw_parts(
-                    self.value.as_ptr() as *mut _,
-                    self.value.len(),
-                    self.value.len(),
-                ))
-            }
-            .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("value invalid: {}", e)))?,
+            key: ManuallyDrop::into_inner(key),
+            value: ManuallyDrop::into_inner(value),
         }))
     }
 }
@@ -1243,39 +1210,32 @@ impl BorrowToNative for LaserScan {
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
     ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
+        let frame_id = unsafe {
+            string_from_raw(
+                self.frame_id.as_ptr() as *const _,
+                self.frame_id.len(),
+                "frame_id",
+            )?
+        };
+        let pose = unsafe {
+            self.pose
+                .as_ref()
+                .map(|m| m.borrow_to_native(arena.as_mut()))
+        }
+        .transpose()?;
+
         Ok(ManuallyDrop::new(foxglove::schemas::LaserScan {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
-            frame_id: unsafe {
-                String::from_utf8(Vec::from_raw_parts(
-                    self.frame_id.as_ptr() as *mut _,
-                    self.frame_id.len(),
-                    self.frame_id.len(),
-                ))
-            }
-            .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("frame_id invalid: {}", e)))?,
-            pose: unsafe {
-                self.pose
-                    .as_ref()
-                    .map(|m| m.borrow_to_native(arena.as_mut()))
-            }
-            .transpose()?
-            .map(ManuallyDrop::into_inner),
+            frame_id: ManuallyDrop::into_inner(frame_id),
+            pose: pose.map(ManuallyDrop::into_inner),
             start_angle: self.start_angle,
             end_angle: self.end_angle,
-            ranges: unsafe {
-                Vec::from_raw_parts(
-                    self.ranges as *mut f64,
-                    self.ranges_count,
-                    self.ranges_count,
-                )
-            },
-            intensities: unsafe {
-                Vec::from_raw_parts(
-                    self.intensities as *mut f64,
-                    self.intensities_count,
-                    self.intensities_count,
-                )
-            },
+            ranges: ManuallyDrop::into_inner(unsafe {
+                vec_from_raw(self.ranges as *mut f64, self.ranges_count)
+            }),
+            intensities: ManuallyDrop::into_inner(unsafe {
+                vec_from_raw(self.intensities as *mut f64, self.intensities_count)
+            }),
         }))
     }
 }
@@ -1338,45 +1298,32 @@ impl BorrowToNative for LinePrimitive {
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
     ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
+        let pose = unsafe {
+            self.pose
+                .as_ref()
+                .map(|m| m.borrow_to_native(arena.as_mut()))
+        }
+        .transpose()?;
+        let points = unsafe { arena.as_mut().map(self.points, self.points_count)? };
+        let color = unsafe {
+            self.color
+                .as_ref()
+                .map(|m| m.borrow_to_native(arena.as_mut()))
+        }
+        .transpose()?;
+        let colors = unsafe { arena.as_mut().map(self.colors, self.colors_count)? };
+
         Ok(ManuallyDrop::new(foxglove::schemas::LinePrimitive {
             r#type: self.r#type as i32,
-            pose: unsafe {
-                self.pose
-                    .as_ref()
-                    .map(|m| m.borrow_to_native(arena.as_mut()))
-            }
-            .transpose()?
-            .map(ManuallyDrop::into_inner),
+            pose: pose.map(ManuallyDrop::into_inner),
             thickness: self.thickness,
             scale_invariant: self.scale_invariant,
-            points: unsafe {
-                ManuallyDrop::into_inner(
-                    arena
-                        .as_mut()
-                        .map(std::slice::from_raw_parts(self.points, self.points_count))?,
-                )
-            },
-            color: unsafe {
-                self.color
-                    .as_ref()
-                    .map(|m| m.borrow_to_native(arena.as_mut()))
-            }
-            .transpose()?
-            .map(ManuallyDrop::into_inner),
-            colors: unsafe {
-                ManuallyDrop::into_inner(
-                    arena
-                        .as_mut()
-                        .map(std::slice::from_raw_parts(self.colors, self.colors_count))?,
-                )
-            },
-            indices: unsafe {
-                Vec::from_raw_parts(
-                    self.indices as *mut u32,
-                    self.indices_count,
-                    self.indices_count,
-                )
-            },
+            points: ManuallyDrop::into_inner(points),
+            color: color.map(ManuallyDrop::into_inner),
+            colors: ManuallyDrop::into_inner(colors),
+            indices: ManuallyDrop::into_inner(unsafe {
+                vec_from_raw(self.indices as *mut u32, self.indices_count)
+            }),
         }))
     }
 }
@@ -1427,26 +1374,26 @@ impl BorrowToNative for LocationFix {
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
     ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
+        let frame_id = unsafe {
+            string_from_raw(
+                self.frame_id.as_ptr() as *const _,
+                self.frame_id.len(),
+                "frame_id",
+            )?
+        };
+
         Ok(ManuallyDrop::new(foxglove::schemas::LocationFix {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
-            frame_id: unsafe {
-                String::from_utf8(Vec::from_raw_parts(
-                    self.frame_id.as_ptr() as *mut _,
-                    self.frame_id.len(),
-                    self.frame_id.len(),
-                ))
-            }
-            .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("frame_id invalid: {}", e)))?,
+            frame_id: ManuallyDrop::into_inner(frame_id),
             latitude: self.latitude,
             longitude: self.longitude,
             altitude: self.altitude,
-            position_covariance: unsafe {
-                Vec::from_raw_parts(
+            position_covariance: ManuallyDrop::into_inner(unsafe {
+                vec_from_raw(
                     self.position_covariance.as_ptr() as *mut f64,
                     self.position_covariance.len(),
-                    self.position_covariance.len(),
                 )
-            },
+            }),
             position_covariance_type: self.position_covariance_type as i32,
         }))
     }
@@ -1513,33 +1460,24 @@ impl BorrowToNative for Log {
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
     ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
+        let message = unsafe {
+            string_from_raw(
+                self.message.as_ptr() as *const _,
+                self.message.len(),
+                "message",
+            )?
+        };
+        let name =
+            unsafe { string_from_raw(self.name.as_ptr() as *const _, self.name.len(), "name")? };
+        let file =
+            unsafe { string_from_raw(self.file.as_ptr() as *const _, self.file.len(), "file")? };
+
         Ok(ManuallyDrop::new(foxglove::schemas::Log {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
             level: self.level as i32,
-            message: unsafe {
-                String::from_utf8(Vec::from_raw_parts(
-                    self.message.as_ptr() as *mut _,
-                    self.message.len(),
-                    self.message.len(),
-                ))
-            }
-            .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("message invalid: {}", e)))?,
-            name: unsafe {
-                String::from_utf8(Vec::from_raw_parts(
-                    self.name.as_ptr() as *mut _,
-                    self.name.len(),
-                    self.name.len(),
-                ))
-            }
-            .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("name invalid: {}", e)))?,
-            file: unsafe {
-                String::from_utf8(Vec::from_raw_parts(
-                    self.file.as_ptr() as *mut _,
-                    self.file.len(),
-                    self.file.len(),
-                ))
-            }
-            .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("file invalid: {}", e)))?,
+            message: ManuallyDrop::into_inner(message),
+            name: ManuallyDrop::into_inner(name),
+            file: ManuallyDrop::into_inner(file),
             line: self.line,
         }))
     }
@@ -1597,17 +1535,12 @@ impl BorrowToNative for SceneEntityDeletion {
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
     ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
+        let id = unsafe { string_from_raw(self.id.as_ptr() as *const _, self.id.len(), "id")? };
+
         Ok(ManuallyDrop::new(foxglove::schemas::SceneEntityDeletion {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
             r#type: self.r#type as i32,
-            id: unsafe {
-                String::from_utf8(Vec::from_raw_parts(
-                    self.id.as_ptr() as *mut _,
-                    self.id.len(),
-                    self.id.len(),
-                ))
-            }
-            .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("id invalid: {}", e)))?,
+            id: ManuallyDrop::into_inner(id),
         }))
     }
 }
@@ -1706,86 +1639,39 @@ impl BorrowToNative for SceneEntity {
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
     ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
+        let frame_id = unsafe {
+            string_from_raw(
+                self.frame_id.as_ptr() as *const _,
+                self.frame_id.len(),
+                "frame_id",
+            )?
+        };
+        let id = unsafe { string_from_raw(self.id.as_ptr() as *const _, self.id.len(), "id")? };
+        let metadata = unsafe { arena.as_mut().map(self.metadata, self.metadata_count)? };
+        let arrows = unsafe { arena.as_mut().map(self.arrows, self.arrows_count)? };
+        let cubes = unsafe { arena.as_mut().map(self.cubes, self.cubes_count)? };
+        let spheres = unsafe { arena.as_mut().map(self.spheres, self.spheres_count)? };
+        let cylinders = unsafe { arena.as_mut().map(self.cylinders, self.cylinders_count)? };
+        let lines = unsafe { arena.as_mut().map(self.lines, self.lines_count)? };
+        let triangles = unsafe { arena.as_mut().map(self.triangles, self.triangles_count)? };
+        let texts = unsafe { arena.as_mut().map(self.texts, self.texts_count)? };
+        let models = unsafe { arena.as_mut().map(self.models, self.models_count)? };
+
         Ok(ManuallyDrop::new(foxglove::schemas::SceneEntity {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
-            frame_id: unsafe {
-                String::from_utf8(Vec::from_raw_parts(
-                    self.frame_id.as_ptr() as *mut _,
-                    self.frame_id.len(),
-                    self.frame_id.len(),
-                ))
-            }
-            .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("frame_id invalid: {}", e)))?,
-            id: unsafe {
-                String::from_utf8(Vec::from_raw_parts(
-                    self.id.as_ptr() as *mut _,
-                    self.id.len(),
-                    self.id.len(),
-                ))
-            }
-            .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("id invalid: {}", e)))?,
+            frame_id: ManuallyDrop::into_inner(frame_id),
+            id: ManuallyDrop::into_inner(id),
             lifetime: unsafe { self.lifetime.as_ref() }.map(|&m| m.into()),
             frame_locked: self.frame_locked,
-            metadata: unsafe {
-                ManuallyDrop::into_inner(arena.as_mut().map(std::slice::from_raw_parts(
-                    self.metadata,
-                    self.metadata_count,
-                ))?)
-            },
-            arrows: unsafe {
-                ManuallyDrop::into_inner(
-                    arena
-                        .as_mut()
-                        .map(std::slice::from_raw_parts(self.arrows, self.arrows_count))?,
-                )
-            },
-            cubes: unsafe {
-                ManuallyDrop::into_inner(
-                    arena
-                        .as_mut()
-                        .map(std::slice::from_raw_parts(self.cubes, self.cubes_count))?,
-                )
-            },
-            spheres: unsafe {
-                ManuallyDrop::into_inner(
-                    arena
-                        .as_mut()
-                        .map(std::slice::from_raw_parts(self.spheres, self.spheres_count))?,
-                )
-            },
-            cylinders: unsafe {
-                ManuallyDrop::into_inner(arena.as_mut().map(std::slice::from_raw_parts(
-                    self.cylinders,
-                    self.cylinders_count,
-                ))?)
-            },
-            lines: unsafe {
-                ManuallyDrop::into_inner(
-                    arena
-                        .as_mut()
-                        .map(std::slice::from_raw_parts(self.lines, self.lines_count))?,
-                )
-            },
-            triangles: unsafe {
-                ManuallyDrop::into_inner(arena.as_mut().map(std::slice::from_raw_parts(
-                    self.triangles,
-                    self.triangles_count,
-                ))?)
-            },
-            texts: unsafe {
-                ManuallyDrop::into_inner(
-                    arena
-                        .as_mut()
-                        .map(std::slice::from_raw_parts(self.texts, self.texts_count))?,
-                )
-            },
-            models: unsafe {
-                ManuallyDrop::into_inner(
-                    arena
-                        .as_mut()
-                        .map(std::slice::from_raw_parts(self.models, self.models_count))?,
-                )
-            },
+            metadata: ManuallyDrop::into_inner(metadata),
+            arrows: ManuallyDrop::into_inner(arrows),
+            cubes: ManuallyDrop::into_inner(cubes),
+            spheres: ManuallyDrop::into_inner(spheres),
+            cylinders: ManuallyDrop::into_inner(cylinders),
+            lines: ManuallyDrop::into_inner(lines),
+            triangles: ManuallyDrop::into_inner(triangles),
+            texts: ManuallyDrop::into_inner(texts),
+            models: ManuallyDrop::into_inner(models),
         }))
     }
 }
@@ -1841,19 +1727,12 @@ impl BorrowToNative for SceneUpdate {
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
     ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
+        let deletions = unsafe { arena.as_mut().map(self.deletions, self.deletions_count)? };
+        let entities = unsafe { arena.as_mut().map(self.entities, self.entities_count)? };
+
         Ok(ManuallyDrop::new(foxglove::schemas::SceneUpdate {
-            deletions: unsafe {
-                ManuallyDrop::into_inner(arena.as_mut().map(std::slice::from_raw_parts(
-                    self.deletions,
-                    self.deletions_count,
-                ))?)
-            },
-            entities: unsafe {
-                ManuallyDrop::into_inner(arena.as_mut().map(std::slice::from_raw_parts(
-                    self.entities,
-                    self.entities_count,
-                ))?)
-            },
+            deletions: ManuallyDrop::into_inner(deletions),
+            entities: ManuallyDrop::into_inner(entities),
         }))
     }
 }
@@ -1909,50 +1788,41 @@ impl BorrowToNative for ModelPrimitive {
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
     ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
+        let pose = unsafe {
+            self.pose
+                .as_ref()
+                .map(|m| m.borrow_to_native(arena.as_mut()))
+        }
+        .transpose()?;
+        let scale = unsafe {
+            self.scale
+                .as_ref()
+                .map(|m| m.borrow_to_native(arena.as_mut()))
+        }
+        .transpose()?;
+        let color = unsafe {
+            self.color
+                .as_ref()
+                .map(|m| m.borrow_to_native(arena.as_mut()))
+        }
+        .transpose()?;
+        let url = unsafe { string_from_raw(self.url.as_ptr() as *const _, self.url.len(), "url")? };
+        let media_type = unsafe {
+            string_from_raw(
+                self.media_type.as_ptr() as *const _,
+                self.media_type.len(),
+                "media_type",
+            )?
+        };
+
         Ok(ManuallyDrop::new(foxglove::schemas::ModelPrimitive {
-            pose: unsafe {
-                self.pose
-                    .as_ref()
-                    .map(|m| m.borrow_to_native(arena.as_mut()))
-            }
-            .transpose()?
-            .map(ManuallyDrop::into_inner),
-            scale: unsafe {
-                self.scale
-                    .as_ref()
-                    .map(|m| m.borrow_to_native(arena.as_mut()))
-            }
-            .transpose()?
-            .map(ManuallyDrop::into_inner),
-            color: unsafe {
-                self.color
-                    .as_ref()
-                    .map(|m| m.borrow_to_native(arena.as_mut()))
-            }
-            .transpose()?
-            .map(ManuallyDrop::into_inner),
+            pose: pose.map(ManuallyDrop::into_inner),
+            scale: scale.map(ManuallyDrop::into_inner),
+            color: color.map(ManuallyDrop::into_inner),
             override_color: self.override_color,
-            url: unsafe {
-                String::from_utf8(Vec::from_raw_parts(
-                    self.url.as_ptr() as *mut _,
-                    self.url.len(),
-                    self.url.len(),
-                ))
-            }
-            .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("url invalid: {}", e)))?,
-            media_type: unsafe {
-                String::from_utf8(Vec::from_raw_parts(
-                    self.media_type.as_ptr() as *mut _,
-                    self.media_type.len(),
-                    self.media_type.len(),
-                ))
-            }
-            .map_err(|e| {
-                foxglove::FoxgloveError::Utf8Error(format!("media_type invalid: {}", e))
-            })?,
-            data: unsafe {
-                Bytes::from_static(std::slice::from_raw_parts(self.data, self.data_len))
-            },
+            url: ManuallyDrop::into_inner(url),
+            media_type: ManuallyDrop::into_inner(media_type),
+            data: ManuallyDrop::into_inner(unsafe { bytes_from_raw(self.data, self.data_len) }),
         }))
     }
 }
@@ -1991,15 +1861,11 @@ impl BorrowToNative for PackedElementField {
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
     ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
+        let name =
+            unsafe { string_from_raw(self.name.as_ptr() as *const _, self.name.len(), "name")? };
+
         Ok(ManuallyDrop::new(foxglove::schemas::PackedElementField {
-            name: unsafe {
-                String::from_utf8(Vec::from_raw_parts(
-                    self.name.as_ptr() as *mut _,
-                    self.name.len(),
-                    self.name.len(),
-                ))
-            }
-            .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("name invalid: {}", e)))?,
+            name: ManuallyDrop::into_inner(name),
             offset: self.offset,
             r#type: self.r#type as i32,
         }))
@@ -2185,34 +2051,28 @@ impl BorrowToNative for PointCloud {
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
     ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
+        let frame_id = unsafe {
+            string_from_raw(
+                self.frame_id.as_ptr() as *const _,
+                self.frame_id.len(),
+                "frame_id",
+            )?
+        };
+        let pose = unsafe {
+            self.pose
+                .as_ref()
+                .map(|m| m.borrow_to_native(arena.as_mut()))
+        }
+        .transpose()?;
+        let fields = unsafe { arena.as_mut().map(self.fields, self.fields_count)? };
+
         Ok(ManuallyDrop::new(foxglove::schemas::PointCloud {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
-            frame_id: unsafe {
-                String::from_utf8(Vec::from_raw_parts(
-                    self.frame_id.as_ptr() as *mut _,
-                    self.frame_id.len(),
-                    self.frame_id.len(),
-                ))
-            }
-            .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("frame_id invalid: {}", e)))?,
-            pose: unsafe {
-                self.pose
-                    .as_ref()
-                    .map(|m| m.borrow_to_native(arena.as_mut()))
-            }
-            .transpose()?
-            .map(ManuallyDrop::into_inner),
+            frame_id: ManuallyDrop::into_inner(frame_id),
+            pose: pose.map(ManuallyDrop::into_inner),
             point_stride: self.point_stride,
-            fields: unsafe {
-                ManuallyDrop::into_inner(
-                    arena
-                        .as_mut()
-                        .map(std::slice::from_raw_parts(self.fields, self.fields_count))?,
-                )
-            },
-            data: unsafe {
-                Bytes::from_static(std::slice::from_raw_parts(self.data, self.data_len))
-            },
+            fields: ManuallyDrop::into_inner(fields),
+            data: ManuallyDrop::into_inner(unsafe { bytes_from_raw(self.data, self.data_len) }),
         }))
     }
 }
@@ -2284,36 +2144,32 @@ impl BorrowToNative for PointsAnnotation {
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
     ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
+        let points = unsafe { arena.as_mut().map(self.points, self.points_count)? };
+        let outline_color = unsafe {
+            self.outline_color
+                .as_ref()
+                .map(|m| m.borrow_to_native(arena.as_mut()))
+        }
+        .transpose()?;
+        let outline_colors = unsafe {
+            arena
+                .as_mut()
+                .map(self.outline_colors, self.outline_colors_count)?
+        };
+        let fill_color = unsafe {
+            self.fill_color
+                .as_ref()
+                .map(|m| m.borrow_to_native(arena.as_mut()))
+        }
+        .transpose()?;
+
         Ok(ManuallyDrop::new(foxglove::schemas::PointsAnnotation {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
             r#type: self.r#type as i32,
-            points: unsafe {
-                ManuallyDrop::into_inner(
-                    arena
-                        .as_mut()
-                        .map(std::slice::from_raw_parts(self.points, self.points_count))?,
-                )
-            },
-            outline_color: unsafe {
-                self.outline_color
-                    .as_ref()
-                    .map(|m| m.borrow_to_native(arena.as_mut()))
-            }
-            .transpose()?
-            .map(ManuallyDrop::into_inner),
-            outline_colors: unsafe {
-                ManuallyDrop::into_inner(arena.as_mut().map(std::slice::from_raw_parts(
-                    self.outline_colors,
-                    self.outline_colors_count,
-                ))?)
-            },
-            fill_color: unsafe {
-                self.fill_color
-                    .as_ref()
-                    .map(|m| m.borrow_to_native(arena.as_mut()))
-            }
-            .transpose()?
-            .map(ManuallyDrop::into_inner),
+            points: ManuallyDrop::into_inner(points),
+            outline_color: outline_color.map(ManuallyDrop::into_inner),
+            outline_colors: ManuallyDrop::into_inner(outline_colors),
+            fill_color: fill_color.map(ManuallyDrop::into_inner),
             thickness: self.thickness,
         }))
     }
@@ -2368,21 +2224,22 @@ impl BorrowToNative for Pose {
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
     ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
+        let position = unsafe {
+            self.position
+                .as_ref()
+                .map(|m| m.borrow_to_native(arena.as_mut()))
+        }
+        .transpose()?;
+        let orientation = unsafe {
+            self.orientation
+                .as_ref()
+                .map(|m| m.borrow_to_native(arena.as_mut()))
+        }
+        .transpose()?;
+
         Ok(ManuallyDrop::new(foxglove::schemas::Pose {
-            position: unsafe {
-                self.position
-                    .as_ref()
-                    .map(|m| m.borrow_to_native(arena.as_mut()))
-            }
-            .transpose()?
-            .map(ManuallyDrop::into_inner),
-            orientation: unsafe {
-                self.orientation
-                    .as_ref()
-                    .map(|m| m.borrow_to_native(arena.as_mut()))
-            }
-            .transpose()?
-            .map(ManuallyDrop::into_inner),
+            position: position.map(ManuallyDrop::into_inner),
+            orientation: orientation.map(ManuallyDrop::into_inner),
         }))
     }
 }
@@ -2439,23 +2296,24 @@ impl BorrowToNative for PoseInFrame {
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
     ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
+        let frame_id = unsafe {
+            string_from_raw(
+                self.frame_id.as_ptr() as *const _,
+                self.frame_id.len(),
+                "frame_id",
+            )?
+        };
+        let pose = unsafe {
+            self.pose
+                .as_ref()
+                .map(|m| m.borrow_to_native(arena.as_mut()))
+        }
+        .transpose()?;
+
         Ok(ManuallyDrop::new(foxglove::schemas::PoseInFrame {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
-            frame_id: unsafe {
-                String::from_utf8(Vec::from_raw_parts(
-                    self.frame_id.as_ptr() as *mut _,
-                    self.frame_id.len(),
-                    self.frame_id.len(),
-                ))
-            }
-            .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("frame_id invalid: {}", e)))?,
-            pose: unsafe {
-                self.pose
-                    .as_ref()
-                    .map(|m| m.borrow_to_native(arena.as_mut()))
-            }
-            .transpose()?
-            .map(ManuallyDrop::into_inner),
+            frame_id: ManuallyDrop::into_inner(frame_id),
+            pose: pose.map(ManuallyDrop::into_inner),
         }))
     }
 }
@@ -2513,23 +2371,19 @@ impl BorrowToNative for PosesInFrame {
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
     ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
+        let frame_id = unsafe {
+            string_from_raw(
+                self.frame_id.as_ptr() as *const _,
+                self.frame_id.len(),
+                "frame_id",
+            )?
+        };
+        let poses = unsafe { arena.as_mut().map(self.poses, self.poses_count)? };
+
         Ok(ManuallyDrop::new(foxglove::schemas::PosesInFrame {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
-            frame_id: unsafe {
-                String::from_utf8(Vec::from_raw_parts(
-                    self.frame_id.as_ptr() as *mut _,
-                    self.frame_id.len(),
-                    self.frame_id.len(),
-                ))
-            }
-            .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("frame_id invalid: {}", e)))?,
-            poses: unsafe {
-                ManuallyDrop::into_inner(
-                    arena
-                        .as_mut()
-                        .map(std::slice::from_raw_parts(self.poses, self.poses_count))?,
-                )
-            },
+            frame_id: ManuallyDrop::into_inner(frame_id),
+            poses: ManuallyDrop::into_inner(poses),
         }))
     }
 }
@@ -2657,19 +2511,18 @@ impl BorrowToNative for RawAudio {
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
     ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
+        let format = unsafe {
+            string_from_raw(
+                self.format.as_ptr() as *const _,
+                self.format.len(),
+                "format",
+            )?
+        };
+
         Ok(ManuallyDrop::new(foxglove::schemas::RawAudio {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
-            data: unsafe {
-                Bytes::from_static(std::slice::from_raw_parts(self.data, self.data_len))
-            },
-            format: unsafe {
-                String::from_utf8(Vec::from_raw_parts(
-                    self.format.as_ptr() as *mut _,
-                    self.format.len(),
-                    self.format.len(),
-                ))
-            }
-            .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("format invalid: {}", e)))?,
+            data: ManuallyDrop::into_inner(unsafe { bytes_from_raw(self.data, self.data_len) }),
+            format: ManuallyDrop::into_inner(format),
             sample_rate: self.sample_rate,
             number_of_channels: self.number_of_channels,
         }))
@@ -2743,30 +2596,29 @@ impl BorrowToNative for RawImage {
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
     ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
+        let frame_id = unsafe {
+            string_from_raw(
+                self.frame_id.as_ptr() as *const _,
+                self.frame_id.len(),
+                "frame_id",
+            )?
+        };
+        let encoding = unsafe {
+            string_from_raw(
+                self.encoding.as_ptr() as *const _,
+                self.encoding.len(),
+                "encoding",
+            )?
+        };
+
         Ok(ManuallyDrop::new(foxglove::schemas::RawImage {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
-            frame_id: unsafe {
-                String::from_utf8(Vec::from_raw_parts(
-                    self.frame_id.as_ptr() as *mut _,
-                    self.frame_id.len(),
-                    self.frame_id.len(),
-                ))
-            }
-            .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("frame_id invalid: {}", e)))?,
+            frame_id: ManuallyDrop::into_inner(frame_id),
             width: self.width,
             height: self.height,
-            encoding: unsafe {
-                String::from_utf8(Vec::from_raw_parts(
-                    self.encoding.as_ptr() as *mut _,
-                    self.encoding.len(),
-                    self.encoding.len(),
-                ))
-            }
-            .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("encoding invalid: {}", e)))?,
+            encoding: ManuallyDrop::into_inner(encoding),
             step: self.step,
-            data: unsafe {
-                Bytes::from_static(std::slice::from_raw_parts(self.data, self.data_len))
-            },
+            data: ManuallyDrop::into_inner(unsafe { bytes_from_raw(self.data, self.data_len) }),
         }))
     }
 }
@@ -2809,28 +2661,29 @@ impl BorrowToNative for SpherePrimitive {
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
     ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
+        let pose = unsafe {
+            self.pose
+                .as_ref()
+                .map(|m| m.borrow_to_native(arena.as_mut()))
+        }
+        .transpose()?;
+        let size = unsafe {
+            self.size
+                .as_ref()
+                .map(|m| m.borrow_to_native(arena.as_mut()))
+        }
+        .transpose()?;
+        let color = unsafe {
+            self.color
+                .as_ref()
+                .map(|m| m.borrow_to_native(arena.as_mut()))
+        }
+        .transpose()?;
+
         Ok(ManuallyDrop::new(foxglove::schemas::SpherePrimitive {
-            pose: unsafe {
-                self.pose
-                    .as_ref()
-                    .map(|m| m.borrow_to_native(arena.as_mut()))
-            }
-            .transpose()?
-            .map(ManuallyDrop::into_inner),
-            size: unsafe {
-                self.size
-                    .as_ref()
-                    .map(|m| m.borrow_to_native(arena.as_mut()))
-            }
-            .transpose()?
-            .map(ManuallyDrop::into_inner),
-            color: unsafe {
-                self.color
-                    .as_ref()
-                    .map(|m| m.borrow_to_native(arena.as_mut()))
-            }
-            .transpose()?
-            .map(ManuallyDrop::into_inner),
+            pose: pose.map(ManuallyDrop::into_inner),
+            size: size.map(ManuallyDrop::into_inner),
+            color: color.map(ManuallyDrop::into_inner),
         }))
     }
 }
@@ -2879,38 +2732,34 @@ impl BorrowToNative for TextAnnotation {
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
     ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
+        let position = unsafe {
+            self.position
+                .as_ref()
+                .map(|m| m.borrow_to_native(arena.as_mut()))
+        }
+        .transpose()?;
+        let text =
+            unsafe { string_from_raw(self.text.as_ptr() as *const _, self.text.len(), "text")? };
+        let text_color = unsafe {
+            self.text_color
+                .as_ref()
+                .map(|m| m.borrow_to_native(arena.as_mut()))
+        }
+        .transpose()?;
+        let background_color = unsafe {
+            self.background_color
+                .as_ref()
+                .map(|m| m.borrow_to_native(arena.as_mut()))
+        }
+        .transpose()?;
+
         Ok(ManuallyDrop::new(foxglove::schemas::TextAnnotation {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
-            position: unsafe {
-                self.position
-                    .as_ref()
-                    .map(|m| m.borrow_to_native(arena.as_mut()))
-            }
-            .transpose()?
-            .map(ManuallyDrop::into_inner),
-            text: unsafe {
-                String::from_utf8(Vec::from_raw_parts(
-                    self.text.as_ptr() as *mut _,
-                    self.text.len(),
-                    self.text.len(),
-                ))
-            }
-            .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("text invalid: {}", e)))?,
+            position: position.map(ManuallyDrop::into_inner),
+            text: ManuallyDrop::into_inner(text),
             font_size: self.font_size,
-            text_color: unsafe {
-                self.text_color
-                    .as_ref()
-                    .map(|m| m.borrow_to_native(arena.as_mut()))
-            }
-            .transpose()?
-            .map(ManuallyDrop::into_inner),
-            background_color: unsafe {
-                self.background_color
-                    .as_ref()
-                    .map(|m| m.borrow_to_native(arena.as_mut()))
-            }
-            .transpose()?
-            .map(ManuallyDrop::into_inner),
+            text_color: text_color.map(ManuallyDrop::into_inner),
+            background_color: background_color.map(ManuallyDrop::into_inner),
         }))
     }
 }
@@ -2962,32 +2811,28 @@ impl BorrowToNative for TextPrimitive {
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
     ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
+        let pose = unsafe {
+            self.pose
+                .as_ref()
+                .map(|m| m.borrow_to_native(arena.as_mut()))
+        }
+        .transpose()?;
+        let color = unsafe {
+            self.color
+                .as_ref()
+                .map(|m| m.borrow_to_native(arena.as_mut()))
+        }
+        .transpose()?;
+        let text =
+            unsafe { string_from_raw(self.text.as_ptr() as *const _, self.text.len(), "text")? };
+
         Ok(ManuallyDrop::new(foxglove::schemas::TextPrimitive {
-            pose: unsafe {
-                self.pose
-                    .as_ref()
-                    .map(|m| m.borrow_to_native(arena.as_mut()))
-            }
-            .transpose()?
-            .map(ManuallyDrop::into_inner),
+            pose: pose.map(ManuallyDrop::into_inner),
             billboard: self.billboard,
             font_size: self.font_size,
             scale_invariant: self.scale_invariant,
-            color: unsafe {
-                self.color
-                    .as_ref()
-                    .map(|m| m.borrow_to_native(arena.as_mut()))
-            }
-            .transpose()?
-            .map(ManuallyDrop::into_inner),
-            text: unsafe {
-                String::from_utf8(Vec::from_raw_parts(
-                    self.text.as_ptr() as *mut _,
-                    self.text.len(),
-                    self.text.len(),
-                ))
-            }
-            .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("text invalid: {}", e)))?,
+            color: color.map(ManuallyDrop::into_inner),
+            text: ManuallyDrop::into_inner(text),
         }))
     }
 }
@@ -3023,43 +2868,30 @@ impl BorrowToNative for TriangleListPrimitive {
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
     ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
+        let pose = unsafe {
+            self.pose
+                .as_ref()
+                .map(|m| m.borrow_to_native(arena.as_mut()))
+        }
+        .transpose()?;
+        let points = unsafe { arena.as_mut().map(self.points, self.points_count)? };
+        let color = unsafe {
+            self.color
+                .as_ref()
+                .map(|m| m.borrow_to_native(arena.as_mut()))
+        }
+        .transpose()?;
+        let colors = unsafe { arena.as_mut().map(self.colors, self.colors_count)? };
+
         Ok(ManuallyDrop::new(
             foxglove::schemas::TriangleListPrimitive {
-                pose: unsafe {
-                    self.pose
-                        .as_ref()
-                        .map(|m| m.borrow_to_native(arena.as_mut()))
-                }
-                .transpose()?
-                .map(ManuallyDrop::into_inner),
-                points: unsafe {
-                    ManuallyDrop::into_inner(
-                        arena
-                            .as_mut()
-                            .map(std::slice::from_raw_parts(self.points, self.points_count))?,
-                    )
-                },
-                color: unsafe {
-                    self.color
-                        .as_ref()
-                        .map(|m| m.borrow_to_native(arena.as_mut()))
-                }
-                .transpose()?
-                .map(ManuallyDrop::into_inner),
-                colors: unsafe {
-                    ManuallyDrop::into_inner(
-                        arena
-                            .as_mut()
-                            .map(std::slice::from_raw_parts(self.colors, self.colors_count))?,
-                    )
-                },
-                indices: unsafe {
-                    Vec::from_raw_parts(
-                        self.indices as *mut u32,
-                        self.indices_count,
-                        self.indices_count,
-                    )
-                },
+                pose: pose.map(ManuallyDrop::into_inner),
+                points: ManuallyDrop::into_inner(points),
+                color: color.map(ManuallyDrop::into_inner),
+                colors: ManuallyDrop::into_inner(colors),
+                indices: ManuallyDrop::into_inner(unsafe {
+                    vec_from_raw(self.indices as *mut u32, self.indices_count)
+                }),
             },
         ))
     }

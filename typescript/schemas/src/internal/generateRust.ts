@@ -116,21 +116,40 @@ impl BorrowToNative for ${name} {
   type NativeType = foxglove::schemas::${name};
 
   unsafe fn borrow_to_native(&self, #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
+    ${fields
+      .flatMap((field) => {
+        const name = escapeId(toSnakeCase(field.name));
+        if (field.array != undefined && typeof field.array !== "number" && field.type.type === "nested") {
+          return [`let ${name} = unsafe { arena.as_mut().map(self.${name}, self.${name}_count)? };`];
+        }
+        switch (field.type.type) {
+          case "primitive":
+            if (field.type.name === "string") {
+              return [`let ${name} = unsafe { string_from_raw(self.${name}.as_ptr() as *const _, self.${name}.len(), "${field.name}")? };`];
+            }
+            return [];
+          case "nested":
+            return [`let ${name} = unsafe { self.${name}.as_ref().map(|m| m.borrow_to_native(arena.as_mut())) }.transpose()?;`];
+          default:
+            return [];
+        }
+      })
+      .join("\n    ")}
+
     Ok(ManuallyDrop::new(foxglove::schemas::${name} {
     ${fields
       .map((field) => {
-        const srcName = escapeId(toSnakeCase(field.name));
-        const dstName = srcName;
+        const name = escapeId(toSnakeCase(field.name));
         if (field.array != undefined) {
           if (typeof field.array === "number") {
             assert(field.type.type === "primitive", `unsupported array type: ${field.type.type}`);
-            return `${dstName}: unsafe { Vec::from_raw_parts(self.${srcName}.as_ptr() as *mut ${primitiveToRust(field.type.name)}, self.${srcName}.len(), self.${srcName}.len()) }`;
+            return `${name}: ManuallyDrop::into_inner(unsafe { vec_from_raw(self.${name}.as_ptr() as *mut ${primitiveToRust(field.type.name)}, self.${name}.len()) })`;
           } else {
             if (field.type.type === "nested") {
-              return `${dstName}: unsafe { ManuallyDrop::into_inner(arena.as_mut().map(std::slice::from_raw_parts(self.${srcName}, self.${srcName}_count))?) }`;
+              return `${name}: ManuallyDrop::into_inner(${name})`;
             } else if (field.type.type === "primitive") {
               assert(field.type.name !== "bytes");
-              return `${dstName}: unsafe { Vec::from_raw_parts(self.${srcName} as *mut ${primitiveToRust(field.type.name)}, self.${srcName}_count, self.${srcName}_count) }`;
+              return `${name}: ManuallyDrop::into_inner(unsafe { vec_from_raw(self.${name} as *mut ${primitiveToRust(field.type.name)}, self.${name}_count) })`;
             } else {
               throw Error(`unsupported array type: ${field.type.type}`);
             }
@@ -139,21 +158,20 @@ impl BorrowToNative for ${name} {
         switch (field.type.type) {
           case "primitive":
             if (field.type.name === "string") {
-              return `${dstName}: unsafe { String::from_utf8(Vec::from_raw_parts(self.${srcName}.as_ptr() as *mut _, self.${srcName}.len(), self.${srcName}.len())) }
-                .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("${srcName} invalid: {}", e)))?`;
+              return `${name}: ManuallyDrop::into_inner(${name})`;
             } else if (field.type.name === "bytes") {
-              return `${dstName}: unsafe { Bytes::from_static(std::slice::from_raw_parts(self.${srcName}, self.${srcName}_len)) }`;
+              return `${name}: ManuallyDrop::into_inner(unsafe { bytes_from_raw(self.${name}, self.${name}_len) })`;
             } else if (field.type.name === "time" || field.type.name === "duration") {
-              return `${dstName}: unsafe { self.${srcName}.as_ref() }.map(|&m| m.into())`;
+              return `${name}: unsafe { self.${name}.as_ref() }.map(|&m| m.into())`;
             }
-            return `${dstName}: self.${srcName}`;
+            return `${name}: self.${name}`;
           case "enum":
-            return `${dstName}: self.${srcName} as i32`;
+            return `${name}: self.${name} as i32`;
           case "nested":
-            return `${dstName}: unsafe { self.${srcName}.as_ref().map(|m| m.borrow_to_native(arena.as_mut())) }.transpose()?.map(ManuallyDrop::into_inner)`;
+            return `${name}: ${name}.map(ManuallyDrop::into_inner)`;
         }
       })
-      .join(",      \n")}
+      .join(",\n        ")}
     }))
   }
 }
@@ -185,7 +203,8 @@ pub extern "C" fn foxglove_channel_log_${snakeName}(channel: Option<&FoxgloveCha
     "use std::pin::{pin, Pin};",
     "",
     "use crate::{FoxgloveString, FoxgloveError, FoxgloveChannel, FoxgloveTimestamp, FoxgloveDuration, log_msg_to_channel};",
-    "use crate::arena::{Arena, BorrowToNative};"
+    "use crate::arena::{Arena, BorrowToNative};",
+    "use crate::util::{bytes_from_raw, string_from_raw, vec_from_raw};",
   ];
 
   const enumDefs = enums.map((enumSchema) => {

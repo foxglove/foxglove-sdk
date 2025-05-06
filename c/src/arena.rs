@@ -69,27 +69,26 @@ impl Arena {
     /// Maps elements from a slice to a new array allocated from the arena.
     pub unsafe fn map<S: BorrowToNative>(
         mut self: Pin<&mut Self>,
-        src: &[S],
+        src: *const S,
+        len: usize,
     ) -> Result<ManuallyDrop<Vec<S::NativeType>>, FoxgloveError> {
-        let result = self.as_mut().alloc::<S::NativeType>(src.len());
+        if len == 0 {
+            return Ok(ManuallyDrop::new(Vec::new()));
+        }
+
+        let result = self.as_mut().alloc::<S::NativeType>(len);
 
         // Convert the elements from S to T, placing them in the result array
-        for (i, src_item) in src.iter().enumerate() {
+        for i in 0..len {
             unsafe {
                 ptr::write(
                     result.add(i),
-                    ManuallyDrop::into_inner(src_item.borrow_to_native(self.as_mut())?),
+                    ManuallyDrop::into_inner((&*src.add(i)).borrow_to_native(self.as_mut())?),
                 );
             }
         }
 
-        unsafe {
-            Ok(ManuallyDrop::new(Vec::from_raw_parts(
-                result,
-                src.len(),
-                src.len(),
-            )))
-        }
+        unsafe { Ok(ManuallyDrop::new(Vec::from_raw_parts(result, len, len))) }
     }
 
     /// Returns how many bytes are currently used in the arena.

@@ -14,6 +14,9 @@ use std::sync::Arc;
 mod arena;
 pub mod connection_graph;
 mod generated_types;
+#[cfg(test)]
+mod tests;
+mod util;
 pub use generated_types::*;
 
 /// A string with associated length.
@@ -913,27 +916,5 @@ pub struct FoxgloveDuration {
 impl From<FoxgloveDuration> for foxglove::schemas::Duration {
     fn from(other: FoxgloveDuration) -> Self {
         Self::new(other.sec, other.nsec)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_foxglove_string_as_utf8_str() {
-        let string = FoxgloveString {
-            data: c"test".as_ptr(),
-            len: 4,
-        };
-        let utf8_str = unsafe { string.as_utf8_str() };
-        assert_eq!(utf8_str, Ok("test"));
-
-        let string = FoxgloveString {
-            data: c"💖".as_ptr(),
-            len: 4,
-        };
-        let utf8_str = unsafe { string.as_utf8_str() };
-        assert_eq!(utf8_str, Ok("💖"));
     }
 }
