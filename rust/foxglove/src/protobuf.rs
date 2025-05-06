@@ -1,6 +1,5 @@
 //! Interfaces for working with Protocol Buffers.
 use prost_types::field_descriptor_proto::Type as ProstFieldType;
-use tracing::warn;
 
 /// Serializes a Protocol Buffers FileDescriptorSet to a byte vector.
 ///
@@ -276,13 +275,9 @@ impl ProtobufField for String {
 
     fn write(&self, buf: &mut impl bytes::BufMut) {
         // Write the length as a varint, followed by the data
-        if let Err(e) = prost::encoding::encode_length_delimiter(self.len(), buf) {
-            warn!("Failed to write string: {}", e);
-            return;
-        }
+        prost::encoding::encode_length_delimiter(self.len(), buf).expect("Failed to write string");
         if buf.remaining_mut() < self.len() {
-            warn!("Failed to write string; insufficient buffer capacity");
-            return;
+            panic!("Failed to write string; insufficient buffer capacity");
         }
         buf.put_slice(self.as_bytes());
     }
@@ -300,13 +295,9 @@ impl ProtobufField for &str {
 
     fn write(&self, buf: &mut impl bytes::BufMut) {
         // Write the length as a varint, followed by the data
-        if let Err(e) = prost::encoding::encode_length_delimiter(self.len(), buf) {
-            warn!("Failed to write str: {}", e);
-            return;
-        }
+        prost::encoding::encode_length_delimiter(self.len(), buf).expect("Failed to write str");
         if buf.remaining_mut() < self.len() {
-            warn!("Failed to write str; insufficient buffer capacity");
-            return;
+            panic!("Failed to write str; insufficient buffer capacity");
         }
         buf.put_slice(self.as_bytes());
     }
@@ -323,13 +314,9 @@ impl ProtobufField for bytes::Bytes {
 
     fn write(&self, buf: &mut impl bytes::BufMut) {
         // Write the length as a varint, followed by the data
-        if let Err(e) = prost::encoding::encode_length_delimiter(self.len(), buf) {
-            warn!("Failed to write bytes: {}", e);
-            return;
-        }
+        prost::encoding::encode_length_delimiter(self.len(), buf).expect("Failed to write bytes");
         if buf.remaining_mut() < self.len() {
-            warn!("Failed to write bytes; insufficient buffer capacity");
-            return;
+            panic!("Failed to write bytes; insufficient buffer capacity");
         }
         buf.put_slice(self);
     }

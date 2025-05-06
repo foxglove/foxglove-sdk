@@ -2,7 +2,6 @@ use ::foxglove::{Encode, Schema};
 use bytes::BytesMut;
 use prost::Message;
 use prost_reflect::{DescriptorPool, DynamicMessage, MessageDescriptor};
-use tracing_test::traced_test;
 
 mod common;
 use common::FixedSizeBuffer;
@@ -187,17 +186,14 @@ fn test_bytes_serialization() {
     assert_eq!(bytes_value.as_ref(), &[1, 2, 3]);
 }
 
-#[traced_test]
 #[test]
-fn test_insufficient_bytes_buffer_warns() {
+#[should_panic(expected = "Failed to write bytes")]
+fn test_insufficient_bytes_buffer_panics() {
     let test_struct = TestMessageBytes {
         bytes: bytes::Bytes::from_static(&[1, 2, 3, 4]),
     };
     let mut buf = FixedSizeBuffer::with_capacity(3);
     test_struct.encode(&mut buf).expect("Failed to encode");
-
-    assert!(logs_contain("Failed to write bytes"));
-    assert!(logs_contain("insufficient buffer capacity"));
 }
 
 #[test]

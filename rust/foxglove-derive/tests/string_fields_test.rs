@@ -2,7 +2,6 @@ use ::foxglove::{Encode, Schema};
 use bytes::BytesMut;
 use prost::Message;
 use prost_reflect::{DescriptorPool, DynamicMessage, MessageDescriptor};
-use tracing_test::traced_test;
 
 mod common;
 use common::FixedSizeBuffer;
@@ -80,28 +79,24 @@ fn test_single_str_field_serialization() {
     assert_eq!(string_value, "Hello, world!");
 }
 
-#[traced_test]
 #[test]
-fn test_insufficient_string_buffer_warns() {
+#[should_panic(expected = "Failed to write string")]
+fn test_insufficient_string_buffer_panics() {
     let mut buf = FixedSizeBuffer::with_capacity(1);
     let test_struct = TestMessage {
         field: "Hello, world!".to_string(),
     };
     test_struct.encode(&mut buf).expect("Failed to encode");
-    assert!(logs_contain("Failed to write string"));
-    assert!(logs_contain("insufficient buffer capacity"));
 }
 
-#[traced_test]
 #[test]
-fn test_insufficient_str_buffer_warns() {
+#[should_panic(expected = "Failed to write str")]
+fn test_insufficient_str_buffer_panics() {
     let mut buf = FixedSizeBuffer::with_capacity(1);
     let test_struct = TestMessageWithLifetime {
         field_ref: "Hello, world!",
     };
     test_struct.encode(&mut buf).expect("Failed to encode");
-    assert!(logs_contain("Failed to write str"));
-    assert!(logs_contain("insufficient buffer capacity"));
 }
 
 fn get_message_descriptor(schema: &Schema) -> MessageDescriptor {
