@@ -47,8 +47,7 @@ private:
 
   /// @brief Writes the schema to the provided C-style structs.
   void writeTo(
-    foxglove_service_schema* c, foxglove_service_message_schema* request,
-    foxglove_service_message_schema* response
+    foxglove_service_schema* c, std::array<foxglove_service_message_schema, 2>& msg_schemas
   ) const noexcept;
 };
 

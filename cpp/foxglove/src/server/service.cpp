@@ -22,21 +22,18 @@ void ServiceMessageSchema::writeTo(foxglove_service_message_schema* c) const noe
  * ServiceSchema implementation.
  */
 void ServiceSchema::writeTo(
-  foxglove_service_schema* c,
-  // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
-  foxglove_service_message_schema* request, foxglove_service_message_schema* response
-
+  foxglove_service_schema* c, std::array<foxglove_service_message_schema, 2>& msg_schemas
 ) const noexcept {
   c->name = {this->name.data(), this->name.length()};
   if (this->request.has_value()) {
-    this->request->writeTo(request);
-    c->request = request;
+    this->request->writeTo(msg_schemas.data());
+    c->request = msg_schemas.data();
   } else {
     c->request = nullptr;
   }
   if (this->response.has_value()) {
-    this->response->writeTo(response);
-    c->response = response;
+    this->response->writeTo(&msg_schemas[1]);
+    c->response = &msg_schemas[1];
   } else {
     c->response = nullptr;
   }
@@ -80,10 +77,9 @@ void ServiceResponder::respondError(std::string_view message) && noexcept {
 FoxgloveResult<Service> Service::create(
   std::string_view name, ServiceSchema& schema, ServiceHandler& handler
 ) {
-  foxglove_service_message_schema request;
-  foxglove_service_message_schema response;
+  std::array<foxglove_service_message_schema, 2> msg_schemas{};
   foxglove_service_schema c_schema;
-  schema.writeTo(&c_schema, &request, &response);
+  schema.writeTo(&c_schema, msg_schemas);
   foxglove_service* ptr = nullptr;
   auto error = foxglove_service_create(
     &ptr,
