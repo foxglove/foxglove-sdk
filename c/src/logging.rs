@@ -18,7 +18,7 @@ pub enum FoxgloveLogLevel {
 /// components. Subsequent calls will have no effect.
 ///
 /// Log level may be overridden with the FOXGLOVE_LOG_LEVEL environment variable: "debug", "info",
-/// "warn", or "error".
+/// "warn", "error", or "off". The default level is "info".
 ///
 /// Log styles (colors) may be configured with the FOXGLOVE_LOG_STYLE environment variable "never",
 /// "always", or "auto" (default).

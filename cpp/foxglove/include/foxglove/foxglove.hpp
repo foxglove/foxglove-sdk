@@ -25,7 +25,7 @@ enum class LogLevel : uint8_t {
 ///
 /// As long as you initialize one logging sink (WebSocket server or MCAP), log level may instead be
 /// configured via a `FOXGLOVE_LOG_LEVEL` environment variable, with one of the values "debug",
-/// "info", "warn", or "error". Default is "info".
+/// "info", "warn", "error", or "off". Default is "info".
 ///
 /// Additionally, you may control whether style characters such as colors are included in log output
 /// via the `FOXGLOVE_LOG_STYLE` environment variable. Valid values are "never", "always", and
