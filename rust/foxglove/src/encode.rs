@@ -10,6 +10,13 @@ use crate::Schema;
 ///
 /// Implementing this trait for your type `T` enables the use of [`Channel<T>`][crate::Channel],
 /// which offers a type-checked `log` method.
+///
+/// This trait may be derived for structs and unit-only enums using the [`derive(Encode)]`
+/// attribute. Today, this will serialize messages using [protobuf]. This means there are some
+/// limitations on the data that you can encode. Notably, enum variants should have a field with a
+/// 0-value, which indicates the default variant.
+///
+/// [protobuf]: https://protobuf.dev/
 pub trait Encode {
     /// The error type returned by methods in this trait.
     type Error: std::error::Error;

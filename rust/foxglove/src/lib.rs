@@ -120,7 +120,7 @@
 //! You can also define your own custom data types by implementing the [`Encode`] trait.
 //!
 //! The easiest way to do this is to derive the [`Encode`] trait, which will generate a schema
-//! and allow you to log your struct to a channel. This currently uses protobuf encoding.
+//! and allow you to log your struct to a channel.
 //!
 //! ```no_run
 //! #[derive(foxglove::Encode)]
