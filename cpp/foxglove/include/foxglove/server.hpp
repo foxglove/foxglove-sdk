@@ -180,6 +180,7 @@ struct WebSocketServerOptions {
   WebSocketServerCapabilities capabilities = WebSocketServerCapabilities(0);
   /// @brief The supported encodings of the server.
   std::vector<std::string> supported_encodings;
+  /// @brief A fetch asset handler callback.
   FetchAssetHandler fetch_asset;
 };
 
