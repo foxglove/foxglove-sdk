@@ -8,8 +8,13 @@ use super::ClientId;
 /// A HashMap where the keys are the topic or service name and the value is a set of string ids.
 type MapOfSets = HashMap<String, HashSet<String>>;
 
-/// The connection graph data. Requires capability [`ConnectionGraph`](super::Capability::ConnectionGraph).
-/// See <https://github.com/foxglove/ws-protocol/blob/main/docs/spec.md#connection-graph-update>
+/// A connection graph describing a topology of subscribers, publishers, topics, and services.
+///
+/// Connection graph data can be published with
+/// [publish_connection_graph][crate::WebSocketServerHandle::publish_connection_graph], and
+/// visualized in the Foxglove [Topic Graph panel].
+///
+/// [Topic Graph panel]: https://docs.foxglove.dev/docs/visualization/panels/topic-graph
 #[derive(Debug, Default, Clone)]
 pub struct ConnectionGraph {
     /// A map of active topic names to the set of string publisher ids.
@@ -29,6 +34,7 @@ impl ConnectionGraph {
     }
 
     /// Set a published topic and its associated publisher ids.
+    ///
     /// Overwrites any existing topic with the same name.
     pub fn set_published_topic(
         &mut self,
@@ -42,6 +48,7 @@ impl ConnectionGraph {
     }
 
     /// Set a subscribed topic and its associated subscriber ids.
+    ///
     /// Overwrites any existing topic with the same name.
     pub fn set_subscribed_topic(
         &mut self,
@@ -55,6 +62,7 @@ impl ConnectionGraph {
     }
 
     /// Set an advertised service and its associated provider ids.
+    ///
     /// Overwrites any existing service with the same name.
     pub fn set_advertised_service(
         &mut self,

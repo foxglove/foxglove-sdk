@@ -11,7 +11,9 @@ use crate::websocket::{
 };
 use crate::{get_runtime_handle, Context, FoxgloveError};
 
-/// A websocket server for live visualization.
+/// A WebSocket server for live visualization in Foxglove.
+///
+/// After your server is started, you can open the Foxglove app to visualize your data. See [Connecting to data].
 ///
 /// ### Buffering
 ///
@@ -23,6 +25,8 @@ use crate::{get_runtime_handle, Context, FoxgloveError};
 /// Other protocol messages, including status updates, are delivered from a separate "control"
 /// queue, using the same configured queue size. If the control queue fills, then the slow client is
 /// dropped.
+///
+/// [Connecting to data]: https://docs.foxglove.dev/docs/connecting-to-data/introduction
 #[must_use]
 #[derive(Debug)]
 pub struct WebSocketServer {
@@ -291,7 +295,10 @@ impl WebSocketServerHandle {
         self.0.remove_status(status_ids);
     }
 
-    /// Publishes a connection graph update to all subscribed clients.
+    /// Publishes a [ConnectionGraph] update to all subscribed clients.
+    ///
+    /// Requires the [`ConnectionGraph`](crate::websocket::Capability::ConnectionGraph) capability.
+    ///
     /// The update is published as a difference from the current graph to replacement_graph.
     /// When a client first subscribes to connection graph updates, it receives the current graph.
     pub fn publish_connection_graph(
@@ -301,7 +308,7 @@ impl WebSocketServerHandle {
         self.0.replace_connection_graph(replacement_graph)
     }
 
-    /// Gracefully shutdown the websocket server.
+    /// Gracefully shut down the websocket server.
     pub fn stop(self) {
         self.0.stop();
     }
