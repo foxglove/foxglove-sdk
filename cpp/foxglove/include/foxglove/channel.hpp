@@ -75,7 +75,11 @@ public:
 private:
   explicit Channel(const foxglove_channel* channel);
 
-  std::unique_ptr<const foxglove_channel, void (*const)(const foxglove_channel*)> impl_;
+  struct Deleter {
+    void operator()(const foxglove_channel* ptr) const noexcept;
+  };
+
+  std::unique_ptr<const foxglove_channel, Deleter> impl_;
 };
 
 }  // namespace foxglove
