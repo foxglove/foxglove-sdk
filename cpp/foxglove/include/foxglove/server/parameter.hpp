@@ -40,8 +40,11 @@ enum class ParameterType : uint8_t {
 /// lifetime when accessing the view.
 class ParameterValueView final {
 public:
+  /// @brief An array of values.
   using Array = std::vector<ParameterValueView>;
+  /// @brief A dictionary of values, mapped by string.
   using Dict = std::map<std::string, ParameterValueView>;
+  /// @brief A sum type representing the possible values.
   using Value = std::variant<double, bool, std::string_view, Array, Dict>;
 
   /// @brief Creates a deep clone of this parameter value.
@@ -63,6 +66,7 @@ public:
       return false;
     }
   }
+  /// @brief Checks whether the parameter value is a string.
   template<>
   [[nodiscard]] bool is<std::string>() const noexcept {
     return this->is<std::string_view>();
@@ -70,19 +74,21 @@ public:
 
   /// @brief Extracts a value from the parameter.
   ///
-  /// This method will throw an exception if the type is unsupported, or does
-  /// not match. You can use `ParameterValueView::is<T>()` to check that the
-  /// type matches before calling this method.
+  /// This method will throw an exception if the type does not match. You can
+  /// use `ParameterValueView::is<T>()` to check that the type matches before
+  /// calling this method.
   ///
   /// @tparam T The type of the value to extract.
   template<typename T>
   [[nodiscard]] T get() const {
     return std::get<T>(this->value());
   }
+  /// @brief Extracts the parameter as itself.
   template<>
   [[nodiscard]] ParameterValueView get<ParameterValueView>() const {
     return *this;
   }
+  /// @brief Extracts the parameter as an owned string.
   template<>
   [[nodiscard]] std::string get<std::string>() const {
     auto sv = this->get<std::string_view>();
@@ -117,7 +123,6 @@ public:
   /// @brief Constructor for an dict value.
   explicit ParameterValue(std::map<std::string, ParameterValue> values);
 
-  /// @brief Default destructor.
   ~ParameterValue() = default;
   /// @brief Default move constructor.
   ParameterValue(ParameterValue&& other) noexcept = default;
@@ -144,9 +149,9 @@ public:
 
   /// @brief Extracts a value from the parameter.
   ///
-  /// This method will throw an exception if the type is unsupported, or does
-  /// not match. You can use `ParameterValue::is<T>()` to check that the type
-  /// matches before calling this method.
+  /// This method will throw an exception if the type does not match. You can
+  /// use `ParameterValue::is<T>()` to check that the type matches before
+  /// calling this method.
   ///
   /// @tparam T The type of the value to extract.
   template<typename T>
@@ -202,22 +207,34 @@ public:
     auto value = this->value();
     return value.has_value() && value->is<T>();
   }
+
+  /// @brief Checks whether the parameter value is a std::string_view.
+  ///
+  /// Returns false if the parameter type indicates that it is a byte array.
   template<>
   [[nodiscard]] bool is<std::string_view>() const noexcept {
     auto value = this->value();
     return value.has_value() && value->is<std::string_view>() &&
            this->type() != ParameterType::ByteArray;
   }
+
+  /// @brief Checks whether the parameter value is a std::string.
+  ///
+  /// Returns false if the parameter type indicates that it is a byte array.
   template<>
   [[nodiscard]] bool is<std::string>() const noexcept {
     return this->is<std::string_view>();
   }
+
+  /// @brief Checks whether the parameter value is a std::vector<std::byte>.
   template<>
   [[nodiscard]] bool is<std::vector<std::byte>>() const noexcept {
     auto value = this->value();
     return value.has_value() && value->is<std::string_view>() &&
            this->type() == ParameterType::ByteArray;
   }
+
+  /// @brief Checks whether the parameter value is a std::vector<double>.
   template<>
   [[nodiscard]] bool is<std::vector<double>>() const noexcept {
     return this->isArray<double>();
@@ -245,6 +262,8 @@ public:
       return false;
     }
   }
+
+  /// @brief Checks whether the paramter value is an array of generic elements.
   template<>
   [[nodiscard]] bool isArray<ParameterValueView>() const noexcept {
     auto value = this->value();
@@ -255,9 +274,9 @@ public:
   /// match the specified type.
   ///
   /// Returns false if the parameter does not have a value. Returns true for an
-  /// empty dict.
+  /// empty dictionary.
   ///
-  /// @tparam T The expected type of the dict's values.
+  /// @tparam T The expected type of the dictionary's values.
   template<typename T>
   [[nodiscard]] bool isDict() const noexcept {
     if (!this->isDict<ParameterValueView>()) {
@@ -276,6 +295,9 @@ public:
       return false;
     }
   }
+
+  /// @brief Checks whether the paramter value is an dictionary of generic
+  /// values.
   template<>
   [[nodiscard]] bool isDict<ParameterValueView>() const noexcept {
     auto value = this->value();
@@ -289,10 +311,9 @@ public:
 
   /// @brief Extracts a value from the parameter.
   ///
-  /// This method will throw an exception if the value is unset, the type is
-  /// unsupported, or the type does not match. You can use
-  /// `ParameterView::is<T>()` to check that the type matches before calling
-  /// this method.
+  /// This method will throw an exception if the value is unset or the type does
+  /// not match. You can use `ParameterView::is<T>()` to check that the type
+  /// matches before calling this method.
   ///
   /// @tparam T The type of the value to extract.
   template<typename T>
@@ -303,6 +324,12 @@ public:
     }
     return value->template get<T>();
   }
+
+  /// @brief Extracts the value as a byte array.
+  ///
+  /// This method will throw an exception if the value is unset or is not a byte
+  /// array. You can use `ParameterView::is<std::vector<std::byte>>()` to check
+  /// that the type matches before calling this method.
   template<>
   [[nodiscard]] std::vector<std::byte> get() const {
     auto result = this->getByteArray();
@@ -311,14 +338,31 @@ public:
     }
     return result.value();
   }
+
+  /// @brief Extracts the value as an array of floating point values.
+  ///
+  /// This method will throw an exception if the value is unset or is not an
+  /// array of floating point values. You can use
+  /// `ParameterView::is<std::vector<double>>()` to check that the type matches
+  /// before calling this method.
   template<>
   [[nodiscard]] std::vector<double> get() const {
     return this->getArray<double>();
   }
+
+  /// @brief Extracts the value as an array of generic values.
+  ///
+  /// This method will throw an exception if the value is unset or is not an
+  /// array.
   template<>
   [[nodiscard]] std::vector<ParameterValueView> get() const {
     return this->getArray<ParameterValueView>();
   }
+
+  /// @brief Extracts the value as a dictionary of generic values.
+  ///
+  /// This method will throw an exception if the value is unset or is not an
+  /// dictionary.
   template<>
   [[nodiscard]] std::map<std::string, ParameterValueView> get() const {
     return this->getDict<ParameterValueView>();
@@ -327,9 +371,9 @@ public:
   /// @brief Extracts an array value from the parameter.
   ///
   /// This method will throw an exception if the value is unset, the value is
-  /// not an array, the element type is unsupported, or the element type does
-  /// not match. You can use `ParameterView::isArray<T>()` to check that the
-  /// element type matches before calling this method.
+  /// not an array or the element type does not match. You can use
+  /// `ParameterView::isArray<T>()` to check that the element type matches
+  /// before calling this method.
   ///
   /// @tparam T The type of the array's elements.
   template<typename T>
@@ -347,14 +391,14 @@ public:
     return result;
   }
 
-  /// @brief Extracts a dict value from the parameter.
+  /// @brief Extracts a dictionary value from the parameter.
   ///
   /// This method will throw an exception if the value is unset, the value is
-  /// not a dict, the value type is unsupported, or the value type does not
-  /// match. You can use `ParameterView::isDict<T>()` to check that the value
-  /// type matches before calling this method.
+  /// not a dictionary or the value type does not match. You can use
+  /// `ParameterView::isDict<T>()` to check that the value type matches before
+  /// calling this method.
   ///
-  /// @tparam T The type of the dict's values.
+  /// @tparam T The type of the dictionary's values.
   template<typename T>
   [[nodiscard]] std::map<std::string, T> getDict() const {
     auto value = this->value();
@@ -371,7 +415,7 @@ public:
     return result;
   }
 
-  /// @brief Extracts a dict value from the parameter.
+  /// @brief Extracts a dictionary value from the parameter.
   ///
   /// This method will return `ValueError` if the value is unset or the value is
   /// not a byte array. It will return `Base64DecodeError` if the value is not a
@@ -410,12 +454,11 @@ public:
       : Parameter(name, reinterpret_cast<const uint8_t*>(bytes.data()), bytes.size()) {}
   /// @brief Constructor for an array of floating point values.
   explicit Parameter(std::string_view name, const std::vector<double>& values);
-  /// @brief Constructor for an dict parameter.
+  /// @brief Constructor for an dictionary parameter.
   explicit Parameter(std::string_view name, std::map<std::string, ParameterValue> values);
   /// @brief Constructor for a parameter from raw parts.
   explicit Parameter(std::string_view name, ParameterType type, ParameterValue&& value);
 
-  /// @brief Default destructor.
   ~Parameter() = default;
   /// @brief Default move constructor.
   Parameter(Parameter&& other) noexcept = default;
@@ -475,9 +518,9 @@ public:
   /// match the specified type.
   ///
   /// Returns false if the parameter does not have a value. Returns true for an
-  /// empty dict.
+  /// empty dictionary.
   ///
-  /// @tparam T The expected type of the dict's values.
+  /// @tparam T The expected type of the dictionary's values.
   template<typename T>
   [[nodiscard]] bool isDict() const noexcept {
     return this->view().isDict<T>();
@@ -490,10 +533,9 @@ public:
 
   /// @brief Extracts a value from the parameter.
   ///
-  /// This method will throw an exception if the value is unset, the type is
-  /// unsupported, or the type does not match. You can use
-  /// `ParameterView::is<T>()` to check that the type matches before calling
-  /// this method.
+  /// This method will throw an exception if the value is unset or the type does
+  /// not match. You can use `ParameterView::is<T>()` to check that the type
+  /// matches before calling this method.
   ///
   /// @tparam T The type of the value to extract.
   template<typename T>
@@ -504,9 +546,9 @@ public:
   /// @brief Extracts an array value from the parameter.
   ///
   /// This method will throw an exception if the value is unset, the value is
-  /// not an array, the element type is unsupported, or the element type does
-  /// not match. You can use `ParameterView::isArray<T>()` to check that the
-  /// element type matches before calling this method.
+  /// not an array or the element type does not match. You can use
+  /// `ParameterView::isArray<T>()` to check that the element type matches
+  /// before calling this method.
   ///
   /// @tparam T The type of the array's elements.
   template<typename T>
@@ -514,20 +556,20 @@ public:
     return this->view().getArray<T>();
   }
 
-  /// @brief Extracts a dict value from the parameter.
+  /// @brief Extracts a dictionary value from the parameter.
   ///
   /// This method will throw an exception if the value is unset, the value is
-  /// not a dict, the value type is unsupported, or the value type does not
-  /// match. You can use `ParameterView::isDict<T>()` to check that the value
-  /// type matches before calling this method.
+  /// not a dictionary or the value type does not match. You can use
+  /// `ParameterView::isDict<T>()` to check that the value type matches before
+  /// calling this method.
   ///
-  /// @tparam T The type of the dict's values.
+  /// @tparam T The type of the dictionary's values.
   template<typename T>
   [[nodiscard]] std::map<std::string, T> getDict() const {
     return this->view().getDict<T>();
   }
 
-  /// @brief Extracts a dict value from the parameter.
+  /// @brief Extracts a dictionary value from the parameter.
   ///
   /// This method will return `ValueError` if the value is unset or the value is
   /// not a byte array. It will return `Base64DecodeError` if the value is not a
@@ -573,9 +615,9 @@ private:
 /// @brief An owned parameter array
 class ParameterArray final {
 public:
+  /// @brief Constructs a parameter array.
   explicit ParameterArray(std::vector<Parameter>&& params);
 
-  /// @brief Default destructor.
   ~ParameterArray() = default;
   /// @brief Default move constructor.
   ParameterArray(ParameterArray&& other) noexcept = default;
