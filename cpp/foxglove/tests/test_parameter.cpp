@@ -27,7 +27,9 @@ TEST_CASE("ParameterValue construction and access") {
   SECTION("string value") {
     foxglove::ParameterValue value("test string");
     REQUIRE(value.is<std::string>());
+    REQUIRE(value.is<std::string_view>());
     REQUIRE(value.get<std::string>() == "test string");
+    REQUIRE(value.get<std::string_view>() == "test string");
   }
 
   SECTION("array value") {
@@ -84,7 +86,10 @@ TEST_CASE("Parameter construction and access") {
     REQUIRE(param.name() == "test_param");
     REQUIRE(param.type() == foxglove::ParameterType::None);
     REQUIRE(param.is<std::string>());
+    REQUIRE(param.is<std::string_view>());
+    REQUIRE(!param.is<std::vector<std::byte>>());
     REQUIRE(param.get<std::string>() == "test string");
+    REQUIRE(param.get<std::string_view>() == "test string");
   }
 
   SECTION("parameter with byte array value") {
@@ -92,6 +97,7 @@ TEST_CASE("Parameter construction and access") {
     foxglove::Parameter param("test_param", data.data(), data.size());
     REQUIRE(param.name() == "test_param");
     REQUIRE(param.type() == foxglove::ParameterType::ByteArray);
+    REQUIRE(!param.is<std::string>());
     REQUIRE(param.is<std::vector<std::byte>>());
     auto decoded = param.get<std::vector<std::byte>>();
     REQUIRE(decoded.size() == data.size());

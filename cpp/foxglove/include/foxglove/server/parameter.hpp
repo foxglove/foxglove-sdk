@@ -18,43 +18,41 @@ struct foxglove_parameter_array;
 
 namespace foxglove {
 
-/**
- * A parameter type.
- *
- * This enum is used to disambiguate `Parameter` values, in situations where the
- * wire representation is ambiguous.
- */
+/// @brief A parameter type.
+///
+/// This enum is used to disambiguate `Parameter` values, in situations where the
+/// wire representation is ambiguous.
 enum class ParameterType : uint8_t {
-  // The parameter value can be inferred from the inner parameter value tag.
+  /// The parameter value can be inferred from the inner parameter value tag.
   None,
-  // An array of bytes.
+  /// An array of bytes.
   ByteArray,
-  // A decimal or integer value that can be represented as a `float64`.
+  /// A decimal or integer value that can be represented as a `float64`.
   Float64,
-  // An array of decimal or integer values that can be represented as `float64`s.
+  /// An array of decimal or integer values that can be represented as `float64`s.
   Float64Array,
 };
 
-/**
- * A view over an unowned parameter value.
- *
- * This lifetime of this view is tied to the `ParameterValue` from which it was
- * derived. It is the caller's responsibility to ensure the validity of this
- * lifetime when accessing the view.
- */
+/// @brief A view over an unowned parameter value.
+///
+/// This lifetime of this view is tied to the `ParameterValue` from which it was
+/// derived. It is the caller's responsibility to ensure the validity of this
+/// lifetime when accessing the view.
 class ParameterValueView final {
 public:
   using Array = std::vector<ParameterValueView>;
   using Dict = std::map<std::string, ParameterValueView>;
-  using Value = std::variant<double, bool, std::string, Array, Dict>;
+  using Value = std::variant<double, bool, std::string_view, Array, Dict>;
 
-  // Creates a deep clone of this parameter value.
+  /// @brief Creates a deep clone of this parameter value.
   [[nodiscard]] class ParameterValue clone() const;
 
-  // Returns a variant representation of the value.
+  /// @brief Returns a variant representation of the value.
   [[nodiscard]] Value value() const;
 
-  // Value type checker.
+  /// @brief Checks whether the parameter value matches the specified type.
+  ///
+  /// @tparam T The expected type of the parameter value.
   template<typename T>
   [[nodiscard]] bool is() const noexcept {
     try {
@@ -65,35 +63,30 @@ public:
       return false;
     }
   }
+  template<>
+  [[nodiscard]] bool is<std::string>() const noexcept {
+    return this->is<std::string_view>();
+  }
 
-  // Value extractor.
+  /// @brief Extracts a value from the parameter.
+  ///
+  /// This method will throw an exception if the type is unsupported, or does
+  /// not match. You can use `ParameterValueView::is<T>()` to check that the
+  /// type matches before calling this method.
+  ///
+  /// @tparam T The type of the value to extract.
   template<typename T>
   [[nodiscard]] T get() const {
-    throw std::runtime_error("Unsupported type");
+    return std::get<T>(this->value());
   }
   template<>
   [[nodiscard]] ParameterValueView get<ParameterValueView>() const {
     return *this;
   }
   template<>
-  [[nodiscard]] double get<double>() const {
-    return std::get<double>(this->value());
-  }
-  template<>
-  [[nodiscard]] bool get<bool>() const {
-    return std::get<bool>(this->value());
-  }
-  template<>
   [[nodiscard]] std::string get<std::string>() const {
-    return std::get<std::string>(this->value());
-  }
-  template<>
-  [[nodiscard]] Array get<Array>() const {
-    return std::get<Array>(this->value());
-  }
-  template<>
-  [[nodiscard]] Dict get<Dict>() const {
-    return std::get<Dict>(this->value());
+    auto sv = this->get<std::string_view>();
+    return std::string(sv);
   }
 
 private:
@@ -101,49 +94,61 @@ private:
   friend class ParameterValue;
 
   const foxglove_parameter_value* impl_;
+
+  /// @brief Constructor from raw pointer.
   explicit ParameterValueView(const foxglove_parameter_value* ptr)
       : impl_(ptr) {}
 };
 
-/**
- * An owned parameter value.
- */
+/// @brief An owned parameter value.
 class ParameterValue final {
 public:
-  // Constructors
+  /// @brief Constructor for a floating point value.
   explicit ParameterValue(double value);
+  /// @brief Constructor for a boolean value.
   explicit ParameterValue(bool value);
+  /// @brief Constructor for a string value.
   explicit ParameterValue(std::string_view value);
+  /// @brief Constructor for a string value from a C-style string.
   explicit ParameterValue(const char* value)
       : ParameterValue(std::string_view(value)) {}
+  /// @brief Constructor for an array value.
   explicit ParameterValue(std::vector<ParameterValue> values);
+  /// @brief Constructor for an dict value.
   explicit ParameterValue(std::map<std::string, ParameterValue> values);
 
-  // Default destructor & move, disable copy.
+  /// @brief Default destructor.
   ~ParameterValue() = default;
+  /// @brief Default move constructor.
   ParameterValue(ParameterValue&& other) noexcept = default;
+  /// @brief Default move assignment.
   ParameterValue& operator=(ParameterValue&& other) noexcept = default;
   ParameterValue(const ParameterValue&) = delete;
   ParameterValue& operator=(const ParameterValue&) = delete;
 
-  // Creates a deep clone of this parameter value.
+  /// @brief Creates a deep clone of this parameter value.
   [[nodiscard]] ParameterValue clone() const {
     return this->view().clone();
   }
 
-  // Accessors
+  /// @brief Returns an immutable view of this parameter value.
   [[nodiscard]] ParameterValueView view() const noexcept;
-  [[nodiscard]] ParameterValueView::Value value() const {
-    return this->view().value();
-  }
 
-  // Value type checker.
+  /// @brief Checks whether the parameter value matches the specified type.
+  ///
+  /// @tparam T The expected type of the parameter value.
   template<typename T>
   [[nodiscard]] bool is() const {
     return this->view().is<T>();
   }
 
-  // Value extractor.
+  /// @brief Extracts a value from the parameter.
+  ///
+  /// This method will throw an exception if the type is unsupported, or does
+  /// not match. You can use `ParameterValue::is<T>()` to check that the type
+  /// matches before calling this method.
+  ///
+  /// @tparam T The type of the value to extract.
   template<typename T>
   [[nodiscard]] T get() const {
     return this->view().get<T>();
@@ -159,51 +164,58 @@ private:
 
   std::unique_ptr<foxglove_parameter_value, Deleter> impl_;
 
-  // Constructor from raw pointer.
+  /// @brief Constructor from raw pointer.
   explicit ParameterValue(foxglove_parameter_value* ptr);
 
-  // Releases ownership of the underlying storage.
+  /// @brief Releases ownership of the underlying storage.
   [[nodiscard]] foxglove_parameter_value* release() noexcept;
 };
 
-/**
- * A view over an unowned parameter.
- *
- * This lifetime of this view is tied to the `Parameter` from which it was
- * derived. It is the caller's responsibility to ensure the validity of this
- * lifetime when accessing the view.
- */
+/// @brief A view over an unowned parameter.
+///
+/// This lifetime of this view is tied to the `Parameter` from which it was
+/// derived. It is the caller's responsibility to ensure the validity of this
+/// lifetime when accessing the view.
 class ParameterView final {
 public:
-  // Creates a deep clone of this parameter.
+  /// @brief Creates a deep clone of this parameter.
   [[nodiscard]] class Parameter clone() const;
 
-  // Accessors
+  /// @brief Returns the parameter name.
   [[nodiscard]] std::string_view name() const noexcept;
+  /// @brief Returns the parameter type, used for disambiguation.
   [[nodiscard]] ParameterType type() const noexcept;
+  /// @brief Returns the parameter value.
   [[nodiscard]] std::optional<ParameterValueView> value() const noexcept;
+  /// @brief Returns true if the parameter has a value.
   [[nodiscard]] bool hasValue() const noexcept {
     return this->value().has_value();
   };
 
-  // Value type checker.
-  //
-  // Returns true if the value is of type T.
+  /// @brief Checks whether the parameter value matches the specified type.
+  ///
+  /// Returns false if the parameter does not have a value.
+  ///
+  /// @tparam T The expected type of the parameter value.
   template<typename T>
   [[nodiscard]] bool is() const noexcept {
     auto value = this->value();
     return value.has_value() && value->is<T>();
   }
   template<>
-  [[nodiscard]] bool is<std::string>() const noexcept {
+  [[nodiscard]] bool is<std::string_view>() const noexcept {
     auto value = this->value();
-    return value.has_value() && value->is<std::string>() &&
+    return value.has_value() && value->is<std::string_view>() &&
            this->type() != ParameterType::ByteArray;
+  }
+  template<>
+  [[nodiscard]] bool is<std::string>() const noexcept {
+    return this->is<std::string_view>();
   }
   template<>
   [[nodiscard]] bool is<std::vector<std::byte>>() const noexcept {
     auto value = this->value();
-    return value.has_value() && value->is<std::string>() &&
+    return value.has_value() && value->is<std::string_view>() &&
            this->type() == ParameterType::ByteArray;
   }
   template<>
@@ -211,10 +223,13 @@ public:
     return this->isArray<double>();
   }
 
-  // Array value type checker.
-  //
-  // Returns true if the value is an array, in which all elements are of type T.
-  // Always returns true for an empty array.
+  /// @brief Checks whether the parameter value is an array whose elements match
+  /// the specified type.
+  ///
+  /// Returns false if the parameter does not have a value. Returns true for
+  /// empty arrays.
+  ///
+  /// @tparam T The expected type of the array's elements.
   template<typename T>
   [[nodiscard]] bool isArray() const noexcept {
     if (!this->isArray<ParameterValueView>()) {
@@ -236,10 +251,13 @@ public:
     return value.has_value() && value->is<ParameterValueView::Array>();
   }
 
-  // Dict value type checker.
-  //
-  // Returns true if the value is a dict, in which all values are of type T.
-  // Always returns true for an empty dict.
+  /// @brief Checks whether the parameter value is a dictionary whose values
+  /// match the specified type.
+  ///
+  /// Returns false if the parameter does not have a value. Returns true for an
+  /// empty dict.
+  ///
+  /// @tparam T The expected type of the dict's values.
   template<typename T>
   [[nodiscard]] bool isDict() const noexcept {
     if (!this->isDict<ParameterValueView>()) {
@@ -264,16 +282,19 @@ public:
     return value.has_value() && value->is<ParameterValueView::Dict>();
   }
 
-  // Byte array type checker.
-  //
-  // Returns true if the value is a byte array.
+  /// @brief Checks whether the parameter value is a byte array.
   [[nodiscard]] bool isByteArray() const noexcept {
     return this->is<std::vector<std::byte>>();
   }
 
-  // Value extractor.
-  //
-  // Raises an exception if the value is not of type T.
+  /// @brief Extracts a value from the parameter.
+  ///
+  /// This method will throw an exception if the value is unset, the type is
+  /// unsupported, or the type does not match. You can use
+  /// `ParameterView::is<T>()` to check that the type matches before calling
+  /// this method.
+  ///
+  /// @tparam T The type of the value to extract.
   template<typename T>
   [[nodiscard]] T get() const {
     auto value = this->value();
@@ -303,7 +324,14 @@ public:
     return this->getDict<ParameterValueView>();
   }
 
-  // Value array extractor.
+  /// @brief Extracts an array value from the parameter.
+  ///
+  /// This method will throw an exception if the value is unset, the value is
+  /// not an array, the element type is unsupported, or the element type does
+  /// not match. You can use `ParameterView::isArray<T>()` to check that the
+  /// element type matches before calling this method.
+  ///
+  /// @tparam T The type of the array's elements.
   template<typename T>
   [[nodiscard]] std::vector<T> getArray() const {
     auto value = this->value();
@@ -319,7 +347,14 @@ public:
     return result;
   }
 
-  // Value dict extractor.
+  /// @brief Extracts a dict value from the parameter.
+  ///
+  /// This method will throw an exception if the value is unset, the value is
+  /// not a dict, the value type is unsupported, or the value type does not
+  /// match. You can use `ParameterView::isDict<T>()` to check that the value
+  /// type matches before calling this method.
+  ///
+  /// @tparam T The type of the dict's values.
   template<typename T>
   [[nodiscard]] std::map<std::string, T> getDict() const {
     auto value = this->value();
@@ -336,9 +371,11 @@ public:
     return result;
   }
 
-  // Value byte array extractor.
-  //
-  // Returns `Base64DecodeError` if the value cannot be base64-decoded.
+  /// @brief Extracts a dict value from the parameter.
+  ///
+  /// This method will return `ValueError` if the value is unset or the value is
+  /// not a byte array. It will return `Base64DecodeError` if the value is not a
+  /// valid base64-encoding.
   [[nodiscard]] FoxgloveResult<std::vector<std::byte>> getByteArray() const;
 
 private:
@@ -346,109 +383,155 @@ private:
   friend class ParameterArrayView;
 
   const foxglove_parameter* impl_;
+
+  /// @brief Constructor from raw pointer.
   explicit ParameterView(const foxglove_parameter* ptr)
       : impl_(ptr) {}
 };
 
-/**
- * An owned parameter.
- */
+/// @brief An owned parameter.
 class Parameter final {
 public:
+  /// @brief Constructor for an unset parameter.
   explicit Parameter(std::string_view name);
+  /// @brief Constructor for a floating point parameter.
   explicit Parameter(std::string_view name, double value);
+  /// @brief Constructor for a boolean parameter.
   explicit Parameter(std::string_view name, bool value);
+  /// @brief Constructor for a string parameter.
   explicit Parameter(std::string_view name, std::string_view value);
+  /// @brief Constructor for a string parameter from a C-style string.
   explicit Parameter(std::string_view name, const char* value)
       : Parameter(name, std::string_view(value)) {}
+  /// @brief Constructor for a byte array parameter.
   explicit Parameter(std::string_view name, const uint8_t* data, size_t data_length);
+  /// @brief Constructor for a byte array parameter from a vector of bytes.
   explicit Parameter(std::string_view name, const std::vector<std::byte>& bytes)
       : Parameter(name, reinterpret_cast<const uint8_t*>(bytes.data()), bytes.size()) {}
+  /// @brief Constructor for an array of floating point values.
   explicit Parameter(std::string_view name, const std::vector<double>& values);
+  /// @brief Constructor for an dict parameter.
   explicit Parameter(std::string_view name, std::map<std::string, ParameterValue> values);
+  /// @brief Constructor for a parameter from raw parts.
   explicit Parameter(std::string_view name, ParameterType type, ParameterValue&& value);
 
-  // Default destructor & move, disable copy.
+  /// @brief Default destructor.
   ~Parameter() = default;
+  /// @brief Default move constructor.
   Parameter(Parameter&& other) noexcept = default;
+  /// @brief Default move assignment.
   Parameter& operator=(Parameter&& other) noexcept = default;
   Parameter(const Parameter&) = delete;
   Parameter& operator=(const Parameter&) = delete;
 
-  // Creates a deep clone of this parameter.
+  /// @brief Creates a deep clone of this parameter.
   [[nodiscard]] Parameter clone() const {
     return this->view().clone();
   }
 
-  // Accessors
+  /// @brief Returns an immutable view of this parameter.
   [[nodiscard]] ParameterView view() const noexcept;
+
+  /// @brief Returns the parameter name.
   [[nodiscard]] std::string_view name() const noexcept {
     return this->view().name();
   }
+  /// @brief Returns the parameter type, used for disambiguation.
   [[nodiscard]] ParameterType type() const noexcept {
     return this->view().type();
   }
+  /// @brief Returns the parameter value.
   [[nodiscard]] std::optional<ParameterValueView> value() const noexcept {
     return this->view().value();
   }
+  /// @brief Returns true if the parameter has a value.
   [[nodiscard]] bool hasValue() const noexcept {
     return this->view().hasValue();
   };
 
-  // Value type checkers.
-  //
-  // Returns true if the value is of type T.
+  /// @brief Checks whether the parameter value matches the specified type.
+  ///
+  /// Returns false if the parameter does not have a value.
+  ///
+  /// @tparam T The expected type of the parameter value.
   template<typename T>
   [[nodiscard]] bool is() const {
     return this->view().is<T>();
   }
 
-  // Array value type checker.
-  //
-  // Returns true if the value is an array, in which all elements are of type T.
-  // Always returns true for an empty array.
+  /// @brief Checks whether the parameter value is an array whose elements match
+  /// the specified type.
+  ///
+  /// Returns false if the parameter does not have a value. Returns true for
+  /// empty arrays.
+  ///
+  /// @tparam T The expected type of the array's elements.
   template<typename T>
   [[nodiscard]] bool isArray() const noexcept {
     return this->view().isArray<T>();
   }
 
-  // Dict value type checker.
-  //
-  // Returns true if the value is a dict, in which all values are of type T.
-  // Always returns true for an empty dict.
+  /// @brief Checks whether the parameter value is a dictionary whose values
+  /// match the specified type.
+  ///
+  /// Returns false if the parameter does not have a value. Returns true for an
+  /// empty dict.
+  ///
+  /// @tparam T The expected type of the dict's values.
   template<typename T>
   [[nodiscard]] bool isDict() const noexcept {
     return this->view().isDict<T>();
   }
 
-  // Byte array type checker.
-  //
-  // Returns true if the value is a byte array.
+  /// @brief Checks whether the parameter value is a byte array.
   [[nodiscard]] bool isByteArray() const noexcept {
     return this->view().isByteArray();
   }
 
-  // Value extractor.
+  /// @brief Extracts a value from the parameter.
+  ///
+  /// This method will throw an exception if the value is unset, the type is
+  /// unsupported, or the type does not match. You can use
+  /// `ParameterView::is<T>()` to check that the type matches before calling
+  /// this method.
+  ///
+  /// @tparam T The type of the value to extract.
   template<typename T>
   [[nodiscard]] T get() const {
     return this->view().get<T>();
   }
 
-  // Value array extractor.
+  /// @brief Extracts an array value from the parameter.
+  ///
+  /// This method will throw an exception if the value is unset, the value is
+  /// not an array, the element type is unsupported, or the element type does
+  /// not match. You can use `ParameterView::isArray<T>()` to check that the
+  /// element type matches before calling this method.
+  ///
+  /// @tparam T The type of the array's elements.
   template<typename T>
   [[nodiscard]] std::vector<T> getArray() const {
     return this->view().getArray<T>();
   }
 
-  // Value dict extractor.
+  /// @brief Extracts a dict value from the parameter.
+  ///
+  /// This method will throw an exception if the value is unset, the value is
+  /// not a dict, the value type is unsupported, or the value type does not
+  /// match. You can use `ParameterView::isDict<T>()` to check that the value
+  /// type matches before calling this method.
+  ///
+  /// @tparam T The type of the dict's values.
   template<typename T>
   [[nodiscard]] std::map<std::string, T> getDict() const {
     return this->view().getDict<T>();
   }
 
-  // Value byte array extractor.
-  //
-  // Returns `Base64DecodeError` if the value cannot be base64-decoded.
+  /// @brief Extracts a dict value from the parameter.
+  ///
+  /// This method will return `ValueError` if the value is unset or the value is
+  /// not a byte array. It will return `Base64DecodeError` if the value is not a
+  /// valid base64-encoding.
   [[nodiscard]] FoxgloveResult<std::vector<std::byte>> getByteArray() const {
     return this->view().getByteArray();
   }
@@ -463,58 +546,62 @@ private:
 
   std::unique_ptr<foxglove_parameter, Deleter> impl_;
 
+  /// @brief Constructor from raw pointer.
   explicit Parameter(foxglove_parameter* param);
 
-  // Releases ownership of the underlying storage.
+  /// @brief Releases ownership of the underlying storage.
   [[nodiscard]] foxglove_parameter* release() noexcept;
 };
 
-/**
- * A view over an unowned parameter array.
- *
- * This lifetime of this view is tied to the `ParameterArray` from which it was
- * derived. It is the caller's responsibility to ensure the validity of this
- * lifetime when accessing the view.
- */
+/// @brief A view over an unowned parameter array.
+///
+/// This lifetime of this view is tied to the `ParameterArray` from which it was
+/// derived. It is the caller's responsibility to ensure the validity of this
+/// lifetime when accessing the view.
 class ParameterArrayView final {
 public:
+  /// @brief Constructs a parameter array from a raw pointer.
   explicit ParameterArrayView(const foxglove_parameter_array* ptr);
 
+  /// @brief Returns a vector of immutable parameter views.
   [[nodiscard]] std::vector<ParameterView> parameters() const;
 
 private:
   const foxglove_parameter_array* impl_;
 };
 
-/**
- * An owned parameter array.
- */
+/// @brief An owned parameter array
 class ParameterArray final {
 public:
   explicit ParameterArray(std::vector<Parameter>&& params);
 
-  // Default destructor & move, disable copy.
+  /// @brief Default destructor.
   ~ParameterArray() = default;
+  /// @brief Default move constructor.
   ParameterArray(ParameterArray&& other) noexcept = default;
+  /// @brief Default move assignment.
   ParameterArray& operator=(ParameterArray&& other) noexcept = default;
   ParameterArray(const ParameterArray&) = delete;
   ParameterArray& operator=(const ParameterArray&) = delete;
 
-  // Accessors
+  /// @brief Returns an immutable view of this parameter array.
   [[nodiscard]] ParameterArrayView view() const noexcept;
+  /// @brief Returns a vector of immutable parameter views.
   [[nodiscard]] std::vector<ParameterView> parameters() const {
     return this->view().parameters();
   }
 
-  // Releases ownership of the underlying storage.
-  [[nodiscard]] foxglove_parameter_array* release() noexcept;
-
 private:
+  friend class WebSocketServer;
+
   struct Deleter {
     void operator()(foxglove_parameter_array* ptr) const noexcept;
   };
 
   std::unique_ptr<foxglove_parameter_array, Deleter> impl_;
+
+  /// @brief Releases ownership of the underlying storage.
+  [[nodiscard]] foxglove_parameter_array* release() noexcept;
 };
 
 }  // namespace foxglove

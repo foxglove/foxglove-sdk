@@ -64,26 +64,30 @@ struct WebSocketServerCallbacks {
     onMessageData;
   std::function<void(uint32_t client_id, uint32_t client_channel_id)> onClientUnadvertise;
 
-  /// Callback invoked when a client requests parameters.
+  /// @brief Callback invoked when a client requests parameters.
   ///
-  /// Requires `FOXGLOVE_CAPABILITY_PARAMETERS`.
+  /// Requires `WebSocketCapability::Parameters`.
   ///
-  /// The `request_id` argument may be NULL.
-  ///
-  /// This function should return the named parameters, or all parameters if
-  /// `paramNames` is empty.
+  /// @param client_id The client ID.
+  /// @param request_id A request ID unique to this client. May be NULL.
+  /// @param param_names A list of parameter names to fetch. If empty, this
+  /// method should return all parameters.
   std::function<std::vector<Parameter>(
     uint32_t client_id, std::optional<std::string_view> request_id,
     const std::vector<std::string_view>& param_names
   )>
     onGetParameters;
 
-  /// Callback invoked when a client sets parameters.
+  /// @brief Callback invoked when a client sets parameters.
   ///
-  /// Requires `FOXGLOVE_CAPABILITY_PARAMETERS`.
+  /// Requires `WebSocketCapability::Parameters`.
   ///
   /// This function should return the updated parameters. All clients subscribed
   /// to updates for the returned parameters will be notified.
+  ///
+  /// @param client_id The client ID.
+  /// @param request_id A request ID unique to this client. May be NULL.
+  /// @param param_names A list of updated parameter values.
   std::function<std::vector<Parameter>(
     uint32_t client_id, std::optional<std::string_view> request_id,
     const std::vector<ParameterView>& params

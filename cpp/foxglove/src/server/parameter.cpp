@@ -21,7 +21,7 @@ ParameterValueView::Value ParameterValueView::value() const {
     case FOXGLOVE_PARAMETER_VALUE_TAG_STRING: {
       // NOLINTNEXTLINE(cppcoreguidelines-pro-type-union-access)
       const foxglove_string* string = &impl_->data.string;
-      return std::string(string->data, string->len);
+      return std::string_view(string->data, string->len);
     }
     case FOXGLOVE_PARAMETER_VALUE_TAG_ARRAY: {
       // NOLINTNEXTLINE(cppcoreguidelines-pro-type-union-access)
