@@ -285,3 +285,66 @@ TEST_CASE("Channel can outlive Schema") {
   REQUIRE_THAT(content, !ContainsSubstring("FAILSCHEMA"));
   REQUIRE_THAT(content, ContainsSubstring("FAKESCHEMA"));
 }
+
+TEST_CASE("ImageAnnotations channel") {
+  FileCleanup cleanup("test.mcap");
+  auto context = foxglove::Context::create();
+
+  foxglove::McapWriterOptions options{context};
+  options.path = "test.mcap";
+  options.compression = foxglove::McapCompression::None;
+  auto writer = foxglove::McapWriter::create(options);
+  REQUIRE(writer.has_value());
+
+  auto channel_result =
+    foxglove::Channel<foxglove::schemas::ImageAnnotations>::create("example", context);
+  REQUIRE(channel_result.has_value());
+  auto channel = std::move(channel_result.value());
+
+  // Prepare ImageAnnotations message
+  foxglove::schemas::ImageAnnotations msg;
+
+  // Add a circle annotation
+  foxglove::schemas::CircleAnnotation circle;
+  circle.timestamp = foxglove::Timestamp{1000000000, 500000000};
+  circle.position = foxglove::schemas::Point2{10.0, 20.0};
+  circle.diameter = 15.0;
+  circle.thickness = 2.0;
+  circle.fill_color = foxglove::schemas::Color{1.0, 0.5, 0.3, 0.8};
+  circle.outline_color = foxglove::schemas::Color{0.1, 0.2, 0.9, 1.0};
+  msg.circles.push_back(circle);
+
+  // Add a points annotation
+  foxglove::schemas::PointsAnnotation points;
+  points.timestamp = foxglove::Timestamp{1000000000, 500000000};
+  points.type = foxglove::schemas::PointsAnnotation::PointsAnnotationType::LINE_STRIP;
+  points.points.push_back(foxglove::schemas::Point2{5.0, 10.0});
+  points.points.push_back(foxglove::schemas::Point2{15.0, 25.0});
+  points.points.push_back(foxglove::schemas::Point2{30.0, 15.0});
+  points.outline_color = foxglove::schemas::Color{0.8, 0.2, 0.3, 1.0};
+  points.outline_colors.push_back(foxglove::schemas::Color{0.9, 0.1, 0.2, 1.0});
+  points.fill_color = foxglove::schemas::Color{0.2, 0.8, 0.3, 0.5};
+  points.thickness = 3.0;
+  msg.points.push_back(points);
+
+  // Add a text annotation
+  foxglove::schemas::TextAnnotation text;
+  text.timestamp = foxglove::Timestamp{1000000000, 500000000};
+  text.position = foxglove::schemas::Point2{50.0, 60.0};
+  text.text = "Sample text";
+  text.font_size = 14.0;
+  text.text_color = foxglove::schemas::Color{0.0, 0.0, 0.0, 1.0};
+  text.background_color = foxglove::schemas::Color{1.0, 1.0, 1.0, 0.7};
+  msg.texts.push_back(text);
+
+  channel.log(msg);
+
+  writer->close();
+
+  REQUIRE(std::filesystem::exists("test.mcap"));
+
+  // Check that the file contains our annotations
+  std::string content = readFile("test.mcap");
+  REQUIRE_THAT(content, ContainsSubstring("Sample text"));
+  REQUIRE_THAT(content, ContainsSubstring("ImageAnnotations"));
+}

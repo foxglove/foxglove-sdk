@@ -48,21 +48,22 @@ private:
   schemas::ChannelUniquePtr impl_;
 };
 
-template<class T, class = void>
+// template<class T, class = void>
+// class Channel final {
+// public:
+//   static_assert(false, "Only schemas defined in foxglove::schemas are currently supported");
+// };
+
+// TODO can we restrict this? std::enable_if_t<internal::BuiltinSchema<T>::value>
+template<class T>
 class Channel final {
 public:
-  static_assert(false, "Only schemas defined in foxglove::schemas are currently supported");
-};
-
-template<class T>
-class Channel<T, std::enable_if_t<internal::BuiltinSchema<T>::value>> final {
-public:
-  static FoxgloveResult<RawChannel> create(
+  static FoxgloveResult<Channel<T>> create(
     const std::string& topic, const Context& context = Context()
   ) {
     auto result = internal::BuiltinSchema<T>::create(topic, context);
     if (result.has_value()) {
-      return RawChannel(result.value());
+      return Channel(std::move(result.value()));
     }
     return foxglove::unexpected(std::move(result.error()));
   }
