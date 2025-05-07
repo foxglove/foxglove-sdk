@@ -4,7 +4,8 @@ use proc_macro::TokenStream;
 use quote::quote;
 use std::collections::HashMap;
 use syn::{
-    parse_macro_input, parse_quote, Data, DataEnum, DeriveInput, Fields, GenericParam, Generics,
+    parse_macro_input, parse_quote, Data, DataEnum, DataStruct, DeriveInput, Fields, GenericParam,
+    Generics,
 };
 
 /// Derive macro for enums and structs allowing them to be logged to a Foxglove channel.
@@ -14,7 +15,7 @@ pub fn derive_loggable(input: TokenStream) -> TokenStream {
 
     match &input.data {
         Data::Enum(data) => derive_enum_impl(&input, data),
-        Data::Struct(_) => derive_struct_impl(input),
+        Data::Struct(data) => derive_struct_impl(&input, data),
         _ => TokenStream::from(quote! {
             compile_error!("Encode can only be used with enums or structs");
         }),
@@ -85,26 +86,23 @@ fn add_protobuf_bound(mut generics: Generics) -> Generics {
     generics
 }
 
-fn derive_struct_impl(input: DeriveInput) -> TokenStream {
+fn derive_struct_impl(input: &DeriveInput, data: &DataStruct) -> TokenStream {
     let name = &input.ident;
     let name_str = name.to_string();
     let package_name = name_str.to_lowercase();
     let full_name = format!("{package_name}.{name_str}");
 
-    let generics = add_protobuf_bound(input.generics);
+    let generics = add_protobuf_bound(input.generics.clone());
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
     // Extract fields from the struct
-    let fields = match &input.data {
-        Data::Struct(data) => match &data.fields {
-            Fields::Named(fields) => &fields.named,
-            _ => {
-                return TokenStream::from(quote! {
-                    compile_error!("Only named struct fields are supported");
-                })
-            }
-        },
-        _ => unreachable!(),
+    let fields = match &data.fields {
+        Fields::Named(fields) => &fields.named,
+        _ => {
+            return TokenStream::from(quote! {
+                compile_error!("Only named struct fields are supported");
+            })
+        }
     };
 
     let mut field_defs = Vec::new();
