@@ -130,16 +130,20 @@ struct WebSocketServerCallbacks {
   )>
     onSetParameters;
 
-  /// Callback invoked when a client subscribes to the named parameters for the
-  /// first time.
+  /// @brief Callback invoked when a client subscribes to the named parameters
+  /// for the first time.
   ///
-  /// Requires `FOXGLOVE_CAPABILITY_PARAMETERS`.
+  /// Requires the capability WebSocketServerCapabilities::Parameters.
+  ///
+  /// @param param_names A list of parameter names.
   std::function<void(const std::vector<std::string_view>& param_names)> onParametersSubscribe;
 
-  /// Callback invoked when the last client unsubscribes from the named
+  /// @brief Callback invoked when the last client unsubscribes from the named
   /// parameters.
   ///
-  /// Requires `FOXGLOVE_CAPABILITY_PARAMETERS`.
+  /// Requires the capability WebSocketServerCapabilities::Parameters.
+  ///
+  /// @param param_names A list of parameter names.
   std::function<void(const std::vector<std::string_view>& param_names)> onParametersUnsubscribe;
 
   /// @brief Callback invoked when a client requests connection graph updates.
@@ -190,6 +194,11 @@ public:
   /// @brief Gracefully shut down the websocket server.
   FoxgloveError stop();
 
+  /// @brief Publishes parameter values to all subscribed clients.
+  ///
+  /// Requires the capability WebSocketServerCapabilities::Parameters.
+  ///
+  /// @param params Updated parameters.
   void publishParameterValues(std::vector<Parameter>&& params);
 
   /// @brief Publish a connection graph to all subscribed clients.

@@ -166,7 +166,7 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
           try {
             (static_cast<const WebSocketServerCallbacks*>(context))->onParametersSubscribe(names);
           } catch (const std::exception& exc) {
-            std::cerr << "onParametersSubscribe callback failed: " << exc.what() << "\n";
+            warn() << "onParametersSubscribe callback failed: " << exc.what();
           }
         };
     }
@@ -181,7 +181,7 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
           try {
             (static_cast<const WebSocketServerCallbacks*>(context))->onParametersUnsubscribe(names);
           } catch (const std::exception& exc) {
-            std::cerr << "onParametersUnsubscribe callback failed: " << exc.what() << "\n";
+            warn() << "onParametersUnsubscribe callback failed: " << exc.what();
           }
         };
     }
