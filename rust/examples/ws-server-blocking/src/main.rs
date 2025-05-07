@@ -8,7 +8,7 @@ use clap::Parser;
 
 use foxglove::LazyChannel;
 
-#[derive(Debug, foxglove::Loggable)]
+#[derive(Debug, foxglove::Encode)]
 struct Message {
     msg: String,
     count: u32,

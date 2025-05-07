@@ -551,6 +551,8 @@ dependencies = [
  "ctrlc",
  "env_logger",
  "foxglove",
+ "schemars",
+ "serde",
 ]
 
 [[package]]
@@ -719,6 +721,8 @@ dependencies = [
  "prost-types",
  "quote",
  "syn 2.0.101",
+ "tracing",
+ "tracing-test",
 ]
 
 [[package]]

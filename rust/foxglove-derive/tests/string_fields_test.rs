@@ -1,12 +1,22 @@
+use ::foxglove::{Encode, Schema};
 use bytes::BytesMut;
-use foxglove::{Encode, Schema};
-use foxglove_derive::Loggable;
 use prost::Message;
 use prost_reflect::{DescriptorPool, DynamicMessage, MessageDescriptor};
 
-#[derive(Loggable)]
+mod common;
+use common::FixedSizeBuffer;
+
+// Ensure the macro properly references the foxglove crate
+mod foxglove {}
+
+#[derive(Encode)]
 struct TestMessage {
     field: String,
+}
+
+#[derive(Encode)]
+struct TestMessageWithLifetime<'a> {
+    field_ref: &'a str,
 }
 
 #[test]
@@ -36,6 +46,57 @@ fn test_single_string_field_serialization() {
     let field_value = deserialized_message.get_field(&field_descriptor);
     let string_value = field_value.as_str().expect("Field value is not a string");
     assert_eq!(string_value, "Hello, world!");
+}
+
+#[test]
+fn test_single_str_field_serialization() {
+    let test_struct = TestMessageWithLifetime {
+        field_ref: "Hello, world!",
+    };
+
+    let mut buf = BytesMut::new();
+    test_struct.encode(&mut buf).expect("Failed to encode");
+
+    let schema = TestMessageWithLifetime::get_schema().expect("Failed to get schema");
+    assert_eq!(schema.encoding, "protobuf");
+    assert_eq!(
+        schema.name,
+        "testmessagewithlifetime.TestMessageWithLifetime"
+    );
+
+    let message_descriptor = get_message_descriptor(&schema);
+
+    let deserialized_message = DynamicMessage::decode(message_descriptor.clone(), buf.as_ref())
+        .expect("Failed to deserialize");
+
+    let field_descriptor = message_descriptor
+        .get_field_by_name("field_ref")
+        .expect("Field 'field_ref' not found");
+    assert_eq!(field_descriptor.name(), "field_ref");
+
+    let field_value = deserialized_message.get_field(&field_descriptor);
+    let string_value = field_value.as_str().expect("Field value is not a string");
+    assert_eq!(string_value, "Hello, world!");
+}
+
+#[test]
+#[should_panic(expected = "Failed to write string")]
+fn test_insufficient_string_buffer_panics() {
+    let mut buf = FixedSizeBuffer::with_capacity(1);
+    let test_struct = TestMessage {
+        field: "Hello, world!".to_string(),
+    };
+    test_struct.encode(&mut buf).expect("Failed to encode");
+}
+
+#[test]
+#[should_panic(expected = "Failed to write str")]
+fn test_insufficient_str_buffer_panics() {
+    let mut buf = FixedSizeBuffer::with_capacity(1);
+    let test_struct = TestMessageWithLifetime {
+        field_ref: "Hello, world!",
+    };
+    test_struct.encode(&mut buf).expect("Failed to encode");
 }
 
 fn get_message_descriptor(schema: &Schema) -> MessageDescriptor {

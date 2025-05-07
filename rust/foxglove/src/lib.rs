@@ -117,14 +117,15 @@
 //!
 //! ### Custom data
 //!
-//! You can also define your own custom data types by annotating a struct with
-//! `#derive(foxglove::Loggable)`. This will automatically implement the [`Encode`] trait, which
-//! allows you to log your struct to a channel.
+//! You can also define your own custom data types by implementing the [`Encode`] trait.
+//!
+//! The easiest way to do this is to derive the [`Encode`] trait, which will generate a schema
+//! and allow you to log your struct to a channel. This currently uses protobuf encoding.
 //!
 //! ```no_run
-//! #[derive(foxglove::Loggable)]
-//! struct Custom {
-//!     msg: String,
+//! #[derive(foxglove::Encode)]
+//! struct Custom<'a> {
+//!     msg: &'a str,
 //!     count: u32,
 //! }
 //!
@@ -136,6 +137,10 @@
 //! });
 //! # Ok(()) }
 //! ```
+//!
+//! This currently uses protobuf encoding. If you'd like to use JSON encoding for integration with
+//! particular tooling, you can instead implement or derive [`Serialize`](serde::Serialize) and
+//! [`JsonSchema`][jsonschema-trait] traits.
 //!
 //! [jsonschema-trait]: https://docs.rs/schemars/latest/schemars/trait.JsonSchema.html
 //!
@@ -282,7 +287,7 @@ pub mod log_macro;
 mod log_sink_set;
 mod mcap_writer;
 mod metadata;
-mod protobuf;
+pub mod protobuf;
 mod schema;
 pub mod schemas;
 mod schemas_wkt;
@@ -303,7 +308,6 @@ pub use context::{Context, LazyContext};
 pub use encode::Encode;
 pub use mcap_writer::{McapCompression, McapWriteOptions, McapWriter, McapWriterHandle};
 pub use metadata::{Metadata, PartialMetadata};
-pub use protobuf::{prost_file_descriptor_set_to_vec, ProtobufField};
 pub use schema::Schema;
 pub use sink::{Sink, SinkId};
 pub(crate) use time::nanoseconds_since_epoch;
@@ -323,7 +327,7 @@ pub use websocket_server::{WebSocketServer, WebSocketServerHandle};
 
 extern crate foxglove_derive;
 #[doc(hidden)]
-pub use foxglove_derive::Loggable;
+pub use foxglove_derive::Encode;
 #[doc(hidden)]
 pub use prost_types;
 

@@ -17,3 +17,5 @@ bytes = "1.4"
 foxglove = { path = "../foxglove" }
 prost.workspace = true
 prost-reflect = "0.14.7"
+tracing.workspace = true
+tracing-test = { workspace = true, features = ["no-env-filter"] }

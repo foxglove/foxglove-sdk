@@ -1,3 +1,4 @@
+//! Interfaces for working with Protocol Buffers.
 use prost_types::field_descriptor_proto::Type as ProstFieldType;
 
 /// Serializes a Protocol Buffers FileDescriptorSet to a byte vector.
@@ -13,6 +14,7 @@ use prost_types::field_descriptor_proto::Type as ProstFieldType;
 /// # Returns
 ///
 /// A `Vec<u8>` containing the binary protobuf encoding of the FileDescriptorSet
+#[doc(hidden)]
 pub fn prost_file_descriptor_set_to_vec(
     file_descriptor_set: &prost_types::FileDescriptorSet,
 ) -> Vec<u8> {
@@ -20,20 +22,31 @@ pub fn prost_file_descriptor_set_to_vec(
     file_descriptor_set.encode_to_vec()
 }
 
+/// Encodes a u64 value as a varint and writes it to the buffer.
+///
+/// Requires up to 10 bytes of buffer space.
+#[doc(hidden)]
+pub fn encode_varint(value: u64, buf: &mut impl bytes::BufMut) {
+    prost::encoding::encode_varint(value, buf);
+}
+
 /// The `ProtobufField` trait defines the interface for types that can be serialized to Protocol
 /// Buffer format.
 ///
-/// This trait is automatically implemented for custom types when using the `#[derive(Loggable)]`
+/// This trait is automatically implemented for custom types when using the `#[derive(Encode)]`
 /// attribute. It provides the necessary methods to serialize data according to Protocol Buffer
 /// encoding rules and generate appropriate Protocol Buffer schema information.
 ///
+/// It supports signed and unsigned integer types, floating point, boolean, string, bytes, and
+/// repeated fields. Signed integers are encoded using sint32 or sint64.
+///
 /// # Usage
 ///
-/// This trait is typically implemented automatically by using the `#[derive(Loggable)]` attribute
+/// This trait is typically implemented automatically by using the `#[derive(Encode)]` attribute
 /// on your custom types:
 ///
 /// ```rust
-/// #[derive(foxglove::Loggable)]
+/// #[derive(foxglove::Encode)]
 /// struct MyMessage {
 ///     number: u64,
 ///     text: String,
@@ -84,23 +97,141 @@ pub trait ProtobufField {
     }
 }
 
-// Implement ProtobufField for u64 that serializes the value as a varint in protobuf serialization
 impl ProtobufField for u64 {
     fn field_type() -> ProstFieldType {
         ProstFieldType::Uint64
     }
 
     fn wire_type() -> u32 {
-        0
+        prost::encoding::WireType::Varint as u32
     }
 
     fn write(&self, buf: &mut impl bytes::BufMut) {
-        let mut value = *self;
-        while value >= 0x80 {
-            buf.put_u8((value as u8) | 0x80);
-            value >>= 7;
-        }
-        buf.put_u8(value as u8);
+        encode_varint(*self, buf);
+    }
+}
+
+impl ProtobufField for u32 {
+    fn field_type() -> ProstFieldType {
+        ProstFieldType::Uint32
+    }
+
+    fn wire_type() -> u32 {
+        prost::encoding::WireType::Varint as u32
+    }
+
+    fn write(&self, buf: &mut impl bytes::BufMut) {
+        encode_varint((*self).into(), buf);
+    }
+}
+
+impl ProtobufField for u16 {
+    fn field_type() -> ProstFieldType {
+        ProstFieldType::Uint32
+    }
+
+    fn wire_type() -> u32 {
+        prost::encoding::WireType::Varint as u32
+    }
+
+    fn write(&self, buf: &mut impl bytes::BufMut) {
+        encode_varint((*self).into(), buf);
+    }
+}
+
+impl ProtobufField for u8 {
+    fn field_type() -> ProstFieldType {
+        ProstFieldType::Uint32
+    }
+
+    fn wire_type() -> u32 {
+        prost::encoding::WireType::Varint as u32
+    }
+
+    fn write(&self, buf: &mut impl bytes::BufMut) {
+        encode_varint((*self).into(), buf);
+    }
+}
+
+impl ProtobufField for i64 {
+    fn field_type() -> ProstFieldType {
+        ProstFieldType::Sint64
+    }
+
+    fn wire_type() -> u32 {
+        prost::encoding::WireType::Varint as u32
+    }
+
+    fn write(&self, buf: &mut impl bytes::BufMut) {
+        // https://protobuf.dev/programming-guides/encoding/#signed-ints
+        let n = *self;
+        let encoded = ((n << 1) ^ (n >> 63)) as u64;
+        encode_varint(encoded, buf);
+    }
+}
+
+impl ProtobufField for i32 {
+    fn field_type() -> ProstFieldType {
+        ProstFieldType::Sint32
+    }
+
+    fn wire_type() -> u32 {
+        prost::encoding::WireType::Varint as u32
+    }
+
+    fn write(&self, buf: &mut impl bytes::BufMut) {
+        // https://protobuf.dev/programming-guides/encoding/#signed-ints
+        let n = *self;
+        let encoded = ((n << 1) ^ (n >> 31)) as u64;
+        encode_varint(encoded, buf);
+    }
+}
+
+impl ProtobufField for i16 {
+    fn field_type() -> ProstFieldType {
+        <i32 as ProtobufField>::field_type()
+    }
+
+    fn wire_type() -> u32 {
+        <i32 as ProtobufField>::wire_type()
+    }
+
+    fn write(&self, buf: &mut impl bytes::BufMut) {
+        // https://protobuf.dev/programming-guides/encoding/#signed-ints
+        let n = *self;
+        let encoded = ((n << 1) ^ (n >> 15)) as u64;
+        encode_varint(encoded, buf);
+    }
+}
+
+impl ProtobufField for i8 {
+    fn field_type() -> ProstFieldType {
+        <i32 as ProtobufField>::field_type()
+    }
+
+    fn wire_type() -> u32 {
+        <i32 as ProtobufField>::wire_type()
+    }
+
+    fn write(&self, buf: &mut impl bytes::BufMut) {
+        // https://protobuf.dev/programming-guides/encoding/#signed-ints
+        let n = *self;
+        let encoded = ((n << 1) ^ (n >> 7)) as u64;
+        encode_varint(encoded, buf);
+    }
+}
+
+impl ProtobufField for bool {
+    fn field_type() -> ProstFieldType {
+        ProstFieldType::Bool
+    }
+
+    fn wire_type() -> u32 {
+        prost::encoding::WireType::Varint as u32
+    }
+
+    fn write(&self, buf: &mut impl bytes::BufMut) {
+        buf.put_u8(*self as u8);
     }
 }
 
@@ -110,7 +241,7 @@ impl ProtobufField for f32 {
     }
 
     fn wire_type() -> u32 {
-        5 // Float
+        prost::encoding::WireType::ThirtyTwoBit as u32
     }
 
     fn write(&self, buf: &mut impl bytes::BufMut) {
@@ -124,7 +255,7 @@ impl ProtobufField for f64 {
     }
 
     fn wire_type() -> u32 {
-        1 // Double
+        prost::encoding::WireType::SixtyFourBit as u32
     }
 
     fn write(&self, buf: &mut impl bytes::BufMut) {
@@ -139,24 +270,16 @@ impl ProtobufField for String {
     }
 
     fn wire_type() -> u32 {
-        2 // Length-delimited
+        prost::encoding::WireType::LengthDelimited as u32
     }
 
     fn write(&self, buf: &mut impl bytes::BufMut) {
-        // Get the UTF-8 bytes of the string
-        let bytes = self.as_bytes();
-
-        // Write the length as a varint
-        let len = bytes.len();
-        let mut len_value = len as u64;
-        while len_value >= 0x80 {
-            buf.put_u8((len_value as u8) | 0x80);
-            len_value >>= 7;
+        // Write the length as a varint, followed by the data
+        prost::encoding::encode_length_delimiter(self.len(), buf).expect("Failed to write string");
+        if buf.remaining_mut() < self.len() {
+            panic!("Failed to write string; insufficient buffer capacity");
         }
-        buf.put_u8(len_value as u8);
-
-        // Write the string bytes
-        buf.put_slice(bytes);
+        buf.put_slice(self.as_bytes());
     }
 }
 
@@ -171,62 +294,31 @@ impl ProtobufField for &str {
     }
 
     fn write(&self, buf: &mut impl bytes::BufMut) {
-        // Get the UTF-8 bytes of the string
-        let bytes = self.as_bytes();
-
-        // Write the length as a varint
-        let len = bytes.len();
-        let mut len_value = len as u64;
-        while len_value >= 0x80 {
-            buf.put_u8((len_value as u8) | 0x80);
-            len_value >>= 7;
+        // Write the length as a varint, followed by the data
+        prost::encoding::encode_length_delimiter(self.len(), buf).expect("Failed to write str");
+        if buf.remaining_mut() < self.len() {
+            panic!("Failed to write str; insufficient buffer capacity");
         }
-        buf.put_u8(len_value as u8);
-
-        // Write the string bytes
-        buf.put_slice(bytes);
+        buf.put_slice(self.as_bytes());
     }
 }
 
-// Implement ProtobufField for u32 that serializes the value as a varint in protobuf serialization
-impl ProtobufField for u32 {
+impl ProtobufField for bytes::Bytes {
     fn field_type() -> ProstFieldType {
-        ProstFieldType::Uint32
+        ProstFieldType::Bytes
     }
 
     fn wire_type() -> u32 {
-        0 // Varint
+        prost::encoding::WireType::LengthDelimited as u32
     }
 
     fn write(&self, buf: &mut impl bytes::BufMut) {
-        // For u32, we encode as a varint in the same way as u64
-        let mut value = *self as u64;
-        while value >= 0x80 {
-            buf.put_u8((value as u8) | 0x80);
-            value >>= 7;
+        // Write the length as a varint, followed by the data
+        prost::encoding::encode_length_delimiter(self.len(), buf).expect("Failed to write bytes");
+        if buf.remaining_mut() < self.len() {
+            panic!("Failed to write bytes; insufficient buffer capacity");
         }
-        buf.put_u8(value as u8);
-    }
-}
-
-// Implement ProtobufField for u16 that serializes the value as a varint in protobuf serialization
-impl ProtobufField for u16 {
-    fn field_type() -> ProstFieldType {
-        ProstFieldType::Uint32
-    }
-
-    fn wire_type() -> u32 {
-        0 // Varint
-    }
-
-    fn write(&self, buf: &mut impl bytes::BufMut) {
-        // For u16, we encode as a varint in the same way as u32
-        let mut value = *self as u64;
-        while value >= 0x80 {
-            buf.put_u8((value as u8) | 0x80);
-            value >>= 7;
-        }
-        buf.put_u8(value as u8);
+        buf.put_slice(self);
     }
 }
 
@@ -240,7 +332,7 @@ where
     }
 
     fn wire_type() -> u32 {
-        2 // Length-delimited
+        prost::encoding::WireType::LengthDelimited as u32
     }
 
     fn write_tagged(&self, field_number: u32, buf: &mut impl bytes::BufMut) {
