@@ -64,5 +64,6 @@ fn main() {
         .expect("Server failed to start");
 
     log_until(args.fps, done);
-    server.stop();
+
+    server.stop().wait_blocking();
 }

@@ -61,7 +61,7 @@ pub async fn main(config: Config) -> Result<()> {
         .context("Failed to register services")?;
 
     tokio::signal::ctrl_c().await.ok();
-    server.stop();
+    server.stop().wait().await;
     Ok(())
 }
 
