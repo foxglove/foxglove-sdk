@@ -3,6 +3,7 @@
 #include <foxglove/channel.hpp>
 #include <foxglove/error.hpp>
 
+#include <array>
 #include <cstdint>
 #include <functional>
 #include <memory>
