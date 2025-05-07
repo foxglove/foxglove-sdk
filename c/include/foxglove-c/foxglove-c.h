@@ -74,19 +74,19 @@ enum foxglove_error
 typedef uint8_t foxglove_error;
 #endif // __cplusplus
 
-enum foxglove_log_severity_level
+enum foxglove_log_level
 #ifdef __cplusplus
   : uint8_t
 #endif // __cplusplus
  {
-  FOXGLOVE_LOG_SEVERITY_LEVEL_OFF = 0,
-  FOXGLOVE_LOG_SEVERITY_LEVEL_DEBUG = 1,
-  FOXGLOVE_LOG_SEVERITY_LEVEL_INFO = 2,
-  FOXGLOVE_LOG_SEVERITY_LEVEL_WARN = 3,
-  FOXGLOVE_LOG_SEVERITY_LEVEL_ERROR = 4,
+  FOXGLOVE_LOG_LEVEL_OFF = 0,
+  FOXGLOVE_LOG_LEVEL_DEBUG = 1,
+  FOXGLOVE_LOG_LEVEL_INFO = 2,
+  FOXGLOVE_LOG_LEVEL_WARN = 3,
+  FOXGLOVE_LOG_LEVEL_ERROR = 4,
 };
 #ifndef __cplusplus
-typedef uint8_t foxglove_log_severity_level;
+typedef uint8_t foxglove_log_level;
 #endif // __cplusplus
 
 enum foxglove_mcap_compression
@@ -406,7 +406,22 @@ foxglove_error foxglove_connection_graph_set_advertised_service(struct foxglove_
                                                                 const struct foxglove_string *provider_ids,
                                                                 size_t provider_ids_count);
 
-void foxglove_set_log_severity_level(foxglove_log_severity_level level);
+/**
+ * Initialize SDK logging with the given severity level.
+ *
+ * The SDK logs informational messages to stderr. Any messages below the given level are not
+ * logged.
+ *
+ * This function should be called before other Foxglove initialization to capture output from all
+ * components. Subsequent calls will have no effect.
+ *
+ * Log level may be overridden with the FOXGLOVE_LOG_LEVEL environment variable: "debug", "info",
+ * "warn", or "error".
+ *
+ * Log styles (colors) may be configured with the FOXGLOVE_LOG_STYLE environment variable "never",
+ * "always", or "auto" (default).
+ */
+void foxglove_set_log_level(foxglove_log_level level);
 
 #ifdef __cplusplus
 }  // extern "C"

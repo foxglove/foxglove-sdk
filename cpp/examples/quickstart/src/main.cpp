@@ -25,7 +25,7 @@ int main(int argc, const char* argv[]) {
     }
   });
 
-  foxglove::setLogSeverityLevel(foxglove::LogSeverityLevel::Debug);
+  foxglove::setLogLevel(foxglove::LogLevel::Debug);
 
   // We'll log to both an MCAP file, and to a running Foxglove app.
   foxglove::McapWriterOptions mcap_options = {};

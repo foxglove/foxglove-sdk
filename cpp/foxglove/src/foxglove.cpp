@@ -3,8 +3,8 @@
 
 namespace foxglove {
 
-void setLogSeverityLevel(LogSeverityLevel level) {
-    foxglove_set_log_severity_level(static_cast<foxglove_log_severity_level>(level));
+void setLogLevel(LogLevel level) {
+    foxglove_set_log_level(static_cast<foxglove_log_level>(level));
 }
 
 }  // namespace foxglove

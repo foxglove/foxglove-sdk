@@ -28,7 +28,7 @@ int main(int argc, const char* argv[]) {
     }
   });
 
-  foxglove::setLogSeverityLevel(foxglove::LogSeverityLevel::Debug);
+  foxglove::setLogLevel(foxglove::LogLevel::Debug);
 
   foxglove::WebSocketServerOptions options = {};
   options.name = "ws-demo-cpp";

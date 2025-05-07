@@ -4,7 +4,7 @@
 
 use bitflags::bitflags;
 use connection_graph::FoxgloveConnectionGraph;
-pub use logging::foxglove_set_log_severity_level;
+pub use logging::foxglove_set_log_level;
 use mcap::{Compression, WriteOptions};
 use std::ffi::{c_char, c_void, CString};
 use std::fs::File;
@@ -645,6 +645,13 @@ pub unsafe extern "C" fn foxglove_context_free(context: *const FoxgloveContext) 
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_internal_register_cpp_wrapper() {
     foxglove::library_version::set_sdk_language("cpp");
+
+    let log_config = std::env::var("FOXGLOVE_LOG_LEVEL")
+        .or_else(|_| std::env::var("FOXGLOVE_LOG_STYLE"))
+        .ok();
+    if log_config.is_some() {
+        foxglove_set_log_level(logging::FoxgloveLogLevel::Debug);
+    }
 }
 
 impl foxglove::websocket::ServerListener for FoxgloveServerCallbacks {
