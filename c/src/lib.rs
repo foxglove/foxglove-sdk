@@ -508,7 +508,7 @@ pub struct FoxgloveChannel(foxglove::RawChannel);
 /// `channel` is an out **FoxgloveChannel pointer, which will be set to the created channel
 /// if the function returns success.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn foxglove_channel_create(
+pub unsafe extern "C" fn foxglove_raw_channel_create(
     topic: FoxgloveString,
     message_encoding: FoxgloveString,
     schema: *const FoxgloveSchema,
@@ -520,12 +520,12 @@ pub unsafe extern "C" fn foxglove_channel_create(
         return FoxgloveError::ValueError;
     }
     unsafe {
-        let result = do_foxglove_channel_create(topic, message_encoding, schema, context);
+        let result = do_foxglove_raw_channel_create(topic, message_encoding, schema, context);
         result_to_c(result, channel)
     }
 }
 
-unsafe fn do_foxglove_channel_create(
+unsafe fn do_foxglove_raw_channel_create(
     topic: FoxgloveString,
     message_encoding: FoxgloveString,
     schema: *const FoxgloveSchema,
@@ -560,6 +560,24 @@ unsafe fn do_foxglove_channel_create(
     builder
         .build_raw()
         .map(|raw_channel| Arc::into_raw(raw_channel) as *const FoxgloveChannel)
+}
+
+pub(crate) unsafe fn do_foxglove_channel_create<T: foxglove::Encode>(
+    topic: FoxgloveString,
+    context: *const FoxgloveContext,
+) -> Result<*const FoxgloveChannel, foxglove::FoxgloveError> {
+    let topic_str = unsafe {
+        topic
+            .as_utf8_str()
+            .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("topic invalid: {}", e)))?
+    };
+
+    let mut builder = foxglove::ChannelBuilder::new(topic_str);
+    if !context.is_null() {
+        let context = ManuallyDrop::new(unsafe { Arc::from_raw(context) });
+        builder = builder.context(&context);
+    }
+    Ok(Arc::into_raw(builder.build::<T>().into_inner()) as *const FoxgloveChannel)
 }
 
 /// Free a channel created via `foxglove_channel_create`.
@@ -834,7 +852,7 @@ impl FoxgloveError {
     }
 }
 
-unsafe fn result_to_c<T>(
+pub(crate) unsafe fn result_to_c<T>(
     result: Result<T, foxglove::FoxgloveError>,
     out_ptr: *mut T,
 ) -> FoxgloveError {

@@ -91,6 +91,14 @@ impl RawChannel {
         &self.metadata
     }
 
+    /// Returns true if one channel is substantially the same as the other.
+    pub(crate) fn matches(&self, other: &Self) -> bool {
+        self.topic == other.topic
+            && self.message_encoding == other.message_encoding
+            && self.schema == other.schema
+            && self.metadata == other.metadata
+    }
+
     /// Closes the channel, removing it from the context.
     ///
     /// You can use this to explicitly unadvertise the channel to sinks that subscribe to channels
@@ -178,10 +186,7 @@ impl RawChannel {
 #[cfg(test)]
 impl PartialEq for RawChannel {
     fn eq(&self, other: &Self) -> bool {
-        self.topic == other.topic
-            && self.message_encoding == other.message_encoding
-            && self.schema == other.schema
-            && self.metadata == other.metadata
+        self.matches(other)
     }
 }
 

@@ -4,7 +4,6 @@
 #include <foxglove/server.hpp>
 #include <foxglove/server/connection_graph.hpp>
 
-#include <iostream>
 #include <type_traits>
 
 namespace foxglove {
@@ -14,33 +13,41 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
 ) {
   foxglove_internal_register_cpp_wrapper();
 
-  bool hasAnyCallbacks = options.callbacks.onSubscribe || options.callbacks.onUnsubscribe ||
-                         options.callbacks.onClientAdvertise || options.callbacks.onMessageData ||
-                         options.callbacks.onClientUnadvertise ||
-                         options.callbacks.onConnectionGraphSubscribe ||
-                         options.callbacks.onConnectionGraphUnsubscribe;
+  bool has_any_callbacks = options.callbacks.onSubscribe || options.callbacks.onUnsubscribe ||
+                           options.callbacks.onClientAdvertise || options.callbacks.onMessageData ||
+                           options.callbacks.onClientUnadvertise ||
+                           options.callbacks.onConnectionGraphSubscribe ||
+                           options.callbacks.onConnectionGraphUnsubscribe;
 
   std::unique_ptr<WebSocketServerCallbacks> callbacks;
 
-  foxglove_server_callbacks cCallbacks = {};
+  foxglove_server_callbacks c_callbacks = {};
 
-  if (hasAnyCallbacks) {
+  if (has_any_callbacks) {
     callbacks = std::make_unique<WebSocketServerCallbacks>(std::move(options.callbacks));
-    cCallbacks.context = callbacks.get();
+    c_callbacks.context = callbacks.get();
     if (callbacks->onSubscribe) {
-      cCallbacks.on_subscribe = [](uint64_t channel_id, const void* context) {
-        (static_cast<const WebSocketServerCallbacks*>(context))->onSubscribe(channel_id);
+      c_callbacks.on_subscribe = [](uint64_t channel_id, const void* context) {
+        try {
+          (static_cast<const WebSocketServerCallbacks*>(context))->onSubscribe(channel_id);
+        } catch (const std::exception& exc) {
+          warn() << "onSubscribe callback failed: " << exc.what();
+        }
       };
     }
     if (callbacks->onUnsubscribe) {
-      cCallbacks.on_unsubscribe = [](uint64_t channel_id, const void* context) {
-        (static_cast<const WebSocketServerCallbacks*>(context))->onUnsubscribe(channel_id);
+      c_callbacks.on_unsubscribe = [](uint64_t channel_id, const void* context) {
+        try {
+          (static_cast<const WebSocketServerCallbacks*>(context))->onUnsubscribe(channel_id);
+        } catch (const std::exception& exc) {
+          warn() << "onUnsubscribe callback failed: " << exc.what();
+        }
       };
     }
     if (callbacks->onClientAdvertise) {
-      cCallbacks.on_client_advertise =
+      c_callbacks.on_client_advertise =
         [](uint32_t client_id, const foxglove_client_channel* channel, const void* context) {
-          ClientChannel cppChannel = {
+          ClientChannel cpp_channel = {
             channel->id,
             channel->topic,
             channel->encoding,
@@ -49,63 +56,83 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
             reinterpret_cast<const std::byte*>(channel->schema),
             channel->schema_len
           };
-          (static_cast<const WebSocketServerCallbacks*>(context))
-            ->onClientAdvertise(client_id, cppChannel);
+          try {
+            (static_cast<const WebSocketServerCallbacks*>(context))
+              ->onClientAdvertise(client_id, cpp_channel);
+          } catch (const std::exception& exc) {
+            warn() << "onClientAdvertise callback failed: " << exc.what();
+          }
         };
     }
     if (callbacks->onMessageData) {
-      cCallbacks.on_message_data = [](
-                                     // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
-                                     uint32_t client_id,
-                                     uint32_t client_channel_id,
-                                     const uint8_t* payload,
-                                     size_t payload_len,
-                                     const void* context
-                                   ) {
-        (static_cast<const WebSocketServerCallbacks*>(context))
-          ->onMessageData(
-            client_id, client_channel_id, reinterpret_cast<const std::byte*>(payload), payload_len
-          );
+      c_callbacks.on_message_data = [](
+                                      // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
+                                      uint32_t client_id,
+                                      uint32_t client_channel_id,
+                                      const uint8_t* payload,
+                                      size_t payload_len,
+                                      const void* context
+                                    ) {
+        try {
+          (static_cast<const WebSocketServerCallbacks*>(context))
+            ->onMessageData(
+              client_id, client_channel_id, reinterpret_cast<const std::byte*>(payload), payload_len
+            );
+        } catch (const std::exception& exc) {
+          warn() << "onMessageData callback failed: " << exc.what();
+        }
       };
     }
     if (callbacks->onClientUnadvertise) {
-      cCallbacks.on_client_unadvertise =
+      c_callbacks.on_client_unadvertise =
         // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
         [](uint32_t client_id, uint32_t client_channel_id, const void* context) {
-          (static_cast<const WebSocketServerCallbacks*>(context))
-            ->onClientUnadvertise(client_id, client_channel_id);
+          try {
+            (static_cast<const WebSocketServerCallbacks*>(context))
+              ->onClientUnadvertise(client_id, client_channel_id);
+          } catch (const std::exception& exc) {
+            warn() << "onClientUnadvertise callback failed: " << exc.what();
+          }
         };
     }
     if (callbacks->onConnectionGraphSubscribe) {
-      cCallbacks.on_connection_graph_subscribe = [](const void* context) {
-        (static_cast<const WebSocketServerCallbacks*>(context))->onConnectionGraphSubscribe();
+      c_callbacks.on_connection_graph_subscribe = [](const void* context) {
+        try {
+          (static_cast<const WebSocketServerCallbacks*>(context))->onConnectionGraphSubscribe();
+        } catch (const std::exception& exc) {
+          warn() << "onConnectionGraphSubscribe callback failed: " << exc.what();
+        }
       };
     }
     if (callbacks->onConnectionGraphUnsubscribe) {
-      cCallbacks.on_connection_graph_unsubscribe = [](const void* context) {
-        (static_cast<const WebSocketServerCallbacks*>(context))->onConnectionGraphUnsubscribe();
+      c_callbacks.on_connection_graph_unsubscribe = [](const void* context) {
+        try {
+          (static_cast<const WebSocketServerCallbacks*>(context))->onConnectionGraphUnsubscribe();
+        } catch (const std::exception& exc) {
+          warn() << "onConnectionGraphUnsubscribe callback failed: " << exc.what();
+        }
       };
     }
   }
 
-  foxglove_server_options cOptions = {};
-  cOptions.context = options.context.get_inner();
-  cOptions.name = {options.name.c_str(), options.name.length()};
-  cOptions.host = {options.host.c_str(), options.host.length()};
-  cOptions.port = options.port;
-  cOptions.callbacks = hasAnyCallbacks ? &cCallbacks : nullptr;
-  cOptions.capabilities =
+  foxglove_server_options c_cptions = {};
+  c_cptions.context = options.context.getInner();
+  c_cptions.name = {options.name.c_str(), options.name.length()};
+  c_cptions.host = {options.host.c_str(), options.host.length()};
+  c_cptions.port = options.port;
+  c_cptions.callbacks = has_any_callbacks ? &c_callbacks : nullptr;
+  c_cptions.capabilities =
     static_cast<std::underlying_type_t<decltype(options.capabilities)>>(options.capabilities);
-  std::vector<foxglove_string> supportedEncodings;
-  supportedEncodings.reserve(options.supportedEncodings.size());
-  for (const auto& encoding : options.supportedEncodings) {
-    supportedEncodings.push_back({encoding.c_str(), encoding.length()});
+  std::vector<foxglove_string> supported_encodings;
+  supported_encodings.reserve(options.supported_encodings.size());
+  for (const auto& encoding : options.supported_encodings) {
+    supported_encodings.push_back({encoding.c_str(), encoding.length()});
   }
-  cOptions.supported_encodings = supportedEncodings.data();
-  cOptions.supported_encodings_count = supportedEncodings.size();
+  c_cptions.supported_encodings = supported_encodings.data();
+  c_cptions.supported_encodings_count = supported_encodings.size();
 
   foxglove_websocket_server* server = nullptr;
-  foxglove_error error = foxglove_server_start(&cOptions, &server);
+  foxglove_error error = foxglove_server_start(&c_cptions, &server);
   if (error != foxglove_error::FOXGLOVE_ERROR_OK || server == nullptr) {
     return foxglove::unexpected(static_cast<FoxgloveError>(error));
   }
@@ -116,20 +143,20 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
 WebSocketServer::WebSocketServer(
   foxglove_websocket_server* server, std::unique_ptr<WebSocketServerCallbacks> callbacks
 )
-    : _impl(server, foxglove_server_stop)
-    , _callbacks(std::move(callbacks)) {}
+    : impl_(server, foxglove_server_stop)
+    , callbacks_(std::move(callbacks)) {}
 
 FoxgloveError WebSocketServer::stop() {
-  foxglove_error error = foxglove_server_stop(_impl.release());
+  foxglove_error error = foxglove_server_stop(impl_.release());
   return FoxgloveError(error);
 }
 
 uint16_t WebSocketServer::port() const {
-  return foxglove_server_get_port(_impl.get());
+  return foxglove_server_get_port(impl_.get());
 }
 
 void WebSocketServer::publishConnectionGraph(ConnectionGraph& graph) {
-  foxglove_server_publish_connection_graph(_impl.get(), graph._impl.get());
+  foxglove_server_publish_connection_graph(impl_.get(), graph.impl_.get());
 }
 
 }  // namespace foxglove

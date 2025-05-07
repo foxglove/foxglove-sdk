@@ -1,19 +1,17 @@
-use bytes::Bytes;
 use clap::Parser;
 
 use foxglove::websocket::{AssetHandler, AssetResponder};
 use std::collections::HashMap;
 
 struct AssetServer {
-    assets: HashMap<String, Bytes>,
+    assets: HashMap<String, &'static [u8]>,
 }
 
 impl AssetServer {
     fn new() -> Self {
-        let mut assets = HashMap::new();
-        assets.insert("/test/one".to_string(), Bytes::from_static(b"one"));
-        assets.insert("/test/two".to_string(), Bytes::from_static(b"two"));
-
+        let mut assets: HashMap<_, &'static [u8]> = HashMap::new();
+        assets.insert("/test/one".to_string(), b"one");
+        assets.insert("/test/two".to_string(), b"two");
         Self { assets }
     }
 }
@@ -23,8 +21,8 @@ impl AssetHandler for AssetServer {
         match self.assets.get(&uri) {
             // A real implementation might use std::fs::read to read a file into a Vec<u8>
             // The ws-protocol doesn't currently support streaming for a single asset.
-            Some(asset) => responder.respond(Ok(asset.clone())),
-            None => responder.respond(Err(format!("Asset {} not found", uri))),
+            Some(asset) => responder.respond_ok(asset),
+            None => responder.respond_err(format!("Asset {} not found", uri)),
         }
     }
 }

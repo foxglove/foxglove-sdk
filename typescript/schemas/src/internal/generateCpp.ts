@@ -49,12 +49,20 @@ function toCamelCase(name: string) {
 }
 
 function toSnakeCase(name: string) {
-  const snakeName = name.replace("JSON", "Json").replace(/([A-Z])/g, "_$1").toLowerCase();
+  const snakeName = name
+    .replace("JSON", "Json")
+    .replace(/([A-Z])/g, "_$1")
+    .toLowerCase();
   return snakeName.startsWith("_") ? snakeName.substring(1) : snakeName;
 }
 
 function isSameAsCType(schema: FoxgloveMessageSchema): boolean {
-  return schema.fields.every((field) => field.type.type === "primitive" && field.type.name !== "bytes" && field.type.name !== "string");
+  return schema.fields.every(
+    (field) =>
+      field.type.type === "primitive" &&
+      field.type.name !== "bytes" &&
+      field.type.name !== "string",
+  );
 }
 
 /**
@@ -155,10 +163,9 @@ export function generateHppSchemas(
     ].join("\n");
   });
 
-  const traitSpecializations = schemas.filter((schema) => !schema.name.endsWith("Primitive")).map(
-    (schema) =>
-      `template<>\nstruct BuiltinSchema<foxglove::schemas::${schema.name}>;`
-  );
+  const traitSpecializations = schemas
+    .filter((schema) => !schema.name.endsWith("Primitive"))
+    .map((schema) => `template<>\nstruct BuiltinSchema<foxglove::schemas::${schema.name}>;`);
 
   const includes = [
     "#include <array>",
@@ -167,6 +174,7 @@ export function generateHppSchemas(
     "#include <type_traits>",
     "#include <vector>",
     "#include <optional>",
+    "#include <memory>",
     "",
     "#include <foxglove/time.hpp>",
     "#include <foxglove/error.hpp>",
@@ -181,6 +189,8 @@ export function generateHppSchemas(
     "struct foxglove_channel;",
 
     "namespace foxglove::schemas {",
+
+    "typedef std::unique_ptr<const foxglove_channel, void (*const)(const foxglove_channel*)> ChannelUniquePtr;",
 
     structDefs.join("\n\n"),
 
@@ -244,81 +254,86 @@ function cppToC(schema: FoxgloveMessageSchema, copyTypes: Set<string>): string[]
   });
 }
 
-export function generateCppSchemas(
-  schemas: FoxgloveMessageSchema[],
-): string {
+export function generateCppSchemas(schemas: FoxgloveMessageSchema[]): string {
   // Sort by name
   schemas.sort((a, b) => a.name.localeCompare(b.name));
 
-  const copyTypes = new Set(schemas.map((schema) => {
-    return isSameAsCType(schema) ? schema.name : "";
-  }).filter((name) => name.length > 0));
-
-  const conversionFuncDecls = schemas.flatMap(
-    (schema) => {
-      if (isSameAsCType(schema)) {
-        return [];
-      }
-      return [`void ${toCamelCase(schema.name)}ToC(foxglove_${toSnakeCase(schema.name)}& dest, const ${schema.name}& src, Arena& arena);`];
-    }
+  const copyTypes = new Set(
+    schemas
+      .map((schema) => {
+        return isSameAsCType(schema) ? schema.name : "";
+      })
+      .filter((name) => name.length > 0),
   );
 
-  const traitSpecializations = schemas.flatMap(
-    (schema) => {
-      if (schema.name.endsWith("Primitive")) {
-        return [];
-      }
+  const conversionFuncDecls = schemas.flatMap((schema) => {
+    if (isSameAsCType(schema)) {
+      return [];
+    }
+    return [
+      `void ${toCamelCase(schema.name)}ToC(foxglove_${toSnakeCase(schema.name)}& dest, const ${schema.name}& src, Arena& arena);`,
+    ];
+  });
 
-      let conversionCode;
-      if (isSameAsCType(schema)) {
-        conversionCode = [
-          `    return FoxgloveError(foxglove_channel_log_${toSnakeCase(schema.name)}(channel, reinterpret_cast<const foxglove_${toSnakeCase(schema.name)}*>(&msg), logTime ? &*logTime : nullptr));`
-        ];
-      } else {
-        conversionCode = ["    Arena arena;",
-        `    foxglove_${toSnakeCase(schema.name)} c_msg;`,
+  const traitSpecializations = schemas.flatMap((schema) => {
+    if (schema.name.endsWith("Primitive")) {
+      return [];
+    }
+
+    const snakeName = toSnakeCase(schema.name);
+    let conversionCode;
+    if (isSameAsCType(schema)) {
+      conversionCode = [
+        `    return FoxgloveError(foxglove_channel_log_${snakeName}(channel, reinterpret_cast<const foxglove_${snakeName}*>(&msg), log_time ? &*log_time : nullptr));`,
+      ];
+    } else {
+      conversionCode = [
+        "    Arena arena;",
+        `    foxglove_${snakeName} c_msg;`,
         `    ${toCamelCase(schema.name)}ToC(c_msg, msg, arena);`,
-        `    return FoxgloveError(foxglove_channel_log_${toSnakeCase(schema.name)}(channel, &c_msg, logTime ? &*logTime : nullptr));`];
-      }
-
-      return [
-        "template<>",
-        `struct BuiltinSchema<${schema.name}> : std::true_type {`,
-        `  inline FoxgloveError logTo(foxglove_channel * const channel, const ${schema.name}& msg, std::optional<uint64_t> logTime = std::nullopt) {`,
-        ...conversionCode,
-        "  }\n};",
-      ]
+        `    return FoxgloveError(foxglove_channel_log_${snakeName}(channel, &c_msg, log_time ? &*log_time : nullptr));`,
+      ];
     }
-  );
 
-  const conversionFuncs = schemas.flatMap(
-    (schema) => {
-      if (isSameAsCType(schema)) {
-        return [];
-      }
-      return [
-        `void ${toCamelCase(schema.name)}ToC(foxglove_${toSnakeCase(schema.name)}& dest, const ${schema.name}& src, Arena& arena) {`,
-        `    ${cppToC(schema, copyTypes).join("\n    ")}`,
-        "}\n",
-      ]
+    return [
+      "template<>",
+      `struct BuiltinSchema<${schema.name}> : std::true_type {`,
+      `  inline FoxgloveError logTo(foxglove_channel * const channel, const ${schema.name}& msg, std::optional<uint64_t> log_time = std::nullopt) {`,
+      ...conversionCode,
+      "  }",
+      "  inline FoxgloveResult<ChannelUniquePtr> create(const std::string& topic, const Context& context = Context()) {",
+      "    const foxglove_channel* channel = nullptr;",
+      `    foxglove_error error = foxglove_channel_create_${snakeName}({topic.data(), topic.size()}, context.getInner(), &channel);`,
+      "    if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {",
+      "      return foxglove::unexpected(FoxgloveError(error));",
+      "    }",
+      "    return ChannelUniquePtr(channel, foxglove_channel_free);",
+      "  }",
+      "};",
+    ];
+  });
+
+  const conversionFuncs = schemas.flatMap((schema) => {
+    if (isSameAsCType(schema)) {
+      return [];
     }
-  );
+    return [
+      `void ${toCamelCase(schema.name)}ToC(foxglove_${toSnakeCase(schema.name)}& dest, const ${schema.name}& src, Arena& arena) {`,
+      `    ${cppToC(schema, copyTypes).join("\n    ")}`,
+      "}\n",
+    ];
+  });
 
-  const systemIncludes = [
-    "#include <optional>",
-    "#include <cstring>",
-  ];
+  const systemIncludes = ["#include <optional>", "#include <cstring>"];
 
   const includes = [
     "#include <foxglove/error.hpp>",
     "#include <foxglove/schemas.hpp>",
     "#include <foxglove/arena.hpp>",
+    "#include <foxglove/context.hpp>",
   ];
 
-  const usings = [
-    "using namespace foxglove;",
-    "using namespace foxglove::schemas;",
-  ];
+  const usings = ["using namespace foxglove;", "using namespace foxglove::schemas;"];
 
   const outputSections = [
     "// Generated by https://github.com/foxglove/foxglove-sdk",

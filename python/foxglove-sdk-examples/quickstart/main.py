@@ -2,7 +2,7 @@ import math
 import time
 
 import foxglove
-from foxglove.channel import Channel
+from foxglove import Channel
 from foxglove.channels import SceneUpdateChannel
 from foxglove.schemas import (
     Color,

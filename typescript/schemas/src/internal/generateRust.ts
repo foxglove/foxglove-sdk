@@ -29,7 +29,7 @@ function formatComment(comment: string) {
 }
 
 function escapeId(id: string) {
-  return (id === "type") ? `r#${id}` : id;
+  return id === "type" ? `r#${id}` : id;
 }
 
 function toSnakeCase(name: string) {
@@ -41,13 +41,15 @@ function toTitleCase(name: string) {
   return name.toLowerCase().replace(/(?:^|_)([a-z])/g, (_, letter: string) => letter.toUpperCase());
 }
 
-export function generateRustTypes(schemas: readonly FoxgloveMessageSchema[], enums: readonly FoxgloveEnumSchema[]): string {
-  const schemaStructs = schemas.map(
-    (schema) => {
-      const { fields, description } = schema;
-      const name = schema.name.replace("JSON", "Json");
-      const snakeName = toSnakeCase(name);
-      return`\
+export function generateRustTypes(
+  schemas: readonly FoxgloveMessageSchema[],
+  enums: readonly FoxgloveEnumSchema[],
+): string {
+  const schemaStructs = schemas.map((schema) => {
+    const { fields, description } = schema;
+    const name = schema.name.replace("JSON", "Json");
+    const snakeName = toSnakeCase(name);
+    return `\
 ${formatComment(description)}
 #[repr(C)]
 pub struct ${name} {
@@ -103,14 +105,34 @@ pub struct ${name} {
     .join("\n\n")}
 }
 
-${name.endsWith("Primitive") ? "" : `impl ${name} {
+${
+  name.endsWith("Primitive")
+    ? ""
+    : `impl ${name} {
   unsafe fn borrow_option_to_native(msg: Option<&Self>, arena: Pin<&mut Arena>) -> Result<ManuallyDrop<foxglove::schemas::${name}>, foxglove::FoxgloveError> {
     let Some(msg) = msg else {
       return Err(foxglove::FoxgloveError::ValueError("msg is required".to_string()));
     };
     unsafe { msg.borrow_to_native(arena) }
   }
-}`}
+
+  #[unsafe(no_mangle)]
+  pub unsafe extern "C" fn foxglove_channel_create_${snakeName}(
+      topic: FoxgloveString,
+      context: *const FoxgloveContext,
+      channel: *mut *const FoxgloveChannel,
+  ) -> FoxgloveError {
+      if channel.is_null() {
+          tracing::error!("channel cannot be null");
+          return FoxgloveError::ValueError;
+      }
+      unsafe {
+          let result = do_foxglove_channel_create::<foxglove::schemas::${name}>(topic, context);
+          result_to_c(result, channel)
+      }
+  }
+}`
+}
 
 impl BorrowToNative for ${name} {
   type NativeType = foxglove::schemas::${name};
@@ -119,17 +141,27 @@ impl BorrowToNative for ${name} {
     ${fields
       .flatMap((field) => {
         const name = escapeId(toSnakeCase(field.name));
-        if (field.array != undefined && typeof field.array !== "number" && field.type.type === "nested") {
-          return [`let ${name} = unsafe { arena.as_mut().map(self.${name}, self.${name}_count)? };`];
+        if (
+          field.array != undefined &&
+          typeof field.array !== "number" &&
+          field.type.type === "nested"
+        ) {
+          return [
+            `let ${name} = unsafe { arena.as_mut().map(self.${name}, self.${name}_count)? };`,
+          ];
         }
         switch (field.type.type) {
           case "primitive":
             if (field.type.name === "string") {
-              return [`let ${name} = unsafe { string_from_raw(self.${name}.as_ptr() as *const _, self.${name}.len(), "${field.name}")? };`];
+              return [
+                `let ${name} = unsafe { string_from_raw(self.${name}.as_ptr() as *const _, self.${name}.len(), "${field.name}")? };`,
+              ];
             }
             return [];
           case "nested":
-            return [`let ${name} = unsafe { self.${name}.as_ref().map(|m| m.borrow_to_native(arena.as_mut())) }.transpose()?;`];
+            return [
+              `let ${name} = unsafe { self.${name}.as_ref().map(|m| m.borrow_to_native(arena.as_mut())) }.transpose()?;`,
+            ];
           default:
             return [];
         }
@@ -176,7 +208,10 @@ impl BorrowToNative for ${name} {
   }
 }
 
-${name.endsWith("Primitive") ? "" : `
+${
+  name.endsWith("Primitive")
+    ? ""
+    : `
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_${snakeName}(channel: Option<&FoxgloveChannel>, msg: Option<&${name}>, log_time: Option<&u64>) -> FoxgloveError {
   let mut arena = pin!(Arena::new());
@@ -192,17 +227,17 @@ pub extern "C" fn foxglove_channel_log_${snakeName}(channel: Option<&FoxgloveCha
     }
   }
 }
-`}
-`},
-  );
+`
+}
+`;
+  });
 
   const imports = [
     "use std::ffi::c_uchar;",
-    "use foxglove::bytes::Bytes;",
     "use std::mem::ManuallyDrop;",
     "use std::pin::{pin, Pin};",
     "",
-    "use crate::{FoxgloveString, FoxgloveError, FoxgloveChannel, FoxgloveTimestamp, FoxgloveDuration, log_msg_to_channel};",
+    "use crate::{FoxgloveString, FoxgloveError, FoxgloveChannel, FoxgloveContext, FoxgloveTimestamp, FoxgloveDuration, log_msg_to_channel, result_to_c, do_foxglove_channel_create};",
     "use crate::arena::{Arena, BorrowToNative};",
     "use crate::util::{bytes_from_raw, string_from_raw, vec_from_raw};",
   ];

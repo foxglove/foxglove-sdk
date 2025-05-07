@@ -21,10 +21,10 @@ struct ClientChannel {
   uint32_t id;
   std::string_view topic;
   std::string_view encoding;
-  std::string_view schemaName;
-  std::string_view schemaEncoding;
+  std::string_view schema_name;
+  std::string_view schema_encoding;
   const std::byte* schema;
-  size_t schemaLen;
+  size_t schema_len;
 };
 
 enum class WebSocketServerCapabilities : uint8_t {
@@ -57,13 +57,13 @@ inline WebSocketServerCapabilities operator&(
 }
 
 struct WebSocketServerCallbacks {
-  std::function<void(uint64_t channelId)> onSubscribe;
-  std::function<void(uint64_t channelId)> onUnsubscribe;
-  std::function<void(uint32_t clientId, const ClientChannel& channel)> onClientAdvertise;
+  std::function<void(uint64_t channel_id)> onSubscribe;
+  std::function<void(uint64_t channel_id)> onUnsubscribe;
+  std::function<void(uint32_t client_id, const ClientChannel& channel)> onClientAdvertise;
   std::function<
-    void(uint32_t clientId, uint32_t clientChannelId, const std::byte* data, size_t dataLen)>
+    void(uint32_t client_id, uint32_t client_channel_id, const std::byte* data, size_t data_len)>
     onMessageData;
-  std::function<void(uint32_t clientId, uint32_t clientChannelId)> onClientUnadvertise;
+  std::function<void(uint32_t client_id, uint32_t client_channel_id)> onClientUnadvertise;
   std::function<void()> onConnectionGraphSubscribe;
   std::function<void()> onConnectionGraphUnsubscribe;
 };
@@ -77,7 +77,7 @@ struct WebSocketServerOptions {
   uint16_t port = 8765;  // default foxglove WebSocket port
   WebSocketServerCallbacks callbacks;
   WebSocketServerCapabilities capabilities = WebSocketServerCapabilities(0);
-  std::vector<std::string> supportedEncodings;
+  std::vector<std::string> supported_encodings;
 };
 
 class WebSocketServer final {
@@ -85,7 +85,7 @@ public:
   static FoxgloveResult<WebSocketServer> create(WebSocketServerOptions&& options);
 
   // Get the port on which the server is listening.
-  uint16_t port() const;
+  [[nodiscard]] uint16_t port() const;
 
   FoxgloveError stop();
 
@@ -96,8 +96,8 @@ private:
     foxglove_websocket_server* server, std::unique_ptr<WebSocketServerCallbacks> callbacks
   );
 
-  std::unique_ptr<WebSocketServerCallbacks> _callbacks;
-  std::unique_ptr<foxglove_websocket_server, foxglove_error (*)(foxglove_websocket_server*)> _impl;
+  std::unique_ptr<WebSocketServerCallbacks> callbacks_;
+  std::unique_ptr<foxglove_websocket_server, foxglove_error (*)(foxglove_websocket_server*)> impl_;
 };
 
 }  // namespace foxglove

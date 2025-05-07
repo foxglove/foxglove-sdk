@@ -81,6 +81,11 @@ impl<T: Encode> Channel<T> {
         }
     }
 
+    #[doc(hidden)]
+    pub fn into_inner(self) -> Arc<RawChannel> {
+        self.inner
+    }
+
     delegate! { to self.inner {
         /// Returns the channel ID.
         pub fn id(&self) -> ChannelId;

@@ -18,31 +18,34 @@ struct Schema {
   std::string name;
   std::string encoding;
   const std::byte* data = nullptr;
-  size_t dataLen = 0;
+  size_t data_len = 0;
 };
 
 class RawChannel final {
 public:
   static FoxgloveResult<RawChannel> create(
-    const std::string& topic, const std::string& messageEncoding,
+    const std::string& topic, const std::string& message_encoding,
     std::optional<Schema> schema = std::nullopt, const Context& context = Context()
   );
 
   FoxgloveError log(
-    const std::byte* data, size_t dataLen, std::optional<uint64_t> logTime = std::nullopt
+    const std::byte* data, size_t data_len, std::optional<uint64_t> log_time = std::nullopt
   );
 
-  uint64_t id() const;
+  [[nodiscard]] uint64_t testId() const;
+
+  [[nodiscard]] uint64_t id() const;
 
   RawChannel(const RawChannel&) = delete;
   RawChannel& operator=(const RawChannel&) = delete;
 
   RawChannel(RawChannel&& other) noexcept = default;
+  ~RawChannel() = default;
 
 private:
   explicit RawChannel(const foxglove_channel* channel);
 
-  std::unique_ptr<const foxglove_channel, void (*const)(const foxglove_channel*)> _impl;
+  schemas::ChannelUniquePtr impl_;
 };
 
 template<class T, class = void>
@@ -54,16 +57,29 @@ public:
 template<class T>
 class Channel<T, std::enable_if_t<internal::BuiltinSchema<T>::value>> final {
 public:
-  Channel(const RawChannel& rawChannel);
-
-  FoxgloveError log(const T& value, std::optional<uint64_t> logTime = std::nullopt) {
-    return internal::BuiltinSchema<T>::logTo(_impl.get(), value, logTime);
+  static FoxgloveResult<RawChannel> create(
+    const std::string& topic, const Context& context = Context()
+  ) {
+    auto result = internal::BuiltinSchema<T>::create(topic, context);
+    if (result.has_value()) {
+      return RawChannel(result.value());
+    }
+    return foxglove::unexpected(std::move(result.error()));
   }
 
-private:
-  explicit Channel(const foxglove_channel* channel);
+  FoxgloveError log(const T& value, std::optional<uint64_t> log_time = std::nullopt) {
+    return internal::BuiltinSchema<T>::logTo(impl_.get(), value, log_time);
+  }
 
-  std::unique_ptr<const foxglove_channel, void (*const)(const foxglove_channel*)> _impl;
+  Channel(Channel&& other) noexcept = default;
+  Channel& operator=(Channel&& other) noexcept = default;
+  ~Channel() = default;
+
+private:
+  explicit Channel(schemas::ChannelUniquePtr&& channel)
+      : impl_(std::move(channel)) {}
+
+  schemas::ChannelUniquePtr impl_;
 };
 
 }  // namespace foxglove

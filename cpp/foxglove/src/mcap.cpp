@@ -8,28 +8,28 @@ namespace foxglove {
 FoxgloveResult<McapWriter> McapWriter::create(const McapWriterOptions& options) {
   foxglove_internal_register_cpp_wrapper();
 
-  foxglove_mcap_options cOptions = {};
-  cOptions.context = options.context.get_inner();
-  cOptions.path = {options.path.data(), options.path.length()};
-  cOptions.profile = {options.profile.data(), options.profile.length()};
+  foxglove_mcap_options c_options = {};
+  c_options.context = options.context.getInner();
+  c_options.path = {options.path.data(), options.path.length()};
+  c_options.profile = {options.profile.data(), options.profile.length()};
   // TODO FG-11215: generate the enum for C++ from the C enum
   // so this is guaranteed to never get out of sync
-  cOptions.compression = static_cast<foxglove_mcap_compression>(options.compression);
-  cOptions.chunk_size = options.chunkSize;
-  cOptions.use_chunks = options.useChunks;
-  cOptions.disable_seeking = options.disableSeeking;
-  cOptions.emit_statistics = options.emitStatistics;
-  cOptions.emit_summary_offsets = options.emitSummaryOffsets;
-  cOptions.emit_message_indexes = options.emitMessageIndexes;
-  cOptions.emit_chunk_indexes = options.emitChunkIndexes;
-  cOptions.emit_attachment_indexes = options.emitAttachmentIndexes;
-  cOptions.emit_metadata_indexes = options.emitMetadataIndexes;
-  cOptions.repeat_channels = options.repeatChannels;
-  cOptions.repeat_schemas = options.repeatSchemas;
-  cOptions.truncate = options.truncate;
+  c_options.compression = static_cast<foxglove_mcap_compression>(options.compression);
+  c_options.chunk_size = options.chunk_size;
+  c_options.use_chunks = options.use_chunks;
+  c_options.disable_seeking = options.disable_seeking;
+  c_options.emit_statistics = options.emit_statistics;
+  c_options.emit_summary_offsets = options.emit_summary_offsets;
+  c_options.emit_message_indexes = options.emit_message_indexes;
+  c_options.emit_chunk_indexes = options.emit_chunk_indexes;
+  c_options.emit_attachment_indexes = options.emit_attachment_indexes;
+  c_options.emit_metadata_indexes = options.emit_metadata_indexes;
+  c_options.repeat_channels = options.repeat_channels;
+  c_options.repeat_schemas = options.repeat_schemas;
+  c_options.truncate = options.truncate;
 
   foxglove_mcap_writer* writer = nullptr;
-  foxglove_error error = foxglove_mcap_open(&cOptions, &writer);
+  foxglove_error error = foxglove_mcap_open(&c_options, &writer);
   if (error != foxglove_error::FOXGLOVE_ERROR_OK || writer == nullptr) {
     return foxglove::unexpected(static_cast<FoxgloveError>(error));
   }
@@ -38,10 +38,10 @@ FoxgloveResult<McapWriter> McapWriter::create(const McapWriterOptions& options) 
 }
 
 McapWriter::McapWriter(foxglove_mcap_writer* writer)
-    : _impl(writer, foxglove_mcap_close) {}
+    : impl_(writer, foxglove_mcap_close) {}
 
 FoxgloveError McapWriter::close() {
-  foxglove_error error = foxglove_mcap_close(_impl.release());
+  foxglove_error error = foxglove_mcap_close(impl_.release());
   return FoxgloveError(error);
 }
 

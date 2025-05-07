@@ -8,6 +8,7 @@
 #include <type_traits>
 #include <vector>
 #include <optional>
+#include <memory>
 
 #include <foxglove/time.hpp>
 #include <foxglove/error.hpp>
@@ -15,6 +16,8 @@
 struct foxglove_channel;
 
 namespace foxglove::schemas {
+
+typedef std::unique_ptr<const foxglove_channel, void (*const)(const foxglove_channel*)> ChannelUniquePtr;
 
 /// A vector in 3D space that represents a direction only
 struct Vector3 {

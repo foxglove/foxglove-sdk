@@ -6,9 +6,8 @@ import time
 from pathlib import Path
 from typing import Generator, List
 
-import foxglove
 import pytest
-from foxglove.channel import Channel
+from foxglove import Channel, open_mcap
 from foxglove.channels import PointCloudChannel, SceneUpdateChannel
 from foxglove.schemas import (
     Color,
@@ -60,7 +59,7 @@ def build_entities(entity_count: int) -> List[SceneEntity]:
 def write_scene_entity_mcap(
     tmp_mcap: Path, channel: SceneUpdateChannel, entities: List[SceneEntity]
 ) -> None:
-    with foxglove.open_mcap(tmp_mcap, allow_overwrite=True):
+    with open_mcap(tmp_mcap, allow_overwrite=True):
         for _ in range(100):
             channel.log(SceneUpdate(entities=entities))
 
@@ -105,7 +104,7 @@ def make_point_cloud(point_count: int) -> PointCloud:
 def write_point_cloud_mcap(
     tmp_mcap: Path, channel: PointCloudChannel, point_cloud: PointCloud
 ) -> None:
-    with foxglove.open_mcap(tmp_mcap, allow_overwrite=True):
+    with open_mcap(tmp_mcap, allow_overwrite=True):
         for _ in range(10):
             channel.log(point_cloud)
 
@@ -113,7 +112,7 @@ def write_point_cloud_mcap(
 def write_untyped_channel_mcap(
     tmp_mcap: Path, channel: Channel, messages: List[bytes]
 ) -> None:
-    with foxglove.open_mcap(tmp_mcap, allow_overwrite=True):
+    with open_mcap(tmp_mcap, allow_overwrite=True):
         for message in messages:
             channel.log(message)
 
