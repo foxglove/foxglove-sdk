@@ -206,7 +206,7 @@ void intMathHandlerImpl(
   uint32_t a = 0;
   uint32_t b = 0;
   try {
-    Json args = Json::parse(request.payload);
+    Json args = Json::parse(request.payloadStr());
     args["a"].get_to(a);
     args["b"].get_to(b);
   } catch (const std::exception e) {

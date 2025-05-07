@@ -69,6 +69,11 @@ struct ServiceRequest {
   /// Request message data.
   std::vector<std::byte> payload;
 
+  /// @brief Returns a string view of the payload.
+  [[nodiscard]] std::string_view payloadStr() const noexcept {
+    return {reinterpret_cast<const char*>(this->payload.data()), this->payload.size()};
+  }
+
 private:
   friend class Service;
 
