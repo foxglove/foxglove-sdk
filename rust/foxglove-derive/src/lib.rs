@@ -26,6 +26,14 @@ fn derive_enum_impl(input: &DeriveInput, data: &DataEnum) -> TokenStream {
     let name = &input.ident;
     let variants = &data.variants;
 
+    for variant in variants {
+        if !variant.fields.is_empty() {
+            return TokenStream::from(quote! {
+                compile_error!("Enums with associated data are not supported.");
+            });
+        }
+    }
+
     // Generate variant name and number pairs for enum descriptor
     let variant_descriptors = variants.iter().enumerate().map(|(i, v)| {
         let variant_ident = &v.ident;
