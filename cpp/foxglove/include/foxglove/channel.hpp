@@ -58,10 +58,6 @@ public:
     const std::byte* data, size_t data_len, std::optional<uint64_t> log_time = std::nullopt
   );
 
-  /// @cond test-utilities
-  [[nodiscard]] uint64_t testId() const;
-  /// @endcond
-
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.
