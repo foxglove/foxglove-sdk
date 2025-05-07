@@ -650,7 +650,7 @@ pub extern "C" fn foxglove_internal_register_cpp_wrapper() {
         .or_else(|_| std::env::var("FOXGLOVE_LOG_STYLE"))
         .ok();
     if log_config.is_some() {
-        foxglove_set_log_level(logging::FoxgloveLogLevel::Debug);
+        foxglove_set_log_level(logging::FoxgloveLogLevel::Info);
     }
 }
 
