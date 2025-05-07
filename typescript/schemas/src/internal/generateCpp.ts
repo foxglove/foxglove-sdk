@@ -259,7 +259,7 @@ export function generateCppSchemas(
       if (isSameAsCType(schema)) {
         return [];
       }
-      return [`void ${toCamelCase(schema.name)}ToC(foxglove_${toSnakeCase(schema.name)}& dest, const ${schema.name}& src, foxglove::Arena& arena);`];
+      return [`void ${toCamelCase(schema.name)}ToC(foxglove_${toSnakeCase(schema.name)}& dest, const ${schema.name}& src, Arena& arena);`];
     }
   );
 
@@ -275,7 +275,7 @@ export function generateCppSchemas(
           `    return FoxgloveError(foxglove_channel_log_${toSnakeCase(schema.name)}(channel, reinterpret_cast<const foxglove_${toSnakeCase(schema.name)}*>(&msg), logTime ? &*logTime : nullptr));`
         ];
       } else {
-        conversionCode = ["    foxglove::Arena arena;",
+        conversionCode = ["    Arena arena;",
         `    foxglove_${toSnakeCase(schema.name)} c_msg;`,
         `    ${toCamelCase(schema.name)}ToC(c_msg, msg, arena);`,
         `    return FoxgloveError(foxglove_channel_log_${toSnakeCase(schema.name)}(channel, &c_msg, logTime ? &*logTime : nullptr));`];
