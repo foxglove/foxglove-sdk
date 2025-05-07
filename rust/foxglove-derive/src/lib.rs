@@ -78,7 +78,7 @@ fn derive_enum_impl(input: &DeriveInput, data: &DataEnum) -> TokenStream {
             }
 
             fn encoded_len(&self) -> usize {
-                prost::encoding::encoded_len_varint(*self as u64)
+                ::foxglove::protobuf::encoded_len_varint(*self as u64)
             }
         }
     };

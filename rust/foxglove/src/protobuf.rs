@@ -30,6 +30,12 @@ pub fn encode_varint(value: u64, buf: &mut impl bytes::BufMut) {
     prost::encoding::encode_varint(value, buf);
 }
 
+/// Returns the encoded length of a value to be written with [encode_varint].
+#[doc(hidden)]
+pub fn encoded_len_varint(value: u64) -> usize {
+    prost::encoding::encoded_len_varint(value)
+}
+
 /// The `ProtobufField` trait defines the interface for types that can be serialized to Protocol
 /// Buffer format.
 ///
