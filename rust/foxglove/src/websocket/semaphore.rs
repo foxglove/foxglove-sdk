@@ -1,4 +1,4 @@
-//! A sempahore for admission control
+//! A semaphore for admission control
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;

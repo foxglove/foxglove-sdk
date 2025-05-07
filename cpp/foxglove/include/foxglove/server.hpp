@@ -1,12 +1,12 @@
 #pragma once
 
+#include <foxglove/context.hpp>
 #include <foxglove/error.hpp>
 #include <foxglove/server/connection_graph.hpp>
 
 #include <cstdint>
 #include <functional>
 #include <memory>
-#include <optional>
 #include <string>
 
 enum foxglove_error : uint8_t;
@@ -15,18 +15,28 @@ struct foxglove_connection_graph;
 
 namespace foxglove {
 
-struct Context;
-
+/// @brief A channel advertised by a client.
 struct ClientChannel {
+  /// @brief The ID of the channel.
   uint32_t id;
+  /// @brief The topic of the channel.
   std::string_view topic;
+  /// @brief The encoding of the channel.
   std::string_view encoding;
-  std::string_view schemaName;
-  std::string_view schemaEncoding;
+  /// @brief The name of the schema of the channel.
+  std::string_view schema_name;
+  /// @brief The encoding of the schema of the channel.
+  std::string_view schema_encoding;
+  /// @brief The schema of the channel.
   const std::byte* schema;
-  size_t schemaLen;
+  /// @brief The length of the schema of the channel.
+  size_t schema_len;
 };
 
+/// @brief The capabilities of a WebSocket server.
+///
+/// A server may advertise certain capabilities to clients and provide related functionality
+/// in WebSocketServerCallbacks.
 enum class WebSocketServerCapabilities : uint8_t {
   /// Allow clients to advertise channels to send data messages to the server.
   ClientPublish = 1 << 0,
@@ -44,51 +54,102 @@ enum class WebSocketServerCapabilities : uint8_t {
   Services = 1 << 4,
 };
 
+/// @brief Combine two capabilities.
 inline WebSocketServerCapabilities operator|(
   WebSocketServerCapabilities a, WebSocketServerCapabilities b
 ) {
   return WebSocketServerCapabilities(uint8_t(a) | uint8_t(b));
 }
 
+/// @brief Check if a capability is set.
 inline WebSocketServerCapabilities operator&(
   WebSocketServerCapabilities a, WebSocketServerCapabilities b
 ) {
   return WebSocketServerCapabilities(uint8_t(a) & uint8_t(b));
 }
 
+/// @brief The callback interface for a WebSocket server.
+///
+/// These methods are invoked from the client's main poll loop and must be as low-latency as
+/// possible.
 struct WebSocketServerCallbacks {
-  std::function<void(uint64_t channelId)> onSubscribe;
-  std::function<void(uint64_t channelId)> onUnsubscribe;
-  std::function<void(uint32_t clientId, const ClientChannel& channel)> onClientAdvertise;
+  /// @brief Callback invoked when a client subscribes to a channel.
+  ///
+  /// Only invoked if the channel is associated with the server and isn't already subscribed to by
+  /// the client.
+  std::function<void(uint64_t channel_id)> onSubscribe;
+  /// @brief Callback invoked when a client unsubscribes from a channel.
+  ///
+  /// Only invoked for channels that had an active subscription from the client.
+  std::function<void(uint64_t channel_id)> onUnsubscribe;
+  /// @brief Callback invoked when a client advertises a client channel.
+  ///
+  /// Requires the capability WebSocketServerCapabilities::ClientPublish
+  std::function<void(uint32_t client_id, const ClientChannel& channel)> onClientAdvertise;
+  /// @brief Callback invoked when a client message is received
   std::function<
-    void(uint32_t clientId, uint32_t clientChannelId, const std::byte* data, size_t dataLen)>
+    void(uint32_t client_id, uint32_t client_channel_id, const std::byte* data, size_t data_len)>
     onMessageData;
-  std::function<void(uint32_t clientId, uint32_t clientChannelId)> onClientUnadvertise;
+  /// @brief Callback invoked when a client unadvertises a client channel.
+  ///
+  /// Requires the capability WebSocketServerCapabilities::ClientPublish
+  std::function<void(uint32_t client_id, uint32_t client_channel_id)> onClientUnadvertise;
+  /// @brief Callback invoked when a client requests parameters.
+  ///
+  /// Requires the capability WebSocketServerCapabilities::Parameters
+  std::function<void()> onGetParameters;
+  /// @brief Callback invoked when a client requests connection graph updates.
+  ///
+  /// Requires the capability WebSocketServerCapabilities::ConnectionGraph
   std::function<void()> onConnectionGraphSubscribe;
+  /// @brief Callback invoked when a client unsubscribes from connection graph updates.
+  ///
+  /// Requires the capability WebSocketServerCapabilities::ConnectionGraph
   std::function<void()> onConnectionGraphUnsubscribe;
 };
 
+/// @brief Options for a WebSocket server.
 struct WebSocketServerOptions {
   friend class WebSocketServer;
 
+  /// @brief The logging context for this server.
   Context context;
+  /// @brief The name of the server.
   std::string name;
+  /// @brief The host address of the server.
   std::string host = "127.0.0.1";
-  uint16_t port = 8765;  // default foxglove WebSocket port
+  /// @brief The port of the server. Default is 8765, which matches the Foxglove app.
+  uint16_t port = 8765;
+  /// @brief The callbacks of the server.
   WebSocketServerCallbacks callbacks;
+  /// @brief The capabilities of the server.
   WebSocketServerCapabilities capabilities = WebSocketServerCapabilities(0);
-  std::vector<std::string> supportedEncodings;
+  /// @brief The supported encodings of the server.
+  std::vector<std::string> supported_encodings;
 };
 
+/// @brief A WebSocket server for visualization in Foxglove.
+///
+/// After your server is started, you can open the Foxglove app to visualize your data. See
+/// [Connecting to data].
+///
+/// [Connecting to data]: https://docs.foxglove.dev/docs/connecting-to-data/introduction
 class WebSocketServer final {
 public:
+  /// @brief Create a new WebSocket server with the given options.
   static FoxgloveResult<WebSocketServer> create(WebSocketServerOptions&& options);
 
-  // Get the port on which the server is listening.
-  uint16_t port() const;
+  /// Get the port on which the server is listening.
+  [[nodiscard]] uint16_t port() const;
 
+  /// @brief Gracefully shut down the websocket server.
   FoxgloveError stop();
 
+  /// @brief Publish a connection graph to all subscribed clients.
+  ///
+  /// @param graph The connection graph to publish.
+  ///
+  /// This requires the capability WebSocketServerCapabilities::ConnectionGraph
   void publishConnectionGraph(ConnectionGraph& graph);
 
 private:
@@ -96,8 +157,8 @@ private:
     foxglove_websocket_server* server, std::unique_ptr<WebSocketServerCallbacks> callbacks
   );
 
-  std::unique_ptr<WebSocketServerCallbacks> _callbacks;
-  std::unique_ptr<foxglove_websocket_server, foxglove_error (*)(foxglove_websocket_server*)> _impl;
+  std::unique_ptr<WebSocketServerCallbacks> callbacks_;
+  std::unique_ptr<foxglove_websocket_server, foxglove_error (*)(foxglove_websocket_server*)> impl_;
 };
 
 }  // namespace foxglove

@@ -12,7 +12,7 @@ from typing import List, Optional, Union
 from . import _foxglove_py as _foxglove
 
 # Re-export these imports
-from ._foxglove_py import Schema, open_mcap
+from ._foxglove_py import Context, Schema, open_mcap
 from .channel import Channel, log
 
 # Deprecated. Use foxglove.mcap.MCAPWriter instead.
@@ -38,6 +38,7 @@ def start_server(
     supported_encodings: Optional[List[str]] = None,
     services: Optional[List[Service]] = None,
     asset_handler: Optional[AssetHandler] = None,
+    context: Optional[Context] = None,
 ) -> WebSocketServer:
     """
     Start a websocket server for live visualization.
@@ -52,6 +53,7 @@ def start_server(
     :param services: A list of services to advertise to clients.
     :param asset_handler: A callback function that returns the asset for a given URI, or None if
         it doesn't exist.
+    :param context: The context to use for logging. If None, the global context is used.
     """
     return _foxglove.start_server(
         name=name,
@@ -62,6 +64,7 @@ def start_server(
         supported_encodings=supported_encodings,
         services=services,
         asset_handler=asset_handler,
+        context=context,
     )
 
 
@@ -111,6 +114,7 @@ def _level_names() -> dict[str, int]:
 
 __all__ = [
     "Channel",
+    "Context",
     "MCAPWriter",
     "Schema",
     "log",

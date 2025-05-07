@@ -15,13 +15,14 @@ TEST_CASE("topic is not valid utf-8") {
   REQUIRE(channel.error() == foxglove::FoxgloveError::Utf8Error);
 }
 
-// TODO FG-11089: create a context specifically for this test here so it doesn't pollute the global
-// context
-
 TEST_CASE("duplicate topic") {
-  auto channel = foxglove::Channel::create("test", "json", std::nullopt);
+  auto context = foxglove::Context::create();
+  auto channel = foxglove::Channel::create("test", "json", std::nullopt, context);
   REQUIRE(channel.has_value());
-  auto channel2 = foxglove::Channel::create("test", "json", std::nullopt);
+  auto channel2 = foxglove::Channel::create("test", "json", std::nullopt, context);
   REQUIRE(channel2.has_value());
-  REQUIRE(channel.value().id() != channel2.value().id());
+  REQUIRE(channel.value().id() == channel2.value().id());
+  auto channel3 = foxglove::Channel::create("test", "msgpack", std::nullopt, context);
+  REQUIRE(channel3.has_value());
+  REQUIRE(channel.value().id() != channel3.value().id());
 }

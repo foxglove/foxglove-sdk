@@ -2,8 +2,6 @@ use std::sync::atomic::AtomicU32;
 use std::sync::atomic::Ordering::Relaxed;
 use std::sync::Weak;
 
-use bytes::Bytes;
-
 use super::connected_client::ConnectedClient;
 use super::Status;
 
@@ -60,11 +58,11 @@ impl Client {
     }
 
     /// Send a fetch asset response to the client. Does nothing if client is disconnected.
-    pub(crate) fn send_asset_response(&self, result: Result<Bytes, String>, request_id: u32) {
+    pub(crate) fn send_asset_response(&self, result: Result<&[u8], &str>, request_id: u32) {
         if let Some(client) = self.client.upgrade() {
             match result {
-                Ok(asset) => client.send_asset_response(&asset, request_id),
-                Err(err) => client.send_asset_error(&err.to_string(), request_id),
+                Ok(asset) => client.send_asset_response(asset, request_id),
+                Err(err) => client.send_asset_error(err, request_id),
             }
         }
     }

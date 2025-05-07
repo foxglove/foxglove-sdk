@@ -22,7 +22,7 @@ fn main() {
         .create_new_buffered_file("example.mcap")
         .expect("Failed to start mcap writer");
 
-    // You can use log! with a topic name and any type that implements Encode, inlcuding foxglove schemas
+    // You can use log! with a topic name and any type that implements Encode, including foxglove schemas
     // without having to create a channel first.
     log!(
         "/log",

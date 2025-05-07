@@ -86,7 +86,7 @@ impl Timestamp {
         let utc = timezone_utc(py);
 
         // We're not simply using `datetime.total_seconds()`, because the conversion to floating
-        // point loses preceision and is not round-trippable.
+        // point loses precision and is not round-trippable.
         let epoch = PyDateTime::new(py, 1970, 1, 1, 0, 0, 0, 0, Some(&utc)).unwrap();
         let td = dt.call_method1(py, "__sub__", (epoch,))?;
 

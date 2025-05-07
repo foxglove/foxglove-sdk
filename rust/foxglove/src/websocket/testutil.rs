@@ -51,7 +51,7 @@ impl WebSocketClient {
         Self { stream }
     }
 
-    /// Receives a messsage from the server.
+    /// Receives a message from the server.
     pub async fn recv_msg(&mut self) -> Result<Message, RecvError> {
         match self.stream.next().await {
             Some(r) => r.map_err(RecvError::from),
@@ -59,7 +59,7 @@ impl WebSocketClient {
         }
     }
 
-    /// Receives and parses a messsage from the server.
+    /// Receives and parses a message from the server.
     pub async fn recv(&mut self) -> Result<ServerMessage, RecvError> {
         let msg = tokio::time::timeout(Duration::from_secs(1), self.recv_msg()).await??;
         let msg = ServerMessage::try_from(&msg)?;
