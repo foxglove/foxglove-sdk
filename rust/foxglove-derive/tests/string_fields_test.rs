@@ -80,23 +80,31 @@ fn test_single_str_field_serialization() {
 }
 
 #[test]
-#[should_panic(expected = "Failed to write string")]
-fn test_insufficient_string_buffer_panics() {
+fn test_insufficient_string_buffer_errors() {
     let mut buf = FixedSizeBuffer::with_capacity(1);
     let test_struct = TestMessage {
         field: "Hello, world!".to_string(),
     };
-    test_struct.encode(&mut buf).expect("Failed to encode");
+    let result = test_struct.encode(&mut buf);
+    assert!(result.is_err());
+    assert_eq!(
+        result.unwrap_err().to_string(),
+        "Encoding error: insufficient buffer"
+    );
 }
 
 #[test]
-#[should_panic(expected = "Failed to write str")]
-fn test_insufficient_str_buffer_panics() {
+fn test_insufficient_str_buffer_errors() {
     let mut buf = FixedSizeBuffer::with_capacity(1);
     let test_struct = TestMessageWithLifetime {
         field_ref: "Hello, world!",
     };
-    test_struct.encode(&mut buf).expect("Failed to encode");
+    let result = test_struct.encode(&mut buf);
+    assert!(result.is_err());
+    assert_eq!(
+        result.unwrap_err().to_string(),
+        "Encoding error: insufficient buffer"
+    );
 }
 
 fn get_message_descriptor(schema: &Schema) -> MessageDescriptor {
