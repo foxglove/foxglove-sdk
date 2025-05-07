@@ -8,11 +8,11 @@ namespace foxglove {
  * The severity level for stderr logging from the SDK.
  */
 enum class LogLevel : uint8_t {
-    Off = 0,
-    Debug = 1,
-    Info = 2,
-    Warn = 3,
-    Error = 4,
+  Off = 0,
+  Debug = 1,
+  Info = 2,
+  Warn = 3,
+  Error = 4,
 };
 
 /// @brief Initialize SDK logging with the given severity level.
