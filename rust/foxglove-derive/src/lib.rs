@@ -68,6 +68,10 @@ fn derive_enum_impl(input: &DeriveInput, data: &DataEnum) -> TokenStream {
             fn type_name() -> Option<String> {
                 Some(stringify!(#name).to_string())
             }
+
+            fn encoded_len(&self) -> usize {
+                prost::encoding::encoded_len_varint(*self as u64)
+            }
         }
     };
 
@@ -107,6 +111,7 @@ fn derive_struct_impl(input: &DeriveInput, data: &DataStruct) -> TokenStream {
 
     let mut field_defs = Vec::new();
     let mut field_encoders = Vec::new();
+    let mut field_message_lengths = Vec::new();
 
     // If a struct nests multiple values of the same enum or message type, we
     // only define them once, based on name.
@@ -117,6 +122,10 @@ fn derive_struct_impl(input: &DeriveInput, data: &DataStruct) -> TokenStream {
         let field_name = &field.ident.as_ref().unwrap();
         let field_type = &field.ty;
         let field_number = i as u32 + 1;
+
+        field_message_lengths.push(quote! {
+            ::foxglove::protobuf::ProtobufField::encoded_len(&self.#field_name)
+        });
 
         enum_defs.entry(field_type).or_insert_with(|| quote! {
             if let Some(enum_desc) = <#field_type as ::foxglove::protobuf::ProtobufField>::enum_descriptor() {
@@ -183,10 +192,6 @@ fn derive_struct_impl(input: &DeriveInput, data: &DataStruct) -> TokenStream {
                 let len = buf.len();
                 ::foxglove::protobuf::encode_varint(len as u64, out);
 
-                if buf.remaining_mut() < len {
-                    return;
-                }
-
                 out.put_slice(&buf);
             }
 
@@ -215,11 +220,15 @@ fn derive_struct_impl(input: &DeriveInput, data: &DataStruct) -> TokenStream {
             fn type_name() -> Option<String> {
                 Some(stringify!(#name).to_string())
             }
+
+            fn encoded_len(&self) -> usize {
+                0 #(+ #field_message_lengths)*
+            }
         }
 
         #[automatically_derived]
         impl #impl_generics ::foxglove::Encode for #name #ty_generics #where_clause {
-            type Error = std::io::Error;
+            type Error = ::foxglove::FoxgloveError;
 
             fn get_schema() -> Option<::foxglove::Schema> {
                 static SCHEMA: ::std::sync::OnceLock<Option<::foxglove::Schema>> = ::std::sync::OnceLock::new();
@@ -253,6 +262,13 @@ fn derive_struct_impl(input: &DeriveInput, data: &DataStruct) -> TokenStream {
             }
 
             fn encode(&self, buf: &mut impl ::foxglove::bytes::BufMut) -> Result<(), Self::Error> {
+                let total_len = 0 #(+ #field_message_lengths)*;
+                if total_len > buf.remaining_mut() {
+                    return Err(::foxglove::FoxgloveError::EncodeError(
+                        "insufficient buffer".to_string(),
+                    ));
+                }
+
                 // The top level message is encoded without a length prefix
                 #(#field_encoders)*
                 Ok(())

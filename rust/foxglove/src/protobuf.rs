@@ -95,6 +95,9 @@ pub trait ProtobufField {
     fn repeating() -> bool {
         false
     }
+
+    /// The length of the field to be written, in bytes.
+    fn encoded_len(&self) -> usize;
 }
 
 impl ProtobufField for u64 {
@@ -108,6 +111,10 @@ impl ProtobufField for u64 {
 
     fn write(&self, buf: &mut impl bytes::BufMut) {
         encode_varint(*self, buf);
+    }
+
+    fn encoded_len(&self) -> usize {
+        prost::encoding::encoded_len_varint(*self)
     }
 }
 
@@ -123,6 +130,10 @@ impl ProtobufField for u32 {
     fn write(&self, buf: &mut impl bytes::BufMut) {
         encode_varint((*self).into(), buf);
     }
+
+    fn encoded_len(&self) -> usize {
+        prost::encoding::encoded_len_varint(*self as u64)
+    }
 }
 
 impl ProtobufField for u16 {
@@ -137,6 +148,10 @@ impl ProtobufField for u16 {
     fn write(&self, buf: &mut impl bytes::BufMut) {
         encode_varint((*self).into(), buf);
     }
+
+    fn encoded_len(&self) -> usize {
+        prost::encoding::encoded_len_varint(*self as u64)
+    }
 }
 
 impl ProtobufField for u8 {
@@ -150,6 +165,10 @@ impl ProtobufField for u8 {
 
     fn write(&self, buf: &mut impl bytes::BufMut) {
         encode_varint((*self).into(), buf);
+    }
+
+    fn encoded_len(&self) -> usize {
+        prost::encoding::encoded_len_varint(*self as u64)
     }
 }
 
@@ -168,6 +187,12 @@ impl ProtobufField for i64 {
         let encoded = ((n << 1) ^ (n >> 63)) as u64;
         encode_varint(encoded, buf);
     }
+
+    fn encoded_len(&self) -> usize {
+        let n = *self;
+        let encoded = ((n << 1) ^ (n >> 63)) as u64;
+        prost::encoding::encoded_len_varint(encoded)
+    }
 }
 
 impl ProtobufField for i32 {
@@ -184,6 +209,12 @@ impl ProtobufField for i32 {
         let n = *self;
         let encoded = ((n << 1) ^ (n >> 31)) as u64;
         encode_varint(encoded, buf);
+    }
+
+    fn encoded_len(&self) -> usize {
+        let n = *self;
+        let encoded = ((n << 1) ^ (n >> 31)) as u64;
+        prost::encoding::encoded_len_varint(encoded)
     }
 }
 
@@ -202,6 +233,12 @@ impl ProtobufField for i16 {
         let encoded = ((n << 1) ^ (n >> 15)) as u64;
         encode_varint(encoded, buf);
     }
+
+    fn encoded_len(&self) -> usize {
+        let n = *self;
+        let encoded = ((n << 1) ^ (n >> 15)) as u64;
+        prost::encoding::encoded_len_varint(encoded)
+    }
 }
 
 impl ProtobufField for i8 {
@@ -219,6 +256,12 @@ impl ProtobufField for i8 {
         let encoded = ((n << 1) ^ (n >> 7)) as u64;
         encode_varint(encoded, buf);
     }
+
+    fn encoded_len(&self) -> usize {
+        let n = *self;
+        let encoded = ((n << 1) ^ (n >> 7)) as u64;
+        prost::encoding::encoded_len_varint(encoded)
+    }
 }
 
 impl ProtobufField for bool {
@@ -232,6 +275,10 @@ impl ProtobufField for bool {
 
     fn write(&self, buf: &mut impl bytes::BufMut) {
         buf.put_u8(*self as u8);
+    }
+
+    fn encoded_len(&self) -> usize {
+        prost::encoding::encoded_len_varint(*self as u64)
     }
 }
 
@@ -247,6 +294,10 @@ impl ProtobufField for f32 {
     fn write(&self, buf: &mut impl bytes::BufMut) {
         buf.put_f32_le(*self);
     }
+
+    fn encoded_len(&self) -> usize {
+        4 // f32
+    }
 }
 
 impl ProtobufField for f64 {
@@ -260,6 +311,10 @@ impl ProtobufField for f64 {
 
     fn write(&self, buf: &mut impl bytes::BufMut) {
         buf.put_f64_le(*self);
+    }
+
+    fn encoded_len(&self) -> usize {
+        8 // f64
     }
 }
 
@@ -276,10 +331,12 @@ impl ProtobufField for String {
     fn write(&self, buf: &mut impl bytes::BufMut) {
         // Write the length as a varint, followed by the data
         prost::encoding::encode_length_delimiter(self.len(), buf).expect("Failed to write string");
-        if buf.remaining_mut() < self.len() {
-            panic!("Failed to write string; insufficient buffer capacity");
-        }
         buf.put_slice(self.as_bytes());
+    }
+
+    fn encoded_len(&self) -> usize {
+        let delim_len = prost::encoding::length_delimiter_len(self.len());
+        delim_len + self.len()
     }
 }
 
@@ -296,10 +353,12 @@ impl ProtobufField for &str {
     fn write(&self, buf: &mut impl bytes::BufMut) {
         // Write the length as a varint, followed by the data
         prost::encoding::encode_length_delimiter(self.len(), buf).expect("Failed to write str");
-        if buf.remaining_mut() < self.len() {
-            panic!("Failed to write str; insufficient buffer capacity");
-        }
         buf.put_slice(self.as_bytes());
+    }
+
+    fn encoded_len(&self) -> usize {
+        let delim_len = prost::encoding::length_delimiter_len(self.len());
+        delim_len + self.len()
     }
 }
 
@@ -315,10 +374,12 @@ impl ProtobufField for bytes::Bytes {
     fn write(&self, buf: &mut impl bytes::BufMut) {
         // Write the length as a varint, followed by the data
         prost::encoding::encode_length_delimiter(self.len(), buf).expect("Failed to write bytes");
-        if buf.remaining_mut() < self.len() {
-            panic!("Failed to write bytes; insufficient buffer capacity");
-        }
         buf.put_slice(self);
+    }
+
+    fn encoded_len(&self) -> usize {
+        let delim_len = prost::encoding::length_delimiter_len(self.len());
+        delim_len + self.len()
     }
 }
 
@@ -365,5 +426,12 @@ where
 
     fn type_name() -> Option<String> {
         T::type_name()
+    }
+
+    fn encoded_len(&self) -> usize {
+        // non-packed repeated fields
+        let delim_len = prost::encoding::length_delimiter_len(self.len());
+        let data_len: usize = self.iter().map(|value| value.encoded_len()).sum();
+        delim_len + data_len
     }
 }

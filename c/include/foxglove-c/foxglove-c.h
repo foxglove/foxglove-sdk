@@ -69,6 +69,7 @@ enum foxglove_error
   FOXGLOVE_ERROR_CONNECTION_GRAPH_NOT_SUPPORTED,
   FOXGLOVE_ERROR_IO_ERROR,
   FOXGLOVE_ERROR_MCAP_ERROR,
+  FOXGLOVE_ERROR_ENCODE_ERROR,
 };
 #ifndef __cplusplus
 typedef uint8_t foxglove_error;

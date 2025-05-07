@@ -374,9 +374,12 @@ pub enum FoxgloveError {
     /// An I/O error.
     #[error(transparent)]
     IoError(#[from] std::io::Error),
-    /// An error related to MCAP encoding.
+    /// An error related to MCAP writing.
     #[error("MCAP error: {0}")]
     McapError(#[from] mcap::McapError),
+    /// An error occurred while encoding a message.
+    #[error("Encoding error: {0}")]
+    EncodeError(String),
 }
 
 impl From<convert::RangeError> for FoxgloveError {

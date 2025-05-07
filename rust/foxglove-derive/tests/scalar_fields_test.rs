@@ -187,13 +187,17 @@ fn test_bytes_serialization() {
 }
 
 #[test]
-#[should_panic(expected = "Failed to write bytes")]
-fn test_insufficient_bytes_buffer_panics() {
+fn test_insufficient_bytes_buffer_errors() {
     let test_struct = TestMessageBytes {
         bytes: bytes::Bytes::from_static(&[1, 2, 3, 4]),
     };
     let mut buf = FixedSizeBuffer::with_capacity(3);
-    test_struct.encode(&mut buf).expect("Failed to encode");
+    let result = test_struct.encode(&mut buf);
+    assert!(result.is_err());
+    assert_eq!(
+        result.unwrap_err().to_string(),
+        "Encoding error: insufficient buffer"
+    );
 }
 
 #[test]
