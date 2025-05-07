@@ -11,6 +11,7 @@
 struct foxglove_channel;
 struct foxglove_context;
 
+/// The foxglove namespace.
 namespace foxglove {
 
 /// @brief A description of the data format of messages in a channel.
@@ -73,7 +74,6 @@ public:
   Channel(Channel&& other) noexcept = default;
   /// @brief Default move assignment.
   Channel& operator=(Channel&& other) noexcept = default;
-  /// @brief Default estructor.
   ~Channel() = default;
 
 private:

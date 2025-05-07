@@ -4,23 +4,42 @@
 
 #include "expected.hpp"
 
+/// The foxglove namespace.
 namespace foxglove {
 
+///
+/// Error codes which may be returned in a FoxgloveResult.
+///
 enum class FoxgloveError : uint8_t {
+  /// The operation was successful.
   Ok,
+  /// An unspecified error.
   Unspecified,
+  /// A value or argument is invalid.
   ValueError,
+  /// A UTF-8 error.
   Utf8Error,
+  /// The sink dropped a message because it is closed.
   SinkClosed,
+  /// A schema is required.
   SchemaRequired,
+  /// A message encoding is required.
   MessageEncodingRequired,
+  /// The server is already started.
   ServerAlreadyStarted,
+  /// Failed to bind to the specified host and port.
   Bind,
+  /// A service with the same name is already registered.
   DuplicateService,
+  /// Neither the service nor the server declared supported encodings.
   MissingRequestEncoding,
+  /// Services are not supported on this server instance.
   ServicesNotSupported,
+  /// Connection graph is not supported on this server instance.
   ConnectionGraphNotSupported,
+  /// An I/O error.
   IoError,
+  /// An error related to MCAP encoding.
   McapError
 };
 

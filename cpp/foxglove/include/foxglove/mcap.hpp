@@ -10,6 +10,7 @@ enum class FoxgloveError : uint8_t;
 struct foxglove_mcap_writer;
 struct foxglove_context;
 
+/// The foxglove namespace.
 namespace foxglove {
 
 /// @brief The compression algorithm to use for an MCAP file.
@@ -70,15 +71,14 @@ public:
   /// @return A new MCAP writer.
   static FoxgloveResult<McapWriter> create(const McapWriterOptions& options);
 
-  /// @brief Stops logging events, flushes buffered data, and returns the writer.
+  /// @brief Stops logging events and flushes buffered data.
   FoxgloveError close();
 
   /// @brief Default move constructor.
   McapWriter(McapWriter&&) = default;
-  /// @brief Default destructor.
-  ~McapWriter() = default;
   /// @brief Default move assignment.
   McapWriter& operator=(McapWriter&&) = default;
+  ~McapWriter() = default;
 
   McapWriter(const McapWriter&) = delete;
   McapWriter& operator=(const McapWriter&) = delete;

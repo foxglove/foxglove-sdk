@@ -8,6 +8,7 @@
 
 struct foxglove_connection_graph;
 
+/// The foxglove namespace.
 namespace foxglove {
 
 /// @brief A connection graph describing a topology of subscribers, publishers, topics, and

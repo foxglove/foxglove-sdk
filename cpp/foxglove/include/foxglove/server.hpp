@@ -36,7 +36,7 @@ struct ClientChannel {
 /// @brief The capabilities of a WebSocket server.
 ///
 /// A server may advertise certain capabilities to clients and provide related functionality
-/// in WebSocketServer::callbacks.
+/// in WebSocketServerCallbacks.
 enum class WebSocketServerCapabilities : uint8_t {
   /// Allow clients to advertise channels to send data messages to the server.
   ClientPublish = 1 << 0,
@@ -54,12 +54,14 @@ enum class WebSocketServerCapabilities : uint8_t {
   Services = 1 << 4,
 };
 
+/// @brief Combine two capabilities.
 inline WebSocketServerCapabilities operator|(
   WebSocketServerCapabilities a, WebSocketServerCapabilities b
 ) {
   return WebSocketServerCapabilities(uint8_t(a) | uint8_t(b));
 }
 
+/// @brief Check if a capability is set.
 inline WebSocketServerCapabilities operator&(
   WebSocketServerCapabilities a, WebSocketServerCapabilities b
 ) {
@@ -67,6 +69,9 @@ inline WebSocketServerCapabilities operator&(
 }
 
 /// @brief The callback interface for a WebSocket server.
+///
+/// These methods are invoked from the client's main poll loop and must be as low-latency as
+/// possible.
 struct WebSocketServerCallbacks {
   /// @brief Callback invoked when a client subscribes to a channel.
   ///

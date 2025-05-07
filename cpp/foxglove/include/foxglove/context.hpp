@@ -4,6 +4,7 @@
 
 struct foxglove_context;
 
+/// The foxglove namespace.
 namespace foxglove {
 
 /// @brief A context is the binding between channels and sinks.

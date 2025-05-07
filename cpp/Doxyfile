@@ -925,7 +925,7 @@ WARN_NO_PARAMDOC       = NO
 # will automatically be disabled.
 # The default value is: NO.
 
-WARN_IF_UNDOC_ENUM_VAL = NO
+WARN_IF_UNDOC_ENUM_VAL = YES
 
 # If WARN_LAYOUT_FILE option is set to YES, Doxygen will warn about issues found
 # while parsing the user defined layout file, such as missing or wrong elements.
