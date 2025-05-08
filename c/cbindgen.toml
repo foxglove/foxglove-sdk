@@ -29,8 +29,8 @@ non_null_attribute = "FOXGLOVE_NONNULL"
 [enum]
 rename_variants = "QUALIFIED_SCREAMING_SNAKE_CASE"
 enum_class = true
-
 prefix_with_name = false
+
 [export.rename]
 FoxgloveBytes = "foxglove_bytes"
 FoxgloveChannel = "foxglove_channel"
@@ -38,6 +38,7 @@ FoxgloveClientChannel = "foxglove_client_channel"
 FoxgloveConnectionGraph = "foxglove_connection_graph"
 FoxgloveContext = "foxglove_context"
 FoxgloveError = "foxglove_error"
+FoxgloveLogLevel = "foxglove_log_level"
 FoxgloveMcapCompression = "foxglove_mcap_compression"
 FoxgloveMcapOptions = "foxglove_mcap_options"
 FoxgloveMcapWriter = "foxglove_mcap_writer"
@@ -54,6 +55,6 @@ FoxgloveSchema = "foxglove_schema"
 FoxgloveServerCallbacks = "foxglove_server_callbacks"
 FoxgloveServerCapability = "foxglove_server_capability"
 FoxgloveServerOptions = "foxglove_server_options"
-FoxgloveString = "foxglove_string"
 FoxgloveStringBuf = "foxglove_string"
+FoxgloveString = "foxglove_string"
 FoxgloveWebSocketServer = "foxglove_websocket_server"
