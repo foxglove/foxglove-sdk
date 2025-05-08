@@ -147,7 +147,7 @@ export function generateHppSchemas(
             case "primitive": {
               defaultStr =
                 field.array != undefined
-                  ? ` = ${field.defaultValue ?? primitiveDefaultValue(field.type.name)}`
+                  ? ` = ${(field.defaultValue ?? primitiveDefaultValue(field.type.name) ?? "").toString()}`
                   : "";
               fieldType = primitiveToCpp(field.type.name);
               break;
