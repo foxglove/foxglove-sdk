@@ -1,3 +1,4 @@
+#include <foxglove/foxglove.hpp>
 #include <foxglove/server.hpp>
 #include <foxglove/server/service.hpp>
 
@@ -24,6 +25,8 @@ bool registerSleepService(foxglove::WebSocketServer& server);
 bool registerIntMathServices(foxglove::WebSocketServer& server);
 
 int main(int argc, const char** argv) {
+  foxglove::setLogLevel(foxglove::LogLevel::Debug);
+
   std::signal(SIGINT, [](int) {
     if (sigint_handler) {
       sigint_handler();
@@ -43,7 +46,6 @@ int main(int argc, const char** argv) {
   }
 
   auto server = std::move(result.value());
-  std::cerr << "Server listening on port " << server.port() << '\n';
 
   // Register services.
   bool ok = true;
@@ -58,8 +60,6 @@ int main(int argc, const char** argv) {
 
   std::atomic_bool done = false;
   sigint_handler = [&] {
-    std::cerr << "Shutting down...\n";
-    server.stop();
     done = true;
   };
 
@@ -69,7 +69,7 @@ int main(int argc, const char** argv) {
     ++i;
   }
 
-  std::cerr << "Done\n";
+  server.stop();
   return 0;
 }
 

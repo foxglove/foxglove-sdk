@@ -9,6 +9,7 @@
  * https://docs.foxglove.dev/docs/visualization/panels/parameters
  */
 
+#include <foxglove/foxglove.hpp>
 #include <foxglove/server.hpp>
 #include <foxglove/server/parameter.hpp>
 
@@ -27,6 +28,8 @@ static std::function<void()> sigint_handler;
 
 // NOLINTNEXTLINE(bugprone-exception-escape)
 int main(int argc, const char* argv[]) {
+  foxglove::setLogLevel(foxglove::LogLevel::Debug);
+
   std::signal(SIGINT, [](int) {
     if (sigint_handler) {
       sigint_handler();
@@ -123,12 +126,9 @@ int main(int argc, const char* argv[]) {
     return 1;
   }
   auto server = std::move(server_result.value());
-  std::cerr << "Started server\n";
 
   std::atomic_bool done = false;
   sigint_handler = [&] {
-    std::cerr << "Shutting down...\n";
-    server.stop();
     done = true;
   };
 
@@ -146,6 +146,6 @@ int main(int argc, const char* argv[]) {
     server.publishParameterValues(std::move(params));
   }
 
-  std::cerr << "Done\n";
+  server.stop();
   return 0;
 }
