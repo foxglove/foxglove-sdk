@@ -12,6 +12,7 @@
 
 #include <foxglove/time.hpp>
 #include <foxglove/error.hpp>
+#include <foxglove/context.hpp>
 
 struct foxglove_channel;
 
@@ -829,74 +830,544 @@ struct RawImage {
   std::vector<std::byte> data;
 };
 
+class CameraCalibrationChannel {
+      public:
+        static FoxgloveResult<CameraCalibrationChannel> create(const std::string_view& topic, const Context& context = Context());
+
+        FoxgloveError log(const CameraCalibration& value, std::optional<uint64_t> log_time = std::nullopt);
+
+        CameraCalibrationChannel(const CameraCalibrationChannel& other) noexcept = delete;
+        CameraCalibrationChannel& operator=(const CameraCalibrationChannel& other) noexcept = delete;
+        CameraCalibrationChannel(CameraCalibrationChannel&& other) noexcept = default;
+        ~CameraCalibrationChannel() = default;
+
+      private:
+        explicit CameraCalibrationChannel(ChannelUniquePtr&& channel)
+            : impl_(std::move(channel)) {}
+
+        ChannelUniquePtr impl_;
+    };
+
+class CircleAnnotationChannel {
+      public:
+        static FoxgloveResult<CircleAnnotationChannel> create(const std::string_view& topic, const Context& context = Context());
+
+        FoxgloveError log(const CircleAnnotation& value, std::optional<uint64_t> log_time = std::nullopt);
+
+        CircleAnnotationChannel(const CircleAnnotationChannel& other) noexcept = delete;
+        CircleAnnotationChannel& operator=(const CircleAnnotationChannel& other) noexcept = delete;
+        CircleAnnotationChannel(CircleAnnotationChannel&& other) noexcept = default;
+        ~CircleAnnotationChannel() = default;
+
+      private:
+        explicit CircleAnnotationChannel(ChannelUniquePtr&& channel)
+            : impl_(std::move(channel)) {}
+
+        ChannelUniquePtr impl_;
+    };
+
+class CompressedImageChannel {
+      public:
+        static FoxgloveResult<CompressedImageChannel> create(const std::string_view& topic, const Context& context = Context());
+
+        FoxgloveError log(const CompressedImage& value, std::optional<uint64_t> log_time = std::nullopt);
+
+        CompressedImageChannel(const CompressedImageChannel& other) noexcept = delete;
+        CompressedImageChannel& operator=(const CompressedImageChannel& other) noexcept = delete;
+        CompressedImageChannel(CompressedImageChannel&& other) noexcept = default;
+        ~CompressedImageChannel() = default;
+
+      private:
+        explicit CompressedImageChannel(ChannelUniquePtr&& channel)
+            : impl_(std::move(channel)) {}
+
+        ChannelUniquePtr impl_;
+    };
+
+class CompressedVideoChannel {
+      public:
+        static FoxgloveResult<CompressedVideoChannel> create(const std::string_view& topic, const Context& context = Context());
+
+        FoxgloveError log(const CompressedVideo& value, std::optional<uint64_t> log_time = std::nullopt);
+
+        CompressedVideoChannel(const CompressedVideoChannel& other) noexcept = delete;
+        CompressedVideoChannel& operator=(const CompressedVideoChannel& other) noexcept = delete;
+        CompressedVideoChannel(CompressedVideoChannel&& other) noexcept = default;
+        ~CompressedVideoChannel() = default;
+
+      private:
+        explicit CompressedVideoChannel(ChannelUniquePtr&& channel)
+            : impl_(std::move(channel)) {}
+
+        ChannelUniquePtr impl_;
+    };
+
+class FrameTransformChannel {
+      public:
+        static FoxgloveResult<FrameTransformChannel> create(const std::string_view& topic, const Context& context = Context());
+
+        FoxgloveError log(const FrameTransform& value, std::optional<uint64_t> log_time = std::nullopt);
+
+        FrameTransformChannel(const FrameTransformChannel& other) noexcept = delete;
+        FrameTransformChannel& operator=(const FrameTransformChannel& other) noexcept = delete;
+        FrameTransformChannel(FrameTransformChannel&& other) noexcept = default;
+        ~FrameTransformChannel() = default;
+
+      private:
+        explicit FrameTransformChannel(ChannelUniquePtr&& channel)
+            : impl_(std::move(channel)) {}
+
+        ChannelUniquePtr impl_;
+    };
+
+class FrameTransformsChannel {
+      public:
+        static FoxgloveResult<FrameTransformsChannel> create(const std::string_view& topic, const Context& context = Context());
+
+        FoxgloveError log(const FrameTransforms& value, std::optional<uint64_t> log_time = std::nullopt);
+
+        FrameTransformsChannel(const FrameTransformsChannel& other) noexcept = delete;
+        FrameTransformsChannel& operator=(const FrameTransformsChannel& other) noexcept = delete;
+        FrameTransformsChannel(FrameTransformsChannel&& other) noexcept = default;
+        ~FrameTransformsChannel() = default;
+
+      private:
+        explicit FrameTransformsChannel(ChannelUniquePtr&& channel)
+            : impl_(std::move(channel)) {}
+
+        ChannelUniquePtr impl_;
+    };
+
+class GeoJSONChannel {
+      public:
+        static FoxgloveResult<GeoJSONChannel> create(const std::string_view& topic, const Context& context = Context());
+
+        FoxgloveError log(const GeoJSON& value, std::optional<uint64_t> log_time = std::nullopt);
+
+        GeoJSONChannel(const GeoJSONChannel& other) noexcept = delete;
+        GeoJSONChannel& operator=(const GeoJSONChannel& other) noexcept = delete;
+        GeoJSONChannel(GeoJSONChannel&& other) noexcept = default;
+        ~GeoJSONChannel() = default;
+
+      private:
+        explicit GeoJSONChannel(ChannelUniquePtr&& channel)
+            : impl_(std::move(channel)) {}
+
+        ChannelUniquePtr impl_;
+    };
+
+class GridChannel {
+      public:
+        static FoxgloveResult<GridChannel> create(const std::string_view& topic, const Context& context = Context());
+
+        FoxgloveError log(const Grid& value, std::optional<uint64_t> log_time = std::nullopt);
+
+        GridChannel(const GridChannel& other) noexcept = delete;
+        GridChannel& operator=(const GridChannel& other) noexcept = delete;
+        GridChannel(GridChannel&& other) noexcept = default;
+        ~GridChannel() = default;
+
+      private:
+        explicit GridChannel(ChannelUniquePtr&& channel)
+            : impl_(std::move(channel)) {}
+
+        ChannelUniquePtr impl_;
+    };
+
+class ImageAnnotationsChannel {
+      public:
+        static FoxgloveResult<ImageAnnotationsChannel> create(const std::string_view& topic, const Context& context = Context());
+
+        FoxgloveError log(const ImageAnnotations& value, std::optional<uint64_t> log_time = std::nullopt);
+
+        ImageAnnotationsChannel(const ImageAnnotationsChannel& other) noexcept = delete;
+        ImageAnnotationsChannel& operator=(const ImageAnnotationsChannel& other) noexcept = delete;
+        ImageAnnotationsChannel(ImageAnnotationsChannel&& other) noexcept = default;
+        ~ImageAnnotationsChannel() = default;
+
+      private:
+        explicit ImageAnnotationsChannel(ChannelUniquePtr&& channel)
+            : impl_(std::move(channel)) {}
+
+        ChannelUniquePtr impl_;
+    };
+
+class KeyValuePairChannel {
+      public:
+        static FoxgloveResult<KeyValuePairChannel> create(const std::string_view& topic, const Context& context = Context());
+
+        FoxgloveError log(const KeyValuePair& value, std::optional<uint64_t> log_time = std::nullopt);
+
+        KeyValuePairChannel(const KeyValuePairChannel& other) noexcept = delete;
+        KeyValuePairChannel& operator=(const KeyValuePairChannel& other) noexcept = delete;
+        KeyValuePairChannel(KeyValuePairChannel&& other) noexcept = default;
+        ~KeyValuePairChannel() = default;
+
+      private:
+        explicit KeyValuePairChannel(ChannelUniquePtr&& channel)
+            : impl_(std::move(channel)) {}
+
+        ChannelUniquePtr impl_;
+    };
+
+class LaserScanChannel {
+      public:
+        static FoxgloveResult<LaserScanChannel> create(const std::string_view& topic, const Context& context = Context());
+
+        FoxgloveError log(const LaserScan& value, std::optional<uint64_t> log_time = std::nullopt);
+
+        LaserScanChannel(const LaserScanChannel& other) noexcept = delete;
+        LaserScanChannel& operator=(const LaserScanChannel& other) noexcept = delete;
+        LaserScanChannel(LaserScanChannel&& other) noexcept = default;
+        ~LaserScanChannel() = default;
+
+      private:
+        explicit LaserScanChannel(ChannelUniquePtr&& channel)
+            : impl_(std::move(channel)) {}
+
+        ChannelUniquePtr impl_;
+    };
+
+class LocationFixChannel {
+      public:
+        static FoxgloveResult<LocationFixChannel> create(const std::string_view& topic, const Context& context = Context());
+
+        FoxgloveError log(const LocationFix& value, std::optional<uint64_t> log_time = std::nullopt);
+
+        LocationFixChannel(const LocationFixChannel& other) noexcept = delete;
+        LocationFixChannel& operator=(const LocationFixChannel& other) noexcept = delete;
+        LocationFixChannel(LocationFixChannel&& other) noexcept = default;
+        ~LocationFixChannel() = default;
+
+      private:
+        explicit LocationFixChannel(ChannelUniquePtr&& channel)
+            : impl_(std::move(channel)) {}
+
+        ChannelUniquePtr impl_;
+    };
+
+class LogChannel {
+      public:
+        static FoxgloveResult<LogChannel> create(const std::string_view& topic, const Context& context = Context());
+
+        FoxgloveError log(const Log& value, std::optional<uint64_t> log_time = std::nullopt);
+
+        LogChannel(const LogChannel& other) noexcept = delete;
+        LogChannel& operator=(const LogChannel& other) noexcept = delete;
+        LogChannel(LogChannel&& other) noexcept = default;
+        ~LogChannel() = default;
+
+      private:
+        explicit LogChannel(ChannelUniquePtr&& channel)
+            : impl_(std::move(channel)) {}
+
+        ChannelUniquePtr impl_;
+    };
+
+class SceneEntityDeletionChannel {
+      public:
+        static FoxgloveResult<SceneEntityDeletionChannel> create(const std::string_view& topic, const Context& context = Context());
+
+        FoxgloveError log(const SceneEntityDeletion& value, std::optional<uint64_t> log_time = std::nullopt);
+
+        SceneEntityDeletionChannel(const SceneEntityDeletionChannel& other) noexcept = delete;
+        SceneEntityDeletionChannel& operator=(const SceneEntityDeletionChannel& other) noexcept = delete;
+        SceneEntityDeletionChannel(SceneEntityDeletionChannel&& other) noexcept = default;
+        ~SceneEntityDeletionChannel() = default;
+
+      private:
+        explicit SceneEntityDeletionChannel(ChannelUniquePtr&& channel)
+            : impl_(std::move(channel)) {}
+
+        ChannelUniquePtr impl_;
+    };
+
+class SceneEntityChannel {
+      public:
+        static FoxgloveResult<SceneEntityChannel> create(const std::string_view& topic, const Context& context = Context());
+
+        FoxgloveError log(const SceneEntity& value, std::optional<uint64_t> log_time = std::nullopt);
+
+        SceneEntityChannel(const SceneEntityChannel& other) noexcept = delete;
+        SceneEntityChannel& operator=(const SceneEntityChannel& other) noexcept = delete;
+        SceneEntityChannel(SceneEntityChannel&& other) noexcept = default;
+        ~SceneEntityChannel() = default;
+
+      private:
+        explicit SceneEntityChannel(ChannelUniquePtr&& channel)
+            : impl_(std::move(channel)) {}
+
+        ChannelUniquePtr impl_;
+    };
+
+class SceneUpdateChannel {
+      public:
+        static FoxgloveResult<SceneUpdateChannel> create(const std::string_view& topic, const Context& context = Context());
+
+        FoxgloveError log(const SceneUpdate& value, std::optional<uint64_t> log_time = std::nullopt);
+
+        SceneUpdateChannel(const SceneUpdateChannel& other) noexcept = delete;
+        SceneUpdateChannel& operator=(const SceneUpdateChannel& other) noexcept = delete;
+        SceneUpdateChannel(SceneUpdateChannel&& other) noexcept = default;
+        ~SceneUpdateChannel() = default;
+
+      private:
+        explicit SceneUpdateChannel(ChannelUniquePtr&& channel)
+            : impl_(std::move(channel)) {}
+
+        ChannelUniquePtr impl_;
+    };
+
+class PackedElementFieldChannel {
+      public:
+        static FoxgloveResult<PackedElementFieldChannel> create(const std::string_view& topic, const Context& context = Context());
+
+        FoxgloveError log(const PackedElementField& value, std::optional<uint64_t> log_time = std::nullopt);
+
+        PackedElementFieldChannel(const PackedElementFieldChannel& other) noexcept = delete;
+        PackedElementFieldChannel& operator=(const PackedElementFieldChannel& other) noexcept = delete;
+        PackedElementFieldChannel(PackedElementFieldChannel&& other) noexcept = default;
+        ~PackedElementFieldChannel() = default;
+
+      private:
+        explicit PackedElementFieldChannel(ChannelUniquePtr&& channel)
+            : impl_(std::move(channel)) {}
+
+        ChannelUniquePtr impl_;
+    };
+
+class Point2Channel {
+      public:
+        static FoxgloveResult<Point2Channel> create(const std::string_view& topic, const Context& context = Context());
+
+        FoxgloveError log(const Point2& value, std::optional<uint64_t> log_time = std::nullopt);
+
+        Point2Channel(const Point2Channel& other) noexcept = delete;
+        Point2Channel& operator=(const Point2Channel& other) noexcept = delete;
+        Point2Channel(Point2Channel&& other) noexcept = default;
+        ~Point2Channel() = default;
+
+      private:
+        explicit Point2Channel(ChannelUniquePtr&& channel)
+            : impl_(std::move(channel)) {}
+
+        ChannelUniquePtr impl_;
+    };
+
+class Point3Channel {
+      public:
+        static FoxgloveResult<Point3Channel> create(const std::string_view& topic, const Context& context = Context());
+
+        FoxgloveError log(const Point3& value, std::optional<uint64_t> log_time = std::nullopt);
+
+        Point3Channel(const Point3Channel& other) noexcept = delete;
+        Point3Channel& operator=(const Point3Channel& other) noexcept = delete;
+        Point3Channel(Point3Channel&& other) noexcept = default;
+        ~Point3Channel() = default;
+
+      private:
+        explicit Point3Channel(ChannelUniquePtr&& channel)
+            : impl_(std::move(channel)) {}
+
+        ChannelUniquePtr impl_;
+    };
+
+class PointCloudChannel {
+      public:
+        static FoxgloveResult<PointCloudChannel> create(const std::string_view& topic, const Context& context = Context());
+
+        FoxgloveError log(const PointCloud& value, std::optional<uint64_t> log_time = std::nullopt);
+
+        PointCloudChannel(const PointCloudChannel& other) noexcept = delete;
+        PointCloudChannel& operator=(const PointCloudChannel& other) noexcept = delete;
+        PointCloudChannel(PointCloudChannel&& other) noexcept = default;
+        ~PointCloudChannel() = default;
+
+      private:
+        explicit PointCloudChannel(ChannelUniquePtr&& channel)
+            : impl_(std::move(channel)) {}
+
+        ChannelUniquePtr impl_;
+    };
+
+class PointsAnnotationChannel {
+      public:
+        static FoxgloveResult<PointsAnnotationChannel> create(const std::string_view& topic, const Context& context = Context());
+
+        FoxgloveError log(const PointsAnnotation& value, std::optional<uint64_t> log_time = std::nullopt);
+
+        PointsAnnotationChannel(const PointsAnnotationChannel& other) noexcept = delete;
+        PointsAnnotationChannel& operator=(const PointsAnnotationChannel& other) noexcept = delete;
+        PointsAnnotationChannel(PointsAnnotationChannel&& other) noexcept = default;
+        ~PointsAnnotationChannel() = default;
+
+      private:
+        explicit PointsAnnotationChannel(ChannelUniquePtr&& channel)
+            : impl_(std::move(channel)) {}
+
+        ChannelUniquePtr impl_;
+    };
+
+class PoseChannel {
+      public:
+        static FoxgloveResult<PoseChannel> create(const std::string_view& topic, const Context& context = Context());
+
+        FoxgloveError log(const Pose& value, std::optional<uint64_t> log_time = std::nullopt);
+
+        PoseChannel(const PoseChannel& other) noexcept = delete;
+        PoseChannel& operator=(const PoseChannel& other) noexcept = delete;
+        PoseChannel(PoseChannel&& other) noexcept = default;
+        ~PoseChannel() = default;
+
+      private:
+        explicit PoseChannel(ChannelUniquePtr&& channel)
+            : impl_(std::move(channel)) {}
+
+        ChannelUniquePtr impl_;
+    };
+
+class PoseInFrameChannel {
+      public:
+        static FoxgloveResult<PoseInFrameChannel> create(const std::string_view& topic, const Context& context = Context());
+
+        FoxgloveError log(const PoseInFrame& value, std::optional<uint64_t> log_time = std::nullopt);
+
+        PoseInFrameChannel(const PoseInFrameChannel& other) noexcept = delete;
+        PoseInFrameChannel& operator=(const PoseInFrameChannel& other) noexcept = delete;
+        PoseInFrameChannel(PoseInFrameChannel&& other) noexcept = default;
+        ~PoseInFrameChannel() = default;
+
+      private:
+        explicit PoseInFrameChannel(ChannelUniquePtr&& channel)
+            : impl_(std::move(channel)) {}
+
+        ChannelUniquePtr impl_;
+    };
+
+class PosesInFrameChannel {
+      public:
+        static FoxgloveResult<PosesInFrameChannel> create(const std::string_view& topic, const Context& context = Context());
+
+        FoxgloveError log(const PosesInFrame& value, std::optional<uint64_t> log_time = std::nullopt);
+
+        PosesInFrameChannel(const PosesInFrameChannel& other) noexcept = delete;
+        PosesInFrameChannel& operator=(const PosesInFrameChannel& other) noexcept = delete;
+        PosesInFrameChannel(PosesInFrameChannel&& other) noexcept = default;
+        ~PosesInFrameChannel() = default;
+
+      private:
+        explicit PosesInFrameChannel(ChannelUniquePtr&& channel)
+            : impl_(std::move(channel)) {}
+
+        ChannelUniquePtr impl_;
+    };
+
+class QuaternionChannel {
+      public:
+        static FoxgloveResult<QuaternionChannel> create(const std::string_view& topic, const Context& context = Context());
+
+        FoxgloveError log(const Quaternion& value, std::optional<uint64_t> log_time = std::nullopt);
+
+        QuaternionChannel(const QuaternionChannel& other) noexcept = delete;
+        QuaternionChannel& operator=(const QuaternionChannel& other) noexcept = delete;
+        QuaternionChannel(QuaternionChannel&& other) noexcept = default;
+        ~QuaternionChannel() = default;
+
+      private:
+        explicit QuaternionChannel(ChannelUniquePtr&& channel)
+            : impl_(std::move(channel)) {}
+
+        ChannelUniquePtr impl_;
+    };
+
+class RawAudioChannel {
+      public:
+        static FoxgloveResult<RawAudioChannel> create(const std::string_view& topic, const Context& context = Context());
+
+        FoxgloveError log(const RawAudio& value, std::optional<uint64_t> log_time = std::nullopt);
+
+        RawAudioChannel(const RawAudioChannel& other) noexcept = delete;
+        RawAudioChannel& operator=(const RawAudioChannel& other) noexcept = delete;
+        RawAudioChannel(RawAudioChannel&& other) noexcept = default;
+        ~RawAudioChannel() = default;
+
+      private:
+        explicit RawAudioChannel(ChannelUniquePtr&& channel)
+            : impl_(std::move(channel)) {}
+
+        ChannelUniquePtr impl_;
+    };
+
+class RawImageChannel {
+      public:
+        static FoxgloveResult<RawImageChannel> create(const std::string_view& topic, const Context& context = Context());
+
+        FoxgloveError log(const RawImage& value, std::optional<uint64_t> log_time = std::nullopt);
+
+        RawImageChannel(const RawImageChannel& other) noexcept = delete;
+        RawImageChannel& operator=(const RawImageChannel& other) noexcept = delete;
+        RawImageChannel(RawImageChannel&& other) noexcept = default;
+        ~RawImageChannel() = default;
+
+      private:
+        explicit RawImageChannel(ChannelUniquePtr&& channel)
+            : impl_(std::move(channel)) {}
+
+        ChannelUniquePtr impl_;
+    };
+
+class TextAnnotationChannel {
+      public:
+        static FoxgloveResult<TextAnnotationChannel> create(const std::string_view& topic, const Context& context = Context());
+
+        FoxgloveError log(const TextAnnotation& value, std::optional<uint64_t> log_time = std::nullopt);
+
+        TextAnnotationChannel(const TextAnnotationChannel& other) noexcept = delete;
+        TextAnnotationChannel& operator=(const TextAnnotationChannel& other) noexcept = delete;
+        TextAnnotationChannel(TextAnnotationChannel&& other) noexcept = default;
+        ~TextAnnotationChannel() = default;
+
+      private:
+        explicit TextAnnotationChannel(ChannelUniquePtr&& channel)
+            : impl_(std::move(channel)) {}
+
+        ChannelUniquePtr impl_;
+    };
+
+class Vector2Channel {
+      public:
+        static FoxgloveResult<Vector2Channel> create(const std::string_view& topic, const Context& context = Context());
+
+        FoxgloveError log(const Vector2& value, std::optional<uint64_t> log_time = std::nullopt);
+
+        Vector2Channel(const Vector2Channel& other) noexcept = delete;
+        Vector2Channel& operator=(const Vector2Channel& other) noexcept = delete;
+        Vector2Channel(Vector2Channel&& other) noexcept = default;
+        ~Vector2Channel() = default;
+
+      private:
+        explicit Vector2Channel(ChannelUniquePtr&& channel)
+            : impl_(std::move(channel)) {}
+
+        ChannelUniquePtr impl_;
+    };
+
+class Vector3Channel {
+      public:
+        static FoxgloveResult<Vector3Channel> create(const std::string_view& topic, const Context& context = Context());
+
+        FoxgloveError log(const Vector3& value, std::optional<uint64_t> log_time = std::nullopt);
+
+        Vector3Channel(const Vector3Channel& other) noexcept = delete;
+        Vector3Channel& operator=(const Vector3Channel& other) noexcept = delete;
+        Vector3Channel(Vector3Channel&& other) noexcept = default;
+        ~Vector3Channel() = default;
+
+      private:
+        explicit Vector3Channel(ChannelUniquePtr&& channel)
+            : impl_(std::move(channel)) {}
+
+        ChannelUniquePtr impl_;
+    };
+
 } // namespace foxglove::schemas
-
-namespace foxglove::internal {
-
-template<class T>
-struct BuiltinSchema : std::false_type {};
-
-template<>
-struct BuiltinSchema<foxglove::schemas::CameraCalibration>;
-template<>
-struct BuiltinSchema<foxglove::schemas::CircleAnnotation>;
-template<>
-struct BuiltinSchema<foxglove::schemas::Color>;
-template<>
-struct BuiltinSchema<foxglove::schemas::CompressedImage>;
-template<>
-struct BuiltinSchema<foxglove::schemas::CompressedVideo>;
-template<>
-struct BuiltinSchema<foxglove::schemas::FrameTransform>;
-template<>
-struct BuiltinSchema<foxglove::schemas::FrameTransforms>;
-template<>
-struct BuiltinSchema<foxglove::schemas::GeoJSON>;
-template<>
-struct BuiltinSchema<foxglove::schemas::Grid>;
-template<>
-struct BuiltinSchema<foxglove::schemas::ImageAnnotations>;
-template<>
-struct BuiltinSchema<foxglove::schemas::KeyValuePair>;
-template<>
-struct BuiltinSchema<foxglove::schemas::LaserScan>;
-template<>
-struct BuiltinSchema<foxglove::schemas::LocationFix>;
-template<>
-struct BuiltinSchema<foxglove::schemas::Log>;
-template<>
-struct BuiltinSchema<foxglove::schemas::SceneEntityDeletion>;
-template<>
-struct BuiltinSchema<foxglove::schemas::SceneEntity>;
-template<>
-struct BuiltinSchema<foxglove::schemas::SceneUpdate>;
-template<>
-struct BuiltinSchema<foxglove::schemas::PackedElementField>;
-template<>
-struct BuiltinSchema<foxglove::schemas::Point2>;
-template<>
-struct BuiltinSchema<foxglove::schemas::Point3>;
-template<>
-struct BuiltinSchema<foxglove::schemas::PointCloud>;
-template<>
-struct BuiltinSchema<foxglove::schemas::PointsAnnotation>;
-template<>
-struct BuiltinSchema<foxglove::schemas::Pose>;
-template<>
-struct BuiltinSchema<foxglove::schemas::PoseInFrame>;
-template<>
-struct BuiltinSchema<foxglove::schemas::PosesInFrame>;
-template<>
-struct BuiltinSchema<foxglove::schemas::Quaternion>;
-template<>
-struct BuiltinSchema<foxglove::schemas::RawAudio>;
-template<>
-struct BuiltinSchema<foxglove::schemas::RawImage>;
-template<>
-struct BuiltinSchema<foxglove::schemas::TextAnnotation>;
-template<>
-struct BuiltinSchema<foxglove::schemas::Vector2>;
-template<>
-struct BuiltinSchema<foxglove::schemas::Vector3>;
-
-} // namespace foxglove::internal

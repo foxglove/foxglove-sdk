@@ -6,7 +6,7 @@
 namespace foxglove {
 
 FoxgloveResult<RawChannel> RawChannel::create(
-  const std::string& topic, const std::string& message_encoding, std::optional<Schema> schema,
+  const std::string_view& topic, const std::string_view& message_encoding, std::optional<Schema> schema,
   const Context& context
 ) {
   foxglove_schema c_schema = {};

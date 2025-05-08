@@ -10,10 +10,7 @@
 #include <optional>
 #include <cstring>
 
-namespace foxglove::internal {
-
-using namespace foxglove;
-using namespace foxglove::schemas;
+namespace foxglove::schemas {
 
 void arrowPrimitiveToC(foxglove_arrow_primitive& dest, const ArrowPrimitive& src, Arena& arena);
 void cameraCalibrationToC(foxglove_camera_calibration& dest, const CameraCalibration& src, Arena& arena);
@@ -49,515 +46,441 @@ void textAnnotationToC(foxglove_text_annotation& dest, const TextAnnotation& src
 void textPrimitiveToC(foxglove_text_primitive& dest, const TextPrimitive& src, Arena& arena);
 void triangleListPrimitiveToC(foxglove_triangle_list_primitive& dest, const TriangleListPrimitive& src, Arena& arena);
 
-template<>
-struct BuiltinSchema<CameraCalibration> : std::true_type {
-  inline FoxgloveError logTo(foxglove_channel * const channel, const CameraCalibration& msg, std::optional<uint64_t> log_time = std::nullopt) {
-    Arena arena;
-    foxglove_camera_calibration c_msg;
-    cameraCalibrationToC(c_msg, msg, arena);
-    return FoxgloveError(foxglove_channel_log_camera_calibration(channel, &c_msg, log_time ? &*log_time : nullptr));
-  }
-  inline FoxgloveResult<ChannelUniquePtr> create(const std::string& topic, const Context& context = Context()) {
+FoxgloveResult<CameraCalibrationChannel> CameraCalibrationChannel::create(const std::string_view& topic, const Context& context) {
     const foxglove_channel* channel = nullptr;
     foxglove_error error = foxglove_channel_create_camera_calibration({topic.data(), topic.size()}, context.getInner(), &channel);
     if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
       return foxglove::unexpected(FoxgloveError(error));
     }
-    return ChannelUniquePtr(channel, foxglove_channel_free);
-  }
-};
-template<>
-struct BuiltinSchema<CircleAnnotation> : std::true_type {
-  inline FoxgloveError logTo(foxglove_channel * const channel, const CircleAnnotation& msg, std::optional<uint64_t> log_time = std::nullopt) {
+    return CameraCalibrationChannel(ChannelUniquePtr(channel, foxglove_channel_free));
+}
+
+FoxgloveError CameraCalibrationChannel::log(const CameraCalibration& msg, std::optional<uint64_t> log_time) {
     Arena arena;
-    foxglove_circle_annotation c_msg;
-    circleAnnotationToC(c_msg, msg, arena);
-    return FoxgloveError(foxglove_channel_log_circle_annotation(channel, &c_msg, log_time ? &*log_time : nullptr));
-  }
-  inline FoxgloveResult<ChannelUniquePtr> create(const std::string& topic, const Context& context = Context()) {
+    foxglove_camera_calibration c_msg;
+    cameraCalibrationToC(c_msg, msg, arena);
+    return FoxgloveError(foxglove_channel_log_camera_calibration(impl_.get(), &c_msg, log_time ? &*log_time : nullptr));
+}
+FoxgloveResult<CircleAnnotationChannel> CircleAnnotationChannel::create(const std::string_view& topic, const Context& context) {
     const foxglove_channel* channel = nullptr;
     foxglove_error error = foxglove_channel_create_circle_annotation({topic.data(), topic.size()}, context.getInner(), &channel);
     if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
       return foxglove::unexpected(FoxgloveError(error));
     }
-    return ChannelUniquePtr(channel, foxglove_channel_free);
-  }
-};
-template<>
-struct BuiltinSchema<Color> : std::true_type {
-  inline FoxgloveError logTo(foxglove_channel * const channel, const Color& msg, std::optional<uint64_t> log_time = std::nullopt) {
-    return FoxgloveError(foxglove_channel_log_color(channel, reinterpret_cast<const foxglove_color*>(&msg), log_time ? &*log_time : nullptr));
-  }
-  inline FoxgloveResult<ChannelUniquePtr> create(const std::string& topic, const Context& context = Context()) {
-    const foxglove_channel* channel = nullptr;
-    foxglove_error error = foxglove_channel_create_color({topic.data(), topic.size()}, context.getInner(), &channel);
-    if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
-      return foxglove::unexpected(FoxgloveError(error));
-    }
-    return ChannelUniquePtr(channel, foxglove_channel_free);
-  }
-};
-template<>
-struct BuiltinSchema<CompressedImage> : std::true_type {
-  inline FoxgloveError logTo(foxglove_channel * const channel, const CompressedImage& msg, std::optional<uint64_t> log_time = std::nullopt) {
+    return CircleAnnotationChannel(ChannelUniquePtr(channel, foxglove_channel_free));
+}
+
+FoxgloveError CircleAnnotationChannel::log(const CircleAnnotation& msg, std::optional<uint64_t> log_time) {
     Arena arena;
-    foxglove_compressed_image c_msg;
-    compressedImageToC(c_msg, msg, arena);
-    return FoxgloveError(foxglove_channel_log_compressed_image(channel, &c_msg, log_time ? &*log_time : nullptr));
-  }
-  inline FoxgloveResult<ChannelUniquePtr> create(const std::string& topic, const Context& context = Context()) {
+    foxglove_circle_annotation c_msg;
+    circleAnnotationToC(c_msg, msg, arena);
+    return FoxgloveError(foxglove_channel_log_circle_annotation(impl_.get(), &c_msg, log_time ? &*log_time : nullptr));
+}
+FoxgloveResult<CompressedImageChannel> CompressedImageChannel::create(const std::string_view& topic, const Context& context) {
     const foxglove_channel* channel = nullptr;
     foxglove_error error = foxglove_channel_create_compressed_image({topic.data(), topic.size()}, context.getInner(), &channel);
     if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
       return foxglove::unexpected(FoxgloveError(error));
     }
-    return ChannelUniquePtr(channel, foxglove_channel_free);
-  }
-};
-template<>
-struct BuiltinSchema<CompressedVideo> : std::true_type {
-  inline FoxgloveError logTo(foxglove_channel * const channel, const CompressedVideo& msg, std::optional<uint64_t> log_time = std::nullopt) {
+    return CompressedImageChannel(ChannelUniquePtr(channel, foxglove_channel_free));
+}
+
+FoxgloveError CompressedImageChannel::log(const CompressedImage& msg, std::optional<uint64_t> log_time) {
     Arena arena;
-    foxglove_compressed_video c_msg;
-    compressedVideoToC(c_msg, msg, arena);
-    return FoxgloveError(foxglove_channel_log_compressed_video(channel, &c_msg, log_time ? &*log_time : nullptr));
-  }
-  inline FoxgloveResult<ChannelUniquePtr> create(const std::string& topic, const Context& context = Context()) {
+    foxglove_compressed_image c_msg;
+    compressedImageToC(c_msg, msg, arena);
+    return FoxgloveError(foxglove_channel_log_compressed_image(impl_.get(), &c_msg, log_time ? &*log_time : nullptr));
+}
+FoxgloveResult<CompressedVideoChannel> CompressedVideoChannel::create(const std::string_view& topic, const Context& context) {
     const foxglove_channel* channel = nullptr;
     foxglove_error error = foxglove_channel_create_compressed_video({topic.data(), topic.size()}, context.getInner(), &channel);
     if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
       return foxglove::unexpected(FoxgloveError(error));
     }
-    return ChannelUniquePtr(channel, foxglove_channel_free);
-  }
-};
-template<>
-struct BuiltinSchema<FrameTransform> : std::true_type {
-  inline FoxgloveError logTo(foxglove_channel * const channel, const FrameTransform& msg, std::optional<uint64_t> log_time = std::nullopt) {
+    return CompressedVideoChannel(ChannelUniquePtr(channel, foxglove_channel_free));
+}
+
+FoxgloveError CompressedVideoChannel::log(const CompressedVideo& msg, std::optional<uint64_t> log_time) {
     Arena arena;
-    foxglove_frame_transform c_msg;
-    frameTransformToC(c_msg, msg, arena);
-    return FoxgloveError(foxglove_channel_log_frame_transform(channel, &c_msg, log_time ? &*log_time : nullptr));
-  }
-  inline FoxgloveResult<ChannelUniquePtr> create(const std::string& topic, const Context& context = Context()) {
+    foxglove_compressed_video c_msg;
+    compressedVideoToC(c_msg, msg, arena);
+    return FoxgloveError(foxglove_channel_log_compressed_video(impl_.get(), &c_msg, log_time ? &*log_time : nullptr));
+}
+FoxgloveResult<FrameTransformChannel> FrameTransformChannel::create(const std::string_view& topic, const Context& context) {
     const foxglove_channel* channel = nullptr;
     foxglove_error error = foxglove_channel_create_frame_transform({topic.data(), topic.size()}, context.getInner(), &channel);
     if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
       return foxglove::unexpected(FoxgloveError(error));
     }
-    return ChannelUniquePtr(channel, foxglove_channel_free);
-  }
-};
-template<>
-struct BuiltinSchema<FrameTransforms> : std::true_type {
-  inline FoxgloveError logTo(foxglove_channel * const channel, const FrameTransforms& msg, std::optional<uint64_t> log_time = std::nullopt) {
+    return FrameTransformChannel(ChannelUniquePtr(channel, foxglove_channel_free));
+}
+
+FoxgloveError FrameTransformChannel::log(const FrameTransform& msg, std::optional<uint64_t> log_time) {
     Arena arena;
-    foxglove_frame_transforms c_msg;
-    frameTransformsToC(c_msg, msg, arena);
-    return FoxgloveError(foxglove_channel_log_frame_transforms(channel, &c_msg, log_time ? &*log_time : nullptr));
-  }
-  inline FoxgloveResult<ChannelUniquePtr> create(const std::string& topic, const Context& context = Context()) {
+    foxglove_frame_transform c_msg;
+    frameTransformToC(c_msg, msg, arena);
+    return FoxgloveError(foxglove_channel_log_frame_transform(impl_.get(), &c_msg, log_time ? &*log_time : nullptr));
+}
+FoxgloveResult<FrameTransformsChannel> FrameTransformsChannel::create(const std::string_view& topic, const Context& context) {
     const foxglove_channel* channel = nullptr;
     foxglove_error error = foxglove_channel_create_frame_transforms({topic.data(), topic.size()}, context.getInner(), &channel);
     if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
       return foxglove::unexpected(FoxgloveError(error));
     }
-    return ChannelUniquePtr(channel, foxglove_channel_free);
-  }
-};
-template<>
-struct BuiltinSchema<GeoJSON> : std::true_type {
-  inline FoxgloveError logTo(foxglove_channel * const channel, const GeoJSON& msg, std::optional<uint64_t> log_time = std::nullopt) {
+    return FrameTransformsChannel(ChannelUniquePtr(channel, foxglove_channel_free));
+}
+
+FoxgloveError FrameTransformsChannel::log(const FrameTransforms& msg, std::optional<uint64_t> log_time) {
     Arena arena;
-    foxglove_geo_json c_msg;
-    geoJSONToC(c_msg, msg, arena);
-    return FoxgloveError(foxglove_channel_log_geo_json(channel, &c_msg, log_time ? &*log_time : nullptr));
-  }
-  inline FoxgloveResult<ChannelUniquePtr> create(const std::string& topic, const Context& context = Context()) {
+    foxglove_frame_transforms c_msg;
+    frameTransformsToC(c_msg, msg, arena);
+    return FoxgloveError(foxglove_channel_log_frame_transforms(impl_.get(), &c_msg, log_time ? &*log_time : nullptr));
+}
+FoxgloveResult<GeoJSONChannel> GeoJSONChannel::create(const std::string_view& topic, const Context& context) {
     const foxglove_channel* channel = nullptr;
     foxglove_error error = foxglove_channel_create_geo_json({topic.data(), topic.size()}, context.getInner(), &channel);
     if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
       return foxglove::unexpected(FoxgloveError(error));
     }
-    return ChannelUniquePtr(channel, foxglove_channel_free);
-  }
-};
-template<>
-struct BuiltinSchema<Grid> : std::true_type {
-  inline FoxgloveError logTo(foxglove_channel * const channel, const Grid& msg, std::optional<uint64_t> log_time = std::nullopt) {
+    return GeoJSONChannel(ChannelUniquePtr(channel, foxglove_channel_free));
+}
+
+FoxgloveError GeoJSONChannel::log(const GeoJSON& msg, std::optional<uint64_t> log_time) {
     Arena arena;
-    foxglove_grid c_msg;
-    gridToC(c_msg, msg, arena);
-    return FoxgloveError(foxglove_channel_log_grid(channel, &c_msg, log_time ? &*log_time : nullptr));
-  }
-  inline FoxgloveResult<ChannelUniquePtr> create(const std::string& topic, const Context& context = Context()) {
+    foxglove_geo_json c_msg;
+    geoJSONToC(c_msg, msg, arena);
+    return FoxgloveError(foxglove_channel_log_geo_json(impl_.get(), &c_msg, log_time ? &*log_time : nullptr));
+}
+FoxgloveResult<GridChannel> GridChannel::create(const std::string_view& topic, const Context& context) {
     const foxglove_channel* channel = nullptr;
     foxglove_error error = foxglove_channel_create_grid({topic.data(), topic.size()}, context.getInner(), &channel);
     if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
       return foxglove::unexpected(FoxgloveError(error));
     }
-    return ChannelUniquePtr(channel, foxglove_channel_free);
-  }
-};
-template<>
-struct BuiltinSchema<ImageAnnotations> : std::true_type {
-  inline FoxgloveError logTo(foxglove_channel * const channel, const ImageAnnotations& msg, std::optional<uint64_t> log_time = std::nullopt) {
+    return GridChannel(ChannelUniquePtr(channel, foxglove_channel_free));
+}
+
+FoxgloveError GridChannel::log(const Grid& msg, std::optional<uint64_t> log_time) {
     Arena arena;
-    foxglove_image_annotations c_msg;
-    imageAnnotationsToC(c_msg, msg, arena);
-    return FoxgloveError(foxglove_channel_log_image_annotations(channel, &c_msg, log_time ? &*log_time : nullptr));
-  }
-  inline FoxgloveResult<ChannelUniquePtr> create(const std::string& topic, const Context& context = Context()) {
+    foxglove_grid c_msg;
+    gridToC(c_msg, msg, arena);
+    return FoxgloveError(foxglove_channel_log_grid(impl_.get(), &c_msg, log_time ? &*log_time : nullptr));
+}
+FoxgloveResult<ImageAnnotationsChannel> ImageAnnotationsChannel::create(const std::string_view& topic, const Context& context) {
     const foxglove_channel* channel = nullptr;
     foxglove_error error = foxglove_channel_create_image_annotations({topic.data(), topic.size()}, context.getInner(), &channel);
     if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
       return foxglove::unexpected(FoxgloveError(error));
     }
-    return ChannelUniquePtr(channel, foxglove_channel_free);
-  }
-};
-template<>
-struct BuiltinSchema<KeyValuePair> : std::true_type {
-  inline FoxgloveError logTo(foxglove_channel * const channel, const KeyValuePair& msg, std::optional<uint64_t> log_time = std::nullopt) {
+    return ImageAnnotationsChannel(ChannelUniquePtr(channel, foxglove_channel_free));
+}
+
+FoxgloveError ImageAnnotationsChannel::log(const ImageAnnotations& msg, std::optional<uint64_t> log_time) {
     Arena arena;
-    foxglove_key_value_pair c_msg;
-    keyValuePairToC(c_msg, msg, arena);
-    return FoxgloveError(foxglove_channel_log_key_value_pair(channel, &c_msg, log_time ? &*log_time : nullptr));
-  }
-  inline FoxgloveResult<ChannelUniquePtr> create(const std::string& topic, const Context& context = Context()) {
+    foxglove_image_annotations c_msg;
+    imageAnnotationsToC(c_msg, msg, arena);
+    return FoxgloveError(foxglove_channel_log_image_annotations(impl_.get(), &c_msg, log_time ? &*log_time : nullptr));
+}
+FoxgloveResult<KeyValuePairChannel> KeyValuePairChannel::create(const std::string_view& topic, const Context& context) {
     const foxglove_channel* channel = nullptr;
     foxglove_error error = foxglove_channel_create_key_value_pair({topic.data(), topic.size()}, context.getInner(), &channel);
     if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
       return foxglove::unexpected(FoxgloveError(error));
     }
-    return ChannelUniquePtr(channel, foxglove_channel_free);
-  }
-};
-template<>
-struct BuiltinSchema<LaserScan> : std::true_type {
-  inline FoxgloveError logTo(foxglove_channel * const channel, const LaserScan& msg, std::optional<uint64_t> log_time = std::nullopt) {
+    return KeyValuePairChannel(ChannelUniquePtr(channel, foxglove_channel_free));
+}
+
+FoxgloveError KeyValuePairChannel::log(const KeyValuePair& msg, std::optional<uint64_t> log_time) {
     Arena arena;
-    foxglove_laser_scan c_msg;
-    laserScanToC(c_msg, msg, arena);
-    return FoxgloveError(foxglove_channel_log_laser_scan(channel, &c_msg, log_time ? &*log_time : nullptr));
-  }
-  inline FoxgloveResult<ChannelUniquePtr> create(const std::string& topic, const Context& context = Context()) {
+    foxglove_key_value_pair c_msg;
+    keyValuePairToC(c_msg, msg, arena);
+    return FoxgloveError(foxglove_channel_log_key_value_pair(impl_.get(), &c_msg, log_time ? &*log_time : nullptr));
+}
+FoxgloveResult<LaserScanChannel> LaserScanChannel::create(const std::string_view& topic, const Context& context) {
     const foxglove_channel* channel = nullptr;
     foxglove_error error = foxglove_channel_create_laser_scan({topic.data(), topic.size()}, context.getInner(), &channel);
     if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
       return foxglove::unexpected(FoxgloveError(error));
     }
-    return ChannelUniquePtr(channel, foxglove_channel_free);
-  }
-};
-template<>
-struct BuiltinSchema<LocationFix> : std::true_type {
-  inline FoxgloveError logTo(foxglove_channel * const channel, const LocationFix& msg, std::optional<uint64_t> log_time = std::nullopt) {
+    return LaserScanChannel(ChannelUniquePtr(channel, foxglove_channel_free));
+}
+
+FoxgloveError LaserScanChannel::log(const LaserScan& msg, std::optional<uint64_t> log_time) {
     Arena arena;
-    foxglove_location_fix c_msg;
-    locationFixToC(c_msg, msg, arena);
-    return FoxgloveError(foxglove_channel_log_location_fix(channel, &c_msg, log_time ? &*log_time : nullptr));
-  }
-  inline FoxgloveResult<ChannelUniquePtr> create(const std::string& topic, const Context& context = Context()) {
+    foxglove_laser_scan c_msg;
+    laserScanToC(c_msg, msg, arena);
+    return FoxgloveError(foxglove_channel_log_laser_scan(impl_.get(), &c_msg, log_time ? &*log_time : nullptr));
+}
+FoxgloveResult<LocationFixChannel> LocationFixChannel::create(const std::string_view& topic, const Context& context) {
     const foxglove_channel* channel = nullptr;
     foxglove_error error = foxglove_channel_create_location_fix({topic.data(), topic.size()}, context.getInner(), &channel);
     if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
       return foxglove::unexpected(FoxgloveError(error));
     }
-    return ChannelUniquePtr(channel, foxglove_channel_free);
-  }
-};
-template<>
-struct BuiltinSchema<Log> : std::true_type {
-  inline FoxgloveError logTo(foxglove_channel * const channel, const Log& msg, std::optional<uint64_t> log_time = std::nullopt) {
+    return LocationFixChannel(ChannelUniquePtr(channel, foxglove_channel_free));
+}
+
+FoxgloveError LocationFixChannel::log(const LocationFix& msg, std::optional<uint64_t> log_time) {
     Arena arena;
-    foxglove_log c_msg;
-    logToC(c_msg, msg, arena);
-    return FoxgloveError(foxglove_channel_log_log(channel, &c_msg, log_time ? &*log_time : nullptr));
-  }
-  inline FoxgloveResult<ChannelUniquePtr> create(const std::string& topic, const Context& context = Context()) {
+    foxglove_location_fix c_msg;
+    locationFixToC(c_msg, msg, arena);
+    return FoxgloveError(foxglove_channel_log_location_fix(impl_.get(), &c_msg, log_time ? &*log_time : nullptr));
+}
+FoxgloveResult<LogChannel> LogChannel::create(const std::string_view& topic, const Context& context) {
     const foxglove_channel* channel = nullptr;
     foxglove_error error = foxglove_channel_create_log({topic.data(), topic.size()}, context.getInner(), &channel);
     if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
       return foxglove::unexpected(FoxgloveError(error));
     }
-    return ChannelUniquePtr(channel, foxglove_channel_free);
-  }
-};
-template<>
-struct BuiltinSchema<PackedElementField> : std::true_type {
-  inline FoxgloveError logTo(foxglove_channel * const channel, const PackedElementField& msg, std::optional<uint64_t> log_time = std::nullopt) {
+    return LogChannel(ChannelUniquePtr(channel, foxglove_channel_free));
+}
+
+FoxgloveError LogChannel::log(const Log& msg, std::optional<uint64_t> log_time) {
     Arena arena;
-    foxglove_packed_element_field c_msg;
-    packedElementFieldToC(c_msg, msg, arena);
-    return FoxgloveError(foxglove_channel_log_packed_element_field(channel, &c_msg, log_time ? &*log_time : nullptr));
-  }
-  inline FoxgloveResult<ChannelUniquePtr> create(const std::string& topic, const Context& context = Context()) {
+    foxglove_log c_msg;
+    logToC(c_msg, msg, arena);
+    return FoxgloveError(foxglove_channel_log_log(impl_.get(), &c_msg, log_time ? &*log_time : nullptr));
+}
+FoxgloveResult<PackedElementFieldChannel> PackedElementFieldChannel::create(const std::string_view& topic, const Context& context) {
     const foxglove_channel* channel = nullptr;
     foxglove_error error = foxglove_channel_create_packed_element_field({topic.data(), topic.size()}, context.getInner(), &channel);
     if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
       return foxglove::unexpected(FoxgloveError(error));
     }
-    return ChannelUniquePtr(channel, foxglove_channel_free);
-  }
-};
-template<>
-struct BuiltinSchema<Point2> : std::true_type {
-  inline FoxgloveError logTo(foxglove_channel * const channel, const Point2& msg, std::optional<uint64_t> log_time = std::nullopt) {
-    return FoxgloveError(foxglove_channel_log_point2(channel, reinterpret_cast<const foxglove_point2*>(&msg), log_time ? &*log_time : nullptr));
-  }
-  inline FoxgloveResult<ChannelUniquePtr> create(const std::string& topic, const Context& context = Context()) {
+    return PackedElementFieldChannel(ChannelUniquePtr(channel, foxglove_channel_free));
+}
+
+FoxgloveError PackedElementFieldChannel::log(const PackedElementField& msg, std::optional<uint64_t> log_time) {
+    Arena arena;
+    foxglove_packed_element_field c_msg;
+    packedElementFieldToC(c_msg, msg, arena);
+    return FoxgloveError(foxglove_channel_log_packed_element_field(impl_.get(), &c_msg, log_time ? &*log_time : nullptr));
+}
+FoxgloveResult<Point2Channel> Point2Channel::create(const std::string_view& topic, const Context& context) {
     const foxglove_channel* channel = nullptr;
     foxglove_error error = foxglove_channel_create_point2({topic.data(), topic.size()}, context.getInner(), &channel);
     if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
       return foxglove::unexpected(FoxgloveError(error));
     }
-    return ChannelUniquePtr(channel, foxglove_channel_free);
-  }
-};
-template<>
-struct BuiltinSchema<Point3> : std::true_type {
-  inline FoxgloveError logTo(foxglove_channel * const channel, const Point3& msg, std::optional<uint64_t> log_time = std::nullopt) {
-    return FoxgloveError(foxglove_channel_log_point3(channel, reinterpret_cast<const foxglove_point3*>(&msg), log_time ? &*log_time : nullptr));
-  }
-  inline FoxgloveResult<ChannelUniquePtr> create(const std::string& topic, const Context& context = Context()) {
+    return Point2Channel(ChannelUniquePtr(channel, foxglove_channel_free));
+}
+
+FoxgloveError Point2Channel::log(const Point2& msg, std::optional<uint64_t> log_time) {
+    return FoxgloveError(foxglove_channel_log_point2(impl_.get(), reinterpret_cast<const foxglove_point2*>(&msg), log_time ? &*log_time : nullptr));
+}
+FoxgloveResult<Point3Channel> Point3Channel::create(const std::string_view& topic, const Context& context) {
     const foxglove_channel* channel = nullptr;
     foxglove_error error = foxglove_channel_create_point3({topic.data(), topic.size()}, context.getInner(), &channel);
     if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
       return foxglove::unexpected(FoxgloveError(error));
     }
-    return ChannelUniquePtr(channel, foxglove_channel_free);
-  }
-};
-template<>
-struct BuiltinSchema<PointCloud> : std::true_type {
-  inline FoxgloveError logTo(foxglove_channel * const channel, const PointCloud& msg, std::optional<uint64_t> log_time = std::nullopt) {
-    Arena arena;
-    foxglove_point_cloud c_msg;
-    pointCloudToC(c_msg, msg, arena);
-    return FoxgloveError(foxglove_channel_log_point_cloud(channel, &c_msg, log_time ? &*log_time : nullptr));
-  }
-  inline FoxgloveResult<ChannelUniquePtr> create(const std::string& topic, const Context& context = Context()) {
+    return Point3Channel(ChannelUniquePtr(channel, foxglove_channel_free));
+}
+
+FoxgloveError Point3Channel::log(const Point3& msg, std::optional<uint64_t> log_time) {
+    return FoxgloveError(foxglove_channel_log_point3(impl_.get(), reinterpret_cast<const foxglove_point3*>(&msg), log_time ? &*log_time : nullptr));
+}
+FoxgloveResult<PointCloudChannel> PointCloudChannel::create(const std::string_view& topic, const Context& context) {
     const foxglove_channel* channel = nullptr;
     foxglove_error error = foxglove_channel_create_point_cloud({topic.data(), topic.size()}, context.getInner(), &channel);
     if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
       return foxglove::unexpected(FoxgloveError(error));
     }
-    return ChannelUniquePtr(channel, foxglove_channel_free);
-  }
-};
-template<>
-struct BuiltinSchema<PointsAnnotation> : std::true_type {
-  inline FoxgloveError logTo(foxglove_channel * const channel, const PointsAnnotation& msg, std::optional<uint64_t> log_time = std::nullopt) {
+    return PointCloudChannel(ChannelUniquePtr(channel, foxglove_channel_free));
+}
+
+FoxgloveError PointCloudChannel::log(const PointCloud& msg, std::optional<uint64_t> log_time) {
     Arena arena;
-    foxglove_points_annotation c_msg;
-    pointsAnnotationToC(c_msg, msg, arena);
-    return FoxgloveError(foxglove_channel_log_points_annotation(channel, &c_msg, log_time ? &*log_time : nullptr));
-  }
-  inline FoxgloveResult<ChannelUniquePtr> create(const std::string& topic, const Context& context = Context()) {
+    foxglove_point_cloud c_msg;
+    pointCloudToC(c_msg, msg, arena);
+    return FoxgloveError(foxglove_channel_log_point_cloud(impl_.get(), &c_msg, log_time ? &*log_time : nullptr));
+}
+FoxgloveResult<PointsAnnotationChannel> PointsAnnotationChannel::create(const std::string_view& topic, const Context& context) {
     const foxglove_channel* channel = nullptr;
     foxglove_error error = foxglove_channel_create_points_annotation({topic.data(), topic.size()}, context.getInner(), &channel);
     if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
       return foxglove::unexpected(FoxgloveError(error));
     }
-    return ChannelUniquePtr(channel, foxglove_channel_free);
-  }
-};
-template<>
-struct BuiltinSchema<Pose> : std::true_type {
-  inline FoxgloveError logTo(foxglove_channel * const channel, const Pose& msg, std::optional<uint64_t> log_time = std::nullopt) {
+    return PointsAnnotationChannel(ChannelUniquePtr(channel, foxglove_channel_free));
+}
+
+FoxgloveError PointsAnnotationChannel::log(const PointsAnnotation& msg, std::optional<uint64_t> log_time) {
     Arena arena;
-    foxglove_pose c_msg;
-    poseToC(c_msg, msg, arena);
-    return FoxgloveError(foxglove_channel_log_pose(channel, &c_msg, log_time ? &*log_time : nullptr));
-  }
-  inline FoxgloveResult<ChannelUniquePtr> create(const std::string& topic, const Context& context = Context()) {
+    foxglove_points_annotation c_msg;
+    pointsAnnotationToC(c_msg, msg, arena);
+    return FoxgloveError(foxglove_channel_log_points_annotation(impl_.get(), &c_msg, log_time ? &*log_time : nullptr));
+}
+FoxgloveResult<PoseChannel> PoseChannel::create(const std::string_view& topic, const Context& context) {
     const foxglove_channel* channel = nullptr;
     foxglove_error error = foxglove_channel_create_pose({topic.data(), topic.size()}, context.getInner(), &channel);
     if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
       return foxglove::unexpected(FoxgloveError(error));
     }
-    return ChannelUniquePtr(channel, foxglove_channel_free);
-  }
-};
-template<>
-struct BuiltinSchema<PoseInFrame> : std::true_type {
-  inline FoxgloveError logTo(foxglove_channel * const channel, const PoseInFrame& msg, std::optional<uint64_t> log_time = std::nullopt) {
+    return PoseChannel(ChannelUniquePtr(channel, foxglove_channel_free));
+}
+
+FoxgloveError PoseChannel::log(const Pose& msg, std::optional<uint64_t> log_time) {
     Arena arena;
-    foxglove_pose_in_frame c_msg;
-    poseInFrameToC(c_msg, msg, arena);
-    return FoxgloveError(foxglove_channel_log_pose_in_frame(channel, &c_msg, log_time ? &*log_time : nullptr));
-  }
-  inline FoxgloveResult<ChannelUniquePtr> create(const std::string& topic, const Context& context = Context()) {
+    foxglove_pose c_msg;
+    poseToC(c_msg, msg, arena);
+    return FoxgloveError(foxglove_channel_log_pose(impl_.get(), &c_msg, log_time ? &*log_time : nullptr));
+}
+FoxgloveResult<PoseInFrameChannel> PoseInFrameChannel::create(const std::string_view& topic, const Context& context) {
     const foxglove_channel* channel = nullptr;
     foxglove_error error = foxglove_channel_create_pose_in_frame({topic.data(), topic.size()}, context.getInner(), &channel);
     if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
       return foxglove::unexpected(FoxgloveError(error));
     }
-    return ChannelUniquePtr(channel, foxglove_channel_free);
-  }
-};
-template<>
-struct BuiltinSchema<PosesInFrame> : std::true_type {
-  inline FoxgloveError logTo(foxglove_channel * const channel, const PosesInFrame& msg, std::optional<uint64_t> log_time = std::nullopt) {
+    return PoseInFrameChannel(ChannelUniquePtr(channel, foxglove_channel_free));
+}
+
+FoxgloveError PoseInFrameChannel::log(const PoseInFrame& msg, std::optional<uint64_t> log_time) {
     Arena arena;
-    foxglove_poses_in_frame c_msg;
-    posesInFrameToC(c_msg, msg, arena);
-    return FoxgloveError(foxglove_channel_log_poses_in_frame(channel, &c_msg, log_time ? &*log_time : nullptr));
-  }
-  inline FoxgloveResult<ChannelUniquePtr> create(const std::string& topic, const Context& context = Context()) {
+    foxglove_pose_in_frame c_msg;
+    poseInFrameToC(c_msg, msg, arena);
+    return FoxgloveError(foxglove_channel_log_pose_in_frame(impl_.get(), &c_msg, log_time ? &*log_time : nullptr));
+}
+FoxgloveResult<PosesInFrameChannel> PosesInFrameChannel::create(const std::string_view& topic, const Context& context) {
     const foxglove_channel* channel = nullptr;
     foxglove_error error = foxglove_channel_create_poses_in_frame({topic.data(), topic.size()}, context.getInner(), &channel);
     if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
       return foxglove::unexpected(FoxgloveError(error));
     }
-    return ChannelUniquePtr(channel, foxglove_channel_free);
-  }
-};
-template<>
-struct BuiltinSchema<Quaternion> : std::true_type {
-  inline FoxgloveError logTo(foxglove_channel * const channel, const Quaternion& msg, std::optional<uint64_t> log_time = std::nullopt) {
-    return FoxgloveError(foxglove_channel_log_quaternion(channel, reinterpret_cast<const foxglove_quaternion*>(&msg), log_time ? &*log_time : nullptr));
-  }
-  inline FoxgloveResult<ChannelUniquePtr> create(const std::string& topic, const Context& context = Context()) {
+    return PosesInFrameChannel(ChannelUniquePtr(channel, foxglove_channel_free));
+}
+
+FoxgloveError PosesInFrameChannel::log(const PosesInFrame& msg, std::optional<uint64_t> log_time) {
+    Arena arena;
+    foxglove_poses_in_frame c_msg;
+    posesInFrameToC(c_msg, msg, arena);
+    return FoxgloveError(foxglove_channel_log_poses_in_frame(impl_.get(), &c_msg, log_time ? &*log_time : nullptr));
+}
+FoxgloveResult<QuaternionChannel> QuaternionChannel::create(const std::string_view& topic, const Context& context) {
     const foxglove_channel* channel = nullptr;
     foxglove_error error = foxglove_channel_create_quaternion({topic.data(), topic.size()}, context.getInner(), &channel);
     if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
       return foxglove::unexpected(FoxgloveError(error));
     }
-    return ChannelUniquePtr(channel, foxglove_channel_free);
-  }
-};
-template<>
-struct BuiltinSchema<RawAudio> : std::true_type {
-  inline FoxgloveError logTo(foxglove_channel * const channel, const RawAudio& msg, std::optional<uint64_t> log_time = std::nullopt) {
-    Arena arena;
-    foxglove_raw_audio c_msg;
-    rawAudioToC(c_msg, msg, arena);
-    return FoxgloveError(foxglove_channel_log_raw_audio(channel, &c_msg, log_time ? &*log_time : nullptr));
-  }
-  inline FoxgloveResult<ChannelUniquePtr> create(const std::string& topic, const Context& context = Context()) {
+    return QuaternionChannel(ChannelUniquePtr(channel, foxglove_channel_free));
+}
+
+FoxgloveError QuaternionChannel::log(const Quaternion& msg, std::optional<uint64_t> log_time) {
+    return FoxgloveError(foxglove_channel_log_quaternion(impl_.get(), reinterpret_cast<const foxglove_quaternion*>(&msg), log_time ? &*log_time : nullptr));
+}
+FoxgloveResult<RawAudioChannel> RawAudioChannel::create(const std::string_view& topic, const Context& context) {
     const foxglove_channel* channel = nullptr;
     foxglove_error error = foxglove_channel_create_raw_audio({topic.data(), topic.size()}, context.getInner(), &channel);
     if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
       return foxglove::unexpected(FoxgloveError(error));
     }
-    return ChannelUniquePtr(channel, foxglove_channel_free);
-  }
-};
-template<>
-struct BuiltinSchema<RawImage> : std::true_type {
-  inline FoxgloveError logTo(foxglove_channel * const channel, const RawImage& msg, std::optional<uint64_t> log_time = std::nullopt) {
+    return RawAudioChannel(ChannelUniquePtr(channel, foxglove_channel_free));
+}
+
+FoxgloveError RawAudioChannel::log(const RawAudio& msg, std::optional<uint64_t> log_time) {
     Arena arena;
-    foxglove_raw_image c_msg;
-    rawImageToC(c_msg, msg, arena);
-    return FoxgloveError(foxglove_channel_log_raw_image(channel, &c_msg, log_time ? &*log_time : nullptr));
-  }
-  inline FoxgloveResult<ChannelUniquePtr> create(const std::string& topic, const Context& context = Context()) {
+    foxglove_raw_audio c_msg;
+    rawAudioToC(c_msg, msg, arena);
+    return FoxgloveError(foxglove_channel_log_raw_audio(impl_.get(), &c_msg, log_time ? &*log_time : nullptr));
+}
+FoxgloveResult<RawImageChannel> RawImageChannel::create(const std::string_view& topic, const Context& context) {
     const foxglove_channel* channel = nullptr;
     foxglove_error error = foxglove_channel_create_raw_image({topic.data(), topic.size()}, context.getInner(), &channel);
     if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
       return foxglove::unexpected(FoxgloveError(error));
     }
-    return ChannelUniquePtr(channel, foxglove_channel_free);
-  }
-};
-template<>
-struct BuiltinSchema<SceneEntity> : std::true_type {
-  inline FoxgloveError logTo(foxglove_channel * const channel, const SceneEntity& msg, std::optional<uint64_t> log_time = std::nullopt) {
+    return RawImageChannel(ChannelUniquePtr(channel, foxglove_channel_free));
+}
+
+FoxgloveError RawImageChannel::log(const RawImage& msg, std::optional<uint64_t> log_time) {
     Arena arena;
-    foxglove_scene_entity c_msg;
-    sceneEntityToC(c_msg, msg, arena);
-    return FoxgloveError(foxglove_channel_log_scene_entity(channel, &c_msg, log_time ? &*log_time : nullptr));
-  }
-  inline FoxgloveResult<ChannelUniquePtr> create(const std::string& topic, const Context& context = Context()) {
+    foxglove_raw_image c_msg;
+    rawImageToC(c_msg, msg, arena);
+    return FoxgloveError(foxglove_channel_log_raw_image(impl_.get(), &c_msg, log_time ? &*log_time : nullptr));
+}
+FoxgloveResult<SceneEntityChannel> SceneEntityChannel::create(const std::string_view& topic, const Context& context) {
     const foxglove_channel* channel = nullptr;
     foxglove_error error = foxglove_channel_create_scene_entity({topic.data(), topic.size()}, context.getInner(), &channel);
     if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
       return foxglove::unexpected(FoxgloveError(error));
     }
-    return ChannelUniquePtr(channel, foxglove_channel_free);
-  }
-};
-template<>
-struct BuiltinSchema<SceneEntityDeletion> : std::true_type {
-  inline FoxgloveError logTo(foxglove_channel * const channel, const SceneEntityDeletion& msg, std::optional<uint64_t> log_time = std::nullopt) {
+    return SceneEntityChannel(ChannelUniquePtr(channel, foxglove_channel_free));
+}
+
+FoxgloveError SceneEntityChannel::log(const SceneEntity& msg, std::optional<uint64_t> log_time) {
     Arena arena;
-    foxglove_scene_entity_deletion c_msg;
-    sceneEntityDeletionToC(c_msg, msg, arena);
-    return FoxgloveError(foxglove_channel_log_scene_entity_deletion(channel, &c_msg, log_time ? &*log_time : nullptr));
-  }
-  inline FoxgloveResult<ChannelUniquePtr> create(const std::string& topic, const Context& context = Context()) {
+    foxglove_scene_entity c_msg;
+    sceneEntityToC(c_msg, msg, arena);
+    return FoxgloveError(foxglove_channel_log_scene_entity(impl_.get(), &c_msg, log_time ? &*log_time : nullptr));
+}
+FoxgloveResult<SceneEntityDeletionChannel> SceneEntityDeletionChannel::create(const std::string_view& topic, const Context& context) {
     const foxglove_channel* channel = nullptr;
     foxglove_error error = foxglove_channel_create_scene_entity_deletion({topic.data(), topic.size()}, context.getInner(), &channel);
     if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
       return foxglove::unexpected(FoxgloveError(error));
     }
-    return ChannelUniquePtr(channel, foxglove_channel_free);
-  }
-};
-template<>
-struct BuiltinSchema<SceneUpdate> : std::true_type {
-  inline FoxgloveError logTo(foxglove_channel * const channel, const SceneUpdate& msg, std::optional<uint64_t> log_time = std::nullopt) {
+    return SceneEntityDeletionChannel(ChannelUniquePtr(channel, foxglove_channel_free));
+}
+
+FoxgloveError SceneEntityDeletionChannel::log(const SceneEntityDeletion& msg, std::optional<uint64_t> log_time) {
     Arena arena;
-    foxglove_scene_update c_msg;
-    sceneUpdateToC(c_msg, msg, arena);
-    return FoxgloveError(foxglove_channel_log_scene_update(channel, &c_msg, log_time ? &*log_time : nullptr));
-  }
-  inline FoxgloveResult<ChannelUniquePtr> create(const std::string& topic, const Context& context = Context()) {
+    foxglove_scene_entity_deletion c_msg;
+    sceneEntityDeletionToC(c_msg, msg, arena);
+    return FoxgloveError(foxglove_channel_log_scene_entity_deletion(impl_.get(), &c_msg, log_time ? &*log_time : nullptr));
+}
+FoxgloveResult<SceneUpdateChannel> SceneUpdateChannel::create(const std::string_view& topic, const Context& context) {
     const foxglove_channel* channel = nullptr;
     foxglove_error error = foxglove_channel_create_scene_update({topic.data(), topic.size()}, context.getInner(), &channel);
     if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
       return foxglove::unexpected(FoxgloveError(error));
     }
-    return ChannelUniquePtr(channel, foxglove_channel_free);
-  }
-};
-template<>
-struct BuiltinSchema<TextAnnotation> : std::true_type {
-  inline FoxgloveError logTo(foxglove_channel * const channel, const TextAnnotation& msg, std::optional<uint64_t> log_time = std::nullopt) {
+    return SceneUpdateChannel(ChannelUniquePtr(channel, foxglove_channel_free));
+}
+
+FoxgloveError SceneUpdateChannel::log(const SceneUpdate& msg, std::optional<uint64_t> log_time) {
     Arena arena;
-    foxglove_text_annotation c_msg;
-    textAnnotationToC(c_msg, msg, arena);
-    return FoxgloveError(foxglove_channel_log_text_annotation(channel, &c_msg, log_time ? &*log_time : nullptr));
-  }
-  inline FoxgloveResult<ChannelUniquePtr> create(const std::string& topic, const Context& context = Context()) {
+    foxglove_scene_update c_msg;
+    sceneUpdateToC(c_msg, msg, arena);
+    return FoxgloveError(foxglove_channel_log_scene_update(impl_.get(), &c_msg, log_time ? &*log_time : nullptr));
+}
+FoxgloveResult<TextAnnotationChannel> TextAnnotationChannel::create(const std::string_view& topic, const Context& context) {
     const foxglove_channel* channel = nullptr;
     foxglove_error error = foxglove_channel_create_text_annotation({topic.data(), topic.size()}, context.getInner(), &channel);
     if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
       return foxglove::unexpected(FoxgloveError(error));
     }
-    return ChannelUniquePtr(channel, foxglove_channel_free);
-  }
-};
-template<>
-struct BuiltinSchema<Vector2> : std::true_type {
-  inline FoxgloveError logTo(foxglove_channel * const channel, const Vector2& msg, std::optional<uint64_t> log_time = std::nullopt) {
-    return FoxgloveError(foxglove_channel_log_vector2(channel, reinterpret_cast<const foxglove_vector2*>(&msg), log_time ? &*log_time : nullptr));
-  }
-  inline FoxgloveResult<ChannelUniquePtr> create(const std::string& topic, const Context& context = Context()) {
+    return TextAnnotationChannel(ChannelUniquePtr(channel, foxglove_channel_free));
+}
+
+FoxgloveError TextAnnotationChannel::log(const TextAnnotation& msg, std::optional<uint64_t> log_time) {
+    Arena arena;
+    foxglove_text_annotation c_msg;
+    textAnnotationToC(c_msg, msg, arena);
+    return FoxgloveError(foxglove_channel_log_text_annotation(impl_.get(), &c_msg, log_time ? &*log_time : nullptr));
+}
+FoxgloveResult<Vector2Channel> Vector2Channel::create(const std::string_view& topic, const Context& context) {
     const foxglove_channel* channel = nullptr;
     foxglove_error error = foxglove_channel_create_vector2({topic.data(), topic.size()}, context.getInner(), &channel);
     if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
       return foxglove::unexpected(FoxgloveError(error));
     }
-    return ChannelUniquePtr(channel, foxglove_channel_free);
-  }
-};
-template<>
-struct BuiltinSchema<Vector3> : std::true_type {
-  inline FoxgloveError logTo(foxglove_channel * const channel, const Vector3& msg, std::optional<uint64_t> log_time = std::nullopt) {
-    return FoxgloveError(foxglove_channel_log_vector3(channel, reinterpret_cast<const foxglove_vector3*>(&msg), log_time ? &*log_time : nullptr));
-  }
-  inline FoxgloveResult<ChannelUniquePtr> create(const std::string& topic, const Context& context = Context()) {
+    return Vector2Channel(ChannelUniquePtr(channel, foxglove_channel_free));
+}
+
+FoxgloveError Vector2Channel::log(const Vector2& msg, std::optional<uint64_t> log_time) {
+    return FoxgloveError(foxglove_channel_log_vector2(impl_.get(), reinterpret_cast<const foxglove_vector2*>(&msg), log_time ? &*log_time : nullptr));
+}
+FoxgloveResult<Vector3Channel> Vector3Channel::create(const std::string_view& topic, const Context& context) {
     const foxglove_channel* channel = nullptr;
     foxglove_error error = foxglove_channel_create_vector3({topic.data(), topic.size()}, context.getInner(), &channel);
     if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
       return foxglove::unexpected(FoxgloveError(error));
     }
-    return ChannelUniquePtr(channel, foxglove_channel_free);
-  }
-};
+    return Vector3Channel(ChannelUniquePtr(channel, foxglove_channel_free));
+}
+
+FoxgloveError Vector3Channel::log(const Vector3& msg, std::optional<uint64_t> log_time) {
+    return FoxgloveError(foxglove_channel_log_vector3(impl_.get(), reinterpret_cast<const foxglove_vector3*>(&msg), log_time ? &*log_time : nullptr));
+}
 
 void arrowPrimitiveToC(foxglove_arrow_primitive& dest, const ArrowPrimitive& src, Arena& arena) {
     dest.pose = src.pose ? arena.map_one<foxglove_pose>(src.pose.value(), poseToC) : nullptr;

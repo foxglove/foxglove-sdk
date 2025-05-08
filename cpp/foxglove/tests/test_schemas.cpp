@@ -12,11 +12,11 @@ using Catch::Matchers::Equals;
 using namespace foxglove;
 using namespace foxglove::schemas;
 
-namespace foxglove::internal {
+namespace foxglove::schemas {
 void triangleListPrimitiveToC(
   foxglove_triangle_list_primitive& dest, const TriangleListPrimitive& src, Arena& arena
 );
-}  // namespace foxglove::internal
+}  // namespace foxglove::schemas
 
 TEST_CASE("triangle list primitive to c") {
   Arena arena;
@@ -46,7 +46,7 @@ TEST_CASE("triangle list primitive to c") {
   src.indices.push_back(1);
   src.indices.push_back(2);
 
-  foxglove::internal::triangleListPrimitiveToC(dest, src, arena);
+  foxglove::schemas::triangleListPrimitiveToC(dest, src, arena);
 
   // Verify the conversion worked
   REQUIRE(dest.pose != nullptr);

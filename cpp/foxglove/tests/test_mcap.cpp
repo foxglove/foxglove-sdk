@@ -296,8 +296,7 @@ TEST_CASE("ImageAnnotations channel") {
   auto writer = foxglove::McapWriter::create(options);
   REQUIRE(writer.has_value());
 
-  auto channel_result =
-    foxglove::Channel<foxglove::schemas::ImageAnnotations>::create("example", context);
+  auto channel_result = foxglove::schemas::ImageAnnotationsChannel::create("example", context);
   REQUIRE(channel_result.has_value());
   auto channel = std::move(channel_result.value());
 

@@ -65,6 +65,10 @@ function isSameAsCType(schema: FoxgloveMessageSchema): boolean {
   );
 }
 
+function hasChannelType(schema: FoxgloveMessageSchema): boolean {
+  return !schema.name.endsWith("Primitive") && schema.name !== "Color";
+}
+
 /**
  * Yield `schemas` in an order such that dependencies come before dependents, so structs don't end
  * up referencing [incomplete types](https://en.cppreference.com/w/cpp/language/incomplete_type).
@@ -163,9 +167,25 @@ export function generateHppSchemas(
     ].join("\n");
   });
 
-  const traitSpecializations = schemas
-    .filter((schema) => !schema.name.endsWith("Primitive"))
-    .map((schema) => `template<>\nstruct BuiltinSchema<foxglove::schemas::${schema.name}>;`);
+  const channelClasses = schemas.filter(hasChannelType).map(
+    (schema) => `class ${schema.name}Channel {
+      public:
+        static FoxgloveResult<${schema.name}Channel> create(const std::string_view& topic, const Context& context = Context());
+
+        FoxgloveError log(const ${schema.name}& value, std::optional<uint64_t> log_time = std::nullopt);
+
+        ${schema.name}Channel(const ${schema.name}Channel& other) noexcept = delete;
+        ${schema.name}Channel& operator=(const ${schema.name}Channel& other) noexcept = delete;
+        ${schema.name}Channel(${schema.name}Channel&& other) noexcept = default;
+        ~${schema.name}Channel() = default;
+
+      private:
+        explicit ${schema.name}Channel(ChannelUniquePtr&& channel)
+            : impl_(std::move(channel)) {}
+
+        ChannelUniquePtr impl_;
+    };`,
+  );
 
   const includes = [
     "#include <array>",
@@ -178,6 +198,7 @@ export function generateHppSchemas(
     "",
     "#include <foxglove/time.hpp>",
     "#include <foxglove/error.hpp>",
+    "#include <foxglove/context.hpp>",
   ];
 
   const outputSections = [
@@ -194,14 +215,9 @@ export function generateHppSchemas(
 
     structDefs.join("\n\n"),
 
+    channelClasses.join("\n\n"),
+
     "} // namespace foxglove::schemas",
-
-    "namespace foxglove::internal {",
-
-    "template<class T>\nstruct BuiltinSchema : std::false_type {};",
-    traitSpecializations.join("\n"),
-
-    "} // namespace foxglove::internal",
   ].filter(Boolean);
 
   return outputSections.join("\n\n") + "\n";
@@ -276,7 +292,7 @@ export function generateCppSchemas(schemas: FoxgloveMessageSchema[]): string {
   });
 
   const traitSpecializations = schemas.flatMap((schema) => {
-    if (schema.name.endsWith("Primitive")) {
+    if (!hasChannelType(schema)) {
       return [];
     }
 
@@ -284,32 +300,30 @@ export function generateCppSchemas(schemas: FoxgloveMessageSchema[]): string {
     let conversionCode;
     if (isSameAsCType(schema)) {
       conversionCode = [
-        `    return FoxgloveError(foxglove_channel_log_${snakeName}(channel, reinterpret_cast<const foxglove_${snakeName}*>(&msg), log_time ? &*log_time : nullptr));`,
+        `    return FoxgloveError(foxglove_channel_log_${snakeName}(impl_.get(), reinterpret_cast<const foxglove_${snakeName}*>(&msg), log_time ? &*log_time : nullptr));`,
       ];
     } else {
       conversionCode = [
         "    Arena arena;",
         `    foxglove_${snakeName} c_msg;`,
         `    ${toCamelCase(schema.name)}ToC(c_msg, msg, arena);`,
-        `    return FoxgloveError(foxglove_channel_log_${snakeName}(channel, &c_msg, log_time ? &*log_time : nullptr));`,
+        `    return FoxgloveError(foxglove_channel_log_${snakeName}(impl_.get(), &c_msg, log_time ? &*log_time : nullptr));`,
       ];
     }
 
     return [
-      "template<>",
-      `struct BuiltinSchema<${schema.name}> : std::true_type {`,
-      `  inline FoxgloveError logTo(foxglove_channel * const channel, const ${schema.name}& msg, std::optional<uint64_t> log_time = std::nullopt) {`,
-      ...conversionCode,
-      "  }",
-      "  inline FoxgloveResult<ChannelUniquePtr> create(const std::string& topic, const Context& context = Context()) {",
+      `FoxgloveResult<${schema.name}Channel> ${schema.name}Channel::create(const std::string_view& topic, const Context& context) {`,
       "    const foxglove_channel* channel = nullptr;",
       `    foxglove_error error = foxglove_channel_create_${snakeName}({topic.data(), topic.size()}, context.getInner(), &channel);`,
       "    if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {",
       "      return foxglove::unexpected(FoxgloveError(error));",
       "    }",
-      "    return ChannelUniquePtr(channel, foxglove_channel_free);",
-      "  }",
-      "};",
+      `    return ${schema.name}Channel(ChannelUniquePtr(channel, foxglove_channel_free));`,
+      "}",
+      "",
+      `FoxgloveError ${schema.name}Channel::log(const ${schema.name}& msg, std::optional<uint64_t> log_time) {`,
+      ...conversionCode,
+      "}",
     ];
   });
 
@@ -333,8 +347,6 @@ export function generateCppSchemas(schemas: FoxgloveMessageSchema[]): string {
     "#include <foxglove/context.hpp>",
   ];
 
-  const usings = ["using namespace foxglove;", "using namespace foxglove::schemas;"];
-
   const outputSections = [
     "// Generated by https://github.com/foxglove/foxglove-sdk",
 
@@ -344,9 +356,7 @@ export function generateCppSchemas(schemas: FoxgloveMessageSchema[]): string {
 
     systemIncludes.join("\n"),
 
-    "namespace foxglove::internal {",
-
-    usings.join("\n"),
+    "namespace foxglove::schemas {",
 
     conversionFuncDecls.join("\n"),
 
