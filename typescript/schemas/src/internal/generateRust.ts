@@ -160,29 +160,29 @@ impl BorrowToNative for ${name} {
   unsafe fn borrow_to_native(&self, #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
     ${fields
       .flatMap((field) => {
-        const name = escapeId(toSnakeCase(field.name));
+        const fieldName = escapeId(toSnakeCase(field.name));
         if (
           field.array != undefined &&
           typeof field.array !== "number" &&
           field.type.type === "nested"
         ) {
           return [
-            `let ${name} = unsafe { arena.as_mut().map(self.${name}, self.${name}_count)? };`,
+            `let ${fieldName} = unsafe { arena.as_mut().map(self.${fieldName}, self.${fieldName}_count)? };`,
           ];
         }
         switch (field.type.type) {
           case "primitive":
             if (field.type.name === "string") {
               return [
-                `let ${name} = unsafe { string_from_raw(self.${name}.as_ptr() as *const _, self.${name}.len(), "${field.name}")? };`,
+                `let ${fieldName} = unsafe { string_from_raw(self.${fieldName}.as_ptr() as *const _, self.${fieldName}.len(), "${field.name}")? };`,
               ];
             }
             return [];
           case "nested":
             return [
-              `let ${name} = unsafe { self.${name}.as_ref().map(|m| m.borrow_to_native(arena.as_mut())) }.transpose()?;`,
+              `let ${fieldName} = unsafe { self.${fieldName}.as_ref().map(|m| m.borrow_to_native(arena.as_mut())) }.transpose()?;`,
             ];
-          default:
+          case "enum":
             return [];
         }
       })
@@ -191,17 +191,17 @@ impl BorrowToNative for ${name} {
     Ok(ManuallyDrop::new(foxglove::schemas::${name} {
     ${fields
       .map((field) => {
-        const name = escapeId(toSnakeCase(field.name));
+        const fieldName = escapeId(toSnakeCase(field.name));
         if (field.array != undefined) {
           if (typeof field.array === "number") {
             assert(field.type.type === "primitive", `unsupported array type: ${field.type.type}`);
-            return `${name}: ManuallyDrop::into_inner(unsafe { vec_from_raw(self.${name}.as_ptr() as *mut ${primitiveToRust(field.type.name)}, self.${name}.len()) })`;
+            return `${fieldName}: ManuallyDrop::into_inner(unsafe { vec_from_raw(self.${fieldName}.as_ptr() as *mut ${primitiveToRust(field.type.name)}, self.${fieldName}.len()) })`;
           } else {
             if (field.type.type === "nested") {
-              return `${name}: ManuallyDrop::into_inner(${name})`;
+              return `${fieldName}: ManuallyDrop::into_inner(${fieldName})`;
             } else if (field.type.type === "primitive") {
               assert(field.type.name !== "bytes");
-              return `${name}: ManuallyDrop::into_inner(unsafe { vec_from_raw(self.${name} as *mut ${primitiveToRust(field.type.name)}, self.${name}_count) })`;
+              return `${fieldName}: ManuallyDrop::into_inner(unsafe { vec_from_raw(self.${fieldName} as *mut ${primitiveToRust(field.type.name)}, self.${fieldName}_count) })`;
             } else {
               throw Error(`unsupported array type: ${field.type.type}`);
             }
@@ -210,17 +210,17 @@ impl BorrowToNative for ${name} {
         switch (field.type.type) {
           case "primitive":
             if (field.type.name === "string") {
-              return `${name}: ManuallyDrop::into_inner(${name})`;
+              return `${fieldName}: ManuallyDrop::into_inner(${fieldName})`;
             } else if (field.type.name === "bytes") {
-              return `${name}: ManuallyDrop::into_inner(unsafe { bytes_from_raw(self.${name}, self.${name}_len) })`;
+              return `${fieldName}: ManuallyDrop::into_inner(unsafe { bytes_from_raw(self.${fieldName}, self.${fieldName}_len) })`;
             } else if (field.type.name === "time" || field.type.name === "duration") {
-              return `${name}: unsafe { self.${name}.as_ref() }.map(|&m| m.into())`;
+              return `${fieldName}: unsafe { self.${fieldName}.as_ref() }.map(|&m| m.into())`;
             }
-            return `${name}: self.${name}`;
+            return `${fieldName}: self.${fieldName}`;
           case "enum":
-            return `${name}: self.${name} as i32`;
+            return `${fieldName}: self.${fieldName} as i32`;
           case "nested":
-            return `${name}: ${name}.map(ManuallyDrop::into_inner)`;
+            return `${fieldName}: ${fieldName}.map(ManuallyDrop::into_inner)`;
         }
       })
       .join(",\n        ")}

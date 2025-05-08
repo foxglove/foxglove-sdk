@@ -145,11 +145,10 @@ export function generateHppSchemas(
               fieldType = field.type.schema.name;
               break;
             case "primitive": {
-              const defaultValue =
+              defaultStr =
                 field.array != undefined
-                  ? undefined
-                  : (field.defaultValue ?? primitiveDefaultValue(field.type.name));
-              defaultStr = defaultValue != undefined ? ` = ${defaultValue}` : "";
+                  ? ` = ${field.defaultValue ?? primitiveDefaultValue(field.type.name)}`
+                  : "";
               fieldType = primitiveToCpp(field.type.name);
               break;
             }
