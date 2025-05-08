@@ -205,3 +205,112 @@ TEST_CASE("ParameterArray functionality") {
   REQUIRE(parameters[1].get<double>() == 2.0);
   REQUIRE(parameters[2].get<double>() == 3.0);
 }
+
+TEST_CASE("Parameter error cases") {
+  SECTION("invalid type conversions") {
+    foxglove::Parameter param("test_param", 42.0);
+    REQUIRE_THROWS_AS(param.get<bool>(), std::bad_variant_access);
+    REQUIRE_THROWS_AS(param.get<std::string>(), std::bad_variant_access);
+    REQUIRE_THROWS_AS(param.get<std::vector<double>>(), std::bad_variant_access);
+  }
+
+  SECTION("accessing unset values") {
+    foxglove::Parameter param("test_param");
+    REQUIRE_THROWS_AS(param.get<double>(), std::bad_optional_access);
+    REQUIRE_THROWS_AS(param.get<bool>(), std::bad_optional_access);
+    REQUIRE_THROWS_AS(param.get<std::string>(), std::bad_optional_access);
+  }
+
+  SECTION("invalid byte array decoding") {
+    foxglove::Parameter param(
+      "test_param",
+      foxglove::ParameterType::ByteArray,
+      std::move(foxglove::ParameterValue("invalid-base64!"))
+    );
+    auto result = param.getByteArray();
+    REQUIRE(!result.has_value());
+    REQUIRE(result.error() == foxglove::FoxgloveError::Base64DecodeError);
+  }
+}
+
+TEST_CASE("Empty collections") {
+  SECTION("empty parameter array") {
+    std::vector<foxglove::Parameter> params;
+    foxglove::ParameterArray array(std::move(params));
+    auto parameters = array.parameters();
+    REQUIRE(parameters.empty());
+  }
+
+  SECTION("empty array value") {
+    std::vector<foxglove::ParameterValue> values;
+    foxglove::ParameterValue value(std::move(values));
+    REQUIRE(value.is<foxglove::ParameterValueView::Array>());
+    const auto& array = value.get<foxglove::ParameterValueView::Array>();
+    REQUIRE(array.empty());
+  }
+
+  SECTION("empty dictionary value") {
+    std::map<std::string, foxglove::ParameterValue> values;
+    foxglove::ParameterValue value(std::move(values));
+    REQUIRE(value.is<foxglove::ParameterValueView::Dict>());
+    const auto& dict = value.get<foxglove::ParameterValueView::Dict>();
+    REQUIRE(dict.empty());
+  }
+}
+
+TEST_CASE("Parameter cloning") {
+  SECTION("clone simple parameter") {
+    foxglove::Parameter original("test_param", 42.0);
+    auto clone = original.clone();
+    REQUIRE(clone.name() == original.name());
+    REQUIRE(clone.type() == original.type());
+    REQUIRE(clone.get<double>() == original.get<double>());
+  }
+
+  SECTION("clone complex parameter") {
+    std::vector<foxglove::ParameterValue> array_values;
+    array_values.emplace_back(1.0);
+    array_values.emplace_back(2.0);
+
+    std::map<std::string, foxglove::ParameterValue> dict_values;
+    dict_values.insert(std::make_pair("nested", foxglove::ParameterValue(std::move(array_values))));
+
+    foxglove::Parameter original("test_param", std::move(dict_values));
+    auto clone = original.clone();
+
+    REQUIRE(clone.name() == original.name());
+    REQUIRE(clone.type() == original.type());
+
+    const auto& original_dict = original.get<foxglove::ParameterValueView::Dict>();
+    const auto& clone_dict = clone.get<foxglove::ParameterValueView::Dict>();
+
+    REQUIRE(original_dict.size() == clone_dict.size());
+    REQUIRE(original_dict.at("nested").is<foxglove::ParameterValueView::Array>());
+    REQUIRE(clone_dict.at("nested").is<foxglove::ParameterValueView::Array>());
+
+    const auto& original_array =
+      original_dict.at("nested").get<foxglove::ParameterValueView::Array>();
+    const auto& clone_array = clone_dict.at("nested").get<foxglove::ParameterValueView::Array>();
+
+    REQUIRE(original_array.size() == clone_array.size());
+    REQUIRE(original_array[0].get<double>() == clone_array[0].get<double>());
+    REQUIRE(original_array[1].get<double>() == clone_array[1].get<double>());
+  }
+
+  SECTION("clone parameter value") {
+    std::vector<foxglove::ParameterValue> values;
+    values.emplace_back(1.0);
+    values.emplace_back(2.0);
+    foxglove::ParameterValue original(std::move(values));
+
+    auto clone = original.clone();
+    REQUIRE(clone.is<foxglove::ParameterValueView::Array>());
+
+    const auto& original_array = original.get<foxglove::ParameterValueView::Array>();
+    const auto& clone_array = clone.get<foxglove::ParameterValueView::Array>();
+
+    REQUIRE(original_array.size() == clone_array.size());
+    REQUIRE(original_array[0].get<double>() == clone_array[0].get<double>());
+    REQUIRE(original_array[1].get<double>() == clone_array[1].get<double>());
+  }
+}
