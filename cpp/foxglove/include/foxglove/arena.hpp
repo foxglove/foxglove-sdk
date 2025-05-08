@@ -34,26 +34,12 @@ public:
     typename = std::enable_if_t<std::is_pod_v<T> && std::is_invocable_v<Fn, T&, const S&, Arena&>>>
   T* map(const std::vector<S>& src, Fn&& map_fn) {
     const size_t elements = src.size();
-    const size_t bytes_needed = elements * sizeof(T);
-
-    // Calculate aligned offset
-    const size_t alignment = alignof(T);
-    const size_t misalignment = _offset % alignment;
-    const size_t alignment_padding = misalignment > 0 ? alignment - misalignment : 0;
-    const size_t aligned_offset = _offset + alignment_padding;
-
-    // Check if we have enough space
-    if (aligned_offset + bytes_needed > Size) {
-      throw std::bad_alloc();
-    }
-
-    // Get pointer to the aligned result array of T
-    T* result = reinterpret_cast<T*>(&_buffer[aligned_offset]);
-    _offset = aligned_offset + bytes_needed;
+    T* result = alloc<T>(elements);
+    T* current = result;
 
     // Convert the elements from S to T, placing them in the result array
     for (auto it = src.begin(); it != src.end(); ++it) {
-      map_fn(*result++, *it, *this);
+      map_fn(*current++, *it, *this);
     }
 
     return result;
@@ -72,22 +58,7 @@ public:
     typename T, typename S, typename Fn,
     typename = std::enable_if_t<std::is_pod_v<T> && std::is_invocable_v<Fn, T&, const S&, Arena&>>>
   T* map_one(const S& src, Fn&& map_fn) {
-    const size_t bytes_needed = sizeof(T);
-
-    // Calculate aligned offset
-    const size_t alignment = alignof(T);
-    const size_t misalignment = _offset % alignment;
-    const size_t alignment_padding = misalignment > 0 ? alignment - misalignment : 0;
-    const size_t aligned_offset = _offset + alignment_padding;
-
-    // Check if we have enough space
-    if (aligned_offset + bytes_needed > Size) {
-      throw std::bad_alloc();
-    }
-
-    // Get pointer to the aligned result array of T
-    T* result = reinterpret_cast<T*>(&_buffer[aligned_offset]);
-    _offset = aligned_offset + bytes_needed;
+    T* result = alloc<T>(1);
     map_fn(*result, src, *this);
     return result;
   }
@@ -108,6 +79,35 @@ public:
 
 private:
   static constexpr std::size_t Size = 512 * 1024;
+
+  /**
+   * Allocates memory for an object of type T from the arena.
+   *
+   * @param elements Number of elements to allocate
+   * @return Pointer to the aligned memory for the requested elements
+   * @throws std::bad_alloc if the arena doesn't have enough space
+   */
+  template<typename T>
+  T* alloc(size_t elements) {
+    const size_t bytes_needed = elements * sizeof(T);
+
+    // Calculate aligned offset
+    const size_t alignment = alignof(T);
+    const size_t misalignment = _offset % alignment;
+    const size_t alignment_padding = misalignment > 0 ? alignment - misalignment : 0;
+    const size_t aligned_offset = _offset + alignment_padding;
+
+    // Check if we have enough space
+    if (aligned_offset + bytes_needed > Size) {
+      throw std::bad_alloc();
+    }
+
+    // Get pointer to the aligned result array of T
+    T* result = reinterpret_cast<T*>(&_buffer[aligned_offset]);
+    _offset = aligned_offset + bytes_needed;
+
+    return result;
+  }
 
   alignas(std::max_align_t) uint8_t _buffer[Size];
   std::size_t _offset;
