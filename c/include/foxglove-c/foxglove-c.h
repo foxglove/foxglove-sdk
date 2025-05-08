@@ -107,7 +107,7 @@ enum foxglove_log_level
 typedef int32_t foxglove_log_level;
 #endif // __cplusplus
 
-enum FoxgloveLoggingLevel
+enum foxglove_logging_level
 #ifdef __cplusplus
   : uint8_t
 #endif // __cplusplus
@@ -119,7 +119,7 @@ enum FoxgloveLoggingLevel
   FOXGLOVE_LOGGING_LEVEL_ERROR = 4,
 };
 #ifndef __cplusplus
-typedef uint8_t FoxgloveLoggingLevel;
+typedef uint8_t foxglove_logging_level;
 #endif // __cplusplus
 
 enum foxglove_mcap_compression
@@ -2366,7 +2366,7 @@ foxglove_error foxglove_connection_graph_set_advertised_service(struct foxglove_
  * Log styles (colors) may be configured with the FOXGLOVE_LOG_STYLE environment variable "never",
  * "always", or "auto" (default).
  */
-void foxglove_set_log_level(FoxgloveLoggingLevel level);
+void foxglove_set_log_level(foxglove_logging_level level);
 
 /**
  * Creates a new parameter array with the specified capacity.

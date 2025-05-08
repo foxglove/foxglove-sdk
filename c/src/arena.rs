@@ -80,7 +80,7 @@ impl Arena {
         // Convert the elements from S to T, placing them in the result array
         for i in 0..len {
             unsafe {
-                let tmp = (&*src.add(i)).borrow_to_native(self.as_mut())?;
+                let tmp = (*src.add(i)).borrow_to_native(self.as_mut())?;
                 *(result.add(i) as *mut _) = tmp;
             }
         }
