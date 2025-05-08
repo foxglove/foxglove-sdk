@@ -25,311 +25,311 @@ struct ChannelDeleter {
 /// @brief A unique pointer to a C foxglove_channel pointer. For internal use only.
 typedef std::unique_ptr<const foxglove_channel, ChannelDeleter> ChannelUniquePtr;
 
-/// A vector in 3D space that represents a direction only
+/// @brief A vector in 3D space that represents a direction only
 struct Vector3 {
-  /// x coordinate length
+  /// @brief x coordinate length
   double x;
 
-  /// y coordinate length
+  /// @brief y coordinate length
   double y;
 
-  /// z coordinate length
+  /// @brief z coordinate length
   double z;
 };
 
-/// A [quaternion](https://eater.net/quaternions) representing a rotation in 3D space
+/// @brief A [quaternion](https://eater.net/quaternions) representing a rotation in 3D space
 struct Quaternion {
-  /// x value
+  /// @brief x value
   double x;
 
-  /// y value
+  /// @brief y value
   double y;
 
-  /// z value
+  /// @brief z value
   double z;
 
-  /// w value
+  /// @brief w value
   double w;
 };
 
-/// A position and orientation for an object or reference frame in 3D space
+/// @brief A position and orientation for an object or reference frame in 3D space
 struct Pose {
-  /// Point denoting position in 3D space
+  /// @brief Point denoting position in 3D space
   std::optional<Vector3> position;
 
-  /// Quaternion denoting orientation in 3D space
+  /// @brief Quaternion denoting orientation in 3D space
   std::optional<Quaternion> orientation;
 };
 
-/// A color in RGBA format
+/// @brief A color in RGBA format
 struct Color {
-  /// Red value between 0 and 1
+  /// @brief Red value between 0 and 1
   double r;
 
-  /// Green value between 0 and 1
+  /// @brief Green value between 0 and 1
   double g;
 
-  /// Blue value between 0 and 1
+  /// @brief Blue value between 0 and 1
   double b;
 
-  /// Alpha value between 0 and 1
+  /// @brief Alpha value between 0 and 1
   double a;
 };
 
-/// A primitive representing an arrow
+/// @brief A primitive representing an arrow
 struct ArrowPrimitive {
-  /// Position of the arrow's tail and orientation of the arrow. Identity orientation means the arrow points in the +x direction.
+  /// @brief Position of the arrow's tail and orientation of the arrow. Identity orientation means the arrow points in the +x direction.
   std::optional<Pose> pose;
 
-  /// Length of the arrow shaft
+  /// @brief Length of the arrow shaft
   double shaft_length;
 
-  /// Diameter of the arrow shaft
+  /// @brief Diameter of the arrow shaft
   double shaft_diameter;
 
-  /// Length of the arrow head
+  /// @brief Length of the arrow head
   double head_length;
 
-  /// Diameter of the arrow head
+  /// @brief Diameter of the arrow head
   double head_diameter;
 
-  /// Color of the arrow
+  /// @brief Color of the arrow
   std::optional<Color> color;
 };
 
-/// Camera calibration parameters
+/// @brief Camera calibration parameters
 struct CameraCalibration {
-  /// Timestamp of calibration data
+  /// @brief Timestamp of calibration data
   std::optional<foxglove::Timestamp> timestamp;
 
-  /// Frame of reference for the camera. The origin of the frame is the optical center of the camera. +x points to the right in the image, +y points down, and +z points into the plane of the image.
+  /// @brief Frame of reference for the camera. The origin of the frame is the optical center of the camera. +x points to the right in the image, +y points down, and +z points into the plane of the image.
   std::string frame_id;
 
-  /// Image width
+  /// @brief Image width
   uint32_t width;
 
-  /// Image height
+  /// @brief Image height
   uint32_t height;
 
-  /// Name of distortion model
-  /// 
-  /// Supported parameters: `plumb_bob` (k1, k2, p1, p2, k3) and `rational_polynomial` (k1, k2, p1, p2, k3, k4, k5, k6). Distortion models are based on [OpenCV's](https://docs.opencv.org/2.4/modules/calib3d/doc/camera_calibration_and_3d_reconstruction.html) [pinhole camera model](https://en.wikipedia.org/wiki/Distortion_%28optics%29#Software_correction). This is the same [implementation used by ROS](http://docs.ros.org/en/diamondback/api/image_geometry/html/c++/pinhole__camera__model_8cpp_source.html)
+  /// @brief Name of distortion model
+  /// @brief 
+  /// @brief Supported parameters: `plumb_bob` (k1, k2, p1, p2, k3) and `rational_polynomial` (k1, k2, p1, p2, k3, k4, k5, k6). Distortion models are based on [OpenCV's](https://docs.opencv.org/2.4/modules/calib3d/doc/camera_calibration_and_3d_reconstruction.html) [pinhole camera model](https://en.wikipedia.org/wiki/Distortion_%28optics%29#Software_correction). This is the same [implementation used by ROS](http://docs.ros.org/en/diamondback/api/image_geometry/html/c++/pinhole__camera__model_8cpp_source.html)
   std::string distortion_model;
 
-  /// Distortion parameters
+  /// @brief Distortion parameters
   std::vector<double> d = 0;
 
-  /// Intrinsic camera matrix (3x3 row-major matrix)
-  /// 
-  /// A 3x3 row-major matrix for the raw (distorted) image.
-  /// 
-  /// Projects 3D points in the camera coordinate frame to 2D pixel coordinates using the focal lengths (fx, fy) and principal point (cx, cy).
-  /// 
-  /// ```
-  ///     [fx  0 cx]
-  /// K = [ 0 fy cy]
-  ///     [ 0  0  1]
-  /// ```
-  /// 
+  /// @brief Intrinsic camera matrix (3x3 row-major matrix)
+  /// @brief 
+  /// @brief A 3x3 row-major matrix for the raw (distorted) image.
+  /// @brief 
+  /// @brief Projects 3D points in the camera coordinate frame to 2D pixel coordinates using the focal lengths (fx, fy) and principal point (cx, cy).
+  /// @brief 
+  /// @brief ```
+  /// @brief     [fx  0 cx]
+  /// @brief K = [ 0 fy cy]
+  /// @brief     [ 0  0  1]
+  /// @brief ```
+  /// @brief 
   std::array<double, 9> k = 0;
 
-  /// Rectification matrix (stereo cameras only, 3x3 row-major matrix)
-  /// 
-  /// A rotation matrix aligning the camera coordinate system to the ideal stereo image plane so that epipolar lines in both stereo images are parallel.
+  /// @brief Rectification matrix (stereo cameras only, 3x3 row-major matrix)
+  /// @brief 
+  /// @brief A rotation matrix aligning the camera coordinate system to the ideal stereo image plane so that epipolar lines in both stereo images are parallel.
   std::array<double, 9> r = 0;
 
-  /// Projection/camera matrix (3x4 row-major matrix)
-  /// 
-  /// ```
-  ///     [fx'  0  cx' Tx]
-  /// P = [ 0  fy' cy' Ty]
-  ///     [ 0   0   1   0]
-  /// ```
-  /// 
-  /// By convention, this matrix specifies the intrinsic (camera) matrix of the processed (rectified) image. That is, the left 3x3 portion is the normal camera intrinsic matrix for the rectified image.
-  /// 
-  /// It projects 3D points in the camera coordinate frame to 2D pixel coordinates using the focal lengths (fx', fy') and principal point (cx', cy') - these may differ from the values in K.
-  /// 
-  /// For monocular cameras, Tx = Ty = 0. Normally, monocular cameras will also have R = the identity and P[1:3,1:3] = K.
-  /// 
-  /// For a stereo pair, the fourth column [Tx Ty 0]' is related to the position of the optical center of the second camera in the first camera's frame. We assume Tz = 0 so both cameras are in the same stereo image plane. The first camera always has Tx = Ty = 0. For the right (second) camera of a horizontal stereo pair, Ty = 0 and Tx = -fx' * B, where B is the baseline between the cameras.
-  /// 
-  /// Given a 3D point [X Y Z]', the projection (x, y) of the point onto the rectified image is given by:
-  /// 
-  /// ```
-  /// [u v w]' = P * [X Y Z 1]'
-  ///        x = u / w
-  ///        y = v / w
-  /// ```
-  /// 
-  /// This holds for both images of a stereo pair.
-  /// 
+  /// @brief Projection/camera matrix (3x4 row-major matrix)
+  /// @brief 
+  /// @brief ```
+  /// @brief     [fx'  0  cx' Tx]
+  /// @brief P = [ 0  fy' cy' Ty]
+  /// @brief     [ 0   0   1   0]
+  /// @brief ```
+  /// @brief 
+  /// @brief By convention, this matrix specifies the intrinsic (camera) matrix of the processed (rectified) image. That is, the left 3x3 portion is the normal camera intrinsic matrix for the rectified image.
+  /// @brief 
+  /// @brief It projects 3D points in the camera coordinate frame to 2D pixel coordinates using the focal lengths (fx', fy') and principal point (cx', cy') - these may differ from the values in K.
+  /// @brief 
+  /// @brief For monocular cameras, Tx = Ty = 0. Normally, monocular cameras will also have R = the identity and P[1:3,1:3] = K.
+  /// @brief 
+  /// @brief For a stereo pair, the fourth column [Tx Ty 0]' is related to the position of the optical center of the second camera in the first camera's frame. We assume Tz = 0 so both cameras are in the same stereo image plane. The first camera always has Tx = Ty = 0. For the right (second) camera of a horizontal stereo pair, Ty = 0 and Tx = -fx' * B, where B is the baseline between the cameras.
+  /// @brief 
+  /// @brief Given a 3D point [X Y Z]', the projection (x, y) of the point onto the rectified image is given by:
+  /// @brief 
+  /// @brief ```
+  /// @brief [u v w]' = P * [X Y Z 1]'
+  /// @brief        x = u / w
+  /// @brief        y = v / w
+  /// @brief ```
+  /// @brief 
+  /// @brief This holds for both images of a stereo pair.
+  /// @brief 
   std::array<double, 12> p = 0;
 };
 
-/// A point representing a position in 2D space
+/// @brief A point representing a position in 2D space
 struct Point2 {
-  /// x coordinate position
+  /// @brief x coordinate position
   double x;
 
-  /// y coordinate position
+  /// @brief y coordinate position
   double y;
 };
 
-/// A circle annotation on a 2D image
+/// @brief A circle annotation on a 2D image
 struct CircleAnnotation {
-  /// Timestamp of circle
+  /// @brief Timestamp of circle
   std::optional<foxglove::Timestamp> timestamp;
 
-  /// Center of the circle in 2D image coordinates (pixels).
-  /// The coordinate uses the top-left corner of the top-left pixel of the image as the origin.
+  /// @brief Center of the circle in 2D image coordinates (pixels).
+  /// @brief The coordinate uses the top-left corner of the top-left pixel of the image as the origin.
   std::optional<Point2> position;
 
-  /// Circle diameter in pixels
+  /// @brief Circle diameter in pixels
   double diameter;
 
-  /// Line thickness in pixels
+  /// @brief Line thickness in pixels
   double thickness;
 
-  /// Fill color
+  /// @brief Fill color
   std::optional<Color> fill_color;
 
-  /// Outline color
+  /// @brief Outline color
   std::optional<Color> outline_color;
 };
 
-/// A compressed image
+/// @brief A compressed image
 struct CompressedImage {
-  /// Timestamp of image
+  /// @brief Timestamp of image
   std::optional<foxglove::Timestamp> timestamp;
 
-  /// Frame of reference for the image. The origin of the frame is the optical center of the camera. +x points to the right in the image, +y points down, and +z points into the plane of the image.
+  /// @brief Frame of reference for the image. The origin of the frame is the optical center of the camera. +x points to the right in the image, +y points down, and +z points into the plane of the image.
   std::string frame_id;
 
-  /// Compressed image data
+  /// @brief Compressed image data
   std::vector<std::byte> data;
 
-  /// Image format
-  /// 
-  /// Supported values: `jpeg`, `png`, `webp`, `avif`
+  /// @brief Image format
+  /// @brief 
+  /// @brief Supported values: `jpeg`, `png`, `webp`, `avif`
   std::string format;
 };
 
-/// A single frame of a compressed video bitstream
+/// @brief A single frame of a compressed video bitstream
 struct CompressedVideo {
-  /// Timestamp of video frame
+  /// @brief Timestamp of video frame
   std::optional<foxglove::Timestamp> timestamp;
 
-  /// Frame of reference for the video.
-  /// 
-  /// The origin of the frame is the optical center of the camera. +x points to the right in the video, +y points down, and +z points into the plane of the video.
+  /// @brief Frame of reference for the video.
+  /// @brief 
+  /// @brief The origin of the frame is the optical center of the camera. +x points to the right in the video, +y points down, and +z points into the plane of the video.
   std::string frame_id;
 
-  /// Compressed video frame data.
-  /// 
-  /// For packet-based video codecs this data must begin and end on packet boundaries (no partial packets), and must contain enough video packets to decode exactly one image (either a keyframe or delta frame). Note: Foxglove does not support video streams that include B frames because they require lookahead.
-  /// 
-  /// Specifically, the requirements for different `format` values are:
-  /// 
-  /// - `h264`
-  ///   - Use Annex B formatted data
-  ///   - Each CompressedVideo message should contain enough NAL units to decode exactly one video frame
-  ///   - Each message containing a key frame (IDR) must also include a SPS NAL unit
-  /// 
-  /// - `h265` (HEVC)
-  ///   - Use Annex B formatted data
-  ///   - Each CompressedVideo message should contain enough NAL units to decode exactly one video frame
-  ///   - Each message containing a key frame (IRAP) must also include relevant VPS/SPS/PPS NAL units
-  /// 
-  /// - `vp9`
-  ///   - Each CompressedVideo message should contain exactly one video frame
-  /// 
-  /// - `av1`
-  ///   - Use the "Low overhead bitstream format" (section 5.2)
-  ///   - Each CompressedVideo message should contain enough OBUs to decode exactly one video frame
-  ///   - Each message containing a key frame must also include a Sequence Header OBU
+  /// @brief Compressed video frame data.
+  /// @brief 
+  /// @brief For packet-based video codecs this data must begin and end on packet boundaries (no partial packets), and must contain enough video packets to decode exactly one image (either a keyframe or delta frame). Note: Foxglove does not support video streams that include B frames because they require lookahead.
+  /// @brief 
+  /// @brief Specifically, the requirements for different `format` values are:
+  /// @brief 
+  /// @brief - `h264`
+  /// @brief   - Use Annex B formatted data
+  /// @brief   - Each CompressedVideo message should contain enough NAL units to decode exactly one video frame
+  /// @brief   - Each message containing a key frame (IDR) must also include a SPS NAL unit
+  /// @brief 
+  /// @brief - `h265` (HEVC)
+  /// @brief   - Use Annex B formatted data
+  /// @brief   - Each CompressedVideo message should contain enough NAL units to decode exactly one video frame
+  /// @brief   - Each message containing a key frame (IRAP) must also include relevant VPS/SPS/PPS NAL units
+  /// @brief 
+  /// @brief - `vp9`
+  /// @brief   - Each CompressedVideo message should contain exactly one video frame
+  /// @brief 
+  /// @brief - `av1`
+  /// @brief   - Use the "Low overhead bitstream format" (section 5.2)
+  /// @brief   - Each CompressedVideo message should contain enough OBUs to decode exactly one video frame
+  /// @brief   - Each message containing a key frame must also include a Sequence Header OBU
   std::vector<std::byte> data;
 
-  /// Video format.
-  /// 
-  /// Supported values: `h264`, `h265`, `vp9`, `av1`.
-  /// 
-  /// Note: compressed video support is subject to hardware limitations and patent licensing, so not all encodings may be supported on all platforms. See more about [H.265 support](https://caniuse.com/hevc), [VP9 support](https://caniuse.com/webm), and [AV1 support](https://caniuse.com/av1).
+  /// @brief Video format.
+  /// @brief 
+  /// @brief Supported values: `h264`, `h265`, `vp9`, `av1`.
+  /// @brief 
+  /// @brief Note: compressed video support is subject to hardware limitations and patent licensing, so not all encodings may be supported on all platforms. See more about [H.265 support](https://caniuse.com/hevc), [VP9 support](https://caniuse.com/webm), and [AV1 support](https://caniuse.com/av1).
   std::string format;
 };
 
-/// A primitive representing a cylinder, elliptic cylinder, or truncated cone
+/// @brief A primitive representing a cylinder, elliptic cylinder, or truncated cone
 struct CylinderPrimitive {
-  /// Position of the center of the cylinder and orientation of the cylinder. The flat face(s) are perpendicular to the z-axis.
+  /// @brief Position of the center of the cylinder and orientation of the cylinder. The flat face(s) are perpendicular to the z-axis.
   std::optional<Pose> pose;
 
-  /// Size of the cylinder's bounding box
+  /// @brief Size of the cylinder's bounding box
   std::optional<Vector3> size;
 
-  /// 0-1, ratio of the diameter of the cylinder's bottom face (min z) to the bottom of the bounding box
+  /// @brief 0-1, ratio of the diameter of the cylinder's bottom face (min z) to the bottom of the bounding box
   double bottom_scale;
 
-  /// 0-1, ratio of the diameter of the cylinder's top face (max z) to the top of the bounding box
+  /// @brief 0-1, ratio of the diameter of the cylinder's top face (max z) to the top of the bounding box
   double top_scale;
 
-  /// Color of the cylinder
+  /// @brief Color of the cylinder
   std::optional<Color> color;
 };
 
-/// A primitive representing a cube or rectangular prism
+/// @brief A primitive representing a cube or rectangular prism
 struct CubePrimitive {
-  /// Position of the center of the cube and orientation of the cube
+  /// @brief Position of the center of the cube and orientation of the cube
   std::optional<Pose> pose;
 
-  /// Size of the cube along each axis
+  /// @brief Size of the cube along each axis
   std::optional<Vector3> size;
 
-  /// Color of the cube
+  /// @brief Color of the cube
   std::optional<Color> color;
 };
 
-/// A transform between two reference frames in 3D space
+/// @brief A transform between two reference frames in 3D space
 struct FrameTransform {
-  /// Timestamp of transform
+  /// @brief Timestamp of transform
   std::optional<foxglove::Timestamp> timestamp;
 
-  /// Name of the parent frame
+  /// @brief Name of the parent frame
   std::string parent_frame_id;
 
-  /// Name of the child frame
+  /// @brief Name of the child frame
   std::string child_frame_id;
 
-  /// Translation component of the transform
+  /// @brief Translation component of the transform
   std::optional<Vector3> translation;
 
-  /// Rotation component of the transform
+  /// @brief Rotation component of the transform
   std::optional<Quaternion> rotation;
 };
 
-/// An array of FrameTransform messages
+/// @brief An array of FrameTransform messages
 struct FrameTransforms {
-  /// Array of transforms
+  /// @brief Array of transforms
   std::vector<FrameTransform> transforms;
 };
 
-/// GeoJSON data for annotating maps
+/// @brief GeoJSON data for annotating maps
 struct GeoJSON {
-  /// GeoJSON data encoded as a UTF-8 string
+  /// @brief GeoJSON data encoded as a UTF-8 string
   std::string geojson;
 };
 
-/// A vector in 2D space that represents a direction only
+/// @brief A vector in 2D space that represents a direction only
 struct Vector2 {
-  /// x coordinate length
+  /// @brief x coordinate length
   double x;
 
-  /// y coordinate length
+  /// @brief y coordinate length
   double y;
 };
 
-/// A field present within each element in a byte array of packed elements.
+/// @brief A field present within each element in a byte array of packed elements.
 struct PackedElementField {
-  /// Numeric type
+  /// @brief Numeric type
   enum class NumericType : uint8_t {
     UNKNOWN = 0,
     UINT8 = 1,
@@ -341,234 +341,234 @@ struct PackedElementField {
     FLOAT32 = 7,
     FLOAT64 = 8,
   };
-  /// Name of the field
+  /// @brief Name of the field
   std::string name;
 
-  /// Byte offset from start of data buffer
+  /// @brief Byte offset from start of data buffer
   uint32_t offset;
 
-  /// Type of data in the field. Integers are stored using little-endian byte order.
+  /// @brief Type of data in the field. Integers are stored using little-endian byte order.
   NumericType type;
 };
 
-/// A 2D grid of data
+/// @brief A 2D grid of data
 struct Grid {
-  /// Timestamp of grid
+  /// @brief Timestamp of grid
   std::optional<foxglove::Timestamp> timestamp;
 
-  /// Frame of reference
+  /// @brief Frame of reference
   std::string frame_id;
 
-  /// Origin of grid's corner relative to frame of reference; grid is positioned in the x-y plane relative to this origin
+  /// @brief Origin of grid's corner relative to frame of reference; grid is positioned in the x-y plane relative to this origin
   std::optional<Pose> pose;
 
-  /// Number of grid columns
+  /// @brief Number of grid columns
   uint32_t column_count;
 
-  /// Size of single grid cell along x and y axes, relative to `pose`
+  /// @brief Size of single grid cell along x and y axes, relative to `pose`
   std::optional<Vector2> cell_size;
 
-  /// Number of bytes between rows in `data`
+  /// @brief Number of bytes between rows in `data`
   uint32_t row_stride;
 
-  /// Number of bytes between cells within a row in `data`
+  /// @brief Number of bytes between cells within a row in `data`
   uint32_t cell_stride;
 
-  /// Fields in `data`. `red`, `green`, `blue`, and `alpha` are optional for customizing the grid's color.
+  /// @brief Fields in `data`. `red`, `green`, `blue`, and `alpha` are optional for customizing the grid's color.
   std::vector<PackedElementField> fields;
 
-  /// Grid cell data, interpreted using `fields`, in row-major (y-major) order
+  /// @brief Grid cell data, interpreted using `fields`, in row-major (y-major) order
   std::vector<std::byte> data;
 };
 
-/// An array of points on a 2D image
+/// @brief An array of points on a 2D image
 struct PointsAnnotation {
-  /// Type of points annotation
+  /// @brief Type of points annotation
   enum class PointsAnnotationType : uint8_t {
     UNKNOWN = 0,
-    /// Individual points: 0, 1, 2, ...
+    /// @brief Individual points: 0, 1, 2, ...
     POINTS = 1,
-    /// Closed polygon: 0-1, 1-2, ..., (n-1)-n, n-0
+    /// @brief Closed polygon: 0-1, 1-2, ..., (n-1)-n, n-0
     LINE_LOOP = 2,
-    /// Connected line segments: 0-1, 1-2, ..., (n-1)-n
+    /// @brief Connected line segments: 0-1, 1-2, ..., (n-1)-n
     LINE_STRIP = 3,
-    /// Individual line segments: 0-1, 2-3, 4-5, ...
+    /// @brief Individual line segments: 0-1, 2-3, 4-5, ...
     LINE_LIST = 4,
   };
-  /// Timestamp of annotation
+  /// @brief Timestamp of annotation
   std::optional<foxglove::Timestamp> timestamp;
 
-  /// Type of points annotation to draw
+  /// @brief Type of points annotation to draw
   PointsAnnotationType type;
 
-  /// Points in 2D image coordinates (pixels).
-  /// These coordinates use the top-left corner of the top-left pixel of the image as the origin.
+  /// @brief Points in 2D image coordinates (pixels).
+  /// @brief These coordinates use the top-left corner of the top-left pixel of the image as the origin.
   std::vector<Point2> points;
 
-  /// Outline color
+  /// @brief Outline color
   std::optional<Color> outline_color;
 
-  /// Per-point colors, if `type` is `POINTS`, or per-segment stroke colors, if `type` is `LINE_LIST`, `LINE_STRIP` or `LINE_LOOP`.
+  /// @brief Per-point colors, if `type` is `POINTS`, or per-segment stroke colors, if `type` is `LINE_LIST`, `LINE_STRIP` or `LINE_LOOP`.
   std::vector<Color> outline_colors;
 
-  /// Fill color
+  /// @brief Fill color
   std::optional<Color> fill_color;
 
-  /// Stroke thickness in pixels
+  /// @brief Stroke thickness in pixels
   double thickness;
 };
 
-/// A text label on a 2D image
+/// @brief A text label on a 2D image
 struct TextAnnotation {
-  /// Timestamp of annotation
+  /// @brief Timestamp of annotation
   std::optional<foxglove::Timestamp> timestamp;
 
-  /// Bottom-left origin of the text label in 2D image coordinates (pixels).
-  /// The coordinate uses the top-left corner of the top-left pixel of the image as the origin.
+  /// @brief Bottom-left origin of the text label in 2D image coordinates (pixels).
+  /// @brief The coordinate uses the top-left corner of the top-left pixel of the image as the origin.
   std::optional<Point2> position;
 
-  /// Text to display
+  /// @brief Text to display
   std::string text;
 
-  /// Font size in pixels
+  /// @brief Font size in pixels
   double font_size;
 
-  /// Text color
+  /// @brief Text color
   std::optional<Color> text_color;
 
-  /// Background fill color
+  /// @brief Background fill color
   std::optional<Color> background_color;
 };
 
-/// Array of annotations for a 2D image
+/// @brief Array of annotations for a 2D image
 struct ImageAnnotations {
-  /// Circle annotations
+  /// @brief Circle annotations
   std::vector<CircleAnnotation> circles;
 
-  /// Points annotations
+  /// @brief Points annotations
   std::vector<PointsAnnotation> points;
 
-  /// Text annotations
+  /// @brief Text annotations
   std::vector<TextAnnotation> texts;
 };
 
-/// A key with its associated value
+/// @brief A key with its associated value
 struct KeyValuePair {
-  /// Key
+  /// @brief Key
   std::string key;
 
-  /// Value
+  /// @brief Value
   std::string value;
 };
 
-/// A single scan from a planar laser range-finder
+/// @brief A single scan from a planar laser range-finder
 struct LaserScan {
-  /// Timestamp of scan
+  /// @brief Timestamp of scan
   std::optional<foxglove::Timestamp> timestamp;
 
-  /// Frame of reference
+  /// @brief Frame of reference
   std::string frame_id;
 
-  /// Origin of scan relative to frame of reference; points are positioned in the x-y plane relative to this origin; angles are interpreted as counterclockwise rotations around the z axis with 0 rad being in the +x direction
+  /// @brief Origin of scan relative to frame of reference; points are positioned in the x-y plane relative to this origin; angles are interpreted as counterclockwise rotations around the z axis with 0 rad being in the +x direction
   std::optional<Pose> pose;
 
-  /// Bearing of first point, in radians
+  /// @brief Bearing of first point, in radians
   double start_angle;
 
-  /// Bearing of last point, in radians
+  /// @brief Bearing of last point, in radians
   double end_angle;
 
-  /// Distance of detections from origin; assumed to be at equally-spaced angles between `start_angle` and `end_angle`
+  /// @brief Distance of detections from origin; assumed to be at equally-spaced angles between `start_angle` and `end_angle`
   std::vector<double> ranges = 0;
 
-  /// Intensity of detections
+  /// @brief Intensity of detections
   std::vector<double> intensities = 0;
 };
 
-/// A point representing a position in 3D space
+/// @brief A point representing a position in 3D space
 struct Point3 {
-  /// x coordinate position
+  /// @brief x coordinate position
   double x;
 
-  /// y coordinate position
+  /// @brief y coordinate position
   double y;
 
-  /// z coordinate position
+  /// @brief z coordinate position
   double z;
 };
 
-/// A primitive representing a series of points connected by lines
+/// @brief A primitive representing a series of points connected by lines
 struct LinePrimitive {
-  /// An enumeration indicating how input points should be interpreted to create lines
+  /// @brief An enumeration indicating how input points should be interpreted to create lines
   enum class LineType : uint8_t {
-    /// Connected line segments: 0-1, 1-2, ..., (n-1)-n
+    /// @brief Connected line segments: 0-1, 1-2, ..., (n-1)-n
     LINE_STRIP = 0,
-    /// Closed polygon: 0-1, 1-2, ..., (n-1)-n, n-0
+    /// @brief Closed polygon: 0-1, 1-2, ..., (n-1)-n, n-0
     LINE_LOOP = 1,
-    /// Individual line segments: 0-1, 2-3, 4-5, ...
+    /// @brief Individual line segments: 0-1, 2-3, 4-5, ...
     LINE_LIST = 2,
   };
-  /// Drawing primitive to use for lines
+  /// @brief Drawing primitive to use for lines
   LineType type;
 
-  /// Origin of lines relative to reference frame
+  /// @brief Origin of lines relative to reference frame
   std::optional<Pose> pose;
 
-  /// Line thickness
+  /// @brief Line thickness
   double thickness;
 
-  /// Indicates whether `thickness` is a fixed size in screen pixels (true), or specified in world coordinates and scales with distance from the camera (false)
+  /// @brief Indicates whether `thickness` is a fixed size in screen pixels (true), or specified in world coordinates and scales with distance from the camera (false)
   bool scale_invariant;
 
-  /// Points along the line
+  /// @brief Points along the line
   std::vector<Point3> points;
 
-  /// Solid color to use for the whole line. One of `color` or `colors` must be provided.
+  /// @brief Solid color to use for the whole line. One of `color` or `colors` must be provided.
   std::optional<Color> color;
 
-  /// Per-point colors (if specified, must have the same length as `points`). One of `color` or `colors` must be provided.
+  /// @brief Per-point colors (if specified, must have the same length as `points`). One of `color` or `colors` must be provided.
   std::vector<Color> colors;
 
-  /// Indices into the `points` and `colors` attribute arrays, which can be used to avoid duplicating attribute data.
-  /// 
-  /// If omitted or empty, indexing will not be used. This default behavior is equivalent to specifying [0, 1, ..., N-1] for the indices (where N is the number of `points` provided).
+  /// @brief Indices into the `points` and `colors` attribute arrays, which can be used to avoid duplicating attribute data.
+  /// @brief 
+  /// @brief If omitted or empty, indexing will not be used. This default behavior is equivalent to specifying [0, 1, ..., N-1] for the indices (where N is the number of `points` provided).
   std::vector<uint32_t> indices = 0;
 };
 
-/// A navigation satellite fix for any Global Navigation Satellite System
+/// @brief A navigation satellite fix for any Global Navigation Satellite System
 struct LocationFix {
-  /// Type of position covariance
+  /// @brief Type of position covariance
   enum class PositionCovarianceType : uint8_t {
     UNKNOWN = 0,
     APPROXIMATED = 1,
     DIAGONAL_KNOWN = 2,
     KNOWN = 3,
   };
-  /// Timestamp of the message
+  /// @brief Timestamp of the message
   std::optional<foxglove::Timestamp> timestamp;
 
-  /// Frame for the sensor. Latitude and longitude readings are at the origin of the frame.
+  /// @brief Frame for the sensor. Latitude and longitude readings are at the origin of the frame.
   std::string frame_id;
 
-  /// Latitude in degrees
+  /// @brief Latitude in degrees
   double latitude;
 
-  /// Longitude in degrees
+  /// @brief Longitude in degrees
   double longitude;
 
-  /// Altitude in meters
+  /// @brief Altitude in meters
   double altitude;
 
-  /// Position covariance (m^2) defined relative to a tangential plane through the reported position. The components are East, North, and Up (ENU), in row-major order.
+  /// @brief Position covariance (m^2) defined relative to a tangential plane through the reported position. The components are East, North, and Up (ENU), in row-major order.
   std::array<double, 9> position_covariance = 0;
 
-  /// If `position_covariance` is available, `position_covariance_type` must be set to indicate the type of covariance.
+  /// @brief If `position_covariance` is available, `position_covariance_type` must be set to indicate the type of covariance.
   PositionCovarianceType position_covariance_type;
 };
 
-/// A log message
+/// @brief A log message
 struct Log {
-  /// Log level
+  /// @brief Log level
   enum class LogLevel : uint8_t {
     UNKNOWN = 0,
     DEBUG = 1,
@@ -577,261 +577,261 @@ struct Log {
     ERROR = 4,
     FATAL = 5,
   };
-  /// Timestamp of log message
+  /// @brief Timestamp of log message
   std::optional<foxglove::Timestamp> timestamp;
 
-  /// Log level
+  /// @brief Log level
   LogLevel level;
 
-  /// Log message
+  /// @brief Log message
   std::string message;
 
-  /// Process or node name
+  /// @brief Process or node name
   std::string name;
 
-  /// Filename
+  /// @brief Filename
   std::string file;
 
-  /// Line number in the file
+  /// @brief Line number in the file
   uint32_t line;
 };
 
-/// Command to remove previously published entities
+/// @brief Command to remove previously published entities
 struct SceneEntityDeletion {
-  /// An enumeration indicating which entities should match a SceneEntityDeletion command
+  /// @brief An enumeration indicating which entities should match a SceneEntityDeletion command
   enum class SceneEntityDeletionType : uint8_t {
-    /// Delete the existing entity on the same topic that has the provided `id`
+    /// @brief Delete the existing entity on the same topic that has the provided `id`
     MATCHING_ID = 0,
-    /// Delete all existing entities on the same topic
+    /// @brief Delete all existing entities on the same topic
     ALL = 1,
   };
-  /// Timestamp of the deletion. Only matching entities earlier than this timestamp will be deleted.
+  /// @brief Timestamp of the deletion. Only matching entities earlier than this timestamp will be deleted.
   std::optional<foxglove::Timestamp> timestamp;
 
-  /// Type of deletion action to perform
+  /// @brief Type of deletion action to perform
   SceneEntityDeletionType type;
 
-  /// Identifier which must match if `type` is `MATCHING_ID`.
+  /// @brief Identifier which must match if `type` is `MATCHING_ID`.
   std::string id;
 };
 
-/// A primitive representing a sphere or ellipsoid
+/// @brief A primitive representing a sphere or ellipsoid
 struct SpherePrimitive {
-  /// Position of the center of the sphere and orientation of the sphere
+  /// @brief Position of the center of the sphere and orientation of the sphere
   std::optional<Pose> pose;
 
-  /// Size (diameter) of the sphere along each axis
+  /// @brief Size (diameter) of the sphere along each axis
   std::optional<Vector3> size;
 
-  /// Color of the sphere
+  /// @brief Color of the sphere
   std::optional<Color> color;
 };
 
-/// A primitive representing a set of triangles or a surface tiled by triangles
+/// @brief A primitive representing a set of triangles or a surface tiled by triangles
 struct TriangleListPrimitive {
-  /// Origin of triangles relative to reference frame
+  /// @brief Origin of triangles relative to reference frame
   std::optional<Pose> pose;
 
-  /// Vertices to use for triangles, interpreted as a list of triples (0-1-2, 3-4-5, ...)
+  /// @brief Vertices to use for triangles, interpreted as a list of triples (0-1-2, 3-4-5, ...)
   std::vector<Point3> points;
 
-  /// Solid color to use for the whole shape. One of `color` or `colors` must be provided.
+  /// @brief Solid color to use for the whole shape. One of `color` or `colors` must be provided.
   std::optional<Color> color;
 
-  /// Per-vertex colors (if specified, must have the same length as `points`). One of `color` or `colors` must be provided.
+  /// @brief Per-vertex colors (if specified, must have the same length as `points`). One of `color` or `colors` must be provided.
   std::vector<Color> colors;
 
-  /// Indices into the `points` and `colors` attribute arrays, which can be used to avoid duplicating attribute data.
-  /// 
-  /// If omitted or empty, indexing will not be used. This default behavior is equivalent to specifying [0, 1, ..., N-1] for the indices (where N is the number of `points` provided).
+  /// @brief Indices into the `points` and `colors` attribute arrays, which can be used to avoid duplicating attribute data.
+  /// @brief 
+  /// @brief If omitted or empty, indexing will not be used. This default behavior is equivalent to specifying [0, 1, ..., N-1] for the indices (where N is the number of `points` provided).
   std::vector<uint32_t> indices = 0;
 };
 
-/// A primitive representing a text label
+/// @brief A primitive representing a text label
 struct TextPrimitive {
-  /// Position of the center of the text box and orientation of the text. Identity orientation means the text is oriented in the xy-plane and flows from -x to +x.
+  /// @brief Position of the center of the text box and orientation of the text. Identity orientation means the text is oriented in the xy-plane and flows from -x to +x.
   std::optional<Pose> pose;
 
-  /// Whether the text should respect `pose.orientation` (false) or always face the camera (true)
+  /// @brief Whether the text should respect `pose.orientation` (false) or always face the camera (true)
   bool billboard;
 
-  /// Font size (height of one line of text)
+  /// @brief Font size (height of one line of text)
   double font_size;
 
-  /// Indicates whether `font_size` is a fixed size in screen pixels (true), or specified in world coordinates and scales with distance from the camera (false)
+  /// @brief Indicates whether `font_size` is a fixed size in screen pixels (true), or specified in world coordinates and scales with distance from the camera (false)
   bool scale_invariant;
 
-  /// Color of the text
+  /// @brief Color of the text
   std::optional<Color> color;
 
-  /// Text
+  /// @brief Text
   std::string text;
 };
 
-/// A primitive representing a 3D model file loaded from an external URL or embedded data
+/// @brief A primitive representing a 3D model file loaded from an external URL or embedded data
 struct ModelPrimitive {
-  /// Origin of model relative to reference frame
+  /// @brief Origin of model relative to reference frame
   std::optional<Pose> pose;
 
-  /// Scale factor to apply to the model along each axis
+  /// @brief Scale factor to apply to the model along each axis
   std::optional<Vector3> scale;
 
-  /// Solid color to use for the whole model if `override_color` is true.
+  /// @brief Solid color to use for the whole model if `override_color` is true.
   std::optional<Color> color;
 
-  /// Whether to use the color specified in `color` instead of any materials embedded in the original model.
+  /// @brief Whether to use the color specified in `color` instead of any materials embedded in the original model.
   bool override_color;
 
-  /// URL pointing to model file. One of `url` or `data` should be provided.
+  /// @brief URL pointing to model file. One of `url` or `data` should be provided.
   std::string url;
 
-  /// [Media type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types) of embedded model (e.g. `model/gltf-binary`). Required if `data` is provided instead of `url`. Overrides the inferred media type if `url` is provided.
+  /// @brief [Media type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types) of embedded model (e.g. `model/gltf-binary`). Required if `data` is provided instead of `url`. Overrides the inferred media type if `url` is provided.
   std::string media_type;
 
-  /// Embedded model. One of `url` or `data` should be provided. If `data` is provided, `media_type` must be set to indicate the type of the data.
+  /// @brief Embedded model. One of `url` or `data` should be provided. If `data` is provided, `media_type` must be set to indicate the type of the data.
   std::vector<std::byte> data;
 };
 
-/// A visual element in a 3D scene. An entity may be composed of multiple primitives which all share the same frame of reference.
+/// @brief A visual element in a 3D scene. An entity may be composed of multiple primitives which all share the same frame of reference.
 struct SceneEntity {
-  /// Timestamp of the entity
+  /// @brief Timestamp of the entity
   std::optional<foxglove::Timestamp> timestamp;
 
-  /// Frame of reference
+  /// @brief Frame of reference
   std::string frame_id;
 
-  /// Identifier for the entity. A entity will replace any prior entity on the same topic with the same `id`.
+  /// @brief Identifier for the entity. A entity will replace any prior entity on the same topic with the same `id`.
   std::string id;
 
-  /// Length of time (relative to `timestamp`) after which the entity should be automatically removed. Zero value indicates the entity should remain visible until it is replaced or deleted.
+  /// @brief Length of time (relative to `timestamp`) after which the entity should be automatically removed. Zero value indicates the entity should remain visible until it is replaced or deleted.
   std::optional<foxglove::Duration> lifetime;
 
-  /// Whether the entity should keep its location in the fixed frame (false) or follow the frame specified in `frame_id` as it moves relative to the fixed frame (true)
+  /// @brief Whether the entity should keep its location in the fixed frame (false) or follow the frame specified in `frame_id` as it moves relative to the fixed frame (true)
   bool frame_locked;
 
-  /// Additional user-provided metadata associated with the entity. Keys must be unique.
+  /// @brief Additional user-provided metadata associated with the entity. Keys must be unique.
   std::vector<KeyValuePair> metadata;
 
-  /// Arrow primitives
+  /// @brief Arrow primitives
   std::vector<ArrowPrimitive> arrows;
 
-  /// Cube primitives
+  /// @brief Cube primitives
   std::vector<CubePrimitive> cubes;
 
-  /// Sphere primitives
+  /// @brief Sphere primitives
   std::vector<SpherePrimitive> spheres;
 
-  /// Cylinder primitives
+  /// @brief Cylinder primitives
   std::vector<CylinderPrimitive> cylinders;
 
-  /// Line primitives
+  /// @brief Line primitives
   std::vector<LinePrimitive> lines;
 
-  /// Triangle list primitives
+  /// @brief Triangle list primitives
   std::vector<TriangleListPrimitive> triangles;
 
-  /// Text primitives
+  /// @brief Text primitives
   std::vector<TextPrimitive> texts;
 
-  /// Model primitives
+  /// @brief Model primitives
   std::vector<ModelPrimitive> models;
 };
 
-/// An update to the entities displayed in a 3D scene
+/// @brief An update to the entities displayed in a 3D scene
 struct SceneUpdate {
-  /// Scene entities to delete
+  /// @brief Scene entities to delete
   std::vector<SceneEntityDeletion> deletions;
 
-  /// Scene entities to add or replace
+  /// @brief Scene entities to add or replace
   std::vector<SceneEntity> entities;
 };
 
-/// A collection of N-dimensional points, which may contain additional fields with information like normals, intensity, etc.
+/// @brief A collection of N-dimensional points, which may contain additional fields with information like normals, intensity, etc.
 struct PointCloud {
-  /// Timestamp of point cloud
+  /// @brief Timestamp of point cloud
   std::optional<foxglove::Timestamp> timestamp;
 
-  /// Frame of reference
+  /// @brief Frame of reference
   std::string frame_id;
 
-  /// The origin of the point cloud relative to the frame of reference
+  /// @brief The origin of the point cloud relative to the frame of reference
   std::optional<Pose> pose;
 
-  /// Number of bytes between points in the `data`
+  /// @brief Number of bytes between points in the `data`
   uint32_t point_stride;
 
-  /// Fields in `data`. At least 2 coordinate fields from `x`, `y`, and `z` are required for each point's position; `red`, `green`, `blue`, and `alpha` are optional for customizing each point's color.
+  /// @brief Fields in `data`. At least 2 coordinate fields from `x`, `y`, and `z` are required for each point's position; `red`, `green`, `blue`, and `alpha` are optional for customizing each point's color.
   std::vector<PackedElementField> fields;
 
-  /// Point data, interpreted using `fields`
+  /// @brief Point data, interpreted using `fields`
   std::vector<std::byte> data;
 };
 
-/// A timestamped pose for an object or reference frame in 3D space
+/// @brief A timestamped pose for an object or reference frame in 3D space
 struct PoseInFrame {
-  /// Timestamp of pose
+  /// @brief Timestamp of pose
   std::optional<foxglove::Timestamp> timestamp;
 
-  /// Frame of reference for pose position and orientation
+  /// @brief Frame of reference for pose position and orientation
   std::string frame_id;
 
-  /// Pose in 3D space
+  /// @brief Pose in 3D space
   std::optional<Pose> pose;
 };
 
-/// An array of timestamped poses for an object or reference frame in 3D space
+/// @brief An array of timestamped poses for an object or reference frame in 3D space
 struct PosesInFrame {
-  /// Timestamp of pose
+  /// @brief Timestamp of pose
   std::optional<foxglove::Timestamp> timestamp;
 
-  /// Frame of reference for pose position and orientation
+  /// @brief Frame of reference for pose position and orientation
   std::string frame_id;
 
-  /// Poses in 3D space
+  /// @brief Poses in 3D space
   std::vector<Pose> poses;
 };
 
-/// A single block of an audio bitstream
+/// @brief A single block of an audio bitstream
 struct RawAudio {
-  /// Timestamp of the start of the audio block
+  /// @brief Timestamp of the start of the audio block
   std::optional<foxglove::Timestamp> timestamp;
 
-  /// Audio data. The samples in the data must be interleaved and little-endian
+  /// @brief Audio data. The samples in the data must be interleaved and little-endian
   std::vector<std::byte> data;
 
-  /// Audio format. Only 'pcm-s16' is currently supported
+  /// @brief Audio format. Only 'pcm-s16' is currently supported
   std::string format;
 
-  /// Sample rate in Hz
+  /// @brief Sample rate in Hz
   uint32_t sample_rate;
 
-  /// Number of channels in the audio block
+  /// @brief Number of channels in the audio block
   uint32_t number_of_channels;
 };
 
-/// A raw image
+/// @brief A raw image
 struct RawImage {
-  /// Timestamp of image
+  /// @brief Timestamp of image
   std::optional<foxglove::Timestamp> timestamp;
 
-  /// Frame of reference for the image. The origin of the frame is the optical center of the camera. +x points to the right in the image, +y points down, and +z points into the plane of the image.
+  /// @brief Frame of reference for the image. The origin of the frame is the optical center of the camera. +x points to the right in the image, +y points down, and +z points into the plane of the image.
   std::string frame_id;
 
-  /// Image width
+  /// @brief Image width
   uint32_t width;
 
-  /// Image height
+  /// @brief Image height
   uint32_t height;
 
-  /// Encoding of the raw image data
-  /// 
-  /// Supported values: `8UC1`, `8UC3`, `16UC1` (little endian), `32FC1` (little endian), `bayer_bggr8`, `bayer_gbrg8`, `bayer_grbg8`, `bayer_rggb8`, `bgr8`, `bgra8`, `mono8`, `mono16`, `rgb8`, `rgba8`, `uyvy` or `yuv422`, `yuyv` or `yuv422_yuy2`
+  /// @brief Encoding of the raw image data
+  /// @brief 
+  /// @brief Supported values: `8UC1`, `8UC3`, `16UC1` (little endian), `32FC1` (little endian), `bayer_bggr8`, `bayer_gbrg8`, `bayer_grbg8`, `bayer_rggb8`, `bgr8`, `bgra8`, `mono8`, `mono16`, `rgb8`, `rgba8`, `uyvy` or `yuv422`, `yuyv` or `yuv422_yuy2`
   std::string encoding;
 
-  /// Byte length of a single row
+  /// @brief Byte length of a single row
   uint32_t step;
 
-  /// Raw image data
+  /// @brief Raw image data
   std::vector<std::byte> data;
 };
 

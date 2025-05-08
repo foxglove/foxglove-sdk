@@ -41,7 +41,7 @@ function formatComment(comment: string, indent: number) {
   const spaces = " ".repeat(indent);
   return comment
     .split("\n")
-    .map((line) => `${spaces}/// ${line}`)
+    .map((line) => `${spaces}/// @brief ${line}`)
     .join("\n");
 }
 
