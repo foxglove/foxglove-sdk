@@ -46,4 +46,5 @@ clean-docs:
 	rm -rf $(BUILD_DIR)/docs
 
 $(BUILD_DIR)/docs/html:
+	cmake -B $(BUILD_DIR)
 	cmake --build $(BUILD_DIR) --target docs
