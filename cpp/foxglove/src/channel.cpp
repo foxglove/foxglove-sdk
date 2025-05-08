@@ -6,8 +6,8 @@
 namespace foxglove {
 
 FoxgloveResult<RawChannel> RawChannel::create(
-  const std::string_view& topic, const std::string_view& message_encoding, std::optional<Schema> schema,
-  const Context& context
+  const std::string_view& topic, const std::string_view& message_encoding,
+  std::optional<Schema> schema, const Context& context
 ) {
   foxglove_schema c_schema = {};
   if (schema) {
@@ -31,7 +31,7 @@ FoxgloveResult<RawChannel> RawChannel::create(
 }
 
 RawChannel::RawChannel(const foxglove_channel* channel)
-    : impl_(channel, foxglove_channel_free) {}
+    : impl_(channel) {}
 
 uint64_t RawChannel::id() const {
   return foxglove_channel_get_id(impl_.get());

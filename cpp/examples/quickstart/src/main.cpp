@@ -1,4 +1,5 @@
 #include <foxglove/channel.hpp>
+#include <foxglove/foxglove.hpp>
 #include <foxglove/mcap.hpp>
 #include <foxglove/server.hpp>
 
@@ -24,6 +25,8 @@ int main(int argc, const char* argv[]) {
     }
   });
 
+  foxglove::setLogLevel(foxglove::LogLevel::Debug);
+
   // We'll log to both an MCAP file, and to a running Foxglove app.
   foxglove::McapWriterOptions mcap_options = {};
   mcap_options.path = "quickstart-cpp.mcap";
@@ -44,7 +47,6 @@ int main(int argc, const char* argv[]) {
     return 1;
   }
   auto server = std::move(server_result.value());
-  std::cerr << "Server listening on port " << server.port() << '\n';
 
   std::atomic_bool done = false;
   sigint_handler = [&] {

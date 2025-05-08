@@ -2,16 +2,9 @@
 
 The Foxglove SDK allows you to log and visualize multimodal data with [Foxglove](https://foxglove.dev).
 
-> [!IMPORTANT]
->
-> **This new Foxglove SDK is under active development.**
->
-> It is ready for beta testing, but it is not yet fully documented and the API is subject to change.
-> Please provide feedback via [Discord](https://foxglove.dev/chat) or [GitHub Discussions](https://github.com/orgs/foxglove/discussions).
->
-> For stable libraries, see the existing [ws-protocol](https://github.com/foxglove/ws-protocol) or [ros-foxglove-bridge](https://github.com/foxglove/ros-foxglove-bridge) repos.
+The SDK is written in Rust, with bindings and packages available for Python and C++.
 
-The new SDK is written in Rust, with bindings and packages available for Python (C, C++, and ROS coming soon).
+For ROS integration, see [ros-foxglove-bridge](https://github.com/foxglove/ros-foxglove-bridge).
 
 - Visualize live data using the Foxglove WebSocket protocol
 - Log data to [MCAP](https://mcap.dev/) files for later visualization or analysis

@@ -6,6 +6,14 @@
 cmake_minimum_required(VERSION 3.25)
 project(foxglove-sdk)
 
+# Enable ccache if available
+find_program(CCACHE_PROGRAM ccache)
+if(CCACHE_PROGRAM)
+  set(CMAKE_C_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+  set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+  message(STATUS "Using ccache: ${CCACHE_PROGRAM}")
+endif()
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
@@ -56,6 +64,12 @@ FetchContent_Declare(asio
   GIT_TAG asio-1-31-0
 )
 FetchContent_MakeAvailable(asio)
+
+FetchContent_Declare(json
+  GIT_REPOSITORY https://github.com/nlohmann/json.git
+  GIT_TAG v3.12.0
+)
+FetchContent_MakeAvailable(json)
 
 if(DEFINED SANITIZE)
   if(NOT CMAKE_CXX_COMPILER_ID MATCHES ".*Clang")
@@ -128,6 +142,7 @@ target_compile_definitions(tests PRIVATE ASIO_STANDALONE)
 target_compile_options(tests PUBLIC ${SANITIZER_COMPILE_OPTIONS})
 target_link_options(tests PUBLIC ${SANITIZER_LINK_OPTIONS})
 target_include_directories(tests SYSTEM PRIVATE ${asio_SOURCE_DIR}/asio/include)
+target_include_directories(tests SYSTEM PRIVATE ${json_SOURCE_DIR}/include)
 target_include_directories(tests SYSTEM PRIVATE ${websocketpp_SOURCE_DIR})
 target_link_libraries(tests PRIVATE foxglove_cpp_static Catch2::Catch2WithMain)
 catch_discover_tests(tests)
@@ -135,6 +150,13 @@ if(MSVC)
   # Auto-detection of C++11 support is not working on the windows-2025 runner with default settings
   target_compile_options(tests PRIVATE /Zc:__cplusplus)
 endif()
+
+### Docs
+
+add_custom_target(docs
+  COMMAND doxygen Doxyfile
+  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+)
 
 ### Examples
 
@@ -151,6 +173,13 @@ set_property(TARGET example_mcap PROPERTY CXX_STANDARD_REQUIRED True)
 target_compile_options(example_mcap PUBLIC ${SANITIZER_COMPILE_OPTIONS})
 target_link_options(example_mcap PUBLIC ${SANITIZER_LINK_OPTIONS})
 target_link_libraries(example_mcap foxglove_cpp_static)
+
+add_executable(example_param_server examples/param-server/src/main.cpp)
+set_property(TARGET example_param_server PROPERTY CXX_STANDARD 17)
+set_property(TARGET example_param_server PROPERTY CXX_STANDARD_REQUIRED True)
+target_compile_options(example_param_server PUBLIC ${SANITIZER_COMPILE_OPTIONS})
+target_link_options(example_param_server PUBLIC ${SANITIZER_LINK_OPTIONS})
+target_link_libraries(example_param_server foxglove_cpp_static)
 
 add_executable(example_quickstart examples/quickstart/src/main.cpp)
 set_property(TARGET example_quickstart PROPERTY CXX_STANDARD 17)
