@@ -109,6 +109,13 @@ ${
   name.endsWith("Primitive")
     ? ""
     : `impl ${name} {
+  /// Unsafely borrow this C struct into a native Rust schema struct, which can then be logged.
+  ///
+  /// We directly reference the C data, and/or copy it into memory allocated from the arena.
+  ///
+  /// # Safety:
+  /// This is intended for internal use only.
+  /// The caller must ensure the result is discarded before the original C data is mutated or freed.
   unsafe fn borrow_option_to_native(msg: Option<&Self>, arena: Pin<&mut Arena>) -> Result<ManuallyDrop<foxglove::schemas::${name}>, foxglove::FoxgloveError> {
     let Some(msg) = msg else {
       return Err(foxglove::FoxgloveError::ValueError("msg is required".to_string()));
@@ -116,6 +123,12 @@ ${
     unsafe { msg.borrow_to_native(arena) }
   }
 
+  /// Create a new typed channel, and return an owned raw channel pointer to it.
+  ///
+  /// # Safety
+  /// This is intended for internal use only.
+  /// We're trusting the caller that the channel will only be used with this type T.
+  #[doc(hidden)]
   #[unsafe(no_mangle)]
   pub unsafe extern "C" fn foxglove_channel_create_${snakeName}(
       topic: FoxgloveString,
@@ -137,6 +150,13 @@ ${
 impl BorrowToNative for ${name} {
   type NativeType = foxglove::schemas::${name};
 
+  /// Unsafely borrow this C struct into a native Rust schema struct, which can then be logged.
+  ///
+  /// We directly reference the C data, and/or copy it into memory allocated from the arena.
+  ///
+  /// # Safety:
+  /// This is intended for internal use only.
+  /// The caller must ensure the result is discarded before the original C data is mutated or freed.
   unsafe fn borrow_to_native(&self, #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
     ${fields
       .flatMap((field) => {
@@ -219,6 +239,7 @@ pub extern "C" fn foxglove_channel_log_${snakeName}(channel: Option<&FoxgloveCha
   // Safety: we're borrowing from the msg, but discard the borrowed message before returning
   match unsafe { ${name}::borrow_option_to_native(msg, arena_pin) } {
     Ok(msg) => {
+      // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
       log_msg_to_channel(channel, &*msg, log_time)
     },
     Err(e) => {

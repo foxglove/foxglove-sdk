@@ -3,7 +3,6 @@ use std::marker::PhantomPinned;
 use std::mem::ManuallyDrop;
 use std::mem::{align_of, size_of, MaybeUninit};
 use std::pin::Pin;
-use std::ptr;
 
 use foxglove::FoxgloveError;
 

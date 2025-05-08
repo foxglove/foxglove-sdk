@@ -1606,6 +1606,13 @@ foxglove_error foxglove_connection_graph_set_advertised_service(struct foxglove_
                                                                 const struct foxglove_string *provider_ids,
                                                                 size_t provider_ids_count);
 
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * This is intended for internal use only.
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
 foxglove_error foxglove_channel_create_camera_calibration(struct foxglove_string topic,
                                                           const struct foxglove_context *context,
                                                           const struct foxglove_channel **channel);
@@ -1614,6 +1621,13 @@ foxglove_error foxglove_channel_log_camera_calibration(const struct foxglove_cha
                                                        const struct foxglove_camera_calibration *msg,
                                                        const uint64_t *log_time);
 
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * This is intended for internal use only.
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
 foxglove_error foxglove_channel_create_circle_annotation(struct foxglove_string topic,
                                                          const struct foxglove_context *context,
                                                          const struct foxglove_channel **channel);
@@ -1622,6 +1636,13 @@ foxglove_error foxglove_channel_log_circle_annotation(const struct foxglove_chan
                                                       const struct foxglove_circle_annotation *msg,
                                                       const uint64_t *log_time);
 
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * This is intended for internal use only.
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
 foxglove_error foxglove_channel_create_color(struct foxglove_string topic,
                                              const struct foxglove_context *context,
                                              const struct foxglove_channel **channel);
@@ -1630,6 +1651,13 @@ foxglove_error foxglove_channel_log_color(const struct foxglove_channel *channel
                                           const struct foxglove_color *msg,
                                           const uint64_t *log_time);
 
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * This is intended for internal use only.
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
 foxglove_error foxglove_channel_create_compressed_image(struct foxglove_string topic,
                                                         const struct foxglove_context *context,
                                                         const struct foxglove_channel **channel);
@@ -1638,6 +1666,13 @@ foxglove_error foxglove_channel_log_compressed_image(const struct foxglove_chann
                                                      const struct foxglove_compressed_image *msg,
                                                      const uint64_t *log_time);
 
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * This is intended for internal use only.
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
 foxglove_error foxglove_channel_create_compressed_video(struct foxglove_string topic,
                                                         const struct foxglove_context *context,
                                                         const struct foxglove_channel **channel);
@@ -1646,6 +1681,13 @@ foxglove_error foxglove_channel_log_compressed_video(const struct foxglove_chann
                                                      const struct foxglove_compressed_video *msg,
                                                      const uint64_t *log_time);
 
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * This is intended for internal use only.
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
 foxglove_error foxglove_channel_create_frame_transform(struct foxglove_string topic,
                                                        const struct foxglove_context *context,
                                                        const struct foxglove_channel **channel);
@@ -1654,6 +1696,13 @@ foxglove_error foxglove_channel_log_frame_transform(const struct foxglove_channe
                                                     const struct foxglove_frame_transform *msg,
                                                     const uint64_t *log_time);
 
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * This is intended for internal use only.
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
 foxglove_error foxglove_channel_create_frame_transforms(struct foxglove_string topic,
                                                         const struct foxglove_context *context,
                                                         const struct foxglove_channel **channel);
@@ -1662,6 +1711,13 @@ foxglove_error foxglove_channel_log_frame_transforms(const struct foxglove_chann
                                                      const struct foxglove_frame_transforms *msg,
                                                      const uint64_t *log_time);
 
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * This is intended for internal use only.
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
 foxglove_error foxglove_channel_create_geo_json(struct foxglove_string topic,
                                                 const struct foxglove_context *context,
                                                 const struct foxglove_channel **channel);
@@ -1670,6 +1726,13 @@ foxglove_error foxglove_channel_log_geo_json(const struct foxglove_channel *chan
                                              const struct foxglove_geo_json *msg,
                                              const uint64_t *log_time);
 
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * This is intended for internal use only.
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
 foxglove_error foxglove_channel_create_grid(struct foxglove_string topic,
                                             const struct foxglove_context *context,
                                             const struct foxglove_channel **channel);
@@ -1678,6 +1741,13 @@ foxglove_error foxglove_channel_log_grid(const struct foxglove_channel *channel,
                                          const struct foxglove_grid *msg,
                                          const uint64_t *log_time);
 
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * This is intended for internal use only.
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
 foxglove_error foxglove_channel_create_image_annotations(struct foxglove_string topic,
                                                          const struct foxglove_context *context,
                                                          const struct foxglove_channel **channel);
@@ -1686,6 +1756,13 @@ foxglove_error foxglove_channel_log_image_annotations(const struct foxglove_chan
                                                       const struct foxglove_image_annotations *msg,
                                                       const uint64_t *log_time);
 
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * This is intended for internal use only.
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
 foxglove_error foxglove_channel_create_key_value_pair(struct foxglove_string topic,
                                                       const struct foxglove_context *context,
                                                       const struct foxglove_channel **channel);
@@ -1694,6 +1771,13 @@ foxglove_error foxglove_channel_log_key_value_pair(const struct foxglove_channel
                                                    const struct foxglove_key_value_pair *msg,
                                                    const uint64_t *log_time);
 
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * This is intended for internal use only.
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
 foxglove_error foxglove_channel_create_laser_scan(struct foxglove_string topic,
                                                   const struct foxglove_context *context,
                                                   const struct foxglove_channel **channel);
@@ -1702,6 +1786,13 @@ foxglove_error foxglove_channel_log_laser_scan(const struct foxglove_channel *ch
                                                const struct foxglove_laser_scan *msg,
                                                const uint64_t *log_time);
 
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * This is intended for internal use only.
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
 foxglove_error foxglove_channel_create_location_fix(struct foxglove_string topic,
                                                     const struct foxglove_context *context,
                                                     const struct foxglove_channel **channel);
@@ -1710,6 +1801,13 @@ foxglove_error foxglove_channel_log_location_fix(const struct foxglove_channel *
                                                  const struct foxglove_location_fix *msg,
                                                  const uint64_t *log_time);
 
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * This is intended for internal use only.
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
 foxglove_error foxglove_channel_create_log(struct foxglove_string topic,
                                            const struct foxglove_context *context,
                                            const struct foxglove_channel **channel);
@@ -1718,6 +1816,13 @@ foxglove_error foxglove_channel_log_log(const struct foxglove_channel *channel,
                                         const struct foxglove_log *msg,
                                         const uint64_t *log_time);
 
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * This is intended for internal use only.
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
 foxglove_error foxglove_channel_create_scene_entity_deletion(struct foxglove_string topic,
                                                              const struct foxglove_context *context,
                                                              const struct foxglove_channel **channel);
@@ -1726,6 +1831,13 @@ foxglove_error foxglove_channel_log_scene_entity_deletion(const struct foxglove_
                                                           const struct foxglove_scene_entity_deletion *msg,
                                                           const uint64_t *log_time);
 
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * This is intended for internal use only.
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
 foxglove_error foxglove_channel_create_scene_entity(struct foxglove_string topic,
                                                     const struct foxglove_context *context,
                                                     const struct foxglove_channel **channel);
@@ -1734,6 +1846,13 @@ foxglove_error foxglove_channel_log_scene_entity(const struct foxglove_channel *
                                                  const struct foxglove_scene_entity *msg,
                                                  const uint64_t *log_time);
 
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * This is intended for internal use only.
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
 foxglove_error foxglove_channel_create_scene_update(struct foxglove_string topic,
                                                     const struct foxglove_context *context,
                                                     const struct foxglove_channel **channel);
@@ -1742,6 +1861,13 @@ foxglove_error foxglove_channel_log_scene_update(const struct foxglove_channel *
                                                  const struct foxglove_scene_update *msg,
                                                  const uint64_t *log_time);
 
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * This is intended for internal use only.
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
 foxglove_error foxglove_channel_create_packed_element_field(struct foxglove_string topic,
                                                             const struct foxglove_context *context,
                                                             const struct foxglove_channel **channel);
@@ -1750,6 +1876,13 @@ foxglove_error foxglove_channel_log_packed_element_field(const struct foxglove_c
                                                          const struct foxglove_packed_element_field *msg,
                                                          const uint64_t *log_time);
 
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * This is intended for internal use only.
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
 foxglove_error foxglove_channel_create_point2(struct foxglove_string topic,
                                               const struct foxglove_context *context,
                                               const struct foxglove_channel **channel);
@@ -1758,6 +1891,13 @@ foxglove_error foxglove_channel_log_point2(const struct foxglove_channel *channe
                                            const struct foxglove_point2 *msg,
                                            const uint64_t *log_time);
 
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * This is intended for internal use only.
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
 foxglove_error foxglove_channel_create_point3(struct foxglove_string topic,
                                               const struct foxglove_context *context,
                                               const struct foxglove_channel **channel);
@@ -1766,6 +1906,13 @@ foxglove_error foxglove_channel_log_point3(const struct foxglove_channel *channe
                                            const struct foxglove_point3 *msg,
                                            const uint64_t *log_time);
 
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * This is intended for internal use only.
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
 foxglove_error foxglove_channel_create_point_cloud(struct foxglove_string topic,
                                                    const struct foxglove_context *context,
                                                    const struct foxglove_channel **channel);
@@ -1774,6 +1921,13 @@ foxglove_error foxglove_channel_log_point_cloud(const struct foxglove_channel *c
                                                 const struct foxglove_point_cloud *msg,
                                                 const uint64_t *log_time);
 
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * This is intended for internal use only.
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
 foxglove_error foxglove_channel_create_points_annotation(struct foxglove_string topic,
                                                          const struct foxglove_context *context,
                                                          const struct foxglove_channel **channel);
@@ -1782,6 +1936,13 @@ foxglove_error foxglove_channel_log_points_annotation(const struct foxglove_chan
                                                       const struct foxglove_points_annotation *msg,
                                                       const uint64_t *log_time);
 
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * This is intended for internal use only.
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
 foxglove_error foxglove_channel_create_pose(struct foxglove_string topic,
                                             const struct foxglove_context *context,
                                             const struct foxglove_channel **channel);
@@ -1790,6 +1951,13 @@ foxglove_error foxglove_channel_log_pose(const struct foxglove_channel *channel,
                                          const struct foxglove_pose *msg,
                                          const uint64_t *log_time);
 
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * This is intended for internal use only.
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
 foxglove_error foxglove_channel_create_pose_in_frame(struct foxglove_string topic,
                                                      const struct foxglove_context *context,
                                                      const struct foxglove_channel **channel);
@@ -1798,6 +1966,13 @@ foxglove_error foxglove_channel_log_pose_in_frame(const struct foxglove_channel 
                                                   const struct foxglove_pose_in_frame *msg,
                                                   const uint64_t *log_time);
 
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * This is intended for internal use only.
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
 foxglove_error foxglove_channel_create_poses_in_frame(struct foxglove_string topic,
                                                       const struct foxglove_context *context,
                                                       const struct foxglove_channel **channel);
@@ -1806,6 +1981,13 @@ foxglove_error foxglove_channel_log_poses_in_frame(const struct foxglove_channel
                                                    const struct foxglove_poses_in_frame *msg,
                                                    const uint64_t *log_time);
 
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * This is intended for internal use only.
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
 foxglove_error foxglove_channel_create_quaternion(struct foxglove_string topic,
                                                   const struct foxglove_context *context,
                                                   const struct foxglove_channel **channel);
@@ -1814,6 +1996,13 @@ foxglove_error foxglove_channel_log_quaternion(const struct foxglove_channel *ch
                                                const struct foxglove_quaternion *msg,
                                                const uint64_t *log_time);
 
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * This is intended for internal use only.
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
 foxglove_error foxglove_channel_create_raw_audio(struct foxglove_string topic,
                                                  const struct foxglove_context *context,
                                                  const struct foxglove_channel **channel);
@@ -1822,6 +2011,13 @@ foxglove_error foxglove_channel_log_raw_audio(const struct foxglove_channel *cha
                                               const struct foxglove_raw_audio *msg,
                                               const uint64_t *log_time);
 
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * This is intended for internal use only.
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
 foxglove_error foxglove_channel_create_raw_image(struct foxglove_string topic,
                                                  const struct foxglove_context *context,
                                                  const struct foxglove_channel **channel);
@@ -1830,6 +2026,13 @@ foxglove_error foxglove_channel_log_raw_image(const struct foxglove_channel *cha
                                               const struct foxglove_raw_image *msg,
                                               const uint64_t *log_time);
 
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * This is intended for internal use only.
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
 foxglove_error foxglove_channel_create_text_annotation(struct foxglove_string topic,
                                                        const struct foxglove_context *context,
                                                        const struct foxglove_channel **channel);
@@ -1838,6 +2041,13 @@ foxglove_error foxglove_channel_log_text_annotation(const struct foxglove_channe
                                                     const struct foxglove_text_annotation *msg,
                                                     const uint64_t *log_time);
 
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * This is intended for internal use only.
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
 foxglove_error foxglove_channel_create_vector2(struct foxglove_string topic,
                                                const struct foxglove_context *context,
                                                const struct foxglove_channel **channel);
@@ -1846,6 +2056,13 @@ foxglove_error foxglove_channel_log_vector2(const struct foxglove_channel *chann
                                             const struct foxglove_vector2 *msg,
                                             const uint64_t *log_time);
 
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * This is intended for internal use only.
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
 foxglove_error foxglove_channel_create_vector3(struct foxglove_string topic,
                                                const struct foxglove_context *context,
                                                const struct foxglove_channel **channel);

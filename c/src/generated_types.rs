@@ -95,6 +95,13 @@ pub struct ArrowPrimitive {
 impl BorrowToNative for ArrowPrimitive {
     type NativeType = foxglove::schemas::ArrowPrimitive;
 
+    /// Unsafely borrow this C struct into a native Rust schema struct, which can then be logged.
+    ///
+    /// We directly reference the C data, and/or copy it into memory allocated from the arena.
+    ///
+    /// # Safety:
+    /// This is intended for internal use only.
+    /// The caller must ensure the result is discarded before the original C data is mutated or freed.
     unsafe fn borrow_to_native(
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
@@ -196,6 +203,13 @@ pub struct CameraCalibration {
 }
 
 impl CameraCalibration {
+    /// Unsafely borrow this C struct into a native Rust schema struct, which can then be logged.
+    ///
+    /// We directly reference the C data, and/or copy it into memory allocated from the arena.
+    ///
+    /// # Safety:
+    /// This is intended for internal use only.
+    /// The caller must ensure the result is discarded before the original C data is mutated or freed.
     unsafe fn borrow_option_to_native(
         msg: Option<&Self>,
         arena: Pin<&mut Arena>,
@@ -208,6 +222,12 @@ impl CameraCalibration {
         unsafe { msg.borrow_to_native(arena) }
     }
 
+    /// Create a new typed channel, and return an owned raw channel pointer to it.
+    ///
+    /// # Safety
+    /// This is intended for internal use only.
+    /// We're trusting the caller that the channel will only be used with this type T.
+    #[doc(hidden)]
     #[unsafe(no_mangle)]
     pub unsafe extern "C" fn foxglove_channel_create_camera_calibration(
         topic: FoxgloveString,
@@ -229,6 +249,13 @@ impl CameraCalibration {
 impl BorrowToNative for CameraCalibration {
     type NativeType = foxglove::schemas::CameraCalibration;
 
+    /// Unsafely borrow this C struct into a native Rust schema struct, which can then be logged.
+    ///
+    /// We directly reference the C data, and/or copy it into memory allocated from the arena.
+    ///
+    /// # Safety:
+    /// This is intended for internal use only.
+    /// The caller must ensure the result is discarded before the original C data is mutated or freed.
     unsafe fn borrow_to_native(
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
@@ -278,7 +305,10 @@ pub extern "C" fn foxglove_channel_log_camera_calibration(
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { CameraCalibration::borrow_option_to_native(msg, arena_pin) } {
-        Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
+        Ok(msg) => {
+            // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
+            log_msg_to_channel(channel, &*msg, log_time)
+        }
         Err(e) => {
             tracing::error!("CameraCalibration: {}", e);
             e.into()
@@ -310,6 +340,13 @@ pub struct CircleAnnotation {
 }
 
 impl CircleAnnotation {
+    /// Unsafely borrow this C struct into a native Rust schema struct, which can then be logged.
+    ///
+    /// We directly reference the C data, and/or copy it into memory allocated from the arena.
+    ///
+    /// # Safety:
+    /// This is intended for internal use only.
+    /// The caller must ensure the result is discarded before the original C data is mutated or freed.
     unsafe fn borrow_option_to_native(
         msg: Option<&Self>,
         arena: Pin<&mut Arena>,
@@ -322,6 +359,12 @@ impl CircleAnnotation {
         unsafe { msg.borrow_to_native(arena) }
     }
 
+    /// Create a new typed channel, and return an owned raw channel pointer to it.
+    ///
+    /// # Safety
+    /// This is intended for internal use only.
+    /// We're trusting the caller that the channel will only be used with this type T.
+    #[doc(hidden)]
     #[unsafe(no_mangle)]
     pub unsafe extern "C" fn foxglove_channel_create_circle_annotation(
         topic: FoxgloveString,
@@ -343,6 +386,13 @@ impl CircleAnnotation {
 impl BorrowToNative for CircleAnnotation {
     type NativeType = foxglove::schemas::CircleAnnotation;
 
+    /// Unsafely borrow this C struct into a native Rust schema struct, which can then be logged.
+    ///
+    /// We directly reference the C data, and/or copy it into memory allocated from the arena.
+    ///
+    /// # Safety:
+    /// This is intended for internal use only.
+    /// The caller must ensure the result is discarded before the original C data is mutated or freed.
     unsafe fn borrow_to_native(
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
@@ -387,7 +437,10 @@ pub extern "C" fn foxglove_channel_log_circle_annotation(
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { CircleAnnotation::borrow_option_to_native(msg, arena_pin) } {
-        Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
+        Ok(msg) => {
+            // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
+            log_msg_to_channel(channel, &*msg, log_time)
+        }
         Err(e) => {
             tracing::error!("CircleAnnotation: {}", e);
             e.into()
@@ -412,6 +465,13 @@ pub struct Color {
 }
 
 impl Color {
+    /// Unsafely borrow this C struct into a native Rust schema struct, which can then be logged.
+    ///
+    /// We directly reference the C data, and/or copy it into memory allocated from the arena.
+    ///
+    /// # Safety:
+    /// This is intended for internal use only.
+    /// The caller must ensure the result is discarded before the original C data is mutated or freed.
     unsafe fn borrow_option_to_native(
         msg: Option<&Self>,
         arena: Pin<&mut Arena>,
@@ -424,6 +484,12 @@ impl Color {
         unsafe { msg.borrow_to_native(arena) }
     }
 
+    /// Create a new typed channel, and return an owned raw channel pointer to it.
+    ///
+    /// # Safety
+    /// This is intended for internal use only.
+    /// We're trusting the caller that the channel will only be used with this type T.
+    #[doc(hidden)]
     #[unsafe(no_mangle)]
     pub unsafe extern "C" fn foxglove_channel_create_color(
         topic: FoxgloveString,
@@ -444,6 +510,13 @@ impl Color {
 impl BorrowToNative for Color {
     type NativeType = foxglove::schemas::Color;
 
+    /// Unsafely borrow this C struct into a native Rust schema struct, which can then be logged.
+    ///
+    /// We directly reference the C data, and/or copy it into memory allocated from the arena.
+    ///
+    /// # Safety:
+    /// This is intended for internal use only.
+    /// The caller must ensure the result is discarded before the original C data is mutated or freed.
     unsafe fn borrow_to_native(
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
@@ -467,7 +540,10 @@ pub extern "C" fn foxglove_channel_log_color(
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { Color::borrow_option_to_native(msg, arena_pin) } {
-        Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
+        Ok(msg) => {
+            // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
+            log_msg_to_channel(channel, &*msg, log_time)
+        }
         Err(e) => {
             tracing::error!("Color: {}", e);
             e.into()
@@ -495,6 +571,13 @@ pub struct CompressedImage {
 }
 
 impl CompressedImage {
+    /// Unsafely borrow this C struct into a native Rust schema struct, which can then be logged.
+    ///
+    /// We directly reference the C data, and/or copy it into memory allocated from the arena.
+    ///
+    /// # Safety:
+    /// This is intended for internal use only.
+    /// The caller must ensure the result is discarded before the original C data is mutated or freed.
     unsafe fn borrow_option_to_native(
         msg: Option<&Self>,
         arena: Pin<&mut Arena>,
@@ -507,6 +590,12 @@ impl CompressedImage {
         unsafe { msg.borrow_to_native(arena) }
     }
 
+    /// Create a new typed channel, and return an owned raw channel pointer to it.
+    ///
+    /// # Safety
+    /// This is intended for internal use only.
+    /// We're trusting the caller that the channel will only be used with this type T.
+    #[doc(hidden)]
     #[unsafe(no_mangle)]
     pub unsafe extern "C" fn foxglove_channel_create_compressed_image(
         topic: FoxgloveString,
@@ -528,6 +617,13 @@ impl CompressedImage {
 impl BorrowToNative for CompressedImage {
     type NativeType = foxglove::schemas::CompressedImage;
 
+    /// Unsafely borrow this C struct into a native Rust schema struct, which can then be logged.
+    ///
+    /// We directly reference the C data, and/or copy it into memory allocated from the arena.
+    ///
+    /// # Safety:
+    /// This is intended for internal use only.
+    /// The caller must ensure the result is discarded before the original C data is mutated or freed.
     unsafe fn borrow_to_native(
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
@@ -566,7 +662,10 @@ pub extern "C" fn foxglove_channel_log_compressed_image(
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { CompressedImage::borrow_option_to_native(msg, arena_pin) } {
-        Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
+        Ok(msg) => {
+            // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
+            log_msg_to_channel(channel, &*msg, log_time)
+        }
         Err(e) => {
             tracing::error!("CompressedImage: {}", e);
             e.into()
@@ -620,6 +719,13 @@ pub struct CompressedVideo {
 }
 
 impl CompressedVideo {
+    /// Unsafely borrow this C struct into a native Rust schema struct, which can then be logged.
+    ///
+    /// We directly reference the C data, and/or copy it into memory allocated from the arena.
+    ///
+    /// # Safety:
+    /// This is intended for internal use only.
+    /// The caller must ensure the result is discarded before the original C data is mutated or freed.
     unsafe fn borrow_option_to_native(
         msg: Option<&Self>,
         arena: Pin<&mut Arena>,
@@ -632,6 +738,12 @@ impl CompressedVideo {
         unsafe { msg.borrow_to_native(arena) }
     }
 
+    /// Create a new typed channel, and return an owned raw channel pointer to it.
+    ///
+    /// # Safety
+    /// This is intended for internal use only.
+    /// We're trusting the caller that the channel will only be used with this type T.
+    #[doc(hidden)]
     #[unsafe(no_mangle)]
     pub unsafe extern "C" fn foxglove_channel_create_compressed_video(
         topic: FoxgloveString,
@@ -653,6 +765,13 @@ impl CompressedVideo {
 impl BorrowToNative for CompressedVideo {
     type NativeType = foxglove::schemas::CompressedVideo;
 
+    /// Unsafely borrow this C struct into a native Rust schema struct, which can then be logged.
+    ///
+    /// We directly reference the C data, and/or copy it into memory allocated from the arena.
+    ///
+    /// # Safety:
+    /// This is intended for internal use only.
+    /// The caller must ensure the result is discarded before the original C data is mutated or freed.
     unsafe fn borrow_to_native(
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
@@ -691,7 +810,10 @@ pub extern "C" fn foxglove_channel_log_compressed_video(
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { CompressedVideo::borrow_option_to_native(msg, arena_pin) } {
-        Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
+        Ok(msg) => {
+            // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
+            log_msg_to_channel(channel, &*msg, log_time)
+        }
         Err(e) => {
             tracing::error!("CompressedVideo: {}", e);
             e.into()
@@ -721,6 +843,13 @@ pub struct CylinderPrimitive {
 impl BorrowToNative for CylinderPrimitive {
     type NativeType = foxglove::schemas::CylinderPrimitive;
 
+    /// Unsafely borrow this C struct into a native Rust schema struct, which can then be logged.
+    ///
+    /// We directly reference the C data, and/or copy it into memory allocated from the arena.
+    ///
+    /// # Safety:
+    /// This is intended for internal use only.
+    /// The caller must ensure the result is discarded before the original C data is mutated or freed.
     unsafe fn borrow_to_native(
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
@@ -770,6 +899,13 @@ pub struct CubePrimitive {
 impl BorrowToNative for CubePrimitive {
     type NativeType = foxglove::schemas::CubePrimitive;
 
+    /// Unsafely borrow this C struct into a native Rust schema struct, which can then be logged.
+    ///
+    /// We directly reference the C data, and/or copy it into memory allocated from the arena.
+    ///
+    /// # Safety:
+    /// This is intended for internal use only.
+    /// The caller must ensure the result is discarded before the original C data is mutated or freed.
     unsafe fn borrow_to_native(
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
@@ -821,6 +957,13 @@ pub struct FrameTransform {
 }
 
 impl FrameTransform {
+    /// Unsafely borrow this C struct into a native Rust schema struct, which can then be logged.
+    ///
+    /// We directly reference the C data, and/or copy it into memory allocated from the arena.
+    ///
+    /// # Safety:
+    /// This is intended for internal use only.
+    /// The caller must ensure the result is discarded before the original C data is mutated or freed.
     unsafe fn borrow_option_to_native(
         msg: Option<&Self>,
         arena: Pin<&mut Arena>,
@@ -833,6 +976,12 @@ impl FrameTransform {
         unsafe { msg.borrow_to_native(arena) }
     }
 
+    /// Create a new typed channel, and return an owned raw channel pointer to it.
+    ///
+    /// # Safety
+    /// This is intended for internal use only.
+    /// We're trusting the caller that the channel will only be used with this type T.
+    #[doc(hidden)]
     #[unsafe(no_mangle)]
     pub unsafe extern "C" fn foxglove_channel_create_frame_transform(
         topic: FoxgloveString,
@@ -854,6 +1003,13 @@ impl FrameTransform {
 impl BorrowToNative for FrameTransform {
     type NativeType = foxglove::schemas::FrameTransform;
 
+    /// Unsafely borrow this C struct into a native Rust schema struct, which can then be logged.
+    ///
+    /// We directly reference the C data, and/or copy it into memory allocated from the arena.
+    ///
+    /// # Safety:
+    /// This is intended for internal use only.
+    /// The caller must ensure the result is discarded before the original C data is mutated or freed.
     unsafe fn borrow_to_native(
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
@@ -905,7 +1061,10 @@ pub extern "C" fn foxglove_channel_log_frame_transform(
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { FrameTransform::borrow_option_to_native(msg, arena_pin) } {
-        Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
+        Ok(msg) => {
+            // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
+            log_msg_to_channel(channel, &*msg, log_time)
+        }
         Err(e) => {
             tracing::error!("FrameTransform: {}", e);
             e.into()
@@ -922,6 +1081,13 @@ pub struct FrameTransforms {
 }
 
 impl FrameTransforms {
+    /// Unsafely borrow this C struct into a native Rust schema struct, which can then be logged.
+    ///
+    /// We directly reference the C data, and/or copy it into memory allocated from the arena.
+    ///
+    /// # Safety:
+    /// This is intended for internal use only.
+    /// The caller must ensure the result is discarded before the original C data is mutated or freed.
     unsafe fn borrow_option_to_native(
         msg: Option<&Self>,
         arena: Pin<&mut Arena>,
@@ -934,6 +1100,12 @@ impl FrameTransforms {
         unsafe { msg.borrow_to_native(arena) }
     }
 
+    /// Create a new typed channel, and return an owned raw channel pointer to it.
+    ///
+    /// # Safety
+    /// This is intended for internal use only.
+    /// We're trusting the caller that the channel will only be used with this type T.
+    #[doc(hidden)]
     #[unsafe(no_mangle)]
     pub unsafe extern "C" fn foxglove_channel_create_frame_transforms(
         topic: FoxgloveString,
@@ -955,6 +1127,13 @@ impl FrameTransforms {
 impl BorrowToNative for FrameTransforms {
     type NativeType = foxglove::schemas::FrameTransforms;
 
+    /// Unsafely borrow this C struct into a native Rust schema struct, which can then be logged.
+    ///
+    /// We directly reference the C data, and/or copy it into memory allocated from the arena.
+    ///
+    /// # Safety:
+    /// This is intended for internal use only.
+    /// The caller must ensure the result is discarded before the original C data is mutated or freed.
     unsafe fn borrow_to_native(
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
@@ -977,7 +1156,10 @@ pub extern "C" fn foxglove_channel_log_frame_transforms(
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { FrameTransforms::borrow_option_to_native(msg, arena_pin) } {
-        Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
+        Ok(msg) => {
+            // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
+            log_msg_to_channel(channel, &*msg, log_time)
+        }
         Err(e) => {
             tracing::error!("FrameTransforms: {}", e);
             e.into()
@@ -993,6 +1175,13 @@ pub struct GeoJson {
 }
 
 impl GeoJson {
+    /// Unsafely borrow this C struct into a native Rust schema struct, which can then be logged.
+    ///
+    /// We directly reference the C data, and/or copy it into memory allocated from the arena.
+    ///
+    /// # Safety:
+    /// This is intended for internal use only.
+    /// The caller must ensure the result is discarded before the original C data is mutated or freed.
     unsafe fn borrow_option_to_native(
         msg: Option<&Self>,
         arena: Pin<&mut Arena>,
@@ -1005,6 +1194,12 @@ impl GeoJson {
         unsafe { msg.borrow_to_native(arena) }
     }
 
+    /// Create a new typed channel, and return an owned raw channel pointer to it.
+    ///
+    /// # Safety
+    /// This is intended for internal use only.
+    /// We're trusting the caller that the channel will only be used with this type T.
+    #[doc(hidden)]
     #[unsafe(no_mangle)]
     pub unsafe extern "C" fn foxglove_channel_create_geo_json(
         topic: FoxgloveString,
@@ -1025,6 +1220,13 @@ impl GeoJson {
 impl BorrowToNative for GeoJson {
     type NativeType = foxglove::schemas::GeoJson;
 
+    /// Unsafely borrow this C struct into a native Rust schema struct, which can then be logged.
+    ///
+    /// We directly reference the C data, and/or copy it into memory allocated from the arena.
+    ///
+    /// # Safety:
+    /// This is intended for internal use only.
+    /// The caller must ensure the result is discarded before the original C data is mutated or freed.
     unsafe fn borrow_to_native(
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
@@ -1053,7 +1255,10 @@ pub extern "C" fn foxglove_channel_log_geo_json(
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { GeoJson::borrow_option_to_native(msg, arena_pin) } {
-        Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
+        Ok(msg) => {
+            // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
+            log_msg_to_channel(channel, &*msg, log_time)
+        }
         Err(e) => {
             tracing::error!("GeoJson: {}", e);
             e.into()
@@ -1095,6 +1300,13 @@ pub struct Grid {
 }
 
 impl Grid {
+    /// Unsafely borrow this C struct into a native Rust schema struct, which can then be logged.
+    ///
+    /// We directly reference the C data, and/or copy it into memory allocated from the arena.
+    ///
+    /// # Safety:
+    /// This is intended for internal use only.
+    /// The caller must ensure the result is discarded before the original C data is mutated or freed.
     unsafe fn borrow_option_to_native(
         msg: Option<&Self>,
         arena: Pin<&mut Arena>,
@@ -1107,6 +1319,12 @@ impl Grid {
         unsafe { msg.borrow_to_native(arena) }
     }
 
+    /// Create a new typed channel, and return an owned raw channel pointer to it.
+    ///
+    /// # Safety
+    /// This is intended for internal use only.
+    /// We're trusting the caller that the channel will only be used with this type T.
+    #[doc(hidden)]
     #[unsafe(no_mangle)]
     pub unsafe extern "C" fn foxglove_channel_create_grid(
         topic: FoxgloveString,
@@ -1127,6 +1345,13 @@ impl Grid {
 impl BorrowToNative for Grid {
     type NativeType = foxglove::schemas::Grid;
 
+    /// Unsafely borrow this C struct into a native Rust schema struct, which can then be logged.
+    ///
+    /// We directly reference the C data, and/or copy it into memory allocated from the arena.
+    ///
+    /// # Safety:
+    /// This is intended for internal use only.
+    /// The caller must ensure the result is discarded before the original C data is mutated or freed.
     unsafe fn borrow_to_native(
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
@@ -1176,7 +1401,10 @@ pub extern "C" fn foxglove_channel_log_grid(
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { Grid::borrow_option_to_native(msg, arena_pin) } {
-        Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
+        Ok(msg) => {
+            // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
+            log_msg_to_channel(channel, &*msg, log_time)
+        }
         Err(e) => {
             tracing::error!("Grid: {}", e);
             e.into()
@@ -1201,6 +1429,13 @@ pub struct ImageAnnotations {
 }
 
 impl ImageAnnotations {
+    /// Unsafely borrow this C struct into a native Rust schema struct, which can then be logged.
+    ///
+    /// We directly reference the C data, and/or copy it into memory allocated from the arena.
+    ///
+    /// # Safety:
+    /// This is intended for internal use only.
+    /// The caller must ensure the result is discarded before the original C data is mutated or freed.
     unsafe fn borrow_option_to_native(
         msg: Option<&Self>,
         arena: Pin<&mut Arena>,
@@ -1213,6 +1448,12 @@ impl ImageAnnotations {
         unsafe { msg.borrow_to_native(arena) }
     }
 
+    /// Create a new typed channel, and return an owned raw channel pointer to it.
+    ///
+    /// # Safety
+    /// This is intended for internal use only.
+    /// We're trusting the caller that the channel will only be used with this type T.
+    #[doc(hidden)]
     #[unsafe(no_mangle)]
     pub unsafe extern "C" fn foxglove_channel_create_image_annotations(
         topic: FoxgloveString,
@@ -1234,6 +1475,13 @@ impl ImageAnnotations {
 impl BorrowToNative for ImageAnnotations {
     type NativeType = foxglove::schemas::ImageAnnotations;
 
+    /// Unsafely borrow this C struct into a native Rust schema struct, which can then be logged.
+    ///
+    /// We directly reference the C data, and/or copy it into memory allocated from the arena.
+    ///
+    /// # Safety:
+    /// This is intended for internal use only.
+    /// The caller must ensure the result is discarded before the original C data is mutated or freed.
     unsafe fn borrow_to_native(
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
@@ -1260,7 +1508,10 @@ pub extern "C" fn foxglove_channel_log_image_annotations(
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { ImageAnnotations::borrow_option_to_native(msg, arena_pin) } {
-        Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
+        Ok(msg) => {
+            // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
+            log_msg_to_channel(channel, &*msg, log_time)
+        }
         Err(e) => {
             tracing::error!("ImageAnnotations: {}", e);
             e.into()
@@ -1279,6 +1530,13 @@ pub struct KeyValuePair {
 }
 
 impl KeyValuePair {
+    /// Unsafely borrow this C struct into a native Rust schema struct, which can then be logged.
+    ///
+    /// We directly reference the C data, and/or copy it into memory allocated from the arena.
+    ///
+    /// # Safety:
+    /// This is intended for internal use only.
+    /// The caller must ensure the result is discarded before the original C data is mutated or freed.
     unsafe fn borrow_option_to_native(
         msg: Option<&Self>,
         arena: Pin<&mut Arena>,
@@ -1291,6 +1549,12 @@ impl KeyValuePair {
         unsafe { msg.borrow_to_native(arena) }
     }
 
+    /// Create a new typed channel, and return an owned raw channel pointer to it.
+    ///
+    /// # Safety
+    /// This is intended for internal use only.
+    /// We're trusting the caller that the channel will only be used with this type T.
+    #[doc(hidden)]
     #[unsafe(no_mangle)]
     pub unsafe extern "C" fn foxglove_channel_create_key_value_pair(
         topic: FoxgloveString,
@@ -1312,6 +1576,13 @@ impl KeyValuePair {
 impl BorrowToNative for KeyValuePair {
     type NativeType = foxglove::schemas::KeyValuePair;
 
+    /// Unsafely borrow this C struct into a native Rust schema struct, which can then be logged.
+    ///
+    /// We directly reference the C data, and/or copy it into memory allocated from the arena.
+    ///
+    /// # Safety:
+    /// This is intended for internal use only.
+    /// The caller must ensure the result is discarded before the original C data is mutated or freed.
     unsafe fn borrow_to_native(
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
@@ -1337,7 +1608,10 @@ pub extern "C" fn foxglove_channel_log_key_value_pair(
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { KeyValuePair::borrow_option_to_native(msg, arena_pin) } {
-        Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
+        Ok(msg) => {
+            // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
+            log_msg_to_channel(channel, &*msg, log_time)
+        }
         Err(e) => {
             tracing::error!("KeyValuePair: {}", e);
             e.into()
@@ -1373,6 +1647,13 @@ pub struct LaserScan {
 }
 
 impl LaserScan {
+    /// Unsafely borrow this C struct into a native Rust schema struct, which can then be logged.
+    ///
+    /// We directly reference the C data, and/or copy it into memory allocated from the arena.
+    ///
+    /// # Safety:
+    /// This is intended for internal use only.
+    /// The caller must ensure the result is discarded before the original C data is mutated or freed.
     unsafe fn borrow_option_to_native(
         msg: Option<&Self>,
         arena: Pin<&mut Arena>,
@@ -1385,6 +1666,12 @@ impl LaserScan {
         unsafe { msg.borrow_to_native(arena) }
     }
 
+    /// Create a new typed channel, and return an owned raw channel pointer to it.
+    ///
+    /// # Safety
+    /// This is intended for internal use only.
+    /// We're trusting the caller that the channel will only be used with this type T.
+    #[doc(hidden)]
     #[unsafe(no_mangle)]
     pub unsafe extern "C" fn foxglove_channel_create_laser_scan(
         topic: FoxgloveString,
@@ -1405,6 +1692,13 @@ impl LaserScan {
 impl BorrowToNative for LaserScan {
     type NativeType = foxglove::schemas::LaserScan;
 
+    /// Unsafely borrow this C struct into a native Rust schema struct, which can then be logged.
+    ///
+    /// We directly reference the C data, and/or copy it into memory allocated from the arena.
+    ///
+    /// # Safety:
+    /// This is intended for internal use only.
+    /// The caller must ensure the result is discarded before the original C data is mutated or freed.
     unsafe fn borrow_to_native(
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
@@ -1449,7 +1743,10 @@ pub extern "C" fn foxglove_channel_log_laser_scan(
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { LaserScan::borrow_option_to_native(msg, arena_pin) } {
-        Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
+        Ok(msg) => {
+            // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
+            log_msg_to_channel(channel, &*msg, log_time)
+        }
         Err(e) => {
             tracing::error!("LaserScan: {}", e);
             e.into()
@@ -1493,6 +1790,13 @@ pub struct LinePrimitive {
 impl BorrowToNative for LinePrimitive {
     type NativeType = foxglove::schemas::LinePrimitive;
 
+    /// Unsafely borrow this C struct into a native Rust schema struct, which can then be logged.
+    ///
+    /// We directly reference the C data, and/or copy it into memory allocated from the arena.
+    ///
+    /// # Safety:
+    /// This is intended for internal use only.
+    /// The caller must ensure the result is discarded before the original C data is mutated or freed.
     unsafe fn borrow_to_native(
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
@@ -1553,6 +1857,13 @@ pub struct LocationFix {
 }
 
 impl LocationFix {
+    /// Unsafely borrow this C struct into a native Rust schema struct, which can then be logged.
+    ///
+    /// We directly reference the C data, and/or copy it into memory allocated from the arena.
+    ///
+    /// # Safety:
+    /// This is intended for internal use only.
+    /// The caller must ensure the result is discarded before the original C data is mutated or freed.
     unsafe fn borrow_option_to_native(
         msg: Option<&Self>,
         arena: Pin<&mut Arena>,
@@ -1565,6 +1876,12 @@ impl LocationFix {
         unsafe { msg.borrow_to_native(arena) }
     }
 
+    /// Create a new typed channel, and return an owned raw channel pointer to it.
+    ///
+    /// # Safety
+    /// This is intended for internal use only.
+    /// We're trusting the caller that the channel will only be used with this type T.
+    #[doc(hidden)]
     #[unsafe(no_mangle)]
     pub unsafe extern "C" fn foxglove_channel_create_location_fix(
         topic: FoxgloveString,
@@ -1586,6 +1903,13 @@ impl LocationFix {
 impl BorrowToNative for LocationFix {
     type NativeType = foxglove::schemas::LocationFix;
 
+    /// Unsafely borrow this C struct into a native Rust schema struct, which can then be logged.
+    ///
+    /// We directly reference the C data, and/or copy it into memory allocated from the arena.
+    ///
+    /// # Safety:
+    /// This is intended for internal use only.
+    /// The caller must ensure the result is discarded before the original C data is mutated or freed.
     unsafe fn borrow_to_native(
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
@@ -1625,7 +1949,10 @@ pub extern "C" fn foxglove_channel_log_location_fix(
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { LocationFix::borrow_option_to_native(msg, arena_pin) } {
-        Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
+        Ok(msg) => {
+            // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
+            log_msg_to_channel(channel, &*msg, log_time)
+        }
         Err(e) => {
             tracing::error!("LocationFix: {}", e);
             e.into()
@@ -1656,6 +1983,13 @@ pub struct Log {
 }
 
 impl Log {
+    /// Unsafely borrow this C struct into a native Rust schema struct, which can then be logged.
+    ///
+    /// We directly reference the C data, and/or copy it into memory allocated from the arena.
+    ///
+    /// # Safety:
+    /// This is intended for internal use only.
+    /// The caller must ensure the result is discarded before the original C data is mutated or freed.
     unsafe fn borrow_option_to_native(
         msg: Option<&Self>,
         arena: Pin<&mut Arena>,
@@ -1668,6 +2002,12 @@ impl Log {
         unsafe { msg.borrow_to_native(arena) }
     }
 
+    /// Create a new typed channel, and return an owned raw channel pointer to it.
+    ///
+    /// # Safety
+    /// This is intended for internal use only.
+    /// We're trusting the caller that the channel will only be used with this type T.
+    #[doc(hidden)]
     #[unsafe(no_mangle)]
     pub unsafe extern "C" fn foxglove_channel_create_log(
         topic: FoxgloveString,
@@ -1688,6 +2028,13 @@ impl Log {
 impl BorrowToNative for Log {
     type NativeType = foxglove::schemas::Log;
 
+    /// Unsafely borrow this C struct into a native Rust schema struct, which can then be logged.
+    ///
+    /// We directly reference the C data, and/or copy it into memory allocated from the arena.
+    ///
+    /// # Safety:
+    /// This is intended for internal use only.
+    /// The caller must ensure the result is discarded before the original C data is mutated or freed.
     unsafe fn borrow_to_native(
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
@@ -1725,7 +2072,10 @@ pub extern "C" fn foxglove_channel_log_log(
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { Log::borrow_option_to_native(msg, arena_pin) } {
-        Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
+        Ok(msg) => {
+            // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
+            log_msg_to_channel(channel, &*msg, log_time)
+        }
         Err(e) => {
             tracing::error!("Log: {}", e);
             e.into()
@@ -1747,6 +2097,13 @@ pub struct SceneEntityDeletion {
 }
 
 impl SceneEntityDeletion {
+    /// Unsafely borrow this C struct into a native Rust schema struct, which can then be logged.
+    ///
+    /// We directly reference the C data, and/or copy it into memory allocated from the arena.
+    ///
+    /// # Safety:
+    /// This is intended for internal use only.
+    /// The caller must ensure the result is discarded before the original C data is mutated or freed.
     unsafe fn borrow_option_to_native(
         msg: Option<&Self>,
         arena: Pin<&mut Arena>,
@@ -1759,6 +2116,12 @@ impl SceneEntityDeletion {
         unsafe { msg.borrow_to_native(arena) }
     }
 
+    /// Create a new typed channel, and return an owned raw channel pointer to it.
+    ///
+    /// # Safety
+    /// This is intended for internal use only.
+    /// We're trusting the caller that the channel will only be used with this type T.
+    #[doc(hidden)]
     #[unsafe(no_mangle)]
     pub unsafe extern "C" fn foxglove_channel_create_scene_entity_deletion(
         topic: FoxgloveString,
@@ -1781,6 +2144,13 @@ impl SceneEntityDeletion {
 impl BorrowToNative for SceneEntityDeletion {
     type NativeType = foxglove::schemas::SceneEntityDeletion;
 
+    /// Unsafely borrow this C struct into a native Rust schema struct, which can then be logged.
+    ///
+    /// We directly reference the C data, and/or copy it into memory allocated from the arena.
+    ///
+    /// # Safety:
+    /// This is intended for internal use only.
+    /// The caller must ensure the result is discarded before the original C data is mutated or freed.
     unsafe fn borrow_to_native(
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
@@ -1805,7 +2175,10 @@ pub extern "C" fn foxglove_channel_log_scene_entity_deletion(
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { SceneEntityDeletion::borrow_option_to_native(msg, arena_pin) } {
-        Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
+        Ok(msg) => {
+            // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
+            log_msg_to_channel(channel, &*msg, log_time)
+        }
         Err(e) => {
             tracing::error!("SceneEntityDeletion: {}", e);
             e.into()
@@ -1869,6 +2242,13 @@ pub struct SceneEntity {
 }
 
 impl SceneEntity {
+    /// Unsafely borrow this C struct into a native Rust schema struct, which can then be logged.
+    ///
+    /// We directly reference the C data, and/or copy it into memory allocated from the arena.
+    ///
+    /// # Safety:
+    /// This is intended for internal use only.
+    /// The caller must ensure the result is discarded before the original C data is mutated or freed.
     unsafe fn borrow_option_to_native(
         msg: Option<&Self>,
         arena: Pin<&mut Arena>,
@@ -1881,6 +2261,12 @@ impl SceneEntity {
         unsafe { msg.borrow_to_native(arena) }
     }
 
+    /// Create a new typed channel, and return an owned raw channel pointer to it.
+    ///
+    /// # Safety
+    /// This is intended for internal use only.
+    /// We're trusting the caller that the channel will only be used with this type T.
+    #[doc(hidden)]
     #[unsafe(no_mangle)]
     pub unsafe extern "C" fn foxglove_channel_create_scene_entity(
         topic: FoxgloveString,
@@ -1902,6 +2288,13 @@ impl SceneEntity {
 impl BorrowToNative for SceneEntity {
     type NativeType = foxglove::schemas::SceneEntity;
 
+    /// Unsafely borrow this C struct into a native Rust schema struct, which can then be logged.
+    ///
+    /// We directly reference the C data, and/or copy it into memory allocated from the arena.
+    ///
+    /// # Safety:
+    /// This is intended for internal use only.
+    /// The caller must ensure the result is discarded before the original C data is mutated or freed.
     unsafe fn borrow_to_native(
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
@@ -1953,7 +2346,10 @@ pub extern "C" fn foxglove_channel_log_scene_entity(
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { SceneEntity::borrow_option_to_native(msg, arena_pin) } {
-        Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
+        Ok(msg) => {
+            // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
+            log_msg_to_channel(channel, &*msg, log_time)
+        }
         Err(e) => {
             tracing::error!("SceneEntity: {}", e);
             e.into()
@@ -1974,6 +2370,13 @@ pub struct SceneUpdate {
 }
 
 impl SceneUpdate {
+    /// Unsafely borrow this C struct into a native Rust schema struct, which can then be logged.
+    ///
+    /// We directly reference the C data, and/or copy it into memory allocated from the arena.
+    ///
+    /// # Safety:
+    /// This is intended for internal use only.
+    /// The caller must ensure the result is discarded before the original C data is mutated or freed.
     unsafe fn borrow_option_to_native(
         msg: Option<&Self>,
         arena: Pin<&mut Arena>,
@@ -1986,6 +2389,12 @@ impl SceneUpdate {
         unsafe { msg.borrow_to_native(arena) }
     }
 
+    /// Create a new typed channel, and return an owned raw channel pointer to it.
+    ///
+    /// # Safety
+    /// This is intended for internal use only.
+    /// We're trusting the caller that the channel will only be used with this type T.
+    #[doc(hidden)]
     #[unsafe(no_mangle)]
     pub unsafe extern "C" fn foxglove_channel_create_scene_update(
         topic: FoxgloveString,
@@ -2007,6 +2416,13 @@ impl SceneUpdate {
 impl BorrowToNative for SceneUpdate {
     type NativeType = foxglove::schemas::SceneUpdate;
 
+    /// Unsafely borrow this C struct into a native Rust schema struct, which can then be logged.
+    ///
+    /// We directly reference the C data, and/or copy it into memory allocated from the arena.
+    ///
+    /// # Safety:
+    /// This is intended for internal use only.
+    /// The caller must ensure the result is discarded before the original C data is mutated or freed.
     unsafe fn borrow_to_native(
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
@@ -2031,7 +2447,10 @@ pub extern "C" fn foxglove_channel_log_scene_update(
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { SceneUpdate::borrow_option_to_native(msg, arena_pin) } {
-        Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
+        Ok(msg) => {
+            // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
+            log_msg_to_channel(channel, &*msg, log_time)
+        }
         Err(e) => {
             tracing::error!("SceneUpdate: {}", e);
             e.into()
@@ -2068,6 +2487,13 @@ pub struct ModelPrimitive {
 impl BorrowToNative for ModelPrimitive {
     type NativeType = foxglove::schemas::ModelPrimitive;
 
+    /// Unsafely borrow this C struct into a native Rust schema struct, which can then be logged.
+    ///
+    /// We directly reference the C data, and/or copy it into memory allocated from the arena.
+    ///
+    /// # Safety:
+    /// This is intended for internal use only.
+    /// The caller must ensure the result is discarded before the original C data is mutated or freed.
     unsafe fn borrow_to_native(
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
@@ -2125,6 +2551,13 @@ pub struct PackedElementField {
 }
 
 impl PackedElementField {
+    /// Unsafely borrow this C struct into a native Rust schema struct, which can then be logged.
+    ///
+    /// We directly reference the C data, and/or copy it into memory allocated from the arena.
+    ///
+    /// # Safety:
+    /// This is intended for internal use only.
+    /// The caller must ensure the result is discarded before the original C data is mutated or freed.
     unsafe fn borrow_option_to_native(
         msg: Option<&Self>,
         arena: Pin<&mut Arena>,
@@ -2137,6 +2570,12 @@ impl PackedElementField {
         unsafe { msg.borrow_to_native(arena) }
     }
 
+    /// Create a new typed channel, and return an owned raw channel pointer to it.
+    ///
+    /// # Safety
+    /// This is intended for internal use only.
+    /// We're trusting the caller that the channel will only be used with this type T.
+    #[doc(hidden)]
     #[unsafe(no_mangle)]
     pub unsafe extern "C" fn foxglove_channel_create_packed_element_field(
         topic: FoxgloveString,
@@ -2158,6 +2597,13 @@ impl PackedElementField {
 impl BorrowToNative for PackedElementField {
     type NativeType = foxglove::schemas::PackedElementField;
 
+    /// Unsafely borrow this C struct into a native Rust schema struct, which can then be logged.
+    ///
+    /// We directly reference the C data, and/or copy it into memory allocated from the arena.
+    ///
+    /// # Safety:
+    /// This is intended for internal use only.
+    /// The caller must ensure the result is discarded before the original C data is mutated or freed.
     unsafe fn borrow_to_native(
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
@@ -2183,7 +2629,10 @@ pub extern "C" fn foxglove_channel_log_packed_element_field(
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { PackedElementField::borrow_option_to_native(msg, arena_pin) } {
-        Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
+        Ok(msg) => {
+            // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
+            log_msg_to_channel(channel, &*msg, log_time)
+        }
         Err(e) => {
             tracing::error!("PackedElementField: {}", e);
             e.into()
@@ -2202,6 +2651,13 @@ pub struct Point2 {
 }
 
 impl Point2 {
+    /// Unsafely borrow this C struct into a native Rust schema struct, which can then be logged.
+    ///
+    /// We directly reference the C data, and/or copy it into memory allocated from the arena.
+    ///
+    /// # Safety:
+    /// This is intended for internal use only.
+    /// The caller must ensure the result is discarded before the original C data is mutated or freed.
     unsafe fn borrow_option_to_native(
         msg: Option<&Self>,
         arena: Pin<&mut Arena>,
@@ -2214,6 +2670,12 @@ impl Point2 {
         unsafe { msg.borrow_to_native(arena) }
     }
 
+    /// Create a new typed channel, and return an owned raw channel pointer to it.
+    ///
+    /// # Safety
+    /// This is intended for internal use only.
+    /// We're trusting the caller that the channel will only be used with this type T.
+    #[doc(hidden)]
     #[unsafe(no_mangle)]
     pub unsafe extern "C" fn foxglove_channel_create_point2(
         topic: FoxgloveString,
@@ -2234,6 +2696,13 @@ impl Point2 {
 impl BorrowToNative for Point2 {
     type NativeType = foxglove::schemas::Point2;
 
+    /// Unsafely borrow this C struct into a native Rust schema struct, which can then be logged.
+    ///
+    /// We directly reference the C data, and/or copy it into memory allocated from the arena.
+    ///
+    /// # Safety:
+    /// This is intended for internal use only.
+    /// The caller must ensure the result is discarded before the original C data is mutated or freed.
     unsafe fn borrow_to_native(
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
@@ -2255,7 +2724,10 @@ pub extern "C" fn foxglove_channel_log_point2(
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { Point2::borrow_option_to_native(msg, arena_pin) } {
-        Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
+        Ok(msg) => {
+            // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
+            log_msg_to_channel(channel, &*msg, log_time)
+        }
         Err(e) => {
             tracing::error!("Point2: {}", e);
             e.into()
@@ -2277,6 +2749,13 @@ pub struct Point3 {
 }
 
 impl Point3 {
+    /// Unsafely borrow this C struct into a native Rust schema struct, which can then be logged.
+    ///
+    /// We directly reference the C data, and/or copy it into memory allocated from the arena.
+    ///
+    /// # Safety:
+    /// This is intended for internal use only.
+    /// The caller must ensure the result is discarded before the original C data is mutated or freed.
     unsafe fn borrow_option_to_native(
         msg: Option<&Self>,
         arena: Pin<&mut Arena>,
@@ -2289,6 +2768,12 @@ impl Point3 {
         unsafe { msg.borrow_to_native(arena) }
     }
 
+    /// Create a new typed channel, and return an owned raw channel pointer to it.
+    ///
+    /// # Safety
+    /// This is intended for internal use only.
+    /// We're trusting the caller that the channel will only be used with this type T.
+    #[doc(hidden)]
     #[unsafe(no_mangle)]
     pub unsafe extern "C" fn foxglove_channel_create_point3(
         topic: FoxgloveString,
@@ -2309,6 +2794,13 @@ impl Point3 {
 impl BorrowToNative for Point3 {
     type NativeType = foxglove::schemas::Point3;
 
+    /// Unsafely borrow this C struct into a native Rust schema struct, which can then be logged.
+    ///
+    /// We directly reference the C data, and/or copy it into memory allocated from the arena.
+    ///
+    /// # Safety:
+    /// This is intended for internal use only.
+    /// The caller must ensure the result is discarded before the original C data is mutated or freed.
     unsafe fn borrow_to_native(
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
@@ -2331,7 +2823,10 @@ pub extern "C" fn foxglove_channel_log_point3(
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { Point3::borrow_option_to_native(msg, arena_pin) } {
-        Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
+        Ok(msg) => {
+            // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
+            log_msg_to_channel(channel, &*msg, log_time)
+        }
         Err(e) => {
             tracing::error!("Point3: {}", e);
             e.into()
@@ -2364,6 +2859,13 @@ pub struct PointCloud {
 }
 
 impl PointCloud {
+    /// Unsafely borrow this C struct into a native Rust schema struct, which can then be logged.
+    ///
+    /// We directly reference the C data, and/or copy it into memory allocated from the arena.
+    ///
+    /// # Safety:
+    /// This is intended for internal use only.
+    /// The caller must ensure the result is discarded before the original C data is mutated or freed.
     unsafe fn borrow_option_to_native(
         msg: Option<&Self>,
         arena: Pin<&mut Arena>,
@@ -2376,6 +2878,12 @@ impl PointCloud {
         unsafe { msg.borrow_to_native(arena) }
     }
 
+    /// Create a new typed channel, and return an owned raw channel pointer to it.
+    ///
+    /// # Safety
+    /// This is intended for internal use only.
+    /// We're trusting the caller that the channel will only be used with this type T.
+    #[doc(hidden)]
     #[unsafe(no_mangle)]
     pub unsafe extern "C" fn foxglove_channel_create_point_cloud(
         topic: FoxgloveString,
@@ -2397,6 +2905,13 @@ impl PointCloud {
 impl BorrowToNative for PointCloud {
     type NativeType = foxglove::schemas::PointCloud;
 
+    /// Unsafely borrow this C struct into a native Rust schema struct, which can then be logged.
+    ///
+    /// We directly reference the C data, and/or copy it into memory allocated from the arena.
+    ///
+    /// # Safety:
+    /// This is intended for internal use only.
+    /// The caller must ensure the result is discarded before the original C data is mutated or freed.
     unsafe fn borrow_to_native(
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
@@ -2437,7 +2952,10 @@ pub extern "C" fn foxglove_channel_log_point_cloud(
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { PointCloud::borrow_option_to_native(msg, arena_pin) } {
-        Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
+        Ok(msg) => {
+            // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
+            log_msg_to_channel(channel, &*msg, log_time)
+        }
         Err(e) => {
             tracing::error!("PointCloud: {}", e);
             e.into()
@@ -2474,6 +2992,13 @@ pub struct PointsAnnotation {
 }
 
 impl PointsAnnotation {
+    /// Unsafely borrow this C struct into a native Rust schema struct, which can then be logged.
+    ///
+    /// We directly reference the C data, and/or copy it into memory allocated from the arena.
+    ///
+    /// # Safety:
+    /// This is intended for internal use only.
+    /// The caller must ensure the result is discarded before the original C data is mutated or freed.
     unsafe fn borrow_option_to_native(
         msg: Option<&Self>,
         arena: Pin<&mut Arena>,
@@ -2486,6 +3011,12 @@ impl PointsAnnotation {
         unsafe { msg.borrow_to_native(arena) }
     }
 
+    /// Create a new typed channel, and return an owned raw channel pointer to it.
+    ///
+    /// # Safety
+    /// This is intended for internal use only.
+    /// We're trusting the caller that the channel will only be used with this type T.
+    #[doc(hidden)]
     #[unsafe(no_mangle)]
     pub unsafe extern "C" fn foxglove_channel_create_points_annotation(
         topic: FoxgloveString,
@@ -2507,6 +3038,13 @@ impl PointsAnnotation {
 impl BorrowToNative for PointsAnnotation {
     type NativeType = foxglove::schemas::PointsAnnotation;
 
+    /// Unsafely borrow this C struct into a native Rust schema struct, which can then be logged.
+    ///
+    /// We directly reference the C data, and/or copy it into memory allocated from the arena.
+    ///
+    /// # Safety:
+    /// This is intended for internal use only.
+    /// The caller must ensure the result is discarded before the original C data is mutated or freed.
     unsafe fn borrow_to_native(
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
@@ -2552,7 +3090,10 @@ pub extern "C" fn foxglove_channel_log_points_annotation(
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { PointsAnnotation::borrow_option_to_native(msg, arena_pin) } {
-        Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
+        Ok(msg) => {
+            // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
+            log_msg_to_channel(channel, &*msg, log_time)
+        }
         Err(e) => {
             tracing::error!("PointsAnnotation: {}", e);
             e.into()
@@ -2571,6 +3112,13 @@ pub struct Pose {
 }
 
 impl Pose {
+    /// Unsafely borrow this C struct into a native Rust schema struct, which can then be logged.
+    ///
+    /// We directly reference the C data, and/or copy it into memory allocated from the arena.
+    ///
+    /// # Safety:
+    /// This is intended for internal use only.
+    /// The caller must ensure the result is discarded before the original C data is mutated or freed.
     unsafe fn borrow_option_to_native(
         msg: Option<&Self>,
         arena: Pin<&mut Arena>,
@@ -2583,6 +3131,12 @@ impl Pose {
         unsafe { msg.borrow_to_native(arena) }
     }
 
+    /// Create a new typed channel, and return an owned raw channel pointer to it.
+    ///
+    /// # Safety
+    /// This is intended for internal use only.
+    /// We're trusting the caller that the channel will only be used with this type T.
+    #[doc(hidden)]
     #[unsafe(no_mangle)]
     pub unsafe extern "C" fn foxglove_channel_create_pose(
         topic: FoxgloveString,
@@ -2603,6 +3157,13 @@ impl Pose {
 impl BorrowToNative for Pose {
     type NativeType = foxglove::schemas::Pose;
 
+    /// Unsafely borrow this C struct into a native Rust schema struct, which can then be logged.
+    ///
+    /// We directly reference the C data, and/or copy it into memory allocated from the arena.
+    ///
+    /// # Safety:
+    /// This is intended for internal use only.
+    /// The caller must ensure the result is discarded before the original C data is mutated or freed.
     unsafe fn borrow_to_native(
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
@@ -2637,7 +3198,10 @@ pub extern "C" fn foxglove_channel_log_pose(
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { Pose::borrow_option_to_native(msg, arena_pin) } {
-        Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
+        Ok(msg) => {
+            // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
+            log_msg_to_channel(channel, &*msg, log_time)
+        }
         Err(e) => {
             tracing::error!("Pose: {}", e);
             e.into()
@@ -2659,6 +3223,13 @@ pub struct PoseInFrame {
 }
 
 impl PoseInFrame {
+    /// Unsafely borrow this C struct into a native Rust schema struct, which can then be logged.
+    ///
+    /// We directly reference the C data, and/or copy it into memory allocated from the arena.
+    ///
+    /// # Safety:
+    /// This is intended for internal use only.
+    /// The caller must ensure the result is discarded before the original C data is mutated or freed.
     unsafe fn borrow_option_to_native(
         msg: Option<&Self>,
         arena: Pin<&mut Arena>,
@@ -2671,6 +3242,12 @@ impl PoseInFrame {
         unsafe { msg.borrow_to_native(arena) }
     }
 
+    /// Create a new typed channel, and return an owned raw channel pointer to it.
+    ///
+    /// # Safety
+    /// This is intended for internal use only.
+    /// We're trusting the caller that the channel will only be used with this type T.
+    #[doc(hidden)]
     #[unsafe(no_mangle)]
     pub unsafe extern "C" fn foxglove_channel_create_pose_in_frame(
         topic: FoxgloveString,
@@ -2692,6 +3269,13 @@ impl PoseInFrame {
 impl BorrowToNative for PoseInFrame {
     type NativeType = foxglove::schemas::PoseInFrame;
 
+    /// Unsafely borrow this C struct into a native Rust schema struct, which can then be logged.
+    ///
+    /// We directly reference the C data, and/or copy it into memory allocated from the arena.
+    ///
+    /// # Safety:
+    /// This is intended for internal use only.
+    /// The caller must ensure the result is discarded before the original C data is mutated or freed.
     unsafe fn borrow_to_native(
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
@@ -2728,7 +3312,10 @@ pub extern "C" fn foxglove_channel_log_pose_in_frame(
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { PoseInFrame::borrow_option_to_native(msg, arena_pin) } {
-        Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
+        Ok(msg) => {
+            // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
+            log_msg_to_channel(channel, &*msg, log_time)
+        }
         Err(e) => {
             tracing::error!("PoseInFrame: {}", e);
             e.into()
@@ -2751,6 +3338,13 @@ pub struct PosesInFrame {
 }
 
 impl PosesInFrame {
+    /// Unsafely borrow this C struct into a native Rust schema struct, which can then be logged.
+    ///
+    /// We directly reference the C data, and/or copy it into memory allocated from the arena.
+    ///
+    /// # Safety:
+    /// This is intended for internal use only.
+    /// The caller must ensure the result is discarded before the original C data is mutated or freed.
     unsafe fn borrow_option_to_native(
         msg: Option<&Self>,
         arena: Pin<&mut Arena>,
@@ -2763,6 +3357,12 @@ impl PosesInFrame {
         unsafe { msg.borrow_to_native(arena) }
     }
 
+    /// Create a new typed channel, and return an owned raw channel pointer to it.
+    ///
+    /// # Safety
+    /// This is intended for internal use only.
+    /// We're trusting the caller that the channel will only be used with this type T.
+    #[doc(hidden)]
     #[unsafe(no_mangle)]
     pub unsafe extern "C" fn foxglove_channel_create_poses_in_frame(
         topic: FoxgloveString,
@@ -2784,6 +3384,13 @@ impl PosesInFrame {
 impl BorrowToNative for PosesInFrame {
     type NativeType = foxglove::schemas::PosesInFrame;
 
+    /// Unsafely borrow this C struct into a native Rust schema struct, which can then be logged.
+    ///
+    /// We directly reference the C data, and/or copy it into memory allocated from the arena.
+    ///
+    /// # Safety:
+    /// This is intended for internal use only.
+    /// The caller must ensure the result is discarded before the original C data is mutated or freed.
     unsafe fn borrow_to_native(
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
@@ -2815,7 +3422,10 @@ pub extern "C" fn foxglove_channel_log_poses_in_frame(
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { PosesInFrame::borrow_option_to_native(msg, arena_pin) } {
-        Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
+        Ok(msg) => {
+            // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
+            log_msg_to_channel(channel, &*msg, log_time)
+        }
         Err(e) => {
             tracing::error!("PosesInFrame: {}", e);
             e.into()
@@ -2840,6 +3450,13 @@ pub struct Quaternion {
 }
 
 impl Quaternion {
+    /// Unsafely borrow this C struct into a native Rust schema struct, which can then be logged.
+    ///
+    /// We directly reference the C data, and/or copy it into memory allocated from the arena.
+    ///
+    /// # Safety:
+    /// This is intended for internal use only.
+    /// The caller must ensure the result is discarded before the original C data is mutated or freed.
     unsafe fn borrow_option_to_native(
         msg: Option<&Self>,
         arena: Pin<&mut Arena>,
@@ -2852,6 +3469,12 @@ impl Quaternion {
         unsafe { msg.borrow_to_native(arena) }
     }
 
+    /// Create a new typed channel, and return an owned raw channel pointer to it.
+    ///
+    /// # Safety
+    /// This is intended for internal use only.
+    /// We're trusting the caller that the channel will only be used with this type T.
+    #[doc(hidden)]
     #[unsafe(no_mangle)]
     pub unsafe extern "C" fn foxglove_channel_create_quaternion(
         topic: FoxgloveString,
@@ -2873,6 +3496,13 @@ impl Quaternion {
 impl BorrowToNative for Quaternion {
     type NativeType = foxglove::schemas::Quaternion;
 
+    /// Unsafely borrow this C struct into a native Rust schema struct, which can then be logged.
+    ///
+    /// We directly reference the C data, and/or copy it into memory allocated from the arena.
+    ///
+    /// # Safety:
+    /// This is intended for internal use only.
+    /// The caller must ensure the result is discarded before the original C data is mutated or freed.
     unsafe fn borrow_to_native(
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
@@ -2896,7 +3526,10 @@ pub extern "C" fn foxglove_channel_log_quaternion(
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { Quaternion::borrow_option_to_native(msg, arena_pin) } {
-        Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
+        Ok(msg) => {
+            // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
+            log_msg_to_channel(channel, &*msg, log_time)
+        }
         Err(e) => {
             tracing::error!("Quaternion: {}", e);
             e.into()
@@ -2925,6 +3558,13 @@ pub struct RawAudio {
 }
 
 impl RawAudio {
+    /// Unsafely borrow this C struct into a native Rust schema struct, which can then be logged.
+    ///
+    /// We directly reference the C data, and/or copy it into memory allocated from the arena.
+    ///
+    /// # Safety:
+    /// This is intended for internal use only.
+    /// The caller must ensure the result is discarded before the original C data is mutated or freed.
     unsafe fn borrow_option_to_native(
         msg: Option<&Self>,
         arena: Pin<&mut Arena>,
@@ -2937,6 +3577,12 @@ impl RawAudio {
         unsafe { msg.borrow_to_native(arena) }
     }
 
+    /// Create a new typed channel, and return an owned raw channel pointer to it.
+    ///
+    /// # Safety
+    /// This is intended for internal use only.
+    /// We're trusting the caller that the channel will only be used with this type T.
+    #[doc(hidden)]
     #[unsafe(no_mangle)]
     pub unsafe extern "C" fn foxglove_channel_create_raw_audio(
         topic: FoxgloveString,
@@ -2957,6 +3603,13 @@ impl RawAudio {
 impl BorrowToNative for RawAudio {
     type NativeType = foxglove::schemas::RawAudio;
 
+    /// Unsafely borrow this C struct into a native Rust schema struct, which can then be logged.
+    ///
+    /// We directly reference the C data, and/or copy it into memory allocated from the arena.
+    ///
+    /// # Safety:
+    /// This is intended for internal use only.
+    /// The caller must ensure the result is discarded before the original C data is mutated or freed.
     unsafe fn borrow_to_native(
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
@@ -2989,7 +3642,10 @@ pub extern "C" fn foxglove_channel_log_raw_audio(
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { RawAudio::borrow_option_to_native(msg, arena_pin) } {
-        Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
+        Ok(msg) => {
+            // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
+            log_msg_to_channel(channel, &*msg, log_time)
+        }
         Err(e) => {
             tracing::error!("RawAudio: {}", e);
             e.into()
@@ -3026,6 +3682,13 @@ pub struct RawImage {
 }
 
 impl RawImage {
+    /// Unsafely borrow this C struct into a native Rust schema struct, which can then be logged.
+    ///
+    /// We directly reference the C data, and/or copy it into memory allocated from the arena.
+    ///
+    /// # Safety:
+    /// This is intended for internal use only.
+    /// The caller must ensure the result is discarded before the original C data is mutated or freed.
     unsafe fn borrow_option_to_native(
         msg: Option<&Self>,
         arena: Pin<&mut Arena>,
@@ -3038,6 +3701,12 @@ impl RawImage {
         unsafe { msg.borrow_to_native(arena) }
     }
 
+    /// Create a new typed channel, and return an owned raw channel pointer to it.
+    ///
+    /// # Safety
+    /// This is intended for internal use only.
+    /// We're trusting the caller that the channel will only be used with this type T.
+    #[doc(hidden)]
     #[unsafe(no_mangle)]
     pub unsafe extern "C" fn foxglove_channel_create_raw_image(
         topic: FoxgloveString,
@@ -3058,6 +3727,13 @@ impl RawImage {
 impl BorrowToNative for RawImage {
     type NativeType = foxglove::schemas::RawImage;
 
+    /// Unsafely borrow this C struct into a native Rust schema struct, which can then be logged.
+    ///
+    /// We directly reference the C data, and/or copy it into memory allocated from the arena.
+    ///
+    /// # Safety:
+    /// This is intended for internal use only.
+    /// The caller must ensure the result is discarded before the original C data is mutated or freed.
     unsafe fn borrow_to_native(
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
@@ -3099,7 +3775,10 @@ pub extern "C" fn foxglove_channel_log_raw_image(
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { RawImage::borrow_option_to_native(msg, arena_pin) } {
-        Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
+        Ok(msg) => {
+            // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
+            log_msg_to_channel(channel, &*msg, log_time)
+        }
         Err(e) => {
             tracing::error!("RawImage: {}", e);
             e.into()
@@ -3123,6 +3802,13 @@ pub struct SpherePrimitive {
 impl BorrowToNative for SpherePrimitive {
     type NativeType = foxglove::schemas::SpherePrimitive;
 
+    /// Unsafely borrow this C struct into a native Rust schema struct, which can then be logged.
+    ///
+    /// We directly reference the C data, and/or copy it into memory allocated from the arena.
+    ///
+    /// # Safety:
+    /// This is intended for internal use only.
+    /// The caller must ensure the result is discarded before the original C data is mutated or freed.
     unsafe fn borrow_to_native(
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
@@ -3178,6 +3864,13 @@ pub struct TextAnnotation {
 }
 
 impl TextAnnotation {
+    /// Unsafely borrow this C struct into a native Rust schema struct, which can then be logged.
+    ///
+    /// We directly reference the C data, and/or copy it into memory allocated from the arena.
+    ///
+    /// # Safety:
+    /// This is intended for internal use only.
+    /// The caller must ensure the result is discarded before the original C data is mutated or freed.
     unsafe fn borrow_option_to_native(
         msg: Option<&Self>,
         arena: Pin<&mut Arena>,
@@ -3190,6 +3883,12 @@ impl TextAnnotation {
         unsafe { msg.borrow_to_native(arena) }
     }
 
+    /// Create a new typed channel, and return an owned raw channel pointer to it.
+    ///
+    /// # Safety
+    /// This is intended for internal use only.
+    /// We're trusting the caller that the channel will only be used with this type T.
+    #[doc(hidden)]
     #[unsafe(no_mangle)]
     pub unsafe extern "C" fn foxglove_channel_create_text_annotation(
         topic: FoxgloveString,
@@ -3211,6 +3910,13 @@ impl TextAnnotation {
 impl BorrowToNative for TextAnnotation {
     type NativeType = foxglove::schemas::TextAnnotation;
 
+    /// Unsafely borrow this C struct into a native Rust schema struct, which can then be logged.
+    ///
+    /// We directly reference the C data, and/or copy it into memory allocated from the arena.
+    ///
+    /// # Safety:
+    /// This is intended for internal use only.
+    /// The caller must ensure the result is discarded before the original C data is mutated or freed.
     unsafe fn borrow_to_native(
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
@@ -3257,7 +3963,10 @@ pub extern "C" fn foxglove_channel_log_text_annotation(
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { TextAnnotation::borrow_option_to_native(msg, arena_pin) } {
-        Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
+        Ok(msg) => {
+            // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
+            log_msg_to_channel(channel, &*msg, log_time)
+        }
         Err(e) => {
             tracing::error!("TextAnnotation: {}", e);
             e.into()
@@ -3290,6 +3999,13 @@ pub struct TextPrimitive {
 impl BorrowToNative for TextPrimitive {
     type NativeType = foxglove::schemas::TextPrimitive;
 
+    /// Unsafely borrow this C struct into a native Rust schema struct, which can then be logged.
+    ///
+    /// We directly reference the C data, and/or copy it into memory allocated from the arena.
+    ///
+    /// # Safety:
+    /// This is intended for internal use only.
+    /// The caller must ensure the result is discarded before the original C data is mutated or freed.
     unsafe fn borrow_to_native(
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
@@ -3347,6 +4063,13 @@ pub struct TriangleListPrimitive {
 impl BorrowToNative for TriangleListPrimitive {
     type NativeType = foxglove::schemas::TriangleListPrimitive;
 
+    /// Unsafely borrow this C struct into a native Rust schema struct, which can then be logged.
+    ///
+    /// We directly reference the C data, and/or copy it into memory allocated from the arena.
+    ///
+    /// # Safety:
+    /// This is intended for internal use only.
+    /// The caller must ensure the result is discarded before the original C data is mutated or freed.
     unsafe fn borrow_to_native(
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
@@ -3391,6 +4114,13 @@ pub struct Vector2 {
 }
 
 impl Vector2 {
+    /// Unsafely borrow this C struct into a native Rust schema struct, which can then be logged.
+    ///
+    /// We directly reference the C data, and/or copy it into memory allocated from the arena.
+    ///
+    /// # Safety:
+    /// This is intended for internal use only.
+    /// The caller must ensure the result is discarded before the original C data is mutated or freed.
     unsafe fn borrow_option_to_native(
         msg: Option<&Self>,
         arena: Pin<&mut Arena>,
@@ -3403,6 +4133,12 @@ impl Vector2 {
         unsafe { msg.borrow_to_native(arena) }
     }
 
+    /// Create a new typed channel, and return an owned raw channel pointer to it.
+    ///
+    /// # Safety
+    /// This is intended for internal use only.
+    /// We're trusting the caller that the channel will only be used with this type T.
+    #[doc(hidden)]
     #[unsafe(no_mangle)]
     pub unsafe extern "C" fn foxglove_channel_create_vector2(
         topic: FoxgloveString,
@@ -3423,6 +4159,13 @@ impl Vector2 {
 impl BorrowToNative for Vector2 {
     type NativeType = foxglove::schemas::Vector2;
 
+    /// Unsafely borrow this C struct into a native Rust schema struct, which can then be logged.
+    ///
+    /// We directly reference the C data, and/or copy it into memory allocated from the arena.
+    ///
+    /// # Safety:
+    /// This is intended for internal use only.
+    /// The caller must ensure the result is discarded before the original C data is mutated or freed.
     unsafe fn borrow_to_native(
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
@@ -3444,7 +4187,10 @@ pub extern "C" fn foxglove_channel_log_vector2(
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { Vector2::borrow_option_to_native(msg, arena_pin) } {
-        Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
+        Ok(msg) => {
+            // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
+            log_msg_to_channel(channel, &*msg, log_time)
+        }
         Err(e) => {
             tracing::error!("Vector2: {}", e);
             e.into()
@@ -3466,6 +4212,13 @@ pub struct Vector3 {
 }
 
 impl Vector3 {
+    /// Unsafely borrow this C struct into a native Rust schema struct, which can then be logged.
+    ///
+    /// We directly reference the C data, and/or copy it into memory allocated from the arena.
+    ///
+    /// # Safety:
+    /// This is intended for internal use only.
+    /// The caller must ensure the result is discarded before the original C data is mutated or freed.
     unsafe fn borrow_option_to_native(
         msg: Option<&Self>,
         arena: Pin<&mut Arena>,
@@ -3478,6 +4231,12 @@ impl Vector3 {
         unsafe { msg.borrow_to_native(arena) }
     }
 
+    /// Create a new typed channel, and return an owned raw channel pointer to it.
+    ///
+    /// # Safety
+    /// This is intended for internal use only.
+    /// We're trusting the caller that the channel will only be used with this type T.
+    #[doc(hidden)]
     #[unsafe(no_mangle)]
     pub unsafe extern "C" fn foxglove_channel_create_vector3(
         topic: FoxgloveString,
@@ -3498,6 +4257,13 @@ impl Vector3 {
 impl BorrowToNative for Vector3 {
     type NativeType = foxglove::schemas::Vector3;
 
+    /// Unsafely borrow this C struct into a native Rust schema struct, which can then be logged.
+    ///
+    /// We directly reference the C data, and/or copy it into memory allocated from the arena.
+    ///
+    /// # Safety:
+    /// This is intended for internal use only.
+    /// The caller must ensure the result is discarded before the original C data is mutated or freed.
     unsafe fn borrow_to_native(
         &self,
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
@@ -3520,7 +4286,10 @@ pub extern "C" fn foxglove_channel_log_vector3(
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { Vector3::borrow_option_to_native(msg, arena_pin) } {
-        Ok(msg) => log_msg_to_channel(channel, &*msg, log_time),
+        Ok(msg) => {
+            // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
+            log_msg_to_channel(channel, &*msg, log_time)
+        }
         Err(e) => {
             tracing::error!("Vector3: {}", e);
             e.into()

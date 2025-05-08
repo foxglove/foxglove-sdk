@@ -73,6 +73,10 @@ impl<T: Encode> Channel<T> {
         ChannelBuilder::new(topic).build()
     }
 
+    /// Constructs a new typed channel from a raw channel.
+    ///
+    /// This is intended for internal use only.
+    /// We're trusting the caller that the channel was created with the same type T as being used to call this.
     #[doc(hidden)]
     pub fn from_raw_channel(raw_channel: Arc<RawChannel>) -> Self {
         Self {

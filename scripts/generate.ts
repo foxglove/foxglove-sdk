@@ -281,10 +281,6 @@ async function main({ clean }: { clean: boolean }) {
       typesFile,
       generateRustTypes(Object.values(foxgloveMessageSchemas), Object.values(foxgloveEnumSchemas)),
     );
-    // await fs.writeFile(
-    //   path.join(repoRoot, 'cpp','foxglove','schema_traits_generated.hpp'),
-    //   generateCppSchemaTraits(Object.values(foxgloveMessageSchemas), Object.values(foxgloveEnumSchemas)),
-    // );
     await exec("cargo", ["fmt", "--", path.resolve(typesFile)], {
       cwd: repoRoot,
     });
