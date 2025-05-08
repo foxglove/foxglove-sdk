@@ -4,6 +4,7 @@
 
 use bitflags::bitflags;
 use connection_graph::FoxgloveConnectionGraph;
+pub use logging::foxglove_set_log_level;
 use mcap::{Compression, WriteOptions};
 use std::ffi::{c_char, c_void, CString};
 use std::fs::File;
@@ -11,9 +12,18 @@ use std::io::BufWriter;
 use std::mem::ManuallyDrop;
 use std::sync::Arc;
 
-pub mod connection_graph;
+mod arena;
 mod generated_types;
+#[cfg(test)]
+mod tests;
+mod util;
 pub use generated_types::*;
+mod bytes;
+mod connection_graph;
+mod logging;
+mod parameter;
+
+use parameter::FoxgloveParameterArray;
 
 /// A string with associated length.
 #[repr(C)]
@@ -47,13 +57,88 @@ impl FoxgloveString {
     }
 }
 
-#[cfg(test)]
+impl From<&String> for FoxgloveString {
+    fn from(s: &String) -> Self {
+        Self {
+            data: s.as_ptr().cast(),
+            len: s.len(),
+        }
+    }
+}
+
 impl From<&str> for FoxgloveString {
     fn from(s: &str) -> Self {
         Self {
             data: s.as_ptr().cast(),
             len: s.len(),
         }
+    }
+}
+
+/// An owned string buffer.
+///
+/// This struct is aliased as `foxglove_string` in the C API.
+///
+/// cbindgen:no-export
+pub struct FoxgloveStringBuf(FoxgloveString);
+
+impl FoxgloveStringBuf {
+    /// Creates a new `FoxgloveString` from the provided string.
+    fn new(str: String) -> Self {
+        // SAFETY: Freed on drop.
+        let mut str = ManuallyDrop::new(str);
+        str.shrink_to_fit();
+        Self(FoxgloveString {
+            data: str.as_ptr().cast(),
+            len: str.len(),
+        })
+    }
+
+    /// Wrapper around [`std::str::from_utf8`].
+    fn as_str(&self) -> &str {
+        // SAFETY: This was constructed from a valid `String`.
+        unsafe { self.0.as_utf8_str() }.expect("valid utf-8")
+    }
+
+    /// Extracts and returns the inner string.
+    fn into_string(self) -> String {
+        // SAFETY: We're consuming the underlying values, so don't drop self.
+        let this = ManuallyDrop::new(self);
+        // SAFETY: This was constructed from a valid `String`.
+        unsafe { String::from_raw_parts(this.0.data as *mut u8, this.0.len, this.0.len) }
+    }
+}
+
+impl From<String> for FoxgloveStringBuf {
+    fn from(str: String) -> Self {
+        Self::new(str)
+    }
+}
+
+impl From<FoxgloveStringBuf> for String {
+    fn from(buf: FoxgloveStringBuf) -> Self {
+        buf.into_string()
+    }
+}
+
+impl AsRef<str> for FoxgloveStringBuf {
+    fn as_ref(&self) -> &str {
+        self.as_str()
+    }
+}
+
+impl Clone for FoxgloveStringBuf {
+    fn clone(&self) -> Self {
+        self.as_str().to_string().into()
+    }
+}
+
+impl Drop for FoxgloveStringBuf {
+    fn drop(&mut self) {
+        let FoxgloveString { data, len } = self.0;
+        assert!(!data.is_null());
+        // SAFETY: This was constructed from valid `String`.
+        drop(unsafe { String::from_raw_parts(data as *mut u8, len, len) })
     }
 }
 
@@ -167,12 +252,82 @@ pub struct FoxgloveServerCallbacks {
     pub on_client_unadvertise: Option<
         unsafe extern "C" fn(client_id: u32, client_channel_id: u32, context: *const c_void),
     >,
+    /// Callback invoked when a client requests parameters.
+    ///
+    /// Requires `FOXGLOVE_CAPABILITY_PARAMETERS`.
+    ///
+    /// The `request_id` argument may be NULL.
+    ///
+    /// The `param_names` argument is guaranteed to be non-NULL. These arguments point to buffers
+    /// that are valid and immutable for the duration of the call. If the callback wishes to store
+    /// these values, they must be copied out.
+    ///
+    /// This function should return the named parameters, or all parameters if `param_names` is
+    /// empty. The return value must be allocated with `foxglove_parameter_array_create`. Ownership
+    /// of this value is transfered to the callee, who is responsible for freeing it. A NULL return
+    /// value is treated as an empty array.
+    pub on_get_parameters: Option<
+        unsafe extern "C" fn(
+            context: *const c_void,
+            client_id: u32,
+            request_id: *const FoxgloveString,
+            param_names: *const FoxgloveString,
+            param_names_len: usize,
+        ) -> *mut FoxgloveParameterArray,
+    >,
+    /// Callback invoked when a client sets parameters.
+    ///
+    /// Requires `FOXGLOVE_CAPABILITY_PARAMETERS`.
+    ///
+    /// The `request_id` argument may be NULL.
+    ///
+    /// The `params` argument is guaranteed to be non-NULL. These arguments point to buffers that
+    /// are valid and immutable for the duration of the call. If the callback wishes to store these
+    /// values, they must be copied out.
+    ///
+    /// This function should return the updated parameters. The return value must be allocated with
+    /// `foxglove_parameter_array_create`. Ownership of this value is transfered to the callee, who
+    /// is responsible for freeing it. A NULL return value is treated as an empty array.
+    ///
+    /// All clients subscribed to updates for the returned parameters will be notified.
+    pub on_set_parameters: Option<
+        unsafe extern "C" fn(
+            context: *const c_void,
+            client_id: u32,
+            request_id: *const FoxgloveString,
+            params: *const FoxgloveParameterArray,
+        ) -> *mut FoxgloveParameterArray,
+    >,
+    /// Callback invoked when a client subscribes to the named parameters for the first time.
+    ///
+    /// Requires `FOXGLOVE_CAPABILITY_PARAMETERS`.
+    ///
+    /// The `param_names` argument is guaranteed to be non-NULL. This argument points to buffers
+    /// that are valid and immutable for the duration of the call. If the callback wishes to store
+    /// these values, they must be copied out.
+    pub on_parameters_subscribe: Option<
+        unsafe extern "C" fn(
+            context: *const c_void,
+            param_names: *const FoxgloveString,
+            param_names_len: usize,
+        ),
+    >,
+    /// Callback invoked when the last client unsubscribes from the named parameters.
+    ///
+    /// Requires `FOXGLOVE_CAPABILITY_PARAMETERS`.
+    ///
+    /// The `param_names` argument is guaranteed to be non-NULL. This argument points to buffers
+    /// that are valid and immutable for the duration of the call. If the callback wishes to store
+    /// these values, they must be copied out.
+    pub on_parameters_unsubscribe: Option<
+        unsafe extern "C" fn(
+            context: *const c_void,
+            param_names: *const FoxgloveString,
+            param_names_len: usize,
+        ),
+    >,
     pub on_connection_graph_subscribe: Option<unsafe extern "C" fn(context: *const c_void)>,
     pub on_connection_graph_unsubscribe: Option<unsafe extern "C" fn(context: *const c_void)>,
-    // pub on_get_parameters: Option<unsafe extern "C" fn()>
-    // pub on_set_parameters: Option<unsafe extern "C" fn()>
-    // pub on_parameters_subscribe: Option<unsafe extern "C" fn()>
-    // pub on_parameters_unsubscribe: Option<unsafe extern "C" fn()>
 }
 unsafe impl Send for FoxgloveServerCallbacks {}
 unsafe impl Sync for FoxgloveServerCallbacks {}
@@ -311,6 +466,33 @@ pub extern "C" fn foxglove_server_stop(
         return FoxgloveError::SinkClosed;
     };
     server.stop();
+    FoxgloveError::Ok
+}
+
+/// Publish parameter values to all subscribed clients.
+///
+/// # Safety
+/// - `params` must be a valid parameter to a value allocated by `foxglove_parameter_array_create`.
+///   This value is moved into this function, and must not be accessed afterwards.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_server_publish_parameter_values(
+    server: Option<&mut FoxgloveWebSocketServer>,
+    params: *mut FoxgloveParameterArray,
+) -> FoxgloveError {
+    if params.is_null() {
+        tracing::error!("foxglove_server_publish_parameter_values called with null params");
+        return FoxgloveError::ValueError;
+    };
+    let params = unsafe { FoxgloveParameterArray::from_raw(params) };
+    let Some(server) = server else {
+        tracing::error!("foxglove_server_publish_parameter_values called with null server");
+        return FoxgloveError::ValueError;
+    };
+    let Some(server) = server.as_ref() else {
+        tracing::error!("foxglove_server_publish_connection_graph called with closed server");
+        return FoxgloveError::SinkClosed;
+    };
+    server.publish_parameter_values(params.into_native());
     FoxgloveError::Ok
 }
 
@@ -504,7 +686,7 @@ pub struct FoxgloveChannel(foxglove::RawChannel);
 /// `channel` is an out **FoxgloveChannel pointer, which will be set to the created channel
 /// if the function returns success.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn foxglove_channel_create(
+pub unsafe extern "C" fn foxglove_raw_channel_create(
     topic: FoxgloveString,
     message_encoding: FoxgloveString,
     schema: *const FoxgloveSchema,
@@ -516,12 +698,12 @@ pub unsafe extern "C" fn foxglove_channel_create(
         return FoxgloveError::ValueError;
     }
     unsafe {
-        let result = do_foxglove_channel_create(topic, message_encoding, schema, context);
+        let result = do_foxglove_raw_channel_create(topic, message_encoding, schema, context);
         result_to_c(result, channel)
     }
 }
 
-unsafe fn do_foxglove_channel_create(
+unsafe fn do_foxglove_raw_channel_create(
     topic: FoxgloveString,
     message_encoding: FoxgloveString,
     schema: *const FoxgloveSchema,
@@ -558,6 +740,24 @@ unsafe fn do_foxglove_channel_create(
         .map(|raw_channel| Arc::into_raw(raw_channel) as *const FoxgloveChannel)
 }
 
+pub(crate) unsafe fn do_foxglove_channel_create<T: foxglove::Encode>(
+    topic: FoxgloveString,
+    context: *const FoxgloveContext,
+) -> Result<*const FoxgloveChannel, foxglove::FoxgloveError> {
+    let topic_str = unsafe {
+        topic
+            .as_utf8_str()
+            .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("topic invalid: {}", e)))?
+    };
+
+    let mut builder = foxglove::ChannelBuilder::new(topic_str);
+    if !context.is_null() {
+        let context = ManuallyDrop::new(unsafe { Arc::from_raw(context) });
+        builder = builder.context(&context);
+    }
+    Ok(Arc::into_raw(builder.build::<T>().into_inner()) as *const FoxgloveChannel)
+}
+
 /// Free a channel created via `foxglove_channel_create`.
 ///
 /// # Safety
@@ -591,7 +791,7 @@ pub extern "C" fn foxglove_channel_get_id(channel: Option<&FoxgloveChannel>) -> 
 /// `data` must be non-null, and the range `[data, data + data_len)` must contain initialized data
 /// contained within a single allocated object.
 ///
-/// `log_time` may be null or may point to a valid value.
+/// `log_time` Some(nanoseconds since epoch timestamp) or None to use the current time.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_channel_log(
     channel: Option<&FoxgloveChannel>,
@@ -657,6 +857,13 @@ pub unsafe extern "C" fn foxglove_context_free(context: *const FoxgloveContext) 
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_internal_register_cpp_wrapper() {
     foxglove::library_version::set_sdk_language("cpp");
+
+    let log_config = std::env::var("FOXGLOVE_LOG_LEVEL")
+        .or_else(|_| std::env::var("FOXGLOVE_LOG_STYLE"))
+        .ok();
+    if log_config.is_some() {
+        foxglove_set_log_level(logging::FoxgloveLoggingLevel::Info);
+    }
 }
 
 impl foxglove::websocket::ServerListener for FoxgloveServerCallbacks {
@@ -747,6 +954,94 @@ impl foxglove::websocket::ServerListener for FoxgloveServerCallbacks {
         }
     }
 
+    fn on_get_parameters(
+        &self,
+        client: foxglove::websocket::Client,
+        param_names: Vec<String>,
+        request_id: Option<&str>,
+    ) -> Vec<foxglove::websocket::Parameter> {
+        let Some(on_get_parameters) = self.on_get_parameters else {
+            return vec![];
+        };
+
+        let c_request_id = request_id.map(FoxgloveString::from);
+        let c_param_names: Vec<_> = param_names.iter().map(FoxgloveString::from).collect();
+        let raw = unsafe {
+            on_get_parameters(
+                self.context,
+                client.id().into(),
+                c_request_id
+                    .as_ref()
+                    .map(|id| id as *const _)
+                    .unwrap_or_else(std::ptr::null),
+                c_param_names.as_ptr(),
+                c_param_names.len(),
+            )
+        };
+        if raw.is_null() {
+            vec![]
+        } else {
+            // SAFETY: The caller must return a valid pointer to an array allocated by
+            // `foxglove_parameter_array_create`.
+            unsafe { FoxgloveParameterArray::from_raw(raw).into_native() }
+        }
+    }
+
+    fn on_set_parameters(
+        &self,
+        client: foxglove::websocket::Client,
+        params: Vec<foxglove::websocket::Parameter>,
+        request_id: Option<&str>,
+    ) -> Vec<foxglove::websocket::Parameter> {
+        let Some(on_set_parameters) = self.on_set_parameters else {
+            return vec![];
+        };
+
+        let c_request_id = request_id.map(FoxgloveString::from);
+        let params: FoxgloveParameterArray = params.into_iter().collect();
+        let c_params = params.into_raw();
+        let raw = unsafe {
+            on_set_parameters(
+                self.context,
+                client.id().into(),
+                c_request_id
+                    .as_ref()
+                    .map(|id| id as *const _)
+                    .unwrap_or_else(std::ptr::null),
+                c_params,
+            )
+        };
+        // SAFETY: This is the same pointer we just converted into raw.
+        drop(unsafe { FoxgloveParameterArray::from_raw(c_params) });
+        if raw.is_null() {
+            vec![]
+        } else {
+            // SAFETY: The caller must return a valid pointer to an array allocated by
+            // `foxglove_parameter_array_create`.
+            unsafe { FoxgloveParameterArray::from_raw(raw).into_native() }
+        }
+    }
+
+    fn on_parameters_subscribe(&self, param_names: Vec<String>) {
+        let Some(on_parameters_subscribe) = self.on_parameters_subscribe else {
+            return;
+        };
+        let c_param_names: Vec<_> = param_names.iter().map(FoxgloveString::from).collect();
+        unsafe {
+            on_parameters_subscribe(self.context, c_param_names.as_ptr(), c_param_names.len())
+        };
+    }
+
+    fn on_parameters_unsubscribe(&self, param_names: Vec<String>) {
+        let Some(on_parameters_unsubscribe) = self.on_parameters_unsubscribe else {
+            return;
+        };
+        let c_param_names: Vec<_> = param_names.iter().map(FoxgloveString::from).collect();
+        unsafe {
+            on_parameters_unsubscribe(self.context, c_param_names.as_ptr(), c_param_names.len())
+        };
+    }
+
     fn on_connection_graph_subscribe(&self) {
         if let Some(on_connection_graph_subscribe) = self.on_connection_graph_subscribe {
             unsafe { on_connection_graph_subscribe(self.context) };
@@ -761,8 +1056,7 @@ impl foxglove::websocket::ServerListener for FoxgloveServerCallbacks {
 }
 
 #[repr(u8)]
-#[derive(PartialEq, Eq, Debug)]
-#[non_exhaustive]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FoxgloveError {
     Ok,
     Unspecified,
@@ -779,6 +1073,8 @@ pub enum FoxgloveError {
     ConnectionGraphNotSupported,
     IoError,
     McapError,
+    BufferTooShort,
+    Base64DecodeError,
 }
 
 impl From<foxglove::FoxgloveError> for FoxgloveError {
@@ -809,7 +1105,7 @@ impl From<foxglove::FoxgloveError> for FoxgloveError {
 }
 
 impl FoxgloveError {
-    fn to_cstr(&self) -> &'static std::ffi::CStr {
+    fn to_cstr(self) -> &'static std::ffi::CStr {
         match self {
             FoxgloveError::Ok => c"Ok",
             FoxgloveError::ValueError => c"Value Error",
@@ -825,12 +1121,14 @@ impl FoxgloveError {
             FoxgloveError::ConnectionGraphNotSupported => c"Connection Graph Not Supported",
             FoxgloveError::IoError => c"IO Error",
             FoxgloveError::McapError => c"MCAP Error",
-            _ => c"Unspecified Error",
+            FoxgloveError::BufferTooShort => c"Buffer too short",
+            FoxgloveError::Base64DecodeError => c"Base64 decode error",
+            FoxgloveError::Unspecified => c"Unspecified Error",
         }
     }
 }
 
-unsafe fn result_to_c<T>(
+pub(crate) unsafe fn result_to_c<T>(
     result: Result<T, foxglove::FoxgloveError>,
     out_ptr: *mut T,
 ) -> FoxgloveError {
@@ -883,15 +1181,15 @@ pub(crate) fn log_msg_to_channel<T: foxglove::Encode>(
 /// A timestamp, represented as an offset from a user-defined epoch.
 #[repr(C)]
 #[derive(Debug, Clone, Copy)]
-pub struct Timestamp {
+pub struct FoxgloveTimestamp {
     /// Seconds since epoch.
     pub sec: u32,
     /// Additional nanoseconds since epoch.
     pub nsec: u32,
 }
 
-impl From<Timestamp> for foxglove::schemas::Timestamp {
-    fn from(other: Timestamp) -> Self {
+impl From<FoxgloveTimestamp> for foxglove::schemas::Timestamp {
+    fn from(other: FoxgloveTimestamp) -> Self {
         Self::new(other.sec, other.nsec)
     }
 }
@@ -902,37 +1200,15 @@ impl From<Timestamp> for foxglove::schemas::Timestamp {
 /// fractional seconds at nanosecond resolution (which are always positive).
 #[repr(C)]
 #[derive(Debug, Clone, Copy)]
-pub struct Duration {
+pub struct FoxgloveDuration {
     /// Seconds offset.
     sec: i32,
     /// Nanoseconds offset in the positive direction.
     nsec: u32,
 }
 
-impl From<Duration> for foxglove::schemas::Duration {
-    fn from(other: Duration) -> Self {
+impl From<FoxgloveDuration> for foxglove::schemas::Duration {
+    fn from(other: FoxgloveDuration) -> Self {
         Self::new(other.sec, other.nsec)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_foxglove_string_as_utf8_str() {
-        let string = FoxgloveString {
-            data: c"test".as_ptr(),
-            len: 4,
-        };
-        let utf8_str = unsafe { string.as_utf8_str() };
-        assert_eq!(utf8_str, Ok("test"));
-
-        let string = FoxgloveString {
-            data: c"💖".as_ptr(),
-            len: 4,
-        };
-        let utf8_str = unsafe { string.as_utf8_str() };
-        assert_eq!(utf8_str, Ok("💖"));
     }
 }

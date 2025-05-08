@@ -749,11 +749,15 @@ dependencies = [
 
 [[package]]
 name = "foxglove_c"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
+ "base64",
  "bitflags",
  "cbindgen",
+ "env_logger",
  "foxglove",
+ "log",
+ "maplit",
  "mcap 0.15.1",
  "tracing",
 ]
