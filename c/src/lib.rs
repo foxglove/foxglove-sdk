@@ -253,22 +253,22 @@ pub struct FoxgloveClientChannel {
 pub struct FoxgloveServerCallbacks {
     /// A user-defined value that will be passed to callback functions
     pub context: *const c_void,
-    pub on_subscribe: Option<unsafe extern "C" fn(channel_id: u64, context: *const c_void)>,
-    pub on_unsubscribe: Option<unsafe extern "C" fn(channel_id: u64, context: *const c_void)>,
+    pub on_subscribe: Option<unsafe extern "C" fn(context: *const c_void, channel_id: u64)>,
+    pub on_unsubscribe: Option<unsafe extern "C" fn(context: *const c_void, channel_id: u64)>,
     pub on_client_advertise: Option<
         unsafe extern "C" fn(
+            context: *const c_void,
             client_id: u32,
             channel: *const FoxgloveClientChannel,
-            context: *const c_void,
         ),
     >,
     pub on_message_data: Option<
         unsafe extern "C" fn(
+            context: *const c_void,
             client_id: u32,
             client_channel_id: u32,
             payload: *const u8,
             payload_len: usize,
-            context: *const c_void,
         ),
     >,
     pub on_client_unadvertise: Option<
@@ -946,7 +946,7 @@ impl foxglove::websocket::ServerListener for FoxgloveServerCallbacks {
         channel: foxglove::websocket::ChannelView,
     ) {
         if let Some(on_subscribe) = self.on_subscribe {
-            unsafe { on_subscribe(u64::from(channel.id()), self.context) };
+            unsafe { on_subscribe(self.context, channel.id().into()) };
         }
     }
 
@@ -956,7 +956,7 @@ impl foxglove::websocket::ServerListener for FoxgloveServerCallbacks {
         channel: foxglove::websocket::ChannelView,
     ) {
         if let Some(on_unsubscribe) = self.on_unsubscribe {
-            unsafe { on_unsubscribe(u64::from(channel.id()), self.context) };
+            unsafe { on_unsubscribe(self.context, channel.id().into()) };
         }
     }
 
@@ -995,7 +995,7 @@ impl foxglove::websocket::ServerListener for FoxgloveServerCallbacks {
                 .map(|schema| schema.len())
                 .unwrap_or(0),
         };
-        unsafe { on_client_advertise(client.id().into(), &c_channel, self.context) };
+        unsafe { on_client_advertise(self.context, client.id().into(), &c_channel) };
     }
 
     fn on_message_data(
@@ -1007,11 +1007,11 @@ impl foxglove::websocket::ServerListener for FoxgloveServerCallbacks {
         if let Some(on_message_data) = self.on_message_data {
             unsafe {
                 on_message_data(
+                    self.context,
                     client.id().into(),
                     channel.id.into(),
                     payload.as_ptr(),
                     payload.len(),
-                    self.context,
                 )
             };
         }

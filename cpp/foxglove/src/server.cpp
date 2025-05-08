@@ -29,7 +29,7 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
     callbacks = std::make_unique<WebSocketServerCallbacks>(std::move(options.callbacks));
     c_callbacks.context = callbacks.get();
     if (callbacks->onSubscribe) {
-      c_callbacks.on_subscribe = [](uint64_t channel_id, const void* context) {
+      c_callbacks.on_subscribe = [](const void* context, uint64_t channel_id) {
         try {
           (static_cast<const WebSocketServerCallbacks*>(context))->onSubscribe(channel_id);
         } catch (const std::exception& exc) {
@@ -38,7 +38,7 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
       };
     }
     if (callbacks->onUnsubscribe) {
-      c_callbacks.on_unsubscribe = [](uint64_t channel_id, const void* context) {
+      c_callbacks.on_unsubscribe = [](const void* context, uint64_t channel_id) {
         try {
           (static_cast<const WebSocketServerCallbacks*>(context))->onUnsubscribe(channel_id);
         } catch (const std::exception& exc) {
@@ -48,7 +48,7 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
     }
     if (callbacks->onClientAdvertise) {
       c_callbacks.on_client_advertise =
-        [](uint32_t client_id, const foxglove_client_channel* channel, const void* context) {
+        [](const void* context, uint32_t client_id, const foxglove_client_channel* channel) {
           ClientChannel cpp_channel = {
             channel->id,
             channel->topic,
@@ -68,12 +68,12 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
     }
     if (callbacks->onMessageData) {
       c_callbacks.on_message_data = [](
+                                      const void* context,
                                       // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
                                       uint32_t client_id,
                                       uint32_t client_channel_id,
                                       const uint8_t* payload,
-                                      size_t payload_len,
-                                      const void* context
+                                      size_t payload_len
                                     ) {
         try {
           (static_cast<const WebSocketServerCallbacks*>(context))

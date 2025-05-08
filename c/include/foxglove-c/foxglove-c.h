@@ -328,16 +328,16 @@ typedef struct foxglove_server_callbacks {
    * A user-defined value that will be passed to callback functions
    */
   const void *context;
-  void (*on_subscribe)(uint64_t channel_id, const void *context);
-  void (*on_unsubscribe)(uint64_t channel_id, const void *context);
-  void (*on_client_advertise)(uint32_t client_id,
-                              const struct foxglove_client_channel *channel,
-                              const void *context);
-  void (*on_message_data)(uint32_t client_id,
+  void (*on_subscribe)(const void *context, uint64_t channel_id);
+  void (*on_unsubscribe)(const void *context, uint64_t channel_id);
+  void (*on_client_advertise)(const void *context,
+                              uint32_t client_id,
+                              const struct foxglove_client_channel *channel);
+  void (*on_message_data)(const void *context,
+                          uint32_t client_id,
                           uint32_t client_channel_id,
                           const uint8_t *payload,
-                          size_t payload_len,
-                          const void *context);
+                          size_t payload_len);
   void (*on_client_unadvertise)(uint32_t client_id, uint32_t client_channel_id, const void *context);
   /**
    * Callback invoked when a client requests parameters.
