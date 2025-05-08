@@ -437,7 +437,7 @@ impl PyWebSocketServer {
     /// Explicitly stop the server.
     pub fn stop(&mut self, py: Python<'_>) {
         if let Some(server) = self.0.take() {
-            py.allow_threads(|| server.stop())
+            py.allow_threads(|| server.stop().wait_blocking())
         }
     }
 

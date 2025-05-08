@@ -421,7 +421,7 @@ pub extern "C" fn foxglove_server_stop(
         tracing::error!("foxglove_server_stop called with closed server");
         return FoxgloveError::SinkClosed;
     };
-    server.stop();
+    server.stop().wait_blocking();
     FoxgloveError::Ok
 }
 

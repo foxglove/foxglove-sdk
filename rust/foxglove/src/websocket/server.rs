@@ -1,14 +1,16 @@
 use std::collections::hash_map::Entry;
 use std::collections::HashSet;
-use std::sync::atomic::Ordering::{AcqRel, Acquire, Release};
-use std::sync::atomic::{AtomicBool, AtomicU16};
+use std::sync::atomic::AtomicU16;
+use std::sync::atomic::Ordering::{Acquire, Release};
 use std::sync::Weak;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use std::{collections::HashMap, net::SocketAddr, sync::Arc};
 
 use futures_util::SinkExt;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::runtime::Handle;
+use tokio::task::{JoinError, JoinSet};
+use tokio::time::MissedTickBehavior;
 use tokio_tungstenite::tungstenite::Message;
 use tokio_util::sync::CancellationToken;
 
@@ -56,16 +58,57 @@ impl std::fmt::Debug for ServerOptions {
     }
 }
 
+/// Processes a task result, warning about panics.
+fn process_task_result(result: Result<(), JoinError>) {
+    match result {
+        Err(e) if e.is_panic() => tracing::warn!("{e}"),
+        _ => (),
+    }
+}
+
+/// A handle that can be used to wait for the server to shut down.
+#[must_use]
+#[derive(Debug)]
+pub struct ShutdownHandle {
+    runtime: Handle,
+    tasks: JoinSet<()>,
+}
+impl ShutdownHandle {
+    /// Returns a new shutdown handle.
+    fn new(runtime: Handle, tasks: JoinSet<()>) -> Self {
+        Self { runtime, tasks }
+    }
+
+    /// Detaches all remaining tasks to complete in the background.
+    pub fn detach_all(mut self) {
+        self.tasks.detach_all();
+    }
+
+    /// Waits for all server tasks to stop.
+    async fn wait_inner(&mut self) {
+        while let Some(result) = self.tasks.join_next().await {
+            process_task_result(result);
+        }
+        tracing::info!("Shutdown complete");
+    }
+
+    /// Waits for all server tasks to stop.
+    pub async fn wait(mut self) {
+        self.wait_inner().await;
+    }
+
+    /// Waits for all server tasks to stop from a blocking context.
+    ///
+    /// This method will panic if invoked from an asynchronous execution context. Use
+    /// [`ShutdownHandle::wait`] instead.
+    pub fn wait_blocking(mut self) {
+        self.runtime.clone().block_on(self.wait_inner());
+    }
+}
+
 /// Creates a new server.
 pub(crate) fn create_server(ctx: &Arc<Context>, opts: ServerOptions) -> Arc<Server> {
     Arc::new_cyclic(|weak_self| Server::new(weak_self.clone(), ctx, opts))
-}
-
-/// Accept handler which spawns a new task for each incoming connection.
-async fn handle_connections(server: Arc<Server>, listener: TcpListener) {
-    while let Ok((stream, addr)) = listener.accept().await {
-        tokio::spawn(server.clone().handle_connection(stream, addr));
-    }
 }
 
 /// A websocket server that implements the Foxglove WebSocket Protocol
@@ -76,7 +119,6 @@ pub(crate) struct Server {
     /// which need to prove to the compiler that the server will outlive the future.
     /// It's analogous to the mixin shared_from_this in C++.
     weak_self: Weak<Self>,
-    started: AtomicBool,
     context: Weak<Context>,
     /// Local port the server is listening on, once it has been started
     port: AtomicU16,
@@ -103,6 +145,8 @@ pub(crate) struct Server {
     services: parking_lot::RwLock<ServiceMap>,
     /// Handler for fetch asset requests
     fetch_asset_handler: Option<Box<dyn AssetHandler>>,
+    /// Client tasks.
+    tasks: parking_lot::Mutex<Option<JoinSet<()>>>,
 }
 
 impl Server {
@@ -138,7 +182,6 @@ impl Server {
         Server {
             weak_self,
             port: AtomicU16::new(0),
-            started: AtomicBool::new(false),
             context: Arc::downgrade(ctx),
             message_backlog_size: opts
                 .message_backlog_size
@@ -157,6 +200,7 @@ impl Server {
             cancellation_token: CancellationToken::new(),
             services: parking_lot::RwLock::new(ServiceMap::from_iter(opts.services.into_values())),
             fetch_asset_handler: opts.fetch_asset_handler,
+            tasks: parking_lot::Mutex::default(),
         }
     }
 
@@ -192,11 +236,13 @@ impl Server {
 
     // Spawn a task to accept all incoming connections and return the server's local address
     pub async fn start(&self, host: &str, port: u16) -> Result<SocketAddr, FoxgloveError> {
-        if self.started.load(Acquire) {
-            return Err(FoxgloveError::ServerAlreadyStarted);
+        {
+            let mut tasks = self.tasks.lock();
+            if tasks.is_some() || self.cancellation_token.is_cancelled() {
+                return Err(FoxgloveError::ServerAlreadyStarted);
+            }
+            tasks.replace(JoinSet::new());
         }
-        let already_started = self.started.swap(true, AcqRel);
-        assert!(!already_started);
 
         let addr = format!("{}:{}", host, port);
         let listener = TcpListener::bind(&addr)
@@ -206,13 +252,12 @@ impl Server {
         self.port.store(local_addr.port(), Release);
 
         let cancellation_token = self.cancellation_token.clone();
-        let server = self.arc().clone();
+        let server = self.arc();
         self.runtime.spawn(async move {
             tokio::select! {
-                () = handle_connections(server, listener) => (),
-                () = cancellation_token.cancelled() => {
-                    tracing::debug!("Closed connection handler");
-                }
+                () = server.clone().accept_connections(listener) => (),
+                () = server.clone().reap_completed_tasks() => (),
+                () = cancellation_token.cancelled() => (),
             }
         });
 
@@ -221,13 +266,43 @@ impl Server {
         Ok(local_addr)
     }
 
+    /// Accept handler which spawns a new task for each incoming connection.
+    async fn accept_connections(self: Arc<Self>, listener: TcpListener) {
+        while let Ok((stream, addr)) = listener.accept().await {
+            if let Some(tasks) = self.tasks.lock().as_mut() {
+                tasks.spawn(self.clone().handle_connection(stream, addr));
+            } else {
+                break;
+            }
+        }
+    }
+
+    /// Periodically reaps completed tasks.
+    async fn reap_completed_tasks(self: Arc<Self>) {
+        let mut interval = tokio::time::interval(Duration::from_secs(1));
+        interval.set_missed_tick_behavior(MissedTickBehavior::Skip);
+        loop {
+            interval.tick().await;
+            if let Some(tasks) = self.tasks.lock().as_mut() {
+                while let Some(result) = tasks.try_join_next() {
+                    process_task_result(result);
+                }
+            } else {
+                break;
+            }
+        }
+    }
+
     /// Stops the server.
     ///
-    /// Once stopped, the server cannot be restarted.
-    pub fn stop(&self) {
-        if !self.started.load(Acquire) {
-            return;
-        }
+    /// Returns a handle that can be used to wait for the graceful shutdown to complete. If the
+    /// handle is dropped, all client tasks will be immediately aborted.
+    ///
+    /// Once stopped, the server cannot be restarted, and future calls to this method will return
+    /// `None`.
+    #[must_use]
+    pub fn stop(&self) -> Option<ShutdownHandle> {
+        let tasks = self.tasks.lock().take()?;
         tracing::info!("Shutting down");
         self.port.store(0, Release);
         self.cancellation_token.cancel();
@@ -235,6 +310,7 @@ impl Server {
         for client in clients.iter() {
             client.shutdown(ShutdownReason::ServerStopped);
         }
+        Some(ShutdownHandle::new(self.runtime.clone(), tasks))
     }
 
     /// Publish the current timestamp to all clients.
