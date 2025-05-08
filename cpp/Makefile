@@ -37,3 +37,14 @@ build:
 .PHONY: test
 test: build
 	cd $(BUILD_DIR) && ctest --verbose
+
+.PHONY: docs
+docs: $(BUILD_DIR)/docs/html
+
+.PHONY: clean-docs
+clean-docs:
+	rm -rf $(BUILD_DIR)/docs
+
+$(BUILD_DIR)/docs/html:
+	cmake -B $(BUILD_DIR)
+	cmake --build $(BUILD_DIR) --target docs

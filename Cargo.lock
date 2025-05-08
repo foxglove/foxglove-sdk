@@ -732,7 +732,6 @@ version = "0.7.1"
 dependencies = [
  "base64",
  "bytes",
- "env_logger",
  "foxglove",
  "log",
  "prost-types",
@@ -752,7 +751,9 @@ version = "0.7.1"
 dependencies = [
  "bitflags",
  "cbindgen",
+ "env_logger",
  "foxglove",
+ "log",
  "mcap 0.15.1",
  "tracing",
 ]
