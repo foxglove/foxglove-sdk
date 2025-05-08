@@ -323,7 +323,7 @@ export function generateCppSchemas(schemas: FoxgloveMessageSchema[]): string {
       "",
       `FoxgloveError ${schema.name}Channel::log(const ${schema.name}& msg, std::optional<uint64_t> log_time) {`,
       ...conversionCode,
-      "}",
+      "}\n\n",
     ];
   });
 
