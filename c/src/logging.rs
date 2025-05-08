@@ -1,7 +1,7 @@
 use std::sync::Once;
 
 #[repr(u8)]
-pub enum FoxgloveLogLevel {
+pub enum FoxgloveLoggingLevel {
     Off = 0,
     Debug = 1,
     Info = 2,
@@ -23,15 +23,15 @@ pub enum FoxgloveLogLevel {
 /// Log styles (colors) may be configured with the FOXGLOVE_LOG_STYLE environment variable "never",
 /// "always", or "auto" (default).
 #[unsafe(no_mangle)]
-pub extern "C" fn foxglove_set_log_level(level: FoxgloveLogLevel) {
+pub extern "C" fn foxglove_set_log_level(level: FoxgloveLoggingLevel) {
     static INIT: Once = Once::new();
     INIT.call_once(|| {
         let initial_level = match &level {
-            FoxgloveLogLevel::Off => "off",
-            FoxgloveLogLevel::Debug => "debug",
-            FoxgloveLogLevel::Info => "info",
-            FoxgloveLogLevel::Warn => "warn",
-            FoxgloveLogLevel::Error => "error",
+            FoxgloveLoggingLevel::Off => "off",
+            FoxgloveLoggingLevel::Debug => "debug",
+            FoxgloveLoggingLevel::Info => "info",
+            FoxgloveLoggingLevel::Warn => "warn",
+            FoxgloveLoggingLevel::Error => "error",
         };
 
         let env = env_logger::Env::default()
@@ -51,7 +51,7 @@ mod tests {
     #[test]
     fn test_foxglove_set_log_level_called_twice() {
         // env_logger panics if initialized twice; ensure we don't
-        foxglove_set_log_level(FoxgloveLogLevel::Info);
-        foxglove_set_log_level(FoxgloveLogLevel::Debug);
+        foxglove_set_log_level(FoxgloveLoggingLevel::Info);
+        foxglove_set_log_level(FoxgloveLoggingLevel::Debug);
     }
 }
