@@ -5,13 +5,13 @@
 namespace foxglove {
 
 struct Timestamp {
-  uint32_t seconds;
-  uint32_t nanos;
+  uint32_t sec;
+  uint32_t nsec;
 };
 
 struct Duration {
-  int32_t seconds;
-  uint32_t nanos;
+  int32_t sec;
+  uint32_t nsec;
 };
 
 }  // namespace foxglove

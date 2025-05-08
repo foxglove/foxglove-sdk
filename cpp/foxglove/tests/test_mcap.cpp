@@ -1,3 +1,5 @@
+#include <foxglove-c/foxglove-c.h>
+#include <foxglove/arena.hpp>
 #include <foxglove/channel.hpp>
 #include <foxglove/context.hpp>
 #include <foxglove/error.hpp>
@@ -286,6 +288,12 @@ TEST_CASE("Channel can outlive Schema") {
   REQUIRE_THAT(content, ContainsSubstring("FAKESCHEMA"));
 }
 
+namespace foxglove::schemas {
+void imageAnnotationsToC(
+  foxglove_image_annotations& dest, const ImageAnnotations& src, Arena& arena
+);
+}  // namespace foxglove::schemas
+
 TEST_CASE("ImageAnnotations channel") {
   FileCleanup cleanup("test.mcap");
   auto context = foxglove::Context::create();
@@ -335,6 +343,75 @@ TEST_CASE("ImageAnnotations channel") {
   text.text_color = foxglove::schemas::Color{0.0, 0.0, 0.0, 1.0};
   text.background_color = foxglove::schemas::Color{1.0, 1.0, 1.0, 0.7};
   msg.texts.push_back(text);
+
+  // Convert to C struct and then compare them
+  foxglove::Arena arena;
+  foxglove_image_annotations c_msg;
+  imageAnnotationsToC(c_msg, msg, arena);
+
+  // Compare the C struct with the original message
+  REQUIRE(c_msg.circles_count == msg.circles.size());
+  REQUIRE(c_msg.points_count == msg.points.size());
+  REQUIRE(c_msg.texts_count == msg.texts.size());
+
+  // Comapre circle annotation
+  REQUIRE(c_msg.circles[0].timestamp->sec == msg.circles[0].timestamp->sec);
+  REQUIRE(c_msg.circles[0].timestamp->nsec == msg.circles[0].timestamp->nsec);
+  REQUIRE(c_msg.circles[0].position->x == msg.circles[0].position->x);
+  REQUIRE(c_msg.circles[0].position->y == msg.circles[0].position->y);
+  REQUIRE(c_msg.circles[0].diameter == msg.circles[0].diameter);
+  REQUIRE(c_msg.circles[0].thickness == msg.circles[0].thickness);
+  REQUIRE(c_msg.circles[0].fill_color->r == msg.circles[0].fill_color->r);
+  REQUIRE(c_msg.circles[0].fill_color->g == msg.circles[0].fill_color->g);
+  REQUIRE(c_msg.circles[0].fill_color->b == msg.circles[0].fill_color->b);
+  REQUIRE(c_msg.circles[0].fill_color->a == msg.circles[0].fill_color->a);
+  REQUIRE(c_msg.circles[0].outline_color->r == msg.circles[0].outline_color->r);
+  REQUIRE(c_msg.circles[0].outline_color->g == msg.circles[0].outline_color->g);
+  REQUIRE(c_msg.circles[0].outline_color->b == msg.circles[0].outline_color->b);
+  REQUIRE(c_msg.circles[0].outline_color->a == msg.circles[0].outline_color->a);
+
+  // Compare points annotation
+  REQUIRE(c_msg.points[0].timestamp->sec == msg.points[0].timestamp->sec);
+  REQUIRE(c_msg.points[0].timestamp->nsec == msg.points[0].timestamp->nsec);
+  REQUIRE(static_cast<uint8_t>(c_msg.points[0].type) == static_cast<uint8_t>(msg.points[0].type));
+  REQUIRE(c_msg.points[0].points_count == msg.points[0].points.size());
+  for (size_t i = 0; i < msg.points[0].points.size(); ++i) {
+    REQUIRE(c_msg.points[0].points[i].x == msg.points[0].points[i].x);
+    REQUIRE(c_msg.points[0].points[i].y == msg.points[0].points[i].y);
+  }
+  REQUIRE(c_msg.points[0].outline_color->r == msg.points[0].outline_color->r);
+  REQUIRE(c_msg.points[0].outline_color->g == msg.points[0].outline_color->g);
+  REQUIRE(c_msg.points[0].outline_color->b == msg.points[0].outline_color->b);
+  REQUIRE(c_msg.points[0].outline_color->a == msg.points[0].outline_color->a);
+  REQUIRE(c_msg.points[0].outline_colors_count == msg.points[0].outline_colors.size());
+  for (size_t i = 0; i < msg.points[0].outline_colors.size(); ++i) {
+    REQUIRE(c_msg.points[0].outline_colors[i].r == msg.points[0].outline_colors[i].r);
+    REQUIRE(c_msg.points[0].outline_colors[i].g == msg.points[0].outline_colors[i].g);
+    REQUIRE(c_msg.points[0].outline_colors[i].b == msg.points[0].outline_colors[i].b);
+    REQUIRE(c_msg.points[0].outline_colors[i].a == msg.points[0].outline_colors[i].a);
+  }
+  REQUIRE(c_msg.points[0].fill_color->r == msg.points[0].fill_color->r);
+  REQUIRE(c_msg.points[0].fill_color->g == msg.points[0].fill_color->g);
+  REQUIRE(c_msg.points[0].fill_color->b == msg.points[0].fill_color->b);
+  REQUIRE(c_msg.points[0].fill_color->a == msg.points[0].fill_color->a);
+  REQUIRE(c_msg.points[0].thickness == msg.points[0].thickness);
+
+  // Compare text annotation
+  REQUIRE(c_msg.texts[0].timestamp->sec == msg.texts[0].timestamp->sec);
+  REQUIRE(c_msg.texts[0].timestamp->nsec == msg.texts[0].timestamp->nsec);
+  REQUIRE(c_msg.texts[0].position->x == msg.texts[0].position->x);
+  REQUIRE(c_msg.texts[0].position->y == msg.texts[0].position->y);
+  REQUIRE(c_msg.texts[0].text.data == msg.texts[0].text.data());
+  REQUIRE(c_msg.texts[0].text.len == msg.texts[0].text.size());
+  REQUIRE(c_msg.texts[0].font_size == msg.texts[0].font_size);
+  REQUIRE(c_msg.texts[0].text_color->r == msg.texts[0].text_color->r);
+  REQUIRE(c_msg.texts[0].text_color->g == msg.texts[0].text_color->g);
+  REQUIRE(c_msg.texts[0].text_color->b == msg.texts[0].text_color->b);
+  REQUIRE(c_msg.texts[0].text_color->a == msg.texts[0].text_color->a);
+  REQUIRE(c_msg.texts[0].background_color->r == msg.texts[0].background_color->r);
+  REQUIRE(c_msg.texts[0].background_color->g == msg.texts[0].background_color->g);
+  REQUIRE(c_msg.texts[0].background_color->b == msg.texts[0].background_color->b);
+  REQUIRE(c_msg.texts[0].background_color->a == msg.texts[0].background_color->a);
 
   channel.log(msg);
 
