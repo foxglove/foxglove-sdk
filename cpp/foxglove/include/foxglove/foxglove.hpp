@@ -4,14 +4,17 @@
 
 namespace foxglove {
 
-/**
- * The severity level for stderr logging from the SDK.
- */
+/// @brief The severity level for stderr logging from the SDK.
 enum class LogLevel : uint8_t {
+  /// Disable logging.
   Off = 0,
+  /// Log debug level and higher.
   Debug = 1,
+  /// Log informational level and higher.
   Info = 2,
+  /// Log warning level and higher.
   Warn = 3,
+  /// Log error level and higher.
   Error = 4,
 };
 
