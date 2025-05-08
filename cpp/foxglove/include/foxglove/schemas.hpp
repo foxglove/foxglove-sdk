@@ -2,52 +2,54 @@
 
 #pragma once
 
-#include <foxglove/context.hpp>
-#include <foxglove/error.hpp>
-#include <foxglove/time.hpp>
-
 #include <array>
 #include <cstdint>
-#include <memory>
-#include <optional>
 #include <string>
 #include <type_traits>
 #include <vector>
+#include <optional>
+#include <memory>
+
+#include <foxglove/time.hpp>
+#include <foxglove/error.hpp>
+#include <foxglove/context.hpp>
 
 struct foxglove_channel;
 
 namespace foxglove::schemas {
 
+/// @brief A functor for deleting a channel. Used by ChannelUniquePtr. For internal use only.
 struct ChannelDeleter {
   void operator()(const foxglove_channel* ptr) const noexcept;
 };
+/// @brief A unique pointer to a C foxglove_channel pointer. For internal use only.
 typedef std::unique_ptr<const foxglove_channel, ChannelDeleter> ChannelUniquePtr;
 
 /// A vector in 3D space that represents a direction only
 struct Vector3 {
   /// x coordinate length
-  double x = 1;
+  double x;
 
   /// y coordinate length
-  double y = 1;
+  double y;
 
   /// z coordinate length
-  double z = 1;
+  double z;
 };
 
 /// A [quaternion](https://eater.net/quaternions) representing a rotation in 3D space
 struct Quaternion {
   /// x value
-  double x = 0;
+  double x;
 
   /// y value
-  double y = 0;
+  double y;
 
   /// z value
-  double z = 0;
+  double z;
 
   /// w value
-  double w = 1;
+  double w;
 };
 
 /// A position and orientation for an object or reference frame in 3D space
@@ -62,35 +64,34 @@ struct Pose {
 /// A color in RGBA format
 struct Color {
   /// Red value between 0 and 1
-  double r = 1;
+  double r;
 
   /// Green value between 0 and 1
-  double g = 1;
+  double g;
 
   /// Blue value between 0 and 1
-  double b = 1;
+  double b;
 
   /// Alpha value between 0 and 1
-  double a = 1;
+  double a;
 };
 
 /// A primitive representing an arrow
 struct ArrowPrimitive {
-  /// Position of the arrow's tail and orientation of the arrow. Identity orientation means the
-  /// arrow points in the +x direction.
+  /// Position of the arrow's tail and orientation of the arrow. Identity orientation means the arrow points in the +x direction.
   std::optional<Pose> pose;
 
   /// Length of the arrow shaft
-  double shaft_length = 0;
+  double shaft_length;
 
   /// Diameter of the arrow shaft
-  double shaft_diameter = 0;
+  double shaft_diameter;
 
   /// Length of the arrow head
-  double head_length = 0;
+  double head_length;
 
   /// Diameter of the arrow head
-  double head_diameter = 0;
+  double head_diameter;
 
   /// Color of the arrow
   std::optional<Color> color;
@@ -101,97 +102,78 @@ struct CameraCalibration {
   /// Timestamp of calibration data
   std::optional<foxglove::Timestamp> timestamp;
 
-  /// Frame of reference for the camera. The origin of the frame is the optical center of the
-  /// camera. +x points to the right in the image, +y points down, and +z points into the plane of
-  /// the image.
+  /// Frame of reference for the camera. The origin of the frame is the optical center of the camera. +x points to the right in the image, +y points down, and +z points into the plane of the image.
   std::string frame_id;
 
   /// Image width
-  uint32_t width = 0;
+  uint32_t width;
 
   /// Image height
-  uint32_t height = 0;
+  uint32_t height;
 
   /// Name of distortion model
-  ///
-  /// Supported parameters: `plumb_bob` (k1, k2, p1, p2, k3) and `rational_polynomial` (k1, k2, p1,
-  /// p2, k3, k4, k5, k6). Distortion models are based on
-  /// [OpenCV's](https://docs.opencv.org/2.4/modules/calib3d/doc/camera_calibration_and_3d_reconstruction.html)
-  /// [pinhole camera
-  /// model](https://en.wikipedia.org/wiki/Distortion_%28optics%29#Software_correction). This is the
-  /// same [implementation used by
-  /// ROS](http://docs.ros.org/en/diamondback/api/image_geometry/html/c++/pinhole__camera__model_8cpp_source.html)
+  /// 
+  /// Supported parameters: `plumb_bob` (k1, k2, p1, p2, k3) and `rational_polynomial` (k1, k2, p1, p2, k3, k4, k5, k6). Distortion models are based on [OpenCV's](https://docs.opencv.org/2.4/modules/calib3d/doc/camera_calibration_and_3d_reconstruction.html) [pinhole camera model](https://en.wikipedia.org/wiki/Distortion_%28optics%29#Software_correction). This is the same [implementation used by ROS](http://docs.ros.org/en/diamondback/api/image_geometry/html/c++/pinhole__camera__model_8cpp_source.html)
   std::string distortion_model;
 
   /// Distortion parameters
-  std::vector<double> d;
+  std::vector<double> d = 0;
 
   /// Intrinsic camera matrix (3x3 row-major matrix)
-  ///
+  /// 
   /// A 3x3 row-major matrix for the raw (distorted) image.
-  ///
-  /// Projects 3D points in the camera coordinate frame to 2D pixel coordinates using the focal
-  /// lengths (fx, fy) and principal point (cx, cy).
-  ///
+  /// 
+  /// Projects 3D points in the camera coordinate frame to 2D pixel coordinates using the focal lengths (fx, fy) and principal point (cx, cy).
+  /// 
   /// ```
   ///     [fx  0 cx]
   /// K = [ 0 fy cy]
   ///     [ 0  0  1]
   /// ```
-  ///
-  std::array<double, 9> k;
+  /// 
+  std::array<double, 9> k = 0;
 
   /// Rectification matrix (stereo cameras only, 3x3 row-major matrix)
-  ///
-  /// A rotation matrix aligning the camera coordinate system to the ideal stereo image plane so
-  /// that epipolar lines in both stereo images are parallel.
-  std::array<double, 9> r;
+  /// 
+  /// A rotation matrix aligning the camera coordinate system to the ideal stereo image plane so that epipolar lines in both stereo images are parallel.
+  std::array<double, 9> r = 0;
 
   /// Projection/camera matrix (3x4 row-major matrix)
-  ///
+  /// 
   /// ```
   ///     [fx'  0  cx' Tx]
   /// P = [ 0  fy' cy' Ty]
   ///     [ 0   0   1   0]
   /// ```
-  ///
-  /// By convention, this matrix specifies the intrinsic (camera) matrix of the processed
-  /// (rectified) image. That is, the left 3x3 portion is the normal camera intrinsic matrix for the
-  /// rectified image.
-  ///
-  /// It projects 3D points in the camera coordinate frame to 2D pixel coordinates using the focal
-  /// lengths (fx', fy') and principal point (cx', cy') - these may differ from the values in K.
-  ///
-  /// For monocular cameras, Tx = Ty = 0. Normally, monocular cameras will also have R = the
-  /// identity and P[1:3,1:3] = K.
-  ///
-  /// For a stereo pair, the fourth column [Tx Ty 0]' is related to the position of the optical
-  /// center of the second camera in the first camera's frame. We assume Tz = 0 so both cameras are
-  /// in the same stereo image plane. The first camera always has Tx = Ty = 0. For the right
-  /// (second) camera of a horizontal stereo pair, Ty = 0 and Tx = -fx' * B, where B is the baseline
-  /// between the cameras.
-  ///
-  /// Given a 3D point [X Y Z]', the projection (x, y) of the point onto the rectified image is
-  /// given by:
-  ///
+  /// 
+  /// By convention, this matrix specifies the intrinsic (camera) matrix of the processed (rectified) image. That is, the left 3x3 portion is the normal camera intrinsic matrix for the rectified image.
+  /// 
+  /// It projects 3D points in the camera coordinate frame to 2D pixel coordinates using the focal lengths (fx', fy') and principal point (cx', cy') - these may differ from the values in K.
+  /// 
+  /// For monocular cameras, Tx = Ty = 0. Normally, monocular cameras will also have R = the identity and P[1:3,1:3] = K.
+  /// 
+  /// For a stereo pair, the fourth column [Tx Ty 0]' is related to the position of the optical center of the second camera in the first camera's frame. We assume Tz = 0 so both cameras are in the same stereo image plane. The first camera always has Tx = Ty = 0. For the right (second) camera of a horizontal stereo pair, Ty = 0 and Tx = -fx' * B, where B is the baseline between the cameras.
+  /// 
+  /// Given a 3D point [X Y Z]', the projection (x, y) of the point onto the rectified image is given by:
+  /// 
   /// ```
   /// [u v w]' = P * [X Y Z 1]'
   ///        x = u / w
   ///        y = v / w
   /// ```
-  ///
+  /// 
   /// This holds for both images of a stereo pair.
-  ///
-  std::array<double, 12> p;
+  /// 
+  std::array<double, 12> p = 0;
 };
 
 /// A point representing a position in 2D space
 struct Point2 {
   /// x coordinate position
-  double x = 0;
+  double x;
 
   /// y coordinate position
-  double y = 0;
+  double y;
 };
 
 /// A circle annotation on a 2D image
@@ -204,10 +186,10 @@ struct CircleAnnotation {
   std::optional<Point2> position;
 
   /// Circle diameter in pixels
-  double diameter = 0;
+  double diameter;
 
   /// Line thickness in pixels
-  double thickness = 0;
+  double thickness;
 
   /// Fill color
   std::optional<Color> fill_color;
@@ -221,16 +203,14 @@ struct CompressedImage {
   /// Timestamp of image
   std::optional<foxglove::Timestamp> timestamp;
 
-  /// Frame of reference for the image. The origin of the frame is the optical center of the camera.
-  /// +x points to the right in the image, +y points down, and +z points into the plane of the
-  /// image.
+  /// Frame of reference for the image. The origin of the frame is the optical center of the camera. +x points to the right in the image, +y points down, and +z points into the plane of the image.
   std::string frame_id;
 
   /// Compressed image data
   std::vector<std::byte> data;
 
   /// Image format
-  ///
+  /// 
   /// Supported values: `jpeg`, `png`, `webp`, `avif`
   std::string format;
 };
@@ -241,36 +221,29 @@ struct CompressedVideo {
   std::optional<foxglove::Timestamp> timestamp;
 
   /// Frame of reference for the video.
-  ///
-  /// The origin of the frame is the optical center of the camera. +x points to the right in the
-  /// video, +y points down, and +z points into the plane of the video.
+  /// 
+  /// The origin of the frame is the optical center of the camera. +x points to the right in the video, +y points down, and +z points into the plane of the video.
   std::string frame_id;
 
   /// Compressed video frame data.
-  ///
-  /// For packet-based video codecs this data must begin and end on packet boundaries (no partial
-  /// packets), and must contain enough video packets to decode exactly one image (either a keyframe
-  /// or delta frame). Note: Foxglove does not support video streams that include B frames because
-  /// they require lookahead.
-  ///
+  /// 
+  /// For packet-based video codecs this data must begin and end on packet boundaries (no partial packets), and must contain enough video packets to decode exactly one image (either a keyframe or delta frame). Note: Foxglove does not support video streams that include B frames because they require lookahead.
+  /// 
   /// Specifically, the requirements for different `format` values are:
-  ///
+  /// 
   /// - `h264`
   ///   - Use Annex B formatted data
-  ///   - Each CompressedVideo message should contain enough NAL units to decode exactly one video
-  ///   frame
+  ///   - Each CompressedVideo message should contain enough NAL units to decode exactly one video frame
   ///   - Each message containing a key frame (IDR) must also include a SPS NAL unit
-  ///
+  /// 
   /// - `h265` (HEVC)
   ///   - Use Annex B formatted data
-  ///   - Each CompressedVideo message should contain enough NAL units to decode exactly one video
-  ///   frame
-  ///   - Each message containing a key frame (IRAP) must also include relevant VPS/SPS/PPS NAL
-  ///   units
-  ///
+  ///   - Each CompressedVideo message should contain enough NAL units to decode exactly one video frame
+  ///   - Each message containing a key frame (IRAP) must also include relevant VPS/SPS/PPS NAL units
+  /// 
   /// - `vp9`
   ///   - Each CompressedVideo message should contain exactly one video frame
-  ///
+  /// 
   /// - `av1`
   ///   - Use the "Low overhead bitstream format" (section 5.2)
   ///   - Each CompressedVideo message should contain enough OBUs to decode exactly one video frame
@@ -278,31 +251,26 @@ struct CompressedVideo {
   std::vector<std::byte> data;
 
   /// Video format.
-  ///
+  /// 
   /// Supported values: `h264`, `h265`, `vp9`, `av1`.
-  ///
-  /// Note: compressed video support is subject to hardware limitations and patent licensing, so not
-  /// all encodings may be supported on all platforms. See more about [H.265
-  /// support](https://caniuse.com/hevc), [VP9 support](https://caniuse.com/webm), and [AV1
-  /// support](https://caniuse.com/av1).
+  /// 
+  /// Note: compressed video support is subject to hardware limitations and patent licensing, so not all encodings may be supported on all platforms. See more about [H.265 support](https://caniuse.com/hevc), [VP9 support](https://caniuse.com/webm), and [AV1 support](https://caniuse.com/av1).
   std::string format;
 };
 
 /// A primitive representing a cylinder, elliptic cylinder, or truncated cone
 struct CylinderPrimitive {
-  /// Position of the center of the cylinder and orientation of the cylinder. The flat face(s) are
-  /// perpendicular to the z-axis.
+  /// Position of the center of the cylinder and orientation of the cylinder. The flat face(s) are perpendicular to the z-axis.
   std::optional<Pose> pose;
 
   /// Size of the cylinder's bounding box
   std::optional<Vector3> size;
 
-  /// 0-1, ratio of the diameter of the cylinder's bottom face (min z) to the bottom of the bounding
-  /// box
-  double bottom_scale = 0;
+  /// 0-1, ratio of the diameter of the cylinder's bottom face (min z) to the bottom of the bounding box
+  double bottom_scale;
 
   /// 0-1, ratio of the diameter of the cylinder's top face (max z) to the top of the bounding box
-  double top_scale = 0;
+  double top_scale;
 
   /// Color of the cylinder
   std::optional<Color> color;
@@ -353,10 +321,10 @@ struct GeoJSON {
 /// A vector in 2D space that represents a direction only
 struct Vector2 {
   /// x coordinate length
-  double x = 1;
+  double x;
 
   /// y coordinate length
-  double y = 1;
+  double y;
 };
 
 /// A field present within each element in a byte array of packed elements.
@@ -377,7 +345,7 @@ struct PackedElementField {
   std::string name;
 
   /// Byte offset from start of data buffer
-  uint32_t offset = 0;
+  uint32_t offset;
 
   /// Type of data in the field. Integers are stored using little-endian byte order.
   NumericType type;
@@ -391,24 +359,22 @@ struct Grid {
   /// Frame of reference
   std::string frame_id;
 
-  /// Origin of grid's corner relative to frame of reference; grid is positioned in the x-y plane
-  /// relative to this origin
+  /// Origin of grid's corner relative to frame of reference; grid is positioned in the x-y plane relative to this origin
   std::optional<Pose> pose;
 
   /// Number of grid columns
-  uint32_t column_count = 0;
+  uint32_t column_count;
 
   /// Size of single grid cell along x and y axes, relative to `pose`
   std::optional<Vector2> cell_size;
 
   /// Number of bytes between rows in `data`
-  uint32_t row_stride = 0;
+  uint32_t row_stride;
 
   /// Number of bytes between cells within a row in `data`
-  uint32_t cell_stride = 0;
+  uint32_t cell_stride;
 
-  /// Fields in `data`. `red`, `green`, `blue`, and `alpha` are optional for customizing the grid's
-  /// color.
+  /// Fields in `data`. `red`, `green`, `blue`, and `alpha` are optional for customizing the grid's color.
   std::vector<PackedElementField> fields;
 
   /// Grid cell data, interpreted using `fields`, in row-major (y-major) order
@@ -442,15 +408,14 @@ struct PointsAnnotation {
   /// Outline color
   std::optional<Color> outline_color;
 
-  /// Per-point colors, if `type` is `POINTS`, or per-segment stroke colors, if `type` is
-  /// `LINE_LIST`, `LINE_STRIP` or `LINE_LOOP`.
+  /// Per-point colors, if `type` is `POINTS`, or per-segment stroke colors, if `type` is `LINE_LIST`, `LINE_STRIP` or `LINE_LOOP`.
   std::vector<Color> outline_colors;
 
   /// Fill color
   std::optional<Color> fill_color;
 
   /// Stroke thickness in pixels
-  double thickness = 0;
+  double thickness;
 };
 
 /// A text label on a 2D image
@@ -466,7 +431,7 @@ struct TextAnnotation {
   std::string text;
 
   /// Font size in pixels
-  double font_size = 12;
+  double font_size;
 
   /// Text color
   std::optional<Color> text_color;
@@ -504,35 +469,32 @@ struct LaserScan {
   /// Frame of reference
   std::string frame_id;
 
-  /// Origin of scan relative to frame of reference; points are positioned in the x-y plane relative
-  /// to this origin; angles are interpreted as counterclockwise rotations around the z axis with 0
-  /// rad being in the +x direction
+  /// Origin of scan relative to frame of reference; points are positioned in the x-y plane relative to this origin; angles are interpreted as counterclockwise rotations around the z axis with 0 rad being in the +x direction
   std::optional<Pose> pose;
 
   /// Bearing of first point, in radians
-  double start_angle = 0;
+  double start_angle;
 
   /// Bearing of last point, in radians
-  double end_angle = 0;
+  double end_angle;
 
-  /// Distance of detections from origin; assumed to be at equally-spaced angles between
-  /// `start_angle` and `end_angle`
-  std::vector<double> ranges;
+  /// Distance of detections from origin; assumed to be at equally-spaced angles between `start_angle` and `end_angle`
+  std::vector<double> ranges = 0;
 
   /// Intensity of detections
-  std::vector<double> intensities;
+  std::vector<double> intensities = 0;
 };
 
 /// A point representing a position in 3D space
 struct Point3 {
   /// x coordinate position
-  double x = 0;
+  double x;
 
   /// y coordinate position
-  double y = 0;
+  double y;
 
   /// z coordinate position
-  double z = 0;
+  double z;
 };
 
 /// A primitive representing a series of points connected by lines
@@ -553,11 +515,10 @@ struct LinePrimitive {
   std::optional<Pose> pose;
 
   /// Line thickness
-  double thickness = 0;
+  double thickness;
 
-  /// Indicates whether `thickness` is a fixed size in screen pixels (true), or specified in world
-  /// coordinates and scales with distance from the camera (false)
-  bool scale_invariant = false;
+  /// Indicates whether `thickness` is a fixed size in screen pixels (true), or specified in world coordinates and scales with distance from the camera (false)
+  bool scale_invariant;
 
   /// Points along the line
   std::vector<Point3> points;
@@ -565,16 +526,13 @@ struct LinePrimitive {
   /// Solid color to use for the whole line. One of `color` or `colors` must be provided.
   std::optional<Color> color;
 
-  /// Per-point colors (if specified, must have the same length as `points`). One of `color` or
-  /// `colors` must be provided.
+  /// Per-point colors (if specified, must have the same length as `points`). One of `color` or `colors` must be provided.
   std::vector<Color> colors;
 
-  /// Indices into the `points` and `colors` attribute arrays, which can be used to avoid
-  /// duplicating attribute data.
-  ///
-  /// If omitted or empty, indexing will not be used. This default behavior is equivalent to
-  /// specifying [0, 1, ..., N-1] for the indices (where N is the number of `points` provided).
-  std::vector<uint32_t> indices;
+  /// Indices into the `points` and `colors` attribute arrays, which can be used to avoid duplicating attribute data.
+  /// 
+  /// If omitted or empty, indexing will not be used. This default behavior is equivalent to specifying [0, 1, ..., N-1] for the indices (where N is the number of `points` provided).
+  std::vector<uint32_t> indices = 0;
 };
 
 /// A navigation satellite fix for any Global Navigation Satellite System
@@ -593,20 +551,18 @@ struct LocationFix {
   std::string frame_id;
 
   /// Latitude in degrees
-  double latitude = 0;
+  double latitude;
 
   /// Longitude in degrees
-  double longitude = 0;
+  double longitude;
 
   /// Altitude in meters
-  double altitude = 0;
+  double altitude;
 
-  /// Position covariance (m^2) defined relative to a tangential plane through the reported
-  /// position. The components are East, North, and Up (ENU), in row-major order.
-  std::array<double, 9> position_covariance;
+  /// Position covariance (m^2) defined relative to a tangential plane through the reported position. The components are East, North, and Up (ENU), in row-major order.
+  std::array<double, 9> position_covariance = 0;
 
-  /// If `position_covariance` is available, `position_covariance_type` must be set to indicate the
-  /// type of covariance.
+  /// If `position_covariance` is available, `position_covariance_type` must be set to indicate the type of covariance.
   PositionCovarianceType position_covariance_type;
 };
 
@@ -637,7 +593,7 @@ struct Log {
   std::string file;
 
   /// Line number in the file
-  uint32_t line = 0;
+  uint32_t line;
 };
 
 /// Command to remove previously published entities
@@ -682,33 +638,28 @@ struct TriangleListPrimitive {
   /// Solid color to use for the whole shape. One of `color` or `colors` must be provided.
   std::optional<Color> color;
 
-  /// Per-vertex colors (if specified, must have the same length as `points`). One of `color` or
-  /// `colors` must be provided.
+  /// Per-vertex colors (if specified, must have the same length as `points`). One of `color` or `colors` must be provided.
   std::vector<Color> colors;
 
-  /// Indices into the `points` and `colors` attribute arrays, which can be used to avoid
-  /// duplicating attribute data.
-  ///
-  /// If omitted or empty, indexing will not be used. This default behavior is equivalent to
-  /// specifying [0, 1, ..., N-1] for the indices (where N is the number of `points` provided).
-  std::vector<uint32_t> indices;
+  /// Indices into the `points` and `colors` attribute arrays, which can be used to avoid duplicating attribute data.
+  /// 
+  /// If omitted or empty, indexing will not be used. This default behavior is equivalent to specifying [0, 1, ..., N-1] for the indices (where N is the number of `points` provided).
+  std::vector<uint32_t> indices = 0;
 };
 
 /// A primitive representing a text label
 struct TextPrimitive {
-  /// Position of the center of the text box and orientation of the text. Identity orientation means
-  /// the text is oriented in the xy-plane and flows from -x to +x.
+  /// Position of the center of the text box and orientation of the text. Identity orientation means the text is oriented in the xy-plane and flows from -x to +x.
   std::optional<Pose> pose;
 
   /// Whether the text should respect `pose.orientation` (false) or always face the camera (true)
-  bool billboard = false;
+  bool billboard;
 
   /// Font size (height of one line of text)
-  double font_size = 0;
+  double font_size;
 
-  /// Indicates whether `font_size` is a fixed size in screen pixels (true), or specified in world
-  /// coordinates and scales with distance from the camera (false)
-  bool scale_invariant = false;
+  /// Indicates whether `font_size` is a fixed size in screen pixels (true), or specified in world coordinates and scales with distance from the camera (false)
+  bool scale_invariant;
 
   /// Color of the text
   std::optional<Color> color;
@@ -728,25 +679,20 @@ struct ModelPrimitive {
   /// Solid color to use for the whole model if `override_color` is true.
   std::optional<Color> color;
 
-  /// Whether to use the color specified in `color` instead of any materials embedded in the
-  /// original model.
-  bool override_color = false;
+  /// Whether to use the color specified in `color` instead of any materials embedded in the original model.
+  bool override_color;
 
   /// URL pointing to model file. One of `url` or `data` should be provided.
   std::string url;
 
-  /// [Media type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types) of
-  /// embedded model (e.g. `model/gltf-binary`). Required if `data` is provided instead of `url`.
-  /// Overrides the inferred media type if `url` is provided.
+  /// [Media type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types) of embedded model (e.g. `model/gltf-binary`). Required if `data` is provided instead of `url`. Overrides the inferred media type if `url` is provided.
   std::string media_type;
 
-  /// Embedded model. One of `url` or `data` should be provided. If `data` is provided, `media_type`
-  /// must be set to indicate the type of the data.
+  /// Embedded model. One of `url` or `data` should be provided. If `data` is provided, `media_type` must be set to indicate the type of the data.
   std::vector<std::byte> data;
 };
 
-/// A visual element in a 3D scene. An entity may be composed of multiple primitives which all share
-/// the same frame of reference.
+/// A visual element in a 3D scene. An entity may be composed of multiple primitives which all share the same frame of reference.
 struct SceneEntity {
   /// Timestamp of the entity
   std::optional<foxglove::Timestamp> timestamp;
@@ -754,18 +700,14 @@ struct SceneEntity {
   /// Frame of reference
   std::string frame_id;
 
-  /// Identifier for the entity. A entity will replace any prior entity on the same topic with the
-  /// same `id`.
+  /// Identifier for the entity. A entity will replace any prior entity on the same topic with the same `id`.
   std::string id;
 
-  /// Length of time (relative to `timestamp`) after which the entity should be automatically
-  /// removed. Zero value indicates the entity should remain visible until it is replaced or
-  /// deleted.
+  /// Length of time (relative to `timestamp`) after which the entity should be automatically removed. Zero value indicates the entity should remain visible until it is replaced or deleted.
   std::optional<foxglove::Duration> lifetime;
 
-  /// Whether the entity should keep its location in the fixed frame (false) or follow the frame
-  /// specified in `frame_id` as it moves relative to the fixed frame (true)
-  bool frame_locked = false;
+  /// Whether the entity should keep its location in the fixed frame (false) or follow the frame specified in `frame_id` as it moves relative to the fixed frame (true)
+  bool frame_locked;
 
   /// Additional user-provided metadata associated with the entity. Keys must be unique.
   std::vector<KeyValuePair> metadata;
@@ -804,8 +746,7 @@ struct SceneUpdate {
   std::vector<SceneEntity> entities;
 };
 
-/// A collection of N-dimensional points, which may contain additional fields with information like
-/// normals, intensity, etc.
+/// A collection of N-dimensional points, which may contain additional fields with information like normals, intensity, etc.
 struct PointCloud {
   /// Timestamp of point cloud
   std::optional<foxglove::Timestamp> timestamp;
@@ -817,11 +758,9 @@ struct PointCloud {
   std::optional<Pose> pose;
 
   /// Number of bytes between points in the `data`
-  uint32_t point_stride = 0;
+  uint32_t point_stride;
 
-  /// Fields in `data`. At least 2 coordinate fields from `x`, `y`, and `z` are required for each
-  /// point's position; `red`, `green`, `blue`, and `alpha` are optional for customizing each
-  /// point's color.
+  /// Fields in `data`. At least 2 coordinate fields from `x`, `y`, and `z` are required for each point's position; `red`, `green`, `blue`, and `alpha` are optional for customizing each point's color.
   std::vector<PackedElementField> fields;
 
   /// Point data, interpreted using `fields`
@@ -864,10 +803,10 @@ struct RawAudio {
   std::string format;
 
   /// Sample rate in Hz
-  uint32_t sample_rate = 0;
+  uint32_t sample_rate;
 
   /// Number of channels in the audio block
-  uint32_t number_of_channels = 0;
+  uint32_t number_of_channels;
 };
 
 /// A raw image
@@ -875,635 +814,1105 @@ struct RawImage {
   /// Timestamp of image
   std::optional<foxglove::Timestamp> timestamp;
 
-  /// Frame of reference for the image. The origin of the frame is the optical center of the camera.
-  /// +x points to the right in the image, +y points down, and +z points into the plane of the
-  /// image.
+  /// Frame of reference for the image. The origin of the frame is the optical center of the camera. +x points to the right in the image, +y points down, and +z points into the plane of the image.
   std::string frame_id;
 
   /// Image width
-  uint32_t width = 0;
+  uint32_t width;
 
   /// Image height
-  uint32_t height = 0;
+  uint32_t height;
 
   /// Encoding of the raw image data
-  ///
-  /// Supported values: `8UC1`, `8UC3`, `16UC1` (little endian), `32FC1` (little endian),
-  /// `bayer_bggr8`, `bayer_gbrg8`, `bayer_grbg8`, `bayer_rggb8`, `bgr8`, `bgra8`, `mono8`,
-  /// `mono16`, `rgb8`, `rgba8`, `uyvy` or `yuv422`, `yuyv` or `yuv422_yuy2`
+  /// 
+  /// Supported values: `8UC1`, `8UC3`, `16UC1` (little endian), `32FC1` (little endian), `bayer_bggr8`, `bayer_gbrg8`, `bayer_grbg8`, `bayer_rggb8`, `bgr8`, `bgra8`, `mono8`, `mono16`, `rgb8`, `rgba8`, `uyvy` or `yuv422`, `yuyv` or `yuv422_yuy2`
   std::string encoding;
 
   /// Byte length of a single row
-  uint32_t step = 0;
+  uint32_t step;
 
   /// Raw image data
   std::vector<std::byte> data;
 };
 
-class CameraCalibrationChannel {
-public:
-  static FoxgloveResult<CameraCalibrationChannel> create(
-    const std::string_view& topic, const Context& context = Context()
-  );
-
-  FoxgloveError log(
-    const CameraCalibration& value, std::optional<uint64_t> log_time = std::nullopt
-  );
-
-  CameraCalibrationChannel(const CameraCalibrationChannel& other) noexcept = delete;
-  CameraCalibrationChannel& operator=(const CameraCalibrationChannel& other) noexcept = delete;
-  CameraCalibrationChannel(CameraCalibrationChannel&& other) noexcept = default;
-  ~CameraCalibrationChannel() = default;
-
-private:
-  explicit CameraCalibrationChannel(ChannelUniquePtr&& channel)
-      : impl_(std::move(channel)) {}
-
-  ChannelUniquePtr impl_;
-};
-
-class CircleAnnotationChannel {
-public:
-  static FoxgloveResult<CircleAnnotationChannel> create(
-    const std::string_view& topic, const Context& context = Context()
-  );
-
-  FoxgloveError log(const CircleAnnotation& value, std::optional<uint64_t> log_time = std::nullopt);
-
-  CircleAnnotationChannel(const CircleAnnotationChannel& other) noexcept = delete;
-  CircleAnnotationChannel& operator=(const CircleAnnotationChannel& other) noexcept = delete;
-  CircleAnnotationChannel(CircleAnnotationChannel&& other) noexcept = default;
-  ~CircleAnnotationChannel() = default;
-
-private:
-  explicit CircleAnnotationChannel(ChannelUniquePtr&& channel)
-      : impl_(std::move(channel)) {}
-
-  ChannelUniquePtr impl_;
-};
-
-class CompressedImageChannel {
-public:
-  static FoxgloveResult<CompressedImageChannel> create(
-    const std::string_view& topic, const Context& context = Context()
-  );
-
-  FoxgloveError log(const CompressedImage& value, std::optional<uint64_t> log_time = std::nullopt);
-
-  CompressedImageChannel(const CompressedImageChannel& other) noexcept = delete;
-  CompressedImageChannel& operator=(const CompressedImageChannel& other) noexcept = delete;
-  CompressedImageChannel(CompressedImageChannel&& other) noexcept = default;
-  ~CompressedImageChannel() = default;
-
-private:
-  explicit CompressedImageChannel(ChannelUniquePtr&& channel)
-      : impl_(std::move(channel)) {}
-
-  ChannelUniquePtr impl_;
-};
-
-class CompressedVideoChannel {
-public:
-  static FoxgloveResult<CompressedVideoChannel> create(
-    const std::string_view& topic, const Context& context = Context()
-  );
-
-  FoxgloveError log(const CompressedVideo& value, std::optional<uint64_t> log_time = std::nullopt);
-
-  CompressedVideoChannel(const CompressedVideoChannel& other) noexcept = delete;
-  CompressedVideoChannel& operator=(const CompressedVideoChannel& other) noexcept = delete;
-  CompressedVideoChannel(CompressedVideoChannel&& other) noexcept = default;
-  ~CompressedVideoChannel() = default;
-
-private:
-  explicit CompressedVideoChannel(ChannelUniquePtr&& channel)
-      : impl_(std::move(channel)) {}
-
-  ChannelUniquePtr impl_;
-};
-
-class FrameTransformChannel {
-public:
-  static FoxgloveResult<FrameTransformChannel> create(
-    const std::string_view& topic, const Context& context = Context()
-  );
-
-  FoxgloveError log(const FrameTransform& value, std::optional<uint64_t> log_time = std::nullopt);
-
-  FrameTransformChannel(const FrameTransformChannel& other) noexcept = delete;
-  FrameTransformChannel& operator=(const FrameTransformChannel& other) noexcept = delete;
-  FrameTransformChannel(FrameTransformChannel&& other) noexcept = default;
-  ~FrameTransformChannel() = default;
-
-private:
-  explicit FrameTransformChannel(ChannelUniquePtr&& channel)
-      : impl_(std::move(channel)) {}
-
-  ChannelUniquePtr impl_;
-};
-
-class FrameTransformsChannel {
-public:
-  static FoxgloveResult<FrameTransformsChannel> create(
-    const std::string_view& topic, const Context& context = Context()
-  );
-
-  FoxgloveError log(const FrameTransforms& value, std::optional<uint64_t> log_time = std::nullopt);
-
-  FrameTransformsChannel(const FrameTransformsChannel& other) noexcept = delete;
-  FrameTransformsChannel& operator=(const FrameTransformsChannel& other) noexcept = delete;
-  FrameTransformsChannel(FrameTransformsChannel&& other) noexcept = default;
-  ~FrameTransformsChannel() = default;
-
-private:
-  explicit FrameTransformsChannel(ChannelUniquePtr&& channel)
-      : impl_(std::move(channel)) {}
-
-  ChannelUniquePtr impl_;
-};
-
-class GeoJSONChannel {
-public:
-  static FoxgloveResult<GeoJSONChannel> create(
-    const std::string_view& topic, const Context& context = Context()
-  );
-
-  FoxgloveError log(const GeoJSON& value, std::optional<uint64_t> log_time = std::nullopt);
-
-  GeoJSONChannel(const GeoJSONChannel& other) noexcept = delete;
-  GeoJSONChannel& operator=(const GeoJSONChannel& other) noexcept = delete;
-  GeoJSONChannel(GeoJSONChannel&& other) noexcept = default;
-  ~GeoJSONChannel() = default;
-
-private:
-  explicit GeoJSONChannel(ChannelUniquePtr&& channel)
-      : impl_(std::move(channel)) {}
-
-  ChannelUniquePtr impl_;
-};
-
-class GridChannel {
-public:
-  static FoxgloveResult<GridChannel> create(
-    const std::string_view& topic, const Context& context = Context()
-  );
-
-  FoxgloveError log(const Grid& value, std::optional<uint64_t> log_time = std::nullopt);
-
-  GridChannel(const GridChannel& other) noexcept = delete;
-  GridChannel& operator=(const GridChannel& other) noexcept = delete;
-  GridChannel(GridChannel&& other) noexcept = default;
-  ~GridChannel() = default;
-
-private:
-  explicit GridChannel(ChannelUniquePtr&& channel)
-      : impl_(std::move(channel)) {}
-
-  ChannelUniquePtr impl_;
-};
-
-class ImageAnnotationsChannel {
-public:
-  static FoxgloveResult<ImageAnnotationsChannel> create(
-    const std::string_view& topic, const Context& context = Context()
-  );
-
-  FoxgloveError log(const ImageAnnotations& value, std::optional<uint64_t> log_time = std::nullopt);
-
-  ImageAnnotationsChannel(const ImageAnnotationsChannel& other) noexcept = delete;
-  ImageAnnotationsChannel& operator=(const ImageAnnotationsChannel& other) noexcept = delete;
-  ImageAnnotationsChannel(ImageAnnotationsChannel&& other) noexcept = default;
-  ~ImageAnnotationsChannel() = default;
-
-private:
-  explicit ImageAnnotationsChannel(ChannelUniquePtr&& channel)
-      : impl_(std::move(channel)) {}
-
-  ChannelUniquePtr impl_;
-};
-
-class KeyValuePairChannel {
-public:
-  static FoxgloveResult<KeyValuePairChannel> create(
-    const std::string_view& topic, const Context& context = Context()
-  );
-
-  FoxgloveError log(const KeyValuePair& value, std::optional<uint64_t> log_time = std::nullopt);
-
-  KeyValuePairChannel(const KeyValuePairChannel& other) noexcept = delete;
-  KeyValuePairChannel& operator=(const KeyValuePairChannel& other) noexcept = delete;
-  KeyValuePairChannel(KeyValuePairChannel&& other) noexcept = default;
-  ~KeyValuePairChannel() = default;
-
-private:
-  explicit KeyValuePairChannel(ChannelUniquePtr&& channel)
-      : impl_(std::move(channel)) {}
-
-  ChannelUniquePtr impl_;
-};
-
-class LaserScanChannel {
-public:
-  static FoxgloveResult<LaserScanChannel> create(
-    const std::string_view& topic, const Context& context = Context()
-  );
-
-  FoxgloveError log(const LaserScan& value, std::optional<uint64_t> log_time = std::nullopt);
-
-  LaserScanChannel(const LaserScanChannel& other) noexcept = delete;
-  LaserScanChannel& operator=(const LaserScanChannel& other) noexcept = delete;
-  LaserScanChannel(LaserScanChannel&& other) noexcept = default;
-  ~LaserScanChannel() = default;
-
-private:
-  explicit LaserScanChannel(ChannelUniquePtr&& channel)
-      : impl_(std::move(channel)) {}
-
-  ChannelUniquePtr impl_;
-};
-
-class LocationFixChannel {
-public:
-  static FoxgloveResult<LocationFixChannel> create(
-    const std::string_view& topic, const Context& context = Context()
-  );
-
-  FoxgloveError log(const LocationFix& value, std::optional<uint64_t> log_time = std::nullopt);
-
-  LocationFixChannel(const LocationFixChannel& other) noexcept = delete;
-  LocationFixChannel& operator=(const LocationFixChannel& other) noexcept = delete;
-  LocationFixChannel(LocationFixChannel&& other) noexcept = default;
-  ~LocationFixChannel() = default;
-
-private:
-  explicit LocationFixChannel(ChannelUniquePtr&& channel)
-      : impl_(std::move(channel)) {}
-
-  ChannelUniquePtr impl_;
-};
-
-class LogChannel {
-public:
-  static FoxgloveResult<LogChannel> create(
-    const std::string_view& topic, const Context& context = Context()
-  );
-
-  FoxgloveError log(const Log& value, std::optional<uint64_t> log_time = std::nullopt);
-
-  LogChannel(const LogChannel& other) noexcept = delete;
-  LogChannel& operator=(const LogChannel& other) noexcept = delete;
-  LogChannel(LogChannel&& other) noexcept = default;
-  ~LogChannel() = default;
-
-private:
-  explicit LogChannel(ChannelUniquePtr&& channel)
-      : impl_(std::move(channel)) {}
-
-  ChannelUniquePtr impl_;
-};
-
-class SceneEntityDeletionChannel {
-public:
-  static FoxgloveResult<SceneEntityDeletionChannel> create(
-    const std::string_view& topic, const Context& context = Context()
-  );
-
-  FoxgloveError log(
-    const SceneEntityDeletion& value, std::optional<uint64_t> log_time = std::nullopt
-  );
-
-  SceneEntityDeletionChannel(const SceneEntityDeletionChannel& other) noexcept = delete;
-  SceneEntityDeletionChannel& operator=(const SceneEntityDeletionChannel& other) noexcept = delete;
-  SceneEntityDeletionChannel(SceneEntityDeletionChannel&& other) noexcept = default;
-  ~SceneEntityDeletionChannel() = default;
-
-private:
-  explicit SceneEntityDeletionChannel(ChannelUniquePtr&& channel)
-      : impl_(std::move(channel)) {}
-
-  ChannelUniquePtr impl_;
-};
-
-class SceneEntityChannel {
-public:
-  static FoxgloveResult<SceneEntityChannel> create(
-    const std::string_view& topic, const Context& context = Context()
-  );
-
-  FoxgloveError log(const SceneEntity& value, std::optional<uint64_t> log_time = std::nullopt);
-
-  SceneEntityChannel(const SceneEntityChannel& other) noexcept = delete;
-  SceneEntityChannel& operator=(const SceneEntityChannel& other) noexcept = delete;
-  SceneEntityChannel(SceneEntityChannel&& other) noexcept = default;
-  ~SceneEntityChannel() = default;
-
-private:
-  explicit SceneEntityChannel(ChannelUniquePtr&& channel)
-      : impl_(std::move(channel)) {}
-
-  ChannelUniquePtr impl_;
-};
-
-class SceneUpdateChannel {
-public:
-  static FoxgloveResult<SceneUpdateChannel> create(
-    const std::string_view& topic, const Context& context = Context()
-  );
-
-  FoxgloveError log(const SceneUpdate& value, std::optional<uint64_t> log_time = std::nullopt);
-
-  SceneUpdateChannel(const SceneUpdateChannel& other) noexcept = delete;
-  SceneUpdateChannel& operator=(const SceneUpdateChannel& other) noexcept = delete;
-  SceneUpdateChannel(SceneUpdateChannel&& other) noexcept = default;
-  ~SceneUpdateChannel() = default;
-
-private:
-  explicit SceneUpdateChannel(ChannelUniquePtr&& channel)
-      : impl_(std::move(channel)) {}
-
-  ChannelUniquePtr impl_;
-};
-
-class PackedElementFieldChannel {
-public:
-  static FoxgloveResult<PackedElementFieldChannel> create(
-    const std::string_view& topic, const Context& context = Context()
-  );
-
-  FoxgloveError log(
-    const PackedElementField& value, std::optional<uint64_t> log_time = std::nullopt
-  );
-
-  PackedElementFieldChannel(const PackedElementFieldChannel& other) noexcept = delete;
-  PackedElementFieldChannel& operator=(const PackedElementFieldChannel& other) noexcept = delete;
-  PackedElementFieldChannel(PackedElementFieldChannel&& other) noexcept = default;
-  ~PackedElementFieldChannel() = default;
-
-private:
-  explicit PackedElementFieldChannel(ChannelUniquePtr&& channel)
-      : impl_(std::move(channel)) {}
-
-  ChannelUniquePtr impl_;
-};
-
-class Point2Channel {
-public:
-  static FoxgloveResult<Point2Channel> create(
-    const std::string_view& topic, const Context& context = Context()
-  );
-
-  FoxgloveError log(const Point2& value, std::optional<uint64_t> log_time = std::nullopt);
-
-  Point2Channel(const Point2Channel& other) noexcept = delete;
-  Point2Channel& operator=(const Point2Channel& other) noexcept = delete;
-  Point2Channel(Point2Channel&& other) noexcept = default;
-  ~Point2Channel() = default;
-
-private:
-  explicit Point2Channel(ChannelUniquePtr&& channel)
-      : impl_(std::move(channel)) {}
-
-  ChannelUniquePtr impl_;
-};
-
-class Point3Channel {
-public:
-  static FoxgloveResult<Point3Channel> create(
-    const std::string_view& topic, const Context& context = Context()
-  );
-
-  FoxgloveError log(const Point3& value, std::optional<uint64_t> log_time = std::nullopt);
-
-  Point3Channel(const Point3Channel& other) noexcept = delete;
-  Point3Channel& operator=(const Point3Channel& other) noexcept = delete;
-  Point3Channel(Point3Channel&& other) noexcept = default;
-  ~Point3Channel() = default;
-
-private:
-  explicit Point3Channel(ChannelUniquePtr&& channel)
-      : impl_(std::move(channel)) {}
-
-  ChannelUniquePtr impl_;
-};
-
-class PointCloudChannel {
-public:
-  static FoxgloveResult<PointCloudChannel> create(
-    const std::string_view& topic, const Context& context = Context()
-  );
-
-  FoxgloveError log(const PointCloud& value, std::optional<uint64_t> log_time = std::nullopt);
-
-  PointCloudChannel(const PointCloudChannel& other) noexcept = delete;
-  PointCloudChannel& operator=(const PointCloudChannel& other) noexcept = delete;
-  PointCloudChannel(PointCloudChannel&& other) noexcept = default;
-  ~PointCloudChannel() = default;
-
-private:
-  explicit PointCloudChannel(ChannelUniquePtr&& channel)
-      : impl_(std::move(channel)) {}
-
-  ChannelUniquePtr impl_;
-};
-
-class PointsAnnotationChannel {
-public:
-  static FoxgloveResult<PointsAnnotationChannel> create(
-    const std::string_view& topic, const Context& context = Context()
-  );
-
-  FoxgloveError log(const PointsAnnotation& value, std::optional<uint64_t> log_time = std::nullopt);
-
-  PointsAnnotationChannel(const PointsAnnotationChannel& other) noexcept = delete;
-  PointsAnnotationChannel& operator=(const PointsAnnotationChannel& other) noexcept = delete;
-  PointsAnnotationChannel(PointsAnnotationChannel&& other) noexcept = default;
-  ~PointsAnnotationChannel() = default;
-
-private:
-  explicit PointsAnnotationChannel(ChannelUniquePtr&& channel)
-      : impl_(std::move(channel)) {}
-
-  ChannelUniquePtr impl_;
-};
-
-class PoseChannel {
-public:
-  static FoxgloveResult<PoseChannel> create(
-    const std::string_view& topic, const Context& context = Context()
-  );
-
-  FoxgloveError log(const Pose& value, std::optional<uint64_t> log_time = std::nullopt);
-
-  PoseChannel(const PoseChannel& other) noexcept = delete;
-  PoseChannel& operator=(const PoseChannel& other) noexcept = delete;
-  PoseChannel(PoseChannel&& other) noexcept = default;
-  ~PoseChannel() = default;
-
-private:
-  explicit PoseChannel(ChannelUniquePtr&& channel)
-      : impl_(std::move(channel)) {}
-
-  ChannelUniquePtr impl_;
-};
-
-class PoseInFrameChannel {
-public:
-  static FoxgloveResult<PoseInFrameChannel> create(
-    const std::string_view& topic, const Context& context = Context()
-  );
-
-  FoxgloveError log(const PoseInFrame& value, std::optional<uint64_t> log_time = std::nullopt);
-
-  PoseInFrameChannel(const PoseInFrameChannel& other) noexcept = delete;
-  PoseInFrameChannel& operator=(const PoseInFrameChannel& other) noexcept = delete;
-  PoseInFrameChannel(PoseInFrameChannel&& other) noexcept = default;
-  ~PoseInFrameChannel() = default;
-
-private:
-  explicit PoseInFrameChannel(ChannelUniquePtr&& channel)
-      : impl_(std::move(channel)) {}
-
-  ChannelUniquePtr impl_;
-};
-
-class PosesInFrameChannel {
-public:
-  static FoxgloveResult<PosesInFrameChannel> create(
-    const std::string_view& topic, const Context& context = Context()
-  );
-
-  FoxgloveError log(const PosesInFrame& value, std::optional<uint64_t> log_time = std::nullopt);
-
-  PosesInFrameChannel(const PosesInFrameChannel& other) noexcept = delete;
-  PosesInFrameChannel& operator=(const PosesInFrameChannel& other) noexcept = delete;
-  PosesInFrameChannel(PosesInFrameChannel&& other) noexcept = default;
-  ~PosesInFrameChannel() = default;
-
-private:
-  explicit PosesInFrameChannel(ChannelUniquePtr&& channel)
-      : impl_(std::move(channel)) {}
-
-  ChannelUniquePtr impl_;
-};
-
-class QuaternionChannel {
-public:
-  static FoxgloveResult<QuaternionChannel> create(
-    const std::string_view& topic, const Context& context = Context()
-  );
-
-  FoxgloveError log(const Quaternion& value, std::optional<uint64_t> log_time = std::nullopt);
-
-  QuaternionChannel(const QuaternionChannel& other) noexcept = delete;
-  QuaternionChannel& operator=(const QuaternionChannel& other) noexcept = delete;
-  QuaternionChannel(QuaternionChannel&& other) noexcept = default;
-  ~QuaternionChannel() = default;
-
-private:
-  explicit QuaternionChannel(ChannelUniquePtr&& channel)
-      : impl_(std::move(channel)) {}
-
-  ChannelUniquePtr impl_;
-};
-
-class RawAudioChannel {
-public:
-  static FoxgloveResult<RawAudioChannel> create(
-    const std::string_view& topic, const Context& context = Context()
-  );
-
-  FoxgloveError log(const RawAudio& value, std::optional<uint64_t> log_time = std::nullopt);
-
-  RawAudioChannel(const RawAudioChannel& other) noexcept = delete;
-  RawAudioChannel& operator=(const RawAudioChannel& other) noexcept = delete;
-  RawAudioChannel(RawAudioChannel&& other) noexcept = default;
-  ~RawAudioChannel() = default;
-
-private:
-  explicit RawAudioChannel(ChannelUniquePtr&& channel)
-      : impl_(std::move(channel)) {}
-
-  ChannelUniquePtr impl_;
-};
-
-class RawImageChannel {
-public:
-  static FoxgloveResult<RawImageChannel> create(
-    const std::string_view& topic, const Context& context = Context()
-  );
-
-  FoxgloveError log(const RawImage& value, std::optional<uint64_t> log_time = std::nullopt);
-
-  RawImageChannel(const RawImageChannel& other) noexcept = delete;
-  RawImageChannel& operator=(const RawImageChannel& other) noexcept = delete;
-  RawImageChannel(RawImageChannel&& other) noexcept = default;
-  ~RawImageChannel() = default;
-
-private:
-  explicit RawImageChannel(ChannelUniquePtr&& channel)
-      : impl_(std::move(channel)) {}
-
-  ChannelUniquePtr impl_;
-};
-
-class TextAnnotationChannel {
-public:
-  static FoxgloveResult<TextAnnotationChannel> create(
-    const std::string_view& topic, const Context& context = Context()
-  );
-
-  FoxgloveError log(const TextAnnotation& value, std::optional<uint64_t> log_time = std::nullopt);
-
-  TextAnnotationChannel(const TextAnnotationChannel& other) noexcept = delete;
-  TextAnnotationChannel& operator=(const TextAnnotationChannel& other) noexcept = delete;
-  TextAnnotationChannel(TextAnnotationChannel&& other) noexcept = default;
-  ~TextAnnotationChannel() = default;
-
-private:
-  explicit TextAnnotationChannel(ChannelUniquePtr&& channel)
-      : impl_(std::move(channel)) {}
-
-  ChannelUniquePtr impl_;
-};
-
-class Vector2Channel {
-public:
-  static FoxgloveResult<Vector2Channel> create(
-    const std::string_view& topic, const Context& context = Context()
-  );
-
-  FoxgloveError log(const Vector2& value, std::optional<uint64_t> log_time = std::nullopt);
-
-  Vector2Channel(const Vector2Channel& other) noexcept = delete;
-  Vector2Channel& operator=(const Vector2Channel& other) noexcept = delete;
-  Vector2Channel(Vector2Channel&& other) noexcept = default;
-  ~Vector2Channel() = default;
-
-private:
-  explicit Vector2Channel(ChannelUniquePtr&& channel)
-      : impl_(std::move(channel)) {}
-
-  ChannelUniquePtr impl_;
-};
-
-class Vector3Channel {
-public:
-  static FoxgloveResult<Vector3Channel> create(
-    const std::string_view& topic, const Context& context = Context()
-  );
-
-  FoxgloveError log(const Vector3& value, std::optional<uint64_t> log_time = std::nullopt);
-
-  Vector3Channel(const Vector3Channel& other) noexcept = delete;
-  Vector3Channel& operator=(const Vector3Channel& other) noexcept = delete;
-  Vector3Channel(Vector3Channel&& other) noexcept = default;
-  ~Vector3Channel() = default;
-
-private:
-  explicit Vector3Channel(ChannelUniquePtr&& channel)
-      : impl_(std::move(channel)) {}
-
-  ChannelUniquePtr impl_;
-};
-
-}  // namespace foxglove::schemas
+/// @brief A channel for logging CameraCalibration messages to a topic.
+      class CameraCalibrationChannel {
+      public:
+        /// @brief Create a new channel.
+        ///
+        /// @param topic The topic name. You should choose a unique topic name per channel for
+        /// compatibility with the Foxglove app.
+        /// @param context The context which associates logs to a sink. If omitted, the default context is
+        /// used.
+        static FoxgloveResult<CameraCalibrationChannel> create(const std::string_view& topic, const Context& context = Context());
+
+        /// @brief Log a message to the channel.
+        ///
+        /// @param value The CameraCalibration message to log.
+        /// @param log_time The timestamp of the message. If omitted, the current time is used.
+        FoxgloveError log(const CameraCalibration& value, std::optional<uint64_t> log_time = std::nullopt);
+
+        /// @brief Uniquely identifies a channel in the context of this program.
+        ///
+        /// @return The ID of the channel.
+        [[nodiscard]] uint64_t id() const;
+
+        CameraCalibrationChannel(const CameraCalibrationChannel& other) noexcept = delete;
+        CameraCalibrationChannel& operator=(const CameraCalibrationChannel& other) noexcept = delete;
+        /// @brief Default move constructor.
+        CameraCalibrationChannel(CameraCalibrationChannel&& other) noexcept = default;
+        /// @brief Default destructor.
+        ~CameraCalibrationChannel() = default;
+
+      private:
+        explicit CameraCalibrationChannel(ChannelUniquePtr&& channel)
+            : impl_(std::move(channel)) {}
+
+        ChannelUniquePtr impl_;
+    };
+
+/// @brief A channel for logging CircleAnnotation messages to a topic.
+      class CircleAnnotationChannel {
+      public:
+        /// @brief Create a new channel.
+        ///
+        /// @param topic The topic name. You should choose a unique topic name per channel for
+        /// compatibility with the Foxglove app.
+        /// @param context The context which associates logs to a sink. If omitted, the default context is
+        /// used.
+        static FoxgloveResult<CircleAnnotationChannel> create(const std::string_view& topic, const Context& context = Context());
+
+        /// @brief Log a message to the channel.
+        ///
+        /// @param value The CircleAnnotation message to log.
+        /// @param log_time The timestamp of the message. If omitted, the current time is used.
+        FoxgloveError log(const CircleAnnotation& value, std::optional<uint64_t> log_time = std::nullopt);
+
+        /// @brief Uniquely identifies a channel in the context of this program.
+        ///
+        /// @return The ID of the channel.
+        [[nodiscard]] uint64_t id() const;
+
+        CircleAnnotationChannel(const CircleAnnotationChannel& other) noexcept = delete;
+        CircleAnnotationChannel& operator=(const CircleAnnotationChannel& other) noexcept = delete;
+        /// @brief Default move constructor.
+        CircleAnnotationChannel(CircleAnnotationChannel&& other) noexcept = default;
+        /// @brief Default destructor.
+        ~CircleAnnotationChannel() = default;
+
+      private:
+        explicit CircleAnnotationChannel(ChannelUniquePtr&& channel)
+            : impl_(std::move(channel)) {}
+
+        ChannelUniquePtr impl_;
+    };
+
+/// @brief A channel for logging CompressedImage messages to a topic.
+      class CompressedImageChannel {
+      public:
+        /// @brief Create a new channel.
+        ///
+        /// @param topic The topic name. You should choose a unique topic name per channel for
+        /// compatibility with the Foxglove app.
+        /// @param context The context which associates logs to a sink. If omitted, the default context is
+        /// used.
+        static FoxgloveResult<CompressedImageChannel> create(const std::string_view& topic, const Context& context = Context());
+
+        /// @brief Log a message to the channel.
+        ///
+        /// @param value The CompressedImage message to log.
+        /// @param log_time The timestamp of the message. If omitted, the current time is used.
+        FoxgloveError log(const CompressedImage& value, std::optional<uint64_t> log_time = std::nullopt);
+
+        /// @brief Uniquely identifies a channel in the context of this program.
+        ///
+        /// @return The ID of the channel.
+        [[nodiscard]] uint64_t id() const;
+
+        CompressedImageChannel(const CompressedImageChannel& other) noexcept = delete;
+        CompressedImageChannel& operator=(const CompressedImageChannel& other) noexcept = delete;
+        /// @brief Default move constructor.
+        CompressedImageChannel(CompressedImageChannel&& other) noexcept = default;
+        /// @brief Default destructor.
+        ~CompressedImageChannel() = default;
+
+      private:
+        explicit CompressedImageChannel(ChannelUniquePtr&& channel)
+            : impl_(std::move(channel)) {}
+
+        ChannelUniquePtr impl_;
+    };
+
+/// @brief A channel for logging CompressedVideo messages to a topic.
+      class CompressedVideoChannel {
+      public:
+        /// @brief Create a new channel.
+        ///
+        /// @param topic The topic name. You should choose a unique topic name per channel for
+        /// compatibility with the Foxglove app.
+        /// @param context The context which associates logs to a sink. If omitted, the default context is
+        /// used.
+        static FoxgloveResult<CompressedVideoChannel> create(const std::string_view& topic, const Context& context = Context());
+
+        /// @brief Log a message to the channel.
+        ///
+        /// @param value The CompressedVideo message to log.
+        /// @param log_time The timestamp of the message. If omitted, the current time is used.
+        FoxgloveError log(const CompressedVideo& value, std::optional<uint64_t> log_time = std::nullopt);
+
+        /// @brief Uniquely identifies a channel in the context of this program.
+        ///
+        /// @return The ID of the channel.
+        [[nodiscard]] uint64_t id() const;
+
+        CompressedVideoChannel(const CompressedVideoChannel& other) noexcept = delete;
+        CompressedVideoChannel& operator=(const CompressedVideoChannel& other) noexcept = delete;
+        /// @brief Default move constructor.
+        CompressedVideoChannel(CompressedVideoChannel&& other) noexcept = default;
+        /// @brief Default destructor.
+        ~CompressedVideoChannel() = default;
+
+      private:
+        explicit CompressedVideoChannel(ChannelUniquePtr&& channel)
+            : impl_(std::move(channel)) {}
+
+        ChannelUniquePtr impl_;
+    };
+
+/// @brief A channel for logging FrameTransform messages to a topic.
+      class FrameTransformChannel {
+      public:
+        /// @brief Create a new channel.
+        ///
+        /// @param topic The topic name. You should choose a unique topic name per channel for
+        /// compatibility with the Foxglove app.
+        /// @param context The context which associates logs to a sink. If omitted, the default context is
+        /// used.
+        static FoxgloveResult<FrameTransformChannel> create(const std::string_view& topic, const Context& context = Context());
+
+        /// @brief Log a message to the channel.
+        ///
+        /// @param value The FrameTransform message to log.
+        /// @param log_time The timestamp of the message. If omitted, the current time is used.
+        FoxgloveError log(const FrameTransform& value, std::optional<uint64_t> log_time = std::nullopt);
+
+        /// @brief Uniquely identifies a channel in the context of this program.
+        ///
+        /// @return The ID of the channel.
+        [[nodiscard]] uint64_t id() const;
+
+        FrameTransformChannel(const FrameTransformChannel& other) noexcept = delete;
+        FrameTransformChannel& operator=(const FrameTransformChannel& other) noexcept = delete;
+        /// @brief Default move constructor.
+        FrameTransformChannel(FrameTransformChannel&& other) noexcept = default;
+        /// @brief Default destructor.
+        ~FrameTransformChannel() = default;
+
+      private:
+        explicit FrameTransformChannel(ChannelUniquePtr&& channel)
+            : impl_(std::move(channel)) {}
+
+        ChannelUniquePtr impl_;
+    };
+
+/// @brief A channel for logging FrameTransforms messages to a topic.
+      class FrameTransformsChannel {
+      public:
+        /// @brief Create a new channel.
+        ///
+        /// @param topic The topic name. You should choose a unique topic name per channel for
+        /// compatibility with the Foxglove app.
+        /// @param context The context which associates logs to a sink. If omitted, the default context is
+        /// used.
+        static FoxgloveResult<FrameTransformsChannel> create(const std::string_view& topic, const Context& context = Context());
+
+        /// @brief Log a message to the channel.
+        ///
+        /// @param value The FrameTransforms message to log.
+        /// @param log_time The timestamp of the message. If omitted, the current time is used.
+        FoxgloveError log(const FrameTransforms& value, std::optional<uint64_t> log_time = std::nullopt);
+
+        /// @brief Uniquely identifies a channel in the context of this program.
+        ///
+        /// @return The ID of the channel.
+        [[nodiscard]] uint64_t id() const;
+
+        FrameTransformsChannel(const FrameTransformsChannel& other) noexcept = delete;
+        FrameTransformsChannel& operator=(const FrameTransformsChannel& other) noexcept = delete;
+        /// @brief Default move constructor.
+        FrameTransformsChannel(FrameTransformsChannel&& other) noexcept = default;
+        /// @brief Default destructor.
+        ~FrameTransformsChannel() = default;
+
+      private:
+        explicit FrameTransformsChannel(ChannelUniquePtr&& channel)
+            : impl_(std::move(channel)) {}
+
+        ChannelUniquePtr impl_;
+    };
+
+/// @brief A channel for logging GeoJSON messages to a topic.
+      class GeoJSONChannel {
+      public:
+        /// @brief Create a new channel.
+        ///
+        /// @param topic The topic name. You should choose a unique topic name per channel for
+        /// compatibility with the Foxglove app.
+        /// @param context The context which associates logs to a sink. If omitted, the default context is
+        /// used.
+        static FoxgloveResult<GeoJSONChannel> create(const std::string_view& topic, const Context& context = Context());
+
+        /// @brief Log a message to the channel.
+        ///
+        /// @param value The GeoJSON message to log.
+        /// @param log_time The timestamp of the message. If omitted, the current time is used.
+        FoxgloveError log(const GeoJSON& value, std::optional<uint64_t> log_time = std::nullopt);
+
+        /// @brief Uniquely identifies a channel in the context of this program.
+        ///
+        /// @return The ID of the channel.
+        [[nodiscard]] uint64_t id() const;
+
+        GeoJSONChannel(const GeoJSONChannel& other) noexcept = delete;
+        GeoJSONChannel& operator=(const GeoJSONChannel& other) noexcept = delete;
+        /// @brief Default move constructor.
+        GeoJSONChannel(GeoJSONChannel&& other) noexcept = default;
+        /// @brief Default destructor.
+        ~GeoJSONChannel() = default;
+
+      private:
+        explicit GeoJSONChannel(ChannelUniquePtr&& channel)
+            : impl_(std::move(channel)) {}
+
+        ChannelUniquePtr impl_;
+    };
+
+/// @brief A channel for logging Grid messages to a topic.
+      class GridChannel {
+      public:
+        /// @brief Create a new channel.
+        ///
+        /// @param topic The topic name. You should choose a unique topic name per channel for
+        /// compatibility with the Foxglove app.
+        /// @param context The context which associates logs to a sink. If omitted, the default context is
+        /// used.
+        static FoxgloveResult<GridChannel> create(const std::string_view& topic, const Context& context = Context());
+
+        /// @brief Log a message to the channel.
+        ///
+        /// @param value The Grid message to log.
+        /// @param log_time The timestamp of the message. If omitted, the current time is used.
+        FoxgloveError log(const Grid& value, std::optional<uint64_t> log_time = std::nullopt);
+
+        /// @brief Uniquely identifies a channel in the context of this program.
+        ///
+        /// @return The ID of the channel.
+        [[nodiscard]] uint64_t id() const;
+
+        GridChannel(const GridChannel& other) noexcept = delete;
+        GridChannel& operator=(const GridChannel& other) noexcept = delete;
+        /// @brief Default move constructor.
+        GridChannel(GridChannel&& other) noexcept = default;
+        /// @brief Default destructor.
+        ~GridChannel() = default;
+
+      private:
+        explicit GridChannel(ChannelUniquePtr&& channel)
+            : impl_(std::move(channel)) {}
+
+        ChannelUniquePtr impl_;
+    };
+
+/// @brief A channel for logging ImageAnnotations messages to a topic.
+      class ImageAnnotationsChannel {
+      public:
+        /// @brief Create a new channel.
+        ///
+        /// @param topic The topic name. You should choose a unique topic name per channel for
+        /// compatibility with the Foxglove app.
+        /// @param context The context which associates logs to a sink. If omitted, the default context is
+        /// used.
+        static FoxgloveResult<ImageAnnotationsChannel> create(const std::string_view& topic, const Context& context = Context());
+
+        /// @brief Log a message to the channel.
+        ///
+        /// @param value The ImageAnnotations message to log.
+        /// @param log_time The timestamp of the message. If omitted, the current time is used.
+        FoxgloveError log(const ImageAnnotations& value, std::optional<uint64_t> log_time = std::nullopt);
+
+        /// @brief Uniquely identifies a channel in the context of this program.
+        ///
+        /// @return The ID of the channel.
+        [[nodiscard]] uint64_t id() const;
+
+        ImageAnnotationsChannel(const ImageAnnotationsChannel& other) noexcept = delete;
+        ImageAnnotationsChannel& operator=(const ImageAnnotationsChannel& other) noexcept = delete;
+        /// @brief Default move constructor.
+        ImageAnnotationsChannel(ImageAnnotationsChannel&& other) noexcept = default;
+        /// @brief Default destructor.
+        ~ImageAnnotationsChannel() = default;
+
+      private:
+        explicit ImageAnnotationsChannel(ChannelUniquePtr&& channel)
+            : impl_(std::move(channel)) {}
+
+        ChannelUniquePtr impl_;
+    };
+
+/// @brief A channel for logging KeyValuePair messages to a topic.
+      class KeyValuePairChannel {
+      public:
+        /// @brief Create a new channel.
+        ///
+        /// @param topic The topic name. You should choose a unique topic name per channel for
+        /// compatibility with the Foxglove app.
+        /// @param context The context which associates logs to a sink. If omitted, the default context is
+        /// used.
+        static FoxgloveResult<KeyValuePairChannel> create(const std::string_view& topic, const Context& context = Context());
+
+        /// @brief Log a message to the channel.
+        ///
+        /// @param value The KeyValuePair message to log.
+        /// @param log_time The timestamp of the message. If omitted, the current time is used.
+        FoxgloveError log(const KeyValuePair& value, std::optional<uint64_t> log_time = std::nullopt);
+
+        /// @brief Uniquely identifies a channel in the context of this program.
+        ///
+        /// @return The ID of the channel.
+        [[nodiscard]] uint64_t id() const;
+
+        KeyValuePairChannel(const KeyValuePairChannel& other) noexcept = delete;
+        KeyValuePairChannel& operator=(const KeyValuePairChannel& other) noexcept = delete;
+        /// @brief Default move constructor.
+        KeyValuePairChannel(KeyValuePairChannel&& other) noexcept = default;
+        /// @brief Default destructor.
+        ~KeyValuePairChannel() = default;
+
+      private:
+        explicit KeyValuePairChannel(ChannelUniquePtr&& channel)
+            : impl_(std::move(channel)) {}
+
+        ChannelUniquePtr impl_;
+    };
+
+/// @brief A channel for logging LaserScan messages to a topic.
+      class LaserScanChannel {
+      public:
+        /// @brief Create a new channel.
+        ///
+        /// @param topic The topic name. You should choose a unique topic name per channel for
+        /// compatibility with the Foxglove app.
+        /// @param context The context which associates logs to a sink. If omitted, the default context is
+        /// used.
+        static FoxgloveResult<LaserScanChannel> create(const std::string_view& topic, const Context& context = Context());
+
+        /// @brief Log a message to the channel.
+        ///
+        /// @param value The LaserScan message to log.
+        /// @param log_time The timestamp of the message. If omitted, the current time is used.
+        FoxgloveError log(const LaserScan& value, std::optional<uint64_t> log_time = std::nullopt);
+
+        /// @brief Uniquely identifies a channel in the context of this program.
+        ///
+        /// @return The ID of the channel.
+        [[nodiscard]] uint64_t id() const;
+
+        LaserScanChannel(const LaserScanChannel& other) noexcept = delete;
+        LaserScanChannel& operator=(const LaserScanChannel& other) noexcept = delete;
+        /// @brief Default move constructor.
+        LaserScanChannel(LaserScanChannel&& other) noexcept = default;
+        /// @brief Default destructor.
+        ~LaserScanChannel() = default;
+
+      private:
+        explicit LaserScanChannel(ChannelUniquePtr&& channel)
+            : impl_(std::move(channel)) {}
+
+        ChannelUniquePtr impl_;
+    };
+
+/// @brief A channel for logging LocationFix messages to a topic.
+      class LocationFixChannel {
+      public:
+        /// @brief Create a new channel.
+        ///
+        /// @param topic The topic name. You should choose a unique topic name per channel for
+        /// compatibility with the Foxglove app.
+        /// @param context The context which associates logs to a sink. If omitted, the default context is
+        /// used.
+        static FoxgloveResult<LocationFixChannel> create(const std::string_view& topic, const Context& context = Context());
+
+        /// @brief Log a message to the channel.
+        ///
+        /// @param value The LocationFix message to log.
+        /// @param log_time The timestamp of the message. If omitted, the current time is used.
+        FoxgloveError log(const LocationFix& value, std::optional<uint64_t> log_time = std::nullopt);
+
+        /// @brief Uniquely identifies a channel in the context of this program.
+        ///
+        /// @return The ID of the channel.
+        [[nodiscard]] uint64_t id() const;
+
+        LocationFixChannel(const LocationFixChannel& other) noexcept = delete;
+        LocationFixChannel& operator=(const LocationFixChannel& other) noexcept = delete;
+        /// @brief Default move constructor.
+        LocationFixChannel(LocationFixChannel&& other) noexcept = default;
+        /// @brief Default destructor.
+        ~LocationFixChannel() = default;
+
+      private:
+        explicit LocationFixChannel(ChannelUniquePtr&& channel)
+            : impl_(std::move(channel)) {}
+
+        ChannelUniquePtr impl_;
+    };
+
+/// @brief A channel for logging Log messages to a topic.
+      class LogChannel {
+      public:
+        /// @brief Create a new channel.
+        ///
+        /// @param topic The topic name. You should choose a unique topic name per channel for
+        /// compatibility with the Foxglove app.
+        /// @param context The context which associates logs to a sink. If omitted, the default context is
+        /// used.
+        static FoxgloveResult<LogChannel> create(const std::string_view& topic, const Context& context = Context());
+
+        /// @brief Log a message to the channel.
+        ///
+        /// @param value The Log message to log.
+        /// @param log_time The timestamp of the message. If omitted, the current time is used.
+        FoxgloveError log(const Log& value, std::optional<uint64_t> log_time = std::nullopt);
+
+        /// @brief Uniquely identifies a channel in the context of this program.
+        ///
+        /// @return The ID of the channel.
+        [[nodiscard]] uint64_t id() const;
+
+        LogChannel(const LogChannel& other) noexcept = delete;
+        LogChannel& operator=(const LogChannel& other) noexcept = delete;
+        /// @brief Default move constructor.
+        LogChannel(LogChannel&& other) noexcept = default;
+        /// @brief Default destructor.
+        ~LogChannel() = default;
+
+      private:
+        explicit LogChannel(ChannelUniquePtr&& channel)
+            : impl_(std::move(channel)) {}
+
+        ChannelUniquePtr impl_;
+    };
+
+/// @brief A channel for logging SceneEntityDeletion messages to a topic.
+      class SceneEntityDeletionChannel {
+      public:
+        /// @brief Create a new channel.
+        ///
+        /// @param topic The topic name. You should choose a unique topic name per channel for
+        /// compatibility with the Foxglove app.
+        /// @param context The context which associates logs to a sink. If omitted, the default context is
+        /// used.
+        static FoxgloveResult<SceneEntityDeletionChannel> create(const std::string_view& topic, const Context& context = Context());
+
+        /// @brief Log a message to the channel.
+        ///
+        /// @param value The SceneEntityDeletion message to log.
+        /// @param log_time The timestamp of the message. If omitted, the current time is used.
+        FoxgloveError log(const SceneEntityDeletion& value, std::optional<uint64_t> log_time = std::nullopt);
+
+        /// @brief Uniquely identifies a channel in the context of this program.
+        ///
+        /// @return The ID of the channel.
+        [[nodiscard]] uint64_t id() const;
+
+        SceneEntityDeletionChannel(const SceneEntityDeletionChannel& other) noexcept = delete;
+        SceneEntityDeletionChannel& operator=(const SceneEntityDeletionChannel& other) noexcept = delete;
+        /// @brief Default move constructor.
+        SceneEntityDeletionChannel(SceneEntityDeletionChannel&& other) noexcept = default;
+        /// @brief Default destructor.
+        ~SceneEntityDeletionChannel() = default;
+
+      private:
+        explicit SceneEntityDeletionChannel(ChannelUniquePtr&& channel)
+            : impl_(std::move(channel)) {}
+
+        ChannelUniquePtr impl_;
+    };
+
+/// @brief A channel for logging SceneEntity messages to a topic.
+      class SceneEntityChannel {
+      public:
+        /// @brief Create a new channel.
+        ///
+        /// @param topic The topic name. You should choose a unique topic name per channel for
+        /// compatibility with the Foxglove app.
+        /// @param context The context which associates logs to a sink. If omitted, the default context is
+        /// used.
+        static FoxgloveResult<SceneEntityChannel> create(const std::string_view& topic, const Context& context = Context());
+
+        /// @brief Log a message to the channel.
+        ///
+        /// @param value The SceneEntity message to log.
+        /// @param log_time The timestamp of the message. If omitted, the current time is used.
+        FoxgloveError log(const SceneEntity& value, std::optional<uint64_t> log_time = std::nullopt);
+
+        /// @brief Uniquely identifies a channel in the context of this program.
+        ///
+        /// @return The ID of the channel.
+        [[nodiscard]] uint64_t id() const;
+
+        SceneEntityChannel(const SceneEntityChannel& other) noexcept = delete;
+        SceneEntityChannel& operator=(const SceneEntityChannel& other) noexcept = delete;
+        /// @brief Default move constructor.
+        SceneEntityChannel(SceneEntityChannel&& other) noexcept = default;
+        /// @brief Default destructor.
+        ~SceneEntityChannel() = default;
+
+      private:
+        explicit SceneEntityChannel(ChannelUniquePtr&& channel)
+            : impl_(std::move(channel)) {}
+
+        ChannelUniquePtr impl_;
+    };
+
+/// @brief A channel for logging SceneUpdate messages to a topic.
+      class SceneUpdateChannel {
+      public:
+        /// @brief Create a new channel.
+        ///
+        /// @param topic The topic name. You should choose a unique topic name per channel for
+        /// compatibility with the Foxglove app.
+        /// @param context The context which associates logs to a sink. If omitted, the default context is
+        /// used.
+        static FoxgloveResult<SceneUpdateChannel> create(const std::string_view& topic, const Context& context = Context());
+
+        /// @brief Log a message to the channel.
+        ///
+        /// @param value The SceneUpdate message to log.
+        /// @param log_time The timestamp of the message. If omitted, the current time is used.
+        FoxgloveError log(const SceneUpdate& value, std::optional<uint64_t> log_time = std::nullopt);
+
+        /// @brief Uniquely identifies a channel in the context of this program.
+        ///
+        /// @return The ID of the channel.
+        [[nodiscard]] uint64_t id() const;
+
+        SceneUpdateChannel(const SceneUpdateChannel& other) noexcept = delete;
+        SceneUpdateChannel& operator=(const SceneUpdateChannel& other) noexcept = delete;
+        /// @brief Default move constructor.
+        SceneUpdateChannel(SceneUpdateChannel&& other) noexcept = default;
+        /// @brief Default destructor.
+        ~SceneUpdateChannel() = default;
+
+      private:
+        explicit SceneUpdateChannel(ChannelUniquePtr&& channel)
+            : impl_(std::move(channel)) {}
+
+        ChannelUniquePtr impl_;
+    };
+
+/// @brief A channel for logging PackedElementField messages to a topic.
+      class PackedElementFieldChannel {
+      public:
+        /// @brief Create a new channel.
+        ///
+        /// @param topic The topic name. You should choose a unique topic name per channel for
+        /// compatibility with the Foxglove app.
+        /// @param context The context which associates logs to a sink. If omitted, the default context is
+        /// used.
+        static FoxgloveResult<PackedElementFieldChannel> create(const std::string_view& topic, const Context& context = Context());
+
+        /// @brief Log a message to the channel.
+        ///
+        /// @param value The PackedElementField message to log.
+        /// @param log_time The timestamp of the message. If omitted, the current time is used.
+        FoxgloveError log(const PackedElementField& value, std::optional<uint64_t> log_time = std::nullopt);
+
+        /// @brief Uniquely identifies a channel in the context of this program.
+        ///
+        /// @return The ID of the channel.
+        [[nodiscard]] uint64_t id() const;
+
+        PackedElementFieldChannel(const PackedElementFieldChannel& other) noexcept = delete;
+        PackedElementFieldChannel& operator=(const PackedElementFieldChannel& other) noexcept = delete;
+        /// @brief Default move constructor.
+        PackedElementFieldChannel(PackedElementFieldChannel&& other) noexcept = default;
+        /// @brief Default destructor.
+        ~PackedElementFieldChannel() = default;
+
+      private:
+        explicit PackedElementFieldChannel(ChannelUniquePtr&& channel)
+            : impl_(std::move(channel)) {}
+
+        ChannelUniquePtr impl_;
+    };
+
+/// @brief A channel for logging Point2 messages to a topic.
+      class Point2Channel {
+      public:
+        /// @brief Create a new channel.
+        ///
+        /// @param topic The topic name. You should choose a unique topic name per channel for
+        /// compatibility with the Foxglove app.
+        /// @param context The context which associates logs to a sink. If omitted, the default context is
+        /// used.
+        static FoxgloveResult<Point2Channel> create(const std::string_view& topic, const Context& context = Context());
+
+        /// @brief Log a message to the channel.
+        ///
+        /// @param value The Point2 message to log.
+        /// @param log_time The timestamp of the message. If omitted, the current time is used.
+        FoxgloveError log(const Point2& value, std::optional<uint64_t> log_time = std::nullopt);
+
+        /// @brief Uniquely identifies a channel in the context of this program.
+        ///
+        /// @return The ID of the channel.
+        [[nodiscard]] uint64_t id() const;
+
+        Point2Channel(const Point2Channel& other) noexcept = delete;
+        Point2Channel& operator=(const Point2Channel& other) noexcept = delete;
+        /// @brief Default move constructor.
+        Point2Channel(Point2Channel&& other) noexcept = default;
+        /// @brief Default destructor.
+        ~Point2Channel() = default;
+
+      private:
+        explicit Point2Channel(ChannelUniquePtr&& channel)
+            : impl_(std::move(channel)) {}
+
+        ChannelUniquePtr impl_;
+    };
+
+/// @brief A channel for logging Point3 messages to a topic.
+      class Point3Channel {
+      public:
+        /// @brief Create a new channel.
+        ///
+        /// @param topic The topic name. You should choose a unique topic name per channel for
+        /// compatibility with the Foxglove app.
+        /// @param context The context which associates logs to a sink. If omitted, the default context is
+        /// used.
+        static FoxgloveResult<Point3Channel> create(const std::string_view& topic, const Context& context = Context());
+
+        /// @brief Log a message to the channel.
+        ///
+        /// @param value The Point3 message to log.
+        /// @param log_time The timestamp of the message. If omitted, the current time is used.
+        FoxgloveError log(const Point3& value, std::optional<uint64_t> log_time = std::nullopt);
+
+        /// @brief Uniquely identifies a channel in the context of this program.
+        ///
+        /// @return The ID of the channel.
+        [[nodiscard]] uint64_t id() const;
+
+        Point3Channel(const Point3Channel& other) noexcept = delete;
+        Point3Channel& operator=(const Point3Channel& other) noexcept = delete;
+        /// @brief Default move constructor.
+        Point3Channel(Point3Channel&& other) noexcept = default;
+        /// @brief Default destructor.
+        ~Point3Channel() = default;
+
+      private:
+        explicit Point3Channel(ChannelUniquePtr&& channel)
+            : impl_(std::move(channel)) {}
+
+        ChannelUniquePtr impl_;
+    };
+
+/// @brief A channel for logging PointCloud messages to a topic.
+      class PointCloudChannel {
+      public:
+        /// @brief Create a new channel.
+        ///
+        /// @param topic The topic name. You should choose a unique topic name per channel for
+        /// compatibility with the Foxglove app.
+        /// @param context The context which associates logs to a sink. If omitted, the default context is
+        /// used.
+        static FoxgloveResult<PointCloudChannel> create(const std::string_view& topic, const Context& context = Context());
+
+        /// @brief Log a message to the channel.
+        ///
+        /// @param value The PointCloud message to log.
+        /// @param log_time The timestamp of the message. If omitted, the current time is used.
+        FoxgloveError log(const PointCloud& value, std::optional<uint64_t> log_time = std::nullopt);
+
+        /// @brief Uniquely identifies a channel in the context of this program.
+        ///
+        /// @return The ID of the channel.
+        [[nodiscard]] uint64_t id() const;
+
+        PointCloudChannel(const PointCloudChannel& other) noexcept = delete;
+        PointCloudChannel& operator=(const PointCloudChannel& other) noexcept = delete;
+        /// @brief Default move constructor.
+        PointCloudChannel(PointCloudChannel&& other) noexcept = default;
+        /// @brief Default destructor.
+        ~PointCloudChannel() = default;
+
+      private:
+        explicit PointCloudChannel(ChannelUniquePtr&& channel)
+            : impl_(std::move(channel)) {}
+
+        ChannelUniquePtr impl_;
+    };
+
+/// @brief A channel for logging PointsAnnotation messages to a topic.
+      class PointsAnnotationChannel {
+      public:
+        /// @brief Create a new channel.
+        ///
+        /// @param topic The topic name. You should choose a unique topic name per channel for
+        /// compatibility with the Foxglove app.
+        /// @param context The context which associates logs to a sink. If omitted, the default context is
+        /// used.
+        static FoxgloveResult<PointsAnnotationChannel> create(const std::string_view& topic, const Context& context = Context());
+
+        /// @brief Log a message to the channel.
+        ///
+        /// @param value The PointsAnnotation message to log.
+        /// @param log_time The timestamp of the message. If omitted, the current time is used.
+        FoxgloveError log(const PointsAnnotation& value, std::optional<uint64_t> log_time = std::nullopt);
+
+        /// @brief Uniquely identifies a channel in the context of this program.
+        ///
+        /// @return The ID of the channel.
+        [[nodiscard]] uint64_t id() const;
+
+        PointsAnnotationChannel(const PointsAnnotationChannel& other) noexcept = delete;
+        PointsAnnotationChannel& operator=(const PointsAnnotationChannel& other) noexcept = delete;
+        /// @brief Default move constructor.
+        PointsAnnotationChannel(PointsAnnotationChannel&& other) noexcept = default;
+        /// @brief Default destructor.
+        ~PointsAnnotationChannel() = default;
+
+      private:
+        explicit PointsAnnotationChannel(ChannelUniquePtr&& channel)
+            : impl_(std::move(channel)) {}
+
+        ChannelUniquePtr impl_;
+    };
+
+/// @brief A channel for logging Pose messages to a topic.
+      class PoseChannel {
+      public:
+        /// @brief Create a new channel.
+        ///
+        /// @param topic The topic name. You should choose a unique topic name per channel for
+        /// compatibility with the Foxglove app.
+        /// @param context The context which associates logs to a sink. If omitted, the default context is
+        /// used.
+        static FoxgloveResult<PoseChannel> create(const std::string_view& topic, const Context& context = Context());
+
+        /// @brief Log a message to the channel.
+        ///
+        /// @param value The Pose message to log.
+        /// @param log_time The timestamp of the message. If omitted, the current time is used.
+        FoxgloveError log(const Pose& value, std::optional<uint64_t> log_time = std::nullopt);
+
+        /// @brief Uniquely identifies a channel in the context of this program.
+        ///
+        /// @return The ID of the channel.
+        [[nodiscard]] uint64_t id() const;
+
+        PoseChannel(const PoseChannel& other) noexcept = delete;
+        PoseChannel& operator=(const PoseChannel& other) noexcept = delete;
+        /// @brief Default move constructor.
+        PoseChannel(PoseChannel&& other) noexcept = default;
+        /// @brief Default destructor.
+        ~PoseChannel() = default;
+
+      private:
+        explicit PoseChannel(ChannelUniquePtr&& channel)
+            : impl_(std::move(channel)) {}
+
+        ChannelUniquePtr impl_;
+    };
+
+/// @brief A channel for logging PoseInFrame messages to a topic.
+      class PoseInFrameChannel {
+      public:
+        /// @brief Create a new channel.
+        ///
+        /// @param topic The topic name. You should choose a unique topic name per channel for
+        /// compatibility with the Foxglove app.
+        /// @param context The context which associates logs to a sink. If omitted, the default context is
+        /// used.
+        static FoxgloveResult<PoseInFrameChannel> create(const std::string_view& topic, const Context& context = Context());
+
+        /// @brief Log a message to the channel.
+        ///
+        /// @param value The PoseInFrame message to log.
+        /// @param log_time The timestamp of the message. If omitted, the current time is used.
+        FoxgloveError log(const PoseInFrame& value, std::optional<uint64_t> log_time = std::nullopt);
+
+        /// @brief Uniquely identifies a channel in the context of this program.
+        ///
+        /// @return The ID of the channel.
+        [[nodiscard]] uint64_t id() const;
+
+        PoseInFrameChannel(const PoseInFrameChannel& other) noexcept = delete;
+        PoseInFrameChannel& operator=(const PoseInFrameChannel& other) noexcept = delete;
+        /// @brief Default move constructor.
+        PoseInFrameChannel(PoseInFrameChannel&& other) noexcept = default;
+        /// @brief Default destructor.
+        ~PoseInFrameChannel() = default;
+
+      private:
+        explicit PoseInFrameChannel(ChannelUniquePtr&& channel)
+            : impl_(std::move(channel)) {}
+
+        ChannelUniquePtr impl_;
+    };
+
+/// @brief A channel for logging PosesInFrame messages to a topic.
+      class PosesInFrameChannel {
+      public:
+        /// @brief Create a new channel.
+        ///
+        /// @param topic The topic name. You should choose a unique topic name per channel for
+        /// compatibility with the Foxglove app.
+        /// @param context The context which associates logs to a sink. If omitted, the default context is
+        /// used.
+        static FoxgloveResult<PosesInFrameChannel> create(const std::string_view& topic, const Context& context = Context());
+
+        /// @brief Log a message to the channel.
+        ///
+        /// @param value The PosesInFrame message to log.
+        /// @param log_time The timestamp of the message. If omitted, the current time is used.
+        FoxgloveError log(const PosesInFrame& value, std::optional<uint64_t> log_time = std::nullopt);
+
+        /// @brief Uniquely identifies a channel in the context of this program.
+        ///
+        /// @return The ID of the channel.
+        [[nodiscard]] uint64_t id() const;
+
+        PosesInFrameChannel(const PosesInFrameChannel& other) noexcept = delete;
+        PosesInFrameChannel& operator=(const PosesInFrameChannel& other) noexcept = delete;
+        /// @brief Default move constructor.
+        PosesInFrameChannel(PosesInFrameChannel&& other) noexcept = default;
+        /// @brief Default destructor.
+        ~PosesInFrameChannel() = default;
+
+      private:
+        explicit PosesInFrameChannel(ChannelUniquePtr&& channel)
+            : impl_(std::move(channel)) {}
+
+        ChannelUniquePtr impl_;
+    };
+
+/// @brief A channel for logging Quaternion messages to a topic.
+      class QuaternionChannel {
+      public:
+        /// @brief Create a new channel.
+        ///
+        /// @param topic The topic name. You should choose a unique topic name per channel for
+        /// compatibility with the Foxglove app.
+        /// @param context The context which associates logs to a sink. If omitted, the default context is
+        /// used.
+        static FoxgloveResult<QuaternionChannel> create(const std::string_view& topic, const Context& context = Context());
+
+        /// @brief Log a message to the channel.
+        ///
+        /// @param value The Quaternion message to log.
+        /// @param log_time The timestamp of the message. If omitted, the current time is used.
+        FoxgloveError log(const Quaternion& value, std::optional<uint64_t> log_time = std::nullopt);
+
+        /// @brief Uniquely identifies a channel in the context of this program.
+        ///
+        /// @return The ID of the channel.
+        [[nodiscard]] uint64_t id() const;
+
+        QuaternionChannel(const QuaternionChannel& other) noexcept = delete;
+        QuaternionChannel& operator=(const QuaternionChannel& other) noexcept = delete;
+        /// @brief Default move constructor.
+        QuaternionChannel(QuaternionChannel&& other) noexcept = default;
+        /// @brief Default destructor.
+        ~QuaternionChannel() = default;
+
+      private:
+        explicit QuaternionChannel(ChannelUniquePtr&& channel)
+            : impl_(std::move(channel)) {}
+
+        ChannelUniquePtr impl_;
+    };
+
+/// @brief A channel for logging RawAudio messages to a topic.
+      class RawAudioChannel {
+      public:
+        /// @brief Create a new channel.
+        ///
+        /// @param topic The topic name. You should choose a unique topic name per channel for
+        /// compatibility with the Foxglove app.
+        /// @param context The context which associates logs to a sink. If omitted, the default context is
+        /// used.
+        static FoxgloveResult<RawAudioChannel> create(const std::string_view& topic, const Context& context = Context());
+
+        /// @brief Log a message to the channel.
+        ///
+        /// @param value The RawAudio message to log.
+        /// @param log_time The timestamp of the message. If omitted, the current time is used.
+        FoxgloveError log(const RawAudio& value, std::optional<uint64_t> log_time = std::nullopt);
+
+        /// @brief Uniquely identifies a channel in the context of this program.
+        ///
+        /// @return The ID of the channel.
+        [[nodiscard]] uint64_t id() const;
+
+        RawAudioChannel(const RawAudioChannel& other) noexcept = delete;
+        RawAudioChannel& operator=(const RawAudioChannel& other) noexcept = delete;
+        /// @brief Default move constructor.
+        RawAudioChannel(RawAudioChannel&& other) noexcept = default;
+        /// @brief Default destructor.
+        ~RawAudioChannel() = default;
+
+      private:
+        explicit RawAudioChannel(ChannelUniquePtr&& channel)
+            : impl_(std::move(channel)) {}
+
+        ChannelUniquePtr impl_;
+    };
+
+/// @brief A channel for logging RawImage messages to a topic.
+      class RawImageChannel {
+      public:
+        /// @brief Create a new channel.
+        ///
+        /// @param topic The topic name. You should choose a unique topic name per channel for
+        /// compatibility with the Foxglove app.
+        /// @param context The context which associates logs to a sink. If omitted, the default context is
+        /// used.
+        static FoxgloveResult<RawImageChannel> create(const std::string_view& topic, const Context& context = Context());
+
+        /// @brief Log a message to the channel.
+        ///
+        /// @param value The RawImage message to log.
+        /// @param log_time The timestamp of the message. If omitted, the current time is used.
+        FoxgloveError log(const RawImage& value, std::optional<uint64_t> log_time = std::nullopt);
+
+        /// @brief Uniquely identifies a channel in the context of this program.
+        ///
+        /// @return The ID of the channel.
+        [[nodiscard]] uint64_t id() const;
+
+        RawImageChannel(const RawImageChannel& other) noexcept = delete;
+        RawImageChannel& operator=(const RawImageChannel& other) noexcept = delete;
+        /// @brief Default move constructor.
+        RawImageChannel(RawImageChannel&& other) noexcept = default;
+        /// @brief Default destructor.
+        ~RawImageChannel() = default;
+
+      private:
+        explicit RawImageChannel(ChannelUniquePtr&& channel)
+            : impl_(std::move(channel)) {}
+
+        ChannelUniquePtr impl_;
+    };
+
+/// @brief A channel for logging TextAnnotation messages to a topic.
+      class TextAnnotationChannel {
+      public:
+        /// @brief Create a new channel.
+        ///
+        /// @param topic The topic name. You should choose a unique topic name per channel for
+        /// compatibility with the Foxglove app.
+        /// @param context The context which associates logs to a sink. If omitted, the default context is
+        /// used.
+        static FoxgloveResult<TextAnnotationChannel> create(const std::string_view& topic, const Context& context = Context());
+
+        /// @brief Log a message to the channel.
+        ///
+        /// @param value The TextAnnotation message to log.
+        /// @param log_time The timestamp of the message. If omitted, the current time is used.
+        FoxgloveError log(const TextAnnotation& value, std::optional<uint64_t> log_time = std::nullopt);
+
+        /// @brief Uniquely identifies a channel in the context of this program.
+        ///
+        /// @return The ID of the channel.
+        [[nodiscard]] uint64_t id() const;
+
+        TextAnnotationChannel(const TextAnnotationChannel& other) noexcept = delete;
+        TextAnnotationChannel& operator=(const TextAnnotationChannel& other) noexcept = delete;
+        /// @brief Default move constructor.
+        TextAnnotationChannel(TextAnnotationChannel&& other) noexcept = default;
+        /// @brief Default destructor.
+        ~TextAnnotationChannel() = default;
+
+      private:
+        explicit TextAnnotationChannel(ChannelUniquePtr&& channel)
+            : impl_(std::move(channel)) {}
+
+        ChannelUniquePtr impl_;
+    };
+
+/// @brief A channel for logging Vector2 messages to a topic.
+      class Vector2Channel {
+      public:
+        /// @brief Create a new channel.
+        ///
+        /// @param topic The topic name. You should choose a unique topic name per channel for
+        /// compatibility with the Foxglove app.
+        /// @param context The context which associates logs to a sink. If omitted, the default context is
+        /// used.
+        static FoxgloveResult<Vector2Channel> create(const std::string_view& topic, const Context& context = Context());
+
+        /// @brief Log a message to the channel.
+        ///
+        /// @param value The Vector2 message to log.
+        /// @param log_time The timestamp of the message. If omitted, the current time is used.
+        FoxgloveError log(const Vector2& value, std::optional<uint64_t> log_time = std::nullopt);
+
+        /// @brief Uniquely identifies a channel in the context of this program.
+        ///
+        /// @return The ID of the channel.
+        [[nodiscard]] uint64_t id() const;
+
+        Vector2Channel(const Vector2Channel& other) noexcept = delete;
+        Vector2Channel& operator=(const Vector2Channel& other) noexcept = delete;
+        /// @brief Default move constructor.
+        Vector2Channel(Vector2Channel&& other) noexcept = default;
+        /// @brief Default destructor.
+        ~Vector2Channel() = default;
+
+      private:
+        explicit Vector2Channel(ChannelUniquePtr&& channel)
+            : impl_(std::move(channel)) {}
+
+        ChannelUniquePtr impl_;
+    };
+
+/// @brief A channel for logging Vector3 messages to a topic.
+      class Vector3Channel {
+      public:
+        /// @brief Create a new channel.
+        ///
+        /// @param topic The topic name. You should choose a unique topic name per channel for
+        /// compatibility with the Foxglove app.
+        /// @param context The context which associates logs to a sink. If omitted, the default context is
+        /// used.
+        static FoxgloveResult<Vector3Channel> create(const std::string_view& topic, const Context& context = Context());
+
+        /// @brief Log a message to the channel.
+        ///
+        /// @param value The Vector3 message to log.
+        /// @param log_time The timestamp of the message. If omitted, the current time is used.
+        FoxgloveError log(const Vector3& value, std::optional<uint64_t> log_time = std::nullopt);
+
+        /// @brief Uniquely identifies a channel in the context of this program.
+        ///
+        /// @return The ID of the channel.
+        [[nodiscard]] uint64_t id() const;
+
+        Vector3Channel(const Vector3Channel& other) noexcept = delete;
+        Vector3Channel& operator=(const Vector3Channel& other) noexcept = delete;
+        /// @brief Default move constructor.
+        Vector3Channel(Vector3Channel&& other) noexcept = default;
+        /// @brief Default destructor.
+        ~Vector3Channel() = default;
+
+      private:
+        explicit Vector3Channel(ChannelUniquePtr&& channel)
+            : impl_(std::move(channel)) {}
+
+        ChannelUniquePtr impl_;
+    };
+
+} // namespace foxglove::schemas

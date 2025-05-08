@@ -168,15 +168,33 @@ export function generateHppSchemas(
   });
 
   const channelClasses = schemas.filter(hasChannelType).map(
-    (schema) => `class ${schema.name}Channel {
+    (schema) => `/// @brief A channel for logging ${schema.name} messages to a topic.
+      class ${schema.name}Channel {
       public:
+        /// @brief Create a new channel.
+        ///
+        /// @param topic The topic name. You should choose a unique topic name per channel for
+        /// compatibility with the Foxglove app.
+        /// @param context The context which associates logs to a sink. If omitted, the default context is
+        /// used.
         static FoxgloveResult<${schema.name}Channel> create(const std::string_view& topic, const Context& context = Context());
 
+        /// @brief Log a message to the channel.
+        ///
+        /// @param value The ${schema.name} message to log.
+        /// @param log_time The timestamp of the message. If omitted, the current time is used.
         FoxgloveError log(const ${schema.name}& value, std::optional<uint64_t> log_time = std::nullopt);
+
+        /// @brief Uniquely identifies a channel in the context of this program.
+        ///
+        /// @return The ID of the channel.
+        [[nodiscard]] uint64_t id() const;
 
         ${schema.name}Channel(const ${schema.name}Channel& other) noexcept = delete;
         ${schema.name}Channel& operator=(const ${schema.name}Channel& other) noexcept = delete;
+        /// @brief Default move constructor.
         ${schema.name}Channel(${schema.name}Channel&& other) noexcept = default;
+        /// @brief Default destructor.
         ~${schema.name}Channel() = default;
 
       private:
@@ -202,9 +220,11 @@ export function generateHppSchemas(
   ];
 
   const uniquePtr = [
+    "/// @brief A functor for deleting a channel. Used by ChannelUniquePtr. For internal use only.",
     "struct ChannelDeleter {",
     "  void operator()(const foxglove_channel* ptr) const noexcept;",
     "};",
+    "/// @brief A unique pointer to a C foxglove_channel pointer. For internal use only.",
     "typedef std::unique_ptr<const foxglove_channel, ChannelDeleter> ChannelUniquePtr;",
   ];
 
@@ -326,10 +346,12 @@ export function generateCppSchemas(schemas: FoxgloveMessageSchema[]): string {
       "      return foxglove::unexpected(FoxgloveError(error));",
       "    }",
       `    return ${schema.name}Channel(ChannelUniquePtr(channel));`,
-      "}",
-      "",
+      "}\n",
       `FoxgloveError ${schema.name}Channel::log(const ${schema.name}& msg, std::optional<uint64_t> log_time) {`,
       ...conversionCode,
+      "}\n",
+      `uint64_t ${schema.name}Channel::id() const {`,
+      "    return foxglove_channel_get_id(impl_.get());",
       "}\n\n",
     ];
   });
