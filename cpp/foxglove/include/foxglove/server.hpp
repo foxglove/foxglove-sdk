@@ -1,5 +1,6 @@
 #pragma once
 
+#include <foxglove/context.hpp>
 #include <foxglove/error.hpp>
 #include <foxglove/server/connection_graph.hpp>
 #include <foxglove/server/parameter.hpp>
@@ -15,8 +16,6 @@ struct foxglove_websocket_server;
 struct foxglove_connection_graph;
 
 namespace foxglove {
-
-struct Context;
 
 /// @brief A channel advertised by a client.
 struct ClientChannel {

@@ -18,7 +18,10 @@ struct foxglove_channel;
 
 namespace foxglove::schemas {
 
-typedef std::unique_ptr<const foxglove_channel, void (*const)(const foxglove_channel*)> ChannelUniquePtr;
+struct ChannelDeleter {
+  void operator()(const foxglove_channel* ptr) const noexcept;
+};
+typedef std::unique_ptr<const foxglove_channel, ChannelDeleter> ChannelUniquePtr;
 
 /// A vector in 3D space that represents a direction only
 struct Vector3 {

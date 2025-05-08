@@ -12,6 +12,10 @@
 
 namespace foxglove::schemas {
 
+void ChannelDeleter::operator()(const foxglove_channel* ptr) const noexcept {
+  foxglove_channel_free(ptr);
+};
+
 void arrowPrimitiveToC(foxglove_arrow_primitive& dest, const ArrowPrimitive& src, Arena& arena);
 void cameraCalibrationToC(foxglove_camera_calibration& dest, const CameraCalibration& src, Arena& arena);
 void circleAnnotationToC(foxglove_circle_annotation& dest, const CircleAnnotation& src, Arena& arena);
@@ -52,7 +56,7 @@ FoxgloveResult<CameraCalibrationChannel> CameraCalibrationChannel::create(const 
     if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
       return foxglove::unexpected(FoxgloveError(error));
     }
-    return CameraCalibrationChannel(ChannelUniquePtr(channel, foxglove_channel_free));
+    return CameraCalibrationChannel(ChannelUniquePtr(channel));
 }
 
 FoxgloveError CameraCalibrationChannel::log(const CameraCalibration& msg, std::optional<uint64_t> log_time) {
@@ -69,7 +73,7 @@ FoxgloveResult<CircleAnnotationChannel> CircleAnnotationChannel::create(const st
     if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
       return foxglove::unexpected(FoxgloveError(error));
     }
-    return CircleAnnotationChannel(ChannelUniquePtr(channel, foxglove_channel_free));
+    return CircleAnnotationChannel(ChannelUniquePtr(channel));
 }
 
 FoxgloveError CircleAnnotationChannel::log(const CircleAnnotation& msg, std::optional<uint64_t> log_time) {
@@ -86,7 +90,7 @@ FoxgloveResult<CompressedImageChannel> CompressedImageChannel::create(const std:
     if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
       return foxglove::unexpected(FoxgloveError(error));
     }
-    return CompressedImageChannel(ChannelUniquePtr(channel, foxglove_channel_free));
+    return CompressedImageChannel(ChannelUniquePtr(channel));
 }
 
 FoxgloveError CompressedImageChannel::log(const CompressedImage& msg, std::optional<uint64_t> log_time) {
@@ -103,7 +107,7 @@ FoxgloveResult<CompressedVideoChannel> CompressedVideoChannel::create(const std:
     if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
       return foxglove::unexpected(FoxgloveError(error));
     }
-    return CompressedVideoChannel(ChannelUniquePtr(channel, foxglove_channel_free));
+    return CompressedVideoChannel(ChannelUniquePtr(channel));
 }
 
 FoxgloveError CompressedVideoChannel::log(const CompressedVideo& msg, std::optional<uint64_t> log_time) {
@@ -120,7 +124,7 @@ FoxgloveResult<FrameTransformChannel> FrameTransformChannel::create(const std::s
     if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
       return foxglove::unexpected(FoxgloveError(error));
     }
-    return FrameTransformChannel(ChannelUniquePtr(channel, foxglove_channel_free));
+    return FrameTransformChannel(ChannelUniquePtr(channel));
 }
 
 FoxgloveError FrameTransformChannel::log(const FrameTransform& msg, std::optional<uint64_t> log_time) {
@@ -137,7 +141,7 @@ FoxgloveResult<FrameTransformsChannel> FrameTransformsChannel::create(const std:
     if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
       return foxglove::unexpected(FoxgloveError(error));
     }
-    return FrameTransformsChannel(ChannelUniquePtr(channel, foxglove_channel_free));
+    return FrameTransformsChannel(ChannelUniquePtr(channel));
 }
 
 FoxgloveError FrameTransformsChannel::log(const FrameTransforms& msg, std::optional<uint64_t> log_time) {
@@ -154,7 +158,7 @@ FoxgloveResult<GeoJSONChannel> GeoJSONChannel::create(const std::string_view& to
     if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
       return foxglove::unexpected(FoxgloveError(error));
     }
-    return GeoJSONChannel(ChannelUniquePtr(channel, foxglove_channel_free));
+    return GeoJSONChannel(ChannelUniquePtr(channel));
 }
 
 FoxgloveError GeoJSONChannel::log(const GeoJSON& msg, std::optional<uint64_t> log_time) {
@@ -171,7 +175,7 @@ FoxgloveResult<GridChannel> GridChannel::create(const std::string_view& topic, c
     if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
       return foxglove::unexpected(FoxgloveError(error));
     }
-    return GridChannel(ChannelUniquePtr(channel, foxglove_channel_free));
+    return GridChannel(ChannelUniquePtr(channel));
 }
 
 FoxgloveError GridChannel::log(const Grid& msg, std::optional<uint64_t> log_time) {
@@ -188,7 +192,7 @@ FoxgloveResult<ImageAnnotationsChannel> ImageAnnotationsChannel::create(const st
     if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
       return foxglove::unexpected(FoxgloveError(error));
     }
-    return ImageAnnotationsChannel(ChannelUniquePtr(channel, foxglove_channel_free));
+    return ImageAnnotationsChannel(ChannelUniquePtr(channel));
 }
 
 FoxgloveError ImageAnnotationsChannel::log(const ImageAnnotations& msg, std::optional<uint64_t> log_time) {
@@ -205,7 +209,7 @@ FoxgloveResult<KeyValuePairChannel> KeyValuePairChannel::create(const std::strin
     if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
       return foxglove::unexpected(FoxgloveError(error));
     }
-    return KeyValuePairChannel(ChannelUniquePtr(channel, foxglove_channel_free));
+    return KeyValuePairChannel(ChannelUniquePtr(channel));
 }
 
 FoxgloveError KeyValuePairChannel::log(const KeyValuePair& msg, std::optional<uint64_t> log_time) {
@@ -222,7 +226,7 @@ FoxgloveResult<LaserScanChannel> LaserScanChannel::create(const std::string_view
     if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
       return foxglove::unexpected(FoxgloveError(error));
     }
-    return LaserScanChannel(ChannelUniquePtr(channel, foxglove_channel_free));
+    return LaserScanChannel(ChannelUniquePtr(channel));
 }
 
 FoxgloveError LaserScanChannel::log(const LaserScan& msg, std::optional<uint64_t> log_time) {
@@ -239,7 +243,7 @@ FoxgloveResult<LocationFixChannel> LocationFixChannel::create(const std::string_
     if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
       return foxglove::unexpected(FoxgloveError(error));
     }
-    return LocationFixChannel(ChannelUniquePtr(channel, foxglove_channel_free));
+    return LocationFixChannel(ChannelUniquePtr(channel));
 }
 
 FoxgloveError LocationFixChannel::log(const LocationFix& msg, std::optional<uint64_t> log_time) {
@@ -256,7 +260,7 @@ FoxgloveResult<LogChannel> LogChannel::create(const std::string_view& topic, con
     if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
       return foxglove::unexpected(FoxgloveError(error));
     }
-    return LogChannel(ChannelUniquePtr(channel, foxglove_channel_free));
+    return LogChannel(ChannelUniquePtr(channel));
 }
 
 FoxgloveError LogChannel::log(const Log& msg, std::optional<uint64_t> log_time) {
@@ -273,7 +277,7 @@ FoxgloveResult<PackedElementFieldChannel> PackedElementFieldChannel::create(cons
     if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
       return foxglove::unexpected(FoxgloveError(error));
     }
-    return PackedElementFieldChannel(ChannelUniquePtr(channel, foxglove_channel_free));
+    return PackedElementFieldChannel(ChannelUniquePtr(channel));
 }
 
 FoxgloveError PackedElementFieldChannel::log(const PackedElementField& msg, std::optional<uint64_t> log_time) {
@@ -290,7 +294,7 @@ FoxgloveResult<Point2Channel> Point2Channel::create(const std::string_view& topi
     if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
       return foxglove::unexpected(FoxgloveError(error));
     }
-    return Point2Channel(ChannelUniquePtr(channel, foxglove_channel_free));
+    return Point2Channel(ChannelUniquePtr(channel));
 }
 
 FoxgloveError Point2Channel::log(const Point2& msg, std::optional<uint64_t> log_time) {
@@ -304,7 +308,7 @@ FoxgloveResult<Point3Channel> Point3Channel::create(const std::string_view& topi
     if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
       return foxglove::unexpected(FoxgloveError(error));
     }
-    return Point3Channel(ChannelUniquePtr(channel, foxglove_channel_free));
+    return Point3Channel(ChannelUniquePtr(channel));
 }
 
 FoxgloveError Point3Channel::log(const Point3& msg, std::optional<uint64_t> log_time) {
@@ -318,7 +322,7 @@ FoxgloveResult<PointCloudChannel> PointCloudChannel::create(const std::string_vi
     if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
       return foxglove::unexpected(FoxgloveError(error));
     }
-    return PointCloudChannel(ChannelUniquePtr(channel, foxglove_channel_free));
+    return PointCloudChannel(ChannelUniquePtr(channel));
 }
 
 FoxgloveError PointCloudChannel::log(const PointCloud& msg, std::optional<uint64_t> log_time) {
@@ -335,7 +339,7 @@ FoxgloveResult<PointsAnnotationChannel> PointsAnnotationChannel::create(const st
     if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
       return foxglove::unexpected(FoxgloveError(error));
     }
-    return PointsAnnotationChannel(ChannelUniquePtr(channel, foxglove_channel_free));
+    return PointsAnnotationChannel(ChannelUniquePtr(channel));
 }
 
 FoxgloveError PointsAnnotationChannel::log(const PointsAnnotation& msg, std::optional<uint64_t> log_time) {
@@ -352,7 +356,7 @@ FoxgloveResult<PoseChannel> PoseChannel::create(const std::string_view& topic, c
     if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
       return foxglove::unexpected(FoxgloveError(error));
     }
-    return PoseChannel(ChannelUniquePtr(channel, foxglove_channel_free));
+    return PoseChannel(ChannelUniquePtr(channel));
 }
 
 FoxgloveError PoseChannel::log(const Pose& msg, std::optional<uint64_t> log_time) {
@@ -369,7 +373,7 @@ FoxgloveResult<PoseInFrameChannel> PoseInFrameChannel::create(const std::string_
     if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
       return foxglove::unexpected(FoxgloveError(error));
     }
-    return PoseInFrameChannel(ChannelUniquePtr(channel, foxglove_channel_free));
+    return PoseInFrameChannel(ChannelUniquePtr(channel));
 }
 
 FoxgloveError PoseInFrameChannel::log(const PoseInFrame& msg, std::optional<uint64_t> log_time) {
@@ -386,7 +390,7 @@ FoxgloveResult<PosesInFrameChannel> PosesInFrameChannel::create(const std::strin
     if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
       return foxglove::unexpected(FoxgloveError(error));
     }
-    return PosesInFrameChannel(ChannelUniquePtr(channel, foxglove_channel_free));
+    return PosesInFrameChannel(ChannelUniquePtr(channel));
 }
 
 FoxgloveError PosesInFrameChannel::log(const PosesInFrame& msg, std::optional<uint64_t> log_time) {
@@ -403,7 +407,7 @@ FoxgloveResult<QuaternionChannel> QuaternionChannel::create(const std::string_vi
     if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
       return foxglove::unexpected(FoxgloveError(error));
     }
-    return QuaternionChannel(ChannelUniquePtr(channel, foxglove_channel_free));
+    return QuaternionChannel(ChannelUniquePtr(channel));
 }
 
 FoxgloveError QuaternionChannel::log(const Quaternion& msg, std::optional<uint64_t> log_time) {
@@ -417,7 +421,7 @@ FoxgloveResult<RawAudioChannel> RawAudioChannel::create(const std::string_view& 
     if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
       return foxglove::unexpected(FoxgloveError(error));
     }
-    return RawAudioChannel(ChannelUniquePtr(channel, foxglove_channel_free));
+    return RawAudioChannel(ChannelUniquePtr(channel));
 }
 
 FoxgloveError RawAudioChannel::log(const RawAudio& msg, std::optional<uint64_t> log_time) {
@@ -434,7 +438,7 @@ FoxgloveResult<RawImageChannel> RawImageChannel::create(const std::string_view& 
     if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
       return foxglove::unexpected(FoxgloveError(error));
     }
-    return RawImageChannel(ChannelUniquePtr(channel, foxglove_channel_free));
+    return RawImageChannel(ChannelUniquePtr(channel));
 }
 
 FoxgloveError RawImageChannel::log(const RawImage& msg, std::optional<uint64_t> log_time) {
@@ -451,7 +455,7 @@ FoxgloveResult<SceneEntityChannel> SceneEntityChannel::create(const std::string_
     if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
       return foxglove::unexpected(FoxgloveError(error));
     }
-    return SceneEntityChannel(ChannelUniquePtr(channel, foxglove_channel_free));
+    return SceneEntityChannel(ChannelUniquePtr(channel));
 }
 
 FoxgloveError SceneEntityChannel::log(const SceneEntity& msg, std::optional<uint64_t> log_time) {
@@ -468,7 +472,7 @@ FoxgloveResult<SceneEntityDeletionChannel> SceneEntityDeletionChannel::create(co
     if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
       return foxglove::unexpected(FoxgloveError(error));
     }
-    return SceneEntityDeletionChannel(ChannelUniquePtr(channel, foxglove_channel_free));
+    return SceneEntityDeletionChannel(ChannelUniquePtr(channel));
 }
 
 FoxgloveError SceneEntityDeletionChannel::log(const SceneEntityDeletion& msg, std::optional<uint64_t> log_time) {
@@ -485,7 +489,7 @@ FoxgloveResult<SceneUpdateChannel> SceneUpdateChannel::create(const std::string_
     if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
       return foxglove::unexpected(FoxgloveError(error));
     }
-    return SceneUpdateChannel(ChannelUniquePtr(channel, foxglove_channel_free));
+    return SceneUpdateChannel(ChannelUniquePtr(channel));
 }
 
 FoxgloveError SceneUpdateChannel::log(const SceneUpdate& msg, std::optional<uint64_t> log_time) {
@@ -502,7 +506,7 @@ FoxgloveResult<TextAnnotationChannel> TextAnnotationChannel::create(const std::s
     if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
       return foxglove::unexpected(FoxgloveError(error));
     }
-    return TextAnnotationChannel(ChannelUniquePtr(channel, foxglove_channel_free));
+    return TextAnnotationChannel(ChannelUniquePtr(channel));
 }
 
 FoxgloveError TextAnnotationChannel::log(const TextAnnotation& msg, std::optional<uint64_t> log_time) {
@@ -519,7 +523,7 @@ FoxgloveResult<Vector2Channel> Vector2Channel::create(const std::string_view& to
     if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
       return foxglove::unexpected(FoxgloveError(error));
     }
-    return Vector2Channel(ChannelUniquePtr(channel, foxglove_channel_free));
+    return Vector2Channel(ChannelUniquePtr(channel));
 }
 
 FoxgloveError Vector2Channel::log(const Vector2& msg, std::optional<uint64_t> log_time) {
@@ -533,7 +537,7 @@ FoxgloveResult<Vector3Channel> Vector3Channel::create(const std::string_view& to
     if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
       return foxglove::unexpected(FoxgloveError(error));
     }
-    return Vector3Channel(ChannelUniquePtr(channel, foxglove_channel_free));
+    return Vector3Channel(ChannelUniquePtr(channel));
 }
 
 FoxgloveError Vector3Channel::log(const Vector3& msg, std::optional<uint64_t> log_time) {

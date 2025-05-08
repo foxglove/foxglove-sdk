@@ -325,7 +325,7 @@ export function generateCppSchemas(schemas: FoxgloveMessageSchema[]): string {
       "    if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {",
       "      return foxglove::unexpected(FoxgloveError(error));",
       "    }",
-      `    return ${schema.name}Channel(ChannelUniquePtr(channel, foxglove_channel_free));`,
+      `    return ${schema.name}Channel(ChannelUniquePtr(channel));`,
       "}",
       "",
       `FoxgloveError ${schema.name}Channel::log(const ${schema.name}& msg, std::optional<uint64_t> log_time) {`,
