@@ -67,7 +67,8 @@ using FoxgloveResult = expected<T, FoxgloveError>;
 /// @return A C string representation of the error.
 const char* strerror(FoxgloveError error);
 
-/// @brief A wrapper around std::ostringstream for logging warnings.
+/// A stream for emitting warnings to stderr, with default formatting.
+/// @cond foxglove_internal
 class WarnStream {
 public:
   WarnStream() = default;
@@ -76,7 +77,6 @@ public:
   WarnStream& operator=(const WarnStream&) = delete;
   WarnStream& operator=(WarnStream&&) = delete;
 
-  /// @brief Inserts formatted data.
   template<typename T>
   WarnStream& operator<<(const T& value) {
 #ifndef FOXGLOVE_DISABLE_CPP_WARNINGS
@@ -109,9 +109,9 @@ private:
   std::ostringstream buffer_;
 };
 
-/// @brief Creates a new stream for logging a warning message.
 inline WarnStream warn() {
   return WarnStream{};
 }
+/// @endcond
 
 }  // namespace foxglove
