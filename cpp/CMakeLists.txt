@@ -136,6 +136,15 @@ if(MSVC)
   target_compile_options(tests PRIVATE /Zc:__cplusplus)
 endif()
 
+### Docs
+
+# file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/docs)
+
+add_custom_target(docs
+  COMMAND doxygen Doxyfile
+  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
 ### Examples
 
 add_executable(example_server examples/ws-server/src/main.cpp)
