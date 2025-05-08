@@ -28,7 +28,7 @@ pub struct Arena {
 }
 
 impl Arena {
-    pub const SIZE: usize = 512 * 1024; // 512 KB
+    pub const SIZE: usize = 256 * 1024; // 256 KB
 
     /// Creates a new empty Arena
     ///

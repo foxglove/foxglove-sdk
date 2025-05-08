@@ -76,7 +76,7 @@ pub struct ${name} {
           fieldType = `Foxglove${field.type.enum.name}`;
           break;
         case "nested":
-          fieldType = `${field.type.schema.name.replace("JSON", "Json")}`;
+          fieldType = field.type.schema.name.replace("JSON", "Json");
           break;
       }
       const lines: string[] = [comment];

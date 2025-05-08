@@ -8,6 +8,10 @@ import { rimraf } from "rimraf";
 import { generateRosMsg, generateRosMsgDefinition } from "../typescript/schemas/src/internal";
 import { exportTypeScriptSchemas } from "../typescript/schemas/src/internal/exportTypeScriptSchemas";
 import {
+  generateCppSchemas,
+  generateHppSchemas,
+} from "../typescript/schemas/src/internal/generateCpp";
+import {
   BYTE_VECTOR_FB,
   DURATION_FB,
   TIME_FB,
@@ -36,10 +40,6 @@ import {
   foxgloveEnumSchemas,
   foxgloveMessageSchemas,
 } from "../typescript/schemas/src/internal/schemas";
-import {
-  generateCppSchemas,
-  generateHppSchemas,
-} from "../typescript/schemas/src/internal/generateCpp";
 
 async function logProgress(message: string, body: () => Promise<void>) {
   process.stderr.write(`${message}... `);

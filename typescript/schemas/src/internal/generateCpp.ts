@@ -1,4 +1,5 @@
 import assert from "assert";
+
 import { FoxgloveEnumSchema, FoxgloveMessageSchema, FoxglovePrimitive } from "./types";
 
 function primitiveToCpp(type: FoxglovePrimitive) {
@@ -75,7 +76,7 @@ function hasChannelType(schema: FoxgloveMessageSchema): boolean {
  */
 function* topologicalOrder(
   schemas: readonly FoxgloveMessageSchema[],
-  seenSchemaNames: Set<string> = new Set(),
+  seenSchemaNames = new Set<string>(),
 ): Iterable<FoxgloveMessageSchema> {
   for (const schema of schemas) {
     if (seenSchemaNames.has(schema.name)) {
@@ -141,7 +142,7 @@ export function generateHppSchemas(
               fieldType = field.type.enum.name;
               break;
             case "nested":
-              fieldType = `${field.type.schema.name}`;
+              fieldType = field.type.schema.name;
               break;
             case "primitive": {
               const defaultValue =

@@ -78,7 +78,7 @@ public:
   }
 
 private:
-  static constexpr std::size_t Size = 512 * 1024;
+  static constexpr std::size_t Size = 256 * 1024;  // 256 KB
 
   /**
    * Allocates memory for an object of type T from the arena.
