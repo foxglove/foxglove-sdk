@@ -64,7 +64,7 @@ int main(int argc, const char* argv[]) {
   })";
   schema.data = reinterpret_cast<const std::byte*>(schema_data.data());
   schema.data_len = schema_data.size();
-  auto channel_result = foxglove::Channel::create("example", "json", std::move(schema));
+  auto channel_result = foxglove::RawChannel::create("example", "json", std::move(schema));
   if (!channel_result.has_value()) {
     std::cerr << "Failed to create channel: " << foxglove::strerror(channel_result.error()) << '\n';
     return 1;

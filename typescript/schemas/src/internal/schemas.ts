@@ -1035,15 +1035,15 @@ const NumericType: FoxgloveEnumSchema = {
   parentSchemaName: "PackedElementField",
   protobufEnumName: "NumericType",
   values: [
-    { name: "UNKNOWN", value: 0 },
-    { name: "UINT8", value: 1 },
-    { name: "INT8", value: 2 },
-    { name: "UINT16", value: 3 },
-    { name: "INT16", value: 4 },
-    { name: "UINT32", value: 5 },
-    { name: "INT32", value: 6 },
-    { name: "FLOAT32", value: 7 },
-    { name: "FLOAT64", value: 8 },
+    { name: "UNKNOWN", value: 0, description: "Unknown numeric type" },
+    { name: "UINT8", value: 1, description: "Unsigned 8-bit integer" },
+    { name: "INT8", value: 2, description: "Signed 8-bit integer" },
+    { name: "UINT16", value: 3, description: "Unsigned 16-bit integer" },
+    { name: "INT16", value: 4, description: "Signed 16-bit integer" },
+    { name: "UINT32", value: 5, description: "Unsigned 32-bit integer" },
+    { name: "INT32", value: 6, description: "Signed 32-bit integer" },
+    { name: "FLOAT32", value: 7, description: "32-bit floating-point number" },
+    { name: "FLOAT64", value: 8, description: "64-bit floating-point number" },
   ],
 };
 
@@ -1172,7 +1172,7 @@ const PointsAnnotationType: FoxgloveEnumSchema = {
   parentSchemaName: "PointsAnnotation",
   protobufEnumName: "Type",
   values: [
-    { name: "UNKNOWN", value: 0 },
+    { name: "UNKNOWN", value: 0, description: "Unknown points type" },
     { name: "POINTS", value: 1, description: "Individual points: 0, 1, 2, ..." },
     { name: "LINE_LOOP", value: 2, description: "Closed polygon: 0-1, 1-2, ..., (n-1)-n, n-0" },
     {
@@ -1304,10 +1304,10 @@ const PositionCovarianceType: FoxgloveEnumSchema = {
   parentSchemaName: "LocationFix",
   protobufEnumName: "PositionCovarianceType",
   values: [
-    { name: "UNKNOWN", value: 0 },
-    { name: "APPROXIMATED", value: 1 },
-    { name: "DIAGONAL_KNOWN", value: 2 },
-    { name: "KNOWN", value: 3 },
+    { name: "UNKNOWN", value: 0, description: "Unknown position covariance type" },
+    { name: "APPROXIMATED", value: 1, description: "Position covariance is approximated" },
+    { name: "DIAGONAL_KNOWN", value: 2, description: "Position covariance is diagonal" },
+    { name: "KNOWN", value: 3, description: "Position covariance is known" },
   ],
 };
 
@@ -1372,12 +1372,12 @@ const LogLevel: FoxgloveEnumSchema = {
   parentSchemaName: "Log",
   protobufEnumName: "Level",
   values: [
-    { name: "UNKNOWN", value: 0 },
-    { name: "DEBUG", value: 1 },
-    { name: "INFO", value: 2 },
-    { name: "WARNING", value: 3 },
-    { name: "ERROR", value: 4 },
-    { name: "FATAL", value: 5 },
+    { name: "UNKNOWN", value: 0, description: "Unknown log level" },
+    { name: "DEBUG", value: 1, description: "Debug log level" },
+    { name: "INFO", value: 2, description: "Info log level" },
+    { name: "WARNING", value: 3, description: "Warning log level" },
+    { name: "ERROR", value: 4, description: "Error log level" },
+    { name: "FATAL", value: 5, description: "Fatal log level" },
   ],
 };
 

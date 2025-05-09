@@ -51,19 +51,23 @@
       "oneOf": [
         {
           "title": "UNKNOWN",
-          "const": 0
+          "const": 0,
+          "description": "Unknown position covariance type"
         },
         {
           "title": "APPROXIMATED",
-          "const": 1
+          "const": 1,
+          "description": "Position covariance is approximated"
         },
         {
           "title": "DIAGONAL_KNOWN",
-          "const": 2
+          "const": 2,
+          "description": "Position covariance is diagonal"
         },
         {
           "title": "KNOWN",
-          "const": 3
+          "const": 3,
+          "description": "Position covariance is known"
         }
       ]
     }

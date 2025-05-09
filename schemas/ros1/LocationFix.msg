@@ -21,9 +21,16 @@ float64 altitude
 # Position covariance (m^2) defined relative to a tangential plane through the reported position. The components are East, North, and Up (ENU), in row-major order.
 float64[9] position_covariance
 
+# Unknown position covariance type
 uint8 UNKNOWN=0
+
+# Position covariance is approximated
 uint8 APPROXIMATED=1
+
+# Position covariance is diagonal
 uint8 DIAGONAL_KNOWN=2
+
+# Position covariance is known
 uint8 KNOWN=3
 
 # If `position_covariance` is available, `position_covariance_type` must be set to indicate the type of covariance.

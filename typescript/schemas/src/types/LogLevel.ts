@@ -3,15 +3,21 @@
 
 /** Log level */
 export enum LogLevel {
+  /** Unknown log level */
   UNKNOWN = 0,
 
+  /** Debug log level */
   DEBUG = 1,
 
+  /** Info log level */
   INFO = 2,
 
+  /** Warning log level */
   WARNING = 3,
 
+  /** Error log level */
   ERROR = 4,
 
+  /** Fatal log level */
   FATAL = 5,
 }

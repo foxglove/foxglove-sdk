@@ -6,6 +6,7 @@
 # Timestamp of annotation
 time timestamp
 
+# Unknown points type
 uint8 UNKNOWN=0
 
 # Individual points: 0, 1, 2, ...

@@ -32,6 +32,11 @@ import {
   generatePyChannelModule,
 } from "../typescript/schemas/src/internal/generatePyclass";
 import {
+  generateCppSchemas,
+  generateHppSchemas,
+} from "../typescript/schemas/src/internal/generateSdkCpp";
+import { generateRustTypes } from "../typescript/schemas/src/internal/generateSdkRustCTypes";
+import {
   foxgloveEnumSchemas,
   foxgloveMessageSchemas,
 } from "../typescript/schemas/src/internal/schemas";
@@ -268,6 +273,30 @@ async function main({ clean }: { clean: boolean }) {
     ];
     await exec("poetry", ["run", "black", ...pythonFiles], { cwd: repoRoot });
     await exec("poetry", ["run", "isort", ...pythonFiles], { cwd: repoRoot });
+  });
+
+  await logProgress("Generating Rust code", async () => {
+    const typesFile = path.join(repoRoot, "c", "src", "generated_types.rs");
+    await fs.writeFile(
+      typesFile,
+      generateRustTypes(Object.values(foxgloveMessageSchemas), Object.values(foxgloveEnumSchemas)),
+    );
+    await exec("cargo", ["fmt", "--", path.resolve(typesFile)], {
+      cwd: repoRoot,
+    });
+  });
+
+  await logProgress("Generating C++ schemas", async () => {
+    const hppFile = path.join(repoRoot, "cpp", "foxglove", "include", "foxglove", "schemas.hpp");
+    await fs.writeFile(
+      hppFile,
+      generateHppSchemas(Object.values(foxgloveMessageSchemas), Object.values(foxgloveEnumSchemas)),
+    );
+    const cppFile = path.join(repoRoot, "cpp", "foxglove", "src", "schemas.cpp");
+    await fs.writeFile(cppFile, generateCppSchemas(Object.values(foxgloveMessageSchemas)));
+
+    await exec("clang-format", [hppFile, "-i", "-Werror"], { cwd: repoRoot });
+    await exec("clang-format", [cppFile, "-i", "-Werror"], { cwd: repoRoot });
   });
 
   await logProgressLn("Updating Jest snapshots", async () => {
