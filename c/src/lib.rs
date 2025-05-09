@@ -451,6 +451,9 @@ pub unsafe extern "C" fn foxglove_server_add_service(
     let Some(server) = server else {
         return FoxgloveError::ValueError;
     };
+    if service.is_null() {
+        return FoxgloveError::ValueError;
+    }
     let Some(server) = server.as_ref() else {
         return FoxgloveError::SinkClosed;
     };

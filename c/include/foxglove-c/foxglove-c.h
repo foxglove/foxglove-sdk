@@ -1149,8 +1149,7 @@ void foxglove_service_free(struct foxglove_service *service);
  *
  * # Safety
  * - `responder` must be a pointer to a `foxglove_service_responder` obtained via the
- *   `foxglove_service.handler` callback. This value is moved into this function, and must not
- *   accessed afterwards.
+ *   `foxglove_service.handler` callback.
  * - `encoding` must be a pointer to a valid UTF-8 string. This value is copied by this function.
  */
 foxglove_error foxglove_service_set_response_encoding(struct foxglove_service_responder *responder,

@@ -134,6 +134,8 @@ bool registerSleepService(foxglove::WebSocketServer& server) {
   foxglove::ServiceSchema empty_schema{"/std_srvs/Empty"};
   static foxglove::ServiceHandler sleep_handler(
     [](const foxglove::ServiceRequest& request, foxglove::ServiceResponder&& responder) {
+      // Spawn a new thread to handle the response, so that we don't block the
+      // websocket client's main poll thread.
       std::thread t([responder = std::move(responder)]() mutable {
         std::this_thread::sleep_for(1s);
         std::move(responder).respondOk(makeBytes(R"({"status": "refreshed"})"));

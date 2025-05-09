@@ -130,7 +130,7 @@ impl FoxgloveServiceSchema<'_> {
 /// Internal type for implementing the service handler trait.
 #[derive(Clone)]
 struct ServiceHandler {
-    context: *const c_void,
+    callback_context: *const c_void,
     callback: unsafe extern "C" fn(
         *const c_void,
         *const FoxgloveServiceRequest,
@@ -146,7 +146,7 @@ impl Handler for ServiceHandler {
         // SAFETY: It's the callback implementation's responsibility to ensure that this callback
         // function pointer remains valid for the lifetime of the service, as described in the
         // safety requirements of `foxglove_service_create`.
-        unsafe { (self.callback)(self.context, &c_request, c_responder) };
+        unsafe { (self.callback)(self.callback_context, &c_request, c_responder) };
     }
 }
 
@@ -205,7 +205,10 @@ pub unsafe extern "C" fn foxglove_service_create(
     let Some(callback) = callback else {
         return FoxgloveError::ValueError;
     };
-    let handler = ServiceHandler { context, callback };
+    let handler = ServiceHandler {
+        callback_context: context,
+        callback,
+    };
     let inner = Service::builder(name, schema).handler(handler);
     let ptr = FoxgloveService(inner).into_raw();
     unsafe { *service = ptr };
@@ -228,8 +231,7 @@ pub unsafe extern "C" fn foxglove_service_free(service: *mut FoxgloveService) {
 ///
 /// # Safety
 /// - `responder` must be a pointer to a `foxglove_service_responder` obtained via the
-///   `foxglove_service.handler` callback. This value is moved into this function, and must not
-///   accessed afterwards.
+///   `foxglove_service.handler` callback.
 /// - `encoding` must be a pointer to a valid UTF-8 string. This value is copied by this function.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_service_set_response_encoding(
