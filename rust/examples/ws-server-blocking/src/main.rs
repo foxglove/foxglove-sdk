@@ -8,7 +8,7 @@ use clap::Parser;
 
 use foxglove::LazyChannel;
 
-#[derive(Debug, serde::Serialize, schemars::JsonSchema)]
+#[derive(Debug, foxglove::Encode)]
 struct Message {
     msg: String,
     count: u32,
