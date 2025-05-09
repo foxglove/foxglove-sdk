@@ -14,7 +14,7 @@ workspace = true
 [dependencies]
 base64 = "0.22.1"
 bytes.workspace = true
-foxglove = { path = "../../rust/foxglove", features = ["unstable"] }
+foxglove = { path = "../../rust/foxglove", features = ["unstable", "lz4", "zstd"] }
 log.workspace = true
 prost-types = "0.13"
 pyo3 = "0.24.1"

@@ -19,6 +19,8 @@ live_visualization = [
   "dep:serde_repr",
   "dep:serde_with",
 ]
+lz4 = ["mcap/lz4"]
+zstd = ["mcap/zstd"]
 
 [lints]
 workspace = true
