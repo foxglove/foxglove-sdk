@@ -34,6 +34,7 @@ flume = "0.11.1"
 futures-util = { version = "0.3.31", features = ["sink", "std"] }
 mcap.workspace = true
 parking_lot = "0.12.3"
+prost-reflect = { workspace = true, features = ["derive"] }
 prost-types.workspace = true
 prost.workspace = true
 schemars = "0.8.21"
