@@ -71,7 +71,7 @@ impl FoxgloveStringBuf {
         let mut str = ManuallyDrop::new(str);
         str.shrink_to_fit();
         Self(FoxgloveString {
-            data: str.as_ptr().cast(),
+            data: str.as_mut_ptr().cast(),
             len: str.len(),
         })
     }
