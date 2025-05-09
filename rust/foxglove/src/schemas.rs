@@ -13,5 +13,13 @@ mod foxglove;
 #[rustfmt::skip]
 mod impls;
 
+use std::sync::LazyLock;
+
+use prost_reflect::DescriptorPool;
+
 pub use self::foxglove::*;
 pub use crate::schemas_wkt::{Duration, Timestamp};
+
+static DESCRIPTOR_POOL: LazyLock<DescriptorPool> = LazyLock::new(|| {
+    DescriptorPool::decode(include_bytes!("schemas/data/file_descriptor_set.bin").as_ref()).unwrap()
+});

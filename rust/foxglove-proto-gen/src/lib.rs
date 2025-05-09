@@ -217,13 +217,18 @@ pub fn generate_protos(proto_path: &Path, out_dir: &Path) -> anyhow::Result<()> 
     config.bytes(["."]);
 
     let mut fds = config
-        .load_fds(&proto_files, &[proto_path])
+        .load_fds(&proto_files, &[&proto_path])
         .context("Failed to load protos")?;
     fds.file.sort_unstable_by(|a, b| a.name.cmp(&b.name));
 
     generate_descriptors(out_dir, &fds).context("Failed to generate descriptor files")?;
 
     generate_impls(out_dir, &fds).context("Failed to generate impls")?;
+
+    let mut builder = prost_reflect_build::Builder::new();
+    builder.file_descriptor_set_path(out_dir.join("data").join("file_descriptor_set.bin"));
+    builder.descriptor_pool("super::DESCRIPTOR_POOL");
+    builder.configure(&mut config, &proto_files, &[&proto_path])?;
 
     config
         .compile_fds(fds)
