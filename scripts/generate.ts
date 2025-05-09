@@ -287,14 +287,16 @@ async function main({ clean }: { clean: boolean }) {
   });
 
   await logProgress("Generating C++ schemas", async () => {
+    const hppFile = path.join(repoRoot, "cpp", "foxglove", "include", "foxglove", "schemas.hpp");
     await fs.writeFile(
-      path.join(repoRoot, "cpp", "foxglove", "include", "foxglove", "schemas.hpp"),
+      hppFile,
       generateHppSchemas(Object.values(foxgloveMessageSchemas), Object.values(foxgloveEnumSchemas)),
     );
-    await fs.writeFile(
-      path.join(repoRoot, "cpp", "foxglove", "src", "schemas.cpp"),
-      generateCppSchemas(Object.values(foxgloveMessageSchemas)),
-    );
+    const cppFile = path.join(repoRoot, "cpp", "foxglove", "src", "schemas.cpp");
+    await fs.writeFile(cppFile, generateCppSchemas(Object.values(foxgloveMessageSchemas)));
+
+    await exec("clang-format", [hppFile, "-i", "-Werror"], { cwd: repoRoot });
+    await exec("clang-format", [cppFile, "-i", "-Werror"], { cwd: repoRoot });
   });
 
   await logProgressLn("Updating Jest snapshots", async () => {
