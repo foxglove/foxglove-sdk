@@ -101,12 +101,12 @@ struct ArrowPrimitive {
 /// @brief Camera calibration parameters
 struct CameraCalibration {
   /// @brief Timestamp of calibration data
-  std::optional<foxglove::Timestamp> timestamp = ;
+  std::optional<foxglove::Timestamp> timestamp;
 
   /// @brief Frame of reference for the camera. The origin of the frame is the optical center of the
   /// camera. +x points to the right in the image, +y points down, and +z points into the plane of
   /// the image.
-  std::string frame_id = ;
+  std::string frame_id;
 
   /// @brief Image width
   uint32_t width = 0;
@@ -123,7 +123,7 @@ struct CameraCalibration {
   /// model](https://en.wikipedia.org/wiki/Distortion_%28optics%29#Software_correction). This is the
   /// same [implementation used by
   /// ROS](http://docs.ros.org/en/diamondback/api/image_geometry/html/c++/pinhole__camera__model_8cpp_source.html)
-  std::string distortion_model = ;
+  std::string distortion_model;
 
   /// @brief Distortion parameters
   std::vector<double> d;
@@ -200,7 +200,7 @@ struct Point2 {
 /// @brief A circle annotation on a 2D image
 struct CircleAnnotation {
   /// @brief Timestamp of circle
-  std::optional<foxglove::Timestamp> timestamp = ;
+  std::optional<foxglove::Timestamp> timestamp;
 
   /// @brief Center of the circle in 2D image coordinates (pixels).
   /// @brief The coordinate uses the top-left corner of the top-left pixel of the image as the
@@ -223,32 +223,32 @@ struct CircleAnnotation {
 /// @brief A compressed image
 struct CompressedImage {
   /// @brief Timestamp of image
-  std::optional<foxglove::Timestamp> timestamp = ;
+  std::optional<foxglove::Timestamp> timestamp;
 
   /// @brief Frame of reference for the image. The origin of the frame is the optical center of the
   /// camera. +x points to the right in the image, +y points down, and +z points into the plane of
   /// the image.
-  std::string frame_id = ;
+  std::string frame_id;
 
   /// @brief Compressed image data
-  std::vector<std::byte> data = ;
+  std::vector<std::byte> data;
 
   /// @brief Image format
   /// @brief
   /// @brief Supported values: `jpeg`, `png`, `webp`, `avif`
-  std::string format = ;
+  std::string format;
 };
 
 /// @brief A single frame of a compressed video bitstream
 struct CompressedVideo {
   /// @brief Timestamp of video frame
-  std::optional<foxglove::Timestamp> timestamp = ;
+  std::optional<foxglove::Timestamp> timestamp;
 
   /// @brief Frame of reference for the video.
   /// @brief
   /// @brief The origin of the frame is the optical center of the camera. +x points to the right in
   /// the video, +y points down, and +z points into the plane of the video.
-  std::string frame_id = ;
+  std::string frame_id;
 
   /// @brief Compressed video frame data.
   /// @brief
@@ -280,7 +280,7 @@ struct CompressedVideo {
   /// @brief   - Each CompressedVideo message should contain enough OBUs to decode exactly one video
   /// frame
   /// @brief   - Each message containing a key frame must also include a Sequence Header OBU
-  std::vector<std::byte> data = ;
+  std::vector<std::byte> data;
 
   /// @brief Video format.
   /// @brief
@@ -290,7 +290,7 @@ struct CompressedVideo {
   /// so not all encodings may be supported on all platforms. See more about [H.265
   /// support](https://caniuse.com/hevc), [VP9 support](https://caniuse.com/webm), and [AV1
   /// support](https://caniuse.com/av1).
-  std::string format = ;
+  std::string format;
 };
 
 /// @brief A primitive representing a cylinder, elliptic cylinder, or truncated cone
@@ -329,13 +329,13 @@ struct CubePrimitive {
 /// @brief A transform between two reference frames in 3D space
 struct FrameTransform {
   /// @brief Timestamp of transform
-  std::optional<foxglove::Timestamp> timestamp = ;
+  std::optional<foxglove::Timestamp> timestamp;
 
   /// @brief Name of the parent frame
-  std::string parent_frame_id = ;
+  std::string parent_frame_id;
 
   /// @brief Name of the child frame
-  std::string child_frame_id = ;
+  std::string child_frame_id;
 
   /// @brief Translation component of the transform
   std::optional<Vector3> translation;
@@ -353,7 +353,7 @@ struct FrameTransforms {
 /// @brief GeoJSON data for annotating maps
 struct GeoJSON {
   /// @brief GeoJSON data encoded as a UTF-8 string
-  std::string geojson = ;
+  std::string geojson;
 };
 
 /// @brief A vector in 2D space that represents a direction only
@@ -380,7 +380,7 @@ struct PackedElementField {
     FLOAT64 = 8,
   };
   /// @brief Name of the field
-  std::string name = ;
+  std::string name;
 
   /// @brief Byte offset from start of data buffer
   uint32_t offset = 0;
@@ -392,10 +392,10 @@ struct PackedElementField {
 /// @brief A 2D grid of data
 struct Grid {
   /// @brief Timestamp of grid
-  std::optional<foxglove::Timestamp> timestamp = ;
+  std::optional<foxglove::Timestamp> timestamp;
 
   /// @brief Frame of reference
-  std::string frame_id = ;
+  std::string frame_id;
 
   /// @brief Origin of grid's corner relative to frame of reference; grid is positioned in the x-y
   /// plane relative to this origin
@@ -418,7 +418,7 @@ struct Grid {
   std::vector<PackedElementField> fields;
 
   /// @brief Grid cell data, interpreted using `fields`, in row-major (y-major) order
-  std::vector<std::byte> data = ;
+  std::vector<std::byte> data;
 };
 
 /// @brief An array of points on a 2D image
@@ -436,7 +436,7 @@ struct PointsAnnotation {
     LINE_LIST = 4,
   };
   /// @brief Timestamp of annotation
-  std::optional<foxglove::Timestamp> timestamp = ;
+  std::optional<foxglove::Timestamp> timestamp;
 
   /// @brief Type of points annotation to draw
   PointsAnnotationType type;
@@ -463,7 +463,7 @@ struct PointsAnnotation {
 /// @brief A text label on a 2D image
 struct TextAnnotation {
   /// @brief Timestamp of annotation
-  std::optional<foxglove::Timestamp> timestamp = ;
+  std::optional<foxglove::Timestamp> timestamp;
 
   /// @brief Bottom-left origin of the text label in 2D image coordinates (pixels).
   /// @brief The coordinate uses the top-left corner of the top-left pixel of the image as the
@@ -471,7 +471,7 @@ struct TextAnnotation {
   std::optional<Point2> position;
 
   /// @brief Text to display
-  std::string text = ;
+  std::string text;
 
   /// @brief Font size in pixels
   double font_size = 12;
@@ -498,19 +498,19 @@ struct ImageAnnotations {
 /// @brief A key with its associated value
 struct KeyValuePair {
   /// @brief Key
-  std::string key = ;
+  std::string key;
 
   /// @brief Value
-  std::string value = ;
+  std::string value;
 };
 
 /// @brief A single scan from a planar laser range-finder
 struct LaserScan {
   /// @brief Timestamp of scan
-  std::optional<foxglove::Timestamp> timestamp = ;
+  std::optional<foxglove::Timestamp> timestamp;
 
   /// @brief Frame of reference
-  std::string frame_id = ;
+  std::string frame_id;
 
   /// @brief Origin of scan relative to frame of reference; points are positioned in the x-y plane
   /// relative to this origin; angles are interpreted as counterclockwise rotations around the z
@@ -595,10 +595,10 @@ struct LocationFix {
     KNOWN = 3,
   };
   /// @brief Timestamp of the message
-  std::optional<foxglove::Timestamp> timestamp = ;
+  std::optional<foxglove::Timestamp> timestamp;
 
   /// @brief Frame for the sensor. Latitude and longitude readings are at the origin of the frame.
-  std::string frame_id = ;
+  std::string frame_id;
 
   /// @brief Latitude in degrees
   double latitude = 0;
@@ -630,19 +630,19 @@ struct Log {
     FATAL = 5,
   };
   /// @brief Timestamp of log message
-  std::optional<foxglove::Timestamp> timestamp = ;
+  std::optional<foxglove::Timestamp> timestamp;
 
   /// @brief Log level
   LogLevel level;
 
   /// @brief Log message
-  std::string message = ;
+  std::string message;
 
   /// @brief Process or node name
-  std::string name = ;
+  std::string name;
 
   /// @brief Filename
-  std::string file = ;
+  std::string file;
 
   /// @brief Line number in the file
   uint32_t line = 0;
@@ -659,13 +659,13 @@ struct SceneEntityDeletion {
   };
   /// @brief Timestamp of the deletion. Only matching entities earlier than this timestamp will be
   /// deleted.
-  std::optional<foxglove::Timestamp> timestamp = ;
+  std::optional<foxglove::Timestamp> timestamp;
 
   /// @brief Type of deletion action to perform
   SceneEntityDeletionType type;
 
   /// @brief Identifier which must match if `type` is `MATCHING_ID`.
-  std::string id = ;
+  std::string id;
 };
 
 /// @brief A primitive representing a sphere or ellipsoid
@@ -724,7 +724,7 @@ struct TextPrimitive {
   std::optional<Color> color;
 
   /// @brief Text
-  std::string text = ;
+  std::string text;
 };
 
 /// @brief A primitive representing a 3D model file loaded from an external URL or embedded data
@@ -743,36 +743,36 @@ struct ModelPrimitive {
   bool override_color = false;
 
   /// @brief URL pointing to model file. One of `url` or `data` should be provided.
-  std::string url = ;
+  std::string url;
 
   /// @brief [Media
   /// type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types) of embedded
   /// model (e.g. `model/gltf-binary`). Required if `data` is provided instead of `url`. Overrides
   /// the inferred media type if `url` is provided.
-  std::string media_type = ;
+  std::string media_type;
 
   /// @brief Embedded model. One of `url` or `data` should be provided. If `data` is provided,
   /// `media_type` must be set to indicate the type of the data.
-  std::vector<std::byte> data = ;
+  std::vector<std::byte> data;
 };
 
 /// @brief A visual element in a 3D scene. An entity may be composed of multiple primitives which
 /// all share the same frame of reference.
 struct SceneEntity {
   /// @brief Timestamp of the entity
-  std::optional<foxglove::Timestamp> timestamp = ;
+  std::optional<foxglove::Timestamp> timestamp;
 
   /// @brief Frame of reference
-  std::string frame_id = ;
+  std::string frame_id;
 
   /// @brief Identifier for the entity. A entity will replace any prior entity on the same topic
   /// with the same `id`.
-  std::string id = ;
+  std::string id;
 
   /// @brief Length of time (relative to `timestamp`) after which the entity should be automatically
   /// removed. Zero value indicates the entity should remain visible until it is replaced or
   /// deleted.
-  std::optional<foxglove::Duration> lifetime = ;
+  std::optional<foxglove::Duration> lifetime;
 
   /// @brief Whether the entity should keep its location in the fixed frame (false) or follow the
   /// frame specified in `frame_id` as it moves relative to the fixed frame (true)
@@ -819,10 +819,10 @@ struct SceneUpdate {
 /// information like normals, intensity, etc.
 struct PointCloud {
   /// @brief Timestamp of point cloud
-  std::optional<foxglove::Timestamp> timestamp = ;
+  std::optional<foxglove::Timestamp> timestamp;
 
   /// @brief Frame of reference
-  std::string frame_id = ;
+  std::string frame_id;
 
   /// @brief The origin of the point cloud relative to the frame of reference
   std::optional<Pose> pose;
@@ -836,16 +836,16 @@ struct PointCloud {
   std::vector<PackedElementField> fields;
 
   /// @brief Point data, interpreted using `fields`
-  std::vector<std::byte> data = ;
+  std::vector<std::byte> data;
 };
 
 /// @brief A timestamped pose for an object or reference frame in 3D space
 struct PoseInFrame {
   /// @brief Timestamp of pose
-  std::optional<foxglove::Timestamp> timestamp = ;
+  std::optional<foxglove::Timestamp> timestamp;
 
   /// @brief Frame of reference for pose position and orientation
-  std::string frame_id = ;
+  std::string frame_id;
 
   /// @brief Pose in 3D space
   std::optional<Pose> pose;
@@ -854,10 +854,10 @@ struct PoseInFrame {
 /// @brief An array of timestamped poses for an object or reference frame in 3D space
 struct PosesInFrame {
   /// @brief Timestamp of pose
-  std::optional<foxglove::Timestamp> timestamp = ;
+  std::optional<foxglove::Timestamp> timestamp;
 
   /// @brief Frame of reference for pose position and orientation
-  std::string frame_id = ;
+  std::string frame_id;
 
   /// @brief Poses in 3D space
   std::vector<Pose> poses;
@@ -866,13 +866,13 @@ struct PosesInFrame {
 /// @brief A single block of an audio bitstream
 struct RawAudio {
   /// @brief Timestamp of the start of the audio block
-  std::optional<foxglove::Timestamp> timestamp = ;
+  std::optional<foxglove::Timestamp> timestamp;
 
   /// @brief Audio data. The samples in the data must be interleaved and little-endian
-  std::vector<std::byte> data = ;
+  std::vector<std::byte> data;
 
   /// @brief Audio format. Only 'pcm-s16' is currently supported
-  std::string format = ;
+  std::string format;
 
   /// @brief Sample rate in Hz
   uint32_t sample_rate = 0;
@@ -884,12 +884,12 @@ struct RawAudio {
 /// @brief A raw image
 struct RawImage {
   /// @brief Timestamp of image
-  std::optional<foxglove::Timestamp> timestamp = ;
+  std::optional<foxglove::Timestamp> timestamp;
 
   /// @brief Frame of reference for the image. The origin of the frame is the optical center of the
   /// camera. +x points to the right in the image, +y points down, and +z points into the plane of
   /// the image.
-  std::string frame_id = ;
+  std::string frame_id;
 
   /// @brief Image width
   uint32_t width = 0;
@@ -902,13 +902,13 @@ struct RawImage {
   /// @brief Supported values: `8UC1`, `8UC3`, `16UC1` (little endian), `32FC1` (little endian),
   /// `bayer_bggr8`, `bayer_gbrg8`, `bayer_grbg8`, `bayer_rggb8`, `bgr8`, `bgra8`, `mono8`,
   /// `mono16`, `rgb8`, `rgba8`, `uyvy` or `yuv422`, `yuyv` or `yuv422_yuy2`
-  std::string encoding = ;
+  std::string encoding;
 
   /// @brief Byte length of a single row
   uint32_t step = 0;
 
   /// @brief Raw image data
-  std::vector<std::byte> data = ;
+  std::vector<std::byte> data;
 };
 
 /// @brief A channel for logging CameraCalibration messages to a topic.
