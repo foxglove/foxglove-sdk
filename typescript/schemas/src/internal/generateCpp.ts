@@ -221,8 +221,9 @@ export function generateHppSchemas(
   ];
 
   const uniquePtr = [
-    "/// @brief A functor for deleting a channel. Used by ChannelUniquePtr. For internal use only.",
+    "/// @brief A functor for freeing a channel. Used by ChannelUniquePtr. For internal use only.",
     "struct ChannelDeleter {",
+    "  /// @brief free the channel",
     "  void operator()(const foxglove_channel* ptr) const noexcept;",
     "};",
     "/// @brief A unique pointer to a C foxglove_channel pointer. For internal use only.",

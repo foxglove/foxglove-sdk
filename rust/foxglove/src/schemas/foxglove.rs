@@ -477,9 +477,13 @@ pub mod location_fix {
     )]
     #[repr(i32)]
     pub enum PositionCovarianceType {
+        /// Unknown position covariance type
         Unknown = 0,
+        /// Position covariance is approximated
         Approximated = 1,
+        /// Position covariance is diagonal
         DiagonalKnown = 2,
+        /// Position covariance is known
         Known = 3,
     }
     impl PositionCovarianceType {
@@ -546,11 +550,17 @@ pub mod log {
     )]
     #[repr(i32)]
     pub enum Level {
+        /// Unknown log level
         Unknown = 0,
+        /// Debug log level
         Debug = 1,
+        /// Info log level
         Info = 2,
+        /// Warning log level
         Warning = 3,
+        /// Error log level
         Error = 4,
+        /// Fatal log level
         Fatal = 5,
     }
     impl Level {
@@ -638,14 +648,23 @@ pub mod packed_element_field {
     )]
     #[repr(i32)]
     pub enum NumericType {
+        /// Unknown numeric type
         Unknown = 0,
+        /// Unsigned 8-bit integer
         Uint8 = 1,
+        /// Signed 8-bit integer
         Int8 = 2,
+        /// Unsigned 16-bit integer
         Uint16 = 3,
+        /// Signed 16-bit integer
         Int16 = 4,
+        /// Unsigned 32-bit integer
         Uint32 = 5,
+        /// Signed 32-bit integer
         Int32 = 6,
+        /// 32-bit floating-point number
         Float32 = 7,
+        /// 64-bit floating-point number
         Float64 = 8,
     }
     impl NumericType {
@@ -774,6 +793,7 @@ pub mod points_annotation {
     )]
     #[repr(i32)]
     pub enum Type {
+        /// Unknown points type
         Unknown = 0,
         /// Individual points: 0, 1, 2, ...
         Points = 1,

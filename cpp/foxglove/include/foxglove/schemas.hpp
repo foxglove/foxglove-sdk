@@ -18,8 +18,9 @@ struct foxglove_channel;
 
 namespace foxglove::schemas {
 
-/// @brief A functor for deleting a channel. Used by ChannelUniquePtr. For internal use only.
+/// @brief A functor for freeing a channel. Used by ChannelUniquePtr. For internal use only.
 struct ChannelDeleter {
+  /// @brief free the channel
   void operator()(const foxglove_channel* ptr) const noexcept;
 };
 /// @brief A unique pointer to a C foxglove_channel pointer. For internal use only.
@@ -369,14 +370,23 @@ struct Vector2 {
 struct PackedElementField {
   /// @brief Numeric type
   enum class NumericType : uint8_t {
+    /// @brief Unknown numeric type
     UNKNOWN = 0,
+    /// @brief Unsigned 8-bit integer
     UINT8 = 1,
+    /// @brief Signed 8-bit integer
     INT8 = 2,
+    /// @brief Unsigned 16-bit integer
     UINT16 = 3,
+    /// @brief Signed 16-bit integer
     INT16 = 4,
+    /// @brief Unsigned 32-bit integer
     UINT32 = 5,
+    /// @brief Signed 32-bit integer
     INT32 = 6,
+    /// @brief 32-bit floating-point number
     FLOAT32 = 7,
+    /// @brief 64-bit floating-point number
     FLOAT64 = 8,
   };
   /// @brief Name of the field
@@ -425,6 +435,7 @@ struct Grid {
 struct PointsAnnotation {
   /// @brief Type of points annotation
   enum class PointsAnnotationType : uint8_t {
+    /// @brief Unknown points type
     UNKNOWN = 0,
     /// @brief Individual points: 0, 1, 2, ...
     POINTS = 1,
@@ -589,9 +600,13 @@ struct LinePrimitive {
 struct LocationFix {
   /// @brief Type of position covariance
   enum class PositionCovarianceType : uint8_t {
+    /// @brief Unknown position covariance type
     UNKNOWN = 0,
+    /// @brief Position covariance is approximated
     APPROXIMATED = 1,
+    /// @brief Position covariance is diagonal
     DIAGONAL_KNOWN = 2,
+    /// @brief Position covariance is known
     KNOWN = 3,
   };
   /// @brief Timestamp of the message
@@ -622,11 +637,17 @@ struct LocationFix {
 struct Log {
   /// @brief Log level
   enum class LogLevel : uint8_t {
+    /// @brief Unknown log level
     UNKNOWN = 0,
+    /// @brief Debug log level
     DEBUG = 1,
+    /// @brief Info log level
     INFO = 2,
+    /// @brief Warning log level
     WARNING = 3,
+    /// @brief Error log level
     ERROR = 4,
+    /// @brief Fatal log level
     FATAL = 5,
   };
   /// @brief Timestamp of log message
