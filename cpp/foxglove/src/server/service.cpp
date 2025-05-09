@@ -61,9 +61,9 @@ void ServiceResponder::Deleter::operator()(foxglove_service_responder* ptr) cons
   foxglove_service_respond_error(ptr, {message.data(), message.length()});
 }
 
-void ServiceResponder::respondOk(const std::vector<std::byte>& data) && noexcept {
+void ServiceResponder::respondOk(const std::byte* data, size_t size) && noexcept {
   auto* ptr = impl_.release();
-  foxglove_service_respond_ok(ptr, {reinterpret_cast<const uint8_t*>(data.data()), data.size()});
+  foxglove_service_respond_ok(ptr, {reinterpret_cast<const uint8_t*>(data), size});
 }
 
 void ServiceResponder::respondError(std::string_view message) && noexcept {

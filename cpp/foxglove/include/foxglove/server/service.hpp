@@ -90,8 +90,16 @@ class ServiceResponder final {
 public:
   /// @brief Sends response data to the client.
   ///
+  /// @param data Response data pointer.
+  /// @param size Response data length.
+  void respondOk(const std::byte* data, size_t size) && noexcept;
+
+  /// @brief Sends response data to the client.
+  ///
   /// @param data Response data.
-  void respondOk(const std::vector<std::byte>& data) && noexcept;
+  void respondOk(const std::vector<std::byte>& data) && noexcept {
+    std::move(*this).respondOk(data.data(), data.size());
+  };
 
   /// @brief Sends an error message to the client.
   ///
