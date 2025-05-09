@@ -8,7 +8,7 @@ use std::mem::ManuallyDrop;
 ///
 /// If len > 0, the pointer must be a valid pointer to len bytes.
 ///
-/// The returned Bytes has a static lifetime, but onyl lives as long as the input data.
+/// The returned Bytes has a static lifetime, but only lives as long as the input data.
 /// It's up to the programmer to manage the lifetimes.
 pub(crate) unsafe fn bytes_from_raw(ptr: *const u8, len: usize) -> ManuallyDrop<Bytes> {
     if len == 0 {

@@ -10,7 +10,7 @@ import { exportTypeScriptSchemas } from "../typescript/schemas/src/internal/expo
 import {
   generateCppSchemas,
   generateHppSchemas,
-} from "../typescript/schemas/src/internal/generateCpp";
+} from "../typescript/schemas/src/internal/generateSdkCpp";
 import {
   BYTE_VECTOR_FB,
   DURATION_FB,
@@ -35,7 +35,7 @@ import {
   generatePySchemaModule,
   generatePyChannelModule,
 } from "../typescript/schemas/src/internal/generatePyclass";
-import { generateRustTypes } from "../typescript/schemas/src/internal/generateRust";
+import { generateRustTypes } from "../typescript/schemas/src/internal/generateSdkRustCTypes";
 import {
   foxgloveEnumSchemas,
   foxgloveMessageSchemas,
