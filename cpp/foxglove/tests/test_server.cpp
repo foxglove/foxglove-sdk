@@ -1287,3 +1287,89 @@ TEST_CASE("Fetch asset error") {
 
   REQUIRE(server.stop() == foxglove::FoxgloveError::Ok);
 }
+
+uint64_t readUint64LE(const std::vector<std::byte>& buffer, size_t offset) {
+  REQUIRE(offset + 8 <= buffer.size());
+  return (static_cast<uint64_t>(buffer[offset + 0]) << 0) |
+         (static_cast<uint64_t>(buffer[offset + 1]) << 8) |
+         (static_cast<uint64_t>(buffer[offset + 2]) << 16) |
+         (static_cast<uint64_t>(buffer[offset + 3]) << 24) |
+         (static_cast<uint64_t>(buffer[offset + 4]) << 32) |
+         (static_cast<uint64_t>(buffer[offset + 5]) << 40) |
+         (static_cast<uint64_t>(buffer[offset + 6]) << 48) |
+         (static_cast<uint64_t>(buffer[offset + 7]) << 56);
+}
+
+void validateTimeMessage(const std::string_view msg, uint64_t timestamp) {
+  std::vector<std::byte> bytes(msg.size());
+  std::memcpy(bytes.data(), msg.data(), msg.size());
+  REQUIRE(msg.size() >= 1 + 8);
+  REQUIRE(static_cast<uint8_t>(bytes[0]) == 2);  // Time opcode
+  REQUIRE(readUint64LE(bytes, 1) == timestamp);
+}
+
+TEST_CASE("Broadcast time") {
+  std::mutex mutex;
+  std::condition_variable cv;
+  // the following variables are protected by the mutex:
+  bool connection_opened = false;
+  std::queue<std::string> client_rx;
+
+  auto context = foxglove::Context::create();
+  auto server = startServer(context, foxglove::WebSocketServerCapabilities::Time);
+
+  WebSocketClient client;
+  client.inner().set_open_handler([&](const auto& hdl) {
+    std::scoped_lock lock{mutex};
+    connection_opened = true;
+    cv.notify_one();
+  });
+  client.inner().set_message_handler(
+    [&](const websocketpp::connection_hdl&, const WebSocketMessage& msg) {
+      std::scoped_lock lock{mutex};
+      client_rx.push(msg->get_payload());
+      cv.notify_one();
+    }
+  );
+  client.start(server.port());
+
+  // Wait for the connection to be opened.
+  {
+    std::unique_lock lock{mutex};
+    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
+      return connection_opened;
+    });
+    REQUIRE(wait_result);
+  }
+
+  // Wait for the serverInfo message.
+  std::string payload;
+  {
+    std::unique_lock lock{mutex};
+    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
+      return !client_rx.empty();
+    });
+    REQUIRE(wait_result);
+    payload = client_rx.front();
+    client_rx.pop();
+  }
+  Json parsed = Json::parse(payload);
+  REQUIRE(parsed.contains("op"));
+  REQUIRE(parsed["op"] == "serverInfo");
+
+  server.broadcastTime(42);
+
+  // Wait for the time message.
+  {
+    std::unique_lock lock{mutex};
+    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
+      return !client_rx.empty();
+    });
+    REQUIRE(wait_result);
+    payload = client_rx.front();
+    client_rx.pop();
+  }
+  validateTimeMessage(payload, 42);
+
+  REQUIRE(server.stop() == foxglove::FoxgloveError::Ok);
+}

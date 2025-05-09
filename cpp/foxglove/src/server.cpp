@@ -265,6 +265,10 @@ uint16_t WebSocketServer::port() const {
   return foxglove_server_get_port(impl_.get());
 }
 
+void WebSocketServer::broadcastTime(uint64_t timestamp_nanos) const noexcept {
+  foxglove_server_broadcast_time(impl_.get(), timestamp_nanos);
+}
+
 // NOLINTNEXTLINE(cppcoreguidelines-rvalue-reference-param-not-moved)
 FoxgloveError WebSocketServer::addService(Service&& service) const noexcept {
   auto error = foxglove_server_add_service(impl_.get(), service.release());

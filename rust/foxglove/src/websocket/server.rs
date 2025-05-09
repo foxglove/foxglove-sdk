@@ -314,7 +314,6 @@ impl Server {
     }
 
     /// Publish the current timestamp to all clients.
-    #[cfg(feature = "unstable")]
     pub fn broadcast_time(&self, timestamp: u64) {
         use super::ws_protocol::server::Time;
 

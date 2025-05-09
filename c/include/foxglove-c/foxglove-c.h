@@ -581,6 +581,14 @@ foxglove_error foxglove_server_start(const struct foxglove_server_options *FOXGL
                                      struct foxglove_websocket_server **server);
 
 /**
+ * Publishes the current server timestamp to all clients.
+ *
+ * Requires the `FOXGLOVE_CAPABILITY_TIME` capability.
+ */
+foxglove_error foxglove_server_broadcast_time(const struct foxglove_websocket_server *server,
+                                              uint64_t timestamp_nanos);
+
+/**
  * Adds a service to the server.
  *
  * # Safety

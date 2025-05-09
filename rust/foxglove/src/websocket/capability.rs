@@ -12,7 +12,6 @@ pub enum Capability {
     /// This allows accelerated, slowed, or stepped control over the progress of time. If the
     /// server publishes time data, then timestamps of published messages must originate from the
     /// same time source.
-    #[cfg(feature = "unstable")]
     Time,
     /// Allow clients to call services.
     Services,
@@ -31,7 +30,6 @@ impl Capability {
                 server_info::Capability::Parameters,
                 server_info::Capability::ParametersSubscribe,
             ],
-            #[cfg(feature = "unstable")]
             Self::Time => &[server_info::Capability::Time],
             Self::Services => &[server_info::Capability::Services],
             Self::Assets => &[server_info::Capability::Assets],

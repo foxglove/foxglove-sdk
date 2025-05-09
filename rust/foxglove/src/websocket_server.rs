@@ -260,8 +260,8 @@ impl WebSocketServerHandle {
     }
 
     /// Publishes the current server timestamp to all clients.
-    #[doc(hidden)]
-    #[cfg(feature = "unstable")]
+    ///
+    /// Requires the [`Time`](crate::websocket::Capability::Time) capability.
     pub fn broadcast_time(&self, timestamp_nanos: u64) {
         self.0.broadcast_time(timestamp_nanos);
     }
