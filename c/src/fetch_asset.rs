@@ -25,7 +25,7 @@ impl FoxgloveFetchAssetResponder {
 
 #[derive(Clone)]
 pub(crate) struct FetchAssetHandler {
-    context: *const c_void,
+    callback_context: *const c_void,
     callback: unsafe extern "C" fn(
         *const c_void,
         *const FoxgloveString,
@@ -34,14 +34,17 @@ pub(crate) struct FetchAssetHandler {
 }
 impl FetchAssetHandler {
     pub fn new(
-        context: *const c_void,
+        callback_context: *const c_void,
         callback: unsafe extern "C" fn(
             *const c_void,
             *const FoxgloveString,
             *mut FoxgloveFetchAssetResponder,
         ),
     ) -> Self {
-        Self { context, callback }
+        Self {
+            callback_context,
+            callback,
+        }
     }
 }
 unsafe impl Send for FetchAssetHandler {}
@@ -53,7 +56,7 @@ impl AssetHandler for FetchAssetHandler {
         // SAFETY: It's the callback implementation's responsibility to ensure that this callback
         // function pointer remains valid for the lifetime of the websocket server, as described in
         // the safety requirements of `foxglove_server_options.fetch_asset`.
-        unsafe { (self.callback)(self.context, &c_uri, c_responder) };
+        unsafe { (self.callback)(self.callback_context, &c_uri, c_responder) };
     }
 }
 
