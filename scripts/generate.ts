@@ -8,10 +8,6 @@ import { rimraf } from "rimraf";
 import { generateRosMsg, generateRosMsgDefinition } from "../typescript/schemas/src/internal";
 import { exportTypeScriptSchemas } from "../typescript/schemas/src/internal/exportTypeScriptSchemas";
 import {
-  generateCppSchemas,
-  generateHppSchemas,
-} from "../typescript/schemas/src/internal/generateSdkCpp";
-import {
   BYTE_VECTOR_FB,
   DURATION_FB,
   TIME_FB,
@@ -35,6 +31,10 @@ import {
   generatePySchemaModule,
   generatePyChannelModule,
 } from "../typescript/schemas/src/internal/generatePyclass";
+import {
+  generateCppSchemas,
+  generateHppSchemas,
+} from "../typescript/schemas/src/internal/generateSdkCpp";
 import { generateRustTypes } from "../typescript/schemas/src/internal/generateSdkRustCTypes";
 import {
   foxgloveEnumSchemas,
