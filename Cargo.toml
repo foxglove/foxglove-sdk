@@ -12,7 +12,7 @@ members = [
 [workspace.dependencies]
 bytes = "1.9.0"
 log = "0.4.22"
-mcap = "0.15.1"
+mcap = { version = "0.15.1", default-features = false }
 prost = "0.13"
 prost-build = "0.13"
 prost-types = "0.13"
