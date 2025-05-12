@@ -25,7 +25,7 @@ async function main() {
   // Find all Cargo.toml files in the workspace
   const workspaceRoot = path.resolve(__dirname, "..");
   const cargoFiles = await glob("**/Cargo.toml", {
-    ignore: ["**/target/**", "**/node_modules/**"],
+    ignore: ["**/target/**", "**/node_modules/**", "cpp/build/**"],
     cwd: workspaceRoot,
     absolute: true,
   });
