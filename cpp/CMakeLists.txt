@@ -153,9 +153,14 @@ endif()
 
 ### Docs
 
-add_custom_target(docs
+add_custom_target(doxygen
   COMMAND doxygen Doxyfile
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+add_custom_target(html-docs
+  COMMAND poetry run sphinx-build --fail-on-warning . ${CMAKE_CURRENT_BINARY_DIR}/docs/html
+  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/foxglove/docs
 )
 
 ### Examples

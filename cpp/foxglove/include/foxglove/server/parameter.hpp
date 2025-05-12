@@ -208,6 +208,9 @@ public:
     return value.has_value() && value->is<T>();
   }
 
+  /// @cond duplicate-ids-bug
+  // https://github.com/doxygen/doxygen/issues/9468
+
   /// @brief Checks whether the parameter value is a std::string_view.
   ///
   /// Returns false if the parameter type indicates that it is a byte array.
@@ -239,6 +242,8 @@ public:
   [[nodiscard]] bool is<std::vector<double>>() const noexcept {
     return this->isArray<double>();
   }
+
+  /// @endcond
 
   /// @brief Checks whether the parameter value is an array whose elements match
   /// the specified type.
