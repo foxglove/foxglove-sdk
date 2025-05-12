@@ -8,7 +8,7 @@ repository = "https://github.com/foxglove/foxglove-sdk"
 license = "MIT"
 
 [features]
-default = ["live_visualization"]
+default = ["live_visualization", "lz4", "zstd"]
 chrono = ["dep:chrono"]
 unstable = []
 live_visualization = [
