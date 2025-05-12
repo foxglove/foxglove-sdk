@@ -6,10 +6,16 @@
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
+import os
+import sys
+
+sys.path.append(os.path.abspath("."))
+from version import SDK_VERSION
 
 project = "Foxglove SDK"
 copyright = "2025, Foxglove"
 author = "Foxglove"
+release = SDK_VERSION
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration

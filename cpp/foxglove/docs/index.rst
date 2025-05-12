@@ -1,6 +1,8 @@
 Foxglove SDK documentation
 ==========================
 
+Version: |release|
+
 The official `Foxglove <https://docs.foxglove.dev/docs>`_ SDK for C++.
 
 This library provides support for integrating with the Foxglove platform. It can be used to log
