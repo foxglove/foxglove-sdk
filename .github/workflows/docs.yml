@@ -43,9 +43,7 @@ jobs:
       - name: Sphinx build
         run: |
           poetry run sphinx-build --fail-on-warning ./python/docs ./python/docs/_build
-      - run: pwd
-      - run: ls -l ./python/docs
-      - name: Upload artifact
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: python
@@ -59,19 +57,18 @@ jobs:
     needs: [build-cpp-docs, build-python-docs]
     # if: startsWith(github.ref, 'refs/tags/sdk/v')
     steps:
-      - name: Download C/C++ artifacts
+      - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
-          path: docs/
-      - run: find ./docs -type f
-      # - name: Deploy to GitHub Pages
-      #   uses: peaceiris/actions-gh-pages@v3
-      #   with:
-      #     # todo: test branch for now
-      #     publish_branch: gh-pages
-      #     github_token: ${{ secrets.GITHUB_TOKEN }}
-      #     # todo...
-      #     publish_dir: python/foxglove-sdk/_build/
-      #     destination_dir: python/
-      #     force_orphan: true
-      #     # keep_files: true
+          path: artifacts
+      - run: test -d artifacts/python
+      - run: test -d artifacts/cpp
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          # todo: test branch for now
+          # publish_branch: gh-pages
+          publish_branch: bryan/docs-test
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: artifacts/
+          force_orphan: true
