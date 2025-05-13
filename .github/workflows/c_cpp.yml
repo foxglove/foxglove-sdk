@@ -26,31 +26,31 @@ jobs:
       - run: make CLANG_TIDY=true build
         working-directory: cpp
 
-  docs:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ssciwr/doxygen-install@v1
-        with:
-          version: "1.13.2"
-      - run: pipx install poetry
-        working-directory: cpp/foxglove/docs
-      - run: poetry install
-        working-directory: cpp/foxglove/docs
-      - run: make docs
-        working-directory: cpp
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
-        # if: startsWith(github.ref, 'refs/tags/sdk/v')
-        with:
-          publish_branch: gh-pages
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: cpp/build/docs/html/
-          destination_dir: cpp/
-          force_orphan: true
-          keep_files: true
+  # docs:
+  #   runs-on: ubuntu-latest
+  #   permissions:
+  #     contents: write
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: ssciwr/doxygen-install@v1
+  #       with:
+  #         version: "1.13.2"
+  #     - run: pipx install poetry
+  #       working-directory: cpp/foxglove/docs
+  #     - run: poetry install
+  #       working-directory: cpp/foxglove/docs
+  #     - run: make docs
+  #       working-directory: cpp
+  #     - name: Deploy to GitHub Pages
+  #       uses: peaceiris/actions-gh-pages@v3
+  #       # if: startsWith(github.ref, 'refs/tags/sdk/v')
+  #       with:
+  #         publish_branch: gh-pages
+  #         github_token: ${{ secrets.GITHUB_TOKEN }}
+  #         publish_dir: cpp/build/docs/html/
+  #         destination_dir: cpp/
+  #         force_orphan: true
+  #         keep_files: true
   build:
     strategy:
       fail-fast: false
