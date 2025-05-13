@@ -33,6 +33,20 @@ constexpr std::underlying_type_t<T> toUnderlying(T e) noexcept {
   return static_cast<std::underlying_type_t<T>>(e);
 }
 
+// Helper function to wait for and retrieve a message from the client queue
+std::string waitForMessage(
+  std::mutex& mutex, std::condition_variable& cv, std::queue<std::string>& client_rx
+) {
+  std::unique_lock lock{mutex};
+  auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
+    return !client_rx.empty();
+  });
+  REQUIRE(wait_result);
+  std::string payload = client_rx.front();
+  client_rx.pop();
+  return payload;
+}
+
 class WebSocketClient {
 public:
   explicit WebSocketClient() {
@@ -488,16 +502,7 @@ TEST_CASE("Parameter callbacks") {
   }
 
   // Wait for the the serverInfo message.
-  std::string payload;
-  {
-    std::unique_lock lock{mutex};
-    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
-      return !client_rx.empty();
-    });
-    REQUIRE(wait_result);
-    payload = client_rx.front();
-    client_rx.pop();
-  }
+  std::string payload = waitForMessage(mutex, cv, client_rx);
   Json parsed = Json::parse(payload);
   REQUIRE(parsed.contains("op"));
   REQUIRE(parsed["op"] == "serverInfo");
@@ -533,15 +538,7 @@ TEST_CASE("Parameter callbacks") {
   }
 
   // Wait for the response and validate it.
-  {
-    std::unique_lock lock{mutex};
-    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
-      return !client_rx.empty();
-    });
-    REQUIRE(wait_result);
-    payload = client_rx.front();
-    client_rx.pop();
-  }
+  payload = waitForMessage(mutex, cv, client_rx);
   parsed = Json::parse(payload);
   auto expected = Json::parse(R"({
       "op": "parameterValues",
@@ -601,15 +598,7 @@ TEST_CASE("Parameter callbacks") {
   }
 
   // Wait for the response and validate it.
-  {
-    std::unique_lock lock{mutex};
-    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
-      return !client_rx.empty();
-    });
-    REQUIRE(wait_result);
-    payload = client_rx.front();
-    client_rx.pop();
-  }
+  payload = waitForMessage(mutex, cv, client_rx);
   parsed = Json::parse(payload);
   expected = Json::parse(R"({
       "op": "parameterValues",
@@ -682,16 +671,7 @@ TEST_CASE("Parameter subscription callbacks") {
   }
 
   // Wait for the the serverInfo message.
-  std::string payload;
-  {
-    std::unique_lock lock{mutex};
-    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
-      return !client_rx.empty();
-    });
-    REQUIRE(wait_result);
-    payload = client_rx.front();
-    client_rx.pop();
-  }
+  std::string payload = waitForMessage(mutex, cv, client_rx);
   Json parsed = Json::parse(payload);
   REQUIRE(parsed.contains("op"));
   REQUIRE(parsed["op"] == "serverInfo");
@@ -726,15 +706,7 @@ TEST_CASE("Parameter subscription callbacks") {
   server.publishParameterValues(std::move(params));
 
   // Wait for the server to send the parameterValues message and validate it.
-  {
-    std::unique_lock lock{mutex};
-    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
-      return !client_rx.empty();
-    });
-    REQUIRE(wait_result);
-    payload = client_rx.front();
-    client_rx.pop();
-  }
+  payload = waitForMessage(mutex, cv, client_rx);
   parsed = Json::parse(payload);
   auto expected = Json::parse(R"({
       "op": "parameterValues",
@@ -897,30 +869,13 @@ TEST_CASE("Service callbacks") {
   }
 
   // Wait for the the serverInfo message.
-  std::string rx_payload;
-  {
-    std::unique_lock lock{mutex};
-    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
-      return !client_rx.empty();
-    });
-    REQUIRE(wait_result);
-    rx_payload = client_rx.front();
-    client_rx.pop();
-  }
+  std::string rx_payload = waitForMessage(mutex, cv, client_rx);
   Json parsed = Json::parse(rx_payload);
   REQUIRE(parsed.contains("op"));
   REQUIRE(parsed["op"] == "serverInfo");
 
   // Wait for the service advertisement message.
-  {
-    std::unique_lock lock{mutex};
-    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
-      return !client_rx.empty();
-    });
-    REQUIRE(wait_result);
-    rx_payload = client_rx.front();
-    client_rx.pop();
-  }
+  rx_payload = waitForMessage(mutex, cv, client_rx);
   parsed = Json::parse(rx_payload);
   REQUIRE(parsed.contains("op"));
   REQUIRE(parsed["op"] == "advertiseServices");
@@ -990,15 +945,7 @@ TEST_CASE("Service callbacks") {
   }
 
   // Wait for the response.
-  {
-    std::unique_lock lock{mutex};
-    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
-      return !client_rx.empty();
-    });
-    REQUIRE(wait_result);
-    rx_payload = client_rx.front();
-    client_rx.pop();
-  }
+  rx_payload = waitForMessage(mutex, cv, client_rx);
   validateServiceResponse(rx_payload, service_ids["/echo"], 99, "json", request_payload);
 
   // Make an error service call.
@@ -1023,15 +970,7 @@ TEST_CASE("Service callbacks") {
   }
 
   // Wait for the response.
-  {
-    std::unique_lock lock{mutex};
-    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
-      return !client_rx.empty();
-    });
-    REQUIRE(wait_result);
-    rx_payload = client_rx.front();
-    client_rx.pop();
-  }
+  rx_payload = waitForMessage(mutex, cv, client_rx);
   parsed = Json::parse(rx_payload);
   auto expected_response = Json::parse(R"({
     "op": "serviceCallFailure",
@@ -1047,15 +986,7 @@ TEST_CASE("Service callbacks") {
   REQUIRE(error == foxglove::FoxgloveError::Ok);
 
   // Wait for the unadvertise message.
-  {
-    std::unique_lock lock{mutex};
-    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
-      return !client_rx.empty();
-    });
-    REQUIRE(wait_result);
-    rx_payload = client_rx.front();
-    client_rx.pop();
-  }
+  rx_payload = waitForMessage(mutex, cv, client_rx);
   parsed = Json::parse(rx_payload);
   auto expected = Json::parse(R"({
     "op": "unadvertiseServices",
@@ -1124,16 +1055,7 @@ TEST_CASE("Fetch asset callback") {
   }
 
   // Wait for the the serverInfo message.
-  std::string rx_payload;
-  {
-    std::unique_lock lock{mutex};
-    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
-      return !client_rx.empty();
-    });
-    REQUIRE(wait_result);
-    rx_payload = client_rx.front();
-    client_rx.pop();
-  }
+  std::string rx_payload = waitForMessage(mutex, cv, client_rx);
   Json parsed = Json::parse(rx_payload);
   REQUIRE(parsed.contains("op"));
   REQUIRE(parsed["op"] == "serverInfo");
@@ -1164,15 +1086,7 @@ TEST_CASE("Fetch asset callback") {
   }
 
   // Wait for the response.
-  {
-    std::unique_lock lock{mutex};
-    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
-      return !client_rx.empty();
-    });
-    REQUIRE(wait_result);
-    rx_payload = client_rx.front();
-    client_rx.pop();
-  }
+  rx_payload = waitForMessage(mutex, cv, client_rx);
   validateFetchAssetOkResponse(rx_payload, 42, makeBytes("data"));
 
   REQUIRE(server.stop() == foxglove::FoxgloveError::Ok);
@@ -1234,16 +1148,7 @@ TEST_CASE("Fetch asset error") {
   }
 
   // Wait for the the serverInfo message.
-  std::string rx_payload;
-  {
-    std::unique_lock lock{mutex};
-    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
-      return !client_rx.empty();
-    });
-    REQUIRE(wait_result);
-    rx_payload = client_rx.front();
-    client_rx.pop();
-  }
+  std::string rx_payload = waitForMessage(mutex, cv, client_rx);
   Json parsed = Json::parse(rx_payload);
   REQUIRE(parsed.contains("op"));
   REQUIRE(parsed["op"] == "serverInfo");
@@ -1274,15 +1179,7 @@ TEST_CASE("Fetch asset error") {
   }
 
   // Wait for the response.
-  {
-    std::unique_lock lock{mutex};
-    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
-      return !client_rx.empty();
-    });
-    REQUIRE(wait_result);
-    rx_payload = client_rx.front();
-    client_rx.pop();
-  }
+  rx_payload = waitForMessage(mutex, cv, client_rx);
   validateFetchAssetErrorResponse(rx_payload, 42, "oh no"sv);
 
   REQUIRE(server.stop() == foxglove::FoxgloveError::Ok);
@@ -1343,16 +1240,7 @@ TEST_CASE("Broadcast time") {
   }
 
   // Wait for the serverInfo message.
-  std::string payload;
-  {
-    std::unique_lock lock{mutex};
-    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
-      return !client_rx.empty();
-    });
-    REQUIRE(wait_result);
-    payload = client_rx.front();
-    client_rx.pop();
-  }
+  std::string payload = waitForMessage(mutex, cv, client_rx);
   Json parsed = Json::parse(payload);
   REQUIRE(parsed.contains("op"));
   REQUIRE(parsed["op"] == "serverInfo");
@@ -1360,15 +1248,7 @@ TEST_CASE("Broadcast time") {
   server.broadcastTime(42);
 
   // Wait for the time message.
-  {
-    std::unique_lock lock{mutex};
-    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
-      return !client_rx.empty();
-    });
-    REQUIRE(wait_result);
-    payload = client_rx.front();
-    client_rx.pop();
-  }
+  payload = waitForMessage(mutex, cv, client_rx);
   validateTimeMessage(payload, 42);
 
   REQUIRE(server.stop() == foxglove::FoxgloveError::Ok);
@@ -1413,17 +1293,8 @@ TEST_CASE("Clear session") {
   }
 
   // Wait for the serverInfo message.
-  std::string payload;
-  {
-    std::unique_lock lock{mutex};
-    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
-      return !client_rx.empty();
-    });
-    REQUIRE(wait_result);
-    payload = client_rx.front();
-    client_rx.pop();
-  }
-  Json parsed = Json::parse(payload);
+  auto payload = waitForMessage(mutex, cv, client_rx);
+  auto parsed = Json::parse(payload);
   REQUIRE(parsed.contains("op"));
   REQUIRE(parsed["op"] == "serverInfo");
   REQUIRE(parsed.contains("sessionId"));
@@ -1435,15 +1306,7 @@ TEST_CASE("Clear session") {
   REQUIRE(error == foxglove::FoxgloveError::Ok);
 
   // Wait for the serverInfo message.
-  {
-    std::unique_lock lock{mutex};
-    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
-      return !client_rx.empty();
-    });
-    REQUIRE(wait_result);
-    payload = client_rx.front();
-    client_rx.pop();
-  }
+  payload = waitForMessage(mutex, cv, client_rx);
   parsed = Json::parse(payload);
   REQUIRE(parsed.contains("op"));
   REQUIRE(parsed["op"] == "serverInfo");
@@ -1456,15 +1319,7 @@ TEST_CASE("Clear session") {
   REQUIRE(error == foxglove::FoxgloveError::Ok);
 
   // Wait for the serverInfo message.
-  {
-    std::unique_lock lock{mutex};
-    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
-      return !client_rx.empty();
-    });
-    REQUIRE(wait_result);
-    payload = client_rx.front();
-    client_rx.pop();
-  }
+  payload = waitForMessage(mutex, cv, client_rx);
   parsed = Json::parse(payload);
   REQUIRE(parsed.contains("op"));
   REQUIRE(parsed["op"] == "serverInfo");
@@ -1510,17 +1365,8 @@ TEST_CASE("Publish status") {
   }
 
   // Wait for the serverInfo message.
-  std::string payload;
-  {
-    std::unique_lock lock{mutex};
-    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
-      return !client_rx.empty();
-    });
-    REQUIRE(wait_result);
-    payload = client_rx.front();
-    client_rx.pop();
-  }
-  Json parsed = Json::parse(payload);
+  auto payload = waitForMessage(mutex, cv, client_rx);
+  auto parsed = Json::parse(payload);
   REQUIRE(parsed.contains("op"));
   REQUIRE(parsed["op"] == "serverInfo");
 
@@ -1529,15 +1375,7 @@ TEST_CASE("Publish status") {
   REQUIRE(error == foxglove::FoxgloveError::Ok);
 
   // Wait for status message.
-  {
-    std::unique_lock lock{mutex};
-    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
-      return !client_rx.empty();
-    });
-    REQUIRE(wait_result);
-    payload = client_rx.front();
-    client_rx.pop();
-  }
+  payload = waitForMessage(mutex, cv, client_rx);
   parsed = Json::parse(payload);
   auto expected = Json::parse(R"({
       "op": "status",
@@ -1551,15 +1389,7 @@ TEST_CASE("Publish status") {
   REQUIRE(error == foxglove::FoxgloveError::Ok);
 
   // Wait for status message.
-  {
-    std::unique_lock lock{mutex};
-    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
-      return !client_rx.empty();
-    });
-    REQUIRE(wait_result);
-    payload = client_rx.front();
-    client_rx.pop();
-  }
+  payload = waitForMessage(mutex, cv, client_rx);
   parsed = Json::parse(payload);
   expected = Json::parse(R"({
       "op": "status",
@@ -1574,15 +1404,7 @@ TEST_CASE("Publish status") {
   REQUIRE(error == foxglove::FoxgloveError::Ok);
 
   // Wait for removeStatus message.
-  {
-    std::unique_lock lock{mutex};
-    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
-      return !client_rx.empty();
-    });
-    REQUIRE(wait_result);
-    payload = client_rx.front();
-    client_rx.pop();
-  }
+  payload = waitForMessage(mutex, cv, client_rx);
   parsed = Json::parse(payload);
   expected = Json::parse(R"({
       "op": "removeStatus",
