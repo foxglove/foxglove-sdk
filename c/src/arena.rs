@@ -1,4 +1,5 @@
-use std::cell::Cell;
+use std::alloc::Layout;
+use std::cell::{Cell, RefCell};
 use std::marker::PhantomPinned;
 use std::mem::ManuallyDrop;
 use std::mem::{align_of, size_of, MaybeUninit};
@@ -23,12 +24,13 @@ pub trait BorrowToNative {
 pub struct Arena {
     buffer: [MaybeUninit<u8>; Arena::SIZE],
     offset: Cell<usize>,
+    overflow: RefCell<Vec<(*mut u8, Layout)>>,
     // Marker to prevent moving
     _pin: PhantomPinned,
 }
 
 impl Arena {
-    pub const SIZE: usize = 256 * 1024; // 256 KB
+    const SIZE: usize = 128 * 1024; // 128 KB
 
     /// Creates a new empty Arena
     ///
@@ -42,12 +44,14 @@ impl Arena {
         Self {
             buffer: [MaybeUninit::uninit(); Self::SIZE],
             offset: Cell::new(0),
+            overflow: RefCell::new(Vec::new()),
             _pin: PhantomPinned,
         }
     }
 
     /// Allocates an array of `n` elements of type `T` from the arena.
-    fn alloc<T>(&self, n: usize) -> *mut T {
+    pub fn alloc<T>(&self, n: usize) -> *mut T {
+        assert!(n > 0, "Cannot allocate 0 elements");
         let element_size = size_of::<T>();
         let bytes_needed = n * element_size;
 
@@ -56,7 +60,11 @@ impl Arena {
 
         // Check if we have enough space
         if aligned_offset + bytes_needed > Self::SIZE {
-            panic!("Arena out of memory");
+            let layout = std::alloc::Layout::array::<T>(n).unwrap();
+            // SAFETY: layout is valid and non-zero and we don't assume the memory is initialized
+            let ptr = unsafe { std::alloc::alloc(layout) };
+            self.overflow.borrow_mut().push((ptr, layout));
+            return ptr as *mut T;
         }
 
         // SAFETY: [result, result+n) is properly aligned and within the bounds of buffer
@@ -75,6 +83,7 @@ impl Arena {
             return Ok(ManuallyDrop::new(Vec::new()));
         }
 
+        // SAFETY: we are not moving the arena, or moving out of it
         let result = self.as_mut().alloc::<S::NativeType>(len);
 
         // Convert the elements from S to T, placing them in the result array
@@ -104,5 +113,111 @@ impl Arena {
 impl Default for Arena {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+impl Drop for Arena {
+    fn drop(&mut self) {
+        for (ptr, layout) in self.overflow.borrow_mut().drain(..) {
+            // SAFETY: ptr was allocated with layout via std::alloc::alloc
+            unsafe { std::alloc::dealloc(ptr, layout) };
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::pin::pin;
+
+    #[test]
+    fn test_allocate_different_types_and_verify_alignment() {
+        let arena = pin!(Arena::new());
+
+        // Allocate different types and verify alignment
+        let int_ptr = arena.alloc::<i32>(10);
+        assert_eq!(int_ptr as usize % align_of::<i32>(), 0);
+
+        let double_ptr = arena.alloc::<f64>(5);
+        assert_eq!(double_ptr as usize % align_of::<f64>(), 0);
+
+        #[repr(align(16))]
+        struct AlignedStruct {
+            #[allow(dead_code)]
+            data: [u8; 32],
+        }
+
+        let struct_ptr = arena.alloc::<AlignedStruct>(3);
+        assert_eq!(struct_ptr as usize % align_of::<AlignedStruct>(), 0);
+
+        // Verify we can write to the allocated memory
+        unsafe {
+            for i in 0..10 {
+                *int_ptr.add(i) = i as i32;
+            }
+
+            for i in 0..5 {
+                *double_ptr.add(i) = (i as f64) * 1.5;
+            }
+
+            // Verify the values were written correctly
+            for i in 0..10 {
+                assert_eq!(*int_ptr.add(i), i as i32);
+            }
+
+            for i in 0..5 {
+                assert_eq!(*double_ptr.add(i), (i as f64) * 1.5);
+            }
+        }
+    }
+
+    #[test]
+    fn test_allocate_from_heap_when_arena_capacity_exceeded() {
+        let arena = pin!(Arena::new());
+
+        // First, nearly fill the arena
+        let nearly_full_size = Arena::SIZE - 1024;
+        let buffer = arena.alloc::<u8>(nearly_full_size);
+        assert!(!buffer.is_null());
+
+        // Verify some data can be written to the arena allocation
+        unsafe {
+            *buffer = b'A';
+            *buffer.add(nearly_full_size - 1) = b'Z';
+            assert_eq!(*buffer, b'A');
+            assert_eq!(*buffer.add(nearly_full_size - 1), b'Z');
+        }
+
+        // Check arena's reported space
+        assert!(arena.used() >= nearly_full_size);
+        assert_eq!(arena.available(), 1024);
+
+        // Now allocate more than what's left in the arena
+        const LARGE_ALLOCATION_SIZE: usize = 8192;
+        let large_allocation = arena.alloc::<i32>(LARGE_ALLOCATION_SIZE / size_of::<i32>());
+        assert!(!large_allocation.is_null());
+
+        // Verify we can use the overflow allocation
+        unsafe {
+            for i in 0..(LARGE_ALLOCATION_SIZE / size_of::<i32>()) {
+                *large_allocation.add(i) = i as i32;
+            }
+        }
+
+        // Make several more overflow allocations
+        let overflow1 = arena.alloc::<f64>(1000);
+        let overflow2 = arena.alloc::<f32>(2000);
+
+        assert!(!overflow1.is_null());
+        assert!(!overflow2.is_null());
+
+        // Verify each allocation can be written to
+        unsafe {
+            *overflow1 = std::f64::consts::PI;
+            *overflow2 = std::f32::consts::E;
+
+            assert_eq!(*overflow1, std::f64::consts::PI);
+            assert_eq!(*overflow2, std::f32::consts::E);
+        }
     }
 }

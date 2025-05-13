@@ -75,6 +75,7 @@ public:
    */
   template<typename T>
   T* alloc(size_t elements) {
+    assert(elements > 0);
     const size_t bytes_needed = elements * sizeof(T);
 
     // Calculate aligned offset
