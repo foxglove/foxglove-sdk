@@ -290,6 +290,7 @@ jobs:
           publish_dir: python/foxglove-sdk/_build/
           destination_dir: python/
           force_orphan: true
+          keep_files: true
 
   test-sdk-examples:
     runs-on: ubuntu-latest
