@@ -38,7 +38,7 @@ jobs:
       - run: poetry install
         working-directory: cpp/foxglove/docs
       - run: make docs
-        working-directory: cpp/foxglove/docs
+        working-directory: cpp
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         # if: startsWith(github.ref, 'refs/tags/sdk/v')
