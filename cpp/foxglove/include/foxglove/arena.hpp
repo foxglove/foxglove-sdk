@@ -22,7 +22,7 @@ public:
   static constexpr std::size_t Size = 128 * 1024;  // 128 KB
 
   Arena()
-      : _offset(0) {}
+      : offset_(0) {}
 
   /**
    * Maps elements from a vector to a new array allocated from the arena.
@@ -81,19 +81,19 @@ public:
 
     // Calculate aligned offset
     const size_t alignment = alignof(T);
-    const size_t misalignment = _offset % alignment;
+    const size_t misalignment = offset_ % alignment;
     const size_t alignment_padding = misalignment > 0 ? alignment - misalignment : 0;
-    const size_t aligned_offset = _offset + alignment_padding;
+    const size_t aligned_offset = offset_ + alignment_padding;
 
     // Check if we have enough space
     if (aligned_offset + bytes_needed > Size) {
-      _overflow.emplace_back(static_cast<char*>(::aligned_alloc(alignment, bytes_needed)));
-      return reinterpret_cast<T*>(_overflow.back().get());
+      overflow_.emplace_back(static_cast<char*>(::aligned_alloc(alignment, bytes_needed)));
+      return reinterpret_cast<T*>(overflow_.back().get());
     }
 
     // Get pointer to the aligned result array of T
-    T* result = reinterpret_cast<T*>(&_buffer[aligned_offset]);
-    _offset = aligned_offset + bytes_needed;
+    T* result = reinterpret_cast<T*>(&buffer_[aligned_offset]);
+    offset_ = aligned_offset + bytes_needed;
 
     return result;
   }
@@ -102,14 +102,14 @@ public:
    * Returns how many bytes are currently used in the arena.
    */
   size_t used() const {
-    return _offset;
+    return offset_;
   }
 
   /**
    * Returns how many bytes are available in the arena.
    */
   size_t available() const {
-    return Size - _offset;
+    return Size - offset_;
   }
 
 private:
@@ -119,9 +119,9 @@ private:
     }
   };
 
-  alignas(std::max_align_t) uint8_t _buffer[Size];
-  std::size_t _offset;
-  std::vector<std::unique_ptr<char, Deleter>> _overflow;
+  alignas(std::max_align_t) uint8_t buffer_[Size];
+  std::size_t offset_;
+  std::vector<std::unique_ptr<char, Deleter>> overflow_;
 };
 
 }  // namespace foxglove
