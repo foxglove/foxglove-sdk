@@ -42,7 +42,7 @@ jobs:
       - run: poetry run maturin develop
       - name: Sphinx build
         run: |
-          poetry run sphinx-build --fail-on-warning ./python/docs _build
+          poetry run sphinx-build --fail-on-warning ./python/docs ./python/docs/_build
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
