@@ -33,26 +33,24 @@ constexpr std::underlying_type_t<T> toUnderlying(T e) noexcept {
   return static_cast<std::underlying_type_t<T>>(e);
 }
 
-// Helper function to wait for and retrieve a message from the client queue
-std::string waitForMessage(
-  std::mutex& mutex, std::condition_variable& cv, std::queue<std::string>& client_rx
-) {
-  std::unique_lock lock{mutex};
-  auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
-    return !client_rx.empty();
-  });
-  REQUIRE(wait_result);
-  std::string payload = client_rx.front();
-  client_rx.pop();
-  return payload;
-}
-
 class WebSocketClient {
 public:
   explicit WebSocketClient() {
     client_.clear_access_channels(websocketpp::log::alevel::all);
     client_.clear_error_channels(websocketpp::log::elevel::all);
     client_.init_asio();
+    client_.set_open_handler([this](const auto& hdl) {
+      std::scoped_lock lock{mutex_};
+      connection_opened_ = true;
+      cv_.notify_one();
+    });
+    client_.set_message_handler(
+      [this](const websocketpp::connection_hdl&, const WebSocketMessage& msg) {
+        std::scoped_lock lock{mutex_};
+        rx_queue_.push(msg->get_payload());
+        cv_.notify_one();
+      }
+    );
   }
 
   WebSocketClient(const WebSocketClient&) = delete;
@@ -83,6 +81,25 @@ public:
     client_.connect(connection_);
     started_ = true;
     thread_ = std::thread{&WebSocketClientInner::run, std::ref(client_)};
+  }
+
+  void waitForConnection() {
+    std::unique_lock lock{mutex_};
+    auto wait_result = cv_.wait_for(lock, std::chrono::seconds(1), [this] {
+      return connection_opened_;
+    });
+    REQUIRE(wait_result);
+  }
+
+  std::string recv() {
+    std::unique_lock lock{mutex_};
+    auto wait_result = cv_.wait_for(lock, std::chrono::seconds(1), [this] {
+      return !rx_queue_.empty();
+    });
+    REQUIRE(wait_result);
+    std::string payload = rx_queue_.front();
+    rx_queue_.pop();
+    return payload;
   }
 
   void send(std::string const& payload) {
@@ -121,6 +138,12 @@ private:
   std::thread thread_;
   bool started_{};
   bool closed_{};
+
+  std::mutex mutex_;
+  std::condition_variable cv_;
+  // The following members are protected by the mutex.
+  bool connection_opened_{};
+  std::queue<std::string> rx_queue_;
 };
 
 foxglove::WebSocketServer startServer(foxglove::WebSocketServerOptions&& options) {
@@ -225,7 +248,6 @@ TEST_CASE("Subscribe and unsubscribe callbacks") {
   std::mutex mutex;
   std::condition_variable cv;
   // the following variables are protected by the mutex:
-  bool connection_opened = false;
   std::vector<uint64_t> subscribe_calls;
   std::vector<uint64_t> unsubscribe_calls;
 
@@ -251,16 +273,14 @@ TEST_CASE("Subscribe and unsubscribe callbacks") {
   auto channel = std::move(channel_result.value());
 
   WebSocketClient client;
-  client.inner().set_open_handler([&](const auto& hdl) {
-    std::scoped_lock lock{mutex};
-    connection_opened = true;
-    cv.notify_all();
-  });
   client.start(server.port());
+  client.waitForConnection();
 
-  cv.wait(lock, [&] {
-    return connection_opened;
-  });
+  auto payload = client.recv();
+  auto parsed = Json::parse(payload);
+  REQUIRE(parsed.contains("op"));
+  REQUIRE(parsed["op"] == "serverInfo");
+
   client.send(
     R"({
       "op": "subscribe",
@@ -317,7 +337,6 @@ TEST_CASE("Client advertise/publish callbacks") {
   std::mutex mutex;
   std::condition_variable cv;
   // the following variables are protected by the mutex:
-  bool connection_opened = false;
   bool advertised = false;
   bool received_message = false;
 
@@ -366,16 +385,14 @@ TEST_CASE("Client advertise/publish callbacks") {
   );
 
   WebSocketClient client;
-  client.inner().set_open_handler([&](const auto& hdl) {
-    std::scoped_lock lock{mutex};
-    connection_opened = true;
-    cv.notify_all();
-  });
   client.start(server.port());
+  client.waitForConnection();
 
-  cv.wait(lock, [&] {
-    return connection_opened;
-  });
+  auto payload = client.recv();
+  auto parsed = Json::parse(payload);
+  REQUIRE(parsed.contains("op"));
+  REQUIRE(parsed["op"] == "serverInfo");
+
   client.send(
     R"({
       "op": "advertise",
@@ -416,12 +433,10 @@ TEST_CASE("Parameter callbacks") {
   std::mutex mutex;
   std::condition_variable cv;
   // the following variables are protected by the mutex:
-  bool connection_opened = false;
   std::optional<std::pair<std::optional<std::string>, std::vector<std::string>>>
     server_get_parameters;
   std::optional<std::pair<std::optional<std::string>, std::vector<foxglove::Parameter>>>
     server_set_parameters;
-  std::queue<std::string> client_rx;
 
   foxglove::WebSocketServerCallbacks callbacks;
   callbacks.onGetParameters = [&](
@@ -478,32 +493,11 @@ TEST_CASE("Parameter callbacks") {
     startServer(context, foxglove::WebSocketServerCapabilities::Parameters, std::move(callbacks));
 
   WebSocketClient client;
-  client.inner().set_open_handler([&](const auto& hdl) {
-    std::scoped_lock lock{mutex};
-    connection_opened = true;
-    cv.notify_one();
-  });
-  client.inner().set_message_handler(
-    [&](const websocketpp::connection_hdl&, const WebSocketMessage& msg) {
-      std::scoped_lock lock{mutex};
-      client_rx.push(msg->get_payload());
-      cv.notify_one();
-    }
-  );
   client.start(server.port());
+  client.waitForConnection();
 
-  // Wait for the connection to be opened.
-  {
-    std::unique_lock lock{mutex};
-    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
-      return connection_opened;
-    });
-    REQUIRE(wait_result);
-  }
-
-  // Wait for the the serverInfo message.
-  std::string payload = waitForMessage(mutex, cv, client_rx);
-  Json parsed = Json::parse(payload);
+  auto payload = client.recv();
+  auto parsed = Json::parse(payload);
   REQUIRE(parsed.contains("op"));
   REQUIRE(parsed["op"] == "serverInfo");
 
@@ -538,7 +532,7 @@ TEST_CASE("Parameter callbacks") {
   }
 
   // Wait for the response and validate it.
-  payload = waitForMessage(mutex, cv, client_rx);
+  payload = client.recv();
   parsed = Json::parse(payload);
   auto expected = Json::parse(R"({
       "op": "parameterValues",
@@ -598,7 +592,7 @@ TEST_CASE("Parameter callbacks") {
   }
 
   // Wait for the response and validate it.
-  payload = waitForMessage(mutex, cv, client_rx);
+  payload = client.recv();
   parsed = Json::parse(payload);
   expected = Json::parse(R"({
       "op": "parameterValues",
@@ -618,10 +612,8 @@ TEST_CASE("Parameter subscription callbacks") {
   std::mutex mutex;
   std::condition_variable cv;
   // the following variables are protected by the mutex:
-  bool connection_opened = false;
   std::optional<std::vector<std::string>> server_sub_names;
   std::optional<std::vector<std::string>> server_unsub_names;
-  std::queue<std::string> client_rx;
 
   foxglove::WebSocketServerCallbacks callbacks;
   callbacks.onParametersSubscribe = [&](const std::vector<std::string_view>& names) {
@@ -647,32 +639,11 @@ TEST_CASE("Parameter subscription callbacks") {
     startServer(context, foxglove::WebSocketServerCapabilities::Parameters, std::move(callbacks));
 
   WebSocketClient client;
-  client.inner().set_open_handler([&](const auto& hdl) {
-    std::scoped_lock lock{mutex};
-    connection_opened = true;
-    cv.notify_one();
-  });
-  client.inner().set_message_handler(
-    [&](const websocketpp::connection_hdl&, const WebSocketMessage& msg) {
-      std::scoped_lock lock{mutex};
-      client_rx.push(msg->get_payload());
-      cv.notify_one();
-    }
-  );
   client.start(server.port());
+  client.waitForConnection();
 
-  // Wait for the connection to be opened.
-  {
-    std::unique_lock lock{mutex};
-    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
-      return connection_opened;
-    });
-    REQUIRE(wait_result);
-  }
-
-  // Wait for the the serverInfo message.
-  std::string payload = waitForMessage(mutex, cv, client_rx);
-  Json parsed = Json::parse(payload);
+  auto payload = client.recv();
+  auto parsed = Json::parse(payload);
   REQUIRE(parsed.contains("op"));
   REQUIRE(parsed["op"] == "serverInfo");
 
@@ -706,7 +677,7 @@ TEST_CASE("Parameter subscription callbacks") {
   server.publishParameterValues(std::move(params));
 
   // Wait for the server to send the parameterValues message and validate it.
-  payload = waitForMessage(mutex, cv, client_rx);
+  payload = client.recv();
   parsed = Json::parse(payload);
   auto expected = Json::parse(R"({
       "op": "parameterValues",
@@ -809,9 +780,7 @@ TEST_CASE("Service callbacks") {
   std::mutex mutex;
   std::condition_variable cv;
   // the following variables are protected by the mutex:
-  bool connection_opened = false;
   std::optional<foxglove::ServiceRequest> last_request;
-  std::queue<std::string> client_rx;
 
   auto context = foxglove::Context::create();
   auto server = startServer(context, foxglove::WebSocketServerCapabilities::Services, {}, {"json"});
@@ -823,6 +792,7 @@ TEST_CASE("Service callbacks") {
       std::scoped_lock lock{mutex};
       last_request = request;
       std::move(responder).respondOk(request.payload);
+      cv.notify_one();
     }
   );
   auto service = foxglove::Service::create("/echo", echo_schema, echo_handler);
@@ -837,6 +807,7 @@ TEST_CASE("Service callbacks") {
       std::scoped_lock lock{mutex};
       last_request = request;
       std::move(responder).respondError("oh noes"sv);
+      cv.notify_one();
     }
   );
   service = foxglove::Service::create("/error", error_schema, error_handler);
@@ -845,37 +816,16 @@ TEST_CASE("Service callbacks") {
   REQUIRE(error == foxglove::FoxgloveError::Ok);
 
   WebSocketClient client;
-  client.inner().set_open_handler([&](const auto& hdl) {
-    std::scoped_lock lock{mutex};
-    connection_opened = true;
-    cv.notify_one();
-  });
-  client.inner().set_message_handler(
-    [&](const websocketpp::connection_hdl&, const WebSocketMessage& msg) {
-      std::scoped_lock lock{mutex};
-      client_rx.push(msg->get_payload());
-      cv.notify_one();
-    }
-  );
   client.start(server.port());
+  client.waitForConnection();
 
-  // Wait for the connection to be opened.
-  {
-    std::unique_lock lock{mutex};
-    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
-      return connection_opened;
-    });
-    REQUIRE(wait_result);
-  }
-
-  // Wait for the the serverInfo message.
-  std::string rx_payload = waitForMessage(mutex, cv, client_rx);
-  Json parsed = Json::parse(rx_payload);
+  auto rx_payload = client.recv();
+  auto parsed = Json::parse(rx_payload);
   REQUIRE(parsed.contains("op"));
   REQUIRE(parsed["op"] == "serverInfo");
 
   // Wait for the service advertisement message.
-  rx_payload = waitForMessage(mutex, cv, client_rx);
+  rx_payload = client.recv();
   parsed = Json::parse(rx_payload);
   REQUIRE(parsed.contains("op"));
   REQUIRE(parsed["op"] == "advertiseServices");
@@ -945,7 +895,7 @@ TEST_CASE("Service callbacks") {
   }
 
   // Wait for the response.
-  rx_payload = waitForMessage(mutex, cv, client_rx);
+  rx_payload = client.recv();
   validateServiceResponse(rx_payload, service_ids["/echo"], 99, "json", request_payload);
 
   // Make an error service call.
@@ -970,7 +920,7 @@ TEST_CASE("Service callbacks") {
   }
 
   // Wait for the response.
-  rx_payload = waitForMessage(mutex, cv, client_rx);
+  rx_payload = client.recv();
   parsed = Json::parse(rx_payload);
   auto expected_response = Json::parse(R"({
     "op": "serviceCallFailure",
@@ -986,7 +936,7 @@ TEST_CASE("Service callbacks") {
   REQUIRE(error == foxglove::FoxgloveError::Ok);
 
   // Wait for the unadvertise message.
-  rx_payload = waitForMessage(mutex, cv, client_rx);
+  rx_payload = client.recv();
   parsed = Json::parse(rx_payload);
   auto expected = Json::parse(R"({
     "op": "unadvertiseServices",
@@ -1016,9 +966,7 @@ TEST_CASE("Fetch asset callback") {
   std::mutex mutex;
   std::condition_variable cv;
   // the following variables are protected by the mutex:
-  bool connection_opened = false;
   std::optional<std::string> last_uri;
-  std::queue<std::string> client_rx;
 
   auto context = foxglove::Context::create();
   auto server =
@@ -1031,32 +979,11 @@ TEST_CASE("Fetch asset callback") {
     });
 
   WebSocketClient client;
-  client.inner().set_open_handler([&](const auto& hdl) {
-    std::scoped_lock lock{mutex};
-    connection_opened = true;
-    cv.notify_one();
-  });
-  client.inner().set_message_handler(
-    [&](const websocketpp::connection_hdl&, const WebSocketMessage& msg) {
-      std::scoped_lock lock{mutex};
-      client_rx.push(msg->get_payload());
-      cv.notify_one();
-    }
-  );
   client.start(server.port());
+  client.waitForConnection();
 
-  // Wait for the connection to be opened.
-  {
-    std::unique_lock lock{mutex};
-    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
-      return connection_opened;
-    });
-    REQUIRE(wait_result);
-  }
-
-  // Wait for the the serverInfo message.
-  std::string rx_payload = waitForMessage(mutex, cv, client_rx);
-  Json parsed = Json::parse(rx_payload);
+  auto rx_payload = client.recv();
+  auto parsed = Json::parse(rx_payload);
   REQUIRE(parsed.contains("op"));
   REQUIRE(parsed["op"] == "serverInfo");
   REQUIRE(parsed.contains("capabilities"));
@@ -1086,7 +1013,7 @@ TEST_CASE("Fetch asset callback") {
   }
 
   // Wait for the response.
-  rx_payload = waitForMessage(mutex, cv, client_rx);
+  rx_payload = client.recv();
   validateFetchAssetOkResponse(rx_payload, 42, makeBytes("data"));
 
   REQUIRE(server.stop() == foxglove::FoxgloveError::Ok);
@@ -1110,9 +1037,7 @@ TEST_CASE("Fetch asset error") {
   std::mutex mutex;
   std::condition_variable cv;
   // the following variables are protected by the mutex:
-  bool connection_opened = false;
   std::optional<std::string> last_uri;
-  std::queue<std::string> client_rx;
 
   auto context = foxglove::Context::create();
   auto server =
@@ -1124,32 +1049,11 @@ TEST_CASE("Fetch asset error") {
     });
 
   WebSocketClient client;
-  client.inner().set_open_handler([&](const auto& hdl) {
-    std::scoped_lock lock{mutex};
-    connection_opened = true;
-    cv.notify_one();
-  });
-  client.inner().set_message_handler(
-    [&](const websocketpp::connection_hdl&, const WebSocketMessage& msg) {
-      std::scoped_lock lock{mutex};
-      client_rx.push(msg->get_payload());
-      cv.notify_one();
-    }
-  );
   client.start(server.port());
+  client.waitForConnection();
 
-  // Wait for the connection to be opened.
-  {
-    std::unique_lock lock{mutex};
-    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
-      return connection_opened;
-    });
-    REQUIRE(wait_result);
-  }
-
-  // Wait for the the serverInfo message.
-  std::string rx_payload = waitForMessage(mutex, cv, client_rx);
-  Json parsed = Json::parse(rx_payload);
+  auto rx_payload = client.recv();
+  auto parsed = Json::parse(rx_payload);
   REQUIRE(parsed.contains("op"));
   REQUIRE(parsed["op"] == "serverInfo");
   REQUIRE(parsed.contains("capabilities"));
@@ -1179,7 +1083,7 @@ TEST_CASE("Fetch asset error") {
   }
 
   // Wait for the response.
-  rx_payload = waitForMessage(mutex, cv, client_rx);
+  rx_payload = client.recv();
   validateFetchAssetErrorResponse(rx_payload, 42, "oh no"sv);
 
   REQUIRE(server.stop() == foxglove::FoxgloveError::Ok);
@@ -1206,61 +1110,28 @@ void validateTimeMessage(const std::string_view msg, uint64_t timestamp) {
 }
 
 TEST_CASE("Broadcast time") {
-  std::mutex mutex;
-  std::condition_variable cv;
-  // the following variables are protected by the mutex:
-  bool connection_opened = false;
-  std::queue<std::string> client_rx;
-
   auto context = foxglove::Context::create();
   auto server = startServer(context, foxglove::WebSocketServerCapabilities::Time);
 
   WebSocketClient client;
-  client.inner().set_open_handler([&](const auto& hdl) {
-    std::scoped_lock lock{mutex};
-    connection_opened = true;
-    cv.notify_one();
-  });
-  client.inner().set_message_handler(
-    [&](const websocketpp::connection_hdl&, const WebSocketMessage& msg) {
-      std::scoped_lock lock{mutex};
-      client_rx.push(msg->get_payload());
-      cv.notify_one();
-    }
-  );
   client.start(server.port());
+  client.waitForConnection();
 
-  // Wait for the connection to be opened.
-  {
-    std::unique_lock lock{mutex};
-    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
-      return connection_opened;
-    });
-    REQUIRE(wait_result);
-  }
-
-  // Wait for the serverInfo message.
-  std::string payload = waitForMessage(mutex, cv, client_rx);
-  Json parsed = Json::parse(payload);
+  auto payload = client.recv();
+  auto parsed = Json::parse(payload);
   REQUIRE(parsed.contains("op"));
   REQUIRE(parsed["op"] == "serverInfo");
 
   server.broadcastTime(42);
 
   // Wait for the time message.
-  payload = waitForMessage(mutex, cv, client_rx);
+  payload = client.recv();
   validateTimeMessage(payload, 42);
 
   REQUIRE(server.stop() == foxglove::FoxgloveError::Ok);
 }
 
 TEST_CASE("Clear session") {
-  std::mutex mutex;
-  std::condition_variable cv;
-  // the following variables are protected by the mutex:
-  bool connection_opened = false;
-  std::queue<std::string> client_rx;
-
   auto context = foxglove::Context::create();
   auto server = startServer(context);
 
@@ -1269,31 +1140,10 @@ TEST_CASE("Clear session") {
   REQUIRE(error == foxglove::FoxgloveError::Ok);
 
   WebSocketClient client;
-  client.inner().set_open_handler([&](const auto& hdl) {
-    std::scoped_lock lock{mutex};
-    connection_opened = true;
-    cv.notify_one();
-  });
-  client.inner().set_message_handler(
-    [&](const websocketpp::connection_hdl&, const WebSocketMessage& msg) {
-      std::scoped_lock lock{mutex};
-      client_rx.push(msg->get_payload());
-      cv.notify_one();
-    }
-  );
   client.start(server.port());
+  client.waitForConnection();
 
-  // Wait for the connection to be opened.
-  {
-    std::unique_lock lock{mutex};
-    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
-      return connection_opened;
-    });
-    REQUIRE(wait_result);
-  }
-
-  // Wait for the serverInfo message.
-  auto payload = waitForMessage(mutex, cv, client_rx);
+  auto payload = client.recv();
   auto parsed = Json::parse(payload);
   REQUIRE(parsed.contains("op"));
   REQUIRE(parsed["op"] == "serverInfo");
@@ -1306,7 +1156,7 @@ TEST_CASE("Clear session") {
   REQUIRE(error == foxglove::FoxgloveError::Ok);
 
   // Wait for the serverInfo message.
-  payload = waitForMessage(mutex, cv, client_rx);
+  payload = client.recv();
   parsed = Json::parse(payload);
   REQUIRE(parsed.contains("op"));
   REQUIRE(parsed["op"] == "serverInfo");
@@ -1319,7 +1169,7 @@ TEST_CASE("Clear session") {
   REQUIRE(error == foxglove::FoxgloveError::Ok);
 
   // Wait for the serverInfo message.
-  payload = waitForMessage(mutex, cv, client_rx);
+  payload = client.recv();
   parsed = Json::parse(payload);
   REQUIRE(parsed.contains("op"));
   REQUIRE(parsed["op"] == "serverInfo");
@@ -1331,41 +1181,14 @@ TEST_CASE("Clear session") {
 }
 
 TEST_CASE("Publish status") {
-  std::mutex mutex;
-  std::condition_variable cv;
-  // the following variables are protected by the mutex:
-  bool connection_opened = false;
-  std::queue<std::string> client_rx;
-
   auto context = foxglove::Context::create();
   auto server = startServer(context);
 
   WebSocketClient client;
-  client.inner().set_open_handler([&](const auto& hdl) {
-    std::scoped_lock lock{mutex};
-    connection_opened = true;
-    cv.notify_one();
-  });
-  client.inner().set_message_handler(
-    [&](const websocketpp::connection_hdl&, const WebSocketMessage& msg) {
-      std::scoped_lock lock{mutex};
-      client_rx.push(msg->get_payload());
-      cv.notify_one();
-    }
-  );
   client.start(server.port());
+  client.waitForConnection();
 
-  // Wait for the connection to be opened.
-  {
-    std::unique_lock lock{mutex};
-    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
-      return connection_opened;
-    });
-    REQUIRE(wait_result);
-  }
-
-  // Wait for the serverInfo message.
-  auto payload = waitForMessage(mutex, cv, client_rx);
+  auto payload = client.recv();
   auto parsed = Json::parse(payload);
   REQUIRE(parsed.contains("op"));
   REQUIRE(parsed["op"] == "serverInfo");
@@ -1375,7 +1198,7 @@ TEST_CASE("Publish status") {
   REQUIRE(error == foxglove::FoxgloveError::Ok);
 
   // Wait for status message.
-  payload = waitForMessage(mutex, cv, client_rx);
+  payload = client.recv();
   parsed = Json::parse(payload);
   auto expected = Json::parse(R"({
       "op": "status",
@@ -1389,7 +1212,7 @@ TEST_CASE("Publish status") {
   REQUIRE(error == foxglove::FoxgloveError::Ok);
 
   // Wait for status message.
-  payload = waitForMessage(mutex, cv, client_rx);
+  payload = client.recv();
   parsed = Json::parse(payload);
   expected = Json::parse(R"({
       "op": "status",
@@ -1404,7 +1227,7 @@ TEST_CASE("Publish status") {
   REQUIRE(error == foxglove::FoxgloveError::Ok);
 
   // Wait for removeStatus message.
-  payload = waitForMessage(mutex, cv, client_rx);
+  payload = client.recv();
   parsed = Json::parse(payload);
   expected = Json::parse(R"({
       "op": "removeStatus",
