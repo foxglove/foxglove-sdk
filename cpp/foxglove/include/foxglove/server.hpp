@@ -3,7 +3,9 @@
 #include <foxglove/context.hpp>
 #include <foxglove/error.hpp>
 #include <foxglove/server/connection_graph.hpp>
+#include <foxglove/server/fetch_asset.hpp>
 #include <foxglove/server/parameter.hpp>
+#include <foxglove/server/service.hpp>
 
 #include <cstdint>
 #include <functional>
@@ -53,6 +55,9 @@ enum class WebSocketServerCapabilities : uint8_t {
   Time = 1 << 3,
   /// Allow clients to call services.
   Services = 1 << 4,
+  /// Allow clients to request assets. If you supply an asset handler to the
+  /// server, this capability will be advertised automatically.
+  Assets = 1 << 5,
 };
 
 /// @brief Combine two capabilities.
@@ -175,6 +180,8 @@ struct WebSocketServerOptions {
   WebSocketServerCapabilities capabilities = WebSocketServerCapabilities(0);
   /// @brief The supported encodings of the server.
   std::vector<std::string> supported_encodings;
+  /// @brief A fetch asset handler callback.
+  FetchAssetHandler fetch_asset;
 };
 
 /// @brief A WebSocket server for visualization in Foxglove.
@@ -194,6 +201,38 @@ public:
   /// @brief Gracefully shut down the websocket server.
   FoxgloveError stop();
 
+  /// @brief Publishes the current server timestamp to all clients.
+  ///
+  /// Requires the capability WebSocketServerCapabilities::Time.
+  ///
+  /// @param timestamp_nanos An epoch offset in nanoseconds.
+  void broadcastTime(uint64_t timestamp_nanos) const noexcept;
+
+  /// @brief Advertises support for the provided service.
+  ///
+  /// This service will be available for clients to use until it is removed with
+  /// `removeService()`, or the server is stopped.
+  ///
+  /// This method will fail for various reasons, with the following error codes:
+  ///
+  /// - `DuplicateService`: A service with the same name is already registered.
+  /// - `MissingRequestedEncoding`: The service didn't declare a request
+  ///   encoding, and the server was not configured with a global list of
+  ///   supported encodings.
+  /// - `ServicesNotSupported`: The server was not convfigured with the
+  ///   `Services` capability.
+  ///
+  /// @param service The service to add.
+  [[nodiscard]] FoxgloveError addService(Service&& service) const noexcept;
+
+  /// @brief Removes a service that was previously advertised.
+  ///
+  /// This method will fail with `FoxgloveError::Utf8Error` if the service name
+  /// is not a valid UTF-8 string.
+  ///
+  /// @param name The name of the service to remove.
+  [[nodiscard]] FoxgloveError removeService(std::string_view name) const noexcept;
+
   /// @brief Publishes parameter values to all subscribed clients.
   ///
   /// Requires the capability WebSocketServerCapabilities::Parameters.
@@ -210,10 +249,12 @@ public:
 
 private:
   WebSocketServer(
-    foxglove_websocket_server* server, std::unique_ptr<WebSocketServerCallbacks> callbacks
+    foxglove_websocket_server* server, std::unique_ptr<WebSocketServerCallbacks> callbacks,
+    std::unique_ptr<FetchAssetHandler> fetch_asset
   );
 
   std::unique_ptr<WebSocketServerCallbacks> callbacks_;
+  std::unique_ptr<FetchAssetHandler> fetch_asset_;
   std::unique_ptr<foxglove_websocket_server, foxglove_error (*)(foxglove_websocket_server*)> impl_;
 };
 

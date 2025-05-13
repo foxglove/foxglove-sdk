@@ -2,7 +2,6 @@
 #include <foxglove/context.hpp>
 #include <foxglove/error.hpp>
 #include <foxglove/server.hpp>
-#include <foxglove/server/connection_graph.hpp>
 
 #include <type_traits>
 
@@ -22,6 +21,7 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
     options.callbacks.onConnectionGraphUnsubscribe;
 
   std::unique_ptr<WebSocketServerCallbacks> callbacks;
+  std::unique_ptr<FetchAssetHandler> fetch_asset;
 
   foxglove_server_callbacks c_callbacks = {};
 
@@ -29,7 +29,7 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
     callbacks = std::make_unique<WebSocketServerCallbacks>(std::move(options.callbacks));
     c_callbacks.context = callbacks.get();
     if (callbacks->onSubscribe) {
-      c_callbacks.on_subscribe = [](uint64_t channel_id, const void* context) {
+      c_callbacks.on_subscribe = [](const void* context, uint64_t channel_id) {
         try {
           (static_cast<const WebSocketServerCallbacks*>(context))->onSubscribe(channel_id);
         } catch (const std::exception& exc) {
@@ -38,7 +38,7 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
       };
     }
     if (callbacks->onUnsubscribe) {
-      c_callbacks.on_unsubscribe = [](uint64_t channel_id, const void* context) {
+      c_callbacks.on_unsubscribe = [](const void* context, uint64_t channel_id) {
         try {
           (static_cast<const WebSocketServerCallbacks*>(context))->onUnsubscribe(channel_id);
         } catch (const std::exception& exc) {
@@ -48,7 +48,7 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
     }
     if (callbacks->onClientAdvertise) {
       c_callbacks.on_client_advertise =
-        [](uint32_t client_id, const foxglove_client_channel* channel, const void* context) {
+        [](const void* context, uint32_t client_id, const foxglove_client_channel* channel) {
           ClientChannel cpp_channel = {
             channel->id,
             channel->topic,
@@ -68,12 +68,12 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
     }
     if (callbacks->onMessageData) {
       c_callbacks.on_message_data = [](
+                                      const void* context,
                                       // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
                                       uint32_t client_id,
                                       uint32_t client_channel_id,
                                       const uint8_t* payload,
-                                      size_t payload_len,
-                                      const void* context
+                                      size_t payload_len
                                     ) {
         try {
           (static_cast<const WebSocketServerCallbacks*>(context))
@@ -205,36 +205,56 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
     }
   }
 
-  foxglove_server_options c_cptions = {};
-  c_cptions.context = options.context.getInner();
-  c_cptions.name = {options.name.c_str(), options.name.length()};
-  c_cptions.host = {options.host.c_str(), options.host.length()};
-  c_cptions.port = options.port;
-  c_cptions.callbacks = has_any_callbacks ? &c_callbacks : nullptr;
-  c_cptions.capabilities =
+  foxglove_server_options c_options = {};
+  c_options.context = options.context.getInner();
+  c_options.name = {options.name.c_str(), options.name.length()};
+  c_options.host = {options.host.c_str(), options.host.length()};
+  c_options.port = options.port;
+  c_options.callbacks = has_any_callbacks ? &c_callbacks : nullptr;
+  c_options.capabilities =
     static_cast<std::underlying_type_t<decltype(options.capabilities)>>(options.capabilities);
   std::vector<foxglove_string> supported_encodings;
   supported_encodings.reserve(options.supported_encodings.size());
   for (const auto& encoding : options.supported_encodings) {
     supported_encodings.push_back({encoding.c_str(), encoding.length()});
   }
-  c_cptions.supported_encodings = supported_encodings.data();
-  c_cptions.supported_encodings_count = supported_encodings.size();
+  c_options.supported_encodings = supported_encodings.data();
+  c_options.supported_encodings_count = supported_encodings.size();
+  if (options.fetch_asset) {
+    fetch_asset = std::make_unique<FetchAssetHandler>(options.fetch_asset);
+    c_options.fetch_asset_context = fetch_asset.get();
+    c_options.fetch_asset = [](
+                              const void* context,
+                              const struct foxglove_string* c_uri,
+                              struct foxglove_fetch_asset_responder* c_responder
+                            ) {
+      try {
+        const auto* handler = static_cast<const FetchAssetHandler*>(context);
+        std::string_view uri{c_uri->data, c_uri->len};
+        FetchAssetResponder responder(c_responder);
+        (*handler)(uri, std::move(responder));
+      } catch (const std::exception& exc) {
+        warn() << "Fetch asset callback failed: " << exc.what();
+      }
+    };
+  }
 
   foxglove_websocket_server* server = nullptr;
-  foxglove_error error = foxglove_server_start(&c_cptions, &server);
+  foxglove_error error = foxglove_server_start(&c_options, &server);
   if (error != foxglove_error::FOXGLOVE_ERROR_OK || server == nullptr) {
     return foxglove::unexpected(static_cast<FoxgloveError>(error));
   }
 
-  return WebSocketServer(server, std::move(callbacks));
+  return WebSocketServer(server, std::move(callbacks), std::move(fetch_asset));
 }
 
 WebSocketServer::WebSocketServer(
-  foxglove_websocket_server* server, std::unique_ptr<WebSocketServerCallbacks> callbacks
+  foxglove_websocket_server* server, std::unique_ptr<WebSocketServerCallbacks> callbacks,
+  std::unique_ptr<FetchAssetHandler> fetch_asset
 )
     : impl_(server, foxglove_server_stop)
-    , callbacks_(std::move(callbacks)) {}
+    , callbacks_(std::move(callbacks))
+    , fetch_asset_(std::move(fetch_asset)) {}
 
 FoxgloveError WebSocketServer::stop() {
   foxglove_error error = foxglove_server_stop(impl_.release());
@@ -243,6 +263,21 @@ FoxgloveError WebSocketServer::stop() {
 
 uint16_t WebSocketServer::port() const {
   return foxglove_server_get_port(impl_.get());
+}
+
+void WebSocketServer::broadcastTime(uint64_t timestamp_nanos) const noexcept {
+  foxglove_server_broadcast_time(impl_.get(), timestamp_nanos);
+}
+
+// NOLINTNEXTLINE(cppcoreguidelines-rvalue-reference-param-not-moved)
+FoxgloveError WebSocketServer::addService(Service&& service) const noexcept {
+  auto error = foxglove_server_add_service(impl_.get(), service.release());
+  return FoxgloveError(error);
+}
+
+FoxgloveError WebSocketServer::removeService(std::string_view name) const noexcept {
+  auto error = foxglove_server_remove_service(impl_.get(), {name.data(), name.length()});
+  return FoxgloveError(error);
 }
 
 void WebSocketServer::publishParameterValues(std::vector<Parameter>&& params) {
