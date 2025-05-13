@@ -1,0 +1,75 @@
+name: Docs
+
+on:
+  push:
+    branches: [main]
+    tags: ["**"]
+  pull_request: {}
+
+jobs:
+  build-cpp-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ssciwr/doxygen-install@v1
+        with:
+          version: "1.13.2"
+      - run: pipx install poetry
+        working-directory: cpp/foxglove/docs
+      - run: poetry install
+        working-directory: cpp/foxglove/docs
+      - run: make docs
+        working-directory: cpp
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cpp
+          path: ./cpp/build/docs/html
+          if-no-files-found: error
+
+  build-python-docs:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: python/foxglove-sdk
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.9"
+      - run: pipx install poetry
+      - run: poetry install
+      - run: poetry run maturin develop
+      - name: Sphinx build
+        run: |
+          poetry run sphinx-build --fail-on-warning ./python/docs _build
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: python
+          path: ./python/docs/_build
+          if-no-files-found: error
+
+  deploy-docs:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    needs: [build-cpp-docs, build-python-docs]
+    # if: startsWith(github.ref, 'refs/tags/sdk/v')
+    steps:
+      - name: Download C/C++ artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: docs/
+      - run: find ./docs -type f
+      # - name: Deploy to GitHub Pages
+      #   uses: peaceiris/actions-gh-pages@v3
+      #   with:
+      #     # todo: test branch for now
+      #     publish_branch: gh-pages
+      #     github_token: ${{ secrets.GITHUB_TOKEN }}
+      #     # todo...
+      #     publish_dir: python/foxglove-sdk/_build/
+      #     destination_dir: python/
+      #     force_orphan: true
+      #     # keep_files: true
