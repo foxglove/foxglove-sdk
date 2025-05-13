@@ -34,7 +34,9 @@ jobs:
         with:
           version: "1.13.2"
       - run: pipx install poetry
+        working-directory: cpp
       - run: poetry install
+        working-directory: cpp
       - run: make docs
         working-directory: cpp
       - name: Deploy to GitHub Pages
