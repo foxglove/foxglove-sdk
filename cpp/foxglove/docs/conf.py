@@ -22,7 +22,6 @@ release = SDK_VERSION
 
 extensions = ["breathe", "exhale", "sphinxcontrib.jquery"]
 
-templates_path = ["_templates"]
 exclude_patterns = ["expected.hpp"]
 
 primary_domain = "cpp"
