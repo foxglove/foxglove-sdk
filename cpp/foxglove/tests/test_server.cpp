@@ -1384,6 +1384,10 @@ TEST_CASE("Clear session") {
   auto context = foxglove::Context::create();
   auto server = startServer(context);
 
+  // Set an initial session ID.
+  auto error = server.clearSession("initial");
+  REQUIRE(error == foxglove::FoxgloveError::Ok);
+
   WebSocketClient client;
   client.inner().set_open_handler([&](const auto& hdl) {
     std::scoped_lock lock{mutex};
@@ -1424,9 +1428,10 @@ TEST_CASE("Clear session") {
   REQUIRE(parsed["op"] == "serverInfo");
   REQUIRE(parsed.contains("sessionId"));
   std::string session_id1 = parsed["sessionId"].get<std::string>();
+  REQUIRE(session_id1 == "initial");
 
   // Reset the session without specifying a new session ID.
-  auto error = server.clearSession();
+  error = server.clearSession();
   REQUIRE(error == foxglove::FoxgloveError::Ok);
 
   // Wait for the serverInfo message.
