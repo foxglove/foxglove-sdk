@@ -60,6 +60,16 @@ enum class WebSocketServerCapabilities : uint8_t {
   Assets = 1 << 5,
 };
 
+/// @brief Level indicator for a server status message.
+enum class WebSocketServerStatusLevel : uint8_t {
+  /// Info level.
+  Info = 0,
+  /// Warning level.
+  Warning = 1,
+  /// Error level.
+  Error = 2,
+};
+
 /// @brief Combine two capabilities.
 inline WebSocketServerCapabilities operator|(
   WebSocketServerCapabilities a, WebSocketServerCapabilities b
@@ -208,6 +218,17 @@ public:
   /// @param timestamp_nanos An epoch offset in nanoseconds.
   void broadcastTime(uint64_t timestamp_nanos) const noexcept;
 
+  /// @brief Sets a new session ID and notifies all clients, causing them to
+  /// reset their state.
+  ///
+  /// If `session_id` is not provided, generates a new one based on the current
+  /// timestamp.
+  ///
+  /// @param session_id Optional session ID.
+  [[nodiscard]] FoxgloveError clearSession(
+    std::optional<std::string_view> session_id = std::nullopt
+  ) const noexcept;
+
   /// @brief Advertises support for the provided service.
   ///
   /// This service will be available for clients to use until it is removed with
@@ -246,6 +267,29 @@ public:
   ///
   /// This requires the capability WebSocketServerCapabilities::ConnectionGraph
   void publishConnectionGraph(ConnectionGraph& graph);
+
+  /// @brief Publishes a status message to all clients.
+  ///
+  /// The server may send this message at any time. Client developers may use it
+  /// for debugging purposes, display it to the end user, or ignore it.
+  ///
+  /// The caller may optionally provide a message ID, which can be used in a
+  /// subsequent call to `removeStatus()`.
+  ///
+  /// @param level Status level value.
+  /// @param message Status message.
+  /// @param id Optional message ID.
+  [[nodiscard]] FoxgloveError publishStatus(
+    WebSocketServerStatusLevel level, std::string_view message,
+    std::optional<std::string_view> id = std::nullopt
+  ) const noexcept;
+
+  /// @brief Removes status messages from all clients.
+  ///
+  /// Previously published status messages are referenced by ID.
+  ///
+  /// @param ids Message IDs.
+  [[nodiscard]] FoxgloveError removeStatus(const std::vector<std::string_view>& ids) const;
 
 private:
   WebSocketServer(

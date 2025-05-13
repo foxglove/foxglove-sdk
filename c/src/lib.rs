@@ -286,7 +286,7 @@ pub struct FoxgloveServerCallbacks {
     ///
     /// This function should return the named parameters, or all parameters if `param_names` is
     /// empty. The return value must be allocated with `foxglove_parameter_array_create`. Ownership
-    /// of this value is transfered to the callee, who is responsible for freeing it. A NULL return
+    /// of this value is transferred to the callee, who is responsible for freeing it. A NULL return
     /// value is treated as an empty array.
     pub on_get_parameters: Option<
         unsafe extern "C" fn(
@@ -308,7 +308,7 @@ pub struct FoxgloveServerCallbacks {
     /// values, they must be copied out.
     ///
     /// This function should return the updated parameters. The return value must be allocated with
-    /// `foxglove_parameter_array_create`. Ownership of this value is transfered to the callee, who
+    /// `foxglove_parameter_array_create`. Ownership of this value is transferred to the callee, who
     /// is responsible for freeing it. A NULL return value is treated as an empty array.
     ///
     /// All clients subscribed to updates for the returned parameters will be notified.
@@ -499,6 +499,33 @@ pub extern "C" fn foxglove_server_broadcast_time(
     FoxgloveError::Ok
 }
 
+/// Sets a new session ID and notifies all clients, causing them to reset their state.
+///
+/// If `session_id` is not provided, generates a new one based on the current timestamp.
+///
+/// # Safety
+/// - `session_id` must either be NULL, or a valid pointer to a UTF-8 string.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_server_clear_session(
+    server: Option<&FoxgloveWebSocketServer>,
+    session_id: Option<&FoxgloveString>,
+) -> FoxgloveError {
+    let Some(server) = server else {
+        return FoxgloveError::ValueError;
+    };
+    let Some(server) = server.as_ref() else {
+        return FoxgloveError::SinkClosed;
+    };
+    let Ok(session_id) = session_id
+        .map(|id| unsafe { id.as_utf8_str().map(|id| id.to_string()) })
+        .transpose()
+    else {
+        return FoxgloveError::Utf8Error;
+    };
+    server.clear_session(session_id);
+    FoxgloveError::Ok
+}
+
 /// Adds a service to the server.
 ///
 /// # Safety
@@ -634,6 +661,99 @@ pub extern "C" fn foxglove_server_publish_connection_graph(
         Ok(_) => FoxgloveError::Ok,
         Err(e) => FoxgloveError::from(e),
     }
+}
+
+/// Level indicator for a server status message.
+#[derive(Clone, Copy)]
+#[repr(u8)]
+pub enum FoxgloveServerStatusLevel {
+    Info,
+    Warning,
+    Error,
+}
+impl From<FoxgloveServerStatusLevel> for foxglove::websocket::StatusLevel {
+    fn from(value: FoxgloveServerStatusLevel) -> Self {
+        match value {
+            FoxgloveServerStatusLevel::Info => Self::Info,
+            FoxgloveServerStatusLevel::Warning => Self::Warning,
+            FoxgloveServerStatusLevel::Error => Self::Error,
+        }
+    }
+}
+
+/// Publishes a status message to all clients.
+///
+/// The server may send this message at any time. Client developers may use it for debugging
+/// purposes, display it to the end user, or ignore it.
+///
+/// The caller may optionally provide a message ID, which can be used in a subsequent call to
+/// `foxglove_server_remove_status`.
+///
+/// # Safety
+/// - `message` must be a valid pointer to a UTF-8 string, which must remain valid for the duration
+///   of this call.
+/// - `id` must either be NULL, or a valid pointer to a UTF-8 string, which must remain valid for
+///   the duration of this call.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_server_publish_status(
+    server: Option<&mut FoxgloveWebSocketServer>,
+    level: FoxgloveServerStatusLevel,
+    message: FoxgloveString,
+    id: Option<&FoxgloveString>,
+) -> FoxgloveError {
+    let Some(server) = server else {
+        return FoxgloveError::ValueError;
+    };
+    let Some(server) = server.as_ref() else {
+        return FoxgloveError::SinkClosed;
+    };
+    let message = unsafe { message.as_utf8_str() };
+    let Ok(message) = message else {
+        return FoxgloveError::Utf8Error;
+    };
+    let id = id.map(|id| unsafe { id.as_utf8_str() }).transpose();
+    let Ok(id) = id else {
+        return FoxgloveError::Utf8Error;
+    };
+    let mut status = foxglove::websocket::Status::new(level.into(), message);
+    if let Some(id) = id {
+        status = status.with_id(id);
+    }
+    server.publish_status(status);
+    FoxgloveError::Ok
+}
+
+/// Removes status messages from all clients.
+///
+/// Previously published status messages are referenced by ID.
+///
+/// # Safety
+/// - `ids` must be a valid pointer to an array of pointers to valid UTF-8 strings, all of which
+///   must remain valid for the duration of this call.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_server_remove_status(
+    server: Option<&mut FoxgloveWebSocketServer>,
+    ids: *const FoxgloveString,
+    ids_len: usize,
+) -> FoxgloveError {
+    let Some(server) = server else {
+        return FoxgloveError::ValueError;
+    };
+    let Some(server) = server.as_ref() else {
+        return FoxgloveError::SinkClosed;
+    };
+    if ids.is_null() {
+        return FoxgloveError::ValueError;
+    }
+    let ids = unsafe { std::slice::from_raw_parts(ids, ids_len) }
+        .iter()
+        .map(|id| unsafe { id.as_utf8_str().map(|id| id.to_string()) })
+        .collect::<Result<Vec<_>, _>>();
+    let Ok(ids) = ids else {
+        return FoxgloveError::Utf8Error;
+    };
+    server.remove_status(ids);
+    FoxgloveError::Ok
 }
 
 #[repr(u8)]

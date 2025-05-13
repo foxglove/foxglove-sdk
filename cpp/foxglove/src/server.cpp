@@ -269,6 +269,15 @@ void WebSocketServer::broadcastTime(uint64_t timestamp_nanos) const noexcept {
   foxglove_server_broadcast_time(impl_.get(), timestamp_nanos);
 }
 
+FoxgloveError WebSocketServer::clearSession(std::optional<std::string_view> session_id
+) const noexcept {
+  auto c_session_id = session_id
+                        ? std::optional<foxglove_string>{{session_id->data(), session_id->size()}}
+                        : std::nullopt;
+  auto error = foxglove_server_clear_session(impl_.get(), c_session_id ? &*c_session_id : nullptr);
+  return FoxgloveError(error);
+}
+
 // NOLINTNEXTLINE(cppcoreguidelines-rvalue-reference-param-not-moved)
 FoxgloveError WebSocketServer::addService(Service&& service) const noexcept {
   auto error = foxglove_server_add_service(impl_.get(), service.release());
@@ -287,6 +296,29 @@ void WebSocketServer::publishParameterValues(std::vector<Parameter>&& params) {
 
 void WebSocketServer::publishConnectionGraph(ConnectionGraph& graph) {
   foxglove_server_publish_connection_graph(impl_.get(), graph.impl_.get());
+}
+
+FoxgloveError WebSocketServer::publishStatus(
+  WebSocketServerStatusLevel level, std::string_view message, std::optional<std::string_view> id
+) const noexcept {
+  auto c_id = id ? std::optional<foxglove_string>{{id->data(), id->size()}} : std::nullopt;
+  auto error = foxglove_server_publish_status(
+    impl_.get(),
+    static_cast<foxglove_server_status_level>(level),
+    {message.data(), message.size()},
+    c_id ? &*c_id : nullptr
+  );
+  return FoxgloveError(error);
+}
+
+FoxgloveError WebSocketServer::removeStatus(const std::vector<std::string_view>& ids) const {
+  std::vector<foxglove_string> c_ids;
+  c_ids.reserve(ids.size());
+  for (const auto& id : ids) {
+    c_ids.push_back({id.data(), id.size()});
+  }
+  auto error = foxglove_server_remove_status(impl_.get(), c_ids.data(), c_ids.size());
+  return FoxgloveError(error);
 }
 
 }  // namespace foxglove

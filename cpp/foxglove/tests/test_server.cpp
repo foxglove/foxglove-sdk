@@ -1373,3 +1373,217 @@ TEST_CASE("Broadcast time") {
 
   REQUIRE(server.stop() == foxglove::FoxgloveError::Ok);
 }
+
+TEST_CASE("Clear session") {
+  std::mutex mutex;
+  std::condition_variable cv;
+  // the following variables are protected by the mutex:
+  bool connection_opened = false;
+  std::queue<std::string> client_rx;
+
+  auto context = foxglove::Context::create();
+  auto server = startServer(context);
+
+  WebSocketClient client;
+  client.inner().set_open_handler([&](const auto& hdl) {
+    std::scoped_lock lock{mutex};
+    connection_opened = true;
+    cv.notify_one();
+  });
+  client.inner().set_message_handler(
+    [&](const websocketpp::connection_hdl&, const WebSocketMessage& msg) {
+      std::scoped_lock lock{mutex};
+      client_rx.push(msg->get_payload());
+      cv.notify_one();
+    }
+  );
+  client.start(server.port());
+
+  // Wait for the connection to be opened.
+  {
+    std::unique_lock lock{mutex};
+    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
+      return connection_opened;
+    });
+    REQUIRE(wait_result);
+  }
+
+  // Wait for the serverInfo message.
+  std::string payload;
+  {
+    std::unique_lock lock{mutex};
+    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
+      return !client_rx.empty();
+    });
+    REQUIRE(wait_result);
+    payload = client_rx.front();
+    client_rx.pop();
+  }
+  Json parsed = Json::parse(payload);
+  REQUIRE(parsed.contains("op"));
+  REQUIRE(parsed["op"] == "serverInfo");
+  REQUIRE(parsed.contains("sessionId"));
+  std::string session_id1 = parsed["sessionId"].get<std::string>();
+
+  // Reset the session without specifying a new session ID.
+  auto error = server.clearSession();
+  REQUIRE(error == foxglove::FoxgloveError::Ok);
+
+  // Wait for the serverInfo message.
+  {
+    std::unique_lock lock{mutex};
+    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
+      return !client_rx.empty();
+    });
+    REQUIRE(wait_result);
+    payload = client_rx.front();
+    client_rx.pop();
+  }
+  parsed = Json::parse(payload);
+  REQUIRE(parsed.contains("op"));
+  REQUIRE(parsed["op"] == "serverInfo");
+  REQUIRE(parsed.contains("sessionId"));
+  std::string session_id2 = parsed["sessionId"].get<std::string>();
+  REQUIRE(session_id1 != session_id2);
+
+  // Reset the session with an explicit session ID.
+  error = server.clearSession("foo");
+  REQUIRE(error == foxglove::FoxgloveError::Ok);
+
+  // Wait for the serverInfo message.
+  {
+    std::unique_lock lock{mutex};
+    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
+      return !client_rx.empty();
+    });
+    REQUIRE(wait_result);
+    payload = client_rx.front();
+    client_rx.pop();
+  }
+  parsed = Json::parse(payload);
+  REQUIRE(parsed.contains("op"));
+  REQUIRE(parsed["op"] == "serverInfo");
+  REQUIRE(parsed.contains("sessionId"));
+  std::string session_id3 = parsed["sessionId"].get<std::string>();
+  REQUIRE(session_id3 == "foo");
+
+  REQUIRE(server.stop() == foxglove::FoxgloveError::Ok);
+}
+
+TEST_CASE("Publish status") {
+  std::mutex mutex;
+  std::condition_variable cv;
+  // the following variables are protected by the mutex:
+  bool connection_opened = false;
+  std::queue<std::string> client_rx;
+
+  auto context = foxglove::Context::create();
+  auto server = startServer(context);
+
+  WebSocketClient client;
+  client.inner().set_open_handler([&](const auto& hdl) {
+    std::scoped_lock lock{mutex};
+    connection_opened = true;
+    cv.notify_one();
+  });
+  client.inner().set_message_handler(
+    [&](const websocketpp::connection_hdl&, const WebSocketMessage& msg) {
+      std::scoped_lock lock{mutex};
+      client_rx.push(msg->get_payload());
+      cv.notify_one();
+    }
+  );
+  client.start(server.port());
+
+  // Wait for the connection to be opened.
+  {
+    std::unique_lock lock{mutex};
+    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
+      return connection_opened;
+    });
+    REQUIRE(wait_result);
+  }
+
+  // Wait for the serverInfo message.
+  std::string payload;
+  {
+    std::unique_lock lock{mutex};
+    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
+      return !client_rx.empty();
+    });
+    REQUIRE(wait_result);
+    payload = client_rx.front();
+    client_rx.pop();
+  }
+  Json parsed = Json::parse(payload);
+  REQUIRE(parsed.contains("op"));
+  REQUIRE(parsed["op"] == "serverInfo");
+
+  // Publish status without an ID.
+  auto error = server.publishStatus(foxglove::WebSocketServerStatusLevel::Info, "hooray");
+  REQUIRE(error == foxglove::FoxgloveError::Ok);
+
+  // Wait for status message.
+  {
+    std::unique_lock lock{mutex};
+    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
+      return !client_rx.empty();
+    });
+    REQUIRE(wait_result);
+    payload = client_rx.front();
+    client_rx.pop();
+  }
+  parsed = Json::parse(payload);
+  auto expected = Json::parse(R"({
+      "op": "status",
+      "level": 0,
+      "message": "hooray"
+    })");
+  REQUIRE(parsed == expected);
+
+  // Publish status with an ID.
+  error = server.publishStatus(foxglove::WebSocketServerStatusLevel::Warning, "oh no", "id1");
+  REQUIRE(error == foxglove::FoxgloveError::Ok);
+
+  // Wait for status message.
+  {
+    std::unique_lock lock{mutex};
+    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
+      return !client_rx.empty();
+    });
+    REQUIRE(wait_result);
+    payload = client_rx.front();
+    client_rx.pop();
+  }
+  parsed = Json::parse(payload);
+  expected = Json::parse(R"({
+      "op": "status",
+      "level": 1,
+      "message": "oh no",
+      "id": "id1"
+    })");
+  REQUIRE(parsed == expected);
+
+  // Remove status messages by ID.
+  error = server.removeStatus({"id1", "id2"});
+  REQUIRE(error == foxglove::FoxgloveError::Ok);
+
+  // Wait for removeStatus message.
+  {
+    std::unique_lock lock{mutex};
+    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
+      return !client_rx.empty();
+    });
+    REQUIRE(wait_result);
+    payload = client_rx.front();
+    client_rx.pop();
+  }
+  parsed = Json::parse(payload);
+  expected = Json::parse(R"({
+      "op": "removeStatus",
+      "statusIds": ["id1", "id2"]
+    })");
+  REQUIRE(parsed == expected);
+
+  REQUIRE(server.stop() == foxglove::FoxgloveError::Ok);
+}

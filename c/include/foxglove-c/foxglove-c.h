@@ -160,6 +160,22 @@ enum foxglove_parameter_value_tag
 typedef uint8_t foxglove_parameter_value_tag;
 #endif // __cplusplus
 
+/**
+ * Level indicator for a server status message.
+ */
+enum foxglove_server_status_level
+#ifdef __cplusplus
+  : uint8_t
+#endif // __cplusplus
+ {
+  FOXGLOVE_SERVER_STATUS_LEVEL_INFO,
+  FOXGLOVE_SERVER_STATUS_LEVEL_WARNING,
+  FOXGLOVE_SERVER_STATUS_LEVEL_ERROR,
+};
+#ifndef __cplusplus
+typedef uint8_t foxglove_server_status_level;
+#endif // __cplusplus
+
 typedef struct foxglove_channel foxglove_channel;
 
 typedef struct foxglove_connection_graph foxglove_connection_graph;
@@ -352,7 +368,7 @@ typedef struct foxglove_server_callbacks {
    *
    * This function should return the named parameters, or all parameters if `param_names` is
    * empty. The return value must be allocated with `foxglove_parameter_array_create`. Ownership
-   * of this value is transfered to the callee, who is responsible for freeing it. A NULL return
+   * of this value is transferred to the callee, who is responsible for freeing it. A NULL return
    * value is treated as an empty array.
    */
   struct foxglove_parameter_array *(*on_get_parameters)(const void *context,
@@ -372,7 +388,7 @@ typedef struct foxglove_server_callbacks {
    * values, they must be copied out.
    *
    * This function should return the updated parameters. The return value must be allocated with
-   * `foxglove_parameter_array_create`. Ownership of this value is transfered to the callee, who
+   * `foxglove_parameter_array_create`. Ownership of this value is transferred to the callee, who
    * is responsible for freeing it. A NULL return value is treated as an empty array.
    *
    * All clients subscribed to updates for the returned parameters will be notified.
@@ -589,6 +605,17 @@ foxglove_error foxglove_server_broadcast_time(const struct foxglove_websocket_se
                                               uint64_t timestamp_nanos);
 
 /**
+ * Sets a new session ID and notifies all clients, causing them to reset their state.
+ *
+ * If `session_id` is not provided, generates a new one based on the current timestamp.
+ *
+ * # Safety
+ * - `session_id` must either be NULL, or a valid pointer to a UTF-8 string.
+ */
+foxglove_error foxglove_server_clear_session(const struct foxglove_websocket_server *server,
+                                             const struct foxglove_string *session_id);
+
+/**
  * Adds a service to the server.
  *
  * # Safety
@@ -634,6 +661,39 @@ foxglove_error foxglove_server_publish_parameter_values(struct foxglove_websocke
  */
 foxglove_error foxglove_server_publish_connection_graph(struct foxglove_websocket_server *server,
                                                         struct foxglove_connection_graph *graph);
+
+/**
+ * Publishes a status message to all clients.
+ *
+ * The server may send this message at any time. Client developers may use it for debugging
+ * purposes, display it to the end user, or ignore it.
+ *
+ * The caller may optionally provide a message ID, which can be used in a subsequent call to
+ * `foxglove_server_remove_status`.
+ *
+ * # Safety
+ * - `message` must be a valid pointer to a UTF-8 string, which must remain valid for the duration
+ *   of this call.
+ * - `id` must either be NULL, or a valid pointer to a UTF-8 string, which must remain valid for
+ *   the duration of this call.
+ */
+foxglove_error foxglove_server_publish_status(struct foxglove_websocket_server *server,
+                                              foxglove_server_status_level level,
+                                              struct foxglove_string message,
+                                              const struct foxglove_string *id);
+
+/**
+ * Removes status messages from all clients.
+ *
+ * Previously published status messages are referenced by ID.
+ *
+ * # Safety
+ * - `ids` must be a valid pointer to an array of pointers to valid UTF-8 strings, all of which
+ *   must remain valid for the duration of this call.
+ */
+foxglove_error foxglove_server_remove_status(struct foxglove_websocket_server *server,
+                                             const struct foxglove_string *ids,
+                                             size_t ids_len);
 
 /**
  * Create or open an MCAP file for writing.
