@@ -693,7 +693,7 @@ foxglove_error foxglove_server_publish_status(struct foxglove_websocket_server *
  */
 foxglove_error foxglove_server_remove_status(struct foxglove_websocket_server *server,
                                              const struct foxglove_string *ids,
-                                             size_t ids_len);
+                                             size_t ids_count);
 
 /**
  * Create or open an MCAP file for writing.

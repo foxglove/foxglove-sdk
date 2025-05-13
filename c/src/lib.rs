@@ -734,7 +734,7 @@ pub unsafe extern "C" fn foxglove_server_publish_status(
 pub unsafe extern "C" fn foxglove_server_remove_status(
     server: Option<&mut FoxgloveWebSocketServer>,
     ids: *const FoxgloveString,
-    ids_len: usize,
+    ids_count: usize,
 ) -> FoxgloveError {
     let Some(server) = server else {
         return FoxgloveError::ValueError;
@@ -745,7 +745,7 @@ pub unsafe extern "C" fn foxglove_server_remove_status(
     if ids.is_null() {
         return FoxgloveError::ValueError;
     }
-    let ids = unsafe { std::slice::from_raw_parts(ids, ids_len) }
+    let ids = unsafe { std::slice::from_raw_parts(ids, ids_count) }
         .iter()
         .map(|id| unsafe { id.as_utf8_str().map(|id| id.to_string()) })
         .collect::<Result<Vec<_>, _>>();
