@@ -10,7 +10,7 @@ import os
 import sys
 
 sys.path.append(os.path.abspath("."))
-from version import SDK_VERSION
+from version import SDK_VERSION  # noqa: E402
 
 project = "Foxglove SDK"
 copyright = "2025, Foxglove"

@@ -33,6 +33,8 @@ jobs:
       - uses: ssciwr/doxygen-install@v1
         with:
           version: "1.13.2"
+      - run: pipx install poetry
+      - run: poetry install
       - run: make docs
         working-directory: cpp
 
