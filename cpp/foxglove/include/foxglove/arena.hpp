@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <cstdlib>
 #include <memory>
 #include <new>
 #include <type_traits>
@@ -17,6 +18,8 @@ namespace foxglove {
  */
 class Arena {
 public:
+  static constexpr std::size_t Size = 128 * 1024;  // 128 KB
+
   Arena()
       : _offset(0) {}
 
@@ -64,23 +67,6 @@ public:
   }
 
   /**
-   * Returns how many bytes are currently used in the arena.
-   */
-  size_t used() const {
-    return _offset;
-  }
-
-  /**
-   * Returns how many bytes are available in the arena.
-   */
-  size_t available() const {
-    return Size - _offset;
-  }
-
-private:
-  static constexpr std::size_t Size = 256 * 1024;  // 256 KB
-
-  /**
    * Allocates memory for an object of type T from the arena.
    *
    * @param elements Number of elements to allocate
@@ -99,7 +85,8 @@ private:
 
     // Check if we have enough space
     if (aligned_offset + bytes_needed > Size) {
-      throw std::bad_alloc();
+      _overflow.emplace_back(static_cast<char*>(::aligned_alloc(alignment, bytes_needed)));
+      return reinterpret_cast<T*>(_overflow.back().get());
     }
 
     // Get pointer to the aligned result array of T
@@ -109,8 +96,30 @@ private:
     return result;
   }
 
+  /**
+   * Returns how many bytes are currently used in the arena.
+   */
+  size_t used() const {
+    return _offset;
+  }
+
+  /**
+   * Returns how many bytes are available in the arena.
+   */
+  size_t available() const {
+    return Size - _offset;
+  }
+
+private:
+  struct Deleter {
+    void operator()(char* ptr) const {
+      free(ptr);
+    }
+  };
+
   alignas(std::max_align_t) uint8_t _buffer[Size];
   std::size_t _offset;
+  std::vector<std::unique_ptr<char, Deleter>> _overflow;
 };
 
 }  // namespace foxglove
