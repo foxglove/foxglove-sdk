@@ -4,8 +4,10 @@
 
 use bitflags::bitflags;
 use connection_graph::FoxgloveConnectionGraph;
+use fetch_asset::{FetchAssetHandler, FoxgloveFetchAssetResponder};
 pub use logging::foxglove_set_log_level;
 use mcap::{Compression, WriteOptions};
+use service::FoxgloveService;
 use std::ffi::{c_char, c_void, CString};
 use std::fs::File;
 use std::io::BufWriter;
@@ -20,8 +22,10 @@ mod util;
 pub use generated_types::*;
 mod bytes;
 mod connection_graph;
+mod fetch_asset;
 mod logging;
 mod parameter;
+mod service;
 
 use parameter::FoxgloveParameterArray;
 
@@ -89,7 +93,7 @@ impl FoxgloveStringBuf {
         let mut str = ManuallyDrop::new(str);
         str.shrink_to_fit();
         Self(FoxgloveString {
-            data: str.as_ptr().cast(),
+            data: str.as_mut_ptr().cast(),
             len: str.len(),
         })
     }
@@ -162,6 +166,9 @@ pub const FOXGLOVE_SERVER_CAPABILITY_PARAMETERS: u8 = 1 << 2;
 pub const FOXGLOVE_SERVER_CAPABILITY_TIME: u8 = 1 << 3;
 /// Allow clients to call services.
 pub const FOXGLOVE_SERVER_CAPABILITY_SERVICES: u8 = 1 << 4;
+/// Allow clients to request assets. If you supply an asset handler to the server, this capability
+/// will be advertised automatically.
+pub const FOXGLOVE_SERVER_CAPABILITY_ASSETS: u8 = 1 << 5;
 
 bitflags! {
     #[derive(Clone, Copy, PartialEq, Eq)]
@@ -171,6 +178,7 @@ bitflags! {
         const Parameters = FOXGLOVE_SERVER_CAPABILITY_PARAMETERS;
         const Time = FOXGLOVE_SERVER_CAPABILITY_TIME;
         const Services = FOXGLOVE_SERVER_CAPABILITY_SERVICES;
+        const Assets = FOXGLOVE_SERVER_CAPABILITY_ASSETS;
     }
 }
 
@@ -189,6 +197,9 @@ impl FoxgloveServerCapabilityBitFlags {
             FoxgloveServerCapabilityBitFlags::Time => Some(foxglove::websocket::Capability::Time),
             FoxgloveServerCapabilityBitFlags::Services => {
                 Some(foxglove::websocket::Capability::Services)
+            }
+            FoxgloveServerCapabilityBitFlags::Assets => {
+                Some(foxglove::websocket::Capability::Assets)
             }
             _ => None,
         })
@@ -213,6 +224,35 @@ pub struct FoxgloveServerOptions<'a> {
     pub capabilities: FoxgloveServerCapability,
     pub supported_encodings: *const FoxgloveString,
     pub supported_encodings_count: usize,
+
+    /// Context provided to the `fetch_asset` callback.
+    pub fetch_asset_context: *const c_void,
+
+    /// Fetch an asset with the given URI and return it via the responder.
+    ///
+    /// This method is invoked from the client's main poll loop and must not block. If blocking or
+    /// long-running behavior is required, the implementation should return immediately and handle
+    /// the request asynchronously.
+    ///
+    /// The `uri` provided to the callback is only valid for the duration of the callback. If the
+    /// implementation wishes to retain its data for a longer lifetime, it must copy data out of
+    /// it.
+    ///
+    /// The `responder` provided to the callback represents an unfulfilled response. The
+    /// implementation must eventually call either `foxglove_fetch_asset_respond_ok` or
+    /// `foxglove_fetch_asset_respond_error`, exactly once, in order to complete the request. It is
+    /// safe to invoke these completion functions synchronously from the context of the callback.
+    ///
+    /// # Safety
+    /// - If provided, the handler callback must be a pointer to the fetch asset callback function,
+    ///   and must remain valid until the server is stopped.
+    pub fetch_asset: Option<
+        unsafe extern "C" fn(
+            context: *const c_void,
+            uri: *const FoxgloveString,
+            responder: *mut FoxgloveFetchAssetResponder,
+        ),
+    >,
 }
 
 #[repr(C)]
@@ -231,22 +271,22 @@ pub struct FoxgloveClientChannel {
 pub struct FoxgloveServerCallbacks {
     /// A user-defined value that will be passed to callback functions
     pub context: *const c_void,
-    pub on_subscribe: Option<unsafe extern "C" fn(channel_id: u64, context: *const c_void)>,
-    pub on_unsubscribe: Option<unsafe extern "C" fn(channel_id: u64, context: *const c_void)>,
+    pub on_subscribe: Option<unsafe extern "C" fn(context: *const c_void, channel_id: u64)>,
+    pub on_unsubscribe: Option<unsafe extern "C" fn(context: *const c_void, channel_id: u64)>,
     pub on_client_advertise: Option<
         unsafe extern "C" fn(
+            context: *const c_void,
             client_id: u32,
             channel: *const FoxgloveClientChannel,
-            context: *const c_void,
         ),
     >,
     pub on_message_data: Option<
         unsafe extern "C" fn(
+            context: *const c_void,
             client_id: u32,
             client_channel_id: u32,
             payload: *const u8,
             payload_len: usize,
-            context: *const c_void,
         ),
     >,
     pub on_client_unadvertise: Option<
@@ -264,7 +304,7 @@ pub struct FoxgloveServerCallbacks {
     ///
     /// This function should return the named parameters, or all parameters if `param_names` is
     /// empty. The return value must be allocated with `foxglove_parameter_array_create`. Ownership
-    /// of this value is transfered to the callee, who is responsible for freeing it. A NULL return
+    /// of this value is transferred to the callee, who is responsible for freeing it. A NULL return
     /// value is treated as an empty array.
     pub on_get_parameters: Option<
         unsafe extern "C" fn(
@@ -286,7 +326,7 @@ pub struct FoxgloveServerCallbacks {
     /// values, they must be copied out.
     ///
     /// This function should return the updated parameters. The return value must be allocated with
-    /// `foxglove_parameter_array_create`. Ownership of this value is transfered to the callee, who
+    /// `foxglove_parameter_array_create`. Ownership of this value is transferred to the callee, who
     /// is responsible for freeing it. A NULL return value is treated as an empty array.
     ///
     /// All clients subscribed to updates for the returned parameters will be notified.
@@ -338,6 +378,24 @@ pub struct FoxgloveSchema {
     pub encoding: FoxgloveString,
     pub data: *const u8,
     pub data_len: usize,
+}
+impl FoxgloveSchema {
+    /// Converts a schema to the native type.
+    ///
+    /// # Safety
+    /// - `name` must be a valid pointer to a UTF-8 string.
+    /// - `encoding` must be a valid pointer to a UTF-8 string.
+    /// - `data` must be a valid pointer to a buffer of `data_len` bytes.
+    unsafe fn to_native(&self) -> Result<foxglove::Schema, foxglove::FoxgloveError> {
+        let name = unsafe { self.name.as_utf8_str() }.map_err(|e| {
+            foxglove::FoxgloveError::Utf8Error(format!("schema name invalid: {}", e))
+        })?;
+        let encoding = unsafe { self.encoding.as_utf8_str() }.map_err(|e| {
+            foxglove::FoxgloveError::Utf8Error(format!("schema encoding invalid: {}", e))
+        })?;
+        let data = unsafe { std::slice::from_raw_parts(self.data, self.data_len) };
+        Ok(foxglove::Schema::new(name, encoding, data.to_owned()))
+    }
 }
 
 pub struct FoxgloveWebSocketServer(Option<foxglove::WebSocketServerHandle>);
@@ -425,6 +483,12 @@ unsafe fn do_foxglove_server_start(
     if let Some(callbacks) = options.callbacks {
         server = server.listener(Arc::new(callbacks.clone()))
     }
+    if let Some(fetch_asset) = options.fetch_asset {
+        server = server.fetch_asset_handler(Box::new(FetchAssetHandler::new(
+            options.fetch_asset_context,
+            fetch_asset,
+        )));
+    }
     if !options.context.is_null() {
         let context = ManuallyDrop::new(unsafe { Arc::from_raw(options.context) });
         server = server.context(&context);
@@ -433,6 +497,103 @@ unsafe fn do_foxglove_server_start(
     Ok(Box::into_raw(Box::new(FoxgloveWebSocketServer(Some(
         server,
     )))))
+}
+
+/// Publishes the current server timestamp to all clients.
+///
+/// Requires the `FOXGLOVE_CAPABILITY_TIME` capability.
+#[unsafe(no_mangle)]
+pub extern "C" fn foxglove_server_broadcast_time(
+    server: Option<&FoxgloveWebSocketServer>,
+    timestamp_nanos: u64,
+) -> FoxgloveError {
+    let Some(server) = server else {
+        return FoxgloveError::ValueError;
+    };
+    let Some(server) = server.as_ref() else {
+        return FoxgloveError::SinkClosed;
+    };
+    server.broadcast_time(timestamp_nanos);
+    FoxgloveError::Ok
+}
+
+/// Sets a new session ID and notifies all clients, causing them to reset their state.
+///
+/// If `session_id` is not provided, generates a new one based on the current timestamp.
+///
+/// # Safety
+/// - `session_id` must either be NULL, or a valid pointer to a UTF-8 string.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_server_clear_session(
+    server: Option<&FoxgloveWebSocketServer>,
+    session_id: Option<&FoxgloveString>,
+) -> FoxgloveError {
+    let Some(server) = server else {
+        return FoxgloveError::ValueError;
+    };
+    let Some(server) = server.as_ref() else {
+        return FoxgloveError::SinkClosed;
+    };
+    let Ok(session_id) = session_id
+        .map(|id| unsafe { id.as_utf8_str().map(|id| id.to_string()) })
+        .transpose()
+    else {
+        return FoxgloveError::Utf8Error;
+    };
+    server.clear_session(session_id);
+    FoxgloveError::Ok
+}
+
+/// Adds a service to the server.
+///
+/// # Safety
+/// - `server` must be a valid pointer to a server started with `foxglove_server_start`.
+/// - `service` must be a valid pointer to a service allocated by `foxglove_service_create`. This
+///   value is moved into this function, and must not be accessed afterwards.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_server_add_service(
+    server: Option<&FoxgloveWebSocketServer>,
+    service: *mut FoxgloveService,
+) -> FoxgloveError {
+    let Some(server) = server else {
+        return FoxgloveError::ValueError;
+    };
+    if service.is_null() {
+        return FoxgloveError::ValueError;
+    }
+    let Some(server) = server.as_ref() else {
+        return FoxgloveError::SinkClosed;
+    };
+    let service = unsafe { FoxgloveService::from_raw(service) };
+    server
+        .add_services([service.into_inner()])
+        .err()
+        .map(FoxgloveError::from)
+        .unwrap_or(FoxgloveError::Ok)
+}
+
+/// Removes a service from the server.
+///
+/// # Safety
+/// - `server` must be a valid pointer to a server started with `foxglove_server_start`.
+/// - `service_name` must be a valid pointer to a UTF-8 string.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_server_remove_service(
+    server: Option<&FoxgloveWebSocketServer>,
+    service_name: FoxgloveString,
+) -> FoxgloveError {
+    let Some(server) = server else {
+        return FoxgloveError::ValueError;
+    };
+    let Some(server) = server.as_ref() else {
+        return FoxgloveError::SinkClosed;
+    };
+    let service_name = unsafe { service_name.as_utf8_str() };
+    let Ok(service_name) = service_name else {
+        return FoxgloveError::Utf8Error;
+    };
+    server.remove_services([service_name]);
+    FoxgloveError::Ok
 }
 
 /// Get the port on which the server is listening.
@@ -518,6 +679,99 @@ pub extern "C" fn foxglove_server_publish_connection_graph(
         Ok(_) => FoxgloveError::Ok,
         Err(e) => FoxgloveError::from(e),
     }
+}
+
+/// Level indicator for a server status message.
+#[derive(Clone, Copy)]
+#[repr(u8)]
+pub enum FoxgloveServerStatusLevel {
+    Info,
+    Warning,
+    Error,
+}
+impl From<FoxgloveServerStatusLevel> for foxglove::websocket::StatusLevel {
+    fn from(value: FoxgloveServerStatusLevel) -> Self {
+        match value {
+            FoxgloveServerStatusLevel::Info => Self::Info,
+            FoxgloveServerStatusLevel::Warning => Self::Warning,
+            FoxgloveServerStatusLevel::Error => Self::Error,
+        }
+    }
+}
+
+/// Publishes a status message to all clients.
+///
+/// The server may send this message at any time. Client developers may use it for debugging
+/// purposes, display it to the end user, or ignore it.
+///
+/// The caller may optionally provide a message ID, which can be used in a subsequent call to
+/// `foxglove_server_remove_status`.
+///
+/// # Safety
+/// - `message` must be a valid pointer to a UTF-8 string, which must remain valid for the duration
+///   of this call.
+/// - `id` must either be NULL, or a valid pointer to a UTF-8 string, which must remain valid for
+///   the duration of this call.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_server_publish_status(
+    server: Option<&mut FoxgloveWebSocketServer>,
+    level: FoxgloveServerStatusLevel,
+    message: FoxgloveString,
+    id: Option<&FoxgloveString>,
+) -> FoxgloveError {
+    let Some(server) = server else {
+        return FoxgloveError::ValueError;
+    };
+    let Some(server) = server.as_ref() else {
+        return FoxgloveError::SinkClosed;
+    };
+    let message = unsafe { message.as_utf8_str() };
+    let Ok(message) = message else {
+        return FoxgloveError::Utf8Error;
+    };
+    let id = id.map(|id| unsafe { id.as_utf8_str() }).transpose();
+    let Ok(id) = id else {
+        return FoxgloveError::Utf8Error;
+    };
+    let mut status = foxglove::websocket::Status::new(level.into(), message);
+    if let Some(id) = id {
+        status = status.with_id(id);
+    }
+    server.publish_status(status);
+    FoxgloveError::Ok
+}
+
+/// Removes status messages from all clients.
+///
+/// Previously published status messages are referenced by ID.
+///
+/// # Safety
+/// - `ids` must be a valid pointer to an array of pointers to valid UTF-8 strings, all of which
+///   must remain valid for the duration of this call.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_server_remove_status(
+    server: Option<&mut FoxgloveWebSocketServer>,
+    ids: *const FoxgloveString,
+    ids_count: usize,
+) -> FoxgloveError {
+    let Some(server) = server else {
+        return FoxgloveError::ValueError;
+    };
+    let Some(server) = server.as_ref() else {
+        return FoxgloveError::SinkClosed;
+    };
+    if ids.is_null() {
+        return FoxgloveError::ValueError;
+    }
+    let ids = unsafe { std::slice::from_raw_parts(ids, ids_count) }
+        .iter()
+        .map(|id| unsafe { id.as_utf8_str().map(|id| id.to_string()) })
+        .collect::<Result<Vec<_>, _>>();
+    let Ok(ids) = ids else {
+        return FoxgloveError::Utf8Error;
+    };
+    server.remove_status(ids);
+    FoxgloveError::Ok
 }
 
 #[repr(u8)]
@@ -717,15 +971,8 @@ unsafe fn do_foxglove_raw_channel_create(
 
     let mut maybe_schema = None;
     if let Some(schema) = unsafe { schema.as_ref() } {
-        let name = unsafe { schema.name.as_utf8_str() }.map_err(|e| {
-            foxglove::FoxgloveError::Utf8Error(format!("schema name invalid: {}", e))
-        })?;
-        let encoding = unsafe { schema.encoding.as_utf8_str() }.map_err(|e| {
-            foxglove::FoxgloveError::Utf8Error(format!("schema encoding invalid: {}", e))
-        })?;
-
-        let data = unsafe { std::slice::from_raw_parts(schema.data, schema.data_len) };
-        maybe_schema = Some(foxglove::Schema::new(name, encoding, data.to_owned()));
+        let schema = unsafe { schema.to_native() }?;
+        maybe_schema = Some(schema);
     }
 
     let mut builder = foxglove::ChannelBuilder::new(topic)
@@ -873,7 +1120,7 @@ impl foxglove::websocket::ServerListener for FoxgloveServerCallbacks {
         channel: foxglove::websocket::ChannelView,
     ) {
         if let Some(on_subscribe) = self.on_subscribe {
-            unsafe { on_subscribe(u64::from(channel.id()), self.context) };
+            unsafe { on_subscribe(self.context, channel.id().into()) };
         }
     }
 
@@ -883,7 +1130,7 @@ impl foxglove::websocket::ServerListener for FoxgloveServerCallbacks {
         channel: foxglove::websocket::ChannelView,
     ) {
         if let Some(on_unsubscribe) = self.on_unsubscribe {
-            unsafe { on_unsubscribe(u64::from(channel.id()), self.context) };
+            unsafe { on_unsubscribe(self.context, channel.id().into()) };
         }
     }
 
@@ -922,7 +1169,7 @@ impl foxglove::websocket::ServerListener for FoxgloveServerCallbacks {
                 .map(|schema| schema.len())
                 .unwrap_or(0),
         };
-        unsafe { on_client_advertise(client.id().into(), &c_channel, self.context) };
+        unsafe { on_client_advertise(self.context, client.id().into(), &c_channel) };
     }
 
     fn on_message_data(
@@ -934,11 +1181,11 @@ impl foxglove::websocket::ServerListener for FoxgloveServerCallbacks {
         if let Some(on_message_data) = self.on_message_data {
             unsafe {
                 on_message_data(
+                    self.context,
                     client.id().into(),
                     channel.id.into(),
                     payload.as_ptr(),
                     payload.len(),
-                    self.context,
                 )
             };
         }

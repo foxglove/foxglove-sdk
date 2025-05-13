@@ -49,6 +49,12 @@
  */
 #define FOXGLOVE_SERVER_CAPABILITY_SERVICES (1 << 4)
 
+/**
+ * Allow clients to request assets. If you supply an asset handler to the server, this capability
+ * will be advertised automatically.
+ */
+#define FOXGLOVE_SERVER_CAPABILITY_ASSETS (1 << 5)
+
 enum foxglove_error
 #ifdef __cplusplus
   : uint8_t
@@ -105,6 +111,11 @@ enum foxglove_log_level
 typedef int32_t foxglove_log_level;
 #endif // __cplusplus
 
+/**
+ * Logging level for the Foxglove SDK.
+ *
+ * Used with `foxglove_set_log_level`.
+ */
 enum foxglove_logging_level
 #ifdef __cplusplus
   : uint8_t
@@ -243,13 +254,35 @@ enum foxglove_scene_entity_deletion_type
 typedef int32_t foxglove_scene_entity_deletion_type;
 #endif // __cplusplus
 
+/**
+ * Level indicator for a server status message.
+ */
+enum foxglove_server_status_level
+#ifdef __cplusplus
+  : uint8_t
+#endif // __cplusplus
+ {
+  FOXGLOVE_SERVER_STATUS_LEVEL_INFO,
+  FOXGLOVE_SERVER_STATUS_LEVEL_WARNING,
+  FOXGLOVE_SERVER_STATUS_LEVEL_ERROR,
+};
+#ifndef __cplusplus
+typedef uint8_t foxglove_server_status_level;
+#endif // __cplusplus
+
 typedef struct foxglove_channel foxglove_channel;
 
 typedef struct foxglove_connection_graph foxglove_connection_graph;
 
 typedef struct foxglove_context foxglove_context;
 
+typedef struct foxglove_fetch_asset_responder foxglove_fetch_asset_responder;
+
 typedef struct foxglove_mcap_writer foxglove_mcap_writer;
+
+typedef struct foxglove_service foxglove_service;
+
+typedef struct foxglove_service_responder foxglove_service_responder;
 
 typedef struct foxglove_websocket_server foxglove_websocket_server;
 
@@ -405,16 +438,16 @@ typedef struct foxglove_server_callbacks {
    * A user-defined value that will be passed to callback functions
    */
   const void *context;
-  void (*on_subscribe)(uint64_t channel_id, const void *context);
-  void (*on_unsubscribe)(uint64_t channel_id, const void *context);
-  void (*on_client_advertise)(uint32_t client_id,
-                              const struct foxglove_client_channel *channel,
-                              const void *context);
-  void (*on_message_data)(uint32_t client_id,
+  void (*on_subscribe)(const void *context, uint64_t channel_id);
+  void (*on_unsubscribe)(const void *context, uint64_t channel_id);
+  void (*on_client_advertise)(const void *context,
+                              uint32_t client_id,
+                              const struct foxglove_client_channel *channel);
+  void (*on_message_data)(const void *context,
+                          uint32_t client_id,
                           uint32_t client_channel_id,
                           const uint8_t *payload,
-                          size_t payload_len,
-                          const void *context);
+                          size_t payload_len);
   void (*on_client_unadvertise)(uint32_t client_id, uint32_t client_channel_id, const void *context);
   /**
    * Callback invoked when a client requests parameters.
@@ -429,7 +462,7 @@ typedef struct foxglove_server_callbacks {
    *
    * This function should return the named parameters, or all parameters if `param_names` is
    * empty. The return value must be allocated with `foxglove_parameter_array_create`. Ownership
-   * of this value is transfered to the callee, who is responsible for freeing it. A NULL return
+   * of this value is transferred to the callee, who is responsible for freeing it. A NULL return
    * value is treated as an empty array.
    */
   struct foxglove_parameter_array *(*on_get_parameters)(const void *context,
@@ -449,7 +482,7 @@ typedef struct foxglove_server_callbacks {
    * values, they must be copied out.
    *
    * This function should return the updated parameters. The return value must be allocated with
-   * `foxglove_parameter_array_create`. Ownership of this value is transfered to the callee, who
+   * `foxglove_parameter_array_create`. Ownership of this value is transferred to the callee, who
    * is responsible for freeing it. A NULL return value is treated as an empty array.
    *
    * All clients subscribed to updates for the returned parameters will be notified.
@@ -501,6 +534,33 @@ typedef struct foxglove_server_options {
   foxglove_server_capability capabilities;
   const struct foxglove_string *supported_encodings;
   size_t supported_encodings_count;
+  /**
+   * Context provided to the `fetch_asset` callback.
+   */
+  const void *fetch_asset_context;
+  /**
+   * Fetch an asset with the given URI and return it via the responder.
+   *
+   * This method is invoked from the client's main poll loop and must not block. If blocking or
+   * long-running behavior is required, the implementation should return immediately and handle
+   * the request asynchronously.
+   *
+   * The `uri` provided to the callback is only valid for the duration of the callback. If the
+   * implementation wishes to retain its data for a longer lifetime, it must copy data out of
+   * it.
+   *
+   * The `responder` provided to the callback represents an unfulfilled response. The
+   * implementation must eventually call either `foxglove_fetch_asset_respond_ok` or
+   * `foxglove_fetch_asset_respond_error`, exactly once, in order to complete the request. It is
+   * safe to invoke these completion functions synchronously from the context of the callback.
+   *
+   * # Safety
+   * - If provided, the handler callback must be a pointer to the fetch asset callback function,
+   *   and must remain valid until the server is stopped.
+   */
+  void (*fetch_asset)(const void *context,
+                      const struct foxglove_string *uri,
+                      struct foxglove_fetch_asset_responder *responder);
 } foxglove_server_options;
 
 typedef struct foxglove_mcap_options {
@@ -1674,6 +1734,64 @@ typedef struct foxglove_bytes {
   size_t len;
 } foxglove_bytes;
 
+/**
+ * A schema describing either a websocket service request or response.
+ */
+typedef struct foxglove_service_message_schema {
+  /**
+   * The message encoding.
+   */
+  struct foxglove_string encoding;
+  /**
+   * The message schema.
+   */
+  struct foxglove_schema schema;
+} foxglove_service_message_schema;
+
+/**
+ * A websocket service schema.
+ */
+typedef struct foxglove_service_schema {
+  /**
+   * Service schema name.
+   */
+  struct foxglove_string name;
+  /**
+   * Optional request message schema.
+   */
+  const struct foxglove_service_message_schema *request;
+  /**
+   * Optional response message schema.
+   */
+  const struct foxglove_service_message_schema *response;
+} foxglove_service_schema;
+
+/**
+ * A websocket service request message.
+ */
+typedef struct foxglove_service_request {
+  /**
+   * The service name.
+   */
+  struct foxglove_string service_name;
+  /**
+   * The client ID.
+   */
+  uint32_t client_id;
+  /**
+   * The call ID that uniquely identifies this request for this client.
+   */
+  uint32_t call_id;
+  /**
+   * The request encoding.
+   */
+  struct foxglove_string encoding;
+  /**
+   * The request payload.
+   */
+  struct foxglove_bytes payload;
+} foxglove_service_request;
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
@@ -1695,6 +1813,46 @@ extern "C" {
  */
 foxglove_error foxglove_server_start(const struct foxglove_server_options *FOXGLOVE_NONNULL options,
                                      struct foxglove_websocket_server **server);
+
+/**
+ * Publishes the current server timestamp to all clients.
+ *
+ * Requires the `FOXGLOVE_CAPABILITY_TIME` capability.
+ */
+foxglove_error foxglove_server_broadcast_time(const struct foxglove_websocket_server *server,
+                                              uint64_t timestamp_nanos);
+
+/**
+ * Sets a new session ID and notifies all clients, causing them to reset their state.
+ *
+ * If `session_id` is not provided, generates a new one based on the current timestamp.
+ *
+ * # Safety
+ * - `session_id` must either be NULL, or a valid pointer to a UTF-8 string.
+ */
+foxglove_error foxglove_server_clear_session(const struct foxglove_websocket_server *server,
+                                             const struct foxglove_string *session_id);
+
+/**
+ * Adds a service to the server.
+ *
+ * # Safety
+ * - `server` must be a valid pointer to a server started with `foxglove_server_start`.
+ * - `service` must be a valid pointer to a service allocated by `foxglove_service_create`. This
+ *   value is moved into this function, and must not be accessed afterwards.
+ */
+foxglove_error foxglove_server_add_service(const struct foxglove_websocket_server *server,
+                                           struct foxglove_service *service);
+
+/**
+ * Removes a service from the server.
+ *
+ * # Safety
+ * - `server` must be a valid pointer to a server started with `foxglove_server_start`.
+ * - `service_name` must be a valid pointer to a UTF-8 string.
+ */
+foxglove_error foxglove_server_remove_service(const struct foxglove_websocket_server *server,
+                                              struct foxglove_string service_name);
 
 /**
  * Get the port on which the server is listening.
@@ -1721,6 +1879,39 @@ foxglove_error foxglove_server_publish_parameter_values(struct foxglove_websocke
  */
 foxglove_error foxglove_server_publish_connection_graph(struct foxglove_websocket_server *server,
                                                         struct foxglove_connection_graph *graph);
+
+/**
+ * Publishes a status message to all clients.
+ *
+ * The server may send this message at any time. Client developers may use it for debugging
+ * purposes, display it to the end user, or ignore it.
+ *
+ * The caller may optionally provide a message ID, which can be used in a subsequent call to
+ * `foxglove_server_remove_status`.
+ *
+ * # Safety
+ * - `message` must be a valid pointer to a UTF-8 string, which must remain valid for the duration
+ *   of this call.
+ * - `id` must either be NULL, or a valid pointer to a UTF-8 string, which must remain valid for
+ *   the duration of this call.
+ */
+foxglove_error foxglove_server_publish_status(struct foxglove_websocket_server *server,
+                                              foxglove_server_status_level level,
+                                              struct foxglove_string message,
+                                              const struct foxglove_string *id);
+
+/**
+ * Removes status messages from all clients.
+ *
+ * Previously published status messages are referenced by ID.
+ *
+ * # Safety
+ * - `ids` must be a valid pointer to an array of pointers to valid UTF-8 strings, all of which
+ *   must remain valid for the duration of this call.
+ */
+foxglove_error foxglove_server_remove_status(struct foxglove_websocket_server *server,
+                                             const struct foxglove_string *ids,
+                                             size_t ids_count);
 
 /**
  * Create or open an MCAP file for writing.
@@ -2350,6 +2541,30 @@ foxglove_error foxglove_connection_graph_set_advertised_service(struct foxglove_
                                                                 size_t provider_ids_count);
 
 /**
+ * Completes a fetch asset request by sending asset data to the client.
+ *
+ * # Safety
+ * - `responder` must be a pointer to a `foxglove_fetch_asset_responder` obtained via the
+ *   `foxglove_server_options.fetch_asset` callback. This value is moved into this
+ *   function, and must not accessed afterwards.
+ * - `data` must be a pointer to the response data. This value is copied by this function.
+ */
+void foxglove_fetch_asset_respond_ok(struct foxglove_fetch_asset_responder *responder,
+                                     struct foxglove_bytes data);
+
+/**
+ * Completes a request by sending an error message to the client.
+ *
+ * # Safety
+ * - `responder` must be a pointer to a `foxglove_fetch_asset_responder` obtained via the
+ *   `foxglove_server_options.fetch_asset` callback. This value is moved into this
+ *   function, and must not accessed afterwards.
+ * - `message` must be a pointer to a valid UTF-8 string. This value is copied by this function.
+ */
+void foxglove_fetch_asset_respond_error(struct foxglove_fetch_asset_responder *responder,
+                                        struct foxglove_string message);
+
+/**
  * Initialize SDK logging with the given severity level.
  *
  * The SDK logs informational messages to stderr. Any messages below the given level are not
@@ -2695,6 +2910,84 @@ foxglove_error foxglove_parameter_value_dict_insert(struct foxglove_parameter_va
  * - `dict` is a valid pointer to a value allocated by `foxglove_parameter_value_dict_create`.
  */
 void foxglove_parameter_value_dict_free(struct foxglove_parameter_value_dict *dict);
+
+/**
+ * Creates a new websocket service.
+ *
+ * The service must be registered with a websocket server using `foxglove_server_add_service`, or
+ * freed with `foxglove_service_free`.
+ *
+ * The callback is invoked from the client's main poll loop and must not block. If blocking or
+ * long-running behavior is required, the implementation should return immediately and handle the
+ * request asynchronously.
+ *
+ * The `request` structure provided to the callback is only valid for the duration of the
+ * callback. If the implementation wishes to retain its data for a longer lifetime, it must copy
+ * data out of it.
+ *
+ * The `responder` provided to the callback represents an unfulfilled response. The implementation
+ * must eventually call either `foxglove_service_respond_ok` or `foxglove_service_respond_error`,
+ * exactly once, in order to complete the request. It is safe to invoke these completion functions
+ * synchronously from the context of the callback.
+ *
+ * # Safety
+ * - `service` must be a valid pointer.
+ * - `name` must be a valid pointer to a UTF-8 string.
+ * - `schema` must be NULL, or a valid pointer to a service schema.
+ * - `callback` must be a valid pointer to a service callback function, which must remain valid
+ *   until the service is either unregistered or freed.
+ */
+foxglove_error foxglove_service_create(struct foxglove_service **service,
+                                       struct foxglove_string name,
+                                       const struct foxglove_service_schema *schema,
+                                       const void *context,
+                                       void (*callback)(const void *context,
+                                                        const struct foxglove_service_request *request,
+                                                        struct foxglove_service_responder *responder));
+
+/**
+ * Frees a service that was never registered to a websocket server.
+ *
+ * # Safety
+ * - `service` must be a valid pointer to a service allocated by `foxglove_service_create`. The
+ *   service MUST NOT have been previously registered with a websocket server.
+ */
+void foxglove_service_free(struct foxglove_service *service);
+
+/**
+ * Overrides the default response encoding.
+ *
+ * # Safety
+ * - `responder` must be a pointer to a `foxglove_service_responder` obtained via the
+ *   `foxglove_service.handler` callback.
+ * - `encoding` must be a pointer to a valid UTF-8 string. This value is copied by this function.
+ */
+foxglove_error foxglove_service_set_response_encoding(struct foxglove_service_responder *responder,
+                                                      struct foxglove_string encoding);
+
+/**
+ * Completes a request by sending response data to the client.
+ *
+ * # Safety
+ * - `responder` must be a pointer to a `foxglove_service_responder` obtained via the
+ *   `foxglove_service.handler` callback. This value is moved into this function, and must not
+ *   accessed afterwards.
+ * - `data` must be a pointer to the response data. This value is copied by this function.
+ */
+void foxglove_service_respond_ok(struct foxglove_service_responder *responder,
+                                 struct foxglove_bytes data);
+
+/**
+ * Completes a request by sending an error message to the client.
+ *
+ * # Safety
+ * - `responder` must be a pointer to a `foxglove_service_responder` obtained via the
+ *   `foxglove_service.handler` callback. This value is moved into this function, and must not
+ *   accessed afterwards.
+ * - `message` must be a pointer to a valid UTF-8 string. This value is copied by this function.
+ */
+void foxglove_service_respond_error(struct foxglove_service_responder *responder,
+                                    struct foxglove_string message);
 
 #ifdef __cplusplus
 }  // extern "C"

@@ -184,17 +184,19 @@ export function generateHppSchemas(
         ///
         /// @param value The ${schema.name} message to log.
         /// @param log_time The timestamp of the message. If omitted, the current time is used.
-        FoxgloveError log(const ${schema.name}& value, std::optional<uint64_t> log_time = std::nullopt);
+        FoxgloveError log(const ${schema.name}& value, std::optional<uint64_t> log_time = std::nullopt) noexcept;
 
         /// @brief Uniquely identifies a channel in the context of this program.
         ///
         /// @return The ID of the channel.
-        [[nodiscard]] uint64_t id() const;
+        [[nodiscard]] uint64_t id() const noexcept;
 
         ${schema.name}Channel(const ${schema.name}Channel& other) noexcept = delete;
         ${schema.name}Channel& operator=(const ${schema.name}Channel& other) noexcept = delete;
         /// @brief Default move constructor.
         ${schema.name}Channel(${schema.name}Channel&& other) noexcept = default;
+        /// @brief Default move assignment.
+        ${schema.name}Channel& operator=(${schema.name}Channel&& other) noexcept = default;
         /// @brief Default destructor.
         ~${schema.name}Channel() = default;
 
@@ -349,10 +351,10 @@ export function generateCppSchemas(schemas: FoxgloveMessageSchema[]): string {
       "    }",
       `    return ${schema.name}Channel(ChannelUniquePtr(channel));`,
       "}\n",
-      `FoxgloveError ${schema.name}Channel::log(const ${schema.name}& msg, std::optional<uint64_t> log_time) {`,
+      `FoxgloveError ${schema.name}Channel::log(const ${schema.name}& msg, std::optional<uint64_t> log_time) noexcept {`,
       ...conversionCode,
       "}\n",
-      `uint64_t ${schema.name}Channel::id() const {`,
+      `uint64_t ${schema.name}Channel::id() const noexcept {`,
       "    return foxglove_channel_get_id(impl_.get());",
       "}\n\n",
     ];

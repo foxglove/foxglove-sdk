@@ -33,13 +33,13 @@ FoxgloveResult<RawChannel> RawChannel::create(
 RawChannel::RawChannel(const foxglove_channel* channel)
     : impl_(channel) {}
 
-uint64_t RawChannel::id() const {
+uint64_t RawChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
 FoxgloveError RawChannel::log(
   const std::byte* data, size_t data_len, std::optional<uint64_t> log_time
-) {
+) noexcept {
   foxglove_error error = foxglove_channel_log(
     impl_.get(), reinterpret_cast<const uint8_t*>(data), data_len, log_time ? &*log_time : nullptr
   );

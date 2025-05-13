@@ -80,7 +80,7 @@ FoxgloveResult<CameraCalibrationChannel> CameraCalibrationChannel::create(
 
 FoxgloveError CameraCalibrationChannel::log(
   const CameraCalibration& msg, std::optional<uint64_t> log_time
-) {
+) noexcept {
   Arena arena;
   foxglove_camera_calibration c_msg;
   cameraCalibrationToC(c_msg, msg, arena);
@@ -89,7 +89,7 @@ FoxgloveError CameraCalibrationChannel::log(
   );
 }
 
-uint64_t CameraCalibrationChannel::id() const {
+uint64_t CameraCalibrationChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
@@ -108,7 +108,7 @@ FoxgloveResult<CircleAnnotationChannel> CircleAnnotationChannel::create(
 
 FoxgloveError CircleAnnotationChannel::log(
   const CircleAnnotation& msg, std::optional<uint64_t> log_time
-) {
+) noexcept {
   Arena arena;
   foxglove_circle_annotation c_msg;
   circleAnnotationToC(c_msg, msg, arena);
@@ -117,7 +117,7 @@ FoxgloveError CircleAnnotationChannel::log(
   );
 }
 
-uint64_t CircleAnnotationChannel::id() const {
+uint64_t CircleAnnotationChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
@@ -136,7 +136,7 @@ FoxgloveResult<CompressedImageChannel> CompressedImageChannel::create(
 
 FoxgloveError CompressedImageChannel::log(
   const CompressedImage& msg, std::optional<uint64_t> log_time
-) {
+) noexcept {
   Arena arena;
   foxglove_compressed_image c_msg;
   compressedImageToC(c_msg, msg, arena);
@@ -145,7 +145,7 @@ FoxgloveError CompressedImageChannel::log(
   );
 }
 
-uint64_t CompressedImageChannel::id() const {
+uint64_t CompressedImageChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
@@ -164,7 +164,7 @@ FoxgloveResult<CompressedVideoChannel> CompressedVideoChannel::create(
 
 FoxgloveError CompressedVideoChannel::log(
   const CompressedVideo& msg, std::optional<uint64_t> log_time
-) {
+) noexcept {
   Arena arena;
   foxglove_compressed_video c_msg;
   compressedVideoToC(c_msg, msg, arena);
@@ -173,7 +173,7 @@ FoxgloveError CompressedVideoChannel::log(
   );
 }
 
-uint64_t CompressedVideoChannel::id() const {
+uint64_t CompressedVideoChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
@@ -192,7 +192,7 @@ FoxgloveResult<FrameTransformChannel> FrameTransformChannel::create(
 
 FoxgloveError FrameTransformChannel::log(
   const FrameTransform& msg, std::optional<uint64_t> log_time
-) {
+) noexcept {
   Arena arena;
   foxglove_frame_transform c_msg;
   frameTransformToC(c_msg, msg, arena);
@@ -201,7 +201,7 @@ FoxgloveError FrameTransformChannel::log(
   );
 }
 
-uint64_t FrameTransformChannel::id() const {
+uint64_t FrameTransformChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
@@ -220,7 +220,7 @@ FoxgloveResult<FrameTransformsChannel> FrameTransformsChannel::create(
 
 FoxgloveError FrameTransformsChannel::log(
   const FrameTransforms& msg, std::optional<uint64_t> log_time
-) {
+) noexcept {
   Arena arena;
   foxglove_frame_transforms c_msg;
   frameTransformsToC(c_msg, msg, arena);
@@ -229,7 +229,7 @@ FoxgloveError FrameTransformsChannel::log(
   );
 }
 
-uint64_t FrameTransformsChannel::id() const {
+uint64_t FrameTransformsChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
@@ -245,7 +245,7 @@ FoxgloveResult<GeoJSONChannel> GeoJSONChannel::create(
   return GeoJSONChannel(ChannelUniquePtr(channel));
 }
 
-FoxgloveError GeoJSONChannel::log(const GeoJSON& msg, std::optional<uint64_t> log_time) {
+FoxgloveError GeoJSONChannel::log(const GeoJSON& msg, std::optional<uint64_t> log_time) noexcept {
   Arena arena;
   foxglove_geo_json c_msg;
   geoJSONToC(c_msg, msg, arena);
@@ -254,7 +254,7 @@ FoxgloveError GeoJSONChannel::log(const GeoJSON& msg, std::optional<uint64_t> lo
   );
 }
 
-uint64_t GeoJSONChannel::id() const {
+uint64_t GeoJSONChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
@@ -270,7 +270,7 @@ FoxgloveResult<GridChannel> GridChannel::create(
   return GridChannel(ChannelUniquePtr(channel));
 }
 
-FoxgloveError GridChannel::log(const Grid& msg, std::optional<uint64_t> log_time) {
+FoxgloveError GridChannel::log(const Grid& msg, std::optional<uint64_t> log_time) noexcept {
   Arena arena;
   foxglove_grid c_msg;
   gridToC(c_msg, msg, arena);
@@ -279,7 +279,7 @@ FoxgloveError GridChannel::log(const Grid& msg, std::optional<uint64_t> log_time
   );
 }
 
-uint64_t GridChannel::id() const {
+uint64_t GridChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
@@ -298,7 +298,7 @@ FoxgloveResult<ImageAnnotationsChannel> ImageAnnotationsChannel::create(
 
 FoxgloveError ImageAnnotationsChannel::log(
   const ImageAnnotations& msg, std::optional<uint64_t> log_time
-) {
+) noexcept {
   Arena arena;
   foxglove_image_annotations c_msg;
   imageAnnotationsToC(c_msg, msg, arena);
@@ -307,7 +307,7 @@ FoxgloveError ImageAnnotationsChannel::log(
   );
 }
 
-uint64_t ImageAnnotationsChannel::id() const {
+uint64_t ImageAnnotationsChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
@@ -324,7 +324,9 @@ FoxgloveResult<KeyValuePairChannel> KeyValuePairChannel::create(
   return KeyValuePairChannel(ChannelUniquePtr(channel));
 }
 
-FoxgloveError KeyValuePairChannel::log(const KeyValuePair& msg, std::optional<uint64_t> log_time) {
+FoxgloveError KeyValuePairChannel::log(
+  const KeyValuePair& msg, std::optional<uint64_t> log_time
+) noexcept {
   Arena arena;
   foxglove_key_value_pair c_msg;
   keyValuePairToC(c_msg, msg, arena);
@@ -333,7 +335,7 @@ FoxgloveError KeyValuePairChannel::log(const KeyValuePair& msg, std::optional<ui
   );
 }
 
-uint64_t KeyValuePairChannel::id() const {
+uint64_t KeyValuePairChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
@@ -349,7 +351,9 @@ FoxgloveResult<LaserScanChannel> LaserScanChannel::create(
   return LaserScanChannel(ChannelUniquePtr(channel));
 }
 
-FoxgloveError LaserScanChannel::log(const LaserScan& msg, std::optional<uint64_t> log_time) {
+FoxgloveError LaserScanChannel::log(
+  const LaserScan& msg, std::optional<uint64_t> log_time
+) noexcept {
   Arena arena;
   foxglove_laser_scan c_msg;
   laserScanToC(c_msg, msg, arena);
@@ -358,7 +362,7 @@ FoxgloveError LaserScanChannel::log(const LaserScan& msg, std::optional<uint64_t
   );
 }
 
-uint64_t LaserScanChannel::id() const {
+uint64_t LaserScanChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
@@ -375,7 +379,9 @@ FoxgloveResult<LocationFixChannel> LocationFixChannel::create(
   return LocationFixChannel(ChannelUniquePtr(channel));
 }
 
-FoxgloveError LocationFixChannel::log(const LocationFix& msg, std::optional<uint64_t> log_time) {
+FoxgloveError LocationFixChannel::log(
+  const LocationFix& msg, std::optional<uint64_t> log_time
+) noexcept {
   Arena arena;
   foxglove_location_fix c_msg;
   locationFixToC(c_msg, msg, arena);
@@ -384,7 +390,7 @@ FoxgloveError LocationFixChannel::log(const LocationFix& msg, std::optional<uint
   );
 }
 
-uint64_t LocationFixChannel::id() const {
+uint64_t LocationFixChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
@@ -400,7 +406,7 @@ FoxgloveResult<LogChannel> LogChannel::create(
   return LogChannel(ChannelUniquePtr(channel));
 }
 
-FoxgloveError LogChannel::log(const Log& msg, std::optional<uint64_t> log_time) {
+FoxgloveError LogChannel::log(const Log& msg, std::optional<uint64_t> log_time) noexcept {
   Arena arena;
   foxglove_log c_msg;
   logToC(c_msg, msg, arena);
@@ -409,7 +415,7 @@ FoxgloveError LogChannel::log(const Log& msg, std::optional<uint64_t> log_time) 
   );
 }
 
-uint64_t LogChannel::id() const {
+uint64_t LogChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
@@ -428,7 +434,7 @@ FoxgloveResult<PackedElementFieldChannel> PackedElementFieldChannel::create(
 
 FoxgloveError PackedElementFieldChannel::log(
   const PackedElementField& msg, std::optional<uint64_t> log_time
-) {
+) noexcept {
   Arena arena;
   foxglove_packed_element_field c_msg;
   packedElementFieldToC(c_msg, msg, arena);
@@ -437,7 +443,7 @@ FoxgloveError PackedElementFieldChannel::log(
   );
 }
 
-uint64_t PackedElementFieldChannel::id() const {
+uint64_t PackedElementFieldChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
@@ -453,13 +459,13 @@ FoxgloveResult<Point2Channel> Point2Channel::create(
   return Point2Channel(ChannelUniquePtr(channel));
 }
 
-FoxgloveError Point2Channel::log(const Point2& msg, std::optional<uint64_t> log_time) {
+FoxgloveError Point2Channel::log(const Point2& msg, std::optional<uint64_t> log_time) noexcept {
   return FoxgloveError(foxglove_channel_log_point2(
     impl_.get(), reinterpret_cast<const foxglove_point2*>(&msg), log_time ? &*log_time : nullptr
   ));
 }
 
-uint64_t Point2Channel::id() const {
+uint64_t Point2Channel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
@@ -475,13 +481,13 @@ FoxgloveResult<Point3Channel> Point3Channel::create(
   return Point3Channel(ChannelUniquePtr(channel));
 }
 
-FoxgloveError Point3Channel::log(const Point3& msg, std::optional<uint64_t> log_time) {
+FoxgloveError Point3Channel::log(const Point3& msg, std::optional<uint64_t> log_time) noexcept {
   return FoxgloveError(foxglove_channel_log_point3(
     impl_.get(), reinterpret_cast<const foxglove_point3*>(&msg), log_time ? &*log_time : nullptr
   ));
 }
 
-uint64_t Point3Channel::id() const {
+uint64_t Point3Channel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
@@ -497,7 +503,9 @@ FoxgloveResult<PointCloudChannel> PointCloudChannel::create(
   return PointCloudChannel(ChannelUniquePtr(channel));
 }
 
-FoxgloveError PointCloudChannel::log(const PointCloud& msg, std::optional<uint64_t> log_time) {
+FoxgloveError PointCloudChannel::log(
+  const PointCloud& msg, std::optional<uint64_t> log_time
+) noexcept {
   Arena arena;
   foxglove_point_cloud c_msg;
   pointCloudToC(c_msg, msg, arena);
@@ -506,7 +514,7 @@ FoxgloveError PointCloudChannel::log(const PointCloud& msg, std::optional<uint64
   );
 }
 
-uint64_t PointCloudChannel::id() const {
+uint64_t PointCloudChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
@@ -525,7 +533,7 @@ FoxgloveResult<PointsAnnotationChannel> PointsAnnotationChannel::create(
 
 FoxgloveError PointsAnnotationChannel::log(
   const PointsAnnotation& msg, std::optional<uint64_t> log_time
-) {
+) noexcept {
   Arena arena;
   foxglove_points_annotation c_msg;
   pointsAnnotationToC(c_msg, msg, arena);
@@ -534,7 +542,7 @@ FoxgloveError PointsAnnotationChannel::log(
   );
 }
 
-uint64_t PointsAnnotationChannel::id() const {
+uint64_t PointsAnnotationChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
@@ -550,7 +558,7 @@ FoxgloveResult<PoseChannel> PoseChannel::create(
   return PoseChannel(ChannelUniquePtr(channel));
 }
 
-FoxgloveError PoseChannel::log(const Pose& msg, std::optional<uint64_t> log_time) {
+FoxgloveError PoseChannel::log(const Pose& msg, std::optional<uint64_t> log_time) noexcept {
   Arena arena;
   foxglove_pose c_msg;
   poseToC(c_msg, msg, arena);
@@ -559,7 +567,7 @@ FoxgloveError PoseChannel::log(const Pose& msg, std::optional<uint64_t> log_time
   );
 }
 
-uint64_t PoseChannel::id() const {
+uint64_t PoseChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
@@ -576,7 +584,9 @@ FoxgloveResult<PoseInFrameChannel> PoseInFrameChannel::create(
   return PoseInFrameChannel(ChannelUniquePtr(channel));
 }
 
-FoxgloveError PoseInFrameChannel::log(const PoseInFrame& msg, std::optional<uint64_t> log_time) {
+FoxgloveError PoseInFrameChannel::log(
+  const PoseInFrame& msg, std::optional<uint64_t> log_time
+) noexcept {
   Arena arena;
   foxglove_pose_in_frame c_msg;
   poseInFrameToC(c_msg, msg, arena);
@@ -585,7 +595,7 @@ FoxgloveError PoseInFrameChannel::log(const PoseInFrame& msg, std::optional<uint
   );
 }
 
-uint64_t PoseInFrameChannel::id() const {
+uint64_t PoseInFrameChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
@@ -602,7 +612,9 @@ FoxgloveResult<PosesInFrameChannel> PosesInFrameChannel::create(
   return PosesInFrameChannel(ChannelUniquePtr(channel));
 }
 
-FoxgloveError PosesInFrameChannel::log(const PosesInFrame& msg, std::optional<uint64_t> log_time) {
+FoxgloveError PosesInFrameChannel::log(
+  const PosesInFrame& msg, std::optional<uint64_t> log_time
+) noexcept {
   Arena arena;
   foxglove_poses_in_frame c_msg;
   posesInFrameToC(c_msg, msg, arena);
@@ -611,7 +623,7 @@ FoxgloveError PosesInFrameChannel::log(const PosesInFrame& msg, std::optional<ui
   );
 }
 
-uint64_t PosesInFrameChannel::id() const {
+uint64_t PosesInFrameChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
@@ -627,13 +639,15 @@ FoxgloveResult<QuaternionChannel> QuaternionChannel::create(
   return QuaternionChannel(ChannelUniquePtr(channel));
 }
 
-FoxgloveError QuaternionChannel::log(const Quaternion& msg, std::optional<uint64_t> log_time) {
+FoxgloveError QuaternionChannel::log(
+  const Quaternion& msg, std::optional<uint64_t> log_time
+) noexcept {
   return FoxgloveError(foxglove_channel_log_quaternion(
     impl_.get(), reinterpret_cast<const foxglove_quaternion*>(&msg), log_time ? &*log_time : nullptr
   ));
 }
 
-uint64_t QuaternionChannel::id() const {
+uint64_t QuaternionChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
@@ -649,7 +663,7 @@ FoxgloveResult<RawAudioChannel> RawAudioChannel::create(
   return RawAudioChannel(ChannelUniquePtr(channel));
 }
 
-FoxgloveError RawAudioChannel::log(const RawAudio& msg, std::optional<uint64_t> log_time) {
+FoxgloveError RawAudioChannel::log(const RawAudio& msg, std::optional<uint64_t> log_time) noexcept {
   Arena arena;
   foxglove_raw_audio c_msg;
   rawAudioToC(c_msg, msg, arena);
@@ -658,7 +672,7 @@ FoxgloveError RawAudioChannel::log(const RawAudio& msg, std::optional<uint64_t> 
   );
 }
 
-uint64_t RawAudioChannel::id() const {
+uint64_t RawAudioChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
@@ -674,7 +688,7 @@ FoxgloveResult<RawImageChannel> RawImageChannel::create(
   return RawImageChannel(ChannelUniquePtr(channel));
 }
 
-FoxgloveError RawImageChannel::log(const RawImage& msg, std::optional<uint64_t> log_time) {
+FoxgloveError RawImageChannel::log(const RawImage& msg, std::optional<uint64_t> log_time) noexcept {
   Arena arena;
   foxglove_raw_image c_msg;
   rawImageToC(c_msg, msg, arena);
@@ -683,7 +697,7 @@ FoxgloveError RawImageChannel::log(const RawImage& msg, std::optional<uint64_t> 
   );
 }
 
-uint64_t RawImageChannel::id() const {
+uint64_t RawImageChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
@@ -700,7 +714,9 @@ FoxgloveResult<SceneEntityChannel> SceneEntityChannel::create(
   return SceneEntityChannel(ChannelUniquePtr(channel));
 }
 
-FoxgloveError SceneEntityChannel::log(const SceneEntity& msg, std::optional<uint64_t> log_time) {
+FoxgloveError SceneEntityChannel::log(
+  const SceneEntity& msg, std::optional<uint64_t> log_time
+) noexcept {
   Arena arena;
   foxglove_scene_entity c_msg;
   sceneEntityToC(c_msg, msg, arena);
@@ -709,7 +725,7 @@ FoxgloveError SceneEntityChannel::log(const SceneEntity& msg, std::optional<uint
   );
 }
 
-uint64_t SceneEntityChannel::id() const {
+uint64_t SceneEntityChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
@@ -728,7 +744,7 @@ FoxgloveResult<SceneEntityDeletionChannel> SceneEntityDeletionChannel::create(
 
 FoxgloveError SceneEntityDeletionChannel::log(
   const SceneEntityDeletion& msg, std::optional<uint64_t> log_time
-) {
+) noexcept {
   Arena arena;
   foxglove_scene_entity_deletion c_msg;
   sceneEntityDeletionToC(c_msg, msg, arena);
@@ -737,7 +753,7 @@ FoxgloveError SceneEntityDeletionChannel::log(
   );
 }
 
-uint64_t SceneEntityDeletionChannel::id() const {
+uint64_t SceneEntityDeletionChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
@@ -754,7 +770,9 @@ FoxgloveResult<SceneUpdateChannel> SceneUpdateChannel::create(
   return SceneUpdateChannel(ChannelUniquePtr(channel));
 }
 
-FoxgloveError SceneUpdateChannel::log(const SceneUpdate& msg, std::optional<uint64_t> log_time) {
+FoxgloveError SceneUpdateChannel::log(
+  const SceneUpdate& msg, std::optional<uint64_t> log_time
+) noexcept {
   Arena arena;
   foxglove_scene_update c_msg;
   sceneUpdateToC(c_msg, msg, arena);
@@ -763,7 +781,7 @@ FoxgloveError SceneUpdateChannel::log(const SceneUpdate& msg, std::optional<uint
   );
 }
 
-uint64_t SceneUpdateChannel::id() const {
+uint64_t SceneUpdateChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
@@ -782,7 +800,7 @@ FoxgloveResult<TextAnnotationChannel> TextAnnotationChannel::create(
 
 FoxgloveError TextAnnotationChannel::log(
   const TextAnnotation& msg, std::optional<uint64_t> log_time
-) {
+) noexcept {
   Arena arena;
   foxglove_text_annotation c_msg;
   textAnnotationToC(c_msg, msg, arena);
@@ -791,7 +809,7 @@ FoxgloveError TextAnnotationChannel::log(
   );
 }
 
-uint64_t TextAnnotationChannel::id() const {
+uint64_t TextAnnotationChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
@@ -807,13 +825,13 @@ FoxgloveResult<Vector2Channel> Vector2Channel::create(
   return Vector2Channel(ChannelUniquePtr(channel));
 }
 
-FoxgloveError Vector2Channel::log(const Vector2& msg, std::optional<uint64_t> log_time) {
+FoxgloveError Vector2Channel::log(const Vector2& msg, std::optional<uint64_t> log_time) noexcept {
   return FoxgloveError(foxglove_channel_log_vector2(
     impl_.get(), reinterpret_cast<const foxglove_vector2*>(&msg), log_time ? &*log_time : nullptr
   ));
 }
 
-uint64_t Vector2Channel::id() const {
+uint64_t Vector2Channel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
@@ -829,13 +847,13 @@ FoxgloveResult<Vector3Channel> Vector3Channel::create(
   return Vector3Channel(ChannelUniquePtr(channel));
 }
 
-FoxgloveError Vector3Channel::log(const Vector3& msg, std::optional<uint64_t> log_time) {
+FoxgloveError Vector3Channel::log(const Vector3& msg, std::optional<uint64_t> log_time) noexcept {
   return FoxgloveError(foxglove_channel_log_vector3(
     impl_.get(), reinterpret_cast<const foxglove_vector3*>(&msg), log_time ? &*log_time : nullptr
   ));
 }
 
-uint64_t Vector3Channel::id() const {
+uint64_t Vector3Channel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 

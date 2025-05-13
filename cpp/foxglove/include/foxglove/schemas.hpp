@@ -951,17 +951,19 @@ public:
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
   FoxgloveError log(
     const CameraCalibration& value, std::optional<uint64_t> log_time = std::nullopt
-  );
+  ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.
-  [[nodiscard]] uint64_t id() const;
+  [[nodiscard]] uint64_t id() const noexcept;
 
   CameraCalibrationChannel(const CameraCalibrationChannel& other) noexcept = delete;
   CameraCalibrationChannel& operator=(const CameraCalibrationChannel& other) noexcept = delete;
   /// @brief Default move constructor.
   CameraCalibrationChannel(CameraCalibrationChannel&& other) noexcept = default;
+  /// @brief Default move assignment.
+  CameraCalibrationChannel& operator=(CameraCalibrationChannel&& other) noexcept = default;
   /// @brief Default destructor.
   ~CameraCalibrationChannel() = default;
 
@@ -989,17 +991,21 @@ public:
   ///
   /// @param value The CircleAnnotation message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
-  FoxgloveError log(const CircleAnnotation& value, std::optional<uint64_t> log_time = std::nullopt);
+  FoxgloveError log(
+    const CircleAnnotation& value, std::optional<uint64_t> log_time = std::nullopt
+  ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.
-  [[nodiscard]] uint64_t id() const;
+  [[nodiscard]] uint64_t id() const noexcept;
 
   CircleAnnotationChannel(const CircleAnnotationChannel& other) noexcept = delete;
   CircleAnnotationChannel& operator=(const CircleAnnotationChannel& other) noexcept = delete;
   /// @brief Default move constructor.
   CircleAnnotationChannel(CircleAnnotationChannel&& other) noexcept = default;
+  /// @brief Default move assignment.
+  CircleAnnotationChannel& operator=(CircleAnnotationChannel&& other) noexcept = default;
   /// @brief Default destructor.
   ~CircleAnnotationChannel() = default;
 
@@ -1027,17 +1033,21 @@ public:
   ///
   /// @param value The CompressedImage message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
-  FoxgloveError log(const CompressedImage& value, std::optional<uint64_t> log_time = std::nullopt);
+  FoxgloveError log(
+    const CompressedImage& value, std::optional<uint64_t> log_time = std::nullopt
+  ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.
-  [[nodiscard]] uint64_t id() const;
+  [[nodiscard]] uint64_t id() const noexcept;
 
   CompressedImageChannel(const CompressedImageChannel& other) noexcept = delete;
   CompressedImageChannel& operator=(const CompressedImageChannel& other) noexcept = delete;
   /// @brief Default move constructor.
   CompressedImageChannel(CompressedImageChannel&& other) noexcept = default;
+  /// @brief Default move assignment.
+  CompressedImageChannel& operator=(CompressedImageChannel&& other) noexcept = default;
   /// @brief Default destructor.
   ~CompressedImageChannel() = default;
 
@@ -1065,17 +1075,21 @@ public:
   ///
   /// @param value The CompressedVideo message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
-  FoxgloveError log(const CompressedVideo& value, std::optional<uint64_t> log_time = std::nullopt);
+  FoxgloveError log(
+    const CompressedVideo& value, std::optional<uint64_t> log_time = std::nullopt
+  ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.
-  [[nodiscard]] uint64_t id() const;
+  [[nodiscard]] uint64_t id() const noexcept;
 
   CompressedVideoChannel(const CompressedVideoChannel& other) noexcept = delete;
   CompressedVideoChannel& operator=(const CompressedVideoChannel& other) noexcept = delete;
   /// @brief Default move constructor.
   CompressedVideoChannel(CompressedVideoChannel&& other) noexcept = default;
+  /// @brief Default move assignment.
+  CompressedVideoChannel& operator=(CompressedVideoChannel&& other) noexcept = default;
   /// @brief Default destructor.
   ~CompressedVideoChannel() = default;
 
@@ -1103,17 +1117,21 @@ public:
   ///
   /// @param value The FrameTransform message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
-  FoxgloveError log(const FrameTransform& value, std::optional<uint64_t> log_time = std::nullopt);
+  FoxgloveError log(
+    const FrameTransform& value, std::optional<uint64_t> log_time = std::nullopt
+  ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.
-  [[nodiscard]] uint64_t id() const;
+  [[nodiscard]] uint64_t id() const noexcept;
 
   FrameTransformChannel(const FrameTransformChannel& other) noexcept = delete;
   FrameTransformChannel& operator=(const FrameTransformChannel& other) noexcept = delete;
   /// @brief Default move constructor.
   FrameTransformChannel(FrameTransformChannel&& other) noexcept = default;
+  /// @brief Default move assignment.
+  FrameTransformChannel& operator=(FrameTransformChannel&& other) noexcept = default;
   /// @brief Default destructor.
   ~FrameTransformChannel() = default;
 
@@ -1141,17 +1159,21 @@ public:
   ///
   /// @param value The FrameTransforms message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
-  FoxgloveError log(const FrameTransforms& value, std::optional<uint64_t> log_time = std::nullopt);
+  FoxgloveError log(
+    const FrameTransforms& value, std::optional<uint64_t> log_time = std::nullopt
+  ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.
-  [[nodiscard]] uint64_t id() const;
+  [[nodiscard]] uint64_t id() const noexcept;
 
   FrameTransformsChannel(const FrameTransformsChannel& other) noexcept = delete;
   FrameTransformsChannel& operator=(const FrameTransformsChannel& other) noexcept = delete;
   /// @brief Default move constructor.
   FrameTransformsChannel(FrameTransformsChannel&& other) noexcept = default;
+  /// @brief Default move assignment.
+  FrameTransformsChannel& operator=(FrameTransformsChannel&& other) noexcept = default;
   /// @brief Default destructor.
   ~FrameTransformsChannel() = default;
 
@@ -1179,17 +1201,19 @@ public:
   ///
   /// @param value The GeoJSON message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
-  FoxgloveError log(const GeoJSON& value, std::optional<uint64_t> log_time = std::nullopt);
+  FoxgloveError log(const GeoJSON& value, std::optional<uint64_t> log_time = std::nullopt) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.
-  [[nodiscard]] uint64_t id() const;
+  [[nodiscard]] uint64_t id() const noexcept;
 
   GeoJSONChannel(const GeoJSONChannel& other) noexcept = delete;
   GeoJSONChannel& operator=(const GeoJSONChannel& other) noexcept = delete;
   /// @brief Default move constructor.
   GeoJSONChannel(GeoJSONChannel&& other) noexcept = default;
+  /// @brief Default move assignment.
+  GeoJSONChannel& operator=(GeoJSONChannel&& other) noexcept = default;
   /// @brief Default destructor.
   ~GeoJSONChannel() = default;
 
@@ -1217,17 +1241,19 @@ public:
   ///
   /// @param value The Grid message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
-  FoxgloveError log(const Grid& value, std::optional<uint64_t> log_time = std::nullopt);
+  FoxgloveError log(const Grid& value, std::optional<uint64_t> log_time = std::nullopt) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.
-  [[nodiscard]] uint64_t id() const;
+  [[nodiscard]] uint64_t id() const noexcept;
 
   GridChannel(const GridChannel& other) noexcept = delete;
   GridChannel& operator=(const GridChannel& other) noexcept = delete;
   /// @brief Default move constructor.
   GridChannel(GridChannel&& other) noexcept = default;
+  /// @brief Default move assignment.
+  GridChannel& operator=(GridChannel&& other) noexcept = default;
   /// @brief Default destructor.
   ~GridChannel() = default;
 
@@ -1255,17 +1281,21 @@ public:
   ///
   /// @param value The ImageAnnotations message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
-  FoxgloveError log(const ImageAnnotations& value, std::optional<uint64_t> log_time = std::nullopt);
+  FoxgloveError log(
+    const ImageAnnotations& value, std::optional<uint64_t> log_time = std::nullopt
+  ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.
-  [[nodiscard]] uint64_t id() const;
+  [[nodiscard]] uint64_t id() const noexcept;
 
   ImageAnnotationsChannel(const ImageAnnotationsChannel& other) noexcept = delete;
   ImageAnnotationsChannel& operator=(const ImageAnnotationsChannel& other) noexcept = delete;
   /// @brief Default move constructor.
   ImageAnnotationsChannel(ImageAnnotationsChannel&& other) noexcept = default;
+  /// @brief Default move assignment.
+  ImageAnnotationsChannel& operator=(ImageAnnotationsChannel&& other) noexcept = default;
   /// @brief Default destructor.
   ~ImageAnnotationsChannel() = default;
 
@@ -1293,17 +1323,21 @@ public:
   ///
   /// @param value The KeyValuePair message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
-  FoxgloveError log(const KeyValuePair& value, std::optional<uint64_t> log_time = std::nullopt);
+  FoxgloveError log(
+    const KeyValuePair& value, std::optional<uint64_t> log_time = std::nullopt
+  ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.
-  [[nodiscard]] uint64_t id() const;
+  [[nodiscard]] uint64_t id() const noexcept;
 
   KeyValuePairChannel(const KeyValuePairChannel& other) noexcept = delete;
   KeyValuePairChannel& operator=(const KeyValuePairChannel& other) noexcept = delete;
   /// @brief Default move constructor.
   KeyValuePairChannel(KeyValuePairChannel&& other) noexcept = default;
+  /// @brief Default move assignment.
+  KeyValuePairChannel& operator=(KeyValuePairChannel&& other) noexcept = default;
   /// @brief Default destructor.
   ~KeyValuePairChannel() = default;
 
@@ -1331,17 +1365,21 @@ public:
   ///
   /// @param value The LaserScan message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
-  FoxgloveError log(const LaserScan& value, std::optional<uint64_t> log_time = std::nullopt);
+  FoxgloveError log(
+    const LaserScan& value, std::optional<uint64_t> log_time = std::nullopt
+  ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.
-  [[nodiscard]] uint64_t id() const;
+  [[nodiscard]] uint64_t id() const noexcept;
 
   LaserScanChannel(const LaserScanChannel& other) noexcept = delete;
   LaserScanChannel& operator=(const LaserScanChannel& other) noexcept = delete;
   /// @brief Default move constructor.
   LaserScanChannel(LaserScanChannel&& other) noexcept = default;
+  /// @brief Default move assignment.
+  LaserScanChannel& operator=(LaserScanChannel&& other) noexcept = default;
   /// @brief Default destructor.
   ~LaserScanChannel() = default;
 
@@ -1369,17 +1407,21 @@ public:
   ///
   /// @param value The LocationFix message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
-  FoxgloveError log(const LocationFix& value, std::optional<uint64_t> log_time = std::nullopt);
+  FoxgloveError log(
+    const LocationFix& value, std::optional<uint64_t> log_time = std::nullopt
+  ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.
-  [[nodiscard]] uint64_t id() const;
+  [[nodiscard]] uint64_t id() const noexcept;
 
   LocationFixChannel(const LocationFixChannel& other) noexcept = delete;
   LocationFixChannel& operator=(const LocationFixChannel& other) noexcept = delete;
   /// @brief Default move constructor.
   LocationFixChannel(LocationFixChannel&& other) noexcept = default;
+  /// @brief Default move assignment.
+  LocationFixChannel& operator=(LocationFixChannel&& other) noexcept = default;
   /// @brief Default destructor.
   ~LocationFixChannel() = default;
 
@@ -1407,17 +1449,19 @@ public:
   ///
   /// @param value The Log message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
-  FoxgloveError log(const Log& value, std::optional<uint64_t> log_time = std::nullopt);
+  FoxgloveError log(const Log& value, std::optional<uint64_t> log_time = std::nullopt) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.
-  [[nodiscard]] uint64_t id() const;
+  [[nodiscard]] uint64_t id() const noexcept;
 
   LogChannel(const LogChannel& other) noexcept = delete;
   LogChannel& operator=(const LogChannel& other) noexcept = delete;
   /// @brief Default move constructor.
   LogChannel(LogChannel&& other) noexcept = default;
+  /// @brief Default move assignment.
+  LogChannel& operator=(LogChannel&& other) noexcept = default;
   /// @brief Default destructor.
   ~LogChannel() = default;
 
@@ -1447,17 +1491,19 @@ public:
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
   FoxgloveError log(
     const SceneEntityDeletion& value, std::optional<uint64_t> log_time = std::nullopt
-  );
+  ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.
-  [[nodiscard]] uint64_t id() const;
+  [[nodiscard]] uint64_t id() const noexcept;
 
   SceneEntityDeletionChannel(const SceneEntityDeletionChannel& other) noexcept = delete;
   SceneEntityDeletionChannel& operator=(const SceneEntityDeletionChannel& other) noexcept = delete;
   /// @brief Default move constructor.
   SceneEntityDeletionChannel(SceneEntityDeletionChannel&& other) noexcept = default;
+  /// @brief Default move assignment.
+  SceneEntityDeletionChannel& operator=(SceneEntityDeletionChannel&& other) noexcept = default;
   /// @brief Default destructor.
   ~SceneEntityDeletionChannel() = default;
 
@@ -1485,17 +1531,21 @@ public:
   ///
   /// @param value The SceneEntity message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
-  FoxgloveError log(const SceneEntity& value, std::optional<uint64_t> log_time = std::nullopt);
+  FoxgloveError log(
+    const SceneEntity& value, std::optional<uint64_t> log_time = std::nullopt
+  ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.
-  [[nodiscard]] uint64_t id() const;
+  [[nodiscard]] uint64_t id() const noexcept;
 
   SceneEntityChannel(const SceneEntityChannel& other) noexcept = delete;
   SceneEntityChannel& operator=(const SceneEntityChannel& other) noexcept = delete;
   /// @brief Default move constructor.
   SceneEntityChannel(SceneEntityChannel&& other) noexcept = default;
+  /// @brief Default move assignment.
+  SceneEntityChannel& operator=(SceneEntityChannel&& other) noexcept = default;
   /// @brief Default destructor.
   ~SceneEntityChannel() = default;
 
@@ -1523,17 +1573,21 @@ public:
   ///
   /// @param value The SceneUpdate message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
-  FoxgloveError log(const SceneUpdate& value, std::optional<uint64_t> log_time = std::nullopt);
+  FoxgloveError log(
+    const SceneUpdate& value, std::optional<uint64_t> log_time = std::nullopt
+  ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.
-  [[nodiscard]] uint64_t id() const;
+  [[nodiscard]] uint64_t id() const noexcept;
 
   SceneUpdateChannel(const SceneUpdateChannel& other) noexcept = delete;
   SceneUpdateChannel& operator=(const SceneUpdateChannel& other) noexcept = delete;
   /// @brief Default move constructor.
   SceneUpdateChannel(SceneUpdateChannel&& other) noexcept = default;
+  /// @brief Default move assignment.
+  SceneUpdateChannel& operator=(SceneUpdateChannel&& other) noexcept = default;
   /// @brief Default destructor.
   ~SceneUpdateChannel() = default;
 
@@ -1563,17 +1617,19 @@ public:
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
   FoxgloveError log(
     const PackedElementField& value, std::optional<uint64_t> log_time = std::nullopt
-  );
+  ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.
-  [[nodiscard]] uint64_t id() const;
+  [[nodiscard]] uint64_t id() const noexcept;
 
   PackedElementFieldChannel(const PackedElementFieldChannel& other) noexcept = delete;
   PackedElementFieldChannel& operator=(const PackedElementFieldChannel& other) noexcept = delete;
   /// @brief Default move constructor.
   PackedElementFieldChannel(PackedElementFieldChannel&& other) noexcept = default;
+  /// @brief Default move assignment.
+  PackedElementFieldChannel& operator=(PackedElementFieldChannel&& other) noexcept = default;
   /// @brief Default destructor.
   ~PackedElementFieldChannel() = default;
 
@@ -1601,17 +1657,19 @@ public:
   ///
   /// @param value The Point2 message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
-  FoxgloveError log(const Point2& value, std::optional<uint64_t> log_time = std::nullopt);
+  FoxgloveError log(const Point2& value, std::optional<uint64_t> log_time = std::nullopt) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.
-  [[nodiscard]] uint64_t id() const;
+  [[nodiscard]] uint64_t id() const noexcept;
 
   Point2Channel(const Point2Channel& other) noexcept = delete;
   Point2Channel& operator=(const Point2Channel& other) noexcept = delete;
   /// @brief Default move constructor.
   Point2Channel(Point2Channel&& other) noexcept = default;
+  /// @brief Default move assignment.
+  Point2Channel& operator=(Point2Channel&& other) noexcept = default;
   /// @brief Default destructor.
   ~Point2Channel() = default;
 
@@ -1639,17 +1697,19 @@ public:
   ///
   /// @param value The Point3 message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
-  FoxgloveError log(const Point3& value, std::optional<uint64_t> log_time = std::nullopt);
+  FoxgloveError log(const Point3& value, std::optional<uint64_t> log_time = std::nullopt) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.
-  [[nodiscard]] uint64_t id() const;
+  [[nodiscard]] uint64_t id() const noexcept;
 
   Point3Channel(const Point3Channel& other) noexcept = delete;
   Point3Channel& operator=(const Point3Channel& other) noexcept = delete;
   /// @brief Default move constructor.
   Point3Channel(Point3Channel&& other) noexcept = default;
+  /// @brief Default move assignment.
+  Point3Channel& operator=(Point3Channel&& other) noexcept = default;
   /// @brief Default destructor.
   ~Point3Channel() = default;
 
@@ -1677,17 +1737,21 @@ public:
   ///
   /// @param value The PointCloud message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
-  FoxgloveError log(const PointCloud& value, std::optional<uint64_t> log_time = std::nullopt);
+  FoxgloveError log(
+    const PointCloud& value, std::optional<uint64_t> log_time = std::nullopt
+  ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.
-  [[nodiscard]] uint64_t id() const;
+  [[nodiscard]] uint64_t id() const noexcept;
 
   PointCloudChannel(const PointCloudChannel& other) noexcept = delete;
   PointCloudChannel& operator=(const PointCloudChannel& other) noexcept = delete;
   /// @brief Default move constructor.
   PointCloudChannel(PointCloudChannel&& other) noexcept = default;
+  /// @brief Default move assignment.
+  PointCloudChannel& operator=(PointCloudChannel&& other) noexcept = default;
   /// @brief Default destructor.
   ~PointCloudChannel() = default;
 
@@ -1715,17 +1779,21 @@ public:
   ///
   /// @param value The PointsAnnotation message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
-  FoxgloveError log(const PointsAnnotation& value, std::optional<uint64_t> log_time = std::nullopt);
+  FoxgloveError log(
+    const PointsAnnotation& value, std::optional<uint64_t> log_time = std::nullopt
+  ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.
-  [[nodiscard]] uint64_t id() const;
+  [[nodiscard]] uint64_t id() const noexcept;
 
   PointsAnnotationChannel(const PointsAnnotationChannel& other) noexcept = delete;
   PointsAnnotationChannel& operator=(const PointsAnnotationChannel& other) noexcept = delete;
   /// @brief Default move constructor.
   PointsAnnotationChannel(PointsAnnotationChannel&& other) noexcept = default;
+  /// @brief Default move assignment.
+  PointsAnnotationChannel& operator=(PointsAnnotationChannel&& other) noexcept = default;
   /// @brief Default destructor.
   ~PointsAnnotationChannel() = default;
 
@@ -1753,17 +1821,19 @@ public:
   ///
   /// @param value The Pose message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
-  FoxgloveError log(const Pose& value, std::optional<uint64_t> log_time = std::nullopt);
+  FoxgloveError log(const Pose& value, std::optional<uint64_t> log_time = std::nullopt) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.
-  [[nodiscard]] uint64_t id() const;
+  [[nodiscard]] uint64_t id() const noexcept;
 
   PoseChannel(const PoseChannel& other) noexcept = delete;
   PoseChannel& operator=(const PoseChannel& other) noexcept = delete;
   /// @brief Default move constructor.
   PoseChannel(PoseChannel&& other) noexcept = default;
+  /// @brief Default move assignment.
+  PoseChannel& operator=(PoseChannel&& other) noexcept = default;
   /// @brief Default destructor.
   ~PoseChannel() = default;
 
@@ -1791,17 +1861,21 @@ public:
   ///
   /// @param value The PoseInFrame message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
-  FoxgloveError log(const PoseInFrame& value, std::optional<uint64_t> log_time = std::nullopt);
+  FoxgloveError log(
+    const PoseInFrame& value, std::optional<uint64_t> log_time = std::nullopt
+  ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.
-  [[nodiscard]] uint64_t id() const;
+  [[nodiscard]] uint64_t id() const noexcept;
 
   PoseInFrameChannel(const PoseInFrameChannel& other) noexcept = delete;
   PoseInFrameChannel& operator=(const PoseInFrameChannel& other) noexcept = delete;
   /// @brief Default move constructor.
   PoseInFrameChannel(PoseInFrameChannel&& other) noexcept = default;
+  /// @brief Default move assignment.
+  PoseInFrameChannel& operator=(PoseInFrameChannel&& other) noexcept = default;
   /// @brief Default destructor.
   ~PoseInFrameChannel() = default;
 
@@ -1829,17 +1903,21 @@ public:
   ///
   /// @param value The PosesInFrame message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
-  FoxgloveError log(const PosesInFrame& value, std::optional<uint64_t> log_time = std::nullopt);
+  FoxgloveError log(
+    const PosesInFrame& value, std::optional<uint64_t> log_time = std::nullopt
+  ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.
-  [[nodiscard]] uint64_t id() const;
+  [[nodiscard]] uint64_t id() const noexcept;
 
   PosesInFrameChannel(const PosesInFrameChannel& other) noexcept = delete;
   PosesInFrameChannel& operator=(const PosesInFrameChannel& other) noexcept = delete;
   /// @brief Default move constructor.
   PosesInFrameChannel(PosesInFrameChannel&& other) noexcept = default;
+  /// @brief Default move assignment.
+  PosesInFrameChannel& operator=(PosesInFrameChannel&& other) noexcept = default;
   /// @brief Default destructor.
   ~PosesInFrameChannel() = default;
 
@@ -1867,17 +1945,21 @@ public:
   ///
   /// @param value The Quaternion message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
-  FoxgloveError log(const Quaternion& value, std::optional<uint64_t> log_time = std::nullopt);
+  FoxgloveError log(
+    const Quaternion& value, std::optional<uint64_t> log_time = std::nullopt
+  ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.
-  [[nodiscard]] uint64_t id() const;
+  [[nodiscard]] uint64_t id() const noexcept;
 
   QuaternionChannel(const QuaternionChannel& other) noexcept = delete;
   QuaternionChannel& operator=(const QuaternionChannel& other) noexcept = delete;
   /// @brief Default move constructor.
   QuaternionChannel(QuaternionChannel&& other) noexcept = default;
+  /// @brief Default move assignment.
+  QuaternionChannel& operator=(QuaternionChannel&& other) noexcept = default;
   /// @brief Default destructor.
   ~QuaternionChannel() = default;
 
@@ -1905,17 +1987,21 @@ public:
   ///
   /// @param value The RawAudio message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
-  FoxgloveError log(const RawAudio& value, std::optional<uint64_t> log_time = std::nullopt);
+  FoxgloveError log(
+    const RawAudio& value, std::optional<uint64_t> log_time = std::nullopt
+  ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.
-  [[nodiscard]] uint64_t id() const;
+  [[nodiscard]] uint64_t id() const noexcept;
 
   RawAudioChannel(const RawAudioChannel& other) noexcept = delete;
   RawAudioChannel& operator=(const RawAudioChannel& other) noexcept = delete;
   /// @brief Default move constructor.
   RawAudioChannel(RawAudioChannel&& other) noexcept = default;
+  /// @brief Default move assignment.
+  RawAudioChannel& operator=(RawAudioChannel&& other) noexcept = default;
   /// @brief Default destructor.
   ~RawAudioChannel() = default;
 
@@ -1943,17 +2029,21 @@ public:
   ///
   /// @param value The RawImage message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
-  FoxgloveError log(const RawImage& value, std::optional<uint64_t> log_time = std::nullopt);
+  FoxgloveError log(
+    const RawImage& value, std::optional<uint64_t> log_time = std::nullopt
+  ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.
-  [[nodiscard]] uint64_t id() const;
+  [[nodiscard]] uint64_t id() const noexcept;
 
   RawImageChannel(const RawImageChannel& other) noexcept = delete;
   RawImageChannel& operator=(const RawImageChannel& other) noexcept = delete;
   /// @brief Default move constructor.
   RawImageChannel(RawImageChannel&& other) noexcept = default;
+  /// @brief Default move assignment.
+  RawImageChannel& operator=(RawImageChannel&& other) noexcept = default;
   /// @brief Default destructor.
   ~RawImageChannel() = default;
 
@@ -1981,17 +2071,21 @@ public:
   ///
   /// @param value The TextAnnotation message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
-  FoxgloveError log(const TextAnnotation& value, std::optional<uint64_t> log_time = std::nullopt);
+  FoxgloveError log(
+    const TextAnnotation& value, std::optional<uint64_t> log_time = std::nullopt
+  ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.
-  [[nodiscard]] uint64_t id() const;
+  [[nodiscard]] uint64_t id() const noexcept;
 
   TextAnnotationChannel(const TextAnnotationChannel& other) noexcept = delete;
   TextAnnotationChannel& operator=(const TextAnnotationChannel& other) noexcept = delete;
   /// @brief Default move constructor.
   TextAnnotationChannel(TextAnnotationChannel&& other) noexcept = default;
+  /// @brief Default move assignment.
+  TextAnnotationChannel& operator=(TextAnnotationChannel&& other) noexcept = default;
   /// @brief Default destructor.
   ~TextAnnotationChannel() = default;
 
@@ -2019,17 +2113,19 @@ public:
   ///
   /// @param value The Vector2 message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
-  FoxgloveError log(const Vector2& value, std::optional<uint64_t> log_time = std::nullopt);
+  FoxgloveError log(const Vector2& value, std::optional<uint64_t> log_time = std::nullopt) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.
-  [[nodiscard]] uint64_t id() const;
+  [[nodiscard]] uint64_t id() const noexcept;
 
   Vector2Channel(const Vector2Channel& other) noexcept = delete;
   Vector2Channel& operator=(const Vector2Channel& other) noexcept = delete;
   /// @brief Default move constructor.
   Vector2Channel(Vector2Channel&& other) noexcept = default;
+  /// @brief Default move assignment.
+  Vector2Channel& operator=(Vector2Channel&& other) noexcept = default;
   /// @brief Default destructor.
   ~Vector2Channel() = default;
 
@@ -2057,17 +2153,19 @@ public:
   ///
   /// @param value The Vector3 message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
-  FoxgloveError log(const Vector3& value, std::optional<uint64_t> log_time = std::nullopt);
+  FoxgloveError log(const Vector3& value, std::optional<uint64_t> log_time = std::nullopt) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.
-  [[nodiscard]] uint64_t id() const;
+  [[nodiscard]] uint64_t id() const noexcept;
 
   Vector3Channel(const Vector3Channel& other) noexcept = delete;
   Vector3Channel& operator=(const Vector3Channel& other) noexcept = delete;
   /// @brief Default move constructor.
   Vector3Channel(Vector3Channel&& other) noexcept = default;
+  /// @brief Default move assignment.
+  Vector3Channel& operator=(Vector3Channel&& other) noexcept = default;
   /// @brief Default destructor.
   ~Vector3Channel() = default;
 

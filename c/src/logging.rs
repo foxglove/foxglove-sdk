@@ -1,5 +1,8 @@
 use std::sync::Once;
 
+/// Logging level for the Foxglove SDK.
+///
+/// Used with `foxglove_set_log_level`.
 #[repr(u8)]
 pub enum FoxgloveLoggingLevel {
     Off = 0,

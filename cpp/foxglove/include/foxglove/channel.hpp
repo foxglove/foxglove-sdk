@@ -57,17 +57,19 @@ public:
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
   FoxgloveError log(
     const std::byte* data, size_t data_len, std::optional<uint64_t> log_time = std::nullopt
-  );
+  ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.
-  [[nodiscard]] uint64_t id() const;
+  [[nodiscard]] uint64_t id() const noexcept;
 
   RawChannel(const RawChannel&) = delete;
   RawChannel& operator=(const RawChannel&) = delete;
   /// @brief Default move constructor.
   RawChannel(RawChannel&& other) noexcept = default;
+  /// @brief Default move assignment.
+  RawChannel& operator=(RawChannel&& other) noexcept = default;
   /// @brief Default destructor
   ~RawChannel() = default;
 
