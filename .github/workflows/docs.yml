@@ -43,11 +43,13 @@ jobs:
       - name: Sphinx build
         run: |
           poetry run sphinx-build --fail-on-warning ./python/docs ./python/docs/_build
+      - run: pwd
+      - run: ls -l ./python/docs
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: python
-          path: ./python/docs/_build
+          path: python/foxglove-sdk/python/docs/_build
           if-no-files-found: error
 
   deploy-docs:
