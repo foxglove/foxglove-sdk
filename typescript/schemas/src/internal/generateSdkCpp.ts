@@ -182,9 +182,9 @@ export function generateHppSchemas(
 
         /// @brief Log a message to the channel.
         ///
-        /// @param value The ${schema.name} message to log.
+        /// @param msg The ${schema.name} message to log.
         /// @param log_time The timestamp of the message. If omitted, the current time is used.
-        FoxgloveError log(const ${schema.name}& value, std::optional<uint64_t> log_time = std::nullopt) noexcept;
+        FoxgloveError log(const ${schema.name}& msg, std::optional<uint64_t> log_time = std::nullopt) noexcept;
 
         /// @brief Uniquely identifies a channel in the context of this program.
         ///

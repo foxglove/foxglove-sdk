@@ -31,7 +31,8 @@ public:
   static Context create();
 
   /// For internal use only.
-  [[nodiscard]] const foxglove_context* getInner() const {
+  /// @cond foxglove_internal
+  [[nodiscard]] const foxglove_context* getInner() const noexcept {
     return impl_.get();
   }
 
