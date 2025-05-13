@@ -201,6 +201,13 @@ public:
   /// @brief Gracefully shut down the websocket server.
   FoxgloveError stop();
 
+  /// @brief Publishes the current server timestamp to all clients.
+  ///
+  /// Requires the capability WebSocketServerCapabilities::Time.
+  ///
+  /// @param timestamp_nanos An epoch offset in nanoseconds.
+  void broadcastTime(uint64_t timestamp_nanos) const noexcept;
+
   /// @brief Advertises support for the provided service.
   ///
   /// This service will be available for clients to use until it is removed with

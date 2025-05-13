@@ -1386,7 +1386,6 @@ async fn test_slow_client() {
     let _ = server.stop();
 }
 
-#[cfg(feature = "unstable")]
 #[tokio::test]
 async fn test_broadcast_time() {
     let ctx = Context::new();

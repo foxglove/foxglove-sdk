@@ -481,6 +481,24 @@ unsafe fn do_foxglove_server_start(
     )))))
 }
 
+/// Publishes the current server timestamp to all clients.
+///
+/// Requires the `FOXGLOVE_CAPABILITY_TIME` capability.
+#[unsafe(no_mangle)]
+pub extern "C" fn foxglove_server_broadcast_time(
+    server: Option<&FoxgloveWebSocketServer>,
+    timestamp_nanos: u64,
+) -> FoxgloveError {
+    let Some(server) = server else {
+        return FoxgloveError::ValueError;
+    };
+    let Some(server) = server.as_ref() else {
+        return FoxgloveError::SinkClosed;
+    };
+    server.broadcast_time(timestamp_nanos);
+    FoxgloveError::Ok
+}
+
 /// Adds a service to the server.
 ///
 /// # Safety
