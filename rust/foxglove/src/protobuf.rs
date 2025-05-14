@@ -284,7 +284,7 @@ impl ProtobufField for bool {
     }
 
     fn encoded_len(&self) -> usize {
-        prost::encoding::encoded_len_varint(*self as u64)
+        1
     }
 }
 
@@ -439,5 +439,27 @@ where
         let delim_len = prost::encoding::length_delimiter_len(self.len());
         let data_len: usize = self.iter().map(|value| value.encoded_len()).sum();
         delim_len + data_len
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_u8_encoded_len() {
+        assert_eq!(ProstFieldType::Uint32, u8::field_type());
+        assert_eq!(1, u8::encoded_len(&127u8));
+        assert_eq!(2, u8::encoded_len(&128u8));
+    }
+
+    #[test]
+    fn test_i8_encoded_len() {
+        // Zig-zag encoding
+        assert_eq!(ProstFieldType::Sint32, i8::field_type());
+        assert_eq!(1, (-1i8).encoded_len());
+        assert_eq!(1, 1i8.encoded_len());
+        assert_eq!(10, i8::MIN.encoded_len());
+        assert_eq!(10, i8::MAX.encoded_len());
     }
 }
