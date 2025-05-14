@@ -79,7 +79,9 @@ impl Arena {
         let bytes_needed = n * element_size;
 
         // Calculate aligned offset
-        let aligned_offset = self.offset.get().next_multiple_of(align_of::<T>());
+        let base_addr = self.buffer.as_ptr() as usize;
+        let aligned_offset =
+            (base_addr + self.offset.get()).next_multiple_of(align_of::<T>()) - base_addr;
 
         // Check if we have enough space
         if aligned_offset + bytes_needed > Self::SIZE {
