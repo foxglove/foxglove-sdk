@@ -80,24 +80,24 @@ public:
   T* alloc(size_t elements) {
     assert(elements > 0);
     const size_t bytes_needed = elements * sizeof(T);
-
-    // Calculate aligned offset
     const size_t alignment = alignof(T);
-    const size_t misalignment = offset_ % alignment;
-    const size_t alignment_padding = misalignment > 0 ? alignment - misalignment : 0;
-    const size_t aligned_offset = offset_ + alignment_padding;
+
+    // Calculate space available in the buffer
+    size_t space_left = available();
+    void* buffer_ptr = &buffer_[offset_];
+
+    // Align the pointer within the buffer
+    void* aligned_ptr = std::align(alignment, bytes_needed, buffer_ptr, space_left);
 
     // Check if we have enough space
-    if (aligned_offset + bytes_needed > Size) {
+    if (aligned_ptr == nullptr) {
       overflow_.emplace_back(static_cast<char*>(::aligned_alloc(alignment, bytes_needed)));
       return reinterpret_cast<T*>(overflow_.back().get());
     }
 
-    // Get pointer to the aligned result array of T
-    T* result = reinterpret_cast<T*>(&buffer_[aligned_offset]);
-    offset_ = aligned_offset + bytes_needed;
-
-    return result;
+    // Calculate the new offset
+    offset_ = Size - space_left - bytes_needed;
+    return reinterpret_cast<T*>(aligned_ptr);
   }
 
   /**
