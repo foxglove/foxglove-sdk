@@ -201,20 +201,26 @@ impl ContextInner {
 /// It is also possible to create explicit contexts:
 ///
 /// ```
-/// use foxglove::{Context, FoxgloveError};
 /// use foxglove::schemas::Log;
+/// use foxglove::{Context, FoxgloveError};
 ///
 /// // Create a channel for the "/log" topic.
 /// let topic = "/topic";
 /// let ctx_a = Context::new();
 /// let chan_a = ctx_a.channel_builder(topic).build();
-/// chan_a.log(&Log{ message: "hello a".into(), ..Log::default() });
+/// chan_a.log(&Log {
+///     message: "hello a".into(),
+///     ..Log::default()
+/// });
 ///
 /// // We can re-use the same topic name on channels if they're in different contexts. This may be
 /// // useful for logging to different MCAP sinks.
 /// let ctx_b = Context::new();
 /// let chan_b = ctx_b.channel_builder(topic).build();
-/// chan_b.log(&Log{ message: "hello b".into(), ..Log::default() });
+/// chan_b.log(&Log {
+///     message: "hello b".into(),
+///     ..Log::default()
+/// });
 /// ```
 pub struct Context(RwLock<ContextInner>);
 
