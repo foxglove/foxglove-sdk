@@ -67,10 +67,12 @@ pub trait ProtobufField {
 
     /// Writes a field with its tag (field number and wire type) to the buffer.
     ///
+    /// You must choose a valid field number (unique, within the max, and not reserved).
+    ///
     /// The default implementation writes the tag followed by the field content.
     fn write_tagged(&self, field_number: u32, buf: &mut impl bytes::BufMut) {
         let tag = (field_number << 3) | Self::wire_type();
-        buf.put_u8(tag as u8);
+        prost::encoding::encode_varint(tag as u64, buf);
         self.write(buf);
     }
 
@@ -407,10 +409,8 @@ where
         // https://protobuf.dev/programming-guides/encoding/#optional
         for value in self {
             let wire_type = T::wire_type();
-
             let tag = (field_number << 3) | wire_type;
-            buf.put_u8(tag as u8);
-
+            prost::encoding::encode_varint(tag as u64, buf);
             value.write(buf);
         }
     }
@@ -461,5 +461,17 @@ mod tests {
         assert_eq!(1, 1i8.encoded_len());
         assert_eq!(10, i8::MIN.encoded_len());
         assert_eq!(10, i8::MAX.encoded_len());
+    }
+
+    #[test]
+    fn test_write_tagged() {
+        // https://protobuf.dev/programming-guides/encoding/#structure
+        let mut buf = bytes::BytesMut::new();
+        bool::write_tagged(&true, 1, &mut buf);
+        assert_eq!(&buf[..], &[0x08, 0x01]);
+
+        let mut buf = bytes::BytesMut::new();
+        bool::write_tagged(&true, 256, &mut buf);
+        assert_eq!(&buf[..], &[0x80, 0x10, 0x01]);
     }
 }
