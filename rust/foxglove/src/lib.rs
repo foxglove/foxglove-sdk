@@ -17,9 +17,9 @@
 //! use foxglove::{McapWriter, log};
 //! use foxglove::schemas::Log;
 //!
-//! # fn func() -> Result<(), foxglove::FoxgloveError> {
+//! # fn func() {
 //! // Create a new MCAP file named 'test.mcap'.
-//! let mcap = McapWriter::new().create_new_buffered_file("test.mcap")?;
+//! let mcap = McapWriter::new().create_new_buffered_file("test.mcap").expect("create failed");
 //!
 //! log!("/log", Log{
 //!     message: "Hello, Foxglove!".to_string(),
@@ -27,8 +27,8 @@
 //! });
 //!
 //! // Flush and close the MCAP file.
-//! mcap.close()?;
-//! # Ok(()) }
+//! mcap.close().expect("finish failed");
+//! # }
 //! ```
 //!
 //! # Concepts
