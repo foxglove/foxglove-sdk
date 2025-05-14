@@ -26,16 +26,6 @@ jobs:
       - run: make CLANG_TIDY=true build
         working-directory: cpp
 
-  docs:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ssciwr/doxygen-install@v1
-        with:
-          version: "1.13.2"
-      - run: make docs
-        working-directory: cpp
-
   build:
     strategy:
       fail-fast: false
