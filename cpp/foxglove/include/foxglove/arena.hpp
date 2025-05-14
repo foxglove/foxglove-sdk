@@ -13,12 +13,11 @@
 namespace foxglove {
 
 /**
+ * @private
  * A fixed-size memory arena that allocates aligned arrays of POD types on the stack.
  * The arena contains a single inline array and allocates from it.
  * If the arena runs out of space, it throws std::bad_alloc.
  * The allocated arrays are "freed" by dropping the arena, destructors are not run.
- *
- * @cond foxglove_internal
  */
 class Arena {
 public:
