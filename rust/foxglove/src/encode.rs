@@ -35,12 +35,12 @@ pub trait Encode {
     /// Encodes message data to the provided buffer.
     fn encode(&self, buf: &mut impl BufMut) -> Result<(), Self::Error>;
 
-    /// Optional. Returns an estimated encoded length for the message data. For serialization
+    /// Optional. Returns an estimated encoded length for the message data.
+    ///
+    /// Used as a hint when allocating the buffer for [`Encode::encode`]. For serialization
     /// performance, it's important to provide an accurate estimate, but err on the side of
     /// overestimating. If insufficient buffer space is available based on this estimate,
     /// [`Encode::encode`] will result in an error.
-    ///
-    /// Used as a hint when allocating the buffer for [`Encode::encode`].
     fn encoded_len(&self) -> Option<usize> {
         None
     }
