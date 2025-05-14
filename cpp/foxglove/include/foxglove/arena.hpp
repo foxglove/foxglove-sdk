@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -96,7 +97,7 @@ public:
     }
 
     // Calculate the new offset
-    offset_ = Size - space_left - bytes_needed;
+    offset_ = Size - space_left + bytes_needed;
     return reinterpret_cast<T*>(aligned_ptr);
   }
 
@@ -121,7 +122,7 @@ private:
     }
   };
 
-  alignas(std::max_align_t) uint8_t buffer_[Size];
+  std::array<uint8_t, Size> buffer_;
   std::size_t offset_;
   std::vector<std::unique_ptr<char, Deleter>> overflow_;
 };
