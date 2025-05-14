@@ -27,10 +27,10 @@ uint8 UNKNOWN=0
 # Position covariance is approximated
 uint8 APPROXIMATED=1
 
-# Position covariance is diagonal
+# Position covariance is per-axis, so put it along the diagonal
 uint8 DIAGONAL_KNOWN=2
 
-# Position covariance is known
+# Position covariance of the fix is known
 uint8 KNOWN=3
 
 # If `position_covariance` is available, `position_covariance_type` must be set to indicate the type of covariance.

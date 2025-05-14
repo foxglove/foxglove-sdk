@@ -27,7 +27,7 @@
         {
           "title": "UNKNOWN",
           "const": 0,
-          "description": "Unknown points type"
+          "description": "Unknown points annotation type"
         },
         {
           "title": "POINTS",

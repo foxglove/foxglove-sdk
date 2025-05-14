@@ -1172,7 +1172,7 @@ const PointsAnnotationType: FoxgloveEnumSchema = {
   parentSchemaName: "PointsAnnotation",
   protobufEnumName: "Type",
   values: [
-    { name: "UNKNOWN", value: 0, description: "Unknown points type" },
+    { name: "UNKNOWN", value: 0, description: "Unknown points annotation type" },
     { name: "POINTS", value: 1, description: "Individual points: 0, 1, 2, ..." },
     { name: "LINE_LOOP", value: 2, description: "Closed polygon: 0-1, 1-2, ..., (n-1)-n, n-0" },
     {
@@ -1306,8 +1306,12 @@ const PositionCovarianceType: FoxgloveEnumSchema = {
   values: [
     { name: "UNKNOWN", value: 0, description: "Unknown position covariance type" },
     { name: "APPROXIMATED", value: 1, description: "Position covariance is approximated" },
-    { name: "DIAGONAL_KNOWN", value: 2, description: "Position covariance is diagonal" },
-    { name: "KNOWN", value: 3, description: "Position covariance is known" },
+    {
+      name: "DIAGONAL_KNOWN",
+      value: 2,
+      description: "Position covariance is per-axis, so put it along the diagonal",
+    },
+    { name: "KNOWN", value: 3, description: "Position covariance of the fix is known" },
   ],
 };
 

@@ -12,7 +12,7 @@ package foxglove;
 message PointsAnnotation {
   // Type of points annotation
   enum Type {
-    // Unknown points type
+    // Unknown points annotation type
     UNKNOWN = 0;
 
     // Individual points: 0, 1, 2, ...

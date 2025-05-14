@@ -481,9 +481,9 @@ pub mod location_fix {
         Unknown = 0,
         /// Position covariance is approximated
         Approximated = 1,
-        /// Position covariance is diagonal
+        /// Position covariance is per-axis, so put it along the diagonal
         DiagonalKnown = 2,
-        /// Position covariance is known
+        /// Position covariance of the fix is known
         Known = 3,
     }
     impl PositionCovarianceType {
@@ -793,7 +793,7 @@ pub mod points_annotation {
     )]
     #[repr(i32)]
     pub enum Type {
-        /// Unknown points type
+        /// Unknown points annotation type
         Unknown = 0,
         /// Individual points: 0, 1, 2, ...
         Points = 1,

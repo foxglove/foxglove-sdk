@@ -9,9 +9,9 @@ export enum PositionCovarianceType {
   /** Position covariance is approximated */
   APPROXIMATED = 1,
 
-  /** Position covariance is diagonal */
+  /** Position covariance is per-axis, so put it along the diagonal */
   DIAGONAL_KNOWN = 2,
 
-  /** Position covariance is known */
+  /** Position covariance of the fix is known */
   KNOWN = 3,
 }

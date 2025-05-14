@@ -105,7 +105,7 @@ Type of points annotation
 
 name | value | description
 ---- | ----- | -----------
-`UNKNOWN` | 0 | Unknown points type
+`UNKNOWN` | 0 | Unknown points annotation type
 `POINTS` | 1 | Individual points: 0, 1, 2, ...
 `LINE_LOOP` | 2 | Closed polygon: 0-1, 1-2, ..., (n-1)-n, n-0
 `LINE_STRIP` | 3 | Connected line segments: 0-1, 1-2, ..., (n-1)-n
@@ -121,8 +121,8 @@ name | value | description
 ---- | ----- | -----------
 `UNKNOWN` | 0 | Unknown position covariance type
 `APPROXIMATED` | 1 | Position covariance is approximated
-`DIAGONAL_KNOWN` | 2 | Position covariance is diagonal
-`KNOWN` | 3 | Position covariance is known
+`DIAGONAL_KNOWN` | 2 | Position covariance is per-axis, so put it along the diagonal
+`KNOWN` | 3 | Position covariance of the fix is known
 
 
 

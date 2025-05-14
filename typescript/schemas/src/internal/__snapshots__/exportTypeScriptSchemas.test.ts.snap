@@ -1099,7 +1099,7 @@ export enum NumericType {
 
 /** Type of points annotation */
 export enum PointsAnnotationType {
-  /** Unknown points type */
+  /** Unknown points annotation type */
   UNKNOWN = 0,
 
   /** Individual points: 0, 1, 2, ... */
@@ -1126,10 +1126,10 @@ export enum PositionCovarianceType {
   /** Position covariance is approximated */
   APPROXIMATED = 1,
 
-  /** Position covariance is diagonal */
+  /** Position covariance is per-axis, so put it along the diagonal */
   DIAGONAL_KNOWN = 2,
 
-  /** Position covariance is known */
+  /** Position covariance of the fix is known */
   KNOWN = 3,
 }
 ",

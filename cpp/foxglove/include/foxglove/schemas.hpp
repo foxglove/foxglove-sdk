@@ -435,7 +435,7 @@ struct Grid {
 struct PointsAnnotation {
   /// @brief Type of points annotation
   enum class PointsAnnotationType : uint8_t {
-    /// @brief Unknown points type
+    /// @brief Unknown points annotation type
     UNKNOWN = 0,
     /// @brief Individual points: 0, 1, 2, ...
     POINTS = 1,
@@ -604,9 +604,9 @@ struct LocationFix {
     UNKNOWN = 0,
     /// @brief Position covariance is approximated
     APPROXIMATED = 1,
-    /// @brief Position covariance is diagonal
+    /// @brief Position covariance is per-axis, so put it along the diagonal
     DIAGONAL_KNOWN = 2,
-    /// @brief Position covariance is known
+    /// @brief Position covariance of the fix is known
     KNOWN = 3,
   };
   /// @brief Timestamp of the message
@@ -947,10 +947,10 @@ public:
 
   /// @brief Log a message to the channel.
   ///
-  /// @param value The CameraCalibration message to log.
+  /// @param msg The CameraCalibration message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
   FoxgloveError log(
-    const CameraCalibration& value, std::optional<uint64_t> log_time = std::nullopt
+    const CameraCalibration& msg, std::optional<uint64_t> log_time = std::nullopt
   ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
@@ -989,10 +989,10 @@ public:
 
   /// @brief Log a message to the channel.
   ///
-  /// @param value The CircleAnnotation message to log.
+  /// @param msg The CircleAnnotation message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
   FoxgloveError log(
-    const CircleAnnotation& value, std::optional<uint64_t> log_time = std::nullopt
+    const CircleAnnotation& msg, std::optional<uint64_t> log_time = std::nullopt
   ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
@@ -1031,10 +1031,10 @@ public:
 
   /// @brief Log a message to the channel.
   ///
-  /// @param value The CompressedImage message to log.
+  /// @param msg The CompressedImage message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
   FoxgloveError log(
-    const CompressedImage& value, std::optional<uint64_t> log_time = std::nullopt
+    const CompressedImage& msg, std::optional<uint64_t> log_time = std::nullopt
   ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
@@ -1073,10 +1073,10 @@ public:
 
   /// @brief Log a message to the channel.
   ///
-  /// @param value The CompressedVideo message to log.
+  /// @param msg The CompressedVideo message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
   FoxgloveError log(
-    const CompressedVideo& value, std::optional<uint64_t> log_time = std::nullopt
+    const CompressedVideo& msg, std::optional<uint64_t> log_time = std::nullopt
   ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
@@ -1115,10 +1115,10 @@ public:
 
   /// @brief Log a message to the channel.
   ///
-  /// @param value The FrameTransform message to log.
+  /// @param msg The FrameTransform message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
   FoxgloveError log(
-    const FrameTransform& value, std::optional<uint64_t> log_time = std::nullopt
+    const FrameTransform& msg, std::optional<uint64_t> log_time = std::nullopt
   ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
@@ -1157,10 +1157,10 @@ public:
 
   /// @brief Log a message to the channel.
   ///
-  /// @param value The FrameTransforms message to log.
+  /// @param msg The FrameTransforms message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
   FoxgloveError log(
-    const FrameTransforms& value, std::optional<uint64_t> log_time = std::nullopt
+    const FrameTransforms& msg, std::optional<uint64_t> log_time = std::nullopt
   ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
@@ -1199,9 +1199,9 @@ public:
 
   /// @brief Log a message to the channel.
   ///
-  /// @param value The GeoJSON message to log.
+  /// @param msg The GeoJSON message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
-  FoxgloveError log(const GeoJSON& value, std::optional<uint64_t> log_time = std::nullopt) noexcept;
+  FoxgloveError log(const GeoJSON& msg, std::optional<uint64_t> log_time = std::nullopt) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
@@ -1239,9 +1239,9 @@ public:
 
   /// @brief Log a message to the channel.
   ///
-  /// @param value The Grid message to log.
+  /// @param msg The Grid message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
-  FoxgloveError log(const Grid& value, std::optional<uint64_t> log_time = std::nullopt) noexcept;
+  FoxgloveError log(const Grid& msg, std::optional<uint64_t> log_time = std::nullopt) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
@@ -1279,10 +1279,10 @@ public:
 
   /// @brief Log a message to the channel.
   ///
-  /// @param value The ImageAnnotations message to log.
+  /// @param msg The ImageAnnotations message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
   FoxgloveError log(
-    const ImageAnnotations& value, std::optional<uint64_t> log_time = std::nullopt
+    const ImageAnnotations& msg, std::optional<uint64_t> log_time = std::nullopt
   ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
@@ -1321,10 +1321,10 @@ public:
 
   /// @brief Log a message to the channel.
   ///
-  /// @param value The KeyValuePair message to log.
+  /// @param msg The KeyValuePair message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
   FoxgloveError log(
-    const KeyValuePair& value, std::optional<uint64_t> log_time = std::nullopt
+    const KeyValuePair& msg, std::optional<uint64_t> log_time = std::nullopt
   ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
@@ -1363,11 +1363,9 @@ public:
 
   /// @brief Log a message to the channel.
   ///
-  /// @param value The LaserScan message to log.
+  /// @param msg The LaserScan message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
-  FoxgloveError log(
-    const LaserScan& value, std::optional<uint64_t> log_time = std::nullopt
-  ) noexcept;
+  FoxgloveError log(const LaserScan& msg, std::optional<uint64_t> log_time = std::nullopt) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
@@ -1405,10 +1403,10 @@ public:
 
   /// @brief Log a message to the channel.
   ///
-  /// @param value The LocationFix message to log.
+  /// @param msg The LocationFix message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
   FoxgloveError log(
-    const LocationFix& value, std::optional<uint64_t> log_time = std::nullopt
+    const LocationFix& msg, std::optional<uint64_t> log_time = std::nullopt
   ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
@@ -1447,9 +1445,9 @@ public:
 
   /// @brief Log a message to the channel.
   ///
-  /// @param value The Log message to log.
+  /// @param msg The Log message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
-  FoxgloveError log(const Log& value, std::optional<uint64_t> log_time = std::nullopt) noexcept;
+  FoxgloveError log(const Log& msg, std::optional<uint64_t> log_time = std::nullopt) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
@@ -1487,10 +1485,10 @@ public:
 
   /// @brief Log a message to the channel.
   ///
-  /// @param value The SceneEntityDeletion message to log.
+  /// @param msg The SceneEntityDeletion message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
   FoxgloveError log(
-    const SceneEntityDeletion& value, std::optional<uint64_t> log_time = std::nullopt
+    const SceneEntityDeletion& msg, std::optional<uint64_t> log_time = std::nullopt
   ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
@@ -1529,10 +1527,10 @@ public:
 
   /// @brief Log a message to the channel.
   ///
-  /// @param value The SceneEntity message to log.
+  /// @param msg The SceneEntity message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
   FoxgloveError log(
-    const SceneEntity& value, std::optional<uint64_t> log_time = std::nullopt
+    const SceneEntity& msg, std::optional<uint64_t> log_time = std::nullopt
   ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
@@ -1571,10 +1569,10 @@ public:
 
   /// @brief Log a message to the channel.
   ///
-  /// @param value The SceneUpdate message to log.
+  /// @param msg The SceneUpdate message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
   FoxgloveError log(
-    const SceneUpdate& value, std::optional<uint64_t> log_time = std::nullopt
+    const SceneUpdate& msg, std::optional<uint64_t> log_time = std::nullopt
   ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
@@ -1613,10 +1611,10 @@ public:
 
   /// @brief Log a message to the channel.
   ///
-  /// @param value The PackedElementField message to log.
+  /// @param msg The PackedElementField message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
   FoxgloveError log(
-    const PackedElementField& value, std::optional<uint64_t> log_time = std::nullopt
+    const PackedElementField& msg, std::optional<uint64_t> log_time = std::nullopt
   ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
@@ -1655,9 +1653,9 @@ public:
 
   /// @brief Log a message to the channel.
   ///
-  /// @param value The Point2 message to log.
+  /// @param msg The Point2 message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
-  FoxgloveError log(const Point2& value, std::optional<uint64_t> log_time = std::nullopt) noexcept;
+  FoxgloveError log(const Point2& msg, std::optional<uint64_t> log_time = std::nullopt) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
@@ -1695,9 +1693,9 @@ public:
 
   /// @brief Log a message to the channel.
   ///
-  /// @param value The Point3 message to log.
+  /// @param msg The Point3 message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
-  FoxgloveError log(const Point3& value, std::optional<uint64_t> log_time = std::nullopt) noexcept;
+  FoxgloveError log(const Point3& msg, std::optional<uint64_t> log_time = std::nullopt) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
@@ -1735,10 +1733,10 @@ public:
 
   /// @brief Log a message to the channel.
   ///
-  /// @param value The PointCloud message to log.
+  /// @param msg The PointCloud message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
   FoxgloveError log(
-    const PointCloud& value, std::optional<uint64_t> log_time = std::nullopt
+    const PointCloud& msg, std::optional<uint64_t> log_time = std::nullopt
   ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
@@ -1777,10 +1775,10 @@ public:
 
   /// @brief Log a message to the channel.
   ///
-  /// @param value The PointsAnnotation message to log.
+  /// @param msg The PointsAnnotation message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
   FoxgloveError log(
-    const PointsAnnotation& value, std::optional<uint64_t> log_time = std::nullopt
+    const PointsAnnotation& msg, std::optional<uint64_t> log_time = std::nullopt
   ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
@@ -1819,9 +1817,9 @@ public:
 
   /// @brief Log a message to the channel.
   ///
-  /// @param value The Pose message to log.
+  /// @param msg The Pose message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
-  FoxgloveError log(const Pose& value, std::optional<uint64_t> log_time = std::nullopt) noexcept;
+  FoxgloveError log(const Pose& msg, std::optional<uint64_t> log_time = std::nullopt) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
@@ -1859,10 +1857,10 @@ public:
 
   /// @brief Log a message to the channel.
   ///
-  /// @param value The PoseInFrame message to log.
+  /// @param msg The PoseInFrame message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
   FoxgloveError log(
-    const PoseInFrame& value, std::optional<uint64_t> log_time = std::nullopt
+    const PoseInFrame& msg, std::optional<uint64_t> log_time = std::nullopt
   ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
@@ -1901,10 +1899,10 @@ public:
 
   /// @brief Log a message to the channel.
   ///
-  /// @param value The PosesInFrame message to log.
+  /// @param msg The PosesInFrame message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
   FoxgloveError log(
-    const PosesInFrame& value, std::optional<uint64_t> log_time = std::nullopt
+    const PosesInFrame& msg, std::optional<uint64_t> log_time = std::nullopt
   ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
@@ -1943,10 +1941,10 @@ public:
 
   /// @brief Log a message to the channel.
   ///
-  /// @param value The Quaternion message to log.
+  /// @param msg The Quaternion message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
   FoxgloveError log(
-    const Quaternion& value, std::optional<uint64_t> log_time = std::nullopt
+    const Quaternion& msg, std::optional<uint64_t> log_time = std::nullopt
   ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
@@ -1985,11 +1983,9 @@ public:
 
   /// @brief Log a message to the channel.
   ///
-  /// @param value The RawAudio message to log.
+  /// @param msg The RawAudio message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
-  FoxgloveError log(
-    const RawAudio& value, std::optional<uint64_t> log_time = std::nullopt
-  ) noexcept;
+  FoxgloveError log(const RawAudio& msg, std::optional<uint64_t> log_time = std::nullopt) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
@@ -2027,11 +2023,9 @@ public:
 
   /// @brief Log a message to the channel.
   ///
-  /// @param value The RawImage message to log.
+  /// @param msg The RawImage message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
-  FoxgloveError log(
-    const RawImage& value, std::optional<uint64_t> log_time = std::nullopt
-  ) noexcept;
+  FoxgloveError log(const RawImage& msg, std::optional<uint64_t> log_time = std::nullopt) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
@@ -2069,10 +2063,10 @@ public:
 
   /// @brief Log a message to the channel.
   ///
-  /// @param value The TextAnnotation message to log.
+  /// @param msg The TextAnnotation message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
   FoxgloveError log(
-    const TextAnnotation& value, std::optional<uint64_t> log_time = std::nullopt
+    const TextAnnotation& msg, std::optional<uint64_t> log_time = std::nullopt
   ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
@@ -2111,9 +2105,9 @@ public:
 
   /// @brief Log a message to the channel.
   ///
-  /// @param value The Vector2 message to log.
+  /// @param msg The Vector2 message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
-  FoxgloveError log(const Vector2& value, std::optional<uint64_t> log_time = std::nullopt) noexcept;
+  FoxgloveError log(const Vector2& msg, std::optional<uint64_t> log_time = std::nullopt) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
@@ -2151,9 +2145,9 @@ public:
 
   /// @brief Log a message to the channel.
   ///
-  /// @param value The Vector3 message to log.
+  /// @param msg The Vector3 message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
-  FoxgloveError log(const Vector3& value, std::optional<uint64_t> log_time = std::nullopt) noexcept;
+  FoxgloveError log(const Vector3& msg, std::optional<uint64_t> log_time = std::nullopt) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
   ///

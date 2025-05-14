@@ -1067,7 +1067,7 @@ export const ImageAnnotations = {
               {
                 "title": "UNKNOWN",
                 "const": 0,
-                "description": "Unknown points type"
+                "description": "Unknown points annotation type"
               },
               {
                 "title": "POINTS",
@@ -1639,12 +1639,12 @@ export const LocationFix = {
         {
           "title": "DIAGONAL_KNOWN",
           "const": 2,
-          "description": "Position covariance is diagonal"
+          "description": "Position covariance is per-axis, so put it along the diagonal"
         },
         {
           "title": "KNOWN",
           "const": 3,
-          "description": "Position covariance is known"
+          "description": "Position covariance of the fix is known"
         }
       ]
     }
@@ -4270,7 +4270,7 @@ export const PointsAnnotation = {
         {
           "title": "UNKNOWN",
           "const": 0,
-          "description": "Unknown points type"
+          "description": "Unknown points annotation type"
         },
         {
           "title": "POINTS",

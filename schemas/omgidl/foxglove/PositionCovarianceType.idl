@@ -12,11 +12,11 @@ enum PositionCovarianceType {
   // Value: 1
   APPROXIMATED,
 
-  // Position covariance is diagonal
+  // Position covariance is per-axis, so put it along the diagonal
   // Value: 2
   DIAGONAL_KNOWN,
 
-  // Position covariance is known
+  // Position covariance of the fix is known
   // Value: 3
   KNOWN
 };
