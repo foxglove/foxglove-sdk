@@ -11,10 +11,33 @@ use foxglove::FoxgloveError;
 pub trait BorrowToNative {
     type NativeType;
 
+    /// Unsafely borrow this C struct into a native Rust schema struct, which can then be logged.
+    ///
+    /// We directly reference the C data, and/or copy it into memory allocated from the arena.
+    ///
+    /// # Safety:
+    /// The caller must ensure the result is discarded before the original C data is mutated or freed.
     unsafe fn borrow_to_native(
         &self,
         arena: Pin<&mut Arena>,
     ) -> Result<ManuallyDrop<Self::NativeType>, FoxgloveError>;
+
+    /// If None is passed, returns a FoxgloveError::ValueError.
+    /// Otherwise call `borrow_to_native` on it.
+    ///
+    /// # Safety:
+    /// See `borrow_to_native`.
+    unsafe fn borrow_option_to_native(
+        msg: Option<&Self>,
+        arena: Pin<&mut Arena>,
+    ) -> Result<ManuallyDrop<Self::NativeType>, FoxgloveError> {
+        let Some(msg) = msg else {
+            return Err(foxglove::FoxgloveError::ValueError(
+                "msg is required".to_string(),
+            ));
+        };
+        unsafe { msg.borrow_to_native(arena) }
+    }
 }
 
 /// A fixed-size memory arena that allocates aligned arrays of POD types.
@@ -86,7 +109,7 @@ impl Arena {
         // SAFETY: we are not moving the arena, or moving out of it
         let result = self.as_mut().alloc::<S::NativeType>(len);
 
-        // Convert the elements from S to T, placing them in the result array
+        // Convert the elements from S to S::NativeType, placing them in the result array
         for i in 0..len {
             unsafe {
                 let tmp = (*src.add(i)).borrow_to_native(self.as_mut())?;

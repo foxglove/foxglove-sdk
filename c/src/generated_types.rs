@@ -203,25 +203,6 @@ pub struct CameraCalibration {
 }
 
 impl CameraCalibration {
-    /// Unsafely borrow this C struct into a native Rust schema struct, which can then be logged.
-    ///
-    /// We directly reference the C data, and/or copy it into memory allocated from the arena.
-    ///
-    /// # Safety:
-    /// This is intended for internal use only.
-    /// The caller must ensure the result is discarded before the original C data is mutated or freed.
-    unsafe fn borrow_option_to_native(
-        msg: Option<&Self>,
-        arena: Pin<&mut Arena>,
-    ) -> Result<ManuallyDrop<foxglove::schemas::CameraCalibration>, foxglove::FoxgloveError> {
-        let Some(msg) = msg else {
-            return Err(foxglove::FoxgloveError::ValueError(
-                "msg is required".to_string(),
-            ));
-        };
-        unsafe { msg.borrow_to_native(arena) }
-    }
-
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
     /// # Safety
