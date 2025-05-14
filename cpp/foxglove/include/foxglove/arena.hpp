@@ -92,8 +92,15 @@ public:
 
     // Check if we have enough space
     if (aligned_ptr == nullptr) {
-      overflow_.emplace_back(static_cast<char*>(::aligned_alloc(alignment, bytes_needed)));
-      return reinterpret_cast<T*>(overflow_.back().get());
+      // We don't use aligned_alloc because it fails on some platforms for larger alignments
+      size_t size_with_alignment = alignment + bytes_needed;
+      auto ptr = ::malloc(size_with_alignment);
+      aligned_ptr = std::align(alignment, bytes_needed, ptr, size_with_alignment);
+      if (aligned_ptr == nullptr) {
+        throw std::bad_alloc();
+      }
+      overflow_.emplace_back(static_cast<char*>(aligned_ptr));
+      return reinterpret_cast<T*>(aligned_ptr);
     }
 
     // Calculate the new offset
