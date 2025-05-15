@@ -100,11 +100,8 @@ FoxgloveSchema = Union[
     Vector3,
 ]
 
-
-Time = Timestamp
-"""An alias for :py:class:`Timestamp`."""
-
 __all__ = [
+    "FoxgloveSchema",
     "ArrowPrimitive",
     "CameraCalibration",
     "CircleAnnotation",
@@ -114,7 +111,6 @@ __all__ = [
     "CubePrimitive",
     "CylinderPrimitive",
     "Duration",
-    "FoxgloveSchema",
     "FrameTransform",
     "FrameTransforms",
     "GeoJson",
@@ -149,7 +145,6 @@ __all__ = [
     "SpherePrimitive",
     "TextAnnotation",
     "TextPrimitive",
-    "Time",
     "Timestamp",
     "TriangleListPrimitive",
     "Vector2",
