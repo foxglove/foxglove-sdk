@@ -1,11 +1,11 @@
 [package]
 name = "foxglove"
-version = "0.7.1"
 description = "Foxglove SDK"
-edition = "2021"
-rust-version = "1.83.0"
-repository = "https://github.com/foxglove/foxglove-sdk"
-license = "MIT"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+license.workspace = true
 
 [features]
 default = ["live_visualization"]
