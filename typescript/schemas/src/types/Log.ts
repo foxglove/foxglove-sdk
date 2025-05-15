@@ -2,12 +2,12 @@
 // Options: {}
 
 import { LogLevel } from "./LogLevel";
-import { Time } from "./Time";
+import { Timestamp } from "./Timestamp";
 
 /** A log message */
 export type Log = {
   /** Timestamp of log message */
-  timestamp: Time;
+  timestamp: Timestamp;
 
   /** Log level */
   level: LogLevel;

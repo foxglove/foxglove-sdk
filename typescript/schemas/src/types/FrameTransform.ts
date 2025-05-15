@@ -2,13 +2,13 @@
 // Options: {}
 
 import { Quaternion } from "./Quaternion";
-import { Time } from "./Time";
+import { Timestamp } from "./Timestamp";
 import { Vector3 } from "./Vector3";
 
 /** A transform between two reference frames in 3D space */
 export type FrameTransform = {
   /** Timestamp of transform */
-  timestamp: Time;
+  timestamp: Timestamp;
 
   /** Name of the parent frame */
   parent_frame_id: string;

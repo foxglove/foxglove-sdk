@@ -15,7 +15,10 @@ import {
 } from "../typescript/schemas/src/internal/generateFlatbufferSchema";
 import { generateJsonSchema } from "../typescript/schemas/src/internal/generateJsonSchema";
 import { generateMarkdown } from "../typescript/schemas/src/internal/generateMarkdown";
-import { generateOmgIdl } from "../typescript/schemas/src/internal/generateOmgIdl";
+import {
+  generateOmgIdl,
+  omgIdlSchemaName,
+} from "../typescript/schemas/src/internal/generateOmgIdl";
 import { generateProto } from "../typescript/schemas/src/internal/generateProto";
 import {
   generateSchemaModuleRegistration,
@@ -101,6 +104,8 @@ async function main({ clean }: { clean: boolean }) {
       await fs.writeFile(path.join(outDir, "jsonschema", `${schema.name}.json`), json + "\n");
       indexTS += `export const ${schema.name} = ${json};\n\n`;
     }
+    // Include the legacy `Time` export for backwards compatibility.
+    indexTS += `export const Time = Timestamp;\n\n`;
     await fs.writeFile(path.join(outDir, "jsonschema", `index.ts`), indexTS);
   });
 
@@ -153,6 +158,7 @@ async function main({ clean }: { clean: boolean }) {
   await logProgress("Generating FlatBuffer definitions", async () => {
     await fs.mkdir(path.join(outDir, "flatbuffer"), { recursive: true });
     await fs.writeFile(path.join(outDir, "flatbuffer", "ByteVector.fbs"), BYTE_VECTOR_FB);
+    // The name "Time" is kept for backwards compatibility.
     await fs.writeFile(path.join(outDir, "flatbuffer", "Time.fbs"), TIME_FB);
     await fs.writeFile(path.join(outDir, "flatbuffer", "Duration.fbs"), DURATION_FB);
 
@@ -160,7 +166,7 @@ async function main({ clean }: { clean: boolean }) {
     // - Duration uses int32 for nsec instead of uint32
     // - Time documents specific ranges
     const messageSchemas = Object.values(foxgloveMessageSchemas).filter(
-      (schema) => schema.name !== "Time" && schema.name !== "Duration",
+      (schema) => schema.name !== "Timestamp" && schema.name !== "Duration",
     );
 
     for (const schema of messageSchemas) {
@@ -187,8 +193,9 @@ async function main({ clean }: { clean: boolean }) {
   await logProgress("Generating OMG IDL definitions", async () => {
     await fs.mkdir(path.join(outDir, "omgidl", "foxglove"), { recursive: true });
     for (const schema of Object.values(foxgloveMessageSchemas)) {
+      const schemaName = omgIdlSchemaName(schema);
       await fs.writeFile(
-        path.join(outDir, "omgidl", "foxglove", `${schema.name}.idl`),
+        path.join(outDir, "omgidl", "foxglove", `${schemaName}.idl`),
         generateOmgIdl(schema),
       );
     }
@@ -234,11 +241,7 @@ async function main({ clean }: { clean: boolean }) {
       writer.write(generatePyclass(enumSchema));
     }
 
-    // Python SDK uses custom implementations for Time and Duration via schemas_wkt. These match the
-    // { sec, nsec } schema definition but provide additional conversions and factory methods.
-    const messageSchemas = Object.values(foxgloveMessageSchemas).filter(
-      (schema) => schema.name !== "Time" && schema.name !== "Duration",
-    );
+    const messageSchemas = Object.values(foxgloveMessageSchemas);
     for (const schema of messageSchemas) {
       writer.write(generatePyclass(schema));
     }

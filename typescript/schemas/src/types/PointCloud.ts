@@ -3,12 +3,12 @@
 
 import { PackedElementField } from "./PackedElementField";
 import { Pose } from "./Pose";
-import { Time } from "./Time";
+import { Timestamp } from "./Timestamp";
 
 /** A collection of N-dimensional points, which may contain additional fields with information like normals, intensity, etc. */
 export type PointCloud = {
   /** Timestamp of point cloud */
-  timestamp: Time;
+  timestamp: Timestamp;
 
   /** Frame of reference */
   frame_id: string;

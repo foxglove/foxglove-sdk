@@ -37,6 +37,9 @@ export function generateSchemaPrelude(): string {
  * Generate a `pyclass`-annotated struct or enum definition for the given schema.
  */
 export function generatePyclass(schema: FoxgloveSchema): string {
+  if (!shouldGenerateSchemaClass(schema)) {
+    return "";
+  }
   return isMessageSchema(schema) ? generateMessageClass(schema) : generateEnumClass(schema);
 }
 
@@ -57,6 +60,7 @@ export function generatePySchemaStub(schemas: FoxgloveSchema[]): string {
 
   const enums = schemas
     .filter((schema) => schema.type === "enum")
+    .filter(shouldGenerateSchemaClass)
     .map((schema) => {
       const name = enumName(schema);
       const doc = ['    """', `    ${schema.description}`, '    """'];
@@ -71,30 +75,33 @@ export function generatePySchemaStub(schemas: FoxgloveSchema[]): string {
 
   const allSchemas: string[] = [];
 
-  const classes = schemas.filter(isMessageSchema).map((schema) => {
-    const name = structName(schema.name);
-    allSchemas.push(name);
-    const doc = ['    """', `    ${schema.description}`, '    """'];
-    const params = schema.fields
-      .map((field) => {
-        return `        ${field.name}: "${pythonCtorType(field)}" = ${pythonDefaultValue(field)}`;
-      })
-      .join(",\n");
+  const classes = schemas
+    .filter(isMessageSchema)
+    .filter(shouldGenerateSchemaClass)
+    .map((schema) => {
+      const name = structName(schema.name);
+      allSchemas.push(name);
+      const doc = ['    """', `    ${schema.description}`, '    """'];
+      const params = schema.fields
+        .map((field) => {
+          return `        ${field.name}: "${pythonCtorType(field)}" = ${pythonDefaultValue(field)}`;
+        })
+        .join(",\n");
 
-    return {
-      name,
-      source:
-        [
-          `class ${name}:`,
-          ...doc,
-          `    def __new__(`,
-          "        cls,",
-          "        *,",
-          params,
-          `    ) -> "${name}": ...`,
-        ].join("\n") + "\n\n",
-    };
-  });
+      return {
+        name,
+        source:
+          [
+            `class ${name}:`,
+            ...doc,
+            `    def __new__(`,
+            "        cls,",
+            "        *,",
+            params,
+            `    ) -> "${name}": ...`,
+          ].join("\n") + "\n\n",
+      };
+    });
 
   // Enums come first to provide default values for constructor parameters. Otherwise, sort by name.
   const enumSources = enums
@@ -496,8 +503,6 @@ export function generateSchemaModuleRegistration(schemas: FoxgloveSchema[]): str
 pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     let module = PyModule::new(parent_module.py(), "schemas")?;
 
-    module.add_class::<Duration>()?;
-    module.add_class::<Timestamp>()?;
     ${schemas.map((schema) => `module.add_class::<${pyClassName(schema)}>()?;`).join("\n    ")}
 
     // Define as a package
@@ -512,8 +517,19 @@ pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
 `;
 }
 
+/**
+ * Python SDK uses custom implementations for Time and Duration via schemas_wkt, so we don't
+ * auto-generate implementations or stubs. These match the `{ sec, nsec }` schema definition but
+ * provide additional conversions and factory methods.
+ */
+function shouldGenerateSchemaClass(schema: FoxgloveSchema): boolean {
+  return schema.name !== "Timestamp" && schema.name !== "Duration";
+}
+
 function shouldGenerateChannelClass(schema: FoxgloveMessageSchema): boolean {
-  return !schema.name.endsWith("Primitive");
+  return (
+    !schema.name.endsWith("Primitive") && schema.name !== "Timestamp" && schema.name !== "Duration"
+  );
 }
 
 /**

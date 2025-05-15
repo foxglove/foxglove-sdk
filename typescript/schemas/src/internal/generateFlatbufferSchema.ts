@@ -11,7 +11,6 @@ table ByteVector {
 root_type ByteVector;
 `;
 
-// Same as protobuf wellknown types
 export const TIME_FB = `
 namespace foxglove;
 

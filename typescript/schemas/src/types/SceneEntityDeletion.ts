@@ -2,12 +2,12 @@
 // Options: {}
 
 import { SceneEntityDeletionType } from "./SceneEntityDeletionType";
-import { Time } from "./Time";
+import { Timestamp } from "./Timestamp";
 
 /** Command to remove previously published entities */
 export type SceneEntityDeletion = {
   /** Timestamp of the deletion. Only matching entities earlier than this timestamp will be deleted. */
-  timestamp: Time;
+  timestamp: Timestamp;
 
   /** Type of deletion action to perform */
   type: SceneEntityDeletionType;

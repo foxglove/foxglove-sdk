@@ -32,6 +32,16 @@ function primitiveToTypedArray(type: FoxglovePrimitive) {
   }
 }
 
+/**
+ * An alias to `Timestamp` for backwards compatibility.
+ */
+export const LEGACY_TIME_TS = `import { Timestamp } from "./Timestamp";
+/**
+ * @deprecated Use the \`Timestamp\` schema instead.
+ */
+export type Time = Timestamp;
+`;
+
 export type GenerateTypeScriptOptions = {
   /**
    * Include TypedArray types on numeric array fields, e.g. `number[] | Uint32Array`. Used by
@@ -76,8 +86,8 @@ export function generateTypeScript(
             break;
           case "primitive":
             if (field.type.name === "time") {
-              fieldType = "Time";
-              imports.add("Time");
+              fieldType = "Timestamp";
+              imports.add("Timestamp");
             } else if (field.type.name === "duration") {
               fieldType = "Duration";
               imports.add("Duration");

@@ -49,7 +49,7 @@ All schemas are generated from [schemas.ts](/internal/schemas.ts).
 - [SpherePrimitive](#sphereprimitive)
 - [TextAnnotation](#textannotation)
 - [TextPrimitive](#textprimitive)
-- [Time](#time)
+- [Timestamp](#timestamp)
 - [TriangleListPrimitive](#trianglelistprimitive)
 - [Vector2](#vector2)
 - [Vector3](#vector3)
@@ -2974,7 +2974,7 @@ Text
 </tr>
 </table>
 
-## Time
+## Timestamp
 
 A timestamp composed of seconds and nanoseconds
 

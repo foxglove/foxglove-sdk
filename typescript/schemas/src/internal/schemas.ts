@@ -21,9 +21,9 @@ const Duration: FoxgloveMessageSchema = {
   ],
 };
 
-const Time: FoxgloveMessageSchema = {
+const Timestamp: FoxgloveMessageSchema = {
   type: "message",
-  name: "Time",
+  name: "Timestamp",
   description: "A timestamp composed of seconds and nanoseconds",
   rosEquivalent: "std_msgs/Time",
   ros2Equivalent: "builtin_interfaces/Time",
@@ -1591,7 +1591,7 @@ export const foxgloveMessageSchemas = {
   SpherePrimitive,
   TextAnnotation,
   TextPrimitive,
-  Time,
+  Timestamp,
   TriangleListPrimitive,
   Vector2,
   Vector3,

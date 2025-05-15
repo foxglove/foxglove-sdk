@@ -17,6 +17,16 @@ function primitiveToIdl(type: Exclude<FoxglovePrimitive, "time" | "duration">) {
   }
 }
 
+/**
+ * For backwards compatibility, we use `Time` instead of `Timestamp`.
+ */
+export function omgIdlSchemaName(schema: FoxgloveSchema): string {
+  if (schema.type === "message" && schema.name === "Timestamp") {
+    return "Time";
+  }
+  return schema.name;
+}
+
 export function generateOmgIdl(schema: FoxgloveSchema): string {
   const imports = new Set<string>();
 
@@ -27,7 +37,7 @@ export function generateOmgIdl(schema: FoxgloveSchema): string {
         const separator = index === schema.values.length - 1 ? "" : ",";
         if (value !== index) {
           throw new Error(
-            `Enum value ${schema.name}.${name} at index ${index} has value ${value}; index and value must match for OMG IDL`,
+            `Enum value ${omgIdlSchemaName(schema)}.${name} at index ${index} has value ${value}; index and value must match for OMG IDL`,
           );
         }
         if (description != undefined) {
@@ -36,7 +46,7 @@ export function generateOmgIdl(schema: FoxgloveSchema): string {
           return `// Value: ${value}\n  ${name}${separator}`;
         }
       });
-      definition = `// ${schema.description}\nenum ${schema.name} {\n  ${fields.join(
+      definition = `// ${schema.description}\nenum ${omgIdlSchemaName(schema)} {\n  ${fields.join(
         "\n\n  ",
       )}\n};`;
       break;
@@ -51,11 +61,12 @@ export function generateOmgIdl(schema: FoxgloveSchema): string {
             imports.add(field.type.enum.name);
             break;
           case "nested":
-            fieldType = field.type.schema.name;
-            imports.add(field.type.schema.name);
+            fieldType = omgIdlSchemaName(field.type.schema);
+            imports.add(omgIdlSchemaName(field.type.schema));
             break;
           case "primitive":
             if (field.type.name === "time") {
+              // Legacy name for backwards compatibility.
               fieldType = "Time";
               imports.add("Time");
             } else if (field.type.name === "duration") {
@@ -97,7 +108,7 @@ export function generateOmgIdl(schema: FoxgloveSchema): string {
         return `${comment}\n  ${defaultAnnotation}${fieldType} ${field.name}${arraySize};`;
       });
 
-      definition = `// ${schema.description}\nstruct ${schema.name} {\n  ${fields.join(
+      definition = `// ${schema.description}\nstruct ${omgIdlSchemaName(schema)} {\n  ${fields.join(
         "\n\n  ",
       )}\n};`;
       break;

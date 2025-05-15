@@ -3,12 +3,12 @@
 
 import { Color } from "./Color";
 import { Point2 } from "./Point2";
-import { Time } from "./Time";
+import { Timestamp } from "./Timestamp";
 
 /** A circle annotation on a 2D image */
 export type CircleAnnotation = {
   /** Timestamp of circle */
-  timestamp: Time;
+  timestamp: Timestamp;
 
   /**
    * Center of the circle in 2D image coordinates (pixels).
