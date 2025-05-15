@@ -43,9 +43,7 @@ async function main() {
     if (deriveVersionRegex.test(content)) {
       const updatedContent = content.replace(deriveVersionRegex, `$<Prefix>"${newVersion}"`);
       if (content === updatedContent) {
-        console.error(
-          `  ❌ foxglove-derive could not be updated from "${prevVersion}" to "${newVersion}"`,
-        );
+        console.error(`  ❌ foxglove-derive could not be updated to "${newVersion}"`);
         success = false;
       } else {
         await writeFile(cargoFile, updatedContent);
