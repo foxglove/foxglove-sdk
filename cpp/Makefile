@@ -45,8 +45,10 @@ docs: $(BUILD_DIR)/docs/html
 
 .PHONY: clean-docs
 clean-docs:
+	rm -rf ./foxglove/docs/generated
 	rm -rf $(BUILD_DIR)/docs
 
 $(BUILD_DIR)/docs/html:
 	cmake -B $(BUILD_DIR)
-	cmake --build $(BUILD_DIR) --target docs
+	cmake --build $(BUILD_DIR) --target doxygen
+	cmake --build $(BUILD_DIR) --target html-docs

@@ -25,7 +25,7 @@ async function main() {
   // Find all Cargo.toml files in the workspace
   const workspaceRoot = path.resolve(__dirname, "..");
   const cargoFiles = await glob("**/Cargo.toml", {
-    ignore: ["**/target/**", "**/node_modules/**"],
+    ignore: ["**/target/**", "**/node_modules/**", "cpp/build/**"],
     cwd: workspaceRoot,
     absolute: true,
   });
@@ -81,22 +81,27 @@ async function main() {
     process.exit(status);
   }
 
-  // update version in Python SDK docs
-  console.log("\nUpdating python docs version...");
+  // update version in Python & C++ SDK docs
+  console.log("\nUpdating version string in SDK docs...");
   const pythonVersionModule = path.join(
     workspaceRoot,
     "python/foxglove-sdk/python/docs/version.py",
   );
-  const content = await readFile(pythonVersionModule, "utf8");
-  const updatedContent = content.replace(
-    /SDK_VERSION\s*=\s*"([^"]*)"/m,
-    `SDK_VERSION = "${newVersion}"`,
-  );
-  if (!updatedContent.includes(newVersion)) {
-    console.error(`❌ Failed to update python docs version`);
-    process.exit(1);
+  const cppVersionModule = path.join(workspaceRoot, "cpp/foxglove/docs/version.py");
+
+  for (const module of [pythonVersionModule, cppVersionModule]) {
+    const content = await readFile(module, "utf8");
+    const updatedContent = content.replace(
+      /SDK_VERSION\s*=\s*"([^"]*)"/m,
+      `SDK_VERSION = "${newVersion}"`,
+    );
+    if (!updatedContent.includes(newVersion)) {
+      console.error(`❌ Failed to update docs version in ${module}`);
+      process.exit(1);
+    }
+    await writeFile(module, updatedContent);
+    console.log(`  ✅ Updated version in ${module} to ${newVersion}`);
   }
-  await writeFile(pythonVersionModule, updatedContent);
 
   console.log("\n✅ Success!");
 

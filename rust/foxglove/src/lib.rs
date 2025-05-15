@@ -17,9 +17,10 @@
 //! use foxglove::schemas::Log;
 //! use foxglove::{log, McapWriter};
 //!
-//! # fn func() -> Result<(), foxglove::FoxgloveError> {
 //! // Create a new MCAP file named 'test.mcap'.
-//! let mcap = McapWriter::new().create_new_buffered_file("test.mcap")?;
+//! let mcap = McapWriter::new()
+//!     .create_new_buffered_file("test.mcap")
+//!     .expect("create failed");
 //!
 //! log!(
 //!     "/log",
@@ -30,8 +31,7 @@
 //! );
 //!
 //! // Flush and close the MCAP file.
-//! mcap.close()?;
-//! # Ok(()) }
+//! mcap.close().expect("close failed");
 //! ```
 //!
 //! # Concepts
@@ -54,12 +54,14 @@
 //! use foxglove::schemas::Log;
 //! use foxglove::Context;
 //!
-//! # fn func() -> Result<(), foxglove::FoxgloveError> {
 //! // Create a new context.
 //! let ctx = Context::new();
 //!
 //! // Create a new MCAP file named 'test.mcap'.
-//! let mcap = ctx.mcap_writer().create_new_buffered_file("test.mcap")?;
+//! let mcap = ctx
+//!     .mcap_writer()
+//!     .create_new_buffered_file("test.mcap")
+//!     .expect("create failed");
 //!
 //! // Create a new channel for the topic "/log" for `Log` messages.
 //! let channel = ctx.channel_builder("/log").build();
@@ -69,8 +71,7 @@
 //! });
 //!
 //! // Flush and close the MCAP file.
-//! mcap.close()?;
-//! # Ok(()) }
+//! mcap.close().expect("close failed");
 //! ```
 //!
 //! ## Channels
@@ -93,9 +94,10 @@
 //! use foxglove::schemas::Log;
 //! use foxglove::{Channel, McapWriter};
 //!
-//! # fn func() -> Result<(), foxglove::FoxgloveError> {
 //! // Create a new MCAP file named 'test.mcap'.
-//! let mcap = McapWriter::new().create_new_buffered_file("test.mcap")?;
+//! let mcap = McapWriter::new()
+//!     .create_new_buffered_file("test.mcap")
+//!     .expect("create failed");
 //!
 //! // Create a new channel for the topic "/log" for `Log` messages.
 //! let channel = Channel::new("/log");
@@ -105,8 +107,7 @@
 //! });
 //!
 //! // Flush and close the MCAP file.
-//! mcap.close()?;
-//! # Ok(()) }
+//! mcap.close().expect("close failed");
 //! ```
 //!
 //! `log!` can be mixed and matched with manually created channels in the default [`Context`], as
@@ -132,13 +133,11 @@
 //!     count: u32,
 //! }
 //!
-//! # fn func() -> Result<(), foxglove::FoxgloveError> {
 //! let channel = foxglove::Channel::new("/custom");
 //! channel.log(&Custom {
 //!     msg: "custom",
 //!     count: 42,
 //! });
-//! # Ok(()) }
 //! ```
 //!
 //! [jsonschema-trait]: https://docs.rs/schemars/latest/schemars/trait.JsonSchema.html
@@ -190,22 +189,22 @@
 //! unregistered from the [`Context`], and the file will be finalized and flushed.
 //!
 //! ```no_run
-//! # fn func() -> Result<(), foxglove::FoxgloveError> {
-//! let mcap = foxglove::McapWriter::new().create_new_buffered_file("test.mcap")?;
-//! # Ok(()) }
+//! let mcap = foxglove::McapWriter::new()
+//!     .create_new_buffered_file("test.mcap")
+//!     .expect("create failed");
 //! ```
 //!
 //! You can override the MCAP writer's configuration using [`McapWriter::with_options`]. See
 //! [`WriteOptions`](`mcap::WriteOptions`) for more detail about these parameters:
 //!
 //! ```no_run
-//! # fn func() -> Result<(), foxglove::FoxgloveError> {
 //! let options = mcap::WriteOptions::default()
 //!     .chunk_size(Some(1024 * 1024))
 //!     .compression(Some(mcap::Compression::Lz4));
 //!
-//! let mcap = foxglove::McapWriter::with_options(options).create_new_buffered_file("test.mcap")?;
-//! # Ok(()) }
+//! let mcap = foxglove::McapWriter::with_options(options)
+//!     .create_new_buffered_file("test.mcap")
+//!     .expect("create failed");
 //! ```
 //!
 //! ### Live visualization server
