@@ -1,6 +1,6 @@
 [package]
 name = "foxglove"
-version = "0.7.0"
+version = "0.7.1"
 description = "Foxglove SDK"
 edition = "2021"
 rust-version = "1.83.0"
@@ -25,7 +25,7 @@ workspace = true
 
 [dependencies]
 arc-swap = "1.7.1"
-base64 = { version = "0.22", optional = true}
+base64 = { version = "0.22", optional = true }
 bimap = "0.6.3"
 bytes.workspace = true
 chrono = { version = "0.4.39", optional = true }

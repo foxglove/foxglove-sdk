@@ -1,4 +1,4 @@
-//! Example websocket server with client publsih
+//! Example websocket server with client publish
 //!
 //! This example uses the 'unstable' feature to expose capabilities.
 //!
@@ -77,7 +77,7 @@ async fn main() {
         () = log_forever() => (),
     };
 
-    server.stop();
+    server.stop().wait().await;
 }
 
 async fn log_forever() {

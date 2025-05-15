@@ -3,7 +3,6 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::{Context, Result};
-use bytes::Bytes;
 use foxglove::websocket::service::{Request, Service, ServiceSchema, SyncHandler};
 use foxglove::websocket::Capability;
 use foxglove::Schema;
@@ -25,7 +24,7 @@ pub async fn main(config: Config) -> Result<()> {
     // Simple services can be implemented with a closure.
     server
         .add_services([
-            Service::builder("/empty", empty_schema()).handler_fn(|_| anyhow::Ok(Bytes::new())),
+            Service::builder("/empty", empty_schema()).handler_fn(|_| anyhow::Ok(b"")),
             Service::builder("/echo", echo_schema())
                 .handler_fn(|req| anyhow::Ok(req.into_payload())),
         ])
@@ -62,7 +61,7 @@ pub async fn main(config: Config) -> Result<()> {
         .context("Failed to register services")?;
 
     tokio::signal::ctrl_c().await.ok();
-    server.stop();
+    server.stop().wait().await;
     Ok(())
 }
 
@@ -93,18 +92,18 @@ fn set_bool_schema() -> ServiceSchema {
         .with_response("json", Schema::json_schema::<SetBoolResponse>())
 }
 
-async fn sleep_handler(_: Request) -> Result<Bytes, String> {
+async fn sleep_handler(_: Request) -> Result<&'static [u8], String> {
     tokio::time::sleep(Duration::from_secs(1)).await;
-    Ok(Bytes::new())
+    Ok(b"")
 }
 
-fn blocking_handler(_: Request) -> Result<Bytes, String> {
+fn blocking_handler(_: Request) -> Result<&'static [u8], String> {
     std::thread::sleep(Duration::from_secs(1));
-    Ok(Bytes::new())
+    Ok(b"")
 }
 
 /// A stateless handler function.
-fn int_bin_handler(req: Request) -> Result<Bytes> {
+fn int_bin_handler(req: Request) -> Result<Vec<u8>> {
     let service_name = req.service_name();
     let client_id = req.client_id();
     let req: IntBinRequest = serde_json::from_slice(req.payload())?;
@@ -121,7 +120,7 @@ fn int_bin_handler(req: Request) -> Result<Bytes> {
     };
 
     let payload = serde_json::to_vec(&IntBinResponse { result })?;
-    Ok(payload.into())
+    Ok(payload)
 }
 
 /// A stateful handler implements the `SyncHandler` trait.
@@ -130,8 +129,9 @@ struct Flag(Arc<AtomicBool>);
 
 impl SyncHandler for Flag {
     type Error = anyhow::Error;
+    type Response = Vec<u8>;
 
-    fn call(&self, req: Request) -> Result<Bytes, Self::Error> {
+    fn call(&self, req: Request) -> Result<Self::Response, Self::Error> {
         // Decode the payload.
         let client_id = req.client_id();
         let req: SetBoolRequest = serde_json::from_slice(req.payload())?;
@@ -150,7 +150,6 @@ impl SyncHandler for Flag {
             success: true,
             message,
         })?;
-
-        Ok(payload.into())
+        Ok(payload)
     }
 }

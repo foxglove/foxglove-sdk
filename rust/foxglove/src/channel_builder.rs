@@ -69,7 +69,7 @@ impl ChannelBuilder {
     ///
     /// Returns [`FoxgloveError::MessageEncodingRequired`] if no message encoding was specified.
     pub fn build_raw(self) -> Result<Arc<RawChannel>, FoxgloveError> {
-        let channel = RawChannel::new(
+        let mut channel = RawChannel::new(
             &self.context,
             self.topic,
             self.message_encoding
@@ -77,7 +77,7 @@ impl ChannelBuilder {
             self.schema,
             self.metadata,
         );
-        self.context.add_channel(channel.clone())?;
+        channel = self.context.add_channel(channel);
         Ok(channel)
     }
 

@@ -81,7 +81,7 @@ fn main() -> Result<()> {
         }
     }
 
-    server.stop();
+    server.stop().wait_blocking();
     Ok(())
 }
 

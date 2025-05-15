@@ -91,7 +91,7 @@ async fn test_client_connect() {
         ServerInfo::new("mock_server").with_session_id("mock_sess_id")
     );
 
-    server.stop();
+    let _ = server.stop();
 }
 
 #[traced_test]
@@ -196,7 +196,7 @@ async fn test_handshake_with_multiple_subprotocols() {
         Some(&HeaderValue::from_static(SUBPROTOCOL))
     );
 
-    server.stop();
+    let _ = server.stop();
 }
 
 #[traced_test]
@@ -260,7 +260,7 @@ async fn test_advertise_to_client() {
         ))
     );
 
-    server.stop();
+    let _ = server.stop();
 }
 
 #[traced_test]
@@ -314,7 +314,7 @@ async fn test_advertise_schemaless_channels() {
         "Ignoring advertise channel for /schemaless_other because a schema is required"
     ));
 
-    server.stop();
+    let _ = server.stop();
 }
 
 #[traced_test]
@@ -445,7 +445,7 @@ async fn test_log_only_to_subscribers() {
     // Client 3 should not receive any messages since it unsubscribed from all channels
     assert!(client3.recv().now_or_never().is_none());
 
-    server.stop();
+    let _ = server.stop();
 }
 
 #[tokio::test]
@@ -497,7 +497,7 @@ async fn test_on_unsubscribe_called_after_disconnect() {
     let unsubscriptions = recording_listener.take_unsubscribe();
     assert_eq!(unsubscriptions.len(), 1);
 
-    server.stop();
+    let _ = server.stop();
 }
 
 #[traced_test]
@@ -530,7 +530,7 @@ async fn test_error_when_client_publish_unsupported() {
     );
 
     client.close().await;
-    server.stop();
+    let _ = server.stop();
 }
 
 #[traced_test]
@@ -585,7 +585,11 @@ async fn test_error_status_message() {
         );
     }
 
-    server.stop();
+    let _ = server.stop();
+}
+
+fn svc_unreachable(_: super::service::Request) -> Result<Bytes, String> {
+    unreachable!("this service handler is never invoked")
 }
 
 #[tokio::test]
@@ -593,7 +597,7 @@ async fn test_service_registration_not_supported() {
     // Can't register services if we don't declare support.
     let ctx = Context::new();
     let server = create_server(&ctx, ServerOptions::default());
-    let svc = Service::builder("/s", ServiceSchema::new("")).handler_fn(|_| Err(""));
+    let svc = Service::builder("/s", ServiceSchema::new("")).handler_fn(svc_unreachable);
     assert_matches!(
         server.add_services(vec![svc]),
         Err(FoxgloveError::ServicesNotSupported)
@@ -611,7 +615,7 @@ async fn test_service_registration_missing_request_encoding() {
             ..Default::default()
         },
     );
-    let svc = Service::builder("/s", ServiceSchema::new("")).handler_fn(|_| Err(""));
+    let svc = Service::builder("/s", ServiceSchema::new("")).handler_fn(svc_unreachable);
     assert_matches!(
         server.add_services(vec![svc]),
         Err(FoxgloveError::MissingRequestEncoding(_))
@@ -622,7 +626,7 @@ async fn test_service_registration_missing_request_encoding() {
 async fn test_service_registration_duplicate_name() {
     // Can't register a service with no encoding unless we declare global encodings.
     let ctx = Context::new();
-    let sa1 = Service::builder("/a", ServiceSchema::new("")).handler_fn(|_| Err(""));
+    let sa1 = Service::builder("/a", ServiceSchema::new("")).handler_fn(svc_unreachable);
     let server = create_server(
         &ctx,
         ServerOptions {
@@ -633,14 +637,14 @@ async fn test_service_registration_duplicate_name() {
         },
     );
 
-    let sa2 = Service::builder("/a", ServiceSchema::new("")).handler_fn(|_| Err(""));
+    let sa2 = Service::builder("/a", ServiceSchema::new("")).handler_fn(svc_unreachable);
     assert_matches!(
         server.add_services(vec![sa2]),
         Err(FoxgloveError::DuplicateService(_))
     );
 
-    let sb1 = Service::builder("/b", ServiceSchema::new("")).handler_fn(|_| Err(""));
-    let sb2 = Service::builder("/b", ServiceSchema::new("")).handler_fn(|_| Err(""));
+    let sb1 = Service::builder("/b", ServiceSchema::new("")).handler_fn(svc_unreachable);
+    let sb2 = Service::builder("/b", ServiceSchema::new("")).handler_fn(svc_unreachable);
     assert_matches!(
         server.add_services(vec![sb1, sb2]),
         Err(FoxgloveError::DuplicateService(_))
@@ -799,7 +803,7 @@ async fn test_client_advertising() {
     assert_eq!(unadvertises[0].1.id, ClientChannelId::new(channel_id));
 
     client.close().await;
-    server.stop();
+    let _ = server.stop();
 }
 
 #[traced_test]
@@ -839,7 +843,7 @@ async fn test_parameter_values() {
     let msg = expect_recv!(client, ServerMessage::ParameterValues);
     assert_eq!(msg, ParameterValues::new([parameter]));
 
-    server.stop();
+    let _ = server.stop();
 }
 
 #[traced_test]
@@ -905,7 +909,7 @@ async fn test_parameter_unsubscribe_no_updates() {
     // doesn't send a parameter message to an unsubscribed client.
     tokio::time::sleep(std::time::Duration::from_millis(10)).await;
 
-    server.stop();
+    server.stop().unwrap().wait().await;
 
     // No parameter message was sent with the updated param before the Close message
     expect_recv_close!(client);
@@ -956,8 +960,8 @@ async fn test_set_parameters() {
     let msg = expect_recv!(client, ServerMessage::ParameterValues);
     assert_eq!(msg, ParameterValues::new(parameters.clone()).with_id("123"));
 
-    // it will also publish the updated paramters returned from on_set_parameters
-    // which will send just the paramters we're subscribed to.
+    // it will also publish the updated parameters returned from on_set_parameters
+    // which will send just the parameters we're subscribed to.
     let msg = expect_recv!(client, ServerMessage::ParameterValues);
     assert_eq!(msg, ParameterValues::new(parameters[..2].to_vec()));
 
@@ -965,7 +969,7 @@ async fn test_set_parameters() {
     assert_eq!(set_parameters.request_id, Some("123".to_string()));
     assert_eq!(set_parameters.parameters, parameters);
 
-    server.stop();
+    let _ = server.stop();
 }
 
 #[traced_test]
@@ -1005,7 +1009,7 @@ async fn test_get_parameters() {
     assert_eq!(get_parameters.param_names, vec!["foo", "bar", "baz"]);
     assert_eq!(get_parameters.request_id, Some("123".to_string()));
 
-    server.stop();
+    let _ = server.stop();
 }
 
 #[tokio::test]
@@ -1071,8 +1075,8 @@ async fn test_services() {
     );
 
     // Register a new service.
-    let err_svc =
-        Service::builder("/err", ServiceSchema::new("plain")).handler_fn(|_| Err("oh noes"));
+    let err_svc = Service::builder("/err", ServiceSchema::new("plain"))
+        .handler_fn(|_| Err::<&[u8], _>("oh noes"));
     let err_svc_id = u32::from(err_svc.id());
     server
         .add_services(vec![err_svc])
@@ -1177,11 +1181,11 @@ async fn test_fetch_asset() {
             fetch_asset_handler: Some(Box::new(BlockingAssetHandlerFn(Arc::new(
                 |_client, uri: String| {
                     if uri.ends_with("error") {
-                        Err("test error".to_string())
+                        Err("test error")
                     } else if uri.ends_with("panic") {
                         panic!("oh no")
                     } else {
-                        Ok(Bytes::from_static(b"test data"))
+                        Ok(b"test data")
                     }
                 },
             )))),
@@ -1335,7 +1339,7 @@ async fn test_update_connection_graph() {
     c1.send(&UnsubscribeConnectionGraph {}).await.unwrap();
     assert_eventually(|| dbg!(recording_listener.take_connection_graph_unsubscribe() == 1)).await;
 
-    server.stop();
+    let _ = server.stop();
 }
 
 #[traced_test]
@@ -1379,10 +1383,9 @@ async fn test_slow_client() {
 
     // Close message should be received
     expect_recv_close!(client);
-    server.stop();
+    let _ = server.stop();
 }
 
-#[cfg(feature = "unstable")]
 #[tokio::test]
 async fn test_broadcast_time() {
     let ctx = Context::new();

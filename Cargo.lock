@@ -605,7 +605,6 @@ dependencies = [
 name = "example-ws-server-fetch-asset"
 version = "0.0.0"
 dependencies = [
- "bytes",
  "clap",
  "env_logger",
  "foxglove",
@@ -678,7 +677,7 @@ checksum = "3f9eec918d3f24069decb9af1554cad7c880e2da24a9afd88aca000531ab82c1"
 
 [[package]]
 name = "foxglove"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "arc-swap",
  "assert_matches",
@@ -729,11 +728,10 @@ dependencies = [
 
 [[package]]
 name = "foxglove-sdk-python"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "base64",
  "bytes",
- "env_logger",
  "foxglove",
  "log",
  "prost-types",
@@ -749,11 +747,15 @@ dependencies = [
 
 [[package]]
 name = "foxglove_c"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
+ "base64",
  "bitflags",
  "cbindgen",
+ "env_logger",
  "foxglove",
+ "log",
+ "maplit",
  "mcap 0.15.1",
  "tracing",
 ]

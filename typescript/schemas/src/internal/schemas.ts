@@ -65,12 +65,12 @@ const RawAudio: FoxgloveMessageSchema = {
     {
       name: "sample_rate",
       type: { type: "primitive", name: "uint32" },
-      description: "Sample rate in Hz"
+      description: "Sample rate in Hz",
     },
     {
       name: "number_of_channels",
       type: { type: "primitive", name: "uint32" },
-      description: "Number of channels in the audio block"
+      description: "Number of channels in the audio block",
     },
   ],
 };
@@ -864,8 +864,7 @@ const CompressedImage: FoxgloveMessageSchema = {
     {
       name: "format",
       type: { type: "primitive", name: "string" },
-      description:
-        "Image format\n\nSupported values: `jpeg`, `png`, `webp`, `avif`",
+      description: "Image format\n\nSupported values: `jpeg`, `png`, `webp`, `avif`",
     },
   ],
 };

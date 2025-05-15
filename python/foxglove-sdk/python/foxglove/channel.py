@@ -3,6 +3,7 @@ import json
 from base64 import b64encode
 from typing import Any, Dict, Optional, Union, cast
 
+from . import Context
 from . import _foxglove_py as _foxglove
 from . import channels as _channels
 from . import schemas as _schemas
@@ -26,6 +27,7 @@ class Channel:
         *,
         schema: Union[JsonSchema, _foxglove.Schema, None] = None,
         message_encoding: Optional[str] = None,
+        context: Optional[Context] = None,
     ):
         """
         Create a new channel for logging messages on a topic.
@@ -40,23 +42,23 @@ class Channel:
 
         If both message_encoding and schema are None, then the channel will use JSON encoding, and
         allow any dict to be logged.
-
-        :raises KeyError: if a channel already exists for the given topic.
         """
-        if topic in _channels_by_topic:
-            raise ValueError(f"Channel for topic '{topic}' already exists")
-
         message_encoding, schema = _normalize_schema(message_encoding, schema)
 
         self.message_encoding = message_encoding
 
-        self.base = _foxglove.BaseChannel(
-            topic,
-            message_encoding,
-            schema,
-        )
+        if context is not None:
+            self.base = context._create_channel(
+                topic, message_encoding=message_encoding, schema=schema
+            )
+        else:
+            self.base = _foxglove.BaseChannel(
+                topic,
+                message_encoding,
+                schema,
+            )
 
-        _channels_by_topic[topic] = self
+        _channels_by_id[self.base.id()] = self
 
     def __repr__(self) -> str:
         return f"Channel(id={self.id()}, topic='{self.topic()}', schema='{self.schema_name()}')"
@@ -109,7 +111,7 @@ class Channel:
         self.base.close()
 
 
-_channels_by_topic: Dict[str, Channel] = {}
+_channels_by_id: Dict[int, Channel] = {}
 
 
 def log(
@@ -136,7 +138,9 @@ def log(
     :param message: The message to log.
     :param log_time: The optional time the message was logged.
     """
-    channel: Optional[Any] = _channels_by_topic.get(topic, None)
+    base_channel = _foxglove.get_channel_for_topic(topic)
+    channel = _channels_by_id.get(base_channel.id(), None) if base_channel else None
+
     if channel is None:
         schema_name = type(message).__name__
         if isinstance(message, (bytes, str)):
@@ -152,7 +156,9 @@ def log(
             raise ValueError(
                 f"No Foxglove schema channel found for message type {schema_name}"
             )
-        _channels_by_topic[topic] = channel
+
+        channel_id = channel.base.id() if hasattr(channel, "base") else channel.id()
+        _channels_by_id[channel_id] = channel
 
     # mypy isn't smart enough to realize that when channel is a Channel, message a compatible type
     channel.log(

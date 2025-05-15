@@ -4,7 +4,7 @@
 //! Timestamp in protobuf, even though we schematize those types differently. This module provides
 //! an infallible translation from the foxglove schema to the underlying protobuf representation.
 //!
-//! This module lives outside `crate::schemas`, because everything under the schemas/ direcory is
+//! This module lives outside `crate::schemas`, because everything under the schemas/ directory is
 //! generated.
 
 use crate::convert::{RangeError, SaturatingFrom};
@@ -220,7 +220,7 @@ impl prost::Message for Duration {
         Self: Sized,
     {
         // We only support encoding for now.
-        unimplemented!("not implemeneted");
+        unimplemented!("not implemented");
     }
 
     fn encoded_len(&self) -> usize {
@@ -414,7 +414,7 @@ impl prost::Message for Timestamp {
         Self: Sized,
     {
         // We only support encoding for now.
-        unimplemented!("not implemeneted");
+        unimplemented!("not implemented");
     }
 
     fn encoded_len(&self) -> usize {

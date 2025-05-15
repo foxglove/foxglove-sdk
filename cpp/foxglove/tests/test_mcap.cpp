@@ -1,4 +1,5 @@
 #include <foxglove/channel.hpp>
+#include <foxglove/context.hpp>
 #include <foxglove/error.hpp>
 #include <foxglove/mcap.hpp>
 
@@ -16,19 +17,19 @@ using Catch::Matchers::Equals;
 class FileCleanup {
 public:
   explicit FileCleanup(std::string&& path)
-      : _path(std::move(path)) {}
+      : path_(std::move(path)) {}
   FileCleanup(const FileCleanup&) = delete;
   FileCleanup& operator=(const FileCleanup&) = delete;
   FileCleanup(FileCleanup&&) = delete;
   FileCleanup& operator=(FileCleanup&&) = delete;
   ~FileCleanup() {
-    if (std::filesystem::exists(_path)) {
-      std::filesystem::remove(_path);
+    if (std::filesystem::exists(path_)) {
+      std::filesystem::remove(path_);
     }
   }
 
 private:
-  std::string _path;
+  std::string path_;
 };
 
 TEST_CASE("Open new file and close mcap writer") {
@@ -124,10 +125,41 @@ std::string readFile(const std::string& path) {
   return {std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>()};
 }
 
+TEST_CASE("different contexts") {
+  FileCleanup cleanup("test.mcap");
+  auto context1 = foxglove::Context::create();
+  auto context2 = foxglove::Context::create();
+
+  // Create writer on context1
+  foxglove::McapWriterOptions options{context1};
+  options.path = "test.mcap";
+  auto writer = foxglove::McapWriter::create(options);
+  REQUIRE(writer.has_value());
+
+  // Log on context2 (should not be output to the file)
+  foxglove::Schema schema;
+  schema.name = "ExampleSchema";
+  auto channel_result = foxglove::Channel::create("example1", "json", schema, context2);
+  REQUIRE(channel_result.has_value());
+  auto channel = std::move(channel_result.value());
+  std::string data = "Hello, world!";
+  channel.log(reinterpret_cast<const std::byte*>(data.data()), data.size());
+
+  writer->close();
+
+  // Check if test.mcap file exists
+  REQUIRE(std::filesystem::exists("test.mcap"));
+
+  // Check that it does not contain the message
+  std::string content = readFile("test.mcap");
+  REQUIRE_THAT(content, !ContainsSubstring("Hello, world!"));
+}
+
 TEST_CASE("specify profile") {
   FileCleanup cleanup("test.mcap");
+  auto context = foxglove::Context::create();
 
-  foxglove::McapWriterOptions options = {};
+  foxglove::McapWriterOptions options{context};
   options.path = "test.mcap";
   options.profile = "test_profile";
   auto writer = foxglove::McapWriter::create(options);
@@ -136,9 +168,9 @@ TEST_CASE("specify profile") {
   // Write message
   foxglove::Schema schema;
   schema.name = "ExampleSchema";
-  auto channelResult = foxglove::Channel::create("example1", "json", schema);
-  REQUIRE(channelResult.has_value());
-  auto& channel = channelResult.value();
+  auto channel_result = foxglove::Channel::create("example1", "json", schema, context);
+  REQUIRE(channel_result.has_value());
+  auto& channel = channel_result.value();
   std::string data = "Hello, world!";
   channel.log(reinterpret_cast<const std::byte*>(data.data()), data.size());
 
@@ -154,21 +186,22 @@ TEST_CASE("specify profile") {
 
 TEST_CASE("zstd compression") {
   FileCleanup cleanup("test.mcap");
+  auto context = foxglove::Context::create();
 
-  foxglove::McapWriterOptions options = {};
+  foxglove::McapWriterOptions options{context};
   options.path = "test.mcap";
   options.compression = foxglove::McapCompression::Zstd;
-  options.chunkSize = 10000;
-  options.useChunks = true;
+  options.chunk_size = 10000;
+  options.use_chunks = true;
   auto writer = foxglove::McapWriter::create(options);
   REQUIRE(writer.has_value());
 
   // Write message
   foxglove::Schema schema;
   schema.name = "ExampleSchema";
-  auto channelResult = foxglove::Channel::create("example2", "json", schema);
-  REQUIRE(channelResult.has_value());
-  auto& channel = channelResult.value();
+  auto channel_result = foxglove::Channel::create("example2", "json", schema, context);
+  REQUIRE(channel_result.has_value());
+  auto channel = std::move(channel_result.value());
   std::string data = "Hello, world!";
   channel.log(reinterpret_cast<const std::byte*>(data.data()), data.size());
 
@@ -184,21 +217,22 @@ TEST_CASE("zstd compression") {
 
 TEST_CASE("lz4 compression") {
   FileCleanup cleanup("test.mcap");
+  auto context = foxglove::Context::create();
 
-  foxglove::McapWriterOptions options = {};
+  foxglove::McapWriterOptions options{context};
   options.path = "test.mcap";
   options.compression = foxglove::McapCompression::Lz4;
-  options.chunkSize = 10000;
-  options.useChunks = true;
+  options.chunk_size = 10000;
+  options.use_chunks = true;
   auto writer = foxglove::McapWriter::create(options);
   REQUIRE(writer.has_value());
 
   // Write message
   foxglove::Schema schema;
   schema.name = "ExampleSchema";
-  auto channelResult = foxglove::Channel::create("example3", "json", schema);
-  REQUIRE(channelResult.has_value());
-  auto& channel = channelResult.value();
+  auto channel_result = foxglove::Channel::create("example3", "json", schema, context);
+  REQUIRE(channel_result.has_value());
+  auto& channel = channel_result.value();
   std::string data = "Hello, world!";
   channel.log(reinterpret_cast<const std::byte*>(data.data()), data.size());
 
@@ -215,8 +249,9 @@ TEST_CASE("lz4 compression") {
 
 TEST_CASE("Channel can outlive Schema") {
   FileCleanup cleanup("test.mcap");
+  auto context = foxglove::Context::create();
 
-  foxglove::McapWriterOptions options = {};
+  foxglove::McapWriterOptions options{context};
   options.path = "test.mcap";
   auto writer = foxglove::McapWriter::create(options);
   REQUIRE(writer.has_value());
@@ -229,8 +264,8 @@ TEST_CASE("Channel can outlive Schema") {
     schema.encoding = "unknown";
     std::string data = "FAKESCHEMA";
     schema.data = reinterpret_cast<const std::byte*>(data.data());
-    schema.dataLen = data.size();
-    auto result = foxglove::Channel::create("example", "json", schema);
+    schema.data_len = data.size();
+    auto result = foxglove::Channel::create("example", "json", schema, context);
     REQUIRE(result.has_value());
     // Channel should copy the schema, so this modification has no effect on the output
     data[2] = 'I';

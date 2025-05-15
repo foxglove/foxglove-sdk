@@ -1,8 +1,9 @@
 //! Service call response handling.
 
+use std::borrow::Cow;
+use std::fmt::Display;
 use std::sync::Arc;
 
-use bytes::Bytes;
 use tokio_tungstenite::tungstenite::Message;
 
 use super::{CallId, ServiceId};
@@ -47,10 +48,29 @@ impl Responder {
         }
     }
 
-    /// Completes the request by sending a response to the client.
-    pub fn respond(mut self, result: Result<Bytes, String>) {
+    /// Send a result to the client.
+    pub fn respond<T, E>(self, result: Result<T, E>)
+    where
+        T: AsRef<[u8]>,
+        E: Display,
+    {
+        match result {
+            Ok(data) => self.respond_ok(data),
+            Err(e) => self.respond_err(e.to_string()),
+        }
+    }
+
+    /// Send response data to the client.
+    pub fn respond_ok(mut self, data: impl AsRef<[u8]>) {
         if let Some(inner) = self.0.take() {
-            inner.respond(result);
+            inner.respond(Ok(data.as_ref()))
+        }
+    }
+
+    /// Send an error response to the client.
+    pub fn respond_err(mut self, message: String) {
+        if let Some(inner) = self.0.take() {
+            inner.respond(Err(message))
         }
     }
 }
@@ -78,13 +98,13 @@ struct Inner {
 }
 
 impl Inner {
-    fn respond(self, result: Result<Bytes, String>) {
+    fn respond(self, result: Result<&[u8], String>) {
         let message = match result {
             Ok(payload) => Message::from(&ServiceCallResponse {
                 service_id: self.service_id.into(),
                 call_id: self.call_id.into(),
                 encoding: self.encoding.into(),
-                payload: (&*payload).into(),
+                payload: Cow::Borrowed(payload),
             }),
             Err(message) => Message::from(&ServiceCallFailure {
                 service_id: self.service_id.into(),
