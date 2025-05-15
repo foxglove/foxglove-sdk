@@ -54,8 +54,8 @@ pub fn create_channel<T: Encode>(
 ///
 /// The type of message to log! should be consistent for each call site to log!.
 /// This is usually true in Rust, but it's possible in a function generic on the message type,
-/// to pass different message types in the same call to log!, for the same underlying channel
-/// with no error at compile time or runtime. The schema will still be the schema the
+/// to pass different message types in the same call site for log!, for the same underlying
+/// channel with no error at compile time or runtime. The schema will still be the schema the
 /// channel was first created with, and the messages won't match the schema,
 /// and will not behave well in the Foxglove app. You should avoid doing this.
 ///
