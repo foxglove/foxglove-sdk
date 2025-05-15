@@ -39,7 +39,11 @@ jobs:
       - run: cargo test --features unstable --verbose
         timeout-minutes: 10
       - run: cargo publish --package foxglove-derive --dry-run
+        # Release tag will publish below
+        if: ! startsWith(github.ref , 'refs/tags/sdk/v')
       - run: cargo publish --package foxglove --dry-run
+        # Release tag will publish below, and requires the derive crate to be published.
+        if: ! startsWith(github.ref , 'refs/tags/sdk/v')
 
   release-rust:
     if: startsWith(github.ref, 'refs/tags/sdk/v')
