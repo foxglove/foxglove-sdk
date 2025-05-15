@@ -5,6 +5,7 @@ import path from "path";
 import semver from "semver";
 
 const versionRegex = /^version\s*=\s*"([^"]*)"/m;
+const deriveVersionRegex = /^(?<Prefix>foxglove-derive\s=\s.+version\s*=\s*)"([^"]*)"/m;
 
 async function main() {
   const newVersionV = process.argv[2];
@@ -37,8 +38,23 @@ async function main() {
     console.log(`Checking ${cargoFile}...`);
     const content = await readFile(cargoFile, "utf8");
 
+    // Bump the foxglove-derive dependency to match. Do this before checking the package version,
+    // which inherits from the workspace.
+    if (deriveVersionRegex.test(content)) {
+      const updatedContent = content.replace(deriveVersionRegex, `$<Prefix>"${newVersion}"`);
+      if (content === updatedContent) {
+        console.error(
+          `  ❌ foxglove-derive could not be updated from "${prevVersion}" to "${newVersion}"`,
+        );
+        success = false;
+      } else {
+        await writeFile(cargoFile, updatedContent);
+        console.log(`  ✅ Updated foxglove-derive in ${cargoFile} to ${newVersion}`);
+      }
+    }
+
     if (!versionRegex.test(content)) {
-      console.log(`  ℹ️ Skipped, does not contain version field`);
+      console.log(`  ℹ️ Skipped Cargo version update; does not contain version field`);
       continue;
     }
 
