@@ -52,6 +52,13 @@ pub fn create_channel<T: Encode>(
 /// from the Context. Panics if the existing channel schema or message_encoding
 /// is incompatible with $msg.
 ///
+/// The type of message to log! should be consistent for each call site to log!.
+/// This is usually true in Rust, but it's possible in a function generic on the message type,
+/// to pass different message types in the same call to log!, for the same underlying channel
+/// with no error at compile time or runtime. The schema will still be the schema the
+/// channel was first created with, and the messages won't match the schema,
+/// and will not behave well in the Foxglove app. You should avoid doing this.
+///
 /// Panics if a channel can't be created for $msg.
 #[macro_export]
 macro_rules! log {
@@ -70,7 +77,7 @@ macro_rules! log {
     }};
 }
 
-/// Log a message for a topic with additional metadata.
+/// Log a message for a topic with additional metadata. See [`log!`] for more information.
 ///
 /// $topic: string literal topic name
 /// $msg: expression to log, must implement Encode trait
@@ -269,5 +276,68 @@ mod tests {
         assert!(logs_contain(
             "Channel with topic foo already exists in this context"
         ));
+    }
+
+    #[test]
+    #[traced_test]
+    fn test_log_macro_inside_generic_function() {
+        let _cleanup = GlobalContextTest::new();
+
+        let sink = Arc::new(RecordingSink::new());
+        Context::get_default().add_sink(sink.clone());
+
+        struct Foo {
+            x: u32,
+        }
+
+        impl Encode for Foo {
+            type Error = FoxgloveError;
+
+            fn encode(&self, buf: &mut impl BufMut) -> Result<(), Self::Error> {
+                buf.put_u32(self.x);
+                Ok(())
+            }
+
+            fn get_schema() -> Option<Schema> {
+                None
+            }
+
+            fn get_message_encoding() -> String {
+                "foo".to_string()
+            }
+        }
+
+        struct Bar {
+            x: u32,
+        }
+
+        impl Encode for Bar {
+            type Error = FoxgloveError;
+
+            fn encode(&self, buf: &mut impl BufMut) -> Result<(), Self::Error> {
+                buf.put_u32(self.x);
+                Ok(())
+            }
+
+            fn get_schema() -> Option<Schema> {
+                None
+            }
+
+            fn get_message_encoding() -> String {
+                "bar".to_string()
+            }
+        }
+
+        fn generic_func<T: Encode>(x: T) {
+            log!("foo", x);
+        }
+
+        generic_func(Foo { x: 1 });
+        generic_func(Bar { x: 1 });
+
+        let messages = sink.take_messages();
+        assert_eq!(messages.len(), 2);
+        assert_eq!(messages[0].msg, serialize(&Foo { x: 1 }));
+        assert_eq!(messages[1].msg, serialize(&Bar { x: 1 }));
     }
 }
