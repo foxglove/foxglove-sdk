@@ -291,8 +291,7 @@ fn derive_struct_impl(input: &DeriveInput, data: &DataStruct) -> TokenStream {
             }
 
             fn encode(&self, buf: &mut impl ::foxglove::bytes::BufMut) -> Result<(), Self::Error> {
-                let total_len = 0 #(+ #field_message_lengths)*;
-                if total_len > buf.remaining_mut() {
+                if self.encoded_len().is_some_and(|len| len > buf.remaining_mut()) {
                     return Err(::foxglove::FoxgloveError::EncodeError(
                         "insufficient buffer".to_string(),
                     ));
@@ -301,6 +300,10 @@ fn derive_struct_impl(input: &DeriveInput, data: &DataStruct) -> TokenStream {
                 // The top level message is encoded without a length prefix
                 #(#field_encoders)*
                 Ok(())
+            }
+
+            fn encoded_len(&self) -> Option<usize> {
+                Some(#tags_encoded_len #(+ #field_message_lengths)*)
             }
         }
     };
