@@ -127,10 +127,7 @@ export function generatePySchemaModule(schemas: FoxgloveSchema[]): string {
     .filter(isMessageSchema)
     .map((schema) => pyClassName(schema))
     .sort();
-  const classNames = schemas
-    .map((schema) => pyClassName(schema))
-    .concat(["Timestamp", "Duration"])
-    .sort();
+  const classNames = schemas.map((schema) => pyClassName(schema)).sort();
   const headers = [
     `"""`,
     `This module contains the definitions of the well-known Foxglove schemas for logging.`,
