@@ -14,16 +14,21 @@
 //! message and close the file.
 //!
 //! ```no_run
-//! use foxglove::{McapWriter, log};
 //! use foxglove::schemas::Log;
+//! use foxglove::{log, McapWriter};
 //!
 //! // Create a new MCAP file named 'test.mcap'.
-//! let mcap = McapWriter::new().create_new_buffered_file("test.mcap").expect("create failed");
+//! let mcap = McapWriter::new()
+//!     .create_new_buffered_file("test.mcap")
+//!     .expect("create failed");
 //!
-//! log!("/log", Log{
-//!     message: "Hello, Foxglove!".to_string(),
-//!     ..Default::default()
-//! });
+//! log!(
+//!     "/log",
+//!     Log {
+//!         message: "Hello, Foxglove!".to_string(),
+//!         ..Default::default()
+//!     }
+//! );
 //!
 //! // Flush and close the MCAP file.
 //! mcap.close().expect("close failed");
@@ -46,18 +51,21 @@
 //! If we wanted to use an explicit context instead, we'd write:
 //!
 //! ```no_run
-//! use foxglove::Context;
 //! use foxglove::schemas::Log;
+//! use foxglove::Context;
 //!
 //! // Create a new context.
 //! let ctx = Context::new();
 //!
 //! // Create a new MCAP file named 'test.mcap'.
-//! let mcap = ctx.mcap_writer().create_new_buffered_file("test.mcap").expect("create failed");
+//! let mcap = ctx
+//!     .mcap_writer()
+//!     .create_new_buffered_file("test.mcap")
+//!     .expect("create failed");
 //!
 //! // Create a new channel for the topic "/log" for `Log` messages.
 //! let channel = ctx.channel_builder("/log").build();
-//! channel.log(&Log{
+//! channel.log(&Log {
 //!     message: "Hello, Foxglove!".to_string(),
 //!     ..Default::default()
 //! });
@@ -83,15 +91,17 @@
 //! the first call. The example could be equivalently written as:
 //!
 //! ```no_run
-//! use foxglove::{Channel, McapWriter};
 //! use foxglove::schemas::Log;
+//! use foxglove::{Channel, McapWriter};
 //!
 //! // Create a new MCAP file named 'test.mcap'.
-//! let mcap = McapWriter::new().create_new_buffered_file("test.mcap").expect("create failed");
+//! let mcap = McapWriter::new()
+//!     .create_new_buffered_file("test.mcap")
+//!     .expect("create failed");
 //!
 //! // Create a new channel for the topic "/log" for `Log` messages.
 //! let channel = Channel::new("/log");
-//! channel.log(&Log{
+//! channel.log(&Log {
 //!     message: "Hello, Foxglove!".to_string(),
 //!     ..Default::default()
 //! });
@@ -124,9 +134,9 @@
 //! }
 //!
 //! let channel = foxglove::Channel::new("/custom");
-//! channel.log(&Custom{
+//! channel.log(&Custom {
 //!     msg: "custom",
-//!     count: 42
+//!     count: 42,
 //! });
 //! ```
 //!
@@ -145,8 +155,8 @@
 //! In this example, we create two lazy channels on the default context:
 //!
 //! ```
-//! use foxglove::{LazyChannel, LazyRawChannel};
 //! use foxglove::schemas::SceneUpdate;
+//! use foxglove::{LazyChannel, LazyRawChannel};
 //!
 //! static BOXES: LazyChannel<SceneUpdate> = LazyChannel::new("/boxes");
 //! static MSG: LazyRawChannel = LazyRawChannel::new("/msg", "json");
@@ -155,8 +165,8 @@
 //! It is also possible to bind lazy channels to an explicit [`LazyContext`]:
 //!
 //! ```
-//! use foxglove::{LazyChannel, LazyContext, LazyRawChannel};
 //! use foxglove::schemas::SceneUpdate;
+//! use foxglove::{LazyChannel, LazyContext, LazyRawChannel};
 //!
 //! static CTX: LazyContext = LazyContext::new();
 //! static BOXES: LazyChannel<SceneUpdate> = CTX.channel("/boxes");
@@ -180,7 +190,8 @@
 //!
 //! ```no_run
 //! let mcap = foxglove::McapWriter::new()
-//!     .create_new_buffered_file("test.mcap").expect("create failed");
+//!     .create_new_buffered_file("test.mcap")
+//!     .expect("create failed");
 //! ```
 //!
 //! You can override the MCAP writer's configuration using [`McapWriter::with_options`]. See
@@ -188,11 +199,12 @@
 //!
 //! ```no_run
 //! let options = mcap::WriteOptions::default()
-//!     .chunk_size(Some(1024*1024))
+//!     .chunk_size(Some(1024 * 1024))
 //!     .compression(Some(mcap::Compression::Lz4));
 //!
 //! let mcap = foxglove::McapWriter::with_options(options)
-//!     .create_new_buffered_file("test.mcap").expect("create failed");
+//!     .create_new_buffered_file("test.mcap")
+//!     .expect("create failed");
 //! ```
 //!
 //! ### Live visualization server
