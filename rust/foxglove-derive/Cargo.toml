@@ -1,7 +1,11 @@
 [package]
 name = "foxglove-derive"
-version = "0.0.1"
-edition = "2021"
+description = "Foxglove SDK derive macros"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+license.workspace = true
 
 [lib]
 proc-macro = true
