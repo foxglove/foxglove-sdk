@@ -11,7 +11,6 @@ table ByteVector {
 root_type ByteVector;
 `;
 
-// Same as protobuf wellknown types
 export const TIME_FB = `
 namespace foxglove;
 
@@ -27,7 +26,7 @@ export const DURATION_FB = `
 namespace foxglove;
 
 struct Duration {
-  /// Signed seconds of the span of time. Must be from -315,576,000,000 to +315,576,000,000 inclusive.
+  /// Signed seconds of the span of time.
   sec:int32;
   /// if sec === 0 : -999,999,999 <= nsec <= +999,999,999
   /// otherwise sign of sec must match sign of nsec or be 0 and abs(nsec) <= 999,999,999
@@ -37,6 +36,8 @@ struct Duration {
 
 function primitiveToFlatbuffers(type: Exclude<FoxglovePrimitive, "time" | "duration">) {
   switch (type) {
+    case "int32":
+      return "int32";
     case "uint32":
       return "uint32";
     case "bytes":

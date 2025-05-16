@@ -1,7 +1,6 @@
 import {
-  DURATION_TS,
   GenerateTypeScriptOptions,
-  TIME_TS,
+  LEGACY_TIME_TS,
   generateTypeScript,
 } from "./generateTypeScript";
 import { foxgloveEnumSchemas, foxgloveMessageSchemas } from "./schemas";
@@ -24,16 +23,19 @@ export function exportTypeScriptSchemas(
     schemas.set(schema.name, generateTypeScript(schema, options));
   }
 
-  schemas.set("Duration", DURATION_TS);
-  schemas.set("Time", TIME_TS);
+  schemas.set("Time", LEGACY_TIME_TS);
 
   const allSchemaNames = [
     ...Object.values(foxgloveMessageSchemas),
     ...Object.values(foxgloveEnumSchemas),
-  ].sort((a, b) => a.name.localeCompare(b.name));
+  ]
+    .map((schema) => schema.name)
+    // Include the legacy `Time` export for backwards compatibility.
+    .concat(["Time"])
+    .sort((a, b) => a.localeCompare(b));
   let indexTS = "";
-  for (const schema of allSchemaNames) {
-    indexTS += `export * from "./${schema.name}";\n`;
+  for (const schemaName of allSchemaNames) {
+    indexTS += `export * from "./${schemaName}";\n`;
   }
   schemas.set("index", indexTS);
 
