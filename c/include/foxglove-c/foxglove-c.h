@@ -49,6 +49,12 @@
  */
 #define FOXGLOVE_SERVER_CAPABILITY_SERVICES (1 << 4)
 
+/**
+ * Allow clients to request assets. If you supply an asset handler to the server, this capability
+ * will be advertised automatically.
+ */
+#define FOXGLOVE_SERVER_CAPABILITY_ASSETS (1 << 5)
+
 enum foxglove_error
 #ifdef __cplusplus
   : uint8_t
@@ -70,9 +76,26 @@ enum foxglove_error
   FOXGLOVE_ERROR_IO_ERROR,
   FOXGLOVE_ERROR_MCAP_ERROR,
   FOXGLOVE_ERROR_ENCODE_ERROR,
+  FOXGLOVE_ERROR_BUFFER_TOO_SHORT,
+  FOXGLOVE_ERROR_BASE64_DECODE_ERROR,
 };
 #ifndef __cplusplus
 typedef uint8_t foxglove_error;
+#endif // __cplusplus
+
+enum foxglove_log_level
+#ifdef __cplusplus
+  : uint8_t
+#endif // __cplusplus
+ {
+  FOXGLOVE_LOG_LEVEL_OFF = 0,
+  FOXGLOVE_LOG_LEVEL_DEBUG = 1,
+  FOXGLOVE_LOG_LEVEL_INFO = 2,
+  FOXGLOVE_LOG_LEVEL_WARN = 3,
+  FOXGLOVE_LOG_LEVEL_ERROR = 4,
+};
+#ifndef __cplusplus
+typedef uint8_t foxglove_log_level;
 #endif // __cplusplus
 
 enum foxglove_mcap_compression
@@ -88,13 +111,85 @@ enum foxglove_mcap_compression
 typedef uint8_t foxglove_mcap_compression;
 #endif // __cplusplus
 
+/**
+ * A parameter type.
+ *
+ * This enum is used to disambiguate `foxglove_parameter` values, in situations where the wire
+ * representation is ambiguous.
+ */
+enum foxglove_parameter_type
+#ifdef __cplusplus
+  : uint8_t
+#endif // __cplusplus
+ {
+  /**
+   * The parameter value can be inferred from the inner parameter value tag.
+   */
+  FOXGLOVE_PARAMETER_TYPE_NONE,
+  /**
+   * An array of bytes.
+   */
+  FOXGLOVE_PARAMETER_TYPE_BYTE_ARRAY,
+  /**
+   * A decimal or integer value that can be represented as a `float64`.
+   */
+  FOXGLOVE_PARAMETER_TYPE_FLOAT64,
+  /**
+   * An array of decimal or integer values that can be represented as `float64`s.
+   */
+  FOXGLOVE_PARAMETER_TYPE_FLOAT64_ARRAY,
+};
+#ifndef __cplusplus
+typedef uint8_t foxglove_parameter_type;
+#endif // __cplusplus
+
+/**
+ * A variant discriminator for `FoxgloveParameterValueData`.
+ */
+enum foxglove_parameter_value_tag
+#ifdef __cplusplus
+  : uint8_t
+#endif // __cplusplus
+ {
+  FOXGLOVE_PARAMETER_VALUE_TAG_NUMBER,
+  FOXGLOVE_PARAMETER_VALUE_TAG_BOOLEAN,
+  FOXGLOVE_PARAMETER_VALUE_TAG_STRING,
+  FOXGLOVE_PARAMETER_VALUE_TAG_ARRAY,
+  FOXGLOVE_PARAMETER_VALUE_TAG_DICT,
+};
+#ifndef __cplusplus
+typedef uint8_t foxglove_parameter_value_tag;
+#endif // __cplusplus
+
+/**
+ * Level indicator for a server status message.
+ */
+enum foxglove_server_status_level
+#ifdef __cplusplus
+  : uint8_t
+#endif // __cplusplus
+ {
+  FOXGLOVE_SERVER_STATUS_LEVEL_INFO,
+  FOXGLOVE_SERVER_STATUS_LEVEL_WARNING,
+  FOXGLOVE_SERVER_STATUS_LEVEL_ERROR,
+};
+#ifndef __cplusplus
+typedef uint8_t foxglove_server_status_level;
+#endif // __cplusplus
+
 typedef struct foxglove_channel foxglove_channel;
 
 typedef struct foxglove_connection_graph foxglove_connection_graph;
 
 typedef struct foxglove_context foxglove_context;
 
+typedef struct foxglove_fetch_asset_responder foxglove_fetch_asset_responder;
+
 typedef struct foxglove_mcap_writer foxglove_mcap_writer;
+
+typedef struct foxglove_service foxglove_service;
+
+typedef struct foxglove_service_responder foxglove_service_responder;
 
 typedef struct foxglove_websocket_server foxglove_websocket_server;
 
@@ -122,22 +217,211 @@ typedef struct foxglove_client_channel {
   size_t schema_len;
 } foxglove_client_channel;
 
+/**
+ * An array of parameter values.
+ *
+ * Constructed with `foxglove_parameter_value_array_create`.
+ */
+typedef struct foxglove_parameter_value_array {
+  /**
+   * A pointer to the array of parameter values.
+   */
+  const struct foxglove_parameter_value *values;
+  /**
+   * Number of elements in the array.
+   */
+  size_t len;
+  /**
+   * Capacity of the array.
+   */
+  size_t capacity;
+} foxglove_parameter_value_array;
+
+/**
+ * An dictionary entry for a parameter value.
+ *
+ * Constructed implicitly with `foxglove_parameter_value_dict_insert`.
+ */
+typedef struct foxglove_parameter_value_dict_entry {
+  /**
+   * The dictionary entry's key.
+   */
+  struct foxglove_string key;
+  /**
+   * The dictionary entry's value.
+   */
+  const struct foxglove_parameter_value *value;
+} foxglove_parameter_value_dict_entry;
+
+/**
+ * An dictionary of parameter values.
+ *
+ * Constructed with `foxglove_parameter_value_dict_create`.
+ */
+typedef struct foxglove_parameter_value_dict {
+  /**
+   * A pointer to the array of dictionary entries.
+   */
+  const struct foxglove_parameter_value_dict_entry *entries;
+  /**
+   * Number of elements in the dictionary.
+   */
+  size_t len;
+  /**
+   * Capacity of the dictionary.
+   */
+  size_t capacity;
+} foxglove_parameter_value_dict;
+
+/**
+ * Storage for `FoxgloveParameterValue`.
+ */
+typedef union foxglove_parameter_value_data {
+  double number;
+  bool boolean;
+  struct foxglove_string string;
+  struct foxglove_parameter_value_array array;
+  struct foxglove_parameter_value_dict dict;
+} foxglove_parameter_value_data;
+
+/**
+ * A websocket parameter value.
+ *
+ * Constructed with `foxglove_parameter_value_create_*`.
+ */
+typedef struct foxglove_parameter_value {
+  /**
+   * A variant discriminator for the `data` union.
+   */
+  foxglove_parameter_value_tag tag;
+  /**
+   * Storage for the value's data.
+   */
+  union foxglove_parameter_value_data data;
+} foxglove_parameter_value;
+
+/**
+ * A websocket parameter.
+ *
+ * Constructed with `foxglove_parameter_create`.
+ */
+typedef struct foxglove_parameter {
+  /**
+   * Parameter name.
+   */
+  struct foxglove_string name;
+  /**
+   * Parameter type.
+   */
+  foxglove_parameter_type type;
+  /**
+   * Parameter value.
+   */
+  const struct foxglove_parameter_value *value;
+} foxglove_parameter;
+
+/**
+ * An array of websocket parameters.
+ *
+ * Constructed with `foxglove_parameter_array_create`.
+ */
+typedef struct foxglove_parameter_array {
+  /**
+   * Pointer to array of parameters.
+   */
+  const struct foxglove_parameter *parameters;
+  /**
+   * Number of valid elements in the array.
+   */
+  size_t len;
+  /**
+   * Capacity of the array.
+   */
+  size_t capacity;
+} foxglove_parameter_array;
+
 typedef struct foxglove_server_callbacks {
   /**
    * A user-defined value that will be passed to callback functions
    */
   const void *context;
-  void (*on_subscribe)(uint64_t channel_id, const void *context);
-  void (*on_unsubscribe)(uint64_t channel_id, const void *context);
-  void (*on_client_advertise)(uint32_t client_id,
-                              const struct foxglove_client_channel *channel,
-                              const void *context);
-  void (*on_message_data)(uint32_t client_id,
+  void (*on_subscribe)(const void *context, uint64_t channel_id);
+  void (*on_unsubscribe)(const void *context, uint64_t channel_id);
+  void (*on_client_advertise)(const void *context,
+                              uint32_t client_id,
+                              const struct foxglove_client_channel *channel);
+  void (*on_message_data)(const void *context,
+                          uint32_t client_id,
                           uint32_t client_channel_id,
                           const uint8_t *payload,
-                          size_t payload_len,
-                          const void *context);
+                          size_t payload_len);
   void (*on_client_unadvertise)(uint32_t client_id, uint32_t client_channel_id, const void *context);
+  /**
+   * Callback invoked when a client requests parameters.
+   *
+   * Requires `FOXGLOVE_CAPABILITY_PARAMETERS`.
+   *
+   * The `request_id` argument may be NULL.
+   *
+   * The `param_names` argument is guaranteed to be non-NULL. These arguments point to buffers
+   * that are valid and immutable for the duration of the call. If the callback wishes to store
+   * these values, they must be copied out.
+   *
+   * This function should return the named parameters, or all parameters if `param_names` is
+   * empty. The return value must be allocated with `foxglove_parameter_array_create`. Ownership
+   * of this value is transferred to the callee, who is responsible for freeing it. A NULL return
+   * value is treated as an empty array.
+   */
+  struct foxglove_parameter_array *(*on_get_parameters)(const void *context,
+                                                        uint32_t client_id,
+                                                        const struct foxglove_string *request_id,
+                                                        const struct foxglove_string *param_names,
+                                                        size_t param_names_len);
+  /**
+   * Callback invoked when a client sets parameters.
+   *
+   * Requires `FOXGLOVE_CAPABILITY_PARAMETERS`.
+   *
+   * The `request_id` argument may be NULL.
+   *
+   * The `params` argument is guaranteed to be non-NULL. These arguments point to buffers that
+   * are valid and immutable for the duration of the call. If the callback wishes to store these
+   * values, they must be copied out.
+   *
+   * This function should return the updated parameters. The return value must be allocated with
+   * `foxglove_parameter_array_create`. Ownership of this value is transferred to the callee, who
+   * is responsible for freeing it. A NULL return value is treated as an empty array.
+   *
+   * All clients subscribed to updates for the returned parameters will be notified.
+   */
+  struct foxglove_parameter_array *(*on_set_parameters)(const void *context,
+                                                        uint32_t client_id,
+                                                        const struct foxglove_string *request_id,
+                                                        const struct foxglove_parameter_array *params);
+  /**
+   * Callback invoked when a client subscribes to the named parameters for the first time.
+   *
+   * Requires `FOXGLOVE_CAPABILITY_PARAMETERS`.
+   *
+   * The `param_names` argument is guaranteed to be non-NULL. This argument points to buffers
+   * that are valid and immutable for the duration of the call. If the callback wishes to store
+   * these values, they must be copied out.
+   */
+  void (*on_parameters_subscribe)(const void *context,
+                                  const struct foxglove_string *param_names,
+                                  size_t param_names_len);
+  /**
+   * Callback invoked when the last client unsubscribes from the named parameters.
+   *
+   * Requires `FOXGLOVE_CAPABILITY_PARAMETERS`.
+   *
+   * The `param_names` argument is guaranteed to be non-NULL. This argument points to buffers
+   * that are valid and immutable for the duration of the call. If the callback wishes to store
+   * these values, they must be copied out.
+   */
+  void (*on_parameters_unsubscribe)(const void *context,
+                                    const struct foxglove_string *param_names,
+                                    size_t param_names_len);
   void (*on_connection_graph_subscribe)(const void *context);
   void (*on_connection_graph_unsubscribe)(const void *context);
 } foxglove_server_callbacks;
@@ -157,6 +441,33 @@ typedef struct foxglove_server_options {
   foxglove_server_capability capabilities;
   const struct foxglove_string *supported_encodings;
   size_t supported_encodings_count;
+  /**
+   * Context provided to the `fetch_asset` callback.
+   */
+  const void *fetch_asset_context;
+  /**
+   * Fetch an asset with the given URI and return it via the responder.
+   *
+   * This method is invoked from the client's main poll loop and must not block. If blocking or
+   * long-running behavior is required, the implementation should return immediately and handle
+   * the request asynchronously.
+   *
+   * The `uri` provided to the callback is only valid for the duration of the callback. If the
+   * implementation wishes to retain its data for a longer lifetime, it must copy data out of
+   * it.
+   *
+   * The `responder` provided to the callback represents an unfulfilled response. The
+   * implementation must eventually call either `foxglove_fetch_asset_respond_ok` or
+   * `foxglove_fetch_asset_respond_error`, exactly once, in order to complete the request. It is
+   * safe to invoke these completion functions synchronously from the context of the callback.
+   *
+   * # Safety
+   * - If provided, the handler callback must be a pointer to the fetch asset callback function,
+   *   and must remain valid until the server is stopped.
+   */
+  void (*fetch_asset)(const void *context,
+                      const struct foxglove_string *uri,
+                      struct foxglove_fetch_asset_responder *responder);
 } foxglove_server_options;
 
 typedef struct foxglove_mcap_options {
@@ -192,6 +503,78 @@ typedef struct foxglove_schema {
   size_t data_len;
 } foxglove_schema;
 
+/**
+ * A byte array with associated length.
+ */
+typedef struct foxglove_bytes {
+  /**
+   * Pointer to data
+   */
+  const uint8_t *data;
+  /**
+   * Number of bytes
+   */
+  size_t len;
+} foxglove_bytes;
+
+/**
+ * A schema describing either a websocket service request or response.
+ */
+typedef struct foxglove_service_message_schema {
+  /**
+   * The message encoding.
+   */
+  struct foxglove_string encoding;
+  /**
+   * The message schema.
+   */
+  struct foxglove_schema schema;
+} foxglove_service_message_schema;
+
+/**
+ * A websocket service schema.
+ */
+typedef struct foxglove_service_schema {
+  /**
+   * Service schema name.
+   */
+  struct foxglove_string name;
+  /**
+   * Optional request message schema.
+   */
+  const struct foxglove_service_message_schema *request;
+  /**
+   * Optional response message schema.
+   */
+  const struct foxglove_service_message_schema *response;
+} foxglove_service_schema;
+
+/**
+ * A websocket service request message.
+ */
+typedef struct foxglove_service_request {
+  /**
+   * The service name.
+   */
+  struct foxglove_string service_name;
+  /**
+   * The client ID.
+   */
+  uint32_t client_id;
+  /**
+   * The call ID that uniquely identifies this request for this client.
+   */
+  uint32_t call_id;
+  /**
+   * The request encoding.
+   */
+  struct foxglove_string encoding;
+  /**
+   * The request payload.
+   */
+  struct foxglove_bytes payload;
+} foxglove_service_request;
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
@@ -215,6 +598,46 @@ foxglove_error foxglove_server_start(const struct foxglove_server_options *FOXGL
                                      struct foxglove_websocket_server **server);
 
 /**
+ * Publishes the current server timestamp to all clients.
+ *
+ * Requires the `FOXGLOVE_CAPABILITY_TIME` capability.
+ */
+foxglove_error foxglove_server_broadcast_time(const struct foxglove_websocket_server *server,
+                                              uint64_t timestamp_nanos);
+
+/**
+ * Sets a new session ID and notifies all clients, causing them to reset their state.
+ *
+ * If `session_id` is not provided, generates a new one based on the current timestamp.
+ *
+ * # Safety
+ * - `session_id` must either be NULL, or a valid pointer to a UTF-8 string.
+ */
+foxglove_error foxglove_server_clear_session(const struct foxglove_websocket_server *server,
+                                             const struct foxglove_string *session_id);
+
+/**
+ * Adds a service to the server.
+ *
+ * # Safety
+ * - `server` must be a valid pointer to a server started with `foxglove_server_start`.
+ * - `service` must be a valid pointer to a service allocated by `foxglove_service_create`. This
+ *   value is moved into this function, and must not be accessed afterwards.
+ */
+foxglove_error foxglove_server_add_service(const struct foxglove_websocket_server *server,
+                                           struct foxglove_service *service);
+
+/**
+ * Removes a service from the server.
+ *
+ * # Safety
+ * - `server` must be a valid pointer to a server started with `foxglove_server_start`.
+ * - `service_name` must be a valid pointer to a UTF-8 string.
+ */
+foxglove_error foxglove_server_remove_service(const struct foxglove_websocket_server *server,
+                                              struct foxglove_string service_name);
+
+/**
  * Get the port on which the server is listening.
  */
 uint16_t foxglove_server_get_port(struct foxglove_websocket_server *server);
@@ -225,10 +648,53 @@ uint16_t foxglove_server_get_port(struct foxglove_websocket_server *server);
 foxglove_error foxglove_server_stop(struct foxglove_websocket_server *server);
 
 /**
+ * Publish parameter values to all subscribed clients.
+ *
+ * # Safety
+ * - `params` must be a valid parameter to a value allocated by `foxglove_parameter_array_create`.
+ *   This value is moved into this function, and must not be accessed afterwards.
+ */
+foxglove_error foxglove_server_publish_parameter_values(struct foxglove_websocket_server *server,
+                                                        struct foxglove_parameter_array *params);
+
+/**
  * Publish a connection graph to the server.
  */
 foxglove_error foxglove_server_publish_connection_graph(struct foxglove_websocket_server *server,
                                                         struct foxglove_connection_graph *graph);
+
+/**
+ * Publishes a status message to all clients.
+ *
+ * The server may send this message at any time. Client developers may use it for debugging
+ * purposes, display it to the end user, or ignore it.
+ *
+ * The caller may optionally provide a message ID, which can be used in a subsequent call to
+ * `foxglove_server_remove_status`.
+ *
+ * # Safety
+ * - `message` must be a valid pointer to a UTF-8 string, which must remain valid for the duration
+ *   of this call.
+ * - `id` must either be NULL, or a valid pointer to a UTF-8 string, which must remain valid for
+ *   the duration of this call.
+ */
+foxglove_error foxglove_server_publish_status(struct foxglove_websocket_server *server,
+                                              foxglove_server_status_level level,
+                                              struct foxglove_string message,
+                                              const struct foxglove_string *id);
+
+/**
+ * Removes status messages from all clients.
+ *
+ * Previously published status messages are referenced by ID.
+ *
+ * # Safety
+ * - `ids` must be a valid pointer to an array of pointers to valid UTF-8 strings, all of which
+ *   must remain valid for the duration of this call.
+ */
+foxglove_error foxglove_server_remove_status(struct foxglove_websocket_server *server,
+                                             const struct foxglove_string *ids,
+                                             size_t ids_count);
 
 /**
  * Create or open an MCAP file for writing.
@@ -391,6 +857,455 @@ foxglove_error foxglove_connection_graph_set_advertised_service(struct foxglove_
                                                                 struct foxglove_string service,
                                                                 const struct foxglove_string *provider_ids,
                                                                 size_t provider_ids_count);
+
+/**
+ * Completes a fetch asset request by sending asset data to the client.
+ *
+ * # Safety
+ * - `responder` must be a pointer to a `foxglove_fetch_asset_responder` obtained via the
+ *   `foxglove_server_options.fetch_asset` callback. This value is moved into this
+ *   function, and must not accessed afterwards.
+ * - `data` must be a pointer to the response data. This value is copied by this function.
+ */
+void foxglove_fetch_asset_respond_ok(struct foxglove_fetch_asset_responder *responder,
+                                     struct foxglove_bytes data);
+
+/**
+ * Completes a request by sending an error message to the client.
+ *
+ * # Safety
+ * - `responder` must be a pointer to a `foxglove_fetch_asset_responder` obtained via the
+ *   `foxglove_server_options.fetch_asset` callback. This value is moved into this
+ *   function, and must not accessed afterwards.
+ * - `message` must be a pointer to a valid UTF-8 string. This value is copied by this function.
+ */
+void foxglove_fetch_asset_respond_error(struct foxglove_fetch_asset_responder *responder,
+                                        struct foxglove_string message);
+
+/**
+ * Initialize SDK logging with the given severity level.
+ *
+ * The SDK logs informational messages to stderr. Any messages below the given level are not
+ * logged.
+ *
+ * This function should be called before other Foxglove initialization to capture output from all
+ * components. Subsequent calls will have no effect.
+ *
+ * Log level may be overridden with the FOXGLOVE_LOG_LEVEL environment variable: "debug", "info",
+ * "warn", "error", or "off". The default level is "info".
+ *
+ * Log styles (colors) may be configured with the FOXGLOVE_LOG_STYLE environment variable "never",
+ * "always", or "auto" (default).
+ */
+void foxglove_set_log_level(foxglove_log_level level);
+
+/**
+ * Creates a new parameter array with the specified capacity.
+ *
+ * The array must be freed with `foxglove_parameter_array_free`.
+ */
+struct foxglove_parameter_array *foxglove_parameter_array_create(size_t capacity);
+
+/**
+ * Pushes a parameter into the array.
+ *
+ * # Safety
+ * - `array` must be a valid pointer to an array allocated by `foxglove_parameter_array_create`.
+ * - `param` must be a valid parameter to a value allocated by `foxglove_parameter_create` or
+ *   `foxglove_parameter_clone`. This value is moved into this function, and must not be accessed
+ *   afterwards.
+ */
+foxglove_error foxglove_parameter_array_push(struct foxglove_parameter_array *array,
+                                             struct foxglove_parameter *param);
+
+/**
+ * Frees the parameter array and its contained parameters.
+ *
+ * # Safety
+ * - `array` must be a valid pointer to a value allocated by `foxglove_parameter_array_create`.
+ */
+void foxglove_parameter_array_free(struct foxglove_parameter_array *array);
+
+/**
+ * Creates a new parameter.
+ *
+ * The parameter must be freed with `foxglove_parameter_free`, or by passing it to a consuming
+ * function such as `foxglove_parameter_array_push`.
+ *
+ * # Safety
+ * - `param` must be a valid pointer.
+ * - `name` must be a valid `foxglove_string`. This value is copied by this function.
+ * - `value` must either be a valid pointer to a value allocated by
+ *   `foxglove_parameter_value_create`, or NULL. This value is moved into this function, and must
+ *   not be accessed afterwards.
+ */
+foxglove_error foxglove_parameter_create(struct foxglove_parameter **param,
+                                         struct foxglove_string name,
+                                         foxglove_parameter_type type,
+                                         struct foxglove_parameter_value *value);
+
+/**
+ * Creates a new empty parameter.
+ *
+ * The value must be freed with `foxglove_parameter_free`, or by passing it to a consuming
+ * function such as `foxglove_parameter_array_push`.
+ *
+ * # Safety
+ * - `param` must be a valid pointer.
+ * - `name` must be a valid `foxglove_string`. This value is copied by this function.
+ */
+foxglove_error foxglove_parameter_create_empty(struct foxglove_parameter **param,
+                                               struct foxglove_string name);
+
+/**
+ * Creates a new number parameter.
+ *
+ * The value must be freed with `foxglove_parameter_free`, or by passing it to a consuming
+ * function such as `foxglove_parameter_array_push`.
+ *
+ * # Safety
+ * - `param` must be a valid pointer.
+ * - `name` must be a valid `foxglove_string`. This value is copied by this function.
+ */
+foxglove_error foxglove_parameter_create_float64(struct foxglove_parameter **param,
+                                                 struct foxglove_string name,
+                                                 double value);
+
+/**
+ * Creates a new boolean parameter.
+ *
+ * The value must be freed with `foxglove_parameter_free`, or by passing it to a consuming
+ * function such as `foxglove_parameter_array_push`.
+ *
+ * # Safety
+ * - `param` must be a valid pointer.
+ * - `name` must be a valid `foxglove_string`. This value is copied by this function.
+ */
+foxglove_error foxglove_parameter_create_boolean(struct foxglove_parameter **param,
+                                                 struct foxglove_string name,
+                                                 bool value);
+
+/**
+ * Creates a new string parameter.
+ *
+ * The value must be freed with `foxglove_parameter_free`, or by passing it to a consuming
+ * function such as `foxglove_parameter_array_push`.
+ *
+ * # Safety
+ * - `param` must be a valid pointer.
+ * - `name` must be a valid `foxglove_string`. This value is copied by this function.
+ * - `value` must be a valid `foxglove_string`. This value is copied by this function.
+ */
+foxglove_error foxglove_parameter_create_string(struct foxglove_parameter **param,
+                                                struct foxglove_string name,
+                                                struct foxglove_string value);
+
+/**
+ * Creates a new byte array parameter.
+ *
+ * The value must be freed with `foxglove_parameter_free`, or by passing it to a consuming
+ * function such as `foxglove_parameter_array_push`.
+ *
+ * # Safety
+ * - `param` must be a valid pointer.
+ * - `name` must be a valid `foxglove_string`. This value is copied by this function.
+ * - `value` must be a valid `foxglove_bytes`. This value is copied by this function.
+ */
+foxglove_error foxglove_parameter_create_byte_array(struct foxglove_parameter **param,
+                                                    struct foxglove_string name,
+                                                    struct foxglove_bytes value);
+
+/**
+ * Creates a new parameter which is an array of float64 values.
+ *
+ * The value must be freed with `foxglove_parameter_free`, or by passing it to a consuming
+ * function such as `foxglove_parameter_array_push`.
+ *
+ * # Safety
+ * - `param` must be a valid pointer.
+ * - `name` must be a valid `foxglove_string`. This value is copied by this function.
+ * - `values` must be a valid pointer to an array of float64 values of `values_len` elements. This
+ *   value is copied by this function.
+ */
+foxglove_error foxglove_parameter_create_float64_array(struct foxglove_parameter **param,
+                                                       struct foxglove_string name,
+                                                       const double *values,
+                                                       size_t values_len);
+
+/**
+ * Creates a new parameter which is a dictionary of parameter values.
+ *
+ * The value must be freed with `foxglove_parameter_free`, or by passing it to a consuming
+ * function such as `foxglove_parameter_array_push`.
+ *
+ * # Safety
+ * - `param` must be a valid pointer.
+ * - `name` must be a valid `foxglove_string`. This value is copied by this function.
+ * - `dict` must be a valid pointer to a value allocated by
+ *   `foxglove_parameter_value_dict_create`. This value is moved into this function, and must not
+ *   be accessed afterwards.
+ */
+foxglove_error foxglove_parameter_create_dict(struct foxglove_parameter **param,
+                                              struct foxglove_string name,
+                                              struct foxglove_parameter_value_dict *dict);
+
+/**
+ * Returns an estimate of the decoded length for the byte array in bytes.
+ *
+ * # Safety
+ * - `param` must be a valid pointer to a value allocated by `foxglove_parameter_create` or
+ *   `foxglove_parameter_clone`.
+ * - `size` must be a valid pointer.
+ */
+foxglove_error foxglove_parameter_get_byte_array_decoded_size(const struct foxglove_parameter *param,
+                                                              size_t *len);
+
+/**
+ * Decodes a byte array into the provided buffer.
+ *
+ * The buffer should be at least the size returned by
+ * `foxglove_parameter_get_byte_array_decoded_size`.
+ *
+ * On success, updates `len` with the number of bytes written to the provided buffer.
+ *
+ * # Safety
+ * - `param` must be a valid pointer to a value allocated by `foxglove_parameter_create` or
+ *   `foxglove_parameter_clone`.
+ * - `data` must be a valid pointer to a writable buffer of size `len`.
+ * - `len` must be a valid pointer.
+ */
+foxglove_error foxglove_parameter_decode_byte_array(const struct foxglove_parameter *param,
+                                                    uint8_t *data,
+                                                    size_t *len);
+
+/**
+ * Clones a parameter.
+ *
+ * The value must be freed with `foxglove_parameter_free`, or by passing it to a consuming
+ * function such as `foxglove_parameter_array_push`.
+ *
+ * # Safety
+ * - `param` must be a valid pointer to a value allocated by `foxglove_parameter_create` or
+ *   `foxglove_parameter_clone`.
+ */
+struct foxglove_parameter *foxglove_parameter_clone(const struct foxglove_parameter *param);
+
+/**
+ * Frees a parameter.
+ *
+ * # Safety
+ * - `param` must be a valid pointer to a value allocated by `foxglove_parameter_create` or
+ *   `foxglove_parameter_clone`.
+ */
+void foxglove_parameter_free(struct foxglove_parameter *param);
+
+/**
+ * Creates a new number parameter value.
+ *
+ * The value must be freed with `foxglove_parameter_value_free`, or by passing it to a consuming
+ * function such as `foxglove_parameter_create`.
+ */
+struct foxglove_parameter_value *foxglove_parameter_value_create_number(double number);
+
+/**
+ * Creates a new boolean parameter value.
+ *
+ * The value must be freed with `foxglove_parameter_value_free`, or by passing it to a consuming
+ * function such as `foxglove_parameter_create`.
+ */
+struct foxglove_parameter_value *foxglove_parameter_value_create_boolean(bool boolean);
+
+/**
+ * Creates a new string parameter value.
+ *
+ * The value must be freed with `foxglove_parameter_value_free`, or by passing it to a consuming
+ * function such as `foxglove_parameter_create`.
+ *
+ * # Safety
+ * - `string` must be a valid `foxglove_string`. This value is copied by this function.
+ */
+foxglove_error foxglove_parameter_value_create_string(struct foxglove_parameter_value **value,
+                                                      struct foxglove_string string);
+
+/**
+ * Creates a new array parameter value.
+ *
+ * The value must be freed with `foxglove_parameter_value_free`, or by passing it to a consuming
+ * function such as `foxglove_parameter_create`.
+ *
+ * # Safety
+ * - `array` must be a valid pointer to a value allocated by
+ *   `foxglove_parameter_value_array_create`. This value is moved into this function, and must not
+ *   be accessed afterwards.
+ */
+struct foxglove_parameter_value *foxglove_parameter_value_create_array(struct foxglove_parameter_value_array *array);
+
+/**
+ * Creates a new dict parameter value.
+ *
+ * The value must be freed with `foxglove_parameter_value_free`, or by passing it to a consuming
+ * function such as `foxglove_parameter_create`.
+ *
+ * # Safety
+ * - `dict` must be a valid pointer to a value allocated by
+ *   `foxglove_parameter_value_dict_create`. This value is moved into this function, and must not be
+ *   accessed afterwards.
+ */
+struct foxglove_parameter_value *foxglove_parameter_value_create_dict(struct foxglove_parameter_value_dict *dict);
+
+/**
+ * Clones a parameter value.
+ *
+ * The value must be freed with `foxglove_parameter_value_free`, or by passing it to a consuming
+ * function such as `foxglove_parameter_create`.
+ *
+ * # Safety
+ * - `value` must be a valid pointer to a value allocated by `foxglove_parameter_value_create` or
+ *   `foxglove_parameter_value_clone`.
+ */
+struct foxglove_parameter_value *foxglove_parameter_value_clone(const struct foxglove_parameter_value *value);
+
+/**
+ * Frees a parameter value.
+ *
+ * # Safety
+ * - `value` must be a valid pointer to a value allocated by `foxglove_parameter_value_create_*`.
+ */
+void foxglove_parameter_value_free(struct foxglove_parameter_value *value);
+
+/**
+ * Creates a new value array with the specified capacity.
+ *
+ * The parameter must be freed with `foxglove_parameter_value_array_free`, or by passing it to a
+ * consuming function such as `foxglove_parameter_value_create_array`.
+ */
+struct foxglove_parameter_value_array *foxglove_parameter_value_array_create(size_t capacity);
+
+/**
+ * Pushes a parameter value into the array.
+ *
+ * # Safety
+ * - `array` must be a valid pointer to an array allocated by
+ *   `foxglove_parameter_value_array_create`.
+ * - `value` must be a valid pointer to a value allocated by `foxglove_parameter_value_create_*`.
+ *   This value is moved into this function, and must not be accessed afterwards.
+ */
+foxglove_error foxglove_parameter_value_array_push(struct foxglove_parameter_value_array *array,
+                                                   struct foxglove_parameter_value *value);
+
+/**
+ * Frees a parameter value array.
+ *
+ * # Safety
+ * - `array` is a valid pointer to a value allocated by `foxglove_parameter_value_array_create`.
+ */
+void foxglove_parameter_value_array_free(struct foxglove_parameter_value_array *array);
+
+/**
+ * Creates a new value dict with the specified capacity.
+ *
+ * The parameter must be freed with `foxglove_parameter_value_dict_free`, or by passing it to a
+ * consuming function such as `foxglove_parameter_value_create_dict`.
+ */
+struct foxglove_parameter_value_dict *foxglove_parameter_value_dict_create(size_t capacity);
+
+/**
+ * Inserts an entry into the parameter value dict.
+ *
+ * # Safety
+ * - `key` must be a valid `foxglove_string`. This value is copied by this function.
+ * - `value` must be a valid pointer to a value allocated by `foxglove_parameter_value_create_*`.
+ *   This value is moved into this function, and must not be accessed afterwards.
+ */
+foxglove_error foxglove_parameter_value_dict_insert(struct foxglove_parameter_value_dict *dict,
+                                                    struct foxglove_string key,
+                                                    struct foxglove_parameter_value *value);
+
+/**
+ * Frees a parameter value dict.
+ *
+ * # Safety
+ * - `dict` is a valid pointer to a value allocated by `foxglove_parameter_value_dict_create`.
+ */
+void foxglove_parameter_value_dict_free(struct foxglove_parameter_value_dict *dict);
+
+/**
+ * Creates a new websocket service.
+ *
+ * The service must be registered with a websocket server using `foxglove_server_add_service`, or
+ * freed with `foxglove_service_free`.
+ *
+ * The callback is invoked from the client's main poll loop and must not block. If blocking or
+ * long-running behavior is required, the implementation should return immediately and handle the
+ * request asynchronously.
+ *
+ * The `request` structure provided to the callback is only valid for the duration of the
+ * callback. If the implementation wishes to retain its data for a longer lifetime, it must copy
+ * data out of it.
+ *
+ * The `responder` provided to the callback represents an unfulfilled response. The implementation
+ * must eventually call either `foxglove_service_respond_ok` or `foxglove_service_respond_error`,
+ * exactly once, in order to complete the request. It is safe to invoke these completion functions
+ * synchronously from the context of the callback.
+ *
+ * # Safety
+ * - `service` must be a valid pointer.
+ * - `name` must be a valid pointer to a UTF-8 string.
+ * - `schema` must be NULL, or a valid pointer to a service schema.
+ * - `callback` must be a valid pointer to a service callback function, which must remain valid
+ *   until the service is either unregistered or freed.
+ */
+foxglove_error foxglove_service_create(struct foxglove_service **service,
+                                       struct foxglove_string name,
+                                       const struct foxglove_service_schema *schema,
+                                       const void *context,
+                                       void (*callback)(const void *context,
+                                                        const struct foxglove_service_request *request,
+                                                        struct foxglove_service_responder *responder));
+
+/**
+ * Frees a service that was never registered to a websocket server.
+ *
+ * # Safety
+ * - `service` must be a valid pointer to a service allocated by `foxglove_service_create`. The
+ *   service MUST NOT have been previously registered with a websocket server.
+ */
+void foxglove_service_free(struct foxglove_service *service);
+
+/**
+ * Overrides the default response encoding.
+ *
+ * # Safety
+ * - `responder` must be a pointer to a `foxglove_service_responder` obtained via the
+ *   `foxglove_service.handler` callback.
+ * - `encoding` must be a pointer to a valid UTF-8 string. This value is copied by this function.
+ */
+foxglove_error foxglove_service_set_response_encoding(struct foxglove_service_responder *responder,
+                                                      struct foxglove_string encoding);
+
+/**
+ * Completes a request by sending response data to the client.
+ *
+ * # Safety
+ * - `responder` must be a pointer to a `foxglove_service_responder` obtained via the
+ *   `foxglove_service.handler` callback. This value is moved into this function, and must not
+ *   accessed afterwards.
+ * - `data` must be a pointer to the response data. This value is copied by this function.
+ */
+void foxglove_service_respond_ok(struct foxglove_service_responder *responder,
+                                 struct foxglove_bytes data);
+
+/**
+ * Completes a request by sending an error message to the client.
+ *
+ * # Safety
+ * - `responder` must be a pointer to a `foxglove_service_responder` obtained via the
+ *   `foxglove_service.handler` callback. This value is moved into this function, and must not
+ *   accessed afterwards.
+ * - `message` must be a pointer to a valid UTF-8 string. This value is copied by this function.
+ */
+void foxglove_service_respond_error(struct foxglove_service_responder *responder,
+                                    struct foxglove_string message);
 
 #ifdef __cplusplus
 }  // extern "C"

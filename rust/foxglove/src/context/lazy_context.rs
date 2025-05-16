@@ -16,8 +16,8 @@ static DEFAULT_CONTEXT: LazyContext = LazyContext::new();
 ///
 /// # Example
 /// ```
-/// use foxglove::{LazyChannel, LazyContext, LazyRawChannel};
 /// use foxglove::schemas::Log;
+/// use foxglove::{LazyChannel, LazyContext, LazyRawChannel};
 ///
 /// // Create two channels for the same topic, in different contexts.
 /// static TOPIC: &str = "/topic";
@@ -25,7 +25,10 @@ static DEFAULT_CONTEXT: LazyContext = LazyContext::new();
 /// static CTX_B: LazyContext = LazyContext::new();
 /// static LOG_A: LazyChannel<Log> = CTX_A.channel(TOPIC);
 /// static LOG_B: LazyRawChannel = CTX_B.raw_channel(TOPIC, "json");
-/// LOG_A.log(&Log{ message: "hello a".into(), ..Log::default() });
+/// LOG_A.log(&Log {
+///     message: "hello a".into(),
+///     ..Log::default()
+/// });
 /// LOG_B.log(br#"{"message": "hello b"}"#);
 /// ```
 pub struct LazyContext(LazyLock<Arc<Context>>);

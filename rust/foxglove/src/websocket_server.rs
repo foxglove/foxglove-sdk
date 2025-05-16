@@ -7,7 +7,7 @@ use std::sync::Arc;
 use crate::websocket::service::Service;
 use crate::websocket::{
     create_server, AssetHandler, AsyncAssetHandlerFn, BlockingAssetHandlerFn, Capability, Client,
-    ConnectionGraph, Parameter, Server, ServerOptions, Status,
+    ConnectionGraph, Parameter, Server, ServerOptions, ShutdownHandle, Status,
 };
 use crate::{get_runtime_handle, Context, FoxgloveError};
 
@@ -260,8 +260,8 @@ impl WebSocketServerHandle {
     }
 
     /// Publishes the current server timestamp to all clients.
-    #[doc(hidden)]
-    #[cfg(feature = "unstable")]
+    ///
+    /// Requires the [`Time`](crate::websocket::Capability::Time) capability.
     pub fn broadcast_time(&self, timestamp_nanos: u64) {
         self.0.broadcast_time(timestamp_nanos);
     }
@@ -309,7 +309,10 @@ impl WebSocketServerHandle {
     }
 
     /// Gracefully shut down the websocket server.
-    pub fn stop(self) {
-        self.0.stop();
+    ///
+    /// Returns a handle that can be used to wait for the graceful shutdown to complete. If the
+    /// handle is dropped, all client tasks will be immediately aborted.
+    pub fn stop(self) -> ShutdownHandle {
+        self.0.stop().expect("this wrapper can only call stop once")
     }
 }
