@@ -191,13 +191,13 @@ impl ProtobufField for i64 {
 
     fn write(&self, buf: &mut impl bytes::BufMut) {
         // https://protobuf.dev/programming-guides/encoding/#signed-ints
-        let n = *self;
+        let n = *self as i128;
         let encoded = ((n << 1) ^ (n >> 63)) as u64;
         encode_varint(encoded, buf);
     }
 
     fn encoded_len(&self) -> usize {
-        let n = *self;
+        let n = *self as i128;
         let encoded = ((n << 1) ^ (n >> 63)) as u64;
         prost::encoding::encoded_len_varint(encoded)
     }
@@ -214,13 +214,13 @@ impl ProtobufField for i32 {
 
     fn write(&self, buf: &mut impl bytes::BufMut) {
         // https://protobuf.dev/programming-guides/encoding/#signed-ints
-        let n = *self;
+        let n = *self as i64;
         let encoded = ((n << 1) ^ (n >> 31)) as u64;
         encode_varint(encoded, buf);
     }
 
     fn encoded_len(&self) -> usize {
-        let n = *self;
+        let n = *self as i64;
         let encoded = ((n << 1) ^ (n >> 31)) as u64;
         prost::encoding::encoded_len_varint(encoded)
     }
@@ -237,13 +237,13 @@ impl ProtobufField for i16 {
 
     fn write(&self, buf: &mut impl bytes::BufMut) {
         // https://protobuf.dev/programming-guides/encoding/#signed-ints
-        let n = *self;
+        let n = *self as i32;
         let encoded = ((n << 1) ^ (n >> 15)) as u64;
         encode_varint(encoded, buf);
     }
 
     fn encoded_len(&self) -> usize {
-        let n = *self;
+        let n = *self as i32;
         let encoded = ((n << 1) ^ (n >> 15)) as u64;
         prost::encoding::encoded_len_varint(encoded)
     }
@@ -260,13 +260,13 @@ impl ProtobufField for i8 {
 
     fn write(&self, buf: &mut impl bytes::BufMut) {
         // https://protobuf.dev/programming-guides/encoding/#signed-ints
-        let n = *self;
+        let n = *self as i16;
         let encoded = ((n << 1) ^ (n >> 7)) as u64;
         encode_varint(encoded, buf);
     }
 
     fn encoded_len(&self) -> usize {
-        let n = *self;
+        let n = *self as i16;
         let encoded = ((n << 1) ^ (n >> 7)) as u64;
         prost::encoding::encoded_len_varint(encoded)
     }
@@ -459,8 +459,57 @@ mod tests {
         assert_eq!(ProstFieldType::Sint32, i8::field_type());
         assert_eq!(1, (-1i8).encoded_len());
         assert_eq!(1, 1i8.encoded_len());
-        assert_eq!(10, i8::MIN.encoded_len());
-        assert_eq!(10, i8::MAX.encoded_len());
+        assert_eq!(2, i8::MIN.encoded_len());
+        assert_eq!(2, i8::MAX.encoded_len());
+    }
+
+    #[test]
+    fn test_i8_write() {
+        // Zig-zag encoding
+        // https://protobuf.dev/programming-guides/encoding/#varints
+        let cases: Vec<(i8, &[u8])> = vec![
+            (-1i8, &[1]),
+            (1i8, &[2]),
+            (-127i8, &[253, 1]),
+            (127i8, &[254, 1]),
+        ];
+
+        for (input, expected) in cases {
+            let mut buf = bytes::BytesMut::new();
+            i8::write(&input, &mut buf);
+            assert_eq!(&buf[..], expected);
+
+            let mut buf = bytes::BytesMut::new();
+            i16::write(&(input as i16), &mut buf);
+            assert_eq!(&buf[..], expected);
+
+            let mut buf = bytes::BytesMut::new();
+            i32::write(&(input as i32), &mut buf);
+            assert_eq!(&buf[..], expected);
+
+            let mut buf = bytes::BytesMut::new();
+            i64::write(&(input as i64), &mut buf);
+            assert_eq!(&buf[..], expected);
+        }
+    }
+
+    #[test]
+    fn test_i64_edges() {
+        let mut buf = bytes::BytesMut::new();
+        i64::write(&(i64::MAX), &mut buf);
+        assert_eq!(
+            &buf[..],
+            &[0xfe, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01]
+        );
+        assert_eq!(i64::MAX.encoded_len(), 10);
+
+        let mut buf = bytes::BytesMut::new();
+        i64::write(&(i64::MIN), &mut buf);
+        assert_eq!(
+            &buf[..],
+            &[0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01]
+        );
+        assert_eq!(i64::MIN.encoded_len(), 10);
     }
 
     #[test]

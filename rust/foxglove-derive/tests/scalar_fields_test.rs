@@ -55,7 +55,7 @@ fn test_primitive_serialization() {
         i64: i64::MIN,
         i32: 42,
         i16: 43,
-        i8: 44,
+        i8: -127,
         f64: -33.5,
         f32: 1234.5678,
         bool: true,
@@ -99,7 +99,7 @@ fn test_primitive_serialization() {
     assert_eq!(field_descriptor.name(), "i64");
     assert_eq!(number_value, i64::MIN);
 
-    let signed_32_types = [("i8", 44), ("i16", 43), ("i32", 42)];
+    let signed_32_types = [("i8", -127), ("i16", 43), ("i32", 42)];
     for (field_name, expected_value) in signed_32_types {
         let field_descriptor = message_descriptor
             .get_field_by_name(field_name)
