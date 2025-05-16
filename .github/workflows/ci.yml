@@ -61,7 +61,7 @@ jobs:
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
       - name: Wait for foxglove-derive to be published
-        run: until cargo info foxglove-derive@${{ steps.detect-version.outputs.version }}; do sleep 10; done
+        run: until cargo info --registry=crates-io foxglove-derive@${{ steps.detect-version.outputs.version }}; do sleep 10; done
       - name: Publish foxglove
         run: cargo publish --package foxglove
         env:
