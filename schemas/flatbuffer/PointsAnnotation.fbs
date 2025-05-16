@@ -8,6 +8,7 @@ namespace foxglove;
 
 /// Type of points annotation
 enum PointsAnnotationType : ubyte {
+  /// Unknown points annotation type
   UNKNOWN = 0,
 
   /// Individual points: 0, 1, 2, ...

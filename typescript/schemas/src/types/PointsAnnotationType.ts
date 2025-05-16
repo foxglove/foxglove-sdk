@@ -3,6 +3,7 @@
 
 /** Type of points annotation */
 export enum PointsAnnotationType {
+  /** Unknown points annotation type */
   UNKNOWN = 0,
 
   /** Individual points: 0, 1, 2, ... */

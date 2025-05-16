@@ -229,7 +229,7 @@ TEST_CASE("Log a message with and without metadata") {
   auto context = foxglove::Context::create();
   auto server = startServer(context);
 
-  auto channel_result = foxglove::Channel::create("example", "json", std::nullopt, context);
+  auto channel_result = foxglove::RawChannel::create("example", "json", std::nullopt, context);
   REQUIRE(channel_result.has_value());
   auto channel = std::move(channel_result.value());
   const std::array<uint8_t, 3> data = {1, 2, 3};
@@ -268,7 +268,7 @@ TEST_CASE("Subscribe and unsubscribe callbacks") {
 
   foxglove::Schema schema;
   schema.name = "ExampleSchema";
-  auto channel_result = foxglove::Channel::create("example", "json", schema, context);
+  auto channel_result = foxglove::RawChannel::create("example", "json", schema, context);
   REQUIRE(channel_result.has_value());
   auto channel = std::move(channel_result.value());
 

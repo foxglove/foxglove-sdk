@@ -129,7 +129,8 @@
             "oneOf": [
               {
                 "title": "UNKNOWN",
-                "const": 0
+                "const": 0,
+                "description": "Unknown points annotation type"
               },
               {
                 "title": "POINTS",

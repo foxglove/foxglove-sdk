@@ -3,21 +3,30 @@
 
 /** Numeric type */
 export enum NumericType {
+  /** Unknown numeric type */
   UNKNOWN = 0,
 
+  /** Unsigned 8-bit integer */
   UINT8 = 1,
 
+  /** Signed 8-bit integer */
   INT8 = 2,
 
+  /** Unsigned 16-bit integer */
   UINT16 = 3,
 
+  /** Signed 16-bit integer */
   INT16 = 4,
 
+  /** Unsigned 32-bit integer */
   UINT32 = 5,
 
+  /** Signed 32-bit integer */
   INT32 = 6,
 
+  /** 32-bit floating-point number */
   FLOAT32 = 7,
 
+  /** 64-bit floating-point number */
   FLOAT64 = 8,
 }

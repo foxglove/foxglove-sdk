@@ -1,6 +1,9 @@
 #pragma once
 
+#include <cstdint>
 #include <memory>
+#include <optional>
+#include <string>
 
 struct foxglove_context;
 
@@ -20,10 +23,6 @@ namespace foxglove {
 /// Since many applications only need a single context, the SDK provides a static default context
 /// for convenience.
 class Context final {
-  friend class McapWriter;
-  friend class Channel;
-  friend class WebSocketServer;
-
 public:
   /// The default global context
   Context() = default;
@@ -31,12 +30,14 @@ public:
   /// Create a new context
   static Context create();
 
-private:
-  explicit Context(const foxglove_context* context);
-
-  [[nodiscard]] const foxglove_context* getInner() const {
+  /// @private
+  /// For internal use only.
+  [[nodiscard]] const foxglove_context* getInner() const noexcept {
     return impl_.get();
   }
+
+private:
+  explicit Context(const foxglove_context* context);
 
   std::shared_ptr<const foxglove_context> impl_;
 };

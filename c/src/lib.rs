@@ -14,6 +14,12 @@ use std::io::BufWriter;
 use std::mem::ManuallyDrop;
 use std::sync::Arc;
 
+mod arena;
+mod generated_types;
+#[cfg(test)]
+mod tests;
+mod util;
+pub use generated_types::*;
 mod bytes;
 mod connection_graph;
 mod fetch_asset;
@@ -40,6 +46,18 @@ impl FoxgloveString {
     /// The [`data`] field must be valid UTF-8, and have a length equal to [`FoxgloveString.len`].
     unsafe fn as_utf8_str(&self) -> Result<&str, std::str::Utf8Error> {
         std::str::from_utf8(unsafe { std::slice::from_raw_parts(self.data.cast(), self.len) })
+    }
+
+    pub fn as_ptr(&self) -> *const c_char {
+        self.data
+    }
+
+    pub fn len(&self) -> usize {
+        self.len
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len == 0
     }
 }
 
@@ -922,7 +940,7 @@ pub struct FoxgloveChannel(foxglove::RawChannel);
 /// `channel` is an out **FoxgloveChannel pointer, which will be set to the created channel
 /// if the function returns success.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn foxglove_channel_create(
+pub unsafe extern "C" fn foxglove_raw_channel_create(
     topic: FoxgloveString,
     message_encoding: FoxgloveString,
     schema: *const FoxgloveSchema,
@@ -934,12 +952,12 @@ pub unsafe extern "C" fn foxglove_channel_create(
         return FoxgloveError::ValueError;
     }
     unsafe {
-        let result = do_foxglove_channel_create(topic, message_encoding, schema, context);
+        let result = do_foxglove_raw_channel_create(topic, message_encoding, schema, context);
         result_to_c(result, channel)
     }
 }
 
-unsafe fn do_foxglove_channel_create(
+unsafe fn do_foxglove_raw_channel_create(
     topic: FoxgloveString,
     message_encoding: FoxgloveString,
     schema: *const FoxgloveSchema,
@@ -967,6 +985,24 @@ unsafe fn do_foxglove_channel_create(
     builder
         .build_raw()
         .map(|raw_channel| Arc::into_raw(raw_channel) as *const FoxgloveChannel)
+}
+
+pub(crate) unsafe fn do_foxglove_channel_create<T: foxglove::Encode>(
+    topic: FoxgloveString,
+    context: *const FoxgloveContext,
+) -> Result<*const FoxgloveChannel, foxglove::FoxgloveError> {
+    let topic_str = unsafe {
+        topic
+            .as_utf8_str()
+            .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("topic invalid: {}", e)))?
+    };
+
+    let mut builder = foxglove::ChannelBuilder::new(topic_str);
+    if !context.is_null() {
+        let context = ManuallyDrop::new(unsafe { Arc::from_raw(context) });
+        builder = builder.context(&context);
+    }
+    Ok(Arc::into_raw(builder.build::<T>().into_inner()) as *const FoxgloveChannel)
 }
 
 /// Free a channel created via `foxglove_channel_create`.
@@ -1002,13 +1038,13 @@ pub extern "C" fn foxglove_channel_get_id(channel: Option<&FoxgloveChannel>) -> 
 /// `data` must be non-null, and the range `[data, data + data_len)` must contain initialized data
 /// contained within a single allocated object.
 ///
-/// `log_time` may be null or may point to a valid value.
+/// `log_time` Some(nanoseconds since epoch timestamp) or None to use the current time.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_channel_log(
     channel: Option<&FoxgloveChannel>,
     data: *const u8,
     data_len: usize,
-    log_time: *const u64,
+    log_time: Option<&u64>,
 ) -> FoxgloveError {
     // An assert might be reasonable under different circumstances, but here
     // we don't want to crash the program using the library, on a robot in the field,
@@ -1028,7 +1064,7 @@ pub unsafe extern "C" fn foxglove_channel_log(
     channel.log_with_meta(
         unsafe { std::slice::from_raw_parts(data, data_len) },
         foxglove::PartialMetadata {
-            log_time: unsafe { log_time.as_ref() }.copied(),
+            log_time: log_time.copied(),
         },
     );
     FoxgloveError::Ok
@@ -1073,7 +1109,7 @@ pub extern "C" fn foxglove_internal_register_cpp_wrapper() {
         .or_else(|_| std::env::var("FOXGLOVE_LOG_STYLE"))
         .ok();
     if log_config.is_some() {
-        foxglove_set_log_level(logging::FoxgloveLogLevel::Info);
+        foxglove_set_log_level(logging::FoxgloveLoggingLevel::Info);
     }
 }
 
@@ -1339,7 +1375,7 @@ impl FoxgloveError {
     }
 }
 
-unsafe fn result_to_c<T>(
+pub(crate) unsafe fn result_to_c<T>(
     result: Result<T, foxglove::FoxgloveError>,
     out_ptr: *mut T,
 ) -> FoxgloveError {
@@ -1365,24 +1401,61 @@ pub extern "C" fn foxglove_error_to_cstr(error: FoxgloveError) -> *const c_char 
     error.to_cstr().as_ptr() as *const _
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+pub(crate) fn log_msg_to_channel<T: foxglove::Encode>(
+    channel: Option<&FoxgloveChannel>,
+    msg: &T,
+    log_time: Option<&u64>,
+) -> FoxgloveError {
+    let Some(channel) = channel else {
+        tracing::error!("log called with null channel");
+        return FoxgloveError::ValueError;
+    };
+    let channel = ManuallyDrop::new(unsafe {
+        // Safety: we're restoring the Arc<RawChannel> we leaked into_raw in foxglove_channel_create
+        let channel_arc = Arc::from_raw(channel as *const _ as *mut foxglove::RawChannel);
+        // We can safely create a Channel from any Arc<RawChannel>
+        foxglove::Channel::<T>::from_raw_channel(channel_arc)
+    });
+    channel.log_with_meta(
+        msg,
+        foxglove::PartialMetadata {
+            log_time: log_time.copied(),
+        },
+    );
+    FoxgloveError::Ok
+}
 
-    #[test]
-    fn test_foxglove_string_as_utf8_str() {
-        let string = FoxgloveString {
-            data: c"test".as_ptr(),
-            len: 4,
-        };
-        let utf8_str = unsafe { string.as_utf8_str() };
-        assert_eq!(utf8_str, Ok("test"));
+/// A timestamp, represented as an offset from a user-defined epoch.
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct FoxgloveTimestamp {
+    /// Seconds since epoch.
+    pub sec: u32,
+    /// Additional nanoseconds since epoch.
+    pub nsec: u32,
+}
 
-        let string = FoxgloveString {
-            data: c"💖".as_ptr(),
-            len: 4,
-        };
-        let utf8_str = unsafe { string.as_utf8_str() };
-        assert_eq!(utf8_str, Ok("💖"));
+impl From<FoxgloveTimestamp> for foxglove::schemas::Timestamp {
+    fn from(other: FoxgloveTimestamp) -> Self {
+        Self::new(other.sec, other.nsec)
+    }
+}
+
+/// A signed, fixed-length span of time.
+///
+/// The duration is represented by a count of seconds (which may be negative), and a count of
+/// fractional seconds at nanosecond resolution (which are always positive).
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct FoxgloveDuration {
+    /// Seconds offset.
+    sec: i32,
+    /// Nanoseconds offset in the positive direction.
+    nsec: u32,
+}
+
+impl From<FoxgloveDuration> for foxglove::schemas::Duration {
+    fn from(other: FoxgloveDuration) -> Self {
+        Self::new(other.sec, other.nsec)
     }
 }

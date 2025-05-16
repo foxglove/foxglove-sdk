@@ -2,6 +2,7 @@
 
 #include <foxglove/context.hpp>
 #include <foxglove/error.hpp>
+#include <foxglove/schemas.hpp>
 
 #include <cstdint>
 #include <memory>
@@ -34,7 +35,7 @@ struct Schema {
 };
 
 /// @brief A channel for messages logged to a topic.
-class Channel final {
+class RawChannel final {
 public:
   /// @brief Create a new channel.
   ///
@@ -44,8 +45,8 @@ public:
   /// @param schema The schema of messages logged to this channel.
   /// @param context The context which associates logs to a sink. If omitted, the default context is
   /// used.
-  static FoxgloveResult<Channel> create(
-    const std::string& topic, const std::string& message_encoding,
+  static FoxgloveResult<RawChannel> create(
+    const std::string_view& topic, const std::string_view& message_encoding,
     std::optional<Schema> schema = std::nullopt, const Context& context = Context()
   );
 
@@ -56,30 +57,26 @@ public:
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
   FoxgloveError log(
     const std::byte* data, size_t data_len, std::optional<uint64_t> log_time = std::nullopt
-  );
+  ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.
-  [[nodiscard]] uint64_t id() const;
+  [[nodiscard]] uint64_t id() const noexcept;
 
-  Channel(const Channel&) = delete;
-  Channel& operator=(const Channel&) = delete;
-
+  RawChannel(const RawChannel&) = delete;
+  RawChannel& operator=(const RawChannel&) = delete;
   /// @brief Default move constructor.
-  Channel(Channel&& other) noexcept = default;
+  RawChannel(RawChannel&& other) noexcept = default;
   /// @brief Default move assignment.
-  Channel& operator=(Channel&& other) noexcept = default;
-  ~Channel() = default;
+  RawChannel& operator=(RawChannel&& other) noexcept = default;
+  /// @brief Default destructor
+  ~RawChannel() = default;
 
 private:
-  explicit Channel(const foxglove_channel* channel);
+  explicit RawChannel(const foxglove_channel* channel);
 
-  struct Deleter {
-    void operator()(const foxglove_channel* ptr) const noexcept;
-  };
-
-  std::unique_ptr<const foxglove_channel, Deleter> impl_;
+  schemas::ChannelUniquePtr impl_;
 };
 
 }  // namespace foxglove

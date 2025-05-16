@@ -1,9 +1,8 @@
 #pragma once
 
-#include <foxglove/context.hpp>
-
 #include <memory>
-#include <string_view>
+#include <optional>
+#include <string>
 
 enum foxglove_error : uint8_t;
 enum class FoxgloveError : uint8_t;
@@ -12,6 +11,8 @@ struct foxglove_context;
 
 /// The foxglove namespace.
 namespace foxglove {
+
+struct Context;
 
 /// @brief The compression algorithm to use for an MCAP file.
 enum class McapCompression : uint8_t {
