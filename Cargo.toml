@@ -3,6 +3,7 @@ resolver = "2"
 members = [
   "c",
   "rust/foxglove",
+  "rust/foxglove-derive",
   "rust/foxglove-proto-gen",
   "rust/examples/*",
   "python/foxglove-sdk",
@@ -21,6 +22,7 @@ tokio = { version = "1.43", features = ["macros", "rt-multi-thread", "signal", "
 tokio-tungstenite = "0.26"
 tokio-util = { version = "0.7", features = ["rt"] }
 tracing = { version = "0.1", features = ["log"] }
+tracing-test = "0.2.5"
 
 [workspace.lints.clippy]
 assigning_clones = "warn"

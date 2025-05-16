@@ -713,6 +713,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "foxglove-derive"
+version = "0.7.1"
+dependencies = [
+ "bytes",
+ "foxglove",
+ "proc-macro2",
+ "prost",
+ "prost-reflect",
+ "prost-types",
+ "quote",
+ "syn 2.0.96",
+ "tracing",
+ "tracing-test",
+]
+
+[[package]]
 name = "foxglove-proto-gen"
 version = "0.0.0"
 dependencies = [
@@ -1465,6 +1481,17 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.96",
+]
+
+[[package]]
+name = "prost-reflect"
+version = "0.14.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7b5edd582b62f5cde844716e66d92565d7faf7ab1445c8cebce6e00fba83ddb2"
+dependencies = [
+ "once_cell",
+ "prost",
+ "prost-types",
 ]
 
 [[package]]
