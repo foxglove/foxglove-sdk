@@ -23,6 +23,7 @@ use super::ws_protocol::server::{
     advertise_services, ConnectionGraphUpdate, FetchAssetResponse, ParameterValues, ServerInfo,
     ServerMessage, ServiceCallFailure, ServiceCallResponse, Status,
 };
+use crate::library_version::get_library_version;
 use crate::testutil::{assert_eventually, RecordingServerListener};
 use crate::websocket::handshake::SUBPROTOCOL;
 use crate::websocket::server::{create_server, ServerOptions};
@@ -88,7 +89,9 @@ async fn test_client_connect() {
     let msg = expect_recv!(client, ServerMessage::ServerInfo);
     assert_eq!(
         msg,
-        ServerInfo::new("mock_server").with_session_id("mock_sess_id")
+        ServerInfo::new("mock_server")
+            .with_metadata(maplit::hashmap! {"fg-library".into() => get_library_version()})
+            .with_session_id("mock_sess_id")
     );
 
     let _ = server.stop();
