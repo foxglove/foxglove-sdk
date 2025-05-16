@@ -30,7 +30,18 @@ jobs:
 
       - run: cargo fmt --all --check
       - run: cargo build --verbose
-      # Validate that we can build without live visualization
+      # Validate that we can build each example individually.
+      - name: Build examples individually
+        run: |
+          set -euo pipefail
+          cargo metadata --no-deps --format-version 1 \
+            | jq -r ".packages[].name" \
+            | grep example \
+            | while read package; do
+            echo "Building $package"
+            cargo build -p "$package"
+          done
+      # Validate that we can build without default features.
       - run: cargo build -p foxglove --verbose --no-default-features
       # Validate that we can build against the MSRV (minimum specified rust version).
       - run: cargo +1.83.0 build -p foxglove --verbose

@@ -29,7 +29,7 @@ async fn test_logging_to_file_and_live_sinks() {
 
     // Configure live output
     let port = 9998;
-    let server = WebSocketServer::new()
+    let _ = WebSocketServer::new()
         .bind("127.0.0.1", port)
         .context(&ctx)
         .start()
@@ -124,6 +124,4 @@ async fn test_logging_to_file_and_live_sinks() {
     assert_eq!(message_count, 1);
 
     expect_recv!(client, ServerMessage::MessageData);
-
-    server.stop();
 }

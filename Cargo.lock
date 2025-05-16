@@ -744,7 +744,6 @@ version = "0.7.1"
 dependencies = [
  "base64",
  "bytes",
- "env_logger",
  "foxglove",
  "log",
  "prost-types",
@@ -762,9 +761,13 @@ dependencies = [
 name = "foxglove_c"
 version = "0.7.1"
 dependencies = [
+ "base64",
  "bitflags",
  "cbindgen",
+ "env_logger",
  "foxglove",
+ "log",
+ "maplit",
  "mcap 0.15.1",
  "tracing",
 ]

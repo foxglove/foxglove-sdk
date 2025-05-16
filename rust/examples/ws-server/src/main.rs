@@ -115,7 +115,7 @@ async fn main() {
 
     tokio::task::spawn(log_forever(args.fps));
     tokio::signal::ctrl_c().await.ok();
-    server.stop();
+    server.stop().wait().await;
 }
 
 fn euler_to_quaternion(roll: f64, pitch: f64, yaw: f64) -> Quaternion {

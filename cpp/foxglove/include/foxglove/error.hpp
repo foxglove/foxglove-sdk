@@ -41,8 +41,14 @@ enum class FoxgloveError : uint8_t {
   ConnectionGraphNotSupported,
   /// An I/O error.
   IoError,
-  /// An error related to MCAP encoding.
-  McapError
+  /// An error related to MCAP writing.
+  McapError,
+  /// An error related to encoding.
+  EncodeError,
+  /// The provided bufffer is too short.
+  BufferTooShort,
+  /// Failed to decode base64 data.
+  Base64DecodeError
 };
 
 /// @brief A result type for Foxglove operations.
@@ -63,6 +69,8 @@ using FoxgloveResult = expected<T, FoxgloveError>;
 /// @return A C string representation of the error.
 const char* strerror(FoxgloveError error);
 
+/// A stream for emitting warnings to stderr, with default formatting.
+/// @cond foxglove_internal
 class WarnStream {
 public:
   WarnStream() = default;
@@ -106,5 +114,6 @@ private:
 inline WarnStream warn() {
   return WarnStream{};
 }
+/// @endcond
 
 }  // namespace foxglove

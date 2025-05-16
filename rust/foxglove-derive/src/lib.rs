@@ -26,6 +26,14 @@ fn derive_enum_impl(input: &DeriveInput, data: &DataEnum) -> TokenStream {
     let name = &input.ident;
     let variants = &data.variants;
 
+    for variant in variants {
+        if !variant.fields.is_empty() {
+            return TokenStream::from(quote! {
+                compile_error!("Enums with associated data are not supported.");
+            });
+        }
+    }
+
     // Generate variant name and number pairs for enum descriptor
     let variant_descriptors = variants.iter().enumerate().map(|(i, v)| {
         let variant_ident = &v.ident;
@@ -68,6 +76,10 @@ fn derive_enum_impl(input: &DeriveInput, data: &DataEnum) -> TokenStream {
             fn type_name() -> Option<String> {
                 Some(stringify!(#name).to_string())
             }
+
+            fn encoded_len(&self) -> usize {
+                ::foxglove::protobuf::encoded_len_varint(*self as u64)
+            }
         }
     };
 
@@ -107,6 +119,16 @@ fn derive_struct_impl(input: &DeriveInput, data: &DataStruct) -> TokenStream {
 
     let mut field_defs = Vec::new();
     let mut field_encoders = Vec::new();
+    let mut field_message_lengths = Vec::new();
+
+    // Field number + wire type must fit into a u32, but there is also a much lower reserved
+    // range starting at 19,000. We should need to encode a much smaller space in practice; if
+    // we limit to 2047, then each encoded tag will take at most two bytes.
+    // Fields 1-15 use a single byte for the tag; fields 16-2047 use two bytes.
+    // https://protobuf.dev/programming-guides/proto3/#assigning
+    let max_one_byte_field_number = 15;
+    let max_field_number = 2047;
+    let mut tags_encoded_len: usize = 0;
 
     // If a struct nests multiple values of the same enum or message type, we
     // only define them once, based on name.
@@ -117,6 +139,22 @@ fn derive_struct_impl(input: &DeriveInput, data: &DataStruct) -> TokenStream {
         let field_name = &field.ident.as_ref().unwrap();
         let field_type = &field.ty;
         let field_number = i as u32 + 1;
+
+        if field_number > max_field_number {
+            return TokenStream::from(quote! {
+                compile_error!("Too many fields to encode");
+            });
+        }
+
+        field_message_lengths.push(quote! {
+            ::foxglove::protobuf::ProtobufField::encoded_len(&self.#field_name)
+        });
+
+        tags_encoded_len += if field_number <= max_one_byte_field_number {
+            1
+        } else {
+            2
+        };
 
         enum_defs.entry(field_type).or_insert_with(|| quote! {
             if let Some(enum_desc) = <#field_type as ::foxglove::protobuf::ProtobufField>::enum_descriptor() {
@@ -183,10 +221,6 @@ fn derive_struct_impl(input: &DeriveInput, data: &DataStruct) -> TokenStream {
                 let len = buf.len();
                 ::foxglove::protobuf::encode_varint(len as u64, out);
 
-                if buf.remaining_mut() < len {
-                    return;
-                }
-
                 out.put_slice(&buf);
             }
 
@@ -215,11 +249,15 @@ fn derive_struct_impl(input: &DeriveInput, data: &DataStruct) -> TokenStream {
             fn type_name() -> Option<String> {
                 Some(stringify!(#name).to_string())
             }
+
+            fn encoded_len(&self) -> usize {
+                #tags_encoded_len #(+ #field_message_lengths)*
+            }
         }
 
         #[automatically_derived]
         impl #impl_generics ::foxglove::Encode for #name #ty_generics #where_clause {
-            type Error = std::io::Error;
+            type Error = ::foxglove::FoxgloveError;
 
             fn get_schema() -> Option<::foxglove::Schema> {
                 static SCHEMA: ::std::sync::OnceLock<Option<::foxglove::Schema>> = ::std::sync::OnceLock::new();
@@ -253,9 +291,19 @@ fn derive_struct_impl(input: &DeriveInput, data: &DataStruct) -> TokenStream {
             }
 
             fn encode(&self, buf: &mut impl ::foxglove::bytes::BufMut) -> Result<(), Self::Error> {
+                if self.encoded_len().is_some_and(|len| len > buf.remaining_mut()) {
+                    return Err(::foxglove::FoxgloveError::EncodeError(
+                        "insufficient buffer".to_string(),
+                    ));
+                }
+
                 // The top level message is encoded without a length prefix
                 #(#field_encoders)*
                 Ok(())
+            }
+
+            fn encoded_len(&self) -> Option<usize> {
+                Some(#tags_encoded_len #(+ #field_message_lengths)*)
             }
         }
     };

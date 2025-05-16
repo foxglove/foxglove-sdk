@@ -91,7 +91,7 @@ async fn test_client_connect() {
         ServerInfo::new("mock_server").with_session_id("mock_sess_id")
     );
 
-    server.stop();
+    let _ = server.stop();
 }
 
 #[traced_test]
@@ -196,7 +196,7 @@ async fn test_handshake_with_multiple_subprotocols() {
         Some(&HeaderValue::from_static(SUBPROTOCOL))
     );
 
-    server.stop();
+    let _ = server.stop();
 }
 
 #[traced_test]
@@ -260,7 +260,7 @@ async fn test_advertise_to_client() {
         ))
     );
 
-    server.stop();
+    let _ = server.stop();
 }
 
 #[traced_test]
@@ -314,7 +314,7 @@ async fn test_advertise_schemaless_channels() {
         "Ignoring advertise channel for /schemaless_other because a schema is required"
     ));
 
-    server.stop();
+    let _ = server.stop();
 }
 
 #[traced_test]
@@ -445,7 +445,7 @@ async fn test_log_only_to_subscribers() {
     // Client 3 should not receive any messages since it unsubscribed from all channels
     assert!(client3.recv().now_or_never().is_none());
 
-    server.stop();
+    let _ = server.stop();
 }
 
 #[tokio::test]
@@ -497,7 +497,7 @@ async fn test_on_unsubscribe_called_after_disconnect() {
     let unsubscriptions = recording_listener.take_unsubscribe();
     assert_eq!(unsubscriptions.len(), 1);
 
-    server.stop();
+    let _ = server.stop();
 }
 
 #[traced_test]
@@ -530,7 +530,7 @@ async fn test_error_when_client_publish_unsupported() {
     );
 
     client.close().await;
-    server.stop();
+    let _ = server.stop();
 }
 
 #[traced_test]
@@ -585,7 +585,7 @@ async fn test_error_status_message() {
         );
     }
 
-    server.stop();
+    let _ = server.stop();
 }
 
 fn svc_unreachable(_: super::service::Request) -> Result<Bytes, String> {
@@ -803,7 +803,7 @@ async fn test_client_advertising() {
     assert_eq!(unadvertises[0].1.id, ClientChannelId::new(channel_id));
 
     client.close().await;
-    server.stop();
+    let _ = server.stop();
 }
 
 #[traced_test]
@@ -843,7 +843,7 @@ async fn test_parameter_values() {
     let msg = expect_recv!(client, ServerMessage::ParameterValues);
     assert_eq!(msg, ParameterValues::new([parameter]));
 
-    server.stop();
+    let _ = server.stop();
 }
 
 #[traced_test]
@@ -909,7 +909,7 @@ async fn test_parameter_unsubscribe_no_updates() {
     // doesn't send a parameter message to an unsubscribed client.
     tokio::time::sleep(std::time::Duration::from_millis(10)).await;
 
-    server.stop();
+    server.stop().unwrap().wait().await;
 
     // No parameter message was sent with the updated param before the Close message
     expect_recv_close!(client);
@@ -969,7 +969,7 @@ async fn test_set_parameters() {
     assert_eq!(set_parameters.request_id, Some("123".to_string()));
     assert_eq!(set_parameters.parameters, parameters);
 
-    server.stop();
+    let _ = server.stop();
 }
 
 #[traced_test]
@@ -1009,7 +1009,7 @@ async fn test_get_parameters() {
     assert_eq!(get_parameters.param_names, vec!["foo", "bar", "baz"]);
     assert_eq!(get_parameters.request_id, Some("123".to_string()));
 
-    server.stop();
+    let _ = server.stop();
 }
 
 #[tokio::test]
@@ -1339,7 +1339,7 @@ async fn test_update_connection_graph() {
     c1.send(&UnsubscribeConnectionGraph {}).await.unwrap();
     assert_eventually(|| dbg!(recording_listener.take_connection_graph_unsubscribe() == 1)).await;
 
-    server.stop();
+    let _ = server.stop();
 }
 
 #[traced_test]
@@ -1383,10 +1383,9 @@ async fn test_slow_client() {
 
     // Close message should be received
     expect_recv_close!(client);
-    server.stop();
+    let _ = server.stop();
 }
 
-#[cfg(feature = "unstable")]
 #[tokio::test]
 async fn test_broadcast_time() {
     let ctx = Context::new();

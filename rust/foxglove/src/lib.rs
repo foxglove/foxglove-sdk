@@ -14,21 +14,24 @@
 //! message and close the file.
 //!
 //! ```no_run
-//! use foxglove::{McapWriter, log};
 //! use foxglove::schemas::Log;
+//! use foxglove::{log, McapWriter};
 //!
-//! # fn func() -> Result<(), foxglove::FoxgloveError> {
 //! // Create a new MCAP file named 'test.mcap'.
-//! let mcap = McapWriter::new().create_new_buffered_file("test.mcap")?;
+//! let mcap = McapWriter::new()
+//!     .create_new_buffered_file("test.mcap")
+//!     .expect("create failed");
 //!
-//! log!("/log", Log{
-//!     message: "Hello, Foxglove!".to_string(),
-//!     ..Default::default()
-//! });
+//! log!(
+//!     "/log",
+//!     Log {
+//!         message: "Hello, Foxglove!".to_string(),
+//!         ..Default::default()
+//!     }
+//! );
 //!
 //! // Flush and close the MCAP file.
-//! mcap.close()?;
-//! # Ok(()) }
+//! mcap.close().expect("close failed");
 //! ```
 //!
 //! # Concepts
@@ -48,26 +51,27 @@
 //! If we wanted to use an explicit context instead, we'd write:
 //!
 //! ```no_run
-//! use foxglove::Context;
 //! use foxglove::schemas::Log;
+//! use foxglove::Context;
 //!
-//! # fn func() -> Result<(), foxglove::FoxgloveError> {
 //! // Create a new context.
 //! let ctx = Context::new();
 //!
 //! // Create a new MCAP file named 'test.mcap'.
-//! let mcap = ctx.mcap_writer().create_new_buffered_file("test.mcap")?;
+//! let mcap = ctx
+//!     .mcap_writer()
+//!     .create_new_buffered_file("test.mcap")
+//!     .expect("create failed");
 //!
 //! // Create a new channel for the topic "/log" for `Log` messages.
 //! let channel = ctx.channel_builder("/log").build();
-//! channel.log(&Log{
+//! channel.log(&Log {
 //!     message: "Hello, Foxglove!".to_string(),
 //!     ..Default::default()
 //! });
 //!
 //! // Flush and close the MCAP file.
-//! mcap.close()?;
-//! # Ok(()) }
+//! mcap.close().expect("close failed");
 //! ```
 //!
 //! ## Channels
@@ -87,23 +91,23 @@
 //! the first call. The example could be equivalently written as:
 //!
 //! ```no_run
-//! use foxglove::{Channel, McapWriter};
 //! use foxglove::schemas::Log;
+//! use foxglove::{Channel, McapWriter};
 //!
-//! # fn func() -> Result<(), foxglove::FoxgloveError> {
 //! // Create a new MCAP file named 'test.mcap'.
-//! let mcap = McapWriter::new().create_new_buffered_file("test.mcap")?;
+//! let mcap = McapWriter::new()
+//!     .create_new_buffered_file("test.mcap")
+//!     .expect("create failed");
 //!
 //! // Create a new channel for the topic "/log" for `Log` messages.
 //! let channel = Channel::new("/log");
-//! channel.log(&Log{
+//! channel.log(&Log {
 //!     message: "Hello, Foxglove!".to_string(),
 //!     ..Default::default()
 //! });
 //!
 //! // Flush and close the MCAP file.
-//! mcap.close()?;
-//! # Ok(()) }
+//! mcap.close().expect("close failed");
 //! ```
 //!
 //! `log!` can be mixed and matched with manually created channels in the default [`Context`], as
@@ -120,7 +124,7 @@
 //! You can also define your own custom data types by implementing the [`Encode`] trait.
 //!
 //! The easiest way to do this is to derive the [`Encode`] trait, which will generate a schema
-//! and allow you to log your struct to a channel. This currently uses protobuf encoding.
+//! and allow you to log your struct to a channel.
 //!
 //! ```no_run
 //! #[derive(foxglove::Encode)]
@@ -129,13 +133,11 @@
 //!     count: u32,
 //! }
 //!
-//! # fn func() -> Result<(), foxglove::FoxgloveError> {
 //! let channel = foxglove::Channel::new("/custom");
-//! channel.log(&Custom{
+//! channel.log(&Custom {
 //!     msg: "custom",
-//!     count: 42
+//!     count: 42,
 //! });
-//! # Ok(()) }
 //! ```
 //!
 //! This currently uses protobuf encoding. If you'd like to use JSON encoding for integration with
@@ -157,8 +159,8 @@
 //! In this example, we create two lazy channels on the default context:
 //!
 //! ```
-//! use foxglove::{LazyChannel, LazyRawChannel};
 //! use foxglove::schemas::SceneUpdate;
+//! use foxglove::{LazyChannel, LazyRawChannel};
 //!
 //! static BOXES: LazyChannel<SceneUpdate> = LazyChannel::new("/boxes");
 //! static MSG: LazyRawChannel = LazyRawChannel::new("/msg", "json");
@@ -167,8 +169,8 @@
 //! It is also possible to bind lazy channels to an explicit [`LazyContext`]:
 //!
 //! ```
-//! use foxglove::{LazyChannel, LazyContext, LazyRawChannel};
 //! use foxglove::schemas::SceneUpdate;
+//! use foxglove::{LazyChannel, LazyContext, LazyRawChannel};
 //!
 //! static CTX: LazyContext = LazyContext::new();
 //! static BOXES: LazyChannel<SceneUpdate> = CTX.channel("/boxes");
@@ -191,24 +193,22 @@
 //! unregistered from the [`Context`], and the file will be finalized and flushed.
 //!
 //! ```no_run
-//! # fn func() -> Result<(), foxglove::FoxgloveError> {
 //! let mcap = foxglove::McapWriter::new()
-//!     .create_new_buffered_file("test.mcap")?;
-//! # Ok(()) }
+//!     .create_new_buffered_file("test.mcap")
+//!     .expect("create failed");
 //! ```
 //!
 //! You can override the MCAP writer's configuration using [`McapWriter::with_options`]. See
 //! [`WriteOptions`](`mcap::WriteOptions`) for more detail about these parameters:
 //!
 //! ```no_run
-//! # fn func() -> Result<(), foxglove::FoxgloveError> {
 //! let options = mcap::WriteOptions::default()
-//!     .chunk_size(Some(1024*1024))
+//!     .chunk_size(Some(1024 * 1024))
 //!     .compression(Some(mcap::Compression::Lz4));
 //!
 //! let mcap = foxglove::McapWriter::with_options(options)
-//!     .create_new_buffered_file("test.mcap")?;
-//! # Ok(()) }
+//!     .create_new_buffered_file("test.mcap")
+//!     .expect("create failed");
 //! ```
 //!
 //! ### Live visualization server
@@ -374,9 +374,12 @@ pub enum FoxgloveError {
     /// An I/O error.
     #[error(transparent)]
     IoError(#[from] std::io::Error),
-    /// An error related to MCAP encoding.
+    /// An error related to MCAP writing.
     #[error("MCAP error: {0}")]
     McapError(#[from] mcap::McapError),
+    /// An error occurred while encoding a message.
+    #[error("Encoding error: {0}")]
+    EncodeError(String),
 }
 
 impl From<convert::RangeError> for FoxgloveError {
