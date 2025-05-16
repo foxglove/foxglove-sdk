@@ -3,19 +3,18 @@ use foxglove::convert::SaturatingInto;
 use foxglove::schemas::{
     Color, CubePrimitive, FrameTransform, Pose, Quaternion, SceneEntity, SceneUpdate, Vector3,
 };
+
 use foxglove::{LazyChannel, LazyRawChannel};
-use schemars::JsonSchema;
-use serde::Serialize;
 use std::time::Duration;
 
-#[derive(Debug, Serialize, JsonSchema)]
+#[derive(Debug, Clone, Copy, foxglove::Encode)]
 enum MessageLevel {
     Debug,
     #[allow(dead_code)]
     Info,
 }
 
-#[derive(Debug, Serialize, JsonSchema)]
+#[derive(foxglove::Encode)]
 struct Message {
     level: MessageLevel,
     msg: String,

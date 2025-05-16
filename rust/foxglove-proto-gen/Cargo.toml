@@ -1,6 +1,6 @@
 [package]
 name = "foxglove-proto-gen"
-edition = "2021"
+edition.workspace = true
 publish = false
 
 [lints]
