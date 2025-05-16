@@ -41,8 +41,10 @@ enum class FoxgloveError : uint8_t {
   ConnectionGraphNotSupported,
   /// An I/O error.
   IoError,
-  /// An error related to MCAP encoding.
-  McapError
+  /// An error related to MCAP writing.
+  McapError,
+  /// An error related to encoding.
+  EncodeError,
 };
 
 /// @brief A result type for Foxglove operations.

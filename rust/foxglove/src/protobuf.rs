@@ -30,6 +30,12 @@ pub fn encode_varint(value: u64, buf: &mut impl bytes::BufMut) {
     prost::encoding::encode_varint(value, buf);
 }
 
+/// Returns the encoded length of a value to be written with [encode_varint].
+#[doc(hidden)]
+pub fn encoded_len_varint(value: u64) -> usize {
+    prost::encoding::encoded_len_varint(value)
+}
+
 /// The `ProtobufField` trait defines the interface for types that can be serialized to Protocol
 /// Buffer format.
 ///
@@ -61,10 +67,12 @@ pub trait ProtobufField {
 
     /// Writes a field with its tag (field number and wire type) to the buffer.
     ///
+    /// You must choose a valid field number (unique, within the max, and not reserved).
+    ///
     /// The default implementation writes the tag followed by the field content.
     fn write_tagged(&self, field_number: u32, buf: &mut impl bytes::BufMut) {
         let tag = (field_number << 3) | Self::wire_type();
-        buf.put_u8(tag as u8);
+        prost::encoding::encode_varint(tag as u64, buf);
         self.write(buf);
     }
 
@@ -95,6 +103,9 @@ pub trait ProtobufField {
     fn repeating() -> bool {
         false
     }
+
+    /// The length of the field to be written, in bytes.
+    fn encoded_len(&self) -> usize;
 }
 
 impl ProtobufField for u64 {
@@ -108,6 +119,10 @@ impl ProtobufField for u64 {
 
     fn write(&self, buf: &mut impl bytes::BufMut) {
         encode_varint(*self, buf);
+    }
+
+    fn encoded_len(&self) -> usize {
+        prost::encoding::encoded_len_varint(*self)
     }
 }
 
@@ -123,6 +138,10 @@ impl ProtobufField for u32 {
     fn write(&self, buf: &mut impl bytes::BufMut) {
         encode_varint((*self).into(), buf);
     }
+
+    fn encoded_len(&self) -> usize {
+        prost::encoding::encoded_len_varint(*self as u64)
+    }
 }
 
 impl ProtobufField for u16 {
@@ -136,6 +155,10 @@ impl ProtobufField for u16 {
 
     fn write(&self, buf: &mut impl bytes::BufMut) {
         encode_varint((*self).into(), buf);
+    }
+
+    fn encoded_len(&self) -> usize {
+        prost::encoding::encoded_len_varint(*self as u64)
     }
 }
 
@@ -151,6 +174,10 @@ impl ProtobufField for u8 {
     fn write(&self, buf: &mut impl bytes::BufMut) {
         encode_varint((*self).into(), buf);
     }
+
+    fn encoded_len(&self) -> usize {
+        prost::encoding::encoded_len_varint(*self as u64)
+    }
 }
 
 impl ProtobufField for i64 {
@@ -164,9 +191,15 @@ impl ProtobufField for i64 {
 
     fn write(&self, buf: &mut impl bytes::BufMut) {
         // https://protobuf.dev/programming-guides/encoding/#signed-ints
-        let n = *self;
+        let n = *self as i128;
         let encoded = ((n << 1) ^ (n >> 63)) as u64;
         encode_varint(encoded, buf);
+    }
+
+    fn encoded_len(&self) -> usize {
+        let n = *self as i128;
+        let encoded = ((n << 1) ^ (n >> 63)) as u64;
+        prost::encoding::encoded_len_varint(encoded)
     }
 }
 
@@ -181,9 +214,15 @@ impl ProtobufField for i32 {
 
     fn write(&self, buf: &mut impl bytes::BufMut) {
         // https://protobuf.dev/programming-guides/encoding/#signed-ints
-        let n = *self;
+        let n = *self as i64;
         let encoded = ((n << 1) ^ (n >> 31)) as u64;
         encode_varint(encoded, buf);
+    }
+
+    fn encoded_len(&self) -> usize {
+        let n = *self as i64;
+        let encoded = ((n << 1) ^ (n >> 31)) as u64;
+        prost::encoding::encoded_len_varint(encoded)
     }
 }
 
@@ -198,9 +237,15 @@ impl ProtobufField for i16 {
 
     fn write(&self, buf: &mut impl bytes::BufMut) {
         // https://protobuf.dev/programming-guides/encoding/#signed-ints
-        let n = *self;
+        let n = *self as i32;
         let encoded = ((n << 1) ^ (n >> 15)) as u64;
         encode_varint(encoded, buf);
+    }
+
+    fn encoded_len(&self) -> usize {
+        let n = *self as i32;
+        let encoded = ((n << 1) ^ (n >> 15)) as u64;
+        prost::encoding::encoded_len_varint(encoded)
     }
 }
 
@@ -215,9 +260,15 @@ impl ProtobufField for i8 {
 
     fn write(&self, buf: &mut impl bytes::BufMut) {
         // https://protobuf.dev/programming-guides/encoding/#signed-ints
-        let n = *self;
+        let n = *self as i16;
         let encoded = ((n << 1) ^ (n >> 7)) as u64;
         encode_varint(encoded, buf);
+    }
+
+    fn encoded_len(&self) -> usize {
+        let n = *self as i16;
+        let encoded = ((n << 1) ^ (n >> 7)) as u64;
+        prost::encoding::encoded_len_varint(encoded)
     }
 }
 
@@ -233,6 +284,10 @@ impl ProtobufField for bool {
     fn write(&self, buf: &mut impl bytes::BufMut) {
         buf.put_u8(*self as u8);
     }
+
+    fn encoded_len(&self) -> usize {
+        1
+    }
 }
 
 impl ProtobufField for f32 {
@@ -247,6 +302,10 @@ impl ProtobufField for f32 {
     fn write(&self, buf: &mut impl bytes::BufMut) {
         buf.put_f32_le(*self);
     }
+
+    fn encoded_len(&self) -> usize {
+        4 // f32
+    }
 }
 
 impl ProtobufField for f64 {
@@ -260,6 +319,10 @@ impl ProtobufField for f64 {
 
     fn write(&self, buf: &mut impl bytes::BufMut) {
         buf.put_f64_le(*self);
+    }
+
+    fn encoded_len(&self) -> usize {
+        8 // f64
     }
 }
 
@@ -276,10 +339,12 @@ impl ProtobufField for String {
     fn write(&self, buf: &mut impl bytes::BufMut) {
         // Write the length as a varint, followed by the data
         prost::encoding::encode_length_delimiter(self.len(), buf).expect("Failed to write string");
-        if buf.remaining_mut() < self.len() {
-            panic!("Failed to write string; insufficient buffer capacity");
-        }
         buf.put_slice(self.as_bytes());
+    }
+
+    fn encoded_len(&self) -> usize {
+        let delim_len = prost::encoding::length_delimiter_len(self.len());
+        delim_len + self.len()
     }
 }
 
@@ -296,10 +361,12 @@ impl ProtobufField for &str {
     fn write(&self, buf: &mut impl bytes::BufMut) {
         // Write the length as a varint, followed by the data
         prost::encoding::encode_length_delimiter(self.len(), buf).expect("Failed to write str");
-        if buf.remaining_mut() < self.len() {
-            panic!("Failed to write str; insufficient buffer capacity");
-        }
         buf.put_slice(self.as_bytes());
+    }
+
+    fn encoded_len(&self) -> usize {
+        let delim_len = prost::encoding::length_delimiter_len(self.len());
+        delim_len + self.len()
     }
 }
 
@@ -315,10 +382,12 @@ impl ProtobufField for bytes::Bytes {
     fn write(&self, buf: &mut impl bytes::BufMut) {
         // Write the length as a varint, followed by the data
         prost::encoding::encode_length_delimiter(self.len(), buf).expect("Failed to write bytes");
-        if buf.remaining_mut() < self.len() {
-            panic!("Failed to write bytes; insufficient buffer capacity");
-        }
         buf.put_slice(self);
+    }
+
+    fn encoded_len(&self) -> usize {
+        let delim_len = prost::encoding::length_delimiter_len(self.len());
+        delim_len + self.len()
     }
 }
 
@@ -340,10 +409,8 @@ where
         // https://protobuf.dev/programming-guides/encoding/#optional
         for value in self {
             let wire_type = T::wire_type();
-
             let tag = (field_number << 3) | wire_type;
-            buf.put_u8(tag as u8);
-
+            prost::encoding::encode_varint(tag as u64, buf);
             value.write(buf);
         }
     }
@@ -365,5 +432,95 @@ where
 
     fn type_name() -> Option<String> {
         T::type_name()
+    }
+
+    fn encoded_len(&self) -> usize {
+        // non-packed repeated fields
+        let delim_len = prost::encoding::length_delimiter_len(self.len());
+        let data_len: usize = self.iter().map(|value| value.encoded_len()).sum();
+        delim_len + data_len
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_u8_encoded_len() {
+        assert_eq!(ProstFieldType::Uint32, u8::field_type());
+        assert_eq!(1, u8::encoded_len(&127u8));
+        assert_eq!(2, u8::encoded_len(&128u8));
+    }
+
+    #[test]
+    fn test_i8_encoded_len() {
+        // Zig-zag encoding
+        assert_eq!(ProstFieldType::Sint32, i8::field_type());
+        assert_eq!(1, (-1i8).encoded_len());
+        assert_eq!(1, 1i8.encoded_len());
+        assert_eq!(2, i8::MIN.encoded_len());
+        assert_eq!(2, i8::MAX.encoded_len());
+    }
+
+    #[test]
+    fn test_i8_write() {
+        // Zig-zag encoding
+        // https://protobuf.dev/programming-guides/encoding/#varints
+        let cases: Vec<(i8, &[u8])> = vec![
+            (-1i8, &[1]),
+            (1i8, &[2]),
+            (-127i8, &[253, 1]),
+            (127i8, &[254, 1]),
+        ];
+
+        for (input, expected) in cases {
+            let mut buf = bytes::BytesMut::new();
+            i8::write(&input, &mut buf);
+            assert_eq!(&buf[..], expected);
+
+            let mut buf = bytes::BytesMut::new();
+            i16::write(&(input as i16), &mut buf);
+            assert_eq!(&buf[..], expected);
+
+            let mut buf = bytes::BytesMut::new();
+            i32::write(&(input as i32), &mut buf);
+            assert_eq!(&buf[..], expected);
+
+            let mut buf = bytes::BytesMut::new();
+            i64::write(&(input as i64), &mut buf);
+            assert_eq!(&buf[..], expected);
+        }
+    }
+
+    #[test]
+    fn test_i64_edges() {
+        let mut buf = bytes::BytesMut::new();
+        i64::write(&(i64::MAX), &mut buf);
+        assert_eq!(
+            &buf[..],
+            &[0xfe, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01]
+        );
+        assert_eq!(i64::MAX.encoded_len(), 10);
+
+        let mut buf = bytes::BytesMut::new();
+        i64::write(&(i64::MIN), &mut buf);
+        assert_eq!(
+            &buf[..],
+            &[0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01]
+        );
+        assert_eq!(i64::MIN.encoded_len(), 10);
+    }
+
+    #[test]
+    fn test_write_tagged() {
+        // https://protobuf.dev/programming-guides/encoding/#structure
+        let mut buf = bytes::BytesMut::new();
+        bool::write_tagged(&true, 1, &mut buf);
+        assert_eq!(&buf[..], &[0x08, 0x01]);
+
+        let mut buf = bytes::BytesMut::new();
+        bool::write_tagged(&true, 256, &mut buf);
+        assert_eq!(&buf[..], &[0x80, 0x10, 0x01]);
     }
 }
