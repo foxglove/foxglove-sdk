@@ -1,5 +1,5 @@
 [package]
-name = "foxglove-derive"
+name = "foxglove_derive"
 description = "Foxglove SDK derive macros"
 version.workspace = true
 edition.workspace = true

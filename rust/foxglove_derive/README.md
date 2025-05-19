@@ -1,4 +1,4 @@
-# foxglove-derive
+# foxglove_derive
 
 Derive macros for the Foxglove SDK.
 

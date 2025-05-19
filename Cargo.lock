@@ -684,7 +684,7 @@ dependencies = [
  "delegate",
  "env_logger",
  "flume",
- "foxglove-derive",
+ "foxglove_derive",
  "futures-util",
  "insta",
  "maplit",
@@ -704,22 +704,6 @@ dependencies = [
  "tokio",
  "tokio-tungstenite",
  "tokio-util",
- "tracing",
- "tracing-test",
-]
-
-[[package]]
-name = "foxglove-derive"
-version = "0.7.1"
-dependencies = [
- "bytes",
- "foxglove",
- "proc-macro2",
- "prost",
- "prost-reflect",
- "prost-types",
- "quote",
- "syn 2.0.101",
  "tracing",
  "tracing-test",
 ]
@@ -770,6 +754,22 @@ dependencies = [
  "maplit",
  "mcap 0.15.1",
  "tracing",
+]
+
+[[package]]
+name = "foxglove_derive"
+version = "0.7.1"
+dependencies = [
+ "bytes",
+ "foxglove",
+ "proc-macro2",
+ "prost",
+ "prost-reflect",
+ "prost-types",
+ "quote",
+ "syn 2.0.101",
+ "tracing",
+ "tracing-test",
 ]
 
 [[package]]
