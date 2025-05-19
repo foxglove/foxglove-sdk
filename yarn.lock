@@ -660,6 +660,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@foxglove/message-definition@npm:^0.3.1":
+  version: 0.3.1
+  resolution: "@foxglove/message-definition@npm:0.3.1"
+  checksum: 10c0/521fadfadcdb9bbde7d28908e429b93a387ded524f8abeb361f27ae5a6f36b8d5dc29cf23dbf0791cc366de59c48dc03aede861faa59df1c64d030b6c659981a
+  languageName: node
+  linkType: hard
+
 "@foxglove/omgidl-parser@npm:^0.2.0":
   version: 0.2.0
   resolution: "@foxglove/omgidl-parser@npm:0.2.0"
@@ -669,13 +676,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@foxglove/rosmsg-msgs-common@npm:^3.0.0":
-  version: 3.0.0
-  resolution: "@foxglove/rosmsg-msgs-common@npm:3.0.0"
+"@foxglove/rosmsg-msgs-common@npm:^3.2.2":
+  version: 3.2.2
+  resolution: "@foxglove/rosmsg-msgs-common@npm:3.2.2"
   dependencies:
-    "@foxglove/message-definition": "npm:^0.2.0"
-    "@foxglove/rosmsg": "npm:^4.0.0"
-  checksum: 10c0/152e81d576ef407138b12ec4e90df8dde49db4ccfe282b47912ba4c964d17ddb0680e4388ac1b08d400e8c7ac07c716389690f00ede52adbe50df6be2555d833
+    "@foxglove/message-definition": "npm:^0.3.1"
+    "@foxglove/rosmsg": "npm:^5.0.4"
+  checksum: 10c0/d1c1e44eadfd61ac651555c4c174535f09834fe1ca61e8117c5ac47932bfd76fd889008b33ed75dc829a2cf034d3d4c6e3c914835aaea76e5cf58f48041eae46
   languageName: node
   linkType: hard
 
@@ -691,11 +698,21 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@foxglove/rosmsg@npm:^5.0.4":
+  version: 5.0.4
+  resolution: "@foxglove/rosmsg@npm:5.0.4"
+  dependencies:
+    "@foxglove/message-definition": "npm:^0.3.1"
+    md5-typescript: "npm:^1.0.5"
+  checksum: 10c0/27651394a2471a88b5d8668ccc8e72592548a49afe0b4a19aa617019a37d7bf5dd49018e2b510e4e8aa778c21e25ca4873e7900613be8d6994a771fab439d929
+  languageName: node
+  linkType: hard
+
 "@foxglove/schemas@workspace:typescript/schemas":
   version: 0.0.0-use.local
   resolution: "@foxglove/schemas@workspace:typescript/schemas"
   dependencies:
-    "@foxglove/rosmsg-msgs-common": "npm:^3.0.0"
+    "@foxglove/rosmsg-msgs-common": "npm:^3.2.2"
     rimraf: "npm:^6.0.1"
     tslib: "npm:^2"
     typescript: "npm:5.7.3"

@@ -1,4 +1,5 @@
-export type Time = {
-  sec: number;
-  nsec: number;
-};
+import { Timestamp } from "./Timestamp";
+/**
+ * @deprecated Use the `Timestamp` schema instead.
+ */
+export type Time = Timestamp;

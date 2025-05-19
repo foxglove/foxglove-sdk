@@ -10,13 +10,13 @@ import { LinePrimitive } from "./LinePrimitive";
 import { ModelPrimitive } from "./ModelPrimitive";
 import { SpherePrimitive } from "./SpherePrimitive";
 import { TextPrimitive } from "./TextPrimitive";
-import { Time } from "./Time";
+import { Timestamp } from "./Timestamp";
 import { TriangleListPrimitive } from "./TriangleListPrimitive";
 
 /** A visual element in a 3D scene. An entity may be composed of multiple primitives which all share the same frame of reference. */
 export type SceneEntity = {
   /** Timestamp of the entity */
-  timestamp: Time;
+  timestamp: Timestamp;
 
   /** Frame of reference */
   frame_id: string;

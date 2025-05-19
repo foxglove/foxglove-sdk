@@ -1,5 +1,47 @@
 import { FoxgloveEnumSchema, FoxgloveMessageSchema } from "./types";
 
+const Duration: FoxgloveMessageSchema = {
+  type: "message",
+  name: "Duration",
+  description: "A duration of time, composed of seconds and nanoseconds",
+  rosEquivalent: "std_msgs/Duration",
+  ros2Equivalent: "builtin_interfaces/Duration",
+  protoEquivalent: "google.protobuf.Duration",
+  fields: [
+    {
+      name: "sec",
+      type: { type: "primitive", name: "int32" },
+      description: "The number of seconds in the duration",
+    },
+    {
+      name: "nsec",
+      type: { type: "primitive", name: "uint32" },
+      description: "The number of nanoseconds in the positive direction",
+    },
+  ],
+};
+
+const Timestamp: FoxgloveMessageSchema = {
+  type: "message",
+  name: "Timestamp",
+  description: "A timestamp composed of seconds and nanoseconds",
+  rosEquivalent: "std_msgs/Time",
+  ros2Equivalent: "builtin_interfaces/Time",
+  protoEquivalent: "google.protobuf.Timestamp",
+  fields: [
+    {
+      name: "sec",
+      type: { type: "primitive", name: "uint32" },
+      description: "The number of seconds since a user-defined epoch",
+    },
+    {
+      name: "nsec",
+      type: { type: "primitive", name: "uint32" },
+      description: "The number of nanoseconds since the sec value",
+    },
+  ],
+};
+
 const RawAudio: FoxgloveMessageSchema = {
   type: "message",
   name: "RawAudio",
@@ -90,6 +132,7 @@ const Vector3: FoxgloveMessageSchema = {
   name: "Vector3",
   description: "A vector in 3D space that represents a direction only",
   rosEquivalent: "geometry_msgs/Vector3",
+  ros2Equivalent: "geometry_msgs/Vector3",
   fields: [
     {
       name: "x",
@@ -135,6 +178,7 @@ const Point3: FoxgloveMessageSchema = {
   name: "Point3",
   description: "A point representing a position in 3D space",
   rosEquivalent: "geometry_msgs/Point",
+  ros2Equivalent: "geometry_msgs/Point",
   fields: [
     {
       name: "x",
@@ -159,6 +203,7 @@ const Quaternion: FoxgloveMessageSchema = {
   name: "Quaternion",
   description: "A [quaternion](https://eater.net/quaternions) representing a rotation in 3D space",
   rosEquivalent: "geometry_msgs/Quaternion",
+  ros2Equivalent: "geometry_msgs/Quaternion",
   fields: [
     {
       name: "x",
@@ -189,6 +234,7 @@ const Pose: FoxgloveMessageSchema = {
   name: "Pose",
   description: "A position and orientation for an object or reference frame in 3D space",
   rosEquivalent: "geometry_msgs/Pose",
+  ros2Equivalent: "geometry_msgs/Pose",
   fields: [
     {
       name: "position",
@@ -1516,6 +1562,7 @@ export const foxgloveMessageSchemas = {
   CompressedVideo,
   CylinderPrimitive,
   CubePrimitive,
+  Duration,
   FrameTransform,
   FrameTransforms,
   GeoJSON,
@@ -1544,6 +1591,7 @@ export const foxgloveMessageSchemas = {
   SpherePrimitive,
   TextAnnotation,
   TextPrimitive,
+  Timestamp,
   TriangleListPrimitive,
   Vector2,
   Vector3,

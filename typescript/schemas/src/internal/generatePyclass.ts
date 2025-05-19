@@ -37,6 +37,9 @@ export function generateSchemaPrelude(): string {
  * Generate a `pyclass`-annotated struct or enum definition for the given schema.
  */
 export function generatePyclass(schema: FoxgloveSchema): string {
+  if (!shouldGenerateSchemaClass(schema)) {
+    return "";
+  }
   return isMessageSchema(schema) ? generateMessageClass(schema) : generateEnumClass(schema);
 }
 
@@ -57,6 +60,7 @@ export function generatePySchemaStub(schemas: FoxgloveSchema[]): string {
 
   const enums = schemas
     .filter((schema) => schema.type === "enum")
+    .filter(shouldGenerateSchemaClass)
     .map((schema) => {
       const name = enumName(schema);
       const doc = ['    """', `    ${schema.description}`, '    """'];
@@ -71,30 +75,33 @@ export function generatePySchemaStub(schemas: FoxgloveSchema[]): string {
 
   const allSchemas: string[] = [];
 
-  const classes = schemas.filter(isMessageSchema).map((schema) => {
-    const name = structName(schema.name);
-    allSchemas.push(name);
-    const doc = ['    """', `    ${schema.description}`, '    """'];
-    const params = schema.fields
-      .map((field) => {
-        return `        ${field.name}: "${pythonCtorType(field)}" = ${pythonDefaultValue(field)}`;
-      })
-      .join(",\n");
+  const classes = schemas
+    .filter(isMessageSchema)
+    .filter(shouldGenerateSchemaClass)
+    .map((schema) => {
+      const name = structName(schema.name);
+      allSchemas.push(name);
+      const doc = ['    """', `    ${schema.description}`, '    """'];
+      const params = schema.fields
+        .map((field) => {
+          return `        ${field.name}: "${pythonCtorType(field)}" = ${pythonDefaultValue(field)}`;
+        })
+        .join(",\n");
 
-    return {
-      name,
-      source:
-        [
-          `class ${name}:`,
-          ...doc,
-          `    def __new__(`,
-          "        cls,",
-          "        *,",
-          params,
-          `    ) -> "${name}": ...`,
-        ].join("\n") + "\n\n",
-    };
-  });
+      return {
+        name,
+        source:
+          [
+            `class ${name}:`,
+            ...doc,
+            `    def __new__(`,
+            "        cls,",
+            "        *,",
+            params,
+            `    ) -> "${name}": ...`,
+          ].join("\n") + "\n\n",
+      };
+    });
 
   // Enums come first to provide default values for constructor parameters. Otherwise, sort by name.
   const enumSources = enums
@@ -120,10 +127,7 @@ export function generatePySchemaModule(schemas: FoxgloveSchema[]): string {
     .filter(isMessageSchema)
     .map((schema) => pyClassName(schema))
     .sort();
-  const classNames = schemas
-    .map((schema) => pyClassName(schema))
-    .concat(["Timestamp", "Duration"])
-    .sort();
+  const classNames = schemas.map((schema) => pyClassName(schema)).sort();
   const headers = [
     `"""`,
     `This module contains the definitions of the well-known Foxglove schemas for logging.`,
@@ -141,7 +145,6 @@ export function generatePySchemaModule(schemas: FoxgloveSchema[]): string {
     ...classNames.map((name) => `    "${name}",`),
     "]",
   ];
-
   const alias = `FoxgloveSchema = Union[${allSchemas.join(", ")}];\n`;
 
   return [...headers, ...imports, alias, ...exports, ""].join("\n");
@@ -302,6 +305,9 @@ function rustOutputType(field: FoxgloveMessageField): string {
         case "float64":
           type = "f64";
           break;
+        case "int32":
+          type = "i32";
+          break;
         case "uint32":
           type = "u32";
           break;
@@ -366,6 +372,7 @@ function pythonDefaultValue(field: FoxgloveMessageField): string {
           return `""`;
         case "float64":
           return "0.0";
+        case "int32":
         case "uint32":
           return "0";
         case "boolean":
@@ -405,6 +412,7 @@ function rustDefaultValue(field: FoxgloveMessageField): string {
           return `"".to_string()`;
         case "float64":
           return "0.0";
+        case "int32":
         case "uint32":
           return "0";
         case "boolean":
@@ -435,6 +443,7 @@ function pythonType(foxglovePrimitive: FoxglovePrimitive): string {
       return "str";
     case "float64":
       return "float";
+    case "int32":
     case "uint32":
       return "int";
     case "boolean":
@@ -491,8 +500,6 @@ export function generateSchemaModuleRegistration(schemas: FoxgloveSchema[]): str
 pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     let module = PyModule::new(parent_module.py(), "schemas")?;
 
-    module.add_class::<Duration>()?;
-    module.add_class::<Timestamp>()?;
     ${schemas.map((schema) => `module.add_class::<${pyClassName(schema)}>()?;`).join("\n    ")}
 
     // Define as a package
@@ -507,8 +514,19 @@ pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
 `;
 }
 
+/**
+ * Python SDK uses custom implementations for Time and Duration via schemas_wkt, so we don't
+ * auto-generate implementations or stubs. These match the `{ sec, nsec }` schema definition but
+ * provide additional conversions and factory methods.
+ */
+function shouldGenerateSchemaClass(schema: FoxgloveSchema): boolean {
+  return schema.name !== "Timestamp" && schema.name !== "Duration";
+}
+
 function shouldGenerateChannelClass(schema: FoxgloveMessageSchema): boolean {
-  return !schema.name.endsWith("Primitive");
+  return (
+    !schema.name.endsWith("Primitive") && schema.name !== "Timestamp" && schema.name !== "Duration"
+  );
 }
 
 /**
@@ -544,7 +562,7 @@ function pyClassName(schema: FoxgloveSchema): string {
  * can't be exported directly to Python.
  */
 export function generateChannelClasses(messageSchemas: FoxgloveMessageSchema[]): string {
-  const schemas = messageSchemas.filter((schema) => !schema.name.endsWith("Primitive"));
+  const schemas = messageSchemas.filter(shouldGenerateChannelClass);
 
   const header = [
     `//! Typed channels for logging Foxglove schemas`,
@@ -642,7 +660,7 @@ impl ${channelClass} {
  */
 export function generatePyChannelStub(messageSchemas: FoxgloveMessageSchema[]): string {
   const header = "# Generated by https://github.com/foxglove/foxglove-sdk";
-  const schemas = messageSchemas.filter((schema) => !schema.name.endsWith("Primitive"));
+  const schemas = messageSchemas.filter(shouldGenerateChannelClass);
 
   const imports = [
     "from typing import Optional",
