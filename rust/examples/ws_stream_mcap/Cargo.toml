@@ -1,5 +1,5 @@
 [package]
-name = "example-ws-stream-mcap"
+name = "example_ws_stream_mcap"
 edition = "2021"
 publish = false
 

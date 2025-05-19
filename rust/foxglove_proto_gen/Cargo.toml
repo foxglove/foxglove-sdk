@@ -1,5 +1,5 @@
 [package]
-name = "foxglove-proto-gen"
+name = "foxglove_proto_gen"
 edition.workspace = true
 publish = false
 
@@ -17,5 +17,5 @@ tempfile = "3.15.0"
 walkdir = "2.5.0"
 
 [[bin]]
-name = "foxglove-proto-gen"
+name = "foxglove_proto_gen"
 path = "src/bin.rs"

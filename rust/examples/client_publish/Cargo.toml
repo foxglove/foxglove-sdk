@@ -1,5 +1,5 @@
 [package]
-name = "example-param-server"
+name = "example_client_publish"
 edition = "2021"
 publish = false
 
@@ -7,8 +7,9 @@ publish = false
 workspace = true
 
 [dependencies]
-foxglove = { path = "../../foxglove", features = ["unstable"] }
+foxglove = { path = "../../foxglove" }
 tokio = { version = "1.43", features = ["full"] }
 tokio-util = { version = "0.7", features = ["rt"] }
 clap = { version = "4.5", features = ["derive"] }
+serde_json = "1.0.128"
 env_logger = "0.11.5"

@@ -1,5 +1,5 @@
 [package]
-name = "example-ws-services"
+name = "example_ws_services"
 edition = "2021"
 
 [lints]

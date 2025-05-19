@@ -14,6 +14,7 @@ use tokio::time::MissedTickBehavior;
 use tokio_tungstenite::tungstenite::Message;
 use tokio_util::sync::CancellationToken;
 
+use crate::library_version::get_library_version;
 use crate::websocket::connected_client::ShutdownReason;
 use crate::{Context, FoxgloveError};
 
@@ -497,6 +498,10 @@ impl Server {
                     .flat_map(Capability::as_protocol_capabilities)
                     .copied(),
             )
+            .with_metadata(HashMap::from([(
+                "fg-library".into(),
+                get_library_version(),
+            )]))
             .with_supported_encodings(&self.supported_encodings)
             .with_session_id(self.session_id.read().clone())
     }

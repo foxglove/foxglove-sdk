@@ -3,8 +3,8 @@ resolver = "2"
 members = [
   "c",
   "rust/foxglove",
-  "rust/foxglove-proto-gen",
   "rust/foxglove_derive",
+  "rust/foxglove_proto_gen",
   "rust/examples/*",
   "python/foxglove-sdk",
 ]

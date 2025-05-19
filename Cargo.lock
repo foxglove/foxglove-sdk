@@ -521,7 +521,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "example-channelless"
+name = "example_channelless"
 version = "0.0.0"
 dependencies = [
  "env_logger",
@@ -532,7 +532,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "example-client-publish"
+name = "example_client_publish"
 version = "0.0.0"
 dependencies = [
  "clap",
@@ -544,7 +544,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "example-mcap"
+name = "example_mcap"
 version = "0.0.0"
 dependencies = [
  "clap",
@@ -556,7 +556,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "example-param-server"
+name = "example_param_server"
 version = "0.0.0"
 dependencies = [
  "clap",
@@ -567,7 +567,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "example-quickstart"
+name = "example_quickstart"
 version = "0.0.0"
 dependencies = [
  "ctrlc",
@@ -576,7 +576,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "example-ws-server"
+name = "example_ws_server"
 version = "0.0.0"
 dependencies = [
  "clap",
@@ -587,7 +587,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "example-ws-server-blocking"
+name = "example_ws_server_blocking"
 version = "0.0.0"
 dependencies = [
  "clap",
@@ -597,7 +597,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "example-ws-server-fetch-asset"
+name = "example_ws_server_fetch_asset"
 version = "0.0.0"
 dependencies = [
  "clap",
@@ -607,7 +607,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "example-ws-services"
+name = "example_ws_services"
 version = "0.0.0"
 dependencies = [
  "anyhow",
@@ -627,7 +627,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "example-ws-stream-mcap"
+name = "example_ws_stream_mcap"
 version = "0.0.0"
 dependencies = [
  "anyhow",
@@ -709,20 +709,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "foxglove-proto-gen"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "itertools",
- "prost",
- "prost-build",
- "prost-types",
- "regex",
- "tempfile",
- "walkdir",
-]
-
-[[package]]
 name = "foxglove-sdk-python"
 version = "0.7.1"
 dependencies = [
@@ -770,6 +756,20 @@ dependencies = [
  "syn 2.0.101",
  "tracing",
  "tracing-test",
+]
+
+[[package]]
+name = "foxglove_proto_gen"
+version = "0.0.0"
+dependencies = [
+ "anyhow",
+ "itertools",
+ "prost",
+ "prost-build",
+ "prost-types",
+ "regex",
+ "tempfile",
+ "walkdir",
 ]
 
 [[package]]
