@@ -1,5 +1,5 @@
 [package]
-name = "example-ws-server"
+name = "example_ws_server"
 edition = "2021"
 publish = false
 

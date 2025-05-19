@@ -4,7 +4,7 @@
 //!
 //! Usage:
 //! ```text
-//! cargo run -p example-param-server
+//! cargo run -p example_param_server
 //! ```
 
 use std::collections::HashMap;

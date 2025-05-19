@@ -1,5 +1,5 @@
 [package]
-name = "example-param-server"
+name = "example_param_server"
 edition = "2021"
 publish = false
 

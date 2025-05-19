@@ -1,5 +1,5 @@
 [package]
-name = "example-ws-server-fetch-asset"
+name = "example_ws_server_fetch_asset"
 edition = "2021"
 publish = false
 

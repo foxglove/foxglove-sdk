@@ -1,5 +1,5 @@
 [package]
-name = "example-client-publish"
+name = "example_client_publish"
 edition = "2021"
 publish = false
 

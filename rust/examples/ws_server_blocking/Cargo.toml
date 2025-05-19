@@ -1,5 +1,5 @@
 [package]
-name = "example-ws-server-blocking"
+name = "example_ws_server_blocking"
 edition = "2021"
 publish = false
 
