@@ -205,7 +205,7 @@ async function main({ clean }: { clean: boolean }) {
 
   // This must run before generating the Pyclass definitions
   await logProgressLn("Generating Rust code", async () => {
-    await exec("cargo", ["run", "--bin", "foxglove-proto-gen"], {
+    await exec("cargo", ["run", "--bin", "foxglove_proto_gen"], {
       cwd: path.join(repoRoot, "rust"),
     });
   });

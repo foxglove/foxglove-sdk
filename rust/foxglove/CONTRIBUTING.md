@@ -10,7 +10,7 @@
 ### Generate Protobuf schemas
 
 ```bash
-cargo run --bin foxglove-proto-gen
+cargo run --bin foxglove_proto_gen
 ```
 
 ### Run the example server

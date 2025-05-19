@@ -713,20 +713,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "foxglove-proto-gen"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "itertools 0.14.0",
- "prost",
- "prost-build",
- "prost-types",
- "regex",
- "tempfile",
- "walkdir",
-]
-
-[[package]]
 name = "foxglove-sdk-python"
 version = "0.7.1"
 dependencies = [
@@ -758,6 +744,20 @@ dependencies = [
  "maplit",
  "mcap 0.15.1",
  "tracing",
+]
+
+[[package]]
+name = "foxglove_proto_gen"
+version = "0.0.0"
+dependencies = [
+ "anyhow",
+ "itertools 0.14.0",
+ "prost",
+ "prost-build",
+ "prost-types",
+ "regex",
+ "tempfile",
+ "walkdir",
 ]
 
 [[package]]
