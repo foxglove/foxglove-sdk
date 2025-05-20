@@ -30,12 +30,12 @@ public:
   /// Create a new context
   static Context create();
 
-  /// @private
   /// For internal use only.
+  /// @cond foxglove_internal
   [[nodiscard]] const foxglove_context* getInner() const noexcept {
     return impl_.get();
   }
-
+  /// @endcond
 private:
   explicit Context(const foxglove_context* context);
 

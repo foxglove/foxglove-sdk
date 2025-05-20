@@ -12,13 +12,11 @@
 
 namespace foxglove {
 
-/**
- * @private
- * A fixed-size memory arena that allocates aligned arrays of POD types on the stack.
- * The arena contains a single inline array and allocates from it.
- * If the arena runs out of space, it throws std::bad_alloc.
- * The allocated arrays are "freed" by dropping the arena, destructors are not run.
- */
+/// A fixed-size memory arena that allocates aligned arrays of POD types on the stack.
+/// The arena contains a single inline array and allocates from it.
+/// If the arena runs out of space, it throws std::bad_alloc.
+/// The allocated arrays are "freed" by dropping the arena, destructors are not run.
+/// @cond foxglove_internal
 class Arena {
 public:
   static constexpr std::size_t Size = 128 * 1024;  // 128 KB
@@ -26,15 +24,13 @@ public:
   Arena()
       : offset_(0) {}
 
-  /**
-   * Maps elements from a vector to a new array allocated from the arena.
-   *
-   * @param src The source vector containing elements to map
-   * @param map_fn Function taking (T& dest, const S& src) to map elements.
-   * T must be a POD type, without a custom constructor or destructor.
-   * @return Pointer to the beginning of the allocated array of src.size() T elements
-   * @throws std::bad_alloc if the arena doesn't have enough space
-   */
+  /// Maps elements from a vector to a new array allocated from the arena.
+  ///
+  /// @param src The source vector containing elements to map
+  /// @param map_fn Function taking (T& dest, const S& src) to map elements.
+  /// T must be a POD type, without a custom constructor or destructor.
+  /// @return Pointer to the beginning of the allocated array of src.size() T elements
+  /// @throws std::bad_alloc if the arena doesn't have enough space
   template<
     typename T, typename S, typename Fn,
     typename = std::enable_if_t<std::is_pod_v<T> && std::is_invocable_v<Fn, T&, const S&, Arena&>>>
@@ -51,15 +47,13 @@ public:
     return result;
   }
 
-  /**
-   * Map a single source object of type S to a new object of type T allocated from the arena.
-   *
-   * @param src The source vector containing elements to map
-   * @param map_fn Function taking (T& dest, const S& src) to map elements.
-   * T must be a POD type, without a custom constructor or destructor.
-   * @return Pointer to the beginning of the allocated array of src.size() T elements
-   * @throws std::bad_alloc if the arena doesn't have enough space
-   */
+  /// Map a single source object of type S to a new object of type T allocated from the arena.
+  ///
+  /// @param src The source vector containing elements to map
+  /// @param map_fn Function taking (T& dest, const S& src) to map elements.
+  /// T must be a POD type, without a custom constructor or destructor.
+  /// @return Pointer to the beginning of the allocated array of src.size() T elements
+  /// @throws std::bad_alloc if the arena doesn't have enough space
   template<
     typename T, typename S, typename Fn,
     typename = std::enable_if_t<std::is_pod_v<T> && std::is_invocable_v<Fn, T&, const S&, Arena&>>>
@@ -69,13 +63,11 @@ public:
     return result;
   }
 
-  /**
-   * Allocates memory for an object of type T from the arena.
-   *
-   * @param elements Number of elements to allocate
-   * @return Pointer to the aligned memory for the requested elements
-   * @throws std::bad_alloc if the arena doesn't have enough space
-   */
+  /// Allocates memory for an object of type T from the arena.
+  ///
+  /// @param elements Number of elements to allocate
+  /// @return Pointer to the aligned memory for the requested elements
+  /// @throws std::bad_alloc if the arena doesn't have enough space
   template<typename T>
   T* alloc(size_t elements) {
     assert(elements > 0);
@@ -107,16 +99,12 @@ public:
     return reinterpret_cast<T*>(aligned_ptr);
   }
 
-  /**
-   * Returns how many bytes are currently used in the arena.
-   */
+  /// Returns how many bytes are currently used in the arena.
   size_t used() const {
     return offset_;
   }
 
-  /**
-   * Returns how many bytes are available in the arena.
-   */
+  /// Returns how many bytes are available in the arena.
   size_t available() const {
     return Size - offset_;
   }
@@ -132,5 +120,6 @@ private:
   std::size_t offset_;
   std::vector<std::unique_ptr<char, Deleter>> overflow_;
 };
+/// @endcond
 
 }  // namespace foxglove
