@@ -1,5 +1,5 @@
 use std::alloc::Layout;
-use std::cell::{Cell, RefCell};
+use std::cell::{Cell, RefCell, UnsafeCell};
 use std::marker::PhantomPinned;
 use std::mem::ManuallyDrop;
 use std::mem::{align_of, size_of, MaybeUninit};
@@ -45,7 +45,7 @@ pub trait BorrowToNative {
 /// If the arena runs out of space, it returns an OutOfMemory error.
 /// The allocated memory is "freed" by dropping the arena, destructors are not run.
 pub struct Arena {
-    buffer: [MaybeUninit<u8>; Arena::SIZE],
+    buffer: UnsafeCell<[MaybeUninit<u8>; Arena::SIZE]>,
     offset: Cell<usize>,
     overflow: RefCell<Vec<(*mut u8, Layout)>>,
     // Marker to prevent moving
@@ -65,7 +65,7 @@ impl Arena {
     /// ```
     pub const fn new() -> Self {
         Self {
-            buffer: [MaybeUninit::uninit(); Self::SIZE],
+            buffer: UnsafeCell::new([MaybeUninit::uninit(); Self::SIZE]),
             offset: Cell::new(0),
             overflow: RefCell::new(Vec::new()),
             _pin: PhantomPinned,
@@ -73,13 +73,13 @@ impl Arena {
     }
 
     /// Allocates an array of `n` elements of type `T` from the arena.
-    pub fn alloc<T>(&self, n: usize) -> *mut T {
+    fn alloc<T>(&self, n: usize) -> *mut T {
         assert!(n > 0, "Cannot allocate 0 elements");
         let element_size = size_of::<T>();
         let bytes_needed = n * element_size;
 
         // Calculate aligned offset
-        let base_addr = self.buffer.as_ptr() as usize;
+        let base_addr = self.buffer.get() as usize;
         let aligned_offset =
             (base_addr + self.offset.get()).next_multiple_of(align_of::<T>()) - base_addr;
 
@@ -93,7 +93,7 @@ impl Arena {
         }
 
         // SAFETY: [result, result+n) is properly aligned and within the bounds of buffer
-        let result = unsafe { self.buffer.as_ptr().add(aligned_offset) as *mut T };
+        let result = unsafe { (self.buffer.get() as *mut u8).add(aligned_offset) as *mut T };
         self.offset.set(aligned_offset + bytes_needed);
         result
     }
@@ -123,13 +123,13 @@ impl Arena {
     }
 
     /// Returns how many bytes are currently used in the arena.
-    #[allow(dead_code)]
+    #[cfg(test)]
     pub fn used(&self) -> usize {
         self.offset.get()
     }
 
     /// Returns how many bytes are available in the arena.
-    #[allow(dead_code)]
+    #[cfg(test)]
     pub fn available(&self) -> usize {
         Self::SIZE - self.offset.get()
     }
