@@ -1,5 +1,5 @@
 [package]
-name = "example-mcap"
+name = "example_mcap"
 edition = "2021"
 publish = false
 

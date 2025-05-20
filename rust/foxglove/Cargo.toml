@@ -1,11 +1,11 @@
 [package]
 name = "foxglove"
-version = "0.7.1"
 description = "Foxglove SDK"
-edition = "2021"
-rust-version = "1.83.0"
-repository = "https://github.com/foxglove/foxglove-sdk"
-license = "MIT"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+license.workspace = true
 
 [features]
 default = ["live_visualization"]
@@ -31,6 +31,7 @@ bytes.workspace = true
 chrono = { version = "0.4.39", optional = true }
 delegate = "0.13.2"
 flume = "0.11.1"
+foxglove_derive = { version = "0.7.1", path = "../foxglove_derive" }
 futures-util = { version = "0.3.31", features = ["sink", "std"] }
 mcap.workspace = true
 parking_lot = "0.12.3"
@@ -57,7 +58,7 @@ futures-util = "0.3.31"
 insta = { version = "1.42.2", features = ["json"] }
 maplit = "1.0.2"
 tempfile = "3.15.0"
-tracing-test = "0.2.5"
+tracing-test.workspace = true
 
 [package.metadata.docs.rs]
 all-features = true

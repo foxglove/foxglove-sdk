@@ -1320,6 +1320,7 @@ pub enum FoxgloveError {
     ConnectionGraphNotSupported,
     IoError,
     McapError,
+    EncodeError,
     BufferTooShort,
     Base64DecodeError,
 }
@@ -1346,6 +1347,7 @@ impl From<foxglove::FoxgloveError> for FoxgloveError {
             }
             foxglove::FoxgloveError::IoError(_) => FoxgloveError::IoError,
             foxglove::FoxgloveError::McapError(_) => FoxgloveError::McapError,
+            foxglove::FoxgloveError::EncodeError(_) => FoxgloveError::EncodeError,
             _ => FoxgloveError::Unspecified,
         }
     }
@@ -1368,6 +1370,7 @@ impl FoxgloveError {
             FoxgloveError::ConnectionGraphNotSupported => c"Connection Graph Not Supported",
             FoxgloveError::IoError => c"IO Error",
             FoxgloveError::McapError => c"MCAP Error",
+            FoxgloveError::EncodeError => c"Encode Error",
             FoxgloveError::BufferTooShort => c"Buffer too short",
             FoxgloveError::Base64DecodeError => c"Base64 decode error",
             FoxgloveError::Unspecified => c"Unspecified Error",
