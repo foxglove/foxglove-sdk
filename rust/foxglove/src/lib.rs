@@ -254,8 +254,12 @@
 //!
 //! - `chrono`: enables [chrono] conversions for [`Duration`][crate::schemas::Duration] and
 //!   [`Timestamp`][crate::schemas::Timestamp].
+//! - `derive`: enables the use of `#[derive(Encode)]` to derive the [`Encode`] trait for logging
+//!   custom structs.
 //! - `live_visualization`: enables the live visualization server and client, and adds dependencies
 //!   on [tokio]. Enabled by default.
+//! - `schemars`: provides a blanket implementation of the [`Encode`] trait for types that
+//!   implement [`schemars::JsonSchema`].
 //! - `unstable`: features which are under active development and likely to change in an upcoming
 //!   version.
 //!
