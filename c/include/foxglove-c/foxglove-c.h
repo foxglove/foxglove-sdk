@@ -2734,6 +2734,8 @@ void foxglove_fetch_asset_respond_error(struct foxglove_fetch_asset_responder *r
  *
  * Log styles (colors) may be configured with the FOXGLOVE_LOG_STYLE environment variable "never",
  * "always", or "auto" (default).
+ *
+ * This is thread-safe, but only the first call to this function will have an effect.
  */
 void foxglove_set_log_level(foxglove_logging_level level);
 

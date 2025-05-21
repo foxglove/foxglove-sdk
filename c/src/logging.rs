@@ -25,6 +25,8 @@ pub enum FoxgloveLoggingLevel {
 ///
 /// Log styles (colors) may be configured with the FOXGLOVE_LOG_STYLE environment variable "never",
 /// "always", or "auto" (default).
+///
+/// This is thread-safe, but only the first call to this function will have an effect.
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_set_log_level(level: FoxgloveLoggingLevel) {
     static INIT: Once = Once::new();

@@ -24,7 +24,7 @@ enum class LogLevel : uint8_t {
 /// logged. Note that this does not affect logging of messages to MCAP or Foxglove.
 ///
 /// This function should be called before other Foxglove initialization to capture output from all
-/// components. Subsequent calls will have no effect.
+/// components.
 ///
 /// As long as you initialize one logging sink (WebSocket server or MCAP), log level may instead be
 /// configured via a `FOXGLOVE_LOG_LEVEL` environment variable, with one of the values "debug",
@@ -38,6 +38,8 @@ enum class LogLevel : uint8_t {
 /// disabled.
 ///
 /// @param level The severity level for stderr logging from the SDK.
+///
+/// @note This is thread-safe, but only the first call to this function will have an effect.
 void setLogLevel(LogLevel level);
 
 }  // namespace foxglove

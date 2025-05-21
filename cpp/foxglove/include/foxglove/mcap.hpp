@@ -68,6 +68,10 @@ struct McapWriterOptions {
 class McapWriter final {
 public:
   /// @brief Create a new MCAP writer.
+  ///
+  /// @note Calls to create from multiple threads is safe,
+  /// unless the same file path is given.
+  ///
   /// @param options The options for the MCAP writer.
   /// @return A new MCAP writer.
   static FoxgloveResult<McapWriter> create(const McapWriterOptions& options);

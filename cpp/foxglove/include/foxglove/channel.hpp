@@ -35,6 +35,8 @@ struct Schema {
 };
 
 /// @brief A channel for messages logged to a topic.
+///
+/// @note Creating channels and logging on them is thread-safe.
 class RawChannel final {
 public:
   /// @brief Create a new channel.
@@ -51,6 +53,9 @@ public:
   );
 
   /// @brief Log a message to the channel.
+  ///
+  /// @note Logging is thread-safe. The data will be logged atomically
+  /// before or after data logged from other threads.
   ///
   /// @param data The message data.
   /// @param data_len The length of the message data, in bytes.

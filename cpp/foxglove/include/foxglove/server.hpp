@@ -89,6 +89,9 @@ inline WebSocketServerCapabilities operator&(
 ///
 /// These methods are invoked from the client's main poll loop and must be as low-latency as
 /// possible.
+///
+/// @note These callbacks may be invoked concurrently from multiple threads.
+/// You must synchronize access to your mutable internal state or shared resources.
 struct WebSocketServerCallbacks {
   /// @brief Callback invoked when a client subscribes to a channel.
   ///
@@ -201,6 +204,8 @@ struct WebSocketServerOptions {
 /// [Connecting to data].
 ///
 /// [Connecting to data]: https://docs.foxglove.dev/docs/connecting-to-data/introduction
+///
+/// @note WebSocketServer is thread-safe.
 class WebSocketServer final {
 public:
   /// @brief Create a new WebSocket server with the given options.

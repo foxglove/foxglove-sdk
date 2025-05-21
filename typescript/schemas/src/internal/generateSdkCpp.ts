@@ -170,6 +170,10 @@ export function generateHppSchemas(
 
   const channelClasses = schemas.filter(hasChannelType).map(
     (schema) => `/// @brief A channel for logging ${schema.name} messages to a topic.
+      ///
+      /// @note Creating channels and logging on them is thread-safe,
+      /// but the ${schema.name} struct is not thread-safe, do not
+      /// modify it concurrently or during the call to log.
       class ${schema.name}Channel {
       public:
         /// @brief Create a new channel.
