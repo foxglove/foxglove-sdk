@@ -123,8 +123,9 @@
 //!
 //! You can also define your own custom data types by implementing the [`Encode`] trait.
 //!
-//! The easiest way to do this is to derive the [`Encode`] trait, which will generate a schema
-//! and allow you to log your struct to a channel.
+//! The easiest way to do this is to enable the `derive` feature and derive the [`Encode`] trait,
+//! which will generate a schema and allow you to log your struct to a channel. This currently uses
+//! protobuf encoding.
 //!
 //! ```no_run
 //! #[derive(foxglove::Encode)]
@@ -140,9 +141,9 @@
 //! });
 //! ```
 //!
-//! This currently uses protobuf encoding. If you'd like to use JSON encoding for integration with
-//! particular tooling, you can instead implement or derive [`Serialize`](serde::Serialize) and
-//! [`JsonSchema`][jsonschema-trait] traits.
+//! If you'd like to use JSON encoding for integration with particular tooling, you can enable the
+//! `schemars` feature, which will provide a blanket [`Encode`] implementation for types that
+//! implement [`Serialize`](serde::Serialize) and [`JsonSchema`][jsonschema-trait].
 //!
 //! [jsonschema-trait]: https://docs.rs/schemars/latest/schemars/trait.JsonSchema.html
 //!
@@ -258,12 +259,13 @@
 //!   custom structs.
 //! - `live_visualization`: enables the live visualization server and client, and adds dependencies
 //!   on [tokio]. Enabled by default.
-//! - `lz4`: enables support for the LZ4 compression algorithm for mcap files.
+//! - `lz4`: enables support for the LZ4 compression algorithm for mcap files. Enabled by default.
 //! - `schemars`: provides a blanket implementation of the [`Encode`] trait for types that
-//!   implement [`schemars::JsonSchema`].
+//!   implement [`Serialize`](serde::Serialize) and [`JsonSchema`][jsonschema-trait].
 //! - `unstable`: features which are under active development and likely to change in an upcoming
 //!   version.
-//! - `zstd`: enables support for the zstd compression algorithm for mcap files.
+//! - `zstd`: enables support for the zstd compression algorithm for mcap files. Enabled by
+//!   default.
 //!
 //! If you do not require live visualization features, you can disable that flag to reduce the
 //! compiled size of the SDK.
