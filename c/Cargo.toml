@@ -15,7 +15,11 @@ workspace = true
 base64 = "0.22.1"
 bitflags = "2.9.0"
 env_logger = "0.11.5"
-foxglove = { path = "../rust/foxglove", features = ["unstable"] }
+foxglove = { path = "../rust/foxglove", default-features = false, features = [
+  "live_visualization",
+  "lz4",
+  "zstd",
+] }
 log.workspace = true
 mcap.workspace = true
 tracing.workspace = true
