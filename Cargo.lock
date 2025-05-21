@@ -682,7 +682,6 @@ dependencies = [
  "chrono",
  "clap",
  "delegate",
- "env_logger",
  "flume",
  "foxglove_derive",
  "futures-util",
