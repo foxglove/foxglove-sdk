@@ -48,7 +48,7 @@ def main() -> None:
     # Open the MCAP file for writing
     with foxglove.open_mcap(args.path):
         # Create a channel for RawAudio messages
-        audio_channel = RawAudioChannel(topic="audio")
+        audio_channel = RawAudioChannel(topic="/audio")
         # Record the wall-clock start time (seconds since epoch)
         start_time = time.time()
         # Loop over the samples in blocks of block_size
