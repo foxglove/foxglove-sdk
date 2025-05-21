@@ -47,8 +47,10 @@ jobs:
       - run: cargo +1.83.0 build -p foxglove --verbose
       - run: cargo clippy --no-deps --all-targets --tests -- -D warnings
       - run: cargo +nightly rustdoc -p foxglove --all-features -- -D warnings --cfg docsrs
-      - run: cargo test --features unstable --verbose
-        timeout-minutes: 10
+      - run: cargo test --all-features --verbose
+        timeout-minutes: 5
+      - run: cargo test -p foxglove --no-default-features --verbose
+        timeout-minutes: 5
 
   release-rust:
     if: startsWith(github.ref, 'refs/tags/sdk/v')
