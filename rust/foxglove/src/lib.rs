@@ -128,6 +128,8 @@
 //! protobuf encoding.
 //!
 //! ```no_run
+//! # #[cfg(feature = "derive")]
+//! # {
 //! #[derive(foxglove::Encode)]
 //! struct Custom<'a> {
 //!     msg: &'a str,
@@ -139,6 +141,7 @@
 //!     msg: "custom",
 //!     count: 42,
 //! });
+//! # }
 //! ```
 //!
 //! If you'd like to use JSON encoding for integration with particular tooling, you can enable the
@@ -203,6 +206,8 @@
 //! [`WriteOptions`](`mcap::WriteOptions`) for more detail about these parameters:
 //!
 //! ```no_run
+//! # #[cfg(feature = "lz4")]
+//! # {
 //! let options = mcap::WriteOptions::default()
 //!     .chunk_size(Some(1024 * 1024))
 //!     .compression(Some(mcap::Compression::Lz4));
@@ -210,6 +215,7 @@
 //! let mcap = foxglove::McapWriter::with_options(options)
 //!     .create_new_buffered_file("test.mcap")
 //!     .expect("create failed");
+//! # }
 //! ```
 //!
 //! ### Live visualization server
@@ -235,6 +241,7 @@
 //! [app-connect]: https://docs.foxglove.dev/docs/connecting-to-data/frameworks/custom#connect
 //!
 //! ```no_run
+//! # #[cfg(feature = "live_visualization")]
 //! # async fn func() {
 //! let server = foxglove::WebSocketServer::new()
 //!     .name("Wall-E")

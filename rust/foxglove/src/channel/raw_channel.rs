@@ -148,7 +148,7 @@ impl RawChannel {
     }
 
     /// Returns the count of sinks subscribed to this channel.
-    #[cfg(test)]
+    #[cfg(all(test, feature = "live_visualization"))]
     pub(crate) fn num_sinks(&self) -> usize {
         self.sinks.len()
     }
