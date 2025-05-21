@@ -69,7 +69,7 @@ class McapWriter final {
 public:
   /// @brief Create a new MCAP writer.
   ///
-  /// @note Calls to create from multiple threads is safe,
+  /// @note Calls to create from multiple threads are safe,
   /// unless the same file path is given.
   ///
   /// @param options The options for the MCAP writer.
