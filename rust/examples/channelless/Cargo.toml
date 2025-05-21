@@ -7,7 +7,7 @@ publish = false
 workspace = true
 
 [dependencies]
-foxglove = { path = "../../foxglove" }
+foxglove = { path = "../../foxglove", features = ["schemars"] }
 env_logger = "0.11.5"
 mcap.workspace = true
 schemars = "0.8.21"

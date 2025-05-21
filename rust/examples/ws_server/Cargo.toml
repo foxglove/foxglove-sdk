@@ -7,7 +7,7 @@ publish = false
 workspace = true
 
 [dependencies]
-foxglove = { path = "../../foxglove" }
+foxglove = { path = "../../foxglove", features = ["derive", "schemars"] }
 tokio = { version = "1.43", features = ["full"] }
 clap = { version = "4.5", features = ["derive"] }
 env_logger = "0.11.5"

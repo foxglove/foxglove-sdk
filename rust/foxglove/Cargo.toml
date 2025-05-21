@@ -10,7 +10,7 @@ license.workspace = true
 [features]
 default = ["live_visualization"]
 chrono = ["dep:chrono"]
-unstable = []
+derive = ["dep:foxglove_derive"]
 live_visualization = [
   "dep:base64",
   "dep:tokio",
@@ -19,6 +19,8 @@ live_visualization = [
   "dep:serde_repr",
   "dep:serde_with",
 ]
+schemars = ["dep:schemars"]
+unstable = []
 
 [lints]
 workspace = true
@@ -31,13 +33,13 @@ bytes.workspace = true
 chrono = { version = "0.4.39", optional = true }
 delegate = "0.13.2"
 flume = "0.11.1"
-foxglove_derive = { version = "0.7.1", path = "../foxglove_derive" }
+foxglove_derive = { version = "0.7.1", path = "../foxglove_derive", optional = true }
 futures-util = { version = "0.3.31", features = ["sink", "std"] }
 mcap.workspace = true
 parking_lot = "0.12.3"
 prost-types.workspace = true
 prost.workspace = true
-schemars = "0.8.21"
+schemars = { version = "0.8.21", optional = true }
 serde_json = "1.0"
 serde_repr = { version = "0.1.19", optional = true }
 serde_with = { version = "3.12.0", features = ["macros", "base64"], optional = true }
