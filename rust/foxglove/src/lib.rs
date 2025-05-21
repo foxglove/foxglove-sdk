@@ -258,10 +258,12 @@
 //!   custom structs.
 //! - `live_visualization`: enables the live visualization server and client, and adds dependencies
 //!   on [tokio]. Enabled by default.
+//! - `lz4`: enables support for the LZ4 compression algorithm for mcap files.
 //! - `schemars`: provides a blanket implementation of the [`Encode`] trait for types that
 //!   implement [`schemars::JsonSchema`].
 //! - `unstable`: features which are under active development and likely to change in an upcoming
 //!   version.
+//! - `zstd`: enables support for the zstd compression algorithm for mcap files.
 //!
 //! If you do not require live visualization features, you can disable that flag to reduce the
 //! compiled size of the SDK.
