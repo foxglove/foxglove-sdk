@@ -324,7 +324,7 @@ pub use channel_builder::ChannelBuilder;
 pub use context::{Context, LazyContext};
 pub use encode::Encode;
 pub use mcap_writer::{McapCompression, McapWriteOptions, McapWriter, McapWriterHandle};
-pub use metadata::{Metadata, PartialMetadata};
+pub use metadata::{Metadata, PartialMetadata, ToUnixNanos};
 pub use schema::Schema;
 pub use sink::{Sink, SinkId};
 pub(crate) use time::nanoseconds_since_epoch;

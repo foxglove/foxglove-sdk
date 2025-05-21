@@ -7,7 +7,7 @@ use delegate::delegate;
 use serde::{Deserialize, Serialize};
 use smallbytes::SmallBytes;
 
-use crate::{ChannelBuilder, Encode, PartialMetadata, Schema};
+use crate::{metadata::ToUnixNanos, ChannelBuilder, Encode, PartialMetadata, Schema};
 
 mod lazy_channel;
 mod raw_channel;
@@ -136,6 +136,16 @@ impl<T: Encode> Channel<T> {
         } else {
             self.inner.log_warn_if_closed();
         }
+    }
+
+    /// Encodes the message and logs it on the channel with the given `timestamp`.
+    /// `timestamp` can be a u64 (nanoseconds since epoch), a foxglove [`Timestamp`][crate::schemas::Timestamp],
+    /// a [`SystemTime`][std::time::SystemTime], or anything else that implements [`IntoFoo`][crate::IntoFoo].
+    ///
+    /// The buffering behavior depends on the log sink; see [`McapWriter`][crate::McapWriter] and
+    /// [`WebSocketServer`][crate::WebSocketServer] for details.
+    pub fn log_with_time(&self, msg: &T, timestamp: impl ToUnixNanos) {
+        self.log_with_meta(msg, PartialMetadata::with_log_time(timestamp))
     }
 
     fn log_to_sinks(&self, msg: &T, metadata: PartialMetadata) {

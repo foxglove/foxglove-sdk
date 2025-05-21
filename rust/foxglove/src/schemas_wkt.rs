@@ -361,6 +361,11 @@ impl Timestamp {
         self.nsec
     }
 
+    /// Returns the Timestamp as the total number of nanoseconds (sec() * 1B + nsec()).
+    pub fn total_nanos(&self) -> u64 {
+        u64::from(self.sec) * 1_000_000_000 + u64::from(self.nsec)
+    }
+
     /// Creates a `Timestamp` from seconds since epoch as an `f64`, or fails if the value is
     /// unrepresentable.
     pub fn try_from_epoch_secs_f64(secs: f64) -> Result<Self, RangeError> {

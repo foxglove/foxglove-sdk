@@ -70,9 +70,7 @@ macro_rules! log {
         $crate::log_with_meta!(
             $topic,
             $msg,
-            $crate::PartialMetadata {
-                log_time: Some($log_time),
-            }
+            $crate::PartialMetadata::with_log_time($log_time)
         )
     }};
 }
@@ -105,7 +103,7 @@ mod tests {
     use tracing_test::traced_test;
 
     use crate::nanoseconds_since_epoch;
-    use crate::schemas::{Color, LaserScan, Log};
+    use crate::schemas::{Color, LaserScan, Log, Timestamp};
     use crate::{testutil::RecordingSink, Context};
     use crate::{FoxgloveError, Schema};
 
@@ -127,7 +125,7 @@ mod tests {
         Context::get_default().add_sink(sink.clone());
 
         let mut log_messages = Vec::new();
-        for line in 1..=2 {
+        for line in 1..=3 {
             let msg = Log {
                 timestamp: None,
                 level: 1,
@@ -139,28 +137,34 @@ mod tests {
             log_messages.push(msg);
         }
 
+        let timestamp = Timestamp::now();
+
         log!("foo", log_messages[0], log_time = 123);
         log!("foo", log_messages[1]);
+        log!("foo", log_messages[2], log_time = timestamp);
         log!("foo", Color::default());
 
         let messages = sink.take_messages();
-        assert_eq!(messages.len(), 3);
+        assert_eq!(messages.len(), 4);
         assert_eq!(messages[0].msg, serialize(&log_messages[0]));
         assert_eq!(messages[0].metadata.log_time, 123);
 
         assert_eq!(messages[1].msg, serialize(&log_messages[1]));
         assert!(messages[1].metadata.log_time >= now);
 
-        assert_eq!(messages[2].msg, serialize(&Color::default()));
-        assert!(messages[2].metadata.log_time >= now);
+        assert_eq!(messages[2].msg, serialize(&log_messages[2]));
+        assert_eq!(messages[2].metadata.log_time, timestamp.total_nanos());
 
-        // Even though there are two log! callsites, which each construct separate channels, the
-        // channels were exactly the same, and we properly deduped the second one when it was
-        // registered to the context.
+        assert_eq!(messages[3].msg, serialize(&Color::default()));
+        assert!(messages[3].metadata.log_time >= now);
+
+        // Even though there are four log! callsites, which each construct separate channels, the
+        // channels were exactly the same, and we properly deduped them when they were registered to the context.
         assert_eq!(messages[0].channel_id, messages[1].channel_id);
+        assert_eq!(messages[0].channel_id, messages[2].channel_id);
 
-        // The third callsite used a different schema, and so it is a distinct channel.
-        assert_ne!(messages[0].channel_id, messages[2].channel_id);
+        // The final callsite used a different schema, and so it is a distinct channel.
+        assert_ne!(messages[0].channel_id, messages[3].channel_id);
     }
 
     #[test]
