@@ -8,7 +8,7 @@ repository.workspace = true
 license.workspace = true
 
 [features]
-default = ["live_visualization"]
+default = ["live_visualization", "lz4", "zstd"]
 chrono = ["dep:chrono"]
 derive = ["dep:foxglove_derive"]
 live_visualization = [
@@ -19,8 +19,10 @@ live_visualization = [
   "dep:serde_repr",
   "dep:serde_with",
 ]
+lz4 = ["mcap/lz4"]
 schemars = ["dep:schemars"]
 unstable = []
+zstd = ["mcap/zstd"]
 
 [lints]
 workspace = true
