@@ -13,6 +13,8 @@ chrono = ["dep:chrono"]
 derive = ["dep:foxglove_derive"]
 live_visualization = [
   "dep:base64",
+  "dep:flume",
+  "dep:futures-util",
   "dep:tokio",
   "dep:tokio-util",
   "dep:tokio-tungstenite",
@@ -34,9 +36,9 @@ bimap = "0.6.3"
 bytes.workspace = true
 chrono = { version = "0.4.39", optional = true }
 delegate = "0.13.2"
-flume = "0.11.1"
+flume = { version = "0.11.1", optional = true }
 foxglove_derive = { version = "0.7.1", path = "../foxglove_derive", optional = true }
-futures-util = { version = "0.3.31", features = ["sink", "std"] }
+futures-util = { version = "0.3.31", features = ["sink", "std"], optional = true }
 mcap.workspace = true
 parking_lot = "0.12.3"
 prost-types.workspace = true
@@ -56,8 +58,6 @@ tracing.workspace = true
 
 [dev-dependencies]
 assert_matches = "1.5.0"
-clap = { version = "4.5", features = ["derive"] }
-futures-util = "0.3.31"
 insta = { version = "1.42.2", features = ["json"] }
 maplit = "1.0.2"
 tempfile = "3.15.0"

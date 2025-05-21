@@ -680,7 +680,6 @@ dependencies = [
  "bimap",
  "bytes",
  "chrono",
- "clap",
  "delegate",
  "flume",
  "foxglove_derive",
