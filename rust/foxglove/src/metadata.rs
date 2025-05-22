@@ -10,7 +10,7 @@ pub trait ToUnixNanos {
 
 impl ToUnixNanos for u64 {
     fn to_unix_nanos(&self) -> u64 {
-        self
+        *self
     }
 }
 
