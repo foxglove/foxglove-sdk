@@ -33,6 +33,14 @@ instantiated with a unique topic name.
 You can log messages with arbitrary schemas and provide your own encoding, by instantiating a
 :class:`foxglove::Channel`.
 
+Thread safety
+-------------
+
+Sinks, channels, and contexts are thread-safe. Sinks and channels can be created concurrently
+and shared or moved between threads. Logging is atomic and thread-safe.
+
+Other types in the SDK are not thread-safe.
+
 
 .. toctree::
    :maxdepth: 2

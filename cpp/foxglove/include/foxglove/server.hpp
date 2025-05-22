@@ -205,7 +205,8 @@ struct WebSocketServerOptions {
 ///
 /// [Connecting to data]: https://docs.foxglove.dev/docs/connecting-to-data/introduction
 ///
-/// @note WebSocketServer is thread-safe.
+/// @note WebSocketServer is fully thread-safe, but WebSocketServerCallbacks may be invoked
+/// concurrently from multiple threads, so you will need to use synchronization in your callbacks.
 class WebSocketServer final {
 public:
   /// @brief Create a new WebSocket server with the given options.

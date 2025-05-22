@@ -70,7 +70,8 @@ public:
   /// @brief Create a new MCAP writer.
   ///
   /// @note Calls to create from multiple threads are safe,
-  /// unless the same file path is given.
+  /// unless the same file path is given. Writing to an MCAP
+  /// writer happens through channel logging, which is thread-safe.
   ///
   /// @param options The options for the MCAP writer.
   /// @return A new MCAP writer.

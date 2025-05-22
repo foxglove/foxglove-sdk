@@ -934,8 +934,8 @@ struct RawImage {
 
 /// @brief A channel for logging CameraCalibration messages to a topic.
 ///
-/// @note While channel creation and logging are thread-safe,
-/// avoid modifying the CameraCalibration struct concurrently or during a log operation.
+/// @note While channels are fully thread-safe, the CameraCalibration struct is not thread-safe.
+/// Avoid modifying it concurrently or during a log operation.
 class CameraCalibrationChannel {
 public:
   /// @brief Create a new channel.
@@ -979,8 +979,8 @@ private:
 
 /// @brief A channel for logging CircleAnnotation messages to a topic.
 ///
-/// @note While channel creation and logging are thread-safe,
-/// avoid modifying the CircleAnnotation struct concurrently or during a log operation.
+/// @note While channels are fully thread-safe, the CircleAnnotation struct is not thread-safe.
+/// Avoid modifying it concurrently or during a log operation.
 class CircleAnnotationChannel {
 public:
   /// @brief Create a new channel.
@@ -1024,8 +1024,8 @@ private:
 
 /// @brief A channel for logging CompressedImage messages to a topic.
 ///
-/// @note While channel creation and logging are thread-safe,
-/// avoid modifying the CompressedImage struct concurrently or during a log operation.
+/// @note While channels are fully thread-safe, the CompressedImage struct is not thread-safe.
+/// Avoid modifying it concurrently or during a log operation.
 class CompressedImageChannel {
 public:
   /// @brief Create a new channel.
@@ -1069,8 +1069,8 @@ private:
 
 /// @brief A channel for logging CompressedVideo messages to a topic.
 ///
-/// @note While channel creation and logging are thread-safe,
-/// avoid modifying the CompressedVideo struct concurrently or during a log operation.
+/// @note While channels are fully thread-safe, the CompressedVideo struct is not thread-safe.
+/// Avoid modifying it concurrently or during a log operation.
 class CompressedVideoChannel {
 public:
   /// @brief Create a new channel.
@@ -1114,8 +1114,8 @@ private:
 
 /// @brief A channel for logging FrameTransform messages to a topic.
 ///
-/// @note While channel creation and logging are thread-safe,
-/// avoid modifying the FrameTransform struct concurrently or during a log operation.
+/// @note While channels are fully thread-safe, the FrameTransform struct is not thread-safe.
+/// Avoid modifying it concurrently or during a log operation.
 class FrameTransformChannel {
 public:
   /// @brief Create a new channel.
@@ -1159,8 +1159,8 @@ private:
 
 /// @brief A channel for logging FrameTransforms messages to a topic.
 ///
-/// @note While channel creation and logging are thread-safe,
-/// avoid modifying the FrameTransforms struct concurrently or during a log operation.
+/// @note While channels are fully thread-safe, the FrameTransforms struct is not thread-safe.
+/// Avoid modifying it concurrently or during a log operation.
 class FrameTransformsChannel {
 public:
   /// @brief Create a new channel.
@@ -1204,8 +1204,8 @@ private:
 
 /// @brief A channel for logging GeoJSON messages to a topic.
 ///
-/// @note While channel creation and logging are thread-safe,
-/// avoid modifying the GeoJSON struct concurrently or during a log operation.
+/// @note While channels are fully thread-safe, the GeoJSON struct is not thread-safe.
+/// Avoid modifying it concurrently or during a log operation.
 class GeoJSONChannel {
 public:
   /// @brief Create a new channel.
@@ -1247,8 +1247,8 @@ private:
 
 /// @brief A channel for logging Grid messages to a topic.
 ///
-/// @note While channel creation and logging are thread-safe,
-/// avoid modifying the Grid struct concurrently or during a log operation.
+/// @note While channels are fully thread-safe, the Grid struct is not thread-safe.
+/// Avoid modifying it concurrently or during a log operation.
 class GridChannel {
 public:
   /// @brief Create a new channel.
@@ -1290,8 +1290,8 @@ private:
 
 /// @brief A channel for logging ImageAnnotations messages to a topic.
 ///
-/// @note While channel creation and logging are thread-safe,
-/// avoid modifying the ImageAnnotations struct concurrently or during a log operation.
+/// @note While channels are fully thread-safe, the ImageAnnotations struct is not thread-safe.
+/// Avoid modifying it concurrently or during a log operation.
 class ImageAnnotationsChannel {
 public:
   /// @brief Create a new channel.
@@ -1335,8 +1335,8 @@ private:
 
 /// @brief A channel for logging KeyValuePair messages to a topic.
 ///
-/// @note While channel creation and logging are thread-safe,
-/// avoid modifying the KeyValuePair struct concurrently or during a log operation.
+/// @note While channels are fully thread-safe, the KeyValuePair struct is not thread-safe.
+/// Avoid modifying it concurrently or during a log operation.
 class KeyValuePairChannel {
 public:
   /// @brief Create a new channel.
@@ -1380,8 +1380,8 @@ private:
 
 /// @brief A channel for logging LaserScan messages to a topic.
 ///
-/// @note While channel creation and logging are thread-safe,
-/// avoid modifying the LaserScan struct concurrently or during a log operation.
+/// @note While channels are fully thread-safe, the LaserScan struct is not thread-safe.
+/// Avoid modifying it concurrently or during a log operation.
 class LaserScanChannel {
 public:
   /// @brief Create a new channel.
@@ -1423,8 +1423,8 @@ private:
 
 /// @brief A channel for logging LocationFix messages to a topic.
 ///
-/// @note While channel creation and logging are thread-safe,
-/// avoid modifying the LocationFix struct concurrently or during a log operation.
+/// @note While channels are fully thread-safe, the LocationFix struct is not thread-safe.
+/// Avoid modifying it concurrently or during a log operation.
 class LocationFixChannel {
 public:
   /// @brief Create a new channel.
@@ -1468,8 +1468,8 @@ private:
 
 /// @brief A channel for logging Log messages to a topic.
 ///
-/// @note While channel creation and logging are thread-safe,
-/// avoid modifying the Log struct concurrently or during a log operation.
+/// @note While channels are fully thread-safe, the Log struct is not thread-safe.
+/// Avoid modifying it concurrently or during a log operation.
 class LogChannel {
 public:
   /// @brief Create a new channel.
@@ -1511,8 +1511,8 @@ private:
 
 /// @brief A channel for logging SceneEntityDeletion messages to a topic.
 ///
-/// @note While channel creation and logging are thread-safe,
-/// avoid modifying the SceneEntityDeletion struct concurrently or during a log operation.
+/// @note While channels are fully thread-safe, the SceneEntityDeletion struct is not thread-safe.
+/// Avoid modifying it concurrently or during a log operation.
 class SceneEntityDeletionChannel {
 public:
   /// @brief Create a new channel.
@@ -1556,8 +1556,8 @@ private:
 
 /// @brief A channel for logging SceneEntity messages to a topic.
 ///
-/// @note While channel creation and logging are thread-safe,
-/// avoid modifying the SceneEntity struct concurrently or during a log operation.
+/// @note While channels are fully thread-safe, the SceneEntity struct is not thread-safe.
+/// Avoid modifying it concurrently or during a log operation.
 class SceneEntityChannel {
 public:
   /// @brief Create a new channel.
@@ -1601,8 +1601,8 @@ private:
 
 /// @brief A channel for logging SceneUpdate messages to a topic.
 ///
-/// @note While channel creation and logging are thread-safe,
-/// avoid modifying the SceneUpdate struct concurrently or during a log operation.
+/// @note While channels are fully thread-safe, the SceneUpdate struct is not thread-safe.
+/// Avoid modifying it concurrently or during a log operation.
 class SceneUpdateChannel {
 public:
   /// @brief Create a new channel.
@@ -1646,8 +1646,8 @@ private:
 
 /// @brief A channel for logging PackedElementField messages to a topic.
 ///
-/// @note While channel creation and logging are thread-safe,
-/// avoid modifying the PackedElementField struct concurrently or during a log operation.
+/// @note While channels are fully thread-safe, the PackedElementField struct is not thread-safe.
+/// Avoid modifying it concurrently or during a log operation.
 class PackedElementFieldChannel {
 public:
   /// @brief Create a new channel.
@@ -1691,8 +1691,8 @@ private:
 
 /// @brief A channel for logging Point2 messages to a topic.
 ///
-/// @note While channel creation and logging are thread-safe,
-/// avoid modifying the Point2 struct concurrently or during a log operation.
+/// @note While channels are fully thread-safe, the Point2 struct is not thread-safe.
+/// Avoid modifying it concurrently or during a log operation.
 class Point2Channel {
 public:
   /// @brief Create a new channel.
@@ -1734,8 +1734,8 @@ private:
 
 /// @brief A channel for logging Point3 messages to a topic.
 ///
-/// @note While channel creation and logging are thread-safe,
-/// avoid modifying the Point3 struct concurrently or during a log operation.
+/// @note While channels are fully thread-safe, the Point3 struct is not thread-safe.
+/// Avoid modifying it concurrently or during a log operation.
 class Point3Channel {
 public:
   /// @brief Create a new channel.
@@ -1777,8 +1777,8 @@ private:
 
 /// @brief A channel for logging PointCloud messages to a topic.
 ///
-/// @note While channel creation and logging are thread-safe,
-/// avoid modifying the PointCloud struct concurrently or during a log operation.
+/// @note While channels are fully thread-safe, the PointCloud struct is not thread-safe.
+/// Avoid modifying it concurrently or during a log operation.
 class PointCloudChannel {
 public:
   /// @brief Create a new channel.
@@ -1822,8 +1822,8 @@ private:
 
 /// @brief A channel for logging PointsAnnotation messages to a topic.
 ///
-/// @note While channel creation and logging are thread-safe,
-/// avoid modifying the PointsAnnotation struct concurrently or during a log operation.
+/// @note While channels are fully thread-safe, the PointsAnnotation struct is not thread-safe.
+/// Avoid modifying it concurrently or during a log operation.
 class PointsAnnotationChannel {
 public:
   /// @brief Create a new channel.
@@ -1867,8 +1867,8 @@ private:
 
 /// @brief A channel for logging Pose messages to a topic.
 ///
-/// @note While channel creation and logging are thread-safe,
-/// avoid modifying the Pose struct concurrently or during a log operation.
+/// @note While channels are fully thread-safe, the Pose struct is not thread-safe.
+/// Avoid modifying it concurrently or during a log operation.
 class PoseChannel {
 public:
   /// @brief Create a new channel.
@@ -1910,8 +1910,8 @@ private:
 
 /// @brief A channel for logging PoseInFrame messages to a topic.
 ///
-/// @note While channel creation and logging are thread-safe,
-/// avoid modifying the PoseInFrame struct concurrently or during a log operation.
+/// @note While channels are fully thread-safe, the PoseInFrame struct is not thread-safe.
+/// Avoid modifying it concurrently or during a log operation.
 class PoseInFrameChannel {
 public:
   /// @brief Create a new channel.
@@ -1955,8 +1955,8 @@ private:
 
 /// @brief A channel for logging PosesInFrame messages to a topic.
 ///
-/// @note While channel creation and logging are thread-safe,
-/// avoid modifying the PosesInFrame struct concurrently or during a log operation.
+/// @note While channels are fully thread-safe, the PosesInFrame struct is not thread-safe.
+/// Avoid modifying it concurrently or during a log operation.
 class PosesInFrameChannel {
 public:
   /// @brief Create a new channel.
@@ -2000,8 +2000,8 @@ private:
 
 /// @brief A channel for logging Quaternion messages to a topic.
 ///
-/// @note While channel creation and logging are thread-safe,
-/// avoid modifying the Quaternion struct concurrently or during a log operation.
+/// @note While channels are fully thread-safe, the Quaternion struct is not thread-safe.
+/// Avoid modifying it concurrently or during a log operation.
 class QuaternionChannel {
 public:
   /// @brief Create a new channel.
@@ -2045,8 +2045,8 @@ private:
 
 /// @brief A channel for logging RawAudio messages to a topic.
 ///
-/// @note While channel creation and logging are thread-safe,
-/// avoid modifying the RawAudio struct concurrently or during a log operation.
+/// @note While channels are fully thread-safe, the RawAudio struct is not thread-safe.
+/// Avoid modifying it concurrently or during a log operation.
 class RawAudioChannel {
 public:
   /// @brief Create a new channel.
@@ -2088,8 +2088,8 @@ private:
 
 /// @brief A channel for logging RawImage messages to a topic.
 ///
-/// @note While channel creation and logging are thread-safe,
-/// avoid modifying the RawImage struct concurrently or during a log operation.
+/// @note While channels are fully thread-safe, the RawImage struct is not thread-safe.
+/// Avoid modifying it concurrently or during a log operation.
 class RawImageChannel {
 public:
   /// @brief Create a new channel.
@@ -2131,8 +2131,8 @@ private:
 
 /// @brief A channel for logging TextAnnotation messages to a topic.
 ///
-/// @note While channel creation and logging are thread-safe,
-/// avoid modifying the TextAnnotation struct concurrently or during a log operation.
+/// @note While channels are fully thread-safe, the TextAnnotation struct is not thread-safe.
+/// Avoid modifying it concurrently or during a log operation.
 class TextAnnotationChannel {
 public:
   /// @brief Create a new channel.
@@ -2176,8 +2176,8 @@ private:
 
 /// @brief A channel for logging Vector2 messages to a topic.
 ///
-/// @note While channel creation and logging are thread-safe,
-/// avoid modifying the Vector2 struct concurrently or during a log operation.
+/// @note While channels are fully thread-safe, the Vector2 struct is not thread-safe.
+/// Avoid modifying it concurrently or during a log operation.
 class Vector2Channel {
 public:
   /// @brief Create a new channel.
@@ -2219,8 +2219,8 @@ private:
 
 /// @brief A channel for logging Vector3 messages to a topic.
 ///
-/// @note While channel creation and logging are thread-safe,
-/// avoid modifying the Vector3 struct concurrently or during a log operation.
+/// @note While channels are fully thread-safe, the Vector3 struct is not thread-safe.
+/// Avoid modifying it concurrently or during a log operation.
 class Vector3Channel {
 public:
   /// @brief Create a new channel.

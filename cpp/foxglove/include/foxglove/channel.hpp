@@ -36,7 +36,9 @@ struct Schema {
 
 /// @brief A channel for messages logged to a topic.
 ///
-/// @note Creating channels and logging on them is thread-safe.
+/// @note Channels are fully thread-safe. Creating channels and logging on them
+/// is safe from any number of threads concurrently. A channel can be created
+/// on one thread and sent to and destroyed on another.
 class RawChannel final {
 public:
   /// @brief Create a new channel.
