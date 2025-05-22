@@ -23,7 +23,7 @@ namespace foxglove {
 /// Since many applications only need a single context, the SDK provides a static default context
 /// for convenience.
 ///
-/// @note Context is thread safe.
+/// @note Context is fully thread-safe.
 class Context final {
 public:
   /// The default global context
