@@ -45,7 +45,9 @@ pub fn create_channel<T: Encode>(
 /// $msg: expression to log, must implement Encode trait
 ///
 /// Optional keyword arguments:
-/// - log_time: timestamp when the message was logged. See [`PartialMetadata`].
+/// - log_time: timestamp when the message was logged. It can be a u64 (nanoseconds since epoch),
+///   a foxglove [`Timestamp`][crate::schemas::Timestamp], a [`SystemTime`][std::time::SystemTime],
+///   or anything else that implements [`ToUnixNanos`][crate::ToUnixNanos].
 ///
 /// If a channel for the topic already exists in the default Context, it will be used.
 /// Otherwise, a new channel will be created. Either way, the channel is never removed
@@ -79,7 +81,7 @@ macro_rules! log {
 ///
 /// $topic: string literal topic name
 /// $msg: expression to log, must implement Encode trait
-/// $metadata: PartialMetadata struct
+/// $metadata: [`PartialMetadata`] struct.
 #[doc(hidden)]
 #[macro_export]
 macro_rules! log_with_meta {

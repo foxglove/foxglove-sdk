@@ -22,7 +22,9 @@ impl ToUnixNanos for Timestamp {
 
 impl ToUnixNanos for SystemTime {
     fn to_unix_nanos(&self) -> u64 {
-        self.duration_since(UNIX_EPOCH).unwrap().as_nanos() as u64
+        self.duration_since(UNIX_EPOCH)
+            .expect("SystemTime out of range")
+            .as_nanos() as u64
     }
 }
 
