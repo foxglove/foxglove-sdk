@@ -29,13 +29,13 @@ typedef std::unique_ptr<const foxglove_channel, ChannelDeleter> ChannelUniquePtr
 /// @brief A vector in 3D space that represents a direction only
 struct Vector3 {
   /// @brief x coordinate length
-  double x = 1;
+  double x = 0;
 
   /// @brief y coordinate length
-  double y = 1;
+  double y = 0;
 
   /// @brief z coordinate length
-  double z = 1;
+  double z = 0;
 };
 
 /// @brief A [quaternion](https://eater.net/quaternions) representing a rotation in 3D space
@@ -50,7 +50,7 @@ struct Quaternion {
   double z = 0;
 
   /// @brief w value
-  double w = 1;
+  double w = 0;
 };
 
 /// @brief A position and orientation for an object or reference frame in 3D space
@@ -65,16 +65,16 @@ struct Pose {
 /// @brief A color in RGBA format
 struct Color {
   /// @brief Red value between 0 and 1
-  double r = 1;
+  double r = 0;
 
   /// @brief Green value between 0 and 1
-  double g = 1;
+  double g = 0;
 
   /// @brief Blue value between 0 and 1
-  double b = 1;
+  double b = 0;
 
   /// @brief Alpha value between 0 and 1
-  double a = 1;
+  double a = 0;
 };
 
 /// @brief A primitive representing an arrow
@@ -360,10 +360,10 @@ struct GeoJSON {
 /// @brief A vector in 2D space that represents a direction only
 struct Vector2 {
   /// @brief x coordinate length
-  double x = 1;
+  double x = 0;
 
   /// @brief y coordinate length
-  double y = 1;
+  double y = 0;
 };
 
 /// @brief A field present within each element in a byte array of packed elements.
@@ -485,7 +485,7 @@ struct TextAnnotation {
   std::string text;
 
   /// @brief Font size in pixels
-  double font_size = 12;
+  double font_size = 0;
 
   /// @brief Text color
   std::optional<Color> text_color;
