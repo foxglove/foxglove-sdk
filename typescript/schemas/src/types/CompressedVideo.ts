@@ -45,9 +45,11 @@ export type CompressedVideo = {
   /**
    * Video format.
    * 
-   * Supported values: `h264`, `h265`, `vp9`, `av1`.
+   * :::note
    * 
-   * Note: compressed video support is subject to hardware limitations and patent licensing, so not all encodings may be supported on all platforms. See more about [H.265 support](https://caniuse.com/hevc), [VP9 support](https://caniuse.com/webm), and [AV1 support](https://caniuse.com/av1).
+   * Compressed video support is subject to hardware limitations and patent licensing, so not all encodings may be supported on all platforms. See more about [H.265 support](https://caniuse.com/hevc), [VP9 support](https://caniuse.com/webm), and [AV1 support](https://caniuse.com/av1).
+   * 
+   * :::
    */
   format: string;
 };

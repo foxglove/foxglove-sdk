@@ -325,7 +325,7 @@ impl From<CompressedImage> for foxglove::schemas::CompressedImage {
 /// :param timestamp: Timestamp of video frame
 /// :param frame_id: Frame of reference for the video.
 /// :param data: Compressed video frame data.
-/// :param format: Video format.
+/// :param format:
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/compressed-video
 #[pyclass(module = "foxglove.schemas")]
