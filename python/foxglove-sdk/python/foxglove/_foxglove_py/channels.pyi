@@ -6,6 +6,7 @@ from .schemas import (
     CameraCalibration,
     CircleAnnotation,
     Color,
+    CompressedAudio,
     CompressedImage,
     CompressedVideo,
     FrameTransform,
@@ -148,6 +149,44 @@ class ColorChannel:
         log_time: int | None = None,
     ) -> None:
         """Log a Foxglove Color message on the channel."""
+        ...
+
+class CompressedAudioChannel:
+    """
+    A channel for logging CompressedAudio messages
+
+    You should choose a unique topic name per channel.
+    """
+
+    def __new__(
+        cls,
+        topic: str,
+        *,
+        context: Optional["Context"] = None,
+    ) -> "CompressedAudioChannel": ...
+    def id(self) -> int:
+        """The unique ID of the channel."""
+        ...
+
+    def topic(self) -> str:
+        """The topic name of the channel."""
+        ...
+
+    def schema_name(self) -> str | None:
+        """The name of the schema for the channel."""
+        ...
+
+    def close(self) -> None:
+        """Close the channel."""
+        ...
+
+    def log(
+        self,
+        message: "CompressedAudio",
+        *,
+        log_time: int | None = None,
+    ) -> None:
+        """Log a Foxglove CompressedAudio message on the channel."""
         ...
 
 class CompressedImageChannel:

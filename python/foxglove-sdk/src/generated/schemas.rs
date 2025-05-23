@@ -276,6 +276,43 @@ impl From<Color> for foxglove::schemas::Color {
     }
 }
 
+/// A single chunk of a compressed audio bitstream
+///
+/// :param timestamp: Timestamp of the start of the audio chunk
+/// :param format: Audio format. Both 'opus' and 'mp4a.40.2' are currently supported.
+/// :param data: Compressed audio data
+///
+/// See https://docs.foxglove.dev/docs/visualization/message-schemas/compressed-audio
+#[pyclass(module = "foxglove.schemas")]
+#[derive(Clone)]
+pub(crate) struct CompressedAudio(pub(crate) foxglove::schemas::CompressedAudio);
+#[pymethods]
+impl CompressedAudio {
+    #[new]
+    #[pyo3(signature = (*, timestamp=None, format="".to_string(), data=None) )]
+    fn new(timestamp: Option<Timestamp>, format: String, data: Option<Bound<'_, PyBytes>>) -> Self {
+        Self(foxglove::schemas::CompressedAudio {
+            timestamp: timestamp.map(Into::into),
+            format,
+            data: data
+                .map(|x| Bytes::copy_from_slice(x.as_bytes()))
+                .unwrap_or_default(),
+        })
+    }
+    fn __repr__(&self) -> String {
+        format!(
+            "CompressedAudio(timestamp={:?}, format={:?}, data={:?})",
+            self.0.timestamp, self.0.format, self.0.data,
+        )
+    }
+}
+
+impl From<CompressedAudio> for foxglove::schemas::CompressedAudio {
+    fn from(value: CompressedAudio) -> Self {
+        value.0
+    }
+}
+
 /// A compressed image
 ///
 /// :param timestamp: Timestamp of image
@@ -1831,6 +1868,7 @@ pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<CameraCalibration>()?;
     module.add_class::<CircleAnnotation>()?;
     module.add_class::<Color>()?;
+    module.add_class::<CompressedAudio>()?;
     module.add_class::<CompressedImage>()?;
     module.add_class::<CompressedVideo>()?;
     module.add_class::<CylinderPrimitive>()?;

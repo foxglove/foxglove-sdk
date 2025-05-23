@@ -2,6 +2,7 @@
 pub const CAMERA_CALIBRATION: &[u8] = include_bytes!("data/CameraCalibration.bin");
 pub const CIRCLE_ANNOTATION: &[u8] = include_bytes!("data/CircleAnnotation.bin");
 pub const COLOR: &[u8] = include_bytes!("data/Color.bin");
+pub const COMPRESSED_AUDIO: &[u8] = include_bytes!("data/CompressedAudio.bin");
 pub const COMPRESSED_IMAGE: &[u8] = include_bytes!("data/CompressedImage.bin");
 pub const COMPRESSED_VIDEO: &[u8] = include_bytes!("data/CompressedVideo.bin");
 pub const FRAME_TRANSFORM: &[u8] = include_bytes!("data/FrameTransform.bin");
