@@ -13,8 +13,6 @@ foxglove::schemas::FrameTransformChannel FRAME_TRANSFORM_CHANNEL =
   foxglove::schemas::FrameTransformChannel::create("/tf").value();
 
 void log_to_channels(int counter) {
-  std::cout << "Logging scene update " << counter << std::endl;
-
   // Create a SceneUpdate message for the box
   foxglove::schemas::SceneUpdate scene_update;
   foxglove::schemas::SceneEntity entity;
@@ -73,8 +71,6 @@ void log_to_channels(int counter) {
   rotation.w = std::cos(yaw2 / 2.0);
   transform.rotation = rotation;
 
-  std::cout << "Logging frame transform " << counter << std::endl;
-
   FRAME_TRANSFORM_CHANNEL.log(transform);
 }
 
@@ -91,7 +87,6 @@ int main(int argc, const char* argv[]) {
   auto writer = std::move(writer_result.value());
 
   for (int i = 0; i < 100; ++i) {
-    std::cout << "Logging " << i << std::endl;
     log_to_channels(i);
   }
 
