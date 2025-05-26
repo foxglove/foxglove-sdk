@@ -1,6 +1,7 @@
+#include <foxglove/context.hpp>
+#include <foxglove/error.hpp>
 #include <foxglove/mcap.hpp>
 #include <foxglove/schemas.hpp>
-#include <foxglove/error.hpp>
 
 #include <chrono>
 #include <cmath>
@@ -11,32 +12,9 @@ foxglove::schemas::SceneUpdateChannel SCENE_UPDATE_CHANNEL =
 foxglove::schemas::FrameTransformChannel FRAME_TRANSFORM_CHANNEL =
   foxglove::schemas::FrameTransformChannel::create("/tf").value();
 
-// NOLINTNEXTLINE(bugprone-exception-escape)
-int main(int argc, const char* argv[]) {
-  foxglove::McapWriterOptions options = {};
-  options.path = "test.mcap";
-  options.truncate = true;
-  auto writer_result = foxglove::McapWriter::create(options);
-  if (!writer_result.has_value()) {
-    std::cerr << "Failed to create writer: " << foxglove::strerror(writer_result.error()) << '\n';
-    return 1;
-  }
-  auto writer = std::move(writer_result.value());
+void log_to_channels(int counter) {
+  std::cout << "Logging scene update " << counter << std::endl;
 
-  for (int i = 0; i < 100; ++i) {
-    log(i);
-  }
-
-  // Optional, if you want to check for or handle errors
-  foxglove::FoxgloveError err = writer.close();
-  if (err != foxglove::FoxgloveError::Ok) {
-    std::cerr << "Failed to close writer: " << foxglove::strerror(err) << '\n';
-    return 1;
-  }
-  return 0;
-}
-
-void log(int counter) {
   // Create a SceneUpdate message for the box
   foxglove::schemas::SceneUpdate scene_update;
   foxglove::schemas::SceneEntity entity;
@@ -95,5 +73,33 @@ void log(int counter) {
   rotation.w = std::cos(yaw2 / 2.0);
   transform.rotation = rotation;
 
+  std::cout << "Logging frame transform " << counter << std::endl;
+
   FRAME_TRANSFORM_CHANNEL.log(transform);
+}
+
+// NOLINTNEXTLINE(bugprone-exception-escape)
+int main(int argc, const char* argv[]) {
+  foxglove::McapWriterOptions options = {};
+  options.path = "test.mcap";
+  options.truncate = true;
+  auto writer_result = foxglove::McapWriter::create(options);
+  if (!writer_result.has_value()) {
+    std::cerr << "Failed to create writer: " << foxglove::strerror(writer_result.error()) << '\n';
+    return 1;
+  }
+  auto writer = std::move(writer_result.value());
+
+  for (int i = 0; i < 100; ++i) {
+    std::cout << "Logging " << i << std::endl;
+    log_to_channels(i);
+  }
+
+  // Optional, if you want to check for or handle errors
+  foxglove::FoxgloveError err = writer.close();
+  if (err != foxglove::FoxgloveError::Ok) {
+    std::cerr << "Failed to close writer: " << foxglove::strerror(err) << '\n';
+    return 1;
+  }
+  return 0;
 }
