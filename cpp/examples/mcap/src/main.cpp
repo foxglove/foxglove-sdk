@@ -39,6 +39,10 @@ int main(int argc, const char* argv[]) {
   }
 
   // Optional, if you want to check for or handle errors
-  writer.close();
+  foxglove::FoxgloveError err = writer.close();
+  if (err != foxglove::FoxgloveError::Ok) {
+    std::cerr << "Failed to close writer: " << foxglove::strerror(err) << '\n';
+    return 1;
+  }
   return 0;
 }
