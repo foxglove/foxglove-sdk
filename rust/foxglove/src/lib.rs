@@ -291,6 +291,7 @@
 
 use thiserror::Error;
 
+mod app_url;
 mod channel;
 mod channel_builder;
 mod context;
@@ -317,6 +318,7 @@ mod testutil;
 mod throttler;
 mod time;
 
+pub use app_url::AppUrl;
 // Re-export bytes crate for convenience when implementing the `Encode` trait
 pub use bytes;
 pub use channel::{Channel, ChannelId, LazyChannel, LazyRawChannel, RawChannel};

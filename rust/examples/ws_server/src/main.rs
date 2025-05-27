@@ -113,6 +113,10 @@ async fn main() {
         .await
         .expect("Server failed to start");
 
+    let app_url = server.app_url();
+    println!("View in browser: {app_url}");
+    println!("View in desktop: {}", app_url.with_open_in_desktop());
+
     tokio::task::spawn(log_forever(args.fps));
     tokio::signal::ctrl_c().await.ok();
     server.stop().wait().await;

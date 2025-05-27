@@ -1,7 +1,5 @@
 use std::collections::hash_map::Entry;
 use std::collections::HashSet;
-use std::sync::atomic::AtomicU16;
-use std::sync::atomic::Ordering::{Acquire, Release};
 use std::sync::Weak;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use std::{collections::HashMap, net::SocketAddr, sync::Arc};
@@ -121,8 +119,6 @@ pub(crate) struct Server {
     /// It's analogous to the mixin shared_from_this in C++.
     weak_self: Weak<Self>,
     context: Weak<Context>,
-    /// Local port the server is listening on, once it has been started
-    port: AtomicU16,
     message_backlog_size: u32,
     runtime: Handle,
     /// May be provided by the caller
@@ -182,7 +178,6 @@ impl Server {
 
         Server {
             weak_self,
-            port: AtomicU16::new(0),
             context: Arc::downgrade(ctx),
             message_backlog_size: opts
                 .message_backlog_size
@@ -209,10 +204,6 @@ impl Server {
         self.weak_self
             .upgrade()
             .expect("server cannot be dropped while in use")
-    }
-
-    pub fn port(&self) -> u16 {
-        self.port.load(Acquire)
     }
 
     /// Returns true if the server supports the capability.
@@ -250,7 +241,6 @@ impl Server {
             .await
             .map_err(FoxgloveError::Bind)?;
         let local_addr = listener.local_addr().map_err(FoxgloveError::Bind)?;
-        self.port.store(local_addr.port(), Release);
 
         let cancellation_token = self.cancellation_token.clone();
         let server = self.arc();
@@ -305,7 +295,6 @@ impl Server {
     pub fn stop(&self) -> Option<ShutdownHandle> {
         let tasks = self.tasks.lock().take()?;
         tracing::info!("Shutting down");
-        self.port.store(0, Release);
         self.cancellation_token.cancel();
         let clients = self.clients.take_and_freeze();
         for client in clients.iter() {
