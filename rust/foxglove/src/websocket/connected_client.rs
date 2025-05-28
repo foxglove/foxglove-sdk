@@ -10,6 +10,7 @@ use tokio::sync::oneshot;
 use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::WebSocketStream;
 
+use crate::sink::SinkChannelFilter;
 use crate::{ChannelId, Context, FoxgloveError, Metadata, RawChannel, Sink, SinkId};
 
 use self::ws_protocol::server::{
@@ -64,6 +65,8 @@ pub(super) struct ConnectedClient {
     control_plane_tx: flume::Sender<Message>,
     service_call_sem: Semaphore,
     fetch_asset_sem: Semaphore,
+    /// Channel subscription filter
+    channel_filter: Option<Arc<dyn SinkChannelFilter>>,
     /// Subscriptions from this client
     subscriptions: parking_lot::Mutex<BiHashMap<ChannelId, SubscriptionId>>,
     /// Channels advertised by this client
@@ -103,8 +106,18 @@ impl Sink for ConnectedClient {
     }
 
     fn add_channels(&self, channels: &[&Arc<RawChannel>]) -> Option<Vec<ChannelId>> {
-        for channels in channels.chunks(ADVERTISE_CHANNEL_BATCH_SIZE) {
-            self.advertise_channels(channels);
+        let filtered: Vec<_> = channels
+            .iter()
+            .filter(|ch| {
+                !self
+                    .channel_filter
+                    .as_ref()
+                    .is_some_and(|cf| !cf.should_subscribe(ch))
+            })
+            .copied()
+            .collect();
+        for batch in filtered.chunks(ADVERTISE_CHANNEL_BATCH_SIZE) {
+            self.advertise_channels(batch);
         }
         // Clients subscribe asynchronously.
         None
@@ -127,6 +140,7 @@ impl ConnectedClient {
         websocket: WebSocketStream<TcpStream>,
         addr: SocketAddr,
         message_backlog_size: usize,
+        channel_filter: Option<Arc<dyn SinkChannelFilter>>,
     ) -> Arc<Self> {
         let (data_plane_tx, data_plane_rx) = flume::bounded(message_backlog_size);
         let (control_plane_tx, control_plane_rx) = flume::bounded(message_backlog_size);
@@ -149,6 +163,7 @@ impl ConnectedClient {
             control_plane_tx,
             service_call_sem: Semaphore::new(DEFAULT_SERVICE_CALLS_PER_CLIENT),
             fetch_asset_sem: Semaphore::new(DEFAULT_FETCH_ASSET_CALLS_PER_CLIENT),
+            channel_filter,
             subscriptions: parking_lot::Mutex::default(),
             advertised_channels: parking_lot::Mutex::default(),
             server: server.clone(),
@@ -710,7 +725,10 @@ impl ConnectedClient {
 
     /// Unadvertises a channel to the client.
     fn unadvertise_channel(&self, channel_id: ChannelId) {
-        self.channels.write().remove(&channel_id);
+        // We may not have advertised this channel if it was filtered out by the channel filter.
+        if self.channels.write().remove(&channel_id).is_none() {
+            return;
+        }
 
         let message = Unadvertise::new([channel_id.into()]);
 

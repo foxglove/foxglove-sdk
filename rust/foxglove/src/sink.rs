@@ -108,3 +108,20 @@ pub trait Sink: Send + Sync {
 /// We use a [`SmallVec`] to improve cache locality and reduce heap allocations when working with a
 /// small number of sinks, which is typically the case.
 pub(crate) type SmallSinkVec = SmallVec<[Arc<dyn Sink>; 6]>;
+
+pub trait SinkChannelFilter: Sync + Send {
+    fn should_subscribe(&self, channel: &RawChannel) -> bool;
+}
+
+pub(crate) struct SinkChannelFilterFn<F>(pub F)
+where
+    F: Fn(&RawChannel) -> bool + Sync + Send;
+
+impl<F> SinkChannelFilter for SinkChannelFilterFn<F>
+where
+    F: Fn(&RawChannel) -> bool + Sync + Send,
+{
+    fn should_subscribe(&self, channel: &RawChannel) -> bool {
+        self.0(channel)
+    }
+}

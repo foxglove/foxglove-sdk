@@ -4,12 +4,13 @@ use std::fmt::{Debug, Display};
 use std::future::Future;
 use std::sync::Arc;
 
+use crate::sink::SinkChannelFilterFn;
 use crate::websocket::service::Service;
 use crate::websocket::{
     create_server, AssetHandler, AsyncAssetHandlerFn, BlockingAssetHandlerFn, Capability, Client,
     ConnectionGraph, Parameter, Server, ServerOptions, ShutdownHandle, Status,
 };
-use crate::{get_runtime_handle, Context, FoxgloveError};
+use crate::{get_runtime_handle, Context, FoxgloveError, RawChannel};
 
 /// A WebSocket server for live visualization in Foxglove.
 ///
@@ -182,6 +183,15 @@ impl WebSocketServer {
     #[cfg(feature = "unstable")]
     pub fn tokio_runtime(mut self, handle: &tokio::runtime::Handle) -> Self {
         self.options.runtime = Some(handle.clone());
+        self
+    }
+
+    /// Adds a channel filter.
+    pub fn with_channel_filter_fn<F>(mut self, f: F) -> Self
+    where
+        F: Fn(&RawChannel) -> bool + Sync + Send + 'static,
+    {
+        self.options.channel_filter = Some(Arc::new(SinkChannelFilterFn(f)));
         self
     }
 

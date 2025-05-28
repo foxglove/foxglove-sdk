@@ -15,6 +15,7 @@ use tokio_tungstenite::tungstenite::Message;
 use tokio_util::sync::CancellationToken;
 
 use crate::library_version::get_library_version;
+use crate::sink::SinkChannelFilter;
 use crate::websocket::connected_client::ShutdownReason;
 use crate::{Context, FoxgloveError};
 
@@ -44,6 +45,7 @@ pub(crate) struct ServerOptions {
     pub supported_encodings: Option<HashSet<String>>,
     pub runtime: Option<Handle>,
     pub fetch_asset_handler: Option<Box<dyn AssetHandler>>,
+    pub channel_filter: Option<Arc<dyn SinkChannelFilter>>,
 }
 
 impl std::fmt::Debug for ServerOptions {
@@ -146,6 +148,8 @@ pub(crate) struct Server {
     services: parking_lot::RwLock<ServiceMap>,
     /// Handler for fetch asset requests
     fetch_asset_handler: Option<Box<dyn AssetHandler>>,
+    /// Channel subscription filter
+    channel_filter: Option<Arc<dyn SinkChannelFilter>>,
     /// Client tasks.
     tasks: parking_lot::Mutex<Option<JoinSet<()>>>,
 }
@@ -201,6 +205,7 @@ impl Server {
             cancellation_token: CancellationToken::new(),
             services: parking_lot::RwLock::new(ServiceMap::from_iter(opts.services.into_values())),
             fetch_asset_handler: opts.fetch_asset_handler,
+            channel_filter: opts.channel_filter,
             tasks: parking_lot::Mutex::default(),
         }
     }
@@ -543,6 +548,7 @@ impl Server {
             ws_stream,
             addr,
             self.message_backlog_size as usize,
+            self.channel_filter.clone(),
         );
         self.register_client_and_advertise(&client);
         client.run().await;
