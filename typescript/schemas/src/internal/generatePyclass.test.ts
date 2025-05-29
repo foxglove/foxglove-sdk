@@ -157,6 +157,7 @@ describe("generatePyclass", () => {
                  self.0.field_nested_array,
              )
          }
+         /// Returns the ExampleMessage schema.
          #[staticmethod]
          fn get_schema() -> PySchema {
              foxglove::schemas::ExampleMessage::get_schema().unwrap().into()

@@ -2,6 +2,7 @@
 from enum import Enum
 from typing import List, Optional, Union
 
+from . import Schema
 from .schemas_wkt import Duration as Duration
 from .schemas_wkt import Timestamp as Timestamp
 
@@ -95,7 +96,7 @@ class ArrowPrimitive:
     ) -> "ArrowPrimitive": ...
     @staticmethod
     def get_schema() -> Schema:
-        """Returns the schema for this type"""
+        """Returns the ArrowPrimitive schema"""
         ...
 
 class CameraCalibration:
@@ -118,7 +119,7 @@ class CameraCalibration:
     ) -> "CameraCalibration": ...
     @staticmethod
     def get_schema() -> Schema:
-        """Returns the schema for this type"""
+        """Returns the CameraCalibration schema"""
         ...
 
 class CircleAnnotation:
@@ -138,7 +139,7 @@ class CircleAnnotation:
     ) -> "CircleAnnotation": ...
     @staticmethod
     def get_schema() -> Schema:
-        """Returns the schema for this type"""
+        """Returns the CircleAnnotation schema"""
         ...
 
 class Color:
@@ -156,7 +157,7 @@ class Color:
     ) -> "Color": ...
     @staticmethod
     def get_schema() -> Schema:
-        """Returns the schema for this type"""
+        """Returns the Color schema"""
         ...
 
 class CompressedImage:
@@ -174,7 +175,7 @@ class CompressedImage:
     ) -> "CompressedImage": ...
     @staticmethod
     def get_schema() -> Schema:
-        """Returns the schema for this type"""
+        """Returns the CompressedImage schema"""
         ...
 
 class CompressedVideo:
@@ -192,7 +193,7 @@ class CompressedVideo:
     ) -> "CompressedVideo": ...
     @staticmethod
     def get_schema() -> Schema:
-        """Returns the schema for this type"""
+        """Returns the CompressedVideo schema"""
         ...
 
 class CubePrimitive:
@@ -209,7 +210,7 @@ class CubePrimitive:
     ) -> "CubePrimitive": ...
     @staticmethod
     def get_schema() -> Schema:
-        """Returns the schema for this type"""
+        """Returns the CubePrimitive schema"""
         ...
 
 class CylinderPrimitive:
@@ -228,7 +229,7 @@ class CylinderPrimitive:
     ) -> "CylinderPrimitive": ...
     @staticmethod
     def get_schema() -> Schema:
-        """Returns the schema for this type"""
+        """Returns the CylinderPrimitive schema"""
         ...
 
 class FrameTransform:
@@ -247,7 +248,7 @@ class FrameTransform:
     ) -> "FrameTransform": ...
     @staticmethod
     def get_schema() -> Schema:
-        """Returns the schema for this type"""
+        """Returns the FrameTransform schema"""
         ...
 
 class FrameTransforms:
@@ -260,7 +261,7 @@ class FrameTransforms:
     ) -> "FrameTransforms": ...
     @staticmethod
     def get_schema() -> Schema:
-        """Returns the schema for this type"""
+        """Returns the FrameTransforms schema"""
         ...
 
 class GeoJson:
@@ -271,7 +272,7 @@ class GeoJson:
     def __new__(cls, *, geojson: "Optional[str]" = "") -> "GeoJson": ...
     @staticmethod
     def get_schema() -> Schema:
-        """Returns the schema for this type"""
+        """Returns the GeoJson schema"""
         ...
 
 class Grid:
@@ -294,7 +295,7 @@ class Grid:
     ) -> "Grid": ...
     @staticmethod
     def get_schema() -> Schema:
-        """Returns the schema for this type"""
+        """Returns the Grid schema"""
         ...
 
 class ImageAnnotations:
@@ -311,7 +312,7 @@ class ImageAnnotations:
     ) -> "ImageAnnotations": ...
     @staticmethod
     def get_schema() -> Schema:
-        """Returns the schema for this type"""
+        """Returns the ImageAnnotations schema"""
         ...
 
 class KeyValuePair:
@@ -324,7 +325,7 @@ class KeyValuePair:
     ) -> "KeyValuePair": ...
     @staticmethod
     def get_schema() -> Schema:
-        """Returns the schema for this type"""
+        """Returns the KeyValuePair schema"""
         ...
 
 class LaserScan:
@@ -345,7 +346,7 @@ class LaserScan:
     ) -> "LaserScan": ...
     @staticmethod
     def get_schema() -> Schema:
-        """Returns the schema for this type"""
+        """Returns the LaserScan schema"""
         ...
 
 class LinePrimitive:
@@ -367,7 +368,7 @@ class LinePrimitive:
     ) -> "LinePrimitive": ...
     @staticmethod
     def get_schema() -> Schema:
-        """Returns the schema for this type"""
+        """Returns the LinePrimitive schema"""
         ...
 
 class LocationFix:
@@ -388,7 +389,7 @@ class LocationFix:
     ) -> "LocationFix": ...
     @staticmethod
     def get_schema() -> Schema:
-        """Returns the schema for this type"""
+        """Returns the LocationFix schema"""
         ...
 
 class Log:
@@ -408,7 +409,7 @@ class Log:
     ) -> "Log": ...
     @staticmethod
     def get_schema() -> Schema:
-        """Returns the schema for this type"""
+        """Returns the Log schema"""
         ...
 
 class ModelPrimitive:
@@ -429,7 +430,7 @@ class ModelPrimitive:
     ) -> "ModelPrimitive": ...
     @staticmethod
     def get_schema() -> Schema:
-        """Returns the schema for this type"""
+        """Returns the ModelPrimitive schema"""
         ...
 
 class PackedElementField:
@@ -446,7 +447,7 @@ class PackedElementField:
     ) -> "PackedElementField": ...
     @staticmethod
     def get_schema() -> Schema:
-        """Returns the schema for this type"""
+        """Returns the PackedElementField schema"""
         ...
 
 class Point2:
@@ -459,7 +460,7 @@ class Point2:
     ) -> "Point2": ...
     @staticmethod
     def get_schema() -> Schema:
-        """Returns the schema for this type"""
+        """Returns the Point2 schema"""
         ...
 
 class Point3:
@@ -476,7 +477,7 @@ class Point3:
     ) -> "Point3": ...
     @staticmethod
     def get_schema() -> Schema:
-        """Returns the schema for this type"""
+        """Returns the Point3 schema"""
         ...
 
 class PointCloud:
@@ -496,7 +497,7 @@ class PointCloud:
     ) -> "PointCloud": ...
     @staticmethod
     def get_schema() -> Schema:
-        """Returns the schema for this type"""
+        """Returns the PointCloud schema"""
         ...
 
 class PointsAnnotation:
@@ -517,7 +518,7 @@ class PointsAnnotation:
     ) -> "PointsAnnotation": ...
     @staticmethod
     def get_schema() -> Schema:
-        """Returns the schema for this type"""
+        """Returns the PointsAnnotation schema"""
         ...
 
 class Pose:
@@ -533,7 +534,7 @@ class Pose:
     ) -> "Pose": ...
     @staticmethod
     def get_schema() -> Schema:
-        """Returns the schema for this type"""
+        """Returns the Pose schema"""
         ...
 
 class PoseInFrame:
@@ -550,7 +551,7 @@ class PoseInFrame:
     ) -> "PoseInFrame": ...
     @staticmethod
     def get_schema() -> Schema:
-        """Returns the schema for this type"""
+        """Returns the PoseInFrame schema"""
         ...
 
 class PosesInFrame:
@@ -567,7 +568,7 @@ class PosesInFrame:
     ) -> "PosesInFrame": ...
     @staticmethod
     def get_schema() -> Schema:
-        """Returns the schema for this type"""
+        """Returns the PosesInFrame schema"""
         ...
 
 class Quaternion:
@@ -585,7 +586,7 @@ class Quaternion:
     ) -> "Quaternion": ...
     @staticmethod
     def get_schema() -> Schema:
-        """Returns the schema for this type"""
+        """Returns the Quaternion schema"""
         ...
 
 class RawAudio:
@@ -604,7 +605,7 @@ class RawAudio:
     ) -> "RawAudio": ...
     @staticmethod
     def get_schema() -> Schema:
-        """Returns the schema for this type"""
+        """Returns the RawAudio schema"""
         ...
 
 class RawImage:
@@ -625,7 +626,7 @@ class RawImage:
     ) -> "RawImage": ...
     @staticmethod
     def get_schema() -> Schema:
-        """Returns the schema for this type"""
+        """Returns the RawImage schema"""
         ...
 
 class SceneEntity:
@@ -653,7 +654,7 @@ class SceneEntity:
     ) -> "SceneEntity": ...
     @staticmethod
     def get_schema() -> Schema:
-        """Returns the schema for this type"""
+        """Returns the SceneEntity schema"""
         ...
 
 class SceneEntityDeletion:
@@ -670,7 +671,7 @@ class SceneEntityDeletion:
     ) -> "SceneEntityDeletion": ...
     @staticmethod
     def get_schema() -> Schema:
-        """Returns the schema for this type"""
+        """Returns the SceneEntityDeletion schema"""
         ...
 
 class SceneUpdate:
@@ -686,7 +687,7 @@ class SceneUpdate:
     ) -> "SceneUpdate": ...
     @staticmethod
     def get_schema() -> Schema:
-        """Returns the schema for this type"""
+        """Returns the SceneUpdate schema"""
         ...
 
 class SpherePrimitive:
@@ -703,7 +704,7 @@ class SpherePrimitive:
     ) -> "SpherePrimitive": ...
     @staticmethod
     def get_schema() -> Schema:
-        """Returns the schema for this type"""
+        """Returns the SpherePrimitive schema"""
         ...
 
 class TextAnnotation:
@@ -723,7 +724,7 @@ class TextAnnotation:
     ) -> "TextAnnotation": ...
     @staticmethod
     def get_schema() -> Schema:
-        """Returns the schema for this type"""
+        """Returns the TextAnnotation schema"""
         ...
 
 class TextPrimitive:
@@ -743,7 +744,7 @@ class TextPrimitive:
     ) -> "TextPrimitive": ...
     @staticmethod
     def get_schema() -> Schema:
-        """Returns the schema for this type"""
+        """Returns the TextPrimitive schema"""
         ...
 
 class TriangleListPrimitive:
@@ -762,7 +763,7 @@ class TriangleListPrimitive:
     ) -> "TriangleListPrimitive": ...
     @staticmethod
     def get_schema() -> Schema:
-        """Returns the schema for this type"""
+        """Returns the TriangleListPrimitive schema"""
         ...
 
 class Vector2:
@@ -775,7 +776,7 @@ class Vector2:
     ) -> "Vector2": ...
     @staticmethod
     def get_schema() -> Schema:
-        """Returns the schema for this type"""
+        """Returns the Vector2 schema"""
         ...
 
 class Vector3:
@@ -792,7 +793,7 @@ class Vector3:
     ) -> "Vector3": ...
     @staticmethod
     def get_schema() -> Schema:
-        """Returns the schema for this type"""
+        """Returns the Vector3 schema"""
         ...
 
 FoxgloveSchema = Union[

@@ -120,6 +120,7 @@ impl ArrowPrimitive {
             self.0.color,
         )
     }
+    /// Returns the ArrowPrimitive schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
         foxglove::schemas::ArrowPrimitive::get_schema()
@@ -191,6 +192,7 @@ impl CameraCalibration {
             self.0.p,
         )
     }
+    /// Returns the CameraCalibration schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
         foxglove::schemas::CameraCalibration::get_schema()
@@ -250,6 +252,7 @@ impl CircleAnnotation {
             self.0.outline_color,
         )
     }
+    /// Returns the CircleAnnotation schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
         foxglove::schemas::CircleAnnotation::get_schema()
@@ -288,6 +291,7 @@ impl Color {
             self.0.r, self.0.g, self.0.b, self.0.a,
         )
     }
+    /// Returns the Color schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
         foxglove::schemas::Color::get_schema().unwrap().into()
@@ -336,6 +340,7 @@ impl CompressedImage {
             self.0.timestamp, self.0.frame_id, self.0.data, self.0.format,
         )
     }
+    /// Returns the CompressedImage schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
         foxglove::schemas::CompressedImage::get_schema()
@@ -386,6 +391,7 @@ impl CompressedVideo {
             self.0.timestamp, self.0.frame_id, self.0.data, self.0.format,
         )
     }
+    /// Returns the CompressedVideo schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
         foxglove::schemas::CompressedVideo::get_schema()
@@ -441,6 +447,7 @@ impl CylinderPrimitive {
             self.0.color,
         )
     }
+    /// Returns the CylinderPrimitive schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
         foxglove::schemas::CylinderPrimitive::get_schema()
@@ -482,6 +489,7 @@ impl CubePrimitive {
             self.0.pose, self.0.size, self.0.color,
         )
     }
+    /// Returns the CubePrimitive schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
         foxglove::schemas::CubePrimitive::get_schema()
@@ -537,6 +545,7 @@ impl FrameTransform {
             self.0.rotation,
         )
     }
+    /// Returns the FrameTransform schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
         foxglove::schemas::FrameTransform::get_schema()
@@ -571,6 +580,7 @@ impl FrameTransforms {
     fn __repr__(&self) -> String {
         format!("FrameTransforms(transforms={:?})", self.0.transforms,)
     }
+    /// Returns the FrameTransforms schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
         foxglove::schemas::FrameTransforms::get_schema()
@@ -603,6 +613,7 @@ impl GeoJson {
     fn __repr__(&self) -> String {
         format!("GeoJson(geojson={:?})", self.0.geojson,)
     }
+    /// Returns the GeoJson schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
         foxglove::schemas::GeoJson::get_schema().unwrap().into()
@@ -674,6 +685,7 @@ impl Grid {
             self.0.data,
         )
     }
+    /// Returns the Grid schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
         foxglove::schemas::Grid::get_schema().unwrap().into()
@@ -717,6 +729,7 @@ impl ImageAnnotations {
             self.0.circles, self.0.points, self.0.texts,
         )
     }
+    /// Returns the ImageAnnotations schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
         foxglove::schemas::ImageAnnotations::get_schema()
@@ -753,6 +766,7 @@ impl KeyValuePair {
             self.0.key, self.0.value,
         )
     }
+    /// Returns the KeyValuePair schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
         foxglove::schemas::KeyValuePair::get_schema()
@@ -816,6 +830,7 @@ impl LaserScan {
             self.0.intensities,
         )
     }
+    /// Returns the LaserScan schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
         foxglove::schemas::LaserScan::get_schema().unwrap().into()
@@ -881,6 +896,7 @@ impl LinePrimitive {
             self.0.indices,
         )
     }
+    /// Returns the LinePrimitive schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
         foxglove::schemas::LinePrimitive::get_schema()
@@ -944,6 +960,7 @@ impl LocationFix {
             self.0.position_covariance_type,
         )
     }
+    /// Returns the LocationFix schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
         foxglove::schemas::LocationFix::get_schema().unwrap().into()
@@ -996,6 +1013,7 @@ impl Log {
             self.0.timestamp, self.0.level, self.0.message, self.0.name, self.0.file, self.0.line,
         )
     }
+    /// Returns the Log schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
         foxglove::schemas::Log::get_schema().unwrap().into()
@@ -1035,6 +1053,7 @@ impl SceneEntityDeletion {
             self.0.timestamp, self.0.r#type, self.0.id,
         )
     }
+    /// Returns the SceneEntityDeletion schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
         foxglove::schemas::SceneEntityDeletion::get_schema()
@@ -1126,6 +1145,7 @@ impl SceneEntity {
             self.0.models,
         )
     }
+    /// Returns the SceneEntity schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
         foxglove::schemas::SceneEntity::get_schema().unwrap().into()
@@ -1163,6 +1183,7 @@ impl SceneUpdate {
             self.0.deletions, self.0.entities,
         )
     }
+    /// Returns the SceneUpdate schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
         foxglove::schemas::SceneUpdate::get_schema().unwrap().into()
@@ -1226,6 +1247,7 @@ impl ModelPrimitive {
             self.0.data,
         )
     }
+    /// Returns the ModelPrimitive schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
         foxglove::schemas::ModelPrimitive::get_schema()
@@ -1267,6 +1289,7 @@ impl PackedElementField {
             self.0.name, self.0.offset, self.0.r#type,
         )
     }
+    /// Returns the PackedElementField schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
         foxglove::schemas::PackedElementField::get_schema()
@@ -1300,6 +1323,7 @@ impl Point2 {
     fn __repr__(&self) -> String {
         format!("Point2(x={:?}, y={:?})", self.0.x, self.0.y,)
     }
+    /// Returns the Point2 schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
         foxglove::schemas::Point2::get_schema().unwrap().into()
@@ -1335,6 +1359,7 @@ impl Point3 {
             self.0.x, self.0.y, self.0.z,
         )
     }
+    /// Returns the Point3 schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
         foxglove::schemas::Point3::get_schema().unwrap().into()
@@ -1394,6 +1419,7 @@ impl PointCloud {
             self.0.data,
         )
     }
+    /// Returns the PointCloud schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
         foxglove::schemas::PointCloud::get_schema().unwrap().into()
@@ -1455,6 +1481,7 @@ impl PointsAnnotation {
             self.0.thickness,
         )
     }
+    /// Returns the PointsAnnotation schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
         foxglove::schemas::PointsAnnotation::get_schema()
@@ -1494,6 +1521,7 @@ impl Pose {
             self.0.position, self.0.orientation,
         )
     }
+    /// Returns the Pose schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
         foxglove::schemas::Pose::get_schema().unwrap().into()
@@ -1533,6 +1561,7 @@ impl PoseInFrame {
             self.0.timestamp, self.0.frame_id, self.0.pose,
         )
     }
+    /// Returns the PoseInFrame schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
         foxglove::schemas::PoseInFrame::get_schema().unwrap().into()
@@ -1572,6 +1601,7 @@ impl PosesInFrame {
             self.0.timestamp, self.0.frame_id, self.0.poses,
         )
     }
+    /// Returns the PosesInFrame schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
         foxglove::schemas::PosesInFrame::get_schema()
@@ -1610,6 +1640,7 @@ impl Quaternion {
             self.0.x, self.0.y, self.0.z, self.0.w,
         )
     }
+    /// Returns the Quaternion schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
         foxglove::schemas::Quaternion::get_schema().unwrap().into()
@@ -1665,6 +1696,7 @@ impl RawAudio {
             self.0.number_of_channels,
         )
     }
+    /// Returns the RawAudio schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
         foxglove::schemas::RawAudio::get_schema().unwrap().into()
@@ -1728,6 +1760,7 @@ impl RawImage {
             self.0.data,
         )
     }
+    /// Returns the RawImage schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
         foxglove::schemas::RawImage::get_schema().unwrap().into()
@@ -1767,6 +1800,7 @@ impl SpherePrimitive {
             self.0.pose, self.0.size, self.0.color,
         )
     }
+    /// Returns the SpherePrimitive schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
         foxglove::schemas::SpherePrimitive::get_schema()
@@ -1826,6 +1860,7 @@ impl TextAnnotation {
             self.0.background_color,
         )
     }
+    /// Returns the TextAnnotation schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
         foxglove::schemas::TextAnnotation::get_schema()
@@ -1885,6 +1920,7 @@ impl TextPrimitive {
             self.0.text,
         )
     }
+    /// Returns the TextPrimitive schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
         foxglove::schemas::TextPrimitive::get_schema()
@@ -1936,6 +1972,7 @@ impl TriangleListPrimitive {
             self.0.pose, self.0.points, self.0.color, self.0.colors, self.0.indices,
         )
     }
+    /// Returns the TriangleListPrimitive schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
         foxglove::schemas::TriangleListPrimitive::get_schema()
@@ -1969,6 +2006,7 @@ impl Vector2 {
     fn __repr__(&self) -> String {
         format!("Vector2(x={:?}, y={:?})", self.0.x, self.0.y,)
     }
+    /// Returns the Vector2 schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
         foxglove::schemas::Vector2::get_schema().unwrap().into()
@@ -2004,6 +2042,7 @@ impl Vector3 {
             self.0.x, self.0.y, self.0.z,
         )
     }
+    /// Returns the Vector3 schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
         foxglove::schemas::Vector3::get_schema().unwrap().into()
