@@ -65,6 +65,34 @@ void triangleListPrimitiveToC(
   foxglove_triangle_list_primitive& dest, const TriangleListPrimitive& src, Arena& arena
 );
 
+FoxgloveResult<ArrowPrimitiveChannel> ArrowPrimitiveChannel::create(
+  const std::string_view& topic, const Context& context
+) {
+  const foxglove_channel* channel = nullptr;
+  foxglove_error error = foxglove_channel_create_arrow_primitive(
+    {topic.data(), topic.size()}, context.getInner(), &channel
+  );
+  if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
+    return foxglove::unexpected(FoxgloveError(error));
+  }
+  return ArrowPrimitiveChannel(ChannelUniquePtr(channel));
+}
+
+FoxgloveError ArrowPrimitiveChannel::log(
+  const ArrowPrimitive& msg, std::optional<uint64_t> log_time
+) noexcept {
+  Arena arena;
+  foxglove_arrow_primitive c_msg;
+  arrowPrimitiveToC(c_msg, msg, arena);
+  return FoxgloveError(
+    foxglove_channel_log_arrow_primitive(impl_.get(), &c_msg, log_time ? &*log_time : nullptr)
+  );
+}
+
+uint64_t ArrowPrimitiveChannel::id() const noexcept {
+  return foxglove_channel_get_id(impl_.get());
+}
+
 FoxgloveResult<CameraCalibrationChannel> CameraCalibrationChannel::create(
   const std::string_view& topic, const Context& context
 ) {
@@ -121,6 +149,28 @@ uint64_t CircleAnnotationChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
+FoxgloveResult<ColorChannel> ColorChannel::create(
+  const std::string_view& topic, const Context& context
+) {
+  const foxglove_channel* channel = nullptr;
+  foxglove_error error =
+    foxglove_channel_create_color({topic.data(), topic.size()}, context.getInner(), &channel);
+  if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
+    return foxglove::unexpected(FoxgloveError(error));
+  }
+  return ColorChannel(ChannelUniquePtr(channel));
+}
+
+FoxgloveError ColorChannel::log(const Color& msg, std::optional<uint64_t> log_time) noexcept {
+  return FoxgloveError(foxglove_channel_log_color(
+    impl_.get(), reinterpret_cast<const foxglove_color*>(&msg), log_time ? &*log_time : nullptr
+  ));
+}
+
+uint64_t ColorChannel::id() const noexcept {
+  return foxglove_channel_get_id(impl_.get());
+}
+
 FoxgloveResult<CompressedImageChannel> CompressedImageChannel::create(
   const std::string_view& topic, const Context& context
 ) {
@@ -174,6 +224,62 @@ FoxgloveError CompressedVideoChannel::log(
 }
 
 uint64_t CompressedVideoChannel::id() const noexcept {
+  return foxglove_channel_get_id(impl_.get());
+}
+
+FoxgloveResult<CubePrimitiveChannel> CubePrimitiveChannel::create(
+  const std::string_view& topic, const Context& context
+) {
+  const foxglove_channel* channel = nullptr;
+  foxglove_error error = foxglove_channel_create_cube_primitive(
+    {topic.data(), topic.size()}, context.getInner(), &channel
+  );
+  if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
+    return foxglove::unexpected(FoxgloveError(error));
+  }
+  return CubePrimitiveChannel(ChannelUniquePtr(channel));
+}
+
+FoxgloveError CubePrimitiveChannel::log(
+  const CubePrimitive& msg, std::optional<uint64_t> log_time
+) noexcept {
+  Arena arena;
+  foxglove_cube_primitive c_msg;
+  cubePrimitiveToC(c_msg, msg, arena);
+  return FoxgloveError(
+    foxglove_channel_log_cube_primitive(impl_.get(), &c_msg, log_time ? &*log_time : nullptr)
+  );
+}
+
+uint64_t CubePrimitiveChannel::id() const noexcept {
+  return foxglove_channel_get_id(impl_.get());
+}
+
+FoxgloveResult<CylinderPrimitiveChannel> CylinderPrimitiveChannel::create(
+  const std::string_view& topic, const Context& context
+) {
+  const foxglove_channel* channel = nullptr;
+  foxglove_error error = foxglove_channel_create_cylinder_primitive(
+    {topic.data(), topic.size()}, context.getInner(), &channel
+  );
+  if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
+    return foxglove::unexpected(FoxgloveError(error));
+  }
+  return CylinderPrimitiveChannel(ChannelUniquePtr(channel));
+}
+
+FoxgloveError CylinderPrimitiveChannel::log(
+  const CylinderPrimitive& msg, std::optional<uint64_t> log_time
+) noexcept {
+  Arena arena;
+  foxglove_cylinder_primitive c_msg;
+  cylinderPrimitiveToC(c_msg, msg, arena);
+  return FoxgloveError(
+    foxglove_channel_log_cylinder_primitive(impl_.get(), &c_msg, log_time ? &*log_time : nullptr)
+  );
+}
+
+uint64_t CylinderPrimitiveChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
@@ -366,6 +472,34 @@ uint64_t LaserScanChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
+FoxgloveResult<LinePrimitiveChannel> LinePrimitiveChannel::create(
+  const std::string_view& topic, const Context& context
+) {
+  const foxglove_channel* channel = nullptr;
+  foxglove_error error = foxglove_channel_create_line_primitive(
+    {topic.data(), topic.size()}, context.getInner(), &channel
+  );
+  if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
+    return foxglove::unexpected(FoxgloveError(error));
+  }
+  return LinePrimitiveChannel(ChannelUniquePtr(channel));
+}
+
+FoxgloveError LinePrimitiveChannel::log(
+  const LinePrimitive& msg, std::optional<uint64_t> log_time
+) noexcept {
+  Arena arena;
+  foxglove_line_primitive c_msg;
+  linePrimitiveToC(c_msg, msg, arena);
+  return FoxgloveError(
+    foxglove_channel_log_line_primitive(impl_.get(), &c_msg, log_time ? &*log_time : nullptr)
+  );
+}
+
+uint64_t LinePrimitiveChannel::id() const noexcept {
+  return foxglove_channel_get_id(impl_.get());
+}
+
 FoxgloveResult<LocationFixChannel> LocationFixChannel::create(
   const std::string_view& topic, const Context& context
 ) {
@@ -416,6 +550,34 @@ FoxgloveError LogChannel::log(const Log& msg, std::optional<uint64_t> log_time) 
 }
 
 uint64_t LogChannel::id() const noexcept {
+  return foxglove_channel_get_id(impl_.get());
+}
+
+FoxgloveResult<ModelPrimitiveChannel> ModelPrimitiveChannel::create(
+  const std::string_view& topic, const Context& context
+) {
+  const foxglove_channel* channel = nullptr;
+  foxglove_error error = foxglove_channel_create_model_primitive(
+    {topic.data(), topic.size()}, context.getInner(), &channel
+  );
+  if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
+    return foxglove::unexpected(FoxgloveError(error));
+  }
+  return ModelPrimitiveChannel(ChannelUniquePtr(channel));
+}
+
+FoxgloveError ModelPrimitiveChannel::log(
+  const ModelPrimitive& msg, std::optional<uint64_t> log_time
+) noexcept {
+  Arena arena;
+  foxglove_model_primitive c_msg;
+  modelPrimitiveToC(c_msg, msg, arena);
+  return FoxgloveError(
+    foxglove_channel_log_model_primitive(impl_.get(), &c_msg, log_time ? &*log_time : nullptr)
+  );
+}
+
+uint64_t ModelPrimitiveChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
@@ -785,6 +947,34 @@ uint64_t SceneUpdateChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
+FoxgloveResult<SpherePrimitiveChannel> SpherePrimitiveChannel::create(
+  const std::string_view& topic, const Context& context
+) {
+  const foxglove_channel* channel = nullptr;
+  foxglove_error error = foxglove_channel_create_sphere_primitive(
+    {topic.data(), topic.size()}, context.getInner(), &channel
+  );
+  if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
+    return foxglove::unexpected(FoxgloveError(error));
+  }
+  return SpherePrimitiveChannel(ChannelUniquePtr(channel));
+}
+
+FoxgloveError SpherePrimitiveChannel::log(
+  const SpherePrimitive& msg, std::optional<uint64_t> log_time
+) noexcept {
+  Arena arena;
+  foxglove_sphere_primitive c_msg;
+  spherePrimitiveToC(c_msg, msg, arena);
+  return FoxgloveError(
+    foxglove_channel_log_sphere_primitive(impl_.get(), &c_msg, log_time ? &*log_time : nullptr)
+  );
+}
+
+uint64_t SpherePrimitiveChannel::id() const noexcept {
+  return foxglove_channel_get_id(impl_.get());
+}
+
 FoxgloveResult<TextAnnotationChannel> TextAnnotationChannel::create(
   const std::string_view& topic, const Context& context
 ) {
@@ -810,6 +1000,62 @@ FoxgloveError TextAnnotationChannel::log(
 }
 
 uint64_t TextAnnotationChannel::id() const noexcept {
+  return foxglove_channel_get_id(impl_.get());
+}
+
+FoxgloveResult<TextPrimitiveChannel> TextPrimitiveChannel::create(
+  const std::string_view& topic, const Context& context
+) {
+  const foxglove_channel* channel = nullptr;
+  foxglove_error error = foxglove_channel_create_text_primitive(
+    {topic.data(), topic.size()}, context.getInner(), &channel
+  );
+  if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
+    return foxglove::unexpected(FoxgloveError(error));
+  }
+  return TextPrimitiveChannel(ChannelUniquePtr(channel));
+}
+
+FoxgloveError TextPrimitiveChannel::log(
+  const TextPrimitive& msg, std::optional<uint64_t> log_time
+) noexcept {
+  Arena arena;
+  foxglove_text_primitive c_msg;
+  textPrimitiveToC(c_msg, msg, arena);
+  return FoxgloveError(
+    foxglove_channel_log_text_primitive(impl_.get(), &c_msg, log_time ? &*log_time : nullptr)
+  );
+}
+
+uint64_t TextPrimitiveChannel::id() const noexcept {
+  return foxglove_channel_get_id(impl_.get());
+}
+
+FoxgloveResult<TriangleListPrimitiveChannel> TriangleListPrimitiveChannel::create(
+  const std::string_view& topic, const Context& context
+) {
+  const foxglove_channel* channel = nullptr;
+  foxglove_error error = foxglove_channel_create_triangle_list_primitive(
+    {topic.data(), topic.size()}, context.getInner(), &channel
+  );
+  if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
+    return foxglove::unexpected(FoxgloveError(error));
+  }
+  return TriangleListPrimitiveChannel(ChannelUniquePtr(channel));
+}
+
+FoxgloveError TriangleListPrimitiveChannel::log(
+  const TriangleListPrimitive& msg, std::optional<uint64_t> log_time
+) noexcept {
+  Arena arena;
+  foxglove_triangle_list_primitive c_msg;
+  triangleListPrimitiveToC(c_msg, msg, arena);
+  return FoxgloveError(foxglove_channel_log_triangle_list_primitive(
+    impl_.get(), &c_msg, log_time ? &*log_time : nullptr
+  ));
+}
+
+uint64_t TriangleListPrimitiveChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 

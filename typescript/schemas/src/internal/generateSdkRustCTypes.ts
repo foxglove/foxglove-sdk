@@ -105,10 +105,7 @@ pub struct ${name} {
     .join("\n\n")}
 }
 
-${
-  name.endsWith("Primitive")
-    ? ""
-    : `impl ${name} {
+impl ${name} {
   /// Create a new typed channel, and return an owned raw channel pointer to it.
   ///
   /// # Safety
@@ -128,7 +125,6 @@ ${
           result_to_c(result, channel)
       }
   }
-}`
 }
 
 impl BorrowToNative for ${name} {
@@ -205,10 +201,6 @@ impl BorrowToNative for ${name} {
   }
 }
 
-${
-  name.endsWith("Primitive")
-    ? ""
-    : `
 /// Log a ${name} message to a channel.
 ///
 /// # Safety
@@ -228,8 +220,6 @@ pub extern "C" fn foxglove_channel_log_${snakeName}(channel: Option<&FoxgloveCha
       e.into()
     }
   }
-}
-`
 }
 `;
   });
