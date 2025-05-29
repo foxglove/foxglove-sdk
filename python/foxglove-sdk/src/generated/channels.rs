@@ -9,11 +9,14 @@ use pyo3::prelude::*;
 pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     let module = PyModule::new(parent_module.py(), "channels")?;
 
+    module.add_class::<ArrowPrimitiveChannel>()?;
     module.add_class::<CameraCalibrationChannel>()?;
     module.add_class::<CircleAnnotationChannel>()?;
     module.add_class::<ColorChannel>()?;
     module.add_class::<CompressedImageChannel>()?;
     module.add_class::<CompressedVideoChannel>()?;
+    module.add_class::<CylinderPrimitiveChannel>()?;
+    module.add_class::<CubePrimitiveChannel>()?;
     module.add_class::<FrameTransformChannel>()?;
     module.add_class::<FrameTransformsChannel>()?;
     module.add_class::<GeoJsonChannel>()?;
@@ -21,11 +24,13 @@ pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<ImageAnnotationsChannel>()?;
     module.add_class::<KeyValuePairChannel>()?;
     module.add_class::<LaserScanChannel>()?;
+    module.add_class::<LinePrimitiveChannel>()?;
     module.add_class::<LocationFixChannel>()?;
     module.add_class::<LogChannel>()?;
     module.add_class::<SceneEntityDeletionChannel>()?;
     module.add_class::<SceneEntityChannel>()?;
     module.add_class::<SceneUpdateChannel>()?;
+    module.add_class::<ModelPrimitiveChannel>()?;
     module.add_class::<PackedElementFieldChannel>()?;
     module.add_class::<Point2Channel>()?;
     module.add_class::<Point3Channel>()?;
@@ -37,7 +42,10 @@ pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<QuaternionChannel>()?;
     module.add_class::<RawAudioChannel>()?;
     module.add_class::<RawImageChannel>()?;
+    module.add_class::<SpherePrimitiveChannel>()?;
     module.add_class::<TextAnnotationChannel>()?;
+    module.add_class::<TextPrimitiveChannel>()?;
+    module.add_class::<TriangleListPrimitiveChannel>()?;
     module.add_class::<Vector2Channel>()?;
     module.add_class::<Vector3Channel>()?;
 
@@ -49,6 +57,75 @@ pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
         .set_item("foxglove._foxglove_py.channels", &module)?;
 
     parent_module.add_submodule(&module)
+}
+
+/// A channel for logging :py:class:`foxglove.schemas.ArrowPrimitive` messages.
+#[pyclass(module = "foxglove.channels")]
+struct ArrowPrimitiveChannel(Channel<foxglove::schemas::ArrowPrimitive>);
+
+#[pymethods]
+impl ArrowPrimitiveChannel {
+    /// Create a new channel.
+    ///
+    /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
+    #[new]
+    #[pyo3(signature = (topic, *, context=None))]
+    fn new(topic: &str, context: Option<&PyContext>) -> Self {
+        let base = if let Some(context) = context {
+            ChannelBuilder::new(topic)
+                .context(&context.0.clone())
+                .build()
+        } else {
+            Channel::new(topic)
+        };
+        Self(base)
+    }
+
+    /// The unique ID of the channel.
+    fn id(&self) -> u64 {
+        self.0.id().into()
+    }
+
+    /// The topic name of the channel.
+    fn topic(&self) -> &str {
+        self.0.topic()
+    }
+
+    /// The name of the schema for the channel.
+    fn schema_name(&self) -> Option<&str> {
+        Some(self.0.schema()?.name.as_str())
+    }
+
+    /// Close the channel.
+    ///
+    /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
+    /// channels dynamically, such as the :py:class:`foxglove.websocket.WebSocketServer`.
+    ///
+    /// Attempts to log on a closed channel will elicit a throttled warning message.
+    fn close(&mut self) {
+        self.0.close();
+    }
+
+    /// Log a :py:class:`foxglove.schemas.ArrowPrimitive` message to the channel.
+    ///
+    /// :param msg: The message to log.
+    /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
+    ///     message was recorded. Usually this is the time log() is called. If omitted, the
+    ///     current time is used.
+    #[pyo3(signature = (msg, *, log_time=None))]
+    fn log(&self, msg: &schemas::ArrowPrimitive, log_time: Option<u64>) {
+        let metadata = PartialMetadata { log_time };
+        self.0.log_with_meta(&msg.0, metadata);
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "ArrowPrimitiveChannel(id={}, topic='{}')",
+            self.id(),
+            self.topic()
+        )
+        .to_string()
+    }
 }
 
 /// A channel for logging :py:class:`foxglove.schemas.CameraCalibration` messages.
@@ -384,6 +461,144 @@ impl CompressedVideoChannel {
     fn __repr__(&self) -> String {
         format!(
             "CompressedVideoChannel(id={}, topic='{}')",
+            self.id(),
+            self.topic()
+        )
+        .to_string()
+    }
+}
+
+/// A channel for logging :py:class:`foxglove.schemas.CylinderPrimitive` messages.
+#[pyclass(module = "foxglove.channels")]
+struct CylinderPrimitiveChannel(Channel<foxglove::schemas::CylinderPrimitive>);
+
+#[pymethods]
+impl CylinderPrimitiveChannel {
+    /// Create a new channel.
+    ///
+    /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
+    #[new]
+    #[pyo3(signature = (topic, *, context=None))]
+    fn new(topic: &str, context: Option<&PyContext>) -> Self {
+        let base = if let Some(context) = context {
+            ChannelBuilder::new(topic)
+                .context(&context.0.clone())
+                .build()
+        } else {
+            Channel::new(topic)
+        };
+        Self(base)
+    }
+
+    /// The unique ID of the channel.
+    fn id(&self) -> u64 {
+        self.0.id().into()
+    }
+
+    /// The topic name of the channel.
+    fn topic(&self) -> &str {
+        self.0.topic()
+    }
+
+    /// The name of the schema for the channel.
+    fn schema_name(&self) -> Option<&str> {
+        Some(self.0.schema()?.name.as_str())
+    }
+
+    /// Close the channel.
+    ///
+    /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
+    /// channels dynamically, such as the :py:class:`foxglove.websocket.WebSocketServer`.
+    ///
+    /// Attempts to log on a closed channel will elicit a throttled warning message.
+    fn close(&mut self) {
+        self.0.close();
+    }
+
+    /// Log a :py:class:`foxglove.schemas.CylinderPrimitive` message to the channel.
+    ///
+    /// :param msg: The message to log.
+    /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
+    ///     message was recorded. Usually this is the time log() is called. If omitted, the
+    ///     current time is used.
+    #[pyo3(signature = (msg, *, log_time=None))]
+    fn log(&self, msg: &schemas::CylinderPrimitive, log_time: Option<u64>) {
+        let metadata = PartialMetadata { log_time };
+        self.0.log_with_meta(&msg.0, metadata);
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "CylinderPrimitiveChannel(id={}, topic='{}')",
+            self.id(),
+            self.topic()
+        )
+        .to_string()
+    }
+}
+
+/// A channel for logging :py:class:`foxglove.schemas.CubePrimitive` messages.
+#[pyclass(module = "foxglove.channels")]
+struct CubePrimitiveChannel(Channel<foxglove::schemas::CubePrimitive>);
+
+#[pymethods]
+impl CubePrimitiveChannel {
+    /// Create a new channel.
+    ///
+    /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
+    #[new]
+    #[pyo3(signature = (topic, *, context=None))]
+    fn new(topic: &str, context: Option<&PyContext>) -> Self {
+        let base = if let Some(context) = context {
+            ChannelBuilder::new(topic)
+                .context(&context.0.clone())
+                .build()
+        } else {
+            Channel::new(topic)
+        };
+        Self(base)
+    }
+
+    /// The unique ID of the channel.
+    fn id(&self) -> u64 {
+        self.0.id().into()
+    }
+
+    /// The topic name of the channel.
+    fn topic(&self) -> &str {
+        self.0.topic()
+    }
+
+    /// The name of the schema for the channel.
+    fn schema_name(&self) -> Option<&str> {
+        Some(self.0.schema()?.name.as_str())
+    }
+
+    /// Close the channel.
+    ///
+    /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
+    /// channels dynamically, such as the :py:class:`foxglove.websocket.WebSocketServer`.
+    ///
+    /// Attempts to log on a closed channel will elicit a throttled warning message.
+    fn close(&mut self) {
+        self.0.close();
+    }
+
+    /// Log a :py:class:`foxglove.schemas.CubePrimitive` message to the channel.
+    ///
+    /// :param msg: The message to log.
+    /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
+    ///     message was recorded. Usually this is the time log() is called. If omitted, the
+    ///     current time is used.
+    #[pyo3(signature = (msg, *, log_time=None))]
+    fn log(&self, msg: &schemas::CubePrimitive, log_time: Option<u64>) {
+        let metadata = PartialMetadata { log_time };
+        self.0.log_with_meta(&msg.0, metadata);
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "CubePrimitiveChannel(id={}, topic='{}')",
             self.id(),
             self.topic()
         )
@@ -864,6 +1079,75 @@ impl LaserScanChannel {
     }
 }
 
+/// A channel for logging :py:class:`foxglove.schemas.LinePrimitive` messages.
+#[pyclass(module = "foxglove.channels")]
+struct LinePrimitiveChannel(Channel<foxglove::schemas::LinePrimitive>);
+
+#[pymethods]
+impl LinePrimitiveChannel {
+    /// Create a new channel.
+    ///
+    /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
+    #[new]
+    #[pyo3(signature = (topic, *, context=None))]
+    fn new(topic: &str, context: Option<&PyContext>) -> Self {
+        let base = if let Some(context) = context {
+            ChannelBuilder::new(topic)
+                .context(&context.0.clone())
+                .build()
+        } else {
+            Channel::new(topic)
+        };
+        Self(base)
+    }
+
+    /// The unique ID of the channel.
+    fn id(&self) -> u64 {
+        self.0.id().into()
+    }
+
+    /// The topic name of the channel.
+    fn topic(&self) -> &str {
+        self.0.topic()
+    }
+
+    /// The name of the schema for the channel.
+    fn schema_name(&self) -> Option<&str> {
+        Some(self.0.schema()?.name.as_str())
+    }
+
+    /// Close the channel.
+    ///
+    /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
+    /// channels dynamically, such as the :py:class:`foxglove.websocket.WebSocketServer`.
+    ///
+    /// Attempts to log on a closed channel will elicit a throttled warning message.
+    fn close(&mut self) {
+        self.0.close();
+    }
+
+    /// Log a :py:class:`foxglove.schemas.LinePrimitive` message to the channel.
+    ///
+    /// :param msg: The message to log.
+    /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
+    ///     message was recorded. Usually this is the time log() is called. If omitted, the
+    ///     current time is used.
+    #[pyo3(signature = (msg, *, log_time=None))]
+    fn log(&self, msg: &schemas::LinePrimitive, log_time: Option<u64>) {
+        let metadata = PartialMetadata { log_time };
+        self.0.log_with_meta(&msg.0, metadata);
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "LinePrimitiveChannel(id={}, topic='{}')",
+            self.id(),
+            self.topic()
+        )
+        .to_string()
+    }
+}
+
 /// A channel for logging :py:class:`foxglove.schemas.LocationFix` messages.
 #[pyclass(module = "foxglove.channels")]
 struct LocationFixChannel(Channel<foxglove::schemas::LocationFix>);
@@ -1197,6 +1481,75 @@ impl SceneUpdateChannel {
     fn __repr__(&self) -> String {
         format!(
             "SceneUpdateChannel(id={}, topic='{}')",
+            self.id(),
+            self.topic()
+        )
+        .to_string()
+    }
+}
+
+/// A channel for logging :py:class:`foxglove.schemas.ModelPrimitive` messages.
+#[pyclass(module = "foxglove.channels")]
+struct ModelPrimitiveChannel(Channel<foxglove::schemas::ModelPrimitive>);
+
+#[pymethods]
+impl ModelPrimitiveChannel {
+    /// Create a new channel.
+    ///
+    /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
+    #[new]
+    #[pyo3(signature = (topic, *, context=None))]
+    fn new(topic: &str, context: Option<&PyContext>) -> Self {
+        let base = if let Some(context) = context {
+            ChannelBuilder::new(topic)
+                .context(&context.0.clone())
+                .build()
+        } else {
+            Channel::new(topic)
+        };
+        Self(base)
+    }
+
+    /// The unique ID of the channel.
+    fn id(&self) -> u64 {
+        self.0.id().into()
+    }
+
+    /// The topic name of the channel.
+    fn topic(&self) -> &str {
+        self.0.topic()
+    }
+
+    /// The name of the schema for the channel.
+    fn schema_name(&self) -> Option<&str> {
+        Some(self.0.schema()?.name.as_str())
+    }
+
+    /// Close the channel.
+    ///
+    /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
+    /// channels dynamically, such as the :py:class:`foxglove.websocket.WebSocketServer`.
+    ///
+    /// Attempts to log on a closed channel will elicit a throttled warning message.
+    fn close(&mut self) {
+        self.0.close();
+    }
+
+    /// Log a :py:class:`foxglove.schemas.ModelPrimitive` message to the channel.
+    ///
+    /// :param msg: The message to log.
+    /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
+    ///     message was recorded. Usually this is the time log() is called. If omitted, the
+    ///     current time is used.
+    #[pyo3(signature = (msg, *, log_time=None))]
+    fn log(&self, msg: &schemas::ModelPrimitive, log_time: Option<u64>) {
+        let metadata = PartialMetadata { log_time };
+        self.0.log_with_meta(&msg.0, metadata);
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "ModelPrimitiveChannel(id={}, topic='{}')",
             self.id(),
             self.topic()
         )
@@ -1948,6 +2301,75 @@ impl RawImageChannel {
     }
 }
 
+/// A channel for logging :py:class:`foxglove.schemas.SpherePrimitive` messages.
+#[pyclass(module = "foxglove.channels")]
+struct SpherePrimitiveChannel(Channel<foxglove::schemas::SpherePrimitive>);
+
+#[pymethods]
+impl SpherePrimitiveChannel {
+    /// Create a new channel.
+    ///
+    /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
+    #[new]
+    #[pyo3(signature = (topic, *, context=None))]
+    fn new(topic: &str, context: Option<&PyContext>) -> Self {
+        let base = if let Some(context) = context {
+            ChannelBuilder::new(topic)
+                .context(&context.0.clone())
+                .build()
+        } else {
+            Channel::new(topic)
+        };
+        Self(base)
+    }
+
+    /// The unique ID of the channel.
+    fn id(&self) -> u64 {
+        self.0.id().into()
+    }
+
+    /// The topic name of the channel.
+    fn topic(&self) -> &str {
+        self.0.topic()
+    }
+
+    /// The name of the schema for the channel.
+    fn schema_name(&self) -> Option<&str> {
+        Some(self.0.schema()?.name.as_str())
+    }
+
+    /// Close the channel.
+    ///
+    /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
+    /// channels dynamically, such as the :py:class:`foxglove.websocket.WebSocketServer`.
+    ///
+    /// Attempts to log on a closed channel will elicit a throttled warning message.
+    fn close(&mut self) {
+        self.0.close();
+    }
+
+    /// Log a :py:class:`foxglove.schemas.SpherePrimitive` message to the channel.
+    ///
+    /// :param msg: The message to log.
+    /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
+    ///     message was recorded. Usually this is the time log() is called. If omitted, the
+    ///     current time is used.
+    #[pyo3(signature = (msg, *, log_time=None))]
+    fn log(&self, msg: &schemas::SpherePrimitive, log_time: Option<u64>) {
+        let metadata = PartialMetadata { log_time };
+        self.0.log_with_meta(&msg.0, metadata);
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "SpherePrimitiveChannel(id={}, topic='{}')",
+            self.id(),
+            self.topic()
+        )
+        .to_string()
+    }
+}
+
 /// A channel for logging :py:class:`foxglove.schemas.TextAnnotation` messages.
 #[pyclass(module = "foxglove.channels")]
 struct TextAnnotationChannel(Channel<foxglove::schemas::TextAnnotation>);
@@ -2010,6 +2432,144 @@ impl TextAnnotationChannel {
     fn __repr__(&self) -> String {
         format!(
             "TextAnnotationChannel(id={}, topic='{}')",
+            self.id(),
+            self.topic()
+        )
+        .to_string()
+    }
+}
+
+/// A channel for logging :py:class:`foxglove.schemas.TextPrimitive` messages.
+#[pyclass(module = "foxglove.channels")]
+struct TextPrimitiveChannel(Channel<foxglove::schemas::TextPrimitive>);
+
+#[pymethods]
+impl TextPrimitiveChannel {
+    /// Create a new channel.
+    ///
+    /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
+    #[new]
+    #[pyo3(signature = (topic, *, context=None))]
+    fn new(topic: &str, context: Option<&PyContext>) -> Self {
+        let base = if let Some(context) = context {
+            ChannelBuilder::new(topic)
+                .context(&context.0.clone())
+                .build()
+        } else {
+            Channel::new(topic)
+        };
+        Self(base)
+    }
+
+    /// The unique ID of the channel.
+    fn id(&self) -> u64 {
+        self.0.id().into()
+    }
+
+    /// The topic name of the channel.
+    fn topic(&self) -> &str {
+        self.0.topic()
+    }
+
+    /// The name of the schema for the channel.
+    fn schema_name(&self) -> Option<&str> {
+        Some(self.0.schema()?.name.as_str())
+    }
+
+    /// Close the channel.
+    ///
+    /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
+    /// channels dynamically, such as the :py:class:`foxglove.websocket.WebSocketServer`.
+    ///
+    /// Attempts to log on a closed channel will elicit a throttled warning message.
+    fn close(&mut self) {
+        self.0.close();
+    }
+
+    /// Log a :py:class:`foxglove.schemas.TextPrimitive` message to the channel.
+    ///
+    /// :param msg: The message to log.
+    /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
+    ///     message was recorded. Usually this is the time log() is called. If omitted, the
+    ///     current time is used.
+    #[pyo3(signature = (msg, *, log_time=None))]
+    fn log(&self, msg: &schemas::TextPrimitive, log_time: Option<u64>) {
+        let metadata = PartialMetadata { log_time };
+        self.0.log_with_meta(&msg.0, metadata);
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "TextPrimitiveChannel(id={}, topic='{}')",
+            self.id(),
+            self.topic()
+        )
+        .to_string()
+    }
+}
+
+/// A channel for logging :py:class:`foxglove.schemas.TriangleListPrimitive` messages.
+#[pyclass(module = "foxglove.channels")]
+struct TriangleListPrimitiveChannel(Channel<foxglove::schemas::TriangleListPrimitive>);
+
+#[pymethods]
+impl TriangleListPrimitiveChannel {
+    /// Create a new channel.
+    ///
+    /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
+    #[new]
+    #[pyo3(signature = (topic, *, context=None))]
+    fn new(topic: &str, context: Option<&PyContext>) -> Self {
+        let base = if let Some(context) = context {
+            ChannelBuilder::new(topic)
+                .context(&context.0.clone())
+                .build()
+        } else {
+            Channel::new(topic)
+        };
+        Self(base)
+    }
+
+    /// The unique ID of the channel.
+    fn id(&self) -> u64 {
+        self.0.id().into()
+    }
+
+    /// The topic name of the channel.
+    fn topic(&self) -> &str {
+        self.0.topic()
+    }
+
+    /// The name of the schema for the channel.
+    fn schema_name(&self) -> Option<&str> {
+        Some(self.0.schema()?.name.as_str())
+    }
+
+    /// Close the channel.
+    ///
+    /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
+    /// channels dynamically, such as the :py:class:`foxglove.websocket.WebSocketServer`.
+    ///
+    /// Attempts to log on a closed channel will elicit a throttled warning message.
+    fn close(&mut self) {
+        self.0.close();
+    }
+
+    /// Log a :py:class:`foxglove.schemas.TriangleListPrimitive` message to the channel.
+    ///
+    /// :param msg: The message to log.
+    /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
+    ///     message was recorded. Usually this is the time log() is called. If omitted, the
+    ///     current time is used.
+    #[pyo3(signature = (msg, *, log_time=None))]
+    fn log(&self, msg: &schemas::TriangleListPrimitive, log_time: Option<u64>) {
+        let metadata = PartialMetadata { log_time };
+        self.0.log_with_meta(&msg.0, metadata);
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "TriangleListPrimitiveChannel(id={}, topic='{}')",
             self.id(),
             self.topic()
         )
