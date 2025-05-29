@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from .mcap import MCAPWriteOptions, MCAPWriter
 from .websocket import AssetHandler, Capability, Service, WebSocketServer
@@ -24,8 +24,25 @@ class BaseChannel:
         """The topic name of the channel"""
         ...
 
+    @property
+    def message_encoding(self) -> str:
+        """The message encoding for the channel"""
+        ...
+
+    def metadata(self) -> Dict[str, str]:
+        """The metadata for the channel"""
+        ...
+
+    def schema(self) -> Optional["Schema"]:
+        """The schema for the channel"""
+        ...
+
     def schema_name(self) -> Optional[str]:
         """The name of the schema for the channel"""
+        ...
+
+    def has_sinks(self) -> bool:
+        """Returns true if at least one sink is subscribed to this channel"""
         ...
 
     def log(
