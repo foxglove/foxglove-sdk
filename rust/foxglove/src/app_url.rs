@@ -74,7 +74,7 @@ impl AppUrl {
     }
 
     /// Sets a websocket data source.
-    pub fn with_websocket(mut self, host: impl Display, port: u16) -> Self {
+    pub(crate) fn with_websocket(mut self, host: impl Display, port: u16) -> Self {
         self.data_source = Some(DataSource::WebSocket(host.to_string(), port));
         self
     }
