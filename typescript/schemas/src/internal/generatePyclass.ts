@@ -611,7 +611,10 @@ impl ${channelClass} {
         self.0.message_encoding()
     }
 
-    /// The metadata for the channel.
+    /// Returns a copy of the channel's metadata.
+    ///
+    /// Note that changes made to the returned dictionary will not be applied to
+    /// the channel's metadata.
     fn metadata(&self, py: Python<'_>) -> PyResult<PyObject> {
         let dict = PyDict::new(py);
         for (key, value) in self.0.metadata() {
@@ -620,7 +623,10 @@ impl ${channelClass} {
         Ok(dict.into())
     }
 
-    /// The schemafor the channel.
+    /// Returns a copy of the channel's schema.
+    ///
+    /// Note that changes made to the returned object will not be applied to
+    /// the channel's schema.
     fn schema(&self) -> Option<PySchema> {
         self.0.schema().cloned().map(PySchema::from)
     }
@@ -715,10 +721,20 @@ export function generatePyChannelStub(schemas: FoxgloveMessageSchema[]): string 
         `        """The message encoding for the channel"""`,
         `        ...`,
         `    def metadata(self) -> Dict[str, str]:`,
-        `        """The metadata for the channel"""`,
+        `        """`,
+        `        Returns a copy of the channel's metadata.`,
+        ``,
+        `        Note that changes made to the returned dictionary will not be applied to`,
+        `        the channel's metadata.`,
+        `        """`,
         `        ...`,
         `    def schema(self) -> Optional[Schema]:`,
-        `        """The schema for the channel"""`,
+        `        """`,
+        `        Returns a copy of the channel's schema.`,
+        ``,
+        `        Note that changes made to the returned object will not be applied to`,
+        `        the channel's schema.`,
+        `        """`,
         `        ...`,
         `    def schema_name(self) -> Optional[str]:`,
         `        """The name of the schema for the channel."""`,

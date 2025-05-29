@@ -74,11 +74,21 @@ class Channel:
         return self.base.message_encoding
 
     def metadata(self) -> Dict[str, str]:
-        """The metadata for the channel"""
+        """
+        Returns a copy of the channel's metadata.
+
+        Note that changes made to the returned dictionary will not be applied to
+        the channel's metadata.
+        """
         return self.base.metadata()
 
     def schema(self) -> Optional[_foxglove.Schema]:
-        """The schema for the channel"""
+        """
+        Returns a copy of the channel's metadata.
+
+        Note that changes made to the returned object will not be applied to
+        the channel's schema.
+        """
         return self.base.schema()
 
     def schema_name(self) -> Optional[str]:

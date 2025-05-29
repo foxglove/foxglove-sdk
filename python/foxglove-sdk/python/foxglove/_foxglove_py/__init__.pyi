@@ -30,11 +30,21 @@ class BaseChannel:
         ...
 
     def metadata(self) -> Dict[str, str]:
-        """The metadata for the channel"""
+        """
+        Returns a copy of the channel's metadata.
+
+        Note that changes made to the returned dictionary will not be applied to
+        the channel's metadata.
+        """
         ...
 
     def schema(self) -> Optional["Schema"]:
-        """The schema for the channel"""
+        """
+        Returns a copy of the channel's schema.
+
+        Note that changes made to the returned object will not be applied to
+        the channel's schema.
+        """
         ...
 
     def schema_name(self) -> Optional[str]:

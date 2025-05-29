@@ -71,11 +71,21 @@ class ArrowPrimitiveChannel:
         ...
 
     def metadata(self) -> Dict[str, str]:
-        """The metadata for the channel"""
+        """
+        Returns a copy of the channel's metadata.
+
+        Note that changes made to the returned dictionary will not be applied to
+        the channel's metadata.
+        """
         ...
 
     def schema(self) -> Optional[Schema]:
-        """The schema for the channel"""
+        """
+        Returns a copy of the channel's schema.
+
+        Note that changes made to the returned object will not be applied to
+        the channel's schema.
+        """
         ...
 
     def schema_name(self) -> Optional[str]:
@@ -126,11 +136,21 @@ class CameraCalibrationChannel:
         ...
 
     def metadata(self) -> Dict[str, str]:
-        """The metadata for the channel"""
+        """
+        Returns a copy of the channel's metadata.
+
+        Note that changes made to the returned dictionary will not be applied to
+        the channel's metadata.
+        """
         ...
 
     def schema(self) -> Optional[Schema]:
-        """The schema for the channel"""
+        """
+        Returns a copy of the channel's schema.
+
+        Note that changes made to the returned object will not be applied to
+        the channel's schema.
+        """
         ...
 
     def schema_name(self) -> Optional[str]:
@@ -181,11 +201,21 @@ class CircleAnnotationChannel:
         ...
 
     def metadata(self) -> Dict[str, str]:
-        """The metadata for the channel"""
+        """
+        Returns a copy of the channel's metadata.
+
+        Note that changes made to the returned dictionary will not be applied to
+        the channel's metadata.
+        """
         ...
 
     def schema(self) -> Optional[Schema]:
-        """The schema for the channel"""
+        """
+        Returns a copy of the channel's schema.
+
+        Note that changes made to the returned object will not be applied to
+        the channel's schema.
+        """
         ...
 
     def schema_name(self) -> Optional[str]:
@@ -236,11 +266,21 @@ class ColorChannel:
         ...
 
     def metadata(self) -> Dict[str, str]:
-        """The metadata for the channel"""
+        """
+        Returns a copy of the channel's metadata.
+
+        Note that changes made to the returned dictionary will not be applied to
+        the channel's metadata.
+        """
         ...
 
     def schema(self) -> Optional[Schema]:
-        """The schema for the channel"""
+        """
+        Returns a copy of the channel's schema.
+
+        Note that changes made to the returned object will not be applied to
+        the channel's schema.
+        """
         ...
 
     def schema_name(self) -> Optional[str]:
@@ -291,11 +331,21 @@ class CompressedImageChannel:
         ...
 
     def metadata(self) -> Dict[str, str]:
-        """The metadata for the channel"""
+        """
+        Returns a copy of the channel's metadata.
+
+        Note that changes made to the returned dictionary will not be applied to
+        the channel's metadata.
+        """
         ...
 
     def schema(self) -> Optional[Schema]:
-        """The schema for the channel"""
+        """
+        Returns a copy of the channel's schema.
+
+        Note that changes made to the returned object will not be applied to
+        the channel's schema.
+        """
         ...
 
     def schema_name(self) -> Optional[str]:
@@ -346,11 +396,21 @@ class CompressedVideoChannel:
         ...
 
     def metadata(self) -> Dict[str, str]:
-        """The metadata for the channel"""
+        """
+        Returns a copy of the channel's metadata.
+
+        Note that changes made to the returned dictionary will not be applied to
+        the channel's metadata.
+        """
         ...
 
     def schema(self) -> Optional[Schema]:
-        """The schema for the channel"""
+        """
+        Returns a copy of the channel's schema.
+
+        Note that changes made to the returned object will not be applied to
+        the channel's schema.
+        """
         ...
 
     def schema_name(self) -> Optional[str]:
@@ -401,11 +461,21 @@ class CubePrimitiveChannel:
         ...
 
     def metadata(self) -> Dict[str, str]:
-        """The metadata for the channel"""
+        """
+        Returns a copy of the channel's metadata.
+
+        Note that changes made to the returned dictionary will not be applied to
+        the channel's metadata.
+        """
         ...
 
     def schema(self) -> Optional[Schema]:
-        """The schema for the channel"""
+        """
+        Returns a copy of the channel's schema.
+
+        Note that changes made to the returned object will not be applied to
+        the channel's schema.
+        """
         ...
 
     def schema_name(self) -> Optional[str]:
@@ -456,11 +526,21 @@ class CylinderPrimitiveChannel:
         ...
 
     def metadata(self) -> Dict[str, str]:
-        """The metadata for the channel"""
+        """
+        Returns a copy of the channel's metadata.
+
+        Note that changes made to the returned dictionary will not be applied to
+        the channel's metadata.
+        """
         ...
 
     def schema(self) -> Optional[Schema]:
-        """The schema for the channel"""
+        """
+        Returns a copy of the channel's schema.
+
+        Note that changes made to the returned object will not be applied to
+        the channel's schema.
+        """
         ...
 
     def schema_name(self) -> Optional[str]:
@@ -511,11 +591,21 @@ class FrameTransformChannel:
         ...
 
     def metadata(self) -> Dict[str, str]:
-        """The metadata for the channel"""
+        """
+        Returns a copy of the channel's metadata.
+
+        Note that changes made to the returned dictionary will not be applied to
+        the channel's metadata.
+        """
         ...
 
     def schema(self) -> Optional[Schema]:
-        """The schema for the channel"""
+        """
+        Returns a copy of the channel's schema.
+
+        Note that changes made to the returned object will not be applied to
+        the channel's schema.
+        """
         ...
 
     def schema_name(self) -> Optional[str]:
@@ -566,11 +656,21 @@ class FrameTransformsChannel:
         ...
 
     def metadata(self) -> Dict[str, str]:
-        """The metadata for the channel"""
+        """
+        Returns a copy of the channel's metadata.
+
+        Note that changes made to the returned dictionary will not be applied to
+        the channel's metadata.
+        """
         ...
 
     def schema(self) -> Optional[Schema]:
-        """The schema for the channel"""
+        """
+        Returns a copy of the channel's schema.
+
+        Note that changes made to the returned object will not be applied to
+        the channel's schema.
+        """
         ...
 
     def schema_name(self) -> Optional[str]:
@@ -621,11 +721,21 @@ class GeoJsonChannel:
         ...
 
     def metadata(self) -> Dict[str, str]:
-        """The metadata for the channel"""
+        """
+        Returns a copy of the channel's metadata.
+
+        Note that changes made to the returned dictionary will not be applied to
+        the channel's metadata.
+        """
         ...
 
     def schema(self) -> Optional[Schema]:
-        """The schema for the channel"""
+        """
+        Returns a copy of the channel's schema.
+
+        Note that changes made to the returned object will not be applied to
+        the channel's schema.
+        """
         ...
 
     def schema_name(self) -> Optional[str]:
@@ -676,11 +786,21 @@ class GridChannel:
         ...
 
     def metadata(self) -> Dict[str, str]:
-        """The metadata for the channel"""
+        """
+        Returns a copy of the channel's metadata.
+
+        Note that changes made to the returned dictionary will not be applied to
+        the channel's metadata.
+        """
         ...
 
     def schema(self) -> Optional[Schema]:
-        """The schema for the channel"""
+        """
+        Returns a copy of the channel's schema.
+
+        Note that changes made to the returned object will not be applied to
+        the channel's schema.
+        """
         ...
 
     def schema_name(self) -> Optional[str]:
@@ -731,11 +851,21 @@ class ImageAnnotationsChannel:
         ...
 
     def metadata(self) -> Dict[str, str]:
-        """The metadata for the channel"""
+        """
+        Returns a copy of the channel's metadata.
+
+        Note that changes made to the returned dictionary will not be applied to
+        the channel's metadata.
+        """
         ...
 
     def schema(self) -> Optional[Schema]:
-        """The schema for the channel"""
+        """
+        Returns a copy of the channel's schema.
+
+        Note that changes made to the returned object will not be applied to
+        the channel's schema.
+        """
         ...
 
     def schema_name(self) -> Optional[str]:
@@ -786,11 +916,21 @@ class KeyValuePairChannel:
         ...
 
     def metadata(self) -> Dict[str, str]:
-        """The metadata for the channel"""
+        """
+        Returns a copy of the channel's metadata.
+
+        Note that changes made to the returned dictionary will not be applied to
+        the channel's metadata.
+        """
         ...
 
     def schema(self) -> Optional[Schema]:
-        """The schema for the channel"""
+        """
+        Returns a copy of the channel's schema.
+
+        Note that changes made to the returned object will not be applied to
+        the channel's schema.
+        """
         ...
 
     def schema_name(self) -> Optional[str]:
@@ -841,11 +981,21 @@ class LaserScanChannel:
         ...
 
     def metadata(self) -> Dict[str, str]:
-        """The metadata for the channel"""
+        """
+        Returns a copy of the channel's metadata.
+
+        Note that changes made to the returned dictionary will not be applied to
+        the channel's metadata.
+        """
         ...
 
     def schema(self) -> Optional[Schema]:
-        """The schema for the channel"""
+        """
+        Returns a copy of the channel's schema.
+
+        Note that changes made to the returned object will not be applied to
+        the channel's schema.
+        """
         ...
 
     def schema_name(self) -> Optional[str]:
@@ -896,11 +1046,21 @@ class LinePrimitiveChannel:
         ...
 
     def metadata(self) -> Dict[str, str]:
-        """The metadata for the channel"""
+        """
+        Returns a copy of the channel's metadata.
+
+        Note that changes made to the returned dictionary will not be applied to
+        the channel's metadata.
+        """
         ...
 
     def schema(self) -> Optional[Schema]:
-        """The schema for the channel"""
+        """
+        Returns a copy of the channel's schema.
+
+        Note that changes made to the returned object will not be applied to
+        the channel's schema.
+        """
         ...
 
     def schema_name(self) -> Optional[str]:
@@ -951,11 +1111,21 @@ class LocationFixChannel:
         ...
 
     def metadata(self) -> Dict[str, str]:
-        """The metadata for the channel"""
+        """
+        Returns a copy of the channel's metadata.
+
+        Note that changes made to the returned dictionary will not be applied to
+        the channel's metadata.
+        """
         ...
 
     def schema(self) -> Optional[Schema]:
-        """The schema for the channel"""
+        """
+        Returns a copy of the channel's schema.
+
+        Note that changes made to the returned object will not be applied to
+        the channel's schema.
+        """
         ...
 
     def schema_name(self) -> Optional[str]:
@@ -1006,11 +1176,21 @@ class LogChannel:
         ...
 
     def metadata(self) -> Dict[str, str]:
-        """The metadata for the channel"""
+        """
+        Returns a copy of the channel's metadata.
+
+        Note that changes made to the returned dictionary will not be applied to
+        the channel's metadata.
+        """
         ...
 
     def schema(self) -> Optional[Schema]:
-        """The schema for the channel"""
+        """
+        Returns a copy of the channel's schema.
+
+        Note that changes made to the returned object will not be applied to
+        the channel's schema.
+        """
         ...
 
     def schema_name(self) -> Optional[str]:
@@ -1061,11 +1241,21 @@ class ModelPrimitiveChannel:
         ...
 
     def metadata(self) -> Dict[str, str]:
-        """The metadata for the channel"""
+        """
+        Returns a copy of the channel's metadata.
+
+        Note that changes made to the returned dictionary will not be applied to
+        the channel's metadata.
+        """
         ...
 
     def schema(self) -> Optional[Schema]:
-        """The schema for the channel"""
+        """
+        Returns a copy of the channel's schema.
+
+        Note that changes made to the returned object will not be applied to
+        the channel's schema.
+        """
         ...
 
     def schema_name(self) -> Optional[str]:
@@ -1116,11 +1306,21 @@ class PackedElementFieldChannel:
         ...
 
     def metadata(self) -> Dict[str, str]:
-        """The metadata for the channel"""
+        """
+        Returns a copy of the channel's metadata.
+
+        Note that changes made to the returned dictionary will not be applied to
+        the channel's metadata.
+        """
         ...
 
     def schema(self) -> Optional[Schema]:
-        """The schema for the channel"""
+        """
+        Returns a copy of the channel's schema.
+
+        Note that changes made to the returned object will not be applied to
+        the channel's schema.
+        """
         ...
 
     def schema_name(self) -> Optional[str]:
@@ -1171,11 +1371,21 @@ class Point2Channel:
         ...
 
     def metadata(self) -> Dict[str, str]:
-        """The metadata for the channel"""
+        """
+        Returns a copy of the channel's metadata.
+
+        Note that changes made to the returned dictionary will not be applied to
+        the channel's metadata.
+        """
         ...
 
     def schema(self) -> Optional[Schema]:
-        """The schema for the channel"""
+        """
+        Returns a copy of the channel's schema.
+
+        Note that changes made to the returned object will not be applied to
+        the channel's schema.
+        """
         ...
 
     def schema_name(self) -> Optional[str]:
@@ -1226,11 +1436,21 @@ class Point3Channel:
         ...
 
     def metadata(self) -> Dict[str, str]:
-        """The metadata for the channel"""
+        """
+        Returns a copy of the channel's metadata.
+
+        Note that changes made to the returned dictionary will not be applied to
+        the channel's metadata.
+        """
         ...
 
     def schema(self) -> Optional[Schema]:
-        """The schema for the channel"""
+        """
+        Returns a copy of the channel's schema.
+
+        Note that changes made to the returned object will not be applied to
+        the channel's schema.
+        """
         ...
 
     def schema_name(self) -> Optional[str]:
@@ -1281,11 +1501,21 @@ class PointCloudChannel:
         ...
 
     def metadata(self) -> Dict[str, str]:
-        """The metadata for the channel"""
+        """
+        Returns a copy of the channel's metadata.
+
+        Note that changes made to the returned dictionary will not be applied to
+        the channel's metadata.
+        """
         ...
 
     def schema(self) -> Optional[Schema]:
-        """The schema for the channel"""
+        """
+        Returns a copy of the channel's schema.
+
+        Note that changes made to the returned object will not be applied to
+        the channel's schema.
+        """
         ...
 
     def schema_name(self) -> Optional[str]:
@@ -1336,11 +1566,21 @@ class PointsAnnotationChannel:
         ...
 
     def metadata(self) -> Dict[str, str]:
-        """The metadata for the channel"""
+        """
+        Returns a copy of the channel's metadata.
+
+        Note that changes made to the returned dictionary will not be applied to
+        the channel's metadata.
+        """
         ...
 
     def schema(self) -> Optional[Schema]:
-        """The schema for the channel"""
+        """
+        Returns a copy of the channel's schema.
+
+        Note that changes made to the returned object will not be applied to
+        the channel's schema.
+        """
         ...
 
     def schema_name(self) -> Optional[str]:
@@ -1391,11 +1631,21 @@ class PoseChannel:
         ...
 
     def metadata(self) -> Dict[str, str]:
-        """The metadata for the channel"""
+        """
+        Returns a copy of the channel's metadata.
+
+        Note that changes made to the returned dictionary will not be applied to
+        the channel's metadata.
+        """
         ...
 
     def schema(self) -> Optional[Schema]:
-        """The schema for the channel"""
+        """
+        Returns a copy of the channel's schema.
+
+        Note that changes made to the returned object will not be applied to
+        the channel's schema.
+        """
         ...
 
     def schema_name(self) -> Optional[str]:
@@ -1446,11 +1696,21 @@ class PoseInFrameChannel:
         ...
 
     def metadata(self) -> Dict[str, str]:
-        """The metadata for the channel"""
+        """
+        Returns a copy of the channel's metadata.
+
+        Note that changes made to the returned dictionary will not be applied to
+        the channel's metadata.
+        """
         ...
 
     def schema(self) -> Optional[Schema]:
-        """The schema for the channel"""
+        """
+        Returns a copy of the channel's schema.
+
+        Note that changes made to the returned object will not be applied to
+        the channel's schema.
+        """
         ...
 
     def schema_name(self) -> Optional[str]:
@@ -1501,11 +1761,21 @@ class PosesInFrameChannel:
         ...
 
     def metadata(self) -> Dict[str, str]:
-        """The metadata for the channel"""
+        """
+        Returns a copy of the channel's metadata.
+
+        Note that changes made to the returned dictionary will not be applied to
+        the channel's metadata.
+        """
         ...
 
     def schema(self) -> Optional[Schema]:
-        """The schema for the channel"""
+        """
+        Returns a copy of the channel's schema.
+
+        Note that changes made to the returned object will not be applied to
+        the channel's schema.
+        """
         ...
 
     def schema_name(self) -> Optional[str]:
@@ -1556,11 +1826,21 @@ class QuaternionChannel:
         ...
 
     def metadata(self) -> Dict[str, str]:
-        """The metadata for the channel"""
+        """
+        Returns a copy of the channel's metadata.
+
+        Note that changes made to the returned dictionary will not be applied to
+        the channel's metadata.
+        """
         ...
 
     def schema(self) -> Optional[Schema]:
-        """The schema for the channel"""
+        """
+        Returns a copy of the channel's schema.
+
+        Note that changes made to the returned object will not be applied to
+        the channel's schema.
+        """
         ...
 
     def schema_name(self) -> Optional[str]:
@@ -1611,11 +1891,21 @@ class RawAudioChannel:
         ...
 
     def metadata(self) -> Dict[str, str]:
-        """The metadata for the channel"""
+        """
+        Returns a copy of the channel's metadata.
+
+        Note that changes made to the returned dictionary will not be applied to
+        the channel's metadata.
+        """
         ...
 
     def schema(self) -> Optional[Schema]:
-        """The schema for the channel"""
+        """
+        Returns a copy of the channel's schema.
+
+        Note that changes made to the returned object will not be applied to
+        the channel's schema.
+        """
         ...
 
     def schema_name(self) -> Optional[str]:
@@ -1666,11 +1956,21 @@ class RawImageChannel:
         ...
 
     def metadata(self) -> Dict[str, str]:
-        """The metadata for the channel"""
+        """
+        Returns a copy of the channel's metadata.
+
+        Note that changes made to the returned dictionary will not be applied to
+        the channel's metadata.
+        """
         ...
 
     def schema(self) -> Optional[Schema]:
-        """The schema for the channel"""
+        """
+        Returns a copy of the channel's schema.
+
+        Note that changes made to the returned object will not be applied to
+        the channel's schema.
+        """
         ...
 
     def schema_name(self) -> Optional[str]:
@@ -1721,11 +2021,21 @@ class SceneEntityChannel:
         ...
 
     def metadata(self) -> Dict[str, str]:
-        """The metadata for the channel"""
+        """
+        Returns a copy of the channel's metadata.
+
+        Note that changes made to the returned dictionary will not be applied to
+        the channel's metadata.
+        """
         ...
 
     def schema(self) -> Optional[Schema]:
-        """The schema for the channel"""
+        """
+        Returns a copy of the channel's schema.
+
+        Note that changes made to the returned object will not be applied to
+        the channel's schema.
+        """
         ...
 
     def schema_name(self) -> Optional[str]:
@@ -1776,11 +2086,21 @@ class SceneEntityDeletionChannel:
         ...
 
     def metadata(self) -> Dict[str, str]:
-        """The metadata for the channel"""
+        """
+        Returns a copy of the channel's metadata.
+
+        Note that changes made to the returned dictionary will not be applied to
+        the channel's metadata.
+        """
         ...
 
     def schema(self) -> Optional[Schema]:
-        """The schema for the channel"""
+        """
+        Returns a copy of the channel's schema.
+
+        Note that changes made to the returned object will not be applied to
+        the channel's schema.
+        """
         ...
 
     def schema_name(self) -> Optional[str]:
@@ -1831,11 +2151,21 @@ class SceneUpdateChannel:
         ...
 
     def metadata(self) -> Dict[str, str]:
-        """The metadata for the channel"""
+        """
+        Returns a copy of the channel's metadata.
+
+        Note that changes made to the returned dictionary will not be applied to
+        the channel's metadata.
+        """
         ...
 
     def schema(self) -> Optional[Schema]:
-        """The schema for the channel"""
+        """
+        Returns a copy of the channel's schema.
+
+        Note that changes made to the returned object will not be applied to
+        the channel's schema.
+        """
         ...
 
     def schema_name(self) -> Optional[str]:
@@ -1886,11 +2216,21 @@ class SpherePrimitiveChannel:
         ...
 
     def metadata(self) -> Dict[str, str]:
-        """The metadata for the channel"""
+        """
+        Returns a copy of the channel's metadata.
+
+        Note that changes made to the returned dictionary will not be applied to
+        the channel's metadata.
+        """
         ...
 
     def schema(self) -> Optional[Schema]:
-        """The schema for the channel"""
+        """
+        Returns a copy of the channel's schema.
+
+        Note that changes made to the returned object will not be applied to
+        the channel's schema.
+        """
         ...
 
     def schema_name(self) -> Optional[str]:
@@ -1941,11 +2281,21 @@ class TextAnnotationChannel:
         ...
 
     def metadata(self) -> Dict[str, str]:
-        """The metadata for the channel"""
+        """
+        Returns a copy of the channel's metadata.
+
+        Note that changes made to the returned dictionary will not be applied to
+        the channel's metadata.
+        """
         ...
 
     def schema(self) -> Optional[Schema]:
-        """The schema for the channel"""
+        """
+        Returns a copy of the channel's schema.
+
+        Note that changes made to the returned object will not be applied to
+        the channel's schema.
+        """
         ...
 
     def schema_name(self) -> Optional[str]:
@@ -1996,11 +2346,21 @@ class TextPrimitiveChannel:
         ...
 
     def metadata(self) -> Dict[str, str]:
-        """The metadata for the channel"""
+        """
+        Returns a copy of the channel's metadata.
+
+        Note that changes made to the returned dictionary will not be applied to
+        the channel's metadata.
+        """
         ...
 
     def schema(self) -> Optional[Schema]:
-        """The schema for the channel"""
+        """
+        Returns a copy of the channel's schema.
+
+        Note that changes made to the returned object will not be applied to
+        the channel's schema.
+        """
         ...
 
     def schema_name(self) -> Optional[str]:
@@ -2051,11 +2411,21 @@ class TriangleListPrimitiveChannel:
         ...
 
     def metadata(self) -> Dict[str, str]:
-        """The metadata for the channel"""
+        """
+        Returns a copy of the channel's metadata.
+
+        Note that changes made to the returned dictionary will not be applied to
+        the channel's metadata.
+        """
         ...
 
     def schema(self) -> Optional[Schema]:
-        """The schema for the channel"""
+        """
+        Returns a copy of the channel's schema.
+
+        Note that changes made to the returned object will not be applied to
+        the channel's schema.
+        """
         ...
 
     def schema_name(self) -> Optional[str]:
@@ -2106,11 +2476,21 @@ class Vector2Channel:
         ...
 
     def metadata(self) -> Dict[str, str]:
-        """The metadata for the channel"""
+        """
+        Returns a copy of the channel's metadata.
+
+        Note that changes made to the returned dictionary will not be applied to
+        the channel's metadata.
+        """
         ...
 
     def schema(self) -> Optional[Schema]:
-        """The schema for the channel"""
+        """
+        Returns a copy of the channel's schema.
+
+        Note that changes made to the returned object will not be applied to
+        the channel's schema.
+        """
         ...
 
     def schema_name(self) -> Optional[str]:
@@ -2161,11 +2541,21 @@ class Vector3Channel:
         ...
 
     def metadata(self) -> Dict[str, str]:
-        """The metadata for the channel"""
+        """
+        Returns a copy of the channel's metadata.
+
+        Note that changes made to the returned dictionary will not be applied to
+        the channel's metadata.
+        """
         ...
 
     def schema(self) -> Optional[Schema]:
-        """The schema for the channel"""
+        """
+        Returns a copy of the channel's schema.
+
+        Note that changes made to the returned object will not be applied to
+        the channel's schema.
+        """
         ...
 
     def schema_name(self) -> Optional[str]:

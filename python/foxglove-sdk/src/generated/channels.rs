@@ -98,7 +98,10 @@ impl ArrowPrimitiveChannel {
         self.0.message_encoding()
     }
 
-    /// The metadata for the channel.
+    /// Returns a copy of the channel's metadata.
+    ///
+    /// Note that changes made to the returned dictionary will not be applied to
+    /// the channel's metadata.
     fn metadata(&self, py: Python<'_>) -> PyResult<PyObject> {
         let dict = PyDict::new(py);
         for (key, value) in self.0.metadata() {
@@ -107,7 +110,10 @@ impl ArrowPrimitiveChannel {
         Ok(dict.into())
     }
 
-    /// The schemafor the channel.
+    /// Returns a copy of the channel's schema.
+    ///
+    /// Note that changes made to the returned object will not be applied to
+    /// the channel's schema.
     fn schema(&self) -> Option<PySchema> {
         self.0.schema().cloned().map(PySchema::from)
     }
@@ -192,7 +198,10 @@ impl CameraCalibrationChannel {
         self.0.message_encoding()
     }
 
-    /// The metadata for the channel.
+    /// Returns a copy of the channel's metadata.
+    ///
+    /// Note that changes made to the returned dictionary will not be applied to
+    /// the channel's metadata.
     fn metadata(&self, py: Python<'_>) -> PyResult<PyObject> {
         let dict = PyDict::new(py);
         for (key, value) in self.0.metadata() {
@@ -201,7 +210,10 @@ impl CameraCalibrationChannel {
         Ok(dict.into())
     }
 
-    /// The schemafor the channel.
+    /// Returns a copy of the channel's schema.
+    ///
+    /// Note that changes made to the returned object will not be applied to
+    /// the channel's schema.
     fn schema(&self) -> Option<PySchema> {
         self.0.schema().cloned().map(PySchema::from)
     }
@@ -286,7 +298,10 @@ impl CircleAnnotationChannel {
         self.0.message_encoding()
     }
 
-    /// The metadata for the channel.
+    /// Returns a copy of the channel's metadata.
+    ///
+    /// Note that changes made to the returned dictionary will not be applied to
+    /// the channel's metadata.
     fn metadata(&self, py: Python<'_>) -> PyResult<PyObject> {
         let dict = PyDict::new(py);
         for (key, value) in self.0.metadata() {
@@ -295,7 +310,10 @@ impl CircleAnnotationChannel {
         Ok(dict.into())
     }
 
-    /// The schemafor the channel.
+    /// Returns a copy of the channel's schema.
+    ///
+    /// Note that changes made to the returned object will not be applied to
+    /// the channel's schema.
     fn schema(&self) -> Option<PySchema> {
         self.0.schema().cloned().map(PySchema::from)
     }
@@ -380,7 +398,10 @@ impl ColorChannel {
         self.0.message_encoding()
     }
 
-    /// The metadata for the channel.
+    /// Returns a copy of the channel's metadata.
+    ///
+    /// Note that changes made to the returned dictionary will not be applied to
+    /// the channel's metadata.
     fn metadata(&self, py: Python<'_>) -> PyResult<PyObject> {
         let dict = PyDict::new(py);
         for (key, value) in self.0.metadata() {
@@ -389,7 +410,10 @@ impl ColorChannel {
         Ok(dict.into())
     }
 
-    /// The schemafor the channel.
+    /// Returns a copy of the channel's schema.
+    ///
+    /// Note that changes made to the returned object will not be applied to
+    /// the channel's schema.
     fn schema(&self) -> Option<PySchema> {
         self.0.schema().cloned().map(PySchema::from)
     }
@@ -469,7 +493,10 @@ impl CompressedImageChannel {
         self.0.message_encoding()
     }
 
-    /// The metadata for the channel.
+    /// Returns a copy of the channel's metadata.
+    ///
+    /// Note that changes made to the returned dictionary will not be applied to
+    /// the channel's metadata.
     fn metadata(&self, py: Python<'_>) -> PyResult<PyObject> {
         let dict = PyDict::new(py);
         for (key, value) in self.0.metadata() {
@@ -478,7 +505,10 @@ impl CompressedImageChannel {
         Ok(dict.into())
     }
 
-    /// The schemafor the channel.
+    /// Returns a copy of the channel's schema.
+    ///
+    /// Note that changes made to the returned object will not be applied to
+    /// the channel's schema.
     fn schema(&self) -> Option<PySchema> {
         self.0.schema().cloned().map(PySchema::from)
     }
@@ -563,7 +593,10 @@ impl CompressedVideoChannel {
         self.0.message_encoding()
     }
 
-    /// The metadata for the channel.
+    /// Returns a copy of the channel's metadata.
+    ///
+    /// Note that changes made to the returned dictionary will not be applied to
+    /// the channel's metadata.
     fn metadata(&self, py: Python<'_>) -> PyResult<PyObject> {
         let dict = PyDict::new(py);
         for (key, value) in self.0.metadata() {
@@ -572,7 +605,10 @@ impl CompressedVideoChannel {
         Ok(dict.into())
     }
 
-    /// The schemafor the channel.
+    /// Returns a copy of the channel's schema.
+    ///
+    /// Note that changes made to the returned object will not be applied to
+    /// the channel's schema.
     fn schema(&self) -> Option<PySchema> {
         self.0.schema().cloned().map(PySchema::from)
     }
@@ -657,7 +693,10 @@ impl CylinderPrimitiveChannel {
         self.0.message_encoding()
     }
 
-    /// The metadata for the channel.
+    /// Returns a copy of the channel's metadata.
+    ///
+    /// Note that changes made to the returned dictionary will not be applied to
+    /// the channel's metadata.
     fn metadata(&self, py: Python<'_>) -> PyResult<PyObject> {
         let dict = PyDict::new(py);
         for (key, value) in self.0.metadata() {
@@ -666,7 +705,10 @@ impl CylinderPrimitiveChannel {
         Ok(dict.into())
     }
 
-    /// The schemafor the channel.
+    /// Returns a copy of the channel's schema.
+    ///
+    /// Note that changes made to the returned object will not be applied to
+    /// the channel's schema.
     fn schema(&self) -> Option<PySchema> {
         self.0.schema().cloned().map(PySchema::from)
     }
@@ -751,7 +793,10 @@ impl CubePrimitiveChannel {
         self.0.message_encoding()
     }
 
-    /// The metadata for the channel.
+    /// Returns a copy of the channel's metadata.
+    ///
+    /// Note that changes made to the returned dictionary will not be applied to
+    /// the channel's metadata.
     fn metadata(&self, py: Python<'_>) -> PyResult<PyObject> {
         let dict = PyDict::new(py);
         for (key, value) in self.0.metadata() {
@@ -760,7 +805,10 @@ impl CubePrimitiveChannel {
         Ok(dict.into())
     }
 
-    /// The schemafor the channel.
+    /// Returns a copy of the channel's schema.
+    ///
+    /// Note that changes made to the returned object will not be applied to
+    /// the channel's schema.
     fn schema(&self) -> Option<PySchema> {
         self.0.schema().cloned().map(PySchema::from)
     }
@@ -845,7 +893,10 @@ impl FrameTransformChannel {
         self.0.message_encoding()
     }
 
-    /// The metadata for the channel.
+    /// Returns a copy of the channel's metadata.
+    ///
+    /// Note that changes made to the returned dictionary will not be applied to
+    /// the channel's metadata.
     fn metadata(&self, py: Python<'_>) -> PyResult<PyObject> {
         let dict = PyDict::new(py);
         for (key, value) in self.0.metadata() {
@@ -854,7 +905,10 @@ impl FrameTransformChannel {
         Ok(dict.into())
     }
 
-    /// The schemafor the channel.
+    /// Returns a copy of the channel's schema.
+    ///
+    /// Note that changes made to the returned object will not be applied to
+    /// the channel's schema.
     fn schema(&self) -> Option<PySchema> {
         self.0.schema().cloned().map(PySchema::from)
     }
@@ -939,7 +993,10 @@ impl FrameTransformsChannel {
         self.0.message_encoding()
     }
 
-    /// The metadata for the channel.
+    /// Returns a copy of the channel's metadata.
+    ///
+    /// Note that changes made to the returned dictionary will not be applied to
+    /// the channel's metadata.
     fn metadata(&self, py: Python<'_>) -> PyResult<PyObject> {
         let dict = PyDict::new(py);
         for (key, value) in self.0.metadata() {
@@ -948,7 +1005,10 @@ impl FrameTransformsChannel {
         Ok(dict.into())
     }
 
-    /// The schemafor the channel.
+    /// Returns a copy of the channel's schema.
+    ///
+    /// Note that changes made to the returned object will not be applied to
+    /// the channel's schema.
     fn schema(&self) -> Option<PySchema> {
         self.0.schema().cloned().map(PySchema::from)
     }
@@ -1033,7 +1093,10 @@ impl GeoJsonChannel {
         self.0.message_encoding()
     }
 
-    /// The metadata for the channel.
+    /// Returns a copy of the channel's metadata.
+    ///
+    /// Note that changes made to the returned dictionary will not be applied to
+    /// the channel's metadata.
     fn metadata(&self, py: Python<'_>) -> PyResult<PyObject> {
         let dict = PyDict::new(py);
         for (key, value) in self.0.metadata() {
@@ -1042,7 +1105,10 @@ impl GeoJsonChannel {
         Ok(dict.into())
     }
 
-    /// The schemafor the channel.
+    /// Returns a copy of the channel's schema.
+    ///
+    /// Note that changes made to the returned object will not be applied to
+    /// the channel's schema.
     fn schema(&self) -> Option<PySchema> {
         self.0.schema().cloned().map(PySchema::from)
     }
@@ -1122,7 +1188,10 @@ impl GridChannel {
         self.0.message_encoding()
     }
 
-    /// The metadata for the channel.
+    /// Returns a copy of the channel's metadata.
+    ///
+    /// Note that changes made to the returned dictionary will not be applied to
+    /// the channel's metadata.
     fn metadata(&self, py: Python<'_>) -> PyResult<PyObject> {
         let dict = PyDict::new(py);
         for (key, value) in self.0.metadata() {
@@ -1131,7 +1200,10 @@ impl GridChannel {
         Ok(dict.into())
     }
 
-    /// The schemafor the channel.
+    /// Returns a copy of the channel's schema.
+    ///
+    /// Note that changes made to the returned object will not be applied to
+    /// the channel's schema.
     fn schema(&self) -> Option<PySchema> {
         self.0.schema().cloned().map(PySchema::from)
     }
@@ -1211,7 +1283,10 @@ impl ImageAnnotationsChannel {
         self.0.message_encoding()
     }
 
-    /// The metadata for the channel.
+    /// Returns a copy of the channel's metadata.
+    ///
+    /// Note that changes made to the returned dictionary will not be applied to
+    /// the channel's metadata.
     fn metadata(&self, py: Python<'_>) -> PyResult<PyObject> {
         let dict = PyDict::new(py);
         for (key, value) in self.0.metadata() {
@@ -1220,7 +1295,10 @@ impl ImageAnnotationsChannel {
         Ok(dict.into())
     }
 
-    /// The schemafor the channel.
+    /// Returns a copy of the channel's schema.
+    ///
+    /// Note that changes made to the returned object will not be applied to
+    /// the channel's schema.
     fn schema(&self) -> Option<PySchema> {
         self.0.schema().cloned().map(PySchema::from)
     }
@@ -1305,7 +1383,10 @@ impl KeyValuePairChannel {
         self.0.message_encoding()
     }
 
-    /// The metadata for the channel.
+    /// Returns a copy of the channel's metadata.
+    ///
+    /// Note that changes made to the returned dictionary will not be applied to
+    /// the channel's metadata.
     fn metadata(&self, py: Python<'_>) -> PyResult<PyObject> {
         let dict = PyDict::new(py);
         for (key, value) in self.0.metadata() {
@@ -1314,7 +1395,10 @@ impl KeyValuePairChannel {
         Ok(dict.into())
     }
 
-    /// The schemafor the channel.
+    /// Returns a copy of the channel's schema.
+    ///
+    /// Note that changes made to the returned object will not be applied to
+    /// the channel's schema.
     fn schema(&self) -> Option<PySchema> {
         self.0.schema().cloned().map(PySchema::from)
     }
@@ -1399,7 +1483,10 @@ impl LaserScanChannel {
         self.0.message_encoding()
     }
 
-    /// The metadata for the channel.
+    /// Returns a copy of the channel's metadata.
+    ///
+    /// Note that changes made to the returned dictionary will not be applied to
+    /// the channel's metadata.
     fn metadata(&self, py: Python<'_>) -> PyResult<PyObject> {
         let dict = PyDict::new(py);
         for (key, value) in self.0.metadata() {
@@ -1408,7 +1495,10 @@ impl LaserScanChannel {
         Ok(dict.into())
     }
 
-    /// The schemafor the channel.
+    /// Returns a copy of the channel's schema.
+    ///
+    /// Note that changes made to the returned object will not be applied to
+    /// the channel's schema.
     fn schema(&self) -> Option<PySchema> {
         self.0.schema().cloned().map(PySchema::from)
     }
@@ -1493,7 +1583,10 @@ impl LinePrimitiveChannel {
         self.0.message_encoding()
     }
 
-    /// The metadata for the channel.
+    /// Returns a copy of the channel's metadata.
+    ///
+    /// Note that changes made to the returned dictionary will not be applied to
+    /// the channel's metadata.
     fn metadata(&self, py: Python<'_>) -> PyResult<PyObject> {
         let dict = PyDict::new(py);
         for (key, value) in self.0.metadata() {
@@ -1502,7 +1595,10 @@ impl LinePrimitiveChannel {
         Ok(dict.into())
     }
 
-    /// The schemafor the channel.
+    /// Returns a copy of the channel's schema.
+    ///
+    /// Note that changes made to the returned object will not be applied to
+    /// the channel's schema.
     fn schema(&self) -> Option<PySchema> {
         self.0.schema().cloned().map(PySchema::from)
     }
@@ -1587,7 +1683,10 @@ impl LocationFixChannel {
         self.0.message_encoding()
     }
 
-    /// The metadata for the channel.
+    /// Returns a copy of the channel's metadata.
+    ///
+    /// Note that changes made to the returned dictionary will not be applied to
+    /// the channel's metadata.
     fn metadata(&self, py: Python<'_>) -> PyResult<PyObject> {
         let dict = PyDict::new(py);
         for (key, value) in self.0.metadata() {
@@ -1596,7 +1695,10 @@ impl LocationFixChannel {
         Ok(dict.into())
     }
 
-    /// The schemafor the channel.
+    /// Returns a copy of the channel's schema.
+    ///
+    /// Note that changes made to the returned object will not be applied to
+    /// the channel's schema.
     fn schema(&self) -> Option<PySchema> {
         self.0.schema().cloned().map(PySchema::from)
     }
@@ -1681,7 +1783,10 @@ impl LogChannel {
         self.0.message_encoding()
     }
 
-    /// The metadata for the channel.
+    /// Returns a copy of the channel's metadata.
+    ///
+    /// Note that changes made to the returned dictionary will not be applied to
+    /// the channel's metadata.
     fn metadata(&self, py: Python<'_>) -> PyResult<PyObject> {
         let dict = PyDict::new(py);
         for (key, value) in self.0.metadata() {
@@ -1690,7 +1795,10 @@ impl LogChannel {
         Ok(dict.into())
     }
 
-    /// The schemafor the channel.
+    /// Returns a copy of the channel's schema.
+    ///
+    /// Note that changes made to the returned object will not be applied to
+    /// the channel's schema.
     fn schema(&self) -> Option<PySchema> {
         self.0.schema().cloned().map(PySchema::from)
     }
@@ -1770,7 +1878,10 @@ impl SceneEntityDeletionChannel {
         self.0.message_encoding()
     }
 
-    /// The metadata for the channel.
+    /// Returns a copy of the channel's metadata.
+    ///
+    /// Note that changes made to the returned dictionary will not be applied to
+    /// the channel's metadata.
     fn metadata(&self, py: Python<'_>) -> PyResult<PyObject> {
         let dict = PyDict::new(py);
         for (key, value) in self.0.metadata() {
@@ -1779,7 +1890,10 @@ impl SceneEntityDeletionChannel {
         Ok(dict.into())
     }
 
-    /// The schemafor the channel.
+    /// Returns a copy of the channel's schema.
+    ///
+    /// Note that changes made to the returned object will not be applied to
+    /// the channel's schema.
     fn schema(&self) -> Option<PySchema> {
         self.0.schema().cloned().map(PySchema::from)
     }
@@ -1864,7 +1978,10 @@ impl SceneEntityChannel {
         self.0.message_encoding()
     }
 
-    /// The metadata for the channel.
+    /// Returns a copy of the channel's metadata.
+    ///
+    /// Note that changes made to the returned dictionary will not be applied to
+    /// the channel's metadata.
     fn metadata(&self, py: Python<'_>) -> PyResult<PyObject> {
         let dict = PyDict::new(py);
         for (key, value) in self.0.metadata() {
@@ -1873,7 +1990,10 @@ impl SceneEntityChannel {
         Ok(dict.into())
     }
 
-    /// The schemafor the channel.
+    /// Returns a copy of the channel's schema.
+    ///
+    /// Note that changes made to the returned object will not be applied to
+    /// the channel's schema.
     fn schema(&self) -> Option<PySchema> {
         self.0.schema().cloned().map(PySchema::from)
     }
@@ -1958,7 +2078,10 @@ impl SceneUpdateChannel {
         self.0.message_encoding()
     }
 
-    /// The metadata for the channel.
+    /// Returns a copy of the channel's metadata.
+    ///
+    /// Note that changes made to the returned dictionary will not be applied to
+    /// the channel's metadata.
     fn metadata(&self, py: Python<'_>) -> PyResult<PyObject> {
         let dict = PyDict::new(py);
         for (key, value) in self.0.metadata() {
@@ -1967,7 +2090,10 @@ impl SceneUpdateChannel {
         Ok(dict.into())
     }
 
-    /// The schemafor the channel.
+    /// Returns a copy of the channel's schema.
+    ///
+    /// Note that changes made to the returned object will not be applied to
+    /// the channel's schema.
     fn schema(&self) -> Option<PySchema> {
         self.0.schema().cloned().map(PySchema::from)
     }
@@ -2052,7 +2178,10 @@ impl ModelPrimitiveChannel {
         self.0.message_encoding()
     }
 
-    /// The metadata for the channel.
+    /// Returns a copy of the channel's metadata.
+    ///
+    /// Note that changes made to the returned dictionary will not be applied to
+    /// the channel's metadata.
     fn metadata(&self, py: Python<'_>) -> PyResult<PyObject> {
         let dict = PyDict::new(py);
         for (key, value) in self.0.metadata() {
@@ -2061,7 +2190,10 @@ impl ModelPrimitiveChannel {
         Ok(dict.into())
     }
 
-    /// The schemafor the channel.
+    /// Returns a copy of the channel's schema.
+    ///
+    /// Note that changes made to the returned object will not be applied to
+    /// the channel's schema.
     fn schema(&self) -> Option<PySchema> {
         self.0.schema().cloned().map(PySchema::from)
     }
@@ -2146,7 +2278,10 @@ impl PackedElementFieldChannel {
         self.0.message_encoding()
     }
 
-    /// The metadata for the channel.
+    /// Returns a copy of the channel's metadata.
+    ///
+    /// Note that changes made to the returned dictionary will not be applied to
+    /// the channel's metadata.
     fn metadata(&self, py: Python<'_>) -> PyResult<PyObject> {
         let dict = PyDict::new(py);
         for (key, value) in self.0.metadata() {
@@ -2155,7 +2290,10 @@ impl PackedElementFieldChannel {
         Ok(dict.into())
     }
 
-    /// The schemafor the channel.
+    /// Returns a copy of the channel's schema.
+    ///
+    /// Note that changes made to the returned object will not be applied to
+    /// the channel's schema.
     fn schema(&self) -> Option<PySchema> {
         self.0.schema().cloned().map(PySchema::from)
     }
@@ -2240,7 +2378,10 @@ impl Point2Channel {
         self.0.message_encoding()
     }
 
-    /// The metadata for the channel.
+    /// Returns a copy of the channel's metadata.
+    ///
+    /// Note that changes made to the returned dictionary will not be applied to
+    /// the channel's metadata.
     fn metadata(&self, py: Python<'_>) -> PyResult<PyObject> {
         let dict = PyDict::new(py);
         for (key, value) in self.0.metadata() {
@@ -2249,7 +2390,10 @@ impl Point2Channel {
         Ok(dict.into())
     }
 
-    /// The schemafor the channel.
+    /// Returns a copy of the channel's schema.
+    ///
+    /// Note that changes made to the returned object will not be applied to
+    /// the channel's schema.
     fn schema(&self) -> Option<PySchema> {
         self.0.schema().cloned().map(PySchema::from)
     }
@@ -2329,7 +2473,10 @@ impl Point3Channel {
         self.0.message_encoding()
     }
 
-    /// The metadata for the channel.
+    /// Returns a copy of the channel's metadata.
+    ///
+    /// Note that changes made to the returned dictionary will not be applied to
+    /// the channel's metadata.
     fn metadata(&self, py: Python<'_>) -> PyResult<PyObject> {
         let dict = PyDict::new(py);
         for (key, value) in self.0.metadata() {
@@ -2338,7 +2485,10 @@ impl Point3Channel {
         Ok(dict.into())
     }
 
-    /// The schemafor the channel.
+    /// Returns a copy of the channel's schema.
+    ///
+    /// Note that changes made to the returned object will not be applied to
+    /// the channel's schema.
     fn schema(&self) -> Option<PySchema> {
         self.0.schema().cloned().map(PySchema::from)
     }
@@ -2418,7 +2568,10 @@ impl PointCloudChannel {
         self.0.message_encoding()
     }
 
-    /// The metadata for the channel.
+    /// Returns a copy of the channel's metadata.
+    ///
+    /// Note that changes made to the returned dictionary will not be applied to
+    /// the channel's metadata.
     fn metadata(&self, py: Python<'_>) -> PyResult<PyObject> {
         let dict = PyDict::new(py);
         for (key, value) in self.0.metadata() {
@@ -2427,7 +2580,10 @@ impl PointCloudChannel {
         Ok(dict.into())
     }
 
-    /// The schemafor the channel.
+    /// Returns a copy of the channel's schema.
+    ///
+    /// Note that changes made to the returned object will not be applied to
+    /// the channel's schema.
     fn schema(&self) -> Option<PySchema> {
         self.0.schema().cloned().map(PySchema::from)
     }
@@ -2512,7 +2668,10 @@ impl PointsAnnotationChannel {
         self.0.message_encoding()
     }
 
-    /// The metadata for the channel.
+    /// Returns a copy of the channel's metadata.
+    ///
+    /// Note that changes made to the returned dictionary will not be applied to
+    /// the channel's metadata.
     fn metadata(&self, py: Python<'_>) -> PyResult<PyObject> {
         let dict = PyDict::new(py);
         for (key, value) in self.0.metadata() {
@@ -2521,7 +2680,10 @@ impl PointsAnnotationChannel {
         Ok(dict.into())
     }
 
-    /// The schemafor the channel.
+    /// Returns a copy of the channel's schema.
+    ///
+    /// Note that changes made to the returned object will not be applied to
+    /// the channel's schema.
     fn schema(&self) -> Option<PySchema> {
         self.0.schema().cloned().map(PySchema::from)
     }
@@ -2606,7 +2768,10 @@ impl PoseChannel {
         self.0.message_encoding()
     }
 
-    /// The metadata for the channel.
+    /// Returns a copy of the channel's metadata.
+    ///
+    /// Note that changes made to the returned dictionary will not be applied to
+    /// the channel's metadata.
     fn metadata(&self, py: Python<'_>) -> PyResult<PyObject> {
         let dict = PyDict::new(py);
         for (key, value) in self.0.metadata() {
@@ -2615,7 +2780,10 @@ impl PoseChannel {
         Ok(dict.into())
     }
 
-    /// The schemafor the channel.
+    /// Returns a copy of the channel's schema.
+    ///
+    /// Note that changes made to the returned object will not be applied to
+    /// the channel's schema.
     fn schema(&self) -> Option<PySchema> {
         self.0.schema().cloned().map(PySchema::from)
     }
@@ -2695,7 +2863,10 @@ impl PoseInFrameChannel {
         self.0.message_encoding()
     }
 
-    /// The metadata for the channel.
+    /// Returns a copy of the channel's metadata.
+    ///
+    /// Note that changes made to the returned dictionary will not be applied to
+    /// the channel's metadata.
     fn metadata(&self, py: Python<'_>) -> PyResult<PyObject> {
         let dict = PyDict::new(py);
         for (key, value) in self.0.metadata() {
@@ -2704,7 +2875,10 @@ impl PoseInFrameChannel {
         Ok(dict.into())
     }
 
-    /// The schemafor the channel.
+    /// Returns a copy of the channel's schema.
+    ///
+    /// Note that changes made to the returned object will not be applied to
+    /// the channel's schema.
     fn schema(&self) -> Option<PySchema> {
         self.0.schema().cloned().map(PySchema::from)
     }
@@ -2789,7 +2963,10 @@ impl PosesInFrameChannel {
         self.0.message_encoding()
     }
 
-    /// The metadata for the channel.
+    /// Returns a copy of the channel's metadata.
+    ///
+    /// Note that changes made to the returned dictionary will not be applied to
+    /// the channel's metadata.
     fn metadata(&self, py: Python<'_>) -> PyResult<PyObject> {
         let dict = PyDict::new(py);
         for (key, value) in self.0.metadata() {
@@ -2798,7 +2975,10 @@ impl PosesInFrameChannel {
         Ok(dict.into())
     }
 
-    /// The schemafor the channel.
+    /// Returns a copy of the channel's schema.
+    ///
+    /// Note that changes made to the returned object will not be applied to
+    /// the channel's schema.
     fn schema(&self) -> Option<PySchema> {
         self.0.schema().cloned().map(PySchema::from)
     }
@@ -2883,7 +3063,10 @@ impl QuaternionChannel {
         self.0.message_encoding()
     }
 
-    /// The metadata for the channel.
+    /// Returns a copy of the channel's metadata.
+    ///
+    /// Note that changes made to the returned dictionary will not be applied to
+    /// the channel's metadata.
     fn metadata(&self, py: Python<'_>) -> PyResult<PyObject> {
         let dict = PyDict::new(py);
         for (key, value) in self.0.metadata() {
@@ -2892,7 +3075,10 @@ impl QuaternionChannel {
         Ok(dict.into())
     }
 
-    /// The schemafor the channel.
+    /// Returns a copy of the channel's schema.
+    ///
+    /// Note that changes made to the returned object will not be applied to
+    /// the channel's schema.
     fn schema(&self) -> Option<PySchema> {
         self.0.schema().cloned().map(PySchema::from)
     }
@@ -2977,7 +3163,10 @@ impl RawAudioChannel {
         self.0.message_encoding()
     }
 
-    /// The metadata for the channel.
+    /// Returns a copy of the channel's metadata.
+    ///
+    /// Note that changes made to the returned dictionary will not be applied to
+    /// the channel's metadata.
     fn metadata(&self, py: Python<'_>) -> PyResult<PyObject> {
         let dict = PyDict::new(py);
         for (key, value) in self.0.metadata() {
@@ -2986,7 +3175,10 @@ impl RawAudioChannel {
         Ok(dict.into())
     }
 
-    /// The schemafor the channel.
+    /// Returns a copy of the channel's schema.
+    ///
+    /// Note that changes made to the returned object will not be applied to
+    /// the channel's schema.
     fn schema(&self) -> Option<PySchema> {
         self.0.schema().cloned().map(PySchema::from)
     }
@@ -3071,7 +3263,10 @@ impl RawImageChannel {
         self.0.message_encoding()
     }
 
-    /// The metadata for the channel.
+    /// Returns a copy of the channel's metadata.
+    ///
+    /// Note that changes made to the returned dictionary will not be applied to
+    /// the channel's metadata.
     fn metadata(&self, py: Python<'_>) -> PyResult<PyObject> {
         let dict = PyDict::new(py);
         for (key, value) in self.0.metadata() {
@@ -3080,7 +3275,10 @@ impl RawImageChannel {
         Ok(dict.into())
     }
 
-    /// The schemafor the channel.
+    /// Returns a copy of the channel's schema.
+    ///
+    /// Note that changes made to the returned object will not be applied to
+    /// the channel's schema.
     fn schema(&self) -> Option<PySchema> {
         self.0.schema().cloned().map(PySchema::from)
     }
@@ -3165,7 +3363,10 @@ impl SpherePrimitiveChannel {
         self.0.message_encoding()
     }
 
-    /// The metadata for the channel.
+    /// Returns a copy of the channel's metadata.
+    ///
+    /// Note that changes made to the returned dictionary will not be applied to
+    /// the channel's metadata.
     fn metadata(&self, py: Python<'_>) -> PyResult<PyObject> {
         let dict = PyDict::new(py);
         for (key, value) in self.0.metadata() {
@@ -3174,7 +3375,10 @@ impl SpherePrimitiveChannel {
         Ok(dict.into())
     }
 
-    /// The schemafor the channel.
+    /// Returns a copy of the channel's schema.
+    ///
+    /// Note that changes made to the returned object will not be applied to
+    /// the channel's schema.
     fn schema(&self) -> Option<PySchema> {
         self.0.schema().cloned().map(PySchema::from)
     }
@@ -3259,7 +3463,10 @@ impl TextAnnotationChannel {
         self.0.message_encoding()
     }
 
-    /// The metadata for the channel.
+    /// Returns a copy of the channel's metadata.
+    ///
+    /// Note that changes made to the returned dictionary will not be applied to
+    /// the channel's metadata.
     fn metadata(&self, py: Python<'_>) -> PyResult<PyObject> {
         let dict = PyDict::new(py);
         for (key, value) in self.0.metadata() {
@@ -3268,7 +3475,10 @@ impl TextAnnotationChannel {
         Ok(dict.into())
     }
 
-    /// The schemafor the channel.
+    /// Returns a copy of the channel's schema.
+    ///
+    /// Note that changes made to the returned object will not be applied to
+    /// the channel's schema.
     fn schema(&self) -> Option<PySchema> {
         self.0.schema().cloned().map(PySchema::from)
     }
@@ -3353,7 +3563,10 @@ impl TextPrimitiveChannel {
         self.0.message_encoding()
     }
 
-    /// The metadata for the channel.
+    /// Returns a copy of the channel's metadata.
+    ///
+    /// Note that changes made to the returned dictionary will not be applied to
+    /// the channel's metadata.
     fn metadata(&self, py: Python<'_>) -> PyResult<PyObject> {
         let dict = PyDict::new(py);
         for (key, value) in self.0.metadata() {
@@ -3362,7 +3575,10 @@ impl TextPrimitiveChannel {
         Ok(dict.into())
     }
 
-    /// The schemafor the channel.
+    /// Returns a copy of the channel's schema.
+    ///
+    /// Note that changes made to the returned object will not be applied to
+    /// the channel's schema.
     fn schema(&self) -> Option<PySchema> {
         self.0.schema().cloned().map(PySchema::from)
     }
@@ -3447,7 +3663,10 @@ impl TriangleListPrimitiveChannel {
         self.0.message_encoding()
     }
 
-    /// The metadata for the channel.
+    /// Returns a copy of the channel's metadata.
+    ///
+    /// Note that changes made to the returned dictionary will not be applied to
+    /// the channel's metadata.
     fn metadata(&self, py: Python<'_>) -> PyResult<PyObject> {
         let dict = PyDict::new(py);
         for (key, value) in self.0.metadata() {
@@ -3456,7 +3675,10 @@ impl TriangleListPrimitiveChannel {
         Ok(dict.into())
     }
 
-    /// The schemafor the channel.
+    /// Returns a copy of the channel's schema.
+    ///
+    /// Note that changes made to the returned object will not be applied to
+    /// the channel's schema.
     fn schema(&self) -> Option<PySchema> {
         self.0.schema().cloned().map(PySchema::from)
     }
@@ -3541,7 +3763,10 @@ impl Vector2Channel {
         self.0.message_encoding()
     }
 
-    /// The metadata for the channel.
+    /// Returns a copy of the channel's metadata.
+    ///
+    /// Note that changes made to the returned dictionary will not be applied to
+    /// the channel's metadata.
     fn metadata(&self, py: Python<'_>) -> PyResult<PyObject> {
         let dict = PyDict::new(py);
         for (key, value) in self.0.metadata() {
@@ -3550,7 +3775,10 @@ impl Vector2Channel {
         Ok(dict.into())
     }
 
-    /// The schemafor the channel.
+    /// Returns a copy of the channel's schema.
+    ///
+    /// Note that changes made to the returned object will not be applied to
+    /// the channel's schema.
     fn schema(&self) -> Option<PySchema> {
         self.0.schema().cloned().map(PySchema::from)
     }
@@ -3630,7 +3858,10 @@ impl Vector3Channel {
         self.0.message_encoding()
     }
 
-    /// The metadata for the channel.
+    /// Returns a copy of the channel's metadata.
+    ///
+    /// Note that changes made to the returned dictionary will not be applied to
+    /// the channel's metadata.
     fn metadata(&self, py: Python<'_>) -> PyResult<PyObject> {
         let dict = PyDict::new(py);
         for (key, value) in self.0.metadata() {
@@ -3639,7 +3870,10 @@ impl Vector3Channel {
         Ok(dict.into())
     }
 
-    /// The schemafor the channel.
+    /// Returns a copy of the channel's schema.
+    ///
+    /// Note that changes made to the returned object will not be applied to
+    /// the channel's schema.
     fn schema(&self) -> Option<PySchema> {
         self.0.schema().cloned().map(PySchema::from)
     }
