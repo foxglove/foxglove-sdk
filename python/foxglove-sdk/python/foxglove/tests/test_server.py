@@ -21,7 +21,9 @@ def test_server_interface() -> None:
     assert isinstance(server.port, int)
     assert server.port != 0
 
-    url = urlparse(server.app_url() or "")
+    raw_url = server.app_url()
+    assert raw_url is not None
+    url = urlparse(raw_url)
     assert url.scheme == "https"
     assert url.netloc == "app.foxglove.dev"
     assert parse_qs(url.query) == {
@@ -29,7 +31,9 @@ def test_server_interface() -> None:
         "ds.url": [f"ws://127.0.0.1:{server.port}"],
     }
 
-    url = urlparse(server.app_url(layout_id="lay_123", open_in_desktop=True) or "")
+    raw_url = server.app_url(layout_id="lay_123", open_in_desktop=True)
+    assert raw_url is not None
+    url = urlparse(raw_url)
     assert url.scheme == "https"
     assert url.netloc == "app.foxglove.dev"
     assert parse_qs(url.query) == {
