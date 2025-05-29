@@ -7,6 +7,7 @@ static BASE_URL: &str = "https://app.foxglove.dev";
 
 #[derive(Debug, Clone)]
 enum DataSource {
+    #[allow(dead_code)] // until `AppUrl::with_websocket` is public.
     WebSocket(String, u16),
 }
 
@@ -74,6 +75,7 @@ impl AppUrl {
     }
 
     /// Sets a websocket data source.
+    #[cfg(feature = "live_visualization")]
     pub(crate) fn with_websocket(mut self, host: impl Display, port: u16) -> Self {
         self.data_source = Some(DataSource::WebSocket(host.to_string(), port));
         self
