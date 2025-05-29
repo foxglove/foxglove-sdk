@@ -22,8 +22,10 @@ export function generateSchemaPrelude(): string {
   ];
 
   const imports = [
+    "use crate::PySchema;",
     "use crate::schemas_wkt::{Duration, Timestamp};",
     "use bytes::Bytes;",
+    "use foxglove::Encode;",
     "use pyo3::prelude::*;",
     "use pyo3::types::PyBytes;",
   ];
@@ -92,6 +94,10 @@ export function generatePySchemaStub(schemas: FoxgloveSchema[]): string {
           "        *,",
           params,
           `    ) -> "${name}": ...`,
+          `    @staticmethod`,
+          `    def get_schema() -> Schema:`,
+          `        """Returns the schema for this type"""`,
+          `        ...`,
         ].join("\n") + "\n\n",
     };
   });
@@ -234,6 +240,10 @@ function generateMessageClass(schema: FoxgloveMessageSchema): string {
     `            "${className}(${schemaFields.map(({ argName }) => `${argName}={:?}`).join(", ")})",`,
     schemaFields.map(({ fieldName }) => `            self.0.${protoName(fieldName)},`).join("\n"),
     `        )`,
+    `    }`,
+    `    #[staticmethod]`,
+    `    fn get_schema() -> PySchema {`,
+    `        foxglove::schemas::${className}::get_schema().unwrap().into()`,
     `    }`,
     `}\n\n`,
   ];

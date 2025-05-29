@@ -4,7 +4,9 @@
 #![allow(clippy::enum_variant_names)]
 #![allow(non_snake_case)]
 use crate::schemas_wkt::{Duration, Timestamp};
+use crate::PySchema;
 use bytes::Bytes;
+use foxglove::Encode;
 use pyo3::prelude::*;
 use pyo3::types::PyBytes;
 
@@ -118,6 +120,12 @@ impl ArrowPrimitive {
             self.0.color,
         )
     }
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::ArrowPrimitive::get_schema()
+            .unwrap()
+            .into()
+    }
 }
 
 impl From<ArrowPrimitive> for foxglove::schemas::ArrowPrimitive {
@@ -183,6 +191,12 @@ impl CameraCalibration {
             self.0.p,
         )
     }
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::CameraCalibration::get_schema()
+            .unwrap()
+            .into()
+    }
 }
 
 impl From<CameraCalibration> for foxglove::schemas::CameraCalibration {
@@ -236,6 +250,12 @@ impl CircleAnnotation {
             self.0.outline_color,
         )
     }
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::CircleAnnotation::get_schema()
+            .unwrap()
+            .into()
+    }
 }
 
 impl From<CircleAnnotation> for foxglove::schemas::CircleAnnotation {
@@ -267,6 +287,10 @@ impl Color {
             "Color(r={:?}, g={:?}, b={:?}, a={:?})",
             self.0.r, self.0.g, self.0.b, self.0.a,
         )
+    }
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::Color::get_schema().unwrap().into()
     }
 }
 
@@ -312,6 +336,12 @@ impl CompressedImage {
             self.0.timestamp, self.0.frame_id, self.0.data, self.0.format,
         )
     }
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::CompressedImage::get_schema()
+            .unwrap()
+            .into()
+    }
 }
 
 impl From<CompressedImage> for foxglove::schemas::CompressedImage {
@@ -355,6 +385,12 @@ impl CompressedVideo {
             "CompressedVideo(timestamp={:?}, frame_id={:?}, data={:?}, format={:?})",
             self.0.timestamp, self.0.frame_id, self.0.data, self.0.format,
         )
+    }
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::CompressedVideo::get_schema()
+            .unwrap()
+            .into()
     }
 }
 
@@ -405,6 +441,12 @@ impl CylinderPrimitive {
             self.0.color,
         )
     }
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::CylinderPrimitive::get_schema()
+            .unwrap()
+            .into()
+    }
 }
 
 impl From<CylinderPrimitive> for foxglove::schemas::CylinderPrimitive {
@@ -439,6 +481,12 @@ impl CubePrimitive {
             "CubePrimitive(pose={:?}, size={:?}, color={:?})",
             self.0.pose, self.0.size, self.0.color,
         )
+    }
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::CubePrimitive::get_schema()
+            .unwrap()
+            .into()
     }
 }
 
@@ -489,6 +537,12 @@ impl FrameTransform {
             self.0.rotation,
         )
     }
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::FrameTransform::get_schema()
+            .unwrap()
+            .into()
+    }
 }
 
 impl From<FrameTransform> for foxglove::schemas::FrameTransform {
@@ -517,6 +571,12 @@ impl FrameTransforms {
     fn __repr__(&self) -> String {
         format!("FrameTransforms(transforms={:?})", self.0.transforms,)
     }
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::FrameTransforms::get_schema()
+            .unwrap()
+            .into()
+    }
 }
 
 impl From<FrameTransforms> for foxglove::schemas::FrameTransforms {
@@ -542,6 +602,10 @@ impl GeoJson {
     }
     fn __repr__(&self) -> String {
         format!("GeoJson(geojson={:?})", self.0.geojson,)
+    }
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::GeoJson::get_schema().unwrap().into()
     }
 }
 
@@ -610,6 +674,10 @@ impl Grid {
             self.0.data,
         )
     }
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::Grid::get_schema().unwrap().into()
+    }
 }
 
 impl From<Grid> for foxglove::schemas::Grid {
@@ -649,6 +717,12 @@ impl ImageAnnotations {
             self.0.circles, self.0.points, self.0.texts,
         )
     }
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::ImageAnnotations::get_schema()
+            .unwrap()
+            .into()
+    }
 }
 
 impl From<ImageAnnotations> for foxglove::schemas::ImageAnnotations {
@@ -678,6 +752,12 @@ impl KeyValuePair {
             "KeyValuePair(key={:?}, value={:?})",
             self.0.key, self.0.value,
         )
+    }
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::KeyValuePair::get_schema()
+            .unwrap()
+            .into()
     }
 }
 
@@ -735,6 +815,10 @@ impl LaserScan {
             self.0.ranges,
             self.0.intensities,
         )
+    }
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::LaserScan::get_schema().unwrap().into()
     }
 }
 
@@ -797,6 +881,12 @@ impl LinePrimitive {
             self.0.indices,
         )
     }
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::LinePrimitive::get_schema()
+            .unwrap()
+            .into()
+    }
 }
 
 impl From<LinePrimitive> for foxglove::schemas::LinePrimitive {
@@ -854,6 +944,10 @@ impl LocationFix {
             self.0.position_covariance_type,
         )
     }
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::LocationFix::get_schema().unwrap().into()
+    }
 }
 
 impl From<LocationFix> for foxglove::schemas::LocationFix {
@@ -902,6 +996,10 @@ impl Log {
             self.0.timestamp, self.0.level, self.0.message, self.0.name, self.0.file, self.0.line,
         )
     }
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::Log::get_schema().unwrap().into()
+    }
 }
 
 impl From<Log> for foxglove::schemas::Log {
@@ -936,6 +1034,12 @@ impl SceneEntityDeletion {
             "SceneEntityDeletion(timestamp={:?}, r#type={:?}, id={:?})",
             self.0.timestamp, self.0.r#type, self.0.id,
         )
+    }
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::SceneEntityDeletion::get_schema()
+            .unwrap()
+            .into()
     }
 }
 
@@ -1022,6 +1126,10 @@ impl SceneEntity {
             self.0.models,
         )
     }
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::SceneEntity::get_schema().unwrap().into()
+    }
 }
 
 impl From<SceneEntity> for foxglove::schemas::SceneEntity {
@@ -1054,6 +1162,10 @@ impl SceneUpdate {
             "SceneUpdate(deletions={:?}, entities={:?})",
             self.0.deletions, self.0.entities,
         )
+    }
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::SceneUpdate::get_schema().unwrap().into()
     }
 }
 
@@ -1114,6 +1226,12 @@ impl ModelPrimitive {
             self.0.data,
         )
     }
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::ModelPrimitive::get_schema()
+            .unwrap()
+            .into()
+    }
 }
 
 impl From<ModelPrimitive> for foxglove::schemas::ModelPrimitive {
@@ -1149,6 +1267,12 @@ impl PackedElementField {
             self.0.name, self.0.offset, self.0.r#type,
         )
     }
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::PackedElementField::get_schema()
+            .unwrap()
+            .into()
+    }
 }
 
 impl From<PackedElementField> for foxglove::schemas::PackedElementField {
@@ -1175,6 +1299,10 @@ impl Point2 {
     }
     fn __repr__(&self) -> String {
         format!("Point2(x={:?}, y={:?})", self.0.x, self.0.y,)
+    }
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::Point2::get_schema().unwrap().into()
     }
 }
 
@@ -1206,6 +1334,10 @@ impl Point3 {
             "Point3(x={:?}, y={:?}, z={:?})",
             self.0.x, self.0.y, self.0.z,
         )
+    }
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::Point3::get_schema().unwrap().into()
     }
 }
 
@@ -1261,6 +1393,10 @@ impl PointCloud {
             self.0.fields,
             self.0.data,
         )
+    }
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::PointCloud::get_schema().unwrap().into()
     }
 }
 
@@ -1319,6 +1455,12 @@ impl PointsAnnotation {
             self.0.thickness,
         )
     }
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::PointsAnnotation::get_schema()
+            .unwrap()
+            .into()
+    }
 }
 
 impl From<PointsAnnotation> for foxglove::schemas::PointsAnnotation {
@@ -1351,6 +1493,10 @@ impl Pose {
             "Pose(position={:?}, orientation={:?})",
             self.0.position, self.0.orientation,
         )
+    }
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::Pose::get_schema().unwrap().into()
     }
 }
 
@@ -1387,6 +1533,10 @@ impl PoseInFrame {
             self.0.timestamp, self.0.frame_id, self.0.pose,
         )
     }
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::PoseInFrame::get_schema().unwrap().into()
+    }
 }
 
 impl From<PoseInFrame> for foxglove::schemas::PoseInFrame {
@@ -1422,6 +1572,12 @@ impl PosesInFrame {
             self.0.timestamp, self.0.frame_id, self.0.poses,
         )
     }
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::PosesInFrame::get_schema()
+            .unwrap()
+            .into()
+    }
 }
 
 impl From<PosesInFrame> for foxglove::schemas::PosesInFrame {
@@ -1453,6 +1609,10 @@ impl Quaternion {
             "Quaternion(x={:?}, y={:?}, z={:?}, w={:?})",
             self.0.x, self.0.y, self.0.z, self.0.w,
         )
+    }
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::Quaternion::get_schema().unwrap().into()
     }
 }
 
@@ -1504,6 +1664,10 @@ impl RawAudio {
             self.0.sample_rate,
             self.0.number_of_channels,
         )
+    }
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::RawAudio::get_schema().unwrap().into()
     }
 }
 
@@ -1564,6 +1728,10 @@ impl RawImage {
             self.0.data,
         )
     }
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::RawImage::get_schema().unwrap().into()
+    }
 }
 
 impl From<RawImage> for foxglove::schemas::RawImage {
@@ -1598,6 +1766,12 @@ impl SpherePrimitive {
             "SpherePrimitive(pose={:?}, size={:?}, color={:?})",
             self.0.pose, self.0.size, self.0.color,
         )
+    }
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::SpherePrimitive::get_schema()
+            .unwrap()
+            .into()
     }
 }
 
@@ -1652,6 +1826,12 @@ impl TextAnnotation {
             self.0.background_color,
         )
     }
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::TextAnnotation::get_schema()
+            .unwrap()
+            .into()
+    }
 }
 
 impl From<TextAnnotation> for foxglove::schemas::TextAnnotation {
@@ -1705,6 +1885,12 @@ impl TextPrimitive {
             self.0.text,
         )
     }
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::TextPrimitive::get_schema()
+            .unwrap()
+            .into()
+    }
 }
 
 impl From<TextPrimitive> for foxglove::schemas::TextPrimitive {
@@ -1750,6 +1936,12 @@ impl TriangleListPrimitive {
             self.0.pose, self.0.points, self.0.color, self.0.colors, self.0.indices,
         )
     }
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::TriangleListPrimitive::get_schema()
+            .unwrap()
+            .into()
+    }
 }
 
 impl From<TriangleListPrimitive> for foxglove::schemas::TriangleListPrimitive {
@@ -1776,6 +1968,10 @@ impl Vector2 {
     }
     fn __repr__(&self) -> String {
         format!("Vector2(x={:?}, y={:?})", self.0.x, self.0.y,)
+    }
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::Vector2::get_schema().unwrap().into()
     }
 }
 
@@ -1807,6 +2003,10 @@ impl Vector3 {
             "Vector3(x={:?}, y={:?}, z={:?})",
             self.0.x, self.0.y, self.0.z,
         )
+    }
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::Vector3::get_schema().unwrap().into()
     }
 }
 

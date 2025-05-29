@@ -145,7 +145,7 @@ def test_typed_channel_attributes(new_topic: str) -> None:
     channel = LogChannel(new_topic)
     assert channel.topic() == new_topic
     assert channel.message_encoding == "protobuf"
-    assert channel.schema() is not None
+    assert channel.schema() == Log.get_schema()
     assert channel.metadata() == {}
     assert not channel.has_sinks()
 

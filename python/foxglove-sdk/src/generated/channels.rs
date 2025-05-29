@@ -92,9 +92,34 @@ impl ArrowPrimitiveChannel {
         self.0.topic()
     }
 
+    /// The message encoding for the channel.
+    #[getter]
+    fn message_encoding(&self) -> &str {
+        self.0.message_encoding()
+    }
+
+    /// The metadata for the channel.
+    fn metadata(&self, py: Python<'_>) -> PyResult<PyObject> {
+        let dict = PyDict::new(py);
+        for (key, value) in self.0.metadata() {
+            dict.set_item(key, value)?;
+        }
+        Ok(dict.into())
+    }
+
+    /// The schemafor the channel.
+    fn schema(&self) -> Option<PySchema> {
+        self.0.schema().cloned().map(PySchema::from)
+    }
+
     /// The name of the schema for the channel.
     fn schema_name(&self) -> Option<&str> {
         Some(self.0.schema()?.name.as_str())
+    }
+
+    /// Returns true if at least one sink is subscribed to this channel.
+    fn has_sinks(&self) -> bool {
+        self.0.has_sinks()
     }
 
     /// Close the channel.
@@ -626,9 +651,34 @@ impl CylinderPrimitiveChannel {
         self.0.topic()
     }
 
+    /// The message encoding for the channel.
+    #[getter]
+    fn message_encoding(&self) -> &str {
+        self.0.message_encoding()
+    }
+
+    /// The metadata for the channel.
+    fn metadata(&self, py: Python<'_>) -> PyResult<PyObject> {
+        let dict = PyDict::new(py);
+        for (key, value) in self.0.metadata() {
+            dict.set_item(key, value)?;
+        }
+        Ok(dict.into())
+    }
+
+    /// The schemafor the channel.
+    fn schema(&self) -> Option<PySchema> {
+        self.0.schema().cloned().map(PySchema::from)
+    }
+
     /// The name of the schema for the channel.
     fn schema_name(&self) -> Option<&str> {
         Some(self.0.schema()?.name.as_str())
+    }
+
+    /// Returns true if at least one sink is subscribed to this channel.
+    fn has_sinks(&self) -> bool {
+        self.0.has_sinks()
     }
 
     /// Close the channel.
@@ -695,9 +745,34 @@ impl CubePrimitiveChannel {
         self.0.topic()
     }
 
+    /// The message encoding for the channel.
+    #[getter]
+    fn message_encoding(&self) -> &str {
+        self.0.message_encoding()
+    }
+
+    /// The metadata for the channel.
+    fn metadata(&self, py: Python<'_>) -> PyResult<PyObject> {
+        let dict = PyDict::new(py);
+        for (key, value) in self.0.metadata() {
+            dict.set_item(key, value)?;
+        }
+        Ok(dict.into())
+    }
+
+    /// The schemafor the channel.
+    fn schema(&self) -> Option<PySchema> {
+        self.0.schema().cloned().map(PySchema::from)
+    }
+
     /// The name of the schema for the channel.
     fn schema_name(&self) -> Option<&str> {
         Some(self.0.schema()?.name.as_str())
+    }
+
+    /// Returns true if at least one sink is subscribed to this channel.
+    fn has_sinks(&self) -> bool {
+        self.0.has_sinks()
     }
 
     /// Close the channel.
@@ -1412,9 +1487,34 @@ impl LinePrimitiveChannel {
         self.0.topic()
     }
 
+    /// The message encoding for the channel.
+    #[getter]
+    fn message_encoding(&self) -> &str {
+        self.0.message_encoding()
+    }
+
+    /// The metadata for the channel.
+    fn metadata(&self, py: Python<'_>) -> PyResult<PyObject> {
+        let dict = PyDict::new(py);
+        for (key, value) in self.0.metadata() {
+            dict.set_item(key, value)?;
+        }
+        Ok(dict.into())
+    }
+
+    /// The schemafor the channel.
+    fn schema(&self) -> Option<PySchema> {
+        self.0.schema().cloned().map(PySchema::from)
+    }
+
     /// The name of the schema for the channel.
     fn schema_name(&self) -> Option<&str> {
         Some(self.0.schema()?.name.as_str())
+    }
+
+    /// Returns true if at least one sink is subscribed to this channel.
+    fn has_sinks(&self) -> bool {
+        self.0.has_sinks()
     }
 
     /// Close the channel.
@@ -1946,9 +2046,34 @@ impl ModelPrimitiveChannel {
         self.0.topic()
     }
 
+    /// The message encoding for the channel.
+    #[getter]
+    fn message_encoding(&self) -> &str {
+        self.0.message_encoding()
+    }
+
+    /// The metadata for the channel.
+    fn metadata(&self, py: Python<'_>) -> PyResult<PyObject> {
+        let dict = PyDict::new(py);
+        for (key, value) in self.0.metadata() {
+            dict.set_item(key, value)?;
+        }
+        Ok(dict.into())
+    }
+
+    /// The schemafor the channel.
+    fn schema(&self) -> Option<PySchema> {
+        self.0.schema().cloned().map(PySchema::from)
+    }
+
     /// The name of the schema for the channel.
     fn schema_name(&self) -> Option<&str> {
         Some(self.0.schema()?.name.as_str())
+    }
+
+    /// Returns true if at least one sink is subscribed to this channel.
+    fn has_sinks(&self) -> bool {
+        self.0.has_sinks()
     }
 
     /// Close the channel.
@@ -3034,9 +3159,34 @@ impl SpherePrimitiveChannel {
         self.0.topic()
     }
 
+    /// The message encoding for the channel.
+    #[getter]
+    fn message_encoding(&self) -> &str {
+        self.0.message_encoding()
+    }
+
+    /// The metadata for the channel.
+    fn metadata(&self, py: Python<'_>) -> PyResult<PyObject> {
+        let dict = PyDict::new(py);
+        for (key, value) in self.0.metadata() {
+            dict.set_item(key, value)?;
+        }
+        Ok(dict.into())
+    }
+
+    /// The schemafor the channel.
+    fn schema(&self) -> Option<PySchema> {
+        self.0.schema().cloned().map(PySchema::from)
+    }
+
     /// The name of the schema for the channel.
     fn schema_name(&self) -> Option<&str> {
         Some(self.0.schema()?.name.as_str())
+    }
+
+    /// Returns true if at least one sink is subscribed to this channel.
+    fn has_sinks(&self) -> bool {
+        self.0.has_sinks()
     }
 
     /// Close the channel.
@@ -3197,9 +3347,34 @@ impl TextPrimitiveChannel {
         self.0.topic()
     }
 
+    /// The message encoding for the channel.
+    #[getter]
+    fn message_encoding(&self) -> &str {
+        self.0.message_encoding()
+    }
+
+    /// The metadata for the channel.
+    fn metadata(&self, py: Python<'_>) -> PyResult<PyObject> {
+        let dict = PyDict::new(py);
+        for (key, value) in self.0.metadata() {
+            dict.set_item(key, value)?;
+        }
+        Ok(dict.into())
+    }
+
+    /// The schemafor the channel.
+    fn schema(&self) -> Option<PySchema> {
+        self.0.schema().cloned().map(PySchema::from)
+    }
+
     /// The name of the schema for the channel.
     fn schema_name(&self) -> Option<&str> {
         Some(self.0.schema()?.name.as_str())
+    }
+
+    /// Returns true if at least one sink is subscribed to this channel.
+    fn has_sinks(&self) -> bool {
+        self.0.has_sinks()
     }
 
     /// Close the channel.
@@ -3266,9 +3441,34 @@ impl TriangleListPrimitiveChannel {
         self.0.topic()
     }
 
+    /// The message encoding for the channel.
+    #[getter]
+    fn message_encoding(&self) -> &str {
+        self.0.message_encoding()
+    }
+
+    /// The metadata for the channel.
+    fn metadata(&self, py: Python<'_>) -> PyResult<PyObject> {
+        let dict = PyDict::new(py);
+        for (key, value) in self.0.metadata() {
+            dict.set_item(key, value)?;
+        }
+        Ok(dict.into())
+    }
+
+    /// The schemafor the channel.
+    fn schema(&self) -> Option<PySchema> {
+        self.0.schema().cloned().map(PySchema::from)
+    }
+
     /// The name of the schema for the channel.
     fn schema_name(&self) -> Option<&str> {
         Some(self.0.schema()?.name.as_str())
+    }
+
+    /// Returns true if at least one sink is subscribed to this channel.
+    fn has_sinks(&self) -> bool {
+        self.0.has_sinks()
     }
 
     /// Close the channel.

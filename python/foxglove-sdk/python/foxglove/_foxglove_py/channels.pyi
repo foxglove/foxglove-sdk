@@ -65,8 +65,25 @@ class ArrowPrimitiveChannel:
         """The topic name of the channel."""
         ...
 
-    def schema_name(self) -> str | None:
+    @property
+    def message_encoding(self) -> str:
+        """The message encoding for the channel"""
+        ...
+
+    def metadata(self) -> Dict[str, str]:
+        """The metadata for the channel"""
+        ...
+
+    def schema(self) -> Optional[Schema]:
+        """The schema for the channel"""
+        ...
+
+    def schema_name(self) -> Optional[str]:
         """The name of the schema for the channel."""
+        ...
+
+    def has_sinks(self) -> bool:
+        """Returns true if at least one sink is subscribed to this channel"""
         ...
 
     def close(self) -> None:
@@ -378,8 +395,25 @@ class CubePrimitiveChannel:
         """The topic name of the channel."""
         ...
 
-    def schema_name(self) -> str | None:
+    @property
+    def message_encoding(self) -> str:
+        """The message encoding for the channel"""
+        ...
+
+    def metadata(self) -> Dict[str, str]:
+        """The metadata for the channel"""
+        ...
+
+    def schema(self) -> Optional[Schema]:
+        """The schema for the channel"""
+        ...
+
+    def schema_name(self) -> Optional[str]:
         """The name of the schema for the channel."""
+        ...
+
+    def has_sinks(self) -> bool:
+        """Returns true if at least one sink is subscribed to this channel"""
         ...
 
     def close(self) -> None:
@@ -416,8 +450,25 @@ class CylinderPrimitiveChannel:
         """The topic name of the channel."""
         ...
 
-    def schema_name(self) -> str | None:
+    @property
+    def message_encoding(self) -> str:
+        """The message encoding for the channel"""
+        ...
+
+    def metadata(self) -> Dict[str, str]:
+        """The metadata for the channel"""
+        ...
+
+    def schema(self) -> Optional[Schema]:
+        """The schema for the channel"""
+        ...
+
+    def schema_name(self) -> Optional[str]:
         """The name of the schema for the channel."""
+        ...
+
+    def has_sinks(self) -> bool:
+        """Returns true if at least one sink is subscribed to this channel"""
         ...
 
     def close(self) -> None:
@@ -839,8 +890,25 @@ class LinePrimitiveChannel:
         """The topic name of the channel."""
         ...
 
-    def schema_name(self) -> str | None:
+    @property
+    def message_encoding(self) -> str:
+        """The message encoding for the channel"""
+        ...
+
+    def metadata(self) -> Dict[str, str]:
+        """The metadata for the channel"""
+        ...
+
+    def schema(self) -> Optional[Schema]:
+        """The schema for the channel"""
+        ...
+
+    def schema_name(self) -> Optional[str]:
         """The name of the schema for the channel."""
+        ...
+
+    def has_sinks(self) -> bool:
+        """Returns true if at least one sink is subscribed to this channel"""
         ...
 
     def close(self) -> None:
@@ -987,8 +1055,25 @@ class ModelPrimitiveChannel:
         """The topic name of the channel."""
         ...
 
-    def schema_name(self) -> str | None:
+    @property
+    def message_encoding(self) -> str:
+        """The message encoding for the channel"""
+        ...
+
+    def metadata(self) -> Dict[str, str]:
+        """The metadata for the channel"""
+        ...
+
+    def schema(self) -> Optional[Schema]:
+        """The schema for the channel"""
+        ...
+
+    def schema_name(self) -> Optional[str]:
         """The name of the schema for the channel."""
+        ...
+
+    def has_sinks(self) -> bool:
+        """Returns true if at least one sink is subscribed to this channel"""
         ...
 
     def close(self) -> None:
@@ -1795,8 +1880,25 @@ class SpherePrimitiveChannel:
         """The topic name of the channel."""
         ...
 
-    def schema_name(self) -> str | None:
+    @property
+    def message_encoding(self) -> str:
+        """The message encoding for the channel"""
+        ...
+
+    def metadata(self) -> Dict[str, str]:
+        """The metadata for the channel"""
+        ...
+
+    def schema(self) -> Optional[Schema]:
+        """The schema for the channel"""
+        ...
+
+    def schema_name(self) -> Optional[str]:
         """The name of the schema for the channel."""
+        ...
+
+    def has_sinks(self) -> bool:
+        """Returns true if at least one sink is subscribed to this channel"""
         ...
 
     def close(self) -> None:
@@ -1888,8 +1990,25 @@ class TextPrimitiveChannel:
         """The topic name of the channel."""
         ...
 
-    def schema_name(self) -> str | None:
+    @property
+    def message_encoding(self) -> str:
+        """The message encoding for the channel"""
+        ...
+
+    def metadata(self) -> Dict[str, str]:
+        """The metadata for the channel"""
+        ...
+
+    def schema(self) -> Optional[Schema]:
+        """The schema for the channel"""
+        ...
+
+    def schema_name(self) -> Optional[str]:
         """The name of the schema for the channel."""
+        ...
+
+    def has_sinks(self) -> bool:
+        """Returns true if at least one sink is subscribed to this channel"""
         ...
 
     def close(self) -> None:
@@ -1926,8 +2045,25 @@ class TriangleListPrimitiveChannel:
         """The topic name of the channel."""
         ...
 
-    def schema_name(self) -> str | None:
+    @property
+    def message_encoding(self) -> str:
+        """The message encoding for the channel"""
+        ...
+
+    def metadata(self) -> Dict[str, str]:
+        """The metadata for the channel"""
+        ...
+
+    def schema(self) -> Optional[Schema]:
+        """The schema for the channel"""
+        ...
+
+    def schema_name(self) -> Optional[str]:
         """The name of the schema for the channel."""
+        ...
+
+    def has_sinks(self) -> bool:
+        """Returns true if at least one sink is subscribed to this channel"""
         ...
 
     def close(self) -> None:
