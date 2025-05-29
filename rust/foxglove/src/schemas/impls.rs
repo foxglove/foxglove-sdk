@@ -3,6 +3,28 @@ use crate::schemas::{descriptors, foxglove::*};
 use crate::{Schema, Encode};
 use bytes::BufMut;
 
+impl Encode for ArrowPrimitive {
+    type Error = ::prost::EncodeError;
+
+    fn get_schema() -> Option<Schema> {
+        Some(Schema::new(
+            "foxglove.ArrowPrimitive",
+            "protobuf",
+            descriptors::ARROW_PRIMITIVE,
+        ))
+    }
+
+    fn get_message_encoding() -> String {
+        "protobuf".to_string()
+    }
+
+    fn encode(&self, buf: &mut impl BufMut) -> Result<(), prost::EncodeError> {
+        ::prost::Message::encode(self, buf)
+    }
+
+    fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
+}
+
 impl Encode for CameraCalibration {
     type Error = ::prost::EncodeError;
 
@@ -99,6 +121,50 @@ impl Encode for CompressedVideo {
             "foxglove.CompressedVideo",
             "protobuf",
             descriptors::COMPRESSED_VIDEO,
+        ))
+    }
+
+    fn get_message_encoding() -> String {
+        "protobuf".to_string()
+    }
+
+    fn encode(&self, buf: &mut impl BufMut) -> Result<(), prost::EncodeError> {
+        ::prost::Message::encode(self, buf)
+    }
+
+    fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
+}
+
+impl Encode for CubePrimitive {
+    type Error = ::prost::EncodeError;
+
+    fn get_schema() -> Option<Schema> {
+        Some(Schema::new(
+            "foxglove.CubePrimitive",
+            "protobuf",
+            descriptors::CUBE_PRIMITIVE,
+        ))
+    }
+
+    fn get_message_encoding() -> String {
+        "protobuf".to_string()
+    }
+
+    fn encode(&self, buf: &mut impl BufMut) -> Result<(), prost::EncodeError> {
+        ::prost::Message::encode(self, buf)
+    }
+
+    fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
+}
+
+impl Encode for CylinderPrimitive {
+    type Error = ::prost::EncodeError;
+
+    fn get_schema() -> Option<Schema> {
+        Some(Schema::new(
+            "foxglove.CylinderPrimitive",
+            "protobuf",
+            descriptors::CYLINDER_PRIMITIVE,
         ))
     }
 
@@ -267,6 +333,28 @@ impl Encode for LaserScan {
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
 }
 
+impl Encode for LinePrimitive {
+    type Error = ::prost::EncodeError;
+
+    fn get_schema() -> Option<Schema> {
+        Some(Schema::new(
+            "foxglove.LinePrimitive",
+            "protobuf",
+            descriptors::LINE_PRIMITIVE,
+        ))
+    }
+
+    fn get_message_encoding() -> String {
+        "protobuf".to_string()
+    }
+
+    fn encode(&self, buf: &mut impl BufMut) -> Result<(), prost::EncodeError> {
+        ::prost::Message::encode(self, buf)
+    }
+
+    fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
+}
+
 impl Encode for LocationFix {
     type Error = ::prost::EncodeError;
 
@@ -297,6 +385,28 @@ impl Encode for Log {
             "foxglove.Log",
             "protobuf",
             descriptors::LOG,
+        ))
+    }
+
+    fn get_message_encoding() -> String {
+        "protobuf".to_string()
+    }
+
+    fn encode(&self, buf: &mut impl BufMut) -> Result<(), prost::EncodeError> {
+        ::prost::Message::encode(self, buf)
+    }
+
+    fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
+}
+
+impl Encode for ModelPrimitive {
+    type Error = ::prost::EncodeError;
+
+    fn get_schema() -> Option<Schema> {
+        Some(Schema::new(
+            "foxglove.ModelPrimitive",
+            "protobuf",
+            descriptors::MODEL_PRIMITIVE,
         ))
     }
 
@@ -619,6 +729,28 @@ impl Encode for SceneUpdate {
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
 }
 
+impl Encode for SpherePrimitive {
+    type Error = ::prost::EncodeError;
+
+    fn get_schema() -> Option<Schema> {
+        Some(Schema::new(
+            "foxglove.SpherePrimitive",
+            "protobuf",
+            descriptors::SPHERE_PRIMITIVE,
+        ))
+    }
+
+    fn get_message_encoding() -> String {
+        "protobuf".to_string()
+    }
+
+    fn encode(&self, buf: &mut impl BufMut) -> Result<(), prost::EncodeError> {
+        ::prost::Message::encode(self, buf)
+    }
+
+    fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
+}
+
 impl Encode for TextAnnotation {
     type Error = ::prost::EncodeError;
 
@@ -627,6 +759,50 @@ impl Encode for TextAnnotation {
             "foxglove.TextAnnotation",
             "protobuf",
             descriptors::TEXT_ANNOTATION,
+        ))
+    }
+
+    fn get_message_encoding() -> String {
+        "protobuf".to_string()
+    }
+
+    fn encode(&self, buf: &mut impl BufMut) -> Result<(), prost::EncodeError> {
+        ::prost::Message::encode(self, buf)
+    }
+
+    fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
+}
+
+impl Encode for TextPrimitive {
+    type Error = ::prost::EncodeError;
+
+    fn get_schema() -> Option<Schema> {
+        Some(Schema::new(
+            "foxglove.TextPrimitive",
+            "protobuf",
+            descriptors::TEXT_PRIMITIVE,
+        ))
+    }
+
+    fn get_message_encoding() -> String {
+        "protobuf".to_string()
+    }
+
+    fn encode(&self, buf: &mut impl BufMut) -> Result<(), prost::EncodeError> {
+        ::prost::Message::encode(self, buf)
+    }
+
+    fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
+}
+
+impl Encode for TriangleListPrimitive {
+    type Error = ::prost::EncodeError;
+
+    fn get_schema() -> Option<Schema> {
+        Some(Schema::new(
+            "foxglove.TriangleListPrimitive",
+            "protobuf",
+            descriptors::TRIANGLE_LIST_PRIMITIVE,
         ))
     }
 
