@@ -18,7 +18,7 @@ use foxglove::{
     ChannelBuilder, PartialMetadata, RawChannel, Schema, WebSocketServer, WebSocketServerHandle,
 };
 use mcap::records::{MessageHeader, Record, SchemaHeader};
-use mcap::sans_io::read::{LinearReader, LinearReaderOptions, ReadAction};
+use mcap::sans_io::linear_reader::{LinearReadEvent, LinearReader, LinearReaderOptions};
 use tracing::info;
 
 #[derive(Debug, Parser)]
@@ -95,13 +95,13 @@ where
     R: Read + Seek,
     F: FnMut(Record<'_>) -> Result<()>,
 {
-    if let Some(action) = reader.next_action() {
-        match action? {
-            ReadAction::NeedMore(count) => {
+    if let Some(event) = reader.next_event() {
+        match event? {
+            LinearReadEvent::ReadRequest(count) => {
                 let count = file.read(reader.insert(count))?;
-                reader.set_written(count);
+                reader.notify_read(count);
             }
-            ReadAction::GetRecord { data, opcode } => {
+            LinearReadEvent::Record { data, opcode } => {
                 let record = mcap::parse_record(opcode, data)?;
                 handle_record(record)?;
             }
