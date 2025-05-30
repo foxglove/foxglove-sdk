@@ -9,7 +9,22 @@ enum DataSource {
     WebSocket(String),
 }
 
-/// Foxglove app URL.
+/// A foxglove app URL.
+///
+/// This struct implements [`Display`] by formatting the URL, so you can use it directly in format
+/// strings, or use `.to_string()` to convert it to a string.
+///
+/// # Example
+///
+/// ```
+/// use foxglove::AppUrl;
+///
+/// let url = AppUrl::new()
+///     .with_layout_id("lay_1234")
+///     .with_websocket("ws://localhost:8765");
+/// println!("Click here: {url}");
+/// assert_eq!(format!("{url}"), url.to_string());
+/// ```
 #[must_use]
 #[derive(Debug, Default, Clone)]
 pub struct AppUrl {
