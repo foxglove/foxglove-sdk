@@ -92,6 +92,29 @@ pub struct ArrowPrimitive {
     pub color: *const Color,
 }
 
+impl ArrowPrimitive {
+    /// Create a new typed channel, and return an owned raw channel pointer to it.
+    ///
+    /// # Safety
+    /// We're trusting the caller that the channel will only be used with this type T.
+    #[unsafe(no_mangle)]
+    pub unsafe extern "C" fn foxglove_channel_create_arrow_primitive(
+        topic: FoxgloveString,
+        context: *const FoxgloveContext,
+        channel: *mut *const FoxgloveChannel,
+    ) -> FoxgloveError {
+        if channel.is_null() {
+            tracing::error!("channel cannot be null");
+            return FoxgloveError::ValueError;
+        }
+        unsafe {
+            let result =
+                do_foxglove_channel_create::<foxglove::schemas::ArrowPrimitive>(topic, context);
+            result_to_c(result, channel)
+        }
+    }
+}
+
 impl BorrowToNative for ArrowPrimitive {
     type NativeType = foxglove::schemas::ArrowPrimitive;
 
@@ -120,6 +143,31 @@ impl BorrowToNative for ArrowPrimitive {
             head_diameter: self.head_diameter,
             color: color.map(ManuallyDrop::into_inner),
         }))
+    }
+}
+
+/// Log a ArrowPrimitive message to a channel.
+///
+/// # Safety
+/// The channel must have been created for this type with foxglove_channel_create_arrow_primitive.
+#[unsafe(no_mangle)]
+pub extern "C" fn foxglove_channel_log_arrow_primitive(
+    channel: Option<&FoxgloveChannel>,
+    msg: Option<&ArrowPrimitive>,
+    log_time: Option<&u64>,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { ArrowPrimitive::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
+            log_msg_to_channel(channel, &*msg, log_time)
+        }
+        Err(e) => {
+            tracing::error!("ArrowPrimitive: {}", e);
+            e.into()
+        }
     }
 }
 
@@ -713,6 +761,29 @@ pub struct CylinderPrimitive {
     pub color: *const Color,
 }
 
+impl CylinderPrimitive {
+    /// Create a new typed channel, and return an owned raw channel pointer to it.
+    ///
+    /// # Safety
+    /// We're trusting the caller that the channel will only be used with this type T.
+    #[unsafe(no_mangle)]
+    pub unsafe extern "C" fn foxglove_channel_create_cylinder_primitive(
+        topic: FoxgloveString,
+        context: *const FoxgloveContext,
+        channel: *mut *const FoxgloveChannel,
+    ) -> FoxgloveError {
+        if channel.is_null() {
+            tracing::error!("channel cannot be null");
+            return FoxgloveError::ValueError;
+        }
+        unsafe {
+            let result =
+                do_foxglove_channel_create::<foxglove::schemas::CylinderPrimitive>(topic, context);
+            result_to_c(result, channel)
+        }
+    }
+}
+
 impl BorrowToNative for CylinderPrimitive {
     type NativeType = foxglove::schemas::CylinderPrimitive;
 
@@ -749,6 +820,31 @@ impl BorrowToNative for CylinderPrimitive {
     }
 }
 
+/// Log a CylinderPrimitive message to a channel.
+///
+/// # Safety
+/// The channel must have been created for this type with foxglove_channel_create_cylinder_primitive.
+#[unsafe(no_mangle)]
+pub extern "C" fn foxglove_channel_log_cylinder_primitive(
+    channel: Option<&FoxgloveChannel>,
+    msg: Option<&CylinderPrimitive>,
+    log_time: Option<&u64>,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { CylinderPrimitive::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
+            log_msg_to_channel(channel, &*msg, log_time)
+        }
+        Err(e) => {
+            tracing::error!("CylinderPrimitive: {}", e);
+            e.into()
+        }
+    }
+}
+
 /// A primitive representing a cube or rectangular prism
 #[repr(C)]
 pub struct CubePrimitive {
@@ -760,6 +856,29 @@ pub struct CubePrimitive {
 
     /// Color of the cube
     pub color: *const Color,
+}
+
+impl CubePrimitive {
+    /// Create a new typed channel, and return an owned raw channel pointer to it.
+    ///
+    /// # Safety
+    /// We're trusting the caller that the channel will only be used with this type T.
+    #[unsafe(no_mangle)]
+    pub unsafe extern "C" fn foxglove_channel_create_cube_primitive(
+        topic: FoxgloveString,
+        context: *const FoxgloveContext,
+        channel: *mut *const FoxgloveChannel,
+    ) -> FoxgloveError {
+        if channel.is_null() {
+            tracing::error!("channel cannot be null");
+            return FoxgloveError::ValueError;
+        }
+        unsafe {
+            let result =
+                do_foxglove_channel_create::<foxglove::schemas::CubePrimitive>(topic, context);
+            result_to_c(result, channel)
+        }
+    }
 }
 
 impl BorrowToNative for CubePrimitive {
@@ -793,6 +912,31 @@ impl BorrowToNative for CubePrimitive {
             size: size.map(ManuallyDrop::into_inner),
             color: color.map(ManuallyDrop::into_inner),
         }))
+    }
+}
+
+/// Log a CubePrimitive message to a channel.
+///
+/// # Safety
+/// The channel must have been created for this type with foxglove_channel_create_cube_primitive.
+#[unsafe(no_mangle)]
+pub extern "C" fn foxglove_channel_log_cube_primitive(
+    channel: Option<&FoxgloveChannel>,
+    msg: Option<&CubePrimitive>,
+    log_time: Option<&u64>,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { CubePrimitive::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
+            log_msg_to_channel(channel, &*msg, log_time)
+        }
+        Err(e) => {
+            tracing::error!("CubePrimitive: {}", e);
+            e.into()
+        }
     }
 }
 
@@ -1478,6 +1622,29 @@ pub struct LinePrimitive {
     pub indices_count: usize,
 }
 
+impl LinePrimitive {
+    /// Create a new typed channel, and return an owned raw channel pointer to it.
+    ///
+    /// # Safety
+    /// We're trusting the caller that the channel will only be used with this type T.
+    #[unsafe(no_mangle)]
+    pub unsafe extern "C" fn foxglove_channel_create_line_primitive(
+        topic: FoxgloveString,
+        context: *const FoxgloveContext,
+        channel: *mut *const FoxgloveChannel,
+    ) -> FoxgloveError {
+        if channel.is_null() {
+            tracing::error!("channel cannot be null");
+            return FoxgloveError::ValueError;
+        }
+        unsafe {
+            let result =
+                do_foxglove_channel_create::<foxglove::schemas::LinePrimitive>(topic, context);
+            result_to_c(result, channel)
+        }
+    }
+}
+
 impl BorrowToNative for LinePrimitive {
     type NativeType = foxglove::schemas::LinePrimitive;
 
@@ -1512,6 +1679,31 @@ impl BorrowToNative for LinePrimitive {
                 vec_from_raw(self.indices as *mut u32, self.indices_count)
             }),
         }))
+    }
+}
+
+/// Log a LinePrimitive message to a channel.
+///
+/// # Safety
+/// The channel must have been created for this type with foxglove_channel_create_line_primitive.
+#[unsafe(no_mangle)]
+pub extern "C" fn foxglove_channel_log_line_primitive(
+    channel: Option<&FoxgloveChannel>,
+    msg: Option<&LinePrimitive>,
+    log_time: Option<&u64>,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { LinePrimitive::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
+            log_msg_to_channel(channel, &*msg, log_time)
+        }
+        Err(e) => {
+            tracing::error!("LinePrimitive: {}", e);
+            e.into()
+        }
     }
 }
 
@@ -2048,6 +2240,29 @@ pub struct ModelPrimitive {
     pub data_len: usize,
 }
 
+impl ModelPrimitive {
+    /// Create a new typed channel, and return an owned raw channel pointer to it.
+    ///
+    /// # Safety
+    /// We're trusting the caller that the channel will only be used with this type T.
+    #[unsafe(no_mangle)]
+    pub unsafe extern "C" fn foxglove_channel_create_model_primitive(
+        topic: FoxgloveString,
+        context: *const FoxgloveContext,
+        channel: *mut *const FoxgloveChannel,
+    ) -> FoxgloveError {
+        if channel.is_null() {
+            tracing::error!("channel cannot be null");
+            return FoxgloveError::ValueError;
+        }
+        unsafe {
+            let result =
+                do_foxglove_channel_create::<foxglove::schemas::ModelPrimitive>(topic, context);
+            result_to_c(result, channel)
+        }
+    }
+}
+
 impl BorrowToNative for ModelPrimitive {
     type NativeType = foxglove::schemas::ModelPrimitive;
 
@@ -2091,6 +2306,31 @@ impl BorrowToNative for ModelPrimitive {
             media_type: ManuallyDrop::into_inner(media_type),
             data: ManuallyDrop::into_inner(unsafe { bytes_from_raw(self.data, self.data_len) }),
         }))
+    }
+}
+
+/// Log a ModelPrimitive message to a channel.
+///
+/// # Safety
+/// The channel must have been created for this type with foxglove_channel_create_model_primitive.
+#[unsafe(no_mangle)]
+pub extern "C" fn foxglove_channel_log_model_primitive(
+    channel: Option<&FoxgloveChannel>,
+    msg: Option<&ModelPrimitive>,
+    log_time: Option<&u64>,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { ModelPrimitive::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
+            log_msg_to_channel(channel, &*msg, log_time)
+        }
+        Err(e) => {
+            tracing::error!("ModelPrimitive: {}", e);
+            e.into()
+        }
     }
 }
 
@@ -3092,6 +3332,29 @@ pub struct SpherePrimitive {
     pub color: *const Color,
 }
 
+impl SpherePrimitive {
+    /// Create a new typed channel, and return an owned raw channel pointer to it.
+    ///
+    /// # Safety
+    /// We're trusting the caller that the channel will only be used with this type T.
+    #[unsafe(no_mangle)]
+    pub unsafe extern "C" fn foxglove_channel_create_sphere_primitive(
+        topic: FoxgloveString,
+        context: *const FoxgloveContext,
+        channel: *mut *const FoxgloveChannel,
+    ) -> FoxgloveError {
+        if channel.is_null() {
+            tracing::error!("channel cannot be null");
+            return FoxgloveError::ValueError;
+        }
+        unsafe {
+            let result =
+                do_foxglove_channel_create::<foxglove::schemas::SpherePrimitive>(topic, context);
+            result_to_c(result, channel)
+        }
+    }
+}
+
 impl BorrowToNative for SpherePrimitive {
     type NativeType = foxglove::schemas::SpherePrimitive;
 
@@ -3123,6 +3386,31 @@ impl BorrowToNative for SpherePrimitive {
             size: size.map(ManuallyDrop::into_inner),
             color: color.map(ManuallyDrop::into_inner),
         }))
+    }
+}
+
+/// Log a SpherePrimitive message to a channel.
+///
+/// # Safety
+/// The channel must have been created for this type with foxglove_channel_create_sphere_primitive.
+#[unsafe(no_mangle)]
+pub extern "C" fn foxglove_channel_log_sphere_primitive(
+    channel: Option<&FoxgloveChannel>,
+    msg: Option<&SpherePrimitive>,
+    log_time: Option<&u64>,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { SpherePrimitive::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
+            log_msg_to_channel(channel, &*msg, log_time)
+        }
+        Err(e) => {
+            tracing::error!("SpherePrimitive: {}", e);
+            e.into()
+        }
     }
 }
 
@@ -3258,6 +3546,29 @@ pub struct TextPrimitive {
     pub text: FoxgloveString,
 }
 
+impl TextPrimitive {
+    /// Create a new typed channel, and return an owned raw channel pointer to it.
+    ///
+    /// # Safety
+    /// We're trusting the caller that the channel will only be used with this type T.
+    #[unsafe(no_mangle)]
+    pub unsafe extern "C" fn foxglove_channel_create_text_primitive(
+        topic: FoxgloveString,
+        context: *const FoxgloveContext,
+        channel: *mut *const FoxgloveChannel,
+    ) -> FoxgloveError {
+        if channel.is_null() {
+            tracing::error!("channel cannot be null");
+            return FoxgloveError::ValueError;
+        }
+        unsafe {
+            let result =
+                do_foxglove_channel_create::<foxglove::schemas::TextPrimitive>(topic, context);
+            result_to_c(result, channel)
+        }
+    }
+}
+
 impl BorrowToNative for TextPrimitive {
     type NativeType = foxglove::schemas::TextPrimitive;
 
@@ -3291,6 +3602,31 @@ impl BorrowToNative for TextPrimitive {
     }
 }
 
+/// Log a TextPrimitive message to a channel.
+///
+/// # Safety
+/// The channel must have been created for this type with foxglove_channel_create_text_primitive.
+#[unsafe(no_mangle)]
+pub extern "C" fn foxglove_channel_log_text_primitive(
+    channel: Option<&FoxgloveChannel>,
+    msg: Option<&TextPrimitive>,
+    log_time: Option<&u64>,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { TextPrimitive::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
+            log_msg_to_channel(channel, &*msg, log_time)
+        }
+        Err(e) => {
+            tracing::error!("TextPrimitive: {}", e);
+            e.into()
+        }
+    }
+}
+
 /// A primitive representing a set of triangles or a surface tiled by triangles
 #[repr(C)]
 pub struct TriangleListPrimitive {
@@ -3313,6 +3649,30 @@ pub struct TriangleListPrimitive {
     /// If omitted or empty, indexing will not be used. This default behavior is equivalent to specifying [0, 1, ..., N-1] for the indices (where N is the number of `points` provided).
     pub indices: *const u32,
     pub indices_count: usize,
+}
+
+impl TriangleListPrimitive {
+    /// Create a new typed channel, and return an owned raw channel pointer to it.
+    ///
+    /// # Safety
+    /// We're trusting the caller that the channel will only be used with this type T.
+    #[unsafe(no_mangle)]
+    pub unsafe extern "C" fn foxglove_channel_create_triangle_list_primitive(
+        topic: FoxgloveString,
+        context: *const FoxgloveContext,
+        channel: *mut *const FoxgloveChannel,
+    ) -> FoxgloveError {
+        if channel.is_null() {
+            tracing::error!("channel cannot be null");
+            return FoxgloveError::ValueError;
+        }
+        unsafe {
+            let result = do_foxglove_channel_create::<foxglove::schemas::TriangleListPrimitive>(
+                topic, context,
+            );
+            result_to_c(result, channel)
+        }
+    }
 }
 
 impl BorrowToNative for TriangleListPrimitive {
@@ -3348,6 +3708,31 @@ impl BorrowToNative for TriangleListPrimitive {
                 }),
             },
         ))
+    }
+}
+
+/// Log a TriangleListPrimitive message to a channel.
+///
+/// # Safety
+/// The channel must have been created for this type with foxglove_channel_create_triangle_list_primitive.
+#[unsafe(no_mangle)]
+pub extern "C" fn foxglove_channel_log_triangle_list_primitive(
+    channel: Option<&FoxgloveChannel>,
+    msg: Option<&TriangleListPrimitive>,
+    log_time: Option<&u64>,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { TriangleListPrimitive::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
+            log_msg_to_channel(channel, &*msg, log_time)
+        }
+        Err(e) => {
+            tracing::error!("TriangleListPrimitive: {}", e);
+            e.into()
+        }
     }
 }
 

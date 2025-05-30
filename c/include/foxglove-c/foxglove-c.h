@@ -598,6 +598,112 @@ typedef struct foxglove_schema {
 } foxglove_schema;
 
 /**
+ * A vector in 3D space that represents a direction only
+ */
+typedef struct foxglove_vector3 {
+  /**
+   * x coordinate length
+   */
+  double x;
+  /**
+   * y coordinate length
+   */
+  double y;
+  /**
+   * z coordinate length
+   */
+  double z;
+} foxglove_vector3;
+
+/**
+ * A [quaternion](https://eater.net/quaternions) representing a rotation in 3D space
+ */
+typedef struct foxglove_quaternion {
+  /**
+   * x value
+   */
+  double x;
+  /**
+   * y value
+   */
+  double y;
+  /**
+   * z value
+   */
+  double z;
+  /**
+   * w value
+   */
+  double w;
+} foxglove_quaternion;
+
+/**
+ * A position and orientation for an object or reference frame in 3D space
+ */
+typedef struct foxglove_pose {
+  /**
+   * Point denoting position in 3D space
+   */
+  const struct foxglove_vector3 *position;
+  /**
+   * Quaternion denoting orientation in 3D space
+   */
+  const struct foxglove_quaternion *orientation;
+} foxglove_pose;
+
+/**
+ * A color in RGBA format
+ */
+typedef struct foxglove_color {
+  /**
+   * Red value between 0 and 1
+   */
+  double r;
+  /**
+   * Green value between 0 and 1
+   */
+  double g;
+  /**
+   * Blue value between 0 and 1
+   */
+  double b;
+  /**
+   * Alpha value between 0 and 1
+   */
+  double a;
+} foxglove_color;
+
+/**
+ * A primitive representing an arrow
+ */
+typedef struct foxglove_arrow_primitive {
+  /**
+   * Position of the arrow's tail and orientation of the arrow. Identity orientation means the arrow points in the +x direction.
+   */
+  const struct foxglove_pose *pose;
+  /**
+   * Length of the arrow shaft
+   */
+  double shaft_length;
+  /**
+   * Diameter of the arrow shaft
+   */
+  double shaft_diameter;
+  /**
+   * Length of the arrow head
+   */
+  double head_length;
+  /**
+   * Diameter of the arrow head
+   */
+  double head_diameter;
+  /**
+   * Color of the arrow
+   */
+  const struct foxglove_color *color;
+} foxglove_arrow_primitive;
+
+/**
  * A timestamp, represented as an offset from a user-defined epoch.
  */
 typedef struct foxglove_timestamp {
@@ -709,28 +815,6 @@ typedef struct foxglove_point2 {
 } foxglove_point2;
 
 /**
- * A color in RGBA format
- */
-typedef struct foxglove_color {
-  /**
-   * Red value between 0 and 1
-   */
-  double r;
-  /**
-   * Green value between 0 and 1
-   */
-  double g;
-  /**
-   * Blue value between 0 and 1
-   */
-  double b;
-  /**
-   * Alpha value between 0 and 1
-   */
-  double a;
-} foxglove_color;
-
-/**
  * A circle annotation on a 2D image
  */
 typedef struct foxglove_circle_annotation {
@@ -838,44 +922,48 @@ typedef struct foxglove_compressed_video {
 } foxglove_compressed_video;
 
 /**
- * A vector in 3D space that represents a direction only
+ * A primitive representing a cylinder, elliptic cylinder, or truncated cone
  */
-typedef struct foxglove_vector3 {
+typedef struct foxglove_cylinder_primitive {
   /**
-   * x coordinate length
+   * Position of the center of the cylinder and orientation of the cylinder. The flat face(s) are perpendicular to the z-axis.
    */
-  double x;
+  const struct foxglove_pose *pose;
   /**
-   * y coordinate length
+   * Size of the cylinder's bounding box
    */
-  double y;
+  const struct foxglove_vector3 *size;
   /**
-   * z coordinate length
+   * 0-1, ratio of the diameter of the cylinder's bottom face (min z) to the bottom of the bounding box
    */
-  double z;
-} foxglove_vector3;
+  double bottom_scale;
+  /**
+   * 0-1, ratio of the diameter of the cylinder's top face (max z) to the top of the bounding box
+   */
+  double top_scale;
+  /**
+   * Color of the cylinder
+   */
+  const struct foxglove_color *color;
+} foxglove_cylinder_primitive;
 
 /**
- * A [quaternion](https://eater.net/quaternions) representing a rotation in 3D space
+ * A primitive representing a cube or rectangular prism
  */
-typedef struct foxglove_quaternion {
+typedef struct foxglove_cube_primitive {
   /**
-   * x value
+   * Position of the center of the cube and orientation of the cube
    */
-  double x;
+  const struct foxglove_pose *pose;
   /**
-   * y value
+   * Size of the cube along each axis
    */
-  double y;
+  const struct foxglove_vector3 *size;
   /**
-   * z value
+   * Color of the cube
    */
-  double z;
-  /**
-   * w value
-   */
-  double w;
-} foxglove_quaternion;
+  const struct foxglove_color *color;
+} foxglove_cube_primitive;
 
 /**
  * A transform between two reference frames in 3D space
@@ -923,20 +1011,6 @@ typedef struct foxglove_geo_json {
    */
   struct foxglove_string geojson;
 } foxglove_geo_json;
-
-/**
- * A position and orientation for an object or reference frame in 3D space
- */
-typedef struct foxglove_pose {
-  /**
-   * Point denoting position in 3D space
-   */
-  const struct foxglove_vector3 *position;
-  /**
-   * Quaternion denoting orientation in 3D space
-   */
-  const struct foxglove_quaternion *orientation;
-} foxglove_pose;
 
 /**
  * A vector in 2D space that represents a direction only
@@ -1154,6 +1228,67 @@ typedef struct foxglove_laser_scan {
 } foxglove_laser_scan;
 
 /**
+ * A point representing a position in 3D space
+ */
+typedef struct foxglove_point3 {
+  /**
+   * x coordinate position
+   */
+  double x;
+  /**
+   * y coordinate position
+   */
+  double y;
+  /**
+   * z coordinate position
+   */
+  double z;
+} foxglove_point3;
+
+/**
+ * A primitive representing a series of points connected by lines
+ */
+typedef struct foxglove_line_primitive {
+  /**
+   * Drawing primitive to use for lines
+   */
+  foxglove_line_type type;
+  /**
+   * Origin of lines relative to reference frame
+   */
+  const struct foxglove_pose *pose;
+  /**
+   * Line thickness
+   */
+  double thickness;
+  /**
+   * Indicates whether `thickness` is a fixed size in screen pixels (true), or specified in world coordinates and scales with distance from the camera (false)
+   */
+  bool scale_invariant;
+  /**
+   * Points along the line
+   */
+  const struct foxglove_point3 *points;
+  size_t points_count;
+  /**
+   * Solid color to use for the whole line. One of `color` or `colors` must be provided.
+   */
+  const struct foxglove_color *color;
+  /**
+   * Per-point colors (if specified, must have the same length as `points`). One of `color` or `colors` must be provided.
+   */
+  const struct foxglove_color *colors;
+  size_t colors_count;
+  /**
+   * Indices into the `points` and `colors` attribute arrays, which can be used to avoid duplicating attribute data.
+   *
+   * If omitted or empty, indexing will not be used. This default behavior is equivalent to specifying [0, 1, ..., N-1] for the indices (where N is the number of `points` provided).
+   */
+  const uint32_t *indices;
+  size_t indices_count;
+} foxglove_line_primitive;
+
+/**
  * A navigation satellite fix for any Global Navigation Satellite System
  */
 typedef struct foxglove_location_fix {
@@ -1253,54 +1388,6 @@ typedef struct foxglove_duration {
 } foxglove_duration;
 
 /**
- * A primitive representing an arrow
- */
-typedef struct foxglove_arrow_primitive {
-  /**
-   * Position of the arrow's tail and orientation of the arrow. Identity orientation means the arrow points in the +x direction.
-   */
-  const struct foxglove_pose *pose;
-  /**
-   * Length of the arrow shaft
-   */
-  double shaft_length;
-  /**
-   * Diameter of the arrow shaft
-   */
-  double shaft_diameter;
-  /**
-   * Length of the arrow head
-   */
-  double head_length;
-  /**
-   * Diameter of the arrow head
-   */
-  double head_diameter;
-  /**
-   * Color of the arrow
-   */
-  const struct foxglove_color *color;
-} foxglove_arrow_primitive;
-
-/**
- * A primitive representing a cube or rectangular prism
- */
-typedef struct foxglove_cube_primitive {
-  /**
-   * Position of the center of the cube and orientation of the cube
-   */
-  const struct foxglove_pose *pose;
-  /**
-   * Size of the cube along each axis
-   */
-  const struct foxglove_vector3 *size;
-  /**
-   * Color of the cube
-   */
-  const struct foxglove_color *color;
-} foxglove_cube_primitive;
-
-/**
  * A primitive representing a sphere or ellipsoid
  */
 typedef struct foxglove_sphere_primitive {
@@ -1317,93 +1404,6 @@ typedef struct foxglove_sphere_primitive {
    */
   const struct foxglove_color *color;
 } foxglove_sphere_primitive;
-
-/**
- * A primitive representing a cylinder, elliptic cylinder, or truncated cone
- */
-typedef struct foxglove_cylinder_primitive {
-  /**
-   * Position of the center of the cylinder and orientation of the cylinder. The flat face(s) are perpendicular to the z-axis.
-   */
-  const struct foxglove_pose *pose;
-  /**
-   * Size of the cylinder's bounding box
-   */
-  const struct foxglove_vector3 *size;
-  /**
-   * 0-1, ratio of the diameter of the cylinder's bottom face (min z) to the bottom of the bounding box
-   */
-  double bottom_scale;
-  /**
-   * 0-1, ratio of the diameter of the cylinder's top face (max z) to the top of the bounding box
-   */
-  double top_scale;
-  /**
-   * Color of the cylinder
-   */
-  const struct foxglove_color *color;
-} foxglove_cylinder_primitive;
-
-/**
- * A point representing a position in 3D space
- */
-typedef struct foxglove_point3 {
-  /**
-   * x coordinate position
-   */
-  double x;
-  /**
-   * y coordinate position
-   */
-  double y;
-  /**
-   * z coordinate position
-   */
-  double z;
-} foxglove_point3;
-
-/**
- * A primitive representing a series of points connected by lines
- */
-typedef struct foxglove_line_primitive {
-  /**
-   * Drawing primitive to use for lines
-   */
-  foxglove_line_type type;
-  /**
-   * Origin of lines relative to reference frame
-   */
-  const struct foxglove_pose *pose;
-  /**
-   * Line thickness
-   */
-  double thickness;
-  /**
-   * Indicates whether `thickness` is a fixed size in screen pixels (true), or specified in world coordinates and scales with distance from the camera (false)
-   */
-  bool scale_invariant;
-  /**
-   * Points along the line
-   */
-  const struct foxglove_point3 *points;
-  size_t points_count;
-  /**
-   * Solid color to use for the whole line. One of `color` or `colors` must be provided.
-   */
-  const struct foxglove_color *color;
-  /**
-   * Per-point colors (if specified, must have the same length as `points`). One of `color` or `colors` must be provided.
-   */
-  const struct foxglove_color *colors;
-  size_t colors_count;
-  /**
-   * Indices into the `points` and `colors` attribute arrays, which can be used to avoid duplicating attribute data.
-   *
-   * If omitted or empty, indexing will not be used. This default behavior is equivalent to specifying [0, 1, ..., N-1] for the indices (where N is the number of `points` provided).
-   */
-  const uint32_t *indices;
-  size_t indices_count;
-} foxglove_line_primitive;
 
 /**
  * A primitive representing a set of triangles or a surface tiled by triangles
@@ -2019,6 +2019,26 @@ const char *foxglove_error_to_cstr(foxglove_error error);
  * # Safety
  * We're trusting the caller that the channel will only be used with this type T.
  */
+foxglove_error foxglove_channel_create_arrow_primitive(struct foxglove_string topic,
+                                                       const struct foxglove_context *context,
+                                                       const struct foxglove_channel **channel);
+
+/**
+ * Log a ArrowPrimitive message to a channel.
+ *
+ * # Safety
+ * The channel must have been created for this type with foxglove_channel_create_arrow_primitive.
+ */
+foxglove_error foxglove_channel_log_arrow_primitive(const struct foxglove_channel *channel,
+                                                    const struct foxglove_arrow_primitive *msg,
+                                                    const uint64_t *log_time);
+
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
 foxglove_error foxglove_channel_create_camera_calibration(struct foxglove_string topic,
                                                           const struct foxglove_context *context,
                                                           const struct foxglove_channel **channel);
@@ -2112,6 +2132,46 @@ foxglove_error foxglove_channel_create_compressed_video(struct foxglove_string t
 foxglove_error foxglove_channel_log_compressed_video(const struct foxglove_channel *channel,
                                                      const struct foxglove_compressed_video *msg,
                                                      const uint64_t *log_time);
+
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
+foxglove_error foxglove_channel_create_cylinder_primitive(struct foxglove_string topic,
+                                                          const struct foxglove_context *context,
+                                                          const struct foxglove_channel **channel);
+
+/**
+ * Log a CylinderPrimitive message to a channel.
+ *
+ * # Safety
+ * The channel must have been created for this type with foxglove_channel_create_cylinder_primitive.
+ */
+foxglove_error foxglove_channel_log_cylinder_primitive(const struct foxglove_channel *channel,
+                                                       const struct foxglove_cylinder_primitive *msg,
+                                                       const uint64_t *log_time);
+
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
+foxglove_error foxglove_channel_create_cube_primitive(struct foxglove_string topic,
+                                                      const struct foxglove_context *context,
+                                                      const struct foxglove_channel **channel);
+
+/**
+ * Log a CubePrimitive message to a channel.
+ *
+ * # Safety
+ * The channel must have been created for this type with foxglove_channel_create_cube_primitive.
+ */
+foxglove_error foxglove_channel_log_cube_primitive(const struct foxglove_channel *channel,
+                                                   const struct foxglove_cube_primitive *msg,
+                                                   const uint64_t *log_time);
 
 /**
  * Create a new typed channel, and return an owned raw channel pointer to it.
@@ -2259,6 +2319,26 @@ foxglove_error foxglove_channel_log_laser_scan(const struct foxglove_channel *ch
  * # Safety
  * We're trusting the caller that the channel will only be used with this type T.
  */
+foxglove_error foxglove_channel_create_line_primitive(struct foxglove_string topic,
+                                                      const struct foxglove_context *context,
+                                                      const struct foxglove_channel **channel);
+
+/**
+ * Log a LinePrimitive message to a channel.
+ *
+ * # Safety
+ * The channel must have been created for this type with foxglove_channel_create_line_primitive.
+ */
+foxglove_error foxglove_channel_log_line_primitive(const struct foxglove_channel *channel,
+                                                   const struct foxglove_line_primitive *msg,
+                                                   const uint64_t *log_time);
+
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
 foxglove_error foxglove_channel_create_location_fix(struct foxglove_string topic,
                                                     const struct foxglove_context *context,
                                                     const struct foxglove_channel **channel);
@@ -2352,6 +2432,26 @@ foxglove_error foxglove_channel_create_scene_update(struct foxglove_string topic
 foxglove_error foxglove_channel_log_scene_update(const struct foxglove_channel *channel,
                                                  const struct foxglove_scene_update *msg,
                                                  const uint64_t *log_time);
+
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
+foxglove_error foxglove_channel_create_model_primitive(struct foxglove_string topic,
+                                                       const struct foxglove_context *context,
+                                                       const struct foxglove_channel **channel);
+
+/**
+ * Log a ModelPrimitive message to a channel.
+ *
+ * # Safety
+ * The channel must have been created for this type with foxglove_channel_create_model_primitive.
+ */
+foxglove_error foxglove_channel_log_model_primitive(const struct foxglove_channel *channel,
+                                                    const struct foxglove_model_primitive *msg,
+                                                    const uint64_t *log_time);
 
 /**
  * Create a new typed channel, and return an owned raw channel pointer to it.
@@ -2579,6 +2679,26 @@ foxglove_error foxglove_channel_log_raw_image(const struct foxglove_channel *cha
  * # Safety
  * We're trusting the caller that the channel will only be used with this type T.
  */
+foxglove_error foxglove_channel_create_sphere_primitive(struct foxglove_string topic,
+                                                        const struct foxglove_context *context,
+                                                        const struct foxglove_channel **channel);
+
+/**
+ * Log a SpherePrimitive message to a channel.
+ *
+ * # Safety
+ * The channel must have been created for this type with foxglove_channel_create_sphere_primitive.
+ */
+foxglove_error foxglove_channel_log_sphere_primitive(const struct foxglove_channel *channel,
+                                                     const struct foxglove_sphere_primitive *msg,
+                                                     const uint64_t *log_time);
+
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
 foxglove_error foxglove_channel_create_text_annotation(struct foxglove_string topic,
                                                        const struct foxglove_context *context,
                                                        const struct foxglove_channel **channel);
@@ -2592,6 +2712,46 @@ foxglove_error foxglove_channel_create_text_annotation(struct foxglove_string to
 foxglove_error foxglove_channel_log_text_annotation(const struct foxglove_channel *channel,
                                                     const struct foxglove_text_annotation *msg,
                                                     const uint64_t *log_time);
+
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
+foxglove_error foxglove_channel_create_text_primitive(struct foxglove_string topic,
+                                                      const struct foxglove_context *context,
+                                                      const struct foxglove_channel **channel);
+
+/**
+ * Log a TextPrimitive message to a channel.
+ *
+ * # Safety
+ * The channel must have been created for this type with foxglove_channel_create_text_primitive.
+ */
+foxglove_error foxglove_channel_log_text_primitive(const struct foxglove_channel *channel,
+                                                   const struct foxglove_text_primitive *msg,
+                                                   const uint64_t *log_time);
+
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
+foxglove_error foxglove_channel_create_triangle_list_primitive(struct foxglove_string topic,
+                                                               const struct foxglove_context *context,
+                                                               const struct foxglove_channel **channel);
+
+/**
+ * Log a TriangleListPrimitive message to a channel.
+ *
+ * # Safety
+ * The channel must have been created for this type with foxglove_channel_create_triangle_list_primitive.
+ */
+foxglove_error foxglove_channel_log_triangle_list_primitive(const struct foxglove_channel *channel,
+                                                            const struct foxglove_triangle_list_primitive *msg,
+                                                            const uint64_t *log_time);
 
 /**
  * Create a new typed channel, and return an owned raw channel pointer to it.

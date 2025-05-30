@@ -66,10 +66,6 @@ function isSameAsCType(schema: FoxgloveMessageSchema): boolean {
   );
 }
 
-function hasChannelType(schema: FoxgloveMessageSchema): boolean {
-  return !schema.name.endsWith("Primitive") && schema.name !== "Color";
-}
-
 /**
  * Yield `schemas` in an order such that dependencies come before dependents, so structs don't end
  * up referencing [incomplete types](https://en.cppreference.com/w/cpp/language/incomplete_type).
@@ -166,7 +162,7 @@ export function generateHppSchemas(
     ].join("\n");
   });
 
-  const channelClasses = schemas.filter(hasChannelType).map(
+  const channelClasses = schemas.map(
     (schema) => `/// @brief A channel for logging ${schema.name} messages to a topic.
       ///
       /// @note While channels are fully thread-safe, the ${schema.name} struct is not thread-safe.
@@ -324,10 +320,6 @@ export function generateCppSchemas(schemas: FoxgloveMessageSchema[]): string {
   });
 
   const traitSpecializations = schemas.flatMap((schema) => {
-    if (!hasChannelType(schema)) {
-      return [];
-    }
-
     const snakeName = toSnakeCase(schema.name);
     let conversionCode;
     if (isSameAsCType(schema)) {

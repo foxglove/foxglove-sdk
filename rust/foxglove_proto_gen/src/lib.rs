@@ -99,7 +99,6 @@ fn generate_descriptors(out_dir: &Path, fds: &FileDescriptorSet) -> anyhow::Resu
             .as_ref()
             .and_then(|n| n.strip_prefix("foxglove/"))
             .and_then(|n| n.strip_suffix(".proto"))
-            .filter(|n| !n.ends_with("Primitive"))
         {
             let file_name = format!("{name}.bin");
             let var_name = camel_case_to_constant_case(name);
@@ -148,7 +147,6 @@ fn generate_impls(out_dir: &Path, fds: &FileDescriptorSet) -> anyhow::Result<()>
             .as_ref()
             .and_then(|n| n.strip_prefix("foxglove/"))
             .and_then(|n| n.strip_suffix(".proto"))
-            .filter(|n| !n.ends_with("Primitive"))
         else {
             continue;
         };

@@ -932,6 +932,51 @@ struct RawImage {
   std::vector<std::byte> data;
 };
 
+/// @brief A channel for logging ArrowPrimitive messages to a topic.
+///
+/// @note While channels are fully thread-safe, the ArrowPrimitive struct is not thread-safe.
+/// Avoid modifying it concurrently or during a log operation.
+class ArrowPrimitiveChannel {
+public:
+  /// @brief Create a new channel.
+  ///
+  /// @param topic The topic name. You should choose a unique topic name per channel for
+  /// compatibility with the Foxglove app.
+  /// @param context The context which associates logs to a sink. If omitted, the default context is
+  /// used.
+  static FoxgloveResult<ArrowPrimitiveChannel> create(
+    const std::string_view& topic, const Context& context = Context()
+  );
+
+  /// @brief Log a message to the channel.
+  ///
+  /// @param msg The ArrowPrimitive message to log.
+  /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  FoxgloveError log(
+    const ArrowPrimitive& msg, std::optional<uint64_t> log_time = std::nullopt
+  ) noexcept;
+
+  /// @brief Uniquely identifies a channel in the context of this program.
+  ///
+  /// @return The ID of the channel.
+  [[nodiscard]] uint64_t id() const noexcept;
+
+  ArrowPrimitiveChannel(const ArrowPrimitiveChannel& other) noexcept = delete;
+  ArrowPrimitiveChannel& operator=(const ArrowPrimitiveChannel& other) noexcept = delete;
+  /// @brief Default move constructor.
+  ArrowPrimitiveChannel(ArrowPrimitiveChannel&& other) noexcept = default;
+  /// @brief Default move assignment.
+  ArrowPrimitiveChannel& operator=(ArrowPrimitiveChannel&& other) noexcept = default;
+  /// @brief Default destructor.
+  ~ArrowPrimitiveChannel() = default;
+
+private:
+  explicit ArrowPrimitiveChannel(ChannelUniquePtr&& channel)
+      : impl_(std::move(channel)) {}
+
+  ChannelUniquePtr impl_;
+};
+
 /// @brief A channel for logging CameraCalibration messages to a topic.
 ///
 /// @note While channels are fully thread-safe, the CameraCalibration struct is not thread-safe.
@@ -1022,6 +1067,49 @@ private:
   ChannelUniquePtr impl_;
 };
 
+/// @brief A channel for logging Color messages to a topic.
+///
+/// @note While channels are fully thread-safe, the Color struct is not thread-safe.
+/// Avoid modifying it concurrently or during a log operation.
+class ColorChannel {
+public:
+  /// @brief Create a new channel.
+  ///
+  /// @param topic The topic name. You should choose a unique topic name per channel for
+  /// compatibility with the Foxglove app.
+  /// @param context The context which associates logs to a sink. If omitted, the default context is
+  /// used.
+  static FoxgloveResult<ColorChannel> create(
+    const std::string_view& topic, const Context& context = Context()
+  );
+
+  /// @brief Log a message to the channel.
+  ///
+  /// @param msg The Color message to log.
+  /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  FoxgloveError log(const Color& msg, std::optional<uint64_t> log_time = std::nullopt) noexcept;
+
+  /// @brief Uniquely identifies a channel in the context of this program.
+  ///
+  /// @return The ID of the channel.
+  [[nodiscard]] uint64_t id() const noexcept;
+
+  ColorChannel(const ColorChannel& other) noexcept = delete;
+  ColorChannel& operator=(const ColorChannel& other) noexcept = delete;
+  /// @brief Default move constructor.
+  ColorChannel(ColorChannel&& other) noexcept = default;
+  /// @brief Default move assignment.
+  ColorChannel& operator=(ColorChannel&& other) noexcept = default;
+  /// @brief Default destructor.
+  ~ColorChannel() = default;
+
+private:
+  explicit ColorChannel(ChannelUniquePtr&& channel)
+      : impl_(std::move(channel)) {}
+
+  ChannelUniquePtr impl_;
+};
+
 /// @brief A channel for logging CompressedImage messages to a topic.
 ///
 /// @note While channels are fully thread-safe, the CompressedImage struct is not thread-safe.
@@ -1107,6 +1195,96 @@ public:
 
 private:
   explicit CompressedVideoChannel(ChannelUniquePtr&& channel)
+      : impl_(std::move(channel)) {}
+
+  ChannelUniquePtr impl_;
+};
+
+/// @brief A channel for logging CylinderPrimitive messages to a topic.
+///
+/// @note While channels are fully thread-safe, the CylinderPrimitive struct is not thread-safe.
+/// Avoid modifying it concurrently or during a log operation.
+class CylinderPrimitiveChannel {
+public:
+  /// @brief Create a new channel.
+  ///
+  /// @param topic The topic name. You should choose a unique topic name per channel for
+  /// compatibility with the Foxglove app.
+  /// @param context The context which associates logs to a sink. If omitted, the default context is
+  /// used.
+  static FoxgloveResult<CylinderPrimitiveChannel> create(
+    const std::string_view& topic, const Context& context = Context()
+  );
+
+  /// @brief Log a message to the channel.
+  ///
+  /// @param msg The CylinderPrimitive message to log.
+  /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  FoxgloveError log(
+    const CylinderPrimitive& msg, std::optional<uint64_t> log_time = std::nullopt
+  ) noexcept;
+
+  /// @brief Uniquely identifies a channel in the context of this program.
+  ///
+  /// @return The ID of the channel.
+  [[nodiscard]] uint64_t id() const noexcept;
+
+  CylinderPrimitiveChannel(const CylinderPrimitiveChannel& other) noexcept = delete;
+  CylinderPrimitiveChannel& operator=(const CylinderPrimitiveChannel& other) noexcept = delete;
+  /// @brief Default move constructor.
+  CylinderPrimitiveChannel(CylinderPrimitiveChannel&& other) noexcept = default;
+  /// @brief Default move assignment.
+  CylinderPrimitiveChannel& operator=(CylinderPrimitiveChannel&& other) noexcept = default;
+  /// @brief Default destructor.
+  ~CylinderPrimitiveChannel() = default;
+
+private:
+  explicit CylinderPrimitiveChannel(ChannelUniquePtr&& channel)
+      : impl_(std::move(channel)) {}
+
+  ChannelUniquePtr impl_;
+};
+
+/// @brief A channel for logging CubePrimitive messages to a topic.
+///
+/// @note While channels are fully thread-safe, the CubePrimitive struct is not thread-safe.
+/// Avoid modifying it concurrently or during a log operation.
+class CubePrimitiveChannel {
+public:
+  /// @brief Create a new channel.
+  ///
+  /// @param topic The topic name. You should choose a unique topic name per channel for
+  /// compatibility with the Foxglove app.
+  /// @param context The context which associates logs to a sink. If omitted, the default context is
+  /// used.
+  static FoxgloveResult<CubePrimitiveChannel> create(
+    const std::string_view& topic, const Context& context = Context()
+  );
+
+  /// @brief Log a message to the channel.
+  ///
+  /// @param msg The CubePrimitive message to log.
+  /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  FoxgloveError log(
+    const CubePrimitive& msg, std::optional<uint64_t> log_time = std::nullopt
+  ) noexcept;
+
+  /// @brief Uniquely identifies a channel in the context of this program.
+  ///
+  /// @return The ID of the channel.
+  [[nodiscard]] uint64_t id() const noexcept;
+
+  CubePrimitiveChannel(const CubePrimitiveChannel& other) noexcept = delete;
+  CubePrimitiveChannel& operator=(const CubePrimitiveChannel& other) noexcept = delete;
+  /// @brief Default move constructor.
+  CubePrimitiveChannel(CubePrimitiveChannel&& other) noexcept = default;
+  /// @brief Default move assignment.
+  CubePrimitiveChannel& operator=(CubePrimitiveChannel&& other) noexcept = default;
+  /// @brief Default destructor.
+  ~CubePrimitiveChannel() = default;
+
+private:
+  explicit CubePrimitiveChannel(ChannelUniquePtr&& channel)
       : impl_(std::move(channel)) {}
 
   ChannelUniquePtr impl_;
@@ -1421,6 +1599,51 @@ private:
   ChannelUniquePtr impl_;
 };
 
+/// @brief A channel for logging LinePrimitive messages to a topic.
+///
+/// @note While channels are fully thread-safe, the LinePrimitive struct is not thread-safe.
+/// Avoid modifying it concurrently or during a log operation.
+class LinePrimitiveChannel {
+public:
+  /// @brief Create a new channel.
+  ///
+  /// @param topic The topic name. You should choose a unique topic name per channel for
+  /// compatibility with the Foxglove app.
+  /// @param context The context which associates logs to a sink. If omitted, the default context is
+  /// used.
+  static FoxgloveResult<LinePrimitiveChannel> create(
+    const std::string_view& topic, const Context& context = Context()
+  );
+
+  /// @brief Log a message to the channel.
+  ///
+  /// @param msg The LinePrimitive message to log.
+  /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  FoxgloveError log(
+    const LinePrimitive& msg, std::optional<uint64_t> log_time = std::nullopt
+  ) noexcept;
+
+  /// @brief Uniquely identifies a channel in the context of this program.
+  ///
+  /// @return The ID of the channel.
+  [[nodiscard]] uint64_t id() const noexcept;
+
+  LinePrimitiveChannel(const LinePrimitiveChannel& other) noexcept = delete;
+  LinePrimitiveChannel& operator=(const LinePrimitiveChannel& other) noexcept = delete;
+  /// @brief Default move constructor.
+  LinePrimitiveChannel(LinePrimitiveChannel&& other) noexcept = default;
+  /// @brief Default move assignment.
+  LinePrimitiveChannel& operator=(LinePrimitiveChannel&& other) noexcept = default;
+  /// @brief Default destructor.
+  ~LinePrimitiveChannel() = default;
+
+private:
+  explicit LinePrimitiveChannel(ChannelUniquePtr&& channel)
+      : impl_(std::move(channel)) {}
+
+  ChannelUniquePtr impl_;
+};
+
 /// @brief A channel for logging LocationFix messages to a topic.
 ///
 /// @note While channels are fully thread-safe, the LocationFix struct is not thread-safe.
@@ -1639,6 +1862,51 @@ public:
 
 private:
   explicit SceneUpdateChannel(ChannelUniquePtr&& channel)
+      : impl_(std::move(channel)) {}
+
+  ChannelUniquePtr impl_;
+};
+
+/// @brief A channel for logging ModelPrimitive messages to a topic.
+///
+/// @note While channels are fully thread-safe, the ModelPrimitive struct is not thread-safe.
+/// Avoid modifying it concurrently or during a log operation.
+class ModelPrimitiveChannel {
+public:
+  /// @brief Create a new channel.
+  ///
+  /// @param topic The topic name. You should choose a unique topic name per channel for
+  /// compatibility with the Foxglove app.
+  /// @param context The context which associates logs to a sink. If omitted, the default context is
+  /// used.
+  static FoxgloveResult<ModelPrimitiveChannel> create(
+    const std::string_view& topic, const Context& context = Context()
+  );
+
+  /// @brief Log a message to the channel.
+  ///
+  /// @param msg The ModelPrimitive message to log.
+  /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  FoxgloveError log(
+    const ModelPrimitive& msg, std::optional<uint64_t> log_time = std::nullopt
+  ) noexcept;
+
+  /// @brief Uniquely identifies a channel in the context of this program.
+  ///
+  /// @return The ID of the channel.
+  [[nodiscard]] uint64_t id() const noexcept;
+
+  ModelPrimitiveChannel(const ModelPrimitiveChannel& other) noexcept = delete;
+  ModelPrimitiveChannel& operator=(const ModelPrimitiveChannel& other) noexcept = delete;
+  /// @brief Default move constructor.
+  ModelPrimitiveChannel(ModelPrimitiveChannel&& other) noexcept = default;
+  /// @brief Default move assignment.
+  ModelPrimitiveChannel& operator=(ModelPrimitiveChannel&& other) noexcept = default;
+  /// @brief Default destructor.
+  ~ModelPrimitiveChannel() = default;
+
+private:
+  explicit ModelPrimitiveChannel(ChannelUniquePtr&& channel)
       : impl_(std::move(channel)) {}
 
   ChannelUniquePtr impl_;
@@ -2129,6 +2397,51 @@ private:
   ChannelUniquePtr impl_;
 };
 
+/// @brief A channel for logging SpherePrimitive messages to a topic.
+///
+/// @note While channels are fully thread-safe, the SpherePrimitive struct is not thread-safe.
+/// Avoid modifying it concurrently or during a log operation.
+class SpherePrimitiveChannel {
+public:
+  /// @brief Create a new channel.
+  ///
+  /// @param topic The topic name. You should choose a unique topic name per channel for
+  /// compatibility with the Foxglove app.
+  /// @param context The context which associates logs to a sink. If omitted, the default context is
+  /// used.
+  static FoxgloveResult<SpherePrimitiveChannel> create(
+    const std::string_view& topic, const Context& context = Context()
+  );
+
+  /// @brief Log a message to the channel.
+  ///
+  /// @param msg The SpherePrimitive message to log.
+  /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  FoxgloveError log(
+    const SpherePrimitive& msg, std::optional<uint64_t> log_time = std::nullopt
+  ) noexcept;
+
+  /// @brief Uniquely identifies a channel in the context of this program.
+  ///
+  /// @return The ID of the channel.
+  [[nodiscard]] uint64_t id() const noexcept;
+
+  SpherePrimitiveChannel(const SpherePrimitiveChannel& other) noexcept = delete;
+  SpherePrimitiveChannel& operator=(const SpherePrimitiveChannel& other) noexcept = delete;
+  /// @brief Default move constructor.
+  SpherePrimitiveChannel(SpherePrimitiveChannel&& other) noexcept = default;
+  /// @brief Default move assignment.
+  SpherePrimitiveChannel& operator=(SpherePrimitiveChannel&& other) noexcept = default;
+  /// @brief Default destructor.
+  ~SpherePrimitiveChannel() = default;
+
+private:
+  explicit SpherePrimitiveChannel(ChannelUniquePtr&& channel)
+      : impl_(std::move(channel)) {}
+
+  ChannelUniquePtr impl_;
+};
+
 /// @brief A channel for logging TextAnnotation messages to a topic.
 ///
 /// @note While channels are fully thread-safe, the TextAnnotation struct is not thread-safe.
@@ -2169,6 +2482,97 @@ public:
 
 private:
   explicit TextAnnotationChannel(ChannelUniquePtr&& channel)
+      : impl_(std::move(channel)) {}
+
+  ChannelUniquePtr impl_;
+};
+
+/// @brief A channel for logging TextPrimitive messages to a topic.
+///
+/// @note While channels are fully thread-safe, the TextPrimitive struct is not thread-safe.
+/// Avoid modifying it concurrently or during a log operation.
+class TextPrimitiveChannel {
+public:
+  /// @brief Create a new channel.
+  ///
+  /// @param topic The topic name. You should choose a unique topic name per channel for
+  /// compatibility with the Foxglove app.
+  /// @param context The context which associates logs to a sink. If omitted, the default context is
+  /// used.
+  static FoxgloveResult<TextPrimitiveChannel> create(
+    const std::string_view& topic, const Context& context = Context()
+  );
+
+  /// @brief Log a message to the channel.
+  ///
+  /// @param msg The TextPrimitive message to log.
+  /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  FoxgloveError log(
+    const TextPrimitive& msg, std::optional<uint64_t> log_time = std::nullopt
+  ) noexcept;
+
+  /// @brief Uniquely identifies a channel in the context of this program.
+  ///
+  /// @return The ID of the channel.
+  [[nodiscard]] uint64_t id() const noexcept;
+
+  TextPrimitiveChannel(const TextPrimitiveChannel& other) noexcept = delete;
+  TextPrimitiveChannel& operator=(const TextPrimitiveChannel& other) noexcept = delete;
+  /// @brief Default move constructor.
+  TextPrimitiveChannel(TextPrimitiveChannel&& other) noexcept = default;
+  /// @brief Default move assignment.
+  TextPrimitiveChannel& operator=(TextPrimitiveChannel&& other) noexcept = default;
+  /// @brief Default destructor.
+  ~TextPrimitiveChannel() = default;
+
+private:
+  explicit TextPrimitiveChannel(ChannelUniquePtr&& channel)
+      : impl_(std::move(channel)) {}
+
+  ChannelUniquePtr impl_;
+};
+
+/// @brief A channel for logging TriangleListPrimitive messages to a topic.
+///
+/// @note While channels are fully thread-safe, the TriangleListPrimitive struct is not thread-safe.
+/// Avoid modifying it concurrently or during a log operation.
+class TriangleListPrimitiveChannel {
+public:
+  /// @brief Create a new channel.
+  ///
+  /// @param topic The topic name. You should choose a unique topic name per channel for
+  /// compatibility with the Foxglove app.
+  /// @param context The context which associates logs to a sink. If omitted, the default context is
+  /// used.
+  static FoxgloveResult<TriangleListPrimitiveChannel> create(
+    const std::string_view& topic, const Context& context = Context()
+  );
+
+  /// @brief Log a message to the channel.
+  ///
+  /// @param msg The TriangleListPrimitive message to log.
+  /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  FoxgloveError log(
+    const TriangleListPrimitive& msg, std::optional<uint64_t> log_time = std::nullopt
+  ) noexcept;
+
+  /// @brief Uniquely identifies a channel in the context of this program.
+  ///
+  /// @return The ID of the channel.
+  [[nodiscard]] uint64_t id() const noexcept;
+
+  TriangleListPrimitiveChannel(const TriangleListPrimitiveChannel& other) noexcept = delete;
+  TriangleListPrimitiveChannel& operator=(const TriangleListPrimitiveChannel& other
+  ) noexcept = delete;
+  /// @brief Default move constructor.
+  TriangleListPrimitiveChannel(TriangleListPrimitiveChannel&& other) noexcept = default;
+  /// @brief Default move assignment.
+  TriangleListPrimitiveChannel& operator=(TriangleListPrimitiveChannel&& other) noexcept = default;
+  /// @brief Default destructor.
+  ~TriangleListPrimitiveChannel() = default;
+
+private:
+  explicit TriangleListPrimitiveChannel(ChannelUniquePtr&& channel)
       : impl_(std::move(channel)) {}
 
   ChannelUniquePtr impl_;
