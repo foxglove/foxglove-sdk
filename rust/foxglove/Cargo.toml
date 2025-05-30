@@ -40,7 +40,7 @@ flume = { version = "0.11.1", optional = true }
 foxglove_derive = { version = "0.7.1", path = "../foxglove_derive", optional = true }
 futures-util = { version = "0.3.31", features = ["sink", "std"], optional = true }
 mcap.workspace = true
-parking_lot = "0.12.3"
+parking_lot = "0.12.4"
 prost-types.workspace = true
 prost.workspace = true
 schemars = { version = "0.8.21", optional = true }
