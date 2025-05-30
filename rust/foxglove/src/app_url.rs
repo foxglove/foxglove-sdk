@@ -1,14 +1,12 @@
 //! App URL builder
 
-use std::borrow::Cow;
 use std::fmt::Display;
 
 static BASE_URL: &str = "https://app.foxglove.dev";
 
 #[derive(Debug, Clone)]
 enum DataSource {
-    #[allow(dead_code)] // until `AppUrl::with_websocket` is public.
-    WebSocket(String, u16),
+    WebSocket(String),
 }
 
 /// Foxglove app URL.
@@ -25,7 +23,7 @@ impl Display for AppUrl {
         f.write_str(BASE_URL)?;
         for (ii, (k, v)) in self.query_params().into_iter().enumerate() {
             let sep = if ii == 0 { '?' } else { '&' };
-            let venc = urlencoding::encode(&v);
+            let venc = urlencoding::encode(v);
             write!(f, "{sep}{k}={venc}")?;
         }
         Ok(())
@@ -41,21 +39,20 @@ impl AppUrl {
     /// Returns a vector of URL query parameters.
     ///
     /// The parameter values are not URL-encoded.
-    fn query_params(&self) -> Vec<(&str, Cow<str>)> {
+    fn query_params(&self) -> Vec<(&str, &str)> {
         let mut params = vec![];
         if let Some(ds) = &self.data_source {
             match ds {
-                DataSource::WebSocket(host, port) => params.extend([
-                    ("ds", "foxglove-websocket".into()),
-                    ("ds.url", format!("ws://{host}:{port}").into()),
-                ]),
+                DataSource::WebSocket(url) => {
+                    params.extend([("ds", "foxglove-websocket"), ("ds.url", url)])
+                }
             }
         }
         if let Some(layout_id) = &self.layout_id {
-            params.push(("layoutId", layout_id.into()));
+            params.push(("layoutId", layout_id));
         }
         if self.open_in_desktop {
-            params.push(("openIn", "desktop".into()));
+            params.push(("openIn", "desktop"));
         }
         params
     }
@@ -75,9 +72,8 @@ impl AppUrl {
     }
 
     /// Sets a websocket data source.
-    #[cfg(feature = "live_visualization")] // until public
-    pub(crate) fn with_websocket(mut self, host: impl Display, port: u16) -> Self {
-        self.data_source = Some(DataSource::WebSocket(host.to_string(), port));
+    pub fn with_websocket(mut self, url: impl Into<String>) -> Self {
+        self.data_source = Some(DataSource::WebSocket(url.into()));
         self
     }
 }
@@ -97,23 +93,20 @@ mod tests {
             AppUrl::new().with_open_in_desktop().to_string(),
             format!("{BASE_URL}?openIn=desktop")
         );
-    }
-
-    #[test]
-    #[cfg(feature = "live_visualization")] // until `AppUrl::with_websocket` is public
-    fn test_app_url_webscoket() {
         assert_eq!(
-            AppUrl::new().with_websocket("1.2.3.4", 1234).to_string(),
+            AppUrl::new()
+                .with_websocket("ws://1.2.3.4:1234")
+                .to_string(),
             format!("{BASE_URL}?ds=foxglove-websocket&ds.url=ws%3A%2F%2F1.2.3.4%3A1234")
         );
         assert_eq!(
             AppUrl::new()
                 .with_layout_id("lay_123")
                 .with_open_in_desktop()
-                .with_websocket("my.robot.dev", 9999)
+                .with_websocket("wss://my.robot.dev:9999")
                 .to_string(),
             format!(
-                "{BASE_URL}?ds=foxglove-websocket&ds.url=ws%3A%2F%2Fmy.robot.dev%3A9999\
+                "{BASE_URL}?ds=foxglove-websocket&ds.url=wss%3A%2F%2Fmy.robot.dev%3A9999\
                 &layoutId=lay_123&openIn=desktop"
             )
         );

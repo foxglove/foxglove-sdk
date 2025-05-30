@@ -244,7 +244,7 @@ impl WebSocketServerHandle {
 
     /// Returns an app URL to open the websocket as a data source.
     pub fn app_url(&self) -> AppUrl {
-        AppUrl::new().with_websocket(self.1.ip(), self.1.port())
+        AppUrl::new().with_websocket(format!("ws://{}:{}", self.1.ip(), self.1.port()))
     }
 
     /// Advertises support for the provided services.
