@@ -1,7 +1,8 @@
 use std::borrow::Cow;
 
 use bytes::BufMut;
-use schemars::{gen::SchemaSettings, JsonSchema};
+use schemars::generate::SchemaSettings;
+use schemars::JsonSchema;
 use serde::Serialize;
 
 use crate::{Encode, Schema};
