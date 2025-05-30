@@ -75,7 +75,7 @@ impl AppUrl {
     }
 
     /// Sets a websocket data source.
-    #[cfg(feature = "live_visualization")]
+    #[cfg(feature = "live_visualization")] // until public
     pub(crate) fn with_websocket(mut self, host: impl Display, port: u16) -> Self {
         self.data_source = Some(DataSource::WebSocket(host.to_string(), port));
         self
@@ -97,6 +97,11 @@ mod tests {
             AppUrl::new().with_open_in_desktop().to_string(),
             format!("{BASE_URL}?openIn=desktop")
         );
+    }
+
+    #[test]
+    #[cfg(feature = "live_visualization")] // until `AppUrl::with_websocket` is public
+    fn test_app_url_webscoket() {
         assert_eq!(
             AppUrl::new().with_websocket("1.2.3.4", 1234).to_string(),
             format!("{BASE_URL}?ds=foxglove-websocket&ds.url=ws%3A%2F%2F1.2.3.4%3A1234")
