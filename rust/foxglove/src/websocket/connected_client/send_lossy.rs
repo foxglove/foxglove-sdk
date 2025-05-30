@@ -1,7 +1,13 @@
 use std::net::SocketAddr;
+use std::time::Duration;
 
 use flume::TrySendError;
+use parking_lot::Mutex;
 use tokio_tungstenite::tungstenite::Message;
+
+use crate::throttler::Throttler;
+
+static THROTTLER: Mutex<Throttler> = Mutex::new(Throttler::new(Duration::from_secs(30)));
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) enum SendLossyResult {
@@ -33,20 +39,18 @@ pub(crate) fn send_lossy(
     loop {
         match (dropped, tx.try_send(message)) {
             (0, Ok(_)) => return SendLossyResult::Sent,
-            (dropped, Ok(_)) => {
-                tracing::warn!(
-                    "outbox for client {} full, dropped {dropped} messages",
-                    client_addr
-                );
+            (_, Ok(_)) => {
+                if THROTTLER.lock().try_acquire() {
+                    tracing::info!("outbox for client {client_addr} full");
+                }
                 return SendLossyResult::SentLossy(dropped);
             }
             (_, Err(TrySendError::Disconnected(_))) => unreachable!("we're holding rx"),
             (_, Err(TrySendError::Full(rejected))) => {
                 if dropped >= retries {
-                    tracing::warn!(
-                        "outbox for client {} full, dropping message after 10 attempts",
-                        client_addr
-                    );
+                    if THROTTLER.lock().try_acquire() {
+                        tracing::info!("outbox for client {client_addr} full");
+                    }
                     return SendLossyResult::ExhaustedRetries;
                 }
                 message = rejected;
