@@ -21,7 +21,7 @@ foxglove = { path = "../../rust/foxglove", default-features = false, features = 
 ]}
 log.workspace = true
 prost-types = "0.13"
-pyo3 = "0.24.1"
+pyo3 = "0.25.0"
 pyo3-log = "0.12.3"
 thiserror.workspace = true
 tokio-tungstenite.workspace = true
