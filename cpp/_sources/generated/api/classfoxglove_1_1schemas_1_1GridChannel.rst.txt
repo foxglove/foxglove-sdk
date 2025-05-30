@@ -1,0 +1,17 @@
+.. _exhale_class_classfoxglove_1_1schemas_1_1GridChannel:
+
+Class GridChannel
+=================
+
+- Defined in :ref:`file_foxglove_include_foxglove_schemas.hpp`
+
+
+Class Documentation
+-------------------
+
+
+.. doxygenclass:: foxglove::schemas::GridChannel
+   :project: Foxglove SDK
+   :members:
+   :protected-members:
+   :undoc-members:

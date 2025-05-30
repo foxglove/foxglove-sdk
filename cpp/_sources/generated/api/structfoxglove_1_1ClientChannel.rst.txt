@@ -1,0 +1,17 @@
+.. _exhale_struct_structfoxglove_1_1ClientChannel:
+
+Struct ClientChannel
+====================
+
+- Defined in :ref:`file_foxglove_include_foxglove_server.hpp`
+
+
+Struct Documentation
+--------------------
+
+
+.. doxygenstruct:: foxglove::ClientChannel
+   :project: Foxglove SDK
+   :members:
+   :protected-members:
+   :undoc-members:

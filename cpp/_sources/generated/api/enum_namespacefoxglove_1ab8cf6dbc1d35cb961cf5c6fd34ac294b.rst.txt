@@ -1,0 +1,14 @@
+.. _exhale_enum_namespacefoxglove_1ab8cf6dbc1d35cb961cf5c6fd34ac294b:
+
+Enum WebSocketServerCapabilities
+================================
+
+- Defined in :ref:`file_foxglove_include_foxglove_server.hpp`
+
+
+Enum Documentation
+------------------
+
+
+.. doxygenenum:: foxglove::WebSocketServerCapabilities
+   :project: Foxglove SDK

@@ -1,0 +1,14 @@
+.. _exhale_function_schemas_8cpp_1ab4b896515c2942bb0f6c98c0c107c209:
+
+Function foxglove::schemas::textPrimitiveToC
+============================================
+
+- Defined in :ref:`file_foxglove_src_schemas.cpp`
+
+
+Function Documentation
+----------------------
+
+
+.. doxygenfunction:: foxglove::schemas::textPrimitiveToC(foxglove_text_primitive&, const TextPrimitive&, Arena&)
+   :project: Foxglove SDK
