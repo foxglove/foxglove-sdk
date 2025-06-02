@@ -43,6 +43,7 @@ from foxglove._foxglove_py.channels import TextPrimitiveChannel
 from foxglove._foxglove_py.channels import TriangleListPrimitiveChannel
 from foxglove._foxglove_py.channels import Vector2Channel
 from foxglove._foxglove_py.channels import Vector3Channel
+
 __all__ = [
     "ArrowPrimitiveChannel",
     "CameraCalibrationChannel",

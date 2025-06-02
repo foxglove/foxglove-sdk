@@ -40,19 +40,20 @@ from .schemas import TextPrimitive
 from .schemas import TriangleListPrimitive
 from .schemas import Vector2
 from .schemas import Vector3
+
 class ArrowPrimitiveChannel:
     """
     A channel for logging ArrowPrimitive messages
 
     You should choose a unique topic name per channel.
     """
+
     def __new__(
         cls,
         topic: str,
         *,
         context: Optional["Context"] = None,
     ) -> "ArrowPrimitiveChannel": ...
-
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -96,19 +97,20 @@ class ArrowPrimitiveChannel:
     ) -> None:
         """Log a Foxglove ArrowPrimitive message on the channel."""
         ...
+
 class CameraCalibrationChannel:
     """
     A channel for logging CameraCalibration messages
 
     You should choose a unique topic name per channel.
     """
+
     def __new__(
         cls,
         topic: str,
         *,
         context: Optional["Context"] = None,
     ) -> "CameraCalibrationChannel": ...
-
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -152,19 +154,20 @@ class CameraCalibrationChannel:
     ) -> None:
         """Log a Foxglove CameraCalibration message on the channel."""
         ...
+
 class CircleAnnotationChannel:
     """
     A channel for logging CircleAnnotation messages
 
     You should choose a unique topic name per channel.
     """
+
     def __new__(
         cls,
         topic: str,
         *,
         context: Optional["Context"] = None,
     ) -> "CircleAnnotationChannel": ...
-
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -208,19 +211,20 @@ class CircleAnnotationChannel:
     ) -> None:
         """Log a Foxglove CircleAnnotation message on the channel."""
         ...
+
 class ColorChannel:
     """
     A channel for logging Color messages
 
     You should choose a unique topic name per channel.
     """
+
     def __new__(
         cls,
         topic: str,
         *,
         context: Optional["Context"] = None,
     ) -> "ColorChannel": ...
-
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -264,19 +268,20 @@ class ColorChannel:
     ) -> None:
         """Log a Foxglove Color message on the channel."""
         ...
+
 class CompressedImageChannel:
     """
     A channel for logging CompressedImage messages
 
     You should choose a unique topic name per channel.
     """
+
     def __new__(
         cls,
         topic: str,
         *,
         context: Optional["Context"] = None,
     ) -> "CompressedImageChannel": ...
-
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -320,19 +325,20 @@ class CompressedImageChannel:
     ) -> None:
         """Log a Foxglove CompressedImage message on the channel."""
         ...
+
 class CompressedVideoChannel:
     """
     A channel for logging CompressedVideo messages
 
     You should choose a unique topic name per channel.
     """
+
     def __new__(
         cls,
         topic: str,
         *,
         context: Optional["Context"] = None,
     ) -> "CompressedVideoChannel": ...
-
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -376,19 +382,20 @@ class CompressedVideoChannel:
     ) -> None:
         """Log a Foxglove CompressedVideo message on the channel."""
         ...
+
 class CubePrimitiveChannel:
     """
     A channel for logging CubePrimitive messages
 
     You should choose a unique topic name per channel.
     """
+
     def __new__(
         cls,
         topic: str,
         *,
         context: Optional["Context"] = None,
     ) -> "CubePrimitiveChannel": ...
-
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -432,19 +439,20 @@ class CubePrimitiveChannel:
     ) -> None:
         """Log a Foxglove CubePrimitive message on the channel."""
         ...
+
 class CylinderPrimitiveChannel:
     """
     A channel for logging CylinderPrimitive messages
 
     You should choose a unique topic name per channel.
     """
+
     def __new__(
         cls,
         topic: str,
         *,
         context: Optional["Context"] = None,
     ) -> "CylinderPrimitiveChannel": ...
-
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -488,19 +496,20 @@ class CylinderPrimitiveChannel:
     ) -> None:
         """Log a Foxglove CylinderPrimitive message on the channel."""
         ...
+
 class FrameTransformChannel:
     """
     A channel for logging FrameTransform messages
 
     You should choose a unique topic name per channel.
     """
+
     def __new__(
         cls,
         topic: str,
         *,
         context: Optional["Context"] = None,
     ) -> "FrameTransformChannel": ...
-
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -544,19 +553,20 @@ class FrameTransformChannel:
     ) -> None:
         """Log a Foxglove FrameTransform message on the channel."""
         ...
+
 class FrameTransformsChannel:
     """
     A channel for logging FrameTransforms messages
 
     You should choose a unique topic name per channel.
     """
+
     def __new__(
         cls,
         topic: str,
         *,
         context: Optional["Context"] = None,
     ) -> "FrameTransformsChannel": ...
-
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -600,19 +610,20 @@ class FrameTransformsChannel:
     ) -> None:
         """Log a Foxglove FrameTransforms message on the channel."""
         ...
+
 class GeoJsonChannel:
     """
     A channel for logging GeoJson messages
 
     You should choose a unique topic name per channel.
     """
+
     def __new__(
         cls,
         topic: str,
         *,
         context: Optional["Context"] = None,
     ) -> "GeoJsonChannel": ...
-
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -656,19 +667,20 @@ class GeoJsonChannel:
     ) -> None:
         """Log a Foxglove GeoJson message on the channel."""
         ...
+
 class GridChannel:
     """
     A channel for logging Grid messages
 
     You should choose a unique topic name per channel.
     """
+
     def __new__(
         cls,
         topic: str,
         *,
         context: Optional["Context"] = None,
     ) -> "GridChannel": ...
-
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -712,19 +724,20 @@ class GridChannel:
     ) -> None:
         """Log a Foxglove Grid message on the channel."""
         ...
+
 class ImageAnnotationsChannel:
     """
     A channel for logging ImageAnnotations messages
 
     You should choose a unique topic name per channel.
     """
+
     def __new__(
         cls,
         topic: str,
         *,
         context: Optional["Context"] = None,
     ) -> "ImageAnnotationsChannel": ...
-
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -768,19 +781,20 @@ class ImageAnnotationsChannel:
     ) -> None:
         """Log a Foxglove ImageAnnotations message on the channel."""
         ...
+
 class KeyValuePairChannel:
     """
     A channel for logging KeyValuePair messages
 
     You should choose a unique topic name per channel.
     """
+
     def __new__(
         cls,
         topic: str,
         *,
         context: Optional["Context"] = None,
     ) -> "KeyValuePairChannel": ...
-
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -824,19 +838,20 @@ class KeyValuePairChannel:
     ) -> None:
         """Log a Foxglove KeyValuePair message on the channel."""
         ...
+
 class LaserScanChannel:
     """
     A channel for logging LaserScan messages
 
     You should choose a unique topic name per channel.
     """
+
     def __new__(
         cls,
         topic: str,
         *,
         context: Optional["Context"] = None,
     ) -> "LaserScanChannel": ...
-
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -880,19 +895,20 @@ class LaserScanChannel:
     ) -> None:
         """Log a Foxglove LaserScan message on the channel."""
         ...
+
 class LinePrimitiveChannel:
     """
     A channel for logging LinePrimitive messages
 
     You should choose a unique topic name per channel.
     """
+
     def __new__(
         cls,
         topic: str,
         *,
         context: Optional["Context"] = None,
     ) -> "LinePrimitiveChannel": ...
-
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -936,19 +952,20 @@ class LinePrimitiveChannel:
     ) -> None:
         """Log a Foxglove LinePrimitive message on the channel."""
         ...
+
 class LocationFixChannel:
     """
     A channel for logging LocationFix messages
 
     You should choose a unique topic name per channel.
     """
+
     def __new__(
         cls,
         topic: str,
         *,
         context: Optional["Context"] = None,
     ) -> "LocationFixChannel": ...
-
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -992,19 +1009,20 @@ class LocationFixChannel:
     ) -> None:
         """Log a Foxglove LocationFix message on the channel."""
         ...
+
 class LogChannel:
     """
     A channel for logging Log messages
 
     You should choose a unique topic name per channel.
     """
+
     def __new__(
         cls,
         topic: str,
         *,
         context: Optional["Context"] = None,
     ) -> "LogChannel": ...
-
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -1048,19 +1066,20 @@ class LogChannel:
     ) -> None:
         """Log a Foxglove Log message on the channel."""
         ...
+
 class ModelPrimitiveChannel:
     """
     A channel for logging ModelPrimitive messages
 
     You should choose a unique topic name per channel.
     """
+
     def __new__(
         cls,
         topic: str,
         *,
         context: Optional["Context"] = None,
     ) -> "ModelPrimitiveChannel": ...
-
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -1104,19 +1123,20 @@ class ModelPrimitiveChannel:
     ) -> None:
         """Log a Foxglove ModelPrimitive message on the channel."""
         ...
+
 class PackedElementFieldChannel:
     """
     A channel for logging PackedElementField messages
 
     You should choose a unique topic name per channel.
     """
+
     def __new__(
         cls,
         topic: str,
         *,
         context: Optional["Context"] = None,
     ) -> "PackedElementFieldChannel": ...
-
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -1160,19 +1180,20 @@ class PackedElementFieldChannel:
     ) -> None:
         """Log a Foxglove PackedElementField message on the channel."""
         ...
+
 class Point2Channel:
     """
     A channel for logging Point2 messages
 
     You should choose a unique topic name per channel.
     """
+
     def __new__(
         cls,
         topic: str,
         *,
         context: Optional["Context"] = None,
     ) -> "Point2Channel": ...
-
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -1216,19 +1237,20 @@ class Point2Channel:
     ) -> None:
         """Log a Foxglove Point2 message on the channel."""
         ...
+
 class Point3Channel:
     """
     A channel for logging Point3 messages
 
     You should choose a unique topic name per channel.
     """
+
     def __new__(
         cls,
         topic: str,
         *,
         context: Optional["Context"] = None,
     ) -> "Point3Channel": ...
-
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -1272,19 +1294,20 @@ class Point3Channel:
     ) -> None:
         """Log a Foxglove Point3 message on the channel."""
         ...
+
 class PointCloudChannel:
     """
     A channel for logging PointCloud messages
 
     You should choose a unique topic name per channel.
     """
+
     def __new__(
         cls,
         topic: str,
         *,
         context: Optional["Context"] = None,
     ) -> "PointCloudChannel": ...
-
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -1328,19 +1351,20 @@ class PointCloudChannel:
     ) -> None:
         """Log a Foxglove PointCloud message on the channel."""
         ...
+
 class PointsAnnotationChannel:
     """
     A channel for logging PointsAnnotation messages
 
     You should choose a unique topic name per channel.
     """
+
     def __new__(
         cls,
         topic: str,
         *,
         context: Optional["Context"] = None,
     ) -> "PointsAnnotationChannel": ...
-
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -1384,19 +1408,20 @@ class PointsAnnotationChannel:
     ) -> None:
         """Log a Foxglove PointsAnnotation message on the channel."""
         ...
+
 class PoseChannel:
     """
     A channel for logging Pose messages
 
     You should choose a unique topic name per channel.
     """
+
     def __new__(
         cls,
         topic: str,
         *,
         context: Optional["Context"] = None,
     ) -> "PoseChannel": ...
-
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -1440,19 +1465,20 @@ class PoseChannel:
     ) -> None:
         """Log a Foxglove Pose message on the channel."""
         ...
+
 class PoseInFrameChannel:
     """
     A channel for logging PoseInFrame messages
 
     You should choose a unique topic name per channel.
     """
+
     def __new__(
         cls,
         topic: str,
         *,
         context: Optional["Context"] = None,
     ) -> "PoseInFrameChannel": ...
-
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -1496,19 +1522,20 @@ class PoseInFrameChannel:
     ) -> None:
         """Log a Foxglove PoseInFrame message on the channel."""
         ...
+
 class PosesInFrameChannel:
     """
     A channel for logging PosesInFrame messages
 
     You should choose a unique topic name per channel.
     """
+
     def __new__(
         cls,
         topic: str,
         *,
         context: Optional["Context"] = None,
     ) -> "PosesInFrameChannel": ...
-
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -1552,19 +1579,20 @@ class PosesInFrameChannel:
     ) -> None:
         """Log a Foxglove PosesInFrame message on the channel."""
         ...
+
 class QuaternionChannel:
     """
     A channel for logging Quaternion messages
 
     You should choose a unique topic name per channel.
     """
+
     def __new__(
         cls,
         topic: str,
         *,
         context: Optional["Context"] = None,
     ) -> "QuaternionChannel": ...
-
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -1608,19 +1636,20 @@ class QuaternionChannel:
     ) -> None:
         """Log a Foxglove Quaternion message on the channel."""
         ...
+
 class RawAudioChannel:
     """
     A channel for logging RawAudio messages
 
     You should choose a unique topic name per channel.
     """
+
     def __new__(
         cls,
         topic: str,
         *,
         context: Optional["Context"] = None,
     ) -> "RawAudioChannel": ...
-
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -1664,19 +1693,20 @@ class RawAudioChannel:
     ) -> None:
         """Log a Foxglove RawAudio message on the channel."""
         ...
+
 class RawImageChannel:
     """
     A channel for logging RawImage messages
 
     You should choose a unique topic name per channel.
     """
+
     def __new__(
         cls,
         topic: str,
         *,
         context: Optional["Context"] = None,
     ) -> "RawImageChannel": ...
-
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -1720,19 +1750,20 @@ class RawImageChannel:
     ) -> None:
         """Log a Foxglove RawImage message on the channel."""
         ...
+
 class SceneEntityChannel:
     """
     A channel for logging SceneEntity messages
 
     You should choose a unique topic name per channel.
     """
+
     def __new__(
         cls,
         topic: str,
         *,
         context: Optional["Context"] = None,
     ) -> "SceneEntityChannel": ...
-
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -1776,19 +1807,20 @@ class SceneEntityChannel:
     ) -> None:
         """Log a Foxglove SceneEntity message on the channel."""
         ...
+
 class SceneEntityDeletionChannel:
     """
     A channel for logging SceneEntityDeletion messages
 
     You should choose a unique topic name per channel.
     """
+
     def __new__(
         cls,
         topic: str,
         *,
         context: Optional["Context"] = None,
     ) -> "SceneEntityDeletionChannel": ...
-
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -1832,19 +1864,20 @@ class SceneEntityDeletionChannel:
     ) -> None:
         """Log a Foxglove SceneEntityDeletion message on the channel."""
         ...
+
 class SceneUpdateChannel:
     """
     A channel for logging SceneUpdate messages
 
     You should choose a unique topic name per channel.
     """
+
     def __new__(
         cls,
         topic: str,
         *,
         context: Optional["Context"] = None,
     ) -> "SceneUpdateChannel": ...
-
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -1888,19 +1921,20 @@ class SceneUpdateChannel:
     ) -> None:
         """Log a Foxglove SceneUpdate message on the channel."""
         ...
+
 class SpherePrimitiveChannel:
     """
     A channel for logging SpherePrimitive messages
 
     You should choose a unique topic name per channel.
     """
+
     def __new__(
         cls,
         topic: str,
         *,
         context: Optional["Context"] = None,
     ) -> "SpherePrimitiveChannel": ...
-
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -1944,19 +1978,20 @@ class SpherePrimitiveChannel:
     ) -> None:
         """Log a Foxglove SpherePrimitive message on the channel."""
         ...
+
 class TextAnnotationChannel:
     """
     A channel for logging TextAnnotation messages
 
     You should choose a unique topic name per channel.
     """
+
     def __new__(
         cls,
         topic: str,
         *,
         context: Optional["Context"] = None,
     ) -> "TextAnnotationChannel": ...
-
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -2000,19 +2035,20 @@ class TextAnnotationChannel:
     ) -> None:
         """Log a Foxglove TextAnnotation message on the channel."""
         ...
+
 class TextPrimitiveChannel:
     """
     A channel for logging TextPrimitive messages
 
     You should choose a unique topic name per channel.
     """
+
     def __new__(
         cls,
         topic: str,
         *,
         context: Optional["Context"] = None,
     ) -> "TextPrimitiveChannel": ...
-
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -2056,19 +2092,20 @@ class TextPrimitiveChannel:
     ) -> None:
         """Log a Foxglove TextPrimitive message on the channel."""
         ...
+
 class TriangleListPrimitiveChannel:
     """
     A channel for logging TriangleListPrimitive messages
 
     You should choose a unique topic name per channel.
     """
+
     def __new__(
         cls,
         topic: str,
         *,
         context: Optional["Context"] = None,
     ) -> "TriangleListPrimitiveChannel": ...
-
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -2112,19 +2149,20 @@ class TriangleListPrimitiveChannel:
     ) -> None:
         """Log a Foxglove TriangleListPrimitive message on the channel."""
         ...
+
 class Vector2Channel:
     """
     A channel for logging Vector2 messages
 
     You should choose a unique topic name per channel.
     """
+
     def __new__(
         cls,
         topic: str,
         *,
         context: Optional["Context"] = None,
     ) -> "Vector2Channel": ...
-
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -2168,19 +2206,20 @@ class Vector2Channel:
     ) -> None:
         """Log a Foxglove Vector2 message on the channel."""
         ...
+
 class Vector3Channel:
     """
     A channel for logging Vector3 messages
 
     You should choose a unique topic name per channel.
     """
+
     def __new__(
         cls,
         topic: str,
         *,
         context: Optional["Context"] = None,
     ) -> "Vector3Channel": ...
-
     def id(self) -> int:
         """The unique ID of the channel."""
         ...

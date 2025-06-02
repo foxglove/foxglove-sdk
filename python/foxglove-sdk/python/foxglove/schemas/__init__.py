@@ -56,10 +56,51 @@ from foxglove._foxglove_py.schemas import Timestamp
 from foxglove._foxglove_py.schemas import TriangleListPrimitive
 from foxglove._foxglove_py.schemas import Vector2
 from foxglove._foxglove_py.schemas import Vector3
-FoxgloveSchema = Union[ArrowPrimitive, CameraCalibration, CircleAnnotation, Color, CompressedImage, CompressedVideo, CubePrimitive, CylinderPrimitive, FrameTransform, FrameTransforms, GeoJson, Grid, ImageAnnotations, KeyValuePair, LaserScan, LinePrimitive, LocationFix, Log, ModelPrimitive, PackedElementField, Point2, Point3, PointCloud, PointsAnnotation, Pose, PoseInFrame, PosesInFrame, Quaternion, RawAudio, RawImage, SceneEntity, SceneEntityDeletion, SceneUpdate, SpherePrimitive, TextAnnotation, TextPrimitive, TriangleListPrimitive, Vector2, Vector3];
+
+FoxgloveSchema = Union[
+    ArrowPrimitive,
+    CameraCalibration,
+    CircleAnnotation,
+    Color,
+    CompressedImage,
+    CompressedVideo,
+    CubePrimitive,
+    CylinderPrimitive,
+    FrameTransform,
+    FrameTransforms,
+    GeoJson,
+    Grid,
+    ImageAnnotations,
+    KeyValuePair,
+    LaserScan,
+    LinePrimitive,
+    LocationFix,
+    Log,
+    ModelPrimitive,
+    PackedElementField,
+    Point2,
+    Point3,
+    PointCloud,
+    PointsAnnotation,
+    Pose,
+    PoseInFrame,
+    PosesInFrame,
+    Quaternion,
+    RawAudio,
+    RawImage,
+    SceneEntity,
+    SceneEntityDeletion,
+    SceneUpdate,
+    SpherePrimitive,
+    TextAnnotation,
+    TextPrimitive,
+    TriangleListPrimitive,
+    Vector2,
+    Vector3,
+]
 
 __all__ = [
-    'FoxgloveSchema',
+    "FoxgloveSchema",
     "ArrowPrimitive",
     "CameraCalibration",
     "CircleAnnotation",
