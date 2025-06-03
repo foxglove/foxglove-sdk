@@ -1,4 +1,5 @@
 IMAGE_NAME=foxglove-sdk
+STABLE_RUST_VERSION=1.83.0
 
 .PHONY: default
 default: build
@@ -39,7 +40,7 @@ build-rust-inside:
 		done
 	cargo build -p foxglove --verbose --no-default-features
 	# Validate that we can build against the MSRV (minimum specified rust version).
-	cargo +1.83.0 build -p foxglove --verbose
+	cargo +$(STABLE_RUST_VERSION) build -p foxglove --verbose
 	cargo clippy --no-deps --all-targets --tests -- -D warnings
 	cargo +nightly rustdoc -p foxglove --all-features -- -D warnings --cfg docsrs
 	cargo test --all-features --verbose
