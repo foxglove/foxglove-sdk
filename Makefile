@@ -2,7 +2,7 @@ IMAGE_NAME=foxglove-sdk
 STABLE_RUST_VERSION=1.83.0
 
 .PHONY: default
-default: build
+default: build-rust
 
 .PHONY: image
 image:
