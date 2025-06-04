@@ -1,13 +1,14 @@
 #pragma once
 
+#include <foxglove/context.hpp>
+#include <foxglove/error.hpp>
+
 #include <memory>
 #include <optional>
 #include <string>
 
 enum foxglove_error : uint8_t;
-enum class FoxgloveError : uint8_t;
 struct foxglove_mcap_writer;
-struct foxglove_context;
 
 /// The foxglove namespace.
 namespace foxglove {

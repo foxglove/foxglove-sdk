@@ -36,7 +36,7 @@ public:
     typename = std::enable_if_t<std::is_pod_v<T> && std::is_invocable_v<Fn, T&, const S&, Arena&>>>
   T* map(const std::vector<S>& src, Fn&& map_fn) {
     const size_t elements = src.size();
-    T* result = alloc<T>(elements);
+    T* result = (elements > 0) ? alloc<T>(elements) : nullptr;
     T* current = result;
 
     // Convert the elements from S to T, placing them in the result array
