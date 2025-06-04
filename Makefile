@@ -16,5 +16,5 @@ shell: image
 TARGETS := $(shell awk '/^\.PHONY:/ {for(i=2;i<=NF;i++) print $$i}' $(CONTAINER_MAKEFILE))
 
 .PHONY: $(TARGETS)
-$(TARGETS):
+$(TARGETS): image
 	docker run -v $(shell pwd):/app -it $(IMAGE_NAME) make -f $(CONTAINER_MAKEFILE) $@
