@@ -2,6 +2,9 @@
 all: build
 
 BUILD_DIR=build
+ifdef CLANG_TIDY
+BUILD_DIR=build-tidy
+endif
 ifdef SANITIZE
 comma:=,
 BUILD_DIR=build-sanitize-$(subst $(comma),-,$(SANITIZE))
