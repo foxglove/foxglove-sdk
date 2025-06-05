@@ -1,12 +1,14 @@
 IMAGE_NAME=foxglove-sdk
 CONTAINER_MAKEFILE=Container.mk
+MSRV_RUST_VERSION=1.83.0
 
 .PHONY: default
 default: build-rust
 
 .PHONY: image
 image:
-	docker build -t $(IMAGE_NAME) .
+	docker build --build-arg MSRV_RUST_VERSION=$(MSRV_RUST_VERSION) \
+		-t $(IMAGE_NAME) .
 
 .PHONY: shell
 shell: image
@@ -24,7 +26,9 @@ $(TARGETS): image
 		-e CARGO_HOME=/app/.cargo \
 		-e POETRY_VIRTUALENVS_PATH=/app/.virtualenvs \
 		-it $(IMAGE_NAME) \
-		make -f $(CONTAINER_MAKEFILE) $@
+		make -f $(CONTAINER_MAKEFILE) \
+		MSRV_RUST_VERSION=$(MSRV_RUST_VERSION) \
+		$@
 
 .PHONY: list-targets
 list-targets:

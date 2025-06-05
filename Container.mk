@@ -1,5 +1,3 @@
-MSRV_RUST_VERSION=1.83.0
-
 .PHONY: generate
 generate:
 	poetry install

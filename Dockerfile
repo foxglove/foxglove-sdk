@@ -1,10 +1,12 @@
-FROM rust:1.83.0 AS builder
+FROM rust:latest AS builder
+
+ARG MSRV_RUST_VERSION=1.83.0
 
 WORKDIR /app
 
 RUN rustup toolchain install nightly --component rustfmt --component clippy
 RUN rustup toolchain install stable --component rustfmt --component clippy
-RUN rustup toolchain install 1.83.0 --component rustfmt --component clippy
+RUN rustup toolchain install ${MSRV_RUST_VERSION} --component rustfmt --component clippy
 
 RUN curl -fsSL https://deb.nodesource.com/setup_23.x -o nodesource_setup.sh
 RUN bash nodesource_setup.sh
