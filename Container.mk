@@ -79,3 +79,7 @@ lint-cpp:
 .PHONY: test-cpp
 test-cpp:
 	make -C cpp test
+
+.PHONY: test-cpp-sanitize
+test-cpp-sanitize:
+	make -C cpp SANITIZE=address,undefined test

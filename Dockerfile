@@ -4,7 +4,7 @@ ARG MSRV_RUST_VERSION=1.83.0
 
 WORKDIR /app
 
-RUN rustup toolchain install nightly
+RUN rustup toolchain install nightly --component rust-src
 RUN rustup toolchain install ${MSRV_RUST_VERSION}
 RUN rustup component add rustfmt clippy
 
