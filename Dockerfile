@@ -19,6 +19,8 @@ RUN apt-get update \
         nodejs=23.11.1-1nodesource1 \
     && rm -rf /var/lib/apt/lists/*
 
+RUN ln -s /usr/bin/clang-format-19 /usr/bin/clang-format
+
 RUN corepack enable yarn
 
 ENV POETRY_NO_INTERACTION=1 \
