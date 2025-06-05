@@ -15,7 +15,7 @@ RUN apt-get update \
     && apt-get install -y \
         protobuf-compiler=3.21.12-3 \
         python3.11-dev=3.11.2-6+deb12u6 \
-        clang-format=1:14.0-55.7~deb12u1 \
+        clang-format-19=1:19.1.4-1~deb12u1 \
         nodejs=23.11.1-1nodesource1 \
     && rm -rf /var/lib/apt/lists/*
 
