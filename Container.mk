@@ -1,6 +1,7 @@
 .PHONY: generate
 generate:
 	poetry install
+	yarn install
 	yarn generate
 
 .PHONY: lint-python
