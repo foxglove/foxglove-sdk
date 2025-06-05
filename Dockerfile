@@ -4,8 +4,8 @@ ARG MSRV_RUST_VERSION=1.83.0
 
 WORKDIR /app
 
-RUN rustup toolchain install nightly --component rustfmt --component clippy
-RUN rustup toolchain install ${MSRV_RUST_VERSION} --component rustfmt --component clippy
+RUN rustup toolchain install nightly
+RUN rustup toolchain install ${MSRV_RUST_VERSION}
 RUN rustup component add rustfmt clippy
 
 RUN curl -fsSL https://deb.nodesource.com/setup_23.x -o nodesource_setup.sh
