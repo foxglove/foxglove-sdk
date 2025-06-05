@@ -32,4 +32,4 @@ $(TARGETS): image
 
 .PHONY: list-targets
 list-targets:
-	@echo $(TARGETS)
+	@echo $(TARGETS) | tr ' ' '\n' | sort

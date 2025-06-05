@@ -45,6 +45,6 @@ test-rust:
 test-rust-foxglove-no-default-features:
 	cargo test -p foxglove --no-default-features
 
-.PHONY: rust-docs
-rust-docs:
+.PHONY: docs-rust
+docs-rust:
 	cargo +nightly rustdoc -p foxglove --all-features -- -D warnings --cfg docsrs
