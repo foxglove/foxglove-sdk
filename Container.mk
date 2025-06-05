@@ -13,11 +13,15 @@ lint-python:
 
 .PHONY: test-python
 test-python:
-	poetry check --strict
-	poetry install
-	poetry run maturin develop
-	poetry run mypy .
-	poetry run pytest --with-benchmarks
+	poetry -C python/foxglove-sdk check --strict
+	poetry -C python/foxglove-sdk install
+	poetry -C python/foxglove-sdk run maturin develop
+	poetry -C python/foxglove-sdk run mypy .
+	poetry -C python/foxglove-sdk run pytest
+
+.PHONY: benchmark-python
+benchmark-python:
+	poetry -C python/foxglove-sdk run pytest --with-benchmarks
 
 .PHONY: lint-rust
 lint-rust:
@@ -27,6 +31,10 @@ lint-rust:
 .PHONY: build-rust
 build-rust:
 	cargo build --all-targets
+
+.PHONY: build-rust-foxglove-msrv
+build-rust-foxglove-msrv:
+	cargo +1.83.0 build -p foxglove --all-features
 
 .PHONY: test-rust
 test-rust:

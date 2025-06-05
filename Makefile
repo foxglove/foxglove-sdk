@@ -17,7 +17,11 @@ TARGETS := $(shell awk '/^\.PHONY:/ {for(i=2;i<=NF;i++) print $$i}' $(CONTAINER_
 
 .PHONY: $(TARGETS)
 $(TARGETS): image
-	docker run -v $(shell pwd):/app -it $(IMAGE_NAME) make -f $(CONTAINER_MAKEFILE) $@
+	docker run -v $(shell pwd):/app \
+		-e CARGO_HOME=/app/.cargo \
+		-e POETRY_VIRTUALENVS_PATH=/app/.virtualenvs \
+		-it $(IMAGE_NAME) \
+		make -f $(CONTAINER_MAKEFILE) $@
 
 .PHONY: list-targets
 list-targets:

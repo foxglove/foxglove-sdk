@@ -4,6 +4,8 @@
 .mypy_cache/
 .pytest_cache/
 .yarn/
+.virtualenvs/
+.cargo/
 *.py[cod]
 *.so
 *.tsbuildinfo
