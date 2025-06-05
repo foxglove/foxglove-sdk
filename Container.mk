@@ -4,6 +4,12 @@ generate:
 	yarn install
 	yarn generate
 
+.PHONY: build-python
+build-python:
+	poetry -C python/foxglove-sdk check --strict
+	poetry -C python/foxglove-sdk install
+	poetry -C python/foxglove-sdk run maturin develop
+
 .PHONY: lint-python
 lint-python:
 	poetry check --strict
@@ -48,3 +54,28 @@ test-rust-foxglove-no-default-features:
 .PHONY: docs-rust
 docs-rust:
 	cargo +nightly rustdoc -p foxglove --all-features -- -D warnings --cfg docsrs
+
+.PHONY: clean-cpp
+clean-cpp:
+	rm -rf cpp/build*
+
+.PHONY: docs-cpp
+docs-cpp:
+	poetry install -C cpp/foxglove/docs
+	make -C cpp docs
+
+.PHONY: build-cpp
+build-cpp:
+	make -C cpp build
+
+.PHONY: build-cpp-tidy
+build-cpp-tidy:
+	make -C cpp CLANG_TIDY=true build
+
+.PHONY: lint-cpp
+lint-cpp:
+	make -C cpp lint
+
+.PHONY: test-cpp
+test-cpp:
+	make -C cpp test
