@@ -1,3 +1,5 @@
+MSRV_RUST_VERSION=1.83.0
+
 .PHONY: generate
 generate:
 	poetry install
@@ -34,7 +36,7 @@ build-rust:
 
 .PHONY: build-rust-foxglove-msrv
 build-rust-foxglove-msrv:
-	cargo +1.83.0 build -p foxglove --all-features
+	cargo +$(MSRV_RUST_VERSION) build -p foxglove --all-features
 
 .PHONY: test-rust
 test-rust:
