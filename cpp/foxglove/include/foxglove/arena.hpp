@@ -29,7 +29,8 @@ public:
   /// @param src The source vector containing elements to map
   /// @param map_fn Function taking (T& dest, const S& src) to map elements.
   /// T must be a POD type, without a custom constructor or destructor.
-  /// @return Pointer to the beginning of the allocated array of src.size() T elements
+  /// @return Pointer to the beginning of the allocated array of src.size() T elements, or null if
+  /// elements is 0.
   /// @throws std::bad_alloc if the arena doesn't have enough space
   template<
     typename T, typename S, typename Fn,
