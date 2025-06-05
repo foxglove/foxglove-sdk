@@ -7,9 +7,9 @@ generate:
 lint-python:
 	poetry check --strict
 	poetry install
-	poetry run black . --check
-	poetry run isort . --check
-	poetry run flake8 .
+	poetry run black python --check
+	poetry run isort python --check
+	poetry run flake8 python
 
 .PHONY: test-python
 test-python:
