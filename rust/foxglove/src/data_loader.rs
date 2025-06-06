@@ -101,6 +101,7 @@ macro_rules! define_data_loader_raw {
         });
 
         pub use self::foxglove::loader::reader;
+        pub use self::foxglove::loader::console;
         pub use self::exports::foxglove::loader::loader::{
             self,
             BackfillArgs, Channel, DataLoader, TimeRange,
