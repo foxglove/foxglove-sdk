@@ -269,8 +269,7 @@ void WebSocketServer::broadcastTime(uint64_t timestamp_nanos) const noexcept {
   foxglove_server_broadcast_time(impl_.get(), timestamp_nanos);
 }
 
-FoxgloveError WebSocketServer::clearSession(
-  std::optional<std::string_view> session_id
+FoxgloveError WebSocketServer::clearSession(std::optional<std::string_view> session_id
 ) const noexcept {
   auto c_session_id = session_id
                         ? std::optional<foxglove_string>{{session_id->data(), session_id->size()}}
