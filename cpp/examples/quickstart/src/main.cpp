@@ -1,37 +1,35 @@
-#include <foxglove/foxglove.hpp>
+#include <foxglove/channel.hpp>
 #include <foxglove/context.hpp>
 #include <foxglove/error.hpp>
+#include <foxglove/foxglove.hpp>
 #include <foxglove/mcap.hpp>
-#include <foxglove/server.hpp>
-#include <foxglove/channel.hpp>
 #include <foxglove/schemas.hpp>
+#include <foxglove/server.hpp>
 
 #include <atomic>
 #include <chrono>
-#include <thread>
-#include <iostream>
 #include <csignal>
 #include <functional>
+#include <iostream>
+#include <thread>
 
 using namespace std::chrono_literals;
 
-int main(int argc, const char *argv[])
-{
+int main(int argc, const char* argv[]) {
   foxglove::setLogLevel(foxglove::LogLevel::Debug);
 
   static std::function<void()> sigint_handler;
 
-  std::signal(SIGINT, [](int)
-              {
-        if (sigint_handler) {
-        sigint_handler();
-    } });
+  std::signal(SIGINT, [](int) {
+    if (sigint_handler) {
+      sigint_handler();
+    }
+  });
 
   foxglove::McapWriterOptions mcap_options = {};
   mcap_options.path = "quickstart-cpp.mcap";
   auto writer_result = foxglove::McapWriter::create(mcap_options);
-  if (!writer_result.has_value())
-  {
+  if (!writer_result.has_value()) {
     std::cerr << "Failed to create writer: " << foxglove::strerror(writer_result.error()) << '\n';
     return 1;
   }
@@ -42,8 +40,7 @@ int main(int argc, const char *argv[])
   ws_options.host = "127.0.0.1";
   ws_options.port = 8765;
   auto server_result = foxglove::WebSocketServer::create(std::move(ws_options));
-  if (!server_result.has_value())
-  {
+  if (!server_result.has_value()) {
     std::cerr << "Failed to create server: " << foxglove::strerror(server_result.error()) << '\n';
     return 1;
   }
@@ -59,11 +56,10 @@ int main(int argc, const char *argv[])
         "size": { "type": "number" }
         }
     })";
-  schema.data = reinterpret_cast<const std::byte *>(schema_data.data());
+  schema.data = reinterpret_cast<const std::byte*>(schema_data.data());
   schema.data_len = schema_data.size();
   auto channel_result = foxglove::RawChannel::create("/size", "json", std::move(schema));
-  if (!channel_result.has_value())
-  {
+  if (!channel_result.has_value()) {
     std::cerr << "Failed to create channel: " << foxglove::strerror(channel_result.error()) << '\n';
     return 1;
   }
@@ -71,26 +67,26 @@ int main(int argc, const char *argv[])
 
   // Create a SceneUpdateChannel for logging changes to a 3d scene
   auto scene_channel_result = foxglove::schemas::SceneUpdateChannel::create("/scene");
-  if (!scene_channel_result.has_value())
-  {
-    std::cerr << "Failed to create scene channel: " << foxglove::strerror(scene_channel_result.error()) << '\n';
+  if (!scene_channel_result.has_value()) {
+    std::cerr << "Failed to create scene channel: "
+              << foxglove::strerror(scene_channel_result.error()) << '\n';
     return 1;
   }
   auto scene_channel = std::move(scene_channel_result.value());
 
   std::atomic_bool done = false;
-  sigint_handler = [&]
-  {
+  sigint_handler = [&] {
     done = true;
   };
 
-  while (!done)
-  {
+  while (!done) {
     auto now = std::chrono::duration_cast<std::chrono::duration<double>>(
-        std::chrono::system_clock::now().time_since_epoch()).count();
+                 std::chrono::system_clock::now().time_since_epoch()
+    )
+                 .count();
     double size = abs(sin(now)) + 1.0;
     std::string msg = "{\"size\": " + std::to_string(size) + "}";
-    size_channel.log(reinterpret_cast<const std::byte *>(msg.data()), msg.size());
+    size_channel.log(reinterpret_cast<const std::byte*>(msg.data()), msg.size());
 
     foxglove::schemas::CubePrimitive cube;
     cube.size = foxglove::schemas::Vector3{size, size, size};
