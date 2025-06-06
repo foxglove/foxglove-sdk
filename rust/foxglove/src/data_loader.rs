@@ -2,8 +2,16 @@
 /// extensionContext.registerDataLoader() api.
 #[macro_export]
 macro_rules! define_data_loader {
+    ( $T:ident, $M:ident ) => {
+        pub mod $M {
+            ::foxglove::define_data_loader_raw!($T);
+        }
+    }
+}
+
+#[macro_export]
+macro_rules! define_data_loader_raw {
     ( $T:ident ) => {
-        pub mod foxglove { pub mod data_loader {
         use crate::$T;
         wit_bindgen::generate!({
             world: "host",
@@ -125,6 +133,5 @@ macro_rules! define_data_loader {
                 Ok(reader::Reader::position(&self))
             }
         }
-        } } // end mod data_loader, end mod foxglove
     };
 }
