@@ -4,7 +4,7 @@
 macro_rules! define_data_loader {
     ( $T:ident, $M:ident ) => {
         wit_bindgen::generate!({
-            world: "data-loader",
+            world: "host",
             export_macro_name: "foxglove_wit_export",
             inline: r#"
                 package foxglove:loader@0.1.0;
@@ -49,12 +49,17 @@ macro_rules! define_data_loader {
                         schema-name: string,
                         message-encoding: string,
                         schema-encoding: string,
-                        schema-data: list<u8>
+                        schema-data: list<u8>,
+                        message-count: option<u64>,
                     }
 
                     record message {
                         channel-id: u16,
-                        timestamp-nanos: u64,
+                        // The timestamp in nanoseconds at which the message was recorded.
+                        log-time: u64,
+                        // The timestamp in nanoseconds at which the message was published.
+                        // If not available, must be set to the log time.
+                        publish-time: u64,
                         data: list<u8>
                     }
 
@@ -77,7 +82,7 @@ macro_rules! define_data_loader {
                     create: func(input: list<string>) -> result<data-loader, string>;
                 }
 
-                world data-loader {
+                world host {
                     import console;
                     import reader;
                     export loader;
