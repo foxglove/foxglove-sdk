@@ -297,7 +297,7 @@ mod channel_builder;
 mod context;
 pub mod convert;
 #[cfg(feature = "data_loader")]
-pub mod data_loader;
+mod data_loader;
 mod encode;
 pub mod library_version;
 #[doc(hidden)]
