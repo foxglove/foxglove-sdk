@@ -2,7 +2,9 @@
 /// extensionContext.registerDataLoader() api.
 #[macro_export]
 macro_rules! define_data_loader {
-    ( $T:ident, $M:ident ) => {
+    ( $T:ident ) => {
+        pub mod foxglove { pub mod data_loader {
+        use crate::$T;
         wit_bindgen::generate!({
             world: "host",
             export_macro_name: "foxglove_wit_export",
@@ -90,27 +92,23 @@ macro_rules! define_data_loader {
             "#,
         });
 
-        mod $M {
-            pub use crate::foxglove::loader::reader;
-            pub use crate::exports::foxglove::loader::loader::{
-                self,
-                BackfillArgs, Channel, DataLoader, TimeRange,
-                Guest, GuestDataLoader, GuestMessageIterator,
-                Message, MessageIterator, MessageIteratorArgs,
-            };
-        }
+        pub use self::foxglove::loader::reader;
+        pub use self::exports::foxglove::loader::loader::{
+            self,
+            BackfillArgs, Channel, DataLoader, TimeRange,
+            Guest, GuestDataLoader, GuestMessageIterator,
+            Message, MessageIterator, MessageIteratorArgs,
+        };
         foxglove_wit_export!($T);
 
-        impl std::io::Read for $M::reader::Reader {
+        impl std::io::Read for reader::Reader {
             fn read(&mut self, dst: &mut [u8]) -> Result<usize, std::io::Error> {
-                use crate::foxglove::loader::reader;
                 Ok(reader::Reader::read(&self, dst) as usize)
             }
         }
 
-        impl std::io::Seek for $M::reader::Reader {
+        impl std::io::Seek for reader::Reader {
             fn seek(&mut self, seek: std::io::SeekFrom) -> Result<u64, std::io::Error> {
-                use crate::foxglove::loader::reader;
                 match seek {
                     std::io::SeekFrom::Start(offset) => {
                         reader::Reader::seek(&self, offset);
@@ -127,5 +125,6 @@ macro_rules! define_data_loader {
                 Ok(reader::Reader::position(&self))
             }
         }
+        } } // end mod data_loader, end mod foxglove
     };
 }
