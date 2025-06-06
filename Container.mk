@@ -76,6 +76,10 @@ build-cpp-tidy:
 lint-cpp:
 	make -C cpp lint
 
+.PHONY: lint-fix-cpp
+lint-fix-cpp:
+	make -C cpp lint-fix
+
 .PHONY: test-cpp
 test-cpp:
 	make -C cpp test
