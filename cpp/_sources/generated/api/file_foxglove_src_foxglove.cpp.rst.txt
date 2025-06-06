@@ -1,0 +1,49 @@
+
+.. _file_foxglove_src_foxglove.cpp:
+
+File foxglove.cpp
+=================
+
+|exhale_lsh| :ref:`Parent directory <dir_foxglove_src>` (``foxglove/src``)
+
+.. |exhale_lsh| unicode:: U+021B0 .. UPWARDS ARROW WITH TIP LEFTWARDS
+
+Definition (``foxglove/src/foxglove.cpp``)
+------------------------------------------
+
+
+.. toctree::
+   :maxdepth: 1
+
+   program_listing_file_foxglove_src_foxglove.cpp.rst
+
+
+
+
+
+Includes
+--------
+
+
+- ``foxglove-c/foxglove-c.h``
+
+- ``foxglove/foxglove.hpp`` (:ref:`file_foxglove_include_foxglove_foxglove.hpp`)
+
+
+
+
+
+
+Namespaces
+----------
+
+
+- :ref:`namespace_foxglove`
+
+
+Functions
+---------
+
+
+- :ref:`exhale_function_namespacefoxglove_1a652f9cfa75da3e0935da23d72cf270ec`
+

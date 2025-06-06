@@ -1,0 +1,56 @@
+
+.. _program_listing_file_foxglove_include_foxglove_server_fetch_asset.hpp:
+
+Program Listing for File fetch_asset.hpp
+========================================
+
+|exhale_lsh| :ref:`Return to documentation for file <file_foxglove_include_foxglove_server_fetch_asset.hpp>` (``foxglove/include/foxglove/server/fetch_asset.hpp``)
+
+.. |exhale_lsh| unicode:: U+021B0 .. UPWARDS ARROW WITH TIP LEFTWARDS
+
+.. code-block:: cpp
+
+   #pragma once
+   
+   #include <functional>
+   #include <memory>
+   #include <string_view>
+   #include <vector>
+   
+   struct foxglove_fetch_asset_responder;
+   
+   namespace foxglove {
+   
+   class FetchAssetResponder final {
+   public:
+     void respondOk(const std::byte* data, size_t size) && noexcept;
+   
+     void respondOk(const std::vector<std::byte>& data) && noexcept {
+       std::move(*this).respondOk(data.data(), data.size());
+     };
+   
+     void respondError(std::string_view message) && noexcept;
+   
+     ~FetchAssetResponder() = default;
+     FetchAssetResponder(FetchAssetResponder&&) noexcept = default;
+     FetchAssetResponder& operator=(FetchAssetResponder&&) noexcept = default;
+     FetchAssetResponder(const FetchAssetResponder&) = delete;
+     FetchAssetResponder& operator=(const FetchAssetResponder&) = delete;
+   
+   private:
+     friend class WebSocketServer;
+   
+     struct Deleter {
+       void operator()(foxglove_fetch_asset_responder* ptr) const noexcept;
+     };
+   
+     std::unique_ptr<foxglove_fetch_asset_responder, Deleter> impl_;
+   
+     explicit FetchAssetResponder(foxglove_fetch_asset_responder* ptr)
+         : impl_(ptr) {}
+   };
+   
+   using FetchAssetHandler =
+     std::function<void(std::string_view uri, FetchAssetResponder&& responder)>;
+   
+   }  // namespace foxglove
