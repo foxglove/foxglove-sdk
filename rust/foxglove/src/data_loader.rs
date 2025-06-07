@@ -2,17 +2,13 @@
 /// extensionContext.registerDataLoader() api.
 #[macro_export]
 macro_rules! define_data_loader {
-    ( $M:ident, $L:ident, $I:ident ) => {
+    ( $M:ident, $L:ident ) => {
         pub mod $M {
-            ::foxglove::define_data_loader_raw!($L, $I);
+            ::foxglove::define_data_loader!($L);
         }
-    }
-}
-
-#[macro_export]
-macro_rules! define_data_loader_raw {
-    ( $L:ident, $I:ident ) => {
-        use crate::{$L,$I};
+    };
+    ( $L:ident ) => {
+        use crate::$L as LOADER;
         wit_bindgen::generate!({
             world: "host",
             export_macro_name: "foxglove_wit_export",
@@ -106,8 +102,9 @@ macro_rules! define_data_loader_raw {
             self,
             BackfillArgs, Channel, TimeRange,
             Message, MessageIteratorArgs,
+            GuestMessageIterator as MessageIterator,
         };
-        foxglove_wit_export!($L);
+        foxglove_wit_export!(LOADER);
 
         impl std::io::Read for reader::Reader {
             fn read(&mut self, dst: &mut [u8]) -> Result<usize, std::io::Error> {
@@ -134,36 +131,40 @@ macro_rules! define_data_loader_raw {
             }
         }
 
-        impl loader::Guest for $L {
-            type DataLoader = $L;
-            type MessageIterator = $I;
+        pub trait DataLoader: 'static+Sized {
+            type MessageIterator: loader::GuestMessageIterator;
+
+            fn create(inputs: Vec<String>) -> Result<Self, String>;
+            fn channels(&self) -> Result<Vec<loader::Channel>, String>;
+            fn time_range(&self) -> Result<loader::TimeRange, String>;
+            fn create_iter(&self, args: loader::MessageIteratorArgs) -> Result<Self::MessageIterator, String>;
+            fn get_backfill(&self, args: loader::BackfillArgs) -> Result<Vec<loader::Message>, String>;
+        }
+
+        impl<T: DataLoader> loader::Guest for T {
+            type DataLoader = Self;
+            type MessageIterator = T::MessageIterator;
 
             fn create(inputs: Vec<String>) -> Result<loader::DataLoader, String> {
-                $L::create(inputs).map(|loader| loader::DataLoader::new(loader))
+                T::create(inputs).map(|loader| loader::DataLoader::new(loader))
             }
         }
 
-        impl loader::GuestDataLoader for $L {
+        impl<T: DataLoader> loader::GuestDataLoader for T {
             fn channels(&self) -> Result<Vec<loader::Channel>, String> {
-                $L::channels(self)
+                T::channels(self)
             }
 
             fn time_range(&self) -> Result<loader::TimeRange, String> {
-                $L::time_range(self)
+                T::time_range(self)
             }
 
             fn create_iter(&self, args: loader::MessageIteratorArgs) -> Result<loader::MessageIterator, String> {
-                $L::create_iter(self, args).map(|iter| loader::MessageIterator::new(iter))
+                T::create_iter(self, args).map(|iter| loader::MessageIterator::new(iter))
             }
 
             fn get_backfill(&self, args: loader::BackfillArgs) -> Result<Vec<loader::Message>, String> {
-                $L::get_backfill(self, args)
-            }
-        }
-
-        impl loader::GuestMessageIterator for $I {
-            fn next(&self) -> Option<Result<Message, String>> {
-                $I::next(self)
+                T::get_backfill(self, args)
             }
         }
     };
