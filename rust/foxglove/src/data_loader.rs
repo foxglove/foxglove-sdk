@@ -2,17 +2,17 @@
 /// extensionContext.registerDataLoader() api.
 #[macro_export]
 macro_rules! define_data_loader {
-    ( $T:ident, $M:ident ) => {
+    ( $M:ident, $L:ident, $I:ident ) => {
         pub mod $M {
-            ::foxglove::define_data_loader_raw!($T);
+            ::foxglove::define_data_loader_raw!($L, $I);
         }
     }
 }
 
 #[macro_export]
 macro_rules! define_data_loader_raw {
-    ( $T:ident ) => {
-        use crate::$T;
+    ( $L:ident, $I:ident ) => {
+        use crate::{$L,$I};
         wit_bindgen::generate!({
             world: "host",
             export_macro_name: "foxglove_wit_export",
@@ -108,7 +108,7 @@ macro_rules! define_data_loader_raw {
             Guest, GuestDataLoader, GuestMessageIterator,
             Message, MessageIterator, MessageIteratorArgs,
         };
-        foxglove_wit_export!($T);
+        foxglove_wit_export!($L);
 
         impl std::io::Read for reader::Reader {
             fn read(&mut self, dst: &mut [u8]) -> Result<usize, std::io::Error> {
@@ -132,6 +132,39 @@ macro_rules! define_data_loader_raw {
                     },
                 }
                 Ok(reader::Reader::position(&self))
+            }
+        }
+
+        impl Guest for $L {
+            type DataLoader = $L;
+            type MessageIterator = $I;
+
+            fn create(inputs: Vec<String>) -> Result<DataLoader, String> {
+                $L::create(inputs).map(|loader| DataLoader::new(loader))
+            }
+        }
+
+        impl GuestDataLoader for $L {
+            fn channels(&self) -> Result<Vec<Channel>, String> {
+                $L::channels(self)
+            }
+
+            fn time_range(&self) -> Result<TimeRange, String> {
+                $L::time_range(self)
+            }
+
+            fn create_iter(&self, args: MessageIteratorArgs) -> Result<MessageIterator, String> {
+                $L::create_iter(self, args).map(|iter| MessageIterator::new(iter))
+            }
+
+            fn get_backfill(&self, args: BackfillArgs) -> Result<Vec<Message>, String> {
+                $L::get_backfill(self, args)
+            }
+        }
+
+        impl GuestMessageIterator for $I {
+            fn next(&self) -> Option<Result<Message, String>> {
+                $I::next(self)
             }
         }
     };
