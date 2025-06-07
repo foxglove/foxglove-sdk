@@ -127,7 +127,7 @@ macro_rules! define_data_loader_raw {
                     },
                     std::io::SeekFrom::Current(offset) => {
                         let pos = reader::Reader::position(&self) as i64;
-                        reader::Reader::seek(&self, (pos - offset) as u64);
+                        reader::Reader::seek(&self, (pos + offset) as u64);
                     },
                 }
                 Ok(reader::Reader::position(&self))
