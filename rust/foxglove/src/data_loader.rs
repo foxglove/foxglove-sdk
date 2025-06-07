@@ -1,8 +1,12 @@
 pub mod generated {
+    // Confine the mess of the things that generate defines to a dedicated namespace with this
+    // inline module.
     wit_bindgen::generate!({
         world: "host",
-        export_macro_name: "data_loader_wit_export",
+        export_macro_name: "export",
         pub_export_macro: true,
+        // We can't use another macro to read from a file here unfortunately since generate!() is a
+        // proc macro that expects a string as the next token after inline.
         inline: r#"
             package foxglove:loader@0.1.0;
 
@@ -88,12 +92,15 @@ pub mod generated {
     });
 }
 
+/// Export a data loader to wasm output with this macro.
 #[macro_export]
 macro_rules! data_loader_export {
     ( $L:ident ) => {
         mod __foxglove_data_loader_export {
+            // Put these in a temp module so none of these pollute the current namespace.
+            // This whole thing could probably be a proc macro.
             use crate::$L as LOADER;
-            foxglove::data_loader::generated::data_loader_wit_export!(
+            foxglove::data_loader::generated::export!(
                 LOADER with_types_in foxglove::data_loader::generated
             );
         }
@@ -134,7 +141,12 @@ impl std::io::Seek for reader::Reader {
     }
 }
 
+/// Your custom data loader should implement this trait along with MessageIterator.
+/// And don't forget to call `foxglove::data_loader_export()` on your loader.
 pub trait DataLoader: 'static+Sized {
+    // Consolidates the Guest and GuestDataLoader traits into a single trait.
+    // Wraps create() and create_iter() to user-defined structs so that users don't need to wrap
+    // their types into `loader::DataLoader::new()` or `loader::MessageIterator::new()`.
     type MessageIterator: loader::GuestMessageIterator;
 
     fn create(inputs: Vec<String>) -> Result<Self, String>;
