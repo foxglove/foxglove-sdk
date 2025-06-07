@@ -104,9 +104,8 @@ macro_rules! define_data_loader_raw {
         pub use self::foxglove::loader::console;
         pub use self::exports::foxglove::loader::loader::{
             self,
-            BackfillArgs, Channel, DataLoader, TimeRange,
-            Guest, GuestDataLoader, GuestMessageIterator,
-            Message, MessageIterator, MessageIteratorArgs,
+            BackfillArgs, Channel, TimeRange,
+            Message, MessageIteratorArgs,
         };
         foxglove_wit_export!($L);
 
@@ -135,34 +134,34 @@ macro_rules! define_data_loader_raw {
             }
         }
 
-        impl Guest for $L {
+        impl loader::Guest for $L {
             type DataLoader = $L;
             type MessageIterator = $I;
 
-            fn create(inputs: Vec<String>) -> Result<DataLoader, String> {
-                $L::create(inputs).map(|loader| DataLoader::new(loader))
+            fn create(inputs: Vec<String>) -> Result<loader::DataLoader, String> {
+                $L::create(inputs).map(|loader| loader::DataLoader::new(loader))
             }
         }
 
-        impl GuestDataLoader for $L {
-            fn channels(&self) -> Result<Vec<Channel>, String> {
+        impl loader::GuestDataLoader for $L {
+            fn channels(&self) -> Result<Vec<loader::Channel>, String> {
                 $L::channels(self)
             }
 
-            fn time_range(&self) -> Result<TimeRange, String> {
+            fn time_range(&self) -> Result<loader::TimeRange, String> {
                 $L::time_range(self)
             }
 
-            fn create_iter(&self, args: MessageIteratorArgs) -> Result<MessageIterator, String> {
-                $L::create_iter(self, args).map(|iter| MessageIterator::new(iter))
+            fn create_iter(&self, args: loader::MessageIteratorArgs) -> Result<loader::MessageIterator, String> {
+                $L::create_iter(self, args).map(|iter| loader::MessageIterator::new(iter))
             }
 
-            fn get_backfill(&self, args: BackfillArgs) -> Result<Vec<Message>, String> {
+            fn get_backfill(&self, args: loader::BackfillArgs) -> Result<Vec<loader::Message>, String> {
                 $L::get_backfill(self, args)
             }
         }
 
-        impl GuestMessageIterator for $I {
+        impl loader::GuestMessageIterator for $I {
             fn next(&self) -> Option<Result<Message, String>> {
                 $I::next(self)
             }
