@@ -9,5 +9,6 @@ exclude =
     python/foxglove-schemas-flatbuffer/foxglove_schemas_flatbuffer/*.py,
     python/foxglove-schemas-protobuf/foxglove_schemas_protobuf/*.py,
     python/foxglove-sdk/python/foxglove/_protobuf/*,
+    *_pb2.py,
     target,
 count = true
