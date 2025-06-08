@@ -1,9 +1,9 @@
+import json
 import logging
 import random
 
 import pytest
-from foxglove import Schema
-from foxglove.channel import Channel
+from foxglove import Channel, Context, Schema
 from foxglove.channels import LogChannel
 from foxglove.schemas import Log
 
@@ -13,11 +13,43 @@ def new_topic() -> str:
     return f"/{random.random()}"
 
 
-def test_prohibits_duplicate_topics() -> None:
+def test_warns_on_duplicate_topics(caplog: pytest.LogCaptureFixture) -> None:
     schema = {"type": "object"}
-    _ = Channel("test-duplicate", schema=schema)
-    with pytest.raises(ValueError, match="already exists"):
-        Channel("test-duplicate", schema=schema)
+    c1 = Channel("test-duplicate", schema=schema)
+    c2 = Channel("test-duplicate", schema=schema)
+    assert c1.id() == c2.id()
+
+    with caplog.at_level(logging.WARNING):
+        # Same topic, different schema
+        c3 = Channel(
+            "test-duplicate",
+            schema={
+                "type": "object",
+                "additionalProperties": False,
+            },
+        )
+        assert c1.id() != c3.id()
+
+    assert len(caplog.records) == 1
+    for _, _, message in caplog.record_tuples:
+        assert (
+            "Channel with topic test-duplicate already exists in this context"
+            in message
+        )
+
+
+def test_does_not_warn_on_duplicate_topics_in_contexts(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    ctx1 = Context()
+    ctx2 = Context()
+
+    _ = Channel("test-duplicate", context=ctx1)
+
+    with caplog.at_level(logging.WARNING):
+        Channel("test-duplicate", context=ctx2)
+
+    assert len(caplog.records) == 0
 
 
 def test_requires_an_object_schema(new_topic: str) -> None:
@@ -27,11 +59,15 @@ def test_requires_an_object_schema(new_topic: str) -> None:
 
 
 def test_log_dict_on_json_channel(new_topic: str) -> None:
-    channel = Channel(
-        new_topic,
-        schema={"type": "object", "additionalProperties": True},
-    )
+    json_schema = {"type": "object", "additionalProperties": True}
+    channel = Channel(new_topic, schema=json_schema)
+
     assert channel.message_encoding == "json"
+
+    schema = channel.schema()
+    assert schema is not None
+    assert schema.encoding == "jsonschema"
+    assert json.loads(schema.data) == json_schema
 
     channel.log({"test": "test"})
 
@@ -40,12 +76,22 @@ def test_log_dict_on_schemaless_channel(new_topic: str) -> None:
     channel = Channel(new_topic)
     assert channel.message_encoding == "json"
 
+    schema = channel.schema()
+    assert schema is not None
+    assert schema.encoding == "jsonschema"
+    assert schema.data == b""
+
     channel.log({"test": "test"})
 
 
 def test_log_dict_with_empty_schema(new_topic: str) -> None:
     channel = Channel(new_topic, schema={})
     assert channel.message_encoding == "json"
+
+    schema = channel.schema()
+    assert schema is not None
+    assert schema.encoding == "jsonschema"
+    assert schema.data == b""
 
     channel.log({"test": "test"})
 
@@ -57,24 +103,51 @@ def test_log_dict_on_schemaless_json_channel(new_topic: str) -> None:
     )
     assert channel.message_encoding == "json"
 
+    schema = channel.schema()
+    assert schema is not None
+    assert schema.encoding == "jsonschema"
+    assert schema.data == b""
+
     channel.log({"test": "test"})
 
 
 def test_log_must_serialize_on_protobuf_channel(new_topic: str) -> None:
+    schema = Schema(
+        name="my_schema",
+        encoding="protobuf",
+        data=b"\x01",
+    )
     channel = Channel(
         new_topic,
         message_encoding="protobuf",
-        schema=Schema(
-            name="my_schema",
-            encoding="protobuf",
-            data=b"\x01",
-        ),
+        schema=schema,
     )
+
+    assert channel.message_encoding == "protobuf"
+    assert channel.schema() == schema
 
     with pytest.raises(TypeError, match="Unsupported message type"):
         channel.log({"test": "test"})
 
     channel.log(b"\x01")
+
+
+def test_channel_attributes(new_topic: str) -> None:
+    channel = Channel(new_topic, message_encoding="json")
+    assert channel.topic() == new_topic
+    assert channel.message_encoding == "json"
+    assert channel.schema() is not None
+    assert channel.metadata() == {}
+    assert not channel.has_sinks()
+
+
+def test_typed_channel_attributes(new_topic: str) -> None:
+    channel = LogChannel(new_topic)
+    assert channel.topic() == new_topic
+    assert channel.message_encoding == "protobuf"
+    assert channel.schema() == Log.get_schema()
+    assert channel.metadata() == {}
+    assert not channel.has_sinks()
 
 
 def test_closed_channel_log(new_topic: str, caplog: pytest.LogCaptureFixture) -> None:

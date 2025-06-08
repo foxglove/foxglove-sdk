@@ -1,0 +1,2 @@
+# Uncomment this line to format rustdoc snippets with `cargo +nightly fmt`.
+#format_code_in_doc_comments = true

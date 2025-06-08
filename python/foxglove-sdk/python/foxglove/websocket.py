@@ -1,5 +1,5 @@
 from collections.abc import Callable
-from typing import List, Optional, Protocol
+from typing import Dict, List, Optional, Protocol, Union
 
 from ._foxglove_py.websocket import (
     Capability,
@@ -21,6 +21,26 @@ from ._foxglove_py.websocket import (
 # Redefine types from the stub interface so they're available for documentation.
 ServiceHandler = Callable[["ServiceRequest"], bytes]
 AssetHandler = Callable[[str], Optional[bytes]]
+AnyParameterValue = Union[
+    ParameterValue.Bool,
+    ParameterValue.Number,
+    ParameterValue.String,
+    ParameterValue.Array,
+    ParameterValue.Dict,
+]
+AnyInnerParameterValue = Union[
+    AnyParameterValue,
+    bool,
+    float,
+    str,
+    List["AnyInnerParameterValue"],
+    Dict[str, "AnyInnerParameterValue"],
+]
+
+AnyNativeParameterValue = Union[
+    AnyInnerParameterValue,
+    bytes,
+]
 
 
 class ServerListener(Protocol):
@@ -153,6 +173,9 @@ class ServerListener(Protocol):
 
 
 __all__ = [
+    "AnyInnerParameterValue",
+    "AnyNativeParameterValue",
+    "AnyParameterValue",
     "Capability",
     "ChannelView",
     "Client",

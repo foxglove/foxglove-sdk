@@ -2,9 +2,20 @@
 
 use std::collections::BTreeMap;
 
+use base64::prelude::*;
 use serde::{Deserialize, Serialize};
-use serde_with::base64::Base64;
 use serde_with::serde_as;
+
+/// Error encountered while trying to decide a base64-encoded byte array parameter value.
+#[derive(Debug, thiserror::Error)]
+pub enum DecodeError {
+    /// Parameter is not a byte-array.
+    #[error("Parameter is not a byte array")]
+    WrongType,
+    /// Invalid base64.
+    #[error(transparent)]
+    Base64(#[from] base64::DecodeError),
+}
 
 /// A parameter type.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -27,8 +38,11 @@ pub enum ParameterValue {
     Number(f64),
     /// A boolean value.
     Bool(bool),
-    /// A byte array, encoded as a base64-encoded string.
-    String(#[serde_as(as = "Base64")] Vec<u8>),
+    /// A string value.
+    ///
+    /// For parameters of type [`ParameterType::ByteArray`], this is a base64 encoding of the byte
+    /// array.
+    String(String),
     /// An array of parameter values.
     Array(Vec<ParameterValue>),
     /// An associative map of parameter values.
@@ -68,7 +82,7 @@ impl Parameter {
     }
 
     /// Creates a new parameter with a float64 array value.
-    pub fn float64_array(name: impl Into<String>, values: Vec<f64>) -> Self {
+    pub fn float64_array(name: impl Into<String>, values: impl IntoIterator<Item = f64>) -> Self {
         Self {
             name: name.into(),
             r#type: Some(ParameterType::Float64Array),
@@ -80,15 +94,20 @@ impl Parameter {
 
     /// Creates a new parameter with a string value.
     pub fn string(name: impl Into<String>, value: impl Into<String>) -> Self {
-        Self::byte_array(name, value.into().into_bytes())
+        Self {
+            name: name.into(),
+            r#type: None,
+            value: Some(ParameterValue::String(value.into())),
+        }
     }
 
     /// Creates a new parameter with a byte array value.
-    pub fn byte_array(name: impl Into<String>, data: impl Into<Vec<u8>>) -> Self {
+    pub fn byte_array(name: impl Into<String>, data: &[u8]) -> Self {
+        let value = BASE64_STANDARD.encode(data);
         Self {
             name: name.into(),
             r#type: Some(ParameterType::ByteArray),
-            value: Some(ParameterValue::String(data.into())),
+            value: Some(ParameterValue::String(value)),
         }
     }
 
@@ -109,10 +128,26 @@ impl Parameter {
             value: Some(ParameterValue::Dict(value)),
         }
     }
+
+    /// Decodes a byte array parameter.
+    ///
+    /// Returns None if the parameter is unset/empty. Returns an error if the parameter value is
+    /// not a byte array, or if it is not a valid base64 encoding.
+    pub fn decode_byte_array(&self) -> Result<Option<Vec<u8>>, DecodeError> {
+        match (self.r#type, self.value.as_ref()) {
+            (Some(ParameterType::ByteArray), Some(ParameterValue::String(s))) => {
+                Some(BASE64_STANDARD.decode(s).map_err(DecodeError::Base64)).transpose()
+            }
+            (_, None) => Ok(None),
+            _ => Err(DecodeError::WrongType),
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
+    use assert_matches::assert_matches;
+
     use super::*;
 
     #[test]
@@ -127,7 +162,7 @@ mod tests {
 
     #[test]
     fn test_float_array() {
-        insta::assert_json_snapshot!(Parameter::float64_array("f64[]", vec![1.23, 4.56]));
+        insta::assert_json_snapshot!(Parameter::float64_array("f64[]", [1.23, 4.56]));
     }
 
     #[test]
@@ -137,7 +172,46 @@ mod tests {
 
     #[test]
     fn test_byte_array() {
-        insta::assert_json_snapshot!(Parameter::byte_array("byte[]", [0x10, 0x20, 0x30]));
+        insta::assert_json_snapshot!(Parameter::byte_array("byte[]", &[0x10, 0x20, 0x30]));
+    }
+
+    #[test]
+    fn test_decode_byte_array() {
+        let param = Parameter::byte_array("bytes", b"123");
+        let decoded = param.decode_byte_array().unwrap().unwrap();
+        assert_eq!(decoded, b"123".to_vec());
+
+        // invalid base64 value
+        let param = Parameter {
+            name: "invalid".into(),
+            r#type: Some(ParameterType::ByteArray),
+            value: Some(ParameterValue::String("!!".into())),
+        };
+        let result = param.decode_byte_array();
+        assert_matches!(result, Err(DecodeError::Base64(_)));
+
+        // it's a string, not a byte array
+        let param = Parameter::string("string", "eHl6enk=");
+        let result = param.decode_byte_array();
+        assert_matches!(result, Err(DecodeError::WrongType));
+
+        // unset
+        let param = Parameter {
+            name: "unset".into(),
+            r#type: Some(ParameterType::ByteArray),
+            value: None,
+        };
+        let result = param.decode_byte_array();
+        assert_matches!(result, Ok(None));
+
+        // unset of a different type
+        let param = Parameter {
+            name: "unset".into(),
+            r#type: None,
+            value: None,
+        };
+        let result = param.decode_byte_array();
+        assert_matches!(result, Ok(None));
     }
 
     #[test]

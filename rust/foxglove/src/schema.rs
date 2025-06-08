@@ -10,7 +10,10 @@ pub struct Schema {
     /// An identifier for the schema.
     pub name: String,
     /// The encoding of the schema data. For example "jsonschema" or "protobuf".
-    /// The [well-known schema encodings](https://mcap.dev/spec/registry#well-known-schema-encodings) are preferred.
+    ///
+    /// The [well-known schema encodings] are preferred.
+    ///
+    /// [well-known schema encodings]: https://mcap.dev/spec/registry#well-known-schema-encodings
     pub encoding: String,
     /// Must conform to the schema encoding. If encoding is an empty string, data should be 0 length.
     pub data: Cow<'static, [u8]>,
@@ -40,6 +43,7 @@ impl Schema {
     }
 
     /// Returns a JSON schema for the specified type.
+    #[cfg(feature = "schemars")]
     pub fn json_schema<T: schemars::JsonSchema>() -> Self {
         let json_schema = schemars::schema_for!(T);
         Self::new(

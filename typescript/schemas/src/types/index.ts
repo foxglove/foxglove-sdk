@@ -31,6 +31,7 @@ export * from "./PoseInFrame";
 export * from "./PosesInFrame";
 export * from "./PositionCovarianceType";
 export * from "./Quaternion";
+export * from "./RawAudio";
 export * from "./RawImage";
 export * from "./SceneEntity";
 export * from "./SceneEntityDeletion";

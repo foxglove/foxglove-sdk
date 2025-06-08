@@ -26,26 +26,62 @@ jobs:
           toolchain: 1.83.0,nightly,stable
 
       - name: Ensure generated protobuf schemas are up to date
-        run: cargo run --bin foxglove-proto-gen && git diff --exit-code
+        run: cargo run --bin foxglove_proto_gen && git diff --exit-code
 
       - run: cargo fmt --all --check
       - run: cargo build --verbose
-      # Validate that we can build without live visualization
+      # Validate that we can build each example individually.
+      - name: Build examples individually
+        run: |
+          set -euo pipefail
+          cargo metadata --no-deps --format-version 1 \
+            | jq -r ".packages[].name" \
+            | grep example \
+            | while read package; do
+            echo "Building $package"
+            cargo build -p "$package"
+          done
+      # Validate that we can build without default features.
       - run: cargo build -p foxglove --verbose --no-default-features
       # Validate that we can build against the MSRV (minimum specified rust version).
       - run: cargo +1.83.0 build -p foxglove --verbose
       - run: cargo clippy --no-deps --all-targets --tests -- -D warnings
       - run: cargo +nightly rustdoc -p foxglove --all-features -- -D warnings --cfg docsrs
-      - run: cargo test --features unstable --verbose
-        timeout-minutes: 10
-      - run: cargo publish --package foxglove --dry-run
-      - run: cargo publish --package foxglove
-        if: startsWith(github.ref, 'refs/tags/sdk/v')
+      - run: cargo test --all-features --verbose
+        timeout-minutes: 5
+      - run: cargo test -p foxglove --no-default-features --verbose
+        timeout-minutes: 5
+
+  release-rust:
+    if: startsWith(github.ref, 'refs/tags/sdk/v')
+    runs-on: ubuntu-latest
+    needs: rust
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - id: detect-version
+        name: Detect local Cargo version
+        run: |
+          version=$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[] | select(.name=="'foxglove'").version')
+          echo "version=$version" >> $GITHUB_OUTPUT
+      - name: Publish foxglove_derive
+        run: cargo publish --package foxglove_derive
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+      - name: Wait for foxglove_derive to be published
+        run: until cargo info --registry=crates-io foxglove_derive@${{ steps.detect-version.outputs.version }}; do sleep 10; done
+      - name: Publish foxglove
+        run: cargo publish --package foxglove
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
 
   typescript:
     runs-on: ubuntu-latest
+
+    permissions:
+      # https://docs.npmjs.com/generating-provenance-statements#publishing-packages-with-provenance-via-github-actions
+      id-token: write
+
     steps:
       - uses: actions/checkout@v4
 
@@ -116,9 +152,11 @@ jobs:
       - name: Validate protobuf definitions
         run: protoc --proto_path=schemas/proto schemas/proto/**/*.proto --descriptor_set_out=/dev/null
 
-      - name: Publish to NPM
-        if: startsWith(github.ref, 'refs/tags/typescript/v')
-        run: yarn npm publish --access public
+      - run: yarn workspace @foxglove/schemas pack
+      - name: Publish @foxglove/schemas to NPM
+        if: startsWith(github.ref, 'refs/tags/typescript/schemas/v')
+        # `yarn npm publish` does not currently support --provenance: https://github.com/yarnpkg/berry/issues/5430
+        run: npm publish typescript/schemas/package.tgz --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
 

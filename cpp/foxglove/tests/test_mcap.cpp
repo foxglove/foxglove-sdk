@@ -1,4 +1,7 @@
+#include <foxglove-c/foxglove-c.h>
+#include <foxglove/arena.hpp>
 #include <foxglove/channel.hpp>
+#include <foxglove/context.hpp>
 #include <foxglove/error.hpp>
 #include <foxglove/mcap.hpp>
 
@@ -16,19 +19,19 @@ using Catch::Matchers::Equals;
 class FileCleanup {
 public:
   explicit FileCleanup(std::string&& path)
-      : _path(std::move(path)) {}
+      : path_(std::move(path)) {}
   FileCleanup(const FileCleanup&) = delete;
   FileCleanup& operator=(const FileCleanup&) = delete;
   FileCleanup(FileCleanup&&) = delete;
   FileCleanup& operator=(FileCleanup&&) = delete;
   ~FileCleanup() {
-    if (std::filesystem::exists(_path)) {
-      std::filesystem::remove(_path);
+    if (std::filesystem::exists(path_)) {
+      std::filesystem::remove(path_);
     }
   }
 
 private:
-  std::string _path;
+  std::string path_;
 };
 
 TEST_CASE("Open new file and close mcap writer") {
@@ -124,10 +127,41 @@ std::string readFile(const std::string& path) {
   return {std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>()};
 }
 
+TEST_CASE("different contexts") {
+  FileCleanup cleanup("test.mcap");
+  auto context1 = foxglove::Context::create();
+  auto context2 = foxglove::Context::create();
+
+  // Create writer on context1
+  foxglove::McapWriterOptions options{context1};
+  options.path = "test.mcap";
+  auto writer = foxglove::McapWriter::create(options);
+  REQUIRE(writer.has_value());
+
+  // Log on context2 (should not be output to the file)
+  foxglove::Schema schema;
+  schema.name = "ExampleSchema";
+  auto channel_result = foxglove::RawChannel::create("example1", "json", schema, context2);
+  REQUIRE(channel_result.has_value());
+  auto channel = std::move(channel_result.value());
+  std::string data = "Hello, world!";
+  channel.log(reinterpret_cast<const std::byte*>(data.data()), data.size());
+
+  writer->close();
+
+  // Check if test.mcap file exists
+  REQUIRE(std::filesystem::exists("test.mcap"));
+
+  // Check that it does not contain the message
+  std::string content = readFile("test.mcap");
+  REQUIRE_THAT(content, !ContainsSubstring("Hello, world!"));
+}
+
 TEST_CASE("specify profile") {
   FileCleanup cleanup("test.mcap");
+  auto context = foxglove::Context::create();
 
-  foxglove::McapWriterOptions options = {};
+  foxglove::McapWriterOptions options{context};
   options.path = "test.mcap";
   options.profile = "test_profile";
   auto writer = foxglove::McapWriter::create(options);
@@ -136,9 +170,9 @@ TEST_CASE("specify profile") {
   // Write message
   foxglove::Schema schema;
   schema.name = "ExampleSchema";
-  auto channelResult = foxglove::Channel::create("example1", "json", schema);
-  REQUIRE(channelResult.has_value());
-  auto& channel = channelResult.value();
+  auto channel_result = foxglove::RawChannel::create("example1", "json", schema, context);
+  REQUIRE(channel_result.has_value());
+  auto& channel = channel_result.value();
   std::string data = "Hello, world!";
   channel.log(reinterpret_cast<const std::byte*>(data.data()), data.size());
 
@@ -154,21 +188,22 @@ TEST_CASE("specify profile") {
 
 TEST_CASE("zstd compression") {
   FileCleanup cleanup("test.mcap");
+  auto context = foxglove::Context::create();
 
-  foxglove::McapWriterOptions options = {};
+  foxglove::McapWriterOptions options{context};
   options.path = "test.mcap";
   options.compression = foxglove::McapCompression::Zstd;
-  options.chunkSize = 10000;
-  options.useChunks = true;
+  options.chunk_size = 10000;
+  options.use_chunks = true;
   auto writer = foxglove::McapWriter::create(options);
   REQUIRE(writer.has_value());
 
   // Write message
   foxglove::Schema schema;
   schema.name = "ExampleSchema";
-  auto channelResult = foxglove::Channel::create("example2", "json", schema);
-  REQUIRE(channelResult.has_value());
-  auto& channel = channelResult.value();
+  auto channel_result = foxglove::RawChannel::create("example2", "json", schema, context);
+  REQUIRE(channel_result.has_value());
+  auto channel = std::move(channel_result.value());
   std::string data = "Hello, world!";
   channel.log(reinterpret_cast<const std::byte*>(data.data()), data.size());
 
@@ -184,21 +219,22 @@ TEST_CASE("zstd compression") {
 
 TEST_CASE("lz4 compression") {
   FileCleanup cleanup("test.mcap");
+  auto context = foxglove::Context::create();
 
-  foxglove::McapWriterOptions options = {};
+  foxglove::McapWriterOptions options{context};
   options.path = "test.mcap";
   options.compression = foxglove::McapCompression::Lz4;
-  options.chunkSize = 10000;
-  options.useChunks = true;
+  options.chunk_size = 10000;
+  options.use_chunks = true;
   auto writer = foxglove::McapWriter::create(options);
   REQUIRE(writer.has_value());
 
   // Write message
   foxglove::Schema schema;
   schema.name = "ExampleSchema";
-  auto channelResult = foxglove::Channel::create("example3", "json", schema);
-  REQUIRE(channelResult.has_value());
-  auto& channel = channelResult.value();
+  auto channel_result = foxglove::RawChannel::create("example3", "json", schema, context);
+  REQUIRE(channel_result.has_value());
+  auto& channel = channel_result.value();
   std::string data = "Hello, world!";
   channel.log(reinterpret_cast<const std::byte*>(data.data()), data.size());
 
@@ -215,22 +251,23 @@ TEST_CASE("lz4 compression") {
 
 TEST_CASE("Channel can outlive Schema") {
   FileCleanup cleanup("test.mcap");
+  auto context = foxglove::Context::create();
 
-  foxglove::McapWriterOptions options = {};
+  foxglove::McapWriterOptions options{context};
   options.path = "test.mcap";
   auto writer = foxglove::McapWriter::create(options);
   REQUIRE(writer.has_value());
 
   // Write message
-  std::optional<foxglove::Channel> channel;
+  std::optional<foxglove::RawChannel> channel;
   {
     foxglove::Schema schema;
     schema.name = "ExampleSchema";
     schema.encoding = "unknown";
     std::string data = "FAKESCHEMA";
     schema.data = reinterpret_cast<const std::byte*>(data.data());
-    schema.dataLen = data.size();
-    auto result = foxglove::Channel::create("example", "json", schema);
+    schema.data_len = data.size();
+    auto result = foxglove::RawChannel::create("example", "json", schema, context);
     REQUIRE(result.has_value());
     // Channel should copy the schema, so this modification has no effect on the output
     data[2] = 'I';
@@ -249,4 +286,145 @@ TEST_CASE("Channel can outlive Schema") {
   std::string content = readFile("test.mcap");
   REQUIRE_THAT(content, !ContainsSubstring("FAILSCHEMA"));
   REQUIRE_THAT(content, ContainsSubstring("FAKESCHEMA"));
+}
+
+namespace foxglove::schemas {
+void imageAnnotationsToC(
+  foxglove_image_annotations& dest, const ImageAnnotations& src, Arena& arena
+);
+}  // namespace foxglove::schemas
+
+void convertToCAndCheck(const foxglove::schemas::ImageAnnotations& msg) {
+  // Convert to C struct and then compare them
+  foxglove::Arena arena;
+  foxglove_image_annotations c_msg;
+  imageAnnotationsToC(c_msg, msg, arena);
+
+  // Compare the C struct with the original message
+  REQUIRE(c_msg.circles_count == msg.circles.size());
+  REQUIRE(c_msg.points_count == msg.points.size());
+  REQUIRE(c_msg.texts_count == msg.texts.size());
+
+  // Comapre circle annotation
+  REQUIRE(c_msg.circles[0].timestamp->sec == msg.circles[0].timestamp->sec);
+  REQUIRE(c_msg.circles[0].timestamp->nsec == msg.circles[0].timestamp->nsec);
+  REQUIRE(c_msg.circles[0].position->x == msg.circles[0].position->x);
+  REQUIRE(c_msg.circles[0].position->y == msg.circles[0].position->y);
+  REQUIRE(c_msg.circles[0].diameter == msg.circles[0].diameter);
+  REQUIRE(c_msg.circles[0].thickness == msg.circles[0].thickness);
+  REQUIRE(c_msg.circles[0].fill_color->r == msg.circles[0].fill_color->r);
+  REQUIRE(c_msg.circles[0].fill_color->g == msg.circles[0].fill_color->g);
+  REQUIRE(c_msg.circles[0].fill_color->b == msg.circles[0].fill_color->b);
+  REQUIRE(c_msg.circles[0].fill_color->a == msg.circles[0].fill_color->a);
+  REQUIRE(c_msg.circles[0].outline_color->r == msg.circles[0].outline_color->r);
+  REQUIRE(c_msg.circles[0].outline_color->g == msg.circles[0].outline_color->g);
+  REQUIRE(c_msg.circles[0].outline_color->b == msg.circles[0].outline_color->b);
+  REQUIRE(c_msg.circles[0].outline_color->a == msg.circles[0].outline_color->a);
+
+  // Compare points annotation
+  REQUIRE(c_msg.points[0].timestamp->sec == msg.points[0].timestamp->sec);
+  REQUIRE(c_msg.points[0].timestamp->nsec == msg.points[0].timestamp->nsec);
+  REQUIRE(static_cast<uint8_t>(c_msg.points[0].type) == static_cast<uint8_t>(msg.points[0].type));
+  REQUIRE(c_msg.points[0].points_count == msg.points[0].points.size());
+  for (size_t i = 0; i < msg.points[0].points.size(); ++i) {
+    REQUIRE(c_msg.points[0].points[i].x == msg.points[0].points[i].x);
+    REQUIRE(c_msg.points[0].points[i].y == msg.points[0].points[i].y);
+  }
+  REQUIRE(c_msg.points[0].outline_color->r == msg.points[0].outline_color->r);
+  REQUIRE(c_msg.points[0].outline_color->g == msg.points[0].outline_color->g);
+  REQUIRE(c_msg.points[0].outline_color->b == msg.points[0].outline_color->b);
+  REQUIRE(c_msg.points[0].outline_color->a == msg.points[0].outline_color->a);
+  REQUIRE(c_msg.points[0].outline_colors_count == msg.points[0].outline_colors.size());
+  for (size_t i = 0; i < msg.points[0].outline_colors.size(); ++i) {
+    REQUIRE(c_msg.points[0].outline_colors[i].r == msg.points[0].outline_colors[i].r);
+    REQUIRE(c_msg.points[0].outline_colors[i].g == msg.points[0].outline_colors[i].g);
+    REQUIRE(c_msg.points[0].outline_colors[i].b == msg.points[0].outline_colors[i].b);
+    REQUIRE(c_msg.points[0].outline_colors[i].a == msg.points[0].outline_colors[i].a);
+  }
+  REQUIRE(c_msg.points[0].fill_color->r == msg.points[0].fill_color->r);
+  REQUIRE(c_msg.points[0].fill_color->g == msg.points[0].fill_color->g);
+  REQUIRE(c_msg.points[0].fill_color->b == msg.points[0].fill_color->b);
+  REQUIRE(c_msg.points[0].fill_color->a == msg.points[0].fill_color->a);
+  REQUIRE(c_msg.points[0].thickness == msg.points[0].thickness);
+
+  // Compare text annotation
+  REQUIRE(c_msg.texts[0].timestamp->sec == msg.texts[0].timestamp->sec);
+  REQUIRE(c_msg.texts[0].timestamp->nsec == msg.texts[0].timestamp->nsec);
+  REQUIRE(c_msg.texts[0].position->x == msg.texts[0].position->x);
+  REQUIRE(c_msg.texts[0].position->y == msg.texts[0].position->y);
+  REQUIRE(c_msg.texts[0].text.data == msg.texts[0].text.data());
+  REQUIRE(c_msg.texts[0].text.len == msg.texts[0].text.size());
+  REQUIRE(c_msg.texts[0].font_size == msg.texts[0].font_size);
+  REQUIRE(c_msg.texts[0].text_color->r == msg.texts[0].text_color->r);
+  REQUIRE(c_msg.texts[0].text_color->g == msg.texts[0].text_color->g);
+  REQUIRE(c_msg.texts[0].text_color->b == msg.texts[0].text_color->b);
+  REQUIRE(c_msg.texts[0].text_color->a == msg.texts[0].text_color->a);
+  REQUIRE(c_msg.texts[0].background_color->r == msg.texts[0].background_color->r);
+  REQUIRE(c_msg.texts[0].background_color->g == msg.texts[0].background_color->g);
+  REQUIRE(c_msg.texts[0].background_color->b == msg.texts[0].background_color->b);
+  REQUIRE(c_msg.texts[0].background_color->a == msg.texts[0].background_color->a);
+}
+
+TEST_CASE("ImageAnnotations channel") {
+  FileCleanup cleanup("test.mcap");
+  auto context = foxglove::Context::create();
+
+  foxglove::McapWriterOptions options{context};
+  options.path = "test.mcap";
+  options.compression = foxglove::McapCompression::None;
+  auto writer = foxglove::McapWriter::create(options);
+  REQUIRE(writer.has_value());
+
+  auto channel_result = foxglove::schemas::ImageAnnotationsChannel::create("example", context);
+  REQUIRE(channel_result.has_value());
+  auto channel = std::move(channel_result.value());
+
+  // Prepare ImageAnnotations message
+  foxglove::schemas::ImageAnnotations msg;
+
+  // Add a circle annotation
+  foxglove::schemas::CircleAnnotation circle;
+  circle.timestamp = foxglove::Timestamp{1000000000, 500000000};
+  circle.position = foxglove::schemas::Point2{10.0, 20.0};
+  circle.diameter = 15.0;
+  circle.thickness = 2.0;
+  circle.fill_color = foxglove::schemas::Color{1.0, 0.5, 0.3, 0.8};
+  circle.outline_color = foxglove::schemas::Color{0.1, 0.2, 0.9, 1.0};
+  msg.circles.push_back(circle);
+
+  // Add a points annotation
+  foxglove::schemas::PointsAnnotation points;
+  points.timestamp = foxglove::Timestamp{1000000000, 500000000};
+  points.type = foxglove::schemas::PointsAnnotation::PointsAnnotationType::LINE_STRIP;
+  points.points.push_back(foxglove::schemas::Point2{5.0, 10.0});
+  points.points.push_back(foxglove::schemas::Point2{15.0, 25.0});
+  points.points.push_back(foxglove::schemas::Point2{30.0, 15.0});
+  points.outline_color = foxglove::schemas::Color{0.8, 0.2, 0.3, 1.0};
+  points.outline_colors.push_back(foxglove::schemas::Color{0.9, 0.1, 0.2, 1.0});
+  points.fill_color = foxglove::schemas::Color{0.2, 0.8, 0.3, 0.5};
+  points.thickness = 3.0;
+  msg.points.push_back(points);
+
+  // Add a text annotation
+  foxglove::schemas::TextAnnotation text;
+  text.timestamp = foxglove::Timestamp{1000000000, 500000000};
+  text.position = foxglove::schemas::Point2{50.0, 60.0};
+  text.text = "Sample text";
+  text.font_size = 14.0;
+  text.text_color = foxglove::schemas::Color{0.0, 0.0, 0.0, 1.0};
+  text.background_color = foxglove::schemas::Color{1.0, 1.0, 1.0, 0.7};
+  msg.texts.push_back(text);
+
+  convertToCAndCheck(msg);
+
+  channel.log(msg);
+
+  writer->close();
+
+  REQUIRE(std::filesystem::exists("test.mcap"));
+
+  // Check that the file contains our annotations
+  std::string content = readFile("test.mcap");
+  REQUIRE_THAT(content, ContainsSubstring("Sample text"));
+  REQUIRE_THAT(content, ContainsSubstring("ImageAnnotations"));
 }

@@ -31,6 +31,8 @@ static WARN_THROTTLER_INTERVAL: Duration = Duration::from_secs(10);
 /// immutable, returned as `Arc<Channel>` and can be shared between threads.
 ///
 /// Channels are created using [`ChannelBuilder`](crate::ChannelBuilder).
+///
+/// You should choose a unique topic name per channel for compatibility with the Foxglove app.
 pub struct RawChannel {
     id: ChannelId,
     context: Weak<Context>,
@@ -89,6 +91,14 @@ impl RawChannel {
         &self.metadata
     }
 
+    /// Returns true if one channel is substantially the same as the other.
+    pub(crate) fn matches(&self, other: &Self) -> bool {
+        self.topic == other.topic
+            && self.message_encoding == other.message_encoding
+            && self.schema == other.schema
+            && self.metadata == other.metadata
+    }
+
     /// Closes the channel, removing it from the context.
     ///
     /// You can use this to explicitly unadvertise the channel to sinks that subscribe to channels
@@ -138,7 +148,7 @@ impl RawChannel {
     }
 
     /// Returns the count of sinks subscribed to this channel.
-    #[cfg(test)]
+    #[cfg(all(test, feature = "live_visualization"))]
     pub(crate) fn num_sinks(&self) -> usize {
         self.sinks.len()
     }
@@ -176,10 +186,7 @@ impl RawChannel {
 #[cfg(test)]
 impl PartialEq for RawChannel {
     fn eq(&self, other: &Self) -> bool {
-        self.topic == other.topic
-            && self.message_encoding == other.message_encoding
-            && self.schema == other.schema
-            && self.metadata == other.metadata
+        self.matches(other)
     }
 }
 

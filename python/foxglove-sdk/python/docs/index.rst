@@ -29,7 +29,9 @@ instantiated with a unique topic name.
 The SDK provides classes for well-known schemas. These can be used in conjunction with associated
 channel classes for type-safe logging, which ensures at compile time that messages logged to a
 channel all share a common schema. For example, you may create a :py:class:`.channels.SceneUpdateChannel` on
-which you will log :py:class:`.schemas.SceneUpdate` messages.
+which you will log :py:class:`.schemas.SceneUpdate` messages. Note that the schema classes
+are currently immutable and do not expose getters and setters for their fields. This is a limitation
+we plan to address in the future.
 
 You can also log messages with arbitrary schemas and provide your own encoding, by instantiating a
 :py:class:`.Channel` class.

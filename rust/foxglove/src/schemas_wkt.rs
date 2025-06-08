@@ -4,7 +4,7 @@
 //! Timestamp in protobuf, even though we schematize those types differently. This module provides
 //! an infallible translation from the foxglove schema to the underlying protobuf representation.
 //!
-//! This module lives outside `crate::schemas`, because everything under the schemas/ direcory is
+//! This module lives outside `crate::schemas`, because everything under the schemas/ directory is
 //! generated.
 
 use crate::convert::{RangeError, SaturatingFrom};
@@ -83,12 +83,16 @@ impl NormalizeResult {
 ///
 /// ```
 /// # use foxglove::schemas::Duration;
-/// let duration: Duration = std::time::Duration::from_micros(577_215).try_into().unwrap();
+/// let duration: Duration = std::time::Duration::from_micros(577_215)
+///     .try_into()
+///     .unwrap();
 /// assert_eq!(duration, Duration::new(0, 577_215_000));
 ///
 /// #[cfg(feature = "chrono")]
 /// {
-///     let duration: Duration = chrono::TimeDelta::microseconds(1_414_213).try_into().unwrap();
+///     let duration: Duration = chrono::TimeDelta::microseconds(1_414_213)
+///         .try_into()
+///         .unwrap();
 ///     assert_eq!(duration, Duration::new(1, 414_213_000));
 /// }
 /// ```
@@ -220,7 +224,7 @@ impl prost::Message for Duration {
         Self: Sized,
     {
         // We only support encoding for now.
-        unimplemented!("not implemeneted");
+        unimplemented!("not implemented");
     }
 
     fn encoded_len(&self) -> usize {
@@ -357,6 +361,11 @@ impl Timestamp {
         self.nsec
     }
 
+    /// Returns the Timestamp as the total number of nanoseconds (sec() * 1B + nsec()).
+    pub fn total_nanos(&self) -> u64 {
+        u64::from(self.sec) * 1_000_000_000 + u64::from(self.nsec)
+    }
+
     /// Creates a `Timestamp` from seconds since epoch as an `f64`, or fails if the value is
     /// unrepresentable.
     pub fn try_from_epoch_secs_f64(secs: f64) -> Result<Self, RangeError> {
@@ -411,7 +420,7 @@ impl prost::Message for Timestamp {
         Self: Sized,
     {
         // We only support encoding for now.
-        unimplemented!("not implemeneted");
+        unimplemented!("not implemented");
     }
 
     fn encoded_len(&self) -> usize {

@@ -1,2 +1,4 @@
 build
 build-*
+.cache
+foxglove/docs/generated

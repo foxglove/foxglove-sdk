@@ -40,6 +40,7 @@ All schemas are generated from [schemas.ts](/internal/schemas.ts).
 - [PoseInFrame](#poseinframe)
 - [PosesInFrame](#posesinframe)
 - [Quaternion](#quaternion)
+- [RawAudio](#rawaudio)
 - [RawImage](#rawimage)
 - [SceneEntity](#sceneentity)
 - [SceneEntityDeletion](#sceneentitydeletion)
@@ -71,12 +72,12 @@ Log level
 
 name | value | description
 ---- | ----- | -----------
-`UNKNOWN` | 0 | 
-`DEBUG` | 1 | 
-`INFO` | 2 | 
-`WARNING` | 3 | 
-`ERROR` | 4 | 
-`FATAL` | 5 | 
+`UNKNOWN` | 0 | Unknown log level
+`DEBUG` | 1 | Debug log level
+`INFO` | 2 | Info log level
+`WARNING` | 3 | Warning log level
+`ERROR` | 4 | Error log level
+`FATAL` | 5 | Fatal log level
 
 
 
@@ -86,15 +87,15 @@ Numeric type
 
 name | value | description
 ---- | ----- | -----------
-`UNKNOWN` | 0 | 
-`UINT8` | 1 | 
-`INT8` | 2 | 
-`UINT16` | 3 | 
-`INT16` | 4 | 
-`UINT32` | 5 | 
-`INT32` | 6 | 
-`FLOAT32` | 7 | 
-`FLOAT64` | 8 | 
+`UNKNOWN` | 0 | Unknown numeric type
+`UINT8` | 1 | Unsigned 8-bit integer
+`INT8` | 2 | Signed 8-bit integer
+`UINT16` | 3 | Unsigned 16-bit integer
+`INT16` | 4 | Signed 16-bit integer
+`UINT32` | 5 | Unsigned 32-bit integer
+`INT32` | 6 | Signed 32-bit integer
+`FLOAT32` | 7 | 32-bit floating-point number
+`FLOAT64` | 8 | 64-bit floating-point number
 
 
 
@@ -104,7 +105,7 @@ Type of points annotation
 
 name | value | description
 ---- | ----- | -----------
-`UNKNOWN` | 0 | 
+`UNKNOWN` | 0 | Unknown points annotation type
 `POINTS` | 1 | Individual points: 0, 1, 2, ...
 `LINE_LOOP` | 2 | Closed polygon: 0-1, 1-2, ..., (n-1)-n, n-0
 `LINE_STRIP` | 3 | Connected line segments: 0-1, 1-2, ..., (n-1)-n
@@ -118,10 +119,10 @@ Type of position covariance
 
 name | value | description
 ---- | ----- | -----------
-`UNKNOWN` | 0 | 
-`APPROXIMATED` | 1 | 
-`DIAGONAL_KNOWN` | 2 | 
-`KNOWN` | 3 | 
+`UNKNOWN` | 0 | Unknown position covariance type
+`APPROXIMATED` | 1 | Position covariance is approximated
+`DIAGONAL_KNOWN` | 2 | Position covariance is per-axis, so put it along the diagonal
+`KNOWN` | 3 | Position covariance of the fix is known
 
 
 
@@ -610,7 +611,7 @@ string
 
 Image format
 
-Supported values: image media types supported by Chrome, such as `webp`, `jpeg`, `png`
+Supported values: `jpeg`, `png`, `webp`, `avif`
 
 </td>
 </tr>
@@ -2231,6 +2232,83 @@ float64
 <td>
 
 w value
+
+</td>
+</tr>
+</table>
+
+## RawAudio
+
+A single block of an audio bitstream
+
+<table>
+  <tr>
+    <th>field</th>
+    <th>type</th>
+    <th>description</th>
+  </tr>
+<tr>
+<td><code>timestamp</code></td>
+<td>
+
+time
+
+</td>
+<td>
+
+Timestamp of the start of the audio block
+
+</td>
+</tr>
+<tr>
+<td><code>data</code></td>
+<td>
+
+bytes
+
+</td>
+<td>
+
+Audio data. The samples in the data must be interleaved and little-endian
+
+</td>
+</tr>
+<tr>
+<td><code>format</code></td>
+<td>
+
+string
+
+</td>
+<td>
+
+Audio format. Only 'pcm-s16' is currently supported
+
+</td>
+</tr>
+<tr>
+<td><code>sample_rate</code></td>
+<td>
+
+uint32
+
+</td>
+<td>
+
+Sample rate in Hz
+
+</td>
+</tr>
+<tr>
+<td><code>number_of_channels</code></td>
+<td>
+
+uint32
+
+</td>
+<td>
+
+Number of channels in the audio block
 
 </td>
 </tr>

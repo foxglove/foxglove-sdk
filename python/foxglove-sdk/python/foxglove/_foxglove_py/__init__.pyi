@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from .mcap import MCAPWriteOptions, MCAPWriter
 from .websocket import AssetHandler, Capability, Service, WebSocketServer
@@ -24,8 +24,35 @@ class BaseChannel:
         """The topic name of the channel"""
         ...
 
+    @property
+    def message_encoding(self) -> str:
+        """The message encoding for the channel"""
+        ...
+
+    def metadata(self) -> Dict[str, str]:
+        """
+        Returns a copy of the channel's metadata.
+
+        Note that changes made to the returned dictionary will not be applied to
+        the channel's metadata.
+        """
+        ...
+
+    def schema(self) -> Optional["Schema"]:
+        """
+        Returns a copy of the channel's schema.
+
+        Note that changes made to the returned object will not be applied to
+        the channel's schema.
+        """
+        ...
+
     def schema_name(self) -> Optional[str]:
         """The name of the schema for the channel"""
+        ...
+
+    def has_sinks(self) -> bool:
+        """Returns true if at least one sink is subscribed to this channel"""
         ...
 
     def log(
@@ -60,6 +87,29 @@ class Schema:
         data: bytes,
     ) -> "Schema": ...
 
+class Context:
+    """
+    A context for logging messages.
+
+    A context is the binding between channels and sinks. By default, the SDK will use a single
+    global context for logging, but you can create multiple contexts in order to log to different
+    topics to different sinks or servers. To do so, associate the context by passing it to the
+    channel constructor and to :py:func:`open_mcap` or :py:func:`start_server`.
+    """
+
+    def __new__(cls) -> "Context": ...
+    def _create_channel(
+        self,
+        topic: str,
+        message_encoding: str,
+        schema: Optional["Schema"] = None,
+        metadata: Optional[List[Tuple[str, str]]] = None,
+    ) -> "BaseChannel":
+        """
+        Instead of calling this method, pass a context to a channel constructor.
+        """
+        ...
+
 def start_server(
     *,
     name: Optional[str] = None,
@@ -70,6 +120,7 @@ def start_server(
     supported_encodings: Optional[List[str]] = None,
     services: Optional[List["Service"]] = None,
     asset_handler: Optional["AssetHandler"] = None,
+    context: Optional["Context"] = None,
 ) -> WebSocketServer:
     """
     Start a websocket server for live visualization.
@@ -98,19 +149,18 @@ def open_mcap(
     path: str | Path,
     *,
     allow_overwrite: bool = False,
+    context: Optional["Context"] = None,
     writer_options: Optional[MCAPWriteOptions] = None,
 ) -> MCAPWriter:
     """
     Creates a new MCAP file for recording.
 
-    :param path: The path to the MCAP file. This file will be created and must not already exist.
-    :param allow_overwrite: Set this flag in order to overwrite an existing file at this path.
-    :param writer_options: Options for the MCAP writer.
-    :rtype: :py:class:`MCAPWriter`
+    If a context is provided, the MCAP file will be associated with that context. Otherwise, the
+    global context will be used.
     """
     ...
 
-def get_channel_for_topic(topic: str) -> BaseChannel:
+def get_channel_for_topic(topic: str) -> Optional[BaseChannel]:
     """
     Get a previously-registered channel.
     """

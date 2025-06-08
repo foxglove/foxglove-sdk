@@ -7,7 +7,7 @@ use delegate::delegate;
 use serde::{Deserialize, Serialize};
 use smallbytes::SmallBytes;
 
-use crate::{ChannelBuilder, Encode, FoxgloveError, PartialMetadata, Schema};
+use crate::{metadata::ToUnixNanos, ChannelBuilder, Encode, PartialMetadata, Schema};
 
 mod lazy_channel;
 mod raw_channel;
@@ -67,15 +67,27 @@ impl<T: Encode> Channel<T> {
     /// Constructs a new typed channel with default settings.
     ///
     /// If you want to override the channel configuration, use [`ChannelBuilder`].
-    pub fn new(topic: impl Into<String>) -> Result<Self, FoxgloveError> {
+    ///
+    /// You should choose a unique topic name per channel for compatibility with the Foxglove app.
+    pub fn new(topic: impl Into<String>) -> Self {
         ChannelBuilder::new(topic).build()
     }
 
-    pub(crate) fn from_raw_channel(raw_channel: Arc<RawChannel>) -> Self {
+    /// Constructs a new typed channel from a raw channel.
+    ///
+    /// This is intended for internal use only.
+    /// We're trusting the caller that the channel was created with the same type T as being used to call this.
+    #[doc(hidden)]
+    pub fn from_raw_channel(raw_channel: Arc<RawChannel>) -> Self {
         Self {
             inner: raw_channel,
             _phantom: std::marker::PhantomData,
         }
+    }
+
+    #[doc(hidden)]
+    pub fn into_inner(self) -> Arc<RawChannel> {
+        self.inner
     }
 
     delegate! { to self.inner {
@@ -124,6 +136,16 @@ impl<T: Encode> Channel<T> {
         } else {
             self.inner.log_warn_if_closed();
         }
+    }
+
+    /// Encodes the message and logs it on the channel with the given `timestamp`.
+    /// `timestamp` can be a u64 (nanoseconds since epoch), a foxglove [`Timestamp`][crate::schemas::Timestamp],
+    /// a [`SystemTime`][std::time::SystemTime], or anything else that implements [`ToUnixNanos`][crate::ToUnixNanos].
+    ///
+    /// The buffering behavior depends on the log sink; see [`McapWriter`][crate::McapWriter] and
+    /// [`WebSocketServer`][crate::WebSocketServer] for details.
+    pub fn log_with_time(&self, msg: &T, timestamp: impl ToUnixNanos) {
+        self.log_with_meta(msg, PartialMetadata::with_log_time(timestamp))
     }
 
     fn log_to_sinks(&self, msg: &T, metadata: PartialMetadata) {

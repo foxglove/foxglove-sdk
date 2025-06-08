@@ -2,7 +2,7 @@
 
 use pyo3::exceptions::PyOverflowError;
 use pyo3::prelude::*;
-use pyo3::types::{timezone_utc, PyDateTime};
+use pyo3::types::{PyDateTime, PyTzInfo};
 
 /// A timestamp in seconds and nanoseconds
 ///
@@ -83,10 +83,10 @@ impl Timestamp {
         if tzinfo.is_none(py) {
             dt = dt.call_method0(py, "astimezone")?.extract(py)?;
         }
-        let utc = timezone_utc(py);
+        let utc = PyTzInfo::utc(py)?;
 
         // We're not simply using `datetime.total_seconds()`, because the conversion to floating
-        // point loses preceision and is not round-trippable.
+        // point loses precision and is not round-trippable.
         let epoch = PyDateTime::new(py, 1970, 1, 1, 0, 0, 0, 0, Some(&utc)).unwrap();
         let td = dt.call_method1(py, "__sub__", (epoch,))?;
 

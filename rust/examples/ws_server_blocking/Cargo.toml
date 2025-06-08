@@ -1,0 +1,13 @@
+[package]
+name = "example_ws_server_blocking"
+edition = "2021"
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+foxglove = { path = "../../foxglove" }
+clap = { version = "4.5", features = ["derive"] }
+env_logger = "0.11.5"
+ctrlc = "3.4.5"

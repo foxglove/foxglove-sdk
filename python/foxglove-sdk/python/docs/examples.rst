@@ -1,6 +1,10 @@
 Examples
 ========
 
+Quickstart
+----------
+.. literalinclude:: ../../../foxglove-sdk-examples/quickstart/main.py
+
 Live visualization
 ------------------
 .. literalinclude:: ../../../foxglove-sdk-examples/live-visualization/main.py
@@ -9,6 +13,11 @@ Live visualization
 Write to an MCAP file
 ----------------------
 .. literalinclude:: ../../../foxglove-sdk-examples/write-mcap-file/main.py
+
+
+Logging context
+---------------
+.. literalinclude:: ../../../foxglove-sdk-examples/logging-context/main.py
 
 
 Stream an MCAP file to Foxglove
@@ -29,3 +38,7 @@ Advertising Services
 Asset server
 ------------
 .. literalinclude:: ../../../foxglove-sdk-examples/ws-asset-server/main.py
+
+Connection Graph
+----------------
+.. literalinclude:: ../../../foxglove-sdk-examples/ws-connection-graph/main.py

@@ -4,8 +4,10 @@ use std::fmt::Debug;
 use std::sync::Arc;
 
 use parking_lot::RwLock;
+use smallvec::SmallVec;
+use tracing::warn;
 
-use crate::{ChannelBuilder, ChannelId, FoxgloveError, McapWriter, RawChannel, Sink, SinkId};
+use crate::{ChannelBuilder, ChannelId, McapWriter, RawChannel, Sink, SinkId};
 
 mod lazy_context;
 mod subscriptions;
@@ -16,25 +18,40 @@ use subscriptions::Subscriptions;
 #[derive(Default)]
 struct ContextInner {
     channels: HashMap<ChannelId, Arc<RawChannel>>,
-    channels_by_topic: HashMap<String, Arc<RawChannel>>,
+    channels_by_topic: HashMap<String, SmallVec<[Arc<RawChannel>; 1]>>,
     sinks: HashMap<SinkId, Arc<dyn Sink>>,
     subs: Subscriptions,
 }
 impl ContextInner {
     /// Returns the channel for the specified topic, if there is one.
+    ///
+    /// If multiple channels use the same topic name, this will return the first channel that was
+    /// added to this context.
     fn get_channel_by_topic(&self, topic: &str) -> Option<&Arc<RawChannel>> {
-        self.channels_by_topic.get(topic)
+        self.channels_by_topic.get(topic)?.first()
     }
 
     /// Adds a channel to the context.
-    fn add_channel(&mut self, channel: Arc<RawChannel>) -> Result<(), FoxgloveError> {
-        // Insert channel.
+    fn add_channel(&mut self, channel: Arc<RawChannel>) -> Arc<RawChannel> {
         let topic = channel.topic();
-        let Entry::Vacant(entry) = self.channels_by_topic.entry(topic.to_string()) else {
-            return Err(FoxgloveError::DuplicateChannel(topic.to_string()));
-        };
-        entry.insert(channel.clone());
+
+        // If a substantially identical channel already exists, just return that.
+        let topic_channels = self.channels_by_topic.entry(topic.to_string()).or_default();
+        if let Some(matching) = topic_channels.iter().find(|c| channel.matches(c)) {
+            return matching.clone();
+        }
+
+        // Friends don't let friends create multiple channels on the same topic.
+        if !topic_channels.is_empty() {
+            warn!(
+                "Channel with topic {topic} already exists in this context; \
+                 use a unique topic for each channel"
+            );
+        }
+
+        // Add the channel to the indexes.
         self.channels.insert(channel.id(), channel.clone());
+        topic_channels.push(channel.clone());
 
         // Notify sinks of new channel. Sinks that dynamically manage subscriptions may return true
         // from `add_channel` to add a subscription synchronously.
@@ -47,8 +64,7 @@ impl ContextInner {
         // Connect channel sinks.
         let sinks = self.subs.get_subscribers(channel.id());
         channel.update_sinks(sinks);
-
-        Ok(())
+        channel
     }
 
     /// Removes a channel from the context.
@@ -56,7 +72,14 @@ impl ContextInner {
         let Some(channel) = self.channels.remove(&channel_id) else {
             return false;
         };
-        self.channels_by_topic.remove(channel.topic());
+
+        // Remove the channel from the topic index.
+        if let Some(topic_channels) = self.channels_by_topic.get_mut(channel.topic()) {
+            topic_channels.retain(|c| c.id() != channel_id);
+            if topic_channels.is_empty() {
+                self.channels_by_topic.remove(channel.topic());
+            }
+        }
 
         // Remove subscriptions for this channel.
         self.subs.remove_channel_subscriptions(channel.id());
@@ -178,23 +201,26 @@ impl ContextInner {
 /// It is also possible to create explicit contexts:
 ///
 /// ```
-/// use foxglove::{Context, FoxgloveError};
 /// use foxglove::schemas::Log;
+/// use foxglove::{Context, FoxgloveError};
 ///
 /// // Create a channel for the "/log" topic.
 /// let topic = "/topic";
 /// let ctx_a = Context::new();
-/// let chan_a = ctx_a.channel_builder(topic).build().unwrap();
-/// chan_a.log(&Log{ message: "hello a".into(), ..Log::default() });
+/// let chan_a = ctx_a.channel_builder(topic).build();
+/// chan_a.log(&Log {
+///     message: "hello a".into(),
+///     ..Log::default()
+/// });
 ///
-/// // Attempting to create another channel with the same topic on the same context will fail.
-/// let err = ctx_a.channel_builder(topic).build::<Log>().unwrap_err();
-/// assert!(matches!(err, FoxgloveError::DuplicateChannel(_)));
-///
-/// // Create a channel for the "/log" topic on a different context.
+/// // We can re-use the same topic name on channels if they're in different contexts. This may be
+/// // useful for logging to different MCAP sinks.
 /// let ctx_b = Context::new();
-/// let chan_b = ctx_b.channel_builder(topic).build().unwrap();
-/// chan_b.log(&Log{ message: "hello b".into(), ..Log::default() });
+/// let chan_b = ctx_b.channel_builder(topic).build();
+/// chan_b.log(&Log {
+///     message: "hello b".into(),
+///     ..Log::default()
+/// });
 /// ```
 pub struct Context(RwLock<ContextInner>);
 
@@ -219,6 +245,8 @@ impl Context {
     }
 
     /// Returns a channel builder for a channel in this context.
+    ///
+    /// You should choose a unique topic name per channel for compatibility with the Foxglove app.
     pub fn channel_builder(self: &Arc<Self>, topic: impl Into<String>) -> ChannelBuilder {
         ChannelBuilder::new(topic).context(self)
     }
@@ -235,16 +263,19 @@ impl Context {
     }
 
     /// Returns the channel for the specified topic, if there is one.
+    ///
+    /// If multiple channels use the same topic name, this will return the first channel that was
+    /// added to this context.
     pub fn get_channel_by_topic(&self, topic: &str) -> Option<Arc<RawChannel>> {
         self.0.read().get_channel_by_topic(topic).cloned()
     }
 
-    /// Adds a channel to the context.
+    /// Adds a channel to the context, or returns a channel with the same topic and schema.
     ///
     /// This is deliberately `pub(crate)` to ensure that the channel's context linkage remains
     /// consistent. Publicly, the only way to add a channel to a context is by constructing it via
     /// a [`ChannelBuilder`][crate::ChannelBuilder].
-    pub(crate) fn add_channel(&self, channel: Arc<RawChannel>) -> Result<(), FoxgloveError> {
+    pub(crate) fn add_channel(&self, channel: Arc<RawChannel>) -> Arc<RawChannel> {
         self.0.write().add_channel(channel)
     }
 
@@ -306,14 +337,15 @@ impl Drop for Context {
 
 #[cfg(test)]
 mod tests {
+    use crate::context::*;
     use crate::log_sink_set::ERROR_LOGGING_MESSAGE;
     use crate::testutil::{ErrorSink, MockSink, RecordingSink};
-    use crate::{context::*, ChannelBuilder};
     use crate::{nanoseconds_since_epoch, PartialMetadata, RawChannel, Schema};
+    use crate::{ChannelBuilder, FoxgloveError};
     use std::sync::Arc;
     use tracing_test::traced_test;
 
-    fn new_test_channel(ctx: &Arc<Context>, topic: &str) -> Result<Arc<RawChannel>, FoxgloveError> {
+    fn new_test_channel_builder(ctx: &Arc<Context>, topic: &str) -> ChannelBuilder {
         ChannelBuilder::new(topic)
             .context(ctx)
             .message_encoding("message_encoding")
@@ -329,7 +361,10 @@ mod tests {
                 }"#,
             ))
             .metadata(maplit::btreemap! {"key".to_string() => "value".to_string()})
-            .build_raw()
+    }
+
+    fn new_test_channel(ctx: &Arc<Context>, topic: &str) -> Result<Arc<RawChannel>, FoxgloveError> {
+        new_test_channel_builder(ctx, topic).build_raw()
     }
 
     #[test]
@@ -456,7 +491,7 @@ mod tests {
         assert!(ctx.remove_channel(c1.id()));
         assert!(!c1.has_sinks());
         assert!(c2.has_sinks());
-        ctx.add_channel(c1.clone()).unwrap();
+        ctx.add_channel(c1.clone());
         assert!(c1.has_sinks());
         assert!(c2.has_sinks());
 
@@ -482,7 +517,7 @@ mod tests {
 
         // No auto-subscribe to new channels.
         assert!(ctx.remove_channel(c1.id()));
-        ctx.add_channel(c1.clone()).unwrap();
+        ctx.add_channel(c1.clone());
         assert!(!c1.has_sinks());
 
         // Subscribe to a channel.
@@ -499,7 +534,7 @@ mod tests {
         assert!(ctx.remove_channel(c1.id()));
         assert!(!c1.has_sinks());
         assert!(c2.has_sinks());
-        ctx.add_channel(c1.clone()).unwrap();
+        ctx.add_channel(c1.clone());
         assert!(!c1.has_sinks());
         assert!(c2.has_sinks());
         ctx.subscribe_channels(sink.id(), &[c1.id()]);
@@ -582,8 +617,8 @@ mod tests {
         assert!(ctx.remove_channel(c2.id()));
 
         // Add channels with existing sink.
-        ctx.add_channel(c1.clone()).unwrap();
-        ctx.add_channel(c2.clone()).unwrap();
+        ctx.add_channel(c1.clone());
+        ctx.add_channel(c2.clone());
         assert!(!c1.has_sinks());
         assert!(!c2.has_sinks());
     }
@@ -593,5 +628,88 @@ mod tests {
         let ctx = Context::new();
         let s1 = Arc::new(RecordingSink::new().add_channels(|_| unreachable!("no channels!")));
         ctx.add_sink(s1.clone());
+    }
+
+    #[test]
+    fn test_supports_multiple_channels_with_same_topic() {
+        let ctx = Context::new();
+        let c1 = new_test_channel(&ctx, "topic").unwrap();
+        let c2 = new_test_channel_builder(&ctx, "topic")
+            .schema(None)
+            .build_raw()
+            .unwrap();
+        assert_ne!(c1.id(), c2.id());
+        assert_eq!(c1.topic(), c2.topic());
+    }
+
+    #[test]
+    #[traced_test]
+    fn test_get_channel_by_topic_with_duplicate() {
+        let ctx = Context::new();
+        let c1 = new_test_channel(&ctx, "dupe").unwrap();
+        let c2 = new_test_channel_builder(&ctx, "dupe")
+            .message_encoding("different")
+            .build_raw()
+            .unwrap();
+        assert!(logs_contain(
+            "Channel with topic dupe already exists in this context"
+        ));
+
+        // Returns the oldest matching channel.
+        let channel = ctx.get_channel_by_topic("dupe");
+        assert!(channel.is_some());
+        assert_eq!(channel.unwrap().id(), c1.id());
+
+        // If we remove the oldest, it returns the next oldest.
+        assert!(ctx.remove_channel(c1.id()));
+        let channel = ctx.get_channel_by_topic("dupe");
+        assert!(channel.is_some());
+        assert_eq!(channel.unwrap().id(), c2.id());
+
+        // Nothing left that matches.
+        assert!(ctx.remove_channel(c2.id()));
+        let channel = ctx.get_channel_by_topic("dupe");
+        assert!(channel.is_none());
+
+        // It is safe to add a new channel with the same topic.
+        let c3 = new_test_channel(&ctx, "dupe").unwrap();
+        let channel = ctx.get_channel_by_topic("dupe");
+        assert!(channel.is_some());
+        assert_eq!(channel.unwrap().id(), c3.id());
+    }
+
+    #[test]
+    fn test_add_channel_or_return_matching_channel() {
+        let ctx = Context::new();
+
+        // Same topic, different properties.
+        let _ = new_test_channel_builder(&ctx, "dupe")
+            .message_encoding("different")
+            .build_raw()
+            .unwrap();
+        let _ = new_test_channel_builder(&ctx, "dupe")
+            .schema(None)
+            .build_raw()
+            .unwrap();
+        let _ = new_test_channel_builder(&ctx, "dupe")
+            .metadata(maplit::btreemap! {"it's".into() => "different".into()})
+            .build_raw()
+            .unwrap();
+
+        // Actual matches.
+        let c1 = new_test_channel(&ctx, "dupe").unwrap();
+        assert_eq!(ctx.0.read().channels.len(), 4);
+
+        // Reuses the matching channel.
+        let c2 = new_test_channel(&ctx, "dupe").unwrap();
+        assert_eq!(c1.id(), c2.id());
+        assert_eq!(Arc::as_ptr(&c1), Arc::as_ptr(&c2));
+        assert_eq!(ctx.0.read().channels.len(), 4);
+
+        // No matches, creates a new channel.
+        assert!(ctx.remove_channel(c1.id()));
+        assert_eq!(ctx.0.read().channels.len(), 3);
+        let _ = new_test_channel(&ctx, "dupe").unwrap();
+        assert_eq!(ctx.0.read().channels.len(), 4);
     }
 }

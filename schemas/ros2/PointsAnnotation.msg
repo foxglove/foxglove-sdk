@@ -6,6 +6,7 @@
 # Timestamp of annotation
 builtin_interfaces/Time timestamp
 
+# Unknown points annotation type
 uint8 UNKNOWN=0
 
 # Individual points: 0, 1, 2, ...

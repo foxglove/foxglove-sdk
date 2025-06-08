@@ -326,7 +326,7 @@ export const CompressedImage = {
     },
     "format": {
       "type": "string",
-      "description": "Image format\n\nSupported values: image media types supported by Chrome, such as `webp`, `jpeg`, `png`"
+      "description": "Image format\n\nSupported values: `jpeg`, `png`, `webp`, `avif`"
     }
   }
 };
@@ -878,39 +878,48 @@ export const Grid = {
             "oneOf": [
               {
                 "title": "UNKNOWN",
-                "const": 0
+                "const": 0,
+                "description": "Unknown numeric type"
               },
               {
                 "title": "UINT8",
-                "const": 1
+                "const": 1,
+                "description": "Unsigned 8-bit integer"
               },
               {
                 "title": "INT8",
-                "const": 2
+                "const": 2,
+                "description": "Signed 8-bit integer"
               },
               {
                 "title": "UINT16",
-                "const": 3
+                "const": 3,
+                "description": "Unsigned 16-bit integer"
               },
               {
                 "title": "INT16",
-                "const": 4
+                "const": 4,
+                "description": "Signed 16-bit integer"
               },
               {
                 "title": "UINT32",
-                "const": 5
+                "const": 5,
+                "description": "Unsigned 32-bit integer"
               },
               {
                 "title": "INT32",
-                "const": 6
+                "const": 6,
+                "description": "Signed 32-bit integer"
               },
               {
                 "title": "FLOAT32",
-                "const": 7
+                "const": 7,
+                "description": "32-bit floating-point number"
               },
               {
                 "title": "FLOAT64",
-                "const": 8
+                "const": 8,
+                "description": "64-bit floating-point number"
               }
             ]
           }
@@ -1057,7 +1066,8 @@ export const ImageAnnotations = {
             "oneOf": [
               {
                 "title": "UNKNOWN",
-                "const": 0
+                "const": 0,
+                "description": "Unknown points annotation type"
               },
               {
                 "title": "POINTS",
@@ -1618,19 +1628,23 @@ export const LocationFix = {
       "oneOf": [
         {
           "title": "UNKNOWN",
-          "const": 0
+          "const": 0,
+          "description": "Unknown position covariance type"
         },
         {
           "title": "APPROXIMATED",
-          "const": 1
+          "const": 1,
+          "description": "Position covariance is approximated"
         },
         {
           "title": "DIAGONAL_KNOWN",
-          "const": 2
+          "const": 2,
+          "description": "Position covariance is per-axis, so put it along the diagonal"
         },
         {
           "title": "KNOWN",
-          "const": 3
+          "const": 3,
+          "description": "Position covariance of the fix is known"
         }
       ]
     }
@@ -1665,27 +1679,33 @@ export const Log = {
       "oneOf": [
         {
           "title": "UNKNOWN",
-          "const": 0
+          "const": 0,
+          "description": "Unknown log level"
         },
         {
           "title": "DEBUG",
-          "const": 1
+          "const": 1,
+          "description": "Debug log level"
         },
         {
           "title": "INFO",
-          "const": 2
+          "const": 2,
+          "description": "Info log level"
         },
         {
           "title": "WARNING",
-          "const": 3
+          "const": 3,
+          "description": "Warning log level"
         },
         {
           "title": "ERROR",
-          "const": 4
+          "const": 4,
+          "description": "Error log level"
         },
         {
           "title": "FATAL",
-          "const": 5
+          "const": 5,
+          "description": "Fatal log level"
         }
       ]
     },
@@ -3976,39 +3996,48 @@ export const PackedElementField = {
       "oneOf": [
         {
           "title": "UNKNOWN",
-          "const": 0
+          "const": 0,
+          "description": "Unknown numeric type"
         },
         {
           "title": "UINT8",
-          "const": 1
+          "const": 1,
+          "description": "Unsigned 8-bit integer"
         },
         {
           "title": "INT8",
-          "const": 2
+          "const": 2,
+          "description": "Signed 8-bit integer"
         },
         {
           "title": "UINT16",
-          "const": 3
+          "const": 3,
+          "description": "Unsigned 16-bit integer"
         },
         {
           "title": "INT16",
-          "const": 4
+          "const": 4,
+          "description": "Signed 16-bit integer"
         },
         {
           "title": "UINT32",
-          "const": 5
+          "const": 5,
+          "description": "Unsigned 32-bit integer"
         },
         {
           "title": "INT32",
-          "const": 6
+          "const": 6,
+          "description": "Signed 32-bit integer"
         },
         {
           "title": "FLOAT32",
-          "const": 7
+          "const": 7,
+          "description": "32-bit floating-point number"
         },
         {
           "title": "FLOAT64",
-          "const": 8
+          "const": 8,
+          "description": "64-bit floating-point number"
         }
       ]
     }
@@ -4155,39 +4184,48 @@ export const PointCloud = {
             "oneOf": [
               {
                 "title": "UNKNOWN",
-                "const": 0
+                "const": 0,
+                "description": "Unknown numeric type"
               },
               {
                 "title": "UINT8",
-                "const": 1
+                "const": 1,
+                "description": "Unsigned 8-bit integer"
               },
               {
                 "title": "INT8",
-                "const": 2
+                "const": 2,
+                "description": "Signed 8-bit integer"
               },
               {
                 "title": "UINT16",
-                "const": 3
+                "const": 3,
+                "description": "Unsigned 16-bit integer"
               },
               {
                 "title": "INT16",
-                "const": 4
+                "const": 4,
+                "description": "Signed 16-bit integer"
               },
               {
                 "title": "UINT32",
-                "const": 5
+                "const": 5,
+                "description": "Unsigned 32-bit integer"
               },
               {
                 "title": "INT32",
-                "const": 6
+                "const": 6,
+                "description": "Signed 32-bit integer"
               },
               {
                 "title": "FLOAT32",
-                "const": 7
+                "const": 7,
+                "description": "32-bit floating-point number"
               },
               {
                 "title": "FLOAT64",
-                "const": 8
+                "const": 8,
+                "description": "64-bit floating-point number"
               }
             ]
           }
@@ -4231,7 +4269,8 @@ export const PointsAnnotation = {
       "oneOf": [
         {
           "title": "UNKNOWN",
-          "const": 0
+          "const": 0,
+          "description": "Unknown points annotation type"
         },
         {
           "title": "POINTS",
@@ -4586,6 +4625,50 @@ export const Quaternion = {
     "w": {
       "type": "number",
       "description": "w value"
+    }
+  }
+};
+
+export const RawAudio = {
+  "title": "foxglove.RawAudio",
+  "description": "A single block of an audio bitstream",
+  "$comment": "Generated by https://github.com/foxglove/foxglove-sdk",
+  "type": "object",
+  "properties": {
+    "timestamp": {
+      "type": "object",
+      "title": "time",
+      "properties": {
+        "sec": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "nsec": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 999999999
+        }
+      },
+      "description": "Timestamp of the start of the audio block"
+    },
+    "data": {
+      "type": "string",
+      "contentEncoding": "base64",
+      "description": "Audio data. The samples in the data must be interleaved and little-endian"
+    },
+    "format": {
+      "type": "string",
+      "description": "Audio format. Only 'pcm-s16' is currently supported"
+    },
+    "sample_rate": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Sample rate in Hz"
+    },
+    "number_of_channels": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Number of channels in the audio block"
     }
   }
 };
