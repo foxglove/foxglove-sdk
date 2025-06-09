@@ -24,13 +24,11 @@ macro_rules! data_loader_export {
     }
 }
 
-pub use generated::foxglove::loader::reader;
-pub use generated::foxglove::loader::console;
 pub use generated::exports::foxglove::loader::loader::{
-    self,
-    BackfillArgs, Channel, TimeRange,
-    Message, MessageIteratorArgs,
+    self, BackfillArgs, Channel, Message, MessageIteratorArgs, TimeRange,
 };
+pub use generated::foxglove::loader::console;
+pub use generated::foxglove::loader::reader;
 
 impl std::io::Read for reader::Reader {
     fn read(&mut self, dst: &mut [u8]) -> Result<usize, std::io::Error> {
@@ -43,15 +41,15 @@ impl std::io::Seek for reader::Reader {
         match seek {
             std::io::SeekFrom::Start(offset) => {
                 reader::Reader::seek(&self, offset);
-            },
+            }
             std::io::SeekFrom::End(offset) => {
                 let end = reader::Reader::size(&self) as i64;
                 reader::Reader::seek(&self, (end - offset) as u64);
-            },
+            }
             std::io::SeekFrom::Current(offset) => {
                 let pos = reader::Reader::position(&self) as i64;
                 reader::Reader::seek(&self, (pos + offset) as u64);
-            },
+            }
         }
         Ok(reader::Reader::position(&self))
     }
@@ -59,7 +57,7 @@ impl std::io::Seek for reader::Reader {
 
 /// Your custom data loader should implement this trait along with MessageIterator.
 /// And don't forget to call `foxglove::data_loader_export()` on your loader.
-pub trait DataLoader: 'static+Sized {
+pub trait DataLoader: 'static + Sized {
     // Consolidates the Guest and GuestDataLoader traits into a single trait.
     // Wraps create() and create_iter() to user-defined structs so that users don't need to wrap
     // their types into `loader::DataLoader::new()` or `loader::MessageIterator::new()`.
@@ -69,11 +67,15 @@ pub trait DataLoader: 'static+Sized {
     fn create(inputs: Vec<String>) -> Result<Self, Self::Error>;
     fn channels(&self) -> Vec<Result<loader::Channel, Self::Error>>;
     fn time_range(&self) -> Result<loader::TimeRange, Self::Error>;
-    fn create_iter(&self, args: loader::MessageIteratorArgs) -> Result<Self::MessageIterator, Self::Error>;
-    fn get_backfill(&self, args: loader::BackfillArgs) -> Result<Vec<loader::Message>, Self::Error>;
+    fn create_iter(
+        &self,
+        args: loader::MessageIteratorArgs,
+    ) -> Result<Self::MessageIterator, Self::Error>;
+    fn get_backfill(&self, args: loader::BackfillArgs)
+        -> Result<Vec<loader::Message>, Self::Error>;
 }
 
-pub trait MessageIterator: 'static+Sized {
+pub trait MessageIterator: 'static + Sized {
     type Error: Into<Box<dyn std::error::Error>>;
     fn next(&self) -> Option<Result<Message, Self::Error>>;
 }
@@ -98,18 +100,20 @@ impl<T: DataLoader> loader::GuestDataLoader for T {
     }
 
     fn time_range(&self) -> Result<loader::TimeRange, String> {
-        T::time_range(self)
-            .map_err(|err| err.into().to_string())
+        T::time_range(self).map_err(|err| err.into().to_string())
     }
 
-    fn create_iter(&self, args: loader::MessageIteratorArgs) -> Result<loader::MessageIterator, String> {
-        T::create_iter(self, args).map(|iter| loader::MessageIterator::new(iter))
+    fn create_iter(
+        &self,
+        args: loader::MessageIteratorArgs,
+    ) -> Result<loader::MessageIterator, String> {
+        T::create_iter(self, args)
+            .map(|iter| loader::MessageIterator::new(iter))
             .map_err(|err| err.into().to_string())
     }
 
     fn get_backfill(&self, args: loader::BackfillArgs) -> Result<Vec<loader::Message>, String> {
-        T::get_backfill(self, args)
-            .map_err(|err| err.into().to_string())
+        T::get_backfill(self, args).map_err(|err| err.into().to_string())
     }
 }
 
