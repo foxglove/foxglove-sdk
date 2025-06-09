@@ -65,12 +65,13 @@ pub trait DataLoader: 'static+Sized {
     // Wraps create() and create_iter() to user-defined structs so that users don't need to wrap
     // their types into `loader::DataLoader::new()` or `loader::MessageIterator::new()`.
     type MessageIterator: loader::GuestMessageIterator;
+    type Error: std::error::Error;
 
-    fn create(inputs: Vec<String>) -> Result<Self, String>;
-    fn channels(&self) -> Result<Vec<loader::Channel>, String>;
-    fn time_range(&self) -> Result<loader::TimeRange, String>;
-    fn create_iter(&self, args: loader::MessageIteratorArgs) -> Result<Self::MessageIterator, String>;
-    fn get_backfill(&self, args: loader::BackfillArgs) -> Result<Vec<loader::Message>, String>;
+    fn create(inputs: Vec<String>) -> Result<Self, Self::Error>;
+    fn channels(&self) -> Result<Vec<loader::Channel>, Self::Error>;
+    fn time_range(&self) -> Result<loader::TimeRange, Self::Error>;
+    fn create_iter(&self, args: loader::MessageIteratorArgs) -> Result<Self::MessageIterator, Self::Error>;
+    fn get_backfill(&self, args: loader::BackfillArgs) -> Result<Vec<loader::Message>, Self::Error>;
 }
 
 impl<T: DataLoader> loader::Guest for T {
@@ -78,24 +79,30 @@ impl<T: DataLoader> loader::Guest for T {
     type MessageIterator = T::MessageIterator;
 
     fn create(inputs: Vec<String>) -> Result<loader::DataLoader, String> {
-        T::create(inputs).map(|loader| loader::DataLoader::new(loader))
+        T::create(inputs)
+            .map(|loader| loader::DataLoader::new(loader))
+            .map_err(|err| err.to_string())
     }
 }
 
 impl<T: DataLoader> loader::GuestDataLoader for T {
     fn channels(&self) -> Result<Vec<loader::Channel>, String> {
         T::channels(self)
+            .map_err(|err| err.to_string())
     }
 
     fn time_range(&self) -> Result<loader::TimeRange, String> {
         T::time_range(self)
+            .map_err(|err| err.to_string())
     }
 
     fn create_iter(&self, args: loader::MessageIteratorArgs) -> Result<loader::MessageIterator, String> {
         T::create_iter(self, args).map(|iter| loader::MessageIterator::new(iter))
+            .map_err(|err| err.to_string())
     }
 
     fn get_backfill(&self, args: loader::BackfillArgs) -> Result<Vec<loader::Message>, String> {
         T::get_backfill(self, args)
+            .map_err(|err| err.to_string())
     }
 }
