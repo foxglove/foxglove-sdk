@@ -58,6 +58,7 @@ jobs:
     needs: rust
     timeout-minutes: 10
     steps:
+      - uses: actions/checkout@v4
       - id: detect-version
         name: Detect local Cargo version
         run: |

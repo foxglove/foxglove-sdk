@@ -7,6 +7,7 @@ use crate::{
     ImageAnnotations, Point2, PointsAnnotation, TextAnnotation,
 };
 use foxglove::schemas::TriangleListPrimitive as NativeTriangleListPrimitive;
+use std::ffi::c_char;
 
 #[test]
 fn test_foxglove_string_as_utf8_str() {
@@ -316,7 +317,7 @@ fn test_image_annotations_borrow_to_native() {
     // Convert "Sample text" to FoxgloveString
     let sample_text = "Sample text";
     let text = FoxgloveString {
-        data: sample_text.as_ptr() as *const i8,
+        data: sample_text.as_ptr() as *const c_char,
         len: sample_text.len(),
     };
 

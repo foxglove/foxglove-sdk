@@ -10,7 +10,7 @@ members = [
 ]
 
 [workspace.package]
-version = "0.8.0"
+version = "0.8.1"
 edition = "2021"
 rust-version = "1.83.0"
 repository = "https://github.com/foxglove/foxglove-sdk"
