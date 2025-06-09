@@ -30,7 +30,6 @@ pub use generated::exports::foxglove::loader::loader::{
     self,
     BackfillArgs, Channel, TimeRange,
     Message, MessageIteratorArgs,
-    GuestMessageIterator as MessageIterator,
 };
 
 impl std::io::Read for reader::Reader {
@@ -68,10 +67,15 @@ pub trait DataLoader: 'static+Sized {
     type Error: Into<Box<dyn std::error::Error>>;
 
     fn create(inputs: Vec<String>) -> Result<Self, Self::Error>;
-    fn channels(&self) -> Result<Vec<loader::Channel>, Self::Error>;
+    fn channels(&self) -> Vec<Result<loader::Channel, Self::Error>>;
     fn time_range(&self) -> Result<loader::TimeRange, Self::Error>;
     fn create_iter(&self, args: loader::MessageIteratorArgs) -> Result<Self::MessageIterator, Self::Error>;
     fn get_backfill(&self, args: loader::BackfillArgs) -> Result<Vec<loader::Message>, Self::Error>;
+}
+
+pub trait MessageIterator: 'static+Sized {
+    type Error: Into<Box<dyn std::error::Error>>;
+    fn next(&self) -> Option<Result<Message, Self::Error>>;
 }
 
 impl<T: DataLoader> loader::Guest for T {
@@ -86,9 +90,11 @@ impl<T: DataLoader> loader::Guest for T {
 }
 
 impl<T: DataLoader> loader::GuestDataLoader for T {
-    fn channels(&self) -> Result<Vec<loader::Channel>, String> {
+    fn channels(&self) -> Vec<Result<loader::Channel, String>> {
         T::channels(self)
-            .map_err(|err| err.into().to_string())
+            .into_iter()
+            .map(|ch_result| ch_result.map_err(|err| err.into().to_string()))
+            .collect()
     }
 
     fn time_range(&self) -> Result<loader::TimeRange, String> {
@@ -104,5 +110,11 @@ impl<T: DataLoader> loader::GuestDataLoader for T {
     fn get_backfill(&self, args: loader::BackfillArgs) -> Result<Vec<loader::Message>, String> {
         T::get_backfill(self, args)
             .map_err(|err| err.into().to_string())
+    }
+}
+
+impl<T: MessageIterator> loader::GuestMessageIterator for T {
+    fn next(&self) -> Option<Result<loader::Message, String>> {
+        T::next(self).map(|r| r.map_err(|err| err.into().to_string()))
     }
 }

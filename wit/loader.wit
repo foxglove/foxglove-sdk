@@ -62,7 +62,7 @@ interface loader {
         // The time range covered by the data.
         time-range: func() -> result<time-range, string>;
         // The list of channels contained in the data.
-        channels: func() -> result<list<channel>, string>;
+        channels: func() -> list<result<channel, string>>;
         // Create an iterator over the data for the requested channels and time range.
         create-iter: func(args: message-iterator-args) -> result<message-iterator, string>;
         // Get the messages on certain channels at a certain time
