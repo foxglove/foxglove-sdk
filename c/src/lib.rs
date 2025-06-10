@@ -1032,6 +1032,20 @@ pub extern "C" fn foxglove_channel_get_id(channel: Option<&FoxgloveChannel>) -> 
     u64::from(channel.0.id())
 }
 
+/// Find out if any sinks have been added to a channel.
+///
+/// # Safety
+/// `channel` must be a valid pointer to a `foxglove_channel` created via `foxglove_channel_create`.
+///
+/// If the passed channel is null, false is returned.
+#[unsafe(no_mangle)]
+pub extern "C" fn foxglove_channel_has_sinks(channel: Option<&FoxgloveChannel>) -> bool {
+    let Some(channel) = channel else {
+        return false;
+    };
+    channel.0.has_sinks()
+}
+
 /// Log a message on a channel.
 ///
 /// # Safety

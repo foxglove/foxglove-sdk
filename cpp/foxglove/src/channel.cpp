@@ -37,6 +37,10 @@ uint64_t RawChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
+bool RawChannel::has_sinks() const noexcept {
+  return foxglove_channel_has_sinks(impl_.get());
+}
+
 FoxgloveError RawChannel::log(
   const std::byte* data, size_t data_len, std::optional<uint64_t> log_time
 ) noexcept {

@@ -71,6 +71,11 @@ public:
   /// @return The ID of the channel.
   [[nodiscard]] uint64_t id() const noexcept;
 
+  /// @brief Find out if any sinks have been added to the channel.
+  ///
+  /// @return True if sinks have been added to the channel, false otherwise.
+  [[nodiscard]] bool has_sinks() const noexcept;
+
   RawChannel(const RawChannel&) = delete;
   RawChannel& operator=(const RawChannel&) = delete;
   /// @brief Default move constructor.
