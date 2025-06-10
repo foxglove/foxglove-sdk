@@ -38,6 +38,15 @@ pub struct FoxgloveString {
     len: usize,
 }
 
+impl Default for FoxgloveString {
+    fn default() -> Self {
+        Self {
+            data: "".as_ptr().cast(),
+            len: 0,
+        }
+    }
+}
+
 impl FoxgloveString {
     /// Wrapper around [`std::str::from_utf8`].
     ///
@@ -1041,14 +1050,30 @@ pub extern "C" fn foxglove_channel_get_id(channel: Option<&FoxgloveChannel>) -> 
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_get_topic(channel: Option<&FoxgloveChannel>) -> FoxgloveString {
     let Some(channel) = channel else {
-        return FoxgloveString {
-            data: "".as_ptr().cast(),
-            len: 0,
-        };
+        return FoxgloveString::default();
     };
     FoxgloveString {
         data: channel.0.topic().as_ptr().cast(),
         len: channel.0.topic().len(),
+    }
+}
+
+/// Get the message_encoding of a channel.
+///
+/// # Safety
+/// `channel` must be a valid pointer to a `foxglove_channel` created via `foxglove_channel_create`.
+///
+/// If the passed channel is null, an empty value is returned.
+#[unsafe(no_mangle)]
+pub extern "C" fn foxglove_channel_get_message_encoding(
+    channel: Option<&FoxgloveChannel>,
+) -> FoxgloveString {
+    let Some(channel) = channel else {
+        return FoxgloveString::default();
+    };
+    FoxgloveString {
+        data: channel.0.message_encoding().as_ptr().cast(),
+        len: channel.0.message_encoding().len(),
     }
 }
 

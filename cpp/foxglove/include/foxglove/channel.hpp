@@ -76,6 +76,11 @@ public:
   /// @return The topic of the channel.
   [[nodiscard]] std::string_view topic() const noexcept;
 
+  /// @brief Get the message encoding of the channel.
+  ///
+  /// @return The message encoding of the channel.
+  [[nodiscard]] std::string_view message_encoding() const noexcept;
+
   /// @brief Find out if any sinks have been added to the channel.
   ///
   /// @return True if sinks have been added to the channel, false otherwise.

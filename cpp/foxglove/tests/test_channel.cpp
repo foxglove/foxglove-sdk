@@ -38,6 +38,13 @@ TEST_CASE("channel.topic()") {
   REQUIRE(channel.value().topic() == "/test-123");
 }
 
+TEST_CASE("channel.message_encoding()") {
+  auto context = foxglove::Context::create();
+  auto channel = foxglove::RawChannel::create("test", "json", std::nullopt, context);
+  REQUIRE(channel.has_value());
+  REQUIRE(channel.value().message_encoding() == "json");
+}
+
 TEST_CASE("channel.has_sinks()") {
   auto context = foxglove::Context::create();
   auto channel = foxglove::RawChannel::create("test", "json", std::nullopt, context);

@@ -42,6 +42,11 @@ std::string_view RawChannel::topic() const noexcept {
   return std::string_view(string.data, string.len);
 }
 
+std::string_view RawChannel::message_encoding() const noexcept {
+  foxglove_string string = foxglove_channel_get_message_encoding(impl_.get());
+  return std::string_view(string.data, string.len);
+}
+
 bool RawChannel::has_sinks() const noexcept {
   return foxglove_channel_has_sinks(impl_.get());
 }
