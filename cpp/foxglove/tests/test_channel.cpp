@@ -5,9 +5,9 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
 
-#include <string>
-#include <filesystem>
 #include <chrono>
+#include <filesystem>
+#include <string>
 
 using Catch::Matchers::ContainsSubstring;
 using Catch::Matchers::Equals;
@@ -53,8 +53,10 @@ TEST_CASE("channel.has_sinks()") {
 
   // Connect a sink, using an MCAP temp file
   auto now = std::chrono::system_clock::now();
-  auto timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
-  std::string tmp = (std::filesystem::temp_directory_path() / ("test_" + std::to_string(timestamp))).string();
+  auto timestamp =
+    std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
+  std::string tmp =
+    (std::filesystem::temp_directory_path() / ("test_" + std::to_string(timestamp))).string();
 
   foxglove::McapWriterOptions mcap_options = {};
   mcap_options.context = context;
@@ -87,7 +89,9 @@ TEST_CASE("channel.schema()") {
   REQUIRE(schema->name == "test_schema");
   REQUIRE(schema->encoding == "jsonschema");
   REQUIRE(schema->data_len == schema_data.size());
-  REQUIRE(std::string_view(reinterpret_cast<const char*>(schema->data), schema->data_len) == schema_data);
+  REQUIRE(
+    std::string_view(reinterpret_cast<const char*>(schema->data), schema->data_len) == schema_data
+  );
 }
 
 TEST_CASE("channel.schema() with no schema") {
