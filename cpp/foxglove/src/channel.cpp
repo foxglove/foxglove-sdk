@@ -38,7 +38,7 @@ uint64_t RawChannel::id() const noexcept {
 }
 
 std::string_view RawChannel::topic() const noexcept {
-  foxglove_string string = foxglove_channel_topic(impl_.get());
+  foxglove_string string = foxglove_channel_get_topic(impl_.get());
   return std::string_view(string.data, string.len);
 }
 

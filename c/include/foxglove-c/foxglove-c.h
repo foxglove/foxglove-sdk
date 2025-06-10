@@ -1983,7 +1983,7 @@ uint64_t foxglove_channel_get_id(const struct foxglove_channel *channel);
  *
  * If the passed channel is null, an empty value is returned.
  */
-struct foxglove_string foxglove_channel_topic(const struct foxglove_channel *channel);
+struct foxglove_string foxglove_channel_get_topic(const struct foxglove_channel *channel);
 
 /**
  * Find out if any sinks have been added to a channel.

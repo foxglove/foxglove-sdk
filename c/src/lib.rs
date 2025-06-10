@@ -1039,7 +1039,7 @@ pub extern "C" fn foxglove_channel_get_id(channel: Option<&FoxgloveChannel>) -> 
 ///
 /// If the passed channel is null, an empty value is returned.
 #[unsafe(no_mangle)]
-pub extern "C" fn foxglove_channel_topic(channel: Option<&FoxgloveChannel>) -> FoxgloveString {
+pub extern "C" fn foxglove_channel_get_topic(channel: Option<&FoxgloveChannel>) -> FoxgloveString {
     let Some(channel) = channel else {
         return FoxgloveString {
             data: "".as_ptr().cast(),
