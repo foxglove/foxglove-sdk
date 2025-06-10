@@ -55,8 +55,8 @@ impl std::io::Seek for reader::Reader {
     }
 }
 
-/// Your custom data loader should implement this trait along with MessageIterator.
-/// And don't forget to call `foxglove::data_loader_export()` on your loader.
+/// Implement this trait along with MessageIterator, then call `foxglove::data_loader_export()` on
+/// your loader.
 pub trait DataLoader: 'static + Sized {
     // Consolidates the Guest and GuestDataLoader traits into a single trait.
     // Wraps create() and create_iter() to user-defined structs so that users don't need to wrap
