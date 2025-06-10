@@ -37,6 +37,11 @@ uint64_t RawChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
+std::string_view RawChannel::topic() const noexcept {
+  foxglove_string string = foxglove_channel_topic(impl_.get());
+  return std::string_view(string.data, string.len);
+}
+
 bool RawChannel::has_sinks() const noexcept {
   return foxglove_channel_has_sinks(impl_.get());
 }

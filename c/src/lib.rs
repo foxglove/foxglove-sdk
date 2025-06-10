@@ -1032,6 +1032,26 @@ pub extern "C" fn foxglove_channel_get_id(channel: Option<&FoxgloveChannel>) -> 
     u64::from(channel.0.id())
 }
 
+/// Get the topic of a channel.
+///
+/// # Safety
+/// `channel` must be a valid pointer to a `foxglove_channel` created via `foxglove_channel_create`.
+///
+/// If the passed channel is null, an empty value is returned.
+#[unsafe(no_mangle)]
+pub extern "C" fn foxglove_channel_topic(channel: Option<&FoxgloveChannel>) -> FoxgloveString {
+    let Some(channel) = channel else {
+        return FoxgloveString {
+            data: "".as_ptr().cast(),
+            len: 0,
+        };
+    };
+    FoxgloveString {
+        data: channel.0.topic().as_ptr().cast(),
+        len: channel.0.topic().len(),
+    }
+}
+
 /// Find out if any sinks have been added to a channel.
 ///
 /// # Safety

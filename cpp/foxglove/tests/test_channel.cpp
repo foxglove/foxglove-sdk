@@ -29,6 +29,13 @@ TEST_CASE("duplicate topic") {
   REQUIRE(channel.value().id() != channel3.value().id());
 }
 
+TEST_CASE("channel.topic()") {
+  auto context = foxglove::Context::create();
+  auto channel = foxglove::RawChannel::create("/test-123", "json", std::nullopt, context);
+  REQUIRE(channel.has_value());
+  REQUIRE(channel.value().topic() == "/test-123");
+}
+
 TEST_CASE("channel has sinks") {
   auto context = foxglove::Context::create();
   auto channel = foxglove::RawChannel::create("test", "json", std::nullopt, context);

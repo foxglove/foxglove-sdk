@@ -71,6 +71,11 @@ public:
   /// @return The ID of the channel.
   [[nodiscard]] uint64_t id() const noexcept;
 
+  /// @brief Get the topic of the channel.
+  ///
+  /// @return The topic of the channel.
+  [[nodiscard]] std::string_view topic() const noexcept;
+
   /// @brief Find out if any sinks have been added to the channel.
   ///
   /// @return True if sinks have been added to the channel, false otherwise.

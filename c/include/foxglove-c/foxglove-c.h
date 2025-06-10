@@ -1976,6 +1976,16 @@ void foxglove_channel_free(const struct foxglove_channel *channel);
 uint64_t foxglove_channel_get_id(const struct foxglove_channel *channel);
 
 /**
+ * Get the topic of a channel.
+ *
+ * # Safety
+ * `channel` must be a valid pointer to a `foxglove_channel` created via `foxglove_channel_create`.
+ *
+ * If the passed channel is null, an empty value is returned.
+ */
+struct foxglove_string foxglove_channel_topic(const struct foxglove_channel *channel);
+
+/**
  * Find out if any sinks have been added to a channel.
  *
  * # Safety
