@@ -86,6 +86,11 @@ public:
   /// @return True if sinks have been added to the channel, false otherwise.
   [[nodiscard]] bool has_sinks() const noexcept;
 
+  /// @brief Get the schema of the channel.
+  ///
+  /// @return The schema of the channel.
+  [[nodiscard]] std::optional<Schema> schema() const noexcept;
+
   RawChannel(const RawChannel&) = delete;
   RawChannel& operator=(const RawChannel&) = delete;
   /// @brief Default move constructor.

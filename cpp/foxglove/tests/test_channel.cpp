@@ -68,3 +68,33 @@ TEST_CASE("channel.has_sinks()") {
 
   std::filesystem::remove(tmp);
 }
+
+TEST_CASE("channel.schema()") {
+  foxglove::Schema mock_schema;
+  mock_schema.encoding = "jsonschema";
+  std::string schema_data = R"({ "type": "object", "additionalProperties": true })";
+  mock_schema.data = reinterpret_cast<const std::byte*>(schema_data.data());
+  mock_schema.data_len = schema_data.size();
+  mock_schema.name = "test_schema";
+  mock_schema.encoding = "jsonschema";
+
+  auto context = foxglove::Context::create();
+  auto channel = foxglove::RawChannel::create("test", "json", mock_schema, context);
+  REQUIRE(channel.has_value());
+
+  auto schema = channel.value().schema();
+  REQUIRE(schema.has_value());
+  REQUIRE(schema->name == "test_schema");
+  REQUIRE(schema->encoding == "jsonschema");
+  REQUIRE(schema->data_len == schema_data.size());
+  REQUIRE(std::string_view(reinterpret_cast<const char*>(schema->data), schema->data_len) == schema_data);
+}
+
+TEST_CASE("channel.schema() with no schema") {
+  auto context = foxglove::Context::create();
+  auto channel = foxglove::RawChannel::create("test", "json", std::nullopt, context);
+  REQUIRE(channel.has_value());
+
+  auto schema = channel.value().schema();
+  REQUIRE(!schema.has_value());
+}

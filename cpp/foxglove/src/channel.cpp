@@ -51,6 +51,21 @@ bool RawChannel::has_sinks() const noexcept {
   return foxglove_channel_has_sinks(impl_.get());
 }
 
+std::optional<Schema> RawChannel::schema() const noexcept {
+  foxglove_schema c_schema = {};
+  foxglove_error error = foxglove_channel_get_schema(impl_.get(), &c_schema);
+  if (error != foxglove_error::FOXGLOVE_ERROR_OK) {
+    return std::nullopt;
+  }
+
+  return Schema{
+    .name = std::string(c_schema.name.data, c_schema.name.len),
+    .encoding = std::string(c_schema.encoding.data, c_schema.encoding.len),
+    .data = reinterpret_cast<const std::byte*>(c_schema.data),
+    .data_len = c_schema.data_len,
+  };
+}
+
 FoxgloveError RawChannel::log(
   const std::byte* data, size_t data_len, std::optional<uint64_t> log_time
 ) noexcept {
