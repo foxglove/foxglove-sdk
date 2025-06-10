@@ -6,6 +6,8 @@
 #include <catch2/matchers/catch_matchers_string.hpp>
 
 #include <string>
+#include <filesystem>
+#include <chrono>
 
 using Catch::Matchers::ContainsSubstring;
 using Catch::Matchers::Equals;
@@ -36,13 +38,17 @@ TEST_CASE("channel.topic()") {
   REQUIRE(channel.value().topic() == "/test-123");
 }
 
-TEST_CASE("channel has sinks") {
+TEST_CASE("channel.has_sinks()") {
   auto context = foxglove::Context::create();
   auto channel = foxglove::RawChannel::create("test", "json", std::nullopt, context);
   REQUIRE(channel.has_value());
   REQUIRE(!channel.value().has_sinks());
 
-  std::string tmp = std::tmpnam(nullptr);
+  // Connect a sink, using an MCAP temp file
+  auto now = std::chrono::system_clock::now();
+  auto timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
+  std::string tmp = (std::filesystem::temp_directory_path() / ("test_" + std::to_string(timestamp))).string();
+
   foxglove::McapWriterOptions mcap_options = {};
   mcap_options.context = context;
   mcap_options.path = tmp;
@@ -53,5 +59,5 @@ TEST_CASE("channel has sinks") {
   CHECK(channel2.has_value());
   CHECK(channel2.value().has_sinks());
 
-  std::remove(tmp.c_str());
+  std::filesystem::remove(tmp);
 }
