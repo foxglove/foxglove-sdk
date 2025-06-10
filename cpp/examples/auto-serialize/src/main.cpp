@@ -15,7 +15,9 @@ using json = nlohmann::json;
 using namespace std::chrono_literals;
 
 /**
- * Message definitions with auto-serialization
+ * Message definitions with auto-serialization.
+ *
+ * See https://json.nlohmann.me/features/arbitrary_types
  */
 namespace messages {
 enum MessageLevel {
