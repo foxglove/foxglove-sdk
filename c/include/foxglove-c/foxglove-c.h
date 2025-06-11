@@ -598,6 +598,48 @@ typedef struct foxglove_schema {
 } foxglove_schema;
 
 /**
+ * A key-value pair of strings.
+ */
+typedef struct foxglove_key_value {
+  /**
+   * The key
+   */
+  struct foxglove_string key;
+  /**
+   * The value
+   */
+  struct foxglove_string value;
+} foxglove_key_value;
+
+/**
+ * A collection of metadata items for a channel.
+ */
+typedef struct foxglove_channel_metadata {
+  /**
+   * The items in the metadata collection.
+   */
+  const struct foxglove_key_value *items;
+  /**
+   * The number of items in the metadata collection.
+   */
+  size_t count;
+} foxglove_channel_metadata;
+
+/**
+ * An iterator over channel metadata key-value pairs.
+ */
+typedef struct foxglove_channel_metadata_iterator {
+  /**
+   * The channel with metadata to iterate
+   */
+  const struct foxglove_channel *channel;
+  /**
+   * Current index
+   */
+  size_t index;
+} foxglove_channel_metadata_iterator;
+
+/**
  * A vector in 3D space that represents a direction only
  */
 typedef struct foxglove_vector3 {
@@ -1947,6 +1989,8 @@ foxglove_error foxglove_mcap_close(struct foxglove_mcap_writer *writer);
  * `schema` is an optional pointer to a schema. The schema and the data it points to
  * need only remain alive for the duration of this function call (they will be copied).
  * `context` can be null, or a valid pointer to a context created via `foxglove_context_new`.
+ * `metadata` can be null, or a valid pointer to a collection of key/value pairs. If keys are
+ *     duplicated in the collection, the last value for each key will be used.
  * `channel` is an out **FoxgloveChannel pointer, which will be set to the created channel
  * if the function returns success.
  */
@@ -1954,6 +1998,7 @@ foxglove_error foxglove_raw_channel_create(struct foxglove_string topic,
                                            struct foxglove_string message_encoding,
                                            const struct foxglove_schema *schema,
                                            const struct foxglove_context *context,
+                                           const struct foxglove_channel_metadata *metadata,
                                            const struct foxglove_channel **channel);
 
 /**
@@ -2038,6 +2083,41 @@ foxglove_error foxglove_channel_get_schema(const struct foxglove_channel *channe
  * If the passed channel is null, false is returned.
  */
 bool foxglove_channel_has_sinks(const struct foxglove_channel *channel);
+
+/**
+ * Create an iterator over a channel's metadata.
+ *
+ * You must later free the iterator using foxglove_channel_metadata_iter_free.
+ *
+ * Iterate items using foxglove_channel_metadata_iter_next.
+ *
+ * # Safety
+ * `channel` must be a valid pointer to a `foxglove_channel` created via `foxglove_channel_create`.
+ * The channel must remain valid for the lifetime of the iterator.
+ */
+struct foxglove_channel_metadata_iterator *foxglove_channel_metadata_iter_create(const struct foxglove_channel *channel);
+
+/**
+ * Get the next key-value pair from the metadata iterator.
+ *
+ * Returns true if a pair was found and stored in `key_value`, false if the iterator is exhausted.
+ *
+ * # Safety
+ * `iter` must be a valid pointer to a `FoxgloveChannelMetadataIterator` created via
+ * `foxglove_channel_metadata_iter_create`.
+ * `key_value` must be a valid pointer to a `FoxgloveKeyValue` that will be filled in.
+ */
+bool foxglove_channel_metadata_iter_next(struct foxglove_channel_metadata_iterator *iter,
+                                         struct foxglove_key_value *key_value);
+
+/**
+ * Free a metadata iterator created via `foxglove_channel_metadata_iter_create`.
+ *
+ * # Safety
+ * `iter` must be a valid pointer to a `FoxgloveChannelMetadataIterator` created via
+ * `foxglove_channel_metadata_iter_create`.
+ */
+void foxglove_channel_metadata_iter_free(struct foxglove_channel_metadata_iterator *iter);
 
 /**
  * Log a message on a channel.

@@ -117,3 +117,21 @@ TEST_CASE("channel.schema() with no schema") {
   auto schema = channel.value().schema();
   REQUIRE(!schema.has_value());
 }
+
+TEST_CASE("channel with metadata") {
+  auto context = foxglove::Context::create();
+  std::map<std::string, std::string> metadata = {{"key1", "value1"}, {"key2", "value2"}};
+  auto channel = foxglove::RawChannel::create("test", "json", std::nullopt, context, metadata);
+  REQUIRE(channel.has_value());
+  REQUIRE(channel.value().metadata().value().size() == 2);
+  REQUIRE(channel.value().metadata() == metadata);
+}
+
+TEST_CASE("channel with no metadata returns an empty value from metadata()") {
+  auto context = foxglove::Context::create();
+  auto channel = foxglove::RawChannel::create("test", "json", std::nullopt, context);
+
+  REQUIRE(channel.has_value());
+  REQUIRE(channel.value().metadata().has_value());
+  REQUIRE(channel.value().metadata().value().empty());
+}

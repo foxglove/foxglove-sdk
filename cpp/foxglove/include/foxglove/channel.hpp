@@ -5,6 +5,7 @@
 #include <foxglove/schemas.hpp>
 
 #include <cstdint>
+#include <map>
 #include <memory>
 #include <optional>
 #include <string>
@@ -49,9 +50,11 @@ public:
   /// @param schema The schema of messages logged to this channel.
   /// @param context The context which associates logs to a sink. If omitted, the default context is
   /// used.
+  /// @param metadata Key/value metadata for the channel.
   static FoxgloveResult<RawChannel> create(
     const std::string_view& topic, const std::string_view& message_encoding,
-    std::optional<Schema> schema = std::nullopt, const Context& context = Context()
+    std::optional<Schema> schema = std::nullopt, const Context& context = Context(),
+    std::optional<std::map<std::string, std::string>> metadata = std::nullopt
   );
 
   /// @brief Log a message to the channel.
@@ -99,6 +102,11 @@ public:
   ///
   /// @return The schema of the channel. The value is valid only for the lifetime of the channel.
   [[nodiscard]] std::optional<Schema> schema() const noexcept;
+
+  /// @brief Get the metadata for the channel, set during creation.
+  ///
+  /// @return The metadata, or an empty map if it was not set.
+  std::optional<std::map<std::string, std::string>> metadata() const noexcept;
 
   RawChannel(const RawChannel&) = delete;
   RawChannel& operator=(const RawChannel&) = delete;
