@@ -67,13 +67,14 @@ TEST_CASE("channel.has_sinks()") {
 }
 
 TEST_CASE("channel.close() disconnects sinks") {
-  FileCleanup cleanup("test.mcap");
+  auto fname = "test-channel-close-disconnects-sinks.mcap";
+  FileCleanup cleanup(fname);
 
   auto context = foxglove::Context::create();
 
   foxglove::McapWriterOptions mcap_options = {};
   mcap_options.context = context;
-  mcap_options.path = "test.mcap";
+  mcap_options.path = fname;
   auto writer = foxglove::McapWriter::create(mcap_options);
   REQUIRE(writer.has_value());
 
