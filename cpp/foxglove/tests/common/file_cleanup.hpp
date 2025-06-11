@@ -23,4 +23,4 @@ private:
   std::string path_;
 };
 
-}
+}  // namespace foxglove_tests
