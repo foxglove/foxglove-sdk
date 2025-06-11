@@ -18,14 +18,20 @@ interface reader {
 }
 
 interface loader {
-    record message-iterator-args {
-        start-nanos: option<u64>,
-        end-nanos: option<u64>,
-        channels: list<u16>,
+    record initialize-result {
+        channels: list<channel>,
+        time-range: time-range,
+        problems: list<string>,
     }
 
     record backfill-args {
         time-nanos: u64,
+        channels: list<u16>,
+    }
+
+    record message-iterator-args {
+        start-nanos: option<u64>,
+        end-nanos: option<u64>,
         channels: list<u16>,
     }
 
@@ -59,18 +65,16 @@ interface loader {
     }
 
     resource data-loader {
-        // The time range covered by the data.
-        time-range: func() -> time-range;
-        // The list of channels contained in the data.
-        channels: func() -> list<channel>;
+        // Initialize the data source, reading the time range and channels or generating list of problems.
+        initialize: func() -> initialize-result;
         // Create an iterator over the data for the requested channels and time range.
         create-iter: func(args: message-iterator-args) -> result<message-iterator, string>;
         // Get the messages on certain channels at a certain time
         get-backfill: func(args: backfill-args) -> result<list<message>, string>;
     }
 
-    // Create a new instance of the data loader for a list of files
-    create: func(input: list<string>) -> result<data-loader, string>;
+    // Create a new instance of the data loader for a list of file paths
+    from-paths: func(paths: list<string>) -> result<data-loader, string>;
 }
 
 world host {

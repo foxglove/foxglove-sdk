@@ -27,7 +27,7 @@ macro_rules! data_loader_export {
 }
 
 pub use generated::exports::foxglove::loader::loader::{
-    self, BackfillArgs, Channel, Message, MessageIteratorArgs, TimeRange,
+    self, BackfillArgs, Channel, InitializeResult, Message, MessageIteratorArgs, TimeRange,
 };
 pub use generated::foxglove::loader::console;
 pub use generated::foxglove::loader::reader;
@@ -91,7 +91,7 @@ impl ChannelBuilder {
 
     /// Set the schema and message encoding from a foxglove::Encode.
     /// Panics if T::get_schema() is None.
-    pub fn encode<T: Encode>(mut self) -> Self {
+    pub fn encode<T: Encode>(self) -> Self {
         let schema = T::get_schema().expect("failed to get schema");
         self.schema(schema)
             .message_encoding(&T::get_message_encoding())
@@ -155,9 +155,9 @@ pub trait DataLoader: 'static + Sized {
     type MessageIterator: loader::GuestMessageIterator;
     type Error: Into<Box<dyn std::error::Error>>;
 
-    fn create(inputs: Vec<String>) -> Result<Self, Self::Error>;
-    fn channels(&self) -> Vec<loader::Channel>;
-    fn time_range(&self) -> loader::TimeRange;
+    fn from_paths(inputs: Vec<String>) -> Result<Self, Self::Error>;
+    fn initialize(&self) -> loader::InitializeResult;
+
     fn create_iter(
         &self,
         args: loader::MessageIteratorArgs,
@@ -175,20 +175,16 @@ impl<T: DataLoader> loader::Guest for T {
     type DataLoader = Self;
     type MessageIterator = T::MessageIterator;
 
-    fn create(inputs: Vec<String>) -> Result<loader::DataLoader, String> {
-        T::create(inputs)
+    fn from_paths(inputs: Vec<String>) -> Result<loader::DataLoader, String> {
+        T::from_paths(inputs)
             .map(|loader| loader::DataLoader::new(loader))
-            .map_err(|err| err.into().to_string())
+            .map_err(|e| e.into().to_string())
     }
 }
 
 impl<T: DataLoader> loader::GuestDataLoader for T {
-    fn channels(&self) -> Vec<loader::Channel> {
-        T::channels(self)
-    }
-
-    fn time_range(&self) -> loader::TimeRange {
-        T::time_range(self)
+    fn initialize(&self) -> InitializeResult {
+        T::initialize(self)
     }
 
     fn create_iter(
