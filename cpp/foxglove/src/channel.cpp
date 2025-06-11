@@ -58,12 +58,12 @@ std::optional<Schema> RawChannel::schema() const noexcept {
     return std::nullopt;
   }
 
-  return Schema{
-    .name = std::string(c_schema.name.data, c_schema.name.len),
-    .encoding = std::string(c_schema.encoding.data, c_schema.encoding.len),
-    .data = reinterpret_cast<const std::byte*>(c_schema.data),
-    .data_len = c_schema.data_len,
-  };
+  Schema schema;
+  schema.name = std::string(c_schema.name.data, c_schema.name.len);
+  schema.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  schema.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  schema.data_len = c_schema.data_len;
+  return schema;
 }
 
 FoxgloveError RawChannel::log(
