@@ -5,12 +5,13 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
 
-#include <chrono>
-#include <filesystem>
 #include <string>
+
+#include "common/file_cleanup.hpp"
 
 using Catch::Matchers::ContainsSubstring;
 using Catch::Matchers::Equals;
+using foxglove_tests::FileCleanup;
 
 TEST_CASE("topic is not valid utf-8") {
   auto channel =
@@ -46,29 +47,22 @@ TEST_CASE("channel.message_encoding()") {
 }
 
 TEST_CASE("channel.has_sinks()") {
+  FileCleanup cleanup("test.mcap");
+
   auto context = foxglove::Context::create();
   auto channel = foxglove::RawChannel::create("test", "json", std::nullopt, context);
   REQUIRE(channel.has_value());
   REQUIRE(!channel.value().has_sinks());
 
-  // Connect a sink, using an MCAP temp file
-  auto now = std::chrono::system_clock::now();
-  auto timestamp =
-    std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
-  std::string tmp =
-    (std::filesystem::temp_directory_path() / ("test_" + std::to_string(timestamp))).string();
-
   foxglove::McapWriterOptions mcap_options = {};
   mcap_options.context = context;
-  mcap_options.path = tmp;
+  mcap_options.path = "test.mcap";
   auto writer = foxglove::McapWriter::create(mcap_options);
   REQUIRE(writer.has_value());
 
   auto channel2 = foxglove::RawChannel::create("test2", "json", std::nullopt, context);
-  CHECK(channel2.has_value());
-  CHECK(channel2.value().has_sinks());
-
-  std::filesystem::remove(tmp);
+  REQUIRE(channel2.has_value());
+  REQUIRE(channel2.value().has_sinks());
 }
 
 TEST_CASE("channel.schema()") {

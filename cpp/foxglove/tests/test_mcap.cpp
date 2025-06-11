@@ -13,26 +13,11 @@
 #include <fstream>
 #include <optional>
 
+#include "common/file_cleanup.hpp"
+
 using Catch::Matchers::ContainsSubstring;
 using Catch::Matchers::Equals;
-
-class FileCleanup {
-public:
-  explicit FileCleanup(std::string&& path)
-      : path_(std::move(path)) {}
-  FileCleanup(const FileCleanup&) = delete;
-  FileCleanup& operator=(const FileCleanup&) = delete;
-  FileCleanup(FileCleanup&&) = delete;
-  FileCleanup& operator=(FileCleanup&&) = delete;
-  ~FileCleanup() {
-    if (std::filesystem::exists(path_)) {
-      std::filesystem::remove(path_);
-    }
-  }
-
-private:
-  std::string path_;
-};
+using foxglove_tests::FileCleanup;
 
 TEST_CASE("Open new file and close mcap writer") {
   FileCleanup cleanup("test.mcap");
