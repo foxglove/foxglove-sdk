@@ -184,6 +184,10 @@ function pythonParamDoc(field: FoxgloveMessageField): string {
   const lines = field.description.split("\n");
   const [firstLine, ...rest] = lines;
   const output: string[] = [];
+  if (firstLine == undefined) {
+    return "";
+  }
+
   output.push(`:param ${field.name}: ${firstLine}`);
   if (rest.length === 0) {
     return output.join("\n");
