@@ -33,6 +33,10 @@ FoxgloveResult<RawChannel> RawChannel::create(
 RawChannel::RawChannel(const foxglove_channel* channel)
     : impl_(channel) {}
 
+void RawChannel::close() noexcept {
+  foxglove_channel_close(impl_.get());
+}
+
 uint64_t RawChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }

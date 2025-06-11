@@ -66,6 +66,14 @@ public:
     const std::byte* data, size_t data_len, std::optional<uint64_t> log_time = std::nullopt
   ) noexcept;
 
+  /// @brief Close the channel.
+  ///
+  /// You can use this to explicitly unadvertise the channel to sinks that subscribe to channels
+  /// dynamically, such as the WebSocketServer.
+  ///
+  /// Attempts to log on a closed channel will elicit a throttled warning message.
+  void close() noexcept;
+
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.

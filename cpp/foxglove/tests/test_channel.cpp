@@ -66,6 +66,25 @@ TEST_CASE("channel.has_sinks()") {
   REQUIRE(channel2.value().has_sinks());
 }
 
+TEST_CASE("channel.close() disconnects sinks") {
+  FileCleanup cleanup("test.mcap");
+
+  auto context = foxglove::Context::create();
+
+  foxglove::McapWriterOptions mcap_options = {};
+  mcap_options.context = context;
+  mcap_options.path = "test.mcap";
+  auto writer = foxglove::McapWriter::create(mcap_options);
+  REQUIRE(writer.has_value());
+
+  auto channel = foxglove::RawChannel::create("test", "json", std::nullopt, context);
+  REQUIRE(channel.has_value());
+  REQUIRE(channel.value().has_sinks());
+
+  channel.value().close();
+  REQUIRE(!channel.value().has_sinks());
+}
+
 TEST_CASE("channel.schema()") {
   foxglove::Schema mock_schema;
   mock_schema.encoding = "jsonschema";

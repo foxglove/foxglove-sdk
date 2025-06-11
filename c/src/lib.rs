@@ -1014,6 +1014,19 @@ pub(crate) unsafe fn do_foxglove_channel_create<T: foxglove::Encode>(
     Ok(Arc::into_raw(builder.build::<T>().into_inner()) as *const FoxgloveChannel)
 }
 
+/// Close a channel.
+///
+/// # Safety
+/// `channel` must be a valid pointer to a `foxglove_channel` created via `foxglove_channel_create`.
+/// If channel is null, this does nothing.
+#[unsafe(no_mangle)]
+pub extern "C" fn foxglove_channel_close(channel: Option<&FoxgloveChannel>) {
+    let Some(channel) = channel else {
+        return;
+    };
+    channel.0.close();
+}
+
 /// Free a channel created via `foxglove_channel_create`.
 ///
 /// # Safety

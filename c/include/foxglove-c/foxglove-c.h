@@ -1957,6 +1957,15 @@ foxglove_error foxglove_raw_channel_create(struct foxglove_string topic,
                                            const struct foxglove_channel **channel);
 
 /**
+ * Close a channel.
+ *
+ * # Safety
+ * `channel` must be a valid pointer to a `foxglove_channel` created via `foxglove_channel_create`.
+ * If channel is null, this does nothing.
+ */
+void foxglove_channel_close(const struct foxglove_channel *channel);
+
+/**
  * Free a channel created via `foxglove_channel_create`.
  *
  * # Safety
