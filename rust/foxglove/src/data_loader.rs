@@ -65,8 +65,8 @@ pub trait DataLoader: 'static + Sized {
     type Error: Into<Box<dyn std::error::Error>>;
 
     fn create(inputs: Vec<String>) -> Result<Self, Self::Error>;
-    fn channels(&self) -> Vec<Result<loader::Channel, Self::Error>>;
-    fn time_range(&self) -> Result<loader::TimeRange, Self::Error>;
+    fn channels(&self) -> Vec<loader::Channel>;
+    fn time_range(&self) -> loader::TimeRange;
     fn create_iter(
         &self,
         args: loader::MessageIteratorArgs,
@@ -92,15 +92,12 @@ impl<T: DataLoader> loader::Guest for T {
 }
 
 impl<T: DataLoader> loader::GuestDataLoader for T {
-    fn channels(&self) -> Vec<Result<loader::Channel, String>> {
+    fn channels(&self) -> Vec<loader::Channel> {
         T::channels(self)
-            .into_iter()
-            .map(|ch_result| ch_result.map_err(|err| err.into().to_string()))
-            .collect()
     }
 
-    fn time_range(&self) -> Result<loader::TimeRange, String> {
-        T::time_range(self).map_err(|err| err.into().to_string())
+    fn time_range(&self) -> loader::TimeRange {
+        T::time_range(self)
     }
 
     fn create_iter(
