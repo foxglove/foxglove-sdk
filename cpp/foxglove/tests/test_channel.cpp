@@ -47,7 +47,8 @@ TEST_CASE("channel.message_encoding()") {
 }
 
 TEST_CASE("channel.has_sinks()") {
-  FileCleanup cleanup("test.mcap");
+  auto fname = "test-channel-has-sinks.mcap";
+  FileCleanup cleanup(fname);
 
   auto context = foxglove::Context::create();
   auto channel = foxglove::RawChannel::create("test", "json", std::nullopt, context);
@@ -56,7 +57,7 @@ TEST_CASE("channel.has_sinks()") {
 
   foxglove::McapWriterOptions mcap_options = {};
   mcap_options.context = context;
-  mcap_options.path = "test.mcap";
+  mcap_options.path = fname;
   auto writer = foxglove::McapWriter::create(mcap_options);
   REQUIRE(writer.has_value());
 
