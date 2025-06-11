@@ -126,6 +126,12 @@ impl ChannelBuilder {
         self
     }
 
+    /// Set the message count.
+    pub fn message_count(mut self, message_count: Option<u64>) -> Self {
+        self.message_count = message_count;
+        self
+    }
+
     /// Turn this ChannelBuilder into a Channel.
     pub fn build(self) -> Channel {
         Channel {
