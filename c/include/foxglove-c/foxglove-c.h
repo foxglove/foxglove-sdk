@@ -1982,6 +1982,8 @@ uint64_t foxglove_channel_get_id(const struct foxglove_channel *channel);
  * `channel` must be a valid pointer to a `foxglove_channel` created via `foxglove_channel_create`.
  *
  * If the passed channel is null, an empty value is returned.
+ *
+ * The returned value is valid only for the lifetime of the channel.
  */
 struct foxglove_string foxglove_channel_get_topic(const struct foxglove_channel *channel);
 
@@ -1992,6 +1994,8 @@ struct foxglove_string foxglove_channel_get_topic(const struct foxglove_channel 
  * `channel` must be a valid pointer to a `foxglove_channel` created via `foxglove_channel_create`.
  *
  * If the passed channel is null, an empty value is returned.
+ *
+ * The returned value is valid only for the lifetime of the channel.
  */
 struct foxglove_string foxglove_channel_get_message_encoding(const struct foxglove_channel *channel);
 
@@ -2003,6 +2007,8 @@ struct foxglove_string foxglove_channel_get_message_encoding(const struct foxglo
  * # Safety
  * `channel` must be a valid pointer to a `foxglove_channel` created via `foxglove_channel_create`.
  * `schema` must be a valid pointer to a `FoxgloveSchema` struct that will be filled in.
+ *
+ * The returned value is valid only for the lifetime of the channel.
  */
 foxglove_error foxglove_channel_get_schema(const struct foxglove_channel *channel,
                                            struct foxglove_schema *schema);

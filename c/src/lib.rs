@@ -1047,6 +1047,8 @@ pub extern "C" fn foxglove_channel_get_id(channel: Option<&FoxgloveChannel>) -> 
 /// `channel` must be a valid pointer to a `foxglove_channel` created via `foxglove_channel_create`.
 ///
 /// If the passed channel is null, an empty value is returned.
+///
+/// The returned value is valid only for the lifetime of the channel.
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_get_topic(channel: Option<&FoxgloveChannel>) -> FoxgloveString {
     let Some(channel) = channel else {
@@ -1064,6 +1066,8 @@ pub extern "C" fn foxglove_channel_get_topic(channel: Option<&FoxgloveChannel>) 
 /// `channel` must be a valid pointer to a `foxglove_channel` created via `foxglove_channel_create`.
 ///
 /// If the passed channel is null, an empty value is returned.
+///
+/// The returned value is valid only for the lifetime of the channel.
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_get_message_encoding(
     channel: Option<&FoxgloveChannel>,
@@ -1084,6 +1088,8 @@ pub extern "C" fn foxglove_channel_get_message_encoding(
 /// # Safety
 /// `channel` must be a valid pointer to a `foxglove_channel` created via `foxglove_channel_create`.
 /// `schema` must be a valid pointer to a `FoxgloveSchema` struct that will be filled in.
+///
+/// The returned value is valid only for the lifetime of the channel.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_channel_get_schema(
     channel: Option<&FoxgloveChannel>,
