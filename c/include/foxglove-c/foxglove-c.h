@@ -1959,6 +1959,13 @@ foxglove_error foxglove_raw_channel_create(struct foxglove_string topic,
 /**
  * Close a channel.
  *
+ * You can use this to explicitly unadvertise the channel to sinks that subscribe to channels
+ * dynamically, such as the WebSocketServer.
+ *
+ * Attempts to log on a closed channel will elicit a throttled warning message.
+ *
+ * Note this *does not* free the channel.
+ *
  * # Safety
  * `channel` must be a valid pointer to a `foxglove_channel` created via `foxglove_channel_create`.
  * If channel is null, this does nothing.

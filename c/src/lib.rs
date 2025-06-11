@@ -1016,6 +1016,13 @@ pub(crate) unsafe fn do_foxglove_channel_create<T: foxglove::Encode>(
 
 /// Close a channel.
 ///
+/// You can use this to explicitly unadvertise the channel to sinks that subscribe to channels
+/// dynamically, such as the WebSocketServer.
+///
+/// Attempts to log on a closed channel will elicit a throttled warning message.
+///
+/// Note this *does not* free the channel.
+///
 /// # Safety
 /// `channel` must be a valid pointer to a `foxglove_channel` created via `foxglove_channel_create`.
 /// If channel is null, this does nothing.
