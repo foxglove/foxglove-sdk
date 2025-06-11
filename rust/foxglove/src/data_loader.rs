@@ -1,3 +1,5 @@
+use crate::{Encode, Schema};
+
 pub mod generated {
     // Confine the mess of the things that generate defines to a dedicated namespace with this
     // inline module.
@@ -52,6 +54,89 @@ impl std::io::Seek for reader::Reader {
             }
         }
         Ok(reader::Reader::position(&self))
+    }
+}
+
+impl Channel {
+    /// Return a ChannelBuilder to set properties for a Channel.
+    pub fn builder() -> ChannelBuilder {
+        ChannelBuilder::default()
+    }
+}
+
+/// Builder interface to create a Channel.
+#[derive(Default)]
+pub struct ChannelBuilder {
+    id: u16,
+    topic_name: String,
+    schema_name: String,
+    message_encoding: String,
+    schema_encoding: String,
+    schema_data: Vec<u8>,
+    message_count: Option<u64>,
+}
+
+impl ChannelBuilder {
+    /// Set the channel id.
+    pub fn id(mut self, id: u16) -> Self {
+        self.id = id;
+        self
+    }
+
+    /// Set the channel topic name.
+    pub fn topic(mut self, topic_name: &str) -> Self {
+        self.topic_name = topic_name.to_string();
+        self
+    }
+
+    /// Set the schema and message encoding from a foxglove::Encode.
+    /// Panics if T::get_schema() is None.
+    pub fn encode<T: Encode>(mut self) -> Self {
+        let schema = T::get_schema().expect("failed to get schema");
+        self.schema(schema)
+            .message_encoding(&T::get_message_encoding())
+    }
+
+    /// Set the channel schema name, schema encoding, and schema data from a foxglove::Schema.
+    pub fn schema(mut self, schema: Schema) -> Self {
+        self.schema_name = schema.name;
+        self.schema_encoding = schema.encoding;
+        self.schema_data = schema.data.into();
+        self
+    }
+
+    pub fn schema_name(mut self, schema_name: &str) -> Self {
+        self.schema_name = schema_name.to_string();
+        self
+    }
+
+    pub fn schema_encoding(mut self, schema_encoding: &str) -> Self {
+        self.schema_encoding = schema_encoding.to_string();
+        self
+    }
+
+    pub fn schema_data(mut self, schema_data: Vec<u8>) -> Self {
+        self.schema_data = schema_data;
+        self
+    }
+
+    /// Set the channel message encoding.
+    pub fn message_encoding(mut self, message_encoding: &str) -> Self {
+        self.message_encoding = message_encoding.to_string();
+        self
+    }
+
+    /// Turn this ChannelBuilder into a Channel.
+    pub fn build(self) -> Channel {
+        Channel {
+            id: self.id,
+            topic_name: self.topic_name,
+            message_encoding: self.message_encoding,
+            message_count: self.message_count,
+            schema_name: self.schema_name,
+            schema_encoding: self.schema_encoding,
+            schema_data: self.schema_data,
+        }
     }
 }
 
