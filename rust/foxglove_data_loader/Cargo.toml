@@ -1,0 +1,17 @@
+[package]
+name = "foxglove_data_loader"
+description = "Generate wasm to use as a Foxglove data loader"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+license.workspace = true
+
+[dependencies]
+wit-bindgen = "0.42.1"
+
+[dependencies.foxglove]
+version = "0.8.0"
+path = "../foxglove"
+default-features = false
+features = [ "derive" ]

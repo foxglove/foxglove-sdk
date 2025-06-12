@@ -1,4 +1,4 @@
-use crate::{Encode, Schema};
+use foxglove::{Encode, Schema};
 
 pub mod generated {
     // Confine the mess of the things that generate defines to a dedicated namespace with this
@@ -13,14 +13,14 @@ pub mod generated {
 
 /// Export a data loader to wasm output with this macro.
 #[macro_export]
-macro_rules! data_loader_export {
+macro_rules! export {
     ( $L:ident ) => {
         mod __foxglove_data_loader_export {
             // Put these in a temp module so none of these pollute the current namespace.
             // This whole thing could probably be a proc macro.
             use crate::$L as LOADER;
-            foxglove::data_loader::generated::export!(
-                LOADER with_types_in foxglove::data_loader::generated
+            foxglove_data_loader::generated::export!(
+                LOADER with_types_in foxglove_data_loader::generated
             );
         }
     }

@@ -10,7 +10,6 @@ license.workspace = true
 [features]
 default = ["derive", "live_visualization", "lz4", "zstd"]
 chrono = ["dep:chrono"]
-data_loader = ["dep:wit-bindgen"]
 derive = ["dep:foxglove_derive"]
 live_visualization = [
   "dep:base64",
@@ -57,7 +56,6 @@ tokio-util = { workspace = true, optional = true }
 tokio = { workspace = true, optional = true }
 tracing.workspace = true
 urlencoding = "2.1.3"
-wit-bindgen = { version = "0.42.1", optional = true }
 
 [dev-dependencies]
 assert_matches = "1.5.0"
