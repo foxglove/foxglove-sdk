@@ -2106,6 +2106,7 @@ struct foxglove_channel_metadata_iterator *foxglove_channel_metadata_iter_create
  * `iter` must be a valid pointer to a `FoxgloveChannelMetadataIterator` created via
  * `foxglove_channel_metadata_iter_create`.
  * `key_value` must be a valid pointer to a `FoxgloveKeyValue` that will be filled in.
+ * The channel itself must still be valid.
  */
 bool foxglove_channel_metadata_iter_next(struct foxglove_channel_metadata_iterator *iter,
                                          struct foxglove_key_value *key_value);

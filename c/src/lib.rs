@@ -1230,6 +1230,7 @@ pub unsafe extern "C" fn foxglove_channel_metadata_iter_create(
 /// `iter` must be a valid pointer to a `FoxgloveChannelMetadataIterator` created via
 /// `foxglove_channel_metadata_iter_create`.
 /// `key_value` must be a valid pointer to a `FoxgloveKeyValue` that will be filled in.
+/// The channel itself must still be valid.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_channel_metadata_iter_next(
     iter: *mut FoxgloveChannelMetadataIterator,
