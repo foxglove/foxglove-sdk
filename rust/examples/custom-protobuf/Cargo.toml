@@ -1,0 +1,23 @@
+[package]
+name = "custom-protobuf"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "custom_protobuf"
+path = "src/main.rs"
+
+[dependencies]
+bytes.workspace = true
+env_logger = "0.11.8"
+foxglove = { version = "0.8.1", path = "../../foxglove", features = ["derive", "schemars"] }
+foxglove_derive = { version = "0.8.1", path = "../../foxglove_derive" }
+schemars = "0.9.0"
+serde.workspace = true
+serde_json = "1.0.140"
+
+[lints]
+workspace = true

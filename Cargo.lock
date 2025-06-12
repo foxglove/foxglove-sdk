@@ -371,6 +371,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "custom-protobuf"
+version = "0.8.1"
+dependencies = [
+ "bytes",
+ "env_logger",
+ "foxglove",
+ "foxglove_derive",
+ "schemars",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "darling"
 version = "0.20.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1454,6 +1467,23 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.102",
+]
+
+[[package]]
+name = "prost-protobuf"
+version = "0.8.1"
+dependencies = [
+ "anyhow",
+ "bytes",
+ "env_logger",
+ "foxglove",
+ "foxglove_derive",
+ "prost",
+ "prost-build",
+ "prost-types",
+ "schemars",
+ "serde",
+ "walkdir",
 ]
 
 [[package]]
