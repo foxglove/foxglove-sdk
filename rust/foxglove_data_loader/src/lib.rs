@@ -7,7 +7,7 @@ pub mod generated {
         world: "host",
         export_macro_name: "export",
         pub_export_macro: true,
-        path: "../../wit",
+        path: "./wit",
     });
 }
 
