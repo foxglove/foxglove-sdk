@@ -1,0 +1,39 @@
+
+.. _program_listing_file_foxglove_include_foxglove_context.hpp:
+
+Program Listing for File context.hpp
+====================================
+
+|exhale_lsh| :ref:`Return to documentation for file <file_foxglove_include_foxglove_context.hpp>` (``foxglove/include/foxglove/context.hpp``)
+
+.. |exhale_lsh| unicode:: U+021B0 .. UPWARDS ARROW WITH TIP LEFTWARDS
+
+.. code-block:: cpp
+
+   #pragma once
+   
+   #include <cstdint>
+   #include <memory>
+   #include <optional>
+   #include <string>
+   
+   struct foxglove_context;
+   
+   namespace foxglove {
+   
+   class Context final {
+   public:
+     Context() = default;
+   
+     static Context create();
+   
+     [[nodiscard]] const foxglove_context* getInner() const noexcept {
+       return impl_.get();
+     }
+   private:
+     explicit Context(const foxglove_context* context);
+   
+     std::shared_ptr<const foxglove_context> impl_;
+   };
+   
+   }  // namespace foxglove

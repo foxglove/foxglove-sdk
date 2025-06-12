@@ -1,0 +1,29 @@
+
+.. _program_listing_file_foxglove_include_foxglove_time.hpp:
+
+Program Listing for File time.hpp
+=================================
+
+|exhale_lsh| :ref:`Return to documentation for file <file_foxglove_include_foxglove_time.hpp>` (``foxglove/include/foxglove/time.hpp``)
+
+.. |exhale_lsh| unicode:: U+021B0 .. UPWARDS ARROW WITH TIP LEFTWARDS
+
+.. code-block:: cpp
+
+   #pragma once
+   
+   #include <cstdint>
+   
+   namespace foxglove {
+   
+   struct Timestamp {
+     uint32_t sec;
+     uint32_t nsec;
+   };
+   
+   struct Duration {
+     int32_t sec;
+     uint32_t nsec;
+   };
+   
+   }  // namespace foxglove

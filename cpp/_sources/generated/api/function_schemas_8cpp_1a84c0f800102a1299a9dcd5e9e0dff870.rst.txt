@@ -1,0 +1,14 @@
+.. _exhale_function_schemas_8cpp_1a84c0f800102a1299a9dcd5e9e0dff870:
+
+Function foxglove::schemas::sceneEntityDeletionToC
+==================================================
+
+- Defined in :ref:`file_foxglove_src_schemas.cpp`
+
+
+Function Documentation
+----------------------
+
+
+.. doxygenfunction:: foxglove::schemas::sceneEntityDeletionToC(foxglove_scene_entity_deletion&, const SceneEntityDeletion&, Arena&)
+   :project: Foxglove SDK

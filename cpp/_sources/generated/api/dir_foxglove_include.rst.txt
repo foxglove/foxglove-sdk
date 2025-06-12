@@ -1,0 +1,21 @@
+.. _dir_foxglove_include:
+
+
+Directory include
+=================
+
+
+|exhale_lsh| :ref:`Parent directory <dir_foxglove>` (``foxglove``)
+
+.. |exhale_lsh| unicode:: U+021B0 .. UPWARDS ARROW WITH TIP LEFTWARDS
+
+
+*Directory path:* ``foxglove/include``
+
+Subdirectories
+--------------
+
+- :ref:`dir_foxglove_include_foxglove`
+
+
+

@@ -1,0 +1,14 @@
+.. _exhale_enum_namespacefoxglove_1ad68fac9cb747dfc3a20fba3339358270:
+
+Enum McapCompression
+====================
+
+- Defined in :ref:`file_foxglove_include_foxglove_mcap.hpp`
+
+
+Enum Documentation
+------------------
+
+
+.. doxygenenum:: foxglove::McapCompression
+   :project: Foxglove SDK

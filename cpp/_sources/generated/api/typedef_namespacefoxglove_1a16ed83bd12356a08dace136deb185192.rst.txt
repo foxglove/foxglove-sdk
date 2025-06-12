@@ -1,0 +1,14 @@
+.. _exhale_typedef_namespacefoxglove_1a16ed83bd12356a08dace136deb185192:
+
+Typedef foxglove::ServiceHandler
+================================
+
+- Defined in :ref:`file_foxglove_include_foxglove_server_service.hpp`
+
+
+Typedef Documentation
+---------------------
+
+
+.. doxygentypedef:: foxglove::ServiceHandler
+   :project: Foxglove SDK

@@ -1,0 +1,14 @@
+.. _exhale_function_schemas_8cpp_1a35be5dd0f2569c599d65c9b060f3da25:
+
+Function foxglove::schemas::poseToC
+===================================
+
+- Defined in :ref:`file_foxglove_src_schemas.cpp`
+
+
+Function Documentation
+----------------------
+
+
+.. doxygenfunction:: foxglove::schemas::poseToC(foxglove_pose&, const Pose&, Arena&)
+   :project: Foxglove SDK
