@@ -29,6 +29,24 @@ mod service;
 
 use parameter::FoxgloveParameterArray;
 
+/// A key-value pair of strings.
+#[repr(C)]
+pub struct FoxgloveKeyValue {
+    /// The key
+    key: FoxgloveString,
+    /// The value
+    value: FoxgloveString,
+}
+
+/// A collection of metadata items for a channel.
+#[repr(C)]
+pub struct FoxgloveChannelMetadata {
+    /// The items in the metadata collection.
+    items: *const FoxgloveKeyValue,
+    /// The number of items in the metadata collection.
+    count: usize,
+}
+
 /// A string with associated length.
 #[repr(C)]
 pub struct FoxgloveString {
@@ -946,6 +964,8 @@ pub struct FoxgloveChannel(foxglove::RawChannel);
 /// `schema` is an optional pointer to a schema. The schema and the data it points to
 /// need only remain alive for the duration of this function call (they will be copied).
 /// `context` can be null, or a valid pointer to a context created via `foxglove_context_new`.
+/// `metadata` can be null, or a valid pointer to a collection of key/value pairs. If keys are
+///     duplicated in the collection, the last value for each key will be used.
 /// `channel` is an out **FoxgloveChannel pointer, which will be set to the created channel
 /// if the function returns success.
 #[unsafe(no_mangle)]
@@ -954,6 +974,7 @@ pub unsafe extern "C" fn foxglove_raw_channel_create(
     message_encoding: FoxgloveString,
     schema: *const FoxgloveSchema,
     context: *const FoxgloveContext,
+    metadata: *const FoxgloveChannelMetadata,
     channel: *mut *const FoxgloveChannel,
 ) -> FoxgloveError {
     if channel.is_null() {
@@ -961,7 +982,8 @@ pub unsafe extern "C" fn foxglove_raw_channel_create(
         return FoxgloveError::ValueError;
     }
     unsafe {
-        let result = do_foxglove_raw_channel_create(topic, message_encoding, schema, context);
+        let result =
+            do_foxglove_raw_channel_create(topic, message_encoding, schema, context, metadata);
         result_to_c(result, channel)
     }
 }
@@ -971,6 +993,7 @@ unsafe fn do_foxglove_raw_channel_create(
     message_encoding: FoxgloveString,
     schema: *const FoxgloveSchema,
     context: *const FoxgloveContext,
+    metadata: *const FoxgloveChannelMetadata,
 ) -> Result<*const FoxgloveChannel, foxglove::FoxgloveError> {
     let topic = unsafe { topic.as_utf8_str() }
         .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("topic invalid: {}", e)))?;
@@ -990,6 +1013,19 @@ unsafe fn do_foxglove_raw_channel_create(
     if !context.is_null() {
         let context = ManuallyDrop::new(unsafe { Arc::from_raw(context) });
         builder = builder.context(&context);
+    }
+    if !metadata.is_null() {
+        let metadata = ManuallyDrop::new(unsafe { Arc::from_raw(metadata) });
+        for i in 0..metadata.count {
+            let item = unsafe { metadata.items.add(i) };
+            let key = unsafe { (*item).key.as_utf8_str() }.map_err(|e| {
+                foxglove::FoxgloveError::Utf8Error(format!("invalid metadata key: {}", e))
+            })?;
+            let value = unsafe { (*item).value.as_utf8_str() }.map_err(|e| {
+                foxglove::FoxgloveError::Utf8Error(format!("invalid metadata value: {}", e))
+            })?;
+            builder = builder.add_metadata(key, value);
+        }
     }
     builder
         .build_raw()
@@ -1153,6 +1189,93 @@ pub extern "C" fn foxglove_channel_has_sinks(channel: Option<&FoxgloveChannel>) 
         return false;
     };
     channel.0.has_sinks()
+}
+
+/// An iterator over channel metadata key-value pairs.
+#[repr(C)]
+pub struct FoxgloveChannelMetadataIterator {
+    /// The channel with metadata to iterate
+    channel: *const FoxgloveChannel,
+    /// Current index
+    index: usize,
+}
+
+/// Create an iterator over a channel's metadata.
+///
+/// You must later free the iterator using foxglove_channel_metadata_iter_free.
+///
+/// Iterate items using foxglove_channel_metadata_iter_next.
+///
+/// # Safety
+/// `channel` must be a valid pointer to a `foxglove_channel` created via `foxglove_channel_create`.
+/// The channel must remain valid for the lifetime of the iterator.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_channel_metadata_iter_create(
+    channel: Option<&FoxgloveChannel>,
+) -> *mut FoxgloveChannelMetadataIterator {
+    let Some(channel) = channel else {
+        return std::ptr::null_mut();
+    };
+    Box::into_raw(Box::new(FoxgloveChannelMetadataIterator {
+        channel: channel as *const _,
+        index: 0,
+    }))
+}
+
+/// Get the next key-value pair from the metadata iterator.
+///
+/// Returns true if a pair was found and stored in `key_value`, false if the iterator is exhausted.
+///
+/// # Safety
+/// `iter` must be a valid pointer to a `FoxgloveChannelMetadataIterator` created via
+/// `foxglove_channel_metadata_iter_create`.
+/// `key_value` must be a valid pointer to a `FoxgloveKeyValue` that will be filled in.
+/// The channel itself must still be valid.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_channel_metadata_iter_next(
+    iter: *mut FoxgloveChannelMetadataIterator,
+    key_value: *mut FoxgloveKeyValue,
+) -> bool {
+    if iter.is_null() || key_value.is_null() {
+        return false;
+    }
+    let iter = unsafe { &mut *iter };
+    let channel = unsafe { &*iter.channel };
+    let metadata = channel.0.metadata();
+
+    if iter.index >= metadata.len() {
+        return false;
+    }
+
+    let Some((key, value)) = metadata.iter().nth(iter.index) else {
+        return false;
+    };
+
+    unsafe {
+        *key_value = FoxgloveKeyValue {
+            key: FoxgloveString::from(key),
+            value: FoxgloveString::from(value),
+        };
+    }
+
+    iter.index += 1;
+    true
+}
+
+/// Free a metadata iterator created via `foxglove_channel_metadata_iter_create`.
+///
+/// # Safety
+/// `iter` must be a valid pointer to a `FoxgloveChannelMetadataIterator` created via
+/// `foxglove_channel_metadata_iter_create`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_channel_metadata_iter_free(
+    iter: *mut FoxgloveChannelMetadataIterator,
+) {
+    if !iter.is_null() {
+        // Safety: undo the Box::into_raw in foxglove_channel_metadata_iter_create; safe if this was
+        // created by that method
+        drop(unsafe { Box::from_raw(iter) });
+    }
 }
 
 /// Log a message on a channel.

@@ -7,7 +7,8 @@ namespace foxglove {
 
 FoxgloveResult<RawChannel> RawChannel::create(
   const std::string_view& topic, const std::string_view& message_encoding,
-  std::optional<Schema> schema, const Context& context
+  std::optional<Schema> schema, const Context& context,
+  std::optional<std::map<std::string, std::string>> metadata
 ) {
   foxglove_schema c_schema = {};
   if (schema) {
@@ -16,12 +17,26 @@ FoxgloveResult<RawChannel> RawChannel::create(
     c_schema.data = reinterpret_cast<const uint8_t*>(schema->data);
     c_schema.data_len = schema->data_len;
   }
+  foxglove_channel_metadata c_metadata = {};
+  std::vector<foxglove_key_value> metadata_items;  // Keep this alive for the duration of the call
+  if (metadata) {
+    metadata_items.reserve(metadata->size());
+    for (const auto& [key, value] : *metadata) {
+      foxglove_string k = {key.data(), key.length()};
+      foxglove_string v = {value.data(), value.length()};
+      metadata_items.push_back({k, v});
+    }
+    c_metadata.items = metadata_items.data();
+    c_metadata.count = metadata_items.size();
+  }
+
   const foxglove_channel* channel = nullptr;
   foxglove_error error = foxglove_raw_channel_create(
     {topic.data(), topic.length()},
     {message_encoding.data(), message_encoding.length()},
     schema ? &c_schema : nullptr,
     context.getInner(),
+    metadata ? &c_metadata : nullptr,
     &channel
   );
   if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
@@ -68,6 +83,24 @@ std::optional<Schema> RawChannel::schema() const noexcept {
   schema.data = reinterpret_cast<const std::byte*>(c_schema.data);
   schema.data_len = c_schema.data_len;
   return schema;
+}
+
+std::optional<std::map<std::string, std::string>> RawChannel::metadata() const noexcept {
+  std::map<std::string, std::string> result;
+
+  foxglove_channel_metadata_iterator* iter = foxglove_channel_metadata_iter_create(impl_.get());
+  if (!iter) {
+    return std::nullopt;
+  }
+
+  struct foxglove_key_value item;
+  while (foxglove_channel_metadata_iter_next(iter, &item)) {
+    result[std::string(item.key.data, item.key.len)] = std::string(item.value.data, item.value.len);
+  }
+
+  foxglove_channel_metadata_iter_free(iter);
+
+  return result;
 }
 
 FoxgloveError RawChannel::log(
