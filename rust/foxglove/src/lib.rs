@@ -17,7 +17,7 @@
 //! ```
 //!
 //! The following sections illustrate how to use the SDK. For a more hands-on walk-through, see
-//! https://docs.foxglove.dev/docs/sdk/example.
+//! <https://docs.foxglove.dev/docs/sdk/example>.
 //!
 //! # Recording messages
 //!
