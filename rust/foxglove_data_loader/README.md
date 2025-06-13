@@ -86,4 +86,4 @@ For a more complete example, check out the [rust-data-loader][] example in the
 
 [rust-data-loader]: https://github.com/foxglove/create-foxglove-extension/tree/main/examples
 [create-foxglove-extension]: https://github.com/foxglove/create-foxglove-extension
-[foxglove-extension]: https://docs.foxglove.dev/docs/visualization/extensions/introduction
+[foxglove extension]: https://docs.foxglove.dev/docs/visualization/extensions/introduction
