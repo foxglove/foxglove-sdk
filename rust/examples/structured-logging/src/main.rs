@@ -28,7 +28,7 @@ static POINTS_CHANNEL: LazyRawChannel = LazyRawChannel::new("/points", "json").s
         .as_bytes(),
 );
 // This channel logs a custom type as JSON using the schemars feature to generate the jsonschema automatically
-static ORANGE_CHANNEL: LazyChannel<Apple> = LazyChannel::new("/apple");
+static APPLE_CHANNEL: LazyChannel<Apple> = LazyChannel::new("/apple");
 // This channel logs a custom type as protobuf, using foxglove_derive
 // Note: this doesn't give you control over field tags,
 // it's fine as a quick-and-dirty way to serialize a struct
@@ -77,12 +77,12 @@ fn main() {
 
     // For a typed JSON channel, we can just pass the struct directly.
     // The type system ensures conformance with the schema.
-    ORANGE_CHANNEL.log(&Apple {
+    APPLE_CHANNEL.log(&Apple {
         color: "red".to_string(),
         diameter: 10.0,
     });
 
-    // Or if we just want to serialize a struct without caring about the format,
+    // Or if we just want to serialize a struct without caring about the encoding,
     // we can use the foxglove_derive feature to serialize to binary protobuf automatically
     BANANA_CHANNEL.log(&Banana {
         length: 10.0,
