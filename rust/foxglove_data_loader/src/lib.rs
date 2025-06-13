@@ -11,6 +11,7 @@ pub mod generated {
 
 /// Export a data loader to wasm output with this macro.
 #[macro_export]
+#[allow(clippy::crate_in_macro_def)]
 macro_rules! export {
     ( $L:ident ) => {
         mod __foxglove_data_loader_export {
