@@ -1,6 +1,5 @@
 use bytes::Bytes;
-use foxglove::{schemas, LazyChannel, LazyRawChannel, McapWriteOptions, McapWriter};
-use foxglove_derive::Encode;
+use foxglove::{schemas, Encode, LazyChannel, LazyRawChannel, McapWriteOptions, McapWriter};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
