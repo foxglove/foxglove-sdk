@@ -1457,23 +1457,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "prost-protobuf"
-version = "0.8.1"
-dependencies = [
- "anyhow",
- "bytes",
- "env_logger",
- "foxglove",
- "foxglove_derive",
- "prost",
- "prost-build",
- "prost-types",
- "schemars",
- "serde",
- "walkdir",
-]
-
-[[package]]
 name = "prost-reflect"
 version = "0.15.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"

@@ -35,7 +35,7 @@ static ORANGE_CHANNEL: LazyChannel<Apple> = LazyChannel::new("/apple");
 // but limited for evolving a type over time.
 static BANANA_CHANNEL: LazyChannel<Banana> = LazyChannel::new("/banana");
 // It's also possible to use a protobuf library and generate the types
-// Or to use any other serilaization format, see the the prost-protobuf example.
+// Or to use any other serialization format, see the the prost-protobuf example.
 
 const IMG_DATA: &[u8] = include_bytes!("fox.webp");
 

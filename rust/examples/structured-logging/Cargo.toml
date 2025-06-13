@@ -7,7 +7,7 @@ repository.workspace = true
 license.workspace = true
 
 [[bin]]
-name = "custom_protobuf"
+name = "structured-logging"
 path = "src/main.rs"
 
 [dependencies]
