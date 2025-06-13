@@ -15,3 +15,9 @@ version = "0.8.0"
 path = "../foxglove"
 default-features = false
 features = [ "derive" ]
+
+[dev-dependencies]
+anyhow = "1.0.98"
+prost.workspace = true
+serde.workspace = true
+serde_json = "1.0.140"

@@ -1,5 +1,3 @@
-use foxglove::{Encode, Schema};
-
 pub mod generated {
     // Confine the mess of the things that generate defines to a dedicated namespace with this
     // inline module.
@@ -27,14 +25,15 @@ macro_rules! export {
 }
 
 pub use generated::exports::foxglove::loader::loader::{
-    self, BackfillArgs, Channel, InitializeResult, Message, MessageIteratorArgs, TimeRange,
+    self, BackfillArgs, Channel, DataLoaderArgs, Initialization, Message, MessageIteratorArgs,
+    Schema, TimeRange,
 };
 pub use generated::foxglove::loader::console;
 pub use generated::foxglove::loader::reader;
 
 impl std::io::Read for reader::Reader {
     fn read(&mut self, dst: &mut [u8]) -> Result<usize, std::io::Error> {
-        Ok(reader::Reader::read(&self, dst) as usize)
+        Ok(reader::Reader::read(self, dst) as usize)
     }
 }
 
@@ -42,106 +41,28 @@ impl std::io::Seek for reader::Reader {
     fn seek(&mut self, seek: std::io::SeekFrom) -> Result<u64, std::io::Error> {
         match seek {
             std::io::SeekFrom::Start(offset) => {
-                reader::Reader::seek(&self, offset);
+                reader::Reader::seek(self, offset);
             }
             std::io::SeekFrom::End(offset) => {
-                let end = reader::Reader::size(&self) as i64;
-                reader::Reader::seek(&self, (end - offset) as u64);
+                let end = reader::Reader::size(self) as i64;
+                reader::Reader::seek(self, (end - offset) as u64);
             }
             std::io::SeekFrom::Current(offset) => {
-                let pos = reader::Reader::position(&self) as i64;
-                reader::Reader::seek(&self, (pos + offset) as u64);
+                let pos = reader::Reader::position(self) as i64;
+                reader::Reader::seek(self, (pos + offset) as u64);
             }
         }
-        Ok(reader::Reader::position(&self))
+        Ok(reader::Reader::position(self))
     }
 }
 
-impl Channel {
-    /// Return a ChannelBuilder to set properties for a Channel.
-    pub fn builder() -> ChannelBuilder {
-        ChannelBuilder::default()
-    }
-}
-
-/// Builder interface to create a Channel.
-#[derive(Default)]
-pub struct ChannelBuilder {
-    id: u16,
-    topic_name: String,
-    schema_name: String,
-    message_encoding: String,
-    schema_encoding: String,
-    schema_data: Vec<u8>,
-    message_count: Option<u64>,
-}
-
-impl ChannelBuilder {
-    /// Set the channel id.
-    pub fn id(mut self, id: u16) -> Self {
-        self.id = id;
-        self
-    }
-
-    /// Set the channel topic name.
-    pub fn topic(mut self, topic_name: &str) -> Self {
-        self.topic_name = topic_name.to_string();
-        self
-    }
-
-    /// Set the schema and message encoding from a foxglove::Encode.
-    /// Panics if T::get_schema() is None.
-    pub fn encode<T: Encode>(self) -> Self {
-        let schema = T::get_schema().expect("failed to get schema");
-        self.schema(schema)
-            .message_encoding(&T::get_message_encoding())
-    }
-
-    /// Set the channel schema name, schema encoding, and schema data from a foxglove::Schema.
-    pub fn schema(mut self, schema: Schema) -> Self {
-        self.schema_name = schema.name;
-        self.schema_encoding = schema.encoding;
-        self.schema_data = schema.data.into();
-        self
-    }
-
-    pub fn schema_name(mut self, schema_name: &str) -> Self {
-        self.schema_name = schema_name.to_string();
-        self
-    }
-
-    pub fn schema_encoding(mut self, schema_encoding: &str) -> Self {
-        self.schema_encoding = schema_encoding.to_string();
-        self
-    }
-
-    pub fn schema_data(mut self, schema_data: Vec<u8>) -> Self {
-        self.schema_data = schema_data;
-        self
-    }
-
-    /// Set the channel message encoding.
-    pub fn message_encoding(mut self, message_encoding: &str) -> Self {
-        self.message_encoding = message_encoding.to_string();
-        self
-    }
-
-    /// Set the message count.
-    pub fn message_count(mut self, message_count: Option<u64>) -> Self {
-        self.message_count = message_count;
-        self
-    }
-
-    /// Turn this ChannelBuilder into a Channel.
-    pub fn build(self) -> Channel {
-        Channel {
-            id: self.id,
-            topic_name: self.topic_name,
-            message_encoding: self.message_encoding,
-            message_count: self.message_count,
-            schema_name: self.schema_name,
-            schema_encoding: self.schema_encoding,
-            schema_data: self.schema_data,
+impl Schema {
+    pub fn from_id_sdk(id: u16, schema: foxglove::Schema) -> Schema {
+        Schema {
+            id,
+            name: schema.name,
+            encoding: schema.encoding,
+            data: schema.data.to_vec(),
         }
     }
 }
@@ -155,8 +76,8 @@ pub trait DataLoader: 'static + Sized {
     type MessageIterator: loader::GuestMessageIterator;
     type Error: Into<Box<dyn std::error::Error>>;
 
-    fn from_paths(inputs: Vec<String>) -> Result<Self, Self::Error>;
-    fn initialize(&self) -> loader::InitializeResult;
+    fn new(args: DataLoaderArgs) -> Self;
+    fn initialize(&self) -> Result<loader::Initialization, Self::Error>;
 
     fn create_iter(
         &self,
@@ -174,25 +95,23 @@ pub trait MessageIterator: 'static + Sized {
 impl<T: DataLoader> loader::Guest for T {
     type DataLoader = Self;
     type MessageIterator = T::MessageIterator;
-
-    fn from_paths(inputs: Vec<String>) -> Result<loader::DataLoader, String> {
-        T::from_paths(inputs)
-            .map(|loader| loader::DataLoader::new(loader))
-            .map_err(|e| e.into().to_string())
-    }
 }
 
 impl<T: DataLoader> loader::GuestDataLoader for T {
-    fn initialize(&self) -> InitializeResult {
-        T::initialize(self)
+    fn new(args: loader::DataLoaderArgs) -> T {
+        T::new(args)
     }
 
-    fn create_iter(
+    fn initialize(&self) -> Result<Initialization, String> {
+        T::initialize(self).map_err(|e| e.into().to_string())
+    }
+
+    fn create_iterator(
         &self,
         args: loader::MessageIteratorArgs,
     ) -> Result<loader::MessageIterator, String> {
         T::create_iter(self, args)
-            .map(|iter| loader::MessageIterator::new(iter))
+            .map(loader::MessageIterator::new)
             .map_err(|err| err.into().to_string())
     }
 
