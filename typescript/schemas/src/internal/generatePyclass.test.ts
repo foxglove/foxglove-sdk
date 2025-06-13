@@ -63,6 +63,11 @@ describe("generatePyclass", () => {
      /// :param field_enum_array: An enum array field
      /// :param field_nested: A nested field
      /// :param field_nested_array: A nested array field
+     ///     With
+     ///     a
+     ///     very
+     ///     long
+     ///     description
      ///
      /// See https://docs.foxglove.dev/docs/visualization/message-schemas/example-message
      #[pyclass(module = "foxglove.schemas")]

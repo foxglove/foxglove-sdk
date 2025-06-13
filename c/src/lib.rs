@@ -29,6 +29,24 @@ mod service;
 
 use parameter::FoxgloveParameterArray;
 
+/// A key-value pair of strings.
+#[repr(C)]
+pub struct FoxgloveKeyValue {
+    /// The key
+    key: FoxgloveString,
+    /// The value
+    value: FoxgloveString,
+}
+
+/// A collection of metadata items for a channel.
+#[repr(C)]
+pub struct FoxgloveChannelMetadata {
+    /// The items in the metadata collection.
+    items: *const FoxgloveKeyValue,
+    /// The number of items in the metadata collection.
+    count: usize,
+}
+
 /// A string with associated length.
 #[repr(C)]
 pub struct FoxgloveString {
@@ -36,6 +54,15 @@ pub struct FoxgloveString {
     data: *const c_char,
     /// Number of bytes in the string
     len: usize,
+}
+
+impl Default for FoxgloveString {
+    fn default() -> Self {
+        Self {
+            data: "".as_ptr().cast(),
+            len: 0,
+        }
+    }
 }
 
 impl FoxgloveString {
@@ -937,6 +964,8 @@ pub struct FoxgloveChannel(foxglove::RawChannel);
 /// `schema` is an optional pointer to a schema. The schema and the data it points to
 /// need only remain alive for the duration of this function call (they will be copied).
 /// `context` can be null, or a valid pointer to a context created via `foxglove_context_new`.
+/// `metadata` can be null, or a valid pointer to a collection of key/value pairs. If keys are
+///     duplicated in the collection, the last value for each key will be used.
 /// `channel` is an out **FoxgloveChannel pointer, which will be set to the created channel
 /// if the function returns success.
 #[unsafe(no_mangle)]
@@ -945,6 +974,7 @@ pub unsafe extern "C" fn foxglove_raw_channel_create(
     message_encoding: FoxgloveString,
     schema: *const FoxgloveSchema,
     context: *const FoxgloveContext,
+    metadata: *const FoxgloveChannelMetadata,
     channel: *mut *const FoxgloveChannel,
 ) -> FoxgloveError {
     if channel.is_null() {
@@ -952,7 +982,8 @@ pub unsafe extern "C" fn foxglove_raw_channel_create(
         return FoxgloveError::ValueError;
     }
     unsafe {
-        let result = do_foxglove_raw_channel_create(topic, message_encoding, schema, context);
+        let result =
+            do_foxglove_raw_channel_create(topic, message_encoding, schema, context, metadata);
         result_to_c(result, channel)
     }
 }
@@ -962,6 +993,7 @@ unsafe fn do_foxglove_raw_channel_create(
     message_encoding: FoxgloveString,
     schema: *const FoxgloveSchema,
     context: *const FoxgloveContext,
+    metadata: *const FoxgloveChannelMetadata,
 ) -> Result<*const FoxgloveChannel, foxglove::FoxgloveError> {
     let topic = unsafe { topic.as_utf8_str() }
         .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("topic invalid: {}", e)))?;
@@ -981,6 +1013,19 @@ unsafe fn do_foxglove_raw_channel_create(
     if !context.is_null() {
         let context = ManuallyDrop::new(unsafe { Arc::from_raw(context) });
         builder = builder.context(&context);
+    }
+    if !metadata.is_null() {
+        let metadata = ManuallyDrop::new(unsafe { Arc::from_raw(metadata) });
+        for i in 0..metadata.count {
+            let item = unsafe { metadata.items.add(i) };
+            let key = unsafe { (*item).key.as_utf8_str() }.map_err(|e| {
+                foxglove::FoxgloveError::Utf8Error(format!("invalid metadata key: {}", e))
+            })?;
+            let value = unsafe { (*item).value.as_utf8_str() }.map_err(|e| {
+                foxglove::FoxgloveError::Utf8Error(format!("invalid metadata value: {}", e))
+            })?;
+            builder = builder.add_metadata(key, value);
+        }
     }
     builder
         .build_raw()
@@ -1003,6 +1048,26 @@ pub(crate) unsafe fn do_foxglove_channel_create<T: foxglove::Encode>(
         builder = builder.context(&context);
     }
     Ok(Arc::into_raw(builder.build::<T>().into_inner()) as *const FoxgloveChannel)
+}
+
+/// Close a channel.
+///
+/// You can use this to explicitly unadvertise the channel to sinks that subscribe to channels
+/// dynamically, such as the WebSocketServer.
+///
+/// Attempts to log on a closed channel will elicit a throttled warning message.
+///
+/// Note this *does not* free the channel.
+///
+/// # Safety
+/// `channel` must be a valid pointer to a `foxglove_channel` created via `foxglove_channel_create`.
+/// If channel is null, this does nothing.
+#[unsafe(no_mangle)]
+pub extern "C" fn foxglove_channel_close(channel: Option<&FoxgloveChannel>) {
+    let Some(channel) = channel else {
+        return;
+    };
+    channel.0.close();
 }
 
 /// Free a channel created via `foxglove_channel_create`.
@@ -1030,6 +1095,187 @@ pub extern "C" fn foxglove_channel_get_id(channel: Option<&FoxgloveChannel>) -> 
         return 0;
     };
     u64::from(channel.0.id())
+}
+
+/// Get the topic of a channel.
+///
+/// # Safety
+/// `channel` must be a valid pointer to a `foxglove_channel` created via `foxglove_channel_create`.
+///
+/// If the passed channel is null, an empty value is returned.
+///
+/// The returned value is valid only for the lifetime of the channel.
+#[unsafe(no_mangle)]
+pub extern "C" fn foxglove_channel_get_topic(channel: Option<&FoxgloveChannel>) -> FoxgloveString {
+    let Some(channel) = channel else {
+        return FoxgloveString::default();
+    };
+    FoxgloveString {
+        data: channel.0.topic().as_ptr().cast(),
+        len: channel.0.topic().len(),
+    }
+}
+
+/// Get the message_encoding of a channel.
+///
+/// # Safety
+/// `channel` must be a valid pointer to a `foxglove_channel` created via `foxglove_channel_create`.
+///
+/// If the passed channel is null, an empty value is returned.
+///
+/// The returned value is valid only for the lifetime of the channel.
+#[unsafe(no_mangle)]
+pub extern "C" fn foxglove_channel_get_message_encoding(
+    channel: Option<&FoxgloveChannel>,
+) -> FoxgloveString {
+    let Some(channel) = channel else {
+        return FoxgloveString::default();
+    };
+    FoxgloveString {
+        data: channel.0.message_encoding().as_ptr().cast(),
+        len: channel.0.message_encoding().len(),
+    }
+}
+
+/// Get the schema of a channel.
+///
+/// If the passed channel is null or has no schema, returns `FoxgloveError::ValueError`.
+///
+/// # Safety
+/// `channel` must be a valid pointer to a `foxglove_channel` created via `foxglove_channel_create`.
+/// `schema` must be a valid pointer to a `FoxgloveSchema` struct that will be filled in.
+///
+/// The returned value is valid only for the lifetime of the channel.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_channel_get_schema(
+    channel: Option<&FoxgloveChannel>,
+    schema: *mut FoxgloveSchema,
+) -> FoxgloveError {
+    let Some(channel) = channel else {
+        return FoxgloveError::ValueError;
+    };
+    if schema.is_null() {
+        return FoxgloveError::ValueError;
+    }
+    let Some(schema_data) = channel.0.schema() else {
+        return FoxgloveError::ValueError;
+    };
+
+    unsafe {
+        (*schema).name = FoxgloveString {
+            data: schema_data.name.as_ptr().cast(),
+            len: schema_data.name.len(),
+        };
+        (*schema).encoding = FoxgloveString {
+            data: schema_data.encoding.as_ptr().cast(),
+            len: schema_data.encoding.len(),
+        };
+        (*schema).data = schema_data.data.as_ptr().cast();
+        (*schema).data_len = schema_data.data.len();
+    }
+
+    FoxgloveError::Ok
+}
+
+/// Find out if any sinks have been added to a channel.
+///
+/// # Safety
+/// `channel` must be a valid pointer to a `foxglove_channel` created via `foxglove_channel_create`.
+///
+/// If the passed channel is null, false is returned.
+#[unsafe(no_mangle)]
+pub extern "C" fn foxglove_channel_has_sinks(channel: Option<&FoxgloveChannel>) -> bool {
+    let Some(channel) = channel else {
+        return false;
+    };
+    channel.0.has_sinks()
+}
+
+/// An iterator over channel metadata key-value pairs.
+#[repr(C)]
+pub struct FoxgloveChannelMetadataIterator {
+    /// The channel with metadata to iterate
+    channel: *const FoxgloveChannel,
+    /// Current index
+    index: usize,
+}
+
+/// Create an iterator over a channel's metadata.
+///
+/// You must later free the iterator using foxglove_channel_metadata_iter_free.
+///
+/// Iterate items using foxglove_channel_metadata_iter_next.
+///
+/// # Safety
+/// `channel` must be a valid pointer to a `foxglove_channel` created via `foxglove_channel_create`.
+/// The channel must remain valid for the lifetime of the iterator.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_channel_metadata_iter_create(
+    channel: Option<&FoxgloveChannel>,
+) -> *mut FoxgloveChannelMetadataIterator {
+    let Some(channel) = channel else {
+        return std::ptr::null_mut();
+    };
+    Box::into_raw(Box::new(FoxgloveChannelMetadataIterator {
+        channel: channel as *const _,
+        index: 0,
+    }))
+}
+
+/// Get the next key-value pair from the metadata iterator.
+///
+/// Returns true if a pair was found and stored in `key_value`, false if the iterator is exhausted.
+///
+/// # Safety
+/// `iter` must be a valid pointer to a `FoxgloveChannelMetadataIterator` created via
+/// `foxglove_channel_metadata_iter_create`.
+/// `key_value` must be a valid pointer to a `FoxgloveKeyValue` that will be filled in.
+/// The channel itself must still be valid.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_channel_metadata_iter_next(
+    iter: *mut FoxgloveChannelMetadataIterator,
+    key_value: *mut FoxgloveKeyValue,
+) -> bool {
+    if iter.is_null() || key_value.is_null() {
+        return false;
+    }
+    let iter = unsafe { &mut *iter };
+    let channel = unsafe { &*iter.channel };
+    let metadata = channel.0.metadata();
+
+    if iter.index >= metadata.len() {
+        return false;
+    }
+
+    let Some((key, value)) = metadata.iter().nth(iter.index) else {
+        return false;
+    };
+
+    unsafe {
+        *key_value = FoxgloveKeyValue {
+            key: FoxgloveString::from(key),
+            value: FoxgloveString::from(value),
+        };
+    }
+
+    iter.index += 1;
+    true
+}
+
+/// Free a metadata iterator created via `foxglove_channel_metadata_iter_create`.
+///
+/// # Safety
+/// `iter` must be a valid pointer to a `FoxgloveChannelMetadataIterator` created via
+/// `foxglove_channel_metadata_iter_create`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_channel_metadata_iter_free(
+    iter: *mut FoxgloveChannelMetadataIterator,
+) {
+    if !iter.is_null() {
+        // Safety: undo the Box::into_raw in foxglove_channel_metadata_iter_create; safe if this was
+        // created by that method
+        drop(unsafe { Box::from_raw(iter) });
+    }
 }
 
 /// Log a message on a channel.

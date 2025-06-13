@@ -157,32 +157,68 @@ export function generatePySchemaModule(schemas: FoxgloveSchema[]): string {
   return [...headers, ...imports, alias, ...exports, ""].join("\n");
 }
 
-function rustDoc(str: string, opts: { indent?: number } = {}): string {
-  const ws = " ".repeat(opts.indent ?? 0);
+/**
+ * Format a string as a Rust doc comment, splitting on newlines and prefixing each line with `///`.
+ */
+function rustDoc(str: string): string {
   return str
     .split("\n")
-    .map((line) => `${ws}/// ${line}`)
+    .map((line) => `/// ${line}`)
     .join("\n");
 }
 
-function firstLine(str: string): string {
-  return str.split("\n")[0]?.trim() ?? str;
+/**
+ * Convert markdown links to RST format: [text](url) becomes `text <url>`__
+ */
+function convertMarkdownLinksToRst(text: string): string {
+  return text.replace(/\[(?<text>[^\]]+)\]\((?<url>[^)]+)\)/g, "`$<text> <$<url>>`__");
+}
+
+/**
+ * Generate a :param doc comment for a field.
+ *
+ * The returned string may be multi-line. This converts markdown code blocks and links to RST inside
+ * extended descriptions.
+ */
+function pythonParamDoc(field: FoxgloveMessageField): string {
+  const lines = field.description.split("\n");
+  const [firstLine, ...rest] = lines;
+  const output: string[] = [];
+  if (firstLine == undefined) {
+    return "";
+  }
+
+  output.push(`:param ${field.name}: ${firstLine}`);
+  if (rest.length === 0) {
+    return output.join("\n");
+  }
+
+  let inCodeBlock = false;
+  for (const line of rest) {
+    if (line.startsWith("```")) {
+      if (!inCodeBlock) {
+        // Start an RST code block, which requires a following blank line
+        output.push("    ::");
+        output.push("");
+      }
+      inCodeBlock = !inCodeBlock;
+      continue;
+    }
+
+    const indent = " ".repeat(inCodeBlock ? 8 : 4);
+    const rst = inCodeBlock ? line : convertMarkdownLinksToRst(line);
+    output.push(indent + rst);
+  }
+
+  return output.join("\n");
 }
 
 function generateMessageClass(schema: FoxgloveMessageSchema): string {
   const className = structName(schema.name);
-  const schemaFields = Array.from(schema.fields).map((field) => ({
-    fieldName: safeName(field.name),
-    argName: safeName(field.name),
-    // description: rustDoc(field.description, { indent: 4 }),
-    field,
-  }));
   const struct = [
     rustDoc(schema.description),
     `///`,
-    ...schemaFields.map(({ fieldName, field }) =>
-      rustDoc(`:param ${fieldName}: ${firstLine(field.description)}`),
-    ),
+    ...schema.fields.map((field) => rustDoc(pythonParamDoc(field))),
     `///`,
     `/// See https://docs.foxglove.dev/docs/visualization/message-schemas/${constantToKebabCase(className)}`,
     `#[pyclass(module = "foxglove.schemas")]`,
@@ -198,16 +234,16 @@ function generateMessageClass(schema: FoxgloveMessageSchema): string {
     switch (field.type.type) {
       case "primitive":
         if (field.type.name === "time" || field.type.name === "duration") {
-          return `${safeName(field.name)}.map(Into::into)`;
+          return `${safeRustName(field.name)}.map(Into::into)`;
         }
-        return safeName(field.name);
+        return safeRustName(field.name);
       case "nested":
         if (field.array != undefined) {
-          return `${safeName(field.name)}.into_iter().map(|x| x.into()).collect()`;
+          return `${safeRustName(field.name)}.into_iter().map(|x| x.into()).collect()`;
         }
-        return `${safeName(field.name)}.map(Into::into)`;
+        return `${safeRustName(field.name)}.map(Into::into)`;
       case "enum":
-        return `${safeName(field.name)} as i32`;
+        return `${safeRustName(field.name)} as i32`;
     }
   }
 
@@ -219,6 +255,12 @@ function generateMessageClass(schema: FoxgloveMessageSchema): string {
     }
     return `${name}: ${value}`;
   }
+
+  const schemaFields = Array.from(schema.fields).map((field) => ({
+    fieldName: safeRustName(field.name),
+    argName: safeRustName(field.name),
+    field,
+  }));
 
   const signature = schemaFields
     .map(({ argName, field }) => `${argName}=${rustDefaultValue(field)}`)
@@ -286,7 +328,7 @@ function enumName(schema: FoxgloveEnumSchema): string {
 /**
  * Deal with reserved keywords in identifiers
  */
-function safeName(name: string): string {
+function safeRustName(name: string): string {
   if (name === "type") {
     return "r#type";
   }
@@ -468,7 +510,7 @@ function protoName(name: string): string {
     // Schemas may include single-letter capitals; generated proto structs use lowercase
     return name.toLowerCase();
   }
-  return safeName(name);
+  return safeRustName(name);
 }
 
 function capitalize(str: string): string {
@@ -770,7 +812,7 @@ export function generatePyChannelStub(schemas: FoxgloveMessageSchema[]): string 
 export function generatePyChannelModule(schemas: FoxgloveMessageSchema[]): string {
   const headers = [
     `"""`,
-    `This defines channels to easily log messages conforming to well-known Foxglove schemas.`,
+    `This module defines channels to easily log messages conforming to well-known Foxglove schemas.`,
     ``,
     "See the :py:mod:`foxglove.schemas` module for available definitions.",
     `"""`,

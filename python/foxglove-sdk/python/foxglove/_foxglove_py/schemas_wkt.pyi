@@ -75,3 +75,12 @@ class Timestamp:
         :param dt: Datetime
         """
         ...
+
+    @staticmethod
+    def now() -> "Timestamp":
+        """
+        Creates a :py:class:`Timestamp` from the current system time.
+
+        Raises `OverflowError` if the timestamp cannot be represented.
+        """
+        ...

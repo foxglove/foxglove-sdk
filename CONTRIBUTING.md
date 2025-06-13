@@ -10,9 +10,7 @@ We commit generated files to git for several reasons:
 - Ease of importing packages (e.g. pointing cargo or npm at a specific git commit)
 
 ```sh
-corepack enable  # ensure you have corepack enabled
-yarn install     # install dependencies
-yarn generate    # regenerate files
+make generate
 ```
 
 Remember to publish new versions of all libraries!

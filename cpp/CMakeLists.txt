@@ -24,7 +24,6 @@ FetchContent_Declare(
   Catch2
   GIT_REPOSITORY https://github.com/catchorg/Catch2.git
   GIT_TAG        v3.8.0
-  SYSTEM
 )
 FetchContent_MakeAvailable(Catch2)
 list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)
@@ -214,3 +213,11 @@ set_property(TARGET example_connection_graph PROPERTY CXX_STANDARD_REQUIRED True
 target_compile_options(example_connection_graph PUBLIC ${SANITIZER_COMPILE_OPTIONS})
 target_link_options(example_connection_graph PUBLIC ${SANITIZER_LINK_OPTIONS})
 target_link_libraries(example_connection_graph foxglove_cpp_static)
+
+add_executable(example_auto_serialize examples/auto-serialize/src/main.cpp)
+set_property(TARGET example_auto_serialize PROPERTY CXX_STANDARD 17)
+set_property(TARGET example_auto_serialize PROPERTY CXX_STANDARD_REQUIRED True)
+target_compile_options(example_auto_serialize PUBLIC ${SANITIZER_COMPILE_OPTIONS})
+target_include_directories(example_auto_serialize SYSTEM PRIVATE ${json_SOURCE_DIR}/include)
+target_link_options(example_auto_serialize PUBLIC ${SANITIZER_LINK_OPTIONS})
+target_link_libraries(example_auto_serialize foxglove_cpp_static)

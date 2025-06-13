@@ -1,1 +1,6 @@
+c/src/generated_types.rs linguist-generated
+cpp/foxglove/include/foxglove/schemas.hpp linguist-generated
+python/foxglove-sdk/src/generated/* linguist-generated
+rust/foxglove/src/schemas/foxglove.rs linguist-generated
 schemas/** linguist-generated
+typescript/schemas/src/types/* linguist-generated
