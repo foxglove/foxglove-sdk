@@ -48,6 +48,14 @@ impl MessageIterator for MyIterator {
 }
 ```
 
+To read data from files in your loader, use `reader::open(&path)`. The return value implements
+`std::io::Read` and `std::io::Seek`, so you can use higher-level adaptors such as `BufReader`:
+
+``` rs
+let reader = foxglove_data_loader::reader::open(&inputs[0]);
+let mut lines = BufReader::new(reader).lines();
+```
+
 Then you can build for `wasm32-unknown-unknown` to get a `.wasm` file:
 
 ```
