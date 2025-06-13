@@ -13,6 +13,10 @@ RUN bash nodesource_setup.sh
 
 RUN apt-get update \
     && apt-get install -y \
+        libc6=2.28* \
+        libc6-dev=2.28* \
+        libstdc++6=10.2.1-6 \
+        libstdc++-10-dev=10.2.1-6 \
         clang-19=1:19.1.4-1~deb12u1 \
         clang-format-19=1:19.1.4-1~deb12u1 \
         clang-tidy-19=1:19.1.4-1~deb12u1 \
