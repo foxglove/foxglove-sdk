@@ -9,9 +9,22 @@
 //!
 //! # Getting started
 //!
-//! To record messages, you need at least one sink. In this example, we create an MCAP file sink,
-//! and log a [`Log`](`crate::schemas::Log`) message on a topic called `/log`. We write one log
-//! message and close the file.
+//! The easiest way to get started is to install the `foxglove` crate with default features, which
+//! will allow logging messages to the Foxglove app and to an MCAP file.
+//!
+//! ```bash
+//! cargo add foxglove
+//! ```
+//!
+//! The following sections illustrate how to use the SDK. For a more hands-on walk-through, see
+//! <https://docs.foxglove.dev/docs/sdk/example>.
+//!
+//! # Recording messages
+//!
+//! To record messages, you need to initialize either an MCAP file writer or a WebSocket server for
+//! live visualization. In this example, we create an MCAP writer, and record a
+//! [`Log`](`crate::schemas::Log`) message on a topic called `/log`. We write one log message and
+//! close the file.
 //!
 //! ```no_run
 //! use foxglove::schemas::Log;
