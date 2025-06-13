@@ -48,7 +48,10 @@ impl DataLoader for NDJsonLoader {
             .first()
             .unwrap_or_else(|| panic!["didn't receive a file path as input"])
             .clone();
-        Self { path, ..Self::default() }
+        Self {
+            path,
+            ..Self::default()
+        }
     }
 
     fn initialize(&self) -> Result<Initialization, Self::Error> {
@@ -66,10 +69,7 @@ impl DataLoader for NDJsonLoader {
             f64::partial_cmp(&time_a, &time_b).expect("time comparison failed")
         });
 
-        let Some(Row::Info(info)) = rows
-            .iter()
-            .find(|row| matches![row, Row::Info(_)])
-            .cloned()
+        let Some(Row::Info(info)) = rows.iter().find(|row| matches![row, Row::Info(_)]).cloned()
         else {
             bail!["did not find type=\"info\" row"]
         };
