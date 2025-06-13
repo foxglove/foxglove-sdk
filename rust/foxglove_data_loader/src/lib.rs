@@ -57,6 +57,7 @@ impl std::io::Seek for reader::Reader {
 }
 
 impl Schema {
+    /// Convert a schema id and foxglove::Schema to a data loader Schema.
     pub fn from_id_sdk(id: u16, schema: foxglove::Schema) -> Schema {
         Schema {
             id,
@@ -67,26 +68,35 @@ impl Schema {
     }
 }
 
-/// Implement this trait along with MessageIterator, then call `foxglove::data_loader_export()` on
-/// your loader.
+/// Implement this trait and call `foxglove::data_loader_export()` on your loader.
 pub trait DataLoader: 'static + Sized {
     // Consolidates the Guest and GuestDataLoader traits into a single trait.
-    // Wraps create() and create_iter() to user-defined structs so that users don't need to wrap
+    // Wraps new() and create_iterator() to user-defined structs so that users don't need to wrap
     // their types into `loader::DataLoader::new()` or `loader::MessageIterator::new()`.
     type MessageIterator: loader::GuestMessageIterator;
     type Error: Into<Box<dyn std::error::Error>>;
 
+    /// Create a new DataLoader.
     fn new(args: DataLoaderArgs) -> Self;
+
+    /// Initialize your DataLoader, reading enough of the file to generate counts, channels, and
+    /// schemas for the `Initialization` result.
     fn initialize(&self) -> Result<loader::Initialization, Self::Error>;
 
+    /// Create a MessageIterator for this DataLoader.
     fn create_iter(
         &self,
         args: loader::MessageIteratorArgs,
     ) -> Result<Self::MessageIterator, Self::Error>;
+
+    /// Backfill results starting from `args.time` for `args.channels`. The backfill results are the
+    /// first message looking backwards in time so that panels won't be empty before playback
+    /// begins.
     fn get_backfill(&self, args: loader::BackfillArgs)
         -> Result<Vec<loader::Message>, Self::Error>;
 }
 
+/// Implement MessageIterator for your loader iterator.
 pub trait MessageIterator: 'static + Sized {
     type Error: Into<Box<dyn std::error::Error>>;
     fn next(&self) -> Option<Result<Message, Self::Error>>;

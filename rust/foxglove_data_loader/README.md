@@ -1,0 +1,81 @@
+# foxglove\_data\_loader
+
+Create a Foxglove data loader to parse custom file formats in Foxglove extensions.
+
+In your data loader code, implement `DataLoader` and `MessageIterator` traits with your file format
+parser and iteration code:
+
+``` rs
+use foxglove_data_loader::{
+    reader, console, BackfillArgs, Channel, DataLoader, DataLoaderArgs, Initialization,
+    Message, MessageIterator, MessageIteratorArgs, Schema, TimeRange,
+};
+foxglove_data_loader::export!(MyLoader);
+
+struct MyLoader { /* ... */ }
+
+impl DataLoader for MyLoader {
+    type MessageIterator = MyIterator;
+    type Error = anyhow::Error;
+
+    fn new(args: DataLoaderArgs) -> Self {
+        // args.paths is a Vec<String> of file paths you can reader::open()
+        unimplemented![]
+    }
+
+    fn initialize(&self) -> Result<Initialization, Self::Error> {
+        // the Initialization contains the channels, schemas, time range, and any problems
+        unimplemented![]
+    }
+
+    fn create_iter(&self, args: MessageIteratorArgs) -> Result<Self::MessageIterator, Self::Error> {
+        unimplemented![]
+    }
+
+    fn get_backfill(&self, args: BackfillArgs) -> Result<Vec<Message>, Self::Error> {
+        unimplemented![]
+    }
+}
+
+struct MyIterator { /* ... */ }
+
+impl MessageIterator for MyIterator {
+    type Error = anyhow::Error;
+
+    fn next(&self) -> Option<Result<Message, Self::Error>> {
+        unimplemented![]
+    }
+}
+```
+
+Then you can build for `wasm32-unknown-unknown` to get a `.wasm` file:
+
+```
+$ cargo build --release --target wasm32-unknown-unknown
+
+$ find -name \*.wasm
+./target/wasm32-unknown-unknown/release/my_foxglove_data_loader.wasm
+```
+
+In your [foxglove extension][], pass this wasm file as `wasmUrl` (inline `data:` or otherwise) to
+`extensionContext.registerDataLoader()`:
+
+``` ts
+import { Experimental } from "@foxglove/extension";
+import wasmUrl from "./target/wasm32-unknown-unknown/release/my_foxglove_data_loader.wasm";
+
+export function activate(extensionContext: Experimental.ExtensionContext): void {
+  extensionContext.registerDataLoader({
+    type: "file",
+    wasmUrl,
+    supportedFileType: ".xyz",
+  });
+}
+```
+
+For a more complete example, check out the [rust-data-loader][] example in the
+[create-foxglove-extension][] repo.
+
+[rust-data-loader]: https://github.com/foxglove/create-foxglove-extension/tree/main/examples
+[create-foxglove-extension]: https://github.com/foxglove/create-foxglove-extension
+[foxglove-extension]: https://docs.foxglove.dev/docs/visualization/extensions/introduction
