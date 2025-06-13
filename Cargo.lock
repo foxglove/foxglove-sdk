@@ -749,7 +749,7 @@ dependencies = [
 
 [[package]]
 name = "foxglove_data_loader"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "anyhow",
  "foxglove",
@@ -2727,7 +2727,7 @@ dependencies = [
  "heck",
  "indexmap 2.9.0",
  "prettyplease",
- "syn 2.0.101",
+ "syn 2.0.102",
  "wasm-metadata",
  "wit-bindgen-core",
  "wit-component",
@@ -2743,7 +2743,7 @@ dependencies = [
  "prettyplease",
  "proc-macro2",
  "quote",
- "syn 2.0.101",
+ "syn 2.0.102",
  "wit-bindgen-core",
  "wit-bindgen-rust",
 ]

@@ -8,7 +8,7 @@
 //! scene and the temperature rows go into a topic called /temperature.
 
 #![no_main]
-use anyhow::anyhow;
+use anyhow::{anyhow, bail};
 use foxglove::schemas::{
     Color, Pose, Quaternion, SceneEntity, SceneUpdate, SpherePrimitive, Timestamp, Vector3,
 };
@@ -72,7 +72,7 @@ impl DataLoader for NDJsonLoader {
             .find(|row| matches![row, Row::Info(_)])
             .cloned()
         else {
-            return anyhow!["did not find type=\"info\" row"];
+            bail!["did not find type=\"info\" row"]
         };
         self.rows.replace(rows);
         console::log(&format!["info={info:?}"]);

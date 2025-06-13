@@ -11,7 +11,7 @@ license.workspace = true
 wit-bindgen = "0.42.1"
 
 [dependencies.foxglove]
-version = "0.8.0"
+version = "0.9.0"
 path = "../foxglove"
 default-features = false
 features = [ "derive" ]
