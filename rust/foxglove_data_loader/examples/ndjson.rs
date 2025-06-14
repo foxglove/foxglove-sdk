@@ -7,7 +7,8 @@
 //! The loader stores the records in memory and puts the sphere data into a SceneUpdate topic called
 //! scene and the temperature rows go into a topic called /temperature.
 
-#[cfg(not(target_family = "wasm"))] fn main() {}
+#[cfg(not(target_family = "wasm"))]
+fn main() {}
 
 use anyhow::{anyhow, bail};
 use foxglove::schemas::{
