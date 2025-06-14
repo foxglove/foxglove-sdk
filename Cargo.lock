@@ -567,6 +567,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "example_prost"
+version = "0.0.0"
+dependencies = [
+ "foxglove",
+ "prost",
+ "prost-build",
+]
+
+[[package]]
 name = "example_quickstart"
 version = "0.0.0"
 dependencies = [
