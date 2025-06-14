@@ -110,10 +110,6 @@ jobs:
             target: ppc64le
     steps:
       - uses: actions/checkout@v4
-      # rustfmt is used on generated rust schemas for the SDK
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
-        with:
-          components: rustfmt
       - uses: actions/setup-python@v5
         with:
           python-version: "3.9"
