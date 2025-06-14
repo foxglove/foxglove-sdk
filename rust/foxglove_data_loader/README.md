@@ -52,7 +52,7 @@ To read data from files in your loader, use `reader::open(&path)`. The return va
 `std::io::Read` and `std::io::Seek`, so you can use higher-level adaptors such as `BufReader`:
 
 ``` rs
-let reader = foxglove_data_loader::reader::open(&inputs[0]);
+let reader = foxglove_data_loader::reader::open(&path);
 let mut lines = BufReader::new(reader).lines();
 ```
 
