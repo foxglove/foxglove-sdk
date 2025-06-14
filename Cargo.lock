@@ -576,6 +576,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "example_structured_logging"
+version = "0.9.0"
+dependencies = [
+ "bytes",
+ "env_logger",
+ "foxglove",
+ "schemars",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "example_ws_server"
 version = "0.0.0"
 dependencies = [
