@@ -1,6 +1,10 @@
-# foxglove\_data\_loader
+# Foxglove Data Loader
 
 Create a Foxglove data loader to parse custom file formats in Foxglove extensions.
+
+The feature implemented by this crate is currently experimental and must be imported by git url.
+
+# Example
 
 In your data loader code, implement `DataLoader` and `MessageIterator` traits with your file format
 parser and iteration code:
