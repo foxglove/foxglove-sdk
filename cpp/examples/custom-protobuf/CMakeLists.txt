@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.14)
-project(quickstart LANGUAGES CXX)
+project(custom-protobuf LANGUAGES CXX)
 
 # Set C++ standard
 set(CMAKE_CXX_STANDARD 17)
@@ -46,13 +46,13 @@ target_include_directories(fruit_proto PUBLIC
 # Link Protocol Buffers to fruit_proto
 target_link_libraries(fruit_proto PUBLIC ${Protobuf_LIBRARIES})
 
-# Fetch Foxglove SDK
+# Fetch Foxglove SDK, add this your CMakeLists.txt or build system and modify it for the released version you want.
 include(FetchContent)
 FetchContent_Declare(
-    foxglove
-    # See available releases and builds here: https://github.com/foxglove/foxglove-sdk/releases
-    URL https://github.com/foxglove/foxglove-sdk/releases/download/sdk%2Fv0.9.0/foxglove-v0.9.0-cpp-x86_64-unknown-linux-gnu.zip
-    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+   foxglove
+   # See available releases and builds here: https://github.com/foxglove/foxglove-sdk/releases
+   URL https://github.com/foxglove/foxglove-sdk/releases/download/sdk%2Fv0.9.0/foxglove-v0.9.0-cpp-x86_64-unknown-linux-gnu.zip
+   DOWNLOAD_EXTRACT_TIMESTAMP TRUE
 )
 FetchContent_MakeAvailable(foxglove)
 
@@ -67,7 +67,6 @@ target_include_directories(custom_protobuf PRIVATE
     ${foxglove_SOURCE_DIR}/include/foxglove
     ${CMAKE_CURRENT_BINARY_DIR}
     ${Protobuf_INCLUDE_DIRS}
-    ${Protobuf_INCLUDE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
