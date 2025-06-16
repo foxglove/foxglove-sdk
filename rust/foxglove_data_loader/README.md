@@ -2,7 +2,11 @@
 
 Create a Foxglove data loader to parse custom file formats in Foxglove extensions.
 
-The feature implemented by this crate is currently experimental and must be imported by git url.
+The feature implemented by this crate is currently experimental and must be imported by git url:
+
+``` sh
+cargo add foxglove_data_loader --git 'https://github.com/foxglove/foxglove-sdk.git'
+```
 
 # Example
 
