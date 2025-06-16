@@ -22,7 +22,7 @@ can manually delete it if you want to run the example again.
 docker run --platform linux/amd64 --rm -v './output:/app/output' -e MCAP_OUTPUT_PATH='/app/output/example.mcap' foxglove-protobuf
 ```
 
-Now, you can open the saved file in the Foxglove app, or inspect it with the [CLI](https://mcap.dev/guides/cli):
+Now you can open the saved file in the Foxglove app, or inspect it with the [CLI](https://mcap.dev/guides/cli):
 
 ```sh
 mcap info output/example.mcap

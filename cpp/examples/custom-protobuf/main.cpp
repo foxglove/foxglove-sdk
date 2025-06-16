@@ -14,7 +14,7 @@
 int main(int argc, const char* argv[]) {
   foxglove::setLogLevel(foxglove::LogLevel::Debug);
 
-  // Get output path from environment variable or use default
+  // Make it easy to override the path when running in a container
   const char* output_path = std::getenv("MCAP_OUTPUT_PATH");
   if (!output_path) {
     output_path = "example-custom-protobuf.mcap";
