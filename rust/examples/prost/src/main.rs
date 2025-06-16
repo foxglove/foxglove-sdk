@@ -1,4 +1,4 @@
-use foxglove::{ChannelBuilder, McapWriter, Schema};
+use foxglove::{Channel, ChannelBuilder, McapWriter, Schema};
 use prost::Message;
 
 pub mod fruit {
@@ -18,22 +18,33 @@ fn main() {
         .expect("failed to create writer");
 
     // Set up a channel for our protobuf messages
-    let schema = Schema::new("fruit.Apple", "protobuf", APPLE_SCHEMA);
-    let channel = ChannelBuilder::new("/fruit")
-        .message_encoding("protobuf")
-        .schema(schema)
-        .build_raw()
-        .expect("failed to build channel");
+    let channel = ChannelBuilder::new("/fruit").build::<fruit::Apple>();
 
     // Create and log a protobuf message
     let msg = fruit::Apple {
         color: Some("red".to_string()),
         diameter: Some(10),
     };
-    let mut buf = vec![];
-    msg.encode(&mut buf).expect("failed to encode");
-
-    channel.log(&buf);
+    channel.log(&msg);
 
     writer.close().expect("failed to close writer");
+}
+
+/// An implementation of the `Encode` trait for the `Apple` message, which encapsulates information
+/// needed to construct a `Channel`. This isn't required if you want to use a `RawChannel`.
+impl foxglove::Encode for fruit::Apple {
+    type Error = prost::EncodeError;
+
+    fn get_schema() -> Option<Schema> {
+        Some(Schema::new("fruit.Apple", "protobuf", APPLE_SCHEMA))
+    }
+
+    fn get_message_encoding() -> String {
+        "protobuf".to_string()
+    }
+
+    fn encode(&self, buf: &mut impl prost::bytes::BufMut) -> Result<(), Self::Error> {
+        prost::Message::encode(self, buf)?;
+        Ok(())
+    }
 }
