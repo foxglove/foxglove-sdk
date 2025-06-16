@@ -18,7 +18,7 @@ fn main() {
         .expect("failed to create writer");
 
     // Set up a channel for our protobuf messages
-    let schema = Schema::new("apple", "protobuf", APPLE_SCHEMA);
+    let schema = Schema::new("fruit.Apple", "protobuf", APPLE_SCHEMA);
     let channel = ChannelBuilder::new("/fruit")
         .message_encoding("protobuf")
         .schema(schema)
