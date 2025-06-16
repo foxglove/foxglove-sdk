@@ -1,4 +1,4 @@
-use foxglove::{Channel, ChannelBuilder, McapWriter, Schema};
+use foxglove::{ChannelBuilder, McapWriter, Schema};
 use prost::Message;
 
 pub mod fruit {
@@ -44,7 +44,7 @@ impl foxglove::Encode for fruit::Apple {
     }
 
     fn encode(&self, buf: &mut impl prost::bytes::BufMut) -> Result<(), Self::Error> {
-        prost::Message::encode(self, buf)?;
+        Message::encode(self, buf)?;
         Ok(())
     }
 }
