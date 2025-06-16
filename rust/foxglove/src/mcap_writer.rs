@@ -7,7 +7,7 @@ use std::sync::{Arc, Weak};
 use std::{fmt::Debug, io::Write};
 
 use crate::library_version::get_library_version;
-use crate::{Context, FoxgloveError, Sink};
+use crate::{Context, FoxgloveError, Sink, SinkChannelFilter};
 
 /// Compression options for content in an MCAP file
 pub use mcap::Compression as McapCompression;
@@ -28,6 +28,13 @@ use mcap_sink::McapSink;
 pub struct McapWriter {
     options: McapWriteOptions,
     context: Arc<Context>,
+    channel_filter: Option<Arc<dyn SinkChannelFilter>>,
+}
+
+impl Debug for dyn SinkChannelFilter {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "SinkChannelFilter")
+    }
 }
 
 impl From<McapWriteOptions> for McapWriter {
@@ -36,6 +43,7 @@ impl From<McapWriteOptions> for McapWriter {
         Self {
             options,
             context: Context::get_default(),
+            channel_filter: None,
         }
     }
 }
@@ -65,6 +73,12 @@ impl McapWriter {
         self
     }
 
+    /// Set a [`SinkChannelFilter`] for this sink.
+    pub fn with_channel_filter(mut self, filter: Arc<dyn SinkChannelFilter>) -> Self {
+        self.channel_filter = Some(filter);
+        self
+    }
+
     /// Begins logging events to the specified writer.
     ///
     /// Returns a handle. When the handle is dropped, the recording will be flushed to the writer
@@ -74,7 +88,7 @@ impl McapWriter {
     where
         W: Write + Seek + Send + 'static,
     {
-        let sink = McapSink::new(writer, self.options)?;
+        let sink = McapSink::new(writer, self.options, self.channel_filter)?;
         self.context.add_sink(sink.clone());
         Ok(McapWriterHandle {
             sink,

@@ -5,6 +5,7 @@ use std::future::Future;
 use std::net::SocketAddr;
 use std::sync::Arc;
 
+use crate::sink_channel_filter::SinkChannelFilter;
 use crate::websocket::service::Service;
 use crate::websocket::{
     create_server, AssetHandler, AsyncAssetHandlerFn, BlockingAssetHandlerFn, Capability, Client,
@@ -74,6 +75,15 @@ impl WebSocketServer {
     pub fn bind(mut self, host: impl Into<String>, port: u16) -> Self {
         self.host = host.into();
         self.port = port;
+        self
+    }
+
+    /// Sets a channel filter for the server.
+    ///
+    /// The filter is a function that takes a channel and returns a boolean indicating whether the
+    /// channel should be logged.
+    pub fn channel_filter(mut self, filter: Arc<dyn SinkChannelFilter>) -> Self {
+        self.options.channel_filter = Some(filter);
         self
     }
 

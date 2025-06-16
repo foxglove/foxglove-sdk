@@ -28,10 +28,14 @@ use crate::testutil::{assert_eventually, RecordingServerListener};
 use crate::websocket::handshake::SUBPROTOCOL;
 use crate::websocket::server::{create_server, ServerOptions};
 use crate::websocket::service::{CallId, Service, ServiceSchema};
+use crate::websocket::testutil::RecvError;
 use crate::websocket::{
     BlockingAssetHandlerFn, Capability, ClientChannelId, ConnectionGraph, Parameter,
 };
-use crate::{ChannelBuilder, Context, FoxgloveError, PartialMetadata, RawChannel, Schema};
+use crate::{
+    ChannelBuilder, Context, FilterableChannel, FoxgloveError, PartialMetadata, RawChannel, Schema,
+    SinkChannelFilter,
+};
 
 macro_rules! expect_recv {
     ($client:expr, $variant:path) => {{
@@ -1410,4 +1414,69 @@ async fn test_broadcast_time() {
     server.broadcast_time(42);
     let msg = expect_recv!(client, ServerMessage::Time);
     assert_eq!(msg.timestamp, 42);
+}
+
+#[tokio::test]
+async fn test_channel_filter() {
+    struct Filter;
+    impl SinkChannelFilter for Filter {
+        fn should_subscribe(&self, channel: &dyn FilterableChannel) -> bool {
+            channel.topic() == "/1"
+        }
+    }
+
+    let ctx = Context::new();
+    let server = create_server(
+        &ctx,
+        ServerOptions {
+            channel_filter: Some(Arc::new(Filter)),
+            ..Default::default()
+        },
+    );
+    let addr = server
+        .start("127.0.0.1", 0)
+        .await
+        .expect("Failed to start server");
+
+    let mut client = WebSocketClient::connect(addr).await;
+    expect_recv!(client, ServerMessage::ServerInfo);
+
+    let ch1 = new_channel("/1", &ctx);
+    let ch2 = new_channel("/2", &ctx);
+
+    let msg = expect_recv!(client, ServerMessage::Advertise);
+    let len = msg.channels.len();
+    assert_eq!(len, 1);
+
+    client
+        .send(&Subscribe::new([Subscription {
+            id: 1,
+            channel_id: ch1.id().into(),
+        }]))
+        .await
+        .expect("Failed to subscribe");
+
+    // Allow the server to process the subscriptions
+    assert_eventually(|| dbg!(ch1.num_sinks()) == 1).await;
+
+    // Channel 2 is filtered, unadvertised, and can't be subscribed to.
+    client
+        .send(&Subscribe::new([Subscription {
+            id: 2,
+            channel_id: ch2.id().into(),
+        }]))
+        .await
+        .expect("Failed to subscribe");
+    assert_eq!(
+        expect_recv!(client, ServerMessage::Status),
+        Status::error(format!("Unknown channel ID: {}", ch2.id()))
+    );
+
+    // Client receives message from channel 1, but not 2.
+    ch1.log(b"{}");
+    expect_recv!(client, ServerMessage::MessageData);
+
+    ch2.log(b"{}");
+    let result = client.recv().await;
+    assert!(matches!(result, Err(RecvError::Timeout(_))));
 }

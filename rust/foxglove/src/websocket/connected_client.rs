@@ -10,6 +10,7 @@ use tokio::sync::oneshot;
 use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::WebSocketStream;
 
+use crate::sink_channel_filter::SinkChannelFilter;
 use crate::{ChannelId, Context, FoxgloveError, Metadata, RawChannel, Sink, SinkId};
 
 use self::ws_protocol::server::{
@@ -55,6 +56,7 @@ pub(super) struct ConnectedClient {
     addr: SocketAddr,
     weak_self: Weak<Self>,
     sink_id: SinkId,
+    channel_filter: Option<Arc<dyn SinkChannelFilter>>,
     context: Weak<Context>,
     poller: parking_lot::Mutex<Option<Poller>>,
     /// A cache of channels for `on_subscribe` and `on_unsubscribe` callbacks.
@@ -103,7 +105,18 @@ impl Sink for ConnectedClient {
     }
 
     fn add_channels(&self, channels: &[&Arc<RawChannel>]) -> Option<Vec<ChannelId>> {
-        for channels in channels.chunks(ADVERTISE_CHANNEL_BATCH_SIZE) {
+        let filtered_channels = channels
+            .iter()
+            .filter(|channel| {
+                let Some(filter) = self.channel_filter.as_ref() else {
+                    return true;
+                };
+                filter.should_subscribe(channel.as_ref())
+            })
+            .copied()
+            .collect::<Vec<_>>();
+
+        for channels in filtered_channels.chunks(ADVERTISE_CHANNEL_BATCH_SIZE) {
             self.advertise_channels(channels);
         }
         // Clients subscribe asynchronously.
@@ -127,6 +140,7 @@ impl ConnectedClient {
         websocket: WebSocketStream<TcpStream>,
         addr: SocketAddr,
         message_backlog_size: usize,
+        channel_filter: Option<Arc<dyn SinkChannelFilter>>,
     ) -> Arc<Self> {
         let (data_plane_tx, data_plane_rx) = flume::bounded(message_backlog_size);
         let (control_plane_tx, control_plane_rx) = flume::bounded(message_backlog_size);
@@ -137,6 +151,7 @@ impl ConnectedClient {
             weak_self: weak_self.clone(),
             sink_id: SinkId::next(),
             context: context.clone(),
+            channel_filter,
             poller: parking_lot::Mutex::new(Some(Poller::new(
                 websocket,
                 data_plane_rx.clone(),

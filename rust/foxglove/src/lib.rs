@@ -323,6 +323,7 @@ mod schema;
 pub mod schemas;
 mod schemas_wkt;
 mod sink;
+mod sink_channel_filter;
 
 #[cfg(test)]
 mod tests;
@@ -342,6 +343,7 @@ pub use mcap_writer::{McapCompression, McapWriteOptions, McapWriter, McapWriterH
 pub use metadata::{Metadata, PartialMetadata, ToUnixNanos};
 pub use schema::Schema;
 pub use sink::{Sink, SinkId};
+pub use sink_channel_filter::{FilterableChannel, SinkChannelFilter};
 pub(crate) use time::nanoseconds_since_epoch;
 
 #[cfg(feature = "live_visualization")]
