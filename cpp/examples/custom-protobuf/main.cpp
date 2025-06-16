@@ -6,14 +6,22 @@
 #include <google/protobuf/descriptor.pb.h>
 
 #include <string>
+#include <cstdlib>
+#include <filesystem>
 
 #include "protos/fruit.pb.h"
 
 int main(int argc, const char* argv[]) {
   foxglove::setLogLevel(foxglove::LogLevel::Debug);
 
+  // Get output path from environment variable or use default
+  const char* output_path = std::getenv("MCAP_OUTPUT_PATH");
+  if (!output_path) {
+    output_path = "example-custom-protobuf.mcap";
+  }
+
   foxglove::McapWriterOptions mcap_options = {};
-  mcap_options.path = "example.mcap";
+  mcap_options.path = output_path;
   auto writer_result = foxglove::McapWriter::create(mcap_options);
   if (!writer_result.has_value()) {
     std::cerr << "Failed to create writer: " << foxglove::strerror(writer_result.error()) << '\n';
