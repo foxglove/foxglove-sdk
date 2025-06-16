@@ -18,5 +18,5 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 strum = { version = "0.27", features = ["derive"] }
 tokio = { version = "1.45", features = ["full"] }
-tokio-tungstenite = "0.26"
+tokio-tungstenite = "0.27"
 tracing = "0.1"
