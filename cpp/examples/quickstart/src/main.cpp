@@ -85,7 +85,7 @@ int main(int argc, const char* argv[]) {
                  std::chrono::system_clock::now().time_since_epoch()
     )
                  .count();
-    double size = abs(sin(now)) + 1.0;
+    double size = std::abs(std::sin(now)) + 1.0;
     std::string msg = "{\"size\": " + std::to_string(size) + "}";
     size_channel.log(reinterpret_cast<const std::byte*>(msg.data()), msg.size());
 

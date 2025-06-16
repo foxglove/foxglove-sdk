@@ -567,12 +567,33 @@ dependencies = [
 ]
 
 [[package]]
+name = "example_prost"
+version = "0.0.0"
+dependencies = [
+ "foxglove",
+ "prost",
+ "prost-build",
+]
+
+[[package]]
 name = "example_quickstart"
 version = "0.0.0"
 dependencies = [
  "ctrlc",
  "env_logger",
  "foxglove",
+]
+
+[[package]]
+name = "example_structured_logging"
+version = "0.9.0"
+dependencies = [
+ "bytes",
+ "env_logger",
+ "foxglove",
+ "schemars",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -1186,9 +1207,9 @@ dependencies = [
 
 [[package]]
 name = "mcap"
-version = "0.18.0"
+version = "0.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a4c5377f076a2ca244e67f2b16a6bac5190e0c13980fe046138346cd5dd1c963"
+checksum = "2a5a8225e54ba304d8bf118679f422a884cfcf5353cf5618a1e1b8aa135ee728"
 dependencies = [
  "bimap",
  "binrw",
@@ -1849,15 +1870,16 @@ dependencies = [
 
 [[package]]
 name = "serde_with"
-version = "3.12.0"
+version = "3.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d6b6f7f2fcb69f747921f79f3926bd1e203fce4fef62c268dd3abfb6d86029aa"
+checksum = "bf65a400f8f66fb7b0552869ad70157166676db75ed8181f8104ea91cf9d0b42"
 dependencies = [
  "base64",
  "chrono",
  "hex",
  "indexmap 1.9.3",
  "indexmap 2.9.0",
+ "schemars",
  "serde",
  "serde_derive",
  "serde_json",
@@ -1867,9 +1889,9 @@ dependencies = [
 
 [[package]]
 name = "serde_with_macros"
-version = "3.12.0"
+version = "3.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8d00caa5193a3c8362ac2b73be6b9e768aa5a4b2f721d8f4b339600c3cb51f8e"
+checksum = "81679d9ed988d5e9a5e6531dc3f2c28efbd639cbd1dfb628df08edea6004da77"
 dependencies = [
  "darling",
  "proc-macro2",
@@ -2148,9 +2170,9 @@ dependencies = [
 
 [[package]]
 name = "tokio-tungstenite"
-version = "0.26.2"
+version = "0.27.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7a9daff607c6d2bf6c16fd681ccb7eecc83e4e2cdc1ca067ffaadfca5de7f084"
+checksum = "489a59b6730eda1b0171fcfda8b121f4bee2b35cba8645ca35c5f7ba3eb736c1"
 dependencies = [
  "futures-util",
  "log",
@@ -2299,9 +2321,9 @@ dependencies = [
 
 [[package]]
 name = "tungstenite"
-version = "0.26.2"
+version = "0.27.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4793cb5e56680ecbb1d843515b23b6de9a75eb04b66643e256a396d43be33c13"
+checksum = "eadc29d668c91fcc564941132e17b28a7ceb2f3ebf0b9dae3e03fd7a6748eb0d"
 dependencies = [
  "bytes",
  "data-encoding",
