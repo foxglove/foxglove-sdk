@@ -1,3 +1,5 @@
+*.png filter=lfs diff=lfs merge=lfs -text
+*.webp filter=lfs diff=lfs merge=lfs -text
 c/src/generated_types.rs linguist-generated
 cpp/foxglove/include/foxglove/schemas.hpp linguist-generated
 python/foxglove-sdk/src/generated/* linguist-generated
