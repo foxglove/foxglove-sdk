@@ -1174,9 +1174,9 @@ dependencies = [
 
 [[package]]
 name = "mcap"
-version = "0.19.0"
+version = "0.22.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2a5a8225e54ba304d8bf118679f422a884cfcf5353cf5618a1e1b8aa135ee728"
+checksum = "0a88619dcca399df14f2a2805c101b150e60230c79c05a87de996fcf7be0a083"
 dependencies = [
  "bimap",
  "binrw",
