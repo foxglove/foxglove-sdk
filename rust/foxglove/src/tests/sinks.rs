@@ -1,4 +1,6 @@
+#[cfg(feature = "live_visualization")]
 use std::{io::BufWriter, sync::Arc};
+#[cfg(feature = "live_visualization")]
 use tempfile::NamedTempFile;
 
 #[cfg(feature = "live_visualization")]
