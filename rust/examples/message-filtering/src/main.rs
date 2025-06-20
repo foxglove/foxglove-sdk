@@ -12,7 +12,7 @@ use foxglove::schemas::{
     packed_element_field::NumericType, PackedElementField, PointCloud, Pose, Quaternion, Vector3,
 };
 use foxglove::schemas::{FrameTransform, FrameTransforms};
-use foxglove::{ChannelDescriptor, Encode, LazyChannel, McapWriter, SinkChannelFilter};
+use foxglove::{Encode, LazyChannel, McapWriter};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, SystemTime};
@@ -29,31 +29,6 @@ static INFO_CHANNEL: LazyChannel<Message> = LazyChannel::new("/info");
 static POINT_CLOUD_CHANNEL: LazyChannel<PointCloud> = LazyChannel::new("/point_cloud");
 static POINT_CLOUD_TF_CHANNEL: LazyChannel<FrameTransforms> = LazyChannel::new("/point_cloud_tf");
 
-/// A filter which will drop all of our point_cloud messages
-struct SmallTopicFilter;
-impl SinkChannelFilter for SmallTopicFilter {
-    fn should_subscribe(&self, channel: &ChannelDescriptor) -> bool {
-        !channel.topic().starts_with("/point_cloud")
-    }
-}
-
-/// A filter which keeps _only_ our point_cloud messages
-struct LargeTopicFilter;
-impl SinkChannelFilter for LargeTopicFilter {
-    fn should_subscribe(&self, channel: &ChannelDescriptor) -> bool {
-        channel.topic().starts_with("/point_cloud")
-    }
-}
-
-/// We'll send all messages to the Foxglove app. We don't need a filter for this, since its the same
-/// as having no filter applied, but this demonstrates how to apply a filter to the WS server.
-struct LiveVizFilter;
-impl SinkChannelFilter for LiveVizFilter {
-    fn should_subscribe(&self, _channel: &ChannelDescriptor) -> bool {
-        true
-    }
-}
-
 fn main() {
     let env = env_logger::Env::default().default_filter_or("debug");
     env_logger::init_from_env(env);
@@ -67,19 +42,22 @@ fn main() {
     })
     .expect("Failed to set SIGINT handler");
 
-    // We'll log to both an MCAP file, and to a running Foxglove app via a server.
+    // In one MCAP, drop all of our point_cloud (and related tf) messages
     let small_mcap = McapWriter::new()
-        .with_channel_filter(Arc::new(SmallTopicFilter))
+        .channel_filter_fn(|channel| !channel.topic().starts_with("/point_cloud"))
         .create_new_buffered_file(SMALL_MCAP_FILE)
         .expect("Failed to create mcap writer");
 
+    // In the other, log only the point_cloud (and related tf) messages
     let large_mcap = McapWriter::new()
-        .with_channel_filter(Arc::new(LargeTopicFilter))
+        .channel_filter_fn(|channel| channel.topic().starts_with("/point_cloud"))
         .create_new_buffered_file(LARGE_MCAP_FILE)
         .expect("Failed to create mcap writer");
 
+    // We'll send all messages to a running app. We don't need a filter, since it's the same as
+    // having no filter applied, but this demonstrates how to add one to the WS server.
     foxglove::WebSocketServer::new()
-        .channel_filter(Arc::new(LiveVizFilter))
+        .channel_filter_fn(|_| true)
         .start_blocking()
         .expect("Server failed to start");
 

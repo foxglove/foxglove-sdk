@@ -1,5 +1,5 @@
 #[cfg(feature = "live_visualization")]
-use std::{io::BufWriter, sync::Arc};
+use std::io::BufWriter;
 #[cfg(feature = "live_visualization")]
 use tempfile::NamedTempFile;
 
@@ -14,42 +14,27 @@ use crate::{
             server::ServerMessage,
         },
     },
-    Channel, ChannelBuilder, ChannelDescriptor, Context, McapWriter, SinkChannelFilter,
-    WebSocketServer,
+    Channel, ChannelBuilder, Context, McapWriter, WebSocketServer,
 };
 
 #[cfg(feature = "live_visualization")]
 #[tokio::test(flavor = "multi_thread")]
 async fn test_sink_channel_filtering_on_mcap_and_ws() {
-    // MCAP only sees topic /1
-    struct McapFilter;
-    impl SinkChannelFilter for McapFilter {
-        fn should_subscribe(&self, channel: &ChannelDescriptor) -> bool {
-            channel.topic() == "/1"
-        }
-    }
-
-    // WS only sees topic /2
-    struct WebsocketFilter;
-    impl SinkChannelFilter for WebsocketFilter {
-        fn should_subscribe(&self, channel: &ChannelDescriptor) -> bool {
-            channel.topic() == "/2"
-        }
-    }
-
     let ctx = Context::new();
 
+    // MCAP only sees topic /1
     let file = NamedTempFile::new().unwrap();
     let mcap = McapWriter::new()
         .context(&ctx)
-        .with_channel_filter(Arc::new(McapFilter))
+        .channel_filter_fn(|channel| channel.topic() == "/1")
         .create(BufWriter::new(file))
         .unwrap();
 
+    // WS only sees topic /2
     let _ = WebSocketServer::new()
         .bind("127.0.0.1", 11011)
         .context(&ctx)
-        .channel_filter(Arc::new(WebsocketFilter))
+        .channel_filter_fn(|channel| channel.topic() == "/2")
         .start()
         .await
         .expect("Failed to start server");

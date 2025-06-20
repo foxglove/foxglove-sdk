@@ -7,7 +7,8 @@ use std::sync::{Arc, Weak};
 use std::{fmt::Debug, io::Write};
 
 use crate::library_version::get_library_version;
-use crate::{Context, FoxgloveError, Sink, SinkChannelFilter};
+use crate::sink_channel_filter::SinkChannelFilterFn;
+use crate::{ChannelDescriptor, Context, FoxgloveError, Sink, SinkChannelFilter};
 
 /// Compression options for content in an MCAP file
 pub use mcap::Compression as McapCompression;
@@ -76,9 +77,18 @@ impl McapWriter {
         self
     }
 
-    /// Set a [`SinkChannelFilter`] for this sink.
-    pub fn with_channel_filter(mut self, filter: Arc<dyn SinkChannelFilter>) -> Self {
+    /// Sets a [`SinkChannelFilter`] for this file.
+    pub fn channel_filter(mut self, filter: Arc<dyn SinkChannelFilter>) -> Self {
         self.channel_filter = Some(filter);
+        self
+    }
+
+    /// Sets a channel filter for this file. See [`SinkChannelFilter`] for more information.
+    pub fn channel_filter_fn(
+        mut self,
+        filter: impl Fn(&ChannelDescriptor) -> bool + Sync + Send + 'static,
+    ) -> Self {
+        self.channel_filter = Some(Arc::new(SinkChannelFilterFn(filter)));
         self
     }
 
