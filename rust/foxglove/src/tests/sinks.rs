@@ -1,7 +1,7 @@
 use std::{io::BufWriter, sync::Arc};
-
 use tempfile::NamedTempFile;
 
+#[cfg(feature = "live_visualization")]
 use crate::{
     schemas::Log,
     testutil::{assert_eventually, read_summary},
@@ -16,6 +16,7 @@ use crate::{
     WebSocketServer,
 };
 
+#[cfg(feature = "live_visualization")]
 #[tokio::test(flavor = "multi_thread")]
 async fn test_sink_channel_filtering_on_mcap_and_ws() {
     // MCAP only sees topic /1
