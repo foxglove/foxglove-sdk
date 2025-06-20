@@ -26,10 +26,10 @@ macro_rules! export {
 }
 
 use anyhow::anyhow;
-use std::{rc::Rc, cell::RefCell};
+use std::{cell::RefCell, rc::Rc};
 
 pub use generated::exports::foxglove::loader::loader::{
-    self, BackfillArgs, Channel, DataLoaderArgs, Message, MessageIteratorArgs, Initialization,
+    self, BackfillArgs, Channel, DataLoaderArgs, Initialization, Message, MessageIteratorArgs,
     Schema, TimeRange,
 };
 pub use generated::foxglove::loader::console;
@@ -80,7 +80,10 @@ impl Default for InitializationBuilder {
         Self {
             next_channel_id: Rc::new(RefCell::new(1)),
             next_schema_id: 1,
-            time_range: TimeRange { start_time: 0, end_time: 0 },
+            time_range: TimeRange {
+                start_time: 0,
+                end_time: 0,
+            },
             problems: vec![],
             schemas: vec![],
         }
@@ -125,12 +128,18 @@ impl InitializationBuilder {
     }
 
     pub fn build(self) -> loader::Initialization {
-        let schemas = self.schemas.iter().map(|linked_schema| {
-            Schema::from_id_sdk(linked_schema.id, linked_schema.schema.clone())
-        }).collect();
-        let channels = self.schemas.iter().flat_map(|linked_schema| {
-            linked_schema.channels.borrow().clone()
-        }).collect();
+        let schemas = self
+            .schemas
+            .iter()
+            .map(|linked_schema| {
+                Schema::from_id_sdk(linked_schema.id, linked_schema.schema.clone())
+            })
+            .collect();
+        let channels = self
+            .schemas
+            .iter()
+            .flat_map(|linked_schema| linked_schema.channels.borrow().clone())
+            .collect();
         loader::Initialization {
             channels,
             schemas,
