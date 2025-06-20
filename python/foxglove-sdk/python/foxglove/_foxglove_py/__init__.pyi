@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from .mcap import MCAPWriteOptions, MCAPWriter
 from .websocket import AssetHandler, Capability, Service, WebSocketServer
@@ -110,6 +110,17 @@ class Context:
         """
         ...
 
+class FilterableChannel:
+    """
+    A channel that can be filtered.
+    """
+
+    id: int
+    topic: str
+    metadata: Dict[str, str]
+
+SinkChannelFilter = Callable[[FilterableChannel], bool]
+
 def start_server(
     *,
     name: Optional[str] = None,
@@ -121,6 +132,7 @@ def start_server(
     services: Optional[List["Service"]] = None,
     asset_handler: Optional["AssetHandler"] = None,
     context: Optional["Context"] = None,
+    channel_filter: Optional[SinkChannelFilter] = None,
 ) -> WebSocketServer:
     """
     Start a websocket server for live visualization.
@@ -150,6 +162,7 @@ def open_mcap(
     *,
     allow_overwrite: bool = False,
     context: Optional["Context"] = None,
+    channel_filter: Optional[SinkChannelFilter] = None,
     writer_options: Optional[MCAPWriteOptions] = None,
 ) -> MCAPWriter:
     """
