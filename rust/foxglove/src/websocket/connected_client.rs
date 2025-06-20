@@ -111,7 +111,7 @@ impl Sink for ConnectedClient {
                 let Some(filter) = self.channel_filter.as_ref() else {
                     return true;
                 };
-                filter.should_subscribe(channel.as_ref())
+                filter.should_subscribe(channel.descriptor())
             })
             .copied()
             .collect::<Vec<_>>();

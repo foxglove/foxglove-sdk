@@ -33,7 +33,7 @@ use crate::websocket::{
     BlockingAssetHandlerFn, Capability, ClientChannelId, ConnectionGraph, Parameter,
 };
 use crate::{
-    ChannelBuilder, Context, FilterableChannel, FoxgloveError, PartialMetadata, RawChannel, Schema,
+    ChannelBuilder, ChannelDescriptor, Context, FoxgloveError, PartialMetadata, RawChannel, Schema,
     SinkChannelFilter,
 };
 
@@ -1420,7 +1420,7 @@ async fn test_broadcast_time() {
 async fn test_channel_filter() {
     struct Filter;
     impl SinkChannelFilter for Filter {
-        fn should_subscribe(&self, channel: &dyn FilterableChannel) -> bool {
+        fn should_subscribe(&self, channel: &ChannelDescriptor) -> bool {
             channel.topic() == "/1"
         }
     }

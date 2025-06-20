@@ -14,7 +14,7 @@ use crate::{
             server::ServerMessage,
         },
     },
-    Channel, ChannelBuilder, Context, FilterableChannel, McapWriter, SinkChannelFilter,
+    Channel, ChannelBuilder, ChannelDescriptor, Context, McapWriter, SinkChannelFilter,
     WebSocketServer,
 };
 
@@ -24,7 +24,7 @@ async fn test_sink_channel_filtering_on_mcap_and_ws() {
     // MCAP only sees topic /1
     struct McapFilter;
     impl SinkChannelFilter for McapFilter {
-        fn should_subscribe(&self, channel: &dyn FilterableChannel) -> bool {
+        fn should_subscribe(&self, channel: &ChannelDescriptor) -> bool {
             channel.topic() == "/1"
         }
     }
@@ -32,7 +32,7 @@ async fn test_sink_channel_filtering_on_mcap_and_ws() {
     // WS only sees topic /2
     struct WebsocketFilter;
     impl SinkChannelFilter for WebsocketFilter {
-        fn should_subscribe(&self, channel: &dyn FilterableChannel) -> bool {
+        fn should_subscribe(&self, channel: &ChannelDescriptor) -> bool {
             channel.topic() == "/2"
         }
     }

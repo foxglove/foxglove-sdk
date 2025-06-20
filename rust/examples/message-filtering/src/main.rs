@@ -12,7 +12,7 @@ use foxglove::schemas::{
     packed_element_field::NumericType, PackedElementField, PointCloud, Pose, Quaternion, Vector3,
 };
 use foxglove::schemas::{FrameTransform, FrameTransforms};
-use foxglove::{Encode, FilterableChannel, LazyChannel, McapWriter, SinkChannelFilter};
+use foxglove::{ChannelDescriptor, Encode, LazyChannel, McapWriter, SinkChannelFilter};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, SystemTime};
@@ -32,7 +32,7 @@ static POINT_CLOUD_TF_CHANNEL: LazyChannel<FrameTransforms> = LazyChannel::new("
 /// A filter which will drop all of our point_cloud messages
 struct SmallTopicFilter;
 impl SinkChannelFilter for SmallTopicFilter {
-    fn should_subscribe(&self, channel: &dyn FilterableChannel) -> bool {
+    fn should_subscribe(&self, channel: &ChannelDescriptor) -> bool {
         !channel.topic().starts_with("/point_cloud")
     }
 }
@@ -40,7 +40,7 @@ impl SinkChannelFilter for SmallTopicFilter {
 /// A filter which keeps _only_ our point_cloud messages
 struct LargeTopicFilter;
 impl SinkChannelFilter for LargeTopicFilter {
-    fn should_subscribe(&self, channel: &dyn FilterableChannel) -> bool {
+    fn should_subscribe(&self, channel: &ChannelDescriptor) -> bool {
         channel.topic().starts_with("/point_cloud")
     }
 }
@@ -49,7 +49,7 @@ impl SinkChannelFilter for LargeTopicFilter {
 /// as having no filter applied, but this demonstrates how to apply a filter to the WS server.
 struct LiveVizFilter;
 impl SinkChannelFilter for LiveVizFilter {
-    fn should_subscribe(&self, _channel: &dyn FilterableChannel) -> bool {
+    fn should_subscribe(&self, _channel: &ChannelDescriptor) -> bool {
         true
     }
 }

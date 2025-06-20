@@ -55,7 +55,7 @@ impl<W: Write + Seek> WriterState<W> {
             Entry::Occupied(entry) => *entry.get(),
             Entry::Vacant(entry) => {
                 if let Some(filter) = self.channel_filter.as_ref() {
-                    if !filter.should_subscribe(channel) {
+                    if !filter.should_subscribe(channel.descriptor()) {
                         entry.insert(None);
                         return Ok(());
                     }
@@ -167,7 +167,8 @@ impl<W: Write + Seek + Send> Sink for McapSink<W> {
 mod tests {
     use super::*;
     use crate::{
-        testutil::read_summary, ChannelBuilder, Context, FilterableChannel, Metadata, Schema,
+        channel::ChannelDescriptor, testutil::read_summary, ChannelBuilder, Context, Metadata,
+        Schema,
     };
     use mcap::McapError;
     use std::path::Path;
@@ -353,7 +354,7 @@ mod tests {
         // Write messages to two topics, but filter out the first.
         struct Ch1Filter;
         impl SinkChannelFilter for Ch1Filter {
-            fn should_subscribe(&self, channel: &dyn FilterableChannel) -> bool {
+            fn should_subscribe(&self, channel: &ChannelDescriptor) -> bool {
                 channel.topic() == "/2"
             }
         }
