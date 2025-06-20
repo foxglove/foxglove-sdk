@@ -24,16 +24,19 @@ use mcap_sink::McapSink;
 /// Logged messages are buffered in a [`BufWriter`]. When the writer is dropped, the buffered
 /// messages are flushed to the writer and the writer is closed.
 #[must_use]
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct McapWriter {
     options: McapWriteOptions,
     context: Arc<Context>,
     channel_filter: Option<Arc<dyn SinkChannelFilter>>,
 }
 
-impl Debug for dyn SinkChannelFilter {
+impl Debug for McapWriter {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "SinkChannelFilter")
+        f.debug_struct("McapWriter")
+            .field("options", &self.options)
+            .field("context", &self.context)
+            .finish_non_exhaustive()
     }
 }
 
