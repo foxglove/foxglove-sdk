@@ -25,8 +25,11 @@ macro_rules! export {
     }
 }
 
+use anyhow::anyhow;
+use std::{rc::Rc, cell::RefCell};
+
 pub use generated::exports::foxglove::loader::loader::{
-    self, BackfillArgs, Channel, DataLoaderArgs, Initialization, Message, MessageIteratorArgs,
+    self, BackfillArgs, Channel, DataLoaderArgs, Message, MessageIteratorArgs, Initialization,
     Schema, TimeRange,
 };
 pub use generated::foxglove::loader::console;
@@ -57,6 +60,118 @@ impl std::io::Seek for reader::Reader {
     }
 }
 
+impl loader::Initialization {
+    pub fn builder() -> InitializationBuilder {
+        InitializationBuilder::default()
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct InitializationBuilder {
+    next_channel_id: Rc<RefCell<u16>>,
+    next_schema_id: u16,
+    time_range: loader::TimeRange,
+    schemas: Vec<LinkedSchema>,
+    problems: Vec<String>,
+}
+
+impl Default for InitializationBuilder {
+    fn default() -> Self {
+        Self {
+            next_channel_id: Rc::new(RefCell::new(1)),
+            next_schema_id: 1,
+            time_range: TimeRange { start_time: 0, end_time: 0 },
+            problems: vec![],
+            schemas: vec![],
+        }
+    }
+}
+
+impl InitializationBuilder {
+    pub fn time_range(mut self, time_range: TimeRange) -> Self {
+        self.time_range = time_range;
+        self
+    }
+
+    pub fn start_time(mut self, start_time: u64) -> Self {
+        self.time_range.start_time = start_time;
+        self
+    }
+
+    pub fn end_time(mut self, end_time: u64) -> Self {
+        self.time_range.end_time = end_time;
+        self
+    }
+
+    pub fn add_schema<T: foxglove::Encode>(&mut self) -> Result<LinkedSchema, anyhow::Error> {
+        let schema_id = self.next_schema_id;
+        self.next_schema_id += 1;
+        let schema = T::get_schema().ok_or(anyhow!["Failed to get schema"])?;
+
+        let linked_schema = LinkedSchema {
+            id: schema_id,
+            next_channel_id: self.next_channel_id.clone(),
+            schema,
+            channels: Rc::new(RefCell::new(vec![])),
+            message_encoding: T::get_message_encoding(),
+        };
+        self.schemas.push(linked_schema.clone());
+        Ok(linked_schema)
+    }
+
+    pub fn add_problem(mut self, problem: &str) -> Self {
+        self.problems.push(String::from(problem));
+        self
+    }
+
+    pub fn build(self) -> loader::Initialization {
+        let schemas = self.schemas.iter().map(|linked_schema| {
+            Schema::from_id_sdk(linked_schema.id, linked_schema.schema.clone())
+        }).collect();
+        let channels = self.schemas.iter().flat_map(|linked_schema| {
+            linked_schema.channels.borrow().clone()
+        }).collect();
+        loader::Initialization {
+            channels,
+            schemas,
+            time_range: self.time_range,
+            problems: self.problems,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct LinkedSchema {
+    id: u16,
+    next_channel_id: Rc<RefCell<u16>>,
+    schema: foxglove::Schema,
+    channels: Rc<RefCell<Vec<loader::Channel>>>,
+    message_encoding: String,
+}
+
+impl LinkedSchema {
+    pub fn add_channel(&mut self, topic_name: &str) -> loader::Channel {
+        let channel_id = *self.next_channel_id.borrow();
+        self.next_channel_id.replace(channel_id + 1);
+        let channel = loader::Channel {
+            id: channel_id,
+            schema_id: Some(self.id),
+            topic_name: topic_name.into(),
+            message_encoding: self.message_encoding.clone(),
+            message_count: None,
+        };
+        self.channels.borrow_mut().push(channel.clone());
+        channel
+    }
+}
+
+impl loader::Channel {
+    pub fn message_count(mut self, message_count: u64) -> Self {
+        self.message_count = Some(message_count);
+        self
+    }
+}
+
 impl Schema {
     /// Convert a schema id and foxglove::Schema to a data loader Schema.
     pub fn from_id_sdk(id: u16, schema: foxglove::Schema) -> Schema {
@@ -82,7 +197,7 @@ pub trait DataLoader: 'static + Sized {
 
     /// Initialize your DataLoader, reading enough of the file to generate counts, channels, and
     /// schemas for the `Initialization` result.
-    fn initialize(&self) -> Result<loader::Initialization, Self::Error>;
+    fn initialize(&self) -> Result<Initialization, Self::Error>;
 
     /// Create a MessageIterator for this DataLoader.
     fn create_iter(
@@ -113,7 +228,7 @@ impl<T: DataLoader> loader::GuestDataLoader for T {
         T::new(args)
     }
 
-    fn initialize(&self) -> Result<Initialization, String> {
+    fn initialize(&self) -> Result<loader::Initialization, String> {
         T::initialize(self).map_err(|e| e.into().to_string())
     }
 
