@@ -13,7 +13,7 @@ mod lazy_channel;
 mod raw_channel;
 
 pub use lazy_channel::{LazyChannel, LazyRawChannel};
-pub use raw_channel::RawChannel;
+pub use raw_channel::{ChannelDescriptor, RawChannel};
 
 /// Stack buffer size to use for encoding messages.
 const STACK_BUFFER_SIZE: usize = 256 * 1024;

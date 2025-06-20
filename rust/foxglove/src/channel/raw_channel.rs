@@ -18,6 +18,42 @@ use crate::{nanoseconds_since_epoch, Context, Metadata, PartialMetadata, Schema}
 /// Interval for throttled warnings.
 static WARN_THROTTLER_INTERVAL: Duration = Duration::from_secs(10);
 
+/// Information about a Channel.
+pub struct ChannelDescriptor {
+    id: ChannelId,
+    topic: String,
+    message_encoding: String,
+    metadata: BTreeMap<String, String>,
+}
+
+impl ChannelDescriptor {
+    /// Returns the channel ID.
+    pub fn id(&self) -> ChannelId {
+        self.id
+    }
+
+    /// Returns the channel topic.
+    pub fn topic(&self) -> &str {
+        &self.topic
+    }
+
+    /// Returns the message encoding for this channel.
+    pub fn message_encoding(&self) -> &str {
+        &self.message_encoding
+    }
+
+    /// Returns the metadata for this channel.
+    pub fn metadata(&self) -> &BTreeMap<String, String> {
+        &self.metadata
+    }
+
+    fn matches(&self, other: &Self) -> bool {
+        self.topic == other.topic
+            && self.message_encoding == other.message_encoding
+            && self.metadata == other.metadata
+    }
+}
+
 /// A log channel that can be used to log binary messages.
 ///
 /// A "channel" is conceptually the same as a [MCAP channel]: it is a stream of messages which all
@@ -34,12 +70,9 @@ static WARN_THROTTLER_INTERVAL: Duration = Duration::from_secs(10);
 ///
 /// You should choose a unique topic name per channel for compatibility with the Foxglove app.
 pub struct RawChannel {
-    id: ChannelId,
-    context: Weak<Context>,
-    topic: String,
-    message_encoding: String,
+    descriptor: ChannelDescriptor,
     schema: Option<Schema>,
-    metadata: BTreeMap<String, String>,
+    context: Weak<Context>,
     sinks: LogSinkSet,
     closed: AtomicBool,
     warn_throttler: Mutex<Throttler>,
@@ -54,26 +87,32 @@ impl RawChannel {
         metadata: BTreeMap<String, String>,
     ) -> Arc<Self> {
         Arc::new(Self {
-            id: ChannelId::next(),
+            descriptor: ChannelDescriptor {
+                id: ChannelId::next(),
+                topic,
+                message_encoding,
+                metadata,
+            },
             context: Arc::downgrade(context),
-            topic,
-            message_encoding,
             schema,
-            metadata,
             sinks: LogSinkSet::new(),
             closed: AtomicBool::new(false),
             warn_throttler: Mutex::new(Throttler::new(WARN_THROTTLER_INTERVAL)),
         })
     }
 
+    pub(crate) fn descriptor(&self) -> &ChannelDescriptor {
+        &self.descriptor
+    }
+
     /// Returns the channel ID.
     pub fn id(&self) -> ChannelId {
-        self.id
+        self.descriptor.id
     }
 
     /// Returns the channel topic.
     pub fn topic(&self) -> &str {
-        &self.topic
+        &self.descriptor.topic
     }
 
     /// Returns the channel schema.
@@ -83,20 +122,17 @@ impl RawChannel {
 
     /// Returns the message encoding for this channel.
     pub fn message_encoding(&self) -> &str {
-        &self.message_encoding
+        &self.descriptor.message_encoding
     }
 
     /// Returns the metadata for this channel.
     pub fn metadata(&self) -> &BTreeMap<String, String> {
-        &self.metadata
+        &self.descriptor.metadata
     }
 
     /// Returns true if one channel is substantially the same as the other.
     pub(crate) fn matches(&self, other: &Self) -> bool {
-        self.topic == other.topic
-            && self.message_encoding == other.message_encoding
-            && self.schema == other.schema
-            && self.metadata == other.metadata
+        self.descriptor.matches(&other.descriptor) && self.schema == other.schema
     }
 
     /// Closes the channel, removing it from the context.
@@ -108,7 +144,7 @@ impl RawChannel {
     pub fn close(&self) {
         if !self.is_closed() {
             if let Some(ctx) = self.context.upgrade() {
-                ctx.remove_channel(self.id);
+                ctx.remove_channel(self.descriptor.id);
             }
         }
     }
@@ -196,11 +232,11 @@ impl Eq for RawChannel {}
 impl std::fmt::Debug for RawChannel {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Channel")
-            .field("id", &self.id)
-            .field("topic", &self.topic)
-            .field("message_encoding", &self.message_encoding)
+            .field("id", &self.descriptor.id)
+            .field("topic", &self.descriptor.topic)
+            .field("message_encoding", &self.descriptor.message_encoding)
             .field("schema", &self.schema)
-            .field("metadata", &self.metadata)
+            .field("metadata", &self.descriptor.metadata)
             .finish_non_exhaustive()
     }
 }
