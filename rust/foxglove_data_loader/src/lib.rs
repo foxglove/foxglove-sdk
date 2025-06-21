@@ -60,7 +60,11 @@ impl std::io::Seek for reader::Reader {
     }
 }
 
+/// Result to initialize a data loader with a set of schemas, channels, a time range, and a set of
+/// problems.
 impl loader::Initialization {
+    /// Create a builder interface to initialize schemas that link to channels without having to
+    /// manage assigning channel and schema IDs.
     pub fn builder() -> InitializationBuilder {
         InitializationBuilder::default()
     }
@@ -90,43 +94,60 @@ impl Default for InitializationBuilder {
     }
 }
 
+/// Builder to make Initializations.
 impl InitializationBuilder {
+    /// Set the initialization's time range.
     pub fn time_range(mut self, time_range: TimeRange) -> Self {
         self.time_range = time_range;
         self
     }
 
+    /// Set the start time for the initialization's time range.
     pub fn start_time(mut self, start_time: u64) -> Self {
         self.time_range.start_time = start_time;
         self
     }
 
+    /// Set the end time for the initialization's time range.
     pub fn end_time(mut self, end_time: u64) -> Self {
         self.time_range.end_time = end_time;
         self
     }
 
-    pub fn add_schema<T: foxglove::Encode>(&mut self) -> Result<LinkedSchema, anyhow::Error> {
+    /// Add a schema from a foxglove::Schema. This adds the schema to the initialization and returns
+    /// the LinkedSchema for further customization and to add channels.
+    pub fn add_schema(&mut self, schema: foxglove::Schema) -> LinkedSchema {
         let schema_id = self.next_schema_id;
         self.next_schema_id += 1;
-        let schema = T::get_schema().ok_or(anyhow!["Failed to get schema"])?;
-
         let linked_schema = LinkedSchema {
             id: schema_id,
             next_channel_id: self.next_channel_id.clone(),
             schema,
             channels: Rc::new(RefCell::new(vec![])),
-            message_encoding: T::get_message_encoding(),
+            message_encoding: String::from(""),
         };
         self.schemas.push(linked_schema.clone());
+        linked_schema
+    }
+
+    /// Add a schema from an implementation of foxglove::Encode.
+    /// This sets both the schema and message encoding at once, adds the schema to the
+    /// initialization, and returns the LinkedSchema for further customization and to add channels.
+    pub fn add_encode<T: foxglove::Encode>(&mut self) -> Result<LinkedSchema, anyhow::Error> {
+        let schema = T::get_schema().ok_or(anyhow!["Failed to get schema"])?;
+        let linked_schema = self
+            .add_schema(schema)
+            .message_encoding(T::get_message_encoding());
         Ok(linked_schema)
     }
 
+    /// Add a problem to the initialization.
     pub fn add_problem(mut self, problem: &str) -> Self {
         self.problems.push(String::from(problem));
         self
     }
 
+    /// Generate the initialization with assigned schema and channel IDs.
     pub fn build(self) -> loader::Initialization {
         let schemas = self
             .schemas
@@ -149,6 +170,8 @@ impl InitializationBuilder {
     }
 }
 
+/// A LinkedSchema holds a foxglove::Schema plus the Channels that use this schema and message
+/// encoding.
 #[derive(Debug, Clone)]
 pub struct LinkedSchema {
     id: u16,
@@ -159,6 +182,8 @@ pub struct LinkedSchema {
 }
 
 impl LinkedSchema {
+    /// Create a channel from a topic name with an assigned channel ID and message encoding from the
+    /// schema default message encoding.
     pub fn add_channel(&mut self, topic_name: &str) -> loader::Channel {
         let channel_id = *self.next_channel_id.borrow();
         self.next_channel_id.replace(channel_id + 1);
@@ -172,11 +197,24 @@ impl LinkedSchema {
         self.channels.borrow_mut().push(channel.clone());
         channel
     }
+
+    /// Set the message encoding that added channels will use.
+    pub fn message_encoding(mut self, message_encoding: String) -> Self {
+        self.message_encoding = message_encoding;
+        self
+    }
 }
 
 impl loader::Channel {
+    /// Set the message count for this channel.
     pub fn message_count(mut self, message_count: u64) -> Self {
         self.message_count = Some(message_count);
+        self
+    }
+
+    /// Set the message encoding for the channel.
+    pub fn message_encoding(mut self, message_encoding: String) -> Self {
+        self.message_encoding = message_encoding;
         self
     }
 }
