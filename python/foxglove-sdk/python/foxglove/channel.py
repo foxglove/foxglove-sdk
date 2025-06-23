@@ -33,13 +33,12 @@ class Channel:
         Create a new channel for logging messages on a topic.
 
         :param topic: The topic name. You should choose a unique topic name per channel.
-        :param message_encoding: The message encoding. Optional if
-            :py:param:`schema` is a dictionary, in which case the message
-            encoding is presumed to be "json".
-        :param schema: A definition of your schema. Pass a :py:class:`Schema`
-            for full control. If a dictionary is passed, it will be treated as a
-            JSON schema.
-        :param metadata: A dictionary of key/value strings to add to the channel.
+        :param message_encoding: The message encoding. Optional if :py:param:`schema` is a
+            dictionary, in which case the message encoding is presumed to be "json".
+        :param schema: A definition of your schema. Pass a :py:class:`Schema` for full control. If a
+            dictionary is passed, it will be treated as a JSON schema.
+        :param metadata: A dictionary of key/value strings to add to the channel. A type error is
+            raised if any key or value is not a string.
 
         If both message_encoding and schema are None, then the channel will use JSON encoding, and
         allow any dict to be logged.

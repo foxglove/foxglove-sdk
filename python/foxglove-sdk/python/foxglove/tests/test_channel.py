@@ -141,11 +141,6 @@ def test_channel_attributes(new_topic: str) -> None:
     assert not channel.has_sinks()
 
 
-def test_channel_metadata(new_topic: str) -> None:
-    channel = Channel(new_topic, metadata={"foo": "bar"})
-    assert channel.metadata() == {"foo": "bar"}
-
-
 def test_typed_channel_attributes(new_topic: str) -> None:
     channel = LogChannel(new_topic)
     assert channel.topic() == new_topic
@@ -153,6 +148,28 @@ def test_typed_channel_attributes(new_topic: str) -> None:
     assert channel.schema() == Log.get_schema()
     assert channel.metadata() == {}
     assert not channel.has_sinks()
+
+
+def test_channel_metadata(new_topic: str) -> None:
+    channel = Channel(new_topic, metadata={"foo": "bar"})
+    assert channel.metadata() == {"foo": "bar"}
+
+
+def test_channel_metadata_mistyped(new_topic: str) -> None:
+    with pytest.raises(TypeError, match="argument 'metadata'"):
+        Channel(new_topic, metadata={"1": 1})  # type: ignore
+
+
+def test_typed_channel_metadata(new_topic: str) -> None:
+    channel = LogChannel(new_topic, metadata={"foo": "bar"})
+    assert channel.metadata() == {"foo": "bar"}
+    channel = LogChannel(new_topic, context=Context(), metadata={"foo": "baz"})
+    assert channel.metadata() == {"foo": "baz"}
+
+
+def test_typed_channel_metadata_mistyped(new_topic: str) -> None:
+    with pytest.raises(TypeError, match="argument 'metadata'"):
+        LogChannel(new_topic, metadata={"1": 1})  # type: ignore
 
 
 def test_closed_channel_log(new_topic: str, caplog: pytest.LogCaptureFixture) -> None:
