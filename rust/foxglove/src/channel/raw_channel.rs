@@ -70,7 +70,7 @@ impl ChannelDescriptor {
 ///
 /// You should choose a unique topic name per channel for compatibility with the Foxglove app.
 pub struct RawChannel {
-    descriptor: ChannelDescriptor,
+    descriptor: Arc<ChannelDescriptor>,
     schema: Option<Schema>,
     context: Weak<Context>,
     sinks: LogSinkSet,
@@ -87,12 +87,12 @@ impl RawChannel {
         metadata: BTreeMap<String, String>,
     ) -> Arc<Self> {
         Arc::new(Self {
-            descriptor: ChannelDescriptor {
+            descriptor: Arc::new(ChannelDescriptor {
                 id: ChannelId::next(),
                 topic,
                 message_encoding,
                 metadata,
-            },
+            }),
             context: Arc::downgrade(context),
             schema,
             sinks: LogSinkSet::new(),
