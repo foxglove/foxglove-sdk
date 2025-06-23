@@ -141,6 +141,11 @@ def test_channel_attributes(new_topic: str) -> None:
     assert not channel.has_sinks()
 
 
+def test_channel_metadata(new_topic: str) -> None:
+    channel = Channel(new_topic, metadata={"foo": "bar"})
+    assert channel.metadata() == {"foo": "bar"}
+
+
 def test_typed_channel_attributes(new_topic: str) -> None:
     channel = LogChannel(new_topic)
     assert channel.topic() == new_topic

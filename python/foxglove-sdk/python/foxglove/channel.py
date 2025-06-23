@@ -27,6 +27,7 @@ class Channel:
         schema: Union[JsonSchema, _foxglove.Schema, None] = None,
         message_encoding: Optional[str] = None,
         context: Optional[Context] = None,
+        metadata: Optional[Dict[str, str]] = None,
     ):
         """
         Create a new channel for logging messages on a topic.
@@ -38,6 +39,7 @@ class Channel:
         :param schema: A definition of your schema. Pass a :py:class:`Schema`
             for full control. If a dictionary is passed, it will be treated as a
             JSON schema.
+        :param metadata: A dictionary of key/value strings to add to the channel.
 
         If both message_encoding and schema are None, then the channel will use JSON encoding, and
         allow any dict to be logged.
@@ -53,6 +55,7 @@ class Channel:
                 topic,
                 message_encoding,
                 schema,
+                metadata,
             )
 
         _channels_by_id[self.base.id()] = self
