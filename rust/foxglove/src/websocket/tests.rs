@@ -1594,7 +1594,7 @@ async fn test_broadcast_time() {
 async fn test_channel_filter() {
     struct Filter;
     impl SinkChannelFilter for Filter {
-        fn should_subscribe(&self, channel: &ChannelDescriptor) -> bool {
+        fn should_subscribe(&self, channel: Arc<ChannelDescriptor>) -> bool {
             channel.topic() == "/1"
         }
     }

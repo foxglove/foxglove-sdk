@@ -354,7 +354,7 @@ mod tests {
         // Write messages to two topics, but filter out the first.
         struct Ch1Filter;
         impl SinkChannelFilter for Ch1Filter {
-            fn should_subscribe(&self, channel: &ChannelDescriptor) -> bool {
+            fn should_subscribe(&self, channel: Arc<ChannelDescriptor>) -> bool {
                 channel.topic() == "/2"
             }
         }
