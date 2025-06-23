@@ -64,8 +64,8 @@ impl RawChannel {
         })
     }
 
-    pub(crate) fn descriptor(&self) -> &ChannelDescriptor {
-        &self.descriptor
+    pub(crate) fn descriptor(&self) -> Arc<ChannelDescriptor> {
+        self.descriptor.clone()
     }
 
     /// Returns the channel ID.
