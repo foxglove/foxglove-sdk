@@ -141,9 +141,9 @@ int main(int argc, const char* argv[]) {
     auto elapsed = std::chrono::duration<double>(now - start_time).count();
     auto param = foxglove::Parameter("elapsed", elapsed);
     param_store.insert_or_assign("elapsed", param.clone());
-    std::vector<foxglove::Parameter> params;
-    params.emplace_back(std::move(param));
-    server.publishParameterValues(std::move(params));
+    std::vector<foxglove::Parameter> paramsToPublish;
+    paramsToPublish.emplace_back(std::move(param));
+    server.publishParameterValues(std::move(paramsToPublish));
   }
 
   server.stop();
