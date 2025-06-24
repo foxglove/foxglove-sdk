@@ -20,14 +20,16 @@ using Catch::Matchers::Equals;
 using foxglove_tests::FileCleanup;
 
 namespace {
-  foxglove::McapWriterOptions makeOptions(const foxglove::Context& context, const std::string& path = "", const bool truncate = true) {
-    return foxglove::McapWriterOptions{
-      .context = context,
-      .path = path,
-      .truncate = truncate,
-    };
-  }
-} // namespace
+foxglove::McapWriterOptions makeOptions(
+  const foxglove::Context& context, const std::string& path = "", const bool truncate = true
+) {
+  return foxglove::McapWriterOptions{
+    .context = context,
+    .path = path,
+    .truncate = truncate,
+  };
+}
+}  // namespace
 
 TEST_CASE("Open new file and close mcap writer") {
   FileCleanup cleanup("test.mcap");
