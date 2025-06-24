@@ -270,7 +270,7 @@ struct is_pointer_to_non_const_member_func : std::false_type {};
 template<class T, class Ret, class... Args>
 struct is_pointer_to_non_const_member_func<Ret (T::*)(Args...)> : std::true_type {};
 template<class T, class Ret, class... Args>
-struct is_pointer_to_non_const_member_func<Ret (T::*)(Args...) &> : std::true_type {};
+struct is_pointer_to_non_const_member_func<Ret (T::*)(Args...)&> : std::true_type {};
 template<class T, class Ret, class... Args>
 struct is_pointer_to_non_const_member_func<Ret (T::*)(Args...) &&> : std::true_type {};
 template<class T, class Ret, class... Args>
@@ -1071,8 +1071,7 @@ struct expected_move_base<T, E, false> : expected_copy_base<T, E> {
   expected_move_base() = default;
   expected_move_base(const expected_move_base& rhs) = default;
 
-  expected_move_base(expected_move_base&& rhs) noexcept(
-    std::is_nothrow_move_constructible<T>::value
+  expected_move_base(expected_move_base&& rhs) noexcept(std::is_nothrow_move_constructible<T>::value
   )
       : expected_copy_base<T, E>(no_init) {
     if (rhs.has_value()) {
@@ -1396,28 +1395,24 @@ public:
 
 #else
   template<class F>
-  TL_EXPECTED_11_CONSTEXPR auto and_then(
-    F&& f
+  TL_EXPECTED_11_CONSTEXPR auto and_then(F&& f
   ) & -> decltype(and_then_impl(std::declval<expected&>(), std::forward<F>(f))) {
     return and_then_impl(*this, std::forward<F>(f));
   }
   template<class F>
-  TL_EXPECTED_11_CONSTEXPR auto and_then(
-    F&& f
+  TL_EXPECTED_11_CONSTEXPR auto and_then(F&& f
   ) && -> decltype(and_then_impl(std::declval<expected&&>(), std::forward<F>(f))) {
     return and_then_impl(std::move(*this), std::forward<F>(f));
   }
   template<class F>
-  constexpr auto and_then(
-    F&& f
+  constexpr auto and_then(F&& f
   ) const& -> decltype(and_then_impl(std::declval<expected const&>(), std::forward<F>(f))) {
     return and_then_impl(*this, std::forward<F>(f));
   }
 
 #ifndef TL_EXPECTED_NO_CONSTRR
   template<class F>
-  constexpr auto and_then(
-    F&& f
+  constexpr auto and_then(F&& f
   ) const&& -> decltype(and_then_impl(std::declval<expected const&&>(), std::forward<F>(f))) {
     return and_then_impl(std::move(*this), std::forward<F>(f));
   }
@@ -1658,9 +1653,8 @@ public:
   template<
     class G = E, detail::enable_if_t<std::is_constructible<E, G&&>::value>* = nullptr,
     detail::enable_if_t<!std::is_convertible<G&&, E>::value>* = nullptr>
-  explicit constexpr expected(unexpected<G>&& e) noexcept(
-    std::is_nothrow_constructible<E, G&&>::value
-  )
+  explicit constexpr expected(unexpected<G>&& e
+  ) noexcept(std::is_nothrow_constructible<E, G&&>::value)
       : impl_base(unexpect, std::move(e.value()))
       , ctor_base(detail::default_constructor_tag{}) {}
 
@@ -2016,8 +2010,8 @@ public:
   template<class OT = T, class OE = E>
   detail::enable_if_t<
     detail::is_swappable<OT>::value && detail::is_swappable<OE>::value &&
-    (std::is_nothrow_move_constructible<OT>::value ||
-     std::is_nothrow_move_constructible<OE>::value)>
+    (std::is_nothrow_move_constructible<OT>::value || std::is_nothrow_move_constructible<OE>::value
+    )>
   swap(expected& rhs) noexcept(
     std::is_nothrow_move_constructible<T>::value && detail::is_nothrow_swappable<T>::value &&
     std::is_nothrow_move_constructible<E>::value && detail::is_nothrow_swappable<E>::value
