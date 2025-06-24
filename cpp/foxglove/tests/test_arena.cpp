@@ -69,7 +69,7 @@ TEST_CASE("allocate from heap when arena capacity is exceeded") {
 
   // Verify we can use the overflow allocation
   for (size_t i = 0; i < largeAllocationSize / sizeof(int); i++) {
-    largeAllocation[i] = i;
+    largeAllocation[i] = static_cast<int>(i);
   }
 
   // Make several more overflow allocations

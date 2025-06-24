@@ -748,7 +748,7 @@ std::vector<std::byte> makeServiceRequest(
   buffer.emplace_back(static_cast<std::byte>(2));  // Service call request opcode
   writeUint32LE(buffer, service_id);
   writeUint32LE(buffer, call_id);
-  writeUint32LE(buffer, encoding.size());
+  writeUint32LE(buffer, static_cast<uint32_t>(encoding.size()));
   for (char c : encoding) {
     buffer.emplace_back(static_cast<std::byte>(c));
   }
@@ -831,11 +831,11 @@ TEST_CASE("Service callbacks") {
   REQUIRE(parsed["op"] == "advertiseServices");
   REQUIRE(parsed.contains("services"));
   std::map<std::string, uint32_t> service_ids;
-  for (const auto& service : parsed["services"]) {
-    REQUIRE(service.contains("id"));
-    REQUIRE(service.contains("name"));
-    uint8_t id(service["id"]);
-    std::string name(service["name"]);
+  for (const auto& parsedService : parsed["services"]) {
+    REQUIRE(parsedService.contains("id"));
+    REQUIRE(parsedService.contains("name"));
+    uint8_t id(parsedService["id"]);
+    std::string name(parsedService["name"]);
     service_ids[name] = id;
     Json expected;
     if (name == "/echo") {
@@ -867,7 +867,7 @@ TEST_CASE("Service callbacks") {
     } else {
     }
     expected["id"] = id;
-    REQUIRE(service == expected);
+    REQUIRE(parsedService == expected);
   }
   REQUIRE(service_ids.count("/echo") == 1);
   REQUIRE(service_ids.count("/error") == 1);
