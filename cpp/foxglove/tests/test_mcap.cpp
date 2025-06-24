@@ -21,13 +21,13 @@ using foxglove_tests::FileCleanup;
 
 namespace {
 foxglove::McapWriterOptions makeOptions(
-  const foxglove::Context& context, const std::string& path = "", const bool truncate = true
+  const foxglove::Context& context, const std::string& path = "", const std::string& profile = ""
 ) {
-  return foxglove::McapWriterOptions{
-    .context = context,
-    .path = path,
-    .truncate = truncate,
-  };
+  foxglove::McapWriterOptions options;
+  options.context = context;
+  options.path = path;
+  options.profile = profile;
+  return options;
 }
 }  // namespace
 
