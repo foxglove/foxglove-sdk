@@ -258,7 +258,6 @@ public:
       return false;
     }
     try {
-      auto value = this->value();
       const auto& arr = this->get<ParameterValueView::Array>();
       return std::all_of(arr.begin(), arr.end(), [](const ParameterValueView& elem) noexcept {
         return elem.is<T>();
