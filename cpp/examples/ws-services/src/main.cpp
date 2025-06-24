@@ -63,10 +63,8 @@ int main(int argc, const char** argv) {
     done = true;
   };
 
-  uint32_t i = 0;
   while (!done) {
     std::this_thread::sleep_for(100ms);
-    ++i;
   }
 
   server.stop();
@@ -82,7 +80,7 @@ std::vector<std::byte> makeBytes(std::string_view sv) {
  * A service that always responds with an empty json object.
  */
 bool registerEmptyService(foxglove::WebSocketServer& server) {
-  foxglove::ServiceSchema empty_schema{"/std_srvs/Empty"};
+  foxglove::ServiceSchema empty_schema{"/std_srvs/Empty", std::nullopt, std::nullopt};
   static foxglove::ServiceHandler empty_handler(
     [](const foxglove::ServiceRequest& request, foxglove::ServiceResponder&& responder) {
       std::move(responder).respondOk(makeBytes("{}"));
@@ -105,7 +103,7 @@ bool registerEmptyService(foxglove::WebSocketServer& server) {
  * A service that echoes its input.
  */
 bool registerEchoService(foxglove::WebSocketServer& server) {
-  foxglove::ServiceSchema empty_schema{"/std_srvs/Empty"};
+  foxglove::ServiceSchema empty_schema{"/std_srvs/Empty", std::nullopt, std::nullopt};
   static foxglove::ServiceHandler echo_handler(
     [](const foxglove::ServiceRequest& request, foxglove::ServiceResponder&& responder) {
       std::move(responder).respondOk(request.payload);
@@ -131,7 +129,7 @@ bool registerEchoService(foxglove::WebSocketServer& server) {
  * because the callback is invoked from the websocket client's main poll thread.
  */
 bool registerSleepService(foxglove::WebSocketServer& server) {
-  foxglove::ServiceSchema empty_schema{"/std_srvs/Empty"};
+  foxglove::ServiceSchema empty_schema{"/std_srvs/Empty", std::nullopt, std::nullopt};
   static foxglove::ServiceHandler sleep_handler(
     [](const foxglove::ServiceRequest& request, foxglove::ServiceResponder&& responder) {
       // Spawn a new thread to handle the response, so that we don't block the

@@ -68,7 +68,7 @@ TEST_CASE("allocate from heap when arena capacity is exceeded") {
   REQUIRE(largeAllocation != nullptr);
 
   // Verify we can use the overflow allocation
-  for (int i = 0; i < largeAllocationSize / sizeof(int); i++) {
+  for (size_t i = 0; i < largeAllocationSize / sizeof(int); i++) {
     largeAllocation[i] = i;
   }
 

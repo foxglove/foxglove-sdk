@@ -477,7 +477,7 @@ TEST_CASE("Parameter callbacks") {
     std::vector<foxglove::Parameter> owned_params;
     owned_params.reserve(params.size());
     for (const auto& param : params) {
-      owned_params.emplace_back(std::move(param.clone()));
+      owned_params.emplace_back(param.clone());
     }
     server_set_parameters = std::make_pair(owned_request_id, std::move(owned_params));
     cv.notify_one();
@@ -786,7 +786,7 @@ TEST_CASE("Service callbacks") {
   auto server = startServer(context, foxglove::WebSocketServerCapabilities::Services, {}, {"json"});
 
   // Register an echo service.
-  foxglove::ServiceSchema echo_schema{"echo schema"};
+  foxglove::ServiceSchema echo_schema{"echo schema", std::nullopt, std::nullopt};
   foxglove::ServiceHandler echo_handler(
     [&](const foxglove::ServiceRequest& request, foxglove::ServiceResponder&& responder) {
       std::scoped_lock lock{mutex};

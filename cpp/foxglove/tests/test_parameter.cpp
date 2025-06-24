@@ -225,7 +225,7 @@ TEST_CASE("Parameter error cases") {
     foxglove::Parameter param(
       "test_param",
       foxglove::ParameterType::ByteArray,
-      std::move(foxglove::ParameterValue("invalid-base64!"))
+      foxglove::ParameterValue("invalid-base64!")
     );
     auto result = param.getByteArray();
     REQUIRE(!result.has_value());

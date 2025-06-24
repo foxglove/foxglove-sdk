@@ -19,6 +19,16 @@ using Catch::Matchers::ContainsSubstring;
 using Catch::Matchers::Equals;
 using foxglove_tests::FileCleanup;
 
+namespace {
+  foxglove::McapWriterOptions makeOptions(const foxglove::Context& context, const std::string& path = "", const bool truncate = true) {
+    return foxglove::McapWriterOptions{
+      .context = context,
+      .path = path,
+      .truncate = truncate,
+    };
+  }
+} // namespace
+
 TEST_CASE("Open new file and close mcap writer") {
   FileCleanup cleanup("test.mcap");
 
@@ -118,8 +128,7 @@ TEST_CASE("different contexts") {
   auto context2 = foxglove::Context::create();
 
   // Create writer on context1
-  foxglove::McapWriterOptions options{context1};
-  options.path = "test.mcap";
+  foxglove::McapWriterOptions options = makeOptions(context1, "test.mcap");
   auto writer = foxglove::McapWriter::create(options);
   REQUIRE(writer.has_value());
 
@@ -146,8 +155,7 @@ TEST_CASE("specify profile") {
   FileCleanup cleanup("test.mcap");
   auto context = foxglove::Context::create();
 
-  foxglove::McapWriterOptions options{context};
-  options.path = "test.mcap";
+  foxglove::McapWriterOptions options = makeOptions(context, "test.mcap");
   options.profile = "test_profile";
   auto writer = foxglove::McapWriter::create(options);
   REQUIRE(writer.has_value());
@@ -175,8 +183,7 @@ TEST_CASE("zstd compression") {
   FileCleanup cleanup("test.mcap");
   auto context = foxglove::Context::create();
 
-  foxglove::McapWriterOptions options{context};
-  options.path = "test.mcap";
+  foxglove::McapWriterOptions options = makeOptions(context, "test.mcap");
   options.compression = foxglove::McapCompression::Zstd;
   options.chunk_size = 10000;
   options.use_chunks = true;
@@ -206,8 +213,7 @@ TEST_CASE("lz4 compression") {
   FileCleanup cleanup("test.mcap");
   auto context = foxglove::Context::create();
 
-  foxglove::McapWriterOptions options{context};
-  options.path = "test.mcap";
+  foxglove::McapWriterOptions options = makeOptions(context, "test.mcap");
   options.compression = foxglove::McapCompression::Lz4;
   options.chunk_size = 10000;
   options.use_chunks = true;
@@ -238,8 +244,7 @@ TEST_CASE("Channel can outlive Schema") {
   FileCleanup cleanup("test.mcap");
   auto context = foxglove::Context::create();
 
-  foxglove::McapWriterOptions options{context};
-  options.path = "test.mcap";
+  foxglove::McapWriterOptions options = makeOptions(context, "test.mcap");
   auto writer = foxglove::McapWriter::create(options);
   REQUIRE(writer.has_value());
 
@@ -354,8 +359,7 @@ TEST_CASE("ImageAnnotations channel") {
   FileCleanup cleanup("test.mcap");
   auto context = foxglove::Context::create();
 
-  foxglove::McapWriterOptions options{context};
-  options.path = "test.mcap";
+  foxglove::McapWriterOptions options = makeOptions(context, "test.mcap");
   options.compression = foxglove::McapCompression::None;
   auto writer = foxglove::McapWriter::create(options);
   REQUIRE(writer.has_value());
