@@ -86,7 +86,8 @@ if (STRICT)
   if(CMAKE_CXX_COMPILER_ID MATCHES ".*Clang")
     set (STRICT_COMPILE_OPTIONS -Wall -Wextra -Wpedantic -Werror -Wold-style-cast -Wno-float-equal -Wno-unused-parameter -Wmost -Wunused-exception-parameter)
   elseif(MSVC)
-    set (STRICT_COMPILE_OPTIONS /W4 /WX)
+    # TODO: Remove /wd4100 once the unused parameter warnings are resolved
+    set (STRICT_COMPILE_OPTIONS /W4 /WX /wd4100)
   endif()
 endif()
 
