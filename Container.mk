@@ -66,7 +66,7 @@ docs-cpp:
 
 .PHONY: build-cpp
 build-cpp:
-	make -C cpp build
+	make -C cpp STRICT=true build
 
 .PHONY: build-cpp-tidy
 build-cpp-tidy:
@@ -82,7 +82,7 @@ lint-fix-cpp:
 
 .PHONY: test-cpp
 test-cpp:
-	make -C cpp test
+	make -C cpp STRICT=true test
 
 .PHONY: test-cpp-sanitize
 test-cpp-sanitize:
