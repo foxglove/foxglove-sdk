@@ -80,7 +80,7 @@ std::vector<std::byte> makeBytes(std::string_view sv) {
  * A service that always responds with an empty json object.
  */
 bool registerEmptyService(foxglove::WebSocketServer& server) {
-  foxglove::ServiceSchema empty_schema{"/std_srvs/Empty", std::nullopt, std::nullopt};
+  foxglove::ServiceSchema empty_schema{"/std_srvs/Empty"};
   static foxglove::ServiceHandler empty_handler(
     [](const foxglove::ServiceRequest& request [[maybe_unused]], foxglove::ServiceResponder&& responder) {
       std::move(responder).respondOk(makeBytes("{}"));
@@ -103,7 +103,7 @@ bool registerEmptyService(foxglove::WebSocketServer& server) {
  * A service that echoes its input.
  */
 bool registerEchoService(foxglove::WebSocketServer& server) {
-  foxglove::ServiceSchema empty_schema{"/std_srvs/Empty", std::nullopt, std::nullopt};
+  foxglove::ServiceSchema empty_schema{"/std_srvs/Empty"};
   static foxglove::ServiceHandler echo_handler(
     [](const foxglove::ServiceRequest& request, foxglove::ServiceResponder&& responder) {
       std::move(responder).respondOk(request.payload);
@@ -129,7 +129,7 @@ bool registerEchoService(foxglove::WebSocketServer& server) {
  * because the callback is invoked from the websocket client's main poll thread.
  */
 bool registerSleepService(foxglove::WebSocketServer& server) {
-  foxglove::ServiceSchema empty_schema{"/std_srvs/Empty", std::nullopt, std::nullopt};
+  foxglove::ServiceSchema empty_schema{"/std_srvs/Empty"};
   static foxglove::ServiceHandler sleep_handler(
     [](const foxglove::ServiceRequest& request [[maybe_unused]], foxglove::ServiceResponder&& responder) {
       // Spawn a new thread to handle the response, so that we don't block the

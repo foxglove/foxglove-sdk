@@ -785,7 +785,7 @@ TEST_CASE("Service callbacks") {
   auto server = startServer(context, foxglove::WebSocketServerCapabilities::Services, {}, {"json"});
 
   // Register an echo service.
-  foxglove::ServiceSchema echo_schema{"echo schema", std::nullopt, std::nullopt};
+  foxglove::ServiceSchema echo_schema{"echo schema"};
   foxglove::ServiceHandler echo_handler(
     [&](const foxglove::ServiceRequest& request, foxglove::ServiceResponder&& responder) {
       std::scoped_lock lock{mutex};
