@@ -358,7 +358,7 @@ export function generateCppSchemas(schemas: FoxgloveMessageSchema[]): string {
       return [];
     }
     return [
-      `void ${toCamelCase(schema.name)}ToC(foxglove_${toSnakeCase(schema.name)}& dest, const ${schema.name}& src, Arena& arena) {`,
+      `void ${toCamelCase(schema.name)}ToC(foxglove_${toSnakeCase(schema.name)}& dest, const ${schema.name}& src, [[maybe_unused]] Arena& arena) {`,
       `    ${cppToC(schema, copyTypes).join("\n    ")}`,
       "}\n",
     ];

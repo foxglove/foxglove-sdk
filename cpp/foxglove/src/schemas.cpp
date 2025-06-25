@@ -17,62 +17,49 @@ void ChannelDeleter::operator()(const foxglove_channel* ptr) const noexcept {
 
 void arrowPrimitiveToC(foxglove_arrow_primitive& dest, const ArrowPrimitive& src, Arena& arena);
 void cameraCalibrationToC(
-  foxglove_camera_calibration& dest, const CameraCalibration& src, Arena& arena [[maybe_unused]]
+  foxglove_camera_calibration& dest, const CameraCalibration& src, Arena& arena
 );
 void circleAnnotationToC(
-  foxglove_circle_annotation& dest, const CircleAnnotation& src, Arena& arena [[maybe_unused]]
+  foxglove_circle_annotation& dest, const CircleAnnotation& src, Arena& arena
 );
-void compressedImageToC(
-  foxglove_compressed_image& dest, const CompressedImage& src, Arena& arena [[maybe_unused]]
-);
-void compressedVideoToC(
-  foxglove_compressed_video& dest, const CompressedVideo& src, Arena& arena [[maybe_unused]]
-);
+void compressedImageToC(foxglove_compressed_image& dest, const CompressedImage& src, Arena& arena);
+void compressedVideoToC(foxglove_compressed_video& dest, const CompressedVideo& src, Arena& arena);
 void cubePrimitiveToC(foxglove_cube_primitive& dest, const CubePrimitive& src, Arena& arena);
 void cylinderPrimitiveToC(
   foxglove_cylinder_primitive& dest, const CylinderPrimitive& src, Arena& arena
 );
-void frameTransformToC(
-  foxglove_frame_transform& dest, const FrameTransform& src, Arena& arena [[maybe_unused]]
-);
+void frameTransformToC(foxglove_frame_transform& dest, const FrameTransform& src, Arena& arena);
 void frameTransformsToC(foxglove_frame_transforms& dest, const FrameTransforms& src, Arena& arena);
-void geoJSONToC(foxglove_geo_json& dest, const GeoJSON& src, Arena& arena [[maybe_unused]]);
+void geoJSONToC(foxglove_geo_json& dest, const GeoJSON& src, Arena& arena);
 void gridToC(foxglove_grid& dest, const Grid& src, Arena& arena);
 void imageAnnotationsToC(
   foxglove_image_annotations& dest, const ImageAnnotations& src, Arena& arena
 );
-void keyValuePairToC(
-  foxglove_key_value_pair& dest, const KeyValuePair& src, Arena& arena [[maybe_unused]]
-);
+void keyValuePairToC(foxglove_key_value_pair& dest, const KeyValuePair& src, Arena& arena);
 void laserScanToC(foxglove_laser_scan& dest, const LaserScan& src, Arena& arena);
 void linePrimitiveToC(foxglove_line_primitive& dest, const LinePrimitive& src, Arena& arena);
-void locationFixToC(
-  foxglove_location_fix& dest, const LocationFix& src, Arena& arena [[maybe_unused]]
-);
-void logToC(foxglove_log& dest, const Log& src, Arena& arena [[maybe_unused]]);
+void locationFixToC(foxglove_location_fix& dest, const LocationFix& src, Arena& arena);
+void logToC(foxglove_log& dest, const Log& src, Arena& arena);
 void modelPrimitiveToC(foxglove_model_primitive& dest, const ModelPrimitive& src, Arena& arena);
 void packedElementFieldToC(
-  foxglove_packed_element_field& dest, const PackedElementField& src, Arena& arena [[maybe_unused]]
+  foxglove_packed_element_field& dest, const PackedElementField& src, Arena& arena
 );
 void pointCloudToC(foxglove_point_cloud& dest, const PointCloud& src, Arena& arena);
 void pointsAnnotationToC(
-  foxglove_points_annotation& dest, const PointsAnnotation& src, Arena& arena [[maybe_unused]]
+  foxglove_points_annotation& dest, const PointsAnnotation& src, Arena& arena
 );
-void poseToC(foxglove_pose& dest, const Pose& src, Arena& arena [[maybe_unused]]);
+void poseToC(foxglove_pose& dest, const Pose& src, Arena& arena);
 void poseInFrameToC(foxglove_pose_in_frame& dest, const PoseInFrame& src, Arena& arena);
 void posesInFrameToC(foxglove_poses_in_frame& dest, const PosesInFrame& src, Arena& arena);
-void rawAudioToC(foxglove_raw_audio& dest, const RawAudio& src, Arena& arena [[maybe_unused]]);
-void rawImageToC(foxglove_raw_image& dest, const RawImage& src, Arena& arena [[maybe_unused]]);
+void rawAudioToC(foxglove_raw_audio& dest, const RawAudio& src, Arena& arena);
+void rawImageToC(foxglove_raw_image& dest, const RawImage& src, Arena& arena);
 void sceneEntityToC(foxglove_scene_entity& dest, const SceneEntity& src, Arena& arena);
 void sceneEntityDeletionToC(
-  foxglove_scene_entity_deletion& dest, const SceneEntityDeletion& src,
-  Arena& arena [[maybe_unused]]
+  foxglove_scene_entity_deletion& dest, const SceneEntityDeletion& src, Arena& arena
 );
 void sceneUpdateToC(foxglove_scene_update& dest, const SceneUpdate& src, Arena& arena);
 void spherePrimitiveToC(foxglove_sphere_primitive& dest, const SpherePrimitive& src, Arena& arena);
-void textAnnotationToC(
-  foxglove_text_annotation& dest, const TextAnnotation& src, Arena& arena [[maybe_unused]]
-);
+void textAnnotationToC(foxglove_text_annotation& dest, const TextAnnotation& src, Arena& arena);
 void textPrimitiveToC(foxglove_text_primitive& dest, const TextPrimitive& src, Arena& arena);
 void triangleListPrimitiveToC(
   foxglove_triangle_list_primitive& dest, const TriangleListPrimitive& src, Arena& arena
@@ -1116,7 +1103,9 @@ uint64_t Vector3Channel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
-void arrowPrimitiveToC(foxglove_arrow_primitive& dest, const ArrowPrimitive& src, Arena& arena) {
+void arrowPrimitiveToC(
+  foxglove_arrow_primitive& dest, const ArrowPrimitive& src, [[maybe_unused]] Arena& arena
+) {
   dest.pose = src.pose ? arena.map_one<foxglove_pose>(src.pose.value(), poseToC) : nullptr;
   dest.shaft_length = src.shaft_length;
   dest.shaft_diameter = src.shaft_diameter;
@@ -1126,7 +1115,7 @@ void arrowPrimitiveToC(foxglove_arrow_primitive& dest, const ArrowPrimitive& src
 }
 
 void cameraCalibrationToC(
-  foxglove_camera_calibration& dest, const CameraCalibration& src, Arena& arena [[maybe_unused]]
+  foxglove_camera_calibration& dest, const CameraCalibration& src, [[maybe_unused]] Arena& arena
 ) {
   dest.timestamp =
     src.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*src.timestamp) : nullptr;
@@ -1142,7 +1131,7 @@ void cameraCalibrationToC(
 }
 
 void circleAnnotationToC(
-  foxglove_circle_annotation& dest, const CircleAnnotation& src, Arena& arena [[maybe_unused]]
+  foxglove_circle_annotation& dest, const CircleAnnotation& src, [[maybe_unused]] Arena& arena
 ) {
   dest.timestamp =
     src.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*src.timestamp) : nullptr;
@@ -1156,7 +1145,7 @@ void circleAnnotationToC(
 }
 
 void compressedImageToC(
-  foxglove_compressed_image& dest, const CompressedImage& src, Arena& arena [[maybe_unused]]
+  foxglove_compressed_image& dest, const CompressedImage& src, [[maybe_unused]] Arena& arena
 ) {
   dest.timestamp =
     src.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*src.timestamp) : nullptr;
@@ -1167,7 +1156,7 @@ void compressedImageToC(
 }
 
 void compressedVideoToC(
-  foxglove_compressed_video& dest, const CompressedVideo& src, Arena& arena [[maybe_unused]]
+  foxglove_compressed_video& dest, const CompressedVideo& src, [[maybe_unused]] Arena& arena
 ) {
   dest.timestamp =
     src.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*src.timestamp) : nullptr;
@@ -1177,14 +1166,16 @@ void compressedVideoToC(
   dest.format = {src.format.data(), src.format.size()};
 }
 
-void cubePrimitiveToC(foxglove_cube_primitive& dest, const CubePrimitive& src, Arena& arena) {
+void cubePrimitiveToC(
+  foxglove_cube_primitive& dest, const CubePrimitive& src, [[maybe_unused]] Arena& arena
+) {
   dest.pose = src.pose ? arena.map_one<foxglove_pose>(src.pose.value(), poseToC) : nullptr;
   dest.size = src.size ? reinterpret_cast<const foxglove_vector3*>(&*src.size) : nullptr;
   dest.color = src.color ? reinterpret_cast<const foxglove_color*>(&*src.color) : nullptr;
 }
 
 void cylinderPrimitiveToC(
-  foxglove_cylinder_primitive& dest, const CylinderPrimitive& src, Arena& arena
+  foxglove_cylinder_primitive& dest, const CylinderPrimitive& src, [[maybe_unused]] Arena& arena
 ) {
   dest.pose = src.pose ? arena.map_one<foxglove_pose>(src.pose.value(), poseToC) : nullptr;
   dest.size = src.size ? reinterpret_cast<const foxglove_vector3*>(&*src.size) : nullptr;
@@ -1194,7 +1185,7 @@ void cylinderPrimitiveToC(
 }
 
 void frameTransformToC(
-  foxglove_frame_transform& dest, const FrameTransform& src, Arena& arena [[maybe_unused]]
+  foxglove_frame_transform& dest, const FrameTransform& src, [[maybe_unused]] Arena& arena
 ) {
   dest.timestamp =
     src.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*src.timestamp) : nullptr;
@@ -1206,16 +1197,18 @@ void frameTransformToC(
     src.rotation ? reinterpret_cast<const foxglove_quaternion*>(&*src.rotation) : nullptr;
 }
 
-void frameTransformsToC(foxglove_frame_transforms& dest, const FrameTransforms& src, Arena& arena) {
+void frameTransformsToC(
+  foxglove_frame_transforms& dest, const FrameTransforms& src, [[maybe_unused]] Arena& arena
+) {
   dest.transforms = arena.map<foxglove_frame_transform>(src.transforms, frameTransformToC);
   dest.transforms_count = src.transforms.size();
 }
 
-void geoJSONToC(foxglove_geo_json& dest, const GeoJSON& src, Arena& arena [[maybe_unused]]) {
+void geoJSONToC(foxglove_geo_json& dest, const GeoJSON& src, [[maybe_unused]] Arena& arena) {
   dest.geojson = {src.geojson.data(), src.geojson.size()};
 }
 
-void gridToC(foxglove_grid& dest, const Grid& src, Arena& arena) {
+void gridToC(foxglove_grid& dest, const Grid& src, [[maybe_unused]] Arena& arena) {
   dest.timestamp =
     src.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*src.timestamp) : nullptr;
   dest.frame_id = {src.frame_id.data(), src.frame_id.size()};
@@ -1232,7 +1225,7 @@ void gridToC(foxglove_grid& dest, const Grid& src, Arena& arena) {
 }
 
 void imageAnnotationsToC(
-  foxglove_image_annotations& dest, const ImageAnnotations& src, Arena& arena
+  foxglove_image_annotations& dest, const ImageAnnotations& src, [[maybe_unused]] Arena& arena
 ) {
   dest.circles = arena.map<foxglove_circle_annotation>(src.circles, circleAnnotationToC);
   dest.circles_count = src.circles.size();
@@ -1243,13 +1236,13 @@ void imageAnnotationsToC(
 }
 
 void keyValuePairToC(
-  foxglove_key_value_pair& dest, const KeyValuePair& src, Arena& arena [[maybe_unused]]
+  foxglove_key_value_pair& dest, const KeyValuePair& src, [[maybe_unused]] Arena& arena
 ) {
   dest.key = {src.key.data(), src.key.size()};
   dest.value = {src.value.data(), src.value.size()};
 }
 
-void laserScanToC(foxglove_laser_scan& dest, const LaserScan& src, Arena& arena) {
+void laserScanToC(foxglove_laser_scan& dest, const LaserScan& src, [[maybe_unused]] Arena& arena) {
   dest.timestamp =
     src.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*src.timestamp) : nullptr;
   dest.frame_id = {src.frame_id.data(), src.frame_id.size()};
@@ -1262,7 +1255,9 @@ void laserScanToC(foxglove_laser_scan& dest, const LaserScan& src, Arena& arena)
   dest.intensities_count = src.intensities.size();
 }
 
-void linePrimitiveToC(foxglove_line_primitive& dest, const LinePrimitive& src, Arena& arena) {
+void linePrimitiveToC(
+  foxglove_line_primitive& dest, const LinePrimitive& src, [[maybe_unused]] Arena& arena
+) {
   dest.type = static_cast<foxglove_line_type>(src.type);
   dest.pose = src.pose ? arena.map_one<foxglove_pose>(src.pose.value(), poseToC) : nullptr;
   dest.thickness = src.thickness;
@@ -1277,7 +1272,7 @@ void linePrimitiveToC(foxglove_line_primitive& dest, const LinePrimitive& src, A
 }
 
 void locationFixToC(
-  foxglove_location_fix& dest, const LocationFix& src, Arena& arena [[maybe_unused]]
+  foxglove_location_fix& dest, const LocationFix& src, [[maybe_unused]] Arena& arena
 ) {
   dest.timestamp =
     src.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*src.timestamp) : nullptr;
@@ -1294,7 +1289,7 @@ void locationFixToC(
     static_cast<foxglove_position_covariance_type>(src.position_covariance_type);
 }
 
-void logToC(foxglove_log& dest, const Log& src, Arena& arena [[maybe_unused]]) {
+void logToC(foxglove_log& dest, const Log& src, [[maybe_unused]] Arena& arena) {
   dest.timestamp =
     src.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*src.timestamp) : nullptr;
   dest.level = static_cast<foxglove_log_level>(src.level);
@@ -1304,7 +1299,9 @@ void logToC(foxglove_log& dest, const Log& src, Arena& arena [[maybe_unused]]) {
   dest.line = src.line;
 }
 
-void modelPrimitiveToC(foxglove_model_primitive& dest, const ModelPrimitive& src, Arena& arena) {
+void modelPrimitiveToC(
+  foxglove_model_primitive& dest, const ModelPrimitive& src, [[maybe_unused]] Arena& arena
+) {
   dest.pose = src.pose ? arena.map_one<foxglove_pose>(src.pose.value(), poseToC) : nullptr;
   dest.scale = src.scale ? reinterpret_cast<const foxglove_vector3*>(&*src.scale) : nullptr;
   dest.color = src.color ? reinterpret_cast<const foxglove_color*>(&*src.color) : nullptr;
@@ -1316,14 +1313,16 @@ void modelPrimitiveToC(foxglove_model_primitive& dest, const ModelPrimitive& src
 }
 
 void packedElementFieldToC(
-  foxglove_packed_element_field& dest, const PackedElementField& src, Arena& arena [[maybe_unused]]
+  foxglove_packed_element_field& dest, const PackedElementField& src, [[maybe_unused]] Arena& arena
 ) {
   dest.name = {src.name.data(), src.name.size()};
   dest.offset = src.offset;
   dest.type = static_cast<foxglove_numeric_type>(src.type);
 }
 
-void pointCloudToC(foxglove_point_cloud& dest, const PointCloud& src, Arena& arena) {
+void pointCloudToC(
+  foxglove_point_cloud& dest, const PointCloud& src, [[maybe_unused]] Arena& arena
+) {
   dest.timestamp =
     src.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*src.timestamp) : nullptr;
   dest.frame_id = {src.frame_id.data(), src.frame_id.size()};
@@ -1336,7 +1335,7 @@ void pointCloudToC(foxglove_point_cloud& dest, const PointCloud& src, Arena& are
 }
 
 void pointsAnnotationToC(
-  foxglove_points_annotation& dest, const PointsAnnotation& src, Arena& arena [[maybe_unused]]
+  foxglove_points_annotation& dest, const PointsAnnotation& src, [[maybe_unused]] Arena& arena
 ) {
   dest.timestamp =
     src.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*src.timestamp) : nullptr;
@@ -1352,21 +1351,25 @@ void pointsAnnotationToC(
   dest.thickness = src.thickness;
 }
 
-void poseToC(foxglove_pose& dest, const Pose& src, Arena& arena [[maybe_unused]]) {
+void poseToC(foxglove_pose& dest, const Pose& src, [[maybe_unused]] Arena& arena) {
   dest.position =
     src.position ? reinterpret_cast<const foxglove_vector3*>(&*src.position) : nullptr;
   dest.orientation =
     src.orientation ? reinterpret_cast<const foxglove_quaternion*>(&*src.orientation) : nullptr;
 }
 
-void poseInFrameToC(foxglove_pose_in_frame& dest, const PoseInFrame& src, Arena& arena) {
+void poseInFrameToC(
+  foxglove_pose_in_frame& dest, const PoseInFrame& src, [[maybe_unused]] Arena& arena
+) {
   dest.timestamp =
     src.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*src.timestamp) : nullptr;
   dest.frame_id = {src.frame_id.data(), src.frame_id.size()};
   dest.pose = src.pose ? arena.map_one<foxglove_pose>(src.pose.value(), poseToC) : nullptr;
 }
 
-void posesInFrameToC(foxglove_poses_in_frame& dest, const PosesInFrame& src, Arena& arena) {
+void posesInFrameToC(
+  foxglove_poses_in_frame& dest, const PosesInFrame& src, [[maybe_unused]] Arena& arena
+) {
   dest.timestamp =
     src.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*src.timestamp) : nullptr;
   dest.frame_id = {src.frame_id.data(), src.frame_id.size()};
@@ -1374,7 +1377,7 @@ void posesInFrameToC(foxglove_poses_in_frame& dest, const PosesInFrame& src, Are
   dest.poses_count = src.poses.size();
 }
 
-void rawAudioToC(foxglove_raw_audio& dest, const RawAudio& src, Arena& arena [[maybe_unused]]) {
+void rawAudioToC(foxglove_raw_audio& dest, const RawAudio& src, [[maybe_unused]] Arena& arena) {
   dest.timestamp =
     src.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*src.timestamp) : nullptr;
   dest.data = reinterpret_cast<const unsigned char*>(src.data.data());
@@ -1384,7 +1387,7 @@ void rawAudioToC(foxglove_raw_audio& dest, const RawAudio& src, Arena& arena [[m
   dest.number_of_channels = src.number_of_channels;
 }
 
-void rawImageToC(foxglove_raw_image& dest, const RawImage& src, Arena& arena [[maybe_unused]]) {
+void rawImageToC(foxglove_raw_image& dest, const RawImage& src, [[maybe_unused]] Arena& arena) {
   dest.timestamp =
     src.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*src.timestamp) : nullptr;
   dest.frame_id = {src.frame_id.data(), src.frame_id.size()};
@@ -1396,7 +1399,9 @@ void rawImageToC(foxglove_raw_image& dest, const RawImage& src, Arena& arena [[m
   dest.data_len = src.data.size();
 }
 
-void sceneEntityToC(foxglove_scene_entity& dest, const SceneEntity& src, Arena& arena) {
+void sceneEntityToC(
+  foxglove_scene_entity& dest, const SceneEntity& src, [[maybe_unused]] Arena& arena
+) {
   dest.timestamp =
     src.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*src.timestamp) : nullptr;
   dest.frame_id = {src.frame_id.data(), src.frame_id.size()};
@@ -1427,7 +1432,7 @@ void sceneEntityToC(foxglove_scene_entity& dest, const SceneEntity& src, Arena& 
 
 void sceneEntityDeletionToC(
   foxglove_scene_entity_deletion& dest, const SceneEntityDeletion& src,
-  Arena& arena [[maybe_unused]]
+  [[maybe_unused]] Arena& arena
 ) {
   dest.timestamp =
     src.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*src.timestamp) : nullptr;
@@ -1435,21 +1440,25 @@ void sceneEntityDeletionToC(
   dest.id = {src.id.data(), src.id.size()};
 }
 
-void sceneUpdateToC(foxglove_scene_update& dest, const SceneUpdate& src, Arena& arena) {
+void sceneUpdateToC(
+  foxglove_scene_update& dest, const SceneUpdate& src, [[maybe_unused]] Arena& arena
+) {
   dest.deletions = arena.map<foxglove_scene_entity_deletion>(src.deletions, sceneEntityDeletionToC);
   dest.deletions_count = src.deletions.size();
   dest.entities = arena.map<foxglove_scene_entity>(src.entities, sceneEntityToC);
   dest.entities_count = src.entities.size();
 }
 
-void spherePrimitiveToC(foxglove_sphere_primitive& dest, const SpherePrimitive& src, Arena& arena) {
+void spherePrimitiveToC(
+  foxglove_sphere_primitive& dest, const SpherePrimitive& src, [[maybe_unused]] Arena& arena
+) {
   dest.pose = src.pose ? arena.map_one<foxglove_pose>(src.pose.value(), poseToC) : nullptr;
   dest.size = src.size ? reinterpret_cast<const foxglove_vector3*>(&*src.size) : nullptr;
   dest.color = src.color ? reinterpret_cast<const foxglove_color*>(&*src.color) : nullptr;
 }
 
 void textAnnotationToC(
-  foxglove_text_annotation& dest, const TextAnnotation& src, Arena& arena [[maybe_unused]]
+  foxglove_text_annotation& dest, const TextAnnotation& src, [[maybe_unused]] Arena& arena
 ) {
   dest.timestamp =
     src.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*src.timestamp) : nullptr;
@@ -1463,7 +1472,9 @@ void textAnnotationToC(
                             : nullptr;
 }
 
-void textPrimitiveToC(foxglove_text_primitive& dest, const TextPrimitive& src, Arena& arena) {
+void textPrimitiveToC(
+  foxglove_text_primitive& dest, const TextPrimitive& src, [[maybe_unused]] Arena& arena
+) {
   dest.pose = src.pose ? arena.map_one<foxglove_pose>(src.pose.value(), poseToC) : nullptr;
   dest.billboard = src.billboard;
   dest.font_size = src.font_size;
@@ -1473,7 +1484,8 @@ void textPrimitiveToC(foxglove_text_primitive& dest, const TextPrimitive& src, A
 }
 
 void triangleListPrimitiveToC(
-  foxglove_triangle_list_primitive& dest, const TriangleListPrimitive& src, Arena& arena
+  foxglove_triangle_list_primitive& dest, const TriangleListPrimitive& src,
+  [[maybe_unused]] Arena& arena
 ) {
   dest.pose = src.pose ? arena.map_one<foxglove_pose>(src.pose.value(), poseToC) : nullptr;
   dest.points = reinterpret_cast<const foxglove_point3*>(src.points.data());
