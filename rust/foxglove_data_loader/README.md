@@ -31,16 +31,16 @@ impl DataLoader for MyLoader {
         unimplemented![]
     }
 
-    fn initialize(&self) -> Result<Initialization, Self::Error> {
+    fn initialize(&mut self) -> Result<Initialization, Self::Error> {
         // the Initialization contains the channels, schemas, time range, and any problems
         unimplemented![]
     }
 
-    fn create_iter(&self, args: MessageIteratorArgs) -> Result<Self::MessageIterator, Self::Error> {
+    fn create_iter(&mut self, args: MessageIteratorArgs) -> Result<Self::MessageIterator, Self::Error> {
         unimplemented![]
     }
 
-    fn get_backfill(&self, args: BackfillArgs) -> Result<Vec<Message>, Self::Error> {
+    fn get_backfill(&mut self, args: BackfillArgs) -> Result<Vec<Message>, Self::Error> {
         unimplemented![]
     }
 }

@@ -17,10 +17,51 @@ macro_rules! export {
         mod __foxglove_data_loader_export {
             // Put these in a temp module so none of these pollute the current namespace.
             // This whole thing could probably be a proc macro.
-            use crate::$L as LOADER;
+            use crate::$L as Loader;
+            use std::cell::RefCell;
+            use foxglove_data_loader::{loader, DataLoader, MessageIterator};
             foxglove_data_loader::generated::export!(
-                LOADER with_types_in foxglove_data_loader::generated
+                DataLoaderWrapper with_types_in foxglove_data_loader::generated
             );
+
+            struct DataLoaderWrapper {
+                loader: RefCell<Loader>,
+            }
+
+            impl loader::Guest for DataLoaderWrapper {
+                type DataLoader = Self;
+                type MessageIterator = <Loader as DataLoader>::MessageIterator;
+            }
+
+            impl loader::GuestDataLoader for DataLoaderWrapper {
+                fn new(args: loader::DataLoaderArgs) -> Self {
+                    Self { loader: RefCell::new(<Loader as DataLoader>::new(args)) }
+                }
+
+                fn initialize(&self) -> Result<loader::Initialization, String> {
+                    self.loader.borrow_mut()
+                        .initialize()
+                        .map(|init| init.into())
+                        .map_err(|err| err.to_string())
+                }
+
+                fn create_iterator(
+                    &self,
+                    args: loader::MessageIteratorArgs,
+                ) -> Result<loader::MessageIterator, String> {
+                    self.loader.borrow_mut()
+                        .create_iter(args)
+                        .map(loader::MessageIterator::new)
+                        .map_err(|err| err.to_string())
+                }
+
+                fn get_backfill(&self, args: loader::BackfillArgs) -> Result<Vec<loader::Message>, String> {
+                    self.loader.borrow_mut()
+                        .get_backfill(args)
+                        .map_err(|err| err.to_string())
+                }
+            }
+
         }
     }
 }
@@ -257,7 +298,7 @@ impl LinkedSchema {
         channel
     }
 
-    /// Add a LinkedChannel to this schema, assigning the schema id onto the channel.
+    /// Add a LinkedChannel to this schema, assigning the schema id and schema encoding onto the channel.
     pub fn add_linked_channel(&self, linked_channel: LinkedChannel) {
         self.channels.borrow_mut().push(
             linked_channel
@@ -346,55 +387,27 @@ pub trait DataLoader: 'static + Sized {
 
     /// Initialize your DataLoader, reading enough of the file to generate counts, channels, and
     /// schemas for the `Initialization` result.
-    fn initialize(&self) -> Result<Initialization, Self::Error>;
+    fn initialize(&mut self) -> Result<Initialization, Self::Error>;
 
     /// Create a MessageIterator for this DataLoader.
     fn create_iter(
-        &self,
+        &mut self,
         args: loader::MessageIteratorArgs,
     ) -> Result<Self::MessageIterator, Self::Error>;
 
     /// Backfill results starting from `args.time` for `args.channels`. The backfill results are the
     /// first message looking backwards in time so that panels won't be empty before playback
     /// begins.
-    fn get_backfill(&self, args: loader::BackfillArgs)
-        -> Result<Vec<loader::Message>, Self::Error>;
+    fn get_backfill(
+        &mut self,
+        args: loader::BackfillArgs,
+    ) -> Result<Vec<loader::Message>, Self::Error>;
 }
 
 /// Implement MessageIterator for your loader iterator.
 pub trait MessageIterator: 'static + Sized {
     type Error: Into<Box<dyn std::error::Error>>;
     fn next(&self) -> Option<Result<Message, Self::Error>>;
-}
-
-impl<T: DataLoader> loader::Guest for T {
-    type DataLoader = Self;
-    type MessageIterator = T::MessageIterator;
-}
-
-impl<T: DataLoader> loader::GuestDataLoader for T {
-    fn new(args: loader::DataLoaderArgs) -> T {
-        T::new(args)
-    }
-
-    fn initialize(&self) -> Result<loader::Initialization, String> {
-        T::initialize(self)
-            .map(|init| init.into())
-            .map_err(|e| e.into().to_string())
-    }
-
-    fn create_iterator(
-        &self,
-        args: loader::MessageIteratorArgs,
-    ) -> Result<loader::MessageIterator, String> {
-        T::create_iter(self, args)
-            .map(loader::MessageIterator::new)
-            .map_err(|err| err.into().to_string())
-    }
-
-    fn get_backfill(&self, args: loader::BackfillArgs) -> Result<Vec<loader::Message>, String> {
-        T::get_backfill(self, args).map_err(|err| err.into().to_string())
-    }
 }
 
 impl<T: MessageIterator> loader::GuestMessageIterator for T {
