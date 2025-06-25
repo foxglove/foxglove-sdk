@@ -26,11 +26,12 @@ macro_rules! export {
 }
 
 use anyhow::anyhow;
+use std::collections::HashMap;
 use std::{cell::RefCell, rc::Rc};
 
 pub use generated::exports::foxglove::loader::loader::{
-    self, BackfillArgs, Channel, DataLoaderArgs, Initialization, Message, MessageIteratorArgs,
-    Schema, TimeRange,
+    self, BackfillArgs, Channel, ChannelId, DataLoaderArgs, Message, MessageIteratorArgs, Schema,
+    SchemaId, TimeRange,
 };
 pub use generated::foxglove::loader::console;
 pub use generated::foxglove::loader::reader;
@@ -60,16 +61,47 @@ impl std::io::Seek for reader::Reader {
     }
 }
 
+/// Initializations are returned by DataLoader::initialize() and hold the set of channels and their
+/// corresponding schemas, the time range, and a set of problem messages.
+#[derive(Debug, Clone, Default)]
+pub struct Initialization {
+    channels_by_topic: HashMap<String, Rc<Channel>>,
+    schemas: Vec<loader::Schema>,
+    time_range: TimeRange,
+    problems: Vec<String>,
+}
+
+impl From<Initialization> for loader::Initialization {
+    fn from(init: Initialization) -> loader::Initialization {
+        loader::Initialization {
+            channels: init
+                .channels_by_topic
+                .values()
+                .map(|ch| (**ch).clone())
+                .collect(),
+            schemas: init.schemas,
+            time_range: init.time_range,
+            problems: init.problems,
+        }
+    }
+}
+
 /// Result to initialize a data loader with a set of schemas, channels, a time range, and a set of
 /// problems.
-impl loader::Initialization {
+impl Initialization {
     /// Create a builder interface to initialize schemas that link to channels without having to
     /// manage assigning channel and schema IDs.
     pub fn builder() -> InitializationBuilder {
         InitializationBuilder::default()
     }
+
+    pub fn get_channel(&self, topic_name: &str) -> Option<Rc<loader::Channel>> {
+        self.channels_by_topic.get(topic_name).cloned()
+    }
 }
 
+/// Builder interface for creating an Initialization with schemas and channels using automatically-
+/// assigned IDs.
 #[derive(Debug, Clone)]
 pub struct InitializationBuilder {
     next_channel_id: Rc<RefCell<u16>>,
@@ -84,12 +116,20 @@ impl Default for InitializationBuilder {
         Self {
             next_channel_id: Rc::new(RefCell::new(1)),
             next_schema_id: 1,
-            time_range: TimeRange {
-                start_time: 0,
-                end_time: 0,
-            },
+            time_range: TimeRange::default(),
             problems: vec![],
             schemas: vec![],
+        }
+    }
+}
+
+// TimeRange is defined by the macro, so we can't use the derived Default impl
+#[allow(clippy::derivable_impls)]
+impl Default for TimeRange {
+    fn default() -> Self {
+        TimeRange {
+            start_time: 0,
+            end_time: 0,
         }
     }
 }
@@ -148,7 +188,7 @@ impl InitializationBuilder {
     }
 
     /// Generate the initialization with assigned schema and channel IDs.
-    pub fn build(self) -> loader::Initialization {
+    pub fn build(self) -> Initialization {
         let schemas = self
             .schemas
             .iter()
@@ -156,13 +196,19 @@ impl InitializationBuilder {
                 Schema::from_id_sdk(linked_schema.id, linked_schema.schema.clone())
             })
             .collect();
-        let channels = self
+        let channels_by_topic = self
             .schemas
             .iter()
-            .flat_map(|linked_schema| linked_schema.channels.borrow().clone())
+            .flat_map(|linked_schema| {
+                let channels = linked_schema.channels.borrow();
+                channels
+                    .iter()
+                    .map(|ch| (ch.topic_name.to_string(), Rc::new(ch.clone().into())))
+                    .collect::<Vec<_>>()
+            })
             .collect();
-        loader::Initialization {
-            channels,
+        Initialization {
+            channels_by_topic,
             schemas,
             time_range: self.time_range,
             problems: self.problems,
@@ -177,22 +223,22 @@ pub struct LinkedSchema {
     id: u16,
     next_channel_id: Rc<RefCell<u16>>,
     schema: foxglove::Schema,
-    channels: Rc<RefCell<Vec<loader::Channel>>>,
+    channels: Rc<RefCell<Vec<LinkedChannel>>>,
     message_encoding: String,
 }
 
 impl LinkedSchema {
     /// Create a channel from a topic name with an assigned channel ID and message encoding from the
     /// schema default message encoding.
-    pub fn add_channel(&mut self, topic_name: &str) -> loader::Channel {
+    pub fn add_channel(&self, topic_name: &str) -> LinkedChannel {
         let channel_id = *self.next_channel_id.borrow();
         self.next_channel_id.replace(channel_id + 1);
-        let channel = loader::Channel {
+        let channel = LinkedChannel {
             id: channel_id,
-            schema_id: Some(self.id),
+            schema_id: self.id,
             topic_name: topic_name.into(),
-            message_encoding: self.message_encoding.clone(),
-            message_count: None,
+            message_encoding: Rc::new(RefCell::new(self.message_encoding.clone())),
+            message_count: Rc::new(RefCell::new(None)),
         };
         self.channels.borrow_mut().push(channel.clone());
         channel
@@ -205,17 +251,39 @@ impl LinkedSchema {
     }
 }
 
-impl loader::Channel {
+/// Builder interface that links back to the originating LinkedSchema and InitializationBuilder
+#[derive(Debug, Clone)]
+pub struct LinkedChannel {
+    id: ChannelId,
+    schema_id: SchemaId,
+    topic_name: String,
+    message_encoding: Rc<RefCell<String>>,
+    message_count: Rc<RefCell<Option<u64>>>,
+}
+
+impl LinkedChannel {
     /// Set the message count for this channel.
-    pub fn message_count(mut self, message_count: u64) -> Self {
-        self.message_count = Some(message_count);
+    pub fn message_count(self, message_count: u64) -> Self {
+        self.message_count.replace(Some(message_count));
         self
     }
 
     /// Set the message encoding for the channel.
-    pub fn message_encoding(mut self, message_encoding: String) -> Self {
-        self.message_encoding = message_encoding;
+    pub fn message_encoding(self, message_encoding: String) -> Self {
+        self.message_encoding.replace(message_encoding);
         self
+    }
+}
+
+impl From<LinkedChannel> for loader::Channel {
+    fn from(ch: LinkedChannel) -> loader::Channel {
+        loader::Channel {
+            id: ch.id,
+            schema_id: Some(ch.schema_id),
+            topic_name: ch.topic_name.clone(),
+            message_encoding: ch.message_encoding.borrow().clone(),
+            message_count: *ch.message_count.borrow(),
+        }
     }
 }
 
@@ -276,7 +344,9 @@ impl<T: DataLoader> loader::GuestDataLoader for T {
     }
 
     fn initialize(&self) -> Result<loader::Initialization, String> {
-        T::initialize(self).map_err(|e| e.into().to_string())
+        T::initialize(self)
+            .map(|init| init.into())
+            .map_err(|e| e.into().to_string())
     }
 
     fn create_iterator(
