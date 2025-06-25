@@ -79,6 +79,7 @@ if(DEFINED SANITIZE)
   set(SANITIZER_CARGO_FLAGS -Zbuild-std)
 endif()
 
+option(STRICT "Enable strict compiler warnings" ON)
 if (STRICT)
   # TODO: Review the warnings for -Wunused-parameter and see if they can be resolved without affecting public-facing APIs
   # TODO: -Wfloat-equal is flagging lots of tests in test_arena.cpp. Need to check with the authors to see if they really want
