@@ -258,7 +258,6 @@ public:
       return false;
     }
     try {
-      auto value = this->value();
       const auto& arr = this->get<ParameterValueView::Array>();
       return std::all_of(arr.begin(), arr.end(), [](const ParameterValueView& elem) noexcept {
         return elem.is<T>();
@@ -412,10 +411,8 @@ public:
     }
     const auto& dict = value->get<ParameterValueView::Dict>();
     std::map<std::string, T> result;
-    for (const auto& elem : dict) {
-      std::string key(elem.first);
-      auto value = elem.second.get<T>();
-      result.emplace(key, value);
+    for (const auto& [dictKey, dictValue] : dict) {
+      result.emplace(dictKey, dictValue.get<T>());
     }
     return result;
   }

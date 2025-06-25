@@ -27,7 +27,7 @@ using namespace std::chrono_literals;
 static std::function<void()> sigint_handler;
 
 // NOLINTNEXTLINE(bugprone-exception-escape)
-int main(int argc, const char* argv[]) {
+int main() {
   foxglove::setLogLevel(foxglove::LogLevel::Debug);
 
   std::signal(SIGINT, [](int) {
@@ -53,7 +53,7 @@ int main(int argc, const char* argv[]) {
   options.port = 8765;
   options.capabilities = foxglove::WebSocketServerCapabilities::Parameters;
   options.callbacks.onGetParameters = [&param_store](
-                                        uint32_t client_id,
+                                        uint32_t client_id [[maybe_unused]],
                                         std::optional<std::string_view>
                                           request_id,
                                         const std::vector<std::string_view>& param_names
@@ -80,7 +80,7 @@ int main(int argc, const char* argv[]) {
     return result;
   };
   options.callbacks.onSetParameters = [&param_store](
-                                        uint32_t client_id,
+                                        uint32_t client_id [[maybe_unused]],
                                         std::optional<std::string_view>
                                           request_id,
                                         const std::vector<foxglove::ParameterView>& params
@@ -141,9 +141,9 @@ int main(int argc, const char* argv[]) {
     auto elapsed = std::chrono::duration<double>(now - start_time).count();
     auto param = foxglove::Parameter("elapsed", elapsed);
     param_store.insert_or_assign("elapsed", param.clone());
-    std::vector<foxglove::Parameter> params;
-    params.emplace_back(std::move(param));
-    server.publishParameterValues(std::move(params));
+    std::vector<foxglove::Parameter> paramsToPublish;
+    paramsToPublish.emplace_back(std::move(param));
+    server.publishParameterValues(std::move(paramsToPublish));
   }
 
   server.stop();

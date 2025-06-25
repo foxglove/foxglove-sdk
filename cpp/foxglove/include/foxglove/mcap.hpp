@@ -13,7 +13,7 @@ struct foxglove_mcap_writer;
 /// The foxglove namespace.
 namespace foxglove {
 
-struct Context;
+class Context;
 
 /// @brief The compression algorithm to use for an MCAP file.
 enum class McapCompression : uint8_t {

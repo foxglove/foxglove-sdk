@@ -113,7 +113,7 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
         std::vector<std::string_view> param_names;
         if (c_param_names != nullptr) {
           param_names.reserve(param_names_len);
-          for (auto i = 0; i < param_names_len; ++i) {
+          for (size_t i = 0; i < param_names_len; ++i) {
             param_names.emplace_back(c_param_names[i].data, c_param_names[i].len);
           }
         }
@@ -160,7 +160,7 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
         [](const void* context, const struct foxglove_string* c_names, size_t names_len) {
           std::vector<std::string_view> names;
           names.reserve(names_len);
-          for (auto i = 0; i < names_len; ++i) {
+          for (size_t i = 0; i < names_len; ++i) {
             names.emplace_back(c_names[i].data, c_names[i].len);
           }
           try {
@@ -175,7 +175,7 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
         [](const void* context, const struct foxglove_string* c_names, size_t names_len) {
           std::vector<std::string_view> names;
           names.reserve(names_len);
-          for (auto i = 0; i < names_len; ++i) {
+          for (size_t i = 0; i < names_len; ++i) {
             names.emplace_back(c_names[i].data, c_names[i].len);
           }
           try {
@@ -252,9 +252,9 @@ WebSocketServer::WebSocketServer(
   foxglove_websocket_server* server, std::unique_ptr<WebSocketServerCallbacks> callbacks,
   std::unique_ptr<FetchAssetHandler> fetch_asset
 )
-    : impl_(server, foxglove_server_stop)
-    , callbacks_(std::move(callbacks))
-    , fetch_asset_(std::move(fetch_asset)) {}
+    : callbacks_(std::move(callbacks))
+    , fetch_asset_(std::move(fetch_asset))
+    , impl_(server, foxglove_server_stop) {}
 
 FoxgloveError WebSocketServer::stop() {
   foxglove_error error = foxglove_server_stop(impl_.release());

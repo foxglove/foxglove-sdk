@@ -39,9 +39,9 @@ struct ServiceSchema {
   /// Schema name.
   std::string name;
   /// Request schema.
-  std::optional<ServiceMessageSchema> request;
+  std::optional<ServiceMessageSchema> request = std::nullopt;
   /// Response schema.
-  std::optional<ServiceMessageSchema> response;
+  std::optional<ServiceMessageSchema> response = std::nullopt;
 
 private:
   friend class Service;
