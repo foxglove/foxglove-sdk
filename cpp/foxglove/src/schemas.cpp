@@ -22,23 +22,33 @@ void cameraCalibrationToC(
 void circleAnnotationToC(
   foxglove_circle_annotation& dest, const CircleAnnotation& src, Arena& arena [[maybe_unused]]
 );
-void compressedImageToC(foxglove_compressed_image& dest, const CompressedImage& src, Arena& arena [[maybe_unused]]);
-void compressedVideoToC(foxglove_compressed_video& dest, const CompressedVideo& src, Arena& arena [[maybe_unused]]);
+void compressedImageToC(
+  foxglove_compressed_image& dest, const CompressedImage& src, Arena& arena [[maybe_unused]]
+);
+void compressedVideoToC(
+  foxglove_compressed_video& dest, const CompressedVideo& src, Arena& arena [[maybe_unused]]
+);
 void cubePrimitiveToC(foxglove_cube_primitive& dest, const CubePrimitive& src, Arena& arena);
 void cylinderPrimitiveToC(
   foxglove_cylinder_primitive& dest, const CylinderPrimitive& src, Arena& arena
 );
-void frameTransformToC(foxglove_frame_transform& dest, const FrameTransform& src, Arena& arena [[maybe_unused]]);
+void frameTransformToC(
+  foxglove_frame_transform& dest, const FrameTransform& src, Arena& arena [[maybe_unused]]
+);
 void frameTransformsToC(foxglove_frame_transforms& dest, const FrameTransforms& src, Arena& arena);
 void geoJSONToC(foxglove_geo_json& dest, const GeoJSON& src, Arena& arena [[maybe_unused]]);
 void gridToC(foxglove_grid& dest, const Grid& src, Arena& arena);
 void imageAnnotationsToC(
   foxglove_image_annotations& dest, const ImageAnnotations& src, Arena& arena
 );
-void keyValuePairToC(foxglove_key_value_pair& dest, const KeyValuePair& src, Arena& arena [[maybe_unused]]);
+void keyValuePairToC(
+  foxglove_key_value_pair& dest, const KeyValuePair& src, Arena& arena [[maybe_unused]]
+);
 void laserScanToC(foxglove_laser_scan& dest, const LaserScan& src, Arena& arena);
 void linePrimitiveToC(foxglove_line_primitive& dest, const LinePrimitive& src, Arena& arena);
-void locationFixToC(foxglove_location_fix& dest, const LocationFix& src, Arena& arena [[maybe_unused]]);
+void locationFixToC(
+  foxglove_location_fix& dest, const LocationFix& src, Arena& arena [[maybe_unused]]
+);
 void logToC(foxglove_log& dest, const Log& src, Arena& arena [[maybe_unused]]);
 void modelPrimitiveToC(foxglove_model_primitive& dest, const ModelPrimitive& src, Arena& arena);
 void packedElementFieldToC(
@@ -55,11 +65,14 @@ void rawAudioToC(foxglove_raw_audio& dest, const RawAudio& src, Arena& arena [[m
 void rawImageToC(foxglove_raw_image& dest, const RawImage& src, Arena& arena [[maybe_unused]]);
 void sceneEntityToC(foxglove_scene_entity& dest, const SceneEntity& src, Arena& arena);
 void sceneEntityDeletionToC(
-  foxglove_scene_entity_deletion& dest, const SceneEntityDeletion& src, Arena& arena [[maybe_unused]]
+  foxglove_scene_entity_deletion& dest, const SceneEntityDeletion& src,
+  Arena& arena [[maybe_unused]]
 );
 void sceneUpdateToC(foxglove_scene_update& dest, const SceneUpdate& src, Arena& arena);
 void spherePrimitiveToC(foxglove_sphere_primitive& dest, const SpherePrimitive& src, Arena& arena);
-void textAnnotationToC(foxglove_text_annotation& dest, const TextAnnotation& src, Arena& arena [[maybe_unused]]);
+void textAnnotationToC(
+  foxglove_text_annotation& dest, const TextAnnotation& src, Arena& arena [[maybe_unused]]
+);
 void textPrimitiveToC(foxglove_text_primitive& dest, const TextPrimitive& src, Arena& arena);
 void triangleListPrimitiveToC(
   foxglove_triangle_list_primitive& dest, const TriangleListPrimitive& src, Arena& arena
@@ -1142,7 +1155,9 @@ void circleAnnotationToC(
     src.outline_color ? reinterpret_cast<const foxglove_color*>(&*src.outline_color) : nullptr;
 }
 
-void compressedImageToC(foxglove_compressed_image& dest, const CompressedImage& src, Arena& arena [[maybe_unused]]) {
+void compressedImageToC(
+  foxglove_compressed_image& dest, const CompressedImage& src, Arena& arena [[maybe_unused]]
+) {
   dest.timestamp =
     src.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*src.timestamp) : nullptr;
   dest.frame_id = {src.frame_id.data(), src.frame_id.size()};
@@ -1151,7 +1166,9 @@ void compressedImageToC(foxglove_compressed_image& dest, const CompressedImage& 
   dest.format = {src.format.data(), src.format.size()};
 }
 
-void compressedVideoToC(foxglove_compressed_video& dest, const CompressedVideo& src, Arena& arena [[maybe_unused]]) {
+void compressedVideoToC(
+  foxglove_compressed_video& dest, const CompressedVideo& src, Arena& arena [[maybe_unused]]
+) {
   dest.timestamp =
     src.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*src.timestamp) : nullptr;
   dest.frame_id = {src.frame_id.data(), src.frame_id.size()};
@@ -1176,7 +1193,9 @@ void cylinderPrimitiveToC(
   dest.color = src.color ? reinterpret_cast<const foxglove_color*>(&*src.color) : nullptr;
 }
 
-void frameTransformToC(foxglove_frame_transform& dest, const FrameTransform& src, Arena& arena [[maybe_unused]]) {
+void frameTransformToC(
+  foxglove_frame_transform& dest, const FrameTransform& src, Arena& arena [[maybe_unused]]
+) {
   dest.timestamp =
     src.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*src.timestamp) : nullptr;
   dest.parent_frame_id = {src.parent_frame_id.data(), src.parent_frame_id.size()};
@@ -1223,7 +1242,9 @@ void imageAnnotationsToC(
   dest.texts_count = src.texts.size();
 }
 
-void keyValuePairToC(foxglove_key_value_pair& dest, const KeyValuePair& src, Arena& arena [[maybe_unused]]) {
+void keyValuePairToC(
+  foxglove_key_value_pair& dest, const KeyValuePair& src, Arena& arena [[maybe_unused]]
+) {
   dest.key = {src.key.data(), src.key.size()};
   dest.value = {src.value.data(), src.value.size()};
 }
@@ -1255,7 +1276,9 @@ void linePrimitiveToC(foxglove_line_primitive& dest, const LinePrimitive& src, A
   dest.indices_count = src.indices.size();
 }
 
-void locationFixToC(foxglove_location_fix& dest, const LocationFix& src, Arena& arena [[maybe_unused]]) {
+void locationFixToC(
+  foxglove_location_fix& dest, const LocationFix& src, Arena& arena [[maybe_unused]]
+) {
   dest.timestamp =
     src.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*src.timestamp) : nullptr;
   dest.frame_id = {src.frame_id.data(), src.frame_id.size()};
@@ -1403,7 +1426,8 @@ void sceneEntityToC(foxglove_scene_entity& dest, const SceneEntity& src, Arena& 
 }
 
 void sceneEntityDeletionToC(
-  foxglove_scene_entity_deletion& dest, const SceneEntityDeletion& src, Arena& arena [[maybe_unused]]
+  foxglove_scene_entity_deletion& dest, const SceneEntityDeletion& src,
+  Arena& arena [[maybe_unused]]
 ) {
   dest.timestamp =
     src.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*src.timestamp) : nullptr;
@@ -1424,7 +1448,9 @@ void spherePrimitiveToC(foxglove_sphere_primitive& dest, const SpherePrimitive& 
   dest.color = src.color ? reinterpret_cast<const foxglove_color*>(&*src.color) : nullptr;
 }
 
-void textAnnotationToC(foxglove_text_annotation& dest, const TextAnnotation& src, Arena& arena [[maybe_unused]]) {
+void textAnnotationToC(
+  foxglove_text_annotation& dest, const TextAnnotation& src, Arena& arena [[maybe_unused]]
+) {
   dest.timestamp =
     src.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*src.timestamp) : nullptr;
   dest.position = src.position ? reinterpret_cast<const foxglove_point2*>(&*src.position) : nullptr;
