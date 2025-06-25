@@ -50,7 +50,7 @@ struct MyIterator { /* ... */ }
 impl MessageIterator for MyIterator {
     type Error = anyhow::Error;
 
-    fn next(&self) -> Option<Result<Message, Self::Error>> {
+    fn next(&mut self) -> Option<Result<Message, Self::Error>> {
         unimplemented![]
     }
 }

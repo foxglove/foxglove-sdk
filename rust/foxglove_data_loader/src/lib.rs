@@ -30,7 +30,7 @@ macro_rules! export {
 
             impl loader::Guest for DataLoaderWrapper {
                 type DataLoader = Self;
-                type MessageIterator = <Loader as DataLoader>::MessageIterator;
+                type MessageIterator = MessageIteratorWrapper;
             }
 
             impl loader::GuestDataLoader for DataLoaderWrapper {
@@ -49,10 +49,12 @@ macro_rules! export {
                     &self,
                     args: loader::MessageIteratorArgs,
                 ) -> Result<loader::MessageIterator, String> {
-                    self.loader.borrow_mut()
+                    let message_iterator = self.loader.borrow_mut()
                         .create_iter(args)
-                        .map(loader::MessageIterator::new)
-                        .map_err(|err| err.to_string())
+                        .map_err(|err| err.to_string())?;
+                    Ok(loader::MessageIterator::new(MessageIteratorWrapper {
+                        message_iterator: RefCell::new(message_iterator),
+                    }))
                 }
 
                 fn get_backfill(&self, args: loader::BackfillArgs) -> Result<Vec<loader::Message>, String> {
@@ -62,6 +64,17 @@ macro_rules! export {
                 }
             }
 
+            struct MessageIteratorWrapper {
+                message_iterator: RefCell<<Loader as DataLoader>::MessageIterator>,
+            }
+
+            impl loader::GuestMessageIterator for MessageIteratorWrapper {
+                fn next(&self) -> Option<Result<loader::Message, String>> {
+                    self.message_iterator.borrow_mut()
+                        .next()
+                        .map(|r| r.map_err(|err| err.to_string()))
+                }
+            }
         }
     }
 }
@@ -379,7 +392,7 @@ pub trait DataLoader: 'static + Sized {
     // Consolidates the Guest and GuestDataLoader traits into a single trait.
     // Wraps new() and create_iterator() to user-defined structs so that users don't need to wrap
     // their types into `loader::DataLoader::new()` or `loader::MessageIterator::new()`.
-    type MessageIterator: loader::GuestMessageIterator;
+    type MessageIterator: MessageIterator;
     type Error: Into<Box<dyn std::error::Error>>;
 
     /// Create a new DataLoader.
@@ -407,11 +420,5 @@ pub trait DataLoader: 'static + Sized {
 /// Implement MessageIterator for your loader iterator.
 pub trait MessageIterator: 'static + Sized {
     type Error: Into<Box<dyn std::error::Error>>;
-    fn next(&self) -> Option<Result<Message, Self::Error>>;
-}
-
-impl<T: MessageIterator> loader::GuestMessageIterator for T {
-    fn next(&self) -> Option<Result<loader::Message, String>> {
-        T::next(self).map(|r| r.map_err(|err| err.into().to_string()))
-    }
+    fn next(&mut self) -> Option<Result<Message, Self::Error>>;
 }
