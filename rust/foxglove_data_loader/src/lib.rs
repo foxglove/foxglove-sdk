@@ -154,6 +154,19 @@ impl InitializationBuilder {
         self
     }
 
+    /// Add a channel by topic string.
+    pub fn add_channel(&self, topic_name: &str) -> LinkedChannel {
+        let channel_id = *self.next_channel_id.borrow();
+        self.next_channel_id.replace(channel_id + 1);
+        LinkedChannel {
+            id: channel_id,
+            schema_id: Rc::new(RefCell::new(None)),
+            topic_name: topic_name.into(),
+            message_encoding: Rc::new(RefCell::new("".into())),
+            message_count: Rc::new(RefCell::new(None)),
+        }
+    }
+
     /// Add a schema from a foxglove::Schema. This adds the schema to the initialization and returns
     /// the LinkedSchema for further customization and to add channels.
     pub fn add_schema(&mut self, schema: foxglove::Schema) -> LinkedSchema {
@@ -235,13 +248,22 @@ impl LinkedSchema {
         self.next_channel_id.replace(channel_id + 1);
         let channel = LinkedChannel {
             id: channel_id,
-            schema_id: self.id,
+            schema_id: Rc::new(RefCell::new(Some(self.id))),
             topic_name: topic_name.into(),
             message_encoding: Rc::new(RefCell::new(self.message_encoding.clone())),
             message_count: Rc::new(RefCell::new(None)),
         };
         self.channels.borrow_mut().push(channel.clone());
         channel
+    }
+
+    /// Add a LinkedChannel to this schema, assigning the schema id onto the channel.
+    pub fn add_linked_channel(&self, linked_channel: LinkedChannel) {
+        self.channels.borrow_mut().push(
+            linked_channel
+                .schema_id(self.id)
+                .message_encoding(self.message_encoding.clone()),
+        );
     }
 
     /// Set the message encoding that added channels will use.
@@ -255,7 +277,7 @@ impl LinkedSchema {
 #[derive(Debug, Clone)]
 pub struct LinkedChannel {
     id: ChannelId,
-    schema_id: SchemaId,
+    schema_id: Rc<RefCell<Option<SchemaId>>>,
     topic_name: String,
     message_encoding: Rc<RefCell<String>>,
     message_count: Rc<RefCell<Option<u64>>>,
@@ -273,13 +295,25 @@ impl LinkedChannel {
         self.message_encoding.replace(message_encoding);
         self
     }
+
+    /// Set the schema id for the channel from a LinkedSchema.
+    pub fn schema(self, linked_schema: &LinkedSchema) -> Self {
+        linked_schema.add_linked_channel(self.clone());
+        self
+    }
+
+    /// Assign a schema id only to the channel.
+    pub fn schema_id(self, schema_id: SchemaId) -> Self {
+        self.schema_id.replace(Some(schema_id));
+        self
+    }
 }
 
 impl From<LinkedChannel> for loader::Channel {
     fn from(ch: LinkedChannel) -> loader::Channel {
         loader::Channel {
             id: ch.id,
-            schema_id: Some(ch.schema_id),
+            schema_id: *ch.schema_id.borrow(),
             topic_name: ch.topic_name.clone(),
             message_encoding: ch.message_encoding.borrow().clone(),
             message_count: *ch.message_count.borrow(),
