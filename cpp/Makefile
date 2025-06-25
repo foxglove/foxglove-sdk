@@ -35,6 +35,7 @@ build:
 		-DCMAKE_BUILD_TYPE=RelWithDebInfo \
 		-DCMAKE_EXPORT_COMPILE_COMMANDS=true \
 		$(if $(SANITIZE),-DSANITIZE=$(SANITIZE) -DRust_TOOLCHAIN=nightly) \
+		$(if $(STRICT),-DSTRICT=$(STRICT)) \
 		$(if $(CLANG_TIDY),-DCLANG_TIDY=$(CLANG_TIDY)) \
 		-B $(BUILD_DIR)
 	cmake --build $(BUILD_DIR) -j 8 --config RelWithDebInfo

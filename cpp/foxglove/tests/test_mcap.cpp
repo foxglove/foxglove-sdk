@@ -118,8 +118,10 @@ TEST_CASE("different contexts") {
   auto context2 = foxglove::Context::create();
 
   // Create writer on context1
-  foxglove::McapWriterOptions options{context1};
+  foxglove::McapWriterOptions options;
+  options.context = context1;
   options.path = "test.mcap";
+
   auto writer = foxglove::McapWriter::create(options);
   REQUIRE(writer.has_value());
 
@@ -146,7 +148,8 @@ TEST_CASE("specify profile") {
   FileCleanup cleanup("test.mcap");
   auto context = foxglove::Context::create();
 
-  foxglove::McapWriterOptions options{context};
+  foxglove::McapWriterOptions options;
+  options.context = context;
   options.path = "test.mcap";
   options.profile = "test_profile";
   auto writer = foxglove::McapWriter::create(options);
@@ -175,7 +178,8 @@ TEST_CASE("zstd compression") {
   FileCleanup cleanup("test.mcap");
   auto context = foxglove::Context::create();
 
-  foxglove::McapWriterOptions options{context};
+  foxglove::McapWriterOptions options;
+  options.context = context;
   options.path = "test.mcap";
   options.compression = foxglove::McapCompression::Zstd;
   options.chunk_size = 10000;
@@ -206,7 +210,8 @@ TEST_CASE("lz4 compression") {
   FileCleanup cleanup("test.mcap");
   auto context = foxglove::Context::create();
 
-  foxglove::McapWriterOptions options{context};
+  foxglove::McapWriterOptions options;
+  options.context = context;
   options.path = "test.mcap";
   options.compression = foxglove::McapCompression::Lz4;
   options.chunk_size = 10000;
@@ -238,7 +243,8 @@ TEST_CASE("Channel can outlive Schema") {
   FileCleanup cleanup("test.mcap");
   auto context = foxglove::Context::create();
 
-  foxglove::McapWriterOptions options{context};
+  foxglove::McapWriterOptions options;
+  options.context = context;
   options.path = "test.mcap";
   auto writer = foxglove::McapWriter::create(options);
   REQUIRE(writer.has_value());
@@ -354,7 +360,8 @@ TEST_CASE("ImageAnnotations channel") {
   FileCleanup cleanup("test.mcap");
   auto context = foxglove::Context::create();
 
-  foxglove::McapWriterOptions options{context};
+  foxglove::McapWriterOptions options;
+  options.context = context;
   options.path = "test.mcap";
   options.compression = foxglove::McapCompression::None;
   auto writer = foxglove::McapWriter::create(options);
