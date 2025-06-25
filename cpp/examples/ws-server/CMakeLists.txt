@@ -14,6 +14,7 @@ FetchContent_Declare(
    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
    # See available releases and builds here: https://github.com/foxglove/foxglove-sdk/releases
    URL https://github.com/foxglove/foxglove-sdk/releases/download/sdk%2Fv0.9.0/foxglove-v0.9.0-cpp-x86_64-unknown-linux-gnu.zip
+   URL_HASH SHA256=48ea17c348583154d7c1934c9f7e82f57067e2afa76b586e1f7ac14cc6b6c1d0
 )
 FetchContent_MakeAvailable(foxglove)
 
