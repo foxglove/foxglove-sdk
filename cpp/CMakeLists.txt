@@ -85,10 +85,10 @@ if (STRICT)
   # TODO: -Wfloat-equal is flagging lots of tests in test_arena.cpp. Need to check with the authors to see if they really want
   # bit-equality tests for floats, or if an approximate equality test is sufficient.
   if(CMAKE_CXX_COMPILER_ID MATCHES ".*Clang")
-    set (STRICT_COMPILE_OPTIONS -Wall -Wextra -Wpedantic -Werror -Wold-style-cast -Wno-float-equal -Wno-unused-parameter -Wmost -Wunused-exception-parameter)
+    set (STRICT_COMPILE_OPTIONS -Wall -Wextra -Wpedantic -Werror -Wold-style-cast -Wno-float-equal -Wmost -Wunused-exception-parameter)
   elseif(MSVC)
     # TODO: Remove /wd4100 once the unused parameter warnings are resolved
-    set (STRICT_COMPILE_OPTIONS /W4 /WX /wd4100)
+    set (STRICT_COMPILE_OPTIONS /W4 /WX)
   endif()
 endif()
 

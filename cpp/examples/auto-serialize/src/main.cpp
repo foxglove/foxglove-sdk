@@ -43,7 +43,7 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Message, level, msg, count)
  * Two channels are created: one with a derived JSON schema, and one using msgpack encoding (a
  * schemaless binary format).
  */
-int main(int argc, const char* argv[]) {
+int main() {
   foxglove::McapWriterOptions mcap_options = {};
   mcap_options.path = "auto_serialized.mcap";
   auto writer_result = foxglove::McapWriter::create(mcap_options);

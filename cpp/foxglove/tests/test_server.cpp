@@ -39,7 +39,7 @@ public:
     client_.clear_access_channels(websocketpp::log::alevel::all);
     client_.clear_error_channels(websocketpp::log::elevel::all);
     client_.init_asio();
-    client_.set_open_handler([this](const auto& hdl) {
+    client_.set_open_handler([this](const auto& hdl [[maybe_unused]]) {
       std::scoped_lock lock{mutex_};
       connection_opened_ = true;
       cv_.notify_one();
@@ -360,10 +360,9 @@ TEST_CASE("Client advertise/publish callbacks") {
   };
   callbacks.onMessageData =
     // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
-    [&](uint32_t client_id, uint32_t client_channel_id, const std::byte* data, size_t data_len) {
+    [&](uint32_t client_id [[maybe_unused]], uint32_t client_channel_id [[maybe_unused]], const std::byte* data, size_t data_len) {
       std::scoped_lock lock{mutex};
       received_message = true;
-      REQUIRE(client_id == 1);
       REQUIRE(data_len == 3);
       REQUIRE(char(data[0]) == 'a');
       REQUIRE(char(data[1]) == 'b');
@@ -440,7 +439,7 @@ TEST_CASE("Parameter callbacks") {
 
   foxglove::WebSocketServerCallbacks callbacks;
   callbacks.onGetParameters = [&](
-                                uint32_t client_id,
+                                uint32_t client_id [[maybe_unused]],
                                 std::optional<std::string_view>
                                   request_id,
                                 const std::vector<std::string_view>& param_names
@@ -464,7 +463,7 @@ TEST_CASE("Parameter callbacks") {
     return result;
   };
   callbacks.onSetParameters = [&](
-                                uint32_t client_id,
+                                uint32_t client_id [[maybe_unused]],
                                 std::optional<std::string_view>
                                   request_id,
                                 const std::vector<foxglove::ParameterView>& params

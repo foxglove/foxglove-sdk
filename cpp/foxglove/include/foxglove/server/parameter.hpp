@@ -411,10 +411,8 @@ public:
     }
     const auto& dict = value->get<ParameterValueView::Dict>();
     std::map<std::string, T> result;
-    for (const auto& elem : dict) {
-      std::string dictKey(elem.first);
-      auto dictValue = elem.second.get<T>();
-      result.emplace(dictKey, dictValue);
+    for (const auto& [dictKey, dictValue]: dict) {
+      result.emplace(dictKey, dictValue.get<T>());
     }
     return result;
   }

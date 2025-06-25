@@ -24,7 +24,7 @@ bool registerEchoService(foxglove::WebSocketServer& server);
 bool registerSleepService(foxglove::WebSocketServer& server);
 bool registerIntMathServices(foxglove::WebSocketServer& server);
 
-int main(int argc, const char** argv) {
+int main() {
   foxglove::setLogLevel(foxglove::LogLevel::Debug);
 
   std::signal(SIGINT, [](int) {
@@ -82,7 +82,7 @@ std::vector<std::byte> makeBytes(std::string_view sv) {
 bool registerEmptyService(foxglove::WebSocketServer& server) {
   foxglove::ServiceSchema empty_schema{"/std_srvs/Empty", std::nullopt, std::nullopt};
   static foxglove::ServiceHandler empty_handler(
-    [](const foxglove::ServiceRequest& request, foxglove::ServiceResponder&& responder) {
+    [](const foxglove::ServiceRequest& request [[maybe_unused]], foxglove::ServiceResponder&& responder) {
       std::move(responder).respondOk(makeBytes("{}"));
     }
   );
@@ -131,7 +131,7 @@ bool registerEchoService(foxglove::WebSocketServer& server) {
 bool registerSleepService(foxglove::WebSocketServer& server) {
   foxglove::ServiceSchema empty_schema{"/std_srvs/Empty", std::nullopt, std::nullopt};
   static foxglove::ServiceHandler sleep_handler(
-    [](const foxglove::ServiceRequest& request, foxglove::ServiceResponder&& responder) {
+    [](const foxglove::ServiceRequest& request [[maybe_unused]], foxglove::ServiceResponder&& responder) {
       // Spawn a new thread to handle the response, so that we don't block the
       // websocket client's main poll thread.
       std::thread t([responder = std::move(responder)]() mutable {
