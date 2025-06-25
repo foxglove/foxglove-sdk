@@ -81,13 +81,9 @@ endif()
 
 option(STRICT "Enable strict compiler warnings" ON)
 if (STRICT)
-  # TODO: Review the warnings for -Wunused-parameter and see if they can be resolved without affecting public-facing APIs
-  # TODO: -Wfloat-equal is flagging lots of tests in test_arena.cpp. Need to check with the authors to see if they really want
-  # bit-equality tests for floats, or if an approximate equality test is sufficient.
   if(CMAKE_CXX_COMPILER_ID MATCHES ".*Clang")
-    set (STRICT_COMPILE_OPTIONS -Wall -Wextra -Wpedantic -Werror -Wold-style-cast -Wno-float-equal -Wmost -Wunused-exception-parameter)
+    set (STRICT_COMPILE_OPTIONS -Wall -Wextra -Wpedantic -Werror -Wold-style-cast -Wmost -Wunused-exception-parameter)
   elseif(MSVC)
-    # TODO: Remove /wd4100 once the unused parameter warnings are resolved
     set (STRICT_COMPILE_OPTIONS /W4 /WX)
   endif()
 endif()
