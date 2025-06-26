@@ -1225,7 +1225,7 @@ pub struct Grid {
     pub fields: *const PackedElementField,
     pub fields_count: usize,
 
-    /// Grid cell data, interpreted using `fields`, in row-major (y-major) order
+    /// Grid cell data, interpreted using `fields`, in row-major (y-major) order — values fill each row from left to right along the X axis, with rows ordered from top to bottom along the Y axis, starting at the top-left corner
     pub data: *const c_uchar,
     pub data_len: usize,
 }
