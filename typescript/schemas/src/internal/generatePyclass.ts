@@ -607,6 +607,7 @@ export function generateChannelClasses(schemas: FoxgloveMessageSchema[]): string
     `use pyo3::prelude::*;`,
     `use pyo3::types::PyDict;`,
     `use super::schemas;`,
+    `use std::collections::BTreeMap;`,
   ].join("\n");
 
   const channelModuleRegistration = generateChannelModuleRegistration(schemas);
@@ -624,16 +625,18 @@ impl ${channelClass} {
     /// Create a new channel.
     ///
     /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
+    /// :param metadata: A dictionary of key/value strings to add to the channel.
+    ///     A type error is raised if any key or value is not a string.
     #[new]
-    #[pyo3(signature = (topic, *, context=None))]
-    fn new(topic: &str, context: Option<&PyContext>) -> Self {
-        let base = if let Some(context) = context {
-          ChannelBuilder::new(topic)
-            .context(&context.0.clone())
-            .build()
+    #[pyo3(signature = (topic, *, metadata=None, context=None))]
+    fn new(topic: &str, metadata: Option<BTreeMap<String, String>>, context: Option<&PyContext>) -> Self {
+        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
+        let builder = if let Some(context) = context {
+            builder.context(&context.0.clone())
         } else {
-          Channel::new(topic)
+            builder
         };
+        let base = builder.build();
         Self(base)
     }
 
@@ -750,6 +753,7 @@ export function generatePyChannelStub(schemas: FoxgloveMessageSchema[]): string 
         `        cls,`,
         `        topic: str,`,
         `        *,`,
+        `        metadata: Optional[Dict[str, str]] = None,`,
         `        context: Optional["Context"] = None,`,
         `    ) -> "${channelClass}": ...\n`,
         `    def id(self) -> int:`,

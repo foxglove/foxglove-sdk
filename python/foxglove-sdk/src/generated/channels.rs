@@ -6,6 +6,7 @@ use crate::{PyContext, PySchema};
 use foxglove::{Channel, ChannelBuilder, PartialMetadata};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
+use std::collections::BTreeMap;
 
 pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     let module = PyModule::new(parent_module.py(), "channels")?;
@@ -69,16 +70,22 @@ impl ArrowPrimitiveChannel {
     /// Create a new channel.
     ///
     /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
+    /// :param metadata: A dictionary of key/value strings to add to the channel.
+    ///     A type error is raised if any key or value is not a string.
     #[new]
-    #[pyo3(signature = (topic, *, context=None))]
-    fn new(topic: &str, context: Option<&PyContext>) -> Self {
-        let base = if let Some(context) = context {
-            ChannelBuilder::new(topic)
-                .context(&context.0.clone())
-                .build()
+    #[pyo3(signature = (topic, *, metadata=None, context=None))]
+    fn new(
+        topic: &str,
+        metadata: Option<BTreeMap<String, String>>,
+        context: Option<&PyContext>,
+    ) -> Self {
+        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
+        let builder = if let Some(context) = context {
+            builder.context(&context.0.clone())
         } else {
-            Channel::new(topic)
+            builder
         };
+        let base = builder.build();
         Self(base)
     }
 
@@ -169,16 +176,22 @@ impl CameraCalibrationChannel {
     /// Create a new channel.
     ///
     /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
+    /// :param metadata: A dictionary of key/value strings to add to the channel.
+    ///     A type error is raised if any key or value is not a string.
     #[new]
-    #[pyo3(signature = (topic, *, context=None))]
-    fn new(topic: &str, context: Option<&PyContext>) -> Self {
-        let base = if let Some(context) = context {
-            ChannelBuilder::new(topic)
-                .context(&context.0.clone())
-                .build()
+    #[pyo3(signature = (topic, *, metadata=None, context=None))]
+    fn new(
+        topic: &str,
+        metadata: Option<BTreeMap<String, String>>,
+        context: Option<&PyContext>,
+    ) -> Self {
+        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
+        let builder = if let Some(context) = context {
+            builder.context(&context.0.clone())
         } else {
-            Channel::new(topic)
+            builder
         };
+        let base = builder.build();
         Self(base)
     }
 
@@ -269,16 +282,22 @@ impl CircleAnnotationChannel {
     /// Create a new channel.
     ///
     /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
+    /// :param metadata: A dictionary of key/value strings to add to the channel.
+    ///     A type error is raised if any key or value is not a string.
     #[new]
-    #[pyo3(signature = (topic, *, context=None))]
-    fn new(topic: &str, context: Option<&PyContext>) -> Self {
-        let base = if let Some(context) = context {
-            ChannelBuilder::new(topic)
-                .context(&context.0.clone())
-                .build()
+    #[pyo3(signature = (topic, *, metadata=None, context=None))]
+    fn new(
+        topic: &str,
+        metadata: Option<BTreeMap<String, String>>,
+        context: Option<&PyContext>,
+    ) -> Self {
+        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
+        let builder = if let Some(context) = context {
+            builder.context(&context.0.clone())
         } else {
-            Channel::new(topic)
+            builder
         };
+        let base = builder.build();
         Self(base)
     }
 
@@ -369,16 +388,22 @@ impl ColorChannel {
     /// Create a new channel.
     ///
     /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
+    /// :param metadata: A dictionary of key/value strings to add to the channel.
+    ///     A type error is raised if any key or value is not a string.
     #[new]
-    #[pyo3(signature = (topic, *, context=None))]
-    fn new(topic: &str, context: Option<&PyContext>) -> Self {
-        let base = if let Some(context) = context {
-            ChannelBuilder::new(topic)
-                .context(&context.0.clone())
-                .build()
+    #[pyo3(signature = (topic, *, metadata=None, context=None))]
+    fn new(
+        topic: &str,
+        metadata: Option<BTreeMap<String, String>>,
+        context: Option<&PyContext>,
+    ) -> Self {
+        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
+        let builder = if let Some(context) = context {
+            builder.context(&context.0.clone())
         } else {
-            Channel::new(topic)
+            builder
         };
+        let base = builder.build();
         Self(base)
     }
 
@@ -464,16 +489,22 @@ impl CompressedImageChannel {
     /// Create a new channel.
     ///
     /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
+    /// :param metadata: A dictionary of key/value strings to add to the channel.
+    ///     A type error is raised if any key or value is not a string.
     #[new]
-    #[pyo3(signature = (topic, *, context=None))]
-    fn new(topic: &str, context: Option<&PyContext>) -> Self {
-        let base = if let Some(context) = context {
-            ChannelBuilder::new(topic)
-                .context(&context.0.clone())
-                .build()
+    #[pyo3(signature = (topic, *, metadata=None, context=None))]
+    fn new(
+        topic: &str,
+        metadata: Option<BTreeMap<String, String>>,
+        context: Option<&PyContext>,
+    ) -> Self {
+        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
+        let builder = if let Some(context) = context {
+            builder.context(&context.0.clone())
         } else {
-            Channel::new(topic)
+            builder
         };
+        let base = builder.build();
         Self(base)
     }
 
@@ -564,16 +595,22 @@ impl CompressedVideoChannel {
     /// Create a new channel.
     ///
     /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
+    /// :param metadata: A dictionary of key/value strings to add to the channel.
+    ///     A type error is raised if any key or value is not a string.
     #[new]
-    #[pyo3(signature = (topic, *, context=None))]
-    fn new(topic: &str, context: Option<&PyContext>) -> Self {
-        let base = if let Some(context) = context {
-            ChannelBuilder::new(topic)
-                .context(&context.0.clone())
-                .build()
+    #[pyo3(signature = (topic, *, metadata=None, context=None))]
+    fn new(
+        topic: &str,
+        metadata: Option<BTreeMap<String, String>>,
+        context: Option<&PyContext>,
+    ) -> Self {
+        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
+        let builder = if let Some(context) = context {
+            builder.context(&context.0.clone())
         } else {
-            Channel::new(topic)
+            builder
         };
+        let base = builder.build();
         Self(base)
     }
 
@@ -664,16 +701,22 @@ impl CylinderPrimitiveChannel {
     /// Create a new channel.
     ///
     /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
+    /// :param metadata: A dictionary of key/value strings to add to the channel.
+    ///     A type error is raised if any key or value is not a string.
     #[new]
-    #[pyo3(signature = (topic, *, context=None))]
-    fn new(topic: &str, context: Option<&PyContext>) -> Self {
-        let base = if let Some(context) = context {
-            ChannelBuilder::new(topic)
-                .context(&context.0.clone())
-                .build()
+    #[pyo3(signature = (topic, *, metadata=None, context=None))]
+    fn new(
+        topic: &str,
+        metadata: Option<BTreeMap<String, String>>,
+        context: Option<&PyContext>,
+    ) -> Self {
+        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
+        let builder = if let Some(context) = context {
+            builder.context(&context.0.clone())
         } else {
-            Channel::new(topic)
+            builder
         };
+        let base = builder.build();
         Self(base)
     }
 
@@ -764,16 +807,22 @@ impl CubePrimitiveChannel {
     /// Create a new channel.
     ///
     /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
+    /// :param metadata: A dictionary of key/value strings to add to the channel.
+    ///     A type error is raised if any key or value is not a string.
     #[new]
-    #[pyo3(signature = (topic, *, context=None))]
-    fn new(topic: &str, context: Option<&PyContext>) -> Self {
-        let base = if let Some(context) = context {
-            ChannelBuilder::new(topic)
-                .context(&context.0.clone())
-                .build()
+    #[pyo3(signature = (topic, *, metadata=None, context=None))]
+    fn new(
+        topic: &str,
+        metadata: Option<BTreeMap<String, String>>,
+        context: Option<&PyContext>,
+    ) -> Self {
+        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
+        let builder = if let Some(context) = context {
+            builder.context(&context.0.clone())
         } else {
-            Channel::new(topic)
+            builder
         };
+        let base = builder.build();
         Self(base)
     }
 
@@ -864,16 +913,22 @@ impl FrameTransformChannel {
     /// Create a new channel.
     ///
     /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
+    /// :param metadata: A dictionary of key/value strings to add to the channel.
+    ///     A type error is raised if any key or value is not a string.
     #[new]
-    #[pyo3(signature = (topic, *, context=None))]
-    fn new(topic: &str, context: Option<&PyContext>) -> Self {
-        let base = if let Some(context) = context {
-            ChannelBuilder::new(topic)
-                .context(&context.0.clone())
-                .build()
+    #[pyo3(signature = (topic, *, metadata=None, context=None))]
+    fn new(
+        topic: &str,
+        metadata: Option<BTreeMap<String, String>>,
+        context: Option<&PyContext>,
+    ) -> Self {
+        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
+        let builder = if let Some(context) = context {
+            builder.context(&context.0.clone())
         } else {
-            Channel::new(topic)
+            builder
         };
+        let base = builder.build();
         Self(base)
     }
 
@@ -964,16 +1019,22 @@ impl FrameTransformsChannel {
     /// Create a new channel.
     ///
     /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
+    /// :param metadata: A dictionary of key/value strings to add to the channel.
+    ///     A type error is raised if any key or value is not a string.
     #[new]
-    #[pyo3(signature = (topic, *, context=None))]
-    fn new(topic: &str, context: Option<&PyContext>) -> Self {
-        let base = if let Some(context) = context {
-            ChannelBuilder::new(topic)
-                .context(&context.0.clone())
-                .build()
+    #[pyo3(signature = (topic, *, metadata=None, context=None))]
+    fn new(
+        topic: &str,
+        metadata: Option<BTreeMap<String, String>>,
+        context: Option<&PyContext>,
+    ) -> Self {
+        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
+        let builder = if let Some(context) = context {
+            builder.context(&context.0.clone())
         } else {
-            Channel::new(topic)
+            builder
         };
+        let base = builder.build();
         Self(base)
     }
 
@@ -1064,16 +1125,22 @@ impl GeoJsonChannel {
     /// Create a new channel.
     ///
     /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
+    /// :param metadata: A dictionary of key/value strings to add to the channel.
+    ///     A type error is raised if any key or value is not a string.
     #[new]
-    #[pyo3(signature = (topic, *, context=None))]
-    fn new(topic: &str, context: Option<&PyContext>) -> Self {
-        let base = if let Some(context) = context {
-            ChannelBuilder::new(topic)
-                .context(&context.0.clone())
-                .build()
+    #[pyo3(signature = (topic, *, metadata=None, context=None))]
+    fn new(
+        topic: &str,
+        metadata: Option<BTreeMap<String, String>>,
+        context: Option<&PyContext>,
+    ) -> Self {
+        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
+        let builder = if let Some(context) = context {
+            builder.context(&context.0.clone())
         } else {
-            Channel::new(topic)
+            builder
         };
+        let base = builder.build();
         Self(base)
     }
 
@@ -1159,16 +1226,22 @@ impl GridChannel {
     /// Create a new channel.
     ///
     /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
+    /// :param metadata: A dictionary of key/value strings to add to the channel.
+    ///     A type error is raised if any key or value is not a string.
     #[new]
-    #[pyo3(signature = (topic, *, context=None))]
-    fn new(topic: &str, context: Option<&PyContext>) -> Self {
-        let base = if let Some(context) = context {
-            ChannelBuilder::new(topic)
-                .context(&context.0.clone())
-                .build()
+    #[pyo3(signature = (topic, *, metadata=None, context=None))]
+    fn new(
+        topic: &str,
+        metadata: Option<BTreeMap<String, String>>,
+        context: Option<&PyContext>,
+    ) -> Self {
+        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
+        let builder = if let Some(context) = context {
+            builder.context(&context.0.clone())
         } else {
-            Channel::new(topic)
+            builder
         };
+        let base = builder.build();
         Self(base)
     }
 
@@ -1254,16 +1327,22 @@ impl ImageAnnotationsChannel {
     /// Create a new channel.
     ///
     /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
+    /// :param metadata: A dictionary of key/value strings to add to the channel.
+    ///     A type error is raised if any key or value is not a string.
     #[new]
-    #[pyo3(signature = (topic, *, context=None))]
-    fn new(topic: &str, context: Option<&PyContext>) -> Self {
-        let base = if let Some(context) = context {
-            ChannelBuilder::new(topic)
-                .context(&context.0.clone())
-                .build()
+    #[pyo3(signature = (topic, *, metadata=None, context=None))]
+    fn new(
+        topic: &str,
+        metadata: Option<BTreeMap<String, String>>,
+        context: Option<&PyContext>,
+    ) -> Self {
+        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
+        let builder = if let Some(context) = context {
+            builder.context(&context.0.clone())
         } else {
-            Channel::new(topic)
+            builder
         };
+        let base = builder.build();
         Self(base)
     }
 
@@ -1354,16 +1433,22 @@ impl KeyValuePairChannel {
     /// Create a new channel.
     ///
     /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
+    /// :param metadata: A dictionary of key/value strings to add to the channel.
+    ///     A type error is raised if any key or value is not a string.
     #[new]
-    #[pyo3(signature = (topic, *, context=None))]
-    fn new(topic: &str, context: Option<&PyContext>) -> Self {
-        let base = if let Some(context) = context {
-            ChannelBuilder::new(topic)
-                .context(&context.0.clone())
-                .build()
+    #[pyo3(signature = (topic, *, metadata=None, context=None))]
+    fn new(
+        topic: &str,
+        metadata: Option<BTreeMap<String, String>>,
+        context: Option<&PyContext>,
+    ) -> Self {
+        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
+        let builder = if let Some(context) = context {
+            builder.context(&context.0.clone())
         } else {
-            Channel::new(topic)
+            builder
         };
+        let base = builder.build();
         Self(base)
     }
 
@@ -1454,16 +1539,22 @@ impl LaserScanChannel {
     /// Create a new channel.
     ///
     /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
+    /// :param metadata: A dictionary of key/value strings to add to the channel.
+    ///     A type error is raised if any key or value is not a string.
     #[new]
-    #[pyo3(signature = (topic, *, context=None))]
-    fn new(topic: &str, context: Option<&PyContext>) -> Self {
-        let base = if let Some(context) = context {
-            ChannelBuilder::new(topic)
-                .context(&context.0.clone())
-                .build()
+    #[pyo3(signature = (topic, *, metadata=None, context=None))]
+    fn new(
+        topic: &str,
+        metadata: Option<BTreeMap<String, String>>,
+        context: Option<&PyContext>,
+    ) -> Self {
+        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
+        let builder = if let Some(context) = context {
+            builder.context(&context.0.clone())
         } else {
-            Channel::new(topic)
+            builder
         };
+        let base = builder.build();
         Self(base)
     }
 
@@ -1554,16 +1645,22 @@ impl LinePrimitiveChannel {
     /// Create a new channel.
     ///
     /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
+    /// :param metadata: A dictionary of key/value strings to add to the channel.
+    ///     A type error is raised if any key or value is not a string.
     #[new]
-    #[pyo3(signature = (topic, *, context=None))]
-    fn new(topic: &str, context: Option<&PyContext>) -> Self {
-        let base = if let Some(context) = context {
-            ChannelBuilder::new(topic)
-                .context(&context.0.clone())
-                .build()
+    #[pyo3(signature = (topic, *, metadata=None, context=None))]
+    fn new(
+        topic: &str,
+        metadata: Option<BTreeMap<String, String>>,
+        context: Option<&PyContext>,
+    ) -> Self {
+        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
+        let builder = if let Some(context) = context {
+            builder.context(&context.0.clone())
         } else {
-            Channel::new(topic)
+            builder
         };
+        let base = builder.build();
         Self(base)
     }
 
@@ -1654,16 +1751,22 @@ impl LocationFixChannel {
     /// Create a new channel.
     ///
     /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
+    /// :param metadata: A dictionary of key/value strings to add to the channel.
+    ///     A type error is raised if any key or value is not a string.
     #[new]
-    #[pyo3(signature = (topic, *, context=None))]
-    fn new(topic: &str, context: Option<&PyContext>) -> Self {
-        let base = if let Some(context) = context {
-            ChannelBuilder::new(topic)
-                .context(&context.0.clone())
-                .build()
+    #[pyo3(signature = (topic, *, metadata=None, context=None))]
+    fn new(
+        topic: &str,
+        metadata: Option<BTreeMap<String, String>>,
+        context: Option<&PyContext>,
+    ) -> Self {
+        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
+        let builder = if let Some(context) = context {
+            builder.context(&context.0.clone())
         } else {
-            Channel::new(topic)
+            builder
         };
+        let base = builder.build();
         Self(base)
     }
 
@@ -1754,16 +1857,22 @@ impl LogChannel {
     /// Create a new channel.
     ///
     /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
+    /// :param metadata: A dictionary of key/value strings to add to the channel.
+    ///     A type error is raised if any key or value is not a string.
     #[new]
-    #[pyo3(signature = (topic, *, context=None))]
-    fn new(topic: &str, context: Option<&PyContext>) -> Self {
-        let base = if let Some(context) = context {
-            ChannelBuilder::new(topic)
-                .context(&context.0.clone())
-                .build()
+    #[pyo3(signature = (topic, *, metadata=None, context=None))]
+    fn new(
+        topic: &str,
+        metadata: Option<BTreeMap<String, String>>,
+        context: Option<&PyContext>,
+    ) -> Self {
+        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
+        let builder = if let Some(context) = context {
+            builder.context(&context.0.clone())
         } else {
-            Channel::new(topic)
+            builder
         };
+        let base = builder.build();
         Self(base)
     }
 
@@ -1849,16 +1958,22 @@ impl SceneEntityDeletionChannel {
     /// Create a new channel.
     ///
     /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
+    /// :param metadata: A dictionary of key/value strings to add to the channel.
+    ///     A type error is raised if any key or value is not a string.
     #[new]
-    #[pyo3(signature = (topic, *, context=None))]
-    fn new(topic: &str, context: Option<&PyContext>) -> Self {
-        let base = if let Some(context) = context {
-            ChannelBuilder::new(topic)
-                .context(&context.0.clone())
-                .build()
+    #[pyo3(signature = (topic, *, metadata=None, context=None))]
+    fn new(
+        topic: &str,
+        metadata: Option<BTreeMap<String, String>>,
+        context: Option<&PyContext>,
+    ) -> Self {
+        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
+        let builder = if let Some(context) = context {
+            builder.context(&context.0.clone())
         } else {
-            Channel::new(topic)
+            builder
         };
+        let base = builder.build();
         Self(base)
     }
 
@@ -1949,16 +2064,22 @@ impl SceneEntityChannel {
     /// Create a new channel.
     ///
     /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
+    /// :param metadata: A dictionary of key/value strings to add to the channel.
+    ///     A type error is raised if any key or value is not a string.
     #[new]
-    #[pyo3(signature = (topic, *, context=None))]
-    fn new(topic: &str, context: Option<&PyContext>) -> Self {
-        let base = if let Some(context) = context {
-            ChannelBuilder::new(topic)
-                .context(&context.0.clone())
-                .build()
+    #[pyo3(signature = (topic, *, metadata=None, context=None))]
+    fn new(
+        topic: &str,
+        metadata: Option<BTreeMap<String, String>>,
+        context: Option<&PyContext>,
+    ) -> Self {
+        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
+        let builder = if let Some(context) = context {
+            builder.context(&context.0.clone())
         } else {
-            Channel::new(topic)
+            builder
         };
+        let base = builder.build();
         Self(base)
     }
 
@@ -2049,16 +2170,22 @@ impl SceneUpdateChannel {
     /// Create a new channel.
     ///
     /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
+    /// :param metadata: A dictionary of key/value strings to add to the channel.
+    ///     A type error is raised if any key or value is not a string.
     #[new]
-    #[pyo3(signature = (topic, *, context=None))]
-    fn new(topic: &str, context: Option<&PyContext>) -> Self {
-        let base = if let Some(context) = context {
-            ChannelBuilder::new(topic)
-                .context(&context.0.clone())
-                .build()
+    #[pyo3(signature = (topic, *, metadata=None, context=None))]
+    fn new(
+        topic: &str,
+        metadata: Option<BTreeMap<String, String>>,
+        context: Option<&PyContext>,
+    ) -> Self {
+        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
+        let builder = if let Some(context) = context {
+            builder.context(&context.0.clone())
         } else {
-            Channel::new(topic)
+            builder
         };
+        let base = builder.build();
         Self(base)
     }
 
@@ -2149,16 +2276,22 @@ impl ModelPrimitiveChannel {
     /// Create a new channel.
     ///
     /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
+    /// :param metadata: A dictionary of key/value strings to add to the channel.
+    ///     A type error is raised if any key or value is not a string.
     #[new]
-    #[pyo3(signature = (topic, *, context=None))]
-    fn new(topic: &str, context: Option<&PyContext>) -> Self {
-        let base = if let Some(context) = context {
-            ChannelBuilder::new(topic)
-                .context(&context.0.clone())
-                .build()
+    #[pyo3(signature = (topic, *, metadata=None, context=None))]
+    fn new(
+        topic: &str,
+        metadata: Option<BTreeMap<String, String>>,
+        context: Option<&PyContext>,
+    ) -> Self {
+        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
+        let builder = if let Some(context) = context {
+            builder.context(&context.0.clone())
         } else {
-            Channel::new(topic)
+            builder
         };
+        let base = builder.build();
         Self(base)
     }
 
@@ -2249,16 +2382,22 @@ impl PackedElementFieldChannel {
     /// Create a new channel.
     ///
     /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
+    /// :param metadata: A dictionary of key/value strings to add to the channel.
+    ///     A type error is raised if any key or value is not a string.
     #[new]
-    #[pyo3(signature = (topic, *, context=None))]
-    fn new(topic: &str, context: Option<&PyContext>) -> Self {
-        let base = if let Some(context) = context {
-            ChannelBuilder::new(topic)
-                .context(&context.0.clone())
-                .build()
+    #[pyo3(signature = (topic, *, metadata=None, context=None))]
+    fn new(
+        topic: &str,
+        metadata: Option<BTreeMap<String, String>>,
+        context: Option<&PyContext>,
+    ) -> Self {
+        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
+        let builder = if let Some(context) = context {
+            builder.context(&context.0.clone())
         } else {
-            Channel::new(topic)
+            builder
         };
+        let base = builder.build();
         Self(base)
     }
 
@@ -2349,16 +2488,22 @@ impl Point2Channel {
     /// Create a new channel.
     ///
     /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
+    /// :param metadata: A dictionary of key/value strings to add to the channel.
+    ///     A type error is raised if any key or value is not a string.
     #[new]
-    #[pyo3(signature = (topic, *, context=None))]
-    fn new(topic: &str, context: Option<&PyContext>) -> Self {
-        let base = if let Some(context) = context {
-            ChannelBuilder::new(topic)
-                .context(&context.0.clone())
-                .build()
+    #[pyo3(signature = (topic, *, metadata=None, context=None))]
+    fn new(
+        topic: &str,
+        metadata: Option<BTreeMap<String, String>>,
+        context: Option<&PyContext>,
+    ) -> Self {
+        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
+        let builder = if let Some(context) = context {
+            builder.context(&context.0.clone())
         } else {
-            Channel::new(topic)
+            builder
         };
+        let base = builder.build();
         Self(base)
     }
 
@@ -2444,16 +2589,22 @@ impl Point3Channel {
     /// Create a new channel.
     ///
     /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
+    /// :param metadata: A dictionary of key/value strings to add to the channel.
+    ///     A type error is raised if any key or value is not a string.
     #[new]
-    #[pyo3(signature = (topic, *, context=None))]
-    fn new(topic: &str, context: Option<&PyContext>) -> Self {
-        let base = if let Some(context) = context {
-            ChannelBuilder::new(topic)
-                .context(&context.0.clone())
-                .build()
+    #[pyo3(signature = (topic, *, metadata=None, context=None))]
+    fn new(
+        topic: &str,
+        metadata: Option<BTreeMap<String, String>>,
+        context: Option<&PyContext>,
+    ) -> Self {
+        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
+        let builder = if let Some(context) = context {
+            builder.context(&context.0.clone())
         } else {
-            Channel::new(topic)
+            builder
         };
+        let base = builder.build();
         Self(base)
     }
 
@@ -2539,16 +2690,22 @@ impl PointCloudChannel {
     /// Create a new channel.
     ///
     /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
+    /// :param metadata: A dictionary of key/value strings to add to the channel.
+    ///     A type error is raised if any key or value is not a string.
     #[new]
-    #[pyo3(signature = (topic, *, context=None))]
-    fn new(topic: &str, context: Option<&PyContext>) -> Self {
-        let base = if let Some(context) = context {
-            ChannelBuilder::new(topic)
-                .context(&context.0.clone())
-                .build()
+    #[pyo3(signature = (topic, *, metadata=None, context=None))]
+    fn new(
+        topic: &str,
+        metadata: Option<BTreeMap<String, String>>,
+        context: Option<&PyContext>,
+    ) -> Self {
+        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
+        let builder = if let Some(context) = context {
+            builder.context(&context.0.clone())
         } else {
-            Channel::new(topic)
+            builder
         };
+        let base = builder.build();
         Self(base)
     }
 
@@ -2639,16 +2796,22 @@ impl PointsAnnotationChannel {
     /// Create a new channel.
     ///
     /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
+    /// :param metadata: A dictionary of key/value strings to add to the channel.
+    ///     A type error is raised if any key or value is not a string.
     #[new]
-    #[pyo3(signature = (topic, *, context=None))]
-    fn new(topic: &str, context: Option<&PyContext>) -> Self {
-        let base = if let Some(context) = context {
-            ChannelBuilder::new(topic)
-                .context(&context.0.clone())
-                .build()
+    #[pyo3(signature = (topic, *, metadata=None, context=None))]
+    fn new(
+        topic: &str,
+        metadata: Option<BTreeMap<String, String>>,
+        context: Option<&PyContext>,
+    ) -> Self {
+        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
+        let builder = if let Some(context) = context {
+            builder.context(&context.0.clone())
         } else {
-            Channel::new(topic)
+            builder
         };
+        let base = builder.build();
         Self(base)
     }
 
@@ -2739,16 +2902,22 @@ impl PoseChannel {
     /// Create a new channel.
     ///
     /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
+    /// :param metadata: A dictionary of key/value strings to add to the channel.
+    ///     A type error is raised if any key or value is not a string.
     #[new]
-    #[pyo3(signature = (topic, *, context=None))]
-    fn new(topic: &str, context: Option<&PyContext>) -> Self {
-        let base = if let Some(context) = context {
-            ChannelBuilder::new(topic)
-                .context(&context.0.clone())
-                .build()
+    #[pyo3(signature = (topic, *, metadata=None, context=None))]
+    fn new(
+        topic: &str,
+        metadata: Option<BTreeMap<String, String>>,
+        context: Option<&PyContext>,
+    ) -> Self {
+        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
+        let builder = if let Some(context) = context {
+            builder.context(&context.0.clone())
         } else {
-            Channel::new(topic)
+            builder
         };
+        let base = builder.build();
         Self(base)
     }
 
@@ -2834,16 +3003,22 @@ impl PoseInFrameChannel {
     /// Create a new channel.
     ///
     /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
+    /// :param metadata: A dictionary of key/value strings to add to the channel.
+    ///     A type error is raised if any key or value is not a string.
     #[new]
-    #[pyo3(signature = (topic, *, context=None))]
-    fn new(topic: &str, context: Option<&PyContext>) -> Self {
-        let base = if let Some(context) = context {
-            ChannelBuilder::new(topic)
-                .context(&context.0.clone())
-                .build()
+    #[pyo3(signature = (topic, *, metadata=None, context=None))]
+    fn new(
+        topic: &str,
+        metadata: Option<BTreeMap<String, String>>,
+        context: Option<&PyContext>,
+    ) -> Self {
+        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
+        let builder = if let Some(context) = context {
+            builder.context(&context.0.clone())
         } else {
-            Channel::new(topic)
+            builder
         };
+        let base = builder.build();
         Self(base)
     }
 
@@ -2934,16 +3109,22 @@ impl PosesInFrameChannel {
     /// Create a new channel.
     ///
     /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
+    /// :param metadata: A dictionary of key/value strings to add to the channel.
+    ///     A type error is raised if any key or value is not a string.
     #[new]
-    #[pyo3(signature = (topic, *, context=None))]
-    fn new(topic: &str, context: Option<&PyContext>) -> Self {
-        let base = if let Some(context) = context {
-            ChannelBuilder::new(topic)
-                .context(&context.0.clone())
-                .build()
+    #[pyo3(signature = (topic, *, metadata=None, context=None))]
+    fn new(
+        topic: &str,
+        metadata: Option<BTreeMap<String, String>>,
+        context: Option<&PyContext>,
+    ) -> Self {
+        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
+        let builder = if let Some(context) = context {
+            builder.context(&context.0.clone())
         } else {
-            Channel::new(topic)
+            builder
         };
+        let base = builder.build();
         Self(base)
     }
 
@@ -3034,16 +3215,22 @@ impl QuaternionChannel {
     /// Create a new channel.
     ///
     /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
+    /// :param metadata: A dictionary of key/value strings to add to the channel.
+    ///     A type error is raised if any key or value is not a string.
     #[new]
-    #[pyo3(signature = (topic, *, context=None))]
-    fn new(topic: &str, context: Option<&PyContext>) -> Self {
-        let base = if let Some(context) = context {
-            ChannelBuilder::new(topic)
-                .context(&context.0.clone())
-                .build()
+    #[pyo3(signature = (topic, *, metadata=None, context=None))]
+    fn new(
+        topic: &str,
+        metadata: Option<BTreeMap<String, String>>,
+        context: Option<&PyContext>,
+    ) -> Self {
+        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
+        let builder = if let Some(context) = context {
+            builder.context(&context.0.clone())
         } else {
-            Channel::new(topic)
+            builder
         };
+        let base = builder.build();
         Self(base)
     }
 
@@ -3134,16 +3321,22 @@ impl RawAudioChannel {
     /// Create a new channel.
     ///
     /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
+    /// :param metadata: A dictionary of key/value strings to add to the channel.
+    ///     A type error is raised if any key or value is not a string.
     #[new]
-    #[pyo3(signature = (topic, *, context=None))]
-    fn new(topic: &str, context: Option<&PyContext>) -> Self {
-        let base = if let Some(context) = context {
-            ChannelBuilder::new(topic)
-                .context(&context.0.clone())
-                .build()
+    #[pyo3(signature = (topic, *, metadata=None, context=None))]
+    fn new(
+        topic: &str,
+        metadata: Option<BTreeMap<String, String>>,
+        context: Option<&PyContext>,
+    ) -> Self {
+        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
+        let builder = if let Some(context) = context {
+            builder.context(&context.0.clone())
         } else {
-            Channel::new(topic)
+            builder
         };
+        let base = builder.build();
         Self(base)
     }
 
@@ -3234,16 +3427,22 @@ impl RawImageChannel {
     /// Create a new channel.
     ///
     /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
+    /// :param metadata: A dictionary of key/value strings to add to the channel.
+    ///     A type error is raised if any key or value is not a string.
     #[new]
-    #[pyo3(signature = (topic, *, context=None))]
-    fn new(topic: &str, context: Option<&PyContext>) -> Self {
-        let base = if let Some(context) = context {
-            ChannelBuilder::new(topic)
-                .context(&context.0.clone())
-                .build()
+    #[pyo3(signature = (topic, *, metadata=None, context=None))]
+    fn new(
+        topic: &str,
+        metadata: Option<BTreeMap<String, String>>,
+        context: Option<&PyContext>,
+    ) -> Self {
+        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
+        let builder = if let Some(context) = context {
+            builder.context(&context.0.clone())
         } else {
-            Channel::new(topic)
+            builder
         };
+        let base = builder.build();
         Self(base)
     }
 
@@ -3334,16 +3533,22 @@ impl SpherePrimitiveChannel {
     /// Create a new channel.
     ///
     /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
+    /// :param metadata: A dictionary of key/value strings to add to the channel.
+    ///     A type error is raised if any key or value is not a string.
     #[new]
-    #[pyo3(signature = (topic, *, context=None))]
-    fn new(topic: &str, context: Option<&PyContext>) -> Self {
-        let base = if let Some(context) = context {
-            ChannelBuilder::new(topic)
-                .context(&context.0.clone())
-                .build()
+    #[pyo3(signature = (topic, *, metadata=None, context=None))]
+    fn new(
+        topic: &str,
+        metadata: Option<BTreeMap<String, String>>,
+        context: Option<&PyContext>,
+    ) -> Self {
+        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
+        let builder = if let Some(context) = context {
+            builder.context(&context.0.clone())
         } else {
-            Channel::new(topic)
+            builder
         };
+        let base = builder.build();
         Self(base)
     }
 
@@ -3434,16 +3639,22 @@ impl TextAnnotationChannel {
     /// Create a new channel.
     ///
     /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
+    /// :param metadata: A dictionary of key/value strings to add to the channel.
+    ///     A type error is raised if any key or value is not a string.
     #[new]
-    #[pyo3(signature = (topic, *, context=None))]
-    fn new(topic: &str, context: Option<&PyContext>) -> Self {
-        let base = if let Some(context) = context {
-            ChannelBuilder::new(topic)
-                .context(&context.0.clone())
-                .build()
+    #[pyo3(signature = (topic, *, metadata=None, context=None))]
+    fn new(
+        topic: &str,
+        metadata: Option<BTreeMap<String, String>>,
+        context: Option<&PyContext>,
+    ) -> Self {
+        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
+        let builder = if let Some(context) = context {
+            builder.context(&context.0.clone())
         } else {
-            Channel::new(topic)
+            builder
         };
+        let base = builder.build();
         Self(base)
     }
 
@@ -3534,16 +3745,22 @@ impl TextPrimitiveChannel {
     /// Create a new channel.
     ///
     /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
+    /// :param metadata: A dictionary of key/value strings to add to the channel.
+    ///     A type error is raised if any key or value is not a string.
     #[new]
-    #[pyo3(signature = (topic, *, context=None))]
-    fn new(topic: &str, context: Option<&PyContext>) -> Self {
-        let base = if let Some(context) = context {
-            ChannelBuilder::new(topic)
-                .context(&context.0.clone())
-                .build()
+    #[pyo3(signature = (topic, *, metadata=None, context=None))]
+    fn new(
+        topic: &str,
+        metadata: Option<BTreeMap<String, String>>,
+        context: Option<&PyContext>,
+    ) -> Self {
+        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
+        let builder = if let Some(context) = context {
+            builder.context(&context.0.clone())
         } else {
-            Channel::new(topic)
+            builder
         };
+        let base = builder.build();
         Self(base)
     }
 
@@ -3634,16 +3851,22 @@ impl TriangleListPrimitiveChannel {
     /// Create a new channel.
     ///
     /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
+    /// :param metadata: A dictionary of key/value strings to add to the channel.
+    ///     A type error is raised if any key or value is not a string.
     #[new]
-    #[pyo3(signature = (topic, *, context=None))]
-    fn new(topic: &str, context: Option<&PyContext>) -> Self {
-        let base = if let Some(context) = context {
-            ChannelBuilder::new(topic)
-                .context(&context.0.clone())
-                .build()
+    #[pyo3(signature = (topic, *, metadata=None, context=None))]
+    fn new(
+        topic: &str,
+        metadata: Option<BTreeMap<String, String>>,
+        context: Option<&PyContext>,
+    ) -> Self {
+        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
+        let builder = if let Some(context) = context {
+            builder.context(&context.0.clone())
         } else {
-            Channel::new(topic)
+            builder
         };
+        let base = builder.build();
         Self(base)
     }
 
@@ -3734,16 +3957,22 @@ impl Vector2Channel {
     /// Create a new channel.
     ///
     /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
+    /// :param metadata: A dictionary of key/value strings to add to the channel.
+    ///     A type error is raised if any key or value is not a string.
     #[new]
-    #[pyo3(signature = (topic, *, context=None))]
-    fn new(topic: &str, context: Option<&PyContext>) -> Self {
-        let base = if let Some(context) = context {
-            ChannelBuilder::new(topic)
-                .context(&context.0.clone())
-                .build()
+    #[pyo3(signature = (topic, *, metadata=None, context=None))]
+    fn new(
+        topic: &str,
+        metadata: Option<BTreeMap<String, String>>,
+        context: Option<&PyContext>,
+    ) -> Self {
+        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
+        let builder = if let Some(context) = context {
+            builder.context(&context.0.clone())
         } else {
-            Channel::new(topic)
+            builder
         };
+        let base = builder.build();
         Self(base)
     }
 
@@ -3829,16 +4058,22 @@ impl Vector3Channel {
     /// Create a new channel.
     ///
     /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
+    /// :param metadata: A dictionary of key/value strings to add to the channel.
+    ///     A type error is raised if any key or value is not a string.
     #[new]
-    #[pyo3(signature = (topic, *, context=None))]
-    fn new(topic: &str, context: Option<&PyContext>) -> Self {
-        let base = if let Some(context) = context {
-            ChannelBuilder::new(topic)
-                .context(&context.0.clone())
-                .build()
+    #[pyo3(signature = (topic, *, metadata=None, context=None))]
+    fn new(
+        topic: &str,
+        metadata: Option<BTreeMap<String, String>>,
+        context: Option<&PyContext>,
+    ) -> Self {
+        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
+        let builder = if let Some(context) = context {
+            builder.context(&context.0.clone())
         } else {
-            Channel::new(topic)
+            builder
         };
+        let base = builder.build();
         Self(base)
     }
 
