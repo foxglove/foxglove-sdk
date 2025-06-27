@@ -301,7 +301,7 @@ pub struct Grid {
     /// Fields in `data`. `red`, `green`, `blue`, and `alpha` are optional for customizing the grid's color.
     #[prost(message, repeated, tag = "8")]
     pub fields: ::prost::alloc::vec::Vec<PackedElementField>,
-    /// Grid cell data, interpreted using `fields`, in row-major (y-major) order
+    /// Grid cell data, interpreted using `fields`, in row-major (y-major) order — values fill each row from left to right along the X axis, with rows ordered from top to bottom along the Y axis, starting at the bottom-left corner when viewed from +Z looking towards -Z with identity orientations
     #[prost(bytes = "bytes", tag = "9")]
     pub data: ::prost::bytes::Bytes,
 }

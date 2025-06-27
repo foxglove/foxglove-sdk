@@ -1087,7 +1087,7 @@ bytes
 </td>
 <td>
 
-Grid cell data, interpreted using `fields`, in row-major (y-major) order
+Grid cell data, interpreted using `fields`, in row-major (y-major) order — values fill each row from left to right along the X axis, with rows ordered from top to bottom along the Y axis, starting at the bottom-left corner when viewed from +Z looking towards -Z with identity orientations
 
 </td>
 </tr>
