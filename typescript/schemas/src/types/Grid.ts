@@ -32,6 +32,6 @@ export type Grid = {
   /** Fields in `data`. `red`, `green`, `blue`, and `alpha` are optional for customizing the grid's color. */
   fields: PackedElementField[];
 
-  /** Grid cell data, interpreted using `fields`, in row-major (y-major) order — values fill each row from left to right along the X axis, with rows ordered from top to bottom along the Y axis, starting at the top-left corner */
+  /** Grid cell data, interpreted using `fields`, in row-major (y-major) order — values fill each row from left to right along the X axis, with rows ordered from top to bottom along the Y axis, starting at the bottom-left corner when viewed from +Z looking towards -Z with identity orientations */
   data: Uint8Array;
 };
