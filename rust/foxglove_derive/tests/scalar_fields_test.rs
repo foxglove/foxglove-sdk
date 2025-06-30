@@ -84,7 +84,7 @@ fn test_primitive_serialization() {
     for (field_name, expected_value) in unsigned_32_types {
         let field_descriptor = message_descriptor
             .get_field_by_name(field_name)
-            .unwrap_or_else(|| panic!("Field '{}' not found", field_name));
+            .unwrap_or_else(|| panic!("Field '{field_name}' not found"));
         let field_value = deserialized_message.get_field(&field_descriptor);
         let number_value = field_value.as_u32().expect("Field value is not a u32");
         assert_eq!(field_descriptor.name(), field_name);
@@ -103,7 +103,7 @@ fn test_primitive_serialization() {
     for (field_name, expected_value) in signed_32_types {
         let field_descriptor = message_descriptor
             .get_field_by_name(field_name)
-            .unwrap_or_else(|| panic!("Field '{}' not found", field_name));
+            .unwrap_or_else(|| panic!("Field '{field_name}' not found"));
         let field_value = deserialized_message.get_field(&field_descriptor);
         let number_value = field_value.as_i32().expect("Field value is not a i32");
         assert_eq!(field_descriptor.name(), field_name);
@@ -153,7 +153,7 @@ fn test_repeated_primitive_serialization() {
     for (field_name, expected_value) in fields {
         let field_descriptor = message_descriptor
             .get_field_by_name(field_name)
-            .unwrap_or_else(|| panic!("Field '{}' not found", field_name));
+            .unwrap_or_else(|| panic!("Field '{field_name}' not found"));
         let field_value = deserialized_message.get_field(&field_descriptor);
         let number_value = field_value.as_u32().expect("Field value is not a u32");
         assert_eq!(field_descriptor.name(), field_name);

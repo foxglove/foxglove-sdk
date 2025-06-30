@@ -20,5 +20,5 @@ pub fn set_sdk_language(language: &'static str) {
 pub(crate) fn get_library_version() -> String {
     let language = CELL.get_or_init(|| COMPILED_SDK_LANGUAGE.as_str());
     let version = env!("CARGO_PKG_VERSION");
-    format!("foxglove-sdk-{}/v{}", language, version)
+    format!("foxglove-sdk-{language}/v{version}")
 }

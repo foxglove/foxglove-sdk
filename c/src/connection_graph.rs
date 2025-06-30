@@ -72,7 +72,7 @@ unsafe fn do_foxglove_connection_graph_set_published_topic(
     publisher_ids_count: usize,
 ) -> Result<(), foxglove::FoxgloveError> {
     let topic = unsafe { topic.as_utf8_str() }
-        .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("topic is invalid: {}", e)))?;
+        .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("topic is invalid: {e}")))?;
 
     if publisher_ids_count > 0 {
         if publisher_ids.is_null() {
@@ -92,7 +92,7 @@ unsafe fn do_foxglove_connection_graph_set_published_topic(
                 ));
             }
             let id = unsafe { publisher_id.as_utf8_str() }.map_err(|e| {
-                foxglove::FoxgloveError::Utf8Error(format!("publisher_id is invalid: {}", e))
+                foxglove::FoxgloveError::Utf8Error(format!("publisher_id is invalid: {e}"))
             })?;
             strings.push(id);
         }
@@ -133,7 +133,7 @@ unsafe fn do_foxglove_connection_graph_set_subscribed_topic(
     subscriber_ids_count: usize,
 ) -> Result<(), foxglove::FoxgloveError> {
     let topic = unsafe { topic.as_utf8_str() }
-        .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("topic is invalid: {}", e)))?;
+        .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("topic is invalid: {e}")))?;
 
     if subscriber_ids_count > 0 {
         if subscriber_ids.is_null() {
@@ -153,7 +153,7 @@ unsafe fn do_foxglove_connection_graph_set_subscribed_topic(
                 ));
             }
             let id = unsafe { subscriber_id.as_utf8_str() }.map_err(|e| {
-                foxglove::FoxgloveError::Utf8Error(format!("subscriber_id is invalid: {}", e))
+                foxglove::FoxgloveError::Utf8Error(format!("subscriber_id is invalid: {e}"))
             })?;
             strings.push(id);
         }
@@ -196,7 +196,7 @@ unsafe fn do_foxglove_connection_graph_set_advertised_service(
     provider_ids_count: usize,
 ) -> Result<(), foxglove::FoxgloveError> {
     let service = unsafe { service.as_utf8_str() }
-        .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("service is invalid: {}", e)))?;
+        .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("service is invalid: {e}")))?;
 
     if provider_ids_count > 0 {
         if provider_ids.is_null() {
@@ -214,7 +214,7 @@ unsafe fn do_foxglove_connection_graph_set_advertised_service(
                 ));
             }
             let id = unsafe { provider_id.as_utf8_str() }.map_err(|e| {
-                foxglove::FoxgloveError::Utf8Error(format!("provider_id is invalid: {}", e))
+                foxglove::FoxgloveError::Utf8Error(format!("provider_id is invalid: {e}"))
             })?;
             strings.push(id);
         }
