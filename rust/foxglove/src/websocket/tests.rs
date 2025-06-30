@@ -167,7 +167,7 @@ async fn test_handshake_with_multiple_subprotocols() {
         .expect("Failed to build request");
 
     let mut req1 = request.clone();
-    let header = format!("{}, foxglove.sdk.v2", SUBPROTOCOL);
+    let header = format!("{SUBPROTOCOL}, foxglove.sdk.v2");
     req1.headers_mut().insert(
         "sec-websocket-protocol",
         HeaderValue::from_str(&header).unwrap(),
@@ -184,7 +184,7 @@ async fn test_handshake_with_multiple_subprotocols() {
 
     // In req2, the client's preferred (initial) subprotocol is not valid
     let mut req2 = request.clone();
-    let header = format!("unknown, {}, another", SUBPROTOCOL);
+    let header = format!("unknown, {SUBPROTOCOL}, another");
     req2.headers_mut().insert(
         "sec-websocket-protocol",
         HeaderValue::from_str(&header).unwrap(),
@@ -1365,7 +1365,7 @@ async fn test_slow_client() {
 
     // Publish more status messages than the client can handle
     for i in 0..50 {
-        let status = Status::error(format!("msg{}", i));
+        let status = Status::error(format!("msg{i}"));
         server.publish_status(status);
     }
 

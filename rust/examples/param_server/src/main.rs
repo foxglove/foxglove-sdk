@@ -95,17 +95,11 @@ impl ServerListener for ParamListener {
     }
 
     fn on_parameters_subscribe(&self, param_names: Vec<String>) {
-        println!(
-            "on_parameters_subscribe called with parameter names: {:?}",
-            param_names
-        );
+        println!("on_parameters_subscribe called with parameter names: {param_names:?}",);
     }
 
     fn on_parameters_unsubscribe(&self, param_names: Vec<String>) {
-        println!(
-            "on_parameters_unsubscribe called with parameter names: {:?}",
-            param_names
-        );
+        println!("on_parameters_unsubscribe called with parameter names: {param_names:?}",);
     }
 }
 

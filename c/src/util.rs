@@ -35,7 +35,7 @@ pub(crate) unsafe fn string_from_raw(
     unsafe {
         String::from_utf8(Vec::from_raw_parts(ptr as *mut _, len, len))
             .map(ManuallyDrop::new)
-            .map_err(|e| FoxgloveError::Utf8Error(format!("{} invalid: {}", field_name, e)))
+            .map_err(|e| FoxgloveError::Utf8Error(format!("{field_name} invalid: {e}")))
     }
 }
 

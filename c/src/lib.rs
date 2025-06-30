@@ -414,11 +414,10 @@ impl FoxgloveSchema {
     /// - `encoding` must be a valid pointer to a UTF-8 string.
     /// - `data` must be a valid pointer to a buffer of `data_len` bytes.
     unsafe fn to_native(&self) -> Result<foxglove::Schema, foxglove::FoxgloveError> {
-        let name = unsafe { self.name.as_utf8_str() }.map_err(|e| {
-            foxglove::FoxgloveError::Utf8Error(format!("schema name invalid: {}", e))
-        })?;
+        let name = unsafe { self.name.as_utf8_str() }
+            .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("schema name invalid: {e}")))?;
         let encoding = unsafe { self.encoding.as_utf8_str() }.map_err(|e| {
-            foxglove::FoxgloveError::Utf8Error(format!("schema encoding invalid: {}", e))
+            foxglove::FoxgloveError::Utf8Error(format!("schema encoding invalid: {e}"))
         })?;
         let data = unsafe { std::slice::from_raw_parts(self.data, self.data_len) };
         Ok(foxglove::Schema::new(name, encoding, data.to_owned()))
@@ -466,9 +465,9 @@ unsafe fn do_foxglove_server_start(
     options: &FoxgloveServerOptions,
 ) -> Result<*mut FoxgloveWebSocketServer, foxglove::FoxgloveError> {
     let name = unsafe { options.name.as_utf8_str() }
-        .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("name is invalid: {}", e)))?;
+        .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("name is invalid: {e}")))?;
     let host = unsafe { options.host.as_utf8_str() }
-        .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("host is invalid: {}", e)))?;
+        .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("host is invalid: {e}")))?;
 
     let mut server = foxglove::WebSocketServer::new()
         .name(name)
@@ -499,8 +498,7 @@ unsafe fn do_foxglove_server_start(
                 }
                 unsafe { enc.as_utf8_str() }.map_err(|e| {
                     foxglove::FoxgloveError::Utf8Error(format!(
-                        "encoding in supported_encodings is invalid: {}",
-                        e
+                        "encoding in supported_encodings is invalid: {e}"
                     ))
                 })
             })
@@ -834,9 +832,8 @@ pub struct FoxgloveMcapOptions {
 
 impl FoxgloveMcapOptions {
     unsafe fn to_write_options(&self) -> Result<WriteOptions, foxglove::FoxgloveError> {
-        let profile = unsafe { self.profile.as_utf8_str() }.map_err(|e| {
-            foxglove::FoxgloveError::ValueError(format!("profile is invalid: {}", e))
-        })?;
+        let profile = unsafe { self.profile.as_utf8_str() }
+            .map_err(|e| foxglove::FoxgloveError::ValueError(format!("profile is invalid: {e}")))?;
 
         let compression = match self.compression {
             FoxgloveMcapCompression::Zstd => Some(Compression::Zstd),
@@ -897,7 +894,7 @@ unsafe fn do_foxglove_mcap_open(
     options: &FoxgloveMcapOptions,
 ) -> Result<*mut FoxgloveMcapWriter, foxglove::FoxgloveError> {
     let path = unsafe { options.path.as_utf8_str() }
-        .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("path is invalid: {}", e)))?;
+        .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("path is invalid: {e}")))?;
     let context = options.context;
 
     // Safety: this is safe if the options struct contains valid strings
@@ -996,9 +993,9 @@ unsafe fn do_foxglove_raw_channel_create(
     metadata: *const FoxgloveChannelMetadata,
 ) -> Result<*const FoxgloveChannel, foxglove::FoxgloveError> {
     let topic = unsafe { topic.as_utf8_str() }
-        .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("topic invalid: {}", e)))?;
+        .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("topic invalid: {e}")))?;
     let message_encoding = unsafe { message_encoding.as_utf8_str() }.map_err(|e| {
-        foxglove::FoxgloveError::Utf8Error(format!("message_encoding invalid: {}", e))
+        foxglove::FoxgloveError::Utf8Error(format!("message_encoding invalid: {e}"))
     })?;
 
     let mut maybe_schema = None;
@@ -1019,10 +1016,10 @@ unsafe fn do_foxglove_raw_channel_create(
         for i in 0..metadata.count {
             let item = unsafe { metadata.items.add(i) };
             let key = unsafe { (*item).key.as_utf8_str() }.map_err(|e| {
-                foxglove::FoxgloveError::Utf8Error(format!("invalid metadata key: {}", e))
+                foxglove::FoxgloveError::Utf8Error(format!("invalid metadata key: {e}"))
             })?;
             let value = unsafe { (*item).value.as_utf8_str() }.map_err(|e| {
-                foxglove::FoxgloveError::Utf8Error(format!("invalid metadata value: {}", e))
+                foxglove::FoxgloveError::Utf8Error(format!("invalid metadata value: {e}"))
             })?;
             builder = builder.add_metadata(key, value);
         }
@@ -1039,7 +1036,7 @@ pub(crate) unsafe fn do_foxglove_channel_create<T: foxglove::Encode>(
     let topic_str = unsafe {
         topic
             .as_utf8_str()
-            .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("topic invalid: {}", e)))?
+            .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("topic invalid: {e}")))?
     };
 
     let mut builder = foxglove::ChannelBuilder::new(topic_str);
