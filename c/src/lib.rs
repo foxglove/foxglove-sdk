@@ -1412,7 +1412,7 @@ impl foxglove::websocket::ServerListener for FoxgloveServerCallbacks {
                 .map(|schema| schema.len())
                 .unwrap_or(0),
         };
-        unsafe { on_client_advertise(self.context, client.id().into(), &c_channel) };
+        unsafe { on_client_advertise(self.context, client.id().into(), &raw const c_channel) };
     }
 
     fn on_message_data(
