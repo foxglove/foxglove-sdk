@@ -44,7 +44,8 @@ fn test_float_array() {
 #[test]
 fn test_string() {
     let mut p = std::ptr::null_mut();
-    let err = unsafe { foxglove_parameter_create_string(&raw mut p, "string".into(), "data".into()) };
+    let err =
+        unsafe { foxglove_parameter_create_string(&raw mut p, "string".into(), "data".into()) };
     assert_eq!(err, FoxgloveError::Ok);
 
     let p = unsafe { FoxgloveParameter::from_raw(p) };
