@@ -379,7 +379,6 @@ template<>
 /// @tparam std::string_view Checks whether the parameter value is a string.
 
 /// @fn ParameterView::is<std::string>()
-/// @note foobar
 /// @tparam std::string Checks whether the parameter value is a string.
 
 /// @fn ParameterView::is<std::vector<std::byte>>()
