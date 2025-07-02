@@ -90,6 +90,21 @@ private:
       : impl_(ptr) {}
 };
 
+// Template specializations for ParameterValueView
+//
+// Documented manually as tparams because specializations are merged:
+// https://github.com/doxygen/doxygen/issues/9468
+
+/// @fn ParameterValueView::is<std::string>()
+/// @tparam std::string Checks whether the parameter value is a string.
+
+/// @fn ParameterValueView::get<ParameterValueView>()
+/// @tparam ParameterValueView Extracts the parameter as itself.
+
+/// @fn ParameterValueView::get<std::string>()
+/// @tparam std::string Extracts the parameter as an owned string.
+
+/// @cond ignore-template-specializations
 /// @brief Checks whether the parameter value is a string.
 template<>
 [[nodiscard]] inline bool ParameterValueView::is<std::string>() const noexcept {
@@ -106,6 +121,7 @@ template<>
   auto sv = this->get<std::string_view>();
   return std::string(sv);
 }
+/// @endcond
 
 /// @brief An owned parameter value.
 class ParameterValue final {
@@ -354,9 +370,26 @@ template<>
   return value.has_value() && value->is<ParameterValueView::Dict>();
 }
 
-/// @cond duplicate-ids-bug
+// Template specializations for ParameterView
+//
+// Documented manually as tparams because specializations are merged:
 // https://github.com/doxygen/doxygen/issues/9468
 
+/// @fn ParameterView::is<std::string_view>()
+/// @tparam std::string_view Checks whether the parameter value is a string.
+
+/// @fn ParameterView::is<std::string>()
+/// @note foobar
+/// @tparam std::string Checks whether the parameter value is a string.
+
+/// @fn ParameterView::is<std::vector<std::byte>>()
+/// @tparam std::vector<std::byte> Checks whether the parameter value is a byte array.
+
+/// @fn ParameterView::is<std::vector<double>>()
+/// @tparam std::vector<double> Checks whether the parameter value is a vector of floating point
+/// values.
+
+/// @cond ignore-template-specializations
 /// @brief Checks whether the parameter value is a std::string_view.
 ///
 /// Returns false if the parameter type indicates that it is a byte array.
@@ -388,7 +421,6 @@ template<>
 [[nodiscard]] inline bool ParameterView::is<std::vector<double>>() const noexcept {
   return this->isArray<double>();
 }
-
 /// @endcond
 
 [[nodiscard]] inline bool ParameterView::isByteArray() const noexcept {
