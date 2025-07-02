@@ -709,7 +709,14 @@ impl ConnectedClient {
 
     /// Unadvertises a channel to the client.
     fn unadvertise_channel(&self, channel_id: ChannelId) {
-        self.channels.write().remove(&channel_id);
+        if self.channels.write().remove(&channel_id).is_none() {
+            tracing::debug!(
+                "Client {} is not advertising channel: {}",
+                self.addr,
+                channel_id
+            );
+            return;
+        }
 
         let message = Unadvertise::new([channel_id.into()]);
 
