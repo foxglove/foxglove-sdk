@@ -282,8 +282,8 @@ impl ConnectedClient {
         let client_channel = {
             let advertised_channels = self.advertised_channels.lock();
             let Some(channel) = advertised_channels.get(&channel_id) else {
-                tracing::error!("Received message for unknown channel: {}", channel_id);
-                self.send_error(format!("Unknown channel ID: {}", channel_id));
+                tracing::error!("Received message for unknown channel: {channel_id}");
+                self.send_error(format!("Unknown channel ID: {channel_id}"));
                 // Do not forward to server listener
                 return;
             };
@@ -312,8 +312,7 @@ impl ConnectedClient {
                     // Remove the channel ID from the list so we don't invoke the on_client_unadvertise callback
                     channel_ids.swap_remove(i);
                     self.send_warning(format!(
-                        "Client is not advertising channel: {}; ignoring unadvertisement",
-                        id
+                        "Client is not advertising channel: {id}; ignoring unadvertisement"
                     ));
                     continue;
                 };
