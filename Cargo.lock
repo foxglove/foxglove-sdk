@@ -561,7 +561,7 @@ version = "0.0.0"
 dependencies = [
  "ctrlc",
  "env_logger",
- "foxglove",
+ "foxglove 0.9.0",
 ]
 
 [[package]]
