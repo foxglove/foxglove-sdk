@@ -38,6 +38,7 @@ jobs:
             cdylib_name: libfoxglove.so
             staticlib_artifact_name: libfoxglove-aarch64-unknown-linux-gnu.a
             cdylib_artifact_name: libfoxglove-aarch64-unknown-linux-gnu.so
+            compiler: clang
             cross: true
           - runner: ubuntu-24.04
             target: x86_64-unknown-linux-gnu
@@ -45,7 +46,28 @@ jobs:
             cdylib_name: libfoxglove.so
             staticlib_artifact_name: libfoxglove-x86_64-unknown-linux-gnu.a
             cdylib_artifact_name: libfoxglove-x86_64-unknown-linux-gnu.so
+            compiler: clang
             cross: false
+
+          # Linux (extra builds to test GCC support)
+          - runner: ubuntu-24.04
+            target: aarch64-unknown-linux-gnu
+            staticlib_name: libfoxglove.a
+            cdylib_name: libfoxglove.so
+            staticlib_artifact_name: libfoxglove-aarch64-unknown-linux-gnu.a
+            cdylib_artifact_name: libfoxglove-aarch64-unknown-linux-gnu.so
+            cross: true
+            compiler: gcc
+            upload: false
+          - runner: ubuntu-24.04
+            target: x86_64-unknown-linux-gnu
+            staticlib_name: libfoxglove.a
+            cdylib_name: libfoxglove.so
+            staticlib_artifact_name: libfoxglove-x86_64-unknown-linux-gnu.a
+            cdylib_artifact_name: libfoxglove-x86_64-unknown-linux-gnu.so
+            cross: false
+            compiler: gcc
+            upload: false
 
           # macOS
           - runner: macos-15
@@ -131,6 +153,17 @@ jobs:
       - name: Ensure generated files are up to date
         run: git diff --exit-code
 
+      - name: Use Clang
+        if: matrix.compiler == 'clang'
+        run: |
+          echo "CC=clang" >> $GITHUB_ENV
+          echo "CXX=clang++" >> $GITHUB_ENV
+      - name: Use GCC
+        if: matrix.compiler == 'gcc'
+        run: |
+          echo "CC=gcc" >> $GITHUB_ENV
+          echo "CXX=g++" >> $GITHUB_ENV
+
       - name: Build C++ library and run tests
         if: ${{ !fromJson(matrix.cross) }}
         run: make test
@@ -166,6 +199,7 @@ jobs:
 
       - name: Upload static & shared library to artifacts
         uses: actions/upload-artifact@v4
+        if: matrix.upload != false
         with:
           name: foxglove-${{inputs.sdk-version || github.sha}}-cpp-${{ matrix.target }}.zip
           path: artifacts/foxglove-${{inputs.sdk-version || github.sha}}-cpp-${{ matrix.target }}.zip
