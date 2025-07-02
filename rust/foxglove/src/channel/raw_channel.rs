@@ -19,6 +19,7 @@ use crate::{nanoseconds_since_epoch, Context, Metadata, PartialMetadata, Schema}
 static WARN_THROTTLER_INTERVAL: Duration = Duration::from_secs(10);
 
 /// Information about a Channel.
+#[derive(Clone)]
 pub struct ChannelDescriptor {
     id: ChannelId,
     topic: String,
