@@ -31,10 +31,10 @@ int main() {
   options.port = 8765;
   options.capabilities = foxglove::WebSocketServerCapabilities::ClientPublish;
   options.supported_encodings = {"json"};
-  options.callbacks.onSubscribe = [](uint64_t channel_id) {
+  options.callbacks.onSubscribe = [](uint64_t channel_id, uint32_t _) {
     std::cerr << "Subscribed to channel " << channel_id << '\n';
   };
-  options.callbacks.onUnsubscribe = [](uint64_t channel_id) {
+  options.callbacks.onUnsubscribe = [](uint64_t channel_id, uint32_t _) {
     std::cerr << "Unsubscribed from channel " << channel_id << '\n';
   };
   options.callbacks.onClientAdvertise = [](

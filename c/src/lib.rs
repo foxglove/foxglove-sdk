@@ -298,8 +298,10 @@ pub struct FoxgloveClientChannel {
 pub struct FoxgloveServerCallbacks {
     /// A user-defined value that will be passed to callback functions
     pub context: *const c_void,
-    pub on_subscribe: Option<unsafe extern "C" fn(context: *const c_void, channel_id: u64)>,
-    pub on_unsubscribe: Option<unsafe extern "C" fn(context: *const c_void, channel_id: u64)>,
+    pub on_subscribe:
+        Option<unsafe extern "C" fn(context: *const c_void, channel_id: u64, client_id: u32)>,
+    pub on_unsubscribe:
+        Option<unsafe extern "C" fn(context: *const c_void, channel_id: u64, client_id: u32)>,
     pub on_client_advertise: Option<
         unsafe extern "C" fn(
             context: *const c_void,
@@ -1363,7 +1365,7 @@ impl foxglove::websocket::ServerListener for FoxgloveServerCallbacks {
         channel: foxglove::websocket::ChannelView,
     ) {
         if let Some(on_subscribe) = self.on_subscribe {
-            unsafe { on_subscribe(self.context, channel.id().into()) };
+            unsafe { on_subscribe(self.context, channel.id().into(), _client.id().into()) };
         }
     }
 
@@ -1373,7 +1375,7 @@ impl foxglove::websocket::ServerListener for FoxgloveServerCallbacks {
         channel: foxglove::websocket::ChannelView,
     ) {
         if let Some(on_unsubscribe) = self.on_unsubscribe {
-            unsafe { on_unsubscribe(self.context, channel.id().into()) };
+            unsafe { on_unsubscribe(self.context, channel.id().into(), _client.id().into()) };
         }
     }
 
