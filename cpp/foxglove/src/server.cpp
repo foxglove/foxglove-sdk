@@ -78,14 +78,14 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
                                       const uint8_t* payload,
                                       size_t payload_len
                                     ) {
-        try {
+        // try {
           (static_cast<const WebSocketServerCallbacks*>(context))
             ->onMessageData(
               client_id, client_channel_id, reinterpret_cast<const std::byte*>(payload), payload_len
             );
-        } catch (const std::exception& exc) {
-          warn() << "onMessageData callback failed: " << exc.what();
-        }
+        // } catch (const std::exception& exc) {
+        //  warn() << "onMessageData callback failed: " << exc.what();
+        // }
       };
     }
     if (callbacks->onClientUnadvertise) {
