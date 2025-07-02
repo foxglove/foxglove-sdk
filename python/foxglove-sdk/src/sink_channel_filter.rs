@@ -5,26 +5,31 @@ use pyo3::prelude::*;
 use pyo3::types::IntoPyDict;
 use pyo3::{types::PyDict, Py};
 
+/// Information about a Channel.
 #[pyclass(name = "ChannelDescriptor", module = "foxglove")]
 pub struct PyChannelDescriptor(Arc<ChannelDescriptor>);
 
 #[pymethods]
 impl PyChannelDescriptor {
+    /// Returns the channel ID.
     #[getter]
     fn id(&self) -> u64 {
         u64::from(self.0.id())
     }
 
+    /// Returns the channel topic.
     #[getter]
     fn topic(&self) -> &str {
         self.0.topic()
     }
 
+    /// Returns the message encoding for this channel.
     #[getter]
     fn message_encoding(&self) -> &str {
         self.0.message_encoding()
     }
 
+    /// Returns the metadata for this channel.
     #[getter]
     fn metadata<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
         println!("[getter] copy metadata");
