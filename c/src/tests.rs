@@ -138,10 +138,10 @@ fn test_triangle_list_primitive_borrow_to_native() {
 
     let indices = [0, 1, 2];
     let c_type = TriangleListPrimitive {
-        pose: &pose,
+        pose: &raw const pose,
         points: points.as_ptr(),
         points_count: points.len(),
-        color: &color,
+        color: &raw const color,
         colors: colors.as_ptr(),
         colors_count: colors.len(),
         indices: indices.as_ptr(),
@@ -249,12 +249,12 @@ fn test_image_annotations_borrow_to_native() {
     };
 
     let circle = CircleAnnotation {
-        timestamp: &timestamp,
-        position: &circle_position,
+        timestamp: &raw const timestamp,
+        position: &raw const circle_position,
         diameter: 15.0,
         thickness: 2.0,
-        fill_color: &circle_fill_color,
-        outline_color: &circle_outline_color,
+        fill_color: &raw const circle_fill_color,
+        outline_color: &raw const circle_outline_color,
     };
 
     // Create points annotation
@@ -286,14 +286,14 @@ fn test_image_annotations_borrow_to_native() {
     };
 
     let points = PointsAnnotation {
-        timestamp: &timestamp,
+        timestamp: &raw const timestamp,
         r#type: FoxglovePointsAnnotationType::LineStrip,
         points: points_positions.as_ptr(),
         points_count: points_positions.len(),
-        outline_color: &points_outline_color,
+        outline_color: &raw const points_outline_color,
         outline_colors: points_outline_colors.as_ptr(),
         outline_colors_count: points_outline_colors.len(),
-        fill_color: &points_fill_color,
+        fill_color: &raw const points_fill_color,
         thickness: 3.0,
     };
 
@@ -322,12 +322,12 @@ fn test_image_annotations_borrow_to_native() {
     };
 
     let text_annotation = TextAnnotation {
-        timestamp: &timestamp,
-        position: &text_position,
+        timestamp: &raw const timestamp,
+        position: &raw const text_position,
         text,
         font_size: 14.0,
-        text_color: &text_color,
-        background_color: &background_color,
+        text_color: &raw const text_color,
+        background_color: &raw const background_color,
     };
 
     // Create ImageAnnotations struct

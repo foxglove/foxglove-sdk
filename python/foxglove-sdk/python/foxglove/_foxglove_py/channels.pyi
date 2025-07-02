@@ -55,6 +55,7 @@ class ArrowPrimitiveChannel:
         cls,
         topic: str,
         *,
+        metadata: Optional[Dict[str, str]] = None,
         context: Optional["Context"] = None,
     ) -> "ArrowPrimitiveChannel": ...
     def id(self) -> int:
@@ -120,6 +121,7 @@ class CameraCalibrationChannel:
         cls,
         topic: str,
         *,
+        metadata: Optional[Dict[str, str]] = None,
         context: Optional["Context"] = None,
     ) -> "CameraCalibrationChannel": ...
     def id(self) -> int:
@@ -185,6 +187,7 @@ class CircleAnnotationChannel:
         cls,
         topic: str,
         *,
+        metadata: Optional[Dict[str, str]] = None,
         context: Optional["Context"] = None,
     ) -> "CircleAnnotationChannel": ...
     def id(self) -> int:
@@ -250,6 +253,7 @@ class ColorChannel:
         cls,
         topic: str,
         *,
+        metadata: Optional[Dict[str, str]] = None,
         context: Optional["Context"] = None,
     ) -> "ColorChannel": ...
     def id(self) -> int:
@@ -315,6 +319,7 @@ class CompressedImageChannel:
         cls,
         topic: str,
         *,
+        metadata: Optional[Dict[str, str]] = None,
         context: Optional["Context"] = None,
     ) -> "CompressedImageChannel": ...
     def id(self) -> int:
@@ -380,6 +385,7 @@ class CompressedVideoChannel:
         cls,
         topic: str,
         *,
+        metadata: Optional[Dict[str, str]] = None,
         context: Optional["Context"] = None,
     ) -> "CompressedVideoChannel": ...
     def id(self) -> int:
@@ -445,6 +451,7 @@ class CubePrimitiveChannel:
         cls,
         topic: str,
         *,
+        metadata: Optional[Dict[str, str]] = None,
         context: Optional["Context"] = None,
     ) -> "CubePrimitiveChannel": ...
     def id(self) -> int:
@@ -510,6 +517,7 @@ class CylinderPrimitiveChannel:
         cls,
         topic: str,
         *,
+        metadata: Optional[Dict[str, str]] = None,
         context: Optional["Context"] = None,
     ) -> "CylinderPrimitiveChannel": ...
     def id(self) -> int:
@@ -575,6 +583,7 @@ class FrameTransformChannel:
         cls,
         topic: str,
         *,
+        metadata: Optional[Dict[str, str]] = None,
         context: Optional["Context"] = None,
     ) -> "FrameTransformChannel": ...
     def id(self) -> int:
@@ -640,6 +649,7 @@ class FrameTransformsChannel:
         cls,
         topic: str,
         *,
+        metadata: Optional[Dict[str, str]] = None,
         context: Optional["Context"] = None,
     ) -> "FrameTransformsChannel": ...
     def id(self) -> int:
@@ -705,6 +715,7 @@ class GeoJsonChannel:
         cls,
         topic: str,
         *,
+        metadata: Optional[Dict[str, str]] = None,
         context: Optional["Context"] = None,
     ) -> "GeoJsonChannel": ...
     def id(self) -> int:
@@ -770,6 +781,7 @@ class GridChannel:
         cls,
         topic: str,
         *,
+        metadata: Optional[Dict[str, str]] = None,
         context: Optional["Context"] = None,
     ) -> "GridChannel": ...
     def id(self) -> int:
@@ -835,6 +847,7 @@ class ImageAnnotationsChannel:
         cls,
         topic: str,
         *,
+        metadata: Optional[Dict[str, str]] = None,
         context: Optional["Context"] = None,
     ) -> "ImageAnnotationsChannel": ...
     def id(self) -> int:
@@ -900,6 +913,7 @@ class KeyValuePairChannel:
         cls,
         topic: str,
         *,
+        metadata: Optional[Dict[str, str]] = None,
         context: Optional["Context"] = None,
     ) -> "KeyValuePairChannel": ...
     def id(self) -> int:
@@ -965,6 +979,7 @@ class LaserScanChannel:
         cls,
         topic: str,
         *,
+        metadata: Optional[Dict[str, str]] = None,
         context: Optional["Context"] = None,
     ) -> "LaserScanChannel": ...
     def id(self) -> int:
@@ -1030,6 +1045,7 @@ class LinePrimitiveChannel:
         cls,
         topic: str,
         *,
+        metadata: Optional[Dict[str, str]] = None,
         context: Optional["Context"] = None,
     ) -> "LinePrimitiveChannel": ...
     def id(self) -> int:
@@ -1095,6 +1111,7 @@ class LocationFixChannel:
         cls,
         topic: str,
         *,
+        metadata: Optional[Dict[str, str]] = None,
         context: Optional["Context"] = None,
     ) -> "LocationFixChannel": ...
     def id(self) -> int:
@@ -1160,6 +1177,7 @@ class LogChannel:
         cls,
         topic: str,
         *,
+        metadata: Optional[Dict[str, str]] = None,
         context: Optional["Context"] = None,
     ) -> "LogChannel": ...
     def id(self) -> int:
@@ -1225,6 +1243,7 @@ class ModelPrimitiveChannel:
         cls,
         topic: str,
         *,
+        metadata: Optional[Dict[str, str]] = None,
         context: Optional["Context"] = None,
     ) -> "ModelPrimitiveChannel": ...
     def id(self) -> int:
@@ -1290,6 +1309,7 @@ class PackedElementFieldChannel:
         cls,
         topic: str,
         *,
+        metadata: Optional[Dict[str, str]] = None,
         context: Optional["Context"] = None,
     ) -> "PackedElementFieldChannel": ...
     def id(self) -> int:
@@ -1355,6 +1375,7 @@ class Point2Channel:
         cls,
         topic: str,
         *,
+        metadata: Optional[Dict[str, str]] = None,
         context: Optional["Context"] = None,
     ) -> "Point2Channel": ...
     def id(self) -> int:
@@ -1420,6 +1441,7 @@ class Point3Channel:
         cls,
         topic: str,
         *,
+        metadata: Optional[Dict[str, str]] = None,
         context: Optional["Context"] = None,
     ) -> "Point3Channel": ...
     def id(self) -> int:
@@ -1485,6 +1507,7 @@ class PointCloudChannel:
         cls,
         topic: str,
         *,
+        metadata: Optional[Dict[str, str]] = None,
         context: Optional["Context"] = None,
     ) -> "PointCloudChannel": ...
     def id(self) -> int:
@@ -1550,6 +1573,7 @@ class PointsAnnotationChannel:
         cls,
         topic: str,
         *,
+        metadata: Optional[Dict[str, str]] = None,
         context: Optional["Context"] = None,
     ) -> "PointsAnnotationChannel": ...
     def id(self) -> int:
@@ -1615,6 +1639,7 @@ class PoseChannel:
         cls,
         topic: str,
         *,
+        metadata: Optional[Dict[str, str]] = None,
         context: Optional["Context"] = None,
     ) -> "PoseChannel": ...
     def id(self) -> int:
@@ -1680,6 +1705,7 @@ class PoseInFrameChannel:
         cls,
         topic: str,
         *,
+        metadata: Optional[Dict[str, str]] = None,
         context: Optional["Context"] = None,
     ) -> "PoseInFrameChannel": ...
     def id(self) -> int:
@@ -1745,6 +1771,7 @@ class PosesInFrameChannel:
         cls,
         topic: str,
         *,
+        metadata: Optional[Dict[str, str]] = None,
         context: Optional["Context"] = None,
     ) -> "PosesInFrameChannel": ...
     def id(self) -> int:
@@ -1810,6 +1837,7 @@ class QuaternionChannel:
         cls,
         topic: str,
         *,
+        metadata: Optional[Dict[str, str]] = None,
         context: Optional["Context"] = None,
     ) -> "QuaternionChannel": ...
     def id(self) -> int:
@@ -1875,6 +1903,7 @@ class RawAudioChannel:
         cls,
         topic: str,
         *,
+        metadata: Optional[Dict[str, str]] = None,
         context: Optional["Context"] = None,
     ) -> "RawAudioChannel": ...
     def id(self) -> int:
@@ -1940,6 +1969,7 @@ class RawImageChannel:
         cls,
         topic: str,
         *,
+        metadata: Optional[Dict[str, str]] = None,
         context: Optional["Context"] = None,
     ) -> "RawImageChannel": ...
     def id(self) -> int:
@@ -2005,6 +2035,7 @@ class SceneEntityChannel:
         cls,
         topic: str,
         *,
+        metadata: Optional[Dict[str, str]] = None,
         context: Optional["Context"] = None,
     ) -> "SceneEntityChannel": ...
     def id(self) -> int:
@@ -2070,6 +2101,7 @@ class SceneEntityDeletionChannel:
         cls,
         topic: str,
         *,
+        metadata: Optional[Dict[str, str]] = None,
         context: Optional["Context"] = None,
     ) -> "SceneEntityDeletionChannel": ...
     def id(self) -> int:
@@ -2135,6 +2167,7 @@ class SceneUpdateChannel:
         cls,
         topic: str,
         *,
+        metadata: Optional[Dict[str, str]] = None,
         context: Optional["Context"] = None,
     ) -> "SceneUpdateChannel": ...
     def id(self) -> int:
@@ -2200,6 +2233,7 @@ class SpherePrimitiveChannel:
         cls,
         topic: str,
         *,
+        metadata: Optional[Dict[str, str]] = None,
         context: Optional["Context"] = None,
     ) -> "SpherePrimitiveChannel": ...
     def id(self) -> int:
@@ -2265,6 +2299,7 @@ class TextAnnotationChannel:
         cls,
         topic: str,
         *,
+        metadata: Optional[Dict[str, str]] = None,
         context: Optional["Context"] = None,
     ) -> "TextAnnotationChannel": ...
     def id(self) -> int:
@@ -2330,6 +2365,7 @@ class TextPrimitiveChannel:
         cls,
         topic: str,
         *,
+        metadata: Optional[Dict[str, str]] = None,
         context: Optional["Context"] = None,
     ) -> "TextPrimitiveChannel": ...
     def id(self) -> int:
@@ -2395,6 +2431,7 @@ class TriangleListPrimitiveChannel:
         cls,
         topic: str,
         *,
+        metadata: Optional[Dict[str, str]] = None,
         context: Optional["Context"] = None,
     ) -> "TriangleListPrimitiveChannel": ...
     def id(self) -> int:
@@ -2460,6 +2497,7 @@ class Vector2Channel:
         cls,
         topic: str,
         *,
+        metadata: Optional[Dict[str, str]] = None,
         context: Optional["Context"] = None,
     ) -> "Vector2Channel": ...
     def id(self) -> int:
@@ -2525,6 +2563,7 @@ class Vector3Channel:
         cls,
         topic: str,
         *,
+        metadata: Optional[Dict[str, str]] = None,
         context: Optional["Context"] = None,
     ) -> "Vector3Channel": ...
     def id(self) -> int:

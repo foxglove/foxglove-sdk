@@ -75,7 +75,7 @@ void log_to_channels(int counter) {
 }
 
 // NOLINTNEXTLINE(bugprone-exception-escape)
-int main(int argc, const char* argv[]) {
+int main() {
   foxglove::McapWriterOptions options = {};
   options.path = "test.mcap";
   options.truncate = true;

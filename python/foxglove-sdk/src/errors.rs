@@ -9,6 +9,6 @@ pub struct PyFoxgloveError(#[from] FoxgloveError);
 
 impl From<PyFoxgloveError> for PyErr {
     fn from(err: PyFoxgloveError) -> PyErr {
-        PyRuntimeError::new_err(format!("FoxgloveError: {}", err))
+        PyRuntimeError::new_err(format!("FoxgloveError: {err}"))
     }
 }

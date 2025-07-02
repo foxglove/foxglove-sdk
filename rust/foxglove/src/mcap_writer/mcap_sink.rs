@@ -278,7 +278,7 @@ mod tests {
                         "bar_schema"
                     );
                 }
-                _ => panic!("unexpected channel id: {}", channel_id),
+                _ => panic!("unexpected channel id: {channel_id}"),
             }
         })
         .expect("failed to read MCAP messages");

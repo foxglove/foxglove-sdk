@@ -5,6 +5,7 @@ members = [
   "rust/foxglove",
   "rust/foxglove_derive",
   "rust/foxglove_proto_gen",
+  "rust/foxglove_data_loader",
   "rust/examples/*",
   "python/foxglove-sdk",
 ]
@@ -19,7 +20,7 @@ license = "MIT"
 [workspace.dependencies]
 bytes = "1.9.0"
 log = "0.4.22"
-mcap = { version = "0.19", default-features = false }
+mcap = { version = "0.23", default-features = false }
 prost = "0.13"
 prost-build = "0.13"
 prost-types = "0.13"

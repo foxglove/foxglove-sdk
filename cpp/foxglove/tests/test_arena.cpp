@@ -68,21 +68,21 @@ TEST_CASE("allocate from heap when arena capacity is exceeded") {
   REQUIRE(largeAllocation != nullptr);
 
   // Verify we can use the overflow allocation
-  for (int i = 0; i < largeAllocationSize / sizeof(int); i++) {
-    largeAllocation[i] = i;
+  for (size_t i = 0; i < largeAllocationSize / sizeof(int); i++) {
+    largeAllocation[i] = static_cast<int>(i);
   }
 
   // Make several more overflow allocations
-  double* overflow1 = arena.alloc<double>(1000);
-  float* overflow2 = arena.alloc<float>(2000);
+  uint32_t* overflow1 = arena.alloc<uint32_t>(1000);
+  uint64_t* overflow2 = arena.alloc<uint64_t>(2000);
 
   REQUIRE(overflow1 != nullptr);
   REQUIRE(overflow2 != nullptr);
 
   // Verify each allocation can be written to
-  overflow1[0] = 3.14159;
-  overflow2[0] = 2.71828f;
+  overflow1[0] = 1234567890;
+  overflow2[0] = 1234567890123456789;
 
-  REQUIRE(overflow1[0] == 3.14159);
-  REQUIRE(overflow2[0] == 2.71828f);
+  REQUIRE(overflow1[0] == 1234567890);
+  REQUIRE(overflow2[0] == 1234567890123456789);
 }

@@ -45,7 +45,7 @@ fn test_single_enum_field_serialization() {
     for (field_name, expected_value) in fields {
         let field_descriptor = message_descriptor
             .get_field_by_name(field_name)
-            .unwrap_or_else(|| panic!("Field '{}' not found", field_name));
+            .unwrap_or_else(|| panic!("Field '{field_name}' not found"));
 
         let field_value = deserialized_message.get_field(&field_descriptor);
 

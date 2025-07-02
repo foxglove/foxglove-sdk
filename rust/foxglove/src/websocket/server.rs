@@ -241,7 +241,7 @@ impl Server {
             tasks.replace(JoinSet::new());
         }
 
-        let addr = format!("{}:{}", host, port);
+        let addr = format!("{host}:{port}");
         let listener = TcpListener::bind(&addr)
             .await
             .map_err(FoxgloveError::Bind)?;

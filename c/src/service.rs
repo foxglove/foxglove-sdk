@@ -146,7 +146,7 @@ impl Handler for ServiceHandler {
         // SAFETY: It's the callback implementation's responsibility to ensure that this callback
         // function pointer remains valid for the lifetime of the service, as described in the
         // safety requirements of `foxglove_service_create`.
-        unsafe { (self.callback)(self.callback_context, &c_request, c_responder) };
+        unsafe { (self.callback)(self.callback_context, &raw const c_request, c_responder) };
     }
 }
 
