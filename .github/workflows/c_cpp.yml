@@ -49,16 +49,7 @@ jobs:
             compiler: clang
             cross: false
 
-          # Linux (extra builds to test GCC support)
-          - runner: ubuntu-24.04
-            target: aarch64-unknown-linux-gnu
-            staticlib_name: libfoxglove.a
-            cdylib_name: libfoxglove.so
-            staticlib_artifact_name: libfoxglove-aarch64-unknown-linux-gnu.a
-            cdylib_artifact_name: libfoxglove-aarch64-unknown-linux-gnu.so
-            cross: true
-            compiler: gcc
-            upload: false
+          # Linux (extra build to test GCC support)
           - runner: ubuntu-24.04
             target: x86_64-unknown-linux-gnu
             staticlib_name: libfoxglove.a
