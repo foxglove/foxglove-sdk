@@ -190,7 +190,7 @@ jobs:
 
       - name: Upload static & shared library to artifacts
         uses: actions/upload-artifact@v4
-        if: ${{ !fromJson(matrix.upload) }}
+        if: ${{ fromJson(matrix.upload || 'true') }}
         with:
           name: foxglove-${{inputs.sdk-version || github.sha}}-cpp-${{ matrix.target }}.zip
           path: artifacts/foxglove-${{inputs.sdk-version || github.sha}}-cpp-${{ matrix.target }}.zip
