@@ -386,7 +386,8 @@ template<>
 /// @tparam std::vector<std::byte> Checks whether the parameter value is a byte array.
 
 /// @fn ParameterView::is<std::vector<double>>()
-/// @tparam std::vector<double> Checks whether the parameter value is a vector of floating point values.
+/// @tparam std::vector<double> Checks whether the parameter value is a vector of floating point
+/// values.
 
 /// @cond ignore-template-specializations
 /// @brief Checks whether the parameter value is a std::string_view.
