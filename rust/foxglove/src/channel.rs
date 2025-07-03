@@ -7,7 +7,7 @@ use delegate::delegate;
 use serde::{Deserialize, Serialize};
 use smallbytes::SmallBytes;
 
-use crate::{metadata::ToUnixNanos, ChannelBuilder, Encode, PartialMetadata, Schema};
+use crate::{metadata::ToUnixNanos, ChannelBuilder, Encode, PartialMetadata, Schema, SinkId};
 
 mod lazy_channel;
 mod raw_channel;
@@ -126,13 +126,40 @@ impl<T: Encode> Channel<T> {
         self.log_with_meta(msg, PartialMetadata::default());
     }
 
+    /// Encodes the message and logs it to a specific sink.
+    ///
+    /// If a sink ID is provided, only that sink will receive the message.
+    /// Otherwise, the message will be sent to all subscribed sinks.
+    ///
+    /// The buffering behavior depends on the log sink; see [`McapWriter`][crate::McapWriter] and
+    /// [`WebSocketServer`][crate::WebSocketServer] for details.
+    pub fn log_to_sink(&self, msg: &T, sink_id: Option<SinkId>) {
+        self.log_with_meta_to_sink(msg, PartialMetadata::default(), sink_id);
+    }
+
     /// Encodes the message and logs it on the channel with additional metadata.
     ///
     /// The buffering behavior depends on the log sink; see [`McapWriter`][crate::McapWriter] and
     /// [`WebSocketServer`][crate::WebSocketServer] for details.
     pub fn log_with_meta(&self, msg: &T, metadata: PartialMetadata) {
+        self.log_with_meta_to_sink(msg, metadata, None);
+    }
+
+    /// Encodes the message and logs it on the channel with additional metadata to a specific sink.
+    ///
+    /// If a sink ID is provided, only that sink will receive the message.
+    /// Otherwise, the message will be sent to all subscribed sinks.
+    ///
+    /// The buffering behavior depends on the log sink; see [`McapWriter`][crate::McapWriter] and
+    /// [`WebSocketServer`][crate::WebSocketServer] for details.
+    pub fn log_with_meta_to_sink(
+        &self,
+        msg: &T,
+        metadata: PartialMetadata,
+        sink_id: Option<SinkId>,
+    ) {
         if self.has_sinks() {
-            self.log_to_sinks(msg, metadata);
+            self.log_to_sinks(msg, metadata, sink_id);
         } else {
             self.inner.log_warn_if_closed();
         }
@@ -148,7 +175,7 @@ impl<T: Encode> Channel<T> {
         self.log_with_meta(msg, PartialMetadata::with_log_time(timestamp))
     }
 
-    fn log_to_sinks(&self, msg: &T, metadata: PartialMetadata) {
+    fn log_to_sinks(&self, msg: &T, metadata: PartialMetadata, sink_id: Option<SinkId>) {
         // Try to avoid heap allocation by using a stack buffer.
         let mut buf: SmallBytes<STACK_BUFFER_SIZE> = SmallBytes::new();
         if let Some(estimated_size) = msg.encoded_len() {
@@ -156,7 +183,7 @@ impl<T: Encode> Channel<T> {
         }
 
         msg.encode(&mut buf).unwrap();
-        self.inner.log_to_sinks(&buf, metadata);
+        self.inner.log_to_sinks(&buf, metadata, sink_id);
     }
 }
 

@@ -3,7 +3,7 @@ use std::sync::Arc;
 use arc_swap::ArcSwap;
 
 use crate::sink::SmallSinkVec;
-use crate::{FoxgloveError, Sink};
+use crate::{FoxgloveError, Sink, SinkId};
 
 pub(crate) const ERROR_LOGGING_MESSAGE: &str = "error logging message";
 
@@ -40,6 +40,21 @@ impl LogSinkSet {
         for sink in self.0.load().iter() {
             if let Err(err) = f(sink) {
                 tracing::warn!("{ERROR_LOGGING_MESSAGE}: {:?}", err);
+            }
+        }
+    }
+
+    /// Iterate over sinks with the specified ID, calling the given function on each,
+    /// logging any errors via tracing::warn!().
+    pub fn for_each_with_id<F>(&self, sink_id: SinkId, mut f: F)
+    where
+        F: FnMut(&Arc<dyn Sink>) -> Result<(), FoxgloveError>,
+    {
+        for sink in self.0.load().iter() {
+            if sink.id() == sink_id {
+                if let Err(err) = f(sink) {
+                    tracing::warn!("{ERROR_LOGGING_MESSAGE}: {:?}", err);
+                }
             }
         }
     }
