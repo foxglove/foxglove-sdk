@@ -182,7 +182,7 @@ int main() {
   auto small_writer = create_mcap_writer(
     "example-topic-splitting-small.mcap",
     [](foxglove::ChannelDescriptor&& channel) -> bool {
-      return channel.topic.find("/point_cloud") == std::string::npos;
+      return channel.topic().find("/point_cloud") == std::string::npos;
     }
   );
   if (!small_writer.has_value()) {
@@ -193,7 +193,7 @@ int main() {
   auto large_writer = create_mcap_writer(
     "example-topic-splitting-large.mcap",
     [](foxglove::ChannelDescriptor&& channel) -> bool {
-      return channel.topic.find("/point_cloud") != std::string::npos;
+      return channel.topic().find("/point_cloud") != std::string::npos;
     }
   );
   if (!large_writer.has_value()) {
