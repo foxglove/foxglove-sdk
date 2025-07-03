@@ -32,7 +32,6 @@ impl PyChannelDescriptor {
     /// Returns the metadata for this channel.
     #[getter]
     fn metadata<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
-        println!("[getter] copy metadata");
         let metadata = self.0.metadata().into_py_dict(py).unwrap_or_else(|err| {
             tracing::error!("Failed to constrcut channel metadata: {}", err.to_string());
             PyDict::new(py)
