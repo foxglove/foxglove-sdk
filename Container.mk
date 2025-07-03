@@ -59,8 +59,13 @@ docs-rust:
 clean-cpp:
 	rm -rf cpp/build*
 
+.PHONY: clean-docs-cpp
+clean-docs-cpp:
+	rm -rf cpp/foxglove/docs/generated
+	rm -rf cpp/build/docs
+
 .PHONY: docs-cpp
-docs-cpp:
+docs-cpp: clean-docs-cpp
 	poetry install -C cpp/foxglove/docs
 	make -C cpp docs
 
