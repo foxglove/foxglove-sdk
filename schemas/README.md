@@ -16,6 +16,7 @@ All schemas are generated from [schemas.ts](/internal/schemas.ts).
 - [CameraCalibration](#cameracalibration)
 - [CircleAnnotation](#circleannotation)
 - [Color](#color)
+- [CompressedAudio](#compressedaudio)
 - [CompressedImage](#compressedimage)
 - [CompressedVideo](#compressedvideo)
 - [CubePrimitive](#cubeprimitive)
@@ -546,6 +547,67 @@ float64
 <td>
 
 Alpha value between 0 and 1
+
+</td>
+</tr>
+</table>
+
+## CompressedAudio
+
+A single chunk of a compressed audio bitstream
+
+<table>
+  <tr>
+    <th>field</th>
+    <th>type</th>
+    <th>description</th>
+  </tr>
+<tr>
+<td><code>timestamp</code></td>
+<td>
+
+time
+
+</td>
+<td>
+
+Timestamp of the start of the audio chunk
+
+</td>
+</tr>
+<tr>
+<td><code>format</code></td>
+<td>
+
+string
+
+</td>
+<td>
+
+Audio format. Both 'opus' and 'mp4a.40.2' are currently supported.
+
+</td>
+</tr>
+<tr>
+<td><code>data</code></td>
+<td>
+
+bytes
+
+</td>
+<td>
+
+Compressed audio data
+
+Specifically, the requirements for different `format` values are:
+
+- `opus`
+  - Each message should contain a complete opus packet as described in https://datatracker.ietf.org/doc/html/rfc6716#section-3.
+- `mp4a.40.2`
+  - Each message should contain a complete MPEG-4 AAC LC ADTS audio packet as described in section 1.A.3.2 of ISO/IEC 14496-3:2019
+
+Any combination of sample rate and number of channels allowed by the respective audio format is supported.
+
 
 </td>
 </tr>
