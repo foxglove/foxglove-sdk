@@ -20,7 +20,7 @@ foxglove = { path = "../../rust/foxglove", default-features = false, features = 
   "zstd",
 ]}
 log.workspace = true
-prost-types = "0.13"
+prost-types = "0.14"
 pyo3 = "0.25.1"
 pyo3-log = "0.12.3"
 thiserror.workspace = true
