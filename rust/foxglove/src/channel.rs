@@ -192,7 +192,7 @@ mod test {
     use crate::channel_builder::ChannelBuilder;
     use crate::log_sink_set::ERROR_LOGGING_MESSAGE;
     use crate::testutil::RecordingSink;
-    use crate::{Context, FoxgloveError, RawChannel, Schema};
+    use crate::{Context, FoxgloveError, RawChannel, Schema, Sink};
     use std::sync::Arc;
     use tracing_test::traced_test;
 
@@ -294,5 +294,70 @@ mod test {
         drop(ctx);
         ch.log(b"");
         assert!(logs_contain("Cannot log on closed channel for /topic"));
+    }
+
+    #[traced_test]
+    #[test]
+    fn test_log_to_specific_sink() {
+        let ctx = Context::new();
+
+        // Create multiple recording sinks
+        let sink1 = Arc::new(RecordingSink::new());
+        let sink2 = Arc::new(RecordingSink::new());
+        let sink3 = Arc::new(RecordingSink::new());
+
+        // Add all sinks to context
+        assert!(ctx.add_sink(sink1.clone()));
+        assert!(ctx.add_sink(sink2.clone()));
+        assert!(ctx.add_sink(sink3.clone()));
+
+        // Create a raw channel
+        let channel = ChannelBuilder::new("/test_topic")
+            .context(&ctx)
+            .message_encoding("raw")
+            .build_raw()
+            .expect("Failed to create channel");
+
+        // Log a message to all sinks (default behavior)
+        let msg_all = b"message for all sinks";
+        channel.log(msg_all);
+
+        // Log a message to only sink2
+        let msg_sink2_only = b"message for sink2 only";
+        channel.log_to_sink(msg_sink2_only, Some(sink2.id()));
+
+        // Log a message to only sink3
+        let msg_sink3_only = b"message for sink3 only";
+        channel.log_to_sink(msg_sink3_only, Some(sink3.id()));
+
+        // Verify messages received by each sink
+        let sink1_messages = sink1.take_messages();
+        let sink2_messages = sink2.take_messages();
+        let sink3_messages = sink3.take_messages();
+
+        // Sink1 should only have received the "all sinks" message
+        assert_eq!(sink1_messages.len(), 1);
+        assert_eq!(sink1_messages[0].msg, msg_all.to_vec());
+
+        // Sink2 should have received the "all sinks" message and the sink2-specific message
+        assert_eq!(sink2_messages.len(), 2);
+        assert_eq!(sink2_messages[0].msg, msg_all.to_vec());
+        assert_eq!(sink2_messages[1].msg, msg_sink2_only.to_vec());
+
+        // Sink3 should have received the "all sinks" message and the sink3-specific message
+        assert_eq!(sink3_messages.len(), 2);
+        assert_eq!(sink3_messages[0].msg, msg_all.to_vec());
+        assert_eq!(sink3_messages[1].msg, msg_sink3_only.to_vec());
+
+        // Test logging to a non-existent sink ID (should not cause errors)
+        let non_existent_id = crate::SinkId::next();
+        channel.log_to_sink(b"message to nowhere", Some(non_existent_id));
+
+        // Verify no additional messages were received
+        assert_eq!(sink1.take_messages().len(), 0);
+        assert_eq!(sink2.take_messages().len(), 0);
+        assert_eq!(sink3.take_messages().len(), 0);
+
+        assert!(!logs_contain(ERROR_LOGGING_MESSAGE));
     }
 }
