@@ -11,7 +11,6 @@
 #include <string>
 
 struct foxglove_channel;
-struct foxglove_context;
 
 /// The foxglove namespace.
 namespace foxglove {
@@ -34,6 +33,25 @@ struct Schema {
   /// @brief The length of the schema data.
   size_t data_len = 0;
 };
+
+/// @brief A description of a channel.
+struct ChannelDescriptor {
+  /// @brief The topic name.
+  std::string topic;
+  /// @brief The message encoding.
+  std::string message_encoding;
+  /// @brief The channel schema.
+  std::optional<Schema> schema;
+  /// @brief Metadata about the channel.
+  std::map<std::string, std::string> metadata;
+};
+
+/// @brief A function that can be used to filter channels.
+///
+/// @param channel Information about the channel.
+/// @return false if the channel should not be logged to the given sink. By default, all channels
+/// are logged to a sink.
+using SinkChannelFilterFn = std::function<bool(ChannelDescriptor&& channel)>;
 
 /// @brief A channel for messages logged to a topic.
 ///
