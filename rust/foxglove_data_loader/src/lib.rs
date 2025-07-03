@@ -150,7 +150,7 @@ impl Problem {
     }
 
     /// Add additional context to the problem.
-    pub fn with_tip(mut self, tip: impl Into<String>) -> Self {
+    pub fn tip(mut self, tip: impl Into<String>) -> Self {
         self.0.tip = Some(tip.into());
         self
     }
@@ -329,7 +329,7 @@ impl InitializationBuilder {
     ///     // You can add an error with a tip, like this:
     ///     .add_problem(
     ///         Problem::error("file was invalid")
-    ///             .with_tip("The provided file could not be read. Ensure it is valid.")
+    ///             .tip("The provided file could not be read. Ensure it is valid.")
     ///     )
     ///     // You can also add warning and info problems:
     ///     .add_problem(Problem::warn("The file contained some empty topics"))
