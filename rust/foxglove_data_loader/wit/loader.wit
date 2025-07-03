@@ -33,11 +33,20 @@ interface loader {
     type schema-id = u16;
     type error = string;
 
+    record problem {
+        // The severity of the problem. Currently "error", "warn" and "info" are supported.
+        severity: string,
+        // The problem that occurred.
+        message: string,
+        // Optional context that can be  displayed to the user along side the problem.
+        tip: option<string>
+    }
+
     record initialization {
         channels: list<channel>,
         schemas: list<schema>,
         time-range: time-range,
-        problems: list<string>,
+        problems: list<problem>,
     }
 
     record backfill-args {
