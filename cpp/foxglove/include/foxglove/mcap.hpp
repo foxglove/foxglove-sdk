@@ -63,10 +63,8 @@ struct McapWriterOptions {
   bool repeat_schemas = true;
   /// @brief Whether to truncate the MCAP file.
   bool truncate = false;
-  /// @brief The sink channel filter to use for the MCAP writer.
-  std::function<bool(ChannelDescriptor&&)> sink_channel_filter = [](ChannelDescriptor&&) {
-    return true;
-  };
+  /// @brief Optional channel filter to use for the MCAP file.
+  SinkChannelFilterFn sink_channel_filter = nullptr;
 
   McapWriterOptions() = default;
 };

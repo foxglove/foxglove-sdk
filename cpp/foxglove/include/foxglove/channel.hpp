@@ -46,6 +46,11 @@ struct ChannelDescriptor {
   std::map<std::string, std::string> metadata;
 };
 
+/// @brief A function that can be used to filter channels.
+///
+/// @param channel Information about the channel.
+/// @return false if the channel should not be logged to the given sink. By default, all channels
+/// are logged to a sink.
 using SinkChannelFilterFn = std::function<bool(ChannelDescriptor&& channel)>;
 
 /// @brief A channel for messages logged to a topic.
