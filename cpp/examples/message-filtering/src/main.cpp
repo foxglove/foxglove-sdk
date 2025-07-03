@@ -108,12 +108,13 @@ PointCloud make_point_cloud(const std::chrono::duration<double>& elapsed) {
         .y = 0.0,
         .z = 0.0,
       },
-    .orientation = Quaternion{
-      .x = 0.0,
-      .y = 0.0,
-      .z = 0.0,
-      .w = 1.0,
-    },
+    .orientation =
+      Quaternion{
+        .x = 0.0,
+        .y = 0.0,
+        .z = 0.0,
+        .w = 1.0,
+      },
   };
   point_cloud.point_stride = 16;  // 4 fields * 4 bytes
   point_cloud.fields = std::move(fields);
@@ -231,11 +232,12 @@ int main() {
   cloud_tf.transforms = {foxglove::schemas::FrameTransform{
     .parent_frame_id = "world",
     .child_frame_id = "points",
-    .translation = foxglove::schemas::Vector3{
-      .x = -10.0,
-      .y = -10.0,
-      .z = 0.0,
-    }
+    .translation =
+      foxglove::schemas::Vector3{
+        .x = -10.0,
+        .y = -10.0,
+        .z = 0.0,
+      }
   }};
 
   while (!done) {
