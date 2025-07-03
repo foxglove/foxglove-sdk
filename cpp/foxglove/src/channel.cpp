@@ -5,6 +5,31 @@
 
 namespace foxglove {
 
+/// @cond foxglove_internal
+
+ChannelDescriptor::ChannelDescriptor(
+  std::string topic, std::string message_encoding,
+  std::optional<std::map<std::string, std::string>> metadata
+)
+    : topic_(std::move(topic))
+    , message_encoding_(std::move(message_encoding))
+    , metadata_(std::move(metadata)) {}
+
+/// @endcond
+
+const std::string& ChannelDescriptor::topic() const noexcept {
+  return topic_;
+}
+
+const std::string& ChannelDescriptor::message_encoding() const noexcept {
+  return message_encoding_;
+}
+
+const std::optional<std::map<std::string, std::string>>& ChannelDescriptor::metadata(
+) const noexcept {
+  return metadata_;
+}
+
 FoxgloveResult<RawChannel> RawChannel::create(
   const std::string_view& topic, const std::string_view& message_encoding,
   std::optional<Schema> schema, const Context& context,

@@ -1406,7 +1406,7 @@ TEST_CASE("Server channel filtering") {
   ws_options.context = context;
   ws_options.callbacks = std::move(callbacks);
   ws_options.sink_channel_filter = [](foxglove::ChannelDescriptor&& channel) -> bool {
-    return channel.topic == "/1";
+    return channel.topic() == "/1";
   };
 
   auto server = startServer(std::move(ws_options));

@@ -1,4 +1,4 @@
-use crate::{FoxgloveChannelDescriptor, FoxgloveString};
+use crate::{FoxgloveChannelDescriptor, FoxgloveChannelMetadata, FoxgloveKeyValue, FoxgloveString};
 
 /// A filter for channels that can be used to subscribe to or unsubscribe from channels.
 ///
@@ -35,12 +35,58 @@ impl foxglove::SinkChannelFilter for SinkChannelFilterHandler {
     /// Indicate whether the channel should be subscribed to.
     /// Safety: the channel is valid only as long as the callback.
     fn should_subscribe(&self, channel: &foxglove::ChannelDescriptor) -> bool {
-        // Create a FoxgloveChannelDescriptor that wraps the Rust ChannelDescriptor
-        // The callback will receive a pointer to this wrapper
-        let c_channel = FoxgloveChannelDescriptor {
-            topic: FoxgloveString::from(channel.topic()),
-            encoding: FoxgloveString::from(channel.message_encoding()),
+        let metadata_items_ptr = if !channel.metadata().is_empty() {
+            let metadata_items: Vec<FoxgloveKeyValue> = channel
+                .metadata()
+                .iter()
+                .map(|(key, value)| FoxgloveKeyValue {
+                    key: FoxgloveString::from(key),
+                    value: FoxgloveString::from(value),
+                })
+                .collect();
+            // Safety: we will call from_raw after the callback returns
+            Some(Box::into_raw(Box::new(metadata_items)))
+        } else {
+            None
         };
-        unsafe { (self.callback)(self.callback_context, &raw const c_channel) }
+
+        let c_channel = if let Some(metadata_items_ptr) = metadata_items_ptr {
+            let metadata = Box::new(FoxgloveChannelMetadata {
+                items: unsafe { (*metadata_items_ptr).as_ptr() },
+                count: unsafe { (*metadata_items_ptr).len() },
+            });
+
+            FoxgloveChannelDescriptor {
+                topic: FoxgloveString::from(channel.topic()),
+                encoding: FoxgloveString::from(channel.message_encoding()),
+                // Safety: we will call from_raw after the callback returns
+                metadata: Box::into_raw(metadata),
+            }
+        } else {
+            FoxgloveChannelDescriptor {
+                topic: FoxgloveString::from(channel.topic()),
+                encoding: FoxgloveString::from(channel.message_encoding()),
+                metadata: std::ptr::null(),
+            }
+        };
+
+        let result = unsafe { (self.callback)(self.callback_context, &raw const c_channel) };
+
+        if !c_channel.metadata.is_null() {
+            unsafe {
+                // Safety: we called into_raw above
+                drop(Box::from_raw(
+                    c_channel.metadata as *mut FoxgloveChannelMetadata,
+                ));
+            }
+        }
+        if let Some(metadata_items_ptr) = metadata_items_ptr {
+            unsafe {
+                // Safety: we called into_raw above
+                drop(Box::from_raw(metadata_items_ptr));
+            }
+        }
+
+        result
     }
 }

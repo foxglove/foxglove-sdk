@@ -428,7 +428,7 @@ TEST_CASE("Channel filtering") {
   foxglove::McapWriterOptions opts_1;
   opts_1.path = "test-1.mcap";
   opts_1.sink_channel_filter = [](foxglove::ChannelDescriptor&& channel) -> bool {
-    return channel.topic == "/1";
+    return channel.topic() == "/1";
   };
   auto writer_res_1 = foxglove::McapWriter::create(opts_1);
   REQUIRE(writer_res_1.has_value());
@@ -437,7 +437,7 @@ TEST_CASE("Channel filtering") {
   foxglove::McapWriterOptions opts_2;
   opts_2.path = "test-2.mcap";
   opts_2.sink_channel_filter = [](foxglove::ChannelDescriptor&& channel) -> bool {
-    return channel.topic == "/2";
+    return channel.topic() == "/2";
   };
   auto writer_res_2 = foxglove::McapWriter::create(opts_2);
   REQUIRE(writer_res_2.has_value());

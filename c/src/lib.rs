@@ -1037,6 +1037,7 @@ pub unsafe extern "C" fn foxglove_mcap_close(
 pub struct FoxgloveChannelDescriptor {
     pub topic: FoxgloveString,
     pub encoding: FoxgloveString,
+    pub metadata: *const FoxgloveChannelMetadata,
 }
 
 pub struct FoxgloveChannel(foxglove::RawChannel);

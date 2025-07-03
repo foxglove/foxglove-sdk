@@ -1,4 +1,5 @@
 #include <foxglove-c/foxglove-c.h>
+#include <foxglove/channel.hpp>
 #include <foxglove/context.hpp>
 #include <foxglove/error.hpp>
 #include <foxglove/mcap.hpp>
@@ -42,12 +43,12 @@ FoxgloveResult<McapWriter> McapWriter::create(const McapWriterOptions& options) 
           return true;
         }
         auto* filter_func = static_cast<const SinkChannelFilterFn*>(context);
-        ChannelDescriptor cpp_channel;
-        cpp_channel.topic = std::string_view(channel->topic.data, channel->topic.len);
-        cpp_channel.message_encoding =
-          std::string_view(channel->encoding.data, channel->encoding.len);
-        cpp_channel.schema = std::nullopt;
-        cpp_channel.metadata = {};
+        auto metadata = buildMetadata_(channel->metadata);
+        ChannelDescriptor cpp_channel(
+          std::string(channel->topic.data, channel->topic.len),
+          std::string(channel->encoding.data, channel->encoding.len),
+          std::move(metadata)
+        );
         return (*filter_func)(std::move(cpp_channel));
       } catch (const std::exception& exc) {
         warn() << "Sink channel filter failed: " << exc.what();

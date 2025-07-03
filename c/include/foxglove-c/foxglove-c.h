@@ -537,11 +537,40 @@ typedef struct foxglove_server_callbacks {
 typedef uint8_t foxglove_server_capability;
 
 /**
+ * A key-value pair of strings.
+ */
+typedef struct foxglove_key_value {
+  /**
+   * The key
+   */
+  struct foxglove_string key;
+  /**
+   * The value
+   */
+  struct foxglove_string value;
+} foxglove_key_value;
+
+/**
+ * A collection of metadata items for a channel.
+ */
+typedef struct foxglove_channel_metadata {
+  /**
+   * The items in the metadata collection.
+   */
+  const struct foxglove_key_value *items;
+  /**
+   * The number of items in the metadata collection.
+   */
+  size_t count;
+} foxglove_channel_metadata;
+
+/**
  * Information about a Channel.
  */
 typedef struct foxglove_channel_descriptor {
   struct foxglove_string topic;
   struct foxglove_string encoding;
+  const struct foxglove_channel_metadata *metadata;
 } foxglove_channel_descriptor;
 
 typedef struct foxglove_server_options {
@@ -652,34 +681,6 @@ typedef struct foxglove_schema {
   const uint8_t *data;
   size_t data_len;
 } foxglove_schema;
-
-/**
- * A key-value pair of strings.
- */
-typedef struct foxglove_key_value {
-  /**
-   * The key
-   */
-  struct foxglove_string key;
-  /**
-   * The value
-   */
-  struct foxglove_string value;
-} foxglove_key_value;
-
-/**
- * A collection of metadata items for a channel.
- */
-typedef struct foxglove_channel_metadata {
-  /**
-   * The items in the metadata collection.
-   */
-  const struct foxglove_key_value *items;
-  /**
-   * The number of items in the metadata collection.
-   */
-  size_t count;
-} foxglove_channel_metadata;
 
 /**
  * An iterator over channel metadata key-value pairs.
