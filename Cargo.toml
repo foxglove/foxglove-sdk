@@ -21,7 +21,7 @@ license = "MIT"
 bytes = "1.9.0"
 log = "0.4.22"
 mcap = { version = "0.23", default-features = false }
-prost = "0.13"
+prost = "0.14"
 prost-build = "0.13"
 prost-types = "0.13"
 serde = { version = "1.0", features = ["derive"] }
