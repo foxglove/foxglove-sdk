@@ -206,7 +206,7 @@ int main() {
 
   // We'll send all messages to the running app. We don't need a filter, since it's the same as
   // having no filter applied, but this demonstrates how to add one to the WS server.
-  ws_options.sink_channel_filter = [](foxglove::ChannelDescriptor&& _) -> bool {
+  ws_options.sink_channel_filter = [](foxglove::ChannelDescriptor&&) -> bool {
     return true;
   };
 
