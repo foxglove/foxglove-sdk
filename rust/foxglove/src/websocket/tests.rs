@@ -221,11 +221,7 @@ async fn test_advertise_to_client() {
         .await
         .expect("Failed to start server");
 
-    let mut client = WebSocketClient::connect(addr).await;
-    expect_recv!(client, ServerMessage::ServerInfo);
-
     let ch = new_channel("/foo", &ctx);
-    ch.log(b"foo bar");
 
     // Create a channel that requires a schema, but doesn't have one. This won't be advertised.
     let ch2 = ChannelBuilder::new("/bar")
@@ -233,13 +229,18 @@ async fn test_advertise_to_client() {
         .context(&ctx)
         .build_raw()
         .expect("Failed to create channel");
-    ch2.log(b"{\"a\":1}");
+
+    let mut client = WebSocketClient::connect(addr).await;
+    expect_recv!(client, ServerMessage::ServerInfo);
 
     let msg = expect_recv!(client, ServerMessage::Advertise);
     assert_eq!(msg.channels.len(), 1);
     let adv_ch = &msg.channels[0];
     assert_eq!(adv_ch.id, u64::from(ch.id()));
     assert_eq!(adv_ch.topic, ch.topic());
+
+    ch.log(b"foo bar");
+    ch2.log(b"{\"a\":1}");
 
     let subscription_id = 42;
     let subscribe_msg = Subscribe::new([Subscription {
