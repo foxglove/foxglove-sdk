@@ -1,4 +1,5 @@
 use std::collections::hash_map::Entry;
+use std::collections::HashSet;
 use std::sync::Weak;
 use std::{collections::HashMap, net::SocketAddr, sync::Arc};
 
@@ -691,25 +692,34 @@ impl ConnectedClient {
             return;
         }
 
-        self.channels
-            .write()
-            .extend(channels.iter().map(|&c| (c.id(), c.clone())));
-
         if self.send_control_msg(&message) {
-            for channel in channels {
+            let advertised_ids = message
+                .channels
+                .iter()
+                .map(|c| c.id)
+                .collect::<HashSet<_>>();
+            let mut advertised_channels = self.channels.write();
+            for &channel in channels {
+                if !advertised_ids.contains(&channel.id().into()) {
+                    continue;
+                }
+
                 tracing::debug!(
                     "Advertised channel {} with id {} to client {}",
                     channel.topic(),
                     channel.id(),
                     self.addr
                 );
+                advertised_channels.insert(channel.id(), channel.clone());
             }
         }
     }
 
     /// Unadvertises a channel to the client.
     fn unadvertise_channel(&self, channel_id: ChannelId) {
-        self.channels.write().remove(&channel_id);
+        if self.channels.write().remove(&channel_id).is_none() {
+            return;
+        }
 
         let message = Unadvertise::new([channel_id.into()]);
 
