@@ -639,6 +639,8 @@ typedef struct foxglove_channel_metadata_iterator {
   size_t index;
 } foxglove_channel_metadata_iterator;
 
+typedef uint64_t FoxgloveSinkId;
+
 /**
  * A vector in 3D space that represents a direction only
  */
@@ -2132,7 +2134,8 @@ void foxglove_channel_metadata_iter_free(struct foxglove_channel_metadata_iterat
 foxglove_error foxglove_channel_log(const struct foxglove_channel *channel,
                                     const uint8_t *data,
                                     size_t data_len,
-                                    const uint64_t *log_time);
+                                    const uint64_t *log_time,
+                                    const FoxgloveSinkId *sink_id);
 
 /**
  * Create a new context. This never fails.

@@ -23,6 +23,12 @@ impl std::fmt::Display for SinkId {
     }
 }
 
+impl From<u64> for SinkId {
+    fn from(id: u64) -> Self {
+        Self(id)
+    }
+}
+
 /// A [`Sink`] writes a message from a channel to a destination.
 ///
 /// Sinks are thread-safe and can be shared between threads. Usually you'd use our implementations
