@@ -1,0 +1,12 @@
+[package]
+name = "example_message_filtering"
+edition = "2021"
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+foxglove = { path = "../../foxglove" }
+ctrlc = "3.4.5"
+env_logger = "0.11.5"
