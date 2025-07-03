@@ -208,8 +208,10 @@ impl RawChannel {
 
         match sink_id {
             Some(id) => {
-                self.sinks
-                    .for_each_with_id(id, |sink| sink.log(self, msg, &metadata));
+                self.sinks.for_each_filtered(
+                    |sink| sink.id() == id,
+                    |sink| sink.log(self, msg, &metadata),
+                );
             }
             None => {
                 self.sinks.for_each(|sink| sink.log(self, msg, &metadata));
