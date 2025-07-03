@@ -1,0 +1,17 @@
+.. _exhale_class_classfoxglove_1_1schemas_1_1CameraCalibrationChannel:
+
+Class CameraCalibrationChannel
+==============================
+
+- Defined in :ref:`file_foxglove_include_foxglove_schemas.hpp`
+
+
+Class Documentation
+-------------------
+
+
+.. doxygenclass:: foxglove::schemas::CameraCalibrationChannel
+   :project: Foxglove SDK
+   :members:
+   :protected-members:
+   :undoc-members:
