@@ -114,3 +114,22 @@ def test_write_to_different_contexts(make_tmp_mcap: Callable[[], Path]) -> None:
     contents2 = tmp_2.read_bytes()
 
     assert len(contents1) < len(contents2)
+
+
+def test_channel_filter(make_tmp_mcap: Callable[[], Path]) -> None:
+    tmp_1 = make_tmp_mcap()
+    tmp_2 = make_tmp_mcap()
+
+    ch1 = Channel("/1", schema={"type": "object"})
+    ch2 = Channel("/2", schema={"type": "object"})
+
+    mcap1 = open_mcap(tmp_1, channel_filter=lambda ch: ch.topic.startswith("/1"))
+    mcap2 = open_mcap(tmp_2, channel_filter=None)
+
+    ch1.log({})
+    ch2.log({})
+
+    mcap1.close()
+    mcap2.close()
+
+    assert tmp_1.stat().st_size < tmp_2.stat().st_size
