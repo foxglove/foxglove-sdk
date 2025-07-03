@@ -66,7 +66,8 @@ public:
   /// @param data_len The length of the message data, in bytes.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
   FoxgloveError log(
-    const std::byte* data, size_t data_len, std::optional<uint64_t> log_time = std::nullopt
+    const std::byte* data, size_t data_len, std::optional<uint64_t> log_time = std::nullopt,
+    std::optional<uint64_t> sink_id = std::nullopt
   ) noexcept;
 
   /// @brief Close the channel.

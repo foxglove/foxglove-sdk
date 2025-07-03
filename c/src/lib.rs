@@ -298,8 +298,10 @@ pub struct FoxgloveClientChannel {
 pub struct FoxgloveServerCallbacks {
     /// A user-defined value that will be passed to callback functions
     pub context: *const c_void,
-    pub on_subscribe: Option<unsafe extern "C" fn(context: *const c_void, channel_id: u64)>,
-    pub on_unsubscribe: Option<unsafe extern "C" fn(context: *const c_void, channel_id: u64)>,
+    pub on_subscribe:
+        Option<unsafe extern "C" fn(context: *const c_void, channel_id: u64, client_id: u32)>,
+    pub on_unsubscribe:
+        Option<unsafe extern "C" fn(context: *const c_void, channel_id: u64, client_id: u32)>,
     pub on_client_advertise: Option<
         unsafe extern "C" fn(
             context: *const c_void,
@@ -1275,6 +1277,8 @@ pub unsafe extern "C" fn foxglove_channel_metadata_iter_free(
     }
 }
 
+pub type FoxgloveSinkId = u64;
+
 /// Log a message on a channel.
 ///
 /// # Safety
@@ -1288,6 +1292,7 @@ pub unsafe extern "C" fn foxglove_channel_log(
     data: *const u8,
     data_len: usize,
     log_time: Option<&u64>,
+    sink_id: Option<&FoxgloveSinkId>,
 ) -> FoxgloveError {
     // An assert might be reasonable under different circumstances, but here
     // we don't want to crash the program using the library, on a robot in the field,
@@ -1304,11 +1309,15 @@ pub unsafe extern "C" fn foxglove_channel_log(
     let channel = ManuallyDrop::new(unsafe {
         Arc::from_raw(channel as *const _ as *const foxglove::RawChannel)
     });
-    channel.log_with_meta(
+
+    // Convert the C sink ID to the Rust SinkId type
+    let rust_sink_id_option = sink_id.map(|id| foxglove::SinkId::from(*id));
+    channel.log_with_meta_to_sink(
         unsafe { std::slice::from_raw_parts(data, data_len) },
         foxglove::PartialMetadata {
             log_time: log_time.copied(),
         },
+        rust_sink_id_option,
     );
     FoxgloveError::Ok
 }
@@ -1363,7 +1372,7 @@ impl foxglove::websocket::ServerListener for FoxgloveServerCallbacks {
         channel: foxglove::websocket::ChannelView,
     ) {
         if let Some(on_subscribe) = self.on_subscribe {
-            unsafe { on_subscribe(self.context, channel.id().into()) };
+            unsafe { on_subscribe(self.context, channel.id().into(), _client.id().into()) };
         }
     }
 
@@ -1373,7 +1382,7 @@ impl foxglove::websocket::ServerListener for FoxgloveServerCallbacks {
         channel: foxglove::websocket::ChannelView,
     ) {
         if let Some(on_unsubscribe) = self.on_unsubscribe {
-            unsafe { on_unsubscribe(self.context, channel.id().into()) };
+            unsafe { on_unsubscribe(self.context, channel.id().into(), _client.id().into()) };
         }
     }
 

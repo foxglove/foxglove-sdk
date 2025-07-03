@@ -97,12 +97,12 @@ struct WebSocketServerCallbacks {
   ///
   /// Only invoked if the channel is associated with the server and isn't already subscribed to by
   /// the client.
-  std::function<void(uint64_t channel_id)> onSubscribe;
+  std::function<void(uint64_t channel_id, uint32_t clientId)> onSubscribe;
 
   /// @brief Callback invoked when a client unsubscribes from a channel.
   ///
   /// Only invoked for channels that had an active subscription from the client.
-  std::function<void(uint64_t channel_id)> onUnsubscribe;
+  std::function<void(uint64_t channel_id, uint32_t clientId)> onUnsubscribe;
 
   /// @brief Callback invoked when a client advertises a client channel.
   ///

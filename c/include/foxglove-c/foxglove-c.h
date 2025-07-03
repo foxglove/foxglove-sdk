@@ -439,8 +439,8 @@ typedef struct foxglove_server_callbacks {
    * A user-defined value that will be passed to callback functions
    */
   const void *context;
-  void (*on_subscribe)(const void *context, uint64_t channel_id);
-  void (*on_unsubscribe)(const void *context, uint64_t channel_id);
+  void (*on_subscribe)(const void *context, uint64_t channel_id, uint32_t client_id);
+  void (*on_unsubscribe)(const void *context, uint64_t channel_id, uint32_t client_id);
   void (*on_client_advertise)(const void *context,
                               uint32_t client_id,
                               const struct foxglove_client_channel *channel);
@@ -638,6 +638,8 @@ typedef struct foxglove_channel_metadata_iterator {
    */
   size_t index;
 } foxglove_channel_metadata_iterator;
+
+typedef uint64_t FoxgloveSinkId;
 
 /**
  * A vector in 3D space that represents a direction only
@@ -2132,7 +2134,8 @@ void foxglove_channel_metadata_iter_free(struct foxglove_channel_metadata_iterat
 foxglove_error foxglove_channel_log(const struct foxglove_channel *channel,
                                     const uint8_t *data,
                                     size_t data_len,
-                                    const uint64_t *log_time);
+                                    const uint64_t *log_time,
+                                    const FoxgloveSinkId *sink_id);
 
 /**
  * Create a new context. This never fails.

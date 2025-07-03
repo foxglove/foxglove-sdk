@@ -44,6 +44,22 @@ impl LogSinkSet {
         }
     }
 
+    /// Iterate over sinks that match the predicate, calling the given function on each,
+    /// logging any errors via tracing::warn!().
+    pub fn for_each_filtered<F, P>(&self, predicate: P, mut f: F)
+    where
+        F: FnMut(&Arc<dyn Sink>) -> Result<(), FoxgloveError>,
+        P: Fn(&Arc<dyn Sink>) -> bool,
+    {
+        for sink in self.0.load().iter() {
+            if predicate(sink) {
+                if let Err(err) = f(sink) {
+                    tracing::warn!("{ERROR_LOGGING_MESSAGE}: {:?}", err);
+                }
+            }
+        }
+    }
+
     /// Clears the set.
     pub fn clear(&self) {
         self.0.store(Arc::default());
