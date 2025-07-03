@@ -710,11 +710,6 @@ impl ConnectedClient {
     /// Unadvertises a channel to the client.
     fn unadvertise_channel(&self, channel_id: ChannelId) {
         if self.channels.write().remove(&channel_id).is_none() {
-            tracing::debug!(
-                "Client {} is not advertising channel: {}",
-                self.addr,
-                channel_id
-            );
             return;
         }
 
