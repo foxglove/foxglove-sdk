@@ -80,7 +80,7 @@ macro_rules! export {
 }
 
 use anyhow::anyhow;
-use std::collections::{BTreeMap, HashMap};
+use std::collections::BTreeMap;
 use std::{cell::RefCell, rc::Rc};
 
 pub use generated::exports::foxglove::loader::loader::{
@@ -152,14 +152,17 @@ struct SchemaManager {
     schemas: BTreeMap<u16, LinkedSchema>,
 }
 
-impl SchemaManager {
-    fn new() -> Self {
+impl Default for SchemaManager {
+    fn default() -> Self {
         Self {
             next_schema_id: 1,
             schemas: Default::default(),
         }
     }
+}
 
+impl SchemaManager {
+    /// Find the next available schema id. This method ensures no other schemas are using this id.
     fn get_free_id(&mut self) -> u16 {
         loop {
             let current_id = self.next_schema_id;
@@ -173,6 +176,8 @@ impl SchemaManager {
         }
     }
 
+    /// Add a [`foxglove::Schema`] to the manager using a certain id, returning a [`LinkedSchema`].
+    /// This method will return None if the id is being used by another schema.
     fn add_schema(
         &mut self,
         id: u16,
@@ -202,14 +207,18 @@ struct ChannelManager {
     channels: BTreeMap<u16, LinkedChannel>,
 }
 
-impl ChannelManager {
-    fn new() -> Self {
+impl Default for ChannelManager {
+    fn default() -> Self {
         Self {
             next_channel_id: 1,
             channels: Default::default(),
         }
     }
+}
 
+impl ChannelManager {
+    /// Add a new channel to the manager by id and return a [`LinkedChannel`]. If there is already
+    /// a channel using this ID this method will return None.
     fn add_channel(&mut self, id: u16, topic_name: impl Into<String>) -> Option<LinkedChannel> {
         if self.channels.contains_key(&id) {
             return None;
@@ -228,6 +237,8 @@ impl ChannelManager {
         Some(channel)
     }
 
+    /// Get the next available channel ID. This method ensures no other channel is currently using
+    /// this ID.
     fn get_free_id(&mut self) -> u16 {
         loop {
             let current_id = self.next_channel_id;
@@ -255,8 +266,8 @@ pub struct InitializationBuilder {
 impl Default for InitializationBuilder {
     fn default() -> Self {
         Self {
-            schemas: Rc::new(RefCell::new(SchemaManager::new())),
-            channels: Rc::new(RefCell::new(ChannelManager::new())),
+            schemas: Rc::new(RefCell::new(SchemaManager::default())),
+            channels: Rc::new(RefCell::new(ChannelManager::default())),
             time_range: TimeRange::default(),
             problems: vec![],
         }
@@ -301,7 +312,9 @@ impl InitializationBuilder {
             .expect("id was checked to be free above")
     }
 
-    /// Add a channel by topic string.
+    /// Add a channel by topic string and a certain ID.
+    ///
+    /// This method will return None if the ID is being used by another channel.
     pub fn add_channel_with_id(&mut self, id: u16, topic_name: &str) -> Option<LinkedChannel> {
         let mut channels = self.channels.borrow_mut();
         channels.add_channel(id, topic_name)
@@ -315,6 +328,10 @@ impl InitializationBuilder {
             .expect("id was checked to be free above")
     }
 
+    /// Add a schema from a [`foxglove::Schema`] and ID. This adds the schema to the initialization and returns
+    /// the [`LinkedSchema`] for further customization and to add channels.
+    ///
+    /// This method will return None if the ID is being used by another channel.
     pub fn add_schema_with_id(
         &mut self,
         id: u16,
@@ -335,6 +352,11 @@ impl InitializationBuilder {
             .expect("id was checked to be free above"))
     }
 
+    /// Add a schema from an implementation of [`foxglove::Encode`] and an ID.
+    /// This sets both the schema and message encoding at once, adds the schema to the
+    /// initialization, and returns the LinkedSchema for further customization and to add channels.
+    ///
+    /// This method will return None if the ID is being used by another channel.
     pub fn add_encode_with_id<T: foxglove::Encode>(
         &mut self,
         id: u16,
@@ -392,6 +414,10 @@ pub struct LinkedSchema {
 }
 
 impl LinkedSchema {
+    /// Create a channel from a topic name with a certain channel ID and message encoding from the
+    /// schema default message encoding.
+    ///
+    /// This method will return None if the ID is being used by another channel.
     pub fn add_channel_with_id(&self, id: u16, topic_name: &str) -> Option<LinkedChannel> {
         let mut channels = self.channels.borrow_mut();
         channels.add_channel(id, topic_name).map(|channel| {
@@ -410,6 +436,9 @@ impl LinkedSchema {
     }
 
     /// Set the message encoding that added channels will use.
+    ///
+    /// Ensure this method is called before adding channels. Calling this method after channels
+    /// have been added may result in incorrect message encodings.
     pub fn message_encoding(mut self, message_encoding: impl Into<String>) -> Self {
         self.message_encoding = message_encoding.into();
         self
