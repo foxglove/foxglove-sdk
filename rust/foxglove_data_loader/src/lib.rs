@@ -80,7 +80,7 @@ macro_rules! export {
 }
 
 use anyhow::anyhow;
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::{cell::RefCell, rc::Rc};
 
 pub use generated::exports::foxglove::loader::loader::{
@@ -119,7 +119,7 @@ impl std::io::Seek for reader::Reader {
 /// corresponding schemas, the time range, and a set of problem messages.
 #[derive(Debug, Clone, Default)]
 pub struct Initialization {
-    channels_by_topic: HashMap<String, Rc<Channel>>,
+    channels: Vec<loader::Channel>,
     schemas: Vec<loader::Schema>,
     time_range: TimeRange,
     problems: Vec<String>,
@@ -128,11 +128,7 @@ pub struct Initialization {
 impl From<Initialization> for loader::Initialization {
     fn from(init: Initialization) -> loader::Initialization {
         loader::Initialization {
-            channels: init
-                .channels_by_topic
-                .values()
-                .map(|ch| (**ch).clone())
-                .collect(),
+            channels: init.channels,
             schemas: init.schemas,
             time_range: init.time_range,
             problems: init.problems,
@@ -148,9 +144,101 @@ impl Initialization {
     pub fn builder() -> InitializationBuilder {
         InitializationBuilder::default()
     }
+}
 
-    pub fn get_channel(&self, topic_name: &str) -> Option<Rc<loader::Channel>> {
-        self.channels_by_topic.get(topic_name).cloned()
+#[derive(Debug)]
+struct SchemaManager {
+    next_schema_id: u16,
+    schemas: BTreeMap<u16, LinkedSchema>,
+}
+
+impl SchemaManager {
+    fn new() -> Self {
+        Self {
+            next_schema_id: 1,
+            schemas: Default::default(),
+        }
+    }
+
+    fn get_free_id(&mut self) -> u16 {
+        loop {
+            let current_id = self.next_schema_id;
+            self.next_schema_id += 1;
+
+            if self.schemas.contains_key(&current_id) {
+                continue;
+            }
+
+            return current_id;
+        }
+    }
+
+    fn add_schema(
+        &mut self,
+        id: u16,
+        schema: foxglove::Schema,
+        channels: &Rc<RefCell<ChannelManager>>,
+    ) -> Option<LinkedSchema> {
+        if self.schemas.contains_key(&id) {
+            return None;
+        }
+
+        let schema = LinkedSchema {
+            id,
+            schema,
+            channels: channels.clone(),
+            message_encoding: String::from(""),
+        };
+
+        self.schemas.insert(id, schema.clone());
+
+        Some(schema)
+    }
+}
+
+#[derive(Debug)]
+struct ChannelManager {
+    next_channel_id: u16,
+    channels: BTreeMap<u16, LinkedChannel>,
+}
+
+impl ChannelManager {
+    fn new() -> Self {
+        Self {
+            next_channel_id: 1,
+            channels: Default::default(),
+        }
+    }
+
+    fn add_channel(&mut self, id: u16, topic_name: impl Into<String>) -> Option<LinkedChannel> {
+        if self.channels.contains_key(&id) {
+            return None;
+        }
+
+        let channel = LinkedChannel {
+            id,
+            schema_id: Rc::new(RefCell::new(None)),
+            topic_name: topic_name.into(),
+            message_encoding: Rc::new(RefCell::new("".into())),
+            message_count: Rc::new(RefCell::new(None)),
+        };
+
+        self.channels.insert(id, channel.clone());
+
+        Some(channel)
+    }
+
+    fn get_free_id(&mut self) -> u16 {
+        loop {
+            let current_id = self.next_channel_id;
+            self.next_channel_id += 1;
+
+            if self.channels.contains_key(&current_id) {
+                continue;
+            }
+
+            return current_id;
+        }
     }
 }
 
@@ -158,21 +246,19 @@ impl Initialization {
 /// assigned IDs.
 #[derive(Debug, Clone)]
 pub struct InitializationBuilder {
-    next_channel_id: Rc<RefCell<u16>>,
-    next_schema_id: u16,
+    channels: Rc<RefCell<ChannelManager>>,
+    schemas: Rc<RefCell<SchemaManager>>,
     time_range: loader::TimeRange,
-    schemas: Vec<LinkedSchema>,
     problems: Vec<String>,
 }
 
 impl Default for InitializationBuilder {
     fn default() -> Self {
         Self {
-            next_channel_id: Rc::new(RefCell::new(1)),
-            next_schema_id: 1,
+            schemas: Rc::new(RefCell::new(SchemaManager::new())),
+            channels: Rc::new(RefCell::new(ChannelManager::new())),
             time_range: TimeRange::default(),
             problems: vec![],
-            schemas: vec![],
         }
     }
 }
@@ -209,42 +295,54 @@ impl InitializationBuilder {
     }
 
     /// Add a channel by topic string.
-    pub fn add_channel(&self, topic_name: &str) -> LinkedChannel {
-        let channel_id = *self.next_channel_id.borrow();
-        self.next_channel_id.replace(channel_id + 1);
-        LinkedChannel {
-            id: channel_id,
-            schema_id: Rc::new(RefCell::new(None)),
-            topic_name: topic_name.into(),
-            message_encoding: Rc::new(RefCell::new("".into())),
-            message_count: Rc::new(RefCell::new(None)),
-        }
+    pub fn add_channel(&mut self, topic_name: &str) -> LinkedChannel {
+        let id = { self.channels.borrow_mut().get_free_id() };
+        self.add_channel_with_id(id, topic_name)
+            .expect("id was checked to be free above")
+    }
+
+    /// Add a channel by topic string.
+    pub fn add_channel_with_id(&mut self, id: u16, topic_name: &str) -> Option<LinkedChannel> {
+        let mut channels = self.channels.borrow_mut();
+        channels.add_channel(id, topic_name)
     }
 
     /// Add a schema from a foxglove::Schema. This adds the schema to the initialization and returns
-    /// the LinkedSchema for further customization and to add channels.
+    /// the [`LinkedSchema`] for further customization and to add channels.
     pub fn add_schema(&mut self, schema: foxglove::Schema) -> LinkedSchema {
-        let schema_id = self.next_schema_id;
-        self.next_schema_id += 1;
-        let linked_schema = LinkedSchema {
-            id: schema_id,
-            next_channel_id: self.next_channel_id.clone(),
-            schema,
-            channels: Rc::new(RefCell::new(vec![])),
-            message_encoding: String::from(""),
-        };
-        self.schemas.push(linked_schema.clone());
-        linked_schema
+        let id = { self.schemas.borrow_mut().get_free_id() };
+        self.add_schema_with_id(id, schema)
+            .expect("id was checked to be free above")
     }
 
-    /// Add a schema from an implementation of foxglove::Encode.
+    pub fn add_schema_with_id(
+        &mut self,
+        id: u16,
+        schema: foxglove::Schema,
+    ) -> Option<LinkedSchema> {
+        assert!(id > 0, "schema id cannot be zero");
+        let mut schemas = self.schemas.borrow_mut();
+        schemas.add_schema(id, schema, &self.channels)
+    }
+
+    /// Add a schema from an implementation of [`foxglove::Encode`].
     /// This sets both the schema and message encoding at once, adds the schema to the
     /// initialization, and returns the LinkedSchema for further customization and to add channels.
     pub fn add_encode<T: foxglove::Encode>(&mut self) -> Result<LinkedSchema, anyhow::Error> {
+        let schema_id = { self.schemas.borrow_mut().get_free_id() };
+        Ok(self
+            .add_encode_with_id::<T>(schema_id)?
+            .expect("id was checked to be free above"))
+    }
+
+    pub fn add_encode_with_id<T: foxglove::Encode>(
+        &mut self,
+        id: u16,
+    ) -> Result<Option<LinkedSchema>, anyhow::Error> {
         let schema = T::get_schema().ok_or(anyhow!["Failed to get schema"])?;
         let linked_schema = self
-            .add_schema(schema)
-            .message_encoding(T::get_message_encoding());
+            .add_schema_with_id(id, schema)
+            .map(|s| s.message_encoding(T::get_message_encoding()));
         Ok(linked_schema)
     }
 
@@ -258,24 +356,24 @@ impl InitializationBuilder {
     pub fn build(self) -> Initialization {
         let schemas = self
             .schemas
-            .iter()
-            .map(|linked_schema| {
-                Schema::from_id_sdk(linked_schema.id, linked_schema.schema.clone())
-            })
-            .collect();
-        let channels_by_topic = self
+            .borrow()
             .schemas
-            .iter()
-            .flat_map(|linked_schema| {
-                let channels = linked_schema.channels.borrow();
-                channels
-                    .iter()
-                    .map(|ch| (ch.topic_name.to_string(), Rc::new(ch.clone().into())))
-                    .collect::<Vec<_>>()
-            })
+            .values()
+            .cloned()
+            .map(Schema::from)
             .collect();
+
+        let channels = self
+            .channels
+            .borrow()
+            .channels
+            .values()
+            .cloned()
+            .map(Channel::from)
+            .collect();
+
         Initialization {
-            channels_by_topic,
+            channels,
             schemas,
             time_range: self.time_range,
             problems: self.problems,
@@ -288,41 +386,32 @@ impl InitializationBuilder {
 #[derive(Debug, Clone)]
 pub struct LinkedSchema {
     id: u16,
-    next_channel_id: Rc<RefCell<u16>>,
     schema: foxglove::Schema,
-    channels: Rc<RefCell<Vec<LinkedChannel>>>,
+    channels: Rc<RefCell<ChannelManager>>,
     message_encoding: String,
 }
 
 impl LinkedSchema {
+    pub fn add_channel_with_id(&self, id: u16, topic_name: &str) -> Option<LinkedChannel> {
+        let mut channels = self.channels.borrow_mut();
+        channels.add_channel(id, topic_name).map(|channel| {
+            channel
+                .message_encoding(self.message_encoding.clone())
+                .schema(self)
+        })
+    }
+
     /// Create a channel from a topic name with an assigned channel ID and message encoding from the
     /// schema default message encoding.
     pub fn add_channel(&self, topic_name: &str) -> LinkedChannel {
-        let channel_id = *self.next_channel_id.borrow();
-        self.next_channel_id.replace(channel_id + 1);
-        let channel = LinkedChannel {
-            id: channel_id,
-            schema_id: Rc::new(RefCell::new(Some(self.id))),
-            topic_name: topic_name.into(),
-            message_encoding: Rc::new(RefCell::new(self.message_encoding.clone())),
-            message_count: Rc::new(RefCell::new(None)),
-        };
-        self.channels.borrow_mut().push(channel.clone());
-        channel
-    }
-
-    /// Add a LinkedChannel to this schema, assigning the schema id and schema encoding onto the channel.
-    pub fn add_linked_channel(&self, linked_channel: LinkedChannel) {
-        self.channels.borrow_mut().push(
-            linked_channel
-                .schema_id(self.id)
-                .message_encoding(self.message_encoding.clone()),
-        );
+        let next_id = { self.channels.borrow_mut().get_free_id() };
+        self.add_channel_with_id(next_id, topic_name)
+            .expect("id was checked to be free above")
     }
 
     /// Set the message encoding that added channels will use.
-    pub fn message_encoding(mut self, message_encoding: String) -> Self {
-        self.message_encoding = message_encoding;
+    pub fn message_encoding(mut self, message_encoding: impl Into<String>) -> Self {
+        self.message_encoding = message_encoding.into();
         self
     }
 }
@@ -345,20 +434,14 @@ impl LinkedChannel {
     }
 
     /// Set the message encoding for the channel.
-    pub fn message_encoding(self, message_encoding: String) -> Self {
-        self.message_encoding.replace(message_encoding);
+    pub fn message_encoding(self, message_encoding: impl Into<String>) -> Self {
+        self.message_encoding.replace(message_encoding.into());
         self
     }
 
     /// Set the schema id for the channel from a LinkedSchema.
     pub fn schema(self, linked_schema: &LinkedSchema) -> Self {
-        linked_schema.add_linked_channel(self.clone());
-        self
-    }
-
-    /// Assign a schema id only to the channel.
-    pub fn schema_id(self, schema_id: SchemaId) -> Self {
-        self.schema_id.replace(Some(schema_id));
+        self.schema_id.replace(Some(linked_schema.id));
         self
     }
 }
@@ -375,14 +458,13 @@ impl From<LinkedChannel> for loader::Channel {
     }
 }
 
-impl Schema {
-    /// Convert a schema id and foxglove::Schema to a data loader Schema.
-    pub fn from_id_sdk(id: u16, schema: foxglove::Schema) -> Schema {
-        Schema {
-            id,
-            name: schema.name,
-            encoding: schema.encoding,
-            data: schema.data.to_vec(),
+impl From<LinkedSchema> for loader::Schema {
+    fn from(value: LinkedSchema) -> Self {
+        loader::Schema {
+            id: value.id,
+            name: value.schema.name,
+            encoding: value.schema.encoding,
+            data: value.schema.data.to_vec(),
         }
     }
 }
@@ -421,4 +503,231 @@ pub trait DataLoader: 'static + Sized {
 pub trait MessageIterator: 'static + Sized {
     type Error: Into<Box<dyn std::error::Error>>;
     fn next(&mut self) -> Option<Result<Message, Self::Error>>;
+}
+
+#[cfg(test)]
+mod tests {
+    use std::borrow::Cow;
+
+    use foxglove::Encode;
+
+    use crate::generated::foxglove::loader::time::TimeRange;
+
+    use super::*;
+
+    #[test]
+    fn test_created_init_with_no_schemas() {
+        let mut builder = InitializationBuilder::default();
+
+        builder
+            .add_channel("/first")
+            .message_encoding("json")
+            .message_count(10);
+
+        builder.add_channel("/second").message_encoding("json");
+
+        let init = loader::Initialization::from(builder.build());
+
+        assert_eq!(init.channels.len(), 2);
+        assert_eq!(init.schemas.len(), 0);
+
+        assert_eq!(init.channels[0].message_encoding, "json");
+        assert_eq!(init.channels[1].message_encoding, "json");
+
+        assert_eq!(init.channels[0].message_count, Some(10));
+        assert_eq!(init.channels[1].message_count, None);
+    }
+
+    #[test]
+    fn test_add_channel_with_existing_id() {
+        let mut builder = InitializationBuilder::default();
+
+        builder
+            .add_channel_with_id(1, "/first")
+            .expect("first channel should get added");
+
+        let second_channel = builder.add_channel_with_id(1, "/second");
+
+        assert!(second_channel.is_none());
+    }
+
+    #[test]
+    fn test_add_auto_channel_skips_taken_ids() {
+        let mut builder = InitializationBuilder::default();
+
+        builder.add_channel_with_id(1, "/manual").unwrap();
+        builder.add_channel_with_id(2, "/manual").unwrap();
+        builder.add_channel_with_id(3, "/manual").unwrap();
+        builder.add_channel_with_id(4, "/manual").unwrap();
+        builder.add_channel_with_id(5, "/manual").unwrap();
+
+        builder.add_channel("/auto");
+
+        let init = loader::Initialization::from(builder.build());
+
+        assert_eq!(init.channels.len(), 6);
+        assert_eq!(init.channels[5].id, 6);
+    }
+
+    #[test]
+    fn test_add_channel_from_encode() {
+        #[derive(Encode)]
+        struct MyData {
+            name: String,
+        }
+
+        let mut builder = InitializationBuilder::default();
+
+        builder
+            .add_encode::<MyData>()
+            .expect("failed to add encode")
+            .add_channel("/my-data");
+
+        let init = Initialization::from(builder.build());
+
+        assert_eq!(init.channels.len(), 1);
+        assert_eq!(init.schemas.len(), 1);
+
+        assert_eq!(init.channels[0].topic_name, "/my-data");
+        assert_eq!(init.channels[0].message_encoding, "protobuf");
+
+        assert_eq!(init.schemas[0].encoding, "protobuf");
+    }
+
+    #[test]
+    fn test_add_channel_from_schema() {
+        let mut builder = InitializationBuilder::default();
+
+        let schema = foxglove::Schema {
+            name: "test.MySchema".into(),
+            encoding: "jsonschema".into(),
+            data: Cow::Borrowed(&[]),
+        };
+
+        builder
+            .add_schema(schema)
+            .message_encoding("json")
+            .add_channel("/my-data");
+
+        let init = loader::Initialization::from(builder.build());
+
+        assert_eq!(init.channels.len(), 1);
+        assert_eq!(init.schemas.len(), 1);
+
+        assert_eq!(init.channels[0].topic_name, "/my-data");
+        assert_eq!(init.channels[0].message_encoding, "json");
+
+        assert_eq!(init.schemas[0].encoding, "jsonschema");
+    }
+
+    #[test]
+    fn test_add_schema_wtih_existing_id() {
+        let mut builder = InitializationBuilder::default();
+
+        builder
+            .add_schema_with_id(
+                1,
+                foxglove::Schema {
+                    name: "test.FirstSchema".into(),
+                    encoding: "jsonschema".into(),
+                    data: Cow::Borrowed(&[]),
+                },
+            )
+            .expect("first schema should get added");
+
+        let second_schema = builder.add_schema_with_id(
+            1,
+            foxglove::Schema {
+                name: "test.SecondSchema".into(),
+                encoding: "jsonschema".into(),
+                data: Cow::Borrowed(&[]),
+            },
+        );
+
+        assert!(second_schema.is_none());
+    }
+
+    #[test]
+    fn test_add_encode_wtih_existing_id() {
+        #[derive(Encode)]
+        struct MyData {
+            name: String,
+        }
+
+        let mut builder = InitializationBuilder::default();
+
+        builder
+            .add_encode_with_id::<MyData>(1)
+            .expect("schema should encode")
+            .expect("first schema should get added");
+
+        let second_schema = builder
+            .add_encode_with_id::<MyData>(1)
+            .expect("schema should encode");
+
+        assert!(second_schema.is_none());
+    }
+
+    #[test]
+    fn test_add_auto_schema_skips_taken_ids() {
+        let mut builder = InitializationBuilder::default();
+
+        builder.add_channel_with_id(1, "/manual").unwrap();
+        builder.add_channel_with_id(2, "/manual").unwrap();
+        builder.add_channel_with_id(3, "/manual").unwrap();
+        builder.add_channel_with_id(4, "/manual").unwrap();
+        builder.add_channel_with_id(5, "/manual").unwrap();
+
+        builder.add_channel("/auto");
+
+        let init = loader::Initialization::from(builder.build());
+
+        assert_eq!(init.channels.len(), 6);
+        assert_eq!(init.channels[5].id, 6);
+    }
+
+    #[test]
+    fn test_multiple_channels_same_topic() {
+        let mut init = Initialization::builder();
+
+        init.add_channel("/json");
+        init.add_channel("/json");
+        init.add_channel("/json");
+        init.add_channel("/json");
+        init.add_channel("/json");
+
+        let init = init.build();
+
+        assert_eq!(init.channels.len(), 5);
+        assert_eq!(init.channels[0].topic_name, "/json");
+        assert_eq!(init.channels[1].topic_name, "/json");
+        assert_eq!(init.channels[2].topic_name, "/json");
+        assert_eq!(init.channels[3].topic_name, "/json");
+        assert_eq!(init.channels[4].topic_name, "/json");
+    }
+
+    #[test]
+    fn test_set_time_range() {
+        let init = loader::Initialization::from(
+            Initialization::builder()
+                .time_range(TimeRange {
+                    start_time: 20,
+                    end_time: 30,
+                })
+                .build(),
+        );
+
+        assert_eq!(init.time_range.start_time, 20);
+        assert_eq!(init.time_range.end_time, 30);
+
+        let init = loader::Initialization::from(
+            Initialization::builder()
+                .start_time(50)
+                .end_time(60)
+                .build(),
+        );
+
+        assert_eq!(init.time_range.start_time, 50);
+        assert_eq!(init.time_range.end_time, 60);
+    }
 }
