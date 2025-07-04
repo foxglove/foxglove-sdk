@@ -612,7 +612,7 @@ mod tests {
             .expect("failed to add encode")
             .add_channel("/my-data");
 
-        let init = Initialization::from(builder.build());
+        let init = loader::Initialization::from(builder.build());
 
         assert_eq!(init.channels.len(), 1);
         assert_eq!(init.schemas.len(), 1);
