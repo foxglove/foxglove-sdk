@@ -1133,7 +1133,7 @@ typedef struct foxglove_grid {
 /**
  * A 3D grid of data
  */
-typedef struct foxglove_grid_3d {
+typedef struct foxglove_grid3_d {
   /**
    * Timestamp of grid
    */
@@ -1180,7 +1180,7 @@ typedef struct foxglove_grid_3d {
    */
   const unsigned char *data;
   size_t data_len;
-} foxglove_grid_3d;
+} foxglove_grid3_d;
 
 /**
  * An array of points on a 2D image
@@ -2457,7 +2457,7 @@ foxglove_error foxglove_channel_log_grid(const struct foxglove_channel *channel,
  * The channel must have been created for this type with foxglove_channel_create_grid.
  */
 foxglove_error foxglove_channel_log_grid3_d(const struct foxglove_channel *channel,
-                                         const struct foxglove_grid_3d *msg,
+                                         const struct foxglove_grid3_d *msg,
                                          const uint64_t *log_time);
 
 /**
