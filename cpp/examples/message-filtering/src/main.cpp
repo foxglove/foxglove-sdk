@@ -45,7 +45,8 @@ PointCloud make_point_cloud(const std::chrono::duration<double>& elapsed) {
 
   for (int x = 0; x < 20; ++x) {
     for (int y = 0; y < 20; ++y) {
-      const float x_coord = static_cast<float>(x) + std::cos(t + static_cast<float>(y) / 5.0f);
+      const float x_coord =
+        static_cast<float>(x) + static_cast<float>(std::cos(t + static_cast<float>(y) / 5.0f));
       const float y_coord = static_cast<float>(y);
       const float z_coord = 0.0f;
 
@@ -235,7 +236,7 @@ int main() {
     -10.0,
     0.0,
   };
-  foxglove::schemas::FrameTransforms point_cloud_tf{{ tf }};
+  foxglove::schemas::FrameTransforms point_cloud_tf{{tf}};
 
   while (!done) {
     const auto now = std::chrono::system_clock::now();
