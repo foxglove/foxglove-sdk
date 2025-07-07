@@ -294,11 +294,10 @@ pub struct FoxgloveClientChannel {
 }
 
 // TODO: LEFT OFF HERE!
-// This struct doesn't really hold everything from client we might need, increase the level of the bindings here
 #[repr(C)]
 pub struct FoxgloveClient {
     pub id: u32,
-    pub sink_id: *const FoxgloveSinkId,
+    pub sink_id: *const FoxgloveSinkId, // NULL means no sink_id
 }
 
 #[repr(C)]
@@ -1381,23 +1380,40 @@ pub extern "C" fn foxglove_internal_register_cpp_wrapper() {
 impl foxglove::websocket::ServerListener for FoxgloveServerCallbacks {
     fn on_subscribe(
         &self,
-        _client: foxglove::websocket::Client,
+        client: foxglove::websocket::Client,
         channel: foxglove::websocket::ChannelView,
     ) {
         // Convert the Rust SinkId to the C SinkId type. If it doesn't have a value,
         // we use a null pointer.
-        // REVIEW: Is there a more idiomatic way to do this? I'm looking for a way to bind an
-        // optional value to a C construct. I'm currently using a pointer for this since that's
-        // what I'm used to, but could also be convinced that an optional struct would be better.
-        let sink_id = _client.sink_id().map(|id| id.into());
-        let c_sink_id = sink_id.map(|id| Box::into_raw(Box::new(id)));
-
-        let c_client = FoxgloveClient {
-            id: _client.id().into(),
-            sink_id: c_sink_id.unwrap_or(std::ptr::null_mut()),
-        };
+        //
+        // REVIEW: Is there a more idiomatic way to do this when binding Rust code?
+        // I'm looking for a way to bind an optional value to pass into a C-bound struct.
+        // I'm currently using a pointer for this since that's what I'm used to,
+        // but could also be convinced creating a new struct that replicates Optional would be better.
+        // Futzing with creating a Box, casting to a raw pointer, then dropping feels like overkill,
+        // but it's the best thing I could think up that isn't either a memory leak or a dangling reference.
         if let Some(on_subscribe) = self.on_subscribe {
+            // Get the sink_id from the client - it's an Option<SinkId>
+            let sink_id = client.sink_id();
+
+            // Create a Box<u64> for the sink_id if it exists, otherwise use null
+            let sink_id_ptr = if let Some(sink_id) = sink_id {
+                Box::into_raw(Box::new(sink_id.into()))
+            } else {
+                std::ptr::null()
+            };
+
+            let c_client = FoxgloveClient {
+                id: client.id().into(),
+                sink_id: sink_id_ptr,
+            };
+
             unsafe { on_subscribe(self.context, channel.id().into(), &raw const c_client) };
+
+            // Clean up the boxed sink_id if it exists
+            if !sink_id_ptr.is_null() {
+                drop(unsafe { Box::from_raw(sink_id_ptr as *mut u64) });
+            }
         }
     }
 
