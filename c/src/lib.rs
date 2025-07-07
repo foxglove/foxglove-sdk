@@ -1397,7 +1397,7 @@ impl foxglove::websocket::ServerListener for FoxgloveServerCallbacks {
             sink_id: c_sink_id.unwrap_or(std::ptr::null_mut()),
         };
         if let Some(on_subscribe) = self.on_subscribe {
-            unsafe { on_subscribe(self.context, channel.id().into(), &c_client) };
+            unsafe { on_subscribe(self.context, channel.id().into(), &raw const c_client) };
         }
     }
 
