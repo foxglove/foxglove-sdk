@@ -11,6 +11,7 @@ pub const FRAME_TRANSFORM: &[u8] = include_bytes!("data/FrameTransform.bin");
 pub const FRAME_TRANSFORMS: &[u8] = include_bytes!("data/FrameTransforms.bin");
 pub const GEO_JSON: &[u8] = include_bytes!("data/GeoJSON.bin");
 pub const GRID: &[u8] = include_bytes!("data/Grid.bin");
+pub const GRID3_D: &[u8] = include_bytes!("data/Grid3D.bin");
 pub const IMAGE_ANNOTATIONS: &[u8] = include_bytes!("data/ImageAnnotations.bin");
 pub const KEY_VALUE_PAIR: &[u8] = include_bytes!("data/KeyValuePair.bin");
 pub const LASER_SCAN: &[u8] = include_bytes!("data/LaserScan.bin");

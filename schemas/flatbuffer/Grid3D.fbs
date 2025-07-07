@@ -19,28 +19,28 @@ table Grid3D {
   pose:foxglove.Pose (id: 2);
 
   /// Number of grid rows
-  row_count:uint32 (id: 4);
+  row_count:uint32 (id: 3);
 
   /// Number of grid columns
-  column_count:uint32 (id: 5);
+  column_count:uint32 (id: 4);
 
   /// Size of single grid cell along x, y, and z axes, relative to `pose`
-  cell_size:foxglove.Vector3 (id: 6);
+  cell_size:foxglove.Vector3 (id: 5);
 
   /// Number of bytes between depth slices in `data`
-  slice_stride:uint32 (id: 7);
+  slice_stride:uint32 (id: 6);
 
   /// Number of bytes between rows in `data`
-  row_stride:uint32 (id: 8);
+  row_stride:uint32 (id: 7);
 
   /// Number of bytes between cells within a row in `data`
-  cell_stride:uint32 (id: 9);
+  cell_stride:uint32 (id: 8);
 
   /// Fields in `data`. `red`, `green`, `blue`, and `alpha` are optional for customizing the grid's color.
-  fields:[foxglove.PackedElementField] (id: 10);
+  fields:[foxglove.PackedElementField] (id: 9);
 
   /// Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order — values fill each row from left to right along the X axis, with rows ordered from top to bottom along the Y axis, starting at the bottom-left corner when viewed from +Z looking towards -Z with identity orientations
-  data:[uint8] (id: 11);
+  data:[uint8] (id: 10);
 }
 
-root_type Grid;
+root_type Grid3D;

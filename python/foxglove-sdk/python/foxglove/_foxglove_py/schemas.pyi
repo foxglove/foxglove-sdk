@@ -834,6 +834,7 @@ FoxgloveSchema = Union[
     FrameTransforms,
     GeoJson,
     Grid,
+    Grid3D,
     ImageAnnotations,
     KeyValuePair,
     LaserScan,

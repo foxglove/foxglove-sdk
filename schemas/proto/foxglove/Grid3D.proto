@@ -20,7 +20,7 @@ message Grid3D {
   // Origin of grid's corner relative to frame of reference; grid is positioned in the x-y plane relative to this origin
   foxglove.Pose pose = 3;
 
-  // Number of grid columns
+  // Number of grid rows
   fixed32 row_count = 4;
 
   // Number of grid columns

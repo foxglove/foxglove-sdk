@@ -6,7 +6,7 @@ import { Pose } from "./Pose";
 import { Time } from "./Time";
 import { Vector3 } from "./Vector3";
 
-/** A 2D grid of data */
+/** A 3D grid of data */
 export type Grid3D = {
   /** Timestamp of grid */
   timestamp: Time;
@@ -17,7 +17,7 @@ export type Grid3D = {
   /** Origin of grid's corner relative to frame of reference; grid is positioned in the x-y plane relative to this origin */
   pose: Pose;
 
-  /** Number of grid columns */
+  /** Number of grid rows */
   row_count: number;
 
   /** Number of grid columns */

@@ -24,6 +24,7 @@ All schemas are generated from [schemas.ts](/internal/schemas.ts).
 - [FrameTransforms](#frametransforms)
 - [GeoJSON](#geojson)
 - [Grid](#grid)
+- [Grid3D](#grid3d)
 - [ImageAnnotations](#imageannotations)
 - [KeyValuePair](#keyvaluepair)
 - [LaserScan](#laserscan)

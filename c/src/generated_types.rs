@@ -1337,10 +1337,10 @@ pub struct Grid3D {
     /// Number of grid columns
     pub column_count: u32,
 
-    /// Size of single grid cell along x and y axes, relative to `pose`
+    /// Size of single grid cell along x, y, and z axes, relative to `pose`
     pub cell_size: *const Vector3,
 
-    /// Number of bytes between depth slice in `data`
+    /// Number of bytes between depth slices in `data`
     pub slice_stride: u32,
 
     /// Number of bytes between rows in `data`
@@ -1364,7 +1364,7 @@ impl Grid3D {
     /// # Safety
     /// We're trusting the caller that the channel will only be used with this type T.
     #[unsafe(no_mangle)]
-    pub unsafe extern "C" fn foxglove_channel_create_grid_3d(
+    pub unsafe extern "C" fn foxglove_channel_create_grid3_d(
         topic: FoxgloveString,
         context: *const FoxgloveContext,
         channel: *mut *const FoxgloveChannel,
@@ -1427,9 +1427,9 @@ impl BorrowToNative for Grid3D {
 /// Log a Grid3D message to a channel.
 ///
 /// # Safety
-/// The channel must have been created for this type with foxglove_channel_create_grid.
+/// The channel must have been created for this type with foxglove_channel_create_grid3_d.
 #[unsafe(no_mangle)]
-pub extern "C" fn foxglove_channel_log_grid_3_d(
+pub extern "C" fn foxglove_channel_log_grid3_d(
     channel: Option<&FoxgloveChannel>,
     msg: Option<&Grid3D>,
     log_time: Option<&u64>,

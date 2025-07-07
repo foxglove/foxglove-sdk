@@ -1592,6 +1592,7 @@ export const foxgloveMessageSchemas = {
   FrameTransforms,
   GeoJSON,
   Grid,
+  Grid3D,
   ImageAnnotations,
   KeyValuePair,
   LaserScan,

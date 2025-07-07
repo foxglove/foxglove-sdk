@@ -452,7 +452,7 @@ struct Grid3D {
   /// @brief Number of grid columns
   uint32_t column_count = 0;
 
-  /// @brief Size of single grid cell along x and y axes, relative to `pose`
+  /// @brief Size of single grid cell along x, y, and z axes, relative to `pose`
   std::optional<Vector3> cell_size;
 
   /// @brief Number of bytes between depth slices in `data`
@@ -468,10 +468,10 @@ struct Grid3D {
   /// grid's color.
   std::vector<PackedElementField> fields;
 
-  /// @brief Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order — values fill
-  /// each row from left to right along the X axis, with rows ordered from top to bottom along the Y
-  /// axis, starting at the bottom-left corner when viewed from +Z looking towards -Z with identity
-  /// orientations
+  /// @brief Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order —
+  /// values fill each row from left to right along the X axis, with rows ordered from top to bottom
+  /// along the Y axis, starting at the bottom-left corner when viewed from +Z looking towards -Z
+  /// with identity orientations
   std::vector<std::byte> data;
 };
 
@@ -1505,6 +1505,49 @@ public:
 
 private:
   explicit GridChannel(ChannelUniquePtr&& channel)
+      : impl_(std::move(channel)) {}
+
+  ChannelUniquePtr impl_;
+};
+
+/// @brief A channel for logging Grid3D messages to a topic.
+///
+/// @note While channels are fully thread-safe, the Grid3D struct is not thread-safe.
+/// Avoid modifying it concurrently or during a log operation.
+class Grid3DChannel {
+public:
+  /// @brief Create a new channel.
+  ///
+  /// @param topic The topic name. You should choose a unique topic name per channel for
+  /// compatibility with the Foxglove app.
+  /// @param context The context which associates logs to a sink. If omitted, the default context is
+  /// used.
+  static FoxgloveResult<Grid3DChannel> create(
+    const std::string_view& topic, const Context& context = Context()
+  );
+
+  /// @brief Log a message to the channel.
+  ///
+  /// @param msg The Grid3D message to log.
+  /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  FoxgloveError log(const Grid3D& msg, std::optional<uint64_t> log_time = std::nullopt) noexcept;
+
+  /// @brief Uniquely identifies a channel in the context of this program.
+  ///
+  /// @return The ID of the channel.
+  [[nodiscard]] uint64_t id() const noexcept;
+
+  Grid3DChannel(const Grid3DChannel& other) noexcept = delete;
+  Grid3DChannel& operator=(const Grid3DChannel& other) noexcept = delete;
+  /// @brief Default move constructor.
+  Grid3DChannel(Grid3DChannel&& other) noexcept = default;
+  /// @brief Default move assignment.
+  Grid3DChannel& operator=(Grid3DChannel&& other) noexcept = default;
+  /// @brief Default destructor.
+  ~Grid3DChannel() = default;
+
+private:
+  explicit Grid3DChannel(ChannelUniquePtr&& channel)
       : impl_(std::move(channel)) {}
 
   ChannelUniquePtr impl_;
