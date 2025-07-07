@@ -2457,8 +2457,8 @@ foxglove_error foxglove_channel_log_grid(const struct foxglove_channel *channel,
  * We're trusting the caller that the channel will only be used with this type T.
  */
 foxglove_error foxglove_channel_create_grid3_d(struct foxglove_string topic,
-                                            const struct foxglove_context *context,
-                                            const struct foxglove_channel **channel);
+                                               const struct foxglove_context *context,
+                                               const struct foxglove_channel **channel);
 
 /**
  * Log a Grid3D message to a channel.
@@ -2467,8 +2467,8 @@ foxglove_error foxglove_channel_create_grid3_d(struct foxglove_string topic,
  * The channel must have been created for this type with foxglove_channel_create_grid3_d.
  */
 foxglove_error foxglove_channel_log_grid3_d(const struct foxglove_channel *channel,
-                                         const struct foxglove_grid3_d *msg,
-                                         const uint64_t *log_time);
+                                            const struct foxglove_grid3_d *msg,
+                                            const uint64_t *log_time);
 
 /**
  * Create a new typed channel, and return an owned raw channel pointer to it.
