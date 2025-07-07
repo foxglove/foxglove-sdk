@@ -65,6 +65,8 @@ public:
   /// @param data The message data.
   /// @param data_len The length of the message data, in bytes.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  /// @param sink_id The sink ID associated with the message. Can be used to target logging messages
+  /// to a specific client or mcap file.
   FoxgloveError log(
     const std::byte* data, size_t data_len, std::optional<uint64_t> log_time = std::nullopt,
     std::optional<uint64_t> sink_id = std::nullopt

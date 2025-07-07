@@ -42,7 +42,8 @@ struct ClientChannel {
 struct ClientMetadata {
   /// @brief The ID of the client.
   uint32_t id;
-  /// @brief The sink ID of the client.
+  /// @brief The sink ID associated with the client. Can be used to
+  /// target logging messages to a specific client.
   std::optional<uint64_t> sink_id;
 };
 
