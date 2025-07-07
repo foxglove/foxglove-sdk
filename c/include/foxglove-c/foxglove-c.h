@@ -303,10 +303,10 @@ typedef struct foxglove_string {
 
 typedef uint64_t FoxgloveSinkId;
 
-typedef struct foxglove_client {
+typedef struct foxglove_client_metadata {
   uint32_t id;
   const FoxgloveSinkId *sink_id;
-} foxglove_client;
+} foxglove_client_metadata;
 
 typedef struct foxglove_client_channel {
   uint32_t id;
@@ -448,7 +448,7 @@ typedef struct foxglove_server_callbacks {
   const void *context;
   void (*on_subscribe)(const void *context,
                        uint64_t channel_id,
-                       const struct foxglove_client *client);
+                       const struct foxglove_client_metadata *client);
   void (*on_unsubscribe)(const void *context, uint64_t channel_id, uint32_t client_id);
   void (*on_client_advertise)(const void *context,
                               uint32_t client_id,

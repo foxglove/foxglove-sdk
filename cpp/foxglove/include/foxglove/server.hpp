@@ -39,7 +39,7 @@ struct ClientChannel {
 };
 
 /// @brief A client connected to the server.
-struct Client {
+struct ClientMetadata {
   /// @brief The ID of the client.
   uint32_t id;
   /// @brief The sink ID of the client.
@@ -106,7 +106,7 @@ struct WebSocketServerCallbacks {
   ///
   /// Only invoked if the channel is associated with the server and isn't already subscribed to by
   /// the client.
-  std::function<void(uint64_t channel_id, const Client& client)> onSubscribe;
+  std::function<void(uint64_t channel_id, const ClientMetadata& client_metadata)> onSubscribe;
 
   /// @brief Callback invoked when a client unsubscribes from a channel.
   ///

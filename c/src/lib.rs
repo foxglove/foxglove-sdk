@@ -293,9 +293,11 @@ pub struct FoxgloveClientChannel {
     pub schema_len: usize,
 }
 
-// TODO: LEFT OFF HERE!
+// REVIEW: This struct only holds the subset of the Client struct that is being used for accounting
+// in the ros_foxglove_bridge. If there are other fields that may be useful to expose, I am
+// happy to implement them here.
 #[repr(C)]
-pub struct FoxgloveClient {
+pub struct FoxgloveClientMetadata {
     pub id: u32,
     pub sink_id: *const FoxgloveSinkId, // NULL means no sink_id
 }
@@ -309,7 +311,7 @@ pub struct FoxgloveServerCallbacks {
         unsafe extern "C" fn(
             context: *const c_void,
             channel_id: u64,
-            client: *const FoxgloveClient,
+            client: *const FoxgloveClientMetadata,
         ),
     >,
     pub on_unsubscribe:
@@ -1403,7 +1405,7 @@ impl foxglove::websocket::ServerListener for FoxgloveServerCallbacks {
                 std::ptr::null()
             };
 
-            let c_client = FoxgloveClient {
+            let c_client = FoxgloveClientMetadata {
                 id: client.id().into(),
                 sink_id: sink_id_ptr,
             };
