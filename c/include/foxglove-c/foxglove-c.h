@@ -2451,6 +2451,16 @@ foxglove_error foxglove_channel_log_grid(const struct foxglove_channel *channel,
                                          const uint64_t *log_time);
 
 /**
+ * Log a Grid3D message to a channel.
+ *
+ * # Safety
+ * The channel must have been created for this type with foxglove_channel_create_grid.
+ */
+foxglove_error foxglove_channel_log_grid3_d(const struct foxglove_channel *channel,
+                                         const struct foxglove_grid_3d *msg,
+                                         const uint64_t *log_time);
+
+/**
  * Create a new typed channel, and return an owned raw channel pointer to it.
  *
  * # Safety
