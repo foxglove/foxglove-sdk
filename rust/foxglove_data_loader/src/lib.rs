@@ -81,12 +81,11 @@ macro_rules! export {
 
 use anyhow::anyhow;
 use std::collections::HashMap;
-use std::fmt::{Display, Formatter};
 use std::{cell::RefCell, rc::Rc};
 
 pub use generated::exports::foxglove::loader::loader::{
     self, BackfillArgs, Channel, ChannelId, DataLoaderArgs, Message, MessageIteratorArgs, Schema,
-    SchemaId, TimeRange,
+    SchemaId, Severity, TimeRange,
 };
 
 pub use generated::foxglove::loader::console;
@@ -123,27 +122,11 @@ impl std::io::Seek for reader::Reader {
 #[derive(Clone, Debug)]
 pub struct Problem(loader::Problem);
 
-pub enum Severity {
-    Error,
-    Info,
-    Warn,
-}
-
-impl Display for Severity {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.write_str(match self {
-            Self::Error => "error",
-            Self::Warn => "warn",
-            Self::Info => "info",
-        })
-    }
-}
-
 impl Problem {
     /// Create a new [`Problem`] with the provided [`Severity`] and message.
     pub fn new(severity: Severity, message: impl Into<String>) -> Self {
         Self(loader::Problem {
-            severity: severity.to_string(),
+            severity,
             message: message.into(),
             tip: None,
         })

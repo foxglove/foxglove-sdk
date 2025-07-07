@@ -33,9 +33,15 @@ interface loader {
     type schema-id = u16;
     type error = string;
 
+    enum severity {
+        info,
+        error,
+        warn
+    }
+
     record problem {
         // The severity of the problem. Currently "error", "warn" and "info" are supported.
-        severity: string,
+        severity: severity,
         // The problem that occurred.
         message: string,
         // Optional context that can be  displayed to the user along side the problem.
