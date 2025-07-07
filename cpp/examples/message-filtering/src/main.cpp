@@ -16,6 +16,7 @@
 
 #include <atomic>
 #include <chrono>
+#include <cmath>
 #include <csignal>
 #include <functional>
 #include <iostream>
@@ -77,44 +78,42 @@ PointCloud make_point_cloud(const std::chrono::duration<double>& elapsed) {
 
   // https://docs.foxglove.dev/docs/visualization/message-schemas/packed-element-field
   std::vector<PackedElementField> fields = {
-    {
-      .name = "x",
-      .offset = 0,
-      .type = PackedElementField::NumericType::FLOAT32,
+    PackedElementField{
+      "x",
+      0,
+      PackedElementField::NumericType::FLOAT32,
     },
-    {
-      .name = "y",
-      .offset = 4,
-      .type = PackedElementField::NumericType::FLOAT32,
+    PackedElementField{
+      "y",
+      4,
+      PackedElementField::NumericType::FLOAT32,
     },
-    {
-      .name = "z",
-      .offset = 8,
-      .type = PackedElementField::NumericType::FLOAT32,
+    PackedElementField{
+      "z",
+      8,
+      PackedElementField::NumericType::FLOAT32,
     },
-    {
-      .name = "rgba",
-      .offset = 12,
-      .type = PackedElementField::NumericType::UINT32,
+    PackedElementField{
+      "rgba",
+      12,
+      PackedElementField::NumericType::UINT32,
     },
   };
 
   PointCloud point_cloud;
   point_cloud.frame_id = "points";
   point_cloud.pose = Pose{
-    .position =
-      Vector3{
-        .x = 0.0,
-        .y = 0.0,
-        .z = 0.0,
-      },
-    .orientation =
-      Quaternion{
-        .x = 0.0,
-        .y = 0.0,
-        .z = 0.0,
-        .w = 1.0,
-      },
+    Vector3{
+      0.0,
+      0.0,
+      0.0,
+    },
+    Quaternion{
+      0.0,
+      0.0,
+      0.0,
+      1.0,
+    },
   };
   point_cloud.point_stride = 16;  // 4 fields * 4 bytes
   point_cloud.fields = std::move(fields);
@@ -228,17 +227,15 @@ int main() {
   const auto start = std::chrono::system_clock::now();
 
   // Create a static transform for the point cloud
-  foxglove::schemas::FrameTransforms cloud_tf;
-  cloud_tf.transforms = {foxglove::schemas::FrameTransform{
-    .parent_frame_id = "world",
-    .child_frame_id = "points",
-    .translation =
-      foxglove::schemas::Vector3{
-        .x = -10.0,
-        .y = -10.0,
-        .z = 0.0,
-      }
-  }};
+  foxglove::schemas::FrameTransform tf;
+  tf.parent_frame_id = "world";
+  tf.child_frame_id = "points";
+  tf.translation = foxglove::schemas::Vector3{
+    -10.0,
+    -10.0,
+    0.0,
+  };
+  foxglove::schemas::FrameTransforms point_cloud_tf{{ tf }};
 
   while (!done) {
     const auto now = std::chrono::system_clock::now();
@@ -256,7 +253,7 @@ int main() {
     // Generate and log point cloud
     const auto point_cloud = make_point_cloud(std::chrono::duration<double>(elapsed));
     point_cloud_channel.log(point_cloud, timestamp);
-    point_cloud_tf_channel.log(cloud_tf, timestamp);
+    point_cloud_tf_channel.log(point_cloud_tf, timestamp);
 
     std::this_thread::sleep_for(33ms);
   }
