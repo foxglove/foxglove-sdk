@@ -14,7 +14,7 @@ class BaseChannel:
         topic: str,
         message_encoding: str,
         schema: Optional["Schema"] = None,
-        metadata: Optional[List[Tuple[str, str]]] = None,
+        metadata: Optional[Dict[str, str]] = None,
     ) -> "BaseChannel": ...
     def id(self) -> int:
         """The unique ID of the channel"""

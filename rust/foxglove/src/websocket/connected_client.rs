@@ -1,4 +1,5 @@
 use std::collections::hash_map::Entry;
+use std::collections::HashSet;
 use std::sync::Weak;
 use std::{collections::HashMap, net::SocketAddr, sync::Arc};
 
@@ -282,8 +283,8 @@ impl ConnectedClient {
         let client_channel = {
             let advertised_channels = self.advertised_channels.lock();
             let Some(channel) = advertised_channels.get(&channel_id) else {
-                tracing::error!("Received message for unknown channel: {}", channel_id);
-                self.send_error(format!("Unknown channel ID: {}", channel_id));
+                tracing::error!("Received message for unknown channel: {channel_id}");
+                self.send_error(format!("Unknown channel ID: {channel_id}"));
                 // Do not forward to server listener
                 return;
             };
@@ -312,8 +313,7 @@ impl ConnectedClient {
                     // Remove the channel ID from the list so we don't invoke the on_client_unadvertise callback
                     channel_ids.swap_remove(i);
                     self.send_warning(format!(
-                        "Client is not advertising channel: {}; ignoring unadvertisement",
-                        id
+                        "Client is not advertising channel: {id}; ignoring unadvertisement"
                     ));
                     continue;
                 };
@@ -692,25 +692,34 @@ impl ConnectedClient {
             return;
         }
 
-        self.channels
-            .write()
-            .extend(channels.iter().map(|&c| (c.id(), c.clone())));
-
         if self.send_control_msg(&message) {
-            for channel in channels {
+            let advertised_ids = message
+                .channels
+                .iter()
+                .map(|c| c.id)
+                .collect::<HashSet<_>>();
+            let mut advertised_channels = self.channels.write();
+            for &channel in channels {
+                if !advertised_ids.contains(&channel.id().into()) {
+                    continue;
+                }
+
                 tracing::debug!(
                     "Advertised channel {} with id {} to client {}",
                     channel.topic(),
                     channel.id(),
                     self.addr
                 );
+                advertised_channels.insert(channel.id(), channel.clone());
             }
         }
     }
 
     /// Unadvertises a channel to the client.
     fn unadvertise_channel(&self, channel_id: ChannelId) {
-        self.channels.write().remove(&channel_id);
+        if self.channels.write().remove(&channel_id).is_none() {
+            return;
+        }
 
         let message = Unadvertise::new([channel_id.into()]);
 

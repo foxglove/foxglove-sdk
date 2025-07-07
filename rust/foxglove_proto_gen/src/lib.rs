@@ -192,7 +192,7 @@ pub fn generate_protos(proto_path: &Path, out_dir: &Path) -> anyhow::Result<()> 
 
     if let Err(err) = fs::create_dir(out_dir) {
         if err.kind() != io::ErrorKind::AlreadyExists {
-            panic!("Failed to create directory: {}", err);
+            panic!("Failed to create directory: {err}");
         }
     }
 
@@ -208,7 +208,7 @@ pub fn generate_protos(proto_path: &Path, out_dir: &Path) -> anyhow::Result<()> 
     }
 
     let mut config = prost_build::Config::new();
-    config.message_attribute(".", format!("/// {}", DOC_REF));
+    config.message_attribute(".", format!("/// {DOC_REF}"));
     config.extern_path(".google.protobuf.Duration", "crate::schemas::Duration");
     config.extern_path(".google.protobuf.Timestamp", "crate::schemas::Timestamp");
     config.out_dir(out_dir);

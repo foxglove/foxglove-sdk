@@ -30,8 +30,6 @@ clean:
 .PHONY: build
 build:
 	cmake \
-		-DCMAKE_C_COMPILER=clang \
-		-DCMAKE_CXX_COMPILER=clang++ \
 		-DCMAKE_BUILD_TYPE=RelWithDebInfo \
 		-DCMAKE_EXPORT_COMPILE_COMMANDS=true \
 		$(if $(SANITIZE),-DSANITIZE=$(SANITIZE) -DRust_TOOLCHAIN=nightly) \
@@ -52,7 +50,7 @@ clean-docs:
 	rm -rf ./foxglove/docs/generated
 	rm -rf $(BUILD_DIR)/docs
 
-$(BUILD_DIR)/docs/html:
+$(BUILD_DIR)/docs/html: clean-docs
 	cmake -B $(BUILD_DIR)
 	cmake --build $(BUILD_DIR) --target doxygen
 	cmake --build $(BUILD_DIR) --target html-docs

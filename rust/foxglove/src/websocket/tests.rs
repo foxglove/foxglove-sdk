@@ -167,7 +167,7 @@ async fn test_handshake_with_multiple_subprotocols() {
         .expect("Failed to build request");
 
     let mut req1 = request.clone();
-    let header = format!("{}, foxglove.sdk.v2", SUBPROTOCOL);
+    let header = format!("{SUBPROTOCOL}, foxglove.sdk.v2");
     req1.headers_mut().insert(
         "sec-websocket-protocol",
         HeaderValue::from_str(&header).unwrap(),
@@ -184,7 +184,7 @@ async fn test_handshake_with_multiple_subprotocols() {
 
     // In req2, the client's preferred (initial) subprotocol is not valid
     let mut req2 = request.clone();
-    let header = format!("unknown, {}, another", SUBPROTOCOL);
+    let header = format!("unknown, {SUBPROTOCOL}, another");
     req2.headers_mut().insert(
         "sec-websocket-protocol",
         HeaderValue::from_str(&header).unwrap(),
@@ -221,16 +221,26 @@ async fn test_advertise_to_client() {
         .await
         .expect("Failed to start server");
 
+    let ch = new_channel("/foo", &ctx);
+
+    // Create a channel that requires a schema, but doesn't have one. This won't be advertised.
+    let ch2 = ChannelBuilder::new("/bar")
+        .message_encoding("flatbuffer")
+        .context(&ctx)
+        .build_raw()
+        .expect("Failed to create channel");
+
     let mut client = WebSocketClient::connect(addr).await;
     expect_recv!(client, ServerMessage::ServerInfo);
 
-    let ch = new_channel("/foo", &ctx);
-    ch.log(b"foo bar");
-
     let msg = expect_recv!(client, ServerMessage::Advertise);
-    let adv_ch = msg.channels.first().expect("not empty");
+    assert_eq!(msg.channels.len(), 1);
+    let adv_ch = &msg.channels[0];
     assert_eq!(adv_ch.id, u64::from(ch.id()));
     assert_eq!(adv_ch.topic, ch.topic());
+
+    ch.log(b"foo bar");
+    ch2.log(b"{\"a\":1}");
 
     let subscription_id = 42;
     let subscribe_msg = Subscribe::new([Subscription {
@@ -262,6 +272,17 @@ async fn test_advertise_to_client() {
             ch.id(),
         ))
     );
+
+    // Remove the channels
+    ctx.remove_channel(ch.id());
+    ctx.remove_channel(ch2.id());
+
+    // Ensure we get an unadvertise message only for the first channel
+    let msg = expect_recv!(client, ServerMessage::Unadvertise);
+    assert_eq!(msg.channel_ids.len(), 1);
+    assert_eq!(msg.channel_ids[0], u64::from(ch.id()));
+
+    assert!(client.recv().now_or_never().is_none());
 
     let _ = server.stop();
 }
@@ -1365,7 +1386,7 @@ async fn test_slow_client() {
 
     // Publish more status messages than the client can handle
     for i in 0..50 {
-        let status = Status::error(format!("msg{}", i));
+        let status = Status::error(format!("msg{i}"));
         server.publish_status(status);
     }
 

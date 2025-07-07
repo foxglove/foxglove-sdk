@@ -61,7 +61,7 @@ fn test_struct_field_serialization() {
     let deserialized_message = DynamicMessage::decode(message_descriptor.clone(), buf.as_ref())
         .expect("Failed to deserialize");
 
-    println!("Message: {:#?}", deserialized_message);
+    println!("Message: {deserialized_message:#?}");
 
     // Get the inner field descriptor
     let inner_field_desc = message_descriptor
@@ -73,7 +73,7 @@ fn test_struct_field_serialization() {
 
     // Get the inner message value
     let inner_value = deserialized_message.get_field(&inner_field_desc);
-    println!("Inner field value: {:?}", inner_value);
+    println!("Inner field value: {inner_value:?}");
 
     // Get and verify the inner message
     let inner_message = inner_value.as_message().expect("Expected a message");
@@ -363,7 +363,7 @@ fn test_repeated_struct_serialization() {
     for (field_name, expected_value) in fields {
         let field = message_descriptor
             .get_field_by_name(field_name)
-            .unwrap_or_else(|| panic!("Field '{}' not found", field_name));
+            .unwrap_or_else(|| panic!("Field '{field_name}' not found"));
 
         let field = deserialized_message.get_field(&field);
         let inner_msg = field.as_message().expect("Expected a message");
