@@ -449,7 +449,9 @@ typedef struct foxglove_server_callbacks {
   void (*on_subscribe)(const void *context,
                        uint64_t channel_id,
                        const struct foxglove_client_metadata *client);
-  void (*on_unsubscribe)(const void *context, uint64_t channel_id, uint32_t client_id);
+  void (*on_unsubscribe)(const void *context,
+                         uint64_t channel_id,
+                         const struct foxglove_client_metadata *client);
   void (*on_client_advertise)(const void *context,
                               uint32_t client_id,
                               const struct foxglove_client_channel *channel);

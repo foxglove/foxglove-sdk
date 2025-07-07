@@ -302,6 +302,38 @@ pub struct FoxgloveClientMetadata {
     pub sink_id: *const FoxgloveSinkId, // NULL means no sink_id
 }
 
+impl From<foxglove::websocket::Client> for FoxgloveClientMetadata {
+    fn from(client: foxglove::websocket::Client) -> Self {
+        // Convert the Rust SinkId to the C SinkId type. If it doesn't have a value,
+        // we use a null pointer.
+        //
+        // REVIEW: Is there a more idiomatic way to do this when binding Rust code?
+        // I'm looking for a way to bind an optional value to pass into a C-bound struct.
+        // I'm currently using a pointer for this since that's what I'm used to,
+        // but could also be convinced creating a new struct that replicates Optional would be better.
+        // Futzing with creating a Box, casting to a raw pointer, then dropping feels like overkill,
+        // but it's the best thing I could think up that isn't either a memory leak or a dangling reference.
+        let sink_id: *const FoxgloveSinkId = if let Some(sink_id) = client.sink_id() {
+            Box::into_raw(Box::new(sink_id.into()))
+        } else {
+            std::ptr::null()
+        };
+
+        Self {
+            id: client.id().into(),
+            sink_id,
+        }
+    }
+}
+
+impl Drop for FoxgloveClientMetadata {
+    fn drop(&mut self) {
+        if !self.sink_id.is_null() {
+            drop(unsafe { Box::from_raw(self.sink_id as *mut u64) });
+        }
+    }
+}
+
 #[repr(C)]
 #[derive(Clone)]
 pub struct FoxgloveServerCallbacks {
@@ -314,8 +346,13 @@ pub struct FoxgloveServerCallbacks {
             client: *const FoxgloveClientMetadata,
         ),
     >,
-    pub on_unsubscribe:
-        Option<unsafe extern "C" fn(context: *const c_void, channel_id: u64, client_id: u32)>,
+    pub on_unsubscribe: Option<
+        unsafe extern "C" fn(
+            context: *const c_void,
+            channel_id: u64,
+            client: *const FoxgloveClientMetadata,
+        ),
+    >,
     pub on_client_advertise: Option<
         unsafe extern "C" fn(
             context: *const c_void,
@@ -1385,47 +1422,20 @@ impl foxglove::websocket::ServerListener for FoxgloveServerCallbacks {
         client: foxglove::websocket::Client,
         channel: foxglove::websocket::ChannelView,
     ) {
-        // Convert the Rust SinkId to the C SinkId type. If it doesn't have a value,
-        // we use a null pointer.
-        //
-        // REVIEW: Is there a more idiomatic way to do this when binding Rust code?
-        // I'm looking for a way to bind an optional value to pass into a C-bound struct.
-        // I'm currently using a pointer for this since that's what I'm used to,
-        // but could also be convinced creating a new struct that replicates Optional would be better.
-        // Futzing with creating a Box, casting to a raw pointer, then dropping feels like overkill,
-        // but it's the best thing I could think up that isn't either a memory leak or a dangling reference.
         if let Some(on_subscribe) = self.on_subscribe {
-            // Get the sink_id from the client - it's an Option<SinkId>
-            let sink_id = client.sink_id();
-
-            // Create a Box<u64> for the sink_id if it exists, otherwise use null
-            let sink_id_ptr = if let Some(sink_id) = sink_id {
-                Box::into_raw(Box::new(sink_id.into()))
-            } else {
-                std::ptr::null()
-            };
-
-            let c_client = FoxgloveClientMetadata {
-                id: client.id().into(),
-                sink_id: sink_id_ptr,
-            };
-
+            let c_client = client.into();
             unsafe { on_subscribe(self.context, channel.id().into(), &raw const c_client) };
-
-            // Clean up the boxed sink_id if it exists
-            if !sink_id_ptr.is_null() {
-                drop(unsafe { Box::from_raw(sink_id_ptr as *mut u64) });
-            }
         }
     }
 
     fn on_unsubscribe(
         &self,
-        _client: foxglove::websocket::Client,
+        client: foxglove::websocket::Client,
         channel: foxglove::websocket::ChannelView,
     ) {
         if let Some(on_unsubscribe) = self.on_unsubscribe {
-            unsafe { on_unsubscribe(self.context, channel.id().into(), _client.id().into()) };
+            let c_client = client.into();
+            unsafe { on_unsubscribe(self.context, channel.id().into(), &raw const c_client) };
         }
     }
 

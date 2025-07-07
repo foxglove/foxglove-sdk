@@ -34,9 +34,10 @@ int main() {
   options.callbacks.onSubscribe = [](uint64_t channel_id, const foxglove::ClientMetadata& client) {
     std::cerr << "Client " << client.id << " subscribed to channel " << channel_id << '\n';
   };
-  options.callbacks.onUnsubscribe = [](uint64_t channel_id, uint32_t client_id) {
-    std::cerr << "Client " << client_id << " unsubscribed from channel " << channel_id << '\n';
-  };
+  options.callbacks.onUnsubscribe =
+    [](uint64_t channel_id, const foxglove::ClientMetadata& client) {
+      std::cerr << "Client " << client.id << " unsubscribed from channel " << channel_id << '\n';
+    };
   options.callbacks.onClientAdvertise = [](
                                           uint32_t client_id, const foxglove::ClientChannel& channel
                                         ) {
