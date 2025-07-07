@@ -298,6 +298,31 @@ class Grid:
         """Returns the Grid schema"""
         ...
 
+class Grid3D:
+    """
+    A 3D grid of data
+    """
+
+    def __new__(
+        cls,
+        *,
+        timestamp: "Optional[Timestamp]" = None,
+        frame_id: "Optional[str]" = "",
+        pose: "Optional[Pose]" = None,
+        row_count: "Optional[int]" = 0,
+        column_count: "Optional[int]" = 0,
+        cell_size: "Optional[Vector3]" = None,
+        slice_stride: "Optional[int]" = 0,
+        row_stride: "Optional[int]" = 0,
+        cell_stride: "Optional[int]" = 0,
+        fields: "Optional[List[PackedElementField]]" = [],
+        data: "Optional[bytes]" = b"",
+    ) -> "Grid3D": ...
+    @staticmethod
+    def get_schema() -> Schema:
+        """Returns the Grid3D schema"""
+        ...
+
 class ImageAnnotations:
     """
     Array of annotations for a 2D image

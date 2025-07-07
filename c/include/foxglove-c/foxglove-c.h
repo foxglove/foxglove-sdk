@@ -1131,6 +1131,58 @@ typedef struct foxglove_grid {
 } foxglove_grid;
 
 /**
+ * A 3D grid of data
+ */
+typedef struct foxglove_grid_3d {
+  /**
+   * Timestamp of grid
+   */
+  const struct foxglove_timestamp *timestamp;
+  /**
+   * Frame of reference
+   */
+  struct foxglove_string frame_id;
+  /**
+   * Origin of grid's corner relative to frame of reference; grid is positioned in the x-y plane relative to this origin
+   */
+  const struct foxglove_pose *pose;
+  /**
+   * Number of grid rows
+   */
+  uint32_t row_count;
+  /**
+   * Number of grid columns
+   */
+  uint32_t column_count;
+  /**
+   * Size of single grid cell along x, y, and z axes, relative to `pose`
+   */
+  const struct foxglove_vector3 *cell_size;
+  /**
+   * Number of bytes between depth slices in `data`
+   */
+  uint32_t slice_stride;
+  /**
+   * Number of bytes between rows in `data`
+   */
+  uint32_t row_stride;
+  /**
+   * Number of bytes between cells within a row in `data`
+   */
+  uint32_t cell_stride;
+  /**
+   * Fields in `data`. `red`, `green`, `blue`, and `alpha` are optional for customizing the grid's color.
+   */
+  const struct foxglove_packed_element_field *fields;
+  size_t fields_count;
+  /**
+   * Grid cell data, interpreted using `fields`, in depth-major row-major (Z-Y-X) order — values fill each row from left to right along the X axis, with rows ordered from top to bottom along the Y axis, starting at the bottom-left corner when viewed from +Z looking towards -Z with identity orientations
+   */
+  const unsigned char *data;
+  size_t data_len;
+} foxglove_grid_3d;
+
+/**
  * An array of points on a 2D image
  */
 typedef struct foxglove_points_annotation {

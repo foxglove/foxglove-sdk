@@ -434,6 +434,47 @@ struct Grid {
   std::vector<std::byte> data;
 };
 
+/// @brief A 3D grid of data
+struct Grid3D {
+  /// @brief Timestamp of grid
+  std::optional<foxglove::Timestamp> timestamp;
+
+  /// @brief Frame of reference
+  std::string frame_id;
+
+  /// @brief Origin of grid's corner relative to frame of reference; grid is positioned in the x-y
+  /// plane relative to this origin
+  std::optional<Pose> pose;
+
+  /// @brief Number of grid rows
+  uint32_t row_count = 0;
+
+  /// @brief Number of grid columns
+  uint32_t column_count = 0;
+
+  /// @brief Size of single grid cell along x and y axes, relative to `pose`
+  std::optional<Vector3> cell_size;
+
+  /// @brief Number of bytes between depth slices in `data`
+  uint32_t slice_stride = 0;
+
+  /// @brief Number of bytes between rows in `data`
+  uint32_t row_stride = 0;
+
+  /// @brief Number of bytes between cells within a row in `data`
+  uint32_t cell_stride = 0;
+
+  /// @brief Fields in `data`. `red`, `green`, `blue`, and `alpha` are optional for customizing the
+  /// grid's color.
+  std::vector<PackedElementField> fields;
+
+  /// @brief Grid cell data, interpreted using `fields`, in row-major (y-major) order — values fill
+  /// each row from left to right along the X axis, with rows ordered from top to bottom along the Y
+  /// axis, starting at the bottom-left corner when viewed from +Z looking towards -Z with identity
+  /// orientations
+  std::vector<std::byte> data;
+};
+
 /// @brief An array of points on a 2D image
 struct PointsAnnotation {
   /// @brief Type of points annotation

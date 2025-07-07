@@ -142,50 +142,50 @@ impl From<ArrowPrimitive> for foxglove::schemas::ArrowPrimitive {
 /// :param width: Image width
 /// :param height: Image height
 /// :param distortion_model: Name of distortion model
-///     
+///
 ///     Supported parameters: `plumb_bob` (k1, k2, p1, p2, k3), `rational_polynomial` (k1, k2, p1, p2, k3, k4, k5, k6), and `kannala_brandt` (k1, k2, k3, k4). `plumb_bob` and `rational_polynomial` models are based on the pinhole model `OpenCV's <https://docs.opencv.org/4.11.0/d9/d0c/group__calib3d.html>`__ `pinhole camera model <https://en.wikipedia.org/wiki/Distortion_%28optics%29#Software_correction>`__. The `kannala_brandt` model is matches the `OpenvCV fisheye <https://docs.opencv.org/4.11.0/db/d58/group__calib3d__fisheye.html>`__ model.
 /// :param D: Distortion parameters
 /// :param K: Intrinsic camera matrix (3x3 row-major matrix)
-///     
+///
 ///     A 3x3 row-major matrix for the raw (distorted) image.
-///     
+///
 ///     Projects 3D points in the camera coordinate frame to 2D pixel coordinates using the focal lengths (fx, fy) and principal point (cx, cy).
-///     
+///
 ///     ::
 ///
 ///             [fx  0 cx]
 ///         K = [ 0 fy cy]
 ///             [ 0  0  1]
-///     
+///
 /// :param R: Rectification matrix (stereo cameras only, 3x3 row-major matrix)
-///     
+///
 ///     A rotation matrix aligning the camera coordinate system to the ideal stereo image plane so that epipolar lines in both stereo images are parallel.
 /// :param P: Projection/camera matrix (3x4 row-major matrix)
-///     
+///
 ///     ::
 ///
 ///             [fx'  0  cx' Tx]
 ///         P = [ 0  fy' cy' Ty]
 ///             [ 0   0   1   0]
-///     
+///
 ///     By convention, this matrix specifies the intrinsic (camera) matrix of the processed (rectified) image. That is, the left 3x3 portion is the normal camera intrinsic matrix for the rectified image.
-///     
+///
 ///     It projects 3D points in the camera coordinate frame to 2D pixel coordinates using the focal lengths (fx', fy') and principal point (cx', cy') - these may differ from the values in K.
-///     
+///
 ///     For monocular cameras, Tx = Ty = 0. Normally, monocular cameras will also have R = the identity and P[1:3,1:3] = K.
-///     
+///
 ///     For a stereo pair, the fourth column [Tx Ty 0]' is related to the position of the optical center of the second camera in the first camera's frame. We assume Tz = 0 so both cameras are in the same stereo image plane. The first camera always has Tx = Ty = 0. For the right (second) camera of a horizontal stereo pair, Ty = 0 and Tx = -fx' * B, where B is the baseline between the cameras.
-///     
+///
 ///     Given a 3D point [X Y Z]', the projection (x, y) of the point onto the rectified image is given by:
-///     
+///
 ///     ::
 ///
 ///         [u v w]' = P * [X Y Z 1]'
 ///                x = u / w
 ///                y = v / w
-///     
+///
 ///     This holds for both images of a stereo pair.
-///     
+///
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/camera-calibration
 #[pyclass(module = "foxglove.schemas")]
@@ -351,7 +351,7 @@ impl From<Color> for foxglove::schemas::Color {
 /// :param frame_id: Frame of reference for the image. The origin of the frame is the optical center of the camera. +x points to the right in the image, +y points down, and +z points into the plane of the image.
 /// :param data: Compressed image data
 /// :param format: Image format
-///     
+///
 ///     Supported values: `jpeg`, `png`, `webp`, `avif`
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/compressed-image
@@ -402,35 +402,35 @@ impl From<CompressedImage> for foxglove::schemas::CompressedImage {
 ///
 /// :param timestamp: Timestamp of video frame
 /// :param frame_id: Frame of reference for the video.
-///     
+///
 ///     The origin of the frame is the optical center of the camera. +x points to the right in the video, +y points down, and +z points into the plane of the video.
 /// :param data: Compressed video frame data.
-///     
+///
 ///     For packet-based video codecs this data must begin and end on packet boundaries (no partial packets), and must contain enough video packets to decode exactly one image (either a keyframe or delta frame). Note: Foxglove does not support video streams that include B frames because they require lookahead.
-///     
+///
 ///     Specifically, the requirements for different `format` values are:
-///     
+///
 ///     - `h264`
 ///       - Use Annex B formatted data
 ///       - Each CompressedVideo message should contain enough NAL units to decode exactly one video frame
 ///       - Each message containing a key frame (IDR) must also include a SPS NAL unit
-///     
+///
 ///     - `h265` (HEVC)
 ///       - Use Annex B formatted data
 ///       - Each CompressedVideo message should contain enough NAL units to decode exactly one video frame
 ///       - Each message containing a key frame (IRAP) must also include relevant VPS/SPS/PPS NAL units
-///     
+///
 ///     - `vp9`
 ///       - Each CompressedVideo message should contain exactly one video frame
-///     
+///
 ///     - `av1`
 ///       - Use the "Low overhead bitstream format" (section 5.2)
 ///       - Each CompressedVideo message should contain enough OBUs to decode exactly one video frame
 ///       - Each message containing a key frame must also include a Sequence Header OBU
 /// :param format: Video format.
-///     
+///
 ///     Supported values: `h264`, `h265`, `vp9`, `av1`.
-///     
+///
 ///     Note: compressed video support is subject to hardware limitations and patent licensing, so not all encodings may be supported on all platforms. See more about `H.265 support <https://caniuse.com/hevc>`__, `VP9 support <https://caniuse.com/webm>`__, and `AV1 support <https://caniuse.com/av1>`__.
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/compressed-video
@@ -769,6 +769,86 @@ impl From<Grid> for foxglove::schemas::Grid {
     }
 }
 
+/// A 3D grid of data
+///
+/// :param timestamp: Timestamp of grid
+/// :param frame_id: Frame of reference
+/// :param pose: Origin of grid's corner relative to frame of reference; grid is positioned in the x-y plane relative to this origin
+/// :param row_count: Number of grid rows
+/// :param column_count: Number of grid columns
+/// :param cell_size: Size of single grid cell along x, y, and z axes, relative to `pose`
+/// :param slice_stride: Number of bytes between depth slices in `data`
+/// :param row_stride: Number of bytes between rows in `data`
+/// :param cell_stride: Number of bytes between cells within a row in `data`
+/// :param fields: Fields in `data`. `red`, `green`, `blue`, and `alpha` are optional for customizing the grid's color.
+/// :param data: Grid cell data, interpreted using `fields`; in depth-major, row-major (Z-Y-X) order — values fill each row from left to right along the X axis, with rows ordered from top to bottom along the Y axis, starting at the bottom-left corner when viewed from +Z looking towards -Z with identity orientations
+///
+/// See https://docs.foxglove.dev/docs/visualization/message-schemas/grid-3-d
+#[pyclass(module = "foxglove.schemas")]
+#[derive(Clone)]
+pub(crate) struct Grid3D(pub(crate) foxglove::schemas::Grid3D);
+#[pymethods]
+impl Grid3D {
+    #[new]
+    #[pyo3(signature = (*, timestamp=None, frame_id="".to_string(), pose=None, row_count=0, column_count=0, cell_size=None, slice_stride=0, row_stride=0, cell_stride=0, fields=vec![], data=None) )]
+    fn new(
+        timestamp: Option<Timestamp>,
+        frame_id: String,
+        pose: Option<Pose>,
+        row_count: u32,
+        column_count: u32,
+        cell_size: Option<Vector3>,
+        slice_stride: u32,
+        row_stride: u32,
+        cell_stride: u32,
+        fields: Vec<PackedElementField>,
+        data: Option<Bound<'_, PyBytes>>,
+    ) -> Self {
+        Self(foxglove::schemas::Grid3D {
+            timestamp: timestamp.map(Into::into),
+            frame_id,
+            pose: pose.map(Into::into),
+            row_count,
+            column_count,
+            cell_size: cell_size.map(Into::into),
+            slice_stride,
+            row_stride,
+            cell_stride,
+            fields: fields.into_iter().map(|x| x.into()).collect(),
+            data: data
+                .map(|x| Bytes::copy_from_slice(x.as_bytes()))
+                .unwrap_or_default(),
+        })
+    }
+    fn __repr__(&self) -> String {
+        format!(
+            "Grid3D(timestamp={:?}, frame_id={:?}, pose={:?}, row_count={:?}, column_count={:?}, cell_size={:?}, slice_stride={:?}, row_stride={:?}, cell_stride={:?}, fields={:?}, data={:?})",
+            self.0.timestamp,
+            self.0.frame_id,
+            self.0.pose,
+            self.0.row_count,
+            self.0.column_count,
+            self.0.cell_size,
+            self.0.slice_stride,
+            self.0.row_stride,
+            self.0.cell_stride,
+            self.0.fields,
+            self.0.data,
+        )
+    }
+    /// Returns the Grid3D schema.
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::Grid3D::get_schema().unwrap().into()
+    }
+}
+
+impl From<Grid3D> for foxglove::schemas::Grid3D {
+    fn from(value: Grid3D) -> Self {
+        value.0
+    }
+}
+
 /// Array of annotations for a 2D image
 ///
 /// :param circles: Circle annotations
@@ -924,7 +1004,7 @@ impl From<LaserScan> for foxglove::schemas::LaserScan {
 /// :param color: Solid color to use for the whole line. One of `color` or `colors` must be provided.
 /// :param colors: Per-point colors (if specified, must have the same length as `points`). One of `color` or `colors` must be provided.
 /// :param indices: Indices into the `points` and `colors` attribute arrays, which can be used to avoid duplicating attribute data.
-///     
+///
 ///     If omitted or empty, indexing will not be used. This default behavior is equivalent to specifying [0, 1, ..., N-1] for the indices (where N is the number of `points` provided).
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/line-primitive
@@ -1790,7 +1870,7 @@ impl From<RawAudio> for foxglove::schemas::RawAudio {
 /// :param width: Image width
 /// :param height: Image height
 /// :param encoding: Encoding of the raw image data
-///     
+///
 ///     Supported values: `8UC1`, `8UC3`, `16UC1` (little endian), `32FC1` (little endian), `bayer_bggr8`, `bayer_gbrg8`, `bayer_grbg8`, `bayer_rggb8`, `bgr8`, `bgra8`, `mono8`, `mono16`, `rgb8`, `rgba8`, `uyvy` or `yuv422`, `yuyv` or `yuv422_yuy2`
 /// :param step: Byte length of a single row
 /// :param data: Raw image data
@@ -2019,7 +2099,7 @@ impl From<TextPrimitive> for foxglove::schemas::TextPrimitive {
 /// :param color: Solid color to use for the whole shape. One of `color` or `colors` must be provided.
 /// :param colors: Per-vertex colors (if specified, must have the same length as `points`). One of `color` or `colors` must be provided.
 /// :param indices: Indices into the `points` and `colors` attribute arrays, which can be used to avoid duplicating attribute data.
-///     
+///
 ///     If omitted or empty, indexing will not be used. This default behavior is equivalent to specifying [0, 1, ..., N-1] for the indices (where N is the number of `points` provided).
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/triangle-list-primitive

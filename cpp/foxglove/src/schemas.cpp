@@ -1224,6 +1224,24 @@ void gridToC(foxglove_grid& dest, const Grid& src, [[maybe_unused]] Arena& arena
   dest.data_len = src.data.size();
 }
 
+void grid3DToC(foxglove_grid& dest, const Grid3D& src, [[maybe_unused]] Arena& arena) {
+  dest.timestamp =
+    src.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*src.timestamp) : nullptr;
+  dest.frame_id = {src.frame_id.data(), src.frame_id.size()};
+  dest.pose = src.pose ? arena.map_one<foxglove_pose>(src.pose.value(), poseToC) : nullptr;
+  dest.row_count = src.row_count;
+  dest.column_count = src.column_count;
+  dest.cell_size =
+    src.cell_size ? reinterpret_cast<const foxglove_vector3*>(&*src.cell_size) : nullptr;
+  dest.slice_stride = src.slice_stride;
+  dest.row_stride = src.row_stride;
+  dest.cell_stride = src.cell_stride;
+  dest.fields = arena.map<foxglove_packed_element_field>(src.fields, packedElementFieldToC);
+  dest.fields_count = src.fields.size();
+  dest.data = reinterpret_cast<const unsigned char*>(src.data.data());
+  dest.data_len = src.data.size();
+}
+
 void imageAnnotationsToC(
   foxglove_image_annotations& dest, const ImageAnnotations& src, [[maybe_unused]] Arena& arena
 ) {
