@@ -29,10 +29,18 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
     callbacks = std::make_unique<WebSocketServerCallbacks>(std::move(options.callbacks));
     c_callbacks.context = callbacks.get();
     if (callbacks->onSubscribe) {
-      c_callbacks.on_subscribe = [](const void* context, uint64_t channel_id, uint32_t client_id) {
+      c_callbacks.on_subscribe = [](
+                                   const void* context,
+                                   uint64_t channel_id,
+                                   const foxglove_client* c_client
+                                 ) {
         try {
-          (static_cast<const WebSocketServerCallbacks*>(context))
-            ->onSubscribe(channel_id, client_id);
+          Client client{
+            c_client->id,
+            c_client->sink_id == nullptr ? std::nullopt
+                                         : std::make_optional<uint64_t>(*c_client->sink_id)
+          };
+          (static_cast<const WebSocketServerCallbacks*>(context))->onSubscribe(channel_id, client);
         } catch (const std::exception& exc) {
           warn() << "onSubscribe callback failed: " << exc.what();
         }

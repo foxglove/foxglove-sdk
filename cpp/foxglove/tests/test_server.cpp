@@ -254,12 +254,12 @@ TEST_CASE("Subscribe and unsubscribe callbacks") {
   std::unique_lock lock{mutex};
 
   foxglove::WebSocketServerCallbacks callbacks;
-  callbacks.onSubscribe = [&](uint64_t channel_id, uint32_t _ [[maybe_unused]]) {
+  callbacks.onSubscribe = [&](uint64_t channel_id, const foxglove::Client& _ [[maybe_unused]]) {
     std::scoped_lock lock{mutex};
     subscribe_calls.push_back(channel_id);
     cv.notify_all();
   };
-  callbacks.onUnsubscribe = [&](uint64_t channel_id, uint32_t _ [[maybe_unused]]) {
+  callbacks.onUnsubscribe = [&](uint64_t channel_id, uint64_t client_id [[maybe_unused]]) {
     std::scoped_lock lock{mutex};
     unsubscribe_calls.push_back(channel_id);
     cv.notify_all();

@@ -293,13 +293,26 @@ pub struct FoxgloveClientChannel {
     pub schema_len: usize,
 }
 
+// TODO: LEFT OFF HERE!
+// This struct doesn't really hold everything from client we might need, increase the level of the bindings here
+#[repr(C)]
+pub struct FoxgloveClient {
+    pub id: u32,
+    pub sink_id: *const FoxgloveSinkId,
+}
+
 #[repr(C)]
 #[derive(Clone)]
 pub struct FoxgloveServerCallbacks {
     /// A user-defined value that will be passed to callback functions
     pub context: *const c_void,
-    pub on_subscribe:
-        Option<unsafe extern "C" fn(context: *const c_void, channel_id: u64, client_id: u32)>,
+    pub on_subscribe: Option<
+        unsafe extern "C" fn(
+            context: *const c_void,
+            channel_id: u64,
+            client: *const FoxgloveClient,
+        ),
+    >,
     pub on_unsubscribe:
         Option<unsafe extern "C" fn(context: *const c_void, channel_id: u64, client_id: u32)>,
     pub on_client_advertise: Option<
@@ -1311,7 +1324,7 @@ pub unsafe extern "C" fn foxglove_channel_log(
     });
 
     // Convert the C sink ID to the Rust SinkId type
-    let rust_sink_id_option = sink_id.map(|id| foxglove::SinkId::from(*id));
+    let rust_sink_id_option = sink_id.map(|id| foxglove::SinkId::new(*id));
     channel.log_with_meta_to_sink(
         unsafe { std::slice::from_raw_parts(data, data_len) },
         foxglove::PartialMetadata {
@@ -1371,8 +1384,20 @@ impl foxglove::websocket::ServerListener for FoxgloveServerCallbacks {
         _client: foxglove::websocket::Client,
         channel: foxglove::websocket::ChannelView,
     ) {
+        // Convert the Rust SinkId to the C SinkId type. If it doesn't have a value,
+        // we use a null pointer.
+        // REVIEW: Is there a more idiomatic way to do this? I'm looking for a way to bind an
+        // optional value to a C construct. I'm currently using a pointer for this since that's
+        // what I'm used to, but could also be convinced that an optional struct would be better.
+        let sink_id = _client.sink_id().map(|id| id.into());
+        let c_sink_id = sink_id.map(|id| Box::into_raw(Box::new(id)));
+
+        let c_client = FoxgloveClient {
+            id: _client.id().into(),
+            sink_id: c_sink_id.unwrap_or(std::ptr::null_mut()),
+        };
         if let Some(on_subscribe) = self.on_subscribe {
-            unsafe { on_subscribe(self.context, channel.id().into(), _client.id().into()) };
+            unsafe { on_subscribe(self.context, channel.id().into(), &c_client) };
         }
     }
 

@@ -10,6 +10,11 @@ use crate::{ChannelId, FoxgloveError, RawChannel};
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct SinkId(u64);
 impl SinkId {
+    /// Returns a new SinkId
+    pub fn new(id: u64) -> Self {
+        Self(id)
+    }
+
     /// Allocates the next sink ID.
     pub fn next() -> Self {
         static NEXT_ID: AtomicU64 = AtomicU64::new(1);
@@ -23,9 +28,10 @@ impl std::fmt::Display for SinkId {
     }
 }
 
-impl From<u64> for SinkId {
-    fn from(id: u64) -> Self {
-        Self(id)
+// Implementation to convert to u64
+impl From<SinkId> for u64 {
+    fn from(id: SinkId) -> Self {
+        id.0
     }
 }
 

@@ -301,6 +301,13 @@ typedef struct foxglove_string {
   size_t len;
 } foxglove_string;
 
+typedef uint64_t FoxgloveSinkId;
+
+typedef struct foxglove_client {
+  uint32_t id;
+  const FoxgloveSinkId *sink_id;
+} foxglove_client;
+
 typedef struct foxglove_client_channel {
   uint32_t id;
   const char *topic;
@@ -439,7 +446,9 @@ typedef struct foxglove_server_callbacks {
    * A user-defined value that will be passed to callback functions
    */
   const void *context;
-  void (*on_subscribe)(const void *context, uint64_t channel_id, uint32_t client_id);
+  void (*on_subscribe)(const void *context,
+                       uint64_t channel_id,
+                       const struct foxglove_client *client);
   void (*on_unsubscribe)(const void *context, uint64_t channel_id, uint32_t client_id);
   void (*on_client_advertise)(const void *context,
                               uint32_t client_id,
@@ -638,8 +647,6 @@ typedef struct foxglove_channel_metadata_iterator {
    */
   size_t index;
 } foxglove_channel_metadata_iterator;
-
-typedef uint64_t FoxgloveSinkId;
 
 /**
  * A vector in 3D space that represents a direction only
