@@ -1329,11 +1329,7 @@ pub unsafe extern "C" fn foxglove_channel_log(
         Arc::from_raw(channel as *const _ as *const foxglove::RawChannel)
     });
 
-    let sink_id = if sink_id == 0 {
-        None
-    } else {
-        Some(foxglove::SinkId::new(sink_id))
-    };
+    let sink_id = std::num::NonZeroU64::new(sink_id).map(foxglove::SinkId::new);
 
     channel.log_with_meta_to_sink(
         unsafe { std::slice::from_raw_parts(data, data_len) },
