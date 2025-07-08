@@ -105,7 +105,7 @@ impl std::io::Seek for reader::Reader {
             }
             std::io::SeekFrom::End(offset) => {
                 let end = reader::Reader::size(self) as i64;
-                reader::Reader::seek(self, (end - offset) as u64);
+                reader::Reader::seek(self, (end + offset) as u64);
             }
             std::io::SeekFrom::Current(offset) => {
                 let pos = reader::Reader::position(self) as i64;
