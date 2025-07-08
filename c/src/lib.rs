@@ -299,39 +299,7 @@ pub struct FoxgloveClientChannel {
 #[repr(C)]
 pub struct FoxgloveClientMetadata {
     pub id: u32,
-    pub sink_id: *const FoxgloveSinkId, // NULL means no sink_id
-}
-
-impl From<foxglove::websocket::Client> for FoxgloveClientMetadata {
-    fn from(client: foxglove::websocket::Client) -> Self {
-        // Convert the Rust SinkId to the C SinkId type. If it doesn't have a value,
-        // we use a null pointer.
-        //
-        // REVIEW: Is there a more idiomatic way to do this when binding Rust code?
-        // I'm looking for a way to bind an optional value to pass into a C-bound struct.
-        // I'm currently using a pointer for this since that's what I'm used to,
-        // but could also be convinced creating a new struct that replicates Optional would be better.
-        // Futzing with creating a Box, casting to a raw pointer, then dropping feels like overkill,
-        // but it's the best thing I could think up that isn't either a memory leak or a dangling reference.
-        let sink_id: *const FoxgloveSinkId = if let Some(sink_id) = client.sink_id() {
-            Box::into_raw(Box::new(sink_id.into()))
-        } else {
-            std::ptr::null()
-        };
-
-        Self {
-            id: client.id().into(),
-            sink_id,
-        }
-    }
-}
-
-impl Drop for FoxgloveClientMetadata {
-    fn drop(&mut self) {
-        if !self.sink_id.is_null() {
-            drop(unsafe { Box::from_raw(self.sink_id as *mut u64) });
-        }
-    }
+    pub sink_id: FoxgloveSinkId,
 }
 
 #[repr(C)]
@@ -343,14 +311,14 @@ pub struct FoxgloveServerCallbacks {
         unsafe extern "C" fn(
             context: *const c_void,
             channel_id: u64,
-            client: *const FoxgloveClientMetadata,
+            client: FoxgloveClientMetadata,
         ),
     >,
     pub on_unsubscribe: Option<
         unsafe extern "C" fn(
             context: *const c_void,
             channel_id: u64,
-            client: *const FoxgloveClientMetadata,
+            client: FoxgloveClientMetadata,
         ),
     >,
     pub on_client_advertise: Option<
@@ -1328,7 +1296,7 @@ pub unsafe extern "C" fn foxglove_channel_metadata_iter_free(
     }
 }
 
-pub type FoxgloveSinkId = u64;
+type FoxgloveSinkId = u64;
 
 /// Log a message on a channel.
 ///
@@ -1343,7 +1311,7 @@ pub unsafe extern "C" fn foxglove_channel_log(
     data: *const u8,
     data_len: usize,
     log_time: Option<&u64>,
-    sink_id: Option<&FoxgloveSinkId>,
+    sink_id: FoxgloveSinkId,
 ) -> FoxgloveError {
     // An assert might be reasonable under different circumstances, but here
     // we don't want to crash the program using the library, on a robot in the field,
@@ -1361,14 +1329,18 @@ pub unsafe extern "C" fn foxglove_channel_log(
         Arc::from_raw(channel as *const _ as *const foxglove::RawChannel)
     });
 
-    // Convert the C sink ID to the Rust SinkId type
-    let rust_sink_id_option = sink_id.map(|id| foxglove::SinkId::new(*id));
+    let sink_id = if sink_id == 0 {
+        None
+    } else {
+        Some(foxglove::SinkId::new(sink_id))
+    };
+
     channel.log_with_meta_to_sink(
         unsafe { std::slice::from_raw_parts(data, data_len) },
         foxglove::PartialMetadata {
             log_time: log_time.copied(),
         },
-        rust_sink_id_option,
+        sink_id,
     );
     FoxgloveError::Ok
 }
@@ -1423,8 +1395,11 @@ impl foxglove::websocket::ServerListener for FoxgloveServerCallbacks {
         channel: foxglove::websocket::ChannelView,
     ) {
         if let Some(on_subscribe) = self.on_subscribe {
-            let c_client = client.into();
-            unsafe { on_subscribe(self.context, channel.id().into(), &raw const c_client) };
+            let c_client_metadata = FoxgloveClientMetadata {
+                id: client.id().into(),
+                sink_id: client.sink_id().map(|id| id.into()).unwrap_or(0),
+            };
+            unsafe { on_subscribe(self.context, channel.id().into(), c_client_metadata) };
         }
     }
 
@@ -1434,8 +1409,11 @@ impl foxglove::websocket::ServerListener for FoxgloveServerCallbacks {
         channel: foxglove::websocket::ChannelView,
     ) {
         if let Some(on_unsubscribe) = self.on_unsubscribe {
-            let c_client = client.into();
-            unsafe { on_unsubscribe(self.context, channel.id().into(), &raw const c_client) };
+            let c_client_metadata = FoxgloveClientMetadata {
+                id: client.id().into(),
+                sink_id: client.sink_id().map(|id| id.into()).unwrap_or(0),
+            };
+            unsafe { on_unsubscribe(self.context, channel.id().into(), c_client_metadata) };
         }
     }
 

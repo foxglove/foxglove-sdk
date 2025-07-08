@@ -305,7 +305,7 @@ typedef uint64_t FoxgloveSinkId;
 
 typedef struct foxglove_client_metadata {
   uint32_t id;
-  const FoxgloveSinkId *sink_id;
+  FoxgloveSinkId sink_id;
 } foxglove_client_metadata;
 
 typedef struct foxglove_client_channel {
@@ -448,10 +448,10 @@ typedef struct foxglove_server_callbacks {
   const void *context;
   void (*on_subscribe)(const void *context,
                        uint64_t channel_id,
-                       const struct foxglove_client_metadata *client);
+                       struct foxglove_client_metadata client);
   void (*on_unsubscribe)(const void *context,
                          uint64_t channel_id,
-                         const struct foxglove_client_metadata *client);
+                         struct foxglove_client_metadata client);
   void (*on_client_advertise)(const void *context,
                               uint32_t client_id,
                               const struct foxglove_client_channel *channel);
@@ -2144,7 +2144,7 @@ foxglove_error foxglove_channel_log(const struct foxglove_channel *channel,
                                     const uint8_t *data,
                                     size_t data_len,
                                     const uint64_t *log_time,
-                                    const FoxgloveSinkId *sink_id);
+                                    FoxgloveSinkId sink_id);
 
 /**
  * Create a new context. This never fails.

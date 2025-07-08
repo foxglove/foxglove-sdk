@@ -19,7 +19,7 @@ impl SinkId {
     pub fn next() -> Self {
         static NEXT_ID: AtomicU64 = AtomicU64::new(1);
         let id = NEXT_ID.fetch_add(1, Ordering::Relaxed);
-        Self(id)
+        Self::new(id)
     }
 }
 impl std::fmt::Display for SinkId {
@@ -28,7 +28,6 @@ impl std::fmt::Display for SinkId {
     }
 }
 
-// Implementation to convert to u64
 impl From<SinkId> for u64 {
     fn from(id: SinkId) -> Self {
         id.0

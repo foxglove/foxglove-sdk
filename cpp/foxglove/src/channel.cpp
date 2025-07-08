@@ -112,7 +112,7 @@ FoxgloveError RawChannel::log(
     reinterpret_cast<const uint8_t*>(data),
     data_len,
     log_time ? &*log_time : nullptr,
-    sink_id ? &*sink_id : nullptr
+    sink_id ? *sink_id : 0
   );
   return FoxgloveError(error);
 }
