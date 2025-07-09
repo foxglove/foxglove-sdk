@@ -3,6 +3,7 @@ use std::{collections::BTreeMap, sync::Arc};
 use crate::{channel::ChannelId, Schema};
 
 /// Information about a Channel.
+#[derive(Clone)]
 pub struct ChannelDescriptor(Arc<Inner>);
 
 struct Inner {

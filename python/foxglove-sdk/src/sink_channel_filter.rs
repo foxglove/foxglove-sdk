@@ -5,9 +5,11 @@ use pyo3::prelude::*;
 use pyo3::types::IntoPyDict;
 use pyo3::{types::PyDict, Py};
 
+use crate::PySchema;
+
 /// Information about a Channel.
 #[pyclass(name = "ChannelDescriptor", module = "foxglove")]
-pub struct PyChannelDescriptor(Arc<ChannelDescriptor>);
+pub struct PyChannelDescriptor(ChannelDescriptor);
 
 #[pymethods]
 impl PyChannelDescriptor {
@@ -39,6 +41,13 @@ impl PyChannelDescriptor {
         Ok(metadata)
     }
 
+    /// Returns the schema for this channel.
+    #[getter]
+    fn schema(&self) -> Option<PySchema> {
+        tracing::info!("schema?: {:?}", self.0.schema().is_some());
+        self.0.schema().map(|schema| PySchema::from(schema.clone()))
+    }
+
     fn __repr__(&self) -> String {
         format!(
             "ChannelDescriptor(id={}, topic='{}')",
@@ -58,7 +67,7 @@ impl PyChannelDescriptor {
 pub struct PySinkChannelFilter(pub Arc<Py<PyAny>>);
 
 impl foxglove::SinkChannelFilter for PySinkChannelFilter {
-    fn should_subscribe(&self, channel: Arc<ChannelDescriptor>) -> bool {
+    fn should_subscribe(&self, channel: &ChannelDescriptor) -> bool {
         let handler = self.0.clone();
         Python::with_gil(|py| {
             let descriptor = PyChannelDescriptor(channel.clone());

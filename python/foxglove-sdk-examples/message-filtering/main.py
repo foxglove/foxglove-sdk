@@ -5,6 +5,7 @@ from math import cos, sin
 
 import foxglove
 from foxglove import ChannelDescriptor
+import foxglove.channels
 from foxglove.schemas import (
     FrameTransform,
     FrameTransforms,
@@ -27,7 +28,12 @@ def drop_large_topics(channel: ChannelDescriptor) -> bool:
 
 # We'll send all messages to the Foxglove app. We don't need a filter for this, since its the same
 # as having no filter applied, but this demonstrates how to apply a filter to the server.
-def live_viz_filter(_: ChannelDescriptor) -> bool:
+def live_viz_filter(ch: ChannelDescriptor) -> bool:
+    print(ch.topic)
+    if ch.schema:
+        print(ch.schema.name, ch.schema.encoding, ch.schema.data)
+    else:
+        print("no schema")
     return True
 
 
@@ -54,14 +60,16 @@ def main() -> None:
         ]
     )
 
+    pc_chan = foxglove.channels.PointCloudChannel(topic="/point_cloud")
+
     try:
         while True:
             foxglove.log("/info", {"state": get_state(), "y": cos(time.time())})
 
             foxglove.log("/point_cloud_tf", cloud_tf)
 
-            foxglove.log(
-                "/point_cloud",
+            pc_chan.log(
+                # "/point_cloud",
                 make_point_cloud(),
             )
 

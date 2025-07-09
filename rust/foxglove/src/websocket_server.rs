@@ -90,7 +90,7 @@ impl WebSocketServer {
     /// Sets a channel filter for connected clients. See [`SinkChannelFilter`] for more information.
     pub fn channel_filter_fn(
         mut self,
-        filter: impl Fn(Arc<ChannelDescriptor>) -> bool + Sync + Send + 'static,
+        filter: impl Fn(&ChannelDescriptor) -> bool + Sync + Send + 'static,
     ) -> Self {
         self.options.channel_filter = Some(Arc::new(SinkChannelFilterFn(filter)));
         self
