@@ -424,7 +424,7 @@ impl ConnectedClient {
         }
 
         let mut channel_ids = Vec::with_capacity(subscribed_channels.len());
-        for (subscription, channel) in subscriptions.into_iter().zip(subscribed_channels.iter()) {
+        for (subscription, channel) in subscriptions.into_iter().zip(subscribed_channels) {
             // Using a limited scope here to avoid holding the lock on subscriptions while calling on_subscribe
             {
                 let mut subscriptions = self.subscriptions.lock();
@@ -455,15 +455,13 @@ impl ConnectedClient {
                 subscription.id
             );
             channel_ids.push(channel.id());
-        }
 
-        // Propagate client subscription requests to the context.
-        if let Some(context) = self.context.upgrade() {
-            context.subscribe_channels(self.sink_id, &channel_ids);
-        }
+            // Propagate client subscription requests to the context.
+            if let Some(context) = self.context.upgrade() {
+                context.subscribe_channels(self.sink_id, &[channel.id()]);
+            }
 
-        // Call the on_subscribe callback if one is registered
-        for channel in subscribed_channels {
+            // Call the on_subscribe callback if one is registered
             if let Some(handler) = server.listener() {
                 handler.on_subscribe(Client::new(self), channel.as_ref().into());
             }
