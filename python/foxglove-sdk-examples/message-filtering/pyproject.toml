@@ -5,7 +5,7 @@ description = "Example message filtering with MCAP and live visualization"
 authors = [{ name = "Foxglove", email = "support@foxglove.dev" }]
 readme = "README.md"
 requires-python = ">=3.9"
-#dependencies = ["foxglove-sdk>=0.4.0", "numpy>=2.0"]
+#dependencies = ["foxglove-sdk>=0.10.0"]
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
