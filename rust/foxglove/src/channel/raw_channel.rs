@@ -35,7 +35,6 @@ static WARN_THROTTLER_INTERVAL: Duration = Duration::from_secs(10);
 /// You should choose a unique topic name per channel for compatibility with the Foxglove app.
 pub struct RawChannel {
     descriptor: Arc<ChannelDescriptor>,
-    schema: Option<Schema>,
     context: Weak<Context>,
     sinks: LogSinkSet,
     closed: AtomicBool,
@@ -56,9 +55,9 @@ impl RawChannel {
                 topic,
                 message_encoding,
                 metadata,
+                schema,
             ),
             context: Arc::downgrade(context),
-            schema,
             sinks: LogSinkSet::new(),
             closed: AtomicBool::new(false),
             warn_throttler: Mutex::new(Throttler::new(WARN_THROTTLER_INTERVAL)),
@@ -81,7 +80,7 @@ impl RawChannel {
 
     /// Returns the channel schema.
     pub fn schema(&self) -> Option<&Schema> {
-        self.schema.as_ref()
+        self.descriptor.schema()
     }
 
     /// Returns the message encoding for this channel.
@@ -96,7 +95,7 @@ impl RawChannel {
 
     /// Returns true if one channel is substantially the same as the other.
     pub(crate) fn matches(&self, other: &Self) -> bool {
-        self.descriptor.matches(&other.descriptor) && self.schema == other.schema
+        self.descriptor.matches(&other.descriptor)
     }
 
     /// Closes the channel, removing it from the context.
@@ -199,7 +198,7 @@ impl std::fmt::Debug for RawChannel {
             .field("id", &self.descriptor.id())
             .field("topic", &self.descriptor.topic())
             .field("message_encoding", &self.descriptor.message_encoding())
-            .field("schema", &self.schema)
+            .field("schema", &self.descriptor.schema())
             .field("metadata", &self.descriptor.metadata())
             .finish_non_exhaustive()
     }

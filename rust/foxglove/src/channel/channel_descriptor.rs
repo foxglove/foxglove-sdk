@@ -1,6 +1,6 @@
 use std::{collections::BTreeMap, sync::Arc};
 
-use crate::channel::ChannelId;
+use crate::{channel::ChannelId, Schema};
 
 /// Information about a Channel.
 pub struct ChannelDescriptor(Arc<Inner>);
@@ -10,6 +10,7 @@ struct Inner {
     topic: String,
     message_encoding: String,
     metadata: BTreeMap<String, String>,
+    schema: Option<Schema>,
 }
 
 impl ChannelDescriptor {
@@ -18,12 +19,14 @@ impl ChannelDescriptor {
         topic: String,
         message_encoding: String,
         metadata: BTreeMap<String, String>,
+        schema: Option<Schema>,
     ) -> Arc<Self> {
         Arc::new(Self(Arc::new(Inner {
             id,
             topic,
             message_encoding,
             metadata,
+            schema,
         })))
     }
 
@@ -47,9 +50,15 @@ impl ChannelDescriptor {
         &self.0.metadata
     }
 
+    /// Returns the schema for this channel.
+    pub fn schema(&self) -> Option<&Schema> {
+        self.0.schema.as_ref()
+    }
+
     pub(crate) fn matches(&self, other: &Self) -> bool {
         self.0.topic == other.0.topic
             && self.0.message_encoding == other.0.message_encoding
             && self.0.metadata == other.0.metadata
+            && self.0.schema == other.0.schema
     }
 }
