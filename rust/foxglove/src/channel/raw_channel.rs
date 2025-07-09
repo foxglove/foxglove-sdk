@@ -9,7 +9,7 @@ use std::time::Duration;
 use parking_lot::Mutex;
 use tracing::warn;
 
-use super::ChannelId;
+use super::{ChannelDescriptor, ChannelId};
 use crate::log_sink_set::LogSinkSet;
 use crate::sink::SmallSinkVec;
 use crate::throttler::Throttler;
@@ -17,42 +17,6 @@ use crate::{nanoseconds_since_epoch, Context, Metadata, PartialMetadata, Schema}
 
 /// Interval for throttled warnings.
 static WARN_THROTTLER_INTERVAL: Duration = Duration::from_secs(10);
-
-/// Information about a Channel.
-pub struct ChannelDescriptor {
-    id: ChannelId,
-    topic: String,
-    message_encoding: String,
-    metadata: BTreeMap<String, String>,
-}
-
-impl ChannelDescriptor {
-    /// Returns the channel ID.
-    pub fn id(&self) -> ChannelId {
-        self.id
-    }
-
-    /// Returns the channel topic.
-    pub fn topic(&self) -> &str {
-        &self.topic
-    }
-
-    /// Returns the message encoding for this channel.
-    pub fn message_encoding(&self) -> &str {
-        &self.message_encoding
-    }
-
-    /// Returns the metadata for this channel.
-    pub fn metadata(&self) -> &BTreeMap<String, String> {
-        &self.metadata
-    }
-
-    fn matches(&self, other: &Self) -> bool {
-        self.topic == other.topic
-            && self.message_encoding == other.message_encoding
-            && self.metadata == other.metadata
-    }
-}
 
 /// A log channel that can be used to log binary messages.
 ///
@@ -87,12 +51,12 @@ impl RawChannel {
         metadata: BTreeMap<String, String>,
     ) -> Arc<Self> {
         Arc::new(Self {
-            descriptor: Arc::new(ChannelDescriptor {
-                id: ChannelId::next(),
+            descriptor: ChannelDescriptor::new(
+                ChannelId::next(),
                 topic,
                 message_encoding,
                 metadata,
-            }),
+            ),
             context: Arc::downgrade(context),
             schema,
             sinks: LogSinkSet::new(),
@@ -107,12 +71,12 @@ impl RawChannel {
 
     /// Returns the channel ID.
     pub fn id(&self) -> ChannelId {
-        self.descriptor.id
+        self.descriptor.id()
     }
 
     /// Returns the channel topic.
     pub fn topic(&self) -> &str {
-        &self.descriptor.topic
+        self.descriptor.topic()
     }
 
     /// Returns the channel schema.
@@ -122,12 +86,12 @@ impl RawChannel {
 
     /// Returns the message encoding for this channel.
     pub fn message_encoding(&self) -> &str {
-        &self.descriptor.message_encoding
+        self.descriptor.message_encoding()
     }
 
     /// Returns the metadata for this channel.
     pub fn metadata(&self) -> &BTreeMap<String, String> {
-        &self.descriptor.metadata
+        self.descriptor.metadata()
     }
 
     /// Returns true if one channel is substantially the same as the other.
@@ -144,7 +108,7 @@ impl RawChannel {
     pub fn close(&self) {
         if !self.is_closed() {
             if let Some(ctx) = self.context.upgrade() {
-                ctx.remove_channel(self.descriptor.id);
+                ctx.remove_channel(self.descriptor.id());
             }
         }
     }
@@ -232,11 +196,11 @@ impl Eq for RawChannel {}
 impl std::fmt::Debug for RawChannel {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Channel")
-            .field("id", &self.descriptor.id)
-            .field("topic", &self.descriptor.topic)
-            .field("message_encoding", &self.descriptor.message_encoding)
+            .field("id", &self.descriptor.id())
+            .field("topic", &self.descriptor.topic())
+            .field("message_encoding", &self.descriptor.message_encoding())
             .field("schema", &self.schema)
-            .field("metadata", &self.descriptor.metadata)
+            .field("metadata", &self.descriptor.metadata())
             .finish_non_exhaustive()
     }
 }
