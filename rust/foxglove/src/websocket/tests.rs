@@ -225,16 +225,26 @@ async fn test_advertise_to_client() {
         .await
         .expect("Failed to start server");
 
+    let ch = new_channel("/foo", &ctx);
+
+    // Create a channel that requires a schema, but doesn't have one. This won't be advertised.
+    let ch2 = ChannelBuilder::new("/bar")
+        .message_encoding("flatbuffer")
+        .context(&ctx)
+        .build_raw()
+        .expect("Failed to create channel");
+
     let mut client = WebSocketClient::connect(addr).await;
     expect_recv!(client, ServerMessage::ServerInfo);
 
-    let ch = new_channel("/foo", &ctx);
-    ch.log(b"foo bar");
-
     let msg = expect_recv!(client, ServerMessage::Advertise);
-    let adv_ch = msg.channels.first().expect("not empty");
+    assert_eq!(msg.channels.len(), 1);
+    let adv_ch = &msg.channels[0];
     assert_eq!(adv_ch.id, u64::from(ch.id()));
     assert_eq!(adv_ch.topic, ch.topic());
+
+    ch.log(b"foo bar");
+    ch2.log(b"{\"a\":1}");
 
     let subscription_id = 42;
     let subscribe_msg = Subscribe::new([Subscription {
@@ -266,6 +276,17 @@ async fn test_advertise_to_client() {
             ch.id(),
         ))
     );
+
+    // Remove the channels
+    ctx.remove_channel(ch.id());
+    ctx.remove_channel(ch2.id());
+
+    // Ensure we get an unadvertise message only for the first channel
+    let msg = expect_recv!(client, ServerMessage::Unadvertise);
+    assert_eq!(msg.channel_ids.len(), 1);
+    assert_eq!(msg.channel_ids[0], u64::from(ch.id()));
+
+    assert!(client.recv().now_or_never().is_none());
 
     let _ = server.stop();
 }

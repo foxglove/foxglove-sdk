@@ -1,5 +1,6 @@
 [package]
 name = "foxglove_data_loader"
+publish = false
 description = "Generate wasm to use as a Foxglove data loader"
 version.workspace = true
 edition.workspace = true
@@ -14,7 +15,7 @@ anyhow = "1.0.98"
 [dependencies.foxglove]
 version = "0.9.0"
 default-features = false
-features = [ "derive" ]
+features = ["derive"]
 
 [dev-dependencies]
 prost.workspace = true

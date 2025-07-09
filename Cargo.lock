@@ -525,7 +525,7 @@ name = "example_channelless"
 version = "0.0.0"
 dependencies = [
  "env_logger",
- "foxglove 0.9.0",
+ "foxglove 0.9.1",
  "mcap 0.23.0",
  "schemars",
  "serde",
@@ -537,7 +537,7 @@ version = "0.0.0"
 dependencies = [
  "clap",
  "env_logger",
- "foxglove 0.9.0",
+ "foxglove 0.9.1",
  "serde_json",
  "tokio",
  "tokio-util",
@@ -550,7 +550,7 @@ dependencies = [
  "clap",
  "ctrlc",
  "env_logger",
- "foxglove 0.9.0",
+ "foxglove 0.9.1",
  "schemars",
  "serde",
 ]
@@ -570,7 +570,7 @@ version = "0.0.0"
 dependencies = [
  "clap",
  "env_logger",
- "foxglove 0.9.0",
+ "foxglove 0.9.1",
  "tokio",
  "tokio-util",
 ]
@@ -579,7 +579,7 @@ dependencies = [
 name = "example_prost"
 version = "0.0.0"
 dependencies = [
- "foxglove 0.9.0",
+ "foxglove 0.9.1",
  "prost",
  "prost-build",
 ]
@@ -590,16 +590,16 @@ version = "0.0.0"
 dependencies = [
  "ctrlc",
  "env_logger",
- "foxglove 0.9.0",
+ "foxglove 0.9.1",
 ]
 
 [[package]]
 name = "example_structured_logging"
-version = "0.9.0"
+version = "0.9.1"
 dependencies = [
  "bytes",
  "env_logger",
- "foxglove 0.9.0",
+ "foxglove 0.9.1",
  "schemars",
  "serde",
  "serde_json",
@@ -611,7 +611,7 @@ version = "0.0.0"
 dependencies = [
  "clap",
  "env_logger",
- "foxglove 0.9.0",
+ "foxglove 0.9.1",
  "quaternion",
  "tokio",
 ]
@@ -623,7 +623,7 @@ dependencies = [
  "clap",
  "ctrlc",
  "env_logger",
- "foxglove 0.9.0",
+ "foxglove 0.9.1",
 ]
 
 [[package]]
@@ -632,7 +632,7 @@ version = "0.0.0"
 dependencies = [
  "clap",
  "env_logger",
- "foxglove 0.9.0",
+ "foxglove 0.9.1",
  "tokio",
 ]
 
@@ -644,7 +644,7 @@ dependencies = [
  "bytes",
  "clap",
  "env_logger",
- "foxglove 0.9.0",
+ "foxglove 0.9.1",
  "futures",
  "parking_lot",
  "schemars",
@@ -665,7 +665,7 @@ dependencies = [
  "clap",
  "ctrlc",
  "env_logger",
- "foxglove 0.9.0",
+ "foxglove 0.9.1",
  "mcap 0.23.0",
  "tracing",
 ]
@@ -709,6 +709,30 @@ checksum = "d9c4f5dac5e15c24eb999c26181a6ca40b39fe946cbe4c263c7209467bc83af2"
 [[package]]
 name = "foxglove"
 version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "25175c4e8b1ef5ff4a78f0c442eab8f2ca92d879a9984e6125c903496762e931"
+dependencies = [
+ "arc-swap",
+ "bimap",
+ "bytes",
+ "delegate",
+ "foxglove_derive 0.9.0",
+ "mcap 0.18.0",
+ "parking_lot",
+ "prost",
+ "prost-types",
+ "serde",
+ "serde_json",
+ "smallbytes",
+ "smallvec",
+ "thiserror 2.0.12",
+ "tracing",
+ "urlencoding",
+]
+
+[[package]]
+name = "foxglove"
+version = "0.9.1"
 dependencies = [
  "arc-swap",
  "assert_matches",
@@ -718,7 +742,7 @@ dependencies = [
  "chrono",
  "delegate",
  "flume",
- "foxglove_derive 0.9.0",
+ "foxglove_derive 0.9.1",
  "futures-util",
  "insta",
  "maplit",
@@ -744,36 +768,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "foxglove"
-version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "25175c4e8b1ef5ff4a78f0c442eab8f2ca92d879a9984e6125c903496762e931"
-dependencies = [
- "arc-swap",
- "bimap",
- "bytes",
- "delegate",
- "foxglove_derive 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "mcap 0.18.0",
- "parking_lot",
- "prost",
- "prost-types",
- "serde",
- "serde_json",
- "smallbytes",
- "smallvec",
- "thiserror 2.0.12",
- "tracing",
- "urlencoding",
-]
-
-[[package]]
 name = "foxglove-sdk-python"
-version = "0.9.0"
+version = "0.9.1"
 dependencies = [
  "base64",
  "bytes",
- "foxglove 0.9.0",
+ "foxglove 0.9.1",
  "log",
  "prost-types",
  "pyo3",
@@ -788,13 +788,13 @@ dependencies = [
 
 [[package]]
 name = "foxglove_c"
-version = "0.9.0"
+version = "0.9.1"
 dependencies = [
  "base64",
  "bitflags",
  "cbindgen",
  "env_logger",
- "foxglove 0.9.0",
+ "foxglove 0.9.1",
  "log",
  "maplit",
  "mcap 0.23.0",
@@ -803,30 +803,14 @@ dependencies = [
 
 [[package]]
 name = "foxglove_data_loader"
-version = "0.9.0"
+version = "0.9.1"
 dependencies = [
  "anyhow",
- "foxglove 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "foxglove 0.9.0",
  "prost",
  "serde",
  "serde_json",
  "wit-bindgen",
-]
-
-[[package]]
-name = "foxglove_derive"
-version = "0.9.0"
-dependencies = [
- "bytes",
- "foxglove 0.9.0",
- "proc-macro2",
- "prost",
- "prost-reflect",
- "prost-types",
- "quote",
- "syn 2.0.103",
- "tracing",
- "tracing-test",
 ]
 
 [[package]]
@@ -839,6 +823,22 @@ dependencies = [
  "prost-types",
  "quote",
  "syn 2.0.103",
+]
+
+[[package]]
+name = "foxglove_derive"
+version = "0.9.1"
+dependencies = [
+ "bytes",
+ "foxglove 0.9.1",
+ "proc-macro2",
+ "prost",
+ "prost-reflect",
+ "prost-types",
+ "quote",
+ "syn 2.0.103",
+ "tracing",
+ "tracing-test",
 ]
 
 [[package]]

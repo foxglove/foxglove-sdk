@@ -85,8 +85,9 @@ use std::{cell::RefCell, rc::Rc};
 
 pub use generated::exports::foxglove::loader::loader::{
     self, BackfillArgs, Channel, ChannelId, DataLoaderArgs, Message, MessageIteratorArgs, Schema,
-    SchemaId, TimeRange,
+    SchemaId, Severity, TimeRange,
 };
+
 pub use generated::foxglove::loader::console;
 pub use generated::foxglove::loader::reader;
 
@@ -104,7 +105,7 @@ impl std::io::Seek for reader::Reader {
             }
             std::io::SeekFrom::End(offset) => {
                 let end = reader::Reader::size(self) as i64;
-                reader::Reader::seek(self, (end - offset) as u64);
+                reader::Reader::seek(self, (end + offset) as u64);
             }
             std::io::SeekFrom::Current(offset) => {
                 let pos = reader::Reader::position(self) as i64;
@@ -115,6 +116,54 @@ impl std::io::Seek for reader::Reader {
     }
 }
 
+/// Problems can be used to display info in the "problems" panel during playback.
+///
+/// They are for non-fatal issues that the user should be aware of.
+#[derive(Clone, Debug)]
+pub struct Problem(loader::Problem);
+
+impl Problem {
+    /// Create a new [`Problem`] with the provided [`Severity`] and message.
+    pub fn new(severity: Severity, message: impl Into<String>) -> Self {
+        Self(loader::Problem {
+            severity,
+            message: message.into(),
+            tip: None,
+        })
+    }
+
+    /// Add additional context to the problem.
+    pub fn tip(mut self, tip: impl Into<String>) -> Self {
+        self.0.tip = Some(tip.into());
+        self
+    }
+
+    /// Create a new error [`Problem`] with the provided message.
+    pub fn error(message: impl Into<String>) -> Self {
+        Self::new(Severity::Error, message)
+    }
+
+    /// Create a new warn [`Problem`] with the provided message.
+    pub fn warn(message: impl Into<String>) -> Self {
+        Self::new(Severity::Warn, message)
+    }
+
+    /// Create a new info [`Problem`] with the provided message.
+    pub fn info(message: impl Into<String>) -> Self {
+        Self::new(Severity::Info, message)
+    }
+
+    fn into_inner(self) -> loader::Problem {
+        self.0
+    }
+}
+
+impl<T: Into<String>> From<T> for Problem {
+    fn from(value: T) -> Self {
+        Self::error(value)
+    }
+}
+
 /// Initializations are returned by DataLoader::initialize() and hold the set of channels and their
 /// corresponding schemas, the time range, and a set of problem messages.
 #[derive(Debug, Clone, Default)]
@@ -122,7 +171,7 @@ pub struct Initialization {
     channels_by_topic: HashMap<String, Rc<Channel>>,
     schemas: Vec<loader::Schema>,
     time_range: TimeRange,
-    problems: Vec<String>,
+    problems: Vec<Problem>,
 }
 
 impl From<Initialization> for loader::Initialization {
@@ -135,7 +184,7 @@ impl From<Initialization> for loader::Initialization {
                 .collect(),
             schemas: init.schemas,
             time_range: init.time_range,
-            problems: init.problems,
+            problems: init.problems.into_iter().map(|p| p.into_inner()).collect(),
         }
     }
 }
@@ -162,7 +211,7 @@ pub struct InitializationBuilder {
     next_schema_id: u16,
     time_range: loader::TimeRange,
     schemas: Vec<LinkedSchema>,
-    problems: Vec<String>,
+    problems: Vec<Problem>,
 }
 
 impl Default for InitializationBuilder {
@@ -248,9 +297,31 @@ impl InitializationBuilder {
         Ok(linked_schema)
     }
 
-    /// Add a problem to the initialization.
-    pub fn add_problem(mut self, problem: &str) -> Self {
-        self.problems.push(String::from(problem));
+    /// Add a [`Problem`] to the initialization.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// // Create an initialization with a bunch of problems:
+    /// # use foxglove_data_loader::*;
+    /// let init = Initialization::builder()
+    ///     // You can add an "error" with a &str:
+    ///     .add_problem("The provided file was invalid")
+    ///     // You can also add an error like this:
+    ///     .add_problem(Problem::error("The provided file was invalid"))
+    ///     // You can add an error with a tip, like this:
+    ///     .add_problem(
+    ///         Problem::error("file was invalid")
+    ///             .tip("The provided file could not be read. Ensure it is valid.")
+    ///     )
+    ///     // You can also add warning and info problems:
+    ///     .add_problem(Problem::warn("The file contained some empty topics"))
+    ///     .add_problem(Problem::info("The file contained some empty topics"))
+    ///     .build();
+    /// ```
+    ///
+    pub fn add_problem(mut self, problem: impl Into<Problem>) -> Self {
+        self.problems.push(problem.into());
         self
     }
 

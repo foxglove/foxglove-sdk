@@ -66,11 +66,6 @@ public:
       return false;
     }
   }
-  /// @brief Checks whether the parameter value is a string.
-  template<>
-  [[nodiscard]] bool is<std::string>() const noexcept {
-    return this->is<std::string_view>();
-  }
 
   /// @brief Extracts a value from the parameter.
   ///
@@ -83,17 +78,6 @@ public:
   [[nodiscard]] T get() const {
     return std::get<T>(this->value());
   }
-  /// @brief Extracts the parameter as itself.
-  template<>
-  [[nodiscard]] ParameterValueView get<ParameterValueView>() const {
-    return *this;
-  }
-  /// @brief Extracts the parameter as an owned string.
-  template<>
-  [[nodiscard]] std::string get<std::string>() const {
-    auto sv = this->get<std::string_view>();
-    return std::string(sv);
-  }
 
 private:
   friend class ParameterView;
@@ -105,6 +89,39 @@ private:
   explicit ParameterValueView(const foxglove_parameter_value* ptr)
       : impl_(ptr) {}
 };
+
+// Template specializations for ParameterValueView
+//
+// Documented manually as tparams because specializations are merged:
+// https://github.com/doxygen/doxygen/issues/9468
+
+/// @fn ParameterValueView::is<std::string>()
+/// @tparam std::string Checks whether the parameter value is a string.
+
+/// @fn ParameterValueView::get<ParameterValueView>()
+/// @tparam ParameterValueView Extracts the parameter as itself.
+
+/// @fn ParameterValueView::get<std::string>()
+/// @tparam std::string Extracts the parameter as an owned string.
+
+/// @cond ignore-template-specializations
+/// @brief Checks whether the parameter value is a string.
+template<>
+[[nodiscard]] inline bool ParameterValueView::is<std::string>() const noexcept {
+  return this->is<std::string_view>();
+}
+/// @brief Extracts the parameter as itself.
+template<>
+[[nodiscard]] inline ParameterValueView ParameterValueView::get<ParameterValueView>() const {
+  return *this;
+}
+/// @brief Extracts the parameter as an owned string.
+template<>
+[[nodiscard]] inline std::string ParameterValueView::get<std::string>() const {
+  auto sv = this->get<std::string_view>();
+  return std::string(sv);
+}
+/// @endcond
 
 /// @brief An owned parameter value.
 class ParameterValue final {
@@ -208,43 +225,6 @@ public:
     return value.has_value() && value->is<T>();
   }
 
-  /// @cond duplicate-ids-bug
-  // https://github.com/doxygen/doxygen/issues/9468
-
-  /// @brief Checks whether the parameter value is a std::string_view.
-  ///
-  /// Returns false if the parameter type indicates that it is a byte array.
-  template<>
-  [[nodiscard]] bool is<std::string_view>() const noexcept {
-    auto value = this->value();
-    return value.has_value() && value->is<std::string_view>() &&
-           this->type() != ParameterType::ByteArray;
-  }
-
-  /// @brief Checks whether the parameter value is a std::string.
-  ///
-  /// Returns false if the parameter type indicates that it is a byte array.
-  template<>
-  [[nodiscard]] bool is<std::string>() const noexcept {
-    return this->is<std::string_view>();
-  }
-
-  /// @brief Checks whether the parameter value is a std::vector<std::byte>.
-  template<>
-  [[nodiscard]] bool is<std::vector<std::byte>>() const noexcept {
-    auto value = this->value();
-    return value.has_value() && value->is<std::string_view>() &&
-           this->type() == ParameterType::ByteArray;
-  }
-
-  /// @brief Checks whether the parameter value is a std::vector<double>.
-  template<>
-  [[nodiscard]] bool is<std::vector<double>>() const noexcept {
-    return this->isArray<double>();
-  }
-
-  /// @endcond
-
   /// @brief Checks whether the parameter value is an array whose elements match
   /// the specified type.
   ///
@@ -265,13 +245,6 @@ public:
     } catch (...) {
       return false;
     }
-  }
-
-  /// @brief Checks whether the paramter value is an array of generic elements.
-  template<>
-  [[nodiscard]] bool isArray<ParameterValueView>() const noexcept {
-    auto value = this->value();
-    return value.has_value() && value->is<ParameterValueView::Array>();
   }
 
   /// @brief Checks whether the parameter value is a dictionary whose values
@@ -300,18 +273,8 @@ public:
     }
   }
 
-  /// @brief Checks whether the paramter value is an dictionary of generic
-  /// values.
-  template<>
-  [[nodiscard]] bool isDict<ParameterValueView>() const noexcept {
-    auto value = this->value();
-    return value.has_value() && value->is<ParameterValueView::Dict>();
-  }
-
   /// @brief Checks whether the parameter value is a byte array.
-  [[nodiscard]] bool isByteArray() const noexcept {
-    return this->is<std::vector<std::byte>>();
-  }
+  [[nodiscard]] bool isByteArray() const noexcept;
 
   /// @brief Extracts a value from the parameter.
   ///
@@ -327,49 +290,6 @@ public:
       throw std::bad_optional_access();
     }
     return value->template get<T>();
-  }
-
-  /// @brief Extracts the value as a byte array.
-  ///
-  /// This method will throw an exception if the value is unset or is not a byte
-  /// array. You can use `ParameterView::is<std::vector<std::byte>>()` to check
-  /// that the type matches before calling this method.
-  template<>
-  [[nodiscard]] std::vector<std::byte> get() const {
-    auto result = this->getByteArray();
-    if (!result.has_value()) {
-      throw std::runtime_error(strerror(result.error()));
-    }
-    return result.value();
-  }
-
-  /// @brief Extracts the value as an array of floating point values.
-  ///
-  /// This method will throw an exception if the value is unset or is not an
-  /// array of floating point values. You can use
-  /// `ParameterView::is<std::vector<double>>()` to check that the type matches
-  /// before calling this method.
-  template<>
-  [[nodiscard]] std::vector<double> get() const {
-    return this->getArray<double>();
-  }
-
-  /// @brief Extracts the value as an array of generic values.
-  ///
-  /// This method will throw an exception if the value is unset or is not an
-  /// array.
-  template<>
-  [[nodiscard]] std::vector<ParameterValueView> get() const {
-    return this->getArray<ParameterValueView>();
-  }
-
-  /// @brief Extracts the value as a dictionary of generic values.
-  ///
-  /// This method will throw an exception if the value is unset or is not an
-  /// dictionary.
-  template<>
-  [[nodiscard]] std::map<std::string, ParameterValueView> get() const {
-    return this->getDict<ParameterValueView>();
   }
 
   /// @brief Extracts an array value from the parameter.
@@ -434,6 +354,120 @@ private:
   explicit ParameterView(const foxglove_parameter* ptr)
       : impl_(ptr) {}
 };
+
+/// @brief Checks whether the paramter value is an array of generic elements.
+template<>
+[[nodiscard]] inline bool ParameterView::isArray<ParameterValueView>() const noexcept {
+  auto value = this->value();
+  return value.has_value() && value->is<ParameterValueView::Array>();
+}
+
+/// @brief Checks whether the paramter value is an dictionary of generic
+/// values.
+template<>
+[[nodiscard]] inline bool ParameterView::isDict<ParameterValueView>() const noexcept {
+  auto value = this->value();
+  return value.has_value() && value->is<ParameterValueView::Dict>();
+}
+
+// Template specializations for ParameterView
+//
+// Documented manually as tparams because specializations are merged:
+// https://github.com/doxygen/doxygen/issues/9468
+
+/// @fn ParameterView::is<std::string_view>()
+/// @tparam std::string_view Checks whether the parameter value is a string.
+
+/// @fn ParameterView::is<std::string>()
+/// @tparam std::string Checks whether the parameter value is a string.
+
+/// @fn ParameterView::is<std::vector<std::byte>>()
+/// @tparam std::vector<std::byte> Checks whether the parameter value is a byte array.
+
+/// @fn ParameterView::is<std::vector<double>>()
+/// @tparam std::vector<double> Checks whether the parameter value is a vector of floating point
+/// values.
+
+/// @cond ignore-template-specializations
+/// @brief Checks whether the parameter value is a std::string_view.
+///
+/// Returns false if the parameter type indicates that it is a byte array.
+template<>
+[[nodiscard]] inline bool ParameterView::is<std::string_view>() const noexcept {
+  auto value = this->value();
+  return value.has_value() && value->is<std::string_view>() &&
+         this->type() != ParameterType::ByteArray;
+}
+
+/// @brief Checks whether the parameter value is a std::string.
+///
+/// Returns false if the parameter type indicates that it is a byte array.
+template<>
+[[nodiscard]] inline bool ParameterView::is<std::string>() const noexcept {
+  return this->is<std::string_view>();
+}
+
+/// @brief Checks whether the parameter value is a std::vector<std::byte>.
+template<>
+[[nodiscard]] inline bool ParameterView::is<std::vector<std::byte>>() const noexcept {
+  auto value = this->value();
+  return value.has_value() && value->is<std::string_view>() &&
+         this->type() == ParameterType::ByteArray;
+}
+
+/// @brief Checks whether the parameter value is a std::vector<double>.
+template<>
+[[nodiscard]] inline bool ParameterView::is<std::vector<double>>() const noexcept {
+  return this->isArray<double>();
+}
+/// @endcond
+
+[[nodiscard]] inline bool ParameterView::isByteArray() const noexcept {
+  return this->is<std::vector<std::byte>>();
+}
+
+/// @brief Extracts the value as a byte array.
+///
+/// This method will throw an exception if the value is unset or is not a byte
+/// array. You can use `ParameterView::is<std::vector<std::byte>>()` to check
+/// that the type matches before calling this method.
+template<>
+[[nodiscard]] inline std::vector<std::byte> ParameterView::get() const {
+  auto result = this->getByteArray();
+  if (!result.has_value()) {
+    throw std::runtime_error(strerror(result.error()));
+  }
+  return result.value();
+}
+
+/// @brief Extracts the value as an array of floating point values.
+///
+/// This method will throw an exception if the value is unset or is not an
+/// array of floating point values. You can use
+/// `ParameterView::is<std::vector<double>>()` to check that the type matches
+/// before calling this method.
+template<>
+[[nodiscard]] inline std::vector<double> ParameterView::get() const {
+  return this->getArray<double>();
+}
+
+/// @brief Extracts the value as an array of generic values.
+///
+/// This method will throw an exception if the value is unset or is not an
+/// array.
+template<>
+[[nodiscard]] inline std::vector<ParameterValueView> ParameterView::get() const {
+  return this->getArray<ParameterValueView>();
+}
+
+/// @brief Extracts the value as a dictionary of generic values.
+///
+/// This method will throw an exception if the value is unset or is not an
+/// dictionary.
+template<>
+[[nodiscard]] inline std::map<std::string, ParameterValueView> ParameterView::get() const {
+  return this->getDict<ParameterValueView>();
+}
 
 /// @brief An owned parameter.
 class Parameter final {

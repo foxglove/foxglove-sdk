@@ -26,7 +26,8 @@ async function main() {
   // Find all Cargo.toml files in the workspace
   const workspaceRoot = path.resolve(__dirname, "..");
   const cargoFiles = await glob("**/Cargo.toml", {
-    ignore: ["**/target/**", "**/node_modules/**", "cpp/build/**"],
+    // FG-12276: foxglove_data_loader depends on foxglove, but is not yet published
+    ignore: ["**/target/**", "**/node_modules/**", "cpp/build/**", "rust/foxglove_data_loader/**"],
     cwd: workspaceRoot,
     absolute: true,
   });
