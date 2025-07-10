@@ -153,15 +153,6 @@ int main() {
   foxglove::setLogLevel(foxglove::LogLevel::Debug);
 
   // Create channels for different message types
-
-  // Create schema data that will outlive the schema object
-  static const std::string schema_data = R"({
-    "type": "object",
-    "properties": {
-        "state": { "type": "string" }
-    }
-    })";
-
   auto info_channel_result = foxglove::RawChannel::create("/info", "json", std::nullopt);
   if (!info_channel_result.has_value()) {
     std::cerr << "Failed to create info channel: "

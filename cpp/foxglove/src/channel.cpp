@@ -8,16 +8,15 @@ namespace foxglove {
 /// @cond foxglove_internal
 
 ChannelDescriptor::ChannelDescriptor(
-  std::string topic, std::string message_encoding,
-  std::optional<std::string> schema_name, std::optional<std::string> schema_encoding,
+  std::string topic, std::string message_encoding, std::optional<std::string> schema_name,
+  std::optional<std::string> schema_encoding,
   std::optional<std::map<std::string, std::string>> metadata
 )
     : topic_(std::move(topic))
     , message_encoding_(std::move(message_encoding))
     , schema_name_(std::move(schema_name))
     , schema_encoding_(std::move(schema_encoding))
-    , metadata_(std::move(metadata))
-    {}
+    , metadata_(std::move(metadata)) {}
 
 /// @endcond
 
