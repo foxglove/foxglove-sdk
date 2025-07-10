@@ -480,7 +480,8 @@ TEST_CASE("MCAP Channel filtering") {
 
     std::map<std::string, std::string> metadata = {{"key1", "value1"}, {"key2", "value2"}};
 
-    auto result = foxglove::RawChannel::create("/2", "json", std::move(topic2Schema), context, metadata);
+    auto result =
+      foxglove::RawChannel::create("/2", "json", std::move(topic2Schema), context, metadata);
     REQUIRE(result.has_value());
     auto channel = std::move(result.value());
     std::string data = "Topic 2 msg";

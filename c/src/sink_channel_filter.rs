@@ -1,7 +1,4 @@
-use crate::{
-    FoxgloveChannelDescriptor, FoxgloveChannelMetadata, FoxgloveKeyValue, FoxgloveSchema,
-    FoxgloveString,
-};
+use crate::{FoxgloveChannelDescriptor, FoxgloveChannelMetadata, FoxgloveKeyValue, FoxgloveString};
 
 /// A filter for channels that can be used to subscribe to or unsubscribe from channels.
 ///

@@ -47,8 +47,8 @@ class ChannelDescriptor {
 public:
   // @cond foxglove_internal
   ChannelDescriptor(
-    std::string topic, std::string message_encoding,
-    std::optional<std::string> schema_name, std::optional<std::string> schema_encoding,
+    std::string topic, std::string message_encoding, std::optional<std::string> schema_name,
+    std::optional<std::string> schema_encoding,
     std::optional<std::map<std::string, std::string>> metadata = std::nullopt
   );
   // @endcond

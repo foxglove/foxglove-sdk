@@ -147,7 +147,9 @@ TEST_CASE("channel descriptor") {
 
   std::map<std::string, std::string> metadata = {{"key1", "value1"}, {"key2", "value2"}};
 
-  foxglove::ChannelDescriptor channel_descriptor("test", "json", "test_schema", "jsonschema", metadata);
+  foxglove::ChannelDescriptor channel_descriptor(
+    "test", "json", "test_schema", "jsonschema", metadata
+  );
   REQUIRE(channel_descriptor.topic() == "test");
   REQUIRE(channel_descriptor.message_encoding() == "json");
   REQUIRE(channel_descriptor.metadata().has_value());
