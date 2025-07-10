@@ -20,7 +20,7 @@ impl AssetHandler for AssetServer {
     fn fetch(&self, uri: String, responder: AssetResponder) {
         match self.assets.get(&uri) {
             // A real implementation might use std::fs::read to read a file into a Vec<u8>
-            // The ws-protocol doesn't currently support streaming for a single asset.
+            // The SDK doesn't currently support streaming for a single asset.
             Some(asset) => responder.respond_ok(asset),
             None => responder.respond_err(format!("Asset {uri} not found")),
         }
