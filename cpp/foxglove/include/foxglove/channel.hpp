@@ -1,5 +1,6 @@
 #pragma once
 
+#include <foxglove-c/foxglove-c.h>
 #include <foxglove/context.hpp>
 #include <foxglove/error.hpp>
 #include <foxglove/schemas.hpp>
@@ -11,7 +12,6 @@
 #include <string>
 
 struct foxglove_channel;
-struct foxglove_context;
 
 /// The foxglove namespace.
 namespace foxglove {
@@ -34,6 +34,55 @@ struct Schema {
   /// @brief The length of the schema data.
   size_t data_len = 0;
 };
+
+/// @brief A description of a channel. This will be constructed by the SDK and passed to an
+/// implementation of a `SinkChannelFilterFn`.
+class ChannelDescriptor {
+  std::string topic_;
+  std::string message_encoding_;
+  std::optional<std::string> schema_name_;
+  std::optional<std::string> schema_encoding_;
+  std::optional<std::map<std::string, std::string>> metadata_;
+
+public:
+  // @cond foxglove_internal
+  ChannelDescriptor(
+    std::string topic, std::string message_encoding, std::optional<std::string> schema_name,
+    std::optional<std::string> schema_encoding,
+    std::optional<std::map<std::string, std::string>> metadata = std::nullopt
+  );
+  // @endcond
+
+  /// @brief Get the topic of the channel.
+  [[nodiscard]] const std::string& topic() const noexcept;
+
+  /// @brief Get the message encoding of the channel.
+  [[nodiscard]] const std::string& message_encoding() const noexcept;
+
+  /// @brief Get the metadata for the channel.
+  [[nodiscard]] const std::optional<std::map<std::string, std::string>>& metadata() const noexcept;
+
+  /// @brief Get the schema name of the channel.
+  [[nodiscard]] const std::optional<std::string>& schema_name() const noexcept;
+  /// @brief Get the schema encoding of the channel.
+  [[nodiscard]] const std::optional<std::string>& schema_encoding() const noexcept;
+
+  // @cond foxglove_internal
+  ChannelDescriptor(ChannelDescriptor&& other) noexcept = default;
+  ChannelDescriptor& operator=(ChannelDescriptor&& other) noexcept = default;
+  ~ChannelDescriptor() = default;
+  // Disable copy operations
+  ChannelDescriptor(const ChannelDescriptor&) = delete;
+  ChannelDescriptor& operator=(const ChannelDescriptor&) = delete;
+  // @endcond
+};
+
+/// @brief A function that can be used to filter channels.
+///
+/// @param channel Information about the channel.
+/// @return false if the channel should not be logged to the given sink. By default, all channels
+/// are logged to a sink.
+using SinkChannelFilterFn = std::function<bool(ChannelDescriptor&& channel)>;
 
 /// @brief A channel for messages logged to a topic.
 ///
@@ -122,5 +171,32 @@ private:
 
   schemas::ChannelUniquePtr impl_;
 };
+
+/// @cond foxglove_internal
+
+/// @brief Build up a map of metadata from C iterator
+///
+/// @param metadata The C metadata structure to convert
+/// @return Optional map containing the converted metadata, or nullopt if metadata is null
+inline std::optional<std::map<std::string, std::string>> buildMetadata_(
+  const foxglove_channel_metadata* metadata
+) {
+  if (metadata == nullptr || metadata->items == nullptr) {
+    return std::nullopt;
+  }
+
+  std::map<std::string, std::string> metadata_map;
+  for (size_t i = 0; i < metadata->count; ++i) {
+    const auto& item = metadata->items[i];
+    if (item.key.data != nullptr && item.value.data != nullptr) {
+      std::string key(item.key.data, item.key.len);
+      std::string value(item.value.data, item.value.len);
+      metadata_map.emplace(std::move(key), std::move(value));
+    }
+  }
+  return metadata_map;
+}
+
+/// @endcond
 
 }  // namespace foxglove
