@@ -1,4 +1,7 @@
-use crate::{FoxgloveChannelDescriptor, FoxgloveChannelMetadata, FoxgloveKeyValue, FoxgloveString};
+use crate::{
+    FoxgloveChannelDescriptor, FoxgloveChannelMetadata, FoxgloveKeyValue, FoxgloveSchema,
+    FoxgloveString,
+};
 
 /// A filter for channels that can be used to subscribe to or unsubscribe from channels.
 ///
@@ -50,6 +53,12 @@ impl foxglove::SinkChannelFilter for SinkChannelFilterHandler {
             None
         };
 
+        let schema_name = channel.schema().map(|s| s.name.clone()).unwrap_or_default();
+        let schema_encoding = channel
+            .schema()
+            .map(|s| s.encoding.clone())
+            .unwrap_or_default();
+
         let c_channel = if let Some(metadata_items_ptr) = metadata_items_ptr {
             let metadata = Box::new(FoxgloveChannelMetadata {
                 items: unsafe { (*metadata_items_ptr).as_ptr() },
@@ -59,6 +68,8 @@ impl foxglove::SinkChannelFilter for SinkChannelFilterHandler {
             FoxgloveChannelDescriptor {
                 topic: FoxgloveString::from(channel.topic()),
                 encoding: FoxgloveString::from(channel.message_encoding()),
+                schema_name: FoxgloveString::from(&schema_name),
+                schema_encoding: FoxgloveString::from(&schema_encoding),
                 // Safety: we will call from_raw after the callback returns
                 metadata: Box::into_raw(metadata),
             }
@@ -67,6 +78,8 @@ impl foxglove::SinkChannelFilter for SinkChannelFilterHandler {
                 topic: FoxgloveString::from(channel.topic()),
                 encoding: FoxgloveString::from(channel.message_encoding()),
                 metadata: std::ptr::null(),
+                schema_name: FoxgloveString::from(&schema_name),
+                schema_encoding: FoxgloveString::from(&schema_encoding),
             }
         };
 
