@@ -6,6 +6,9 @@
 //! selectively retrieving data from bandwidth-constrained environments, such as with the Foxglove
 //! Agent.
 //!
+//! Note that if you just want to partition topics into different MCAPs without live visualization,
+//! you could instead set up different logging `Context`s.
+//!
 //! In this example, we log some point cloud data to one MCAP file, and some minimal metadata to
 //! another.
 use foxglove::schemas::{
