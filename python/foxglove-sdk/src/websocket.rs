@@ -15,7 +15,6 @@ use pyo3::{
 };
 use std::collections::HashMap;
 use std::sync::Arc;
-use std::time;
 
 /// Information about a channel.
 #[pyclass(name = "ChannelView", module = "foxglove")]
@@ -381,17 +380,11 @@ pub fn start_server(
     context: Option<PyRef<PyContext>>,
     session_id: Option<String>,
 ) -> PyResult<PyWebSocketServer> {
-    let session_id = session_id.unwrap_or_else(|| {
-        time::SystemTime::now()
-            .duration_since(time::UNIX_EPOCH)
-            .expect("Failed to create session ID; invalid system time")
-            .as_millis()
-            .to_string()
-    });
+    let mut server = WebSocketServer::new().bind(host, port);
 
-    let mut server = WebSocketServer::new()
-        .session_id(session_id)
-        .bind(host, port);
+    if let Some(session_id) = session_id {
+        server = server.session_id(session_id);
+    }
 
     if let Some(py_obj) = server_listener {
         let listener = PyServerListener { listener: py_obj };
