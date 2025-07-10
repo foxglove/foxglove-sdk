@@ -15,7 +15,6 @@ use pyo3::{
 };
 use std::collections::HashMap;
 use std::sync::Arc;
-use std::time;
 
 /// Information about a channel.
 #[pyclass(name = "ChannelView", module = "foxglove")]
@@ -366,7 +365,7 @@ impl foxglove::websocket::service::Handler for ServiceHandler {
 /// To connect to this server: open Foxglove, choose "Open a new connection", and select Foxglove
 /// WebSocket. The default connection string matches the defaults used by the SDK.
 #[pyfunction]
-#[pyo3(signature = (*, name = None, host="127.0.0.1", port=8765, capabilities=None, server_listener=None, supported_encodings=None, services=None, asset_handler=None, context=None))]
+#[pyo3(signature = (*, name = None, host="127.0.0.1", port=8765, capabilities=None, server_listener=None, supported_encodings=None, services=None, asset_handler=None, context=None, session_id=None))]
 #[allow(clippy::too_many_arguments)]
 pub fn start_server(
     py: Python<'_>,
@@ -379,16 +378,13 @@ pub fn start_server(
     services: Option<Vec<PyService>>,
     asset_handler: Option<Py<PyAny>>,
     context: Option<PyRef<PyContext>>,
+    session_id: Option<String>,
 ) -> PyResult<PyWebSocketServer> {
-    let session_id = time::SystemTime::now()
-        .duration_since(time::UNIX_EPOCH)
-        .expect("Failed to create session ID; invalid system time")
-        .as_millis()
-        .to_string();
+    let mut server = WebSocketServer::new().bind(host, port);
 
-    let mut server = WebSocketServer::new()
-        .session_id(session_id)
-        .bind(host, port);
+    if let Some(session_id) = session_id {
+        server = server.session_id(session_id);
+    }
 
     if let Some(py_obj) = server_listener {
         let listener = PyServerListener { listener: py_obj };

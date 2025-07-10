@@ -121,6 +121,7 @@ def start_server(
     services: Optional[List["Service"]] = None,
     asset_handler: Optional["AssetHandler"] = None,
     context: Optional["Context"] = None,
+    session_id: Optional[str] = None,
 ) -> WebSocketServer:
     """
     Start a websocket server for live visualization.
