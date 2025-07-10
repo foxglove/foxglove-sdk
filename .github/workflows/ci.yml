@@ -47,6 +47,9 @@ jobs:
       - run: cargo +1.83.0 build -p foxglove --verbose
       - run: cargo clippy --no-deps --all-targets --tests -- -D warnings
       - run: cargo +nightly rustdoc -p foxglove --all-features -- -D warnings --cfg docsrs
+      - run: "[ -d ./target/doc/foxglove ] || exit 1"
+      - name: Check for ws-protocol references in public docs
+        run: '! grep -R "foxglove/ws-protocol" ./target/doc/foxglove'
       - run: cargo test --all-features --verbose
         timeout-minutes: 5
       - run: cargo test -p foxglove --no-default-features --verbose
