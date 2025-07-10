@@ -40,12 +40,15 @@ struct Schema {
 class ChannelDescriptor {
   std::string topic_;
   std::string message_encoding_;
+  std::optional<std::string> schema_name_;
+  std::optional<std::string> schema_encoding_;
   std::optional<std::map<std::string, std::string>> metadata_;
 
 public:
   // @cond foxglove_internal
   ChannelDescriptor(
     std::string topic, std::string message_encoding,
+    std::optional<std::string> schema_name, std::optional<std::string> schema_encoding,
     std::optional<std::map<std::string, std::string>> metadata = std::nullopt
   );
   // @endcond
@@ -58,6 +61,11 @@ public:
 
   /// @brief Get the metadata for the channel.
   [[nodiscard]] const std::optional<std::map<std::string, std::string>>& metadata() const noexcept;
+
+  /// @brief Get the schema name of the channel.
+  [[nodiscard]] const std::optional<std::string>& schema_name() const noexcept;
+  /// @brief Get the schema encoding of the channel.
+  [[nodiscard]] const std::optional<std::string>& schema_encoding() const noexcept;
 
   // @cond foxglove_internal
   ChannelDescriptor(ChannelDescriptor&& other) noexcept = default;

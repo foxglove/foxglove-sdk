@@ -274,6 +274,8 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
         ChannelDescriptor cpp_channel(
           std::string(channel->topic.data, channel->topic.len),
           std::string(channel->encoding.data, channel->encoding.len),
+          std::string(channel->schema_name.data, channel->schema_name.len),
+          std::string(channel->schema_encoding.data, channel->schema_encoding.len),
           std::move(metadata)
         );
         return (*filter_func)(std::move(cpp_channel));

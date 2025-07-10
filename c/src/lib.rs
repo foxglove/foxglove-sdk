@@ -452,6 +452,7 @@ pub struct FoxgloveSchema {
     pub data: *const u8,
     pub data_len: usize,
 }
+
 impl FoxgloveSchema {
     /// Converts a schema to the native type.
     ///
@@ -1037,6 +1038,8 @@ pub unsafe extern "C" fn foxglove_mcap_close(
 pub struct FoxgloveChannelDescriptor {
     pub topic: FoxgloveString,
     pub encoding: FoxgloveString,
+    pub schema_name: FoxgloveString,
+    pub schema_encoding: FoxgloveString,
     pub metadata: *const FoxgloveChannelMetadata,
 }
 

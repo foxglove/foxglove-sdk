@@ -570,6 +570,8 @@ typedef struct foxglove_channel_metadata {
 typedef struct foxglove_channel_descriptor {
   struct foxglove_string topic;
   struct foxglove_string encoding;
+  struct foxglove_string schema_name;
+  struct foxglove_string schema_encoding;
   const struct foxglove_channel_metadata *metadata;
 } foxglove_channel_descriptor;
 

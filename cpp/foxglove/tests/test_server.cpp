@@ -1386,12 +1386,8 @@ TEST_CASE("Server channel filtering") {
   auto context = foxglove::Context::create();
   std::mutex mutex;
   std::condition_variable cv;
-  // the following variables are protected by the mutex:
+  // the following variable is protected by the mutex:
   std::vector<uint64_t> subscribe_calls;
-  // std::vector<uint64_t> unsubscribe_calls;
-  // u_int received_messages = 0;
-  // bool received_message = false;
-
   std::unique_lock lock{mutex};
 
   foxglove::WebSocketServerCallbacks callbacks;
