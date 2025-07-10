@@ -293,9 +293,6 @@ pub struct FoxgloveClientChannel {
     pub schema_len: usize,
 }
 
-// REVIEW: This struct only holds the subset of the Client struct that is being used for accounting
-// in the ros_foxglove_bridge. If there are other fields that may be useful to expose, I am
-// happy to implement them here.
 #[repr(C)]
 pub struct FoxgloveClientMetadata {
     pub id: u32,
