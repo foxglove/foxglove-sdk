@@ -294,12 +294,30 @@ pub struct FoxgloveClientChannel {
 }
 
 #[repr(C)]
+pub struct FoxgloveClientMetadata {
+    pub id: u32,
+    pub sink_id: FoxgloveSinkId,
+}
+
+#[repr(C)]
 #[derive(Clone)]
 pub struct FoxgloveServerCallbacks {
     /// A user-defined value that will be passed to callback functions
     pub context: *const c_void,
-    pub on_subscribe: Option<unsafe extern "C" fn(context: *const c_void, channel_id: u64)>,
-    pub on_unsubscribe: Option<unsafe extern "C" fn(context: *const c_void, channel_id: u64)>,
+    pub on_subscribe: Option<
+        unsafe extern "C" fn(
+            context: *const c_void,
+            channel_id: u64,
+            client: FoxgloveClientMetadata,
+        ),
+    >,
+    pub on_unsubscribe: Option<
+        unsafe extern "C" fn(
+            context: *const c_void,
+            channel_id: u64,
+            client: FoxgloveClientMetadata,
+        ),
+    >,
     pub on_client_advertise: Option<
         unsafe extern "C" fn(
             context: *const c_void,
@@ -1275,6 +1293,8 @@ pub unsafe extern "C" fn foxglove_channel_metadata_iter_free(
     }
 }
 
+type FoxgloveSinkId = u64;
+
 /// Log a message on a channel.
 ///
 /// # Safety
@@ -1288,6 +1308,7 @@ pub unsafe extern "C" fn foxglove_channel_log(
     data: *const u8,
     data_len: usize,
     log_time: Option<&u64>,
+    sink_id: FoxgloveSinkId,
 ) -> FoxgloveError {
     // An assert might be reasonable under different circumstances, but here
     // we don't want to crash the program using the library, on a robot in the field,
@@ -1304,11 +1325,15 @@ pub unsafe extern "C" fn foxglove_channel_log(
     let channel = ManuallyDrop::new(unsafe {
         Arc::from_raw(channel as *const _ as *const foxglove::RawChannel)
     });
-    channel.log_with_meta(
+
+    let sink_id = std::num::NonZeroU64::new(sink_id).map(foxglove::SinkId::new);
+
+    channel.log_with_meta_to_sink(
         unsafe { std::slice::from_raw_parts(data, data_len) },
         foxglove::PartialMetadata {
             log_time: log_time.copied(),
         },
+        sink_id,
     );
     FoxgloveError::Ok
 }
@@ -1359,21 +1384,29 @@ pub extern "C" fn foxglove_internal_register_cpp_wrapper() {
 impl foxglove::websocket::ServerListener for FoxgloveServerCallbacks {
     fn on_subscribe(
         &self,
-        _client: foxglove::websocket::Client,
+        client: foxglove::websocket::Client,
         channel: foxglove::websocket::ChannelView,
     ) {
         if let Some(on_subscribe) = self.on_subscribe {
-            unsafe { on_subscribe(self.context, channel.id().into()) };
+            let c_client_metadata = FoxgloveClientMetadata {
+                id: client.id().into(),
+                sink_id: client.sink_id().map(|id| id.into()).unwrap_or(0),
+            };
+            unsafe { on_subscribe(self.context, channel.id().into(), c_client_metadata) };
         }
     }
 
     fn on_unsubscribe(
         &self,
-        _client: foxglove::websocket::Client,
+        client: foxglove::websocket::Client,
         channel: foxglove::websocket::ChannelView,
     ) {
         if let Some(on_unsubscribe) = self.on_unsubscribe {
-            unsafe { on_unsubscribe(self.context, channel.id().into()) };
+            let c_client_metadata = FoxgloveClientMetadata {
+                id: client.id().into(),
+                sink_id: client.sink_id().map(|id| id.into()).unwrap_or(0),
+            };
+            unsafe { on_unsubscribe(self.context, channel.id().into(), c_client_metadata) };
         }
     }
 

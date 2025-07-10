@@ -301,6 +301,13 @@ typedef struct foxglove_string {
   size_t len;
 } foxglove_string;
 
+typedef uint64_t FoxgloveSinkId;
+
+typedef struct foxglove_client_metadata {
+  uint32_t id;
+  FoxgloveSinkId sink_id;
+} foxglove_client_metadata;
+
 typedef struct foxglove_client_channel {
   uint32_t id;
   const char *topic;
@@ -439,8 +446,12 @@ typedef struct foxglove_server_callbacks {
    * A user-defined value that will be passed to callback functions
    */
   const void *context;
-  void (*on_subscribe)(const void *context, uint64_t channel_id);
-  void (*on_unsubscribe)(const void *context, uint64_t channel_id);
+  void (*on_subscribe)(const void *context,
+                       uint64_t channel_id,
+                       struct foxglove_client_metadata client);
+  void (*on_unsubscribe)(const void *context,
+                         uint64_t channel_id,
+                         struct foxglove_client_metadata client);
   void (*on_client_advertise)(const void *context,
                               uint32_t client_id,
                               const struct foxglove_client_channel *channel);
@@ -2132,7 +2143,8 @@ void foxglove_channel_metadata_iter_free(struct foxglove_channel_metadata_iterat
 foxglove_error foxglove_channel_log(const struct foxglove_channel *channel,
                                     const uint8_t *data,
                                     size_t data_len,
-                                    const uint64_t *log_time);
+                                    const uint64_t *log_time,
+                                    FoxgloveSinkId sink_id);
 
 /**
  * Create a new context. This never fails.
