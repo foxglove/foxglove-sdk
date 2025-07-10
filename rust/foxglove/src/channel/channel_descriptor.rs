@@ -3,6 +3,9 @@ use std::{collections::BTreeMap, sync::Arc};
 use crate::{channel::ChannelId, Schema};
 
 /// Information about a Channel.
+///
+/// Cheaply cloned with references to the underlying data.
+#[derive(Clone)]
 pub struct ChannelDescriptor(Arc<Inner>);
 
 struct Inner {
@@ -20,14 +23,14 @@ impl ChannelDescriptor {
         message_encoding: String,
         metadata: BTreeMap<String, String>,
         schema: Option<Schema>,
-    ) -> Arc<Self> {
-        Arc::new(Self(Arc::new(Inner {
+    ) -> Self {
+        Self(Arc::new(Inner {
             id,
             topic,
             message_encoding,
             metadata,
             schema,
-        })))
+        }))
     }
 
     /// Returns the channel ID.

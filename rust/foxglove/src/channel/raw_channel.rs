@@ -34,7 +34,7 @@ static WARN_THROTTLER_INTERVAL: Duration = Duration::from_secs(10);
 ///
 /// You should choose a unique topic name per channel for compatibility with the Foxglove app.
 pub struct RawChannel {
-    descriptor: Arc<ChannelDescriptor>,
+    descriptor: ChannelDescriptor,
     context: Weak<Context>,
     sinks: LogSinkSet,
     closed: AtomicBool,
