@@ -35,8 +35,8 @@ interface loader {
 
     enum severity {
         info,
+        warn,
         error,
-        warn
     }
 
     record problem {
