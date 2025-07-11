@@ -41,27 +41,27 @@ pub fn create_channel<T: Encode>(
 
 /// Log a message for a topic to the default Context.
 ///
-/// $topic: string literal topic name
-/// $msg: expression to log, must implement Encode trait
+/// - `$topic`: string literal topic name
+/// - `$msg`: expression to log, must implement the [Encode] trait
 ///
 /// Optional keyword arguments:
-/// - log_time: timestamp when the message was logged. It can be a u64 (nanoseconds since epoch),
+/// - `log_time`: timestamp when the message was logged. It can be a u64 (nanoseconds since epoch),
 ///   a foxglove [`Timestamp`][crate::schemas::Timestamp], a [`SystemTime`][std::time::SystemTime],
 ///   or anything else that implements [`ToUnixNanos`][crate::ToUnixNanos].
 ///
 /// If a channel for the topic already exists in the default Context, it will be used.
 /// Otherwise, a new channel will be created. Either way, the channel is never removed
 /// from the Context. Panics if the existing channel schema or message_encoding
-/// is incompatible with $msg.
+/// is incompatible with `$msg`.
 ///
-/// The type of message to log! should be consistent for each call site to log!.
+/// The type of message to `log!` should be consistent for each call site to `log!`.
 /// This is usually true in Rust, but it's possible in a function generic on the message type,
-/// to pass different message types in the same call site for log!, for the same underlying
+/// to pass different message types in the same call site for `log!`, for the same underlying
 /// channel with no error at compile time or runtime. The schema will still be the schema the
 /// channel was first created with, and the messages won't match the schema,
 /// and will not behave well in the Foxglove app. You should avoid doing this.
 ///
-/// Panics if a channel can't be created for $msg.
+/// Panics if a channel can't be created for `$msg`.
 #[macro_export]
 macro_rules! log {
     ($topic:literal, $msg:expr $(,)? ) => {{
