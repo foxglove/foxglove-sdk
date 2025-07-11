@@ -1142,6 +1142,58 @@ typedef struct foxglove_grid {
 } foxglove_grid;
 
 /**
+ * A 3D grid of data
+ */
+typedef struct foxglove_grid3_d {
+  /**
+   * Timestamp of grid
+   */
+  const struct foxglove_timestamp *timestamp;
+  /**
+   * Frame of reference
+   */
+  struct foxglove_string frame_id;
+  /**
+   * Origin of grid's corner relative to frame of reference; grid is positioned in the x-y plane relative to this origin
+   */
+  const struct foxglove_pose *pose;
+  /**
+   * Number of grid rows
+   */
+  uint32_t row_count;
+  /**
+   * Number of grid columns
+   */
+  uint32_t column_count;
+  /**
+   * Size of single grid cell along x, y, and z axes, relative to `pose`
+   */
+  const struct foxglove_vector3 *cell_size;
+  /**
+   * Number of bytes between depth slices in `data`
+   */
+  uint32_t slice_stride;
+  /**
+   * Number of bytes between rows in `data`
+   */
+  uint32_t row_stride;
+  /**
+   * Number of bytes between cells within a row in `data`
+   */
+  uint32_t cell_stride;
+  /**
+   * Fields in `data`. `red`, `green`, `blue`, and `alpha` are optional for customizing the grid's color.
+   */
+  const struct foxglove_packed_element_field *fields;
+  size_t fields_count;
+  /**
+   * Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order — values fill each row from left to right along the X axis, with rows ordered from top to bottom along the Y axis, starting at the bottom-left corner when viewed from +Z looking towards -Z with identity orientations
+   */
+  const unsigned char *data;
+  size_t data_len;
+} foxglove_grid3_d;
+
+/**
  * An array of points on a 2D image
  */
 typedef struct foxglove_points_annotation {
@@ -2409,6 +2461,26 @@ foxglove_error foxglove_channel_create_grid(struct foxglove_string topic,
 foxglove_error foxglove_channel_log_grid(const struct foxglove_channel *channel,
                                          const struct foxglove_grid *msg,
                                          const uint64_t *log_time);
+
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
+foxglove_error foxglove_channel_create_grid3_d(struct foxglove_string topic,
+                                               const struct foxglove_context *context,
+                                               const struct foxglove_channel **channel);
+
+/**
+ * Log a Grid3D message to a channel.
+ *
+ * # Safety
+ * The channel must have been created for this type with foxglove_channel_create_grid3_d.
+ */
+foxglove_error foxglove_channel_log_grid3_d(const struct foxglove_channel *channel,
+                                            const struct foxglove_grid3_d *msg,
+                                            const uint64_t *log_time);
 
 /**
  * Create a new typed channel, and return an owned raw channel pointer to it.
