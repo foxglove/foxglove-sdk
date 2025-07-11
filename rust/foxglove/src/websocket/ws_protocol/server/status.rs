@@ -6,8 +6,7 @@ use serde_repr::{Deserialize_repr, Serialize_repr};
 use crate::websocket::ws_protocol::JsonMessage;
 
 /// Status message.
-///
-/// Spec: <https://github.com/foxglove/ws-protocol/blob/main/docs/spec.md#status>
+// Spec: <https://github.com/foxglove/ws-protocol/blob/main/docs/spec.md#status>
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "op", rename = "status", rename_all = "camelCase")]
 pub struct Status {
