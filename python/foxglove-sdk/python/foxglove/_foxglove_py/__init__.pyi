@@ -58,12 +58,16 @@ class BaseChannel:
     def log(
         self,
         msg: bytes,
+        *,
+        sink_id: Optional[int] = None,
         log_time: Optional[int] = None,
     ) -> None:
         """
         Log a message to the channel.
 
         :param msg: The message to log.
+        :param sink_id: The optional sink ID to log the message to. If omitted, the message is
+            logged to all sinks. Sink ID must be a positive integer.
         :param log_time: The optional time the message was logged.
         """
         ...

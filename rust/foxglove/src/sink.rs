@@ -37,6 +37,14 @@ impl From<SinkId> for u64 {
     }
 }
 
+impl TryFrom<u64> for SinkId {
+    type Error = <NonZeroU64 as TryFrom<u64>>::Error;
+
+    fn try_from(value: u64) -> Result<Self, Self::Error> {
+        NonZeroU64::try_from(value).map(Self::new)
+    }
+}
+
 impl From<SinkId> for NonZeroU64 {
     fn from(id: SinkId) -> Self {
         id.0

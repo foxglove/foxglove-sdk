@@ -105,6 +105,7 @@ class Channel:
         self,
         msg: Union[JsonMessage, list[Any], bytes, str],
         *,
+        sink_id: Optional[int] = None,
         log_time: Optional[int] = None,
     ) -> None:
         """
@@ -112,16 +113,20 @@ class Channel:
 
         :param msg: the message to log. If the channel uses JSON encoding, you may pass a
             dictionary or list. Otherwise, you are responsible for serializing the message.
+        :param sink_id: The optional sink ID to log the message to. If omitted, the message is
+            logged to all sinks. Sink ID must be a positive integer.
         :param log_time: The optional time the message was logged.
         """
         if self.message_encoding == "json" and isinstance(msg, (dict, list)):
-            return self.base.log(json.dumps(msg).encode("utf-8"), log_time)
+            return self.base.log(
+                json.dumps(msg).encode("utf-8"), sink_id=sink_id, log_time=log_time
+            )
 
         if isinstance(msg, str):
             msg = msg.encode("utf-8")
 
         if isinstance(msg, bytes):
-            return self.base.log(msg, log_time)
+            return self.base.log(msg, sink_id=sink_id, log_time=log_time)
 
         raise TypeError(f"Unsupported message type: {type(msg)}")
 

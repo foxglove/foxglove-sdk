@@ -1,6 +1,6 @@
 use errors::PyFoxgloveError;
-use foxglove::McapWriteOptions;
 use foxglove::{ChannelBuilder, Context, McapWriter, PartialMetadata, RawChannel, Schema};
+use foxglove::{McapWriteOptions, SinkId};
 use generated::channels;
 use generated::schemas;
 use log::LevelFilter;
@@ -89,10 +89,11 @@ impl BaseChannel {
         Ok(BaseChannel(channel))
     }
 
-    #[pyo3(signature = (msg, log_time=None))]
-    fn log(&self, msg: &[u8], log_time: Option<u64>) -> PyResult<()> {
+    #[pyo3(signature = (msg, *, sink_id=None, log_time=None))]
+    fn log(&self, msg: &[u8], sink_id: Option<u64>, log_time: Option<u64>) -> PyResult<()> {
         let metadata = PartialMetadata { log_time };
-        self.0.log_with_meta(msg, metadata);
+        let sink_id = sink_id.and_then(|id| SinkId::try_from(id).ok());
+        self.0.log_with_meta_to_sink(msg, metadata, sink_id);
         Ok(())
     }
 
