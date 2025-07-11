@@ -1,5 +1,30 @@
-# Import Catch2 for testing
+# Import Catch2 for testing and other test dependencies
 include(FetchContent)
+
+# ASIO for async I/O (required by WebSocket++)
+FetchContent_Declare(asio
+    GIT_REPOSITORY https://github.com/chriskohlhoff/asio.git
+    GIT_TAG asio-1-31-0
+)
+FetchContent_MakeAvailable(asio)
+
+# WebSocket++
+FetchContent_Declare(
+    websocketpp
+    GIT_REPOSITORY https://github.com/zaphoyd/websocketpp.git
+    GIT_TAG 0.8.2
+    OVERRIDE_FIND_PACKAGE
+)
+set(FETCHCONTENT_TRY_FIND_PACKAGE_MODE NEVER)
+FetchContent_GetProperties(websocketpp)
+if(NOT websocketpp_POPULATED)
+    FetchContent_Populate(websocketpp)
+    add_library(websocketpp INTERFACE)
+    target_include_directories(websocketpp INTERFACE ${websocketpp_SOURCE_DIR})
+endif()
+FetchContent_MakeAvailable(websocketpp)
+
+# Catch2
 FetchContent_Declare(
     Catch2
     GIT_REPOSITORY https://github.com/catchorg/Catch2.git

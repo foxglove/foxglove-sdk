@@ -1,3 +1,11 @@
+# Import JSON for modern C++
+include(FetchContent)
+FetchContent_Declare(json
+    GIT_REPOSITORY https://github.com/nlohmann/json.git
+    GIT_TAG v3.12.0
+)
+FetchContent_MakeAvailable(json)
+
 function(add_example name)
     add_executable(example_${name} ${name}/src/main.cpp)
     set_property(TARGET example_${name} PROPERTY CXX_STANDARD 17)
