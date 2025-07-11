@@ -9,9 +9,11 @@ use smallbytes::SmallBytes;
 
 use crate::{metadata::ToUnixNanos, ChannelBuilder, Encode, PartialMetadata, Schema, SinkId};
 
+mod channel_descriptor;
 mod lazy_channel;
 mod raw_channel;
 
+pub use channel_descriptor::ChannelDescriptor;
 pub use lazy_channel::{LazyChannel, LazyRawChannel};
 pub use raw_channel::RawChannel;
 
