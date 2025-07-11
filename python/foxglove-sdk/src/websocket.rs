@@ -875,6 +875,7 @@ impl From<foxglove::websocket::ParameterValue> for PyParameterValue {
     fn from(value: foxglove::websocket::ParameterValue) -> Self {
         match value {
             foxglove::websocket::ParameterValue::Number(n) => PyParameterValue::Number(n),
+            foxglove::websocket::ParameterValue::Integer(n) => PyParameterValue::Number(n as f64), // TODO: Add integer type?
             foxglove::websocket::ParameterValue::Bool(b) => PyParameterValue::Bool(b),
             foxglove::websocket::ParameterValue::String(s) => PyParameterValue::String(s),
             foxglove::websocket::ParameterValue::Array(parameter_values) => {

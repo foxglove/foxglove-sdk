@@ -35,7 +35,10 @@ pub enum ParameterType {
 #[serde(untagged)]
 pub enum ParameterValue {
     /// A decimal or integer value.
+    /// TODO: Rename to indicate that this is a float only
     Number(f64),
+    /// An integer value.
+    Integer(i64),
     /// A boolean value.
     Bool(bool),
     /// A string value.
@@ -78,6 +81,26 @@ impl Parameter {
             name: name.into(),
             r#type: Some(ParameterType::Float64),
             value: Some(ParameterValue::Number(value)),
+        }
+    }
+
+    /// Creates a new parameter with an integer value.
+    pub fn integer(name: impl Into<String>, value: i64) -> Self {
+        Self {
+            name: name.into(),
+            r#type: None,
+            value: Some(ParameterValue::Integer(value)),
+        }
+    }
+
+    /// Creates a new parameter with an integer array value.
+    pub fn integer_array(name: impl Into<String>, values: impl IntoIterator<Item = i64>) -> Self {
+        Self {
+            name: name.into(),
+            r#type: None,
+            value: Some(ParameterValue::Array(
+                values.into_iter().map(ParameterValue::Integer).collect(),
+            )),
         }
     }
 
@@ -163,6 +186,16 @@ mod tests {
     #[test]
     fn test_float_array() {
         insta::assert_json_snapshot!(Parameter::float64_array("f64[]", [1.23, 4.56]));
+    }
+
+    #[test]
+    fn test_integer() {
+        insta::assert_json_snapshot!(Parameter::integer("i64", 123));
+    }
+
+    #[test]
+    fn test_integer_array() {
+        insta::assert_json_snapshot!(Parameter::integer_array("i64[]", [123, 456]));
     }
 
     #[test]

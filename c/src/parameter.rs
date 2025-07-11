@@ -769,6 +769,7 @@ impl From<ParameterValue> for FoxgloveParameterValue {
     fn from(value: ParameterValue) -> Self {
         match value {
             ParameterValue::Number(v) => Self::number(v),
+            ParameterValue::Integer(v) => Self::number(v as f64), // TODO: Add integer type?
             ParameterValue::Bool(v) => Self::boolean(v),
             ParameterValue::String(v) => Self::string(v),
             ParameterValue::Array(v) => Self::array(v.into_iter().collect()),
