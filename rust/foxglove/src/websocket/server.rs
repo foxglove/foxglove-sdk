@@ -134,7 +134,6 @@ pub(crate) struct Server {
     /// Encodings server can accept from clients. Ignored unless the "clientPublish" capability is set.
     supported_encodings: HashSet<String>,
     /// The current connection graph, unused unless the "connectionGraph" capability is set.
-    /// see https://github.com/foxglove/ws-protocol/blob/main/docs/spec.md#connection-graph-update
     connection_graph: parking_lot::Mutex<ConnectionGraph>,
     /// Token for cancelling all tasks
     cancellation_token: CancellationToken,

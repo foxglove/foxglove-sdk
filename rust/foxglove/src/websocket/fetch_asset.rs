@@ -7,7 +7,7 @@ use super::Client;
 
 /// A handler to respond to fetch asset requests.
 ///
-/// See: <https://github.com/foxglove/ws-protocol/blob/main/docs/spec.md#fetch-asset>
+/// This can be used to serve assets to the Foxglove app, including URDF files for the 3D panel.
 pub trait AssetHandler: Send + Sync + 'static {
     /// Fetch an asset with the given uri and return it via the responder.
     /// Fetch should not block, it should call `runtime.spawn`
