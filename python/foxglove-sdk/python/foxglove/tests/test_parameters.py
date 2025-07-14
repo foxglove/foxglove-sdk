@@ -26,25 +26,49 @@ def test_float() -> None:
 def test_int() -> None:
     p = Parameter("int", value=1)
     assert p.name == "int"
-    assert p.type == ParameterType.Float64
-    assert p.value == ParameterValue.Number(1)
-    assert type(p.get_value()) is float
+    assert p.type is None
+    assert p.value == ParameterValue.Integer(1)
+    assert type(p.get_value()) is int
     assert p.get_value() == 1
 
 
 def test_float_array() -> None:
-    v: AnyNativeParameterValue = [1, 2, 3]
+    v: AnyNativeParameterValue = [1.0, 2.0, 3.0]
     p = Parameter("float_array", value=v)
     assert p.name == "float_array"
     assert p.type == ParameterType.Float64Array
     assert p.value == ParameterValue.Array(
         [
-            ParameterValue.Number(1),
-            ParameterValue.Number(2),
-            ParameterValue.Number(3),
+            ParameterValue.Number(1.0),
+            ParameterValue.Number(2.0),
+            ParameterValue.Number(3.0),
         ]
     )
     assert p.get_value() == v
+
+
+def test_int_array() -> None:
+    v: AnyNativeParameterValue = [1, 2, 3]
+    p = Parameter("int_array", value=v)
+    assert p.name == "int_array"
+    assert p.type is None
+    assert p.value == ParameterValue.Array(
+        [
+            ParameterValue.Integer(1),
+            ParameterValue.Integer(2),
+            ParameterValue.Integer(3),
+        ]
+    )
+    assert p.get_value() == v
+
+
+def test_parameter_value_integer() -> None:
+    p = Parameter("integer_param", value=ParameterValue.Integer(42))
+    assert p.name == "integer_param"
+    assert p.type is None
+    assert p.value == ParameterValue.Integer(42)
+    assert type(p.get_value()) is int
+    assert p.get_value() == 42
 
 
 def test_heterogeneous_array() -> None:
@@ -55,7 +79,7 @@ def test_heterogeneous_array() -> None:
     assert p.value == ParameterValue.Array(
         [
             ParameterValue.String("a"),
-            ParameterValue.Number(2),
+            ParameterValue.Integer(2),
             ParameterValue.Bool(False),
         ]
     )
@@ -94,15 +118,15 @@ def test_dict() -> None:
     assert p.value == ParameterValue.Dict(
         {
             "a": ParameterValue.Bool(True),
-            "b": ParameterValue.Number(2),
+            "b": ParameterValue.Integer(2),
             "c": ParameterValue.String("C"),
             "d": ParameterValue.Dict(
                 {
                     "inner": ParameterValue.Array(
                         [
-                            ParameterValue.Number(1),
-                            ParameterValue.Number(2),
-                            ParameterValue.Number(3),
+                            ParameterValue.Integer(1),
+                            ParameterValue.Integer(2),
+                            ParameterValue.Integer(3),
                         ]
                     )
                 }

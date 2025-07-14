@@ -109,7 +109,7 @@ class Parameter:
     :param name: The parameter name.
     :type name: str
     :param value: Optional value, represented as a native python object, or a ParameterValue.
-    :type value: None|bool|float|str|bytes|list|dict|ParameterValue
+    :type value: None|bool|int|float|str|bytes|list|dict|ParameterValue
     :param type: Optional parameter type. This is automatically derived when passing a native
                  python object as the value.
     :type type: ParameterType|None
@@ -149,6 +149,11 @@ class ParameterValue:
     A parameter value.
     """
 
+    class Integer:
+        """An integer value."""
+
+        def __new__(cls, value: int) -> "ParameterValue.Integer": ...
+
     class Bool:
         """A boolean value."""
 
@@ -184,6 +189,7 @@ class ParameterValue:
         ) -> "ParameterValue.Dict": ...
 
 AnyParameterValue = Union[
+    ParameterValue.Integer,
     ParameterValue.Bool,
     ParameterValue.Number,
     ParameterValue.String,
@@ -194,6 +200,7 @@ AnyParameterValue = Union[
 AnyInnerParameterValue = Union[
     AnyParameterValue,
     bool,
+    int,
     float,
     str,
     List["AnyInnerParameterValue"],

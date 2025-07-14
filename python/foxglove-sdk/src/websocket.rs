@@ -839,6 +839,8 @@ impl From<foxglove::websocket::ParameterType> for PyParameterType {
 #[pyclass(name = "ParameterValue", module = "foxglove", eq)]
 #[derive(Clone, PartialEq)]
 pub enum PyParameterValue {
+    /// An integer value.
+    Integer(i64),
     /// A decimal or integer value.
     Number(f64),
     /// A boolean value.
@@ -856,6 +858,7 @@ pub enum PyParameterValue {
 impl From<PyParameterValue> for foxglove::websocket::ParameterValue {
     fn from(value: PyParameterValue) -> Self {
         match value {
+            PyParameterValue::Integer(i) => foxglove::websocket::ParameterValue::Integer(i),
             PyParameterValue::Number(n) => foxglove::websocket::ParameterValue::Number(n),
             PyParameterValue::Bool(b) => foxglove::websocket::ParameterValue::Bool(b),
             PyParameterValue::String(s) => foxglove::websocket::ParameterValue::String(s),
@@ -874,8 +877,8 @@ impl From<PyParameterValue> for foxglove::websocket::ParameterValue {
 impl From<foxglove::websocket::ParameterValue> for PyParameterValue {
     fn from(value: foxglove::websocket::ParameterValue) -> Self {
         match value {
+            foxglove::websocket::ParameterValue::Integer(n) => PyParameterValue::Integer(n),
             foxglove::websocket::ParameterValue::Number(n) => PyParameterValue::Number(n),
-            foxglove::websocket::ParameterValue::Integer(n) => PyParameterValue::Number(n as f64), // TODO: Add integer type?
             foxglove::websocket::ParameterValue::Bool(b) => PyParameterValue::Bool(b),
             foxglove::websocket::ParameterValue::String(s) => PyParameterValue::String(s),
             foxglove::websocket::ParameterValue::Array(parameter_values) => {
@@ -981,6 +984,7 @@ impl<'py> IntoPyObject<'py> for ParameterValueConverter {
 
     fn into_pyobject(self, py: Python<'py>) -> Result<Self::Output, Self::Error> {
         match self.0 {
+            PyParameterValue::Integer(v) => v.into_bound_py_any(py),
             PyParameterValue::Number(v) => v.into_bound_py_any(py),
             PyParameterValue::Bool(v) => v.into_bound_py_any(py),
             PyParameterValue::String(v) => v.into_bound_py_any(py),
@@ -1005,6 +1009,8 @@ impl<'py> FromPyObject<'py> for ParameterValueConverter {
             Ok(Self(val))
         } else if let Ok(val) = obj.extract::<bool>() {
             Ok(Self(PyParameterValue::Bool(val)))
+        } else if let Ok(val) = obj.extract::<i64>() {
+            Ok(Self(PyParameterValue::Integer(val)))
         } else if let Ok(val) = obj.extract::<f64>() {
             Ok(Self(PyParameterValue::Number(val)))
         } else if let Ok(val) = obj.extract::<String>() {
