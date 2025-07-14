@@ -109,6 +109,7 @@ FoxgloveError RawChannel::log(
   return log_(data, data_len, log_time, std::nullopt);
 }
 
+/// @cond foxglove_internal
 FoxgloveError RawChannel::log_(
   const std::byte* data, size_t data_len, std::optional<uint64_t> log_time,
   std::optional<uint64_t> sink_id
@@ -122,5 +123,6 @@ FoxgloveError RawChannel::log_(
   );
   return FoxgloveError(error);
 }
+/// @endcond
 
 }  // namespace foxglove
