@@ -234,7 +234,6 @@ TEST_CASE("Parameter construction and access") {
     REQUIRE(generic_array.empty());
   }
 
-
   SECTION("parameter with dict value") {
     std::map<std::string, foxglove::ParameterValue> values;
     values.insert(std::make_pair("key1", foxglove::ParameterValue(1.0)));

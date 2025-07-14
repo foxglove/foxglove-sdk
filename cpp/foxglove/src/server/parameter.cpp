@@ -306,7 +306,6 @@ Parameter::Parameter(std::string_view name, const std::vector<int64_t>& values)
   impl_.reset(ptr);
 }
 
-
 Parameter::Parameter(std::string_view name, std::map<std::string, ParameterValue> values)
     : Parameter::Parameter(name, ParameterType::None, ParameterValue(std::move(values))) {}
 
