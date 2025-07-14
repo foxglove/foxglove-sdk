@@ -104,6 +104,12 @@ std::optional<std::map<std::string, std::string>> RawChannel::metadata() const n
 }
 
 FoxgloveError RawChannel::log(
+  const std::byte* data, size_t data_len, std::optional<uint64_t> log_time
+) noexcept {
+  return log_(data, data_len, log_time, std::nullopt);
+}
+
+FoxgloveError RawChannel::log_(
   const std::byte* data, size_t data_len, std::optional<uint64_t> log_time,
   std::optional<uint64_t> sink_id
 ) noexcept {

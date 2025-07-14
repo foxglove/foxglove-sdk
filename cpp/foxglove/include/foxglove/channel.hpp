@@ -65,12 +65,23 @@ public:
   /// @param data The message data.
   /// @param data_len The length of the message data, in bytes.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
-  /// @param sink_id The sink ID associated with the message. Can be used to target logging messages
-  /// to a specific client or mcap file. If omitted, the message is logged to all sinks.
   FoxgloveError log(
+    const std::byte* data, size_t data_len, std::optional<uint64_t> log_time = std::nullopt
+  ) noexcept;
+
+  /// @cond foxglove_internal
+  /// @param data The message data.
+  /// @param data_len The length of the message data, in bytes.
+  /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  /// @param sink_id The sink ID associated with the message. Can be used to target logging messages
+  /// to a specific client or mcap file. If omitted, the message is logged to all sinks. Note that
+  /// providing a sink_id is not yet part of the public API. To partition logs among specific sinks,
+  /// set up different `Context`s.
+  FoxgloveError log_(
     const std::byte* data, size_t data_len, std::optional<uint64_t> log_time = std::nullopt,
     std::optional<uint64_t> sink_id = std::nullopt
   ) noexcept;
+  /// @endcond
 
   /// @brief Close the channel.
   ///
