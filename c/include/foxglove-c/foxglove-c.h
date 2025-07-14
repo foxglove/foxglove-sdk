@@ -205,6 +205,7 @@ enum foxglove_parameter_value_tag
 #endif // __cplusplus
  {
   FOXGLOVE_PARAMETER_VALUE_TAG_NUMBER,
+  FOXGLOVE_PARAMETER_VALUE_TAG_INTEGER,
   FOXGLOVE_PARAMETER_VALUE_TAG_BOOLEAN,
   FOXGLOVE_PARAMETER_VALUE_TAG_STRING,
   FOXGLOVE_PARAMETER_VALUE_TAG_ARRAY,
@@ -379,6 +380,7 @@ typedef struct foxglove_parameter_value_dict {
  */
 typedef union foxglove_parameter_value_data {
   double number;
+  int64_t integer;
   bool boolean;
   struct foxglove_string string;
   struct foxglove_parameter_value_array array;
@@ -3129,6 +3131,20 @@ foxglove_error foxglove_parameter_create_float64(struct foxglove_parameter **par
                                                  double value);
 
 /**
+ * Creates a new integer parameter.
+ *
+ * The value must be freed with `foxglove_parameter_free`, or by passing it to a consuming
+ * function such as `foxglove_parameter_array_push`.
+ *
+ * # Safety
+ * - `param` must be a valid pointer.
+ * - `name` must be a valid `foxglove_string`. This value is copied by this function.
+ */
+foxglove_error foxglove_parameter_create_integer(struct foxglove_parameter **param,
+                                                 struct foxglove_string name,
+                                                 int64_t value);
+
+/**
  * Creates a new boolean parameter.
  *
  * The value must be freed with `foxglove_parameter_free`, or by passing it to a consuming
@@ -3187,6 +3203,14 @@ foxglove_error foxglove_parameter_create_byte_array(struct foxglove_parameter **
 foxglove_error foxglove_parameter_create_float64_array(struct foxglove_parameter **param,
                                                        struct foxglove_string name,
                                                        const double *values,
+                                                       size_t values_len);
+
+/**
+ * Creates a new parameter which is an array of integer values.
+ */
+foxglove_error foxglove_parameter_create_integer_array(struct foxglove_parameter **param,
+                                                       struct foxglove_string name,
+                                                       const int64_t *values,
                                                        size_t values_len);
 
 /**
@@ -3263,6 +3287,14 @@ void foxglove_parameter_free(struct foxglove_parameter *param);
  * function such as `foxglove_parameter_create`.
  */
 struct foxglove_parameter_value *foxglove_parameter_value_create_number(double number);
+
+/**
+ * Creates a new integer parameter value.
+ *
+ * The value must be freed with `foxglove_parameter_value_free`, or by passing it to a consuming
+ * function such as `foxglove_parameter_create`.
+ */
+struct foxglove_parameter_value *foxglove_parameter_value_create_integer(int64_t integer);
 
 /**
  * Creates a new boolean parameter value.

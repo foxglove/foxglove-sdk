@@ -378,6 +378,24 @@ pub unsafe extern "C" fn foxglove_parameter_create_float64(
     unsafe { foxglove_parameter_create(param, name, FoxgloveParameterType::Float64, value) }
 }
 
+/// Creates a new integer parameter.
+///
+/// The value must be freed with `foxglove_parameter_free`, or by passing it to a consuming
+/// function such as `foxglove_parameter_array_push`.
+///
+/// # Safety
+/// - `param` must be a valid pointer.
+/// - `name` must be a valid `foxglove_string`. This value is copied by this function.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_parameter_create_integer(
+    param: *mut *mut FoxgloveParameter,
+    name: FoxgloveString,
+    value: i64,
+) -> FoxgloveError {
+    let value = FoxgloveParameterValue::integer(value).into_raw();
+    unsafe { foxglove_parameter_create(param, name, FoxgloveParameterType::None, value) }
+}
+
 /// Creates a new boolean parameter.
 ///
 /// The value must be freed with `foxglove_parameter_free`, or by passing it to a consuming
@@ -465,6 +483,24 @@ pub unsafe extern "C" fn foxglove_parameter_create_float64_array(
         .collect::<FoxgloveParameterValueArray>();
     let value = FoxgloveParameterValue::array(array).into_raw();
     unsafe { foxglove_parameter_create(param, name, FoxgloveParameterType::Float64Array, value) }
+}
+
+/// Creates a new parameter which is an array of integer values.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_parameter_create_integer_array(
+    param: *mut *mut FoxgloveParameter,
+    name: FoxgloveString,
+    values: *const i64,
+    values_len: usize,
+) -> FoxgloveError {
+    let values = unsafe { std::slice::from_raw_parts(values, values_len) };
+    let array = values
+        .iter()
+        .copied()
+        .map(ParameterValue::Integer)
+        .collect::<FoxgloveParameterValueArray>();
+    let value = FoxgloveParameterValue::array(array).into_raw();
+    unsafe { foxglove_parameter_create(param, name, FoxgloveParameterType::None, value) }
 }
 
 /// Creates a new parameter which is a dictionary of parameter values.
@@ -644,6 +680,7 @@ pub struct FoxgloveParameterValue {
 #[repr(u8)]
 pub enum FoxgloveParameterValueTag {
     Number,
+    Integer,
     Boolean,
     String,
     Array,
@@ -654,6 +691,7 @@ pub enum FoxgloveParameterValueTag {
 #[repr(C)]
 pub union FoxgloveParameterValueData {
     number: f64,
+    integer: i64,
     boolean: bool,
     string: ManuallyDrop<FoxgloveStringBuf>,
     array: ManuallyDrop<FoxgloveParameterValueArray>,
@@ -670,6 +708,14 @@ impl FoxgloveParameterValue {
         Self::new(
             FoxgloveParameterValueTag::Number,
             FoxgloveParameterValueData { number },
+        )
+    }
+
+    /// Constructs a new integer value.
+    fn integer(integer: i64) -> Self {
+        Self::new(
+            FoxgloveParameterValueTag::Integer,
+            FoxgloveParameterValueData { integer },
         )
     }
 
@@ -734,6 +780,10 @@ impl FoxgloveParameterValue {
                 // SAFETY: Constructed by [`Self::number`].
                 ParameterValue::Number(unsafe { this.data.number })
             }
+            FoxgloveParameterValueTag::Integer => {
+                // SAFETY: Constructed by [`Self::integer`].
+                ParameterValue::Integer(unsafe { this.data.integer })
+            }
             FoxgloveParameterValueTag::Boolean => {
                 // SAFETY: Constructed by [`Self::boolean`].
                 ParameterValue::Bool(unsafe { this.data.boolean })
@@ -769,7 +819,7 @@ impl From<ParameterValue> for FoxgloveParameterValue {
     fn from(value: ParameterValue) -> Self {
         match value {
             ParameterValue::Number(v) => Self::number(v),
-            ParameterValue::Integer(v) => Self::number(v as f64), // TODO: Add integer type?
+            ParameterValue::Integer(v) => Self::integer(v),
             ParameterValue::Bool(v) => Self::boolean(v),
             ParameterValue::String(v) => Self::string(v),
             ParameterValue::Array(v) => Self::array(v.into_iter().collect()),
@@ -784,6 +834,10 @@ impl Clone for FoxgloveParameterValue {
             FoxgloveParameterValueTag::Number => {
                 // SAFETY: Constructed by [`Self::number`].
                 Self::number(unsafe { self.data.number })
+            }
+            FoxgloveParameterValueTag::Integer => {
+                // SAFETY: Constructed by [`Self::integer`].
+                Self::integer(unsafe { self.data.integer })
             }
             FoxgloveParameterValueTag::Boolean => {
                 // SAFETY: Constructed by [`Self::boolean`].
@@ -811,7 +865,9 @@ impl Clone for FoxgloveParameterValue {
 impl Drop for FoxgloveParameterValue {
     fn drop(&mut self) {
         match self.tag {
-            FoxgloveParameterValueTag::Number | FoxgloveParameterValueTag::Boolean => (),
+            FoxgloveParameterValueTag::Number
+            | FoxgloveParameterValueTag::Integer
+            | FoxgloveParameterValueTag::Boolean => (),
             FoxgloveParameterValueTag::String => {
                 // SAFETY: Constructed by [`Self::string`].
                 let string = unsafe { &mut self.data.string };
@@ -846,6 +902,17 @@ pub extern "C" fn foxglove_parameter_value_create_number(
     number: f64,
 ) -> *mut FoxgloveParameterValue {
     FoxgloveParameterValue::number(number).into_raw()
+}
+
+/// Creates a new integer parameter value.
+///
+/// The value must be freed with `foxglove_parameter_value_free`, or by passing it to a consuming
+/// function such as `foxglove_parameter_create`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_parameter_value_create_integer(
+    integer: i64,
+) -> *mut FoxgloveParameterValue {
+    FoxgloveParameterValue::integer(integer).into_raw()
 }
 
 /// Creates a new boolean parameter value.

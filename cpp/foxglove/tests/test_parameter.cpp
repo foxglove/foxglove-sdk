@@ -18,6 +18,12 @@ TEST_CASE("ParameterValue construction and access") {
     REQUIRE(value.get<double>() == 42.0);
   }
 
+  SECTION("integer value") {
+    foxglove::ParameterValue value(int64_t(42));
+    REQUIRE(value.is<int64_t>());
+    REQUIRE(value.get<int64_t>() == 42);
+  }
+
   SECTION("bool value") {
     foxglove::ParameterValue value(true);
     REQUIRE(value.is<bool>());
@@ -42,6 +48,18 @@ TEST_CASE("ParameterValue construction and access") {
     REQUIRE(array.size() == 2);
     REQUIRE(array[0].get<double>() == 1.0);
     REQUIRE(array[1].get<double>() == 2.0);
+  }
+
+  SECTION("integer array value") {
+    std::vector<foxglove::ParameterValue> values;
+    values.emplace_back(int64_t(1));
+    values.emplace_back(int64_t(2));
+    foxglove::ParameterValue value(std::move(values));
+    REQUIRE(value.is<foxglove::ParameterValueView::Array>());
+    const auto& array = value.get<foxglove::ParameterValueView::Array>();
+    REQUIRE(array.size() == 2);
+    REQUIRE(array[0].get<int64_t>() == int64_t(1));
+    REQUIRE(array[1].get<int64_t>() == int64_t(2));
   }
 
   SECTION("dict value") {
@@ -71,6 +89,14 @@ TEST_CASE("Parameter construction and access") {
     REQUIRE(param.type() == foxglove::ParameterType::Float64);
     REQUIRE(param.is<double>());
     REQUIRE(param.get<double>() == 42.0);
+  }
+
+  SECTION("parameter with integer value") {
+    foxglove::Parameter param("test_param", int64_t(42));
+    REQUIRE(param.name() == "test_param");
+    REQUIRE(param.type() == foxglove::ParameterType::None);
+    REQUIRE(param.is<int64_t>());
+    REQUIRE(param.get<int64_t>() == 42);
   }
 
   SECTION("parameter with bool value") {
@@ -160,6 +186,55 @@ TEST_CASE("Parameter construction and access") {
     REQUIRE(generic_array.empty());
   }
 
+  SECTION("parameter with integer array value") {
+    std::vector<int64_t> values = {1LL, 2LL, 3LL};
+    foxglove::Parameter param("test_param", values);
+    REQUIRE(param.name() == "test_param");
+    REQUIRE(param.type() == foxglove::ParameterType::None);
+    REQUIRE(param.is<std::vector<int64_t>>());
+    REQUIRE(param.get<std::vector<int64_t>>() == values);
+
+    // Alternative checkers/extractors.
+    REQUIRE(param.isArray<int64_t>());
+    REQUIRE(param.getArray<int64_t>() == values);
+
+    REQUIRE(param.isArray<foxglove::ParameterValueView>());
+    auto generic_array = param.getArray<foxglove::ParameterValueView>();
+    REQUIRE(generic_array.size() == 3);
+    REQUIRE(generic_array[0].get<int64_t>() == 1LL);
+    REQUIRE(generic_array[1].get<int64_t>() == 2LL);
+    REQUIRE(generic_array[2].get<int64_t>() == 3LL);
+
+    REQUIRE(param.is<foxglove::ParameterValueView::Array>());
+    generic_array = param.get<foxglove::ParameterValueView::Array>();
+    REQUIRE(generic_array.size() == 3);
+    REQUIRE(generic_array[0].get<int64_t>() == 1LL);
+    REQUIRE(generic_array[1].get<int64_t>() == 2LL);
+    REQUIRE(generic_array[2].get<int64_t>() == 3LL);
+  }
+
+  SECTION("parameter with empty integer array value") {
+    std::vector<int64_t> values;
+    foxglove::Parameter param("test_param", values);
+    REQUIRE(param.name() == "test_param");
+    REQUIRE(param.type() == foxglove::ParameterType::None);
+    REQUIRE(param.is<std::vector<int64_t>>());
+    REQUIRE(param.get<std::vector<int64_t>>() == values);
+
+    // Alternative checkers/extractors.
+    REQUIRE(param.isArray<int64_t>());
+    REQUIRE(param.getArray<int64_t>() == values);
+
+    REQUIRE(param.isArray<foxglove::ParameterValueView>());
+    auto generic_array = param.getArray<foxglove::ParameterValueView>();
+    REQUIRE(generic_array.empty());
+
+    REQUIRE(param.is<foxglove::ParameterValueView::Array>());
+    generic_array = param.get<foxglove::ParameterValueView::Array>();
+    REQUIRE(generic_array.empty());
+  }
+
+
   SECTION("parameter with dict value") {
     std::map<std::string, foxglove::ParameterValue> values;
     values.insert(std::make_pair("key1", foxglove::ParameterValue(1.0)));
@@ -204,6 +279,24 @@ TEST_CASE("ParameterArray functionality") {
   REQUIRE(parameters[0].get<double>() == 1.0);
   REQUIRE(parameters[1].get<double>() == 2.0);
   REQUIRE(parameters[2].get<double>() == 3.0);
+}
+
+TEST_CASE("ParameterArray functionality with integers") {
+  std::vector<foxglove::Parameter> params;
+  params.emplace_back("param1", int64_t(1));
+  params.emplace_back("param2", int64_t(2));
+  params.emplace_back("param3", int64_t(3));
+
+  foxglove::ParameterArray array(std::move(params));
+  auto parameters = array.parameters();
+
+  REQUIRE(parameters.size() == 3);
+  REQUIRE(parameters[0].name() == "param1");
+  REQUIRE(parameters[1].name() == "param2");
+  REQUIRE(parameters[2].name() == "param3");
+  REQUIRE(parameters[0].get<int64_t>() == 1);
+  REQUIRE(parameters[1].get<int64_t>() == 2);
+  REQUIRE(parameters[2].get<int64_t>() == 3);
 }
 
 TEST_CASE("Parameter error cases") {
@@ -310,5 +403,19 @@ TEST_CASE("Parameter cloning") {
     REQUIRE(original_array.size() == clone_array.size());
     REQUIRE(original_array[0].get<double>() == clone_array[0].get<double>());
     REQUIRE(original_array[1].get<double>() == clone_array[1].get<double>());
+  }
+
+  SECTION("clone parameter value with integer array") {
+    std::vector<foxglove::ParameterValue> values;
+    values.emplace_back(int64_t(1));
+    values.emplace_back(int64_t(2));
+    foxglove::ParameterValue original(std::move(values));
+    auto clone = original.clone();
+    REQUIRE(clone.is<foxglove::ParameterValueView::Array>());
+    const auto& original_array = original.get<foxglove::ParameterValueView::Array>();
+    const auto& clone_array = clone.get<foxglove::ParameterValueView::Array>();
+    REQUIRE(original_array.size() == clone_array.size());
+    REQUIRE(original_array[0].get<int64_t>() == clone_array[0].get<int64_t>());
+    REQUIRE(original_array[1].get<int64_t>() == clone_array[1].get<int64_t>());
   }
 }
