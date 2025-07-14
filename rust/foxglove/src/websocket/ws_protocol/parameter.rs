@@ -34,11 +34,13 @@ pub enum ParameterType {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum ParameterValue {
+    /// An integer value.
+    /// NOTE: This needs to be before `Number` to ensure that values without a fractional part
+    /// are preferrentially deserialized as integers, not floats.
+    Integer(i64),
     /// A decimal or integer value.
     /// TODO: Rename to indicate that this is a float only
     Number(f64),
-    /// An integer value.
-    Integer(i64),
     /// A boolean value.
     Bool(bool),
     /// A string value.
