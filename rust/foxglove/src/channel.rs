@@ -133,6 +133,7 @@ impl<T: Encode> Channel<T> {
     ///
     /// The buffering behavior depends on the log sink; see [`McapWriter`][crate::McapWriter] and
     /// [`WebSocketServer`][crate::WebSocketServer] for details.
+    #[doc(hidden)]
     pub fn log_to_sink(&self, msg: &T, sink_id: Option<SinkId>) {
         self.log_with_meta_to_sink(msg, PartialMetadata::default(), sink_id);
     }
@@ -152,6 +153,7 @@ impl<T: Encode> Channel<T> {
     ///
     /// The buffering behavior depends on the log sink; see [`McapWriter`][crate::McapWriter] and
     /// [`WebSocketServer`][crate::WebSocketServer] for details.
+    #[doc(hidden)]
     pub fn log_with_meta_to_sink(
         &self,
         msg: &T,
