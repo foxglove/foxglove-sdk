@@ -353,17 +353,6 @@ impl foxglove::websocket::service::Handler for ServiceHandler {
 }
 
 /// Start a new Foxglove WebSocket server.
-///
-/// :param name: The name of the server.
-/// :param host: The host to bind to.
-/// :param port: The port to bind to.
-/// :param capabilities: A list of capabilities to advertise to clients.
-/// :param server_listener: A Python object that implements the :py:class:`foxglove.websocket.ServerListener` protocol.
-/// :param supported_encodings: A list of encodings to advertise to clients.
-///    Foxglove currently supports "json", "ros1", and "cdr" for client-side publishing.
-///
-/// To connect to this server: open Foxglove, choose "Open a new connection", and select Foxglove
-/// WebSocket. The default connection string matches the defaults used by the SDK.
 #[pyfunction]
 #[pyo3(signature = (*, name = None, host="127.0.0.1", port=8765, capabilities=None, server_listener=None, supported_encodings=None, services=None, asset_handler=None, context=None, session_id=None, channel_filter=None))]
 #[allow(clippy::too_many_arguments)]
