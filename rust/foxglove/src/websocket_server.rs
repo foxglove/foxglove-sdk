@@ -2,6 +2,7 @@
 
 use std::fmt::{Debug, Display};
 use std::future::Future;
+use std::net::SocketAddr;
 use std::sync::Arc;
 
 use crate::websocket::service::Service;
@@ -9,7 +10,7 @@ use crate::websocket::{
     create_server, AssetHandler, AsyncAssetHandlerFn, BlockingAssetHandlerFn, Capability, Client,
     ConnectionGraph, Parameter, Server, ServerOptions, ShutdownHandle, Status,
 };
-use crate::{get_runtime_handle, Context, FoxgloveError};
+use crate::{get_runtime_handle, AppUrl, Context, FoxgloveError};
 
 /// A WebSocket server for live visualization in Foxglove.
 ///
@@ -197,8 +198,8 @@ impl WebSocketServer {
     /// can safely drop the handle, and the server will run forever.
     pub async fn start(self) -> Result<WebSocketServerHandle, FoxgloveError> {
         let server = create_server(&self.context, self.options);
-        server.start(&self.host, self.port).await?;
-        Ok(WebSocketServerHandle(server))
+        let addr = server.start(&self.host, self.port).await?;
+        Ok(WebSocketServerHandle(server, addr))
     }
 
     /// Starts the websocket server.
@@ -227,7 +228,7 @@ impl WebSocketServer {
 /// A handle to the websocket server.
 ///
 /// This handle can safely be dropped and the server will run forever.
-pub struct WebSocketServerHandle(Arc<Server>);
+pub struct WebSocketServerHandle(Arc<Server>, SocketAddr);
 
 impl Debug for WebSocketServerHandle {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -238,7 +239,12 @@ impl Debug for WebSocketServerHandle {
 impl WebSocketServerHandle {
     /// Returns the local port that the server is listening on.
     pub fn port(&self) -> u16 {
-        self.0.port()
+        self.1.port()
+    }
+
+    /// Returns an app URL to open the websocket as a data source.
+    pub fn app_url(&self) -> AppUrl {
+        AppUrl::new().with_websocket(format!("ws://{}:{}", self.1.ip(), self.1.port()))
     }
 
     /// Advertises support for the provided services.
@@ -279,18 +285,13 @@ impl WebSocketServerHandle {
 
     /// Publishes a status message to all clients.
     ///
-    /// For more information, refer to the [Status][status] message specification.
-    ///
-    /// [status]: https://github.com/foxglove/ws-protocol/blob/main/docs/spec.md#status
+    /// This can be used to communicate information, warnings, and errors to the Foxglove app. An
+    /// ID may be included in the status to later remove it by referencing that ID.
     pub fn publish_status(&self, status: Status) {
         self.0.publish_status(status);
     }
 
     /// Removes status messages by id from all clients.
-    ///
-    /// For more information, refer to the [Remove Status][remove-status] message specification.
-    ///
-    /// [remove-status]: https://github.com/foxglove/ws-protocol/blob/main/docs/spec.md#remove-status
     pub fn remove_status(&self, status_ids: Vec<String>) {
         self.0.remove_status(status_ids);
     }

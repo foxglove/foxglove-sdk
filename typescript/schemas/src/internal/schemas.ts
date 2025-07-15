@@ -772,7 +772,7 @@ const CameraCalibration: FoxgloveMessageSchema = {
       name: "distortion_model",
       type: { type: "primitive", name: "string" },
       description:
-        "Name of distortion model\n\nSupported parameters: `plumb_bob` (k1, k2, p1, p2, k3) and `rational_polynomial` (k1, k2, p1, p2, k3, k4, k5, k6). Distortion models are based on [OpenCV's](https://docs.opencv.org/2.4/modules/calib3d/doc/camera_calibration_and_3d_reconstruction.html) [pinhole camera model](https://en.wikipedia.org/wiki/Distortion_%28optics%29#Software_correction). This is the same [implementation used by ROS](http://docs.ros.org/en/diamondback/api/image_geometry/html/c++/pinhole__camera__model_8cpp_source.html)",
+        "Name of distortion model\n\nSupported parameters: `plumb_bob` (k1, k2, p1, p2, k3), `rational_polynomial` (k1, k2, p1, p2, k3, k4, k5, k6), and `kannala_brandt` (k1, k2, k3, k4). `plumb_bob` and `rational_polynomial` models are based on the pinhole model [OpenCV's](https://docs.opencv.org/4.11.0/d9/d0c/group__calib3d.html) [pinhole camera model](https://en.wikipedia.org/wiki/Distortion_%28optics%29#Software_correction). The `kannala_brandt` model is matches the [OpenvCV fisheye](https://docs.opencv.org/4.11.0/db/d58/group__calib3d__fisheye.html) model.",
     },
     {
       name: "D",
@@ -1081,15 +1081,15 @@ const NumericType: FoxgloveEnumSchema = {
   parentSchemaName: "PackedElementField",
   protobufEnumName: "NumericType",
   values: [
-    { name: "UNKNOWN", value: 0 },
-    { name: "UINT8", value: 1 },
-    { name: "INT8", value: 2 },
-    { name: "UINT16", value: 3 },
-    { name: "INT16", value: 4 },
-    { name: "UINT32", value: 5 },
-    { name: "INT32", value: 6 },
-    { name: "FLOAT32", value: 7 },
-    { name: "FLOAT64", value: 8 },
+    { name: "UNKNOWN", value: 0, description: "Unknown numeric type" },
+    { name: "UINT8", value: 1, description: "Unsigned 8-bit integer" },
+    { name: "INT8", value: 2, description: "Signed 8-bit integer" },
+    { name: "UINT16", value: 3, description: "Unsigned 16-bit integer" },
+    { name: "INT16", value: 4, description: "Signed 16-bit integer" },
+    { name: "UINT32", value: 5, description: "Unsigned 32-bit integer" },
+    { name: "INT32", value: 6, description: "Signed 32-bit integer" },
+    { name: "FLOAT32", value: 7, description: "32-bit floating-point number" },
+    { name: "FLOAT64", value: 8, description: "64-bit floating-point number" },
   ],
 };
 
@@ -1167,7 +1167,8 @@ const Grid: FoxgloveMessageSchema = {
     {
       name: "data",
       type: { type: "primitive", name: "bytes" },
-      description: "Grid cell data, interpreted using `fields`, in row-major (y-major) order",
+      description:
+        "Grid cell data, interpreted using `fields`, in row-major (y-major) order — values fill each row from left to right along the X axis, with rows ordered from top to bottom along the Y axis, starting at the bottom-left corner when viewed from +Z looking towards -Z with identity orientations",
     },
   ],
 };
@@ -1218,7 +1219,7 @@ const PointsAnnotationType: FoxgloveEnumSchema = {
   parentSchemaName: "PointsAnnotation",
   protobufEnumName: "Type",
   values: [
-    { name: "UNKNOWN", value: 0 },
+    { name: "UNKNOWN", value: 0, description: "Unknown points annotation type" },
     { name: "POINTS", value: 1, description: "Individual points: 0, 1, 2, ..." },
     { name: "LINE_LOOP", value: 2, description: "Closed polygon: 0-1, 1-2, ..., (n-1)-n, n-0" },
     {
@@ -1350,10 +1351,14 @@ const PositionCovarianceType: FoxgloveEnumSchema = {
   parentSchemaName: "LocationFix",
   protobufEnumName: "PositionCovarianceType",
   values: [
-    { name: "UNKNOWN", value: 0 },
-    { name: "APPROXIMATED", value: 1 },
-    { name: "DIAGONAL_KNOWN", value: 2 },
-    { name: "KNOWN", value: 3 },
+    { name: "UNKNOWN", value: 0, description: "Unknown position covariance type" },
+    { name: "APPROXIMATED", value: 1, description: "Position covariance is approximated" },
+    {
+      name: "DIAGONAL_KNOWN",
+      value: 2,
+      description: "Position covariance is per-axis, so put it along the diagonal",
+    },
+    { name: "KNOWN", value: 3, description: "Position covariance of the fix is known" },
   ],
 };
 
@@ -1418,12 +1423,12 @@ const LogLevel: FoxgloveEnumSchema = {
   parentSchemaName: "Log",
   protobufEnumName: "Level",
   values: [
-    { name: "UNKNOWN", value: 0 },
-    { name: "DEBUG", value: 1 },
-    { name: "INFO", value: 2 },
-    { name: "WARNING", value: 3 },
-    { name: "ERROR", value: 4 },
-    { name: "FATAL", value: 5 },
+    { name: "UNKNOWN", value: 0, description: "Unknown log level" },
+    { name: "DEBUG", value: 1, description: "Debug log level" },
+    { name: "INFO", value: 2, description: "Info log level" },
+    { name: "WARNING", value: 3, description: "Warning log level" },
+    { name: "ERROR", value: 4, description: "Error log level" },
+    { name: "FATAL", value: 5, description: "Fatal log level" },
   ],
 };
 

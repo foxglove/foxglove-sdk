@@ -272,6 +272,22 @@ class WebSocketServer:
         """Get the port on which the server is listening."""
         ...
 
+    def app_url(
+        self,
+        *,
+        layout_id: Optional[str] = None,
+        open_in_desktop: bool = False,
+    ) -> Optional[str]:
+        """
+        Returns a web app URL to open the websocket as a data source.
+
+        Returns None if the server has been stopped.
+
+        :param layout_id: An optional layout ID to include in the URL.
+        :param open_in_desktop: Opens the foxglove desktop app.
+        """
+        ...
+
     def stop(self) -> None:
         """Explicitly stop the server."""
         ...

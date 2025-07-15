@@ -4,7 +4,7 @@ import tseslint from "typescript-eslint";
 
 export default tseslint.config(
   {
-    ignores: ["**/dist", "target/", "python/foxglove-sdk/**/_build", "cpp/build"],
+    ignores: ["**/dist", "python/foxglove-sdk/**/_build", ".cargo", "cpp/build"],
   },
   ...foxglove.configs.base,
   {

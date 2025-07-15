@@ -135,7 +135,7 @@ export const CameraCalibration = {
     },
     "distortion_model": {
       "type": "string",
-      "description": "Name of distortion model\n\nSupported parameters: `plumb_bob` (k1, k2, p1, p2, k3) and `rational_polynomial` (k1, k2, p1, p2, k3, k4, k5, k6). Distortion models are based on [OpenCV's](https://docs.opencv.org/2.4/modules/calib3d/doc/camera_calibration_and_3d_reconstruction.html) [pinhole camera model](https://en.wikipedia.org/wiki/Distortion_%28optics%29#Software_correction). This is the same [implementation used by ROS](http://docs.ros.org/en/diamondback/api/image_geometry/html/c++/pinhole__camera__model_8cpp_source.html)"
+      "description": "Name of distortion model\n\nSupported parameters: `plumb_bob` (k1, k2, p1, p2, k3), `rational_polynomial` (k1, k2, p1, p2, k3, k4, k5, k6), and `kannala_brandt` (k1, k2, k3, k4). `plumb_bob` and `rational_polynomial` models are based on the pinhole model [OpenCV's](https://docs.opencv.org/4.11.0/d9/d0c/group__calib3d.html) [pinhole camera model](https://en.wikipedia.org/wiki/Distortion_%28optics%29#Software_correction). The `kannala_brandt` model is matches the [OpenvCV fisheye](https://docs.opencv.org/4.11.0/db/d58/group__calib3d__fisheye.html) model."
     },
     "D": {
       "type": "array",
@@ -896,39 +896,48 @@ export const Grid = {
             "oneOf": [
               {
                 "title": "UNKNOWN",
-                "const": 0
+                "const": 0,
+                "description": "Unknown numeric type"
               },
               {
                 "title": "UINT8",
-                "const": 1
+                "const": 1,
+                "description": "Unsigned 8-bit integer"
               },
               {
                 "title": "INT8",
-                "const": 2
+                "const": 2,
+                "description": "Signed 8-bit integer"
               },
               {
                 "title": "UINT16",
-                "const": 3
+                "const": 3,
+                "description": "Unsigned 16-bit integer"
               },
               {
                 "title": "INT16",
-                "const": 4
+                "const": 4,
+                "description": "Signed 16-bit integer"
               },
               {
                 "title": "UINT32",
-                "const": 5
+                "const": 5,
+                "description": "Unsigned 32-bit integer"
               },
               {
                 "title": "INT32",
-                "const": 6
+                "const": 6,
+                "description": "Signed 32-bit integer"
               },
               {
                 "title": "FLOAT32",
-                "const": 7
+                "const": 7,
+                "description": "32-bit floating-point number"
               },
               {
                 "title": "FLOAT64",
-                "const": 8
+                "const": 8,
+                "description": "64-bit floating-point number"
               }
             ]
           }
@@ -939,7 +948,7 @@ export const Grid = {
     "data": {
       "type": "string",
       "contentEncoding": "base64",
-      "description": "Grid cell data, interpreted using `fields`, in row-major (y-major) order"
+      "description": "Grid cell data, interpreted using `fields`, in row-major (y-major) order — values fill each row from left to right along the X axis, with rows ordered from top to bottom along the Y axis, starting at the bottom-left corner when viewed from +Z looking towards -Z with identity orientations"
     }
   }
 };
@@ -1075,7 +1084,8 @@ export const ImageAnnotations = {
             "oneOf": [
               {
                 "title": "UNKNOWN",
-                "const": 0
+                "const": 0,
+                "description": "Unknown points annotation type"
               },
               {
                 "title": "POINTS",
@@ -1636,19 +1646,23 @@ export const LocationFix = {
       "oneOf": [
         {
           "title": "UNKNOWN",
-          "const": 0
+          "const": 0,
+          "description": "Unknown position covariance type"
         },
         {
           "title": "APPROXIMATED",
-          "const": 1
+          "const": 1,
+          "description": "Position covariance is approximated"
         },
         {
           "title": "DIAGONAL_KNOWN",
-          "const": 2
+          "const": 2,
+          "description": "Position covariance is per-axis, so put it along the diagonal"
         },
         {
           "title": "KNOWN",
-          "const": 3
+          "const": 3,
+          "description": "Position covariance of the fix is known"
         }
       ]
     }
@@ -1683,27 +1697,33 @@ export const Log = {
       "oneOf": [
         {
           "title": "UNKNOWN",
-          "const": 0
+          "const": 0,
+          "description": "Unknown log level"
         },
         {
           "title": "DEBUG",
-          "const": 1
+          "const": 1,
+          "description": "Debug log level"
         },
         {
           "title": "INFO",
-          "const": 2
+          "const": 2,
+          "description": "Info log level"
         },
         {
           "title": "WARNING",
-          "const": 3
+          "const": 3,
+          "description": "Warning log level"
         },
         {
           "title": "ERROR",
-          "const": 4
+          "const": 4,
+          "description": "Error log level"
         },
         {
           "title": "FATAL",
-          "const": 5
+          "const": 5,
+          "description": "Fatal log level"
         }
       ]
     },
@@ -3994,39 +4014,48 @@ export const PackedElementField = {
       "oneOf": [
         {
           "title": "UNKNOWN",
-          "const": 0
+          "const": 0,
+          "description": "Unknown numeric type"
         },
         {
           "title": "UINT8",
-          "const": 1
+          "const": 1,
+          "description": "Unsigned 8-bit integer"
         },
         {
           "title": "INT8",
-          "const": 2
+          "const": 2,
+          "description": "Signed 8-bit integer"
         },
         {
           "title": "UINT16",
-          "const": 3
+          "const": 3,
+          "description": "Unsigned 16-bit integer"
         },
         {
           "title": "INT16",
-          "const": 4
+          "const": 4,
+          "description": "Signed 16-bit integer"
         },
         {
           "title": "UINT32",
-          "const": 5
+          "const": 5,
+          "description": "Unsigned 32-bit integer"
         },
         {
           "title": "INT32",
-          "const": 6
+          "const": 6,
+          "description": "Signed 32-bit integer"
         },
         {
           "title": "FLOAT32",
-          "const": 7
+          "const": 7,
+          "description": "32-bit floating-point number"
         },
         {
           "title": "FLOAT64",
-          "const": 8
+          "const": 8,
+          "description": "64-bit floating-point number"
         }
       ]
     }
@@ -4173,39 +4202,48 @@ export const PointCloud = {
             "oneOf": [
               {
                 "title": "UNKNOWN",
-                "const": 0
+                "const": 0,
+                "description": "Unknown numeric type"
               },
               {
                 "title": "UINT8",
-                "const": 1
+                "const": 1,
+                "description": "Unsigned 8-bit integer"
               },
               {
                 "title": "INT8",
-                "const": 2
+                "const": 2,
+                "description": "Signed 8-bit integer"
               },
               {
                 "title": "UINT16",
-                "const": 3
+                "const": 3,
+                "description": "Unsigned 16-bit integer"
               },
               {
                 "title": "INT16",
-                "const": 4
+                "const": 4,
+                "description": "Signed 16-bit integer"
               },
               {
                 "title": "UINT32",
-                "const": 5
+                "const": 5,
+                "description": "Unsigned 32-bit integer"
               },
               {
                 "title": "INT32",
-                "const": 6
+                "const": 6,
+                "description": "Signed 32-bit integer"
               },
               {
                 "title": "FLOAT32",
-                "const": 7
+                "const": 7,
+                "description": "32-bit floating-point number"
               },
               {
                 "title": "FLOAT64",
-                "const": 8
+                "const": 8,
+                "description": "64-bit floating-point number"
               }
             ]
           }
@@ -4249,7 +4287,8 @@ export const PointsAnnotation = {
       "oneOf": [
         {
           "title": "UNKNOWN",
-          "const": 0
+          "const": 0,
+          "description": "Unknown points annotation type"
         },
         {
           "title": "POINTS",

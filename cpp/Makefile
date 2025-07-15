@@ -2,6 +2,9 @@
 all: build
 
 BUILD_DIR=build
+ifdef CLANG_TIDY
+BUILD_DIR=build-tidy
+endif
 ifdef SANITIZE
 comma:=,
 BUILD_DIR=build-sanitize-$(subst $(comma),-,$(SANITIZE))
@@ -27,11 +30,10 @@ clean:
 .PHONY: build
 build:
 	cmake \
-		-DCMAKE_C_COMPILER=clang \
-		-DCMAKE_CXX_COMPILER=clang++ \
 		-DCMAKE_BUILD_TYPE=RelWithDebInfo \
 		-DCMAKE_EXPORT_COMPILE_COMMANDS=true \
 		$(if $(SANITIZE),-DSANITIZE=$(SANITIZE) -DRust_TOOLCHAIN=nightly) \
+		$(if $(STRICT),-DSTRICT=$(STRICT)) \
 		$(if $(CLANG_TIDY),-DCLANG_TIDY=$(CLANG_TIDY)) \
 		-B $(BUILD_DIR)
 	cmake --build $(BUILD_DIR) -j 8 --config RelWithDebInfo
@@ -48,7 +50,7 @@ clean-docs:
 	rm -rf ./foxglove/docs/generated
 	rm -rf $(BUILD_DIR)/docs
 
-$(BUILD_DIR)/docs/html:
+$(BUILD_DIR)/docs/html: clean-docs
 	cmake -B $(BUILD_DIR)
 	cmake --build $(BUILD_DIR) --target doxygen
 	cmake --build $(BUILD_DIR) --target html-docs

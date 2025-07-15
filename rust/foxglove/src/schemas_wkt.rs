@@ -83,12 +83,16 @@ impl NormalizeResult {
 ///
 /// ```
 /// # use foxglove::schemas::Duration;
-/// let duration: Duration = std::time::Duration::from_micros(577_215).try_into().unwrap();
+/// let duration: Duration = std::time::Duration::from_micros(577_215)
+///     .try_into()
+///     .unwrap();
 /// assert_eq!(duration, Duration::new(0, 577_215_000));
 ///
 /// #[cfg(feature = "chrono")]
 /// {
-///     let duration: Duration = chrono::TimeDelta::microseconds(1_414_213).try_into().unwrap();
+///     let duration: Duration = chrono::TimeDelta::microseconds(1_414_213)
+///         .try_into()
+///         .unwrap();
 ///     assert_eq!(duration, Duration::new(1, 414_213_000));
 /// }
 /// ```
@@ -355,6 +359,11 @@ impl Timestamp {
     /// Returns the number of fractional seconds in the timestamp, as nanoseconds.
     pub fn nsec(&self) -> u32 {
         self.nsec
+    }
+
+    /// Returns the Timestamp as the total number of nanoseconds (sec() * 1B + nsec()).
+    pub fn total_nanos(&self) -> u64 {
+        u64::from(self.sec) * 1_000_000_000 + u64::from(self.nsec)
     }
 
     /// Creates a `Timestamp` from seconds since epoch as an `f64`, or fails if the value is

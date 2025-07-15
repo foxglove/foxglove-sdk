@@ -21,7 +21,7 @@ impl LogSinkSet {
     }
 
     /// Returns the number of sinks in the set.
-    #[cfg(test)]
+    #[cfg(all(test, feature = "live_visualization"))]
     pub fn len(&self) -> usize {
         self.0.load().len()
     }
@@ -40,6 +40,22 @@ impl LogSinkSet {
         for sink in self.0.load().iter() {
             if let Err(err) = f(sink) {
                 tracing::warn!("{ERROR_LOGGING_MESSAGE}: {:?}", err);
+            }
+        }
+    }
+
+    /// Iterate over sinks that match the predicate, calling the given function on each,
+    /// logging any errors via tracing::warn!().
+    pub fn for_each_filtered<F, P>(&self, predicate: P, mut f: F)
+    where
+        F: FnMut(&Arc<dyn Sink>) -> Result<(), FoxgloveError>,
+        P: Fn(&Arc<dyn Sink>) -> bool,
+    {
+        for sink in self.0.load().iter() {
+            if predicate(sink) {
+                if let Err(err) = f(sink) {
+                    tracing::warn!("{ERROR_LOGGING_MESSAGE}: {:?}", err);
+                }
             }
         }
     }

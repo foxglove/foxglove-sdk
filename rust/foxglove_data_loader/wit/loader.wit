@@ -1,0 +1,127 @@
+package foxglove:loader@0.1.0;
+
+interface console {
+    log: func(log: string);
+    error: func(log: string);
+    warn: func(log: string);
+}
+
+interface reader {
+    resource reader {
+        seek: func(pos: u64) -> u64;
+        position: func() -> u64;
+        read: func(target: list<u8>) -> u64;
+        size: func() -> u64;
+    }
+
+    open: func(path: string) -> reader;
+}
+
+interface time {
+    type time-nanos = u64;
+
+    record time-range {
+        start-time: time-nanos,
+        end-time: time-nanos,
+    }
+}
+
+interface loader {
+    use time.{time-nanos, time-range};
+
+    type channel-id = u16;
+    type schema-id = u16;
+    type error = string;
+
+    enum severity {
+        info,
+        warn,
+        error,
+    }
+
+    record problem {
+        // The severity of the problem. Currently "error", "warn" and "info" are supported.
+        severity: severity,
+        // The problem that occurred.
+        message: string,
+        // Optional context that can be  displayed to the user along side the problem.
+        tip: option<string>
+    }
+
+    record initialization {
+        channels: list<channel>,
+        schemas: list<schema>,
+        time-range: time-range,
+        problems: list<problem>,
+    }
+
+    record backfill-args {
+        time: time-nanos,
+        channels: list<channel-id>,
+    }
+
+    record message-iterator-args {
+        start-time: option<time-nanos>,
+        end-time: option<time-nanos>,
+        channels: list<channel-id>,
+    }
+
+    record channel {
+        // A unique identifier for this channel within the file.
+        id: channel-id,
+        // The schema for messages on this channel.
+        schema-id: option<schema-id>,
+        // The channel topic.
+        topic-name: string,
+        // Encoding for messages on this channel.
+        message-encoding: string,
+        // The number of messages on this channel.
+        message-count: option<u64>,
+    }
+
+    record schema {
+        // A unique identifier for this schema within the file. Must not be zero.
+        id: schema-id,
+        // An identifier for the schema.
+        name: string,
+        // Format for the schema. The well-known schema encodings are preferred. An empty string indicates no schema is available.
+        encoding: string,
+        // Must conform to the schema encoding. If encoding is an empty string, data should be 0 length.
+        data: list<u8>,
+    }
+
+    record message {
+        channel-id: channel-id,
+        // The timestamp in nanoseconds at which the message was recorded.
+        log-time: time-nanos,
+        // The timestamp in nanoseconds at which the message was published.
+        // If not available, must be set to the log time.
+        publish-time: time-nanos,
+        data: list<u8>,
+    }
+
+    record data-loader-args {
+        paths: list<string>,
+    }
+
+    resource message-iterator {
+        next: func() -> option<result<message, error>>;
+    }
+
+    resource data-loader {
+        // Create a new instance of the data loader for a list of file paths
+        constructor(args: data-loader-args);
+        // Initialize the data source, reading the time range and channels or generating list of problems.
+        initialize: func() -> result<initialization, error>;
+        // Create an iterator over the data for the requested channels and time range.
+        create-iterator: func(args: message-iterator-args) -> result<message-iterator, error>;
+        // Get the messages on certain channels at a certain time
+        get-backfill: func(args: backfill-args) -> result<list<message>, error>;
+    }
+}
+
+world host {
+    import console;
+    import reader;
+    export loader;
+}

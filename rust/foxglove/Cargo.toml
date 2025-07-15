@@ -1,24 +1,30 @@
 [package]
 name = "foxglove"
-version = "0.7.1"
 description = "Foxglove SDK"
-edition = "2021"
-rust-version = "1.83.0"
-repository = "https://github.com/foxglove/foxglove-sdk"
-license = "MIT"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+license.workspace = true
 
 [features]
-default = ["live_visualization"]
+default = ["derive", "live_visualization", "lz4", "zstd"]
 chrono = ["dep:chrono"]
-unstable = []
+derive = ["dep:foxglove_derive"]
 live_visualization = [
   "dep:base64",
+  "dep:flume",
+  "dep:futures-util",
   "dep:tokio",
   "dep:tokio-util",
   "dep:tokio-tungstenite",
   "dep:serde_repr",
   "dep:serde_with",
 ]
+lz4 = ["mcap/lz4"]
+schemars = ["dep:schemars"]
+unstable = []
+zstd = ["mcap/zstd"]
 
 [lints]
 workspace = true
@@ -30,34 +36,33 @@ bimap = "0.6.3"
 bytes.workspace = true
 chrono = { version = "0.4.39", optional = true }
 delegate = "0.13.2"
-flume = "0.11.1"
-futures-util = { version = "0.3.31", features = ["sink", "std"] }
+flume = { version = "0.11.1", optional = true }
+foxglove_derive = { version = "0.9.1", path = "../foxglove_derive", optional = true }
+futures-util = { version = "0.3.31", features = ["sink", "std"], optional = true }
 mcap.workspace = true
-parking_lot = "0.12.3"
+parking_lot = "0.12.4"
 prost-types.workspace = true
 prost.workspace = true
-schemars = "0.8.21"
+schemars = { version = "0.9.0", optional = true }
 serde_json = "1.0"
 serde_repr = { version = "0.1.19", optional = true }
-serde_with = { version = "3.12.0", features = ["macros", "base64"], optional = true }
+serde_with = { version = "3.13.0", features = ["macros", "base64"], optional = true }
 serde.workspace = true
-smallvec = "1.14.0"
+smallvec = "1.15.1"
 smallbytes = "0.1.0"
 thiserror.workspace = true
 tokio-tungstenite = { workspace = true, optional = true }
 tokio-util = { workspace = true, optional = true }
 tokio = { workspace = true, optional = true }
 tracing.workspace = true
+urlencoding = "2.1.3"
 
 [dev-dependencies]
 assert_matches = "1.5.0"
-clap = { version = "4.5", features = ["derive"] }
-env_logger = "0.11.5"
-futures-util = "0.3.31"
 insta = { version = "1.42.2", features = ["json"] }
 maplit = "1.0.2"
 tempfile = "3.15.0"
-tracing-test = "0.2.5"
+tracing-test.workspace = true
 
 [package.metadata.docs.rs]
 all-features = true

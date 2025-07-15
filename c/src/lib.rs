@@ -14,6 +14,12 @@ use std::io::BufWriter;
 use std::mem::ManuallyDrop;
 use std::sync::Arc;
 
+mod arena;
+mod generated_types;
+#[cfg(test)]
+mod tests;
+mod util;
+pub use generated_types::*;
 mod bytes;
 mod connection_graph;
 mod fetch_asset;
@@ -22,6 +28,24 @@ mod parameter;
 mod service;
 
 use parameter::FoxgloveParameterArray;
+
+/// A key-value pair of strings.
+#[repr(C)]
+pub struct FoxgloveKeyValue {
+    /// The key
+    key: FoxgloveString,
+    /// The value
+    value: FoxgloveString,
+}
+
+/// A collection of metadata items for a channel.
+#[repr(C)]
+pub struct FoxgloveChannelMetadata {
+    /// The items in the metadata collection.
+    items: *const FoxgloveKeyValue,
+    /// The number of items in the metadata collection.
+    count: usize,
+}
 
 /// A string with associated length.
 #[repr(C)]
@@ -32,6 +56,15 @@ pub struct FoxgloveString {
     len: usize,
 }
 
+impl Default for FoxgloveString {
+    fn default() -> Self {
+        Self {
+            data: "".as_ptr().cast(),
+            len: 0,
+        }
+    }
+}
+
 impl FoxgloveString {
     /// Wrapper around [`std::str::from_utf8`].
     ///
@@ -40,6 +73,18 @@ impl FoxgloveString {
     /// The [`data`] field must be valid UTF-8, and have a length equal to [`FoxgloveString.len`].
     unsafe fn as_utf8_str(&self) -> Result<&str, std::str::Utf8Error> {
         std::str::from_utf8(unsafe { std::slice::from_raw_parts(self.data.cast(), self.len) })
+    }
+
+    pub fn as_ptr(&self) -> *const c_char {
+        self.data
+    }
+
+    pub fn len(&self) -> usize {
+        self.len
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len == 0
     }
 }
 
@@ -249,12 +294,30 @@ pub struct FoxgloveClientChannel {
 }
 
 #[repr(C)]
+pub struct FoxgloveClientMetadata {
+    pub id: u32,
+    pub sink_id: FoxgloveSinkId,
+}
+
+#[repr(C)]
 #[derive(Clone)]
 pub struct FoxgloveServerCallbacks {
     /// A user-defined value that will be passed to callback functions
     pub context: *const c_void,
-    pub on_subscribe: Option<unsafe extern "C" fn(context: *const c_void, channel_id: u64)>,
-    pub on_unsubscribe: Option<unsafe extern "C" fn(context: *const c_void, channel_id: u64)>,
+    pub on_subscribe: Option<
+        unsafe extern "C" fn(
+            context: *const c_void,
+            channel_id: u64,
+            client: FoxgloveClientMetadata,
+        ),
+    >,
+    pub on_unsubscribe: Option<
+        unsafe extern "C" fn(
+            context: *const c_void,
+            channel_id: u64,
+            client: FoxgloveClientMetadata,
+        ),
+    >,
     pub on_client_advertise: Option<
         unsafe extern "C" fn(
             context: *const c_void,
@@ -369,11 +432,10 @@ impl FoxgloveSchema {
     /// - `encoding` must be a valid pointer to a UTF-8 string.
     /// - `data` must be a valid pointer to a buffer of `data_len` bytes.
     unsafe fn to_native(&self) -> Result<foxglove::Schema, foxglove::FoxgloveError> {
-        let name = unsafe { self.name.as_utf8_str() }.map_err(|e| {
-            foxglove::FoxgloveError::Utf8Error(format!("schema name invalid: {}", e))
-        })?;
+        let name = unsafe { self.name.as_utf8_str() }
+            .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("schema name invalid: {e}")))?;
         let encoding = unsafe { self.encoding.as_utf8_str() }.map_err(|e| {
-            foxglove::FoxgloveError::Utf8Error(format!("schema encoding invalid: {}", e))
+            foxglove::FoxgloveError::Utf8Error(format!("schema encoding invalid: {e}"))
         })?;
         let data = unsafe { std::slice::from_raw_parts(self.data, self.data_len) };
         Ok(foxglove::Schema::new(name, encoding, data.to_owned()))
@@ -421,9 +483,9 @@ unsafe fn do_foxglove_server_start(
     options: &FoxgloveServerOptions,
 ) -> Result<*mut FoxgloveWebSocketServer, foxglove::FoxgloveError> {
     let name = unsafe { options.name.as_utf8_str() }
-        .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("name is invalid: {}", e)))?;
+        .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("name is invalid: {e}")))?;
     let host = unsafe { options.host.as_utf8_str() }
-        .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("host is invalid: {}", e)))?;
+        .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("host is invalid: {e}")))?;
 
     let mut server = foxglove::WebSocketServer::new()
         .name(name)
@@ -454,8 +516,7 @@ unsafe fn do_foxglove_server_start(
                 }
                 unsafe { enc.as_utf8_str() }.map_err(|e| {
                     foxglove::FoxgloveError::Utf8Error(format!(
-                        "encoding in supported_encodings is invalid: {}",
-                        e
+                        "encoding in supported_encodings is invalid: {e}"
                     ))
                 })
             })
@@ -789,9 +850,8 @@ pub struct FoxgloveMcapOptions {
 
 impl FoxgloveMcapOptions {
     unsafe fn to_write_options(&self) -> Result<WriteOptions, foxglove::FoxgloveError> {
-        let profile = unsafe { self.profile.as_utf8_str() }.map_err(|e| {
-            foxglove::FoxgloveError::ValueError(format!("profile is invalid: {}", e))
-        })?;
+        let profile = unsafe { self.profile.as_utf8_str() }
+            .map_err(|e| foxglove::FoxgloveError::ValueError(format!("profile is invalid: {e}")))?;
 
         let compression = match self.compression {
             FoxgloveMcapCompression::Zstd => Some(Compression::Zstd),
@@ -852,7 +912,7 @@ unsafe fn do_foxglove_mcap_open(
     options: &FoxgloveMcapOptions,
 ) -> Result<*mut FoxgloveMcapWriter, foxglove::FoxgloveError> {
     let path = unsafe { options.path.as_utf8_str() }
-        .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("path is invalid: {}", e)))?;
+        .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("path is invalid: {e}")))?;
     let context = options.context;
 
     // Safety: this is safe if the options struct contains valid strings
@@ -919,14 +979,17 @@ pub struct FoxgloveChannel(foxglove::RawChannel);
 /// `schema` is an optional pointer to a schema. The schema and the data it points to
 /// need only remain alive for the duration of this function call (they will be copied).
 /// `context` can be null, or a valid pointer to a context created via `foxglove_context_new`.
+/// `metadata` can be null, or a valid pointer to a collection of key/value pairs. If keys are
+///     duplicated in the collection, the last value for each key will be used.
 /// `channel` is an out **FoxgloveChannel pointer, which will be set to the created channel
 /// if the function returns success.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn foxglove_channel_create(
+pub unsafe extern "C" fn foxglove_raw_channel_create(
     topic: FoxgloveString,
     message_encoding: FoxgloveString,
     schema: *const FoxgloveSchema,
     context: *const FoxgloveContext,
+    metadata: *const FoxgloveChannelMetadata,
     channel: *mut *const FoxgloveChannel,
 ) -> FoxgloveError {
     if channel.is_null() {
@@ -934,21 +997,23 @@ pub unsafe extern "C" fn foxglove_channel_create(
         return FoxgloveError::ValueError;
     }
     unsafe {
-        let result = do_foxglove_channel_create(topic, message_encoding, schema, context);
+        let result =
+            do_foxglove_raw_channel_create(topic, message_encoding, schema, context, metadata);
         result_to_c(result, channel)
     }
 }
 
-unsafe fn do_foxglove_channel_create(
+unsafe fn do_foxglove_raw_channel_create(
     topic: FoxgloveString,
     message_encoding: FoxgloveString,
     schema: *const FoxgloveSchema,
     context: *const FoxgloveContext,
+    metadata: *const FoxgloveChannelMetadata,
 ) -> Result<*const FoxgloveChannel, foxglove::FoxgloveError> {
     let topic = unsafe { topic.as_utf8_str() }
-        .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("topic invalid: {}", e)))?;
+        .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("topic invalid: {e}")))?;
     let message_encoding = unsafe { message_encoding.as_utf8_str() }.map_err(|e| {
-        foxglove::FoxgloveError::Utf8Error(format!("message_encoding invalid: {}", e))
+        foxglove::FoxgloveError::Utf8Error(format!("message_encoding invalid: {e}"))
     })?;
 
     let mut maybe_schema = None;
@@ -964,9 +1029,60 @@ unsafe fn do_foxglove_channel_create(
         let context = ManuallyDrop::new(unsafe { Arc::from_raw(context) });
         builder = builder.context(&context);
     }
+    if !metadata.is_null() {
+        let metadata = ManuallyDrop::new(unsafe { Arc::from_raw(metadata) });
+        for i in 0..metadata.count {
+            let item = unsafe { metadata.items.add(i) };
+            let key = unsafe { (*item).key.as_utf8_str() }.map_err(|e| {
+                foxglove::FoxgloveError::Utf8Error(format!("invalid metadata key: {e}"))
+            })?;
+            let value = unsafe { (*item).value.as_utf8_str() }.map_err(|e| {
+                foxglove::FoxgloveError::Utf8Error(format!("invalid metadata value: {e}"))
+            })?;
+            builder = builder.add_metadata(key, value);
+        }
+    }
     builder
         .build_raw()
         .map(|raw_channel| Arc::into_raw(raw_channel) as *const FoxgloveChannel)
+}
+
+pub(crate) unsafe fn do_foxglove_channel_create<T: foxglove::Encode>(
+    topic: FoxgloveString,
+    context: *const FoxgloveContext,
+) -> Result<*const FoxgloveChannel, foxglove::FoxgloveError> {
+    let topic_str = unsafe {
+        topic
+            .as_utf8_str()
+            .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("topic invalid: {e}")))?
+    };
+
+    let mut builder = foxglove::ChannelBuilder::new(topic_str);
+    if !context.is_null() {
+        let context = ManuallyDrop::new(unsafe { Arc::from_raw(context) });
+        builder = builder.context(&context);
+    }
+    Ok(Arc::into_raw(builder.build::<T>().into_inner()) as *const FoxgloveChannel)
+}
+
+/// Close a channel.
+///
+/// You can use this to explicitly unadvertise the channel to sinks that subscribe to channels
+/// dynamically, such as the WebSocketServer.
+///
+/// Attempts to log on a closed channel will elicit a throttled warning message.
+///
+/// Note this *does not* free the channel.
+///
+/// # Safety
+/// `channel` must be a valid pointer to a `foxglove_channel` created via `foxglove_channel_create`.
+/// If channel is null, this does nothing.
+#[unsafe(no_mangle)]
+pub extern "C" fn foxglove_channel_close(channel: Option<&FoxgloveChannel>) {
+    let Some(channel) = channel else {
+        return;
+    };
+    channel.0.close();
 }
 
 /// Free a channel created via `foxglove_channel_create`.
@@ -996,19 +1112,203 @@ pub extern "C" fn foxglove_channel_get_id(channel: Option<&FoxgloveChannel>) -> 
     u64::from(channel.0.id())
 }
 
+/// Get the topic of a channel.
+///
+/// # Safety
+/// `channel` must be a valid pointer to a `foxglove_channel` created via `foxglove_channel_create`.
+///
+/// If the passed channel is null, an empty value is returned.
+///
+/// The returned value is valid only for the lifetime of the channel.
+#[unsafe(no_mangle)]
+pub extern "C" fn foxglove_channel_get_topic(channel: Option<&FoxgloveChannel>) -> FoxgloveString {
+    let Some(channel) = channel else {
+        return FoxgloveString::default();
+    };
+    FoxgloveString {
+        data: channel.0.topic().as_ptr().cast(),
+        len: channel.0.topic().len(),
+    }
+}
+
+/// Get the message_encoding of a channel.
+///
+/// # Safety
+/// `channel` must be a valid pointer to a `foxglove_channel` created via `foxglove_channel_create`.
+///
+/// If the passed channel is null, an empty value is returned.
+///
+/// The returned value is valid only for the lifetime of the channel.
+#[unsafe(no_mangle)]
+pub extern "C" fn foxglove_channel_get_message_encoding(
+    channel: Option<&FoxgloveChannel>,
+) -> FoxgloveString {
+    let Some(channel) = channel else {
+        return FoxgloveString::default();
+    };
+    FoxgloveString {
+        data: channel.0.message_encoding().as_ptr().cast(),
+        len: channel.0.message_encoding().len(),
+    }
+}
+
+/// Get the schema of a channel.
+///
+/// If the passed channel is null or has no schema, returns `FoxgloveError::ValueError`.
+///
+/// # Safety
+/// `channel` must be a valid pointer to a `foxglove_channel` created via `foxglove_channel_create`.
+/// `schema` must be a valid pointer to a `FoxgloveSchema` struct that will be filled in.
+///
+/// The returned value is valid only for the lifetime of the channel.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_channel_get_schema(
+    channel: Option<&FoxgloveChannel>,
+    schema: *mut FoxgloveSchema,
+) -> FoxgloveError {
+    let Some(channel) = channel else {
+        return FoxgloveError::ValueError;
+    };
+    if schema.is_null() {
+        return FoxgloveError::ValueError;
+    }
+    let Some(schema_data) = channel.0.schema() else {
+        return FoxgloveError::ValueError;
+    };
+
+    unsafe {
+        (*schema).name = FoxgloveString {
+            data: schema_data.name.as_ptr().cast(),
+            len: schema_data.name.len(),
+        };
+        (*schema).encoding = FoxgloveString {
+            data: schema_data.encoding.as_ptr().cast(),
+            len: schema_data.encoding.len(),
+        };
+        (*schema).data = schema_data.data.as_ptr().cast();
+        (*schema).data_len = schema_data.data.len();
+    }
+
+    FoxgloveError::Ok
+}
+
+/// Find out if any sinks have been added to a channel.
+///
+/// # Safety
+/// `channel` must be a valid pointer to a `foxglove_channel` created via `foxglove_channel_create`.
+///
+/// If the passed channel is null, false is returned.
+#[unsafe(no_mangle)]
+pub extern "C" fn foxglove_channel_has_sinks(channel: Option<&FoxgloveChannel>) -> bool {
+    let Some(channel) = channel else {
+        return false;
+    };
+    channel.0.has_sinks()
+}
+
+/// An iterator over channel metadata key-value pairs.
+#[repr(C)]
+pub struct FoxgloveChannelMetadataIterator {
+    /// The channel with metadata to iterate
+    channel: *const FoxgloveChannel,
+    /// Current index
+    index: usize,
+}
+
+/// Create an iterator over a channel's metadata.
+///
+/// You must later free the iterator using foxglove_channel_metadata_iter_free.
+///
+/// Iterate items using foxglove_channel_metadata_iter_next.
+///
+/// # Safety
+/// `channel` must be a valid pointer to a `foxglove_channel` created via `foxglove_channel_create`.
+/// The channel must remain valid for the lifetime of the iterator.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_channel_metadata_iter_create(
+    channel: Option<&FoxgloveChannel>,
+) -> *mut FoxgloveChannelMetadataIterator {
+    let Some(channel) = channel else {
+        return std::ptr::null_mut();
+    };
+    Box::into_raw(Box::new(FoxgloveChannelMetadataIterator {
+        channel: channel as *const _,
+        index: 0,
+    }))
+}
+
+/// Get the next key-value pair from the metadata iterator.
+///
+/// Returns true if a pair was found and stored in `key_value`, false if the iterator is exhausted.
+///
+/// # Safety
+/// `iter` must be a valid pointer to a `FoxgloveChannelMetadataIterator` created via
+/// `foxglove_channel_metadata_iter_create`.
+/// `key_value` must be a valid pointer to a `FoxgloveKeyValue` that will be filled in.
+/// The channel itself must still be valid.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_channel_metadata_iter_next(
+    iter: *mut FoxgloveChannelMetadataIterator,
+    key_value: *mut FoxgloveKeyValue,
+) -> bool {
+    if iter.is_null() || key_value.is_null() {
+        return false;
+    }
+    let iter = unsafe { &mut *iter };
+    let channel = unsafe { &*iter.channel };
+    let metadata = channel.0.metadata();
+
+    if iter.index >= metadata.len() {
+        return false;
+    }
+
+    let Some((key, value)) = metadata.iter().nth(iter.index) else {
+        return false;
+    };
+
+    unsafe {
+        *key_value = FoxgloveKeyValue {
+            key: FoxgloveString::from(key),
+            value: FoxgloveString::from(value),
+        };
+    }
+
+    iter.index += 1;
+    true
+}
+
+/// Free a metadata iterator created via `foxglove_channel_metadata_iter_create`.
+///
+/// # Safety
+/// `iter` must be a valid pointer to a `FoxgloveChannelMetadataIterator` created via
+/// `foxglove_channel_metadata_iter_create`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_channel_metadata_iter_free(
+    iter: *mut FoxgloveChannelMetadataIterator,
+) {
+    if !iter.is_null() {
+        // Safety: undo the Box::into_raw in foxglove_channel_metadata_iter_create; safe if this was
+        // created by that method
+        drop(unsafe { Box::from_raw(iter) });
+    }
+}
+
+type FoxgloveSinkId = u64;
+
 /// Log a message on a channel.
 ///
 /// # Safety
 /// `data` must be non-null, and the range `[data, data + data_len)` must contain initialized data
 /// contained within a single allocated object.
 ///
-/// `log_time` may be null or may point to a valid value.
+/// `log_time` Some(nanoseconds since epoch timestamp) or None to use the current time.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_channel_log(
     channel: Option<&FoxgloveChannel>,
     data: *const u8,
     data_len: usize,
-    log_time: *const u64,
+    log_time: Option<&u64>,
+    sink_id: FoxgloveSinkId,
 ) -> FoxgloveError {
     // An assert might be reasonable under different circumstances, but here
     // we don't want to crash the program using the library, on a robot in the field,
@@ -1025,11 +1325,15 @@ pub unsafe extern "C" fn foxglove_channel_log(
     let channel = ManuallyDrop::new(unsafe {
         Arc::from_raw(channel as *const _ as *const foxglove::RawChannel)
     });
-    channel.log_with_meta(
+
+    let sink_id = std::num::NonZeroU64::new(sink_id).map(foxglove::SinkId::new);
+
+    channel.log_with_meta_to_sink(
         unsafe { std::slice::from_raw_parts(data, data_len) },
         foxglove::PartialMetadata {
-            log_time: unsafe { log_time.as_ref() }.copied(),
+            log_time: log_time.copied(),
         },
+        sink_id,
     );
     FoxgloveError::Ok
 }
@@ -1073,28 +1377,36 @@ pub extern "C" fn foxglove_internal_register_cpp_wrapper() {
         .or_else(|_| std::env::var("FOXGLOVE_LOG_STYLE"))
         .ok();
     if log_config.is_some() {
-        foxglove_set_log_level(logging::FoxgloveLogLevel::Info);
+        foxglove_set_log_level(logging::FoxgloveLoggingLevel::Info);
     }
 }
 
 impl foxglove::websocket::ServerListener for FoxgloveServerCallbacks {
     fn on_subscribe(
         &self,
-        _client: foxglove::websocket::Client,
+        client: foxglove::websocket::Client,
         channel: foxglove::websocket::ChannelView,
     ) {
         if let Some(on_subscribe) = self.on_subscribe {
-            unsafe { on_subscribe(self.context, channel.id().into()) };
+            let c_client_metadata = FoxgloveClientMetadata {
+                id: client.id().into(),
+                sink_id: client.sink_id().map(|id| id.into()).unwrap_or(0),
+            };
+            unsafe { on_subscribe(self.context, channel.id().into(), c_client_metadata) };
         }
     }
 
     fn on_unsubscribe(
         &self,
-        _client: foxglove::websocket::Client,
+        client: foxglove::websocket::Client,
         channel: foxglove::websocket::ChannelView,
     ) {
         if let Some(on_unsubscribe) = self.on_unsubscribe {
-            unsafe { on_unsubscribe(self.context, channel.id().into()) };
+            let c_client_metadata = FoxgloveClientMetadata {
+                id: client.id().into(),
+                sink_id: client.sink_id().map(|id| id.into()).unwrap_or(0),
+            };
+            unsafe { on_unsubscribe(self.context, channel.id().into(), c_client_metadata) };
         }
     }
 
@@ -1133,7 +1445,7 @@ impl foxglove::websocket::ServerListener for FoxgloveServerCallbacks {
                 .map(|schema| schema.len())
                 .unwrap_or(0),
         };
-        unsafe { on_client_advertise(self.context, client.id().into(), &c_channel) };
+        unsafe { on_client_advertise(self.context, client.id().into(), &raw const c_channel) };
     }
 
     fn on_message_data(
@@ -1284,6 +1596,7 @@ pub enum FoxgloveError {
     ConnectionGraphNotSupported,
     IoError,
     McapError,
+    EncodeError,
     BufferTooShort,
     Base64DecodeError,
 }
@@ -1310,6 +1623,7 @@ impl From<foxglove::FoxgloveError> for FoxgloveError {
             }
             foxglove::FoxgloveError::IoError(_) => FoxgloveError::IoError,
             foxglove::FoxgloveError::McapError(_) => FoxgloveError::McapError,
+            foxglove::FoxgloveError::EncodeError(_) => FoxgloveError::EncodeError,
             _ => FoxgloveError::Unspecified,
         }
     }
@@ -1332,6 +1646,7 @@ impl FoxgloveError {
             FoxgloveError::ConnectionGraphNotSupported => c"Connection Graph Not Supported",
             FoxgloveError::IoError => c"IO Error",
             FoxgloveError::McapError => c"MCAP Error",
+            FoxgloveError::EncodeError => c"Encode Error",
             FoxgloveError::BufferTooShort => c"Buffer too short",
             FoxgloveError::Base64DecodeError => c"Base64 decode error",
             FoxgloveError::Unspecified => c"Unspecified Error",
@@ -1339,7 +1654,7 @@ impl FoxgloveError {
     }
 }
 
-unsafe fn result_to_c<T>(
+pub(crate) unsafe fn result_to_c<T>(
     result: Result<T, foxglove::FoxgloveError>,
     out_ptr: *mut T,
 ) -> FoxgloveError {
@@ -1365,24 +1680,61 @@ pub extern "C" fn foxglove_error_to_cstr(error: FoxgloveError) -> *const c_char 
     error.to_cstr().as_ptr() as *const _
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+pub(crate) fn log_msg_to_channel<T: foxglove::Encode>(
+    channel: Option<&FoxgloveChannel>,
+    msg: &T,
+    log_time: Option<&u64>,
+) -> FoxgloveError {
+    let Some(channel) = channel else {
+        tracing::error!("log called with null channel");
+        return FoxgloveError::ValueError;
+    };
+    let channel = ManuallyDrop::new(unsafe {
+        // Safety: we're restoring the Arc<RawChannel> we leaked into_raw in foxglove_channel_create
+        let channel_arc = Arc::from_raw(channel as *const _ as *mut foxglove::RawChannel);
+        // We can safely create a Channel from any Arc<RawChannel>
+        foxglove::Channel::<T>::from_raw_channel(channel_arc)
+    });
+    channel.log_with_meta(
+        msg,
+        foxglove::PartialMetadata {
+            log_time: log_time.copied(),
+        },
+    );
+    FoxgloveError::Ok
+}
 
-    #[test]
-    fn test_foxglove_string_as_utf8_str() {
-        let string = FoxgloveString {
-            data: c"test".as_ptr(),
-            len: 4,
-        };
-        let utf8_str = unsafe { string.as_utf8_str() };
-        assert_eq!(utf8_str, Ok("test"));
+/// A timestamp, represented as an offset from a user-defined epoch.
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct FoxgloveTimestamp {
+    /// Seconds since epoch.
+    pub sec: u32,
+    /// Additional nanoseconds since epoch.
+    pub nsec: u32,
+}
 
-        let string = FoxgloveString {
-            data: c"💖".as_ptr(),
-            len: 4,
-        };
-        let utf8_str = unsafe { string.as_utf8_str() };
-        assert_eq!(utf8_str, Ok("💖"));
+impl From<FoxgloveTimestamp> for foxglove::schemas::Timestamp {
+    fn from(other: FoxgloveTimestamp) -> Self {
+        Self::new(other.sec, other.nsec)
+    }
+}
+
+/// A signed, fixed-length span of time.
+///
+/// The duration is represented by a count of seconds (which may be negative), and a count of
+/// fractional seconds at nanosecond resolution (which are always positive).
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct FoxgloveDuration {
+    /// Seconds offset.
+    sec: i32,
+    /// Nanoseconds offset in the positive direction.
+    nsec: u32,
+}
+
+impl From<FoxgloveDuration> for foxglove::schemas::Duration {
+    fn from(other: FoxgloveDuration) -> Self {
+        Self::new(other.sec, other.nsec)
     }
 }

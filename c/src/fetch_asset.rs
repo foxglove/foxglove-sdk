@@ -56,7 +56,7 @@ impl AssetHandler for FetchAssetHandler {
         // SAFETY: It's the callback implementation's responsibility to ensure that this callback
         // function pointer remains valid for the lifetime of the websocket server, as described in
         // the safety requirements of `foxglove_server_options.fetch_asset`.
-        unsafe { (self.callback)(self.callback_context, &c_uri, c_responder) };
+        unsafe { (self.callback)(self.callback_context, &raw const c_uri, c_responder) };
     }
 }
 

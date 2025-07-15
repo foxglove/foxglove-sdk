@@ -1,4 +1,5 @@
 import time
+from urllib.parse import parse_qs, urlparse
 
 import pytest
 from foxglove import (
@@ -16,13 +17,36 @@ def test_server_interface() -> None:
     """
     Exercise the server interface; will also be checked with mypy.
     """
-    server = start_server(port=0)
+    server = start_server(port=0, session_id="test-session")
     assert isinstance(server.port, int)
     assert server.port != 0
+
+    raw_url = server.app_url()
+    assert raw_url is not None
+    url = urlparse(raw_url)
+    assert url.scheme == "https"
+    assert url.netloc == "app.foxglove.dev"
+    assert parse_qs(url.query) == {
+        "ds": ["foxglove-websocket"],
+        "ds.url": [f"ws://127.0.0.1:{server.port}"],
+    }
+
+    raw_url = server.app_url(layout_id="lay_123", open_in_desktop=True)
+    assert raw_url is not None
+    url = urlparse(raw_url)
+    assert url.scheme == "https"
+    assert url.netloc == "app.foxglove.dev"
+    assert parse_qs(url.query) == {
+        "ds": ["foxglove-websocket"],
+        "ds.url": [f"ws://127.0.0.1:{server.port}"],
+        "layoutId": ["lay_123"],
+        "openIn": ["desktop"],
+    }
+
     server.publish_status("test message", StatusLevel.Info, "some-id")
     server.broadcast_time(time.time_ns())
     server.remove_status(["some-id"])
-    server.clear_session()
+    server.clear_session("new-session")
     server.stop()
 
 

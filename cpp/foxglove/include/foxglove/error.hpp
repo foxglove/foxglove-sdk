@@ -41,8 +41,10 @@ enum class FoxgloveError : uint8_t {
   ConnectionGraphNotSupported,
   /// An I/O error.
   IoError,
-  /// An error related to MCAP encoding.
+  /// An error related to MCAP writing.
   McapError,
+  /// An error related to encoding.
+  EncodeError,
   /// The provided bufffer is too short.
   BufferTooShort,
   /// Failed to decode base64 data.
@@ -109,6 +111,7 @@ private:
   std::ostringstream buffer_;
 };
 
+/// @private
 inline WarnStream warn() {
   return WarnStream{};
 }

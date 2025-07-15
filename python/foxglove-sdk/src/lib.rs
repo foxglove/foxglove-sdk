@@ -6,6 +6,7 @@ use generated::schemas;
 use log::LevelFilter;
 use mcap::{PyMcapWriteOptions, PyMcapWriter};
 use pyo3::prelude::*;
+use pyo3::types::PyDict;
 use std::collections::BTreeMap;
 use std::fs::File;
 use std::io::BufWriter;
@@ -27,8 +28,8 @@ mod websocket;
 /// :type encoding: str
 /// :param data: Schema data.
 /// :type data: bytes
-#[pyclass(name = "Schema", module = "foxglove", get_all, set_all)]
-#[derive(Clone)]
+#[pyclass(name = "Schema", module = "foxglove", get_all, set_all, eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct PySchema {
     /// The name of the schema.
     name: String,
@@ -54,6 +55,12 @@ impl PySchema {
 impl From<PySchema> for foxglove::Schema {
     fn from(value: PySchema) -> Self {
         foxglove::Schema::new(value.name, value.encoding, value.data)
+    }
+}
+
+impl From<foxglove::Schema> for PySchema {
+    fn from(value: foxglove::Schema) -> Self {
+        Self::new(value.name, value.encoding, value.data.into_owned())
     }
 }
 
@@ -97,8 +104,29 @@ impl BaseChannel {
         self.0.topic()
     }
 
+    #[getter]
+    fn message_encoding(&self) -> &str {
+        self.0.message_encoding()
+    }
+
+    fn metadata(&self, py: Python<'_>) -> PyResult<PyObject> {
+        let dict = PyDict::new(py);
+        for (key, value) in self.0.metadata() {
+            dict.set_item(key, value)?;
+        }
+        Ok(dict.into())
+    }
+
+    fn schema(&self) -> Option<PySchema> {
+        self.0.schema().cloned().map(PySchema::from)
+    }
+
     fn schema_name(&self) -> Option<&str> {
         Some(self.0.schema()?.name.as_str())
+    }
+
+    fn has_sinks(&self) -> bool {
+        self.0.has_sinks()
     }
 
     fn close(&mut self) {

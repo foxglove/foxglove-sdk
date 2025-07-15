@@ -110,10 +110,6 @@ jobs:
             target: ppc64le
     steps:
       - uses: actions/checkout@v4
-      # rustfmt is used on generated rust schemas for the SDK
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
-        with:
-          components: rustfmt
       - uses: actions/setup-python@v5
         with:
           python-version: "3.9"
@@ -251,7 +247,7 @@ jobs:
           path: python/foxglove-sdk
       - run: find python/foxglove-sdk/wheels*
       - name: Generate artifact attestation
-        uses: actions/attest-build-provenance@v1
+        uses: actions/attest-build-provenance@v2
         with:
           subject-path: "python/foxglove-sdk/wheels-*/*"
       - name: Publish to PyPI

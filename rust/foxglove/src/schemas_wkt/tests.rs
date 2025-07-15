@@ -292,3 +292,13 @@ fn test_timestamp_now() {
     assert!(now >= before);
     assert!(now.nsec() < 1_000_000_000);
 }
+
+#[test]
+fn test_timestamp_total_nanos() {
+    assert_eq!(
+        Timestamp::new(12345, 234_567_890).total_nanos(),
+        12345234567890
+    );
+    assert_eq!(Timestamp::MIN.total_nanos(), 0);
+    assert_eq!(Timestamp::MAX.total_nanos(), 4294967295999999999);
+}

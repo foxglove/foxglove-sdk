@@ -13,7 +13,7 @@ use super::ChannelId;
 use crate::log_sink_set::LogSinkSet;
 use crate::sink::SmallSinkVec;
 use crate::throttler::Throttler;
-use crate::{nanoseconds_since_epoch, Context, Metadata, PartialMetadata, Schema};
+use crate::{nanoseconds_since_epoch, Context, Metadata, PartialMetadata, Schema, SinkId};
 
 /// Interval for throttled warnings.
 static WARN_THROTTLER_INTERVAL: Duration = Duration::from_secs(10);
@@ -148,7 +148,7 @@ impl RawChannel {
     }
 
     /// Returns the count of sinks subscribed to this channel.
-    #[cfg(test)]
+    #[cfg(all(test, feature = "live_visualization"))]
     pub(crate) fn num_sinks(&self) -> usize {
         self.sinks.len()
     }
@@ -161,25 +161,64 @@ impl RawChannel {
         self.log_with_meta(msg, PartialMetadata::default());
     }
 
+    /// Logs a message to a specific sink.
+    ///
+    /// If a sink ID is provided, only that sink will receive the message.
+    /// Otherwise, the message will be sent to all subscribed sinks.
+    ///
+    /// The buffering behavior depends on the log sink; see [`McapWriter`][crate::McapWriter] and
+    /// [`WebSocketServer`][crate::WebSocketServer] for details.
+    #[doc(hidden)]
+    pub fn log_to_sink(&self, msg: &[u8], sink_id: Option<SinkId>) {
+        self.log_with_meta_to_sink(msg, PartialMetadata::default(), sink_id);
+    }
+
     /// Logs a message with additional metadata.
     ///
     /// The buffering behavior depends on the log sink; see [`McapWriter`][crate::McapWriter] and
     /// [`WebSocketServer`][crate::WebSocketServer] for details.
     pub fn log_with_meta(&self, msg: &[u8], opts: PartialMetadata) {
+        self.log_with_meta_to_sink(msg, opts, None);
+    }
+
+    /// Logs a message with additional metadata to a specific sink.
+    ///
+    /// If a sink ID is provided, only that sink will receive the message.
+    /// Otherwise, the message will be sent to all subscribed sinks.
+    ///
+    /// The buffering behavior depends on the log sink; see [`McapWriter`][crate::McapWriter] and
+    /// [`WebSocketServer`][crate::WebSocketServer] for details.
+    #[doc(hidden)]
+    pub fn log_with_meta_to_sink(
+        &self,
+        msg: &[u8],
+        opts: PartialMetadata,
+        sink_id: Option<SinkId>,
+    ) {
         if self.has_sinks() {
-            self.log_to_sinks(msg, opts);
+            self.log_to_sinks(msg, opts, sink_id);
         } else {
             self.log_warn_if_closed();
         }
     }
 
     /// Logs a message with additional metadata.
-    pub(crate) fn log_to_sinks(&self, msg: &[u8], opts: PartialMetadata) {
+    pub(crate) fn log_to_sinks(&self, msg: &[u8], opts: PartialMetadata, sink_id: Option<SinkId>) {
         let metadata = Metadata {
             log_time: opts.log_time.unwrap_or_else(nanoseconds_since_epoch),
         };
 
-        self.sinks.for_each(|sink| sink.log(self, msg, &metadata));
+        match sink_id {
+            Some(id) => {
+                self.sinks.for_each_filtered(
+                    |sink| sink.id() == id,
+                    |sink| sink.log(self, msg, &metadata),
+                );
+            }
+            None => {
+                self.sinks.for_each(|sink| sink.log(self, msg, &metadata));
+            }
+        }
     }
 }
 

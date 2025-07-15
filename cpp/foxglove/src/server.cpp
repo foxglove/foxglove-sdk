@@ -29,22 +29,40 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
     callbacks = std::make_unique<WebSocketServerCallbacks>(std::move(options.callbacks));
     c_callbacks.context = callbacks.get();
     if (callbacks->onSubscribe) {
-      c_callbacks.on_subscribe = [](const void* context, uint64_t channel_id) {
+      c_callbacks.on_subscribe = [](
+                                   const void* context,
+                                   uint64_t channel_id,
+                                   const foxglove_client_metadata c_client_metadata
+                                 ) {
         try {
-          (static_cast<const WebSocketServerCallbacks*>(context))->onSubscribe(channel_id);
+          ClientMetadata client_metadata{
+            c_client_metadata.id,
+            c_client_metadata.sink_id == 0 ? std::nullopt
+                                           : std::make_optional<uint64_t>(c_client_metadata.sink_id)
+          };
+          (static_cast<const WebSocketServerCallbacks*>(context))
+            ->onSubscribe(channel_id, client_metadata);
         } catch (const std::exception& exc) {
           warn() << "onSubscribe callback failed: " << exc.what();
         }
       };
     }
     if (callbacks->onUnsubscribe) {
-      c_callbacks.on_unsubscribe = [](const void* context, uint64_t channel_id) {
-        try {
-          (static_cast<const WebSocketServerCallbacks*>(context))->onUnsubscribe(channel_id);
-        } catch (const std::exception& exc) {
-          warn() << "onUnsubscribe callback failed: " << exc.what();
-        }
-      };
+      c_callbacks.on_unsubscribe =
+        [](const void* context, uint64_t channel_id, foxglove_client_metadata c_client_metadata) {
+          try {
+            ClientMetadata client_metadata{
+              c_client_metadata.id,
+              c_client_metadata.sink_id == 0
+                ? std::nullopt
+                : std::make_optional<uint64_t>(c_client_metadata.sink_id)
+            };
+            (static_cast<const WebSocketServerCallbacks*>(context))
+              ->onUnsubscribe(channel_id, client_metadata);
+          } catch (const std::exception& exc) {
+            warn() << "onUnsubscribe callback failed: " << exc.what();
+          }
+        };
     }
     if (callbacks->onClientAdvertise) {
       c_callbacks.on_client_advertise =
@@ -113,7 +131,7 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
         std::vector<std::string_view> param_names;
         if (c_param_names != nullptr) {
           param_names.reserve(param_names_len);
-          for (auto i = 0; i < param_names_len; ++i) {
+          for (size_t i = 0; i < param_names_len; ++i) {
             param_names.emplace_back(c_param_names[i].data, c_param_names[i].len);
           }
         }
@@ -160,7 +178,7 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
         [](const void* context, const struct foxglove_string* c_names, size_t names_len) {
           std::vector<std::string_view> names;
           names.reserve(names_len);
-          for (auto i = 0; i < names_len; ++i) {
+          for (size_t i = 0; i < names_len; ++i) {
             names.emplace_back(c_names[i].data, c_names[i].len);
           }
           try {
@@ -175,7 +193,7 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
         [](const void* context, const struct foxglove_string* c_names, size_t names_len) {
           std::vector<std::string_view> names;
           names.reserve(names_len);
-          for (auto i = 0; i < names_len; ++i) {
+          for (size_t i = 0; i < names_len; ++i) {
             names.emplace_back(c_names[i].data, c_names[i].len);
           }
           try {
@@ -252,9 +270,9 @@ WebSocketServer::WebSocketServer(
   foxglove_websocket_server* server, std::unique_ptr<WebSocketServerCallbacks> callbacks,
   std::unique_ptr<FetchAssetHandler> fetch_asset
 )
-    : impl_(server, foxglove_server_stop)
-    , callbacks_(std::move(callbacks))
-    , fetch_asset_(std::move(fetch_asset)) {}
+    : callbacks_(std::move(callbacks))
+    , fetch_asset_(std::move(fetch_asset))
+    , impl_(server, foxglove_server_stop) {}
 
 FoxgloveError WebSocketServer::stop() {
   foxglove_error error = foxglove_server_stop(impl_.release());

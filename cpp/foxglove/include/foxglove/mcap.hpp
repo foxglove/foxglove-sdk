@@ -1,17 +1,19 @@
 #pragma once
 
 #include <foxglove/context.hpp>
+#include <foxglove/error.hpp>
 
 #include <memory>
-#include <string_view>
+#include <optional>
+#include <string>
 
 enum foxglove_error : uint8_t;
-enum class FoxgloveError : uint8_t;
 struct foxglove_mcap_writer;
-struct foxglove_context;
 
 /// The foxglove namespace.
 namespace foxglove {
+
+class Context;
 
 /// @brief The compression algorithm to use for an MCAP file.
 enum class McapCompression : uint8_t {
@@ -67,6 +69,11 @@ struct McapWriterOptions {
 class McapWriter final {
 public:
   /// @brief Create a new MCAP writer.
+  ///
+  /// @note Calls to create from multiple threads are safe,
+  /// unless the same file path is given. Writing to an MCAP
+  /// writer happens through channel logging, which is thread-safe.
+  ///
   /// @param options The options for the MCAP writer.
   /// @return A new MCAP writer.
   static FoxgloveResult<McapWriter> create(const McapWriterOptions& options);

@@ -15,7 +15,6 @@ use pyo3::{
 };
 use std::collections::HashMap;
 use std::sync::Arc;
-use std::time;
 
 /// Information about a channel.
 #[pyclass(name = "ChannelView", module = "foxglove")]
@@ -366,7 +365,7 @@ impl foxglove::websocket::service::Handler for ServiceHandler {
 /// To connect to this server: open Foxglove, choose "Open a new connection", and select Foxglove
 /// WebSocket. The default connection string matches the defaults used by the SDK.
 #[pyfunction]
-#[pyo3(signature = (*, name = None, host="127.0.0.1", port=8765, capabilities=None, server_listener=None, supported_encodings=None, services=None, asset_handler=None, context=None))]
+#[pyo3(signature = (*, name = None, host="127.0.0.1", port=8765, capabilities=None, server_listener=None, supported_encodings=None, services=None, asset_handler=None, context=None, session_id=None))]
 #[allow(clippy::too_many_arguments)]
 pub fn start_server(
     py: Python<'_>,
@@ -379,16 +378,13 @@ pub fn start_server(
     services: Option<Vec<PyService>>,
     asset_handler: Option<Py<PyAny>>,
     context: Option<PyRef<PyContext>>,
+    session_id: Option<String>,
 ) -> PyResult<PyWebSocketServer> {
-    let session_id = time::SystemTime::now()
-        .duration_since(time::UNIX_EPOCH)
-        .expect("Failed to create session ID; invalid system time")
-        .as_millis()
-        .to_string();
+    let mut server = WebSocketServer::new().bind(host, port);
 
-    let mut server = WebSocketServer::new()
-        .session_id(session_id)
-        .bind(host, port);
+    if let Some(session_id) = session_id {
+        server = server.session_id(session_id);
+    }
 
     if let Some(py_obj) = server_listener {
         let listener = PyServerListener { listener: py_obj };
@@ -445,6 +441,26 @@ impl PyWebSocketServer {
     #[getter]
     pub fn port(&self) -> u16 {
         self.0.as_ref().map_or(0, |handle| handle.port())
+    }
+
+    /// Returns an app URL to open the websocket as a data source.
+    ///
+    /// Returns None if the server has been stopped.
+    ///
+    /// :param layout_id: An optional layout ID to include in the URL.
+    /// :param open_in_desktop: Opens the foxglove desktop app.
+    #[pyo3(signature = (*, layout_id=None, open_in_desktop=false))]
+    pub fn app_url(&self, layout_id: Option<&str>, open_in_desktop: bool) -> Option<String> {
+        self.0.as_ref().map(|s| {
+            let mut url = s.app_url();
+            if let Some(layout_id) = layout_id {
+                url = url.with_layout_id(layout_id);
+            }
+            if open_in_desktop {
+                url = url.with_open_in_desktop();
+            }
+            url.to_string()
+        })
     }
 
     /// Sets a new session ID and notifies all clients, causing them to reset their state.

@@ -4,6 +4,7 @@ module foxglove {
 
 // Type of points annotation
 enum PointsAnnotationType {
+  // Unknown points annotation type
   // Value: 0
   UNKNOWN,
 

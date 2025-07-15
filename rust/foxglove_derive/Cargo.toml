@@ -1,0 +1,25 @@
+[package]
+name = "foxglove_derive"
+description = "Foxglove SDK derive macros"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+license.workspace = true
+
+[lib]
+proc-macro = true
+
+[dependencies]
+proc-macro2 = "1.0"
+quote = "1.0"
+syn = { version = "2.0", features = ["full", "extra-traits"] }
+prost-types.workspace = true
+
+[dev-dependencies]
+bytes = "1.4"
+foxglove = { path = "../foxglove" }
+prost.workspace = true
+prost-reflect = "0.15.3"
+tracing.workspace = true
+tracing-test = { workspace = true, features = ["no-env-filter"] }

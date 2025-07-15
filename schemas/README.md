@@ -74,12 +74,12 @@ Log level
 
 name | value | description
 ---- | ----- | -----------
-`UNKNOWN` | 0 | 
-`DEBUG` | 1 | 
-`INFO` | 2 | 
-`WARNING` | 3 | 
-`ERROR` | 4 | 
-`FATAL` | 5 | 
+`UNKNOWN` | 0 | Unknown log level
+`DEBUG` | 1 | Debug log level
+`INFO` | 2 | Info log level
+`WARNING` | 3 | Warning log level
+`ERROR` | 4 | Error log level
+`FATAL` | 5 | Fatal log level
 
 
 
@@ -89,15 +89,15 @@ Numeric type
 
 name | value | description
 ---- | ----- | -----------
-`UNKNOWN` | 0 | 
-`UINT8` | 1 | 
-`INT8` | 2 | 
-`UINT16` | 3 | 
-`INT16` | 4 | 
-`UINT32` | 5 | 
-`INT32` | 6 | 
-`FLOAT32` | 7 | 
-`FLOAT64` | 8 | 
+`UNKNOWN` | 0 | Unknown numeric type
+`UINT8` | 1 | Unsigned 8-bit integer
+`INT8` | 2 | Signed 8-bit integer
+`UINT16` | 3 | Unsigned 16-bit integer
+`INT16` | 4 | Signed 16-bit integer
+`UINT32` | 5 | Unsigned 32-bit integer
+`INT32` | 6 | Signed 32-bit integer
+`FLOAT32` | 7 | 32-bit floating-point number
+`FLOAT64` | 8 | 64-bit floating-point number
 
 
 
@@ -107,7 +107,7 @@ Type of points annotation
 
 name | value | description
 ---- | ----- | -----------
-`UNKNOWN` | 0 | 
+`UNKNOWN` | 0 | Unknown points annotation type
 `POINTS` | 1 | Individual points: 0, 1, 2, ...
 `LINE_LOOP` | 2 | Closed polygon: 0-1, 1-2, ..., (n-1)-n, n-0
 `LINE_STRIP` | 3 | Connected line segments: 0-1, 1-2, ..., (n-1)-n
@@ -121,10 +121,10 @@ Type of position covariance
 
 name | value | description
 ---- | ----- | -----------
-`UNKNOWN` | 0 | 
-`APPROXIMATED` | 1 | 
-`DIAGONAL_KNOWN` | 2 | 
-`KNOWN` | 3 | 
+`UNKNOWN` | 0 | Unknown position covariance type
+`APPROXIMATED` | 1 | Position covariance is approximated
+`DIAGONAL_KNOWN` | 2 | Position covariance is per-axis, so put it along the diagonal
+`KNOWN` | 3 | Position covariance of the fix is known
 
 
 
@@ -302,7 +302,7 @@ string
 
 Name of distortion model
 
-Supported parameters: `plumb_bob` (k1, k2, p1, p2, k3) and `rational_polynomial` (k1, k2, p1, p2, k3, k4, k5, k6). Distortion models are based on [OpenCV's](https://docs.opencv.org/2.4/modules/calib3d/doc/camera_calibration_and_3d_reconstruction.html) [pinhole camera model](https://en.wikipedia.org/wiki/Distortion_%28optics%29#Software_correction). This is the same [implementation used by ROS](http://docs.ros.org/en/diamondback/api/image_geometry/html/c++/pinhole__camera__model_8cpp_source.html)
+Supported parameters: `plumb_bob` (k1, k2, p1, p2, k3), `rational_polynomial` (k1, k2, p1, p2, k3, k4, k5, k6), and `kannala_brandt` (k1, k2, k3, k4). `plumb_bob` and `rational_polynomial` models are based on the pinhole model [OpenCV's](https://docs.opencv.org/4.11.0/d9/d0c/group__calib3d.html) [pinhole camera model](https://en.wikipedia.org/wiki/Distortion_%28optics%29#Software_correction). The `kannala_brandt` model is matches the [OpenvCV fisheye](https://docs.opencv.org/4.11.0/db/d58/group__calib3d__fisheye.html) model.
 
 </td>
 </tr>
@@ -1127,7 +1127,7 @@ bytes
 </td>
 <td>
 
-Grid cell data, interpreted using `fields`, in row-major (y-major) order
+Grid cell data, interpreted using `fields`, in row-major (y-major) order — values fill each row from left to right along the X axis, with rows ordered from top to bottom along the Y axis, starting at the bottom-left corner when viewed from +Z looking towards -Z with identity orientations
 
 </td>
 </tr>

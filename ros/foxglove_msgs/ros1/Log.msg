@@ -6,11 +6,22 @@
 # Timestamp of log message
 time timestamp
 
+# Unknown log level
 uint8 UNKNOWN=0
+
+# Debug log level
 uint8 DEBUG=1
+
+# Info log level
 uint8 INFO=2
+
+# Warning log level
 uint8 WARNING=3
+
+# Error log level
 uint8 ERROR=4
+
+# Fatal log level
 uint8 FATAL=5
 
 # Log level

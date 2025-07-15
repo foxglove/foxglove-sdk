@@ -43,6 +43,7 @@ impl Schema {
     }
 
     /// Returns a JSON schema for the specified type.
+    #[cfg(feature = "schemars")]
     pub fn json_schema<T: schemars::JsonSchema>() -> Self {
         let json_schema = schemars::schema_for!(T);
         Self::new(

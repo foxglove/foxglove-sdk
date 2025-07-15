@@ -307,7 +307,7 @@ ParameterArrayView::ParameterArrayView(const foxglove_parameter_array* ptr)
 std::vector<ParameterView> ParameterArrayView::parameters() const {
   std::vector<ParameterView> params;
   params.reserve(impl_->len);
-  for (auto i = 0; i < impl_->len; ++i) {
+  for (size_t i = 0; i < impl_->len; ++i) {
     params.emplace_back(ParameterView(&impl_->parameters[i]));
   }
   return params;

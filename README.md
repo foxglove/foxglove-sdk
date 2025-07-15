@@ -44,7 +44,7 @@ Visit [Foxglove Docs](https://docs.foxglove.dev/) to get started.
 </td>
 <td>
 
-[![conan version](https://img.shields.io/crates/v/foxglove)](https://crates.io/crates/foxglove)
+[![Rust crate version](https://img.shields.io/crates/v/foxglove)](https://crates.io/crates/foxglove)
 
 </td>
 <td>Foxglove SDK for Rust</td>

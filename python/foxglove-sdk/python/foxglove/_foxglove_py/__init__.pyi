@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from .mcap import MCAPWriteOptions, MCAPWriter
 from .websocket import AssetHandler, Capability, Service, WebSocketServer
@@ -14,7 +14,7 @@ class BaseChannel:
         topic: str,
         message_encoding: str,
         schema: Optional["Schema"] = None,
-        metadata: Optional[List[Tuple[str, str]]] = None,
+        metadata: Optional[Dict[str, str]] = None,
     ) -> "BaseChannel": ...
     def id(self) -> int:
         """The unique ID of the channel"""
@@ -24,8 +24,35 @@ class BaseChannel:
         """The topic name of the channel"""
         ...
 
+    @property
+    def message_encoding(self) -> str:
+        """The message encoding for the channel"""
+        ...
+
+    def metadata(self) -> Dict[str, str]:
+        """
+        Returns a copy of the channel's metadata.
+
+        Note that changes made to the returned dictionary will not be applied to
+        the channel's metadata.
+        """
+        ...
+
+    def schema(self) -> Optional["Schema"]:
+        """
+        Returns a copy of the channel's schema.
+
+        Note that changes made to the returned object will not be applied to
+        the channel's schema.
+        """
+        ...
+
     def schema_name(self) -> Optional[str]:
         """The name of the schema for the channel"""
+        ...
+
+    def has_sinks(self) -> bool:
+        """Returns true if at least one sink is subscribed to this channel"""
         ...
 
     def log(
@@ -94,6 +121,7 @@ def start_server(
     services: Optional[List["Service"]] = None,
     asset_handler: Optional["AssetHandler"] = None,
     context: Optional["Context"] = None,
+    session_id: Optional[str] = None,
 ) -> WebSocketServer:
     """
     Start a websocket server for live visualization.

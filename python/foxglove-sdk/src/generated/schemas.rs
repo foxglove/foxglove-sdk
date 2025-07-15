@@ -4,7 +4,9 @@
 #![allow(clippy::enum_variant_names)]
 #![allow(non_snake_case)]
 use crate::schemas_wkt::{Duration, Timestamp};
+use crate::PySchema;
 use bytes::Bytes;
+use foxglove::Encode;
 use pyo3::prelude::*;
 use pyo3::types::PyBytes;
 
@@ -118,6 +120,13 @@ impl ArrowPrimitive {
             self.0.color,
         )
     }
+    /// Returns the ArrowPrimitive schema.
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::ArrowPrimitive::get_schema()
+            .unwrap()
+            .into()
+    }
 }
 
 impl From<ArrowPrimitive> for foxglove::schemas::ArrowPrimitive {
@@ -133,10 +142,50 @@ impl From<ArrowPrimitive> for foxglove::schemas::ArrowPrimitive {
 /// :param width: Image width
 /// :param height: Image height
 /// :param distortion_model: Name of distortion model
+///     
+///     Supported parameters: `plumb_bob` (k1, k2, p1, p2, k3), `rational_polynomial` (k1, k2, p1, p2, k3, k4, k5, k6), and `kannala_brandt` (k1, k2, k3, k4). `plumb_bob` and `rational_polynomial` models are based on the pinhole model `OpenCV's <https://docs.opencv.org/4.11.0/d9/d0c/group__calib3d.html>`__ `pinhole camera model <https://en.wikipedia.org/wiki/Distortion_%28optics%29#Software_correction>`__. The `kannala_brandt` model is matches the `OpenvCV fisheye <https://docs.opencv.org/4.11.0/db/d58/group__calib3d__fisheye.html>`__ model.
 /// :param D: Distortion parameters
 /// :param K: Intrinsic camera matrix (3x3 row-major matrix)
+///     
+///     A 3x3 row-major matrix for the raw (distorted) image.
+///     
+///     Projects 3D points in the camera coordinate frame to 2D pixel coordinates using the focal lengths (fx, fy) and principal point (cx, cy).
+///     
+///     ::
+///
+///             [fx  0 cx]
+///         K = [ 0 fy cy]
+///             [ 0  0  1]
+///     
 /// :param R: Rectification matrix (stereo cameras only, 3x3 row-major matrix)
+///     
+///     A rotation matrix aligning the camera coordinate system to the ideal stereo image plane so that epipolar lines in both stereo images are parallel.
 /// :param P: Projection/camera matrix (3x4 row-major matrix)
+///     
+///     ::
+///
+///             [fx'  0  cx' Tx]
+///         P = [ 0  fy' cy' Ty]
+///             [ 0   0   1   0]
+///     
+///     By convention, this matrix specifies the intrinsic (camera) matrix of the processed (rectified) image. That is, the left 3x3 portion is the normal camera intrinsic matrix for the rectified image.
+///     
+///     It projects 3D points in the camera coordinate frame to 2D pixel coordinates using the focal lengths (fx', fy') and principal point (cx', cy') - these may differ from the values in K.
+///     
+///     For monocular cameras, Tx = Ty = 0. Normally, monocular cameras will also have R = the identity and P[1:3,1:3] = K.
+///     
+///     For a stereo pair, the fourth column [Tx Ty 0]' is related to the position of the optical center of the second camera in the first camera's frame. We assume Tz = 0 so both cameras are in the same stereo image plane. The first camera always has Tx = Ty = 0. For the right (second) camera of a horizontal stereo pair, Ty = 0 and Tx = -fx' * B, where B is the baseline between the cameras.
+///     
+///     Given a 3D point [X Y Z]', the projection (x, y) of the point onto the rectified image is given by:
+///     
+///     ::
+///
+///         [u v w]' = P * [X Y Z 1]'
+///                x = u / w
+///                y = v / w
+///     
+///     This holds for both images of a stereo pair.
+///     
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/camera-calibration
 #[pyclass(module = "foxglove.schemas")]
@@ -183,6 +232,13 @@ impl CameraCalibration {
             self.0.p,
         )
     }
+    /// Returns the CameraCalibration schema.
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::CameraCalibration::get_schema()
+            .unwrap()
+            .into()
+    }
 }
 
 impl From<CameraCalibration> for foxglove::schemas::CameraCalibration {
@@ -195,6 +251,7 @@ impl From<CameraCalibration> for foxglove::schemas::CameraCalibration {
 ///
 /// :param timestamp: Timestamp of circle
 /// :param position: Center of the circle in 2D image coordinates (pixels).
+///     The coordinate uses the top-left corner of the top-left pixel of the image as the origin.
 /// :param diameter: Circle diameter in pixels
 /// :param thickness: Line thickness in pixels
 /// :param fill_color: Fill color
@@ -236,6 +293,13 @@ impl CircleAnnotation {
             self.0.outline_color,
         )
     }
+    /// Returns the CircleAnnotation schema.
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::CircleAnnotation::get_schema()
+            .unwrap()
+            .into()
+    }
 }
 
 impl From<CircleAnnotation> for foxglove::schemas::CircleAnnotation {
@@ -268,6 +332,11 @@ impl Color {
             self.0.r, self.0.g, self.0.b, self.0.a,
         )
     }
+    /// Returns the Color schema.
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::Color::get_schema().unwrap().into()
+    }
 }
 
 impl From<Color> for foxglove::schemas::Color {
@@ -282,6 +351,8 @@ impl From<Color> for foxglove::schemas::Color {
 /// :param frame_id: Frame of reference for the image. The origin of the frame is the optical center of the camera. +x points to the right in the image, +y points down, and +z points into the plane of the image.
 /// :param data: Compressed image data
 /// :param format: Image format
+///     
+///     Supported values: `jpeg`, `png`, `webp`, `avif`
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/compressed-image
 #[pyclass(module = "foxglove.schemas")]
@@ -312,6 +383,13 @@ impl CompressedImage {
             self.0.timestamp, self.0.frame_id, self.0.data, self.0.format,
         )
     }
+    /// Returns the CompressedImage schema.
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::CompressedImage::get_schema()
+            .unwrap()
+            .into()
+    }
 }
 
 impl From<CompressedImage> for foxglove::schemas::CompressedImage {
@@ -324,8 +402,36 @@ impl From<CompressedImage> for foxglove::schemas::CompressedImage {
 ///
 /// :param timestamp: Timestamp of video frame
 /// :param frame_id: Frame of reference for the video.
+///     
+///     The origin of the frame is the optical center of the camera. +x points to the right in the video, +y points down, and +z points into the plane of the video.
 /// :param data: Compressed video frame data.
+///     
+///     For packet-based video codecs this data must begin and end on packet boundaries (no partial packets), and must contain enough video packets to decode exactly one image (either a keyframe or delta frame). Note: Foxglove does not support video streams that include B frames because they require lookahead.
+///     
+///     Specifically, the requirements for different `format` values are:
+///     
+///     - `h264`
+///       - Use Annex B formatted data
+///       - Each CompressedVideo message should contain enough NAL units to decode exactly one video frame
+///       - Each message containing a key frame (IDR) must also include a SPS NAL unit
+///     
+///     - `h265` (HEVC)
+///       - Use Annex B formatted data
+///       - Each CompressedVideo message should contain enough NAL units to decode exactly one video frame
+///       - Each message containing a key frame (IRAP) must also include relevant VPS/SPS/PPS NAL units
+///     
+///     - `vp9`
+///       - Each CompressedVideo message should contain exactly one video frame
+///     
+///     - `av1`
+///       - Use the "Low overhead bitstream format" (section 5.2)
+///       - Each CompressedVideo message should contain enough OBUs to decode exactly one video frame
+///       - Each message containing a key frame must also include a Sequence Header OBU
 /// :param format: Video format.
+///     
+///     Supported values: `h264`, `h265`, `vp9`, `av1`.
+///     
+///     Note: compressed video support is subject to hardware limitations and patent licensing, so not all encodings may be supported on all platforms. See more about `H.265 support <https://caniuse.com/hevc>`__, `VP9 support <https://caniuse.com/webm>`__, and `AV1 support <https://caniuse.com/av1>`__.
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/compressed-video
 #[pyclass(module = "foxglove.schemas")]
@@ -355,6 +461,13 @@ impl CompressedVideo {
             "CompressedVideo(timestamp={:?}, frame_id={:?}, data={:?}, format={:?})",
             self.0.timestamp, self.0.frame_id, self.0.data, self.0.format,
         )
+    }
+    /// Returns the CompressedVideo schema.
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::CompressedVideo::get_schema()
+            .unwrap()
+            .into()
     }
 }
 
@@ -405,6 +518,13 @@ impl CylinderPrimitive {
             self.0.color,
         )
     }
+    /// Returns the CylinderPrimitive schema.
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::CylinderPrimitive::get_schema()
+            .unwrap()
+            .into()
+    }
 }
 
 impl From<CylinderPrimitive> for foxglove::schemas::CylinderPrimitive {
@@ -439,6 +559,13 @@ impl CubePrimitive {
             "CubePrimitive(pose={:?}, size={:?}, color={:?})",
             self.0.pose, self.0.size, self.0.color,
         )
+    }
+    /// Returns the CubePrimitive schema.
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::CubePrimitive::get_schema()
+            .unwrap()
+            .into()
     }
 }
 
@@ -489,6 +616,13 @@ impl FrameTransform {
             self.0.rotation,
         )
     }
+    /// Returns the FrameTransform schema.
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::FrameTransform::get_schema()
+            .unwrap()
+            .into()
+    }
 }
 
 impl From<FrameTransform> for foxglove::schemas::FrameTransform {
@@ -517,6 +651,13 @@ impl FrameTransforms {
     fn __repr__(&self) -> String {
         format!("FrameTransforms(transforms={:?})", self.0.transforms,)
     }
+    /// Returns the FrameTransforms schema.
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::FrameTransforms::get_schema()
+            .unwrap()
+            .into()
+    }
 }
 
 impl From<FrameTransforms> for foxglove::schemas::FrameTransforms {
@@ -543,6 +684,11 @@ impl GeoJson {
     fn __repr__(&self) -> String {
         format!("GeoJson(geojson={:?})", self.0.geojson,)
     }
+    /// Returns the GeoJson schema.
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::GeoJson::get_schema().unwrap().into()
+    }
 }
 
 impl From<GeoJson> for foxglove::schemas::GeoJson {
@@ -561,7 +707,7 @@ impl From<GeoJson> for foxglove::schemas::GeoJson {
 /// :param row_stride: Number of bytes between rows in `data`
 /// :param cell_stride: Number of bytes between cells within a row in `data`
 /// :param fields: Fields in `data`. `red`, `green`, `blue`, and `alpha` are optional for customizing the grid's color.
-/// :param data: Grid cell data, interpreted using `fields`, in row-major (y-major) order
+/// :param data: Grid cell data, interpreted using `fields`, in row-major (y-major) order — values fill each row from left to right along the X axis, with rows ordered from top to bottom along the Y axis, starting at the bottom-left corner when viewed from +Z looking towards -Z with identity orientations
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/grid
 #[pyclass(module = "foxglove.schemas")]
@@ -610,6 +756,11 @@ impl Grid {
             self.0.data,
         )
     }
+    /// Returns the Grid schema.
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::Grid::get_schema().unwrap().into()
+    }
 }
 
 impl From<Grid> for foxglove::schemas::Grid {
@@ -649,6 +800,13 @@ impl ImageAnnotations {
             self.0.circles, self.0.points, self.0.texts,
         )
     }
+    /// Returns the ImageAnnotations schema.
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::ImageAnnotations::get_schema()
+            .unwrap()
+            .into()
+    }
 }
 
 impl From<ImageAnnotations> for foxglove::schemas::ImageAnnotations {
@@ -678,6 +836,13 @@ impl KeyValuePair {
             "KeyValuePair(key={:?}, value={:?})",
             self.0.key, self.0.value,
         )
+    }
+    /// Returns the KeyValuePair schema.
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::KeyValuePair::get_schema()
+            .unwrap()
+            .into()
     }
 }
 
@@ -736,6 +901,11 @@ impl LaserScan {
             self.0.intensities,
         )
     }
+    /// Returns the LaserScan schema.
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::LaserScan::get_schema().unwrap().into()
+    }
 }
 
 impl From<LaserScan> for foxglove::schemas::LaserScan {
@@ -746,7 +916,7 @@ impl From<LaserScan> for foxglove::schemas::LaserScan {
 
 /// A primitive representing a series of points connected by lines
 ///
-/// :param r#type: Drawing primitive to use for lines
+/// :param type: Drawing primitive to use for lines
 /// :param pose: Origin of lines relative to reference frame
 /// :param thickness: Line thickness
 /// :param scale_invariant: Indicates whether `thickness` is a fixed size in screen pixels (true), or specified in world coordinates and scales with distance from the camera (false)
@@ -754,6 +924,8 @@ impl From<LaserScan> for foxglove::schemas::LaserScan {
 /// :param color: Solid color to use for the whole line. One of `color` or `colors` must be provided.
 /// :param colors: Per-point colors (if specified, must have the same length as `points`). One of `color` or `colors` must be provided.
 /// :param indices: Indices into the `points` and `colors` attribute arrays, which can be used to avoid duplicating attribute data.
+///     
+///     If omitted or empty, indexing will not be used. This default behavior is equivalent to specifying [0, 1, ..., N-1] for the indices (where N is the number of `points` provided).
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/line-primitive
 #[pyclass(module = "foxglove.schemas")]
@@ -796,6 +968,13 @@ impl LinePrimitive {
             self.0.colors,
             self.0.indices,
         )
+    }
+    /// Returns the LinePrimitive schema.
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::LinePrimitive::get_schema()
+            .unwrap()
+            .into()
     }
 }
 
@@ -854,6 +1033,11 @@ impl LocationFix {
             self.0.position_covariance_type,
         )
     }
+    /// Returns the LocationFix schema.
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::LocationFix::get_schema().unwrap().into()
+    }
 }
 
 impl From<LocationFix> for foxglove::schemas::LocationFix {
@@ -902,6 +1086,11 @@ impl Log {
             self.0.timestamp, self.0.level, self.0.message, self.0.name, self.0.file, self.0.line,
         )
     }
+    /// Returns the Log schema.
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::Log::get_schema().unwrap().into()
+    }
 }
 
 impl From<Log> for foxglove::schemas::Log {
@@ -913,7 +1102,7 @@ impl From<Log> for foxglove::schemas::Log {
 /// Command to remove previously published entities
 ///
 /// :param timestamp: Timestamp of the deletion. Only matching entities earlier than this timestamp will be deleted.
-/// :param r#type: Type of deletion action to perform
+/// :param type: Type of deletion action to perform
 /// :param id: Identifier which must match if `type` is `MATCHING_ID`.
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/scene-entity-deletion
@@ -936,6 +1125,13 @@ impl SceneEntityDeletion {
             "SceneEntityDeletion(timestamp={:?}, r#type={:?}, id={:?})",
             self.0.timestamp, self.0.r#type, self.0.id,
         )
+    }
+    /// Returns the SceneEntityDeletion schema.
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::SceneEntityDeletion::get_schema()
+            .unwrap()
+            .into()
     }
 }
 
@@ -1022,6 +1218,11 @@ impl SceneEntity {
             self.0.models,
         )
     }
+    /// Returns the SceneEntity schema.
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::SceneEntity::get_schema().unwrap().into()
+    }
 }
 
 impl From<SceneEntity> for foxglove::schemas::SceneEntity {
@@ -1054,6 +1255,11 @@ impl SceneUpdate {
             "SceneUpdate(deletions={:?}, entities={:?})",
             self.0.deletions, self.0.entities,
         )
+    }
+    /// Returns the SceneUpdate schema.
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::SceneUpdate::get_schema().unwrap().into()
     }
 }
 
@@ -1114,6 +1320,13 @@ impl ModelPrimitive {
             self.0.data,
         )
     }
+    /// Returns the ModelPrimitive schema.
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::ModelPrimitive::get_schema()
+            .unwrap()
+            .into()
+    }
 }
 
 impl From<ModelPrimitive> for foxglove::schemas::ModelPrimitive {
@@ -1126,7 +1339,7 @@ impl From<ModelPrimitive> for foxglove::schemas::ModelPrimitive {
 ///
 /// :param name: Name of the field
 /// :param offset: Byte offset from start of data buffer
-/// :param r#type: Type of data in the field. Integers are stored using little-endian byte order.
+/// :param type: Type of data in the field. Integers are stored using little-endian byte order.
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/packed-element-field
 #[pyclass(module = "foxglove.schemas")]
@@ -1148,6 +1361,13 @@ impl PackedElementField {
             "PackedElementField(name={:?}, offset={:?}, r#type={:?})",
             self.0.name, self.0.offset, self.0.r#type,
         )
+    }
+    /// Returns the PackedElementField schema.
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::PackedElementField::get_schema()
+            .unwrap()
+            .into()
     }
 }
 
@@ -1175,6 +1395,11 @@ impl Point2 {
     }
     fn __repr__(&self) -> String {
         format!("Point2(x={:?}, y={:?})", self.0.x, self.0.y,)
+    }
+    /// Returns the Point2 schema.
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::Point2::get_schema().unwrap().into()
     }
 }
 
@@ -1206,6 +1431,11 @@ impl Point3 {
             "Point3(x={:?}, y={:?}, z={:?})",
             self.0.x, self.0.y, self.0.z,
         )
+    }
+    /// Returns the Point3 schema.
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::Point3::get_schema().unwrap().into()
     }
 }
 
@@ -1262,6 +1492,11 @@ impl PointCloud {
             self.0.data,
         )
     }
+    /// Returns the PointCloud schema.
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::PointCloud::get_schema().unwrap().into()
+    }
 }
 
 impl From<PointCloud> for foxglove::schemas::PointCloud {
@@ -1273,8 +1508,9 @@ impl From<PointCloud> for foxglove::schemas::PointCloud {
 /// An array of points on a 2D image
 ///
 /// :param timestamp: Timestamp of annotation
-/// :param r#type: Type of points annotation to draw
+/// :param type: Type of points annotation to draw
 /// :param points: Points in 2D image coordinates (pixels).
+///     These coordinates use the top-left corner of the top-left pixel of the image as the origin.
 /// :param outline_color: Outline color
 /// :param outline_colors: Per-point colors, if `type` is `POINTS`, or per-segment stroke colors, if `type` is `LINE_LIST`, `LINE_STRIP` or `LINE_LOOP`.
 /// :param fill_color: Fill color
@@ -1319,6 +1555,13 @@ impl PointsAnnotation {
             self.0.thickness,
         )
     }
+    /// Returns the PointsAnnotation schema.
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::PointsAnnotation::get_schema()
+            .unwrap()
+            .into()
+    }
 }
 
 impl From<PointsAnnotation> for foxglove::schemas::PointsAnnotation {
@@ -1351,6 +1594,11 @@ impl Pose {
             "Pose(position={:?}, orientation={:?})",
             self.0.position, self.0.orientation,
         )
+    }
+    /// Returns the Pose schema.
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::Pose::get_schema().unwrap().into()
     }
 }
 
@@ -1387,6 +1635,11 @@ impl PoseInFrame {
             self.0.timestamp, self.0.frame_id, self.0.pose,
         )
     }
+    /// Returns the PoseInFrame schema.
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::PoseInFrame::get_schema().unwrap().into()
+    }
 }
 
 impl From<PoseInFrame> for foxglove::schemas::PoseInFrame {
@@ -1422,6 +1675,13 @@ impl PosesInFrame {
             self.0.timestamp, self.0.frame_id, self.0.poses,
         )
     }
+    /// Returns the PosesInFrame schema.
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::PosesInFrame::get_schema()
+            .unwrap()
+            .into()
+    }
 }
 
 impl From<PosesInFrame> for foxglove::schemas::PosesInFrame {
@@ -1453,6 +1713,11 @@ impl Quaternion {
             "Quaternion(x={:?}, y={:?}, z={:?}, w={:?})",
             self.0.x, self.0.y, self.0.z, self.0.w,
         )
+    }
+    /// Returns the Quaternion schema.
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::Quaternion::get_schema().unwrap().into()
     }
 }
 
@@ -1505,6 +1770,11 @@ impl RawAudio {
             self.0.number_of_channels,
         )
     }
+    /// Returns the RawAudio schema.
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::RawAudio::get_schema().unwrap().into()
+    }
 }
 
 impl From<RawAudio> for foxglove::schemas::RawAudio {
@@ -1520,6 +1790,8 @@ impl From<RawAudio> for foxglove::schemas::RawAudio {
 /// :param width: Image width
 /// :param height: Image height
 /// :param encoding: Encoding of the raw image data
+///     
+///     Supported values: `8UC1`, `8UC3`, `16UC1` (little endian), `32FC1` (little endian), `bayer_bggr8`, `bayer_gbrg8`, `bayer_grbg8`, `bayer_rggb8`, `bgr8`, `bgra8`, `mono8`, `mono16`, `rgb8`, `rgba8`, `uyvy` or `yuv422`, `yuyv` or `yuv422_yuy2`
 /// :param step: Byte length of a single row
 /// :param data: Raw image data
 ///
@@ -1564,6 +1836,11 @@ impl RawImage {
             self.0.data,
         )
     }
+    /// Returns the RawImage schema.
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::RawImage::get_schema().unwrap().into()
+    }
 }
 
 impl From<RawImage> for foxglove::schemas::RawImage {
@@ -1599,6 +1876,13 @@ impl SpherePrimitive {
             self.0.pose, self.0.size, self.0.color,
         )
     }
+    /// Returns the SpherePrimitive schema.
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::SpherePrimitive::get_schema()
+            .unwrap()
+            .into()
+    }
 }
 
 impl From<SpherePrimitive> for foxglove::schemas::SpherePrimitive {
@@ -1611,6 +1895,7 @@ impl From<SpherePrimitive> for foxglove::schemas::SpherePrimitive {
 ///
 /// :param timestamp: Timestamp of annotation
 /// :param position: Bottom-left origin of the text label in 2D image coordinates (pixels).
+///     The coordinate uses the top-left corner of the top-left pixel of the image as the origin.
 /// :param text: Text to display
 /// :param font_size: Font size in pixels
 /// :param text_color: Text color
@@ -1651,6 +1936,13 @@ impl TextAnnotation {
             self.0.text_color,
             self.0.background_color,
         )
+    }
+    /// Returns the TextAnnotation schema.
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::TextAnnotation::get_schema()
+            .unwrap()
+            .into()
     }
 }
 
@@ -1705,6 +1997,13 @@ impl TextPrimitive {
             self.0.text,
         )
     }
+    /// Returns the TextPrimitive schema.
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::TextPrimitive::get_schema()
+            .unwrap()
+            .into()
+    }
 }
 
 impl From<TextPrimitive> for foxglove::schemas::TextPrimitive {
@@ -1720,6 +2019,8 @@ impl From<TextPrimitive> for foxglove::schemas::TextPrimitive {
 /// :param color: Solid color to use for the whole shape. One of `color` or `colors` must be provided.
 /// :param colors: Per-vertex colors (if specified, must have the same length as `points`). One of `color` or `colors` must be provided.
 /// :param indices: Indices into the `points` and `colors` attribute arrays, which can be used to avoid duplicating attribute data.
+///     
+///     If omitted or empty, indexing will not be used. This default behavior is equivalent to specifying [0, 1, ..., N-1] for the indices (where N is the number of `points` provided).
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/triangle-list-primitive
 #[pyclass(module = "foxglove.schemas")]
@@ -1750,6 +2051,13 @@ impl TriangleListPrimitive {
             self.0.pose, self.0.points, self.0.color, self.0.colors, self.0.indices,
         )
     }
+    /// Returns the TriangleListPrimitive schema.
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::TriangleListPrimitive::get_schema()
+            .unwrap()
+            .into()
+    }
 }
 
 impl From<TriangleListPrimitive> for foxglove::schemas::TriangleListPrimitive {
@@ -1776,6 +2084,11 @@ impl Vector2 {
     }
     fn __repr__(&self) -> String {
         format!("Vector2(x={:?}, y={:?})", self.0.x, self.0.y,)
+    }
+    /// Returns the Vector2 schema.
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::Vector2::get_schema().unwrap().into()
     }
 }
 
@@ -1807,6 +2120,11 @@ impl Vector3 {
             "Vector3(x={:?}, y={:?}, z={:?})",
             self.0.x, self.0.y, self.0.z,
         )
+    }
+    /// Returns the Vector3 schema.
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::Vector3::get_schema().unwrap().into()
     }
 }
 

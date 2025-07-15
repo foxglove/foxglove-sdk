@@ -40,7 +40,7 @@ pub struct CameraCalibration {
     pub height: u32,
     /// Name of distortion model
     ///
-    /// Supported parameters: `plumb_bob` (k1, k2, p1, p2, k3) and `rational_polynomial` (k1, k2, p1, p2, k3, k4, k5, k6). Distortion models are based on [OpenCV's](<https://docs.opencv.org/2.4/modules/calib3d/doc/camera_calibration_and_3d_reconstruction.html>) [pinhole camera model](<https://en.wikipedia.org/wiki/Distortion_%28optics%29#Software_correction>). This is the same [implementation used by ROS](<http://docs.ros.org/en/diamondback/api/image_geometry/html/c++/pinhole__camera__model_8cpp_source.html>)
+    /// Supported parameters: `plumb_bob` (k1, k2, p1, p2, k3), `rational_polynomial` (k1, k2, p1, p2, k3, k4, k5, k6), and `kannala_brandt` (k1, k2, k3, k4). `plumb_bob` and `rational_polynomial` models are based on the pinhole model [OpenCV's](<https://docs.opencv.org/4.11.0/d9/d0c/group__calib3d.html>) [pinhole camera model](<https://en.wikipedia.org/wiki/Distortion_%28optics%29#Software_correction>). The `kannala_brandt` model is matches the [OpenvCV fisheye](<https://docs.opencv.org/4.11.0/db/d58/group__calib3d__fisheye.html>) model.
     #[prost(string, tag = "4")]
     pub distortion_model: ::prost::alloc::string::String,
     /// Distortion parameters
@@ -301,7 +301,7 @@ pub struct Grid {
     /// Fields in `data`. `red`, `green`, `blue`, and `alpha` are optional for customizing the grid's color.
     #[prost(message, repeated, tag = "8")]
     pub fields: ::prost::alloc::vec::Vec<PackedElementField>,
-    /// Grid cell data, interpreted using `fields`, in row-major (y-major) order
+    /// Grid cell data, interpreted using `fields`, in row-major (y-major) order — values fill each row from left to right along the X axis, with rows ordered from top to bottom along the Y axis, starting at the bottom-left corner when viewed from +Z looking towards -Z with identity orientations
     #[prost(bytes = "bytes", tag = "9")]
     pub data: ::prost::bytes::Bytes,
 }
@@ -477,9 +477,13 @@ pub mod location_fix {
     )]
     #[repr(i32)]
     pub enum PositionCovarianceType {
+        /// Unknown position covariance type
         Unknown = 0,
+        /// Position covariance is approximated
         Approximated = 1,
+        /// Position covariance is per-axis, so put it along the diagonal
         DiagonalKnown = 2,
+        /// Position covariance of the fix is known
         Known = 3,
     }
     impl PositionCovarianceType {
@@ -546,11 +550,17 @@ pub mod log {
     )]
     #[repr(i32)]
     pub enum Level {
+        /// Unknown log level
         Unknown = 0,
+        /// Debug log level
         Debug = 1,
+        /// Info log level
         Info = 2,
+        /// Warning log level
         Warning = 3,
+        /// Error log level
         Error = 4,
+        /// Fatal log level
         Fatal = 5,
     }
     impl Level {
@@ -638,14 +648,23 @@ pub mod packed_element_field {
     )]
     #[repr(i32)]
     pub enum NumericType {
+        /// Unknown numeric type
         Unknown = 0,
+        /// Unsigned 8-bit integer
         Uint8 = 1,
+        /// Signed 8-bit integer
         Int8 = 2,
+        /// Unsigned 16-bit integer
         Uint16 = 3,
+        /// Signed 16-bit integer
         Int16 = 4,
+        /// Unsigned 32-bit integer
         Uint32 = 5,
+        /// Signed 32-bit integer
         Int32 = 6,
+        /// 32-bit floating-point number
         Float32 = 7,
+        /// 64-bit floating-point number
         Float64 = 8,
     }
     impl NumericType {
@@ -774,6 +793,7 @@ pub mod points_annotation {
     )]
     #[repr(i32)]
     pub enum Type {
+        /// Unknown points annotation type
         Unknown = 0,
         /// Individual points: 0, 1, 2, ...
         Points = 1,

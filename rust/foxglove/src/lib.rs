@@ -9,21 +9,39 @@
 //!
 //! # Getting started
 //!
-//! To record messages, you need at least one sink. In this example, we create an MCAP file sink,
-//! and log a [`Log`](`crate::schemas::Log`) message on a topic called `/log`. We write one log
-//! message and close the file.
+//! The easiest way to get started is to install the `foxglove` crate with default features, which
+//! will allow logging messages to the Foxglove app and to an MCAP file.
+//!
+//! ```bash
+//! cargo add foxglove
+//! ```
+//!
+//! The following sections illustrate how to use the SDK. For a more hands-on walk-through, see
+//! <https://docs.foxglove.dev/docs/sdk/example>.
+//!
+//! # Recording messages
+//!
+//! To record messages, you need to initialize either an MCAP file writer or a WebSocket server for
+//! live visualization. In this example, we create an MCAP writer, and record a
+//! [`Log`](`crate::schemas::Log`) message on a topic called `/log`. We write one log message and
+//! close the file.
 //!
 //! ```no_run
-//! use foxglove::{McapWriter, log};
 //! use foxglove::schemas::Log;
+//! use foxglove::{log, McapWriter};
 //!
 //! // Create a new MCAP file named 'test.mcap'.
-//! let mcap = McapWriter::new().create_new_buffered_file("test.mcap").expect("create failed");
+//! let mcap = McapWriter::new()
+//!     .create_new_buffered_file("test.mcap")
+//!     .expect("create failed");
 //!
-//! log!("/log", Log{
-//!     message: "Hello, Foxglove!".to_string(),
-//!     ..Default::default()
-//! });
+//! log!(
+//!     "/log",
+//!     Log {
+//!         message: "Hello, Foxglove!".to_string(),
+//!         ..Default::default()
+//!     }
+//! );
 //!
 //! // Flush and close the MCAP file.
 //! mcap.close().expect("close failed");
@@ -46,18 +64,21 @@
 //! If we wanted to use an explicit context instead, we'd write:
 //!
 //! ```no_run
-//! use foxglove::Context;
 //! use foxglove::schemas::Log;
+//! use foxglove::Context;
 //!
 //! // Create a new context.
 //! let ctx = Context::new();
 //!
 //! // Create a new MCAP file named 'test.mcap'.
-//! let mcap = ctx.mcap_writer().create_new_buffered_file("test.mcap").expect("create failed");
+//! let mcap = ctx
+//!     .mcap_writer()
+//!     .create_new_buffered_file("test.mcap")
+//!     .expect("create failed");
 //!
 //! // Create a new channel for the topic "/log" for `Log` messages.
 //! let channel = ctx.channel_builder("/log").build();
-//! channel.log(&Log{
+//! channel.log(&Log {
 //!     message: "Hello, Foxglove!".to_string(),
 //!     ..Default::default()
 //! });
@@ -83,15 +104,17 @@
 //! the first call. The example could be equivalently written as:
 //!
 //! ```no_run
-//! use foxglove::{Channel, McapWriter};
 //! use foxglove::schemas::Log;
+//! use foxglove::{Channel, McapWriter};
 //!
 //! // Create a new MCAP file named 'test.mcap'.
-//! let mcap = McapWriter::new().create_new_buffered_file("test.mcap").expect("create failed");
+//! let mcap = McapWriter::new()
+//!     .create_new_buffered_file("test.mcap")
+//!     .expect("create failed");
 //!
 //! // Create a new channel for the topic "/log" for `Log` messages.
 //! let channel = Channel::new("/log");
-//! channel.log(&Log{
+//! channel.log(&Log {
 //!     message: "Hello, Foxglove!".to_string(),
 //!     ..Default::default()
 //! });
@@ -111,24 +134,32 @@
 //!
 //! ### Custom data
 //!
-//! You can also define your own custom data types by implementing the [`Encode`] trait. This allows
-//! you to log arbitrary custom data types. Notably, the `Encode` trait is automatically implemented
-//! for types that implement [`Serialize`](serde::Serialize) and [`JsonSchema`][jsonschema-trait].
-//! This makes it easy to define new custom messages:
+//! You can also define your own custom data types by implementing the [`Encode`] trait.
+//!
+//! The easiest way to do this is to enable the `derive` feature and derive the [`Encode`] trait,
+//! which will generate a schema and allow you to log your struct to a channel. This currently uses
+//! protobuf encoding.
 //!
 //! ```no_run
-//! #[derive(serde::Serialize, schemars::JsonSchema)]
+//! # #[cfg(feature = "derive")]
+//! # {
+//! #[derive(foxglove::Encode)]
 //! struct Custom<'a> {
 //!     msg: &'a str,
 //!     count: u32,
 //! }
 //!
 //! let channel = foxglove::Channel::new("/custom");
-//! channel.log(&Custom{
+//! channel.log(&Custom {
 //!     msg: "custom",
-//!     count: 42
+//!     count: 42,
 //! });
+//! # }
 //! ```
+//!
+//! If you'd like to use JSON encoding for integration with particular tooling, you can enable the
+//! `schemars` feature, which will provide a blanket [`Encode`] implementation for types that
+//! implement [`Serialize`](serde::Serialize) and [`JsonSchema`][jsonschema-trait].
 //!
 //! [jsonschema-trait]: https://docs.rs/schemars/latest/schemars/trait.JsonSchema.html
 //!
@@ -145,8 +176,8 @@
 //! In this example, we create two lazy channels on the default context:
 //!
 //! ```
-//! use foxglove::{LazyChannel, LazyRawChannel};
 //! use foxglove::schemas::SceneUpdate;
+//! use foxglove::{LazyChannel, LazyRawChannel};
 //!
 //! static BOXES: LazyChannel<SceneUpdate> = LazyChannel::new("/boxes");
 //! static MSG: LazyRawChannel = LazyRawChannel::new("/msg", "json");
@@ -155,8 +186,8 @@
 //! It is also possible to bind lazy channels to an explicit [`LazyContext`]:
 //!
 //! ```
-//! use foxglove::{LazyChannel, LazyContext, LazyRawChannel};
 //! use foxglove::schemas::SceneUpdate;
+//! use foxglove::{LazyChannel, LazyContext, LazyRawChannel};
 //!
 //! static CTX: LazyContext = LazyContext::new();
 //! static BOXES: LazyChannel<SceneUpdate> = CTX.channel("/boxes");
@@ -180,19 +211,24 @@
 //!
 //! ```no_run
 //! let mcap = foxglove::McapWriter::new()
-//!     .create_new_buffered_file("test.mcap").expect("create failed");
+//!     .create_new_buffered_file("test.mcap")
+//!     .expect("create failed");
 //! ```
 //!
 //! You can override the MCAP writer's configuration using [`McapWriter::with_options`]. See
 //! [`WriteOptions`](`mcap::WriteOptions`) for more detail about these parameters:
 //!
 //! ```no_run
+//! # #[cfg(feature = "lz4")]
+//! # {
 //! let options = mcap::WriteOptions::default()
-//!     .chunk_size(Some(1024*1024))
+//!     .chunk_size(Some(1024 * 1024))
 //!     .compression(Some(mcap::Compression::Lz4));
 //!
 //! let mcap = foxglove::McapWriter::with_options(options)
-//!     .create_new_buffered_file("test.mcap").expect("create failed");
+//!     .create_new_buffered_file("test.mcap")
+//!     .expect("create failed");
+//! # }
 //! ```
 //!
 //! ### Live visualization server
@@ -218,6 +254,7 @@
 //! [app-connect]: https://docs.foxglove.dev/docs/connecting-to-data/frameworks/custom#connect
 //!
 //! ```no_run
+//! # #[cfg(feature = "live_visualization")]
 //! # async fn func() {
 //! let server = foxglove::WebSocketServer::new()
 //!     .name("Wall-E")
@@ -238,10 +275,17 @@
 //!
 //! - `chrono`: enables [chrono] conversions for [`Duration`][crate::schemas::Duration] and
 //!   [`Timestamp`][crate::schemas::Timestamp].
+//! - `derive`: enables the use of `#[derive(Encode)]` to derive the [`Encode`] trait for logging
+//!   custom structs. Enabled by default.
 //! - `live_visualization`: enables the live visualization server and client, and adds dependencies
 //!   on [tokio]. Enabled by default.
+//! - `lz4`: enables support for the LZ4 compression algorithm for mcap files. Enabled by default.
+//! - `schemars`: provides a blanket implementation of the [`Encode`] trait for types that
+//!   implement [`Serialize`](serde::Serialize) and [`JsonSchema`][jsonschema-trait].
 //! - `unstable`: features which are under active development and likely to change in an upcoming
 //!   version.
+//! - `zstd`: enables support for the zstd compression algorithm for mcap files. Enabled by
+//!   default.
 //!
 //! If you do not require live visualization features, you can disable that flag to reduce the
 //! compiled size of the SDK.
@@ -260,6 +304,7 @@
 
 use thiserror::Error;
 
+mod app_url;
 mod channel;
 mod channel_builder;
 mod context;
@@ -271,6 +316,9 @@ pub mod log_macro;
 mod log_sink_set;
 mod mcap_writer;
 mod metadata;
+#[doc(hidden)]
+#[cfg(feature = "derive")]
+pub mod protobuf;
 mod schema;
 pub mod schemas;
 mod schemas_wkt;
@@ -283,15 +331,15 @@ mod testutil;
 mod throttler;
 mod time;
 
+pub use app_url::AppUrl;
 // Re-export bytes crate for convenience when implementing the `Encode` trait
 pub use bytes;
-
 pub use channel::{Channel, ChannelId, LazyChannel, LazyRawChannel, RawChannel};
 pub use channel_builder::ChannelBuilder;
 pub use context::{Context, LazyContext};
 pub use encode::Encode;
 pub use mcap_writer::{McapCompression, McapWriteOptions, McapWriter, McapWriterHandle};
-pub use metadata::{Metadata, PartialMetadata};
+pub use metadata::{Metadata, PartialMetadata, ToUnixNanos};
 pub use schema::Schema;
 pub use sink::{Sink, SinkId};
 pub(crate) use time::nanoseconds_since_epoch;
@@ -308,6 +356,13 @@ pub(crate) use runtime::get_runtime_handle;
 pub use runtime::shutdown_runtime;
 #[cfg(feature = "live_visualization")]
 pub use websocket_server::{WebSocketServer, WebSocketServerHandle};
+
+#[doc(hidden)]
+#[cfg(feature = "derive")]
+pub use foxglove_derive::Encode;
+#[doc(hidden)]
+#[cfg(feature = "derive")]
+pub use prost_types;
 
 /// An error type for errors generated by this crate.
 #[derive(Error, Debug)]
@@ -352,9 +407,12 @@ pub enum FoxgloveError {
     /// An I/O error.
     #[error(transparent)]
     IoError(#[from] std::io::Error),
-    /// An error related to MCAP encoding.
+    /// An error related to MCAP writing.
     #[error("MCAP error: {0}")]
     McapError(#[from] mcap::McapError),
+    /// An error occurred while encoding a message.
+    #[error("Encoding error: {0}")]
+    EncodeError(String),
 }
 
 impl From<convert::RangeError> for FoxgloveError {

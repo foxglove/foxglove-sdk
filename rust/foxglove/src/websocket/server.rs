@@ -1,7 +1,5 @@
 use std::collections::hash_map::Entry;
 use std::collections::HashSet;
-use std::sync::atomic::AtomicU16;
-use std::sync::atomic::Ordering::{Acquire, Release};
 use std::sync::Weak;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use std::{collections::HashMap, net::SocketAddr, sync::Arc};
@@ -14,6 +12,7 @@ use tokio::time::MissedTickBehavior;
 use tokio_tungstenite::tungstenite::Message;
 use tokio_util::sync::CancellationToken;
 
+use crate::library_version::get_library_version;
 use crate::websocket::connected_client::ShutdownReason;
 use crate::{Context, FoxgloveError};
 
@@ -120,8 +119,6 @@ pub(crate) struct Server {
     /// It's analogous to the mixin shared_from_this in C++.
     weak_self: Weak<Self>,
     context: Weak<Context>,
-    /// Local port the server is listening on, once it has been started
-    port: AtomicU16,
     message_backlog_size: u32,
     runtime: Handle,
     /// May be provided by the caller
@@ -137,7 +134,6 @@ pub(crate) struct Server {
     /// Encodings server can accept from clients. Ignored unless the "clientPublish" capability is set.
     supported_encodings: HashSet<String>,
     /// The current connection graph, unused unless the "connectionGraph" capability is set.
-    /// see https://github.com/foxglove/ws-protocol/blob/main/docs/spec.md#connection-graph-update
     connection_graph: parking_lot::Mutex<ConnectionGraph>,
     /// Token for cancelling all tasks
     cancellation_token: CancellationToken,
@@ -181,7 +177,6 @@ impl Server {
 
         Server {
             weak_self,
-            port: AtomicU16::new(0),
             context: Arc::downgrade(ctx),
             message_backlog_size: opts
                 .message_backlog_size
@@ -208,10 +203,6 @@ impl Server {
         self.weak_self
             .upgrade()
             .expect("server cannot be dropped while in use")
-    }
-
-    pub fn port(&self) -> u16 {
-        self.port.load(Acquire)
     }
 
     /// Returns true if the server supports the capability.
@@ -244,12 +235,11 @@ impl Server {
             tasks.replace(JoinSet::new());
         }
 
-        let addr = format!("{}:{}", host, port);
+        let addr = format!("{host}:{port}");
         let listener = TcpListener::bind(&addr)
             .await
             .map_err(FoxgloveError::Bind)?;
         let local_addr = listener.local_addr().map_err(FoxgloveError::Bind)?;
-        self.port.store(local_addr.port(), Release);
 
         let cancellation_token = self.cancellation_token.clone();
         let server = self.arc();
@@ -304,7 +294,6 @@ impl Server {
     pub fn stop(&self) -> Option<ShutdownHandle> {
         let tasks = self.tasks.lock().take()?;
         tracing::info!("Shutting down");
-        self.port.store(0, Release);
         self.cancellation_token.cancel();
         let clients = self.clients.take_and_freeze();
         for client in clients.iter() {
@@ -497,6 +486,10 @@ impl Server {
                     .flat_map(Capability::as_protocol_capabilities)
                     .copied(),
             )
+            .with_metadata(HashMap::from([(
+                "fg-library".into(),
+                get_library_version(),
+            )]))
             .with_supported_encodings(&self.supported_encodings)
             .with_session_id(self.session_id.read().clone())
     }

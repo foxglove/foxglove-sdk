@@ -99,12 +99,14 @@ impl ChannelBuilder {
 
 #[cfg(test)]
 mod tests {
+    use crate::schemas::Log;
+
     use super::*;
 
     #[test]
     fn test_build_with_no_options() {
         let builder = ChannelBuilder::new("topic");
-        let channel = builder.build::<String>();
+        let channel = builder.build::<Log>();
         assert_eq!(channel.topic(), "topic");
     }
 }

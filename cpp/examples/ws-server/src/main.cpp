@@ -16,7 +16,7 @@ using namespace std::chrono_literals;
 static std::function<void()> sigint_handler;
 
 // NOLINTNEXTLINE(bugprone-exception-escape)
-int main(int argc, const char* argv[]) {
+int main() {
   std::signal(SIGINT, [](int) {
     if (sigint_handler) {
       sigint_handler();
@@ -31,12 +31,13 @@ int main(int argc, const char* argv[]) {
   options.port = 8765;
   options.capabilities = foxglove::WebSocketServerCapabilities::ClientPublish;
   options.supported_encodings = {"json"};
-  options.callbacks.onSubscribe = [](uint64_t channel_id) {
-    std::cerr << "Subscribed to channel " << channel_id << '\n';
+  options.callbacks.onSubscribe = [](uint64_t channel_id, const foxglove::ClientMetadata& client) {
+    std::cerr << "Client " << client.id << " subscribed to channel " << channel_id << '\n';
   };
-  options.callbacks.onUnsubscribe = [](uint64_t channel_id) {
-    std::cerr << "Unsubscribed from channel " << channel_id << '\n';
-  };
+  options.callbacks.onUnsubscribe =
+    [](uint64_t channel_id, const foxglove::ClientMetadata& client) {
+      std::cerr << "Client " << client.id << " unsubscribed from channel " << channel_id << '\n';
+    };
   options.callbacks.onClientAdvertise = [](
                                           uint32_t client_id, const foxglove::ClientChannel& channel
                                         ) {
@@ -85,7 +86,7 @@ int main(int argc, const char* argv[]) {
   })";
   schema.data = reinterpret_cast<const std::byte*>(schema_data.data());
   schema.data_len = schema_data.size();
-  auto channel_result = foxglove::Channel::create("example", "json", std::move(schema));
+  auto channel_result = foxglove::RawChannel::create("example", "json", std::move(schema));
   if (!channel_result.has_value()) {
     std::cerr << "Failed to create channel: " << foxglove::strerror(channel_result.error()) << '\n';
     return 1;
