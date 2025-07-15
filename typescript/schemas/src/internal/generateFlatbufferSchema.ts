@@ -100,17 +100,19 @@ export function generateFlatbuffers(
             type = field.type.enum.name;
             break;
           case "nested":
-            type = `foxglove.${field.type.schema.name}`;
-            imports.add(field.type.schema.name);
-            break;
-          case "primitive":
-            if (field.type.name === "time") {
+            if (field.type.schema.name === "Timestamp") {
               type = "Time";
               imports.add(`Time`);
-            } else if (field.type.name === "duration") {
+            } else if (field.type.schema.name === "Duration") {
               type = "Duration";
               imports.add(`Duration`);
-            } else if (field.type.name === "bytes" && isArray) {
+            } else {
+              type = `foxglove.${field.type.schema.name}`;
+              imports.add(field.type.schema.name);
+            }
+            break;
+          case "primitive":
+            if (field.type.name === "bytes" && isArray) {
               type = "ByteVector";
               imports.add("ByteVector");
             } else {
@@ -126,10 +128,7 @@ export function generateFlatbuffers(
         }
         let defaultValue;
         if (field.defaultValue != undefined && !isArray) {
-          if (
-            field.type.type === "primitive" &&
-            !(field.type.name === "duration" || field.type.name === "time")
-          ) {
+          if (field.type.type === "primitive") {
             if (typeof field.defaultValue === "string") {
               defaultValue = `"${field.defaultValue}"`;
             } else if (typeof field.defaultValue === "number") {

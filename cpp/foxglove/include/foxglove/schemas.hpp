@@ -98,6 +98,15 @@ struct ArrowPrimitive {
   std::optional<Color> color;
 };
 
+/// @brief A timestamp composed of seconds and nanoseconds
+struct Timestamp {
+  /// @brief The number of seconds since a user-defined epoch
+  uint32_t sec = 0;
+
+  /// @brief The number of nanoseconds since the sec value
+  uint32_t nsec = 0;
+};
+
 /// @brief Camera calibration parameters
 struct CameraCalibration {
   /// @brief Timestamp of calibration data
@@ -941,15 +950,6 @@ struct RawImage {
 
   /// @brief Raw image data
   std::vector<std::byte> data;
-};
-
-/// @brief A timestamp composed of seconds and nanoseconds
-struct Timestamp {
-  /// @brief The number of seconds since a user-defined epoch
-  uint32_t sec = 0;
-
-  /// @brief The number of nanoseconds since the sec value
-  uint32_t nsec = 0;
 };
 
 /// @brief A channel for logging ArrowPrimitive messages to a topic.

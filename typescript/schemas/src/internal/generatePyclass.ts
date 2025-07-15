@@ -236,9 +236,6 @@ function generateMessageClass(schema: FoxgloveMessageSchema): string {
     }
     switch (field.type.type) {
       case "primitive":
-        if (field.type.name === "time" || field.type.name === "duration") {
-          return `${safeRustName(field.name)}.map(Into::into)`;
-        }
         return safeRustName(field.name);
       case "nested":
         if (field.array != undefined) {
@@ -375,11 +372,6 @@ function rustOutputType(field: FoxgloveMessageField): string {
           // Special case: we don't take a Vec<u8> directly because pyo3 will iterate the vec and
           // copy each element https://github.com/PyO3/pyo3/issues/2888
           return "Option<Bound<'_, PyBytes>>";
-        case "time":
-          type = "Option<Timestamp>";
-          break;
-        case "duration":
-          type = "Option<Duration>";
           break;
       }
       break;
@@ -436,9 +428,6 @@ function pythonDefaultValue(field: FoxgloveMessageField): string {
           return "False";
         case "bytes":
           return 'b""';
-        case "time":
-        case "duration":
-          return "None";
       }
     // exhaustive check above
     // eslint-disable-next-line no-fallthrough
@@ -476,9 +465,6 @@ function rustDefaultValue(field: FoxgloveMessageField): string {
           return "false";
         case "bytes":
           return "vec![]";
-        case "time":
-        case "duration":
-          return "None";
       }
     // exhaustive check above
     // eslint-disable-next-line no-fallthrough
@@ -507,10 +493,6 @@ function pythonType(foxglovePrimitive: FoxglovePrimitive): string {
       return "bool";
     case "bytes":
       return "bytes";
-    case "time":
-      return "Timestamp";
-    case "duration":
-      return "Duration";
   }
 }
 

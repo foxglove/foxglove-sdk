@@ -1,7 +1,9 @@
 import { FoxgloveMessageSchema, FoxglovePrimitive } from "./types";
 
-function primitiveToJsonSchema(type: Exclude<FoxglovePrimitive, "bytes">) {
+function primitiveToJsonSchema(type: FoxglovePrimitive) {
   switch (type) {
+    case "bytes":
+      return { type: "string", contentEncoding: "base64" };
     case "string":
       return { type: "string" };
     case "boolean":
@@ -12,25 +14,34 @@ function primitiveToJsonSchema(type: Exclude<FoxglovePrimitive, "bytes">) {
       return { type: "integer" };
     case "uint32":
       return { type: "integer", minimum: 0 };
-    case "time":
-      return {
-        type: "object",
-        title: "time",
-        properties: {
-          sec: { type: "integer", minimum: 0 },
-          nsec: { type: "integer", minimum: 0, maximum: 999_999_999 },
-        },
-      };
-    case "duration":
-      return {
-        type: "object",
-        title: "duration",
-        properties: {
-          sec: { type: "integer" },
-          nsec: { type: "integer", minimum: 0, maximum: 999_999_999 },
-        },
-      };
   }
+}
+
+/**
+ * Applies additional constraints on time and duration types.
+ */
+function timeOrDurationToJsonSchema(schema: FoxgloveMessageSchema) {
+  if (schema.name === "Timestamp") {
+    return {
+      type: "object",
+      title: "time",
+      properties: {
+        sec: { type: "integer", minimum: 0 },
+        nsec: { type: "integer", minimum: 0, maximum: 999_999_999 },
+      },
+    };
+  }
+  if (schema.name === "Duration") {
+    return {
+      type: "object",
+      title: "duration",
+      properties: {
+        sec: { type: "integer" },
+        nsec: { type: "integer", minimum: 0, maximum: 999_999_999 },
+      },
+    };
+  }
+  throw new Error(`Unknown time or duration schema: ${schema.name}`);
 }
 
 export function generateJsonSchema(schema: FoxgloveMessageSchema): Record<string, unknown> {
@@ -39,14 +50,14 @@ export function generateJsonSchema(schema: FoxgloveMessageSchema): Record<string
     let fieldType: Record<string, unknown>;
     switch (field.type.type) {
       case "primitive":
-        if (field.type.name === "bytes") {
-          fieldType = { type: "string", contentEncoding: "base64" };
-        } else {
-          fieldType = primitiveToJsonSchema(field.type.name);
-        }
+        fieldType = primitiveToJsonSchema(field.type.name);
         break;
       case "nested":
-        fieldType = generateJsonSchema(field.type.schema);
+        if (field.type.schema.name === "Timestamp" || field.type.schema.name === "Duration") {
+          fieldType = timeOrDurationToJsonSchema(field.type.schema);
+        } else {
+          fieldType = generateJsonSchema(field.type.schema);
+        }
         delete fieldType.$comment;
         break;
       case "enum":

@@ -16,10 +16,6 @@ function primitiveToCpp(type: FoxglovePrimitive) {
       return "bool";
     case "float64":
       return "double";
-    case "time":
-      return "std::optional<Timestamp>";
-    case "duration":
-      return "std::optional<Duration>";
   }
 }
 
@@ -34,8 +30,6 @@ function primitiveDefaultValue(type: FoxglovePrimitive) {
       return 0;
     case "string":
     case "bytes":
-    case "time":
-    case "duration":
       return undefined;
   }
 }
@@ -290,16 +284,16 @@ function cppToC(schema: FoxgloveMessageSchema, copyTypes: Set<string>): string[]
           return `dest.${dstName} = {src.${srcName}.data(), src.${srcName}.size()};`;
         } else if (field.type.name === "bytes") {
           return `dest.${dstName} = reinterpret_cast<const unsigned char *>(src.${srcName}.data());\n    dest.${dstName}_len = src.${srcName}.size();`;
-        } else if (field.type.name === "time") {
-          return `dest.${dstName} = src.${srcName} ? reinterpret_cast<const foxglove_timestamp*>(&*src.${srcName}) : nullptr;`;
-        } else if (field.type.name === "duration") {
-          return `dest.${dstName} = src.${srcName} ? reinterpret_cast<const foxglove_duration*>(&*src.${srcName}) : nullptr;`;
         }
         return `dest.${dstName} = src.${srcName};`;
       case "enum":
         return `dest.${dstName} = static_cast<foxglove_${toSnakeCase(field.type.enum.name)}>(src.${srcName});`;
       case "nested":
-        if (copyTypes.has(field.type.schema.name)) {
+        if (field.type.schema.name === "Timestamp") {
+          return `dest.${dstName} = src.${srcName} ? reinterpret_cast<const foxglove_timestamp*>(&*src.${srcName}) : nullptr;`;
+        } else if (field.type.schema.name === "Duration") {
+          return `dest.${dstName} = src.${srcName} ? reinterpret_cast<const foxglove_duration*>(&*src.${srcName}) : nullptr;`;
+        } else if (copyTypes.has(field.type.schema.name)) {
           return `dest.${dstName} = src.${srcName} ? reinterpret_cast<const foxglove_${toSnakeCase(field.type.schema.name)}*>(&*src.${srcName}) : nullptr;`;
         } else {
           return `dest.${dstName} = src.${srcName} ? arena.map_one<foxglove_${toSnakeCase(field.type.schema.name)}>(src.${srcName}.value(), ${toCamelCase(field.type.schema.name)}ToC) : nullptr;`;

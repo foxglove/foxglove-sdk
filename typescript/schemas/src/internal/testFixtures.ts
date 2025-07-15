@@ -1,11 +1,10 @@
 import { FoxgloveEnumSchema, FoxgloveMessageSchema, FoxglovePrimitive } from "./types";
 
 const allPrimitives: FoxglovePrimitive[] = [
-  "duration",
-  "time",
   "boolean",
   "bytes",
   "float64",
+  "int32",
   "uint32",
   "string",
 ];

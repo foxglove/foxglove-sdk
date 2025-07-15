@@ -61,20 +61,17 @@ export function generateOmgIdl(schema: FoxgloveSchema): string {
             imports.add(field.type.enum.name);
             break;
           case "nested":
-            fieldType = omgIdlSchemaName(field.type.schema);
-            imports.add(omgIdlSchemaName(field.type.schema));
-            break;
-          case "primitive":
-            if (field.type.name === "time") {
+            if (field.type.schema.name === "Timestamp") {
               // Legacy name for backwards compatibility.
               fieldType = "Time";
               imports.add("Time");
-            } else if (field.type.name === "duration") {
-              fieldType = "Duration";
-              imports.add("Duration");
             } else {
-              fieldType = primitiveToIdl(field.type.name);
+              fieldType = omgIdlSchemaName(field.type.schema);
+              imports.add(omgIdlSchemaName(field.type.schema));
             }
+            break;
+          case "primitive":
+            fieldType = primitiveToIdl(field.type.name);
             break;
         }
         let arraySize = "";

@@ -12,10 +12,6 @@ function primitiveToRust(type: FoxglovePrimitive) {
       return "bool";
     case "float64":
       return "f64";
-    case "time":
-      return "Timestamp";
-    case "duration":
-      return "Duration";
     case "string":
       return "FoxgloveString";
     case "bytes":
@@ -71,10 +67,6 @@ pub struct ${name} {
           if (field.type.name === "bytes") {
             fieldType = "*const c_uchar";
             fieldHasLen = true;
-          } else if (field.type.name === "time") {
-            fieldType = "*const FoxgloveTimestamp";
-          } else if (field.type.name === "duration") {
-            fieldType = "*const FoxgloveDuration";
           } else {
             fieldType = primitiveToRust(field.type.name);
           }
@@ -83,7 +75,13 @@ pub struct ${name} {
           fieldType = `Foxglove${field.type.enum.name}`;
           break;
         case "nested":
-          fieldType = field.type.schema.name.replace("JSON", "Json");
+          if (field.type.schema.name === "Timestamp") {
+            fieldType = "FoxgloveTimestamp";
+          } else if (field.type.schema.name === "Duration") {
+            fieldType = "FoxgloveDuration";
+          } else {
+            fieldType = field.type.schema.name.replace("JSON", "Json");
+          }
           break;
       }
       const lines: string[] = [comment];
@@ -159,6 +157,9 @@ impl BorrowToNative for ${name} {
             }
             return [];
           case "nested":
+            if (field.type.schema.name === "Timestamp" || field.type.schema.name === "Duration") {
+              return [];
+            }
             return [
               `let ${fieldName} = unsafe { self.${fieldName}.as_ref().map(|m| m.borrow_to_native(arena.as_mut())) }.transpose()?;`,
             ];
@@ -193,13 +194,14 @@ impl BorrowToNative for ${name} {
               return `${fieldName}: ManuallyDrop::into_inner(${fieldName})`;
             } else if (field.type.name === "bytes") {
               return `${fieldName}: ManuallyDrop::into_inner(unsafe { bytes_from_raw(self.${fieldName}, self.${fieldName}_len) })`;
-            } else if (field.type.name === "time" || field.type.name === "duration") {
-              return `${fieldName}: unsafe { self.${fieldName}.as_ref() }.map(|&m| m.into())`;
             }
             return `${fieldName}: self.${fieldName}`;
           case "enum":
             return `${fieldName}: self.${fieldName} as i32`;
           case "nested":
+            if (field.type.schema.name === "Timestamp" || field.type.schema.name === "Duration") {
+              return `${fieldName}: unsafe { self.${fieldName}.as_ref() }.map(|&m| m.into())`;
+            }
             return `${fieldName}: ${fieldName}.map(ManuallyDrop::into_inner)`;
         }
       })

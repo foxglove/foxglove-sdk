@@ -49,7 +49,7 @@ const RawAudio: FoxgloveMessageSchema = {
   fields: [
     {
       name: "timestamp",
-      type: { type: "primitive", name: "time" },
+      type: { type: "nested", schema: Timestamp },
       description: "Timestamp of the start of the audio block",
     },
     {
@@ -291,7 +291,7 @@ const SceneEntityDeletion: FoxgloveMessageSchema = {
   fields: [
     {
       name: "timestamp",
-      type: { type: "primitive", name: "time" },
+      type: { type: "nested", schema: Timestamp },
       description:
         "Timestamp of the deletion. Only matching entities earlier than this timestamp will be deleted.",
     },
@@ -637,7 +637,7 @@ const SceneEntity: FoxgloveMessageSchema = {
   fields: [
     {
       name: "timestamp",
-      type: { type: "primitive", name: "time" },
+      type: { type: "nested", schema: Timestamp },
       description: "Timestamp of the entity",
     },
     {
@@ -653,7 +653,7 @@ const SceneEntity: FoxgloveMessageSchema = {
     },
     {
       name: "lifetime",
-      type: { type: "primitive", name: "duration" },
+      type: { type: "nested", schema: Duration },
       description:
         "Length of time (relative to `timestamp`) after which the entity should be automatically removed. Zero value indicates the entity should remain visible until it is replaced or deleted.",
     },
@@ -748,7 +748,7 @@ const CameraCalibration: FoxgloveMessageSchema = {
   fields: [
     {
       name: "timestamp",
-      type: { type: "primitive", name: "time" },
+      type: { type: "nested", schema: Timestamp },
       description: "Timestamp of calibration data",
     },
     {
@@ -846,7 +846,7 @@ const CompressedImage: FoxgloveMessageSchema = {
   fields: [
     {
       name: "timestamp",
-      type: { type: "primitive", name: "time" },
+      type: { type: "nested", schema: Timestamp },
       description: "Timestamp of image",
     },
     {
@@ -876,7 +876,7 @@ const CompressedVideo: FoxgloveMessageSchema = {
   fields: [
     {
       name: "timestamp",
-      type: { type: "primitive", name: "time" },
+      type: { type: "nested", schema: Timestamp },
       description: "Timestamp of video frame",
     },
     {
@@ -928,7 +928,7 @@ const RawImage: FoxgloveMessageSchema = {
   fields: [
     {
       name: "timestamp",
-      type: { type: "primitive", name: "time" },
+      type: { type: "nested", schema: Timestamp },
       description: "Timestamp of image",
     },
     {
@@ -974,7 +974,7 @@ const FrameTransform: FoxgloveMessageSchema = {
   fields: [
     {
       name: "timestamp",
-      type: { type: "primitive", name: "time" },
+      type: { type: "nested", schema: Timestamp },
       description: "Timestamp of transform",
     },
     {
@@ -1021,7 +1021,7 @@ const PoseInFrame: FoxgloveMessageSchema = {
   fields: [
     {
       name: "timestamp",
-      type: { type: "primitive", name: "time" },
+      type: { type: "nested", schema: Timestamp },
       description: "Timestamp of pose",
     },
     {
@@ -1044,7 +1044,7 @@ const PosesInFrame: FoxgloveMessageSchema = {
   fields: [
     {
       name: "timestamp",
-      type: { type: "primitive", name: "time" },
+      type: { type: "nested", schema: Timestamp },
       description: "Timestamp of pose",
     },
     {
@@ -1123,7 +1123,7 @@ const Grid: FoxgloveMessageSchema = {
   fields: [
     {
       name: "timestamp",
-      type: { type: "primitive", name: "time" },
+      type: { type: "nested", schema: Timestamp },
       description: "Timestamp of grid",
     },
     {
@@ -1180,7 +1180,7 @@ const CircleAnnotation: FoxgloveMessageSchema = {
   fields: [
     {
       name: "timestamp",
-      type: { type: "primitive", name: "time" },
+      type: { type: "nested", schema: Timestamp },
       description: "Timestamp of circle",
     },
     {
@@ -1238,7 +1238,7 @@ const PointsAnnotation: FoxgloveMessageSchema = {
   fields: [
     {
       name: "timestamp",
-      type: { type: "primitive", name: "time" },
+      type: { type: "nested", schema: Timestamp },
       description: "Timestamp of annotation",
     },
     {
@@ -1285,7 +1285,7 @@ const TextAnnotation: FoxgloveMessageSchema = {
   fields: [
     {
       name: "timestamp",
-      type: { type: "primitive", name: "time" },
+      type: { type: "nested", schema: Timestamp },
       description: "Timestamp of annotation",
     },
     {
@@ -1369,7 +1369,7 @@ const LocationFix: FoxgloveMessageSchema = {
   fields: [
     {
       name: "timestamp",
-      type: { type: "primitive", name: "time" },
+      type: { type: "nested", schema: Timestamp },
       description: "Timestamp of the message",
       protobufFieldNumber: 6,
     },
@@ -1439,7 +1439,7 @@ const Log: FoxgloveMessageSchema = {
   fields: [
     {
       name: "timestamp",
-      type: { type: "primitive", name: "time" },
+      type: { type: "nested", schema: Timestamp },
       description: "Timestamp of log message",
     },
     {
@@ -1478,7 +1478,7 @@ const PointCloud: FoxgloveMessageSchema = {
   fields: [
     {
       name: "timestamp",
-      type: { type: "primitive", name: "time" },
+      type: { type: "nested", schema: Timestamp },
       description: "Timestamp of point cloud",
     },
     {
@@ -1518,7 +1518,7 @@ const LaserScan: FoxgloveMessageSchema = {
   fields: [
     {
       name: "timestamp",
-      type: { type: "primitive", name: "time" },
+      type: { type: "nested", schema: Timestamp },
       description: "Timestamp of scan",
     },
     {

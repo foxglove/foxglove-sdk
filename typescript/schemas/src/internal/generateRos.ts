@@ -16,9 +16,7 @@ type RosMsgDefinitionWithDescription = {
   fields: RosMsgFieldWithDescription[];
 };
 
-function primitiveToRos(
-  type: Exclude<FoxglovePrimitive, "int32" | "uint32" | "bytes" | "time" | "duration">,
-) {
+function primitiveToRos(type: Exclude<FoxglovePrimitive, "int32" | "uint32" | "bytes">) {
   switch (type) {
     case "string":
       return "string";
@@ -29,8 +27,11 @@ function primitiveToRos(
   }
 }
 
-function timeDurationToRos(type: "time" | "duration", { rosVersion }: { rosVersion: 1 | 2 }) {
-  if (type === "time") {
+function normalizeTimeDuration(
+  type: "std_msgs/Time" | "std_msgs/Duration",
+  { rosVersion }: { rosVersion: 1 | 2 },
+) {
+  if (type === "std_msgs/Time") {
     return rosVersion === 2 ? "builtin_interfaces/Time" : "time";
   } else {
     return rosVersion === 2 ? "builtin_interfaces/Duration" : "duration";
@@ -70,8 +71,8 @@ export function generateRosMsg(
       constant = `=${field.valueText}`;
     }
     let type = field.type;
-    if (type === "time" || type === "duration") {
-      type = timeDurationToRos(type, { rosVersion });
+    if (type === "std_msgs/Time" || type === "std_msgs/Duration") {
+      type = normalizeTimeDuration(type, { rosVersion });
     }
     source += `${type}${field.isArray === true ? `[${field.arrayLength ?? ""}]` : ""} ${
       field.name
@@ -165,6 +166,8 @@ export function generateRosMsgDefinition(
       case "nested":
         if (field.type.schema.rosEquivalent != undefined) {
           fieldType = field.type.schema.rosEquivalent;
+        } else if (field.type.schema.ros2Equivalent != undefined) {
+          fieldType = field.type.schema.ros2Equivalent;
         } else {
           fieldType = `foxglove_msgs/${field.type.schema.name}`;
         }
@@ -181,10 +184,6 @@ export function generateRosMsgDefinition(
           fieldType = "int32";
         } else if (field.type.name === "uint32") {
           fieldType = "uint32";
-        } else if (field.type.name === "time") {
-          fieldType = "time";
-        } else if (field.type.name === "duration") {
-          fieldType = "duration";
         } else {
           fieldType = primitiveToRos(field.type.name);
         }

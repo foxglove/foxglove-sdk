@@ -82,19 +82,19 @@ export function generateProto(
         qualifiers.push(field.type.enum.protobufEnumName);
         break;
       case "nested":
-        qualifiers.push(`foxglove.${field.type.schema.name}`);
-        imports.add(`foxglove/${field.type.schema.name}`);
-        break;
-      case "primitive":
-        if (field.type.name === "time") {
+        if (field.type.schema.name === "Timestamp") {
           qualifiers.push("google.protobuf.Timestamp");
           imports.add(`google/protobuf/timestamp`);
-        } else if (field.type.name === "duration") {
+        } else if (field.type.schema.name === "Duration") {
           qualifiers.push("google.protobuf.Duration");
           imports.add(`google/protobuf/duration`);
         } else {
-          qualifiers.push(primitiveToProto(field.type.name));
+          qualifiers.push(`foxglove.${field.type.schema.name}`);
+          imports.add(`foxglove/${field.type.schema.name}`);
         }
+        break;
+      case "primitive":
+        qualifiers.push(primitiveToProto(field.type.name));
         break;
     }
     return `${field.description
