@@ -61,7 +61,8 @@ impl PyChannelDescriptor {
 /// This can be used to omit one or more channels from a sink, but still log all channels to another
 /// sink in the same context.
 ///
-/// Return `True` to log the channel, or `False` to skip it.
+/// Return ``True`` to log the channel, or ``False`` to skip it. If the callback errors, then
+/// the channel will be skipped.
 #[pyclass(name = "SinkChannelFilter", module = "foxglove")]
 pub struct PySinkChannelFilter(pub Arc<Py<PyAny>>);
 
