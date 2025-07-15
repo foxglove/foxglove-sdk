@@ -1,7 +1,7 @@
 import type { MessageDefinition, MessageDefinitionField } from "@foxglove/message-definition";
 import { ros1 } from "@foxglove/rosmsg-msgs-common";
 
-import { FoxgloveMessageSchema, FoxglovePrimitive } from "./types";
+import { FoxgloveMessageField, FoxgloveMessageSchema, FoxglovePrimitive } from "./types";
 
 type RosMsgFieldWithDescription = MessageDefinitionField & {
   description?: string;
@@ -27,11 +27,8 @@ function primitiveToRos(type: Exclude<FoxglovePrimitive, "int32" | "uint32" | "b
   }
 }
 
-function normalizeTimeDuration(
-  type: "std_msgs/Time" | "std_msgs/Duration",
-  { rosVersion }: { rosVersion: 1 | 2 },
-) {
-  if (type === "std_msgs/Time") {
+function timeDurationToRos(type: "time" | "duration", { rosVersion }: { rosVersion: 1 | 2 }) {
+  if (type === "time") {
     return rosVersion === 2 ? "builtin_interfaces/Time" : "time";
   } else {
     return rosVersion === 2 ? "builtin_interfaces/Duration" : "duration";
@@ -71,8 +68,8 @@ export function generateRosMsg(
       constant = `=${field.valueText}`;
     }
     let type = field.type;
-    if (type === "std_msgs/Time" || type === "std_msgs/Duration") {
-      type = normalizeTimeDuration(type, { rosVersion });
+    if (type === "time" || type === "duration") {
+      type = timeDurationToRos(type, { rosVersion });
     }
     source += `${type}${field.isArray === true ? `[${field.arrayLength ?? ""}]` : ""} ${
       field.name
@@ -94,7 +91,7 @@ function dependenciesEqual(a: Dependency, b: Dependency) {
 
 function* getSchemaDependencies(schema: FoxgloveMessageSchema): Iterable<Dependency> {
   for (const field of schema.fields) {
-    if (field.type.type === "nested") {
+    if (isComplex(field)) {
       if (field.type.schema.rosEquivalent != undefined) {
         yield { type: "ros", name: field.type.schema.rosEquivalent };
         yield* getRosDependencies(ros1[field.type.schema.rosEquivalent]);
@@ -112,6 +109,19 @@ function* getRosDependencies(schema: MessageDefinition): Iterable<Dependency> {
       yield* getRosDependencies(ros1[field.type as keyof typeof ros1]);
     }
   }
+}
+
+/**
+ * Time and duration are special-cased to be treated as primitives.
+ */
+function isComplex(
+  field: FoxgloveMessageField,
+): field is FoxgloveMessageField & { type: { type: "nested" } } {
+  return (
+    field.type.type === "nested" &&
+    field.type.schema.name !== "Timestamp" &&
+    field.type.schema.name !== "Duration"
+  );
 }
 
 export function generateRosMsgDefinition(
@@ -164,10 +174,12 @@ export function generateRosMsgDefinition(
       }
 
       case "nested":
-        if (field.type.schema.rosEquivalent != undefined) {
+        if (field.type.schema.name === "Timestamp") {
+          fieldType = "time";
+        } else if (field.type.schema.name === "Duration") {
+          fieldType = "duration";
+        } else if (field.type.schema.rosEquivalent != undefined) {
           fieldType = field.type.schema.rosEquivalent;
-        } else if (field.type.schema.ros2Equivalent != undefined) {
-          fieldType = field.type.schema.ros2Equivalent;
         } else {
           fieldType = `foxglove_msgs/${field.type.schema.name}`;
         }
@@ -192,7 +204,7 @@ export function generateRosMsgDefinition(
     fields.push({
       name: rosVersion === 2 ? field.name.toLowerCase() : field.name,
       type: fieldType,
-      isComplex: field.type.type === "nested",
+      isComplex: isComplex(field),
       isArray,
       arrayLength,
       description: field.description,
