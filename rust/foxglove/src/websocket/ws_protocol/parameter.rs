@@ -102,8 +102,7 @@ impl<'de> Deserialize<'de> for Parameter {
                             value = Some(map.next_value()?);
                         }
                         _ => {
-                            // Ignore unknown fields
-                            let _: serde_json::Value = map.next_value()?;
+                            return Err(de::Error::unknown_field(&key, &["name", "type", "value"]));
                         }
                     }
                 }
@@ -176,7 +175,7 @@ fn convert_to_float64_array_value(value: serde_json::Value) -> Result<ParameterV
             Ok(ParameterValue::Array(float_values))
         }
         _ => {
-            // For non-array values marked as float64, raise an error
+            // For non-array values marked as float64_array, raise an error
             Err("Value with type set to float64_array was not an array of numbers".to_string())
         }
     }
@@ -232,10 +231,7 @@ fn convert_value_with_homogenization(value: serde_json::Value) -> Result<Paramet
                             }
                         }
                         _ => {
-                            // Convert non-numeric values normally
-                            let param_val: ParameterValue =
-                                serde_json::from_value(item).map_err(|e| e.to_string())?;
-                            float_values.push(param_val);
+                            unreachable!()
                         }
                     }
                 }

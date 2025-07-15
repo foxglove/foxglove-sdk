@@ -893,7 +893,7 @@ impl Drop for FoxgloveParameterValue {
     }
 }
 
-/// Creates a new number parameter value.
+/// Creates a newumber float64 parameter value.
 ///
 /// The value must be freed with `foxglove_parameter_value_free`, or by passing it to a consuming
 /// function such as `foxglove_parameter_create`.
@@ -904,7 +904,9 @@ pub extern "C" fn foxglove_parameter_value_create_float64(
     FoxgloveParameterValue::float64(number).into_raw()
 }
 
-/// Creates a new  or by passing it to a consuming
+/// Creates a new integer parameter value.
+///
+/// The value must be freed with `foxglove_parameter_value_free`, or by passing it to a consuming
 /// function such as `foxglove_parameter_create`.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_parameter_value_create_integer(

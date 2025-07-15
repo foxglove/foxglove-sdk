@@ -3281,7 +3281,7 @@ struct foxglove_parameter *foxglove_parameter_clone(const struct foxglove_parame
 void foxglove_parameter_free(struct foxglove_parameter *param);
 
 /**
- * Creates a new number parameter value.
+ * Creates a newumber float64 parameter value.
  *
  * The value must be freed with `foxglove_parameter_value_free`, or by passing it to a consuming
  * function such as `foxglove_parameter_create`.
@@ -3289,7 +3289,9 @@ void foxglove_parameter_free(struct foxglove_parameter *param);
 struct foxglove_parameter_value *foxglove_parameter_value_create_float64(double number);
 
 /**
- * Creates a new  or by passing it to a consuming
+ * Creates a new integer parameter value.
+ *
+ * The value must be freed with `foxglove_parameter_value_free`, or by passing it to a consuming
  * function such as `foxglove_parameter_create`.
  */
 struct foxglove_parameter_value *foxglove_parameter_value_create_integer(int64_t integer);

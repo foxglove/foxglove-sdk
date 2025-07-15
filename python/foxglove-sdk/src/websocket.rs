@@ -1065,7 +1065,7 @@ impl<'py> FromPyObject<'py> for ParameterTypeValueConverter {
         if let Ok(val) = obj.extract::<ParameterValueConverter>() {
             let val = val.0;
             let (typ, val) = match val {
-                // If the value is a number, the type is float64.
+                // If the value is a float, the type is float64.
                 PyParameterValue::Float64(_) => (Some(PyParameterType::Float64), val),
                 // If the value is an array of numbers, then the type is float64 array.
                 PyParameterValue::Array(ref vec)
