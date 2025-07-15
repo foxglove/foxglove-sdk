@@ -1,0 +1,38 @@
+cmake_minimum_required(VERSION 3.14)
+project(example_tl_expected LANGUAGES CXX)
+
+# Set C++ standard
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Add executable
+add_executable(example_tl_expected
+    src/main.cpp
+)
+
+include(FetchContent)
+FetchContent_Declare(
+    foxglove
+    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+    URL https://github.com/foxglove/foxglove-sdk/releases/download/sdk%2Fv0.9.1/foxglove-v0.9.1-cpp-aarch64-apple-darwin.zip
+)
+FetchContent_MakeAvailable(foxglove)
+
+# Add include directories for locally built Foxglove SDK
+target_include_directories(example_tl_expected PRIVATE
+    ${foxglove_SOURCE_DIR}/include
+    ${foxglove_SOURCE_DIR}/include/foxglove
+    ${CMAKE_CURRENT_BINARY_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+file(GLOB FOXGLOVE_SOURCES CONFIGURE_DEPENDS
+    "${foxglove_SOURCE_DIR}/src/*.cpp"
+    "${foxglove_SOURCE_DIR}/src/server/*.cpp"
+)
+
+target_sources(example_tl_expected PRIVATE ${FOXGLOVE_SOURCES})
+
+target_link_libraries(example_tl_expected PRIVATE
+    ${foxglove_SOURCE_DIR}/lib/libfoxglove.a
+)

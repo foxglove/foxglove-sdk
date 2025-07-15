@@ -230,3 +230,10 @@ target_compile_options(example_auto_serialize PUBLIC ${SANITIZER_COMPILE_OPTIONS
 target_include_directories(example_auto_serialize SYSTEM PRIVATE ${json_SOURCE_DIR}/include)
 target_link_options(example_auto_serialize PUBLIC ${SANITIZER_LINK_OPTIONS})
 target_link_libraries(example_auto_serialize foxglove_cpp_static)
+
+add_executable(example_tl_expected examples/tl-expected/src/main.cpp)
+set_property(TARGET example_tl_expected PROPERTY CXX_STANDARD 17)
+set_property(TARGET example_tl_expected PROPERTY CXX_STANDARD_REQUIRED True)
+target_compile_options(example_tl_expected PUBLIC ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
+target_link_options(example_tl_expected PUBLIC ${SANITIZER_LINK_OPTIONS})
+target_link_libraries(example_tl_expected foxglove_cpp_static)
