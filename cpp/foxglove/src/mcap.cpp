@@ -31,7 +31,7 @@ FoxgloveResult<McapWriter> McapWriter::create(const McapWriterOptions& options) 
   foxglove_mcap_writer* writer = nullptr;
   foxglove_error error = foxglove_mcap_open(&c_options, &writer);
   if (error != foxglove_error::FOXGLOVE_ERROR_OK || writer == nullptr) {
-    return foxglove::unexpected(static_cast<FoxgloveError>(error));
+    return tl::unexpected(static_cast<FoxgloveError>(error));
   }
 
   return McapWriter(writer);

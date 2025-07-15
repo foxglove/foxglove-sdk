@@ -73,7 +73,7 @@ FoxgloveResult<ArrowPrimitiveChannel> ArrowPrimitiveChannel::create(
     {topic.data(), topic.size()}, context.getInner(), &channel
   );
   if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
-    return foxglove::unexpected(FoxgloveError(error));
+    return tl::unexpected(FoxgloveError(error));
   }
   return ArrowPrimitiveChannel(ChannelUniquePtr(channel));
 }
@@ -101,7 +101,7 @@ FoxgloveResult<CameraCalibrationChannel> CameraCalibrationChannel::create(
     {topic.data(), topic.size()}, context.getInner(), &channel
   );
   if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
-    return foxglove::unexpected(FoxgloveError(error));
+    return tl::unexpected(FoxgloveError(error));
   }
   return CameraCalibrationChannel(ChannelUniquePtr(channel));
 }
@@ -129,7 +129,7 @@ FoxgloveResult<CircleAnnotationChannel> CircleAnnotationChannel::create(
     {topic.data(), topic.size()}, context.getInner(), &channel
   );
   if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
-    return foxglove::unexpected(FoxgloveError(error));
+    return tl::unexpected(FoxgloveError(error));
   }
   return CircleAnnotationChannel(ChannelUniquePtr(channel));
 }
@@ -156,7 +156,7 @@ FoxgloveResult<ColorChannel> ColorChannel::create(
   foxglove_error error =
     foxglove_channel_create_color({topic.data(), topic.size()}, context.getInner(), &channel);
   if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
-    return foxglove::unexpected(FoxgloveError(error));
+    return tl::unexpected(FoxgloveError(error));
   }
   return ColorChannel(ChannelUniquePtr(channel));
 }
@@ -179,7 +179,7 @@ FoxgloveResult<CompressedImageChannel> CompressedImageChannel::create(
     {topic.data(), topic.size()}, context.getInner(), &channel
   );
   if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
-    return foxglove::unexpected(FoxgloveError(error));
+    return tl::unexpected(FoxgloveError(error));
   }
   return CompressedImageChannel(ChannelUniquePtr(channel));
 }
@@ -207,7 +207,7 @@ FoxgloveResult<CompressedVideoChannel> CompressedVideoChannel::create(
     {topic.data(), topic.size()}, context.getInner(), &channel
   );
   if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
-    return foxglove::unexpected(FoxgloveError(error));
+    return tl::unexpected(FoxgloveError(error));
   }
   return CompressedVideoChannel(ChannelUniquePtr(channel));
 }
@@ -235,7 +235,7 @@ FoxgloveResult<CubePrimitiveChannel> CubePrimitiveChannel::create(
     {topic.data(), topic.size()}, context.getInner(), &channel
   );
   if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
-    return foxglove::unexpected(FoxgloveError(error));
+    return tl::unexpected(FoxgloveError(error));
   }
   return CubePrimitiveChannel(ChannelUniquePtr(channel));
 }
@@ -263,7 +263,7 @@ FoxgloveResult<CylinderPrimitiveChannel> CylinderPrimitiveChannel::create(
     {topic.data(), topic.size()}, context.getInner(), &channel
   );
   if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
-    return foxglove::unexpected(FoxgloveError(error));
+    return tl::unexpected(FoxgloveError(error));
   }
   return CylinderPrimitiveChannel(ChannelUniquePtr(channel));
 }
@@ -291,7 +291,7 @@ FoxgloveResult<FrameTransformChannel> FrameTransformChannel::create(
     {topic.data(), topic.size()}, context.getInner(), &channel
   );
   if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
-    return foxglove::unexpected(FoxgloveError(error));
+    return tl::unexpected(FoxgloveError(error));
   }
   return FrameTransformChannel(ChannelUniquePtr(channel));
 }
@@ -319,7 +319,7 @@ FoxgloveResult<FrameTransformsChannel> FrameTransformsChannel::create(
     {topic.data(), topic.size()}, context.getInner(), &channel
   );
   if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
-    return foxglove::unexpected(FoxgloveError(error));
+    return tl::unexpected(FoxgloveError(error));
   }
   return FrameTransformsChannel(ChannelUniquePtr(channel));
 }
@@ -346,7 +346,7 @@ FoxgloveResult<GeoJSONChannel> GeoJSONChannel::create(
   foxglove_error error =
     foxglove_channel_create_geo_json({topic.data(), topic.size()}, context.getInner(), &channel);
   if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
-    return foxglove::unexpected(FoxgloveError(error));
+    return tl::unexpected(FoxgloveError(error));
   }
   return GeoJSONChannel(ChannelUniquePtr(channel));
 }
@@ -371,7 +371,7 @@ FoxgloveResult<GridChannel> GridChannel::create(
   foxglove_error error =
     foxglove_channel_create_grid({topic.data(), topic.size()}, context.getInner(), &channel);
   if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
-    return foxglove::unexpected(FoxgloveError(error));
+    return tl::unexpected(FoxgloveError(error));
   }
   return GridChannel(ChannelUniquePtr(channel));
 }
@@ -397,7 +397,7 @@ FoxgloveResult<ImageAnnotationsChannel> ImageAnnotationsChannel::create(
     {topic.data(), topic.size()}, context.getInner(), &channel
   );
   if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
-    return foxglove::unexpected(FoxgloveError(error));
+    return tl::unexpected(FoxgloveError(error));
   }
   return ImageAnnotationsChannel(ChannelUniquePtr(channel));
 }
@@ -425,7 +425,7 @@ FoxgloveResult<KeyValuePairChannel> KeyValuePairChannel::create(
     {topic.data(), topic.size()}, context.getInner(), &channel
   );
   if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
-    return foxglove::unexpected(FoxgloveError(error));
+    return tl::unexpected(FoxgloveError(error));
   }
   return KeyValuePairChannel(ChannelUniquePtr(channel));
 }
@@ -452,7 +452,7 @@ FoxgloveResult<LaserScanChannel> LaserScanChannel::create(
   foxglove_error error =
     foxglove_channel_create_laser_scan({topic.data(), topic.size()}, context.getInner(), &channel);
   if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
-    return foxglove::unexpected(FoxgloveError(error));
+    return tl::unexpected(FoxgloveError(error));
   }
   return LaserScanChannel(ChannelUniquePtr(channel));
 }
@@ -480,7 +480,7 @@ FoxgloveResult<LinePrimitiveChannel> LinePrimitiveChannel::create(
     {topic.data(), topic.size()}, context.getInner(), &channel
   );
   if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
-    return foxglove::unexpected(FoxgloveError(error));
+    return tl::unexpected(FoxgloveError(error));
   }
   return LinePrimitiveChannel(ChannelUniquePtr(channel));
 }
@@ -508,7 +508,7 @@ FoxgloveResult<LocationFixChannel> LocationFixChannel::create(
     {topic.data(), topic.size()}, context.getInner(), &channel
   );
   if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
-    return foxglove::unexpected(FoxgloveError(error));
+    return tl::unexpected(FoxgloveError(error));
   }
   return LocationFixChannel(ChannelUniquePtr(channel));
 }
@@ -535,7 +535,7 @@ FoxgloveResult<LogChannel> LogChannel::create(
   foxglove_error error =
     foxglove_channel_create_log({topic.data(), topic.size()}, context.getInner(), &channel);
   if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
-    return foxglove::unexpected(FoxgloveError(error));
+    return tl::unexpected(FoxgloveError(error));
   }
   return LogChannel(ChannelUniquePtr(channel));
 }
@@ -561,7 +561,7 @@ FoxgloveResult<ModelPrimitiveChannel> ModelPrimitiveChannel::create(
     {topic.data(), topic.size()}, context.getInner(), &channel
   );
   if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
-    return foxglove::unexpected(FoxgloveError(error));
+    return tl::unexpected(FoxgloveError(error));
   }
   return ModelPrimitiveChannel(ChannelUniquePtr(channel));
 }
@@ -589,7 +589,7 @@ FoxgloveResult<PackedElementFieldChannel> PackedElementFieldChannel::create(
     {topic.data(), topic.size()}, context.getInner(), &channel
   );
   if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
-    return foxglove::unexpected(FoxgloveError(error));
+    return tl::unexpected(FoxgloveError(error));
   }
   return PackedElementFieldChannel(ChannelUniquePtr(channel));
 }
@@ -616,7 +616,7 @@ FoxgloveResult<Point2Channel> Point2Channel::create(
   foxglove_error error =
     foxglove_channel_create_point2({topic.data(), topic.size()}, context.getInner(), &channel);
   if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
-    return foxglove::unexpected(FoxgloveError(error));
+    return tl::unexpected(FoxgloveError(error));
   }
   return Point2Channel(ChannelUniquePtr(channel));
 }
@@ -638,7 +638,7 @@ FoxgloveResult<Point3Channel> Point3Channel::create(
   foxglove_error error =
     foxglove_channel_create_point3({topic.data(), topic.size()}, context.getInner(), &channel);
   if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
-    return foxglove::unexpected(FoxgloveError(error));
+    return tl::unexpected(FoxgloveError(error));
   }
   return Point3Channel(ChannelUniquePtr(channel));
 }
@@ -660,7 +660,7 @@ FoxgloveResult<PointCloudChannel> PointCloudChannel::create(
   foxglove_error error =
     foxglove_channel_create_point_cloud({topic.data(), topic.size()}, context.getInner(), &channel);
   if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
-    return foxglove::unexpected(FoxgloveError(error));
+    return tl::unexpected(FoxgloveError(error));
   }
   return PointCloudChannel(ChannelUniquePtr(channel));
 }
@@ -688,7 +688,7 @@ FoxgloveResult<PointsAnnotationChannel> PointsAnnotationChannel::create(
     {topic.data(), topic.size()}, context.getInner(), &channel
   );
   if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
-    return foxglove::unexpected(FoxgloveError(error));
+    return tl::unexpected(FoxgloveError(error));
   }
   return PointsAnnotationChannel(ChannelUniquePtr(channel));
 }
@@ -715,7 +715,7 @@ FoxgloveResult<PoseChannel> PoseChannel::create(
   foxglove_error error =
     foxglove_channel_create_pose({topic.data(), topic.size()}, context.getInner(), &channel);
   if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
-    return foxglove::unexpected(FoxgloveError(error));
+    return tl::unexpected(FoxgloveError(error));
   }
   return PoseChannel(ChannelUniquePtr(channel));
 }
@@ -741,7 +741,7 @@ FoxgloveResult<PoseInFrameChannel> PoseInFrameChannel::create(
     {topic.data(), topic.size()}, context.getInner(), &channel
   );
   if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
-    return foxglove::unexpected(FoxgloveError(error));
+    return tl::unexpected(FoxgloveError(error));
   }
   return PoseInFrameChannel(ChannelUniquePtr(channel));
 }
@@ -769,7 +769,7 @@ FoxgloveResult<PosesInFrameChannel> PosesInFrameChannel::create(
     {topic.data(), topic.size()}, context.getInner(), &channel
   );
   if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
-    return foxglove::unexpected(FoxgloveError(error));
+    return tl::unexpected(FoxgloveError(error));
   }
   return PosesInFrameChannel(ChannelUniquePtr(channel));
 }
@@ -796,7 +796,7 @@ FoxgloveResult<QuaternionChannel> QuaternionChannel::create(
   foxglove_error error =
     foxglove_channel_create_quaternion({topic.data(), topic.size()}, context.getInner(), &channel);
   if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
-    return foxglove::unexpected(FoxgloveError(error));
+    return tl::unexpected(FoxgloveError(error));
   }
   return QuaternionChannel(ChannelUniquePtr(channel));
 }
@@ -820,7 +820,7 @@ FoxgloveResult<RawAudioChannel> RawAudioChannel::create(
   foxglove_error error =
     foxglove_channel_create_raw_audio({topic.data(), topic.size()}, context.getInner(), &channel);
   if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
-    return foxglove::unexpected(FoxgloveError(error));
+    return tl::unexpected(FoxgloveError(error));
   }
   return RawAudioChannel(ChannelUniquePtr(channel));
 }
@@ -845,7 +845,7 @@ FoxgloveResult<RawImageChannel> RawImageChannel::create(
   foxglove_error error =
     foxglove_channel_create_raw_image({topic.data(), topic.size()}, context.getInner(), &channel);
   if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
-    return foxglove::unexpected(FoxgloveError(error));
+    return tl::unexpected(FoxgloveError(error));
   }
   return RawImageChannel(ChannelUniquePtr(channel));
 }
@@ -871,7 +871,7 @@ FoxgloveResult<SceneEntityChannel> SceneEntityChannel::create(
     {topic.data(), topic.size()}, context.getInner(), &channel
   );
   if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
-    return foxglove::unexpected(FoxgloveError(error));
+    return tl::unexpected(FoxgloveError(error));
   }
   return SceneEntityChannel(ChannelUniquePtr(channel));
 }
@@ -899,7 +899,7 @@ FoxgloveResult<SceneEntityDeletionChannel> SceneEntityDeletionChannel::create(
     {topic.data(), topic.size()}, context.getInner(), &channel
   );
   if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
-    return foxglove::unexpected(FoxgloveError(error));
+    return tl::unexpected(FoxgloveError(error));
   }
   return SceneEntityDeletionChannel(ChannelUniquePtr(channel));
 }
@@ -927,7 +927,7 @@ FoxgloveResult<SceneUpdateChannel> SceneUpdateChannel::create(
     {topic.data(), topic.size()}, context.getInner(), &channel
   );
   if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
-    return foxglove::unexpected(FoxgloveError(error));
+    return tl::unexpected(FoxgloveError(error));
   }
   return SceneUpdateChannel(ChannelUniquePtr(channel));
 }
@@ -955,7 +955,7 @@ FoxgloveResult<SpherePrimitiveChannel> SpherePrimitiveChannel::create(
     {topic.data(), topic.size()}, context.getInner(), &channel
   );
   if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
-    return foxglove::unexpected(FoxgloveError(error));
+    return tl::unexpected(FoxgloveError(error));
   }
   return SpherePrimitiveChannel(ChannelUniquePtr(channel));
 }
@@ -983,7 +983,7 @@ FoxgloveResult<TextAnnotationChannel> TextAnnotationChannel::create(
     {topic.data(), topic.size()}, context.getInner(), &channel
   );
   if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
-    return foxglove::unexpected(FoxgloveError(error));
+    return tl::unexpected(FoxgloveError(error));
   }
   return TextAnnotationChannel(ChannelUniquePtr(channel));
 }
@@ -1011,7 +1011,7 @@ FoxgloveResult<TextPrimitiveChannel> TextPrimitiveChannel::create(
     {topic.data(), topic.size()}, context.getInner(), &channel
   );
   if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
-    return foxglove::unexpected(FoxgloveError(error));
+    return tl::unexpected(FoxgloveError(error));
   }
   return TextPrimitiveChannel(ChannelUniquePtr(channel));
 }
@@ -1039,7 +1039,7 @@ FoxgloveResult<TriangleListPrimitiveChannel> TriangleListPrimitiveChannel::creat
     {topic.data(), topic.size()}, context.getInner(), &channel
   );
   if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
-    return foxglove::unexpected(FoxgloveError(error));
+    return tl::unexpected(FoxgloveError(error));
   }
   return TriangleListPrimitiveChannel(ChannelUniquePtr(channel));
 }
@@ -1066,7 +1066,7 @@ FoxgloveResult<Vector2Channel> Vector2Channel::create(
   foxglove_error error =
     foxglove_channel_create_vector2({topic.data(), topic.size()}, context.getInner(), &channel);
   if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
-    return foxglove::unexpected(FoxgloveError(error));
+    return tl::unexpected(FoxgloveError(error));
   }
   return Vector2Channel(ChannelUniquePtr(channel));
 }
@@ -1088,7 +1088,7 @@ FoxgloveResult<Vector3Channel> Vector3Channel::create(
   foxglove_error error =
     foxglove_channel_create_vector3({topic.data(), topic.size()}, context.getInner(), &channel);
   if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
-    return foxglove::unexpected(FoxgloveError(error));
+    return tl::unexpected(FoxgloveError(error));
   }
   return Vector3Channel(ChannelUniquePtr(channel));
 }
