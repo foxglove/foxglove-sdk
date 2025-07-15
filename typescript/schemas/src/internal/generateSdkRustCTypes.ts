@@ -4,6 +4,8 @@ import { FoxgloveEnumSchema, FoxgloveMessageSchema, FoxglovePrimitive } from "./
 
 function primitiveToRust(type: FoxglovePrimitive) {
   switch (type) {
+    case "int32":
+      return "i32";
     case "uint32":
       return "u32";
     case "boolean":
@@ -41,11 +43,16 @@ function toTitleCase(name: string) {
   return name.toLowerCase().replace(/(?:^|_)([a-z])/g, (_, letter: string) => letter.toUpperCase());
 }
 
+// We use special FoxgloveTimestamp and FoxgloveDuration types for the time and duration fields.
+function shouldGenerateRustType(schema: FoxgloveMessageSchema): boolean {
+  return schema.name !== "Timestamp" && schema.name !== "Duration";
+}
+
 export function generateRustTypes(
   schemas: readonly FoxgloveMessageSchema[],
   enums: readonly FoxgloveEnumSchema[],
 ): string {
-  const schemaStructs = schemas.map((schema) => {
+  const schemaStructs = schemas.filter(shouldGenerateRustType).map((schema) => {
     const { fields, description } = schema;
     const name = schema.name.replace("JSON", "Json");
     const snakeName = toSnakeCase(name);

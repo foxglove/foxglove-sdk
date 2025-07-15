@@ -4,6 +4,8 @@ import { FoxgloveEnumSchema, FoxgloveMessageSchema, FoxglovePrimitive } from "./
 
 function primitiveToCpp(type: FoxglovePrimitive) {
   switch (type) {
+    case "int32":
+      return "int32_t";
     case "uint32":
       return "uint32_t";
     case "bytes":
@@ -15,14 +17,15 @@ function primitiveToCpp(type: FoxglovePrimitive) {
     case "float64":
       return "double";
     case "time":
-      return "std::optional<foxglove::Timestamp>";
+      return "std::optional<Timestamp>";
     case "duration":
-      return "std::optional<foxglove::Duration>";
+      return "std::optional<Duration>";
   }
 }
 
 function primitiveDefaultValue(type: FoxglovePrimitive) {
   switch (type) {
+    case "int32":
     case "uint32":
       return 0;
     case "boolean":
@@ -86,6 +89,14 @@ function* topologicalOrder(
     }
     yield schema;
   }
+}
+
+/**
+ * SDK does not yet generate channels for Timestamp and Duration because of custom implementations
+ * in other languages.
+ */
+function shouldGenerateChannel(schema: FoxgloveMessageSchema): boolean {
+  return schema.name !== "Timestamp" && schema.name !== "Duration";
 }
 
 export function generateHppSchemas(
@@ -162,7 +173,7 @@ export function generateHppSchemas(
     ].join("\n");
   });
 
-  const channelClasses = schemas.map(
+  const channelClasses = schemas.filter(shouldGenerateChannel).map(
     (schema) => `/// @brief A channel for logging ${schema.name} messages to a topic.
       ///
       /// @note While channels are fully thread-safe, the ${schema.name} struct is not thread-safe.
@@ -214,7 +225,6 @@ export function generateHppSchemas(
     "#include <optional>",
     "#include <memory>",
     "",
-    "#include <foxglove/time.hpp>",
     "#include <foxglove/error.hpp>",
     "#include <foxglove/context.hpp>",
   ];
@@ -319,7 +329,7 @@ export function generateCppSchemas(schemas: FoxgloveMessageSchema[]): string {
     ];
   });
 
-  const traitSpecializations = schemas.flatMap((schema) => {
+  const traitSpecializations = schemas.filter(shouldGenerateChannel).flatMap((schema) => {
     const snakeName = toSnakeCase(schema.name);
     let conversionCode;
     if (isSameAsCType(schema)) {
