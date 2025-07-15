@@ -35,7 +35,7 @@ impl PyChannelDescriptor {
     #[getter]
     fn metadata<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
         let metadata = self.0.metadata().into_py_dict(py).unwrap_or_else(|err| {
-            tracing::error!("Failed to constrcut channel metadata: {}", err.to_string());
+            tracing::error!("Failed to construct channel metadata: {}", err.to_string());
             PyDict::new(py)
         });
         Ok(metadata)
@@ -44,7 +44,6 @@ impl PyChannelDescriptor {
     /// Returns the schema for this channel.
     #[getter]
     fn schema(&self) -> Option<PySchema> {
-        tracing::info!("schema?: {:?}", self.0.schema().is_some());
         self.0.schema().map(|schema| PySchema::from(schema.clone()))
     }
 
