@@ -27,9 +27,9 @@ enum class ParameterType : uint8_t {
   None,
   /// An array of bytes.
   ByteArray,
-  /// A decimal or integer value that can be represented as a `float64`.
+  /// A floating-point value that can be represented as a `float64`.
   Float64,
-  /// An array of decimal or integer values that can be represented as `float64`s.
+  /// An array of floating-point values that can be represented as `float64`s.
   Float64Array,
 };
 

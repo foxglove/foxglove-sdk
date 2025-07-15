@@ -23,9 +23,9 @@ pub enum DecodeError {
 pub enum ParameterType {
     /// A byte array, encoded as a base64-encoded string.
     ByteArray,
-    /// A decimal or integer value that can be represented as a `float64`.
+    /// A floating-point value that can be represented as a `float64`.
     Float64,
-    /// An array of decimal or integer values that can be represented as `float64`s.
+    /// An array of floating-point values that can be represented as `float64`s.
     Float64Array,
 }
 
@@ -35,12 +35,9 @@ pub enum ParameterType {
 #[serde(untagged)]
 pub enum ParameterValue {
     /// An integer value.
-    /// NOTE: This needs to be before `Number` to ensure that values without a fractional part
-    /// are preferrentially deserialized as integers, not floats.
     Integer(i64),
-    /// A decimal or integer value.
-    /// TODO: Rename to indicate that this is a float only
-    Number(f64),
+    /// A floating-point value.
+    Float64(f64),
     /// A boolean value.
     Bool(bool),
     /// A string value.
@@ -82,7 +79,7 @@ impl Parameter {
         Self {
             name: name.into(),
             r#type: Some(ParameterType::Float64),
-            value: Some(ParameterValue::Number(value)),
+            value: Some(ParameterValue::Float64(value)),
         }
     }
 
@@ -112,7 +109,7 @@ impl Parameter {
             name: name.into(),
             r#type: Some(ParameterType::Float64Array),
             value: Some(ParameterValue::Array(
-                values.into_iter().map(ParameterValue::Number).collect(),
+                values.into_iter().map(ParameterValue::Float64).collect(),
             )),
         }
     }
@@ -260,12 +257,12 @@ mod tests {
             "outer",
             maplit::btreemap! {
                 "bool".into() => ParameterValue::Bool(false),
-                "number".into() => ParameterValue::Number(1.23),
                 "nested".into() => ParameterValue::Dict(
                     maplit::btreemap! {
-                        "inner".into() => ParameterValue::Number(1.0),
+                        "inner".into() => ParameterValue::Float64(1.0),
                     }
-                )
+                ),
+                "float64".into() => ParameterValue::Float64(1.23),
             }
         ));
     }

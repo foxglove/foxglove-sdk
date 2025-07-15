@@ -40,17 +40,17 @@ Used with the parameter service during live visualization. Requires the :py:data
 
    .. py:data:: Float64
 
-      A decimal or integer value that can be represented as a 64-bit floating point number.
+      A floating-point value that can be represented as a 64-bit floating point number.
 
    .. py:data:: Float64Array
 
-      An array of decimal or integer values that can be represented as 64-bit floating point numbers.
+      An array of floating-point values that can be represented as 64-bit floating point numbers.
 
 .. autoclass:: foxglove.websocket.ParameterValue
 
-   .. py:class:: Number(value: float)
+      .. py:class:: Float(value: float)
 
-      A decimal or integer value.
+     A floating-point value.
 
    .. py:class:: Bool(value: bool)
 

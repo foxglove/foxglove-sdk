@@ -19,7 +19,7 @@ def test_float() -> None:
     p = Parameter("float", value=1.234)
     assert p.name == "float"
     assert p.type == ParameterType.Float64
-    assert p.value == ParameterValue.Number(1.234)
+    assert p.value == ParameterValue.Float64(1.234)
     assert p.get_value() == 1.234
 
 
@@ -39,9 +39,9 @@ def test_float_array() -> None:
     assert p.type == ParameterType.Float64Array
     assert p.value == ParameterValue.Array(
         [
-            ParameterValue.Number(1.0),
-            ParameterValue.Number(2.0),
-            ParameterValue.Number(3.0),
+            ParameterValue.Float64(1.0),
+            ParameterValue.Float64(2.0),
+            ParameterValue.Float64(3.0),
         ]
     )
     assert p.get_value() == v
@@ -138,14 +138,14 @@ def test_dict() -> None:
 
 def test_explicit() -> None:
     # Derive type from value
-    p = Parameter("float", value=ParameterValue.Number(1))
+    p = Parameter("float", value=ParameterValue.Float64(1))
     assert p.type == ParameterType.Float64
     assert p.get_value() == 1
 
     # Override derived type.
     p = Parameter(
         "bad float array",
-        value=ParameterValue.Number(1),
+        value=ParameterValue.Float64(1),
         type=ParameterType.Float64Array,
     )
     assert p.type == ParameterType.Float64Array
@@ -161,7 +161,7 @@ def test_explicit() -> None:
     assert p.get_value() == "1"
 
     # Override derived type with None.
-    p = Parameter("underspecified float", value=ParameterValue.Number(1), type=None)
+    p = Parameter("underspecified float", value=ParameterValue.Float64(1), type=None)
     assert p.type is None
     assert p.get_value() == 1
 

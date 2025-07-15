@@ -14,8 +14,8 @@ ParameterValueView::Value ParameterValueView::value() const {
   // Accessing union members is safe, because the tag serves as a valid
   // discriminator.
   switch (impl_->tag) {
-    case FOXGLOVE_PARAMETER_VALUE_TAG_NUMBER:
-      return impl_->data.number;  // NOLINT(cppcoreguidelines-pro-type-union-access)
+    case FOXGLOVE_PARAMETER_VALUE_TAG_FLOAT64:
+      return impl_->data.float64;  // NOLINT(cppcoreguidelines-pro-type-union-access)
     case FOXGLOVE_PARAMETER_VALUE_TAG_INTEGER:
       return impl_->data.integer;  // NOLINT(cppcoreguidelines-pro-type-union-access)
     case FOXGLOVE_PARAMETER_VALUE_TAG_BOOLEAN:
@@ -72,7 +72,7 @@ ParameterValue::ParameterValue(foxglove_parameter_value* ptr)
 
 ParameterValue::ParameterValue(double value)
     : impl_(nullptr) {
-  foxglove_parameter_value* ptr = foxglove_parameter_value_create_number(value);
+  foxglove_parameter_value* ptr = foxglove_parameter_value_create_float64(value);
   if (ptr == nullptr) {
     throw std::runtime_error("allocation failed");
   }

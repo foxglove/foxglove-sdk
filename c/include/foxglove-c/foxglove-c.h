@@ -204,7 +204,7 @@ enum foxglove_parameter_value_tag
   : uint8_t
 #endif // __cplusplus
  {
-  FOXGLOVE_PARAMETER_VALUE_TAG_NUMBER,
+  FOXGLOVE_PARAMETER_VALUE_TAG_FLOAT64,
   FOXGLOVE_PARAMETER_VALUE_TAG_INTEGER,
   FOXGLOVE_PARAMETER_VALUE_TAG_BOOLEAN,
   FOXGLOVE_PARAMETER_VALUE_TAG_STRING,
@@ -379,7 +379,7 @@ typedef struct foxglove_parameter_value_dict {
  * Storage for `FoxgloveParameterValue`.
  */
 typedef union foxglove_parameter_value_data {
-  double number;
+  double float64;
   int64_t integer;
   bool boolean;
   struct foxglove_string string;
@@ -3286,12 +3286,10 @@ void foxglove_parameter_free(struct foxglove_parameter *param);
  * The value must be freed with `foxglove_parameter_value_free`, or by passing it to a consuming
  * function such as `foxglove_parameter_create`.
  */
-struct foxglove_parameter_value *foxglove_parameter_value_create_number(double number);
+struct foxglove_parameter_value *foxglove_parameter_value_create_float64(double number);
 
 /**
- * Creates a new integer parameter value.
- *
- * The value must be freed with `foxglove_parameter_value_free`, or by passing it to a consuming
+ * Creates a new  or by passing it to a consuming
  * function such as `foxglove_parameter_create`.
  */
 struct foxglove_parameter_value *foxglove_parameter_value_create_integer(int64_t integer);

@@ -139,10 +139,10 @@ class ParameterType(Enum):
     """A byte array."""
 
     Float64 = ...
-    """A decimal or integer value that can be represented as a `float64`."""
+    """A floating-point value that can be represented as a `float64`."""
 
     Float64Array = ...
-    """An array of decimal or integer values that can be represented as `float64`s."""
+    """An array of floating-point values that can be represented as `float64`s."""
 
 class ParameterValue:
     """
@@ -159,10 +159,10 @@ class ParameterValue:
 
         def __new__(cls, value: bool) -> "ParameterValue.Bool": ...
 
-    class Number:
-        """A decimal or integer value."""
+    class Float64:
+        """A floating-point value."""
 
-        def __new__(cls, value: float) -> "ParameterValue.Number": ...
+        def __new__(cls, value: float) -> "ParameterValue.Float64": ...
 
     class String:
         """
@@ -191,7 +191,7 @@ class ParameterValue:
 AnyParameterValue = Union[
     ParameterValue.Integer,
     ParameterValue.Bool,
-    ParameterValue.Number,
+    ParameterValue.Float64,
     ParameterValue.String,
     ParameterValue.Array,
     ParameterValue.Dict,

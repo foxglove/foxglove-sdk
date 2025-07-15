@@ -24,7 +24,7 @@ AssetHandler = Callable[[str], Optional[bytes]]
 AnyParameterValue = Union[
     ParameterValue.Integer,
     ParameterValue.Bool,
-    ParameterValue.Number,
+    ParameterValue.Float64,
     ParameterValue.String,
     ParameterValue.Array,
     ParameterValue.Dict,
