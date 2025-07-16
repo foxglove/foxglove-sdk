@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-namespace foxglove {
+namespace foxglove::schemas {
 
 /// @brief A timestamp in seconds and nanoseconds from the unix epoch.
 struct Timestamp {
@@ -20,4 +20,4 @@ struct Duration {
   uint32_t nsec;
 };
 
-}  // namespace foxglove
+}  // namespace foxglove::schemas
