@@ -14,13 +14,13 @@ endif
 .PHONY: lint
 lint:
 	find . -path './build*' -prune -name '*.h' -o -name '*.hpp' -o -name '*.cpp' |\
-		grep -v '/expected.hpp' |\
+		grep -v 'foxglove/expected.hpp' |\
 		xargs clang-format --dry-run -Werror --color=1
 
 .PHONY: lint-fix
 lint-fix:
 	find . -path './build*' -prune -name '*.h' -o -name '*.hpp' -o -name '*.cpp' |\
-		grep -v '/expected.hpp' |\
+		grep -v 'foxglove/expected.hpp' |\
 		xargs clang-format -i -Werror --color=1
 
 .PHONY: clean
