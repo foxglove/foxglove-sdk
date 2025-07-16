@@ -893,7 +893,7 @@ impl Drop for FoxgloveParameterValue {
     }
 }
 
-/// Creates a newumber float64 parameter value.
+/// Creates a new float64 parameter value.
 ///
 /// The value must be freed with `foxglove_parameter_value_free`, or by passing it to a consuming
 /// function such as `foxglove_parameter_create`.

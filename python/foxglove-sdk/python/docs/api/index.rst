@@ -48,9 +48,13 @@ Used with the parameter service during live visualization. Requires the :py:data
 
 .. autoclass:: foxglove.websocket.ParameterValue
 
-      .. py:class:: Float(value: float)
+   .. py:class:: Float64(value: float)
 
      A floating-point value.
+
+   .. py:class:: Integer(value: int)
+
+      An integer value.
 
    .. py:class:: Bool(value: bool)
 
