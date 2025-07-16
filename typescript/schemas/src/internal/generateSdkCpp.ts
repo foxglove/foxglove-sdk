@@ -15,9 +15,9 @@ function primitiveToCpp(type: FoxglovePrimitive) {
     case "float64":
       return "double";
     case "time":
-      return "std::optional<foxglove::Timestamp>";
+      return "std::optional<Timestamp>";
     case "duration":
-      return "std::optional<foxglove::Duration>";
+      return "std::optional<Duration>";
   }
 }
 

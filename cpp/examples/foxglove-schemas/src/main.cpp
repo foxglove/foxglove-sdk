@@ -18,7 +18,7 @@ void log_to_channels(int counter) {
   foxglove::schemas::SceneEntity entity;
   entity.frame_id = "box";
   entity.id = "box_1";
-  entity.lifetime = foxglove::Duration{10, 10000000};
+  entity.lifetime = foxglove::schemas::Duration{10, 10000000};
 
   // Create a cube primitive
   foxglove::schemas::CubePrimitive cube;
