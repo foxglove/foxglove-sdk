@@ -438,12 +438,6 @@ impl Server {
             return;
         }
 
-        // Globally filter out parameters that are not set
-        let parameters: Vec<Parameter> = parameters
-            .into_iter()
-            .filter(|p| p.value.is_some())
-            .collect();
-
         let clients = self.clients.get();
         for client in clients.iter() {
             // Filter parameters by subscriptions.
@@ -461,7 +455,7 @@ impl Server {
 
             // Notify client.
             if !filtered.is_empty() {
-                client.update_parameters(filtered);
+                client.update_parameters(filtered, None);
             }
         }
     }
