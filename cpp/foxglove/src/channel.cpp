@@ -40,7 +40,7 @@ FoxgloveResult<RawChannel> RawChannel::create(
     &channel
   );
   if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
-    return foxglove::unexpected(FoxgloveError(error));
+    return tl::unexpected(FoxgloveError(error));
   }
   return RawChannel(channel);
 }
