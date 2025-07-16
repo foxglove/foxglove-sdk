@@ -1,0 +1,12 @@
+---
+source: rust/foxglove/src/websocket/ws_protocol/parameter.rs
+assertion_line: 198
+expression: "Parameter::integer_array(\"i64[]\", [123, 456])"
+---
+{
+  "name": "i64[]",
+  "value": [
+    123,
+    456
+  ]
+}

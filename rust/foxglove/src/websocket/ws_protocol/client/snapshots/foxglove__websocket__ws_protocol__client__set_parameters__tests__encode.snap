@@ -1,5 +1,6 @@
 ---
 source: rust/foxglove/src/websocket/ws_protocol/client/set_parameters.rs
+assertion_line: 64
 expression: message()
 ---
 {
@@ -7,6 +8,17 @@ expression: message()
   "parameters": [
     {
       "name": "empty"
+    },
+    {
+      "name": "int",
+      "value": 123
+    },
+    {
+      "name": "int[]",
+      "value": [
+        123,
+        456
+      ]
     },
     {
       "name": "f64",

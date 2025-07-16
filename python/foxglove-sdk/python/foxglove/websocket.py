@@ -22,8 +22,9 @@ from ._foxglove_py.websocket import (
 ServiceHandler = Callable[["ServiceRequest"], bytes]
 AssetHandler = Callable[[str], Optional[bytes]]
 AnyParameterValue = Union[
+    ParameterValue.Integer,
     ParameterValue.Bool,
-    ParameterValue.Number,
+    ParameterValue.Float64,
     ParameterValue.String,
     ParameterValue.Array,
     ParameterValue.Dict,
@@ -31,6 +32,7 @@ AnyParameterValue = Union[
 AnyInnerParameterValue = Union[
     AnyParameterValue,
     bool,
+    int,
     float,
     str,
     List["AnyInnerParameterValue"],

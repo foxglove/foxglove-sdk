@@ -109,7 +109,7 @@ class Parameter:
     :param name: The parameter name.
     :type name: str
     :param value: Optional value, represented as a native python object, or a ParameterValue.
-    :type value: None|bool|float|str|bytes|list|dict|ParameterValue
+    :type value: None|bool|int|float|str|bytes|list|dict|ParameterValue
     :param type: Optional parameter type. This is automatically derived when passing a native
                  python object as the value.
     :type type: ParameterType|None
@@ -139,25 +139,30 @@ class ParameterType(Enum):
     """A byte array."""
 
     Float64 = ...
-    """A decimal or integer value that can be represented as a `float64`."""
+    """A floating-point value that can be represented as a `float64`."""
 
     Float64Array = ...
-    """An array of decimal or integer values that can be represented as `float64`s."""
+    """An array of floating-point values that can be represented as `float64`s."""
 
 class ParameterValue:
     """
     A parameter value.
     """
 
+    class Integer:
+        """An integer value."""
+
+        def __new__(cls, value: int) -> "ParameterValue.Integer": ...
+
     class Bool:
         """A boolean value."""
 
         def __new__(cls, value: bool) -> "ParameterValue.Bool": ...
 
-    class Number:
-        """A decimal or integer value."""
+    class Float64:
+        """A floating-point value."""
 
-        def __new__(cls, value: float) -> "ParameterValue.Number": ...
+        def __new__(cls, value: float) -> "ParameterValue.Float64": ...
 
     class String:
         """
@@ -184,8 +189,9 @@ class ParameterValue:
         ) -> "ParameterValue.Dict": ...
 
 AnyParameterValue = Union[
+    ParameterValue.Integer,
     ParameterValue.Bool,
-    ParameterValue.Number,
+    ParameterValue.Float64,
     ParameterValue.String,
     ParameterValue.Array,
     ParameterValue.Dict,
@@ -194,6 +200,7 @@ AnyParameterValue = Union[
 AnyInnerParameterValue = Union[
     AnyParameterValue,
     bool,
+    int,
     float,
     str,
     List["AnyInnerParameterValue"],
