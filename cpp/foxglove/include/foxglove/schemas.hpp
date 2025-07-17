@@ -438,7 +438,7 @@ struct Grid {
 /// @brief A 3D grid of data
 struct Grid3D {
   /// @brief Timestamp of grid
-  std::optional<foxglove::Timestamp> timestamp;
+  std::optional<Timestamp> timestamp;
 
   /// @brief Frame of reference
   std::string frame_id;

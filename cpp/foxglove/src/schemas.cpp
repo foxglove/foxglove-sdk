@@ -397,7 +397,7 @@ FoxgloveResult<Grid3DChannel> Grid3DChannel::create(
   foxglove_error error =
     foxglove_channel_create_grid3_d({topic.data(), topic.size()}, context.getInner(), &channel);
   if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
-    return foxglove::unexpected(FoxgloveError(error));
+    return tl::unexpected(FoxgloveError(error));
   }
   return Grid3DChannel(ChannelUniquePtr(channel));
 }
