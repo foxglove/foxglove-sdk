@@ -1,0 +1,90 @@
+
+.. _file_foxglove_include_foxglove_error.hpp:
+
+File error.hpp
+==============
+
+|exhale_lsh| :ref:`Parent directory <dir_foxglove_include_foxglove>` (``foxglove/include/foxglove``)
+
+.. |exhale_lsh| unicode:: U+021B0 .. UPWARDS ARROW WITH TIP LEFTWARDS
+
+Definition (``foxglove/include/foxglove/error.hpp``)
+----------------------------------------------------
+
+
+.. toctree::
+   :maxdepth: 1
+
+   program_listing_file_foxglove_include_foxglove_error.hpp.rst
+
+
+
+
+
+Includes
+--------
+
+
+- ``cstdint``
+
+- ``expected.hpp``
+
+- ``iostream``
+
+- ``sstream``
+
+
+
+Included By
+-----------
+
+
+- :ref:`file_foxglove_include_foxglove_channel.hpp`
+
+- :ref:`file_foxglove_include_foxglove_mcap.hpp`
+
+- :ref:`file_foxglove_include_foxglove_schemas.hpp`
+
+- :ref:`file_foxglove_include_foxglove_server.hpp`
+
+- :ref:`file_foxglove_include_foxglove_server_connection_graph.hpp`
+
+- :ref:`file_foxglove_include_foxglove_server_parameter.hpp`
+
+- :ref:`file_foxglove_include_foxglove_server_service.hpp`
+
+- :ref:`file_foxglove_src_channel.cpp`
+
+- :ref:`file_foxglove_src_error.cpp`
+
+- :ref:`file_foxglove_src_mcap.cpp`
+
+- :ref:`file_foxglove_src_schemas.cpp`
+
+- :ref:`file_foxglove_src_server.cpp`
+
+- :ref:`file_foxglove_src_server_parameter.cpp`
+
+
+
+
+Namespaces
+----------
+
+
+- :ref:`namespace_foxglove`
+
+
+Enums
+-----
+
+
+- :ref:`exhale_enum_namespacefoxglove_1a6359c784ca82c5e60be0636693968069`
+
+
+Typedefs
+--------
+
+
+- :ref:`exhale_typedef_namespacefoxglove_1ae499bdf585b764ce785c0442b22394c4`
+

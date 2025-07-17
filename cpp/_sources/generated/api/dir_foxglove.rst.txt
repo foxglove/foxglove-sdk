@@ -1,0 +1,17 @@
+.. _dir_foxglove:
+
+
+Directory foxglove
+==================
+
+
+*Directory path:* ``foxglove``
+
+Subdirectories
+--------------
+
+- :ref:`dir_foxglove_include`
+- :ref:`dir_foxglove_src`
+
+
+

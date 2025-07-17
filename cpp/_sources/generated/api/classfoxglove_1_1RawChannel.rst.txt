@@ -1,0 +1,17 @@
+.. _exhale_class_classfoxglove_1_1RawChannel:
+
+Class RawChannel
+================
+
+- Defined in :ref:`file_foxglove_include_foxglove_channel.hpp`
+
+
+Class Documentation
+-------------------
+
+
+.. doxygenclass:: foxglove::RawChannel
+   :project: Foxglove SDK
+   :members:
+   :protected-members:
+   :undoc-members:

@@ -1,0 +1,14 @@
+.. _exhale_enum_namespacefoxglove_1ad173012e55635dbea0da1182376bec72:
+
+Enum WebSocketServerStatusLevel
+===============================
+
+- Defined in :ref:`file_foxglove_include_foxglove_server.hpp`
+
+
+Enum Documentation
+------------------
+
+
+.. doxygenenum:: foxglove::WebSocketServerStatusLevel
+   :project: Foxglove SDK

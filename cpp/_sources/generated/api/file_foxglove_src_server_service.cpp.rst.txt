@@ -1,0 +1,44 @@
+
+.. _file_foxglove_src_server_service.cpp:
+
+File service.cpp
+================
+
+|exhale_lsh| :ref:`Parent directory <dir_foxglove_src_server>` (``foxglove/src/server``)
+
+.. |exhale_lsh| unicode:: U+021B0 .. UPWARDS ARROW WITH TIP LEFTWARDS
+
+Definition (``foxglove/src/server/service.cpp``)
+------------------------------------------------
+
+
+.. toctree::
+   :maxdepth: 1
+
+   program_listing_file_foxglove_src_server_service.cpp.rst
+
+
+
+
+
+Includes
+--------
+
+
+- ``foxglove-c/foxglove-c.h``
+
+- ``foxglove/server/service.hpp`` (:ref:`file_foxglove_include_foxglove_server_service.hpp`)
+
+- ``memory``
+
+
+
+
+
+
+Namespaces
+----------
+
+
+- :ref:`namespace_foxglove`
+

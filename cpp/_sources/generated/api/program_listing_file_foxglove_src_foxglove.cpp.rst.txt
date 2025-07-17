@@ -1,0 +1,22 @@
+
+.. _program_listing_file_foxglove_src_foxglove.cpp:
+
+Program Listing for File foxglove.cpp
+=====================================
+
+|exhale_lsh| :ref:`Return to documentation for file <file_foxglove_src_foxglove.cpp>` (``foxglove/src/foxglove.cpp``)
+
+.. |exhale_lsh| unicode:: U+021B0 .. UPWARDS ARROW WITH TIP LEFTWARDS
+
+.. code-block:: cpp
+
+   #include <foxglove-c/foxglove-c.h>
+   #include <foxglove/foxglove.hpp>
+   
+   namespace foxglove {
+   
+   void setLogLevel(LogLevel level) {
+     foxglove_set_log_level(static_cast<foxglove_logging_level>(level));
+   }
+   
+   }  // namespace foxglove

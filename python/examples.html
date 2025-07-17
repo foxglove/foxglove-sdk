@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Examples &#8212; Foxglove SDK 0.10.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=12dfc556" />
+    <script src="_static/documentation_options.js?v=82662543"></script>
+    <script src="_static/doctools.js?v=9a2dae69"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="API Reference" href="api/index.html" />
+    <link rel="prev" title="Foxglove SDK documentation" href="index.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="examples">
+<h1>Examples<a class="headerlink" href="#examples" title="Link to this heading">¶</a></h1>
+<section id="quickstart">
+<h2>Quickstart<a class="headerlink" href="#quickstart" title="Link to this heading">¶</a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">foxglove</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">foxglove</span><span class="w"> </span><span class="kn">import</span> <span class="n">Channel</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">foxglove.channels</span><span class="w"> </span><span class="kn">import</span> <span class="n">SceneUpdateChannel</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">foxglove.schemas</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">Color</span><span class="p">,</span>
+    <span class="n">CubePrimitive</span><span class="p">,</span>
+    <span class="n">SceneEntity</span><span class="p">,</span>
+    <span class="n">SceneUpdate</span><span class="p">,</span>
+    <span class="n">Vector3</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">foxglove</span><span class="o">.</span><span class="n">set_log_level</span><span class="p">(</span><span class="s2">&quot;DEBUG&quot;</span><span class="p">)</span>
+
+<span class="c1"># Our example logs data on a couple of different topics, so we&#39;ll create a</span>
+<span class="c1"># channel for each. We can use a channel like SceneUpdateChannel to log</span>
+<span class="c1"># Foxglove schemas, or a generic Channel to log custom data.</span>
+<span class="n">scene_channel</span> <span class="o">=</span> <span class="n">SceneUpdateChannel</span><span class="p">(</span><span class="s2">&quot;/scene&quot;</span><span class="p">)</span>
+<span class="n">size_channel</span> <span class="o">=</span> <span class="n">Channel</span><span class="p">(</span><span class="s2">&quot;/size&quot;</span><span class="p">,</span> <span class="n">message_encoding</span><span class="o">=</span><span class="s2">&quot;json&quot;</span><span class="p">)</span>
+
+<span class="c1"># We&#39;ll log to both an MCAP file, and to a running Foxglove app via a server.</span>
+<span class="n">file_name</span> <span class="o">=</span> <span class="s2">&quot;quickstart-python.mcap&quot;</span>
+<span class="n">writer</span> <span class="o">=</span> <span class="n">foxglove</span><span class="o">.</span><span class="n">open_mcap</span><span class="p">(</span><span class="n">file_name</span><span class="p">)</span>
+<span class="n">server</span> <span class="o">=</span> <span class="n">foxglove</span><span class="o">.</span><span class="n">start_server</span><span class="p">()</span>
+
+<span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+    <span class="n">size</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()))</span> <span class="o">+</span> <span class="mi">1</span>
+
+    <span class="c1"># Log messages on both channels until interrupted. By default, each message</span>
+    <span class="c1"># is stamped with the current time.</span>
+    <span class="n">size_channel</span><span class="o">.</span><span class="n">log</span><span class="p">({</span><span class="s2">&quot;size&quot;</span><span class="p">:</span> <span class="n">size</span><span class="p">})</span>
+    <span class="n">scene_channel</span><span class="o">.</span><span class="n">log</span><span class="p">(</span>
+        <span class="n">SceneUpdate</span><span class="p">(</span>
+            <span class="n">entities</span><span class="o">=</span><span class="p">[</span>
+                <span class="n">SceneEntity</span><span class="p">(</span>
+                    <span class="n">cubes</span><span class="o">=</span><span class="p">[</span>
+                        <span class="n">CubePrimitive</span><span class="p">(</span>
+                            <span class="n">size</span><span class="o">=</span><span class="n">Vector3</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">size</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="n">size</span><span class="p">,</span> <span class="n">z</span><span class="o">=</span><span class="n">size</span><span class="p">),</span>
+                            <span class="n">color</span><span class="o">=</span><span class="n">Color</span><span class="p">(</span><span class="n">r</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">g</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">a</span><span class="o">=</span><span class="mf">1.0</span><span class="p">),</span>
+                        <span class="p">)</span>
+                    <span class="p">],</span>
+                <span class="p">),</span>
+            <span class="p">]</span>
+        <span class="p">)</span>
+    <span class="p">)</span>
+
+    <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.033</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="live-visualization">
+<h2>Live visualization<a class="headerlink" href="#live-visualization" title="Link to this heading">¶</a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">datetime</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">struct</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">math</span><span class="w"> </span><span class="kn">import</span> <span class="n">cos</span><span class="p">,</span> <span class="n">sin</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">foxglove</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">foxglove</span><span class="w"> </span><span class="kn">import</span> <span class="n">Channel</span><span class="p">,</span> <span class="n">Schema</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">foxglove.channels</span><span class="w"> </span><span class="kn">import</span> <span class="n">RawImageChannel</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">foxglove.schemas</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">Color</span><span class="p">,</span>
+    <span class="n">CubePrimitive</span><span class="p">,</span>
+    <span class="n">Duration</span><span class="p">,</span>
+    <span class="n">FrameTransform</span><span class="p">,</span>
+    <span class="n">FrameTransforms</span><span class="p">,</span>
+    <span class="n">PackedElementField</span><span class="p">,</span>
+    <span class="n">PackedElementFieldNumericType</span><span class="p">,</span>
+    <span class="n">PointCloud</span><span class="p">,</span>
+    <span class="n">Pose</span><span class="p">,</span>
+    <span class="n">Quaternion</span><span class="p">,</span>
+    <span class="n">RawImage</span><span class="p">,</span>
+    <span class="n">SceneEntity</span><span class="p">,</span>
+    <span class="n">SceneUpdate</span><span class="p">,</span>
+    <span class="n">Timestamp</span><span class="p">,</span>
+    <span class="n">Vector3</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">foxglove.websocket</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">Capability</span><span class="p">,</span>
+    <span class="n">ChannelView</span><span class="p">,</span>
+    <span class="n">Client</span><span class="p">,</span>
+    <span class="n">ClientChannel</span><span class="p">,</span>
+    <span class="n">ServerListener</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">any_schema</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;object&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;additionalProperties&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="n">plot_schema</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;object&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;properties&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;timestamp&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;number&quot;</span><span class="p">},</span>
+        <span class="s2">&quot;y&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;number&quot;</span><span class="p">},</span>
+    <span class="p">},</span>
+<span class="p">}</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">ExampleListener</span><span class="p">(</span><span class="n">ServerListener</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="c1"># Map client id -&gt; set of subscribed topics</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">subscribers</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">has_subscribers</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">subscribers</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">on_subscribe</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">client</span><span class="p">:</span> <span class="n">Client</span><span class="p">,</span>
+        <span class="n">channel</span><span class="p">:</span> <span class="n">ChannelView</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Called by the server when a client subscribes to a channel.</span>
+<span class="sd">        We&#39;ll use this and on_unsubscribe to simply track if we have any subscribers at all.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Client </span><span class="si">{</span><span class="n">client</span><span class="si">}</span><span class="s2"> subscribed to channel </span><span class="si">{</span><span class="n">channel</span><span class="o">.</span><span class="n">topic</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">subscribers</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">client</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="nb">set</span><span class="p">())</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">channel</span><span class="o">.</span><span class="n">topic</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">on_unsubscribe</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">client</span><span class="p">:</span> <span class="n">Client</span><span class="p">,</span>
+        <span class="n">channel</span><span class="p">:</span> <span class="n">ChannelView</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Called by the server when a client unsubscribes from a channel.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Client </span><span class="si">{</span><span class="n">client</span><span class="si">}</span><span class="s2"> unsubscribed from channel </span><span class="si">{</span><span class="n">channel</span><span class="o">.</span><span class="n">topic</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">subscribers</span><span class="p">[</span><span class="n">client</span><span class="o">.</span><span class="n">id</span><span class="p">]</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">channel</span><span class="o">.</span><span class="n">topic</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">subscribers</span><span class="p">[</span><span class="n">client</span><span class="o">.</span><span class="n">id</span><span class="p">]:</span>
+            <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">subscribers</span><span class="p">[</span><span class="n">client</span><span class="o">.</span><span class="n">id</span><span class="p">]</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">on_client_advertise</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">client</span><span class="p">:</span> <span class="n">Client</span><span class="p">,</span>
+        <span class="n">channel</span><span class="p">:</span> <span class="n">ClientChannel</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Called when a client advertises a new channel.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Client </span><span class="si">{</span><span class="n">client</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2"> advertised channel: </span><span class="si">{</span><span class="n">channel</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  Topic: </span><span class="si">{</span><span class="n">channel</span><span class="o">.</span><span class="n">topic</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  Encoding: </span><span class="si">{</span><span class="n">channel</span><span class="o">.</span><span class="n">encoding</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  Schema name: </span><span class="si">{</span><span class="n">channel</span><span class="o">.</span><span class="n">schema_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  Schema encoding: </span><span class="si">{</span><span class="n">channel</span><span class="o">.</span><span class="n">schema_encoding</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  Schema: </span><span class="si">{</span><span class="n">channel</span><span class="o">.</span><span class="n">schema</span><span class="si">!r}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">on_message_data</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">client</span><span class="p">:</span> <span class="n">Client</span><span class="p">,</span>
+        <span class="n">client_channel_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">data</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        This handler demonstrates receiving messages from the client.</span>
+<span class="sd">        You can send messages from Foxglove app in the publish panel:</span>
+<span class="sd">        https://docs.foxglove.dev/docs/visualization/panels/publish</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Message from client </span><span class="si">{</span><span class="n">client</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2"> on channel </span><span class="si">{</span><span class="n">client_channel_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Data: </span><span class="si">{</span><span class="n">data</span><span class="si">!r}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">on_client_unadvertise</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">client</span><span class="p">:</span> <span class="n">Client</span><span class="p">,</span>
+        <span class="n">client_channel_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Called when a client unadvertises a new channel.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Client </span><span class="si">{</span><span class="n">client</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2"> unadvertised channel: </span><span class="si">{</span><span class="n">client_channel_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">foxglove</span><span class="o">.</span><span class="n">set_log_level</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+
+    <span class="n">listener</span> <span class="o">=</span> <span class="n">ExampleListener</span><span class="p">()</span>
+
+    <span class="n">server</span> <span class="o">=</span> <span class="n">foxglove</span><span class="o">.</span><span class="n">start_server</span><span class="p">(</span>
+        <span class="n">server_listener</span><span class="o">=</span><span class="n">listener</span><span class="p">,</span>
+        <span class="n">capabilities</span><span class="o">=</span><span class="p">[</span><span class="n">Capability</span><span class="o">.</span><span class="n">ClientPublish</span><span class="p">],</span>
+        <span class="n">supported_encodings</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;json&quot;</span><span class="p">],</span>
+    <span class="p">)</span>
+
+    <span class="c1"># Log messages with a custom schema and any encoding.</span>
+    <span class="n">sin_chan</span> <span class="o">=</span> <span class="n">Channel</span><span class="p">(</span>
+        <span class="n">topic</span><span class="o">=</span><span class="s2">&quot;/sine&quot;</span><span class="p">,</span>
+        <span class="n">message_encoding</span><span class="o">=</span><span class="s2">&quot;json&quot;</span><span class="p">,</span>
+        <span class="n">schema</span><span class="o">=</span><span class="n">Schema</span><span class="p">(</span>
+            <span class="n">name</span><span class="o">=</span><span class="s2">&quot;sine&quot;</span><span class="p">,</span>
+            <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;jsonschema&quot;</span><span class="p">,</span>
+            <span class="n">data</span><span class="o">=</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">plot_schema</span><span class="p">)</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">),</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+
+    <span class="c1"># If you want to use JSON encoding, you can also specify the schema and log messages as dicts.</span>
+    <span class="c1"># Dicts can also be logged without specifying a schema.</span>
+    <span class="n">json_chan</span> <span class="o">=</span> <span class="n">Channel</span><span class="p">(</span><span class="n">topic</span><span class="o">=</span><span class="s2">&quot;/json&quot;</span><span class="p">,</span> <span class="n">schema</span><span class="o">=</span><span class="n">plot_schema</span><span class="p">)</span>
+
+    <span class="n">img_chan</span> <span class="o">=</span> <span class="n">RawImageChannel</span><span class="p">(</span><span class="n">topic</span><span class="o">=</span><span class="s2">&quot;/image&quot;</span><span class="p">)</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">counter</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="n">counter</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="n">now</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+            <span class="n">y</span> <span class="o">=</span> <span class="n">sin</span><span class="p">(</span><span class="n">now</span><span class="p">)</span>
+
+            <span class="n">json_msg</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">&quot;timestamp&quot;</span><span class="p">:</span> <span class="n">now</span><span class="p">,</span>
+                <span class="s2">&quot;y&quot;</span><span class="p">:</span> <span class="n">y</span><span class="p">,</span>
+            <span class="p">}</span>
+            <span class="n">sin_chan</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">json_msg</span><span class="p">)</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">))</span>
+
+            <span class="n">json_chan</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">json_msg</span><span class="p">)</span>
+
+            <span class="n">foxglove</span><span class="o">.</span><span class="n">log</span><span class="p">(</span>
+                <span class="s2">&quot;/tf&quot;</span><span class="p">,</span>
+                <span class="n">FrameTransforms</span><span class="p">(</span>
+                    <span class="n">transforms</span><span class="o">=</span><span class="p">[</span>
+                        <span class="n">FrameTransform</span><span class="p">(</span>
+                            <span class="n">parent_frame_id</span><span class="o">=</span><span class="s2">&quot;world&quot;</span><span class="p">,</span>
+                            <span class="n">child_frame_id</span><span class="o">=</span><span class="s2">&quot;box&quot;</span><span class="p">,</span>
+                            <span class="n">rotation</span><span class="o">=</span><span class="n">euler_to_quaternion</span><span class="p">(</span>
+                                <span class="n">roll</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">pitch</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">yaw</span><span class="o">=</span><span class="n">counter</span> <span class="o">*</span> <span class="mf">0.1</span>
+                            <span class="p">),</span>
+                        <span class="p">),</span>
+                        <span class="n">FrameTransform</span><span class="p">(</span>
+                            <span class="n">parent_frame_id</span><span class="o">=</span><span class="s2">&quot;world&quot;</span><span class="p">,</span>
+                            <span class="n">child_frame_id</span><span class="o">=</span><span class="s2">&quot;points&quot;</span><span class="p">,</span>
+                            <span class="n">translation</span><span class="o">=</span><span class="n">Vector3</span><span class="p">(</span><span class="n">x</span><span class="o">=-</span><span class="mi">10</span><span class="p">,</span> <span class="n">y</span><span class="o">=-</span><span class="mi">10</span><span class="p">,</span> <span class="n">z</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span>
+                        <span class="p">),</span>
+                    <span class="p">]</span>
+                <span class="p">),</span>
+            <span class="p">)</span>
+
+            <span class="n">foxglove</span><span class="o">.</span><span class="n">log</span><span class="p">(</span>
+                <span class="s2">&quot;/boxes&quot;</span><span class="p">,</span>
+                <span class="n">SceneUpdate</span><span class="p">(</span>
+                    <span class="n">entities</span><span class="o">=</span><span class="p">[</span>
+                        <span class="n">SceneEntity</span><span class="p">(</span>
+                            <span class="n">frame_id</span><span class="o">=</span><span class="s2">&quot;box&quot;</span><span class="p">,</span>
+                            <span class="nb">id</span><span class="o">=</span><span class="s2">&quot;box_1&quot;</span><span class="p">,</span>
+                            <span class="n">timestamp</span><span class="o">=</span><span class="n">Timestamp</span><span class="o">.</span><span class="n">from_datetime</span><span class="p">(</span><span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()),</span>
+                            <span class="n">lifetime</span><span class="o">=</span><span class="n">Duration</span><span class="o">.</span><span class="n">from_secs</span><span class="p">(</span><span class="mf">1.2345</span><span class="p">),</span>
+                            <span class="n">cubes</span><span class="o">=</span><span class="p">[</span>
+                                <span class="n">CubePrimitive</span><span class="p">(</span>
+                                    <span class="n">pose</span><span class="o">=</span><span class="n">Pose</span><span class="p">(</span>
+                                        <span class="n">position</span><span class="o">=</span><span class="n">Vector3</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="n">y</span><span class="p">,</span> <span class="n">z</span><span class="o">=</span><span class="mi">3</span><span class="p">),</span>
+                                        <span class="n">orientation</span><span class="o">=</span><span class="n">euler_to_quaternion</span><span class="p">(</span>
+                                            <span class="n">roll</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">pitch</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">yaw</span><span class="o">=</span><span class="n">counter</span> <span class="o">*</span> <span class="o">-</span><span class="mf">0.1</span>
+                                        <span class="p">),</span>
+                                    <span class="p">),</span>
+                                    <span class="n">size</span><span class="o">=</span><span class="n">Vector3</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">z</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>
+                                    <span class="n">color</span><span class="o">=</span><span class="n">Color</span><span class="p">(</span><span class="n">r</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">g</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">a</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>
+                                <span class="p">)</span>
+                            <span class="p">],</span>
+                        <span class="p">),</span>
+                    <span class="p">]</span>
+                <span class="p">),</span>
+            <span class="p">)</span>
+
+            <span class="n">foxglove</span><span class="o">.</span><span class="n">log</span><span class="p">(</span>
+                <span class="s2">&quot;/pointcloud&quot;</span><span class="p">,</span>
+                <span class="n">make_point_cloud</span><span class="p">(),</span>
+            <span class="p">)</span>
+
+            <span class="c1"># Or use typed channels directly to get better type checking</span>
+            <span class="n">img_chan</span><span class="o">.</span><span class="n">log</span><span class="p">(</span>
+                <span class="n">RawImage</span><span class="p">(</span>
+                    <span class="n">data</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">100</span><span class="p">,</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span><span class="o">.</span><span class="n">tobytes</span><span class="p">(),</span>
+                    <span class="n">step</span><span class="o">=</span><span class="mi">300</span><span class="p">,</span>
+                    <span class="n">width</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
+                    <span class="n">height</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
+                    <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;rgb8&quot;</span><span class="p">,</span>
+                <span class="p">),</span>
+            <span class="p">)</span>
+
+            <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.05</span><span class="p">)</span>
+
+            <span class="k">while</span> <span class="ow">not</span> <span class="n">listener</span><span class="o">.</span><span class="n">has_subscribers</span><span class="p">():</span>
+                <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+                <span class="k">continue</span>
+
+    <span class="k">except</span> <span class="ne">KeyboardInterrupt</span><span class="p">:</span>
+        <span class="n">server</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">make_point_cloud</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">PointCloud</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    https://foxglove.dev/blog/visualizing-point-clouds-with-custom-colors</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">point_struct</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">Struct</span><span class="p">(</span><span class="s2">&quot;&lt;fffBBBB&quot;</span><span class="p">)</span>
+    <span class="n">f32</span> <span class="o">=</span> <span class="n">PackedElementFieldNumericType</span><span class="o">.</span><span class="n">Float32</span>
+    <span class="n">u32</span> <span class="o">=</span> <span class="n">PackedElementFieldNumericType</span><span class="o">.</span><span class="n">Uint32</span>
+
+    <span class="n">t</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+    <span class="n">points</span> <span class="o">=</span> <span class="p">[(</span><span class="n">x</span> <span class="o">+</span> <span class="n">cos</span><span class="p">(</span><span class="n">t</span> <span class="o">+</span> <span class="n">y</span> <span class="o">/</span> <span class="mi">5</span><span class="p">),</span> <span class="n">y</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">20</span><span class="p">)</span> <span class="k">for</span> <span class="n">y</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">20</span><span class="p">)]</span>
+    <span class="n">buffer</span> <span class="o">=</span> <span class="nb">bytearray</span><span class="p">(</span><span class="n">point_struct</span><span class="o">.</span><span class="n">size</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">points</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">point</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">points</span><span class="p">):</span>
+        <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span> <span class="o">=</span> <span class="n">point</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="mi">255</span> <span class="o">*</span> <span class="p">(</span><span class="mf">0.5</span> <span class="o">+</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">x</span> <span class="o">/</span> <span class="mi">20</span><span class="p">))</span>
+        <span class="n">g</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="mi">255</span> <span class="o">*</span> <span class="n">y</span> <span class="o">/</span> <span class="mi">20</span><span class="p">)</span>
+        <span class="n">b</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="mi">255</span> <span class="o">*</span> <span class="p">(</span><span class="mf">0.5</span> <span class="o">+</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">sin</span><span class="p">(</span><span class="n">t</span><span class="p">)))</span>
+        <span class="n">a</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="mi">255</span> <span class="o">*</span> <span class="p">(</span><span class="mf">0.5</span> <span class="o">+</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">((</span><span class="n">x</span> <span class="o">/</span> <span class="mi">20</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">y</span> <span class="o">/</span> <span class="mi">20</span><span class="p">))))</span>
+        <span class="n">point_struct</span><span class="o">.</span><span class="n">pack_into</span><span class="p">(</span><span class="n">buffer</span><span class="p">,</span> <span class="n">i</span> <span class="o">*</span> <span class="n">point_struct</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">g</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">a</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">PointCloud</span><span class="p">(</span>
+        <span class="n">frame_id</span><span class="o">=</span><span class="s2">&quot;points&quot;</span><span class="p">,</span>
+        <span class="n">pose</span><span class="o">=</span><span class="n">Pose</span><span class="p">(</span>
+            <span class="n">position</span><span class="o">=</span><span class="n">Vector3</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">z</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span>
+            <span class="n">orientation</span><span class="o">=</span><span class="n">Quaternion</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">z</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">w</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>
+        <span class="p">),</span>
+        <span class="n">point_stride</span><span class="o">=</span><span class="mi">16</span><span class="p">,</span>  <span class="c1"># 4 fields * 4 bytes</span>
+        <span class="n">fields</span><span class="o">=</span><span class="p">[</span>
+            <span class="n">PackedElementField</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="n">offset</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="n">f32</span><span class="p">),</span>
+            <span class="n">PackedElementField</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;y&quot;</span><span class="p">,</span> <span class="n">offset</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="n">f32</span><span class="p">),</span>
+            <span class="n">PackedElementField</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;z&quot;</span><span class="p">,</span> <span class="n">offset</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="n">f32</span><span class="p">),</span>
+            <span class="n">PackedElementField</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;rgba&quot;</span><span class="p">,</span> <span class="n">offset</span><span class="o">=</span><span class="mi">12</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="n">u32</span><span class="p">),</span>
+        <span class="p">],</span>
+        <span class="n">data</span><span class="o">=</span><span class="nb">bytes</span><span class="p">(</span><span class="n">buffer</span><span class="p">),</span>
+    <span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">euler_to_quaternion</span><span class="p">(</span><span class="n">roll</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">pitch</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">yaw</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Quaternion</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Convert Euler angles to a rotation quaternion</span>
+
+<span class="sd">    See e.g. https://danceswithcode.net/engineeringnotes/quaternions/quaternions.html</span>
+
+<span class="sd">    :param roll: rotation around X axis (radians)</span>
+<span class="sd">    :param pitch: rotation around Y axis (radians)</span>
+<span class="sd">    :param yaw: rotation around Z axis (radians)</span>
+<span class="sd">    :returns: a protobuf Quaternion</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">roll</span><span class="p">,</span> <span class="n">pitch</span><span class="p">,</span> <span class="n">yaw</span> <span class="o">=</span> <span class="n">roll</span> <span class="o">*</span> <span class="mf">0.5</span><span class="p">,</span> <span class="n">pitch</span> <span class="o">*</span> <span class="mf">0.5</span><span class="p">,</span> <span class="n">yaw</span> <span class="o">*</span> <span class="mf">0.5</span>
+
+    <span class="n">sin_r</span><span class="p">,</span> <span class="n">cos_r</span> <span class="o">=</span> <span class="n">sin</span><span class="p">(</span><span class="n">roll</span><span class="p">),</span> <span class="n">cos</span><span class="p">(</span><span class="n">roll</span><span class="p">)</span>
+    <span class="n">sin_p</span><span class="p">,</span> <span class="n">cos_p</span> <span class="o">=</span> <span class="n">sin</span><span class="p">(</span><span class="n">pitch</span><span class="p">),</span> <span class="n">cos</span><span class="p">(</span><span class="n">pitch</span><span class="p">)</span>
+    <span class="n">sin_y</span><span class="p">,</span> <span class="n">cos_y</span> <span class="o">=</span> <span class="n">sin</span><span class="p">(</span><span class="n">yaw</span><span class="p">),</span> <span class="n">cos</span><span class="p">(</span><span class="n">yaw</span><span class="p">)</span>
+
+    <span class="n">w</span> <span class="o">=</span> <span class="n">cos_r</span> <span class="o">*</span> <span class="n">cos_p</span> <span class="o">*</span> <span class="n">cos_y</span> <span class="o">+</span> <span class="n">sin_r</span> <span class="o">*</span> <span class="n">sin_p</span> <span class="o">*</span> <span class="n">sin_y</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">sin_r</span> <span class="o">*</span> <span class="n">cos_p</span> <span class="o">*</span> <span class="n">cos_y</span> <span class="o">-</span> <span class="n">cos_r</span> <span class="o">*</span> <span class="n">sin_p</span> <span class="o">*</span> <span class="n">sin_y</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">cos_r</span> <span class="o">*</span> <span class="n">sin_p</span> <span class="o">*</span> <span class="n">cos_y</span> <span class="o">+</span> <span class="n">sin_r</span> <span class="o">*</span> <span class="n">cos_p</span> <span class="o">*</span> <span class="n">sin_y</span>
+    <span class="n">z</span> <span class="o">=</span> <span class="n">cos_r</span> <span class="o">*</span> <span class="n">cos_p</span> <span class="o">*</span> <span class="n">sin_y</span> <span class="o">-</span> <span class="n">sin_r</span> <span class="o">*</span> <span class="n">sin_p</span> <span class="o">*</span> <span class="n">cos_y</span>
+
+    <span class="k">return</span> <span class="n">Quaternion</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="n">y</span><span class="p">,</span> <span class="n">z</span><span class="o">=</span><span class="n">z</span><span class="p">,</span> <span class="n">w</span><span class="o">=</span><span class="n">w</span><span class="p">)</span>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">main</span><span class="p">()</span>
+</pre></div>
+</div>
+</section>
+<section id="write-to-an-mcap-file">
+<h2>Write to an MCAP file<a class="headerlink" href="#write-to-an-mcap-file" title="Link to this heading">¶</a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">argparse</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">inspect</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">foxglove</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">foxglove.channels</span><span class="w"> </span><span class="kn">import</span> <span class="n">LogChannel</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">foxglove.schemas</span><span class="w"> </span><span class="kn">import</span> <span class="n">Log</span><span class="p">,</span> <span class="n">LogLevel</span>
+
+<span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">()</span>
+<span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--path&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s2">&quot;output.mcap&quot;</span><span class="p">)</span>
+<span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+
+
+<span class="n">log_chan</span> <span class="o">=</span> <span class="n">LogChannel</span><span class="p">(</span><span class="n">topic</span><span class="o">=</span><span class="s2">&quot;/log1&quot;</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="c1"># Create a new mcap file at the given path for recording</span>
+    <span class="k">with</span> <span class="n">foxglove</span><span class="o">.</span><span class="n">open_mcap</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">path</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">):</span>
+            <span class="n">frame</span> <span class="o">=</span> <span class="n">inspect</span><span class="o">.</span><span class="n">currentframe</span><span class="p">()</span>
+            <span class="n">frameinfo</span> <span class="o">=</span> <span class="n">inspect</span><span class="o">.</span><span class="n">getframeinfo</span><span class="p">(</span><span class="n">frame</span><span class="p">)</span> <span class="k">if</span> <span class="n">frame</span> <span class="k">else</span> <span class="kc">None</span>
+
+            <span class="n">foxglove</span><span class="o">.</span><span class="n">log</span><span class="p">(</span>
+                <span class="s2">&quot;/log2&quot;</span><span class="p">,</span>
+                <span class="n">Log</span><span class="p">(</span>
+                    <span class="n">level</span><span class="o">=</span><span class="n">LogLevel</span><span class="o">.</span><span class="n">Info</span><span class="p">,</span>
+                    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;SDK example&quot;</span><span class="p">,</span>
+                    <span class="n">file</span><span class="o">=</span><span class="n">frameinfo</span><span class="o">.</span><span class="n">filename</span> <span class="k">if</span> <span class="n">frameinfo</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+                    <span class="n">line</span><span class="o">=</span><span class="n">frameinfo</span><span class="o">.</span><span class="n">lineno</span> <span class="k">if</span> <span class="n">frameinfo</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+                    <span class="n">message</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;message </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                <span class="p">),</span>
+            <span class="p">)</span>
+
+            <span class="c1"># Or use a typed channel directly to get better type checking</span>
+            <span class="n">log_chan</span><span class="o">.</span><span class="n">log</span><span class="p">(</span>
+                <span class="n">Log</span><span class="p">(</span>
+                    <span class="n">level</span><span class="o">=</span><span class="n">LogLevel</span><span class="o">.</span><span class="n">Info</span><span class="p">,</span>
+                    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;SDK example&quot;</span><span class="p">,</span>
+                    <span class="n">file</span><span class="o">=</span><span class="n">frameinfo</span><span class="o">.</span><span class="n">filename</span> <span class="k">if</span> <span class="n">frameinfo</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+                    <span class="n">line</span><span class="o">=</span><span class="n">frameinfo</span><span class="o">.</span><span class="n">lineno</span> <span class="k">if</span> <span class="n">frameinfo</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+                    <span class="n">message</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;message </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                <span class="p">),</span>
+            <span class="p">)</span>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">main</span><span class="p">()</span>
+</pre></div>
+</div>
+</section>
+<section id="logging-context">
+<h2>Logging context<a class="headerlink" href="#logging-context" title="Link to this heading">¶</a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">foxglove.schemas</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">foxglove</span><span class="w"> </span><span class="kn">import</span> <span class="n">Channel</span><span class="p">,</span> <span class="n">Context</span><span class="p">,</span> <span class="n">open_mcap</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">foxglove.channels</span><span class="w"> </span><span class="kn">import</span> <span class="n">SceneUpdateChannel</span>
+
+<span class="n">ctx1</span> <span class="o">=</span> <span class="n">Context</span><span class="p">()</span>
+<span class="n">ctx2</span> <span class="o">=</span> <span class="n">Context</span><span class="p">()</span>
+
+<span class="n">mcap1</span> <span class="o">=</span> <span class="n">open_mcap</span><span class="p">(</span><span class="s2">&quot;file1.mcap&quot;</span><span class="p">,</span> <span class="n">context</span><span class="o">=</span><span class="n">ctx1</span><span class="p">)</span>
+<span class="n">mcap2</span> <span class="o">=</span> <span class="n">open_mcap</span><span class="p">(</span><span class="s2">&quot;file2.mcap&quot;</span><span class="p">,</span> <span class="n">context</span><span class="o">=</span><span class="n">ctx2</span><span class="p">)</span>
+
+<span class="n">foo</span> <span class="o">=</span> <span class="n">SceneUpdateChannel</span><span class="p">(</span><span class="s2">&quot;/foo&quot;</span><span class="p">,</span> <span class="n">context</span><span class="o">=</span><span class="n">ctx1</span><span class="p">)</span>
+<span class="n">bar</span> <span class="o">=</span> <span class="n">Channel</span><span class="p">(</span><span class="s2">&quot;/bar&quot;</span><span class="p">,</span> <span class="n">context</span><span class="o">=</span><span class="n">ctx1</span><span class="p">)</span>
+<span class="n">baz</span> <span class="o">=</span> <span class="n">Channel</span><span class="p">(</span><span class="s2">&quot;/baz&quot;</span><span class="p">,</span> <span class="n">context</span><span class="o">=</span><span class="n">ctx2</span><span class="p">)</span>
+
+<span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">):</span>
+    <span class="c1"># Log /foo and /bar to mcap1, and /baz to mcap2</span>
+    <span class="n">foo</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">foxglove</span><span class="o">.</span><span class="n">schemas</span><span class="o">.</span><span class="n">SceneUpdate</span><span class="p">())</span>
+    <span class="n">bar</span><span class="o">.</span><span class="n">log</span><span class="p">({</span><span class="s2">&quot;hello&quot;</span><span class="p">:</span> <span class="s2">&quot;world&quot;</span><span class="p">})</span>
+    <span class="n">baz</span><span class="o">.</span><span class="n">log</span><span class="p">({</span><span class="s2">&quot;hello&quot;</span><span class="p">:</span> <span class="s2">&quot;world&quot;</span><span class="p">})</span>
+    <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.1</span><span class="p">)</span>
+
+<span class="n">mcap1</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+<span class="n">mcap2</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</pre></div>
+</div>
+</section>
+<section id="stream-an-mcap-file-to-foxglove">
+<h2>Stream an MCAP file to Foxglove<a class="headerlink" href="#stream-an-mcap-file-to-foxglove" title="Link to this heading">¶</a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">argparse</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">foxglove</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">mcap</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">mcap.reader</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">mcap.records</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">foxglove</span><span class="w"> </span><span class="kn">import</span> <span class="n">Channel</span><span class="p">,</span> <span class="n">Schema</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">foxglove.websocket</span><span class="w"> </span><span class="kn">import</span> <span class="n">Capability</span><span class="p">,</span> <span class="n">WebSocketServer</span>
+
+<span class="n">channels</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Channel</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">():</span>
+    <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">()</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--file&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--port&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mi">8765</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--host&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s2">&quot;127.0.0.1&quot;</span><span class="p">)</span>
+    <span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+
+    <span class="n">file_name</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">file</span>
+
+    <span class="n">server</span> <span class="o">=</span> <span class="n">foxglove</span><span class="o">.</span><span class="n">start_server</span><span class="p">(</span>
+        <span class="n">name</span><span class="o">=</span><span class="n">file_name</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">port</span><span class="p">,</span> <span class="n">host</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">host</span><span class="p">,</span> <span class="n">capabilities</span><span class="o">=</span><span class="p">[</span><span class="n">Capability</span><span class="o">.</span><span class="n">Time</span><span class="p">]</span>
+    <span class="p">)</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="n">stream_until_done</span><span class="p">(</span><span class="n">file_name</span><span class="p">,</span> <span class="n">server</span><span class="p">)</span>
+
+            <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Looping&quot;</span><span class="p">)</span>
+            <span class="n">server</span><span class="o">.</span><span class="n">clear_session</span><span class="p">()</span>
+
+    <span class="k">except</span> <span class="ne">KeyboardInterrupt</span><span class="p">:</span>
+        <span class="n">server</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">stream_until_done</span><span class="p">(</span><span class="n">file_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">server</span><span class="p">:</span> <span class="n">WebSocketServer</span><span class="p">):</span>
+    <span class="n">tracker</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">TimeTracker</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file_name</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="n">reader</span> <span class="o">=</span> <span class="n">mcap</span><span class="o">.</span><span class="n">reader</span><span class="o">.</span><span class="n">make_reader</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">mcap_schema</span><span class="p">,</span> <span class="n">mcap_chan</span><span class="p">,</span> <span class="n">mcap_msg</span> <span class="ow">in</span> <span class="n">reader</span><span class="o">.</span><span class="n">iter_messages</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">tracker</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">tracker</span> <span class="o">=</span> <span class="n">new_time_tracker</span><span class="p">(</span><span class="n">mcap_msg</span><span class="p">)</span>
+
+            <span class="n">tracker</span><span class="o">.</span><span class="n">sleep_until</span><span class="p">(</span><span class="n">mcap_msg</span><span class="o">.</span><span class="n">log_time</span><span class="p">)</span>
+
+            <span class="n">notify_time</span> <span class="o">=</span> <span class="n">tracker</span><span class="o">.</span><span class="n">notify</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">notify_time</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">server</span><span class="o">.</span><span class="n">broadcast_time</span><span class="p">(</span><span class="n">tracker</span><span class="o">.</span><span class="n">_now_ns</span><span class="p">)</span>
+
+            <span class="n">channel</span> <span class="o">=</span> <span class="n">get_channel</span><span class="p">(</span><span class="n">mcap_schema</span><span class="p">,</span> <span class="n">mcap_chan</span><span class="p">)</span>
+            <span class="n">channel</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">mcap_msg</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">new_time_tracker</span><span class="p">(</span><span class="n">message</span><span class="p">:</span> <span class="n">mcap</span><span class="o">.</span><span class="n">records</span><span class="o">.</span><span class="n">Message</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">TimeTracker</span><span class="p">(</span><span class="n">offset_ns</span><span class="o">=</span><span class="n">message</span><span class="o">.</span><span class="n">log_time</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">get_channel</span><span class="p">(</span>
+    <span class="n">mcap_schema</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">mcap</span><span class="o">.</span><span class="n">records</span><span class="o">.</span><span class="n">Schema</span><span class="p">],</span> <span class="n">mcap_channel</span><span class="p">:</span> <span class="n">mcap</span><span class="o">.</span><span class="n">records</span><span class="o">.</span><span class="n">Channel</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Channel</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return a Channel we can log to, based on records seen in the mcap.</span>
+<span class="sd">    Channels are stored based on topic name.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">mcap_channel</span><span class="o">.</span><span class="n">topic</span> <span class="ow">in</span> <span class="n">channels</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">channels</span><span class="p">[</span><span class="n">mcap_channel</span><span class="o">.</span><span class="n">topic</span><span class="p">]</span>
+
+    <span class="n">channels</span><span class="p">[</span><span class="n">mcap_channel</span><span class="o">.</span><span class="n">topic</span><span class="p">]</span> <span class="o">=</span> <span class="n">Channel</span><span class="p">(</span>
+        <span class="n">topic</span><span class="o">=</span><span class="n">mcap_channel</span><span class="o">.</span><span class="n">topic</span><span class="p">,</span>
+        <span class="n">message_encoding</span><span class="o">=</span><span class="n">mcap_channel</span><span class="o">.</span><span class="n">message_encoding</span><span class="p">,</span>
+        <span class="n">schema</span><span class="o">=</span><span class="p">(</span>
+            <span class="kc">None</span>
+            <span class="k">if</span> <span class="n">mcap_schema</span> <span class="ow">is</span> <span class="kc">None</span>
+            <span class="k">else</span> <span class="n">Schema</span><span class="p">(</span>
+                <span class="n">name</span><span class="o">=</span><span class="n">mcap_schema</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                <span class="n">encoding</span><span class="o">=</span><span class="n">mcap_schema</span><span class="o">.</span><span class="n">encoding</span><span class="p">,</span>
+                <span class="n">data</span><span class="o">=</span><span class="n">mcap_schema</span><span class="o">.</span><span class="n">data</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">channels</span><span class="p">[</span><span class="n">mcap_channel</span><span class="o">.</span><span class="n">topic</span><span class="p">]</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">TimeTracker</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Helper for keep tracking of the relationship between a file timestamp and the wallclock.</span>
+
+<span class="sd">    :param offset_ns: The offset from epoch to treat as &quot;now&quot;.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">offset_ns</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_offset_ns</span> <span class="o">=</span> <span class="n">offset_ns</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_now_ns</span> <span class="o">=</span> <span class="n">offset_ns</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_notify_interval_ns</span> <span class="o">=</span> <span class="mf">1e9</span> <span class="o">/</span> <span class="mi">60</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_notify_last</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time_ns</span><span class="p">()</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">sleep_until</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">offset_ns</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+        <span class="n">elapsed</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time_ns</span><span class="p">()</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_start</span>
+        <span class="n">delta</span> <span class="o">=</span> <span class="n">offset_ns</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_offset_ns</span> <span class="o">-</span> <span class="n">elapsed</span>
+        <span class="k">if</span> <span class="n">delta</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">delta</span> <span class="o">/</span> <span class="mf">1e9</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_now_ns</span> <span class="o">=</span> <span class="n">offset_ns</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">notify</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_now_ns</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_notify_last</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">_notify_interval_ns</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_notify_last</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_now_ns</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_now_ns</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">main</span><span class="p">()</span>
+</pre></div>
+</div>
+</section>
+<section id="parameter-server">
+<h2>Parameter server<a class="headerlink" href="#parameter-server" title="Link to this heading">¶</a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">This implements a parameter server for live visualization.</span>
+
+<span class="sd">View and edit parameters from a Parameters panel in Foxglove:</span>
+<span class="sd">https://docs.foxglove.dev/docs/visualization/panels/parameters</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">foxglove</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">foxglove.websocket</span><span class="w"> </span><span class="kn">import</span> <span class="n">Capability</span><span class="p">,</span> <span class="n">Client</span><span class="p">,</span> <span class="n">Parameter</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">ParameterStore</span><span class="p">(</span><span class="n">foxglove</span><span class="o">.</span><span class="n">websocket</span><span class="o">.</span><span class="n">ServerListener</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parameters</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Parameter</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="c1"># In this example our parameters are unique by name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parameters</span> <span class="o">=</span> <span class="p">{</span><span class="n">param</span><span class="o">.</span><span class="n">name</span><span class="p">:</span> <span class="n">param</span> <span class="k">for</span> <span class="n">param</span> <span class="ow">in</span> <span class="n">parameters</span><span class="p">}</span>
+        <span class="c1"># We can keep track of any parameters that are subscribed to</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">subscribed_param_names</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+
+    <span class="c1"># Foxglove server callback</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">on_get_parameters</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">client</span><span class="p">:</span> <span class="n">Client</span><span class="p">,</span>
+        <span class="n">param_names</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+        <span class="n">request_id</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Parameter</span><span class="p">]:</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;on_get_parameters: </span><span class="si">{</span><span class="n">param_names</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">client</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">request_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">param_names</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+        <span class="k">return</span> <span class="p">[</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">param_names</span> <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">parameters</span>
+        <span class="p">]</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">on_set_parameters</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">client</span><span class="p">:</span> <span class="n">Client</span><span class="p">,</span>
+        <span class="n">parameters</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Parameter</span><span class="p">],</span>
+        <span class="n">request_id</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Parameter</span><span class="p">]:</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;on_set_parameters: </span><span class="si">{</span><span class="n">parameters</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">client</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">request_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">changed_param</span> <span class="ow">in</span> <span class="n">parameters</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">changed_param</span><span class="o">.</span><span class="n">value</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="n">changed_param</span><span class="o">.</span><span class="n">name</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># Add or update</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="n">changed_param</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">changed_param</span>
+        <span class="k">return</span> <span class="n">parameters</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">on_parameters_subscribe</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">param_names</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="c1"># The SDK takes care of notifying the client of the current parameters;</span>
+        <span class="c1"># this is informational only.</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;New subscriptions for: </span><span class="si">{</span><span class="n">param_names</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">subscribed_param_names</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">param_names</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">on_parameters_unsubscribe</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">param_names</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="c1"># The SDK takes care of notifying the client of the current parameters;</span>
+        <span class="c1"># this is informational only.</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Remove subscriptions for: </span><span class="si">{</span><span class="n">param_names</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">subscribed_param_names</span><span class="o">.</span><span class="n">difference_update</span><span class="p">(</span><span class="n">param_names</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">foxglove</span><span class="o">.</span><span class="n">set_log_level</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+
+    <span class="n">initial_values</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Parameter</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">Parameter</span><span class="p">(</span><span class="s2">&quot;p0&quot;</span><span class="p">),</span>
+        <span class="n">Parameter</span><span class="p">(</span>
+            <span class="s2">&quot;p1&quot;</span><span class="p">,</span>
+            <span class="n">value</span><span class="o">=</span><span class="p">{</span>
+                <span class="s2">&quot;a&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+                <span class="s2">&quot;b&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+                <span class="s2">&quot;c&quot;</span><span class="p">:</span> <span class="s2">&quot;hello&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;arr&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="kc">True</span><span class="p">],</span>
+            <span class="p">},</span>
+        <span class="p">),</span>
+        <span class="n">Parameter</span><span class="p">(</span><span class="s2">&quot;p2&quot;</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+        <span class="n">Parameter</span><span class="p">(</span><span class="s2">&quot;p3&quot;</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="mf">0.124</span><span class="p">),</span>
+        <span class="n">Parameter</span><span class="p">(</span><span class="s2">&quot;p4&quot;</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">5</span><span class="p">]),</span>
+        <span class="n">Parameter</span><span class="p">(</span><span class="s2">&quot;p5&quot;</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="sa">b</span><span class="s2">&quot;data&quot;</span><span class="p">),</span>
+        <span class="n">Parameter</span><span class="p">(</span><span class="s2">&quot;p6&quot;</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="s2">&quot;hello&quot;</span><span class="p">),</span>
+    <span class="p">]</span>
+
+    <span class="n">store</span> <span class="o">=</span> <span class="n">ParameterStore</span><span class="p">(</span><span class="n">initial_values</span><span class="p">)</span>
+
+    <span class="n">websocket_server</span> <span class="o">=</span> <span class="n">foxglove</span><span class="o">.</span><span class="n">start_server</span><span class="p">(</span>
+        <span class="n">server_listener</span><span class="o">=</span><span class="n">store</span><span class="p">,</span>
+        <span class="n">capabilities</span><span class="o">=</span><span class="p">[</span>
+            <span class="c1"># &#39;Parameters&#39; is required for get/set callbacks</span>
+            <span class="n">Capability</span><span class="o">.</span><span class="n">Parameters</span><span class="p">,</span>
+        <span class="p">],</span>
+    <span class="p">)</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="n">websocket_server</span><span class="o">.</span><span class="n">publish_parameter_values</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">store</span><span class="o">.</span><span class="n">parameters</span><span class="o">.</span><span class="n">values</span><span class="p">()))</span>
+            <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">KeyboardInterrupt</span><span class="p">:</span>
+        <span class="n">websocket_server</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">main</span><span class="p">()</span>
+</pre></div>
+</div>
+</section>
+<section id="advertising-services">
+<h2>Advertising Services<a class="headerlink" href="#advertising-services" title="Link to this heading">¶</a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">This example demonstrates how to use the Foxglove WebSocket API to implement services which can be</span>
+<span class="sd">called from the Service Call panel in the Foxglove app.</span>
+
+<span class="sd">https://docs.foxglove.dev/docs/visualization/panels/service-call</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">argparse</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">foxglove</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">foxglove.websocket</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">Capability</span><span class="p">,</span>
+    <span class="n">Service</span><span class="p">,</span>
+    <span class="n">ServiceRequest</span><span class="p">,</span>
+    <span class="n">ServiceSchema</span><span class="p">,</span>
+<span class="p">)</span>
+
+
+<span class="c1"># A handler can also be a bare function.</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">logging_handler</span><span class="p">(</span>
+    <span class="n">request</span><span class="p">:</span> <span class="n">ServiceRequest</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bytes</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A handler for the service, adhering to the `ServiceHandler` type.</span>
+
+<span class="sd">    The handler should return a bytes object which will be sent back to the client.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">log_request</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+    <span class="k">return</span> <span class="sa">b</span><span class="s2">&quot;</span><span class="si">{}</span><span class="s2">&quot;</span>
+
+
+<span class="c1"># A handler can also be defined as any callable.</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">EchoService</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__call__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">request</span><span class="p">:</span> <span class="n">ServiceRequest</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bytes</span><span class="p">:</span>
+        <span class="n">log_request</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">request</span><span class="o">.</span><span class="n">payload</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">log_request</span><span class="p">(</span><span class="n">r</span><span class="p">:</span> <span class="n">ServiceRequest</span><span class="p">):</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;[</span><span class="si">{</span><span class="n">r</span><span class="o">.</span><span class="n">service_name</span><span class="si">}</span><span class="s2">] &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;client </span><span class="si">{</span><span class="n">r</span><span class="o">.</span><span class="n">client_id</span><span class="si">}</span><span class="s2"> call </span><span class="si">{</span><span class="n">r</span><span class="o">.</span><span class="n">call_id</span><span class="si">}</span><span class="s2">: &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;(</span><span class="si">{</span><span class="n">r</span><span class="o">.</span><span class="n">encoding</span><span class="si">}</span><span class="s2">): </span><span class="si">{</span><span class="n">r</span><span class="o">.</span><span class="n">payload</span><span class="si">!r}</span><span class="s2">&quot;</span>
+    <span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This example demonstrates how to use the Foxglove WebSocket API to implement services which can</span>
+<span class="sd">    be called from the Foxglove app.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">foxglove</span><span class="o">.</span><span class="n">set_log_level</span><span class="p">(</span><span class="s2">&quot;DEBUG&quot;</span><span class="p">)</span>
+
+    <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">()</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--port&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mi">8765</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--host&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s2">&quot;127.0.0.1&quot;</span><span class="p">)</span>
+    <span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+
+    <span class="n">logging_service</span> <span class="o">=</span> <span class="n">Service</span><span class="p">(</span>
+        <span class="n">name</span><span class="o">=</span><span class="s2">&quot;logging&quot;</span><span class="p">,</span>
+        <span class="n">schema</span><span class="o">=</span><span class="n">ServiceSchema</span><span class="p">(</span>
+            <span class="n">name</span><span class="o">=</span><span class="s2">&quot;logging-schema&quot;</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="n">handler</span><span class="o">=</span><span class="n">logging_handler</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">echo_service</span> <span class="o">=</span> <span class="n">Service</span><span class="p">(</span>
+        <span class="n">name</span><span class="o">=</span><span class="s2">&quot;echo&quot;</span><span class="p">,</span>
+        <span class="n">schema</span><span class="o">=</span><span class="n">ServiceSchema</span><span class="p">(</span>
+            <span class="n">name</span><span class="o">=</span><span class="s2">&quot;echo-schema&quot;</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="n">handler</span><span class="o">=</span><span class="n">EchoService</span><span class="p">(),</span>
+    <span class="p">)</span>
+
+    <span class="n">server</span> <span class="o">=</span> <span class="n">foxglove</span><span class="o">.</span><span class="n">start_server</span><span class="p">(</span>
+        <span class="n">name</span><span class="o">=</span><span class="s2">&quot;ws-services-example&quot;</span><span class="p">,</span>
+        <span class="n">port</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">port</span><span class="p">,</span>
+        <span class="n">host</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">host</span><span class="p">,</span>
+        <span class="n">capabilities</span><span class="o">=</span><span class="p">[</span><span class="n">Capability</span><span class="o">.</span><span class="n">Services</span><span class="p">],</span>
+        <span class="c1"># If publishing from Foxglove, add at least one supported encoding (json, ros1, or cdr).</span>
+        <span class="c1"># These examples use json.</span>
+        <span class="n">supported_encodings</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;json&quot;</span><span class="p">],</span>
+        <span class="c1"># The services to publish</span>
+        <span class="n">services</span><span class="o">=</span><span class="p">[</span><span class="n">echo_service</span><span class="p">,</span> <span class="n">logging_service</span><span class="p">],</span>
+    <span class="p">)</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="k">pass</span>
+    <span class="k">except</span> <span class="ne">KeyboardInterrupt</span><span class="p">:</span>
+        <span class="n">server</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">main</span><span class="p">()</span>
+</pre></div>
+</div>
+</section>
+<section id="asset-server">
+<h2>Asset server<a class="headerlink" href="#asset-server" title="Link to this heading">¶</a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">foxglove</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">asset_handler</span><span class="p">(</span><span class="n">uri</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bytes</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This will respond to &quot;package://&quot; asset requests from Foxglove by reading files from disk.</span>
+<span class="sd">    This example doesn&#39;t do any path validation or upward traversal prevention.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">asset</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="n">uri</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;package://&quot;</span><span class="p">):</span>
+        <span class="n">filepath</span> <span class="o">=</span> <span class="n">uri</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;package://&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">file</span><span class="p">:</span>
+                <span class="n">asset</span> <span class="o">=</span> <span class="n">file</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+        <span class="k">except</span> <span class="ne">FileNotFoundError</span><span class="p">:</span>
+            <span class="k">pass</span>
+
+    <span class="n">status</span> <span class="o">=</span> <span class="s2">&quot;OK&quot;</span> <span class="k">if</span> <span class="n">asset</span> <span class="k">else</span> <span class="s2">&quot;Not Found&quot;</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;asset_handler </span><span class="si">{</span><span class="n">status</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">uri</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">asset</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">foxglove</span><span class="o">.</span><span class="n">set_log_level</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+
+    <span class="n">server</span> <span class="o">=</span> <span class="n">foxglove</span><span class="o">.</span><span class="n">start_server</span><span class="p">(</span>
+        <span class="n">asset_handler</span><span class="o">=</span><span class="n">asset_handler</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="c1"># Send transforms for the model as needed, on a `FrameTransformsChannel`</span>
+            <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">except</span> <span class="ne">KeyboardInterrupt</span><span class="p">:</span>
+        <span class="n">server</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">main</span><span class="p">()</span>
+</pre></div>
+</div>
+</section>
+<section id="connection-graph">
+<h2>Connection Graph<a class="headerlink" href="#connection-graph" title="Link to this heading">¶</a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">foxglove</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">foxglove.websocket</span><span class="w"> </span><span class="kn">import</span> <span class="n">Capability</span><span class="p">,</span> <span class="n">ConnectionGraph</span><span class="p">,</span> <span class="n">ServerListener</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">SubscriptionWatcher</span><span class="p">(</span><span class="n">ServerListener</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A server listener that keeps track of whether any clients are subscribed to the connection graph</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">has_subscribers</span> <span class="o">=</span> <span class="kc">False</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">on_connection_graph_subscribe</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;on_connection_graph_subscribe&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">has_subscribers</span> <span class="o">=</span> <span class="kc">True</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">on_connection_graph_unsubscribe</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;on_connection_graph_unsubscribe&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">has_subscribers</span> <span class="o">=</span> <span class="kc">False</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">foxglove</span><span class="o">.</span><span class="n">set_log_level</span><span class="p">(</span><span class="s2">&quot;DEBUG&quot;</span><span class="p">)</span>
+
+    <span class="n">graph</span> <span class="o">=</span> <span class="n">ConnectionGraph</span><span class="p">()</span>
+    <span class="n">graph</span><span class="o">.</span><span class="n">set_published_topic</span><span class="p">(</span><span class="s2">&quot;/example-topic&quot;</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;1&quot;</span><span class="p">,</span> <span class="s2">&quot;2&quot;</span><span class="p">])</span>
+    <span class="n">graph</span><span class="o">.</span><span class="n">set_subscribed_topic</span><span class="p">(</span><span class="s2">&quot;/subscribed-topic&quot;</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;3&quot;</span><span class="p">,</span> <span class="s2">&quot;4&quot;</span><span class="p">])</span>
+    <span class="n">graph</span><span class="o">.</span><span class="n">set_advertised_service</span><span class="p">(</span><span class="s2">&quot;example-service&quot;</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;5&quot;</span><span class="p">,</span> <span class="s2">&quot;6&quot;</span><span class="p">])</span>
+
+    <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="n">graph</span><span class="p">)</span>
+
+    <span class="n">server</span> <span class="o">=</span> <span class="n">foxglove</span><span class="o">.</span><span class="n">start_server</span><span class="p">(</span>
+        <span class="n">server_listener</span><span class="o">=</span><span class="n">SubscriptionWatcher</span><span class="p">(),</span>
+        <span class="n">capabilities</span><span class="o">=</span><span class="p">[</span><span class="n">Capability</span><span class="o">.</span><span class="n">ConnectionGraph</span><span class="p">],</span>
+    <span class="p">)</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="n">server</span><span class="o">.</span><span class="n">publish_connection_graph</span><span class="p">(</span><span class="n">graph</span><span class="p">)</span>
+            <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">KeyboardInterrupt</span><span class="p">:</span>
+        <span class="n">server</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">main</span><span class="p">()</span>
+</pre></div>
+</div>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">Foxglove SDK</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Examples</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#quickstart">Quickstart</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#live-visualization">Live visualization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#write-to-an-mcap-file">Write to an MCAP file</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#logging-context">Logging context</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#stream-an-mcap-file-to-foxglove">Stream an MCAP file to Foxglove</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#parameter-server">Parameter server</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#advertising-services">Advertising Services</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#asset-server">Asset server</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#connection-graph">Connection Graph</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api/index.html">API Reference</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="index.html" title="previous chapter">Foxglove SDK documentation</a></li>
+      <li>Next: <a href="api/index.html" title="next chapter">API Reference</a></li>
+  </ul></li>
+</ul>
+</div>
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025, Foxglove.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 7.4.7</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 0.7.16</a>
+      
+      |
+      <a href="_sources/examples.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
