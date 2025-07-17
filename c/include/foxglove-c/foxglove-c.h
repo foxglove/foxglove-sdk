@@ -204,7 +204,8 @@ enum foxglove_parameter_value_tag
   : uint8_t
 #endif // __cplusplus
  {
-  FOXGLOVE_PARAMETER_VALUE_TAG_NUMBER,
+  FOXGLOVE_PARAMETER_VALUE_TAG_FLOAT64,
+  FOXGLOVE_PARAMETER_VALUE_TAG_INTEGER,
   FOXGLOVE_PARAMETER_VALUE_TAG_BOOLEAN,
   FOXGLOVE_PARAMETER_VALUE_TAG_STRING,
   FOXGLOVE_PARAMETER_VALUE_TAG_ARRAY,
@@ -301,6 +302,13 @@ typedef struct foxglove_string {
   size_t len;
 } foxglove_string;
 
+typedef uint64_t FoxgloveSinkId;
+
+typedef struct foxglove_client_metadata {
+  uint32_t id;
+  FoxgloveSinkId sink_id;
+} foxglove_client_metadata;
+
 typedef struct foxglove_client_channel {
   uint32_t id;
   const char *topic;
@@ -371,7 +379,8 @@ typedef struct foxglove_parameter_value_dict {
  * Storage for `FoxgloveParameterValue`.
  */
 typedef union foxglove_parameter_value_data {
-  double number;
+  double float64;
+  int64_t integer;
   bool boolean;
   struct foxglove_string string;
   struct foxglove_parameter_value_array array;
@@ -439,8 +448,12 @@ typedef struct foxglove_server_callbacks {
    * A user-defined value that will be passed to callback functions
    */
   const void *context;
-  void (*on_subscribe)(const void *context, uint64_t channel_id);
-  void (*on_unsubscribe)(const void *context, uint64_t channel_id);
+  void (*on_subscribe)(const void *context,
+                       uint64_t channel_id,
+                       struct foxglove_client_metadata client);
+  void (*on_unsubscribe)(const void *context,
+                         uint64_t channel_id,
+                         struct foxglove_client_metadata client);
   void (*on_client_advertise)(const void *context,
                               uint32_t client_id,
                               const struct foxglove_client_channel *channel);
@@ -2191,7 +2204,8 @@ void foxglove_channel_metadata_iter_free(struct foxglove_channel_metadata_iterat
 foxglove_error foxglove_channel_log(const struct foxglove_channel *channel,
                                     const uint8_t *data,
                                     size_t data_len,
-                                    const uint64_t *log_time);
+                                    const uint64_t *log_time,
+                                    FoxgloveSinkId sink_id);
 
 /**
  * Create a new context. This never fails.
@@ -3196,6 +3210,20 @@ foxglove_error foxglove_parameter_create_float64(struct foxglove_parameter **par
                                                  double value);
 
 /**
+ * Creates a new integer parameter.
+ *
+ * The value must be freed with `foxglove_parameter_free`, or by passing it to a consuming
+ * function such as `foxglove_parameter_array_push`.
+ *
+ * # Safety
+ * - `param` must be a valid pointer.
+ * - `name` must be a valid `foxglove_string`. This value is copied by this function.
+ */
+foxglove_error foxglove_parameter_create_integer(struct foxglove_parameter **param,
+                                                 struct foxglove_string name,
+                                                 int64_t value);
+
+/**
  * Creates a new boolean parameter.
  *
  * The value must be freed with `foxglove_parameter_free`, or by passing it to a consuming
@@ -3254,6 +3282,14 @@ foxglove_error foxglove_parameter_create_byte_array(struct foxglove_parameter **
 foxglove_error foxglove_parameter_create_float64_array(struct foxglove_parameter **param,
                                                        struct foxglove_string name,
                                                        const double *values,
+                                                       size_t values_len);
+
+/**
+ * Creates a new parameter which is an array of integer values.
+ */
+foxglove_error foxglove_parameter_create_integer_array(struct foxglove_parameter **param,
+                                                       struct foxglove_string name,
+                                                       const int64_t *values,
                                                        size_t values_len);
 
 /**
@@ -3324,12 +3360,20 @@ struct foxglove_parameter *foxglove_parameter_clone(const struct foxglove_parame
 void foxglove_parameter_free(struct foxglove_parameter *param);
 
 /**
- * Creates a new number parameter value.
+ * Creates a new float64 parameter value.
  *
  * The value must be freed with `foxglove_parameter_value_free`, or by passing it to a consuming
  * function such as `foxglove_parameter_create`.
  */
-struct foxglove_parameter_value *foxglove_parameter_value_create_number(double number);
+struct foxglove_parameter_value *foxglove_parameter_value_create_float64(double number);
+
+/**
+ * Creates a new integer parameter value.
+ *
+ * The value must be freed with `foxglove_parameter_value_free`, or by passing it to a consuming
+ * function such as `foxglove_parameter_create`.
+ */
+struct foxglove_parameter_value *foxglove_parameter_value_create_integer(int64_t integer);
 
 /**
  * Creates a new boolean parameter value.

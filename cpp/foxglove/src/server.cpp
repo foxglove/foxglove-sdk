@@ -29,22 +29,40 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
     callbacks = std::make_unique<WebSocketServerCallbacks>(std::move(options.callbacks));
     c_callbacks.context = callbacks.get();
     if (callbacks->onSubscribe) {
-      c_callbacks.on_subscribe = [](const void* context, uint64_t channel_id) {
+      c_callbacks.on_subscribe = [](
+                                   const void* context,
+                                   uint64_t channel_id,
+                                   const foxglove_client_metadata c_client_metadata
+                                 ) {
         try {
-          (static_cast<const WebSocketServerCallbacks*>(context))->onSubscribe(channel_id);
+          ClientMetadata client_metadata{
+            c_client_metadata.id,
+            c_client_metadata.sink_id == 0 ? std::nullopt
+                                           : std::make_optional<uint64_t>(c_client_metadata.sink_id)
+          };
+          (static_cast<const WebSocketServerCallbacks*>(context))
+            ->onSubscribe(channel_id, client_metadata);
         } catch (const std::exception& exc) {
           warn() << "onSubscribe callback failed: " << exc.what();
         }
       };
     }
     if (callbacks->onUnsubscribe) {
-      c_callbacks.on_unsubscribe = [](const void* context, uint64_t channel_id) {
-        try {
-          (static_cast<const WebSocketServerCallbacks*>(context))->onUnsubscribe(channel_id);
-        } catch (const std::exception& exc) {
-          warn() << "onUnsubscribe callback failed: " << exc.what();
-        }
-      };
+      c_callbacks.on_unsubscribe =
+        [](const void* context, uint64_t channel_id, foxglove_client_metadata c_client_metadata) {
+          try {
+            ClientMetadata client_metadata{
+              c_client_metadata.id,
+              c_client_metadata.sink_id == 0
+                ? std::nullopt
+                : std::make_optional<uint64_t>(c_client_metadata.sink_id)
+            };
+            (static_cast<const WebSocketServerCallbacks*>(context))
+              ->onUnsubscribe(channel_id, client_metadata);
+          } catch (const std::exception& exc) {
+            warn() << "onUnsubscribe callback failed: " << exc.what();
+          }
+        };
     }
     if (callbacks->onClientAdvertise) {
       c_callbacks.on_client_advertise =
@@ -242,7 +260,7 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
   foxglove_websocket_server* server = nullptr;
   foxglove_error error = foxglove_server_start(&c_options, &server);
   if (error != foxglove_error::FOXGLOVE_ERROR_OK || server == nullptr) {
-    return foxglove::unexpected(static_cast<FoxgloveError>(error));
+    return tl::unexpected(static_cast<FoxgloveError>(error));
   }
 
   return WebSocketServer(server, std::move(callbacks), std::move(fetch_asset));

@@ -102,7 +102,7 @@ struct ArrowPrimitive {
 /// @brief Camera calibration parameters
 struct CameraCalibration {
   /// @brief Timestamp of calibration data
-  std::optional<foxglove::Timestamp> timestamp;
+  std::optional<Timestamp> timestamp;
 
   /// @brief Frame of reference for the camera. The origin of the frame is the optical center of the
   /// camera. +x points to the right in the image, +y points down, and +z points into the plane of
@@ -201,7 +201,7 @@ struct Point2 {
 /// @brief A circle annotation on a 2D image
 struct CircleAnnotation {
   /// @brief Timestamp of circle
-  std::optional<foxglove::Timestamp> timestamp;
+  std::optional<Timestamp> timestamp;
 
   /// @brief Center of the circle in 2D image coordinates (pixels).
   /// @brief The coordinate uses the top-left corner of the top-left pixel of the image as the
@@ -224,7 +224,7 @@ struct CircleAnnotation {
 /// @brief A compressed image
 struct CompressedImage {
   /// @brief Timestamp of image
-  std::optional<foxglove::Timestamp> timestamp;
+  std::optional<Timestamp> timestamp;
 
   /// @brief Frame of reference for the image. The origin of the frame is the optical center of the
   /// camera. +x points to the right in the image, +y points down, and +z points into the plane of
@@ -243,7 +243,7 @@ struct CompressedImage {
 /// @brief A single frame of a compressed video bitstream
 struct CompressedVideo {
   /// @brief Timestamp of video frame
-  std::optional<foxglove::Timestamp> timestamp;
+  std::optional<Timestamp> timestamp;
 
   /// @brief Frame of reference for the video.
   /// @brief
@@ -330,7 +330,7 @@ struct CubePrimitive {
 /// @brief A transform between two reference frames in 3D space
 struct FrameTransform {
   /// @brief Timestamp of transform
-  std::optional<foxglove::Timestamp> timestamp;
+  std::optional<Timestamp> timestamp;
 
   /// @brief Name of the parent frame
   std::string parent_frame_id;
@@ -402,7 +402,7 @@ struct PackedElementField {
 /// @brief A 2D grid of data
 struct Grid {
   /// @brief Timestamp of grid
-  std::optional<foxglove::Timestamp> timestamp;
+  std::optional<Timestamp> timestamp;
 
   /// @brief Frame of reference
   std::string frame_id;
@@ -494,7 +494,7 @@ struct PointsAnnotation {
     LINE_LIST = 4,
   };
   /// @brief Timestamp of annotation
-  std::optional<foxglove::Timestamp> timestamp;
+  std::optional<Timestamp> timestamp;
 
   /// @brief Type of points annotation to draw
   PointsAnnotationType type;
@@ -521,7 +521,7 @@ struct PointsAnnotation {
 /// @brief A text label on a 2D image
 struct TextAnnotation {
   /// @brief Timestamp of annotation
-  std::optional<foxglove::Timestamp> timestamp;
+  std::optional<Timestamp> timestamp;
 
   /// @brief Bottom-left origin of the text label in 2D image coordinates (pixels).
   /// @brief The coordinate uses the top-left corner of the top-left pixel of the image as the
@@ -565,7 +565,7 @@ struct KeyValuePair {
 /// @brief A single scan from a planar laser range-finder
 struct LaserScan {
   /// @brief Timestamp of scan
-  std::optional<foxglove::Timestamp> timestamp;
+  std::optional<Timestamp> timestamp;
 
   /// @brief Frame of reference
   std::string frame_id;
@@ -657,7 +657,7 @@ struct LocationFix {
     KNOWN = 3,
   };
   /// @brief Timestamp of the message
-  std::optional<foxglove::Timestamp> timestamp;
+  std::optional<Timestamp> timestamp;
 
   /// @brief Frame for the sensor. Latitude and longitude readings are at the origin of the frame.
   std::string frame_id;
@@ -698,7 +698,7 @@ struct Log {
     FATAL = 5,
   };
   /// @brief Timestamp of log message
-  std::optional<foxglove::Timestamp> timestamp;
+  std::optional<Timestamp> timestamp;
 
   /// @brief Log level
   LogLevel level;
@@ -727,7 +727,7 @@ struct SceneEntityDeletion {
   };
   /// @brief Timestamp of the deletion. Only matching entities earlier than this timestamp will be
   /// deleted.
-  std::optional<foxglove::Timestamp> timestamp;
+  std::optional<Timestamp> timestamp;
 
   /// @brief Type of deletion action to perform
   SceneEntityDeletionType type;
@@ -828,7 +828,7 @@ struct ModelPrimitive {
 /// all share the same frame of reference.
 struct SceneEntity {
   /// @brief Timestamp of the entity
-  std::optional<foxglove::Timestamp> timestamp;
+  std::optional<Timestamp> timestamp;
 
   /// @brief Frame of reference
   std::string frame_id;
@@ -840,7 +840,7 @@ struct SceneEntity {
   /// @brief Length of time (relative to `timestamp`) after which the entity should be automatically
   /// removed. Zero value indicates the entity should remain visible until it is replaced or
   /// deleted.
-  std::optional<foxglove::Duration> lifetime;
+  std::optional<Duration> lifetime;
 
   /// @brief Whether the entity should keep its location in the fixed frame (false) or follow the
   /// frame specified in `frame_id` as it moves relative to the fixed frame (true)
@@ -887,7 +887,7 @@ struct SceneUpdate {
 /// information like normals, intensity, etc.
 struct PointCloud {
   /// @brief Timestamp of point cloud
-  std::optional<foxglove::Timestamp> timestamp;
+  std::optional<Timestamp> timestamp;
 
   /// @brief Frame of reference
   std::string frame_id;
@@ -910,7 +910,7 @@ struct PointCloud {
 /// @brief A timestamped pose for an object or reference frame in 3D space
 struct PoseInFrame {
   /// @brief Timestamp of pose
-  std::optional<foxglove::Timestamp> timestamp;
+  std::optional<Timestamp> timestamp;
 
   /// @brief Frame of reference for pose position and orientation
   std::string frame_id;
@@ -922,7 +922,7 @@ struct PoseInFrame {
 /// @brief An array of timestamped poses for an object or reference frame in 3D space
 struct PosesInFrame {
   /// @brief Timestamp of pose
-  std::optional<foxglove::Timestamp> timestamp;
+  std::optional<Timestamp> timestamp;
 
   /// @brief Frame of reference for pose position and orientation
   std::string frame_id;
@@ -934,7 +934,7 @@ struct PosesInFrame {
 /// @brief A single block of an audio bitstream
 struct RawAudio {
   /// @brief Timestamp of the start of the audio block
-  std::optional<foxglove::Timestamp> timestamp;
+  std::optional<Timestamp> timestamp;
 
   /// @brief Audio data. The samples in the data must be interleaved and little-endian
   std::vector<std::byte> data;
@@ -952,7 +952,7 @@ struct RawAudio {
 /// @brief A raw image
 struct RawImage {
   /// @brief Timestamp of image
-  std::optional<foxglove::Timestamp> timestamp;
+  std::optional<Timestamp> timestamp;
 
   /// @brief Frame of reference for the image. The origin of the frame is the optical center of the
   /// camera. +x points to the right in the image, +y points down, and +z points into the plane of

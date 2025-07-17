@@ -45,6 +45,8 @@ mod tests {
     fn message() -> SetParameters {
         SetParameters::new([
             Parameter::empty("empty"),
+            Parameter::integer("int", 123),
+            Parameter::integer_array("int[]", [123, 456]),
             Parameter::float64("f64", 1.23),
             Parameter::float64_array("f64[]", [1.23, 4.56]),
             Parameter::string("str", "hello"),

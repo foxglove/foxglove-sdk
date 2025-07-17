@@ -456,14 +456,15 @@ impl ConnectedClient {
             );
             channel_ids.push(channel.id());
 
+            // Propagate client subscription requests to the context.
+            if let Some(context) = self.context.upgrade() {
+                context.subscribe_channels(self.sink_id, &[channel.id()]);
+            }
+
+            // Call the on_subscribe callback if one is registered
             if let Some(handler) = server.listener() {
                 handler.on_subscribe(Client::new(self), channel.as_ref().into());
             }
-        }
-
-        // Propagate client subscription requests to the context.
-        if let Some(context) = self.context.upgrade() {
-            context.subscribe_channels(self.sink_id, &channel_ids);
         }
     }
 

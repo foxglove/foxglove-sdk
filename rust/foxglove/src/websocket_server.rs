@@ -285,18 +285,13 @@ impl WebSocketServerHandle {
 
     /// Publishes a status message to all clients.
     ///
-    /// For more information, refer to the [Status][status] message specification.
-    ///
-    /// [status]: https://github.com/foxglove/ws-protocol/blob/main/docs/spec.md#status
+    /// This can be used to communicate information, warnings, and errors to the Foxglove app. An
+    /// ID may be included in the status to later remove it by referencing that ID.
     pub fn publish_status(&self, status: Status) {
         self.0.publish_status(status);
     }
 
     /// Removes status messages by id from all clients.
-    ///
-    /// For more information, refer to the [Remove Status][remove-status] message specification.
-    ///
-    /// [remove-status]: https://github.com/foxglove/ws-protocol/blob/main/docs/spec.md#remove-status
     pub fn remove_status(&self, status_ids: Vec<String>) {
         self.0.remove_status(status_ids);
     }

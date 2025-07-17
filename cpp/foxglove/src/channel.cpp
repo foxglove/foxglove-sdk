@@ -40,7 +40,7 @@ FoxgloveResult<RawChannel> RawChannel::create(
     &channel
   );
   if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
-    return foxglove::unexpected(FoxgloveError(error));
+    return tl::unexpected(FoxgloveError(error));
   }
   return RawChannel(channel);
 }
@@ -106,10 +106,23 @@ std::optional<std::map<std::string, std::string>> RawChannel::metadata() const n
 FoxgloveError RawChannel::log(
   const std::byte* data, size_t data_len, std::optional<uint64_t> log_time
 ) noexcept {
+  return log_(data, data_len, log_time, std::nullopt);
+}
+
+/// @cond foxglove_internal
+FoxgloveError RawChannel::log_(
+  const std::byte* data, size_t data_len, std::optional<uint64_t> log_time,
+  std::optional<uint64_t> sink_id
+) noexcept {
   foxglove_error error = foxglove_channel_log(
-    impl_.get(), reinterpret_cast<const uint8_t*>(data), data_len, log_time ? &*log_time : nullptr
+    impl_.get(),
+    reinterpret_cast<const uint8_t*>(data),
+    data_len,
+    log_time ? &*log_time : nullptr,
+    sink_id ? *sink_id : 0
   );
   return FoxgloveError(error);
 }
+/// @endcond
 
 }  // namespace foxglove

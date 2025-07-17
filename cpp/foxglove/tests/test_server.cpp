@@ -254,16 +254,18 @@ TEST_CASE("Subscribe and unsubscribe callbacks") {
   std::unique_lock lock{mutex};
 
   foxglove::WebSocketServerCallbacks callbacks;
-  callbacks.onSubscribe = [&](uint64_t channel_id) {
-    std::scoped_lock lock{mutex};
-    subscribe_calls.push_back(channel_id);
-    cv.notify_all();
-  };
-  callbacks.onUnsubscribe = [&](uint64_t channel_id) {
-    std::scoped_lock lock{mutex};
-    unsubscribe_calls.push_back(channel_id);
-    cv.notify_all();
-  };
+  callbacks.onSubscribe =
+    [&](uint64_t channel_id, const foxglove::ClientMetadata& _ [[maybe_unused]]) {
+      std::scoped_lock lock{mutex};
+      subscribe_calls.push_back(channel_id);
+      cv.notify_all();
+    };
+  callbacks.onUnsubscribe =
+    [&](uint64_t channel_id, const foxglove::ClientMetadata& _ [[maybe_unused]]) {
+      std::scoped_lock lock{mutex};
+      unsubscribe_calls.push_back(channel_id);
+      cv.notify_all();
+    };
   auto server = startServer(context, {}, std::move(callbacks));
 
   foxglove::Schema schema;
