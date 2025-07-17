@@ -22,3 +22,5 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: make -C ros docker-build-${{ matrix.ros_distribution }}
+      - run: docker run --rm foxglove-sdk-ros-${{ matrix.ros_distribution }} make build
+      - run: docker run --rm foxglove-sdk-ros-${{ matrix.ros_distribution }} make test

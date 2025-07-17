@@ -19,5 +19,3 @@ COPY --chown=$USERNAME:$USERNAME . /sdk
 WORKDIR /sdk/ros
 
 RUN make deps
-# RUN make build
-# RUN make test
