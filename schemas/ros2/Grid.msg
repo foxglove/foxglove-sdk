@@ -27,5 +27,8 @@ uint32 cell_stride
 # Fields in `data`. `red`, `green`, `blue`, and `alpha` are optional for customizing the grid's color.
 foxglove_msgs/PackedElementField[] fields
 
-# Grid cell data, interpreted using `fields`, in row-major (y-major) order — values fill each row from left to right along the X axis, with rows ordered from top to bottom along the Y axis, starting at the bottom-left corner when viewed from +Z looking towards -Z with identity orientations
+# Grid cell data, interpreted using `fields`, in row-major (y-major) order.
+# For the data element starting at byte offset offset, the coordinates of its corner closest to the origin will be:
+#  y = (i / cell_stride) % row_stride
+#  x = i % cell_stride
 uint8[] data

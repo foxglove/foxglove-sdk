@@ -930,7 +930,7 @@ export const Grid = {
     "data": {
       "type": "string",
       "contentEncoding": "base64",
-      "description": "Grid cell data, interpreted using `fields`, in row-major (y-major) order — values fill each row from left to right along the X axis, with rows ordered from top to bottom along the Y axis, starting at the bottom-left corner when viewed from +Z looking towards -Z with identity orientations"
+      "description": "Grid cell data, interpreted using `fields`, in row-major (y-major) order.\n For the data element starting at byte offset offset, the coordinates of its corner closest to the origin will be:\n y = (i / cell_stride) % row_stride\n x = i % cell_stride"
     }
   }
 };
@@ -1128,7 +1128,7 @@ export const Grid3D = {
     "data": {
       "type": "string",
       "contentEncoding": "base64",
-      "description": "Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order — values fill each row from left to right along the X axis, with rows ordered from top to bottom along the Y axis, starting at the bottom-left corner when viewed from +Z looking towards -Z with identity orientations"
+      "description": "Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order.\n For the data element starting at byte offset offset, the coordinates of its corner closest to the origin will be:\n z = (i / (row_stride * cell_stride)) % slice_stride\n y = (i / cell_stride) % row_stride\n x = i % cell_stride"
     }
   }
 };
@@ -5391,4 +5391,3 @@ export const Vector3 = {
     }
   }
 };
-

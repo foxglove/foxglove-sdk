@@ -427,10 +427,10 @@ struct Grid {
   /// grid's color.
   std::vector<PackedElementField> fields;
 
-  /// @brief Grid cell data, interpreted using `fields`, in row-major (y-major) order — values fill
-  /// each row from left to right along the X axis, with rows ordered from top to bottom along the Y
-  /// axis, starting at the bottom-left corner when viewed from +Z looking towards -Z with identity
-  /// orientations
+  /// @brief Grid cell data, interpreted using `fields`, in row-major (y-major) order.
+  /// For the data element starting at byte offset offset, the coordinates of its corner closest to the origin will be:
+  ///  y = (i / cell_stride) % row_stride
+  ///  x = i % cell_stride
   std::vector<std::byte> data;
 };
 
@@ -468,10 +468,11 @@ struct Grid3D {
   /// grid's color.
   std::vector<PackedElementField> fields;
 
-  /// @brief Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order —
-  /// values fill each row from left to right along the X axis, with rows ordered from top to bottom
-  /// along the Y axis, starting at the bottom-left corner when viewed from +Z looking towards -Z
-  /// with identity orientations
+  /// @brief Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order.
+  /// For the data element starting at byte offset offset, the coordinates of its corner closest to the origin will be:
+  ///  z = (i / (row_stride * cell_stride)) % slice_stride
+  ///  y = (i / cell_stride) % row_stride
+  ///  x = i % cell_stride
   std::vector<std::byte> data;
 };
 
