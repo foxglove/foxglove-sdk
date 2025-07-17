@@ -1089,9 +1089,9 @@ bytes
 <td>
 
 Grid cell data, interpreted using `fields`, in row-major (y-major) order.
-For the data element starting at byte offset offset, the coordinates of its corner closest to the origin will be:
-  - y = (i / cell_stride) % row_stride
-  - x = i % cell_stride
+ For the data element starting at byte offset offset, the coordinates of its corner closest to the origin will be:
+ y = (i / cell_stride) % row_stride
+ x = i % cell_stride
 
 </td>
 </tr>
@@ -1247,10 +1247,10 @@ bytes
 <td>
 
 Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order.
-For the data element starting at byte offset offset, the coordinates of its corner closest to the origin will be:
-  - z = (i / (row_stride * cell_stride)) % slice_stride
-  - y = (i / cell_stride) % row_stride
-  - x = i % cell_stride
+ For the data element starting at byte offset offset, the coordinates of its corner closest to the origin will be:
+ z = (i / (row_stride * cell_stride)) % slice_stride
+ y = (i / cell_stride) % row_stride
+ x = i % cell_stride
 
 </td>
 </tr>

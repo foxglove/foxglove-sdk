@@ -34,7 +34,7 @@ export type Grid = {
 
   /**
    * Grid cell data, interpreted using `fields`, in row-major (y-major) order.
-   * For the data element starting at byte offset offset, the coordinates of its corner closest to the origin will be:
+   *  For the data element starting at byte offset offset, the coordinates of its corner closest to the origin will be:
    *  y = (i / cell_stride) % row_stride
    *  x = i % cell_stride
    */
