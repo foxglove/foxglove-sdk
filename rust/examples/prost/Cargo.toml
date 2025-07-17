@@ -11,4 +11,4 @@ foxglove = { path = "../../foxglove", default-features = false }
 prost = "0.13.5"
 
 [build-dependencies]
-prost-build = "0.13.5"
+prost-build = "0.14.1"
