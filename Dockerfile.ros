@@ -3,13 +3,16 @@ FROM ros:$ROS_DISTRIBUTION-ros-base
 
 RUN apt-get update
 
-# switch to the existing ubuntu user
+# create ubuntu user if it doesn't exist (pre-jazzy)
 ENV USERNAME=ubuntu
+RUN id -u $USERNAME >/dev/null 2>&1 || useradd -m $USERNAME
+
+# switch to ubuntu user
 RUN echo "$USERNAME ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 USER $USERNAME
 RUN touch /home/$USERNAME/.sudo_as_admin_successful
 
-# run rosdep update as user
+# rosdep update must be run as user
 RUN rosdep update --include-eol-distros
 
 COPY --chown=$USERNAME:$USERNAME . /sdk
