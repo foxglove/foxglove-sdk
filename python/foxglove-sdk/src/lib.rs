@@ -229,7 +229,7 @@ fn open_mcap(
         McapWriter::with_options(options)
     };
     let handle = if let Some(channel_filter) = channel_filter {
-        handle.channel_filter(Arc::new(PySinkChannelFilter(Arc::new(channel_filter))))
+        handle.channel_filter(Arc::new(PySinkChannelFilter(channel_filter)))
     } else {
         handle
     };

@@ -402,7 +402,7 @@ pub fn start_server(
     }
 
     if let Some(channel_filter) = channel_filter {
-        server = server.channel_filter(Arc::new(PySinkChannelFilter(Arc::new(channel_filter))));
+        server = server.channel_filter(Arc::new(PySinkChannelFilter(channel_filter)));
     }
 
     if let Some(asset_handler) = asset_handler {

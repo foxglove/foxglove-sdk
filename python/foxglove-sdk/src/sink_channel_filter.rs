@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use foxglove::ChannelDescriptor;
 use pyo3::prelude::*;
 use pyo3::types::IntoPyDict;
@@ -64,12 +62,12 @@ impl PyChannelDescriptor {
 /// Return ``True`` to log the channel, or ``False`` to skip it. If the callback errors, then
 /// the channel will be skipped.
 #[pyclass(name = "SinkChannelFilter", module = "foxglove")]
-pub struct PySinkChannelFilter(pub Arc<Py<PyAny>>);
+pub struct PySinkChannelFilter(pub Py<PyAny>);
 
 impl foxglove::SinkChannelFilter for PySinkChannelFilter {
     fn should_subscribe(&self, channel: &ChannelDescriptor) -> bool {
-        let handler = self.0.clone();
         Python::with_gil(|py| {
+            let handler = self.0.clone_ref(py);
             let descriptor = PyChannelDescriptor(channel.clone());
             let result = handler
                 .bind(py)
