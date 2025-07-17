@@ -124,7 +124,8 @@ class ServerListener(Protocol):
         """
         Called by the server when a client sets parameters.
         Note that only `parameters` which have changed are included in the callback, but the return
-        value must include all parameters.
+        value must include all parameters. If a parameter that is unset is included in the return
+        value, it will not be published to clients.
 
         Requires :py:data:`Capability.Parameters`.
 

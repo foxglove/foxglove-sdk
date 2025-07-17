@@ -832,6 +832,52 @@ async fn test_client_advertising() {
 
 #[traced_test]
 #[tokio::test]
+async fn test_parameter_values_with_empty_values() {
+    let ctx = Context::new();
+    // NOTE: It's rare that a parameter will be manually initialized with an empty value like this. Per the
+    // spec, a non-valued parameter should be treated as if it were unset.
+    //
+    // This also comes up in practice because ROS will return a rclcpp::Parameter with the requested name and an empty value
+    // if a deleted parameter value is requested, or if a parameter is requested that has never been set.
+    //
+    // In this case, we don't want the server to send the parameter to the client and have it show up in the UI.
+    let parameters = vec![Parameter::empty("some-nonexistent-value")];
+
+    let listener = Arc::new(RecordingServerListener::new());
+    listener.set_parameters_get_result(parameters);
+
+    let server = create_server(
+        &ctx,
+        ServerOptions {
+            capabilities: Some(HashSet::from([Capability::Parameters])),
+            listener: Some(listener.clone()),
+            ..Default::default()
+        },
+    );
+
+    let addr = server
+        .start("127.0.0.1", 0)
+        .await
+        .expect("Failed to start server");
+
+    let mut client = WebSocketClient::connect(addr).await;
+    expect_recv!(client, ServerMessage::ServerInfo);
+
+    client
+        .send(&GetParameters::new(["some-nonexistent-value"]))
+        .await
+        .expect("Failed to request parameters");
+
+    let msg = expect_recv!(client, ServerMessage::ParameterValues);
+
+    // Expect the message to be an empty list
+    assert_eq!(msg, ParameterValues::new([]));
+
+    let _ = server.stop();
+}
+
+#[traced_test]
+#[tokio::test]
 async fn test_parameter_values() {
     let ctx = Context::new();
     let recording_listener = Arc::new(RecordingServerListener::new());

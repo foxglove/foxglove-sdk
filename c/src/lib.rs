@@ -374,7 +374,8 @@ pub struct FoxgloveServerCallbacks {
     /// `foxglove_parameter_array_create`. Ownership of this value is transferred to the callee, who
     /// is responsible for freeing it. A NULL return value is treated as an empty array.
     ///
-    /// All clients subscribed to updates for the returned parameters will be notified.
+    /// All clients subscribed to updates for the returned parameters will be notified. Note that if a
+    /// returned parameter is unset, it will not be published to clients.
     pub on_set_parameters: Option<
         unsafe extern "C" fn(
             context: *const c_void,

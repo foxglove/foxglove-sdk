@@ -482,11 +482,7 @@ impl ConnectedClient {
         if let Some(handler) = server.listener() {
             let parameters =
                 handler.on_get_parameters(Client::new(self), param_names, request_id.as_deref());
-            let mut msg = ParameterValues::new(parameters);
-            if let Some(id) = request_id {
-                msg = msg.with_id(id);
-            }
-            self.send_control_msg(&msg);
+            self.update_parameters(parameters, request_id);
         }
     }
 
@@ -504,10 +500,11 @@ impl ConnectedClient {
         let updated_parameters = if let Some(handler) = server.listener() {
             let updated =
                 handler.on_set_parameters(Client::new(self), parameters, request_id.as_deref());
+
             // Send all the updated_parameters back to the client if request_id is provided.
             // This is the behavior of the reference Python server implementation.
-            if let Some(id) = request_id {
-                self.send_control_msg(&ParameterValues::new(updated.clone()).with_id(id));
+            if request_id.is_some() {
+                self.update_parameters(updated.clone(), request_id);
             }
             updated
         } else {
@@ -519,8 +516,14 @@ impl ConnectedClient {
         server.publish_parameter_values(updated_parameters);
     }
 
-    pub fn update_parameters(&self, parameters: Vec<Parameter>) {
-        self.send_control_msg(&ParameterValues::new(parameters));
+    pub fn update_parameters(&self, parameters: Vec<Parameter>, request_id: Option<String>) {
+        // Filter out parameters that are not set
+        let mut msg = ParameterValues::new(parameters.into_iter().filter(|p| p.value.is_some()));
+        if let Some(id) = request_id {
+            msg = msg.with_id(id);
+        }
+
+        self.send_control_msg(&msg);
     }
 
     fn on_parameters_subscribe(&self, server: Arc<Server>, names: Vec<String>) {
