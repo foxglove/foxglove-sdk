@@ -1,0 +1,24 @@
+name: ROS
+
+on:
+  push:
+    branches: [main]
+    tags: ["**"]
+  pull_request: {}
+
+jobs:
+  ros:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        ros_distribution:
+          - humble
+          - iron
+          - jazzy
+          - kilted
+          - rolling
+    name: "ros (${{ matrix.ros_distribution }})"
+    steps:
+      - uses: actions/checkout@v4
+      - run: make -C ros docker-build-${{ matrix.ros_distribution }}

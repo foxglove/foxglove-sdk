@@ -1,0 +1,20 @@
+ARG ROS_DISTRIBUTION=rolling
+FROM ros:$ROS_DISTRIBUTION-ros-base
+
+RUN apt-get update
+
+# switch to the existing ubuntu user
+ENV USERNAME=ubuntu
+RUN echo "$USERNAME ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+USER $USERNAME
+RUN touch /home/$USERNAME/.sudo_as_admin_successful
+
+# run rosdep update as user
+RUN rosdep update --include-eol-distros
+
+COPY --chown=$USERNAME:$USERNAME . /sdk
+WORKDIR /sdk/ros
+
+RUN make deps
+# RUN make build
+# RUN make test
