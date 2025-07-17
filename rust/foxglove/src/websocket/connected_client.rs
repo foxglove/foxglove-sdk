@@ -518,12 +518,7 @@ impl ConnectedClient {
 
     pub fn update_parameters(&self, parameters: Vec<Parameter>, request_id: Option<String>) {
         // Filter out parameters that are not set
-        let parameters: Vec<_> = parameters
-            .into_iter()
-            .filter(|p| p.value.is_some())
-            .collect();
-
-        let mut msg = ParameterValues::new(parameters);
+        let mut msg = ParameterValues::new(parameters.into_iter().filter(|p| p.value.is_some()));
         if let Some(id) = request_id {
             msg = msg.with_id(id);
         }
