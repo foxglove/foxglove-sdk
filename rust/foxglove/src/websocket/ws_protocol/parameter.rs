@@ -62,7 +62,8 @@ pub struct Parameter {
     /// The parameter type.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub r#type: Option<ParameterType>,
-    /// The parameter value.
+    /// The parameter value. If None, the parameter is treated as unset/deleted, and will not
+    /// be published to clients.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub value: Option<ParameterValue>,
 }

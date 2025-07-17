@@ -455,7 +455,7 @@ impl Server {
 
             // Notify client.
             if !filtered.is_empty() {
-                client.update_parameters(filtered);
+                client.update_parameters(filtered, None);
             }
         }
     }

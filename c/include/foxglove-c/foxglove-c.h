@@ -499,7 +499,8 @@ typedef struct foxglove_server_callbacks {
    * `foxglove_parameter_array_create`. Ownership of this value is transferred to the callee, who
    * is responsible for freeing it. A NULL return value is treated as an empty array.
    *
-   * All clients subscribed to updates for the returned parameters will be notified.
+   * All clients subscribed to updates for the returned parameters will be notified. Note that if a
+   * returned parameter is unset, it will not be published to clients.
    */
   struct foxglove_parameter_array *(*on_set_parameters)(const void *context,
                                                         uint32_t client_id,
