@@ -54,7 +54,7 @@ Visit [Foxglove Docs](https://docs.foxglove.dev/) to get started.
 <tr>
 <td>
 
-[foxglove_msgs](./ros/foxglove_msgs)
+[foxglove_msgs](./ros/src/foxglove_msgs)
 
 </td>
 <td>

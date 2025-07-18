@@ -77,7 +77,7 @@ async function exec(command: string, args: string[], { cwd }: Pick<SpawnOptions,
 async function main({ clean }: { clean: boolean }) {
   const repoRoot = path.resolve(__dirname, "..");
   const outDir = path.join(repoRoot, "schemas");
-  const rosOutDir = path.join(repoRoot, "ros/foxglove_msgs");
+  const rosOutDir = path.join(repoRoot, "ros/src/foxglove_msgs");
   const typescriptTypesDir = path.join(repoRoot, "typescript/schemas/src/types");
 
   const pythonSdkRoot = path.resolve(repoRoot, "python", "foxglove-sdk");
