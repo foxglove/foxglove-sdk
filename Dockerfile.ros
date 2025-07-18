@@ -15,6 +15,6 @@ USER $USERNAME
 # rosdep update must run as user
 RUN rosdep update --include-eol-distros
 
-COPY --chown=$USER_UID:$USER_GID . /sdk
 WORKDIR /sdk/ros
+COPY --chown=$USER_UID:$USER_GID ./ros /sdk/ros
 RUN make deps
