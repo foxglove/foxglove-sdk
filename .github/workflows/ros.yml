@@ -21,6 +21,8 @@ jobs:
     name: "ros (${{ matrix.ros_distribution }})"
     steps:
       - uses: actions/checkout@v4
+        with:
+          lfs: true
 
       - name: Run make docker-build
         run: EXTRA_DOCKER_ARGS="--build-arg USER_UID=$(id -u) --build-arg USER_GID=$(id -g)" make docker-build-${{ matrix.ros_distribution }}
