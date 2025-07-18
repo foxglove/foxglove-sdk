@@ -3,6 +3,10 @@
 .PHONY: all
 all: deps build test
 
+.PHONY: clean
+clean:
+	rm -rf build install log
+
 .PHONY: deps
 deps:
 	rosdep install -y \
