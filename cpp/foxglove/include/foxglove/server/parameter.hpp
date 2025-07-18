@@ -27,9 +27,9 @@ enum class ParameterType : uint8_t {
   None,
   /// An array of bytes.
   ByteArray,
-  /// A decimal or integer value that can be represented as a `float64`.
+  /// A floating-point value that can be represented as a `float64`.
   Float64,
-  /// An array of decimal or integer values that can be represented as `float64`s.
+  /// An array of floating-point values that can be represented as `float64`s.
   Float64Array,
 };
 
@@ -45,7 +45,7 @@ public:
   /// @brief A dictionary of values, mapped by string.
   using Dict = std::map<std::string, ParameterValueView>;
   /// @brief A sum type representing the possible values.
-  using Value = std::variant<double, bool, std::string_view, Array, Dict>;
+  using Value = std::variant<double, bool, int64_t, std::string_view, Array, Dict>;
 
   /// @brief Creates a deep clone of this parameter value.
   [[nodiscard]] class ParameterValue clone() const;
@@ -128,6 +128,8 @@ class ParameterValue final {
 public:
   /// @brief Constructor for a floating point value.
   explicit ParameterValue(double value);
+  /// @brief Constructor for an integer value.
+  explicit ParameterValue(int64_t value);
   /// @brief Constructor for a boolean value.
   explicit ParameterValue(bool value);
   /// @brief Constructor for a string value.
@@ -388,6 +390,9 @@ template<>
 /// @tparam std::vector<double> Checks whether the parameter value is a vector of floating point
 /// values.
 
+/// @fn ParameterView::is<std::vector<int64_t>>()
+/// @tparam std::vector<int64_t> Checks whether the parameter value is a vector of integer values.
+
 /// @cond ignore-template-specializations
 /// @brief Checks whether the parameter value is a std::string_view.
 ///
@@ -420,6 +425,13 @@ template<>
 [[nodiscard]] inline bool ParameterView::is<std::vector<double>>() const noexcept {
   return this->isArray<double>();
 }
+
+/// @brief Checks whether the parameter value is a std::vector<int64_t>.
+template<>
+[[nodiscard]] inline bool ParameterView::is<std::vector<int64_t>>() const noexcept {
+  return this->isArray<int64_t>();
+}
+
 /// @endcond
 
 [[nodiscard]] inline bool ParameterView::isByteArray() const noexcept {
@@ -451,6 +463,17 @@ template<>
   return this->getArray<double>();
 }
 
+/// @brief Extracts the value as an array of integer values.
+///
+/// This method will throw an exception if the value is unset or is not an
+/// array of integer values. You can use
+/// `ParameterView::is<std::vector<int64_t>>()` to check that the type matches
+/// before calling this method.
+template<>
+[[nodiscard]] inline std::vector<int64_t> ParameterView::get() const {
+  return this->getArray<int64_t>();
+}
+
 /// @brief Extracts the value as an array of generic values.
 ///
 /// This method will throw an exception if the value is unset or is not an
@@ -476,6 +499,8 @@ public:
   explicit Parameter(std::string_view name);
   /// @brief Constructor for a floating point parameter.
   explicit Parameter(std::string_view name, double value);
+  /// @brief Constructor for an integer parameter.
+  explicit Parameter(std::string_view name, int64_t value);
   /// @brief Constructor for a boolean parameter.
   explicit Parameter(std::string_view name, bool value);
   /// @brief Constructor for a string parameter.
@@ -490,6 +515,8 @@ public:
       : Parameter(name, reinterpret_cast<const uint8_t*>(bytes.data()), bytes.size()) {}
   /// @brief Constructor for an array of floating point values.
   explicit Parameter(std::string_view name, const std::vector<double>& values);
+  /// @brief Constructor for an array of integer values.
+  explicit Parameter(std::string_view name, const std::vector<int64_t>& values);
   /// @brief Constructor for an dictionary parameter.
   explicit Parameter(std::string_view name, std::map<std::string, ParameterValue> values);
   /// @brief Constructor for a parameter from raw parts.

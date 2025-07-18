@@ -22,8 +22,9 @@ from ._foxglove_py.websocket import (
 ServiceHandler = Callable[["ServiceRequest"], bytes]
 AssetHandler = Callable[[str], Optional[bytes]]
 AnyParameterValue = Union[
+    ParameterValue.Integer,
     ParameterValue.Bool,
-    ParameterValue.Number,
+    ParameterValue.Float64,
     ParameterValue.String,
     ParameterValue.Array,
     ParameterValue.Dict,
@@ -31,6 +32,7 @@ AnyParameterValue = Union[
 AnyInnerParameterValue = Union[
     AnyParameterValue,
     bool,
+    int,
     float,
     str,
     List["AnyInnerParameterValue"],
@@ -122,7 +124,8 @@ class ServerListener(Protocol):
         """
         Called by the server when a client sets parameters.
         Note that only `parameters` which have changed are included in the callback, but the return
-        value must include all parameters.
+        value must include all parameters. If a parameter that is unset is included in the return
+        value, it will not be published to clients.
 
         Requires :py:data:`Capability.Parameters`.
 

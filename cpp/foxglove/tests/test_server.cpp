@@ -544,7 +544,6 @@ TEST_CASE("Parameter callbacks") {
       "op": "parameterValues",
       "id": "get-request",
       "parameters": [
-        { "name": "foo" },
         { "name": "bar", "value": "BAR" },
         { "name": "baz", "type": "float64", "value": 1.234 }
       ]
@@ -604,7 +603,6 @@ TEST_CASE("Parameter callbacks") {
       "op": "parameterValues",
       "id": "set-request",
       "parameters": [
-        { "name": "zip" },
         { "name": "bar", "type": "float64", "value": 99.99 },
         { "name": "bytes", "type": "byte_array", "value": "c2VjcmV0" }
       ]

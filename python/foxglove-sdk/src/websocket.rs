@@ -809,9 +809,9 @@ impl PyMessageSchema {
 pub enum PyParameterType {
     /// A byte array.
     ByteArray,
-    /// A decimal or integer value that can be represented as a `float64`.
+    /// A floating-point value that can be represented as a `float64`.
     Float64,
-    /// An array of decimal or integer values that can be represented as `float64`s.
+    /// An array of floating-point values that can be represented as `float64`s.
     Float64Array,
 }
 
@@ -839,8 +839,10 @@ impl From<foxglove::websocket::ParameterType> for PyParameterType {
 #[pyclass(name = "ParameterValue", module = "foxglove", eq)]
 #[derive(Clone, PartialEq)]
 pub enum PyParameterValue {
-    /// A decimal or integer value.
-    Number(f64),
+    /// An integer value.
+    Integer(i64),
+    /// A floating-point value.
+    Float64(f64),
     /// A boolean value.
     Bool(bool),
     /// A string value.
@@ -856,7 +858,8 @@ pub enum PyParameterValue {
 impl From<PyParameterValue> for foxglove::websocket::ParameterValue {
     fn from(value: PyParameterValue) -> Self {
         match value {
-            PyParameterValue::Number(n) => foxglove::websocket::ParameterValue::Number(n),
+            PyParameterValue::Integer(i) => foxglove::websocket::ParameterValue::Integer(i),
+            PyParameterValue::Float64(n) => foxglove::websocket::ParameterValue::Float64(n),
             PyParameterValue::Bool(b) => foxglove::websocket::ParameterValue::Bool(b),
             PyParameterValue::String(s) => foxglove::websocket::ParameterValue::String(s),
             PyParameterValue::Array(py_parameter_values) => {
@@ -874,7 +877,8 @@ impl From<PyParameterValue> for foxglove::websocket::ParameterValue {
 impl From<foxglove::websocket::ParameterValue> for PyParameterValue {
     fn from(value: foxglove::websocket::ParameterValue) -> Self {
         match value {
-            foxglove::websocket::ParameterValue::Number(n) => PyParameterValue::Number(n),
+            foxglove::websocket::ParameterValue::Integer(n) => PyParameterValue::Integer(n),
+            foxglove::websocket::ParameterValue::Float64(n) => PyParameterValue::Float64(n),
             foxglove::websocket::ParameterValue::Bool(b) => PyParameterValue::Bool(b),
             foxglove::websocket::ParameterValue::String(s) => PyParameterValue::String(s),
             foxglove::websocket::ParameterValue::Array(parameter_values) => {
@@ -980,7 +984,8 @@ impl<'py> IntoPyObject<'py> for ParameterValueConverter {
 
     fn into_pyobject(self, py: Python<'py>) -> Result<Self::Output, Self::Error> {
         match self.0 {
-            PyParameterValue::Number(v) => v.into_bound_py_any(py),
+            PyParameterValue::Integer(v) => v.into_bound_py_any(py),
+            PyParameterValue::Float64(v) => v.into_bound_py_any(py),
             PyParameterValue::Bool(v) => v.into_bound_py_any(py),
             PyParameterValue::String(v) => v.into_bound_py_any(py),
             PyParameterValue::Array(values) => {
@@ -1004,8 +1009,10 @@ impl<'py> FromPyObject<'py> for ParameterValueConverter {
             Ok(Self(val))
         } else if let Ok(val) = obj.extract::<bool>() {
             Ok(Self(PyParameterValue::Bool(val)))
+        } else if let Ok(val) = obj.extract::<i64>() {
+            Ok(Self(PyParameterValue::Integer(val)))
         } else if let Ok(val) = obj.extract::<f64>() {
-            Ok(Self(PyParameterValue::Number(val)))
+            Ok(Self(PyParameterValue::Float64(val)))
         } else if let Ok(val) = obj.extract::<String>() {
             Ok(Self(PyParameterValue::String(val)))
         } else if let Ok(list) = obj.downcast::<PyList>() {
@@ -1058,11 +1065,13 @@ impl<'py> FromPyObject<'py> for ParameterTypeValueConverter {
         if let Ok(val) = obj.extract::<ParameterValueConverter>() {
             let val = val.0;
             let (typ, val) = match val {
-                // If the value is a number, the type is float64.
-                PyParameterValue::Number(_) => (Some(PyParameterType::Float64), val),
+                // If the value is a float, the type is float64.
+                PyParameterValue::Float64(_) => (Some(PyParameterType::Float64), val),
                 // If the value is an array of numbers, then the type is float64 array.
                 PyParameterValue::Array(ref vec)
-                    if vec.iter().all(|v| matches!(v, PyParameterValue::Number(_))) =>
+                    if vec
+                        .iter()
+                        .all(|v| matches!(v, PyParameterValue::Float64(_))) =>
                 {
                     (Some(PyParameterType::Float64Array), val)
                 }

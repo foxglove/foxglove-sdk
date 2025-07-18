@@ -147,7 +147,7 @@ async fn update_parameters(server: &WebSocketServerHandle, _listener: Arc<ParamL
         interval.tick().await;
         let parameter = Parameter {
             name: "elapsed".to_string(),
-            value: Some(ParameterValue::Number(start.elapsed().as_secs_f64())),
+            value: Some(ParameterValue::Float64(start.elapsed().as_secs_f64())),
             r#type: Some(ParameterType::Float64),
         };
         server.publish_parameter_values(vec![parameter]);

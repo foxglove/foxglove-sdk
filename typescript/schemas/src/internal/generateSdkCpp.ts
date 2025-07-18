@@ -344,7 +344,7 @@ export function generateCppSchemas(schemas: FoxgloveMessageSchema[]): string {
       "    const foxglove_channel* channel = nullptr;",
       `    foxglove_error error = foxglove_channel_create_${snakeName}({topic.data(), topic.size()}, context.getInner(), &channel);`,
       "    if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {",
-      "      return foxglove::unexpected(FoxgloveError(error));",
+      "      return tl::unexpected(FoxgloveError(error));",
       "    }",
       `    return ${schema.name}Channel(ChannelUniquePtr(channel));`,
       "}\n",
