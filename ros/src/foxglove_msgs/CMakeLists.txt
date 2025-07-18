@@ -15,6 +15,14 @@ find_package(builtin_interfaces REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 
+# Copy .msg files from schemas/ros2
+file(GLOB _generated_ros2_schemas "${CMAKE_CURRENT_SOURCE_DIR}/../../../schemas/ros2/*")
+file(REMOVE_RECURSE msg)
+file(COPY
+  ${_generated_ros2_schemas}
+  DESTINATION "${CMAKE_CURRENT_SOURCE_DIR}/msg"
+)
+
 file(GLOB _all_msg_files RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" msg/*)
 message(STATUS "Using msg files: ${_all_msg_files}")
 if(NOT _all_msg_files)

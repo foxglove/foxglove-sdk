@@ -24,3 +24,4 @@ node_modules/
 /ros/build/
 /ros/install/
 /ros/log/
+/ros/src/foxglove_msgs/msg/

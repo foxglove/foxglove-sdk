@@ -77,7 +77,6 @@ async function exec(command: string, args: string[], { cwd }: Pick<SpawnOptions,
 async function main({ clean }: { clean: boolean }) {
   const repoRoot = path.resolve(__dirname, "..");
   const outDir = path.join(repoRoot, "schemas");
-  const rosOutDir = path.join(repoRoot, "ros/src/foxglove_msgs");
   const typescriptTypesDir = path.join(repoRoot, "typescript/schemas/src/types");
 
   const pythonSdkRoot = path.resolve(repoRoot, "python", "foxglove-sdk");
@@ -86,7 +85,6 @@ async function main({ clean }: { clean: boolean }) {
 
   await logProgress("Removing existing output directories", async () => {
     await rimraf(outDir);
-    await rimraf(path.join(rosOutDir, "msg"));
     await rimraf(typescriptTypesDir);
     await rimraf(path.join(repoRoot, "rust/foxglove/src/schemas"));
     await rimraf(pythonSdkGeneratedRoot);
@@ -127,7 +125,6 @@ async function main({ clean }: { clean: boolean }) {
 
   await logProgress("Generating ROS 2 msg files", async () => {
     await fs.mkdir(path.join(outDir, "ros2"), { recursive: true });
-    await fs.mkdir(path.join(rosOutDir, "msg"), { recursive: true });
     for (const schema of Object.values(foxgloveMessageSchemas)) {
       if (schema.rosEquivalent != undefined) {
         continue;
@@ -136,7 +133,6 @@ async function main({ clean }: { clean: boolean }) {
         rosVersion: 2,
       });
       await fs.writeFile(path.join(outDir, "ros2", `${schema.name}.msg`), msg);
-      await fs.writeFile(path.join(rosOutDir, "msg", `${schema.name}.msg`), msg);
     }
   });
 
