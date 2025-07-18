@@ -1,11 +1,9 @@
-
-
 .PHONY: all
 all: deps build test
 
 .PHONY: clean
 clean:
-	rm -rf build install log
+	rm -rf build install log src/foxglove_msgs/msg
 
 .PHONY: deps
 deps:
