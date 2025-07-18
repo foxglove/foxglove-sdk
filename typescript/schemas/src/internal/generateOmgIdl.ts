@@ -17,12 +17,9 @@ function primitiveToIdl(type: Exclude<FoxglovePrimitive, "time" | "duration">) {
   }
 }
 
-/**
- * For backwards compatibility, we use `Time` instead of `Timestamp`.
- */
 export function omgIdlSchemaName(schema: FoxgloveSchema): string {
-  if (schema.type === "message" && schema.name === "Timestamp") {
-    return "Time";
+  if (schema.type === "message" && schema.omgIdlEquivalent) {
+    return schema.omgIdlEquivalent;
   }
   return schema.name;
 }
@@ -61,13 +58,10 @@ export function generateOmgIdl(schema: FoxgloveSchema): string {
             imports.add(field.type.enum.name);
             break;
           case "nested":
-            if (field.type.schema.name === "Timestamp") {
-              // Legacy name for backwards compatibility.
-              fieldType = "Time";
-              imports.add("Time");
-            } else {
-              fieldType = omgIdlSchemaName(field.type.schema);
-              imports.add(omgIdlSchemaName(field.type.schema));
+            {
+              const schemaName = omgIdlSchemaName(field.type.schema);
+              fieldType = schemaName;
+              imports.add(schemaName);
             }
             break;
           case "primitive":
