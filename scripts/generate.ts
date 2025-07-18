@@ -86,8 +86,7 @@ async function main({ clean }: { clean: boolean }) {
 
   await logProgress("Removing existing output directories", async () => {
     await rimraf(outDir);
-    await rimraf(path.join(rosOutDir, "ros1"));
-    await rimraf(path.join(rosOutDir, "ros2"));
+    await rimraf(path.join(rosOutDir, "msg"));
     await rimraf(typescriptTypesDir);
     await rimraf(path.join(repoRoot, "rust/foxglove/src/schemas"));
     await rimraf(pythonSdkGeneratedRoot);
@@ -115,7 +114,6 @@ async function main({ clean }: { clean: boolean }) {
 
   await logProgress("Generating ROS 1 msg files", async () => {
     await fs.mkdir(path.join(outDir, "ros1"), { recursive: true });
-    await fs.mkdir(path.join(rosOutDir, "ros1"), { recursive: true });
     for (const schema of Object.values(foxgloveMessageSchemas)) {
       if (schema.rosEquivalent != undefined) {
         continue;
@@ -124,13 +122,12 @@ async function main({ clean }: { clean: boolean }) {
         rosVersion: 1,
       });
       await fs.writeFile(path.join(outDir, "ros1", `${schema.name}.msg`), msg);
-      await fs.writeFile(path.join(rosOutDir, "ros1", `${schema.name}.msg`), msg);
     }
   });
 
   await logProgress("Generating ROS 2 msg files", async () => {
     await fs.mkdir(path.join(outDir, "ros2"), { recursive: true });
-    await fs.mkdir(path.join(rosOutDir, "ros2"), { recursive: true });
+    await fs.mkdir(path.join(rosOutDir, "msg"), { recursive: true });
     for (const schema of Object.values(foxgloveMessageSchemas)) {
       if (schema.rosEquivalent != undefined) {
         continue;
@@ -139,7 +136,7 @@ async function main({ clean }: { clean: boolean }) {
         rosVersion: 2,
       });
       await fs.writeFile(path.join(outDir, "ros2", `${schema.name}.msg`), msg);
-      await fs.writeFile(path.join(rosOutDir, "ros2", `${schema.name}.msg`), msg);
+      await fs.writeFile(path.join(rosOutDir, "msg", `${schema.name}.msg`), msg);
     }
   });
 

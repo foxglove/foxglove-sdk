@@ -2,6 +2,10 @@
 Changelog for package foxglove_msgs
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Unreleased
+----------
+* Remove ROS1 support
+
 3.1.0 (2025-02-11)
 ------------------
 * Remove invalid generated schemas from package
