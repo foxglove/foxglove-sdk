@@ -20,6 +20,7 @@ build:
 .PHONY: test
 test:
 	colcon test
+	colcon test-result --all --verbose
 
 ROS_DISTRIBUTIONS := humble iron jazzy kilted rolling
 
