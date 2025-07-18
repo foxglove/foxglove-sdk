@@ -3,19 +3,18 @@ FROM ros:$ROS_DISTRIBUTION-ros-base
 
 RUN apt-get update
 
-# create ubuntu user if it doesn't exist (pre-jazzy)
-ENV USERNAME=ubuntu
-RUN id -u $USERNAME >/dev/null 2>&1 || useradd -m $USERNAME
-
-# switch to ubuntu user
-RUN echo "$USERNAME ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+# create foxglove user
+ARG USERNAME=foxglove
+ARG USER_UID=1005
+ARG USER_GID=$USER_UID
+RUN groupadd --gid $USER_GID $USERNAME \
+    && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME \
+    && echo "$USERNAME ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers.d/$USERNAME
 USER $USERNAME
-RUN touch /home/$USERNAME/.sudo_as_admin_successful
 
-# rosdep update must be run as user
+# rosdep update must run as user
 RUN rosdep update --include-eol-distros
 
-COPY --chown=$USERNAME:$USERNAME . /sdk
+COPY --chown=$USER_UID:$USER_GID . /sdk
 WORKDIR /sdk/ros
-
 RUN make deps

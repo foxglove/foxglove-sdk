@@ -21,6 +21,17 @@ jobs:
     name: "ros (${{ matrix.ros_distribution }})"
     steps:
       - uses: actions/checkout@v4
-      - run: make -C ros docker-build-${{ matrix.ros_distribution }}
-      - run: docker run --rm -v $(pwd):/sdk foxglove-sdk-ros-${{ matrix.ros_distribution }} make build
-      - run: docker run --rm -v $(pwd):/sdk foxglove-sdk-ros-${{ matrix.ros_distribution }} make test
+
+      - name: Run make docker-build
+        run: EXTRA_DOCKER_ARGS="--build-arg USER_UID=$(id -u) --build-arg USER_GID=$(id -g)" make docker-build-${{ matrix.ros_distribution }}
+        working-directory: ros
+
+      - name: Run make build
+        run: |
+          docker run --rm -v $(pwd):/sdk foxglove-sdk-ros-${{ matrix.ros_distribution }} \
+            make build
+
+      - name: Run make test
+        run: |
+          docker run --rm -v $(pwd):/sdk foxglove-sdk-ros-${{ matrix.ros_distribution }} \
+            make test

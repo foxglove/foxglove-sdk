@@ -26,13 +26,14 @@ ROS_DISTRIBUTIONS := humble iron jazzy kilted rolling
 define generate_ros_targets
 .PHONY: docker-build-$(1)
 docker-build-$(1):
-	docker build -t foxglove-sdk-ros-$(1) -f ../Dockerfile.ros --build-arg ROS_DISTRIBUTION=$(1) ..
+	docker build -t foxglove-sdk-ros-$(1) -f ../Dockerfile.ros \
+		--build-arg ROS_DISTRIBUTION=$(1) \
+		$(EXTRA_DOCKER_ARGS) ..
 
 .PHONY: docker-sh-$(1)
 docker-sh-$(1):
-	-docker run --rm -it -v $(pwd)/..:/sdk foxglove-sdk-ros-$(1)
+	docker run --rm -it -v $(PWD)/..:/sdk foxglove-sdk-ros-$(1)
 endef
-
 $(foreach distribution,$(ROS_DISTRIBUTIONS),$(eval $(call generate_ros_targets,$(strip $(distribution)))))
 
 .PHONY: docker-build
