@@ -24,7 +24,7 @@ describe("generateTypeScript", () => {
       import { Duration } from "./Duration";
       import { ExampleEnum } from "./ExampleEnum";
       import { NestedMessage } from "./NestedMessage";
-      import { Time } from "./Time";
+      import { Timestamp } from "./Timestamp";
 
       /** An example type */
       export type ExampleMessage = {
@@ -32,7 +32,7 @@ describe("generateTypeScript", () => {
         field_duration: Duration;
 
         /** time field */
-        field_time: Time;
+        field_time: Timestamp;
 
         /** boolean field */
         field_boolean: boolean;
@@ -53,7 +53,7 @@ describe("generateTypeScript", () => {
         field_duration_array: Duration[];
 
         /** time array field */
-        field_time_array: Time[];
+        field_time_array: Timestamp[];
 
         /** boolean array field */
         field_boolean_array: boolean[];
@@ -74,7 +74,7 @@ describe("generateTypeScript", () => {
         field_duration_fixed_array: [Duration, Duration, Duration];
 
         /** time fixed-length array field */
-        field_time_fixed_array: [Time, Time, Time];
+        field_time_fixed_array: [Timestamp, Timestamp, Timestamp];
 
         /** boolean fixed-length array field */
         field_boolean_fixed_array: [boolean, boolean, boolean];
@@ -126,7 +126,7 @@ describe("generateTypeScript", () => {
       import { Duration } from "./Duration";
       import { ExampleEnum } from "./ExampleEnum";
       import { NestedMessage } from "./NestedMessage";
-      import { Time } from "./Time";
+      import { Timestamp } from "./Timestamp";
 
       /** An example type */
       export type ExampleMessage = {
@@ -134,7 +134,7 @@ describe("generateTypeScript", () => {
         field_duration: Duration;
 
         /** time field */
-        field_time: Time;
+        field_time: Timestamp;
 
         /** boolean field */
         field_boolean: boolean;
@@ -155,7 +155,7 @@ describe("generateTypeScript", () => {
         field_duration_array: Duration[];
 
         /** time array field */
-        field_time_array: Time[];
+        field_time_array: Timestamp[];
 
         /** boolean array field */
         field_boolean_array: boolean[];
@@ -176,7 +176,7 @@ describe("generateTypeScript", () => {
         field_duration_fixed_array: [Duration, Duration, Duration];
 
         /** time fixed-length array field */
-        field_time_fixed_array: [Time, Time, Time];
+        field_time_fixed_array: [Timestamp, Timestamp, Timestamp];
 
         /** boolean fixed-length array field */
         field_boolean_fixed_array: [boolean, boolean, boolean];
