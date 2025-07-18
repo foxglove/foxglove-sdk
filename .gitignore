@@ -21,3 +21,6 @@
 node_modules/
 /python/foxglove-sdk/python/docs/_build
 /python/foxglove-sdk-examples/**/poetry.lock
+/ros/build/
+/ros/install/
+/ros/log/

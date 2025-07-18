@@ -1,5 +1,3 @@
-
-
 .PHONY: all
 all: deps build test
 
