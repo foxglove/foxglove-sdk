@@ -30,7 +30,7 @@ docker-build-$(1):
 
 .PHONY: docker-sh-$(1)
 docker-sh-$(1):
-	-docker run --rm -it -v $(PWD)/..:/sdk foxglove-sdk-ros-$(1)
+	-docker run --rm -it -v $(pwd)/..:/sdk foxglove-sdk-ros-$(1)
 endef
 
 $(foreach distribution,$(ROS_DISTRIBUTIONS),$(eval $(call generate_ros_targets,$(strip $(distribution)))))
