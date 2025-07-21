@@ -930,7 +930,7 @@ export const Grid = {
     "data": {
       "type": "string",
       "contentEncoding": "base64",
-      "description": "Grid cell data, interpreted using `fields`, in row-major (y-major) order.\n For the data element starting at byte offset offset, the coordinates of its corner closest to the origin will be:\n y = (i / cell_stride) % row_stride * cell_size.y\n x = i % cell_stride * cell_size.x"
+      "description": "Grid cell data, interpreted using `fields`, in row-major (y-major) order.\n For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:\n y = (i / cell_stride) % row_stride * cell_size.y\n x = i % cell_stride * cell_size.x"
     }
   }
 };
@@ -1128,7 +1128,7 @@ export const Grid3D = {
     "data": {
       "type": "string",
       "contentEncoding": "base64",
-      "description": "Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order.\n For the data element starting at byte offset offset, the coordinates of its corner closest to the origin will be:\n z = (i / (row_stride * cell_stride)) % slice_stride * cell_size.z\n y = (i / cell_stride) % row_stride * cell_size.y\n x = i % cell_stride * cell_size.x"
+      "description": "Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order.\n For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:\n z = (i / (row_stride * cell_stride)) % slice_stride * cell_size.z\n y = (i / cell_stride) % row_stride * cell_size.y\n x = i % cell_stride * cell_size.x"
     }
   }
 };
@@ -5391,3 +5391,4 @@ export const Vector3 = {
     }
   }
 };
+

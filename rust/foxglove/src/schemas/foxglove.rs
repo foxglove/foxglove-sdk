@@ -302,7 +302,7 @@ pub struct Grid {
     #[prost(message, repeated, tag = "8")]
     pub fields: ::prost::alloc::vec::Vec<PackedElementField>,
     /// Grid cell data, interpreted using `fields`, in row-major (y-major) order.
-    ///   For the data element starting at byte offset offset, the coordinates of its corner closest to the origin will be:
+    ///   For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
     ///   y = (i / cell_stride) % row_stride * cell_size.y
     ///   x = i % cell_stride * cell_size.x
     #[prost(bytes = "bytes", tag = "9")]
@@ -343,7 +343,7 @@ pub struct Grid3D {
     #[prost(message, repeated, tag = "10")]
     pub fields: ::prost::alloc::vec::Vec<PackedElementField>,
     /// Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order.
-    ///   For the data element starting at byte offset offset, the coordinates of its corner closest to the origin will be:
+    ///   For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
     ///   z = (i / (row_stride * cell_stride)) % slice_stride * cell_size.z
     ///   y = (i / cell_stride) % row_stride * cell_size.y
     ///   x = i % cell_stride * cell_size.x
