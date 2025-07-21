@@ -1122,7 +1122,7 @@ const Grid: FoxgloveMessageSchema = {
       name: "data",
       type: { type: "primitive", name: "bytes" },
       description:
-        "Grid cell data, interpreted using `fields`, in row-major (y-major) order.\n For the data element starting at byte offset offset, the coordinates of its corner closest to the origin will be:\n y = (i / cell_stride) % row_stride\n x = i % cell_stride",
+        "Grid cell data, interpreted using `fields`, in row-major (y-major) order.\n For the data element starting at byte offset offset, the coordinates of its corner closest to the origin will be:\n y = (i / cell_stride) % row_stride * cell_size.y\n x = i % cell_stride * cell_size.x",
     },
   ],
 };
@@ -1189,7 +1189,7 @@ const Grid3D: FoxgloveMessageSchema = {
       name: "data",
       type: { type: "primitive", name: "bytes" },
       description:
-        "Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order.\n For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:\n z = (i / (row_stride * cell_stride)) % slice_stride\n y = (i / cell_stride) % row_stride\n x = i % cell_stride",
+        "Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order.\n For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:\n z = (i / (row_stride * cell_stride)) % slice_stride * cell_size.z\n y = (i / cell_stride) % row_stride * cell_size.y\n x = i % cell_stride * cell_size.x",
     },
   ],
 };

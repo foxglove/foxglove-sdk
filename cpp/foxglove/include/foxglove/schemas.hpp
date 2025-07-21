@@ -430,8 +430,8 @@ struct Grid {
   /// @brief Grid cell data, interpreted using `fields`, in row-major (y-major) order.
   /// @brief  For the data element starting at byte offset offset, the coordinates of its corner
   /// closest to the origin will be:
-  /// @brief  y = (i / cell_stride) % row_stride
-  /// @brief  x = i % cell_stride
+  /// @brief  y = (i / cell_stride) % row_stride * cell_size.y
+  /// @brief  x = i % cell_stride * cell_size.x
   std::vector<std::byte> data;
 };
 
@@ -472,9 +472,9 @@ struct Grid3D {
   /// @brief Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order.
   /// @brief  For the data element starting at byte offset offset, the coordinates of its corner
   /// closest to the origin will be:
-  /// @brief  z = (i / (row_stride * cell_stride)) % slice_stride
-  /// @brief  y = (i / cell_stride) % row_stride
-  /// @brief  x = i % cell_stride
+  /// @brief  z = (i / (row_stride * cell_stride)) % slice_stride * cell_size.z
+  /// @brief  y = (i / cell_stride) % row_stride * cell_size.y
+  /// @brief  x = i % cell_stride * cell_size.x * cell_size.x
   std::vector<std::byte> data;
 };
 
