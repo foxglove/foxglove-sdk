@@ -33,7 +33,7 @@ impl<T: Serialize + JsonSchema> Encode for T {
         "json".to_string()
     }
 
-    fn encode(&self, buf: &mut impl BufMut) -> Result<(), Self::Error> {
+    fn encode(&self, buf: &mut dyn BufMut) -> Result<(), Self::Error> {
         serde_json::to_writer(buf.writer(), self)
     }
 }

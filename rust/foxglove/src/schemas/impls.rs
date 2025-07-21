@@ -18,8 +18,8 @@ impl Encode for ArrowPrimitive {
         "protobuf".to_string()
     }
 
-    fn encode(&self, buf: &mut impl BufMut) -> Result<(), prost::EncodeError> {
-        ::prost::Message::encode(self, buf)
+    fn encode(&self, mut buf: &mut dyn BufMut) -> Result<(), prost::EncodeError> {
+        ::prost::Message::encode(self, &mut buf)
     }
 
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
@@ -40,8 +40,8 @@ impl Encode for CameraCalibration {
         "protobuf".to_string()
     }
 
-    fn encode(&self, buf: &mut impl BufMut) -> Result<(), prost::EncodeError> {
-        ::prost::Message::encode(self, buf)
+    fn encode(&self, mut buf: &mut dyn BufMut) -> Result<(), prost::EncodeError> {
+        ::prost::Message::encode(self, &mut buf)
     }
 
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
@@ -62,8 +62,8 @@ impl Encode for CircleAnnotation {
         "protobuf".to_string()
     }
 
-    fn encode(&self, buf: &mut impl BufMut) -> Result<(), prost::EncodeError> {
-        ::prost::Message::encode(self, buf)
+    fn encode(&self, mut buf: &mut dyn BufMut) -> Result<(), prost::EncodeError> {
+        ::prost::Message::encode(self, &mut buf)
     }
 
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
@@ -84,8 +84,8 @@ impl Encode for Color {
         "protobuf".to_string()
     }
 
-    fn encode(&self, buf: &mut impl BufMut) -> Result<(), prost::EncodeError> {
-        ::prost::Message::encode(self, buf)
+    fn encode(&self, mut buf: &mut dyn BufMut) -> Result<(), prost::EncodeError> {
+        ::prost::Message::encode(self, &mut buf)
     }
 
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
@@ -106,8 +106,8 @@ impl Encode for CompressedImage {
         "protobuf".to_string()
     }
 
-    fn encode(&self, buf: &mut impl BufMut) -> Result<(), prost::EncodeError> {
-        ::prost::Message::encode(self, buf)
+    fn encode(&self, mut buf: &mut dyn BufMut) -> Result<(), prost::EncodeError> {
+        ::prost::Message::encode(self, &mut buf)
     }
 
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
@@ -128,8 +128,8 @@ impl Encode for CompressedVideo {
         "protobuf".to_string()
     }
 
-    fn encode(&self, buf: &mut impl BufMut) -> Result<(), prost::EncodeError> {
-        ::prost::Message::encode(self, buf)
+    fn encode(&self, mut buf: &mut dyn BufMut) -> Result<(), prost::EncodeError> {
+        ::prost::Message::encode(self, &mut buf)
     }
 
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
@@ -150,8 +150,8 @@ impl Encode for CubePrimitive {
         "protobuf".to_string()
     }
 
-    fn encode(&self, buf: &mut impl BufMut) -> Result<(), prost::EncodeError> {
-        ::prost::Message::encode(self, buf)
+    fn encode(&self, mut buf: &mut dyn BufMut) -> Result<(), prost::EncodeError> {
+        ::prost::Message::encode(self, &mut buf)
     }
 
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
@@ -172,8 +172,8 @@ impl Encode for CylinderPrimitive {
         "protobuf".to_string()
     }
 
-    fn encode(&self, buf: &mut impl BufMut) -> Result<(), prost::EncodeError> {
-        ::prost::Message::encode(self, buf)
+    fn encode(&self, mut buf: &mut dyn BufMut) -> Result<(), prost::EncodeError> {
+        ::prost::Message::encode(self, &mut buf)
     }
 
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
@@ -194,8 +194,8 @@ impl Encode for FrameTransform {
         "protobuf".to_string()
     }
 
-    fn encode(&self, buf: &mut impl BufMut) -> Result<(), prost::EncodeError> {
-        ::prost::Message::encode(self, buf)
+    fn encode(&self, mut buf: &mut dyn BufMut) -> Result<(), prost::EncodeError> {
+        ::prost::Message::encode(self, &mut buf)
     }
 
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
@@ -216,8 +216,8 @@ impl Encode for FrameTransforms {
         "protobuf".to_string()
     }
 
-    fn encode(&self, buf: &mut impl BufMut) -> Result<(), prost::EncodeError> {
-        ::prost::Message::encode(self, buf)
+    fn encode(&self, mut buf: &mut dyn BufMut) -> Result<(), prost::EncodeError> {
+        ::prost::Message::encode(self, &mut buf)
     }
 
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
@@ -238,8 +238,8 @@ impl Encode for GeoJson {
         "protobuf".to_string()
     }
 
-    fn encode(&self, buf: &mut impl BufMut) -> Result<(), prost::EncodeError> {
-        ::prost::Message::encode(self, buf)
+    fn encode(&self, mut buf: &mut dyn BufMut) -> Result<(), prost::EncodeError> {
+        ::prost::Message::encode(self, &mut buf)
     }
 
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
@@ -260,8 +260,8 @@ impl Encode for Grid {
         "protobuf".to_string()
     }
 
-    fn encode(&self, buf: &mut impl BufMut) -> Result<(), prost::EncodeError> {
-        ::prost::Message::encode(self, buf)
+    fn encode(&self, mut buf: &mut dyn BufMut) -> Result<(), prost::EncodeError> {
+        ::prost::Message::encode(self, &mut buf)
     }
 
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
@@ -282,8 +282,8 @@ impl Encode for ImageAnnotations {
         "protobuf".to_string()
     }
 
-    fn encode(&self, buf: &mut impl BufMut) -> Result<(), prost::EncodeError> {
-        ::prost::Message::encode(self, buf)
+    fn encode(&self, mut buf: &mut dyn BufMut) -> Result<(), prost::EncodeError> {
+        ::prost::Message::encode(self, &mut buf)
     }
 
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
@@ -304,8 +304,8 @@ impl Encode for KeyValuePair {
         "protobuf".to_string()
     }
 
-    fn encode(&self, buf: &mut impl BufMut) -> Result<(), prost::EncodeError> {
-        ::prost::Message::encode(self, buf)
+    fn encode(&self, mut buf: &mut dyn BufMut) -> Result<(), prost::EncodeError> {
+        ::prost::Message::encode(self, &mut buf)
     }
 
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
@@ -326,8 +326,8 @@ impl Encode for LaserScan {
         "protobuf".to_string()
     }
 
-    fn encode(&self, buf: &mut impl BufMut) -> Result<(), prost::EncodeError> {
-        ::prost::Message::encode(self, buf)
+    fn encode(&self, mut buf: &mut dyn BufMut) -> Result<(), prost::EncodeError> {
+        ::prost::Message::encode(self, &mut buf)
     }
 
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
@@ -348,8 +348,8 @@ impl Encode for LinePrimitive {
         "protobuf".to_string()
     }
 
-    fn encode(&self, buf: &mut impl BufMut) -> Result<(), prost::EncodeError> {
-        ::prost::Message::encode(self, buf)
+    fn encode(&self, mut buf: &mut dyn BufMut) -> Result<(), prost::EncodeError> {
+        ::prost::Message::encode(self, &mut buf)
     }
 
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
@@ -370,8 +370,8 @@ impl Encode for LocationFix {
         "protobuf".to_string()
     }
 
-    fn encode(&self, buf: &mut impl BufMut) -> Result<(), prost::EncodeError> {
-        ::prost::Message::encode(self, buf)
+    fn encode(&self, mut buf: &mut dyn BufMut) -> Result<(), prost::EncodeError> {
+        ::prost::Message::encode(self, &mut buf)
     }
 
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
@@ -392,8 +392,8 @@ impl Encode for Log {
         "protobuf".to_string()
     }
 
-    fn encode(&self, buf: &mut impl BufMut) -> Result<(), prost::EncodeError> {
-        ::prost::Message::encode(self, buf)
+    fn encode(&self, mut buf: &mut dyn BufMut) -> Result<(), prost::EncodeError> {
+        ::prost::Message::encode(self, &mut buf)
     }
 
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
@@ -414,8 +414,8 @@ impl Encode for ModelPrimitive {
         "protobuf".to_string()
     }
 
-    fn encode(&self, buf: &mut impl BufMut) -> Result<(), prost::EncodeError> {
-        ::prost::Message::encode(self, buf)
+    fn encode(&self, mut buf: &mut dyn BufMut) -> Result<(), prost::EncodeError> {
+        ::prost::Message::encode(self, &mut buf)
     }
 
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
@@ -436,8 +436,8 @@ impl Encode for PackedElementField {
         "protobuf".to_string()
     }
 
-    fn encode(&self, buf: &mut impl BufMut) -> Result<(), prost::EncodeError> {
-        ::prost::Message::encode(self, buf)
+    fn encode(&self, mut buf: &mut dyn BufMut) -> Result<(), prost::EncodeError> {
+        ::prost::Message::encode(self, &mut buf)
     }
 
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
@@ -458,8 +458,8 @@ impl Encode for Point2 {
         "protobuf".to_string()
     }
 
-    fn encode(&self, buf: &mut impl BufMut) -> Result<(), prost::EncodeError> {
-        ::prost::Message::encode(self, buf)
+    fn encode(&self, mut buf: &mut dyn BufMut) -> Result<(), prost::EncodeError> {
+        ::prost::Message::encode(self, &mut buf)
     }
 
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
@@ -480,8 +480,8 @@ impl Encode for Point3 {
         "protobuf".to_string()
     }
 
-    fn encode(&self, buf: &mut impl BufMut) -> Result<(), prost::EncodeError> {
-        ::prost::Message::encode(self, buf)
+    fn encode(&self, mut buf: &mut dyn BufMut) -> Result<(), prost::EncodeError> {
+        ::prost::Message::encode(self, &mut buf)
     }
 
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
@@ -502,8 +502,8 @@ impl Encode for PointCloud {
         "protobuf".to_string()
     }
 
-    fn encode(&self, buf: &mut impl BufMut) -> Result<(), prost::EncodeError> {
-        ::prost::Message::encode(self, buf)
+    fn encode(&self, mut buf: &mut dyn BufMut) -> Result<(), prost::EncodeError> {
+        ::prost::Message::encode(self, &mut buf)
     }
 
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
@@ -524,8 +524,8 @@ impl Encode for PointsAnnotation {
         "protobuf".to_string()
     }
 
-    fn encode(&self, buf: &mut impl BufMut) -> Result<(), prost::EncodeError> {
-        ::prost::Message::encode(self, buf)
+    fn encode(&self, mut buf: &mut dyn BufMut) -> Result<(), prost::EncodeError> {
+        ::prost::Message::encode(self, &mut buf)
     }
 
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
@@ -546,8 +546,8 @@ impl Encode for Pose {
         "protobuf".to_string()
     }
 
-    fn encode(&self, buf: &mut impl BufMut) -> Result<(), prost::EncodeError> {
-        ::prost::Message::encode(self, buf)
+    fn encode(&self, mut buf: &mut dyn BufMut) -> Result<(), prost::EncodeError> {
+        ::prost::Message::encode(self, &mut buf)
     }
 
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
@@ -568,8 +568,8 @@ impl Encode for PoseInFrame {
         "protobuf".to_string()
     }
 
-    fn encode(&self, buf: &mut impl BufMut) -> Result<(), prost::EncodeError> {
-        ::prost::Message::encode(self, buf)
+    fn encode(&self, mut buf: &mut dyn BufMut) -> Result<(), prost::EncodeError> {
+        ::prost::Message::encode(self, &mut buf)
     }
 
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
@@ -590,8 +590,8 @@ impl Encode for PosesInFrame {
         "protobuf".to_string()
     }
 
-    fn encode(&self, buf: &mut impl BufMut) -> Result<(), prost::EncodeError> {
-        ::prost::Message::encode(self, buf)
+    fn encode(&self, mut buf: &mut dyn BufMut) -> Result<(), prost::EncodeError> {
+        ::prost::Message::encode(self, &mut buf)
     }
 
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
@@ -612,8 +612,8 @@ impl Encode for Quaternion {
         "protobuf".to_string()
     }
 
-    fn encode(&self, buf: &mut impl BufMut) -> Result<(), prost::EncodeError> {
-        ::prost::Message::encode(self, buf)
+    fn encode(&self, mut buf: &mut dyn BufMut) -> Result<(), prost::EncodeError> {
+        ::prost::Message::encode(self, &mut buf)
     }
 
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
@@ -634,8 +634,8 @@ impl Encode for RawAudio {
         "protobuf".to_string()
     }
 
-    fn encode(&self, buf: &mut impl BufMut) -> Result<(), prost::EncodeError> {
-        ::prost::Message::encode(self, buf)
+    fn encode(&self, mut buf: &mut dyn BufMut) -> Result<(), prost::EncodeError> {
+        ::prost::Message::encode(self, &mut buf)
     }
 
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
@@ -656,8 +656,8 @@ impl Encode for RawImage {
         "protobuf".to_string()
     }
 
-    fn encode(&self, buf: &mut impl BufMut) -> Result<(), prost::EncodeError> {
-        ::prost::Message::encode(self, buf)
+    fn encode(&self, mut buf: &mut dyn BufMut) -> Result<(), prost::EncodeError> {
+        ::prost::Message::encode(self, &mut buf)
     }
 
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
@@ -678,8 +678,8 @@ impl Encode for SceneEntity {
         "protobuf".to_string()
     }
 
-    fn encode(&self, buf: &mut impl BufMut) -> Result<(), prost::EncodeError> {
-        ::prost::Message::encode(self, buf)
+    fn encode(&self, mut buf: &mut dyn BufMut) -> Result<(), prost::EncodeError> {
+        ::prost::Message::encode(self, &mut buf)
     }
 
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
@@ -700,8 +700,8 @@ impl Encode for SceneEntityDeletion {
         "protobuf".to_string()
     }
 
-    fn encode(&self, buf: &mut impl BufMut) -> Result<(), prost::EncodeError> {
-        ::prost::Message::encode(self, buf)
+    fn encode(&self, mut buf: &mut dyn BufMut) -> Result<(), prost::EncodeError> {
+        ::prost::Message::encode(self, &mut buf)
     }
 
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
@@ -722,8 +722,8 @@ impl Encode for SceneUpdate {
         "protobuf".to_string()
     }
 
-    fn encode(&self, buf: &mut impl BufMut) -> Result<(), prost::EncodeError> {
-        ::prost::Message::encode(self, buf)
+    fn encode(&self, mut buf: &mut dyn BufMut) -> Result<(), prost::EncodeError> {
+        ::prost::Message::encode(self, &mut buf)
     }
 
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
@@ -744,8 +744,8 @@ impl Encode for SpherePrimitive {
         "protobuf".to_string()
     }
 
-    fn encode(&self, buf: &mut impl BufMut) -> Result<(), prost::EncodeError> {
-        ::prost::Message::encode(self, buf)
+    fn encode(&self, mut buf: &mut dyn BufMut) -> Result<(), prost::EncodeError> {
+        ::prost::Message::encode(self, &mut buf)
     }
 
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
@@ -766,8 +766,8 @@ impl Encode for TextAnnotation {
         "protobuf".to_string()
     }
 
-    fn encode(&self, buf: &mut impl BufMut) -> Result<(), prost::EncodeError> {
-        ::prost::Message::encode(self, buf)
+    fn encode(&self, mut buf: &mut dyn BufMut) -> Result<(), prost::EncodeError> {
+        ::prost::Message::encode(self, &mut buf)
     }
 
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
@@ -788,8 +788,8 @@ impl Encode for TextPrimitive {
         "protobuf".to_string()
     }
 
-    fn encode(&self, buf: &mut impl BufMut) -> Result<(), prost::EncodeError> {
-        ::prost::Message::encode(self, buf)
+    fn encode(&self, mut buf: &mut dyn BufMut) -> Result<(), prost::EncodeError> {
+        ::prost::Message::encode(self, &mut buf)
     }
 
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
@@ -810,8 +810,8 @@ impl Encode for TriangleListPrimitive {
         "protobuf".to_string()
     }
 
-    fn encode(&self, buf: &mut impl BufMut) -> Result<(), prost::EncodeError> {
-        ::prost::Message::encode(self, buf)
+    fn encode(&self, mut buf: &mut dyn BufMut) -> Result<(), prost::EncodeError> {
+        ::prost::Message::encode(self, &mut buf)
     }
 
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
@@ -832,8 +832,8 @@ impl Encode for Vector2 {
         "protobuf".to_string()
     }
 
-    fn encode(&self, buf: &mut impl BufMut) -> Result<(), prost::EncodeError> {
-        ::prost::Message::encode(self, buf)
+    fn encode(&self, mut buf: &mut dyn BufMut) -> Result<(), prost::EncodeError> {
+        ::prost::Message::encode(self, &mut buf)
     }
 
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
@@ -854,8 +854,8 @@ impl Encode for Vector3 {
         "protobuf".to_string()
     }
 
-    fn encode(&self, buf: &mut impl BufMut) -> Result<(), prost::EncodeError> {
-        ::prost::Message::encode(self, buf)
+    fn encode(&self, mut buf: &mut dyn BufMut) -> Result<(), prost::EncodeError> {
+        ::prost::Message::encode(self, &mut buf)
     }
 
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }

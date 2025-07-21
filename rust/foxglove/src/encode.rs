@@ -32,7 +32,7 @@ pub trait Encode {
     fn get_message_encoding() -> String;
 
     /// Encodes message data to the provided buffer.
-    fn encode(&self, buf: &mut impl BufMut) -> Result<(), Self::Error>;
+    fn encode(&self, buf: &mut dyn BufMut) -> Result<(), Self::Error>;
 
     /// Optional. Returns an estimated encoded length for the message data.
     ///
@@ -80,7 +80,7 @@ mod test {
             "json".to_string()
         }
 
-        fn encode(&self, buf: &mut impl BufMut) -> Result<(), Self::Error> {
+        fn encode(&self, buf: &mut dyn BufMut) -> Result<(), Self::Error> {
             serde_json::to_writer(buf.writer(), self)
         }
     }

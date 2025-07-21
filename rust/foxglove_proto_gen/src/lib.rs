@@ -173,8 +173,8 @@ fn generate_impls(out_dir: &Path, fds: &FileDescriptorSet) -> anyhow::Result<()>
         \"protobuf\".to_string()
     }}
 
-    fn encode(&self, buf: &mut impl BufMut) -> Result<(), prost::EncodeError> {{
-        ::prost::Message::encode(self, buf)
+    fn encode(&self, mut buf: &mut dyn BufMut) -> Result<(), prost::EncodeError> {{
+        ::prost::Message::encode(self, &mut buf)
     }}
 
     fn encoded_len(&self) -> Option<usize> {{ Some(::prost::Message::encoded_len(self)) }}

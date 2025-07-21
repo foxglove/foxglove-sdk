@@ -240,7 +240,7 @@ mod tests {
         impl Encode for Foo {
             type Error = FoxgloveError;
 
-            fn encode(&self, buf: &mut impl BufMut) -> Result<(), Self::Error> {
+            fn encode(&self, buf: &mut dyn BufMut) -> Result<(), Self::Error> {
                 buf.put_u32(self.x);
                 Ok(())
             }
@@ -261,7 +261,7 @@ mod tests {
         impl Encode for Bar {
             type Error = FoxgloveError;
 
-            fn encode(&self, buf: &mut impl BufMut) -> Result<(), Self::Error> {
+            fn encode(&self, buf: &mut dyn BufMut) -> Result<(), Self::Error> {
                 buf.put_u32(self.x);
                 Ok(())
             }
@@ -299,7 +299,7 @@ mod tests {
         impl Encode for Foo {
             type Error = FoxgloveError;
 
-            fn encode(&self, buf: &mut impl BufMut) -> Result<(), Self::Error> {
+            fn encode(&self, buf: &mut dyn BufMut) -> Result<(), Self::Error> {
                 buf.put_u32(self.x);
                 Ok(())
             }
@@ -320,7 +320,7 @@ mod tests {
         impl Encode for Bar {
             type Error = FoxgloveError;
 
-            fn encode(&self, buf: &mut impl BufMut) -> Result<(), Self::Error> {
+            fn encode(&self, buf: &mut dyn BufMut) -> Result<(), Self::Error> {
                 buf.put_u32(self.x);
                 Ok(())
             }

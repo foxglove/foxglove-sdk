@@ -186,7 +186,7 @@ fn derive_struct_impl(input: &DeriveInput, data: &DataStruct) -> TokenStream {
         });
 
         field_encoders.push(quote! {
-            ::foxglove::protobuf::ProtobufField::write_tagged(&self.#field_name, #field_number, buf);
+            ::foxglove::protobuf::ProtobufField::write_tagged(&self.#field_name, #field_number, &mut buf);
         });
     }
 
@@ -290,7 +290,7 @@ fn derive_struct_impl(input: &DeriveInput, data: &DataStruct) -> TokenStream {
                 String::from("protobuf")
             }
 
-            fn encode(&self, buf: &mut impl ::foxglove::bytes::BufMut) -> Result<(), Self::Error> {
+            fn encode(&self, mut buf: &mut dyn ::foxglove::bytes::BufMut) -> Result<(), Self::Error> {
                 if self.encoded_len().is_some_and(|len| len > buf.remaining_mut()) {
                     return Err(::foxglove::FoxgloveError::EncodeError(
                         "insufficient buffer".to_string(),

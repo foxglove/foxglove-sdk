@@ -43,8 +43,8 @@ impl foxglove::Encode for fruit::Apple {
         "protobuf".to_string()
     }
 
-    fn encode(&self, buf: &mut impl prost::bytes::BufMut) -> Result<(), Self::Error> {
-        Message::encode(self, buf)?;
+    fn encode(&self, mut buf: &mut dyn prost::bytes::BufMut) -> Result<(), Self::Error> {
+        Message::encode(self, &mut buf)?;
         Ok(())
     }
 }
