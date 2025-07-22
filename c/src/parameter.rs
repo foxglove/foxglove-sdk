@@ -475,7 +475,11 @@ pub unsafe extern "C" fn foxglove_parameter_create_float64_array(
     values: *const f64,
     values_len: usize,
 ) -> FoxgloveError {
-    let values = unsafe { std::slice::from_raw_parts(values, values_len) };
+    let values = if values.is_null() {
+        &[]
+    } else {
+        unsafe { std::slice::from_raw_parts(values, values_len) }
+    };
     let array = values
         .iter()
         .copied()
@@ -493,7 +497,11 @@ pub unsafe extern "C" fn foxglove_parameter_create_integer_array(
     values: *const i64,
     values_len: usize,
 ) -> FoxgloveError {
-    let values = unsafe { std::slice::from_raw_parts(values, values_len) };
+    let values = if values.is_null() {
+        &[]
+    } else {
+        unsafe { std::slice::from_raw_parts(values, values_len) }
+    };
     let array = values
         .iter()
         .copied()
@@ -574,7 +582,11 @@ pub unsafe extern "C" fn foxglove_parameter_decode_byte_array(
     if capacity < base64::decoded_len_estimate(encoded.len()) {
         return FoxgloveError::BufferTooShort;
     }
-    let buffer = unsafe { std::slice::from_raw_parts_mut(data, capacity) };
+    let buffer = if data.is_null() {
+        &mut []
+    } else {
+        unsafe { std::slice::from_raw_parts_mut(data, capacity) }
+    };
     match BASE64_STANDARD.decode_slice_unchecked(encoded, buffer) {
         Ok(written) => {
             unsafe { *len = written };

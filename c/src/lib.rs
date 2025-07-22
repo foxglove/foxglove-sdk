@@ -445,7 +445,11 @@ impl FoxgloveSchema {
         let encoding = unsafe { self.encoding.as_utf8_str() }.map_err(|e| {
             foxglove::FoxgloveError::Utf8Error(format!("schema encoding invalid: {e}"))
         })?;
-        let data = unsafe { std::slice::from_raw_parts(self.data, self.data_len) };
+        let data = if self.data.is_null() {
+            &[]
+        } else {
+            unsafe { std::slice::from_raw_parts(self.data, self.data_len) }
+        };
         Ok(foxglove::Schema::new(name, encoding, data.to_owned()))
     }
 }
