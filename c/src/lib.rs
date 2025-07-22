@@ -73,13 +73,11 @@ impl FoxgloveString {
     /// The [`data`] field must be valid UTF-8, correctly aligned, and have a length equal to
     /// [`FoxgloveString.len`].
     unsafe fn as_utf8_str(&self) -> Result<&str, std::str::Utf8Error> {
-        std::str::from_utf8(unsafe {
-            if self.data.is_null() {
-                &[]
-            } else {
-                std::slice::from_raw_parts(self.data.cast(), self.len)
-            }
-        })
+        if self.data.is_null() {
+            Ok("")
+        } else {
+            std::str::from_utf8(unsafe { std::slice::from_raw_parts(self.data.cast(), self.len) })
+        }
     }
 
     pub fn as_ptr(&self) -> *const c_char {
