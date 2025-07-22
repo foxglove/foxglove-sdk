@@ -160,6 +160,13 @@ jobs:
         run: make test
         working-directory: cpp
 
+      - name: Build & test (Debug mode)
+        if: ${{ !fromJson(matrix.cross) }}
+        env:
+          CMAKE_BUILD_TYPE: Debug
+        run: make test
+        working-directory: cpp
+
       - name: Organize artifacts for zip
         shell: bash
         run: |
