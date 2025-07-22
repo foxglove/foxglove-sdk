@@ -3,7 +3,7 @@
 # the sources under `cpp/foxglove`, link with the C static or shared library, and add both the C/C++
 # includes to include paths.
 
-cmake_minimum_required(VERSION 3.25)
+cmake_minimum_required(VERSION 3.30)
 project(foxglove-sdk)
 
 # Enable ccache if available
@@ -16,6 +16,10 @@ endif()
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
+
+if (MSVC)
+  set(CMAKE_VS_USE_DEBUG_LIBRARIES "$<CONFIG:Debug>")
+endif()
 
 include(CTest)
 include(FetchContent)
