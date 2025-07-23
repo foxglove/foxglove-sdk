@@ -11,6 +11,8 @@ BUILD_DIR=build-sanitize-$(subst $(comma),-,$(SANITIZE))
 $(info Using sanitizer: $(SANITIZE))
 endif
 
+CMAKE_BUILD_TYPE?=RelWithDebInfo
+
 .PHONY: lint
 lint:
 	find . -path './build*' -prune -name '*.h' -o -name '*.hpp' -o -name '*.cpp' |\
@@ -30,13 +32,13 @@ clean:
 .PHONY: build
 build:
 	cmake \
-		-DCMAKE_BUILD_TYPE=RelWithDebInfo \
+		-DCMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE) \
 		-DCMAKE_EXPORT_COMPILE_COMMANDS=true \
 		$(if $(SANITIZE),-DSANITIZE=$(SANITIZE) -DRust_TOOLCHAIN=nightly) \
 		$(if $(STRICT),-DSTRICT=$(STRICT)) \
 		$(if $(CLANG_TIDY),-DCLANG_TIDY=$(CLANG_TIDY)) \
 		-B $(BUILD_DIR)
-	cmake --build $(BUILD_DIR) -j 8 --config RelWithDebInfo
+	cmake --build $(BUILD_DIR) -j 8 --config $(CMAKE_BUILD_TYPE)
 
 .PHONY: test
 test: build

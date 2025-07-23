@@ -70,9 +70,14 @@ impl FoxgloveString {
     ///
     /// # Safety
     ///
-    /// The [`data`] field must be valid UTF-8, and have a length equal to [`FoxgloveString.len`].
+    /// The [`data`] field must be valid UTF-8, correctly aligned, and have a length equal to
+    /// [`FoxgloveString.len`].
     unsafe fn as_utf8_str(&self) -> Result<&str, std::str::Utf8Error> {
-        std::str::from_utf8(unsafe { std::slice::from_raw_parts(self.data.cast(), self.len) })
+        if self.data.is_null() {
+            Ok("")
+        } else {
+            std::str::from_utf8(unsafe { std::slice::from_raw_parts(self.data.cast(), self.len) })
+        }
     }
 
     pub fn as_ptr(&self) -> *const c_char {
@@ -438,7 +443,11 @@ impl FoxgloveSchema {
         let encoding = unsafe { self.encoding.as_utf8_str() }.map_err(|e| {
             foxglove::FoxgloveError::Utf8Error(format!("schema encoding invalid: {e}"))
         })?;
-        let data = unsafe { std::slice::from_raw_parts(self.data, self.data_len) };
+        let data = if self.data.is_null() {
+            &[]
+        } else {
+            unsafe { std::slice::from_raw_parts(self.data, self.data_len) }
+        };
         Ok(foxglove::Schema::new(name, encoding, data.to_owned()))
     }
 }
