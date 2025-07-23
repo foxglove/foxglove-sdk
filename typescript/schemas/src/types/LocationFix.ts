@@ -2,12 +2,12 @@
 // Options: {}
 
 import { PositionCovarianceType } from "./PositionCovarianceType";
-import { Timestamp } from "./Timestamp";
+import { Time } from "./Time";
 
 /** A navigation satellite fix for any Global Navigation Satellite System */
 export type LocationFix = {
   /** Timestamp of the message */
-  timestamp: Timestamp;
+  timestamp: Time;
 
   /** Frame for the sensor. Latitude and longitude readings are at the origin of the frame. */
   frame_id: string;

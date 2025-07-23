@@ -4,12 +4,12 @@
 import { Color } from "./Color";
 import { Point2 } from "./Point2";
 import { PointsAnnotationType } from "./PointsAnnotationType";
-import { Timestamp } from "./Timestamp";
+import { Time } from "./Time";
 
 /** An array of points on a 2D image */
 export type PointsAnnotation = {
   /** Timestamp of annotation */
-  timestamp: Timestamp;
+  timestamp: Time;
 
   /** Type of points annotation to draw */
   type: PointsAnnotationType;

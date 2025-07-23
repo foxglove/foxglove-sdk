@@ -3,12 +3,12 @@
 
 import { Color } from "./Color";
 import { Point2 } from "./Point2";
-import { Timestamp } from "./Timestamp";
+import { Time } from "./Time";
 
 /** A text label on a 2D image */
 export type TextAnnotation = {
   /** Timestamp of annotation */
-  timestamp: Timestamp;
+  timestamp: Time;
 
   /**
    * Bottom-left origin of the text label in 2D image coordinates (pixels).

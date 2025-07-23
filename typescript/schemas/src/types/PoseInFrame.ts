@@ -2,12 +2,12 @@
 // Options: {}
 
 import { Pose } from "./Pose";
-import { Timestamp } from "./Timestamp";
+import { Time } from "./Time";
 
 /** A timestamped pose for an object or reference frame in 3D space */
 export type PoseInFrame = {
   /** Timestamp of pose */
-  timestamp: Timestamp;
+  timestamp: Time;
 
   /** Frame of reference for pose position and orientation */
   frame_id: string;

@@ -3,13 +3,13 @@
 
 import { PackedElementField } from "./PackedElementField";
 import { Pose } from "./Pose";
-import { Timestamp } from "./Timestamp";
+import { Time } from "./Time";
 import { Vector2 } from "./Vector2";
 
 /** A 2D grid of data */
 export type Grid = {
   /** Timestamp of grid */
-  timestamp: Timestamp;
+  timestamp: Time;
 
   /** Frame of reference */
   frame_id: string;

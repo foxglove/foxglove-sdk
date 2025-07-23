@@ -33,11 +33,10 @@ function primitiveToTypedArray(type: FoxglovePrimitive) {
 /**
  * An alias to `Timestamp` for backwards compatibility.
  */
-export const LEGACY_TIME_TS = `import { Timestamp } from "./Timestamp";
-/**
- * @deprecated Use the \`Timestamp\` schema instead.
- */
-export type Time = Timestamp;
+export const TIME_TS = `export type Time = {
+  sec: number;
+  nsec: number;
+};
 `;
 
 export type GenerateTypeScriptOptions = {
@@ -79,8 +78,13 @@ export function generateTypeScript(
             imports.add(field.type.enum.name);
             break;
           case "nested":
-            fieldType = field.type.schema.name;
-            imports.add(field.type.schema.name);
+            if (field.type.schema.name === "Timestamp") {
+              fieldType = "Time";
+              imports.add("Time");
+            } else {
+              fieldType = field.type.schema.name;
+              imports.add(field.type.schema.name);
+            }
             break;
           case "primitive":
             fieldType = primitiveToTypeScript(field.type.name);

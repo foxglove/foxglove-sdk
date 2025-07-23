@@ -2,12 +2,12 @@
 // Options: {}
 
 import { Pose } from "./Pose";
-import { Timestamp } from "./Timestamp";
+import { Time } from "./Time";
 
 /** A single scan from a planar laser range-finder */
 export type LaserScan = {
   /** Timestamp of scan */
-  timestamp: Timestamp;
+  timestamp: Time;
 
   /** Frame of reference */
   frame_id: string;
