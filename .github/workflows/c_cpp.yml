@@ -40,6 +40,7 @@ jobs:
             cdylib_artifact_name: libfoxglove-aarch64-unknown-linux-gnu.so
             compiler: clang
             cross: true
+            test_debug: false
           - runner: ubuntu-24.04
             target: x86_64-unknown-linux-gnu
             staticlib_name: libfoxglove.a
@@ -48,6 +49,7 @@ jobs:
             cdylib_artifact_name: libfoxglove-x86_64-unknown-linux-gnu.so
             compiler: clang
             cross: false
+            test_debug: true
 
           # Linux (extra build to test GCC support)
           - runner: ubuntu-24.04
@@ -59,6 +61,7 @@ jobs:
             cross: false
             compiler: gcc
             skip_upload: true
+            test_debug: true
 
           # macOS
           - runner: macos-15
@@ -68,6 +71,8 @@ jobs:
             staticlib_artifact_name: libfoxglove-aarch64-apple-darwin.a
             cdylib_artifact_name: libfoxglove-aarch64-apple-darwin.dylib
             cross: false
+            test_debug: true
+
           - runner: macos-15
             target: x86_64-apple-darwin
             staticlib_name: libfoxglove.a
@@ -75,6 +80,7 @@ jobs:
             staticlib_artifact_name: libfoxglove-x86_64-apple-darwin.a
             cdylib_artifact_name: libfoxglove-x86_64-apple-darwin.dylib
             cross: true
+            test_debug: false
 
           # Windows
           - runner: windows-2025
@@ -84,6 +90,7 @@ jobs:
             staticlib_artifact_name: foxglove-x86_64-pc-windows-msvc.lib
             cdylib_artifact_name: foxglove-x86_64-pc-windows-msvc.dll
             cross: false
+            test_debug: false
           - runner: windows-2025
             target: aarch64-pc-windows-msvc
             staticlib_name: foxglove.lib
@@ -91,6 +98,7 @@ jobs:
             staticlib_artifact_name: foxglove-aarch64-pc-windows-msvc.lib
             cdylib_artifact_name: foxglove-aarch64-pc-windows-msvc.dll
             cross: true
+            test_debug: false
 
           # iOS
           - runner: macos-15
@@ -100,6 +108,7 @@ jobs:
             staticlib_artifact_name: libfoxglove-aarch64-apple-ios.a
             cdylib_artifact_name: libfoxglove-aarch64-apple-ios.dylib
             cross: true
+            test_debug: false
           # iOS simulator
           - runner: macos-15
             target: aarch64-apple-ios-sim
@@ -108,6 +117,7 @@ jobs:
             staticlib_artifact_name: libfoxglove-aarch64-apple-ios-sim.a
             cdylib_artifact_name: libfoxglove-aarch64-apple-ios-sim.dylib
             cross: true
+            test_debug: false
           - runner: macos-15
             target: x86_64-apple-ios
             staticlib_name: libfoxglove.a
@@ -115,6 +125,7 @@ jobs:
             staticlib_artifact_name: libfoxglove-x86_64-apple-ios.a
             cdylib_artifact_name: libfoxglove-x86_64-apple-ios.dylib
             cross: true
+            test_debug: false
 
     name: build (${{ matrix.target }}, ${{ matrix.compiler || 'default compiler' }})
     runs-on: ${{ matrix.runner }}
@@ -157,6 +168,13 @@ jobs:
 
       - name: Build C++ library and run tests
         if: ${{ !fromJson(matrix.cross) }}
+        run: make test
+        working-directory: cpp
+
+      - name: Build & test (Debug mode)
+        if: ${{ fromJson(matrix.test_debug) }}
+        env:
+          CMAKE_BUILD_TYPE: Debug
         run: make test
         working-directory: cpp
 
