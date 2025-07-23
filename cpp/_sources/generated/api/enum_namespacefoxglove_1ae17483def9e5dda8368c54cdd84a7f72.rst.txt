@@ -1,0 +1,14 @@
+.. _exhale_enum_namespacefoxglove_1ae17483def9e5dda8368c54cdd84a7f72:
+
+Enum LogLevel
+=============
+
+- Defined in :ref:`file_foxglove_include_foxglove_foxglove.hpp`
+
+
+Enum Documentation
+------------------
+
+
+.. doxygenenum:: foxglove::LogLevel
+   :project: Foxglove SDK

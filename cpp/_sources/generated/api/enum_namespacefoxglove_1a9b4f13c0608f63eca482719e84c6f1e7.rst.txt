@@ -1,0 +1,14 @@
+.. _exhale_enum_namespacefoxglove_1a9b4f13c0608f63eca482719e84c6f1e7:
+
+Enum ParameterType
+==================
+
+- Defined in :ref:`file_foxglove_include_foxglove_server_parameter.hpp`
+
+
+Enum Documentation
+------------------
+
+
+.. doxygenenum:: foxglove::ParameterType
+   :project: Foxglove SDK

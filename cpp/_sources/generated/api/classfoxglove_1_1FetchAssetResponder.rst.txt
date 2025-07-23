@@ -1,0 +1,27 @@
+.. _exhale_class_classfoxglove_1_1FetchAssetResponder:
+
+Class FetchAssetResponder
+=========================
+
+- Defined in :ref:`file_foxglove_include_foxglove_server_fetch_asset.hpp`
+
+
+Nested Relationships
+--------------------
+
+
+Nested Types
+************
+
+- :ref:`exhale_struct_structfoxglove_1_1FetchAssetResponder_1_1Deleter`
+
+
+Class Documentation
+-------------------
+
+
+.. doxygenclass:: foxglove::FetchAssetResponder
+   :project: Foxglove SDK
+   :members:
+   :protected-members:
+   :undoc-members:

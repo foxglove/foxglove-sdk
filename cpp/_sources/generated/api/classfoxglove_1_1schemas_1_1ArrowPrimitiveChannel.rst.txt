@@ -1,0 +1,17 @@
+.. _exhale_class_classfoxglove_1_1schemas_1_1ArrowPrimitiveChannel:
+
+Class ArrowPrimitiveChannel
+===========================
+
+- Defined in :ref:`file_foxglove_include_foxglove_schemas.hpp`
+
+
+Class Documentation
+-------------------
+
+
+.. doxygenclass:: foxglove::schemas::ArrowPrimitiveChannel
+   :project: Foxglove SDK
+   :members:
+   :protected-members:
+   :undoc-members:

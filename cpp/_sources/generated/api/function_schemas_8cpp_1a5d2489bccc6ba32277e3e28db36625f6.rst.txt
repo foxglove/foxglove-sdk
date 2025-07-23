@@ -1,0 +1,14 @@
+.. _exhale_function_schemas_8cpp_1a5d2489bccc6ba32277e3e28db36625f6:
+
+Function foxglove::schemas::pointsAnnotationToC
+===============================================
+
+- Defined in :ref:`file_foxglove_src_schemas.cpp`
+
+
+Function Documentation
+----------------------
+
+
+.. doxygenfunction:: foxglove::schemas::pointsAnnotationToC(foxglove_points_annotation&, const PointsAnnotation&, Arena&)
+   :project: Foxglove SDK
