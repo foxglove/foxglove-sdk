@@ -1,8 +1,11 @@
-.PHONY: generate
-generate:
+.PHONY: yarn-generate
+yarn-generate:
 	poetry install
 	yarn install
 	yarn generate
+
+.PHONY: generate
+generate: yarn-generate build-cpp
 
 .PHONY: build-python
 build-python:
