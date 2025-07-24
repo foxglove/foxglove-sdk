@@ -511,6 +511,17 @@ pub mod location_fix {
         }
     }
 }
+/// A series of LocationFix messages
+/// <https://docs.foxglove.dev/docs/visualization/message-schemas/location-fixes>
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct LocationFixes {
+    /// A series of location fixes
+    #[prost(message, repeated, tag = "1")]
+    pub fixes: ::prost::alloc::vec::Vec<LocationFix>,
+    /// Color used to visualize this series
+    #[prost(message, optional, tag = "2")]
+    pub color: ::core::option::Option<Color>,
+}
 /// A log message
 /// <https://docs.foxglove.dev/docs/visualization/message-schemas/log>
 #[derive(Clone, PartialEq, ::prost::Message)]

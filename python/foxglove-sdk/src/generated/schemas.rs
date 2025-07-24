@@ -1046,6 +1046,46 @@ impl From<LocationFix> for foxglove::schemas::LocationFix {
     }
 }
 
+/// A series of LocationFix messages
+///
+/// :param fixes: A series of location fixes
+/// :param color: Color used to visualize this series
+///
+/// See https://docs.foxglove.dev/docs/visualization/message-schemas/location-fixes
+#[pyclass(module = "foxglove.schemas")]
+#[derive(Clone)]
+pub(crate) struct LocationFixes(pub(crate) foxglove::schemas::LocationFixes);
+#[pymethods]
+impl LocationFixes {
+    #[new]
+    #[pyo3(signature = (*, fixes=vec![], color=None) )]
+    fn new(fixes: Vec<LocationFix>, color: Option<Color>) -> Self {
+        Self(foxglove::schemas::LocationFixes {
+            fixes: fixes.into_iter().map(|x| x.into()).collect(),
+            color: color.map(Into::into),
+        })
+    }
+    fn __repr__(&self) -> String {
+        format!(
+            "LocationFixes(fixes={:?}, color={:?})",
+            self.0.fixes, self.0.color,
+        )
+    }
+    /// Returns the LocationFixes schema.
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::LocationFixes::get_schema()
+            .unwrap()
+            .into()
+    }
+}
+
+impl From<LocationFixes> for foxglove::schemas::LocationFixes {
+    fn from(value: LocationFixes) -> Self {
+        value.0
+    }
+}
+
 /// A log message
 ///
 /// :param timestamp: Timestamp of log message
@@ -2162,6 +2202,7 @@ pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<LaserScan>()?;
     module.add_class::<LinePrimitive>()?;
     module.add_class::<LocationFix>()?;
+    module.add_class::<LocationFixes>()?;
     module.add_class::<Log>()?;
     module.add_class::<SceneEntityDeletion>()?;
     module.add_class::<SceneEntity>()?;

@@ -392,6 +392,22 @@ class LocationFix:
         """Returns the LocationFix schema"""
         ...
 
+class LocationFixes:
+    """
+    A series of LocationFix messages
+    """
+
+    def __new__(
+        cls,
+        *,
+        fixes: "Optional[List[LocationFix]]" = [],
+        color: "Optional[Color]" = None,
+    ) -> "LocationFixes": ...
+    @staticmethod
+    def get_schema() -> Schema:
+        """Returns the LocationFixes schema"""
+        ...
+
 class Log:
     """
     A log message
@@ -814,6 +830,7 @@ FoxgloveSchema = Union[
     LaserScan,
     LinePrimitive,
     LocationFix,
+    LocationFixes,
     Log,
     SceneEntityDeletion,
     SceneEntity,

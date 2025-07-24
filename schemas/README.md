@@ -29,6 +29,7 @@ All schemas are generated from [schemas.ts](/internal/schemas.ts).
 - [LaserScan](#laserscan)
 - [LinePrimitive](#lineprimitive)
 - [LocationFix](#locationfix)
+- [LocationFixes](#locationfixes)
 - [Log](#log)
 - [ModelPrimitive](#modelprimitive)
 - [PackedElementField](#packedelementfield)
@@ -1501,6 +1502,44 @@ Position covariance (m^2) defined relative to a tangential plane through the rep
 <td>
 
 If `position_covariance` is available, `position_covariance_type` must be set to indicate the type of covariance.
+
+</td>
+</tr>
+</table>
+
+## LocationFixes
+
+A series of LocationFix messages
+
+<table>
+  <tr>
+    <th>field</th>
+    <th>type</th>
+    <th>description</th>
+  </tr>
+<tr>
+<td><code>fixes</code></td>
+<td>
+
+[LocationFix](#locationfix)[]
+
+</td>
+<td>
+
+A series of location fixes
+
+</td>
+</tr>
+<tr>
+<td><code>color</code></td>
+<td>
+
+[Color](#color)
+
+</td>
+<td>
+
+Color used to visualize this series
 
 </td>
 </tr>

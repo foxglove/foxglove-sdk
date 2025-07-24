@@ -16,6 +16,7 @@ export * from "./LaserScan";
 export * from "./LinePrimitive";
 export * from "./LineType";
 export * from "./LocationFix";
+export * from "./LocationFixes";
 export * from "./Log";
 export * from "./LogLevel";
 export * from "./ModelPrimitive";
