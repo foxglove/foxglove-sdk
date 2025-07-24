@@ -1370,6 +1370,25 @@ const LocationFix: FoxgloveMessageSchema = {
   ],
 };
 
+const LocationFixes: FoxgloveMessageSchema = {
+  type: "message",
+  name: "LocationFixes",
+  description: "A series of LocationFix messages",
+  fields: [
+    {
+      name: "fixes",
+      type: { type: "nested", schema: LocationFix },
+      array: true,
+      description: "A series of location fixes",
+    },
+    {
+      name: "color",
+      type: { type: "nested", schema: Color },
+      description: "Color used to visualize this series",
+    },
+  ],
+};
+
 const LogLevel: FoxgloveEnumSchema = {
   type: "enum",
   name: "LogLevel",
@@ -1530,6 +1549,7 @@ export const foxgloveMessageSchemas = {
   LaserScan,
   LinePrimitive,
   LocationFix,
+  LocationFixes,
   Log,
   SceneEntityDeletion,
   SceneEntity,
