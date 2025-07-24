@@ -49,9 +49,15 @@ function toCamelCase(name: string) {
   return name.substring(0, 1).toLowerCase() + name.substring(1);
 }
 
+/**
+ * GeoJSON is renamed to GeoJson in all lanaguages
+ */
+function normalizeCamelCasing(name: string): string {
+  return name.replace("JSON", "Json");
+}
+
 function toSnakeCase(name: string) {
-  const snakeName = name
-    .replace("JSON", "Json")
+  const snakeName = normalizeCamelCasing(name)
     .replace(/([A-Z])/g, "_$1")
     .toLowerCase();
   return snakeName.startsWith("_") ? snakeName.substring(1) : snakeName;
@@ -64,6 +70,44 @@ function isSameAsCType(schema: FoxgloveMessageSchema): boolean {
       field.type.name !== "bytes" &&
       field.type.name !== "string",
   );
+}
+
+function cExportName(schema: Pick<FoxgloveMessageSchema, "name">): string {
+  return `foxglove_${toSnakeCase(schema.name)}`;
+}
+
+/**
+ * Checks for missing schemas in the exports.rename section of cbindgen.toml.
+ *
+ * This is used to log a more helpful error message if the user forgets to add a schema to the
+ * cbindgen.toml file.
+ *
+ * This does not throw an error; the C++ build will fail during generation with an unknown type
+ * error if there's a mismatched name.
+ */
+export function checkBindgenConfig(
+  config: { export?: { rename?: Record<string, string> } },
+  schemas: readonly FoxgloveMessageSchema[],
+) {
+  if (!config.export?.rename) {
+    throw new Error("Expected cbindgen.toml to have an [export.rename] section");
+  }
+
+  for (const schema of schemas) {
+    const sourceName = normalizeCamelCasing(schema.name);
+    const exportName = cExportName(schema);
+    if (!(sourceName in config.export.rename)) {
+      console.error(`\n\nMissing an entry for ${sourceName} in cbindgen.toml.`);
+      console.error(`This file is used to generate the library headers for the SDK.`);
+      console.error(`You probably want to add the following line to c/cbindgen.toml,`);
+      console.error(`inside the [export.rename] section:`);
+      console.error("\n```");
+      console.error(`${sourceName} = "${exportName}"`);
+      console.error("```\n");
+    }
+  }
+
+  return config;
 }
 
 /**

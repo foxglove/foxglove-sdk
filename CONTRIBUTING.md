@@ -4,6 +4,10 @@
 
 Schemas are defined in [internal/schemas.ts](internal/schemas.ts). After modifying this file, you will need to regenerate the language-specific definitions.
 
+> [!NOTE]
+> When adding a new schema, you'll need to add an `export.rename` entry to `c/cbindgen.toml` for the
+> C SDK headers following the existing pattern; for example, `LaserScan = "foxglove_laser_scan"`
+
 We commit generated files to git for several reasons:
 
 - Ease of access for users of the protobuf/flatbuffer/etc schemas

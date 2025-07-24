@@ -4,6 +4,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { finished } from "node:stream/promises";
 import { rimraf } from "rimraf";
+import { parse as parseToml } from "smol-toml";
 
 import { generateRosMsg, generateRosMsgDefinition } from "../typescript/schemas/src/internal";
 import { exportTypeScriptSchemas } from "../typescript/schemas/src/internal/exportTypeScriptSchemas";
@@ -34,6 +35,7 @@ import {
 import {
   generateCppSchemas,
   generateHppSchemas,
+  checkBindgenConfig,
 } from "../typescript/schemas/src/internal/generateSdkCpp";
 import { generateRustTypes } from "../typescript/schemas/src/internal/generateSdkRustCTypes";
 import {
@@ -294,6 +296,9 @@ async function main({ clean }: { clean: boolean }) {
     );
     const cppFile = path.join(repoRoot, "cpp", "foxglove", "src", "schemas.cpp");
     await fs.writeFile(cppFile, generateCppSchemas(Object.values(foxgloveMessageSchemas)));
+
+    const bindgenConfig = await fs.readFile(path.join(repoRoot, "c/cbindgen.toml"), "utf-8");
+    checkBindgenConfig(parseToml(bindgenConfig), Object.values(foxgloveMessageSchemas));
 
     await exec("clang-format", [hppFile, "-i", "-Werror"], { cwd: repoRoot });
     await exec("clang-format", [cppFile, "-i", "-Werror"], { cwd: repoRoot });
