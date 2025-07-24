@@ -275,7 +275,7 @@ async function main({ clean }: { clean: boolean }) {
     await exec("poetry", ["run", "isort", ...pythonFiles], { cwd: repoRoot });
   });
 
-  await logProgress("Generating Rust code", async () => {
+  await logProgress("Generating C library types", async () => {
     const typesFile = path.join(repoRoot, "c", "src", "generated_types.rs");
     await fs.writeFile(
       typesFile,
