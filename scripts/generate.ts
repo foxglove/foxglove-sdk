@@ -275,12 +275,13 @@ async function main({ clean }: { clean: boolean }) {
     await exec("poetry", ["run", "isort", ...pythonFiles], { cwd: repoRoot });
   });
 
-  await logProgress("Generating Rust code", async () => {
+  await logProgress("Generating C library types", async () => {
     const typesFile = path.join(repoRoot, "c", "src", "generated_types.rs");
     await fs.writeFile(
       typesFile,
       generateRustTypes(Object.values(foxgloveMessageSchemas), Object.values(foxgloveEnumSchemas)),
     );
+    await exec("cargo", ["build"], { cwd: path.join(repoRoot, "c") });
     await exec("cargo", ["fmt", "--", path.resolve(typesFile)], {
       cwd: repoRoot,
     });
@@ -297,7 +298,6 @@ async function main({ clean }: { clean: boolean }) {
 
     await exec("clang-format", [hppFile, "-i", "-Werror"], { cwd: repoRoot });
     await exec("clang-format", [cppFile, "-i", "-Werror"], { cwd: repoRoot });
-    await exec("make", ["build"], { cwd: path.join(repoRoot, "cpp") });
   });
 
   await logProgressLn("Updating Jest snapshots", async () => {
