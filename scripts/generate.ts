@@ -297,6 +297,7 @@ async function main({ clean }: { clean: boolean }) {
 
     await exec("clang-format", [hppFile, "-i", "-Werror"], { cwd: repoRoot });
     await exec("clang-format", [cppFile, "-i", "-Werror"], { cwd: repoRoot });
+    await exec("make", ["build"], { cwd: path.join(repoRoot, "cpp") });
   });
 
   await logProgressLn("Updating Jest snapshots", async () => {
