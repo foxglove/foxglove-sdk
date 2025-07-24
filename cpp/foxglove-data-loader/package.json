@@ -1,0 +1,33 @@
+{
+  "name": "example-foxglove-cpp-data-loader",
+  "displayName": "Example Foxglove c++ data loader",
+  "description": "",
+  "publisher": "Foxglove",
+  "version": "1.1.0",
+  "license": "MIT",
+  "main": "./dist/extension.js",
+  "scripts": {
+    "build": "npm run build:wasm && foxglove-extension build",
+    "build:wasm": "cd cpp && make",
+    "foxglove:prepublish": "npm run build:wasm && foxglove-extension build --mode production",
+    "lint:ci": "eslint --report-unused-disable-directives .",
+    "lint": "eslint --report-unused-disable-directives --fix .",
+    "local-install": "foxglove-extension install",
+    "package": "foxglove-extension package",
+    "pretest": "foxglove-extension pretest"
+  },
+  "devDependencies": {
+    "@foxglove/eslint-plugin": "2.0.0",
+    "@foxglove/extension": "2.29.0",
+    "@foxglove/schemas": "1.6.4",
+    "@types/react": "18.3.12",
+    "@types/react-dom": "18.3.1",
+    "@types/wicg-file-system-access": "2023.10.6",
+    "create-foxglove-extension": "1.0.4",
+    "eslint": "9.15.0",
+    "prettier": "3.3.3",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "typescript": "5.7.2"
+  }
+}
