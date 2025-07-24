@@ -15,13 +15,13 @@ CMAKE_BUILD_TYPE?=RelWithDebInfo
 
 .PHONY: lint
 lint:
-	find . -path './build*' -prune -name '*.h' -o -name '*.hpp' -o -name '*.cpp' |\
+	find . -path './build*' -prune -name '*.h' -o -name '*.hpp' -o -name '*.cpp' -o -name '*.inl' |\
 		grep -v 'foxglove/expected.hpp' |\
 		xargs clang-format --dry-run -Werror --color=1
 
 .PHONY: lint-fix
 lint-fix:
-	find . -path './build*' -prune -name '*.h' -o -name '*.hpp' -o -name '*.cpp' |\
+	find . -path './build*' -prune -name '*.h' -o -name '*.hpp' -o -name '*.cpp' -o -name '*.inl' |\
 		grep -v 'foxglove/expected.hpp' |\
 		xargs clang-format -i -Werror --color=1
 
