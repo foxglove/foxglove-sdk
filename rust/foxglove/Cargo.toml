@@ -18,6 +18,7 @@ live_visualization = [
   "dep:tokio",
   "dep:tokio-util",
   "dep:tokio-tungstenite",
+  "dep:tokio-native-tls",
   "dep:serde_repr",
   "dep:serde_with",
 ]
@@ -51,7 +52,8 @@ serde.workspace = true
 smallvec = "1.15.1"
 smallbytes = "0.1.0"
 thiserror.workspace = true
-tokio-tungstenite = { workspace = true, optional = true }
+tokio-native-tls = { version = "0.3.1", optional = true }
+tokio-tungstenite = { workspace = true, optional = true, features = ["native-tls"] }
 tokio-util = { workspace = true, optional = true }
 tokio = { workspace = true, optional = true }
 tracing.workspace = true

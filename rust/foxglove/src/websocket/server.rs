@@ -9,6 +9,7 @@ use tokio::net::{TcpListener, TcpStream};
 use tokio::runtime::Handle;
 use tokio::task::{JoinError, JoinSet};
 use tokio::time::MissedTickBehavior;
+use tokio_native_tls::native_tls::Identity;
 use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::MaybeTlsStream;
 use tokio_util::sync::CancellationToken;
@@ -144,6 +145,8 @@ pub(crate) struct Server {
     fetch_asset_handler: Option<Box<dyn AssetHandler>>,
     /// Client tasks.
     tasks: parking_lot::Mutex<Option<JoinSet<()>>>,
+    /// TLS acceptor, if using native TLS
+    tls_acceptor: Option<tokio_native_tls::TlsAcceptor>,
 }
 
 impl Server {
@@ -197,6 +200,7 @@ impl Server {
             services: parking_lot::RwLock::new(ServiceMap::from_iter(opts.services.into_values())),
             fetch_asset_handler: opts.fetch_asset_handler,
             tasks: parking_lot::Mutex::default(),
+            tls_acceptor: None,
         }
     }
 
@@ -508,13 +512,25 @@ impl Server {
     }
 
     /// When a new client connects:
+    /// - SSL handshake (if configured)
     /// - Handshake
     /// - Send ServerInfo
     /// - Advertise existing channels
     /// - Advertise existing services
     /// - Listen for client messages
     async fn handle_connection(self: Arc<Self>, stream: TcpStream, addr: SocketAddr) {
-        let stream = MaybeTlsStream::Plain(stream);
+        let stream = if let Some(tls_acceptor) = &self.tls_acceptor {
+            let stream = match tls_acceptor.accept(stream).await {
+                Ok(tls_stream) => tls_stream,
+                Err(e) => {
+                    tracing::error!("Dropping client {addr}: secure handshake failed: {}", e);
+                    return;
+                }
+            };
+            MaybeTlsStream::NativeTls(stream)
+        } else {
+            MaybeTlsStream::Plain(stream)
+        };
 
         let Ok(mut ws_stream) = handshake::do_handshake(stream).await else {
             tracing::error!("Dropping client {addr}: handshake failed");
