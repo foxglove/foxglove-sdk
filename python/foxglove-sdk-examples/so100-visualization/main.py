@@ -33,51 +33,51 @@ URDF_FILE = "SO100/so100.urdf"
 def parse_args():
     parser = argparse.ArgumentParser(
         description="SO-100 robot arm visualization with Foxglove",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
 
     # Robot configuration
-    robot_group = parser.add_argument_group('robot', 'Robot configuration')
+    robot_group = parser.add_argument_group("robot", "Robot configuration")
     robot_group.add_argument(
-        '--robot.port',
+        "--robot.port",
         type=str,
         required=True,
-        dest='robot_port',
-        help='USB port to connect to the SO-100 arm (e.g., /dev/ttyUSB0)'
+        dest="robot_port",
+        help="USB port to connect to the SO-100 arm (e.g., /dev/ttyUSB0)",
     )
     robot_group.add_argument(
-        '--robot.id',
+        "--robot.id",
         type=str,
         required=True,
-        dest='robot_id',
-        help='Unique identifier for the robot arm'
+        dest="robot_id",
+        help="Unique identifier for the robot arm",
     )
     robot_group.add_argument(
-        '--robot.wrist_cam_id',
+        "--robot.wrist_cam_id",
         type=int,
-        help='Camera ID for wrist camera (if not provided, wrist camera will be disabled)',
-        dest='robot_wrist_cam_id'
+        help="Camera ID for wrist camera (if not provided, wrist camera will be disabled)",
+        dest="robot_wrist_cam_id",
     )
     robot_group.add_argument(
-        '--robot.env_cam_id',
+        "--robot.env_cam_id",
         type=int,
-        help='Camera ID for environment camera (if not provided, environment camera will be disabled)',
-        dest='robot_env_cam_id'
+        help="Camera ID for environment camera (if not provided, environment camera will be disabled)",
+        dest="robot_env_cam_id",
     )
 
     # Output configuration
-    output_group = parser.add_argument_group('output', 'Output configuration')
+    output_group = parser.add_argument_group("output", "Output configuration")
     output_group.add_argument(
-        '--output.write_mcap',
-        action='store_true',
-        dest='output_write_mcap',
-        help='Write data to MCAP file'
+        "--output.write_mcap",
+        action="store_true",
+        dest="output_write_mcap",
+        help="Write data to MCAP file",
     )
     output_group.add_argument(
-        '--output.mcap_path',
+        "--output.mcap_path",
         type=str,
-        dest='output_mcap_path',
-        help='Path for MCAP output file (auto-generated if not specified)'
+        dest="output_mcap_path",
+        help="Path for MCAP output file (auto-generated if not specified)",
     )
 
     return parser.parse_args()
@@ -91,7 +91,7 @@ def setup_camera(cam_id: int, topic_name: str) -> tuple[OpenCVCamera, RawImageCh
         width=640,
         height=480,
         color_mode=ColorMode.RGB,
-        rotation=Cv2Rotation.NO_ROTATION
+        rotation=Cv2Rotation.NO_ROTATION,
     )
     camera = OpenCVCamera(cam_config)
     camera.connect()
@@ -143,7 +143,9 @@ def main():
     if args.robot_wrist_cam_id is not None:
         print(f"Setting up wrist camera (ID: {args.robot_wrist_cam_id})...")
         try:
-            wrist_camera, wrist_image_channel = setup_camera(args.robot_wrist_cam_id, "wrist_image")
+            wrist_camera, wrist_image_channel = setup_camera(
+                args.robot_wrist_cam_id, "wrist_image"
+            )
             print("Wrist camera connected successfully.")
         except Exception as e:
             print(f"Failed to setup wrist camera: {e}")
@@ -151,7 +153,9 @@ def main():
     if args.robot_env_cam_id is not None:
         print(f"Setting up environment camera (ID: {args.robot_env_cam_id})...")
         try:
-            env_camera, env_image_channel = setup_camera(args.robot_env_cam_id, "env_image")
+            env_camera, env_image_channel = setup_camera(
+                args.robot_env_cam_id, "env_image"
+            )
             print("Environment camera connected successfully.")
         except Exception as e:
             print(f"Failed to setup environment camera: {e}")
@@ -159,7 +163,9 @@ def main():
     print("Open Foxglove Studio and connect to ws://localhost:8765")
 
     # Connect to SO-100 arm
-    config = SO100FollowerConfig(port=args.robot_port, id=args.robot_id, use_degrees=True)
+    config = SO100FollowerConfig(
+        port=args.robot_port, id=args.robot_id, use_degrees=True
+    )
     follower = SO100Follower(config)
     follower.connect(calibrate=False)
     if not follower.is_connected:
@@ -196,13 +202,15 @@ def main():
 
             # TODO: The URDF 0 position does not match the calibrated arm 0 position
             # as described in the lerobot documentation.
-            joint_positions["1"] = math.radians(obs.get("shoulder_pan.pos", 0.0)) * -1.
+            joint_positions["1"] = math.radians(obs.get("shoulder_pan.pos", 0.0)) * -1.0
             joint_positions["2"] = math.radians(obs.get("shoulder_lift.pos", 0.0))
             joint_positions["3"] = math.radians(obs.get("elbow_flex.pos", 0.0))
             joint_positions["4"] = math.radians(obs.get("wrist_flex.pos", 0.0))
             joint_positions["5"] = math.radians(obs.get("wrist_roll.pos", 0.0))
             # Convert gripper percent (0-100) to radians (0 to pi)
-            joint_positions["6"] = ((obs.get("gripper.pos", 0.0) - 10) / 100.0) * math.pi
+            joint_positions["6"] = (
+                (obs.get("gripper.pos", 0.0) - 10) / 100.0
+            ) * math.pi
 
             # Update robot configuration for forward kinematics
             robot.update_cfg(joint_positions)
@@ -214,7 +222,7 @@ def main():
                     parent_frame_id=WORLD_FRAME_ID,
                     child_frame_id=BASE_FRAME_ID,
                     translation=Vector3(x=0.0, y=0.0, z=0.0),
-                    rotation=Quaternion(x=0.0, y=0.0, z=0.0, w=1.0)
+                    rotation=Quaternion(x=0.0, y=0.0, z=0.0, w=1.0),
                 )
             )
             # Per-joint transforms
@@ -222,7 +230,9 @@ def main():
                 parent_link = joint.parent
                 child_link = joint.child
                 # Get transform from parent to child using yourdfpy's get_transform method
-                T_local = robot.get_transform(frame_to=child_link, frame_from=parent_link)
+                T_local = robot.get_transform(
+                    frame_to=child_link, frame_from=parent_link
+                )
                 trans = T_local[:3, 3]
                 # Use scipy to convert rotation matrix to quaternion (x, y, z, w)
                 quat = R.from_matrix(T_local[:3, :3]).as_quat()
@@ -230,15 +240,19 @@ def main():
                     FrameTransform(
                         parent_frame_id=parent_link,
                         child_frame_id=child_link,
-                        translation=Vector3(x=float(trans[0]), y=float(trans[1]), z=float(trans[2])),
-                        rotation=Quaternion(x=float(quat[0]), y=float(quat[1]), z=float(quat[2]), w=float(quat[3]))
+                        translation=Vector3(
+                            x=float(trans[0]), y=float(trans[1]), z=float(trans[2])
+                        ),
+                        rotation=Quaternion(
+                            x=float(quat[0]),
+                            y=float(quat[1]),
+                            z=float(quat[2]),
+                            w=float(quat[3]),
+                        ),
                     )
                 )
 
-            foxglove.log(
-                "/tf",
-                FrameTransforms(transforms=transforms)
-            )
+            foxglove.log("/tf", FrameTransforms(transforms=transforms))
 
             time.sleep(1.0 / RATE_HZ)
 
