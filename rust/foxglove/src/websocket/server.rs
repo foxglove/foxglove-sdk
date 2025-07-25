@@ -9,13 +9,15 @@ use tokio::net::{TcpListener, TcpStream};
 use tokio::runtime::Handle;
 use tokio::task::{JoinError, JoinSet};
 use tokio::time::MissedTickBehavior;
-use tokio_native_tls::native_tls::Identity;
+use tokio_native_tls::native_tls::{self, Identity};
+use tokio_native_tls::TlsAcceptor;
 use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::MaybeTlsStream;
 use tokio_util::sync::CancellationToken;
 
 use crate::library_version::get_library_version;
 use crate::websocket::connected_client::ShutdownReason;
+use crate::websocket_server::TlsIdentity;
 use crate::{Context, FoxgloveError};
 
 use super::connected_client::ConnectedClient;
@@ -44,6 +46,7 @@ pub(crate) struct ServerOptions {
     pub supported_encodings: Option<HashSet<String>>,
     pub runtime: Option<Handle>,
     pub fetch_asset_handler: Option<Box<dyn AssetHandler>>,
+    pub tls_identity: Option<TlsIdentity>,
 }
 
 impl std::fmt::Debug for ServerOptions {
@@ -57,6 +60,12 @@ impl std::fmt::Debug for ServerOptions {
             .field("supported_encodings", &self.supported_encodings)
             .finish()
     }
+}
+
+fn build_tls_acceptor(tls_identity: &TlsIdentity) -> Result<TlsAcceptor, native_tls::Error> {
+    let identity = Identity::from_pkcs8(&tls_identity.cert, &tls_identity.key)?;
+    let tls_acceptor = native_tls::TlsAcceptor::new(identity)?;
+    Ok(tls_acceptor.into())
 }
 
 /// Processes a task result, warning about panics.
@@ -108,8 +117,23 @@ impl ShutdownHandle {
 }
 
 /// Creates a new server.
-pub(crate) fn create_server(ctx: &Arc<Context>, opts: ServerOptions) -> Arc<Server> {
-    Arc::new_cyclic(|weak_self| Server::new(weak_self.clone(), ctx, opts))
+pub(crate) fn create_server(
+    ctx: &Arc<Context>,
+    opts: ServerOptions,
+) -> Result<Arc<Server>, FoxgloveError> {
+    // TLS configuration is fallible, so build it prior to allocating the Arc with the weak ref
+    let tls_acceptor = if let Some(tls_identity) = &opts.tls_identity {
+        let acceptor = build_tls_acceptor(tls_identity).map_err(|err| {
+            FoxgloveError::ConfigurationError(format!("Failed to configure TLS: {err}"))
+        })?;
+        Some(acceptor)
+    } else {
+        None
+    };
+
+    Ok(Arc::new_cyclic(|weak_self| {
+        Server::new(weak_self.clone(), ctx, opts, tls_acceptor)
+    }))
 }
 
 /// A websocket server that implements the Foxglove WebSocket Protocol
@@ -146,7 +170,7 @@ pub(crate) struct Server {
     /// Client tasks.
     tasks: parking_lot::Mutex<Option<JoinSet<()>>>,
     /// TLS acceptor, if using native TLS
-    tls_acceptor: Option<tokio_native_tls::TlsAcceptor>,
+    tls_acceptor: Option<TlsAcceptor>,
 }
 
 impl Server {
@@ -159,7 +183,12 @@ impl Server {
             .unwrap_or_default()
     }
 
-    fn new(weak_self: Weak<Self>, ctx: &Arc<Context>, opts: ServerOptions) -> Self {
+    fn new(
+        weak_self: Weak<Self>,
+        ctx: &Arc<Context>,
+        opts: ServerOptions,
+        tls_acceptor: Option<TlsAcceptor>,
+    ) -> Self {
         let mut capabilities = opts.capabilities.unwrap_or_default();
         let mut supported_encodings = opts.supported_encodings.unwrap_or_default();
 
@@ -200,7 +229,7 @@ impl Server {
             services: parking_lot::RwLock::new(ServiceMap::from_iter(opts.services.into_values())),
             fetch_asset_handler: opts.fetch_asset_handler,
             tasks: parking_lot::Mutex::default(),
-            tls_acceptor: None,
+            tls_acceptor,
         }
     }
 
@@ -256,7 +285,12 @@ impl Server {
             }
         });
 
-        tracing::info!("Started server on {}", local_addr);
+        let maybe_tls = if self.is_tls_configured() {
+            " (TLS enabled)"
+        } else {
+            ""
+        };
+        tracing::info!("Started server on {local_addr}{maybe_tls}");
 
         Ok(local_addr)
     }
