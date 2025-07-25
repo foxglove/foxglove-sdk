@@ -1,3 +1,4 @@
 foxglove-sdk>=0.4.0
 scipy>=1.0
 yourdfpy
+lerobot
