@@ -9,10 +9,12 @@ if(POLICY CMP0024)
   set(CMAKE_POLICY_DEFAULT_CMP0024 NEW)
 endif()
 
-project(foxglove_bridge LANGUAGES CXX VERSION 0.8.5)
+project(foxglove_bridge LANGUAGES CXX VERSION 1.0.0)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+option(USE_LOCAL_PREBUILT_SDK "Use pre-built Foxglove SDK binaries from local source tree" OFF)
 
 macro(enable_strict_compiler_warnings target)
   if (MSVC)
@@ -24,18 +26,13 @@ macro(enable_strict_compiler_warnings target)
   endif()
 endmacro()
 
-find_package(nlohmann_json QUIET)
 find_package(OpenSSL REQUIRED)
 find_package(Threads REQUIRED)
-find_package(websocketpp REQUIRED)
 find_package(ZLIB REQUIRED)
 
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE RelWithDebInfo)
 endif()
-
-option(USE_FOXGLOVE_SDK "Build with Foxglove SDK" OFF)
-add_definitions(-DUSE_FOXGLOVE_SDK=${USE_FOXGLOVE_SDK})
 
 # Determine wheter to use standalone or boost asio
 option(USE_ASIO_STANDALONE "Build with standalone ASIO" ON)
@@ -54,40 +51,47 @@ if (ENDIAN)
   add_compile_definitions(ARCH_IS_BIG_ENDIAN=1)
 endif()
 
-if(USE_FOXGLOVE_SDK)
+if (USE_LOCAL_PREBUILT_SDK)
+  set(FOXGLOVE_SDK_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/../../..)
+  add_library(foxglove_cpp_static STATIC IMPORTED)
+  set_target_properties(foxglove_cpp_static PROPERTIES
+    IMPORTED_LOCATION ${FOXGLOVE_SDK_ROOT}/cpp/build/libfoxglove_cpp_static.a
+  )
+  add_library(foxglove_c_static STATIC IMPORTED)
+  set_target_properties(foxglove_c_static PROPERTIES
+    IMPORTED_LOCATION ${FOXGLOVE_SDK_ROOT}/cpp/build/libfoxglove.a
+  )
+else()
+  message(STATUS "Fetching Foxglove SDK artifacts from GitHub")
   if (CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64")
-    set(FOXGLOVE_SDK_RELEASES "https://github.com/foxglove/foxglove-sdk/releases/download/sdk%2Fv0.10.0/foxglove-v0.10.0-cpp-aarch64-unknown-linux-gnu.zip" "81e2379e3a08160c023779eab0fe5c5764ace3b30c8727b0030ac7dc8b415016")
+    set(FOXGLOVE_SDK_URL "https://github.com/foxglove/foxglove-sdk/releases/download/sdk%2Fv0.10.0/foxglove-v0.10.0-cpp-aarch64-unknown-linux-gnu.zip")
+    set(FOXGLOVE_SDK_SHA "81e2379e3a08160c023779eab0fe5c5764ace3b30c8727b0030ac7dc8b415016")
   elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
-    set(FOXGLOVE_SDK_RELEASES "https://github.com/foxglove/foxglove-sdk/releases/download/sdk%2Fv0.10.0/foxglove-v0.10.0-cpp-x86_64-unknown-linux-gnu.zip" "209d34a8703d44a129c559493e1a3fb215888b4d5973622750ac28b1c345946c")
+    set(FOXGLOVE_SDK_URL "https://github.com/foxglove/foxglove-sdk/releases/download/sdk%2Fv0.10.0/foxglove-v0.10.0-cpp-x86_64-unknown-linux-gnu.zip")
+    set(FOXGLOVE_SDK_SHA "209d34a8703d44a129c559493e1a3fb215888b4d5973622750ac28b1c345946c")
   else()
     message(FATAL_ERROR "Unsupported platform: ${CMAKE_SYSTEM_PROCESSOR}-${CMAKE_SYSTEM_NAME}")
   endif()
 
-  list(GET FOXGLOVE_SDK_RELEASES 0 url)
-  list(GET FOXGLOVE_SDK_RELEASES 1 hash)
-
-  # Download Foxglove SDK shared lib
   include(FetchContent)
   FetchContent_Declare(
     foxglove_sdk
-    URL ${url}
-    URL_HASH SHA256=${hash}
+    URL ${FOXGLOVE_SDK_URL}
+    URL_HASH SHA256=${FOXGLOVE_SDK_SHA}
   )
   FetchContent_MakeAvailable(foxglove_sdk)
-
-  add_library(foxglove_sdk STATIC)
-  target_include_directories(foxglove_sdk SYSTEM
+  add_library(foxglove_cpp_static STATIC)
+  target_include_directories(foxglove_cpp_static SYSTEM
     PUBLIC
       $<BUILD_INTERFACE:${foxglove_sdk_SOURCE_DIR}/include>
       $<INSTALL_INTERFACE:include>
   )
   file(GLOB_RECURSE FOXGLOVE_SDK_SOURCES CONFIGURE_DEPENDS "${foxglove_sdk_SOURCE_DIR}/src/*.cpp")
-  target_sources(foxglove_sdk PRIVATE ${FOXGLOVE_SDK_SOURCES})
-  set_target_properties(foxglove_sdk PROPERTIES POSITION_INDEPENDENT_CODE ON)
-  target_link_libraries(foxglove_sdk PRIVATE ${foxglove_sdk_SOURCE_DIR}/lib/libfoxglove.a)
+  target_sources(foxglove_cpp_static PRIVATE ${FOXGLOVE_SDK_SOURCES})
+  set_target_properties(foxglove_cpp_static PROPERTIES POSITION_INDEPENDENT_CODE ON)
+  target_link_libraries(foxglove_cpp_static PRIVATE ${foxglove_sdk_SOURCE_DIR}/lib/libfoxglove.a)
 endif()
 
-# Get git commit hash and replace variables in version.cpp.in
 find_program(GIT_SCM git DOC "Git version control")
 if (GIT_SCM)
   execute_process(
@@ -98,287 +102,119 @@ if (GIT_SCM)
   )
 endif()
 set(FOXGLOVE_BRIDGE_VERSION "${CMAKE_PROJECT_VERSION}")
-configure_file(foxglove_bridge_base/src/version.cpp.in
-               foxglove_bridge_base/src/version.cpp @ONLY)
-# Build the foxglove_bridge_base library
-add_library(foxglove_bridge_base SHARED
-  foxglove_bridge_base/src/base64.cpp
-  foxglove_bridge_base/src/foxglove_bridge.cpp
-  foxglove_bridge_base/src/parameter.cpp
-  foxglove_bridge_base/src/serialization.cpp
-  foxglove_bridge_base/src/server_factory.cpp
-  foxglove_bridge_base/src/test/test_client.cpp
-  # Generated:
-  ${CMAKE_CURRENT_BINARY_DIR}/foxglove_bridge_base/src/version.cpp
+
+if(NOT DEFINED ENV{AMENT_PREFIX_PATH})
+  message(FATAL_ERROR "ament_cmake is not detected but is required for building")
+endif()
+
+set(ROS_BUILD_TYPE "ament_cmake")
+
+find_package(ament_cmake REQUIRED)
+find_package(rosgraph_msgs REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(rclcpp_components REQUIRED)
+find_package(resource_retriever REQUIRED)
+find_package(rosx_introspection REQUIRED)
+
+# Generate version.hpp
+configure_file(include/foxglove_bridge/version.hpp.in include/foxglove_bridge/version.hpp @ONLY)
+
+add_library(foxglove_bridge_component SHARED
+  src/message_definition_cache.cpp
+  src/param_utils.cpp
+  src/ros2_foxglove_bridge.cpp
+  src/parameter_interface.cpp
+  src/generic_client.cpp
 )
-target_include_directories(foxglove_bridge_base
+target_include_directories(foxglove_bridge_component
   PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/foxglove_bridge_base/include>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../../../cpp/foxglove/include>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../../../c/include>
+    # For generated version.hpp
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
     $<INSTALL_INTERFACE:include>
 )
-target_link_libraries(foxglove_bridge_base
-  OpenSSL::Crypto
+
+if (USE_LOCAL_PREBUILT_SDK)
+  # The locally-built C++ SDK needs to be statically linked to the C SDK
+  target_link_libraries(foxglove_bridge_component foxglove_c_static)
+endif()
+target_link_libraries(foxglove_bridge_component
+  foxglove_cpp_static
   OpenSSL::SSL
-  ZLIB::ZLIB
-  ${CMAKE_THREAD_LIBS_INIT}
 )
 
-if(nlohmann_json_FOUND)
-  target_link_libraries(foxglove_bridge_base nlohmann_json::nlohmann_json)
-else()
-  message(STATUS "nlohmann_json not found, will search at compile time")
-endif()
-enable_strict_compiler_warnings(foxglove_bridge_base)
+target_compile_definitions(foxglove_bridge_component
+  PRIVATE
+    RESOURCE_RETRIEVER_VERSION_MAJOR=${resource_retriever_VERSION_MAJOR}
+    RESOURCE_RETRIEVER_VERSION_MINOR=${resource_retriever_VERSION_MINOR}
+    RESOURCE_RETRIEVER_VERSION_PATCH=${resource_retriever_VERSION_PATCH}
+)
 
-message(STATUS "ROS_VERSION: " $ENV{ROS_VERSION})
-message(STATUS "ROS_DISTRO: " $ENV{ROS_DISTRO})
-message(STATUS "ROS_ROOT: " $ENV{ROS_ROOT})
-if("$ENV{ROS_VERSION}" STREQUAL "1")
-  # ROS 1
-  if(CATKIN_DEVEL_PREFIX OR catkin_FOUND OR CATKIN_BUILD_BINARY_PACKAGE)
-    message(STATUS "Building with catkin")
-    set(ROS_BUILD_TYPE "catkin")
+target_link_libraries(foxglove_bridge_component
+  ${rosgraph_msgs_TARGETS}
+  ament_index_cpp::ament_index_cpp
+  rclcpp::rclcpp
+  rclcpp_components::component
+  rclcpp_components::component_manager
+  resource_retriever::resource_retriever
+  rosx_introspection::rosx_introspection
+)
 
-    find_package(catkin REQUIRED COMPONENTS nodelet resource_retriever ros_babel_fish rosgraph_msgs roslib roscpp)
-    find_package(Boost REQUIRED)
+rclcpp_components_register_nodes(foxglove_bridge_component "foxglove_bridge::FoxgloveBridge")
+enable_strict_compiler_warnings(foxglove_bridge_component)
 
-    catkin_package(
-      INCLUDE_DIRS foxglove_bridge_base/include
-      LIBRARIES foxglove_bridge_base foxglove_bridge_nodelet
-      CATKIN_DEPENDS nodelet resource_retriever ros_babel_fish rosgraph_msgs roslib roscpp
-      DEPENDS Boost
-    )
+add_executable(foxglove_bridge
+  src/ros2_foxglove_bridge_node.cpp
+)
+target_include_directories(foxglove_bridge SYSTEM PRIVATE ${rclcpp_INCLUDE_DIRS})
+target_link_libraries(foxglove_bridge
+  foxglove_bridge_component
+  rclcpp::rclcpp
+  rclcpp_components::component
+  rclcpp_components::component_manager
+)
+enable_strict_compiler_warnings(foxglove_bridge)
 
-    add_library(foxglove_bridge_nodelet
-      ros1_foxglove_bridge/src/ros1_foxglove_bridge_nodelet.cpp
-      ros1_foxglove_bridge/src/param_utils.cpp
-      ros1_foxglove_bridge/src/service_utils.cpp
-    )
-    target_include_directories(foxglove_bridge_nodelet
-      SYSTEM PRIVATE
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/foxglove_bridge_base/include>
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ros1_foxglove_bridge/include>
-        $<INSTALL_INTERFACE:include>
-        ${catkin_INCLUDE_DIRS}
-    )
-    target_link_libraries(foxglove_bridge_nodelet foxglove_bridge_base ${catkin_LIBRARIES})
-    enable_strict_compiler_warnings(foxglove_bridge_nodelet)
+if(BUILD_TESTING)
+  find_package(ament_cmake_gtest REQUIRED)
+  find_package(ament_lint_auto REQUIRED)
+  ament_lint_auto_find_test_dependencies()
 
-    add_executable(foxglove_bridge ros1_foxglove_bridge/src/ros1_foxglove_bridge_node.cpp)
-    target_include_directories(foxglove_bridge SYSTEM PRIVATE ${catkin_INCLUDE_DIRS})
-    target_link_libraries(foxglove_bridge ${catkin_LIBRARIES})
-    enable_strict_compiler_warnings(foxglove_bridge)
-  else()
-    message(FATAL_ERROR "Could not find catkin")
-  endif()
-elseif("$ENV{ROS_VERSION}" STREQUAL "2")
-  # ROS 2
-  if(DEFINED ENV{AMENT_PREFIX_PATH})
-    message(STATUS "Building with ament_cmake")
-    set(ROS_BUILD_TYPE "ament_cmake")
+  # Repeat tests several times to catch nondeterministic issues
+  ament_add_gtest(smoke_test tests/smoke_test.cpp ENV GTEST_REPEAT=50 TIMEOUT 600)
+  target_link_libraries(smoke_test
+    foxglove_bridge_component
+    ${std_msgs_TARGETS}
+    ${std_srvs_TARGETS}
+    rclcpp::rclcpp
+    rclcpp_components::component
+    rclcpp_components::component_manager
+  )
+  enable_strict_compiler_warnings(smoke_test)
 
-
-    find_package(ament_cmake REQUIRED)
-    find_package(rosgraph_msgs REQUIRED)
-    find_package(rclcpp REQUIRED)
-    find_package(rclcpp_components REQUIRED)
-    find_package(resource_retriever REQUIRED)
-    find_package(rosx_introspection REQUIRED)
-
-    if(USE_FOXGLOVE_SDK)
-      set(ros2_foxglove_bridge_src_dir ros2_foxglove_bridge_sdk)
-
-      # Generate version.hpp
-      configure_file(ros2_foxglove_bridge_sdk/include/foxglove_bridge/version.hpp.in
-                    ros2_foxglove_bridge_sdk/include/foxglove_bridge/version.hpp @ONLY)
-
-      add_library(foxglove_bridge_component SHARED
-        ros2_foxglove_bridge_sdk/src/message_definition_cache.cpp
-        ros2_foxglove_bridge_sdk/src/param_utils.cpp
-        ros2_foxglove_bridge_sdk/src/ros2_foxglove_bridge.cpp
-        ros2_foxglove_bridge_sdk/src/parameter_interface.cpp
-        ros2_foxglove_bridge_sdk/src/generic_client.cpp
-      )
-      target_include_directories(foxglove_bridge_component
-        PUBLIC
-          $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ros2_foxglove_bridge_sdk/include>
-          # For generated version.hpp
-          $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/ros2_foxglove_bridge_sdk/include>
-          $<INSTALL_INTERFACE:include>
-      )
-
-      target_link_libraries(foxglove_bridge_component
-        foxglove_sdk
-        OpenSSL::SSL
-      )
-      if (nlohmann_json_FOUND)
-        target_link_libraries(foxglove_bridge_component nlohmann_json::nlohmann_json)
-      endif()
-    else()
-      set(ros2_foxglove_bridge_src_dir ros2_foxglove_bridge)
-      add_library(foxglove_bridge_component SHARED
-        ros2_foxglove_bridge/src/message_definition_cache.cpp
-        ros2_foxglove_bridge/src/param_utils.cpp
-        ros2_foxglove_bridge/src/ros2_foxglove_bridge.cpp
-        ros2_foxglove_bridge/src/parameter_interface.cpp
-        ros2_foxglove_bridge/src/generic_client.cpp
-      )
-      target_include_directories(foxglove_bridge_component
-        PUBLIC
-          $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/foxglove_bridge_base/include>
-          $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ros2_foxglove_bridge/include>
-          $<INSTALL_INTERFACE:include>
-      )
-
-      target_link_libraries(foxglove_bridge_component foxglove_bridge_base)
-    endif()
-
-
-    target_compile_definitions(foxglove_bridge_component
-      PRIVATE
-        RESOURCE_RETRIEVER_VERSION_MAJOR=${resource_retriever_VERSION_MAJOR}
-        RESOURCE_RETRIEVER_VERSION_MINOR=${resource_retriever_VERSION_MINOR}
-        RESOURCE_RETRIEVER_VERSION_PATCH=${resource_retriever_VERSION_PATCH}
-    )
-
-    target_link_libraries(foxglove_bridge_component
-      ${rosgraph_msgs_TARGETS}
-      ament_index_cpp::ament_index_cpp
-      rclcpp::rclcpp
-      rclcpp_components::component
-      rclcpp_components::component_manager
-      resource_retriever::resource_retriever
-      rosx_introspection::rosx_introspection
-    )
-
-    rclcpp_components_register_nodes(foxglove_bridge_component "foxglove_bridge::FoxgloveBridge")
-    enable_strict_compiler_warnings(foxglove_bridge_component)
-
-    add_executable(foxglove_bridge
-      ${ros2_foxglove_bridge_src_dir}/src/ros2_foxglove_bridge_node.cpp
-    )
-    target_include_directories(foxglove_bridge SYSTEM PRIVATE ${rclcpp_INCLUDE_DIRS})
-    target_link_libraries(foxglove_bridge
-      foxglove_bridge_component
-      rclcpp::rclcpp
-      rclcpp_components::component
-      rclcpp_components::component_manager
-    )
-    enable_strict_compiler_warnings(foxglove_bridge)
-  else()
-    message(FATAL_ERROR "Could not find ament_cmake")
-  endif()
-else()
-  message(FATAL_ERROR "ROS_VERSION environment variable must be 1 or 2")
+  ament_add_gtest(utils_test tests/utils_test.cpp)
+  target_link_libraries(utils_test foxglove_bridge_component)
+  enable_strict_compiler_warnings(utils_test)
 endif()
 
-#### TESTS #####################################################################
-
-if(ROS_BUILD_TYPE STREQUAL "catkin")
-  if (CATKIN_ENABLE_TESTING)
-    message(STATUS "Building tests with catkin")
-
-    find_package(catkin REQUIRED COMPONENTS roscpp std_msgs std_srvs)
-    if(NOT "$ENV{ROS_DISTRO}" STREQUAL "melodic")
-      find_package(GTest REQUIRED)
-    endif()
-    find_package(rostest REQUIRED)
-    find_package(Boost REQUIRED COMPONENTS system)
-
-    catkin_add_gtest(version_test foxglove_bridge_base/tests/version_test.cpp)
-    target_link_libraries(version_test foxglove_bridge_base ${Boost_LIBRARIES})
-    enable_strict_compiler_warnings(version_test)
-
-    catkin_add_gtest(serialization_test foxglove_bridge_base/tests/serialization_test.cpp)
-    target_link_libraries(serialization_test foxglove_bridge_base ${Boost_LIBRARIES})
-    enable_strict_compiler_warnings(foxglove_bridge)
-
-    catkin_add_gtest(base64_test foxglove_bridge_base/tests/base64_test.cpp)
-    target_link_libraries(base64_test foxglove_bridge_base ${Boost_LIBRARIES})
-    enable_strict_compiler_warnings(foxglove_bridge)
-
-    add_rostest_gtest(smoke_test ros1_foxglove_bridge/tests/smoke.test ros1_foxglove_bridge/tests/smoke_test.cpp)
-    target_include_directories(smoke_test SYSTEM PRIVATE
-      $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/foxglove_bridge_base/include>
-      ${catkin_INCLUDE_DIRS}
-      $<INSTALL_INTERFACE:include>
-    )
-    target_link_libraries(smoke_test foxglove_bridge_base ${catkin_LIBRARIES})
-    enable_strict_compiler_warnings(smoke_test)
-  endif()
-elseif(ROS_BUILD_TYPE STREQUAL "ament_cmake")
-  if(BUILD_TESTING)
-    message(STATUS "Building tests with ament_cmake")
-
-    find_package(ament_cmake_gtest REQUIRED)
-    find_package(ament_lint_auto REQUIRED)
-    ament_lint_auto_find_test_dependencies()
-
-    ament_add_gtest(version_test foxglove_bridge_base/tests/version_test.cpp)
-    target_link_libraries(version_test foxglove_bridge_base)
-    enable_strict_compiler_warnings(version_test)
-
-    ament_add_gtest(serialization_test foxglove_bridge_base/tests/serialization_test.cpp)
-    target_link_libraries(serialization_test foxglove_bridge_base)
-    enable_strict_compiler_warnings(serialization_test)
-
-    ament_add_gtest(base64_test foxglove_bridge_base/tests/base64_test.cpp)
-    target_link_libraries(base64_test foxglove_bridge_base)
-    enable_strict_compiler_warnings(base64_test)
-
-    # Repeat tests several times to catch nondeterministic issues
-    ament_add_gtest(smoke_test ${ros2_foxglove_bridge_src_dir}/tests/smoke_test.cpp ENV GTEST_REPEAT=50 TIMEOUT 600)
-    target_link_libraries(smoke_test
-      foxglove_bridge_component
-      ${std_msgs_TARGETS}
-      ${std_srvs_TARGETS}
-      rclcpp::rclcpp
-      rclcpp_components::component
-      rclcpp_components::component_manager
-    )
-    enable_strict_compiler_warnings(smoke_test)
-
-    ament_add_gtest(utils_test ${ros2_foxglove_bridge_src_dir}/tests/utils_test.cpp)
-    target_link_libraries(utils_test foxglove_bridge_component)
-    enable_strict_compiler_warnings(utils_test)
-  endif()
-endif()
-
-#### INSTALL ###################################################################
-
-if(ROS_BUILD_TYPE STREQUAL "catkin")
-    install(TARGETS foxglove_bridge
-      RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-    )
-    install(TARGETS foxglove_bridge_base foxglove_bridge_nodelet
-      ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-      LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-      RUNTIME DESTINATION ${CATKIN_GLOBAL_BIN_DESTINATION}
-    )
-    install(FILES nodelets.xml
-      DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
-    )
-    install(DIRECTORY ros1_foxglove_bridge/launch/
-      DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch
-    )
-elseif(ROS_BUILD_TYPE STREQUAL "ament_cmake")
-    install(FILES ros2_foxglove_bridge/include/foxglove_bridge/ros2_foxglove_bridge.hpp
-      DESTINATION include/${PROJECT_NAME}/
-    )
-    install(TARGETS foxglove_bridge
-      DESTINATION lib/${PROJECT_NAME}
-    )
-    install(TARGETS foxglove_bridge_base foxglove_bridge_component
-      ARCHIVE DESTINATION lib
-      LIBRARY DESTINATION lib
-      RUNTIME DESTINATION bin
-    )
-    install(DIRECTORY ros2_foxglove_bridge/launch
-      DESTINATION share/${PROJECT_NAME}/
-    )
-    install(FILES ros2_foxglove_bridge/include/foxglove_bridge/utils.hpp
-      DESTINATION include/${PROJECT_NAME}/
-    )
-    ament_export_libraries(foxglove_bridge_base foxglove_bridge_component)
-    ament_package()
-endif()
+install(FILES include/foxglove_bridge/ros2_foxglove_bridge.hpp
+  DESTINATION include/${PROJECT_NAME}/
+)
+install(TARGETS foxglove_bridge_component
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
+)
+install(TARGETS foxglove_bridge
+  DESTINATION lib/${PROJECT_NAME}
+)
+install(DIRECTORY launch
+  DESTINATION share/${PROJECT_NAME}/
+)
+install(FILES include/foxglove_bridge/utils.hpp
+  DESTINATION include/${PROJECT_NAME}/
+)
+ament_export_libraries(foxglove_bridge_component)
+ament_package()
