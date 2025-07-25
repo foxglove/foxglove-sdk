@@ -1,5 +1,30 @@
 ARG ROS_DISTRIBUTION=rolling
-FROM ros:$ROS_DISTRIBUTION-ros-base
+ARG LOCAL_SDK_BUILD=true
+
+# Build Foxglove C++ SDK
+FROM rust:latest AS build-sdk
+
+ARG MSRV_RUST_VERSION=1.83.0
+
+WORKDIR /sdk
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    cmake
+
+COPY ./cpp /sdk/cpp
+COPY ./c /sdk/c
+COPY ./rust /sdk/rust
+# REVIEW: Is it possible to do this without copying over Python?
+COPY ./python /sdk/python
+COPY ./Cargo.toml /sdk/Cargo.toml
+
+WORKDIR /sdk/cpp
+RUN make
+
+# Build ROS workspace
+FROM ros:$ROS_DISTRIBUTION-ros-base AS build-ros
+
+ARG BUILD_TARGET=all
 
 RUN apt-get update
 
@@ -12,9 +37,16 @@ RUN groupadd --gid $USER_GID $USERNAME \
     && echo "$USERNAME ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers.d/$USERNAME
 USER $USERNAME
 
+# Copy Foxglove SDK build artifacts
+COPY --from=build-sdk --chown=$USER_UID:$USER_GID /sdk/cpp/build/libfoxglove.a /sdk/cpp/build/libfoxglove_cpp_static.a /sdk/cpp/build/
+COPY --from=build-sdk --chown=$USER_UID:$USER_GID /sdk/cpp/foxglove/include /sdk/cpp/foxglove/include
+
+RUN . /opt/ros/$ROS_DISTRO/setup.sh
+
 # rosdep update must run as user
 RUN rosdep update --include-eol-distros
 
 WORKDIR /sdk/ros
 COPY --chown=$USER_UID:$USER_GID ./ros /sdk/ros
 RUN make deps
+RUN echo "BUILD_TARGET is: $BUILD_TARGET" && . /opt/ros/$ROS_DISTRO/setup.sh && make $BUILD_TARGET
