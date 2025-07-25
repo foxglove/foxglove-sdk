@@ -3,10 +3,8 @@ import datetime
 import logging
 import math
 import time
-from typing import Optional
 
 import foxglove
-import numpy as np
 from foxglove.channels import RawImageChannel
 from foxglove.schemas import (
     FrameTransform,
@@ -52,13 +50,13 @@ def parse_args():
     robot_group.add_argument(
         "--robot.wrist_cam_id",
         type=int,
-        help="Camera ID for wrist camera (if not provided, wrist camera will be disabled)",
+        help="Camera ID for wrist camera (disabled if not provided)",
         dest="robot_wrist_cam_id",
     )
     robot_group.add_argument(
         "--robot.env_cam_id",
         type=int,
-        help="Camera ID for environment camera (if not provided, environment camera will be disabled)",
+        help="Camera ID for environment camera (disabled if not provided)",
         dest="robot_env_cam_id",
     )
 
@@ -266,7 +264,7 @@ def main():
             env_camera.disconnect()
         if writer:
             writer.close()
-            print(f"MCAP file saved successfully.")
+            print("MCAP file saved successfully.")
 
 
 if __name__ == "__main__":
