@@ -10,6 +10,7 @@ use tokio::runtime::Handle;
 use tokio::task::{JoinError, JoinSet};
 use tokio::time::MissedTickBehavior;
 use tokio_tungstenite::tungstenite::Message;
+use tokio_tungstenite::MaybeTlsStream;
 use tokio_util::sync::CancellationToken;
 
 use crate::library_version::get_library_version;
@@ -513,6 +514,8 @@ impl Server {
     /// - Advertise existing services
     /// - Listen for client messages
     async fn handle_connection(self: Arc<Self>, stream: TcpStream, addr: SocketAddr) {
+        let stream = MaybeTlsStream::Plain(stream);
+
         let Ok(mut ws_stream) = handshake::do_handshake(stream).await else {
             tracing::error!("Dropping client {addr}: handshake failed");
             return;
