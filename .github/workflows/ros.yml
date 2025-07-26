@@ -28,5 +28,5 @@ jobs:
 
       - name: Run make test
         run: |
-          docker run --rm -v $(pwd):/sdk foxglove-sdk-ros-${{ matrix.ros_distribution }} \
+          docker run --rm foxglove-sdk-ros-${{ matrix.ros_distribution }} \
             make test
