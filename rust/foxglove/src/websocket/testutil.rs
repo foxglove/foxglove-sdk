@@ -11,6 +11,20 @@ use super::handshake::SUBPROTOCOL;
 use super::ws_protocol::server::ServerMessage;
 use super::ws_protocol::ParseError;
 
+// pub mod testutil {
+macro_rules! expect_recv {
+    ($client:expr, $variant:path) => {{
+        let msg = $client.recv().await.expect("Failed to recv");
+        match msg {
+            $variant(m) => m,
+            _ => panic!("Received unexpected message: {msg:?}"),
+        }
+    }};
+}
+
+pub(crate) use expect_recv;
+// }
+
 #[derive(Debug, thiserror::Error)]
 pub enum RecvError {
     #[error("unexpected end of stream")]
