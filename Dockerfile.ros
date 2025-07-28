@@ -37,8 +37,7 @@ RUN groupadd --gid $USER_GID $USERNAME \
 USER $USERNAME
 
 # Copy Foxglove SDK build artifacts
-COPY --from=build-sdk --chown=$USER_UID:$USER_GID /sdk/cpp/build/libfoxglove.a /sdk/cpp/build/libfoxglove_cpp_static.a /sdk/cpp/build/
-COPY --from=build-sdk --chown=$USER_UID:$USER_GID /sdk/cpp/foxglove/include /sdk/cpp/foxglove/include
+COPY --from=build-sdk --chown=$USER_UID:$USER_GID /sdk/cpp /sdk/cpp
 
 RUN . /opt/ros/$ROS_DISTRO/setup.sh
 

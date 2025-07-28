@@ -1,3 +1,6 @@
+ROS_DISTRIBUTIONS := humble iron jazzy kilted rolling
+USE_LOCAL_PREBUILT_SDK := OFF
+BUILD_SDK := OFF
 
 
 .PHONY: all
@@ -15,7 +18,7 @@ deps:
 
 .PHONY: build
 build: cpp-sdk
-	colcon build --cmake-args -DLOCAL_SDK_BUILD=$(LOCAL_SDK_BUILD)
+	colcon build --cmake-args -DUSE_LOCAL_PREBUILT_SDK=$(USE_LOCAL_PREBUILT_SDK)
 
 .PHONY: build-msgs
 build-msgs:
@@ -23,16 +26,21 @@ build-msgs:
 
 .PHONY: cpp-sdk
 cpp-sdk:
-ifeq ($(LOCAL_SDK_BUILD), ON)
+ifeq ($(BUILD_SDK), ON)
 	$(info Building Foxlove C++ SDK from local source tree)
-	if ! [ -e ../cpp/build/libfoxglove_cpp_static.a ] ; then make -C ../cpp ; fi
+	make -C ../cpp
+	USE_LOCAL_PREBUILT_SDK := ON
+endif
+
+ifeq ($(USE_LOCAL_PREBUILT_SDK), ON)
+	$(info Using pre-built Foxglove C++ SDK binaries from local source tree)
 else
 	$(info Build will use pre-built Foxglove C++ SDK binaries)
 endif
 
 .PHONY: build-bridge
 build-bridge: cpp-sdk
-	colcon build --packages-select foxglove_bridge --cmake-args -DLOCAL_SDK_BUILD=$(LOCAL_SDK_BUILD) --event-handlers console_direct+
+	colcon build --packages-select foxglove_bridge --cmake-args -DUSE_LOCAL_PREBUILT_SDK=$(USE_LOCAL_PREBUILT_SDK) --event-handlers console_direct+
 
 .PHONY: test
 test: build
@@ -48,9 +56,6 @@ test-msgs: build-msgs
 test-bridge: build-bridge
 	colcon test --packages-select foxglove_bridge
 	colcon test-result --all --verbose
-
-ROS_DISTRIBUTIONS := humble iron jazzy kilted rolling
-LOCAL_SDK_BUILD := OFF
 
 define generate_ros_targets
 .PHONY: docker-build-$(1)
