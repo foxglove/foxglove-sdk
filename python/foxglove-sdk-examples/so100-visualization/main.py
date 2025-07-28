@@ -195,8 +195,6 @@ def main():
             # Read actual joint angles from follower (in degrees)
             obs = follower.get_observation()
 
-            # TODO: The URDF 0 position does not match the calibrated arm 0 position
-            # as described in the lerobot documentation.
             joint_positions["1"] = math.radians(obs.get("shoulder_pan.pos", 0.0)) * -1.0
             joint_positions["2"] = math.radians(obs.get("shoulder_lift.pos", 0.0))
             joint_positions["3"] = math.radians(obs.get("elbow_flex.pos", 0.0))

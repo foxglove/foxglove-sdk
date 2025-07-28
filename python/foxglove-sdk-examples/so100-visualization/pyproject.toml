@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "so100-visualization"
+version = "0.1.0"
+description = "SO-100 robot arm visualization with Foxglove"
+authors = ["Foxglove <contact@foxglove.dev>"]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+foxglove-sdk = "^0.4.0"
+scipy = "^1.0"
+yourdfpy = "*"
+# Install lerobot from GitHub repo
+lerobot = {git = "https://github.com/huggingface/lerobot.git", extras = ["feetech"]}
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
