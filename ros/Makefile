@@ -1,7 +1,7 @@
 
 
 .PHONY: all
-all: deps build-msgs build-bridge test
+all: deps build
 
 .PHONY: clean
 clean:
@@ -26,22 +26,22 @@ build-bridge:
 	colcon build --packages-select foxglove_bridge --cmake-args -DLOCAL_SDK_BUILD=$(LOCAL_SDK_BUILD) --event-handlers console_direct+
 
 .PHONY: test
-test:
+test: build
 	colcon test
 	colcon test-result --all --verbose
 
 .PHONY: test-msgs
-test-msgs:
+test-msgs: build-msgs
 	colcon test --packages-select foxglove_msgs
 	colcon test-result --all --verbose
 
 .PHONY: test-bridge
-test-bridge:
+test-bridge: build-bridge
 	colcon test --packages-select foxglove_bridge
 	colcon test-result --all --verbose
 
 ROS_DISTRIBUTIONS := humble iron jazzy kilted rolling
-LOCAL_SDK_BUILD := true
+LOCAL_SDK_BUILD := false
 
 define generate_ros_targets
 .PHONY: docker-build-$(1)
