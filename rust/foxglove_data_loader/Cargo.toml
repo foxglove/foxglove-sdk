@@ -1,8 +1,7 @@
 [package]
 name = "foxglove_data_loader"
-publish = false
+version = "0.0.1"
 description = "Generate wasm to use as a Foxglove data loader"
-version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 repository.workspace = true
