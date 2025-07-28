@@ -28,10 +28,10 @@ jobs:
 
       - name: Run make
         run: |
-          docker run --rm -v $(pwd):/sdk foxglove-sdk-ros-${{ matrix.ros_distribution }} \
+          docker run --rm -v $(pwd)/ros:/sdk/ros foxglove-sdk-ros-${{ matrix.ros_distribution }} \
             make LOCAL_SDK_BUILD=ON
 
       - name: Run make test
         run: |
-          docker run --rm -v $(pwd):/sdk foxglove-sdk-ros-${{ matrix.ros_distribution }} \
+          docker run --rm -v $(pwd)/ros:/sdk/ros foxglove-sdk-ros-${{ matrix.ros_distribution }} \
             make test

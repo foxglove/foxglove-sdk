@@ -1,5 +1,4 @@
 ARG ROS_DISTRIBUTION=rolling
-ARG LOCAL_SDK_BUILD=true
 
 # Build Foxglove C++ SDK
 FROM rust:latest AS build-sdk

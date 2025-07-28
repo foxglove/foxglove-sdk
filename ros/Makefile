@@ -22,7 +22,7 @@ build-msgs:
 	colcon build --packages-select foxglove_msgs
 
 .PHONY: cpp-sdk
-cpp-sdk: 
+cpp-sdk:
 ifeq ($(LOCAL_SDK_BUILD), ON)
 	$(info Building Foxlove C++ SDK from local source tree)
 	if ! [ -e ../cpp/build/libfoxglove_cpp_static.a ] ; then make -C ../cpp ; fi
@@ -57,8 +57,6 @@ define generate_ros_targets
 docker-build-$(1):
 	docker build -t foxglove-sdk-ros-$(1) -f ../Dockerfile.ros \
 		--build-arg ROS_DISTRIBUTION=$(1) \
-		--build-arg LOCAL_SDK_BUILD=$(LOCAL_SDK_BUILD) \
-		--build-arg BUILD_TARGET=build \
 		$(EXTRA_DOCKER_ARGS) ..
 
 .PHONY: docker-build-msgs-$(1)
@@ -72,7 +70,6 @@ docker-build-msgs-$(1):
 docker-build-bridge-$(1):
 	docker build -t foxglove-sdk-ros-$(1) -f ../Dockerfile.ros \
 		--build-arg ROS_DISTRIBUTION=$(1) \
-		--build-arg LOCAL_SDK_BUILD=$(LOCAL_SDK_BUILD) \
 		--build-arg BUILD_TARGET=build-bridge \
 		$(EXTRA_DOCKER_ARGS) ..
 
