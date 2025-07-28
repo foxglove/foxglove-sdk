@@ -5,7 +5,7 @@ description = "SO-100 robot arm visualization with Foxglove"
 authors = ["Foxglove <contact@foxglove.dev>"]
 
 [tool.poetry.dependencies]
-python = "^3.8"
+python = "^3.10"
 foxglove-sdk = "^0.4.0"
 scipy = "^1.0"
 yourdfpy = "*"
