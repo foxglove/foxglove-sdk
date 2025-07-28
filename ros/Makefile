@@ -14,15 +14,24 @@ deps:
 		--ignore-src
 
 .PHONY: build
-build:
+build: cpp-sdk
 	colcon build --cmake-args -DLOCAL_SDK_BUILD=$(LOCAL_SDK_BUILD)
 
 .PHONY: build-msgs
 build-msgs:
 	colcon build --packages-select foxglove_msgs
 
+.PHONY: cpp-sdk
+cpp-sdk:
+ifeq ($(LOCAL_SDK_BUILD), ON)
+	$(info Building Foxlove C++ SDK from local source tree)
+	make -C ../cpp
+else
+	$(info Build will use pre-built Foxglove C++ SDK binaries)
+endif
+
 .PHONY: build-bridge
-build-bridge:
+build-bridge: cpp-sdk
 	colcon build --packages-select foxglove_bridge --cmake-args -DLOCAL_SDK_BUILD=$(LOCAL_SDK_BUILD) --event-handlers console_direct+
 
 .PHONY: test
@@ -41,7 +50,7 @@ test-bridge: build-bridge
 	colcon test-result --all --verbose
 
 ROS_DISTRIBUTIONS := humble iron jazzy kilted rolling
-LOCAL_SDK_BUILD := false
+LOCAL_SDK_BUILD := OFF
 
 define generate_ros_targets
 .PHONY: docker-build-$(1)
