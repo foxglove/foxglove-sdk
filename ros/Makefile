@@ -22,10 +22,10 @@ build-msgs:
 	colcon build --packages-select foxglove_msgs
 
 .PHONY: cpp-sdk
-cpp-sdk:
+cpp-sdk: 
 ifeq ($(LOCAL_SDK_BUILD), ON)
 	$(info Building Foxlove C++ SDK from local source tree)
-	make -C ../cpp
+	if ! [ -e ../cpp/build/libfoxglove_cpp_static.a ] ; then make -C ../cpp ; fi
 else
 	$(info Build will use pre-built Foxglove C++ SDK binaries)
 endif

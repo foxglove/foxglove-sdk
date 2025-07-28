@@ -78,7 +78,6 @@ else()
     foxglove_sdk
     URL ${FOXGLOVE_SDK_URL}
     URL_HASH SHA256=${FOXGLOVE_SDK_SHA}
-    DOWNLOAD_EXTRACT_TIMESTAMP NEW
   )
   FetchContent_MakeAvailable(foxglove_sdk)
   add_library(foxglove_cpp_static STATIC)
