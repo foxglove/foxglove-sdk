@@ -774,4 +774,8 @@ impl Server {
         }
         Ok(())
     }
+
+    pub(crate) fn is_tls_configured(&self) -> bool {
+        self.tls_acceptor.is_some()
+    }
 }
