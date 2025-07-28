@@ -260,7 +260,12 @@ impl WebSocketServerHandle {
 
     /// Returns an app URL to open the websocket as a data source.
     pub fn app_url(&self) -> AppUrl {
-        AppUrl::new().with_websocket(format!("ws://{}:{}", self.1.ip(), self.1.port()))
+        let protocol = if self.0.is_tls_configured() {
+            "wss"
+        } else {
+            "ws"
+        };
+        AppUrl::new().with_websocket(format!("{protocol}://{}:{}", self.1.ip(), self.1.port()))
     }
 
     /// Advertises support for the provided services.
