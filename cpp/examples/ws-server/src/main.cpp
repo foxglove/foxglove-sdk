@@ -5,6 +5,7 @@
 #include <atomic>
 #include <chrono>
 #include <csignal>
+#include <fstream>
 #include <functional>
 #include <iostream>
 #include <memory>
@@ -15,8 +16,42 @@ using namespace std::chrono_literals;
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 static std::function<void()> sigint_handler;
 
+std::vector<std::byte> readFile(const std::string& filepath) {
+  std::filesystem::path path(filepath);
+  size_t length = std::filesystem::file_size(path);
+  if (length == 0) {
+    throw std::runtime_error("File is empty: " + filepath);
+  }
+
+  std::ifstream file(path, std::ios::binary);
+  if (!file.is_open()) {
+    throw std::runtime_error("Failed to open file: " + filepath);
+  }
+
+  std::vector<std::byte> buffer(length);
+  if (!file.read(reinterpret_cast<char*>(buffer.data()), length)) {
+    throw std::runtime_error("Failed to read file: " + filepath);
+  }
+
+  return buffer;
+}
+
 // NOLINTNEXTLINE(bugprone-exception-escape)
-int main() {
+int main(int argc, char* argv[]) {
+  std::string cert_path;
+  std::string key_path;
+  for (int i = 1; i < argc; ++i) {
+    std::string arg = argv[i];
+    if (arg == "--cert" && i + 1 < argc) {
+      cert_path = argv[++i];
+    } else if (arg == "--key" && i + 1 < argc) {
+      key_path = argv[++i];
+    } else {
+      std::cerr << "Unknown argument: " << arg << "\n";
+      std::exit(1);
+    }
+  }
+
   std::signal(SIGINT, [](int) {
     if (sigint_handler) {
       sigint_handler();
@@ -61,6 +96,30 @@ int main() {
   options.callbacks.onClientUnadvertise = [](uint32_t client_id, uint32_t client_channel_id) {
     std::cerr << "Client " << client_id << " unadvertised channel " << client_channel_id << '\n';
   };
+
+  // Read TLS certificate and key files if provided
+  std::vector<std::byte> cert_data;
+  std::vector<std::byte> key_data;
+  if (!cert_path.empty() && !key_path.empty()) {
+    try {
+      cert_data = readFile(cert_path);
+      key_data = readFile(key_path);
+
+      foxglove::TlsIdentity tls_identity;
+      tls_identity.cert = cert_data.data();
+      tls_identity.cert_len = cert_data.size();
+      tls_identity.key = key_data.data();
+      tls_identity.key_len = key_data.size();
+      options.tls_identity = std::move(tls_identity);
+    } catch (const std::exception& e) {
+      std::cerr << "Error reading TLS files: " << e.what() << '\n';
+      return 1;
+    }
+  } else if (!cert_path.empty() || !key_path.empty()) {
+    std::cerr << "Error: Both --cert and --key must be provided for TLS\n";
+    return 1;
+  }
+
   auto server_result = foxglove::WebSocketServer::create(std::move(options));
   if (!server_result.has_value()) {
     std::cerr << "Failed to create server: " << foxglove::strerror(server_result.error()) << '\n';
