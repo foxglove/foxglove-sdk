@@ -47,7 +47,7 @@ build-bridge: cpp-sdk
 	colcon build --packages-select foxglove_bridge --cmake-args -DUSE_LOCAL_PREBUILT_SDK=$(USE_LOCAL_PREBUILT_SDK) --event-handlers console_direct+
 
 .PHONY: test
-test: build
+test:
 	colcon test
 	colcon test-result --all --verbose
 
