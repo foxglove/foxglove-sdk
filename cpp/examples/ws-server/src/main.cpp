@@ -17,16 +17,14 @@ using namespace std::chrono_literals;
 static std::function<void()> sigint_handler;
 
 std::vector<std::byte> readFile(const std::string& filepath) {
-  std::filesystem::path path(filepath);
-  size_t length = std::filesystem::file_size(path);
-  if (length == 0) {
-    throw std::runtime_error("File is empty: " + filepath);
-  }
-
-  std::ifstream file(path, std::ios::binary);
+  std::ifstream file(filepath, std::ios::binary);
   if (!file.is_open()) {
     throw std::runtime_error("Failed to open file: " + filepath);
   }
+
+  file.seekg(0, std::ios::end);
+  std::streamsize length = file.tellg();
+  file.seekg(0, std::ios::beg);
 
   std::vector<std::byte> buffer(length);
   if (!file.read(reinterpret_cast<char*>(buffer.data()), length)) {
