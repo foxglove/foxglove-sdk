@@ -2,6 +2,11 @@ ROS_DISTRIBUTIONS := humble iron jazzy kilted rolling
 USE_LOCAL_PREBUILT_SDK := OFF
 BUILD_SDK := OFF
 
+# Automatically set USE_LOCAL_PREBUILT_SDK=ON if BUILD_SDK=ON
+ifeq ($(BUILD_SDK), ON)
+USE_LOCAL_PREBUILT_SDK := ON
+endif
+
 
 .PHONY: all
 all: deps build
@@ -29,7 +34,6 @@ cpp-sdk:
 ifeq ($(BUILD_SDK), ON)
 	$(info Building Foxlove C++ SDK from local source tree)
 	make -C ../cpp
-	USE_LOCAL_PREBUILT_SDK := ON
 endif
 
 ifeq ($(USE_LOCAL_PREBUILT_SDK), ON)
