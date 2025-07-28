@@ -26,7 +26,11 @@ jobs:
         run: EXTRA_DOCKER_ARGS="--build-arg USER_UID=$(id -u) --build-arg USER_GID=$(id -g)" make docker-build-${{ matrix.ros_distribution }}
         working-directory: ros
 
+      - name: Run make
+          docker run --rm -v $(pwd):/sdk foxglove-sdk-ros-${{ matrix.ros_distribution }} \
+            make LOCAL_SDK_BUILD=ON
+
       - name: Run make test
         run: |
-          docker run --rm foxglove-sdk-ros-${{ matrix.ros_distribution }} \
+          docker run --rm -v $(pwd):/sdk foxglove-sdk-ros-${{ matrix.ros_distribution }} \
             make test

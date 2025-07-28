@@ -49,4 +49,3 @@ RUN rosdep update --include-eol-distros
 WORKDIR /sdk/ros
 COPY --chown=$USER_UID:$USER_GID ./ros /sdk/ros
 RUN make deps
-RUN echo "BUILD_TARGET is: $BUILD_TARGET" && . /opt/ros/$ROS_DISTRO/setup.sh && make $BUILD_TARGET
