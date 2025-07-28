@@ -27,6 +27,7 @@ jobs:
         working-directory: ros
 
       - name: Run make
+        run: |
           docker run --rm -v $(pwd):/sdk foxglove-sdk-ros-${{ matrix.ros_distribution }} \
             make LOCAL_SDK_BUILD=ON
 
