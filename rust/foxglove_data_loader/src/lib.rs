@@ -93,7 +93,11 @@ pub use generated::foxglove::loader::reader;
 
 impl std::io::Read for reader::Reader {
     fn read(&mut self, dst: &mut [u8]) -> Result<usize, std::io::Error> {
-        Ok(reader::Reader::read(self, dst) as usize)
+        // The WIT read requires the target pointer and length to write into.
+        // This allows us to read into a slice without copying.
+        let ptr = dst.as_ptr() as _;
+        let len = dst.len() as _;
+        Ok(reader::Reader::read(self, ptr, len) as usize)
     }
 }
 
