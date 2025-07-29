@@ -10,7 +10,9 @@ interface reader {
     resource reader {
         seek: func(pos: u64) -> u64;
         position: func() -> u64;
-        read: func(target: list<u8>) -> u64;
+        // Read data into a slice at the provided pointer with the provided length.
+        // The host implementation will write up to `len` bytes into the address starting at `ptr`. The caller must ensure that this memory region is valid.
+        read: func(ptr: u32, len: u32) -> u64;
         size: func() -> u64;
     }
 
