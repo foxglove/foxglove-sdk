@@ -56,6 +56,8 @@ define generate_ros_targets
 docker-build-container-$(1):
 	docker build -t foxglove-sdk-ros-$(1) -f ../Dockerfile.ros \
 		--build-arg ROS_DISTRIBUTION=$(1) \
+		--build-arg USER_UID=$(id -u) \
+		--build-arg USER_GID=$(id -g) \
 		$(EXTRA_DOCKER_ARGS) ..
 
 .PHONY: docker-build-$(1)
