@@ -23,8 +23,6 @@ RUN make
 # Build ROS workspace
 FROM ros:$ROS_DISTRIBUTION-ros-base AS build-ros
 
-ARG BUILD_TARGET=all
-
 RUN apt-get update
 
 # create foxglove user

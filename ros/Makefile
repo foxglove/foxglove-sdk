@@ -51,36 +51,28 @@ test:
 	colcon test
 	colcon test-result --all --verbose
 
-.PHONY: test-msgs
-test-msgs: build-msgs
-	colcon test --packages-select foxglove_msgs
-	colcon test-result --all --verbose
-
-.PHONY: test-bridge
-test-bridge: build-bridge
-	colcon test --packages-select foxglove_bridge
-	colcon test-result --all --verbose
-
 define generate_ros_targets
-.PHONY: docker-build-$(1)
-docker-build-$(1):
+.PHONY: docker-build-container-$(1)
+docker-build-container-$(1):
 	docker build -t foxglove-sdk-ros-$(1) -f ../Dockerfile.ros \
 		--build-arg ROS_DISTRIBUTION=$(1) \
 		$(EXTRA_DOCKER_ARGS) ..
+
+.PHONY: docker-build-$(1)
+docker-build-$(1): docker-build-container-$(1)
+	docker run --rm -v $(PWD):/sdk/ros foxglove-sdk-ros-$(1) make USE_LOCAL_PREBUILT_SDK=$(USE_LOCAL_PREBUILT_SDK) build
 
 .PHONY: docker-build-msgs-$(1)
-docker-build-msgs-$(1):
-	docker build -t foxglove-sdk-ros-$(1) -f ../Dockerfile.ros \
-		--build-arg ROS_DISTRIBUTION=$(1) \
-		--build-arg BUILD_TARGET=build-msgs \
-		$(EXTRA_DOCKER_ARGS) ..
+docker-build-msgs-$(1): docker-build-container-$(1)
+	docker run --rm -v $(PWD):/sdk/ros foxglove-sdk-ros-$(1) make build-msgs
 
 .PHONY: docker-build-bridge-$(1)
-docker-build-bridge-$(1):
-	docker build -t foxglove-sdk-ros-$(1) -f ../Dockerfile.ros \
-		--build-arg ROS_DISTRIBUTION=$(1) \
-		--build-arg BUILD_TARGET=build-bridge \
-		$(EXTRA_DOCKER_ARGS) ..
+docker-build-bridge-$(1): docker-build-container-$(1)
+	docker run --rm -v $(PWD):/sdk/ros foxglove-sdk-ros-$(1) make USE_LOCAL_PREBUILT_SDK=$(USE_LOCAL_PREBUILT_SDK) build-bridge
+
+.PHONY: docker-test-$(1)
+docker-test-$(1): docker-build-container-$(1)
+	docker run --rm -v $(PWD):/sdk/ros foxglove-sdk-ros-$(1) make test
 
 .PHONY: docker-sh-$(1)
 docker-sh-$(1):

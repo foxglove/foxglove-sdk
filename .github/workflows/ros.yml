@@ -22,16 +22,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Run make docker-build
-        run: EXTRA_DOCKER_ARGS="--build-arg USER_UID=$(id -u) --build-arg USER_GID=$(id -g)" make docker-build-${{ matrix.ros_distribution }}
+      - name: Run make docker-build-container
+        run: EXTRA_DOCKER_ARGS="--build-arg USER_UID=$(id -u) --build-arg USER_GID=$(id -g)" make docker-build-container-${{ matrix.ros_distribution }}
         working-directory: ros
 
-      - name: Run make
-        run: |
-          docker run --rm -v $(pwd)/ros:/sdk/ros foxglove-sdk-ros-${{ matrix.ros_distribution }} \
-            make USE_LOCAL_PREBUILT_SDK=ON
+      - name: Run make docker-build
+        run: make docker-build-${{ matrix.ros_distribution }}
+        working-directory: ros
 
-      - name: Run make test
-        run: |
-          docker run --rm -v $(pwd)/ros:/sdk/ros foxglove-sdk-ros-${{ matrix.ros_distribution }} \
-            make test
+      - name: Run make docker-test
+        run: make docker-test-${{ matrix.ros_distribution }}
+        working-directory: ros
