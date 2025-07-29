@@ -47,7 +47,9 @@ make build-bridge
 You can also build the bridge using a Docker container:
 
 ```bash
-make docker-build-bridge-<distro> # ROS 2 distro codename (i.e. jazzy, kilted, rolling)
+# In the following commands, replace <distro> with your preferred ROS 2 distro codename (i.e. jazzy, kilted, rolling)
+make docker-build-container-<distro> # Build the Docker container environment, including the Foxglove SDK
+make docker-build-bridge-<distro>    # Build the bridge itself
 ```
 
 The built ROS workspace will be written to `/ros` in your `foxglove_sdk` directory.
@@ -102,20 +104,6 @@ Parameters are provided to configure the behavior of the bridge. These parameter
 
 ## For developers
 
-### Running tests
-
-`foxglove_bridge` unit tests can be run after `foxglove_bridge` is built:
-
-```bash
-make test
-```
-
-Tests can also be run under Docker:
-
-```bash
-make docker-test-<distro> # ROS 2 distro codename (i.e. kilted, jazzy, rolling)
-```
-
 ### Building with local SDK changes
 
 The build commands above pull a pre-built Foxglove SDK binary release from GitHub and link against it when building. This
@@ -136,7 +124,22 @@ make BUILD_SDK=ON build-bridge
 If you'd prefer to build using Docker, `USE_LOCAL_PREBUILT_SDK=ON` should be used, since the Foxglove SDK is rebuilt from scratch as a part of the Docker build process:
 
 ```bash
+make docker-build-container-<distro> # Required for the first build, or any time you make a change to the SDK
 make USE_LOCAL_PREBUILT_SDK=ON docker-build-bridge-<distro>
+```
+
+### Running tests
+
+`foxglove_bridge` unit tests can be run after `foxglove_bridge` is built:
+
+```bash
+make test
+```
+
+Tests can also be run under Docker (assuming that `foxglove_bridge`'s Docker container exists and you've run a build using one of the methods above):
+
+```bash
+make docker-test-<distro> # ROS 2 distro codename (i.e. kilted, jazzy, rolling)
 ```
 
 ## Clients
