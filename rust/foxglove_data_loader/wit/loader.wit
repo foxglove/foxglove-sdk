@@ -10,7 +10,7 @@ interface reader {
     resource reader {
         seek: func(pos: u64) -> u64;
         position: func() -> u64;
-        read: func(target: list<u8>) -> u64;
+        read: func(ptr: u32, len: u32) -> u64;
         size: func() -> u64;
     }
 
