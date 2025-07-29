@@ -5,12 +5,12 @@ include "LocationFix.fbs";
 
 namespace foxglove;
 
-/// A series of LocationFix messages
+/// A group of LocationFix messages
 table LocationFixes {
-  /// A series of location fixes
+  /// One or more location fixes
   fixes:[foxglove.LocationFix] (id: 0);
 
-  /// Color used to visualize this series
+  /// Color used to visualize this series, if not set on the individual fixes
   color:foxglove.Color (id: 1);
 }
 

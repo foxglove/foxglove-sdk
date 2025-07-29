@@ -1730,6 +1730,9 @@ pub struct LocationFix {
 
     /// If `position_covariance` is available, `position_covariance_type` must be set to indicate the type of covariance.
     pub position_covariance_type: FoxglovePositionCovarianceType,
+
+    /// Color used to visualize the location
+    pub color: *const Color,
 }
 
 impl LocationFix {
@@ -1769,6 +1772,12 @@ impl BorrowToNative for LocationFix {
                 "frame_id",
             )?
         };
+        let color = unsafe {
+            self.color
+                .as_ref()
+                .map(|m| m.borrow_to_native(arena.as_mut()))
+        }
+        .transpose()?;
 
         Ok(ManuallyDrop::new(foxglove::schemas::LocationFix {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
@@ -1783,6 +1792,7 @@ impl BorrowToNative for LocationFix {
                 )
             }),
             position_covariance_type: self.position_covariance_type as i32,
+            color: color.map(ManuallyDrop::into_inner),
         }))
     }
 }
@@ -1812,14 +1822,14 @@ pub extern "C" fn foxglove_channel_log_location_fix(
     }
 }
 
-/// A series of LocationFix messages
+/// A group of LocationFix messages
 #[repr(C)]
 pub struct LocationFixes {
-    /// A series of location fixes
+    /// One or more location fixes
     pub fixes: *const LocationFix,
     pub fixes_count: usize,
 
-    /// Color used to visualize this series
+    /// Color used to visualize this series, if not set on the individual fixes
     pub color: *const Color,
 }
 

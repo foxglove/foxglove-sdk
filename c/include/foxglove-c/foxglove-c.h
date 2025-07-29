@@ -1376,19 +1376,23 @@ typedef struct foxglove_location_fix {
    * If `position_covariance` is available, `position_covariance_type` must be set to indicate the type of covariance.
    */
   foxglove_position_covariance_type position_covariance_type;
+  /**
+   * Color used to visualize the location
+   */
+  const struct foxglove_color *color;
 } foxglove_location_fix;
 
 /**
- * A series of LocationFix messages
+ * A group of LocationFix messages
  */
 typedef struct foxglove_location_fixes {
   /**
-   * A series of location fixes
+   * One or more location fixes
    */
   const struct foxglove_location_fix *fixes;
   size_t fixes_count;
   /**
-   * Color used to visualize this series
+   * Color used to visualize this series, if not set on the individual fixes
    */
   const struct foxglove_color *color;
 } foxglove_location_fixes;

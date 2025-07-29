@@ -7,11 +7,11 @@ import "foxglove/LocationFix.proto";
 
 package foxglove;
 
-// A series of LocationFix messages
+// A group of LocationFix messages
 message LocationFixes {
-  // A series of location fixes
+  // One or more location fixes
   repeated foxglove.LocationFix fixes = 1;
 
-  // Color used to visualize this series
+  // Color used to visualize this series, if not set on the individual fixes
   foxglove.Color color = 2;
 }

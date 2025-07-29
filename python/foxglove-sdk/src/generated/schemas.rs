@@ -993,6 +993,7 @@ impl From<LinePrimitive> for foxglove::schemas::LinePrimitive {
 /// :param altitude: Altitude in meters
 /// :param position_covariance: Position covariance (m^2) defined relative to a tangential plane through the reported position. The components are East, North, and Up (ENU), in row-major order.
 /// :param position_covariance_type: If `position_covariance` is available, `position_covariance_type` must be set to indicate the type of covariance.
+/// :param color: Color used to visualize the location
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/location-fix
 #[pyclass(module = "foxglove.schemas")]
@@ -1001,7 +1002,7 @@ pub(crate) struct LocationFix(pub(crate) foxglove::schemas::LocationFix);
 #[pymethods]
 impl LocationFix {
     #[new]
-    #[pyo3(signature = (*, timestamp=None, frame_id="".to_string(), latitude=0.0, longitude=0.0, altitude=0.0, position_covariance=vec![], position_covariance_type=LocationFixPositionCovarianceType::Unknown) )]
+    #[pyo3(signature = (*, timestamp=None, frame_id="".to_string(), latitude=0.0, longitude=0.0, altitude=0.0, position_covariance=vec![], position_covariance_type=LocationFixPositionCovarianceType::Unknown, color=None) )]
     fn new(
         timestamp: Option<Timestamp>,
         frame_id: String,
@@ -1010,6 +1011,7 @@ impl LocationFix {
         altitude: f64,
         position_covariance: Vec<f64>,
         position_covariance_type: LocationFixPositionCovarianceType,
+        color: Option<Color>,
     ) -> Self {
         Self(foxglove::schemas::LocationFix {
             timestamp: timestamp.map(Into::into),
@@ -1019,11 +1021,12 @@ impl LocationFix {
             altitude,
             position_covariance,
             position_covariance_type: position_covariance_type as i32,
+            color: color.map(Into::into),
         })
     }
     fn __repr__(&self) -> String {
         format!(
-            "LocationFix(timestamp={:?}, frame_id={:?}, latitude={:?}, longitude={:?}, altitude={:?}, position_covariance={:?}, position_covariance_type={:?})",
+            "LocationFix(timestamp={:?}, frame_id={:?}, latitude={:?}, longitude={:?}, altitude={:?}, position_covariance={:?}, position_covariance_type={:?}, color={:?})",
             self.0.timestamp,
             self.0.frame_id,
             self.0.latitude,
@@ -1031,6 +1034,7 @@ impl LocationFix {
             self.0.altitude,
             self.0.position_covariance,
             self.0.position_covariance_type,
+            self.0.color,
         )
     }
     /// Returns the LocationFix schema.
@@ -1046,10 +1050,10 @@ impl From<LocationFix> for foxglove::schemas::LocationFix {
     }
 }
 
-/// A series of LocationFix messages
+/// A group of LocationFix messages
 ///
-/// :param fixes: A series of location fixes
-/// :param color: Color used to visualize this series
+/// :param fixes: One or more location fixes
+/// :param color: Color used to visualize this series, if not set on the individual fixes
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/location-fixes
 #[pyclass(module = "foxglove.schemas")]

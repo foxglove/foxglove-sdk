@@ -634,14 +634,17 @@ struct LocationFix {
   /// @brief If `position_covariance` is available, `position_covariance_type` must be set to
   /// indicate the type of covariance.
   PositionCovarianceType position_covariance_type;
+
+  /// @brief Color used to visualize the location
+  std::optional<Color> color;
 };
 
-/// @brief A series of LocationFix messages
+/// @brief A group of LocationFix messages
 struct LocationFixes {
-  /// @brief A series of location fixes
+  /// @brief One or more location fixes
   std::vector<LocationFix> fixes;
 
-  /// @brief Color used to visualize this series
+  /// @brief Color used to visualize this series, if not set on the individual fixes
   std::optional<Color> color;
 };
 

@@ -4,11 +4,11 @@
 import { Color } from "./Color";
 import { LocationFix } from "./LocationFix";
 
-/** A series of LocationFix messages */
+/** A group of LocationFix messages */
 export type LocationFixes = {
-  /** A series of location fixes */
+  /** One or more location fixes */
   fixes: LocationFix[];
 
-  /** Color used to visualize this series */
+  /** Color used to visualize this series, if not set on the individual fixes */
   color: Color;
 };

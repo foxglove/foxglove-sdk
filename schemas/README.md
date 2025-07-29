@@ -1505,11 +1505,24 @@ If `position_covariance` is available, `position_covariance_type` must be set to
 
 </td>
 </tr>
+<tr>
+<td><code>color</code></td>
+<td>
+
+[Color](#color)
+
+</td>
+<td>
+
+Color used to visualize the location
+
+</td>
+</tr>
 </table>
 
 ## LocationFixes
 
-A series of LocationFix messages
+A group of LocationFix messages
 
 <table>
   <tr>
@@ -1526,7 +1539,7 @@ A series of LocationFix messages
 </td>
 <td>
 
-A series of location fixes
+One or more location fixes
 
 </td>
 </tr>
@@ -1539,7 +1552,7 @@ A series of location fixes
 </td>
 <td>
 
-Color used to visualize this series
+Color used to visualize this series, if not set on the individual fixes
 
 </td>
 </tr>

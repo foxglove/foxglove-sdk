@@ -386,6 +386,7 @@ class LocationFix:
         altitude: "Optional[float]" = 0.0,
         position_covariance: "Optional[List[float]]" = [],
         position_covariance_type: "Optional[LocationFixPositionCovarianceType]" = LocationFixPositionCovarianceType.Unknown,
+        color: "Optional[Color]" = None,
     ) -> "LocationFix": ...
     @staticmethod
     def get_schema() -> Schema:
@@ -394,7 +395,7 @@ class LocationFix:
 
 class LocationFixes:
     """
-    A series of LocationFix messages
+    A group of LocationFix messages
     """
 
     def __new__(
