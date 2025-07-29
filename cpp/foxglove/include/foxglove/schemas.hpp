@@ -643,9 +643,6 @@ struct LocationFix {
 struct LocationFixes {
   /// @brief One or more location fixes
   std::vector<LocationFix> fixes;
-
-  /// @brief Color used to visualize this series, if not set on the individual fixes
-  std::optional<Color> color;
 };
 
 /// @brief A log message

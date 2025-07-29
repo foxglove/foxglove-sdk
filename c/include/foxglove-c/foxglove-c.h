@@ -1391,10 +1391,6 @@ typedef struct foxglove_location_fixes {
    */
   const struct foxglove_location_fix *fixes;
   size_t fixes_count;
-  /**
-   * Color used to visualize this series, if not set on the individual fixes
-   */
-  const struct foxglove_color *color;
 } foxglove_location_fixes;
 
 /**

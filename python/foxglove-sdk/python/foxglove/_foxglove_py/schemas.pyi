@@ -399,10 +399,7 @@ class LocationFixes:
     """
 
     def __new__(
-        cls,
-        *,
-        fixes: "Optional[List[LocationFix]]" = [],
-        color: "Optional[Color]" = None,
+        cls, *, fixes: "Optional[List[LocationFix]]" = []
     ) -> "LocationFixes": ...
     @staticmethod
     def get_schema() -> Schema:

@@ -521,9 +521,6 @@ pub struct LocationFixes {
     /// One or more location fixes
     #[prost(message, repeated, tag = "1")]
     pub fixes: ::prost::alloc::vec::Vec<LocationFix>,
-    /// Color used to visualize this series, if not set on the individual fixes
-    #[prost(message, optional, tag = "2")]
-    pub color: ::core::option::Option<Color>,
 }
 /// A log message
 /// <https://docs.foxglove.dev/docs/visualization/message-schemas/log>

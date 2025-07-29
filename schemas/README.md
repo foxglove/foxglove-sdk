@@ -1543,19 +1543,6 @@ One or more location fixes
 
 </td>
 </tr>
-<tr>
-<td><code>color</code></td>
-<td>
-
-[Color](#color)
-
-</td>
-<td>
-
-Color used to visualize this series, if not set on the individual fixes
-
-</td>
-</tr>
 </table>
 
 ## Log

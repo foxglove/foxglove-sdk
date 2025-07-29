@@ -1053,7 +1053,6 @@ impl From<LocationFix> for foxglove::schemas::LocationFix {
 /// A group of LocationFix messages
 ///
 /// :param fixes: One or more location fixes
-/// :param color: Color used to visualize this series, if not set on the individual fixes
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/location-fixes
 #[pyclass(module = "foxglove.schemas")]
@@ -1062,18 +1061,14 @@ pub(crate) struct LocationFixes(pub(crate) foxglove::schemas::LocationFixes);
 #[pymethods]
 impl LocationFixes {
     #[new]
-    #[pyo3(signature = (*, fixes=vec![], color=None) )]
-    fn new(fixes: Vec<LocationFix>, color: Option<Color>) -> Self {
+    #[pyo3(signature = (*, fixes=vec![]) )]
+    fn new(fixes: Vec<LocationFix>) -> Self {
         Self(foxglove::schemas::LocationFixes {
             fixes: fixes.into_iter().map(|x| x.into()).collect(),
-            color: color.map(Into::into),
         })
     }
     fn __repr__(&self) -> String {
-        format!(
-            "LocationFixes(fixes={:?}, color={:?})",
-            self.0.fixes, self.0.color,
-        )
+        format!("LocationFixes(fixes={:?})", self.0.fixes,)
     }
     /// Returns the LocationFixes schema.
     #[staticmethod]

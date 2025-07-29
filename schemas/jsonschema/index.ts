@@ -1780,29 +1780,6 @@ export const LocationFixes = {
         }
       },
       "description": "One or more location fixes"
-    },
-    "color": {
-      "title": "foxglove.Color",
-      "description": "Color used to visualize this series, if not set on the individual fixes",
-      "type": "object",
-      "properties": {
-        "r": {
-          "type": "number",
-          "description": "Red value between 0 and 1"
-        },
-        "g": {
-          "type": "number",
-          "description": "Green value between 0 and 1"
-        },
-        "b": {
-          "type": "number",
-          "description": "Blue value between 0 and 1"
-        },
-        "a": {
-          "type": "number",
-          "description": "Alpha value between 0 and 1"
-        }
-      }
     }
   }
 };

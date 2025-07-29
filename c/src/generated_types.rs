@@ -1828,9 +1828,6 @@ pub struct LocationFixes {
     /// One or more location fixes
     pub fixes: *const LocationFix,
     pub fixes_count: usize,
-
-    /// Color used to visualize this series, if not set on the individual fixes
-    pub color: *const Color,
 }
 
 impl LocationFixes {
@@ -1864,16 +1861,9 @@ impl BorrowToNative for LocationFixes {
         #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
     ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
         let fixes = unsafe { arena.as_mut().map(self.fixes, self.fixes_count)? };
-        let color = unsafe {
-            self.color
-                .as_ref()
-                .map(|m| m.borrow_to_native(arena.as_mut()))
-        }
-        .transpose()?;
 
         Ok(ManuallyDrop::new(foxglove::schemas::LocationFixes {
             fixes: ManuallyDrop::into_inner(fixes),
-            color: color.map(ManuallyDrop::into_inner),
         }))
     }
 }

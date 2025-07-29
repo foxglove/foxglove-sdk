@@ -1324,7 +1324,6 @@ void locationFixesToC(
 ) {
   dest.fixes = arena.map<foxglove_location_fix>(src.fixes, locationFixToC);
   dest.fixes_count = src.fixes.size();
-  dest.color = src.color ? reinterpret_cast<const foxglove_color*>(&*src.color) : nullptr;
 }
 
 void logToC(foxglove_log& dest, const Log& src, [[maybe_unused]] Arena& arena) {

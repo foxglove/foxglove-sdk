@@ -5,6 +5,3 @@
 
 # One or more location fixes
 foxglove_msgs/LocationFix[] fixes
-
-# Color used to visualize this series, if not set on the individual fixes
-foxglove_msgs/Color color
