@@ -3562,6 +3562,7 @@ __metadata:
     protobufjs: "npm:^7.2.5"
     rimraf: "npm:^6.0.1"
     semver: "npm:^7.7.1"
+    smol-toml: "npm:^1.4.1"
     ts-jest: "npm:29.2.5"
     ts-node: "npm:^10.9.2"
     typescript: "npm:5.7.3"
@@ -6685,6 +6686,13 @@ __metadata:
   version: 4.2.0
   resolution: "smart-buffer@npm:4.2.0"
   checksum: 10c0/a16775323e1404dd43fabafe7460be13a471e021637bc7889468eb45ce6a6b207261f454e4e530a19500cc962c4cc5348583520843b363f4193cee5c00e1e539
+  languageName: node
+  linkType: hard
+
+"smol-toml@npm:^1.4.1":
+  version: 1.4.1
+  resolution: "smol-toml@npm:1.4.1"
+  checksum: 10c0/0589866e6949a1d6db92e67af57b4c8a1b284e19e215cda2a0e88f43ab91677d077724fad39ff5e6a0912150c743f5f4e560da675d565348ee8c65417096b0af
   languageName: node
   linkType: hard
 
