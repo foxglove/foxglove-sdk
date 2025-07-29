@@ -1,6 +1,6 @@
 # foxglove_bridge
 
-> [IMPORTANT]
+> [!IMPORTANT]
 > This upcoming version of `foxglove_bridge` is built using the Foxglove SDK and is in **public beta**. There may be some remaining bugs or unexpected behavior. We encourage users to take it for a spin and submit feedback and bug reports.
 >
 > Older versions of `foxglove_bridge`, including those targeting ROS 1, still are available from the [foxglove/ros-foxglove-bridge](https://github.com/foxglove/ros-foxglove-bridge) repository or via the ROS package index for your ROS distro.
