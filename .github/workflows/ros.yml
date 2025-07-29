@@ -27,7 +27,7 @@ jobs:
         working-directory: ros
 
       - name: Run make docker-build
-        run: make docker-build-${{ matrix.ros_distribution }}
+        run: make USE_LOCAL_PREBUILT_SDK=ON docker-build-${{ matrix.ros_distribution }}
         working-directory: ros
 
       - name: Run make docker-test
