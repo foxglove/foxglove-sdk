@@ -1387,11 +1387,6 @@ const LocationFixes: FoxgloveMessageSchema = {
       array: true,
       description: "One or more location fixes",
     },
-    {
-      name: "color",
-      type: { type: "nested", schema: Color },
-      description: "Color used to visualize this series, if not set on the individual fixes",
-    },
   ],
 };
 
