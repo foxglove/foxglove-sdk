@@ -59,19 +59,19 @@ docker-build-container-$(1):
 		$(EXTRA_DOCKER_ARGS) ..
 
 .PHONY: docker-build-$(1)
-docker-build-$(1): docker-build-container-$(1)
+docker-build-$(1):
 	docker run --rm -v $(PWD):/sdk/ros foxglove-sdk-ros-$(1) make USE_LOCAL_PREBUILT_SDK=$(USE_LOCAL_PREBUILT_SDK) build
 
 .PHONY: docker-build-msgs-$(1)
-docker-build-msgs-$(1): docker-build-container-$(1)
+docker-build-msgs-$(1):
 	docker run --rm -v $(PWD):/sdk/ros foxglove-sdk-ros-$(1) make build-msgs
 
 .PHONY: docker-build-bridge-$(1)
-docker-build-bridge-$(1): docker-build-container-$(1)
+docker-build-bridge-$(1):
 	docker run --rm -v $(PWD):/sdk/ros foxglove-sdk-ros-$(1) make USE_LOCAL_PREBUILT_SDK=$(USE_LOCAL_PREBUILT_SDK) build-bridge
 
 .PHONY: docker-test-$(1)
-docker-test-$(1): docker-build-container-$(1)
+docker-test-$(1):
 	docker run --rm -v $(PWD):/sdk/ros foxglove-sdk-ros-$(1) make test
 
 .PHONY: docker-sh-$(1)
