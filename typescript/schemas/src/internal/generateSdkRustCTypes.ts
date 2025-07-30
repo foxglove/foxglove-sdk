@@ -51,10 +51,18 @@ function rustEnumName(name: string) {
 }
 
 /**
- * Identical to the name, but GeoJSON is renamed to GeoJson in all lanaguages
+ * Identical to the name, except:
+ * - GeoJSON is renamed to GeoJson in all lanaguages
+ * - Timestamp and Duration use existing FoxgloveTimestamp and FoxgloveDuration implementations
  */
-function rustMessageSchemaName(name: string): string {
-  return name.replace("JSON", "Json");
+function rustMessageSchemaName(schema: FoxgloveMessageSchema): string {
+  if (schema.name === "Timestamp") {
+    return "FoxgloveTimestamp";
+  } else if (schema.name === "Duration") {
+    return "FoxgloveDuration";
+  } else {
+    return schema.name.replace("JSON", "Json");
+  }
 }
 
 export function generateRustTypes(
@@ -63,7 +71,7 @@ export function generateRustTypes(
 ): string {
   const schemaStructs = schemas.filter(shouldGenerateRustType).map((schema) => {
     const { fields, description } = schema;
-    const name = rustMessageSchemaName(schema.name);
+    const name = rustMessageSchemaName(schema);
     const snakeName = toSnakeCase(name);
     return `\
 ${formatComment(description)}
@@ -88,13 +96,7 @@ pub struct ${name} {
           fieldType = rustEnumName(field.type.enum.name);
           break;
         case "nested":
-          if (field.type.schema.name === "Timestamp") {
-            fieldType = "FoxgloveTimestamp";
-          } else if (field.type.schema.name === "Duration") {
-            fieldType = "FoxgloveDuration";
-          } else {
-            fieldType = rustMessageSchemaName(field.type.schema.name);
-          }
+          fieldType = rustMessageSchemaName(field.type.schema);
           break;
       }
       const lines: string[] = [comment];
@@ -313,8 +315,9 @@ export async function generateBindgenConfig(
   assertValidBindgen(bindgenToml);
 
   schemas.forEach((schema) => {
-    const sourceName = rustMessageSchemaName(schema.name);
-    const exportName = `foxglove_${toSnakeCase(sourceName)}`;
+    const sourceName = rustMessageSchemaName(schema);
+    const prefix = sourceName.startsWith("Foxglove") ? "" : "foxglove_";
+    const exportName = `${prefix}${toSnakeCase(sourceName)}`;
     if (sourceName in bindgenToml.export.rename) {
       throw new Error(`Duplicate name in rename section: ${sourceName}`);
     }
