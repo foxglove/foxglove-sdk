@@ -199,25 +199,25 @@ __wasm_export_exports_foxglove_loader_loader_method_data_loader_get_backfill_pos
       size_t len0 = *((size_t*)(arg0 + (2 * sizeof(void*))));
       if (len0 > 0) {
         uint8_t* ptr1 = *((uint8_t**)(arg0 + sizeof(void*)));
-        for (size_t i2 = 0; i2 < len0; i2++) {
-          // NOTE: the original generated `host.c` code calls free(ptr) on each message data
-          // pointer, because the WIT component model ABI requires that all arguments and return
-          // values are passed by copy. We're not adhering to the WIT component model here, and
-          // the foxglove host wrapper code does not does not allocate a buffer for every message,
-          // so we remove the corresponding free() here. The original code is left as comments for
-          // reference.
-          // uint8_t* base = ptr1 + i2 * (24 + 2 * sizeof(void*));
-          // (void)base;
-          // size_t len = *((size_t*)(base + (24 + 1 * sizeof(void*))));
-          // if (len > 0) {
-          //   uint8_t* ptr = *((uint8_t**)(base + 24));
-          //   for (size_t i = 0; i < len; i++) {
-          //     uint8_t* base = ptr + i * 1;
-          //     (void)base;
-          //   }
-          //   free(ptr);
-          // }
-        }
+        // NOTE: the original generated `host.c` code calls free(ptr) on each message data
+        // pointer, because the WIT component model ABI requires that all arguments and return
+        // values are passed by copy. We're not adhering to the WIT component model here, and
+        // the foxglove host wrapper code does not does not allocate a buffer for every message,
+        // so we remove the corresponding free() here. The original code is left as comments for
+        // reference.
+        // for (size_t i2 = 0; i2 < len0; i2++) {
+        //   uint8_t* base = ptr1 + i2 * (24 + 2 * sizeof(void*));
+        //   (void)base;
+        //   size_t len = *((size_t*)(base + (24 + 1 * sizeof(void*))));
+        //   if (len > 0) {
+        //     uint8_t* ptr = *((uint8_t**)(base + 24));
+        //     for (size_t i = 0; i < len; i++) {
+        //       uint8_t* base = ptr + i * 1;
+        //       (void)base;
+        //     }
+        //     free(ptr);
+        //   }
+        // }
         free(ptr1);
       }
       break;
