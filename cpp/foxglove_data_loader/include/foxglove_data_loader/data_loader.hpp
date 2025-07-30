@@ -196,12 +196,12 @@ class AbstractDataLoader {
 public:
   /** Read summary information about the input files. */
   virtual Result<Initialization> initialize() = 0;
-  /** Start iterating over messages in the input file(s).
-   *
-   * This function must return an object instantiated with the `new` keyword. It will be cleaned
-   * up with `delete` at the end of its lifetime.
+  /** Start iterating over messages in the input file(s). More than one iterator may be instantiated
+   * at a time.
    */
-  virtual Result<AbstractMessageIterator*> create_iterator(const MessageIteratorArgs& args) = 0;
+  virtual Result<std::unique_ptr<AbstractMessageIterator>> create_iterator(
+    const MessageIteratorArgs& args
+  ) = 0;
   /** Get the latest message before the requested `time` for each channel, if present. The default
    * implementation returns no messages. You may implement this to improve the experience of seeking
    * within a recording.

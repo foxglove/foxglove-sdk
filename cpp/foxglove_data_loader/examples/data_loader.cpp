@@ -59,7 +59,8 @@ public:
 
   Result<Initialization> initialize() override;
 
-  Result<AbstractMessageIterator*> create_iterator(const MessageIteratorArgs& args) override;
+  Result<std::unique_ptr<AbstractMessageIterator>> create_iterator(const MessageIteratorArgs& args
+  ) override;
   Result<std::vector<Message>> get_backfill(const BackfillArgs& args) override;
 };
 
@@ -142,9 +143,11 @@ Result<Initialization> TextDataLoader::initialize() {
 /** returns an AbstractMessageIterator for the set of requested args.
  * More than one message iterator may be instantiated at a given time.
  */
-Result<AbstractMessageIterator*> TextDataLoader::create_iterator(const MessageIteratorArgs& args) {
-  return Result<AbstractMessageIterator*>{
-    .value = new TextMessageIterator(this, args),
+Result<std::unique_ptr<AbstractMessageIterator>> TextDataLoader::create_iterator(
+  const MessageIteratorArgs& args
+) {
+  return Result<std::unique_ptr<AbstractMessageIterator>>{
+    .value = std::make_unique<TextMessageIterator>(this, args),
   };
 }
 

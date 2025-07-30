@@ -215,9 +215,12 @@ extern bool exports_foxglove_loader_loader_method_data_loader_create_iterator(
     ChannelId* ch_id = &args->channels.ptr[i];
     iter_args.channel_ids.push_back(*ch_id);
   }
-  Result<AbstractMessageIterator*> iter_result = self->data_loader->create_iterator(iter_args);
+  Result<std::unique_ptr<AbstractMessageIterator>> iter_result =
+    self->data_loader->create_iterator(iter_args);
   if (iter_result.value.has_value()) {
-    AbstractMessageIterator* iter = iter_result.value.value();
+    // NOTE: the owning pointer to the loader is stored by the host, not in the guest, which is why
+    // we `release()` here.
+    AbstractMessageIterator* iter = iter_result.value.value().release();
     ret->__handle = (int32_t)new exports_foxglove_loader_loader_message_iterator_t{
       .message_iterator = iter,
     };
