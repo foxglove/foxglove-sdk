@@ -91,8 +91,12 @@ extern bool exports_foxglove_loader_loader_method_message_iterator_next(
     ret->val.ok.log_time = msg.log_time;
     ret->val.ok.publish_time = msg.publish_time;
     ret->val.ok.data.len = msg.data.len;
-    ret->val.ok.data.ptr = (uint8_t*)calloc(msg.data.len, sizeof(uint8_t));
-    memcpy(ret->val.ok.data.ptr, msg.data.ptr, msg.data.len);
+    // NOTE: normally the WIT-generated wrapper code would require us to copy the message data
+    // to a new allocation, and it would free() that allocation in the post-return hook. We're not
+    // abiding by the WIT component model ABI here, so we can choose to avoid that copy. The
+    // generated code in `host_internal.inl` has been modified to remove the corresponding free()
+    // call.
+    ret->val.ok.data.ptr = msg.data.ptr;
   } else {
     ret->is_err = true;
     host_string_dup(&ret->val.err, result.error.c_str());
@@ -259,8 +263,12 @@ extern bool exports_foxglove_loader_loader_method_data_loader_get_backfill(
       ret_message->channel_id = message.channel_id;
       ret_message->log_time = message.log_time;
       ret_message->publish_time = message.publish_time;
-      ret_message->data.ptr = (uint8_t*)calloc(message.data.len, sizeof(uint8_t));
-      memcpy(ret_message->data.ptr, message.data.ptr, message.data.len);
+      // NOTE: normally the WIT-generated wrapper code would require us to copy the message data
+      // to a new allocation, and it would free() that allocation in the post-return hook. We're not
+      // abiding by the WIT component model ABI here, so we can choose to avoid that copy. The
+      // generated code in `host_internal.inl` has been modified to remove the corresponding free()
+      // call.
+      ret_message->data.ptr = message.data.ptr;
       ret_message->data.len = message.data.len;
     }
     return true;

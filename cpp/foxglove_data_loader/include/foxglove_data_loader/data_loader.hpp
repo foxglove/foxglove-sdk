@@ -119,8 +119,9 @@ struct Message {
    * If not known, set this to log_time.
    * */
   TimeNanos publish_time;
-  /** The serialized message data. The underlying pointer should remain valid after `next()`
-   * returns. It may be invalidated as soon as control is returned to the data loader.
+  /** The serialized message data. The underlying pointer should remain valid after `next()` or
+   * `get_backfill()` returns. It may be invalidated as soon as control is returned to the data
+   * loader.
    */
   BytesView data;
 };
