@@ -5,10 +5,7 @@
 >
 > Older versions of `foxglove_bridge`, including those targeting ROS 1, still are available from the [foxglove/ros-foxglove-bridge](https://github.com/foxglove/ros-foxglove-bridge) repository or via the ROS package index for your ROS distro.
 
-[![ROS Melodic version](https://img.shields.io/ros/v/melodic/foxglove_bridge)](https://index.ros.org/p/foxglove_bridge/github-foxglove-ros-foxglove-bridge/#melodic)
-[![ROS Noetic version](https://img.shields.io/ros/v/noetic/foxglove_bridge)](https://index.ros.org/p/foxglove_bridge/github-foxglove-ros-foxglove-bridge/#noetic)
 [![ROS Humble version](https://img.shields.io/ros/v/humble/foxglove_bridge)](https://index.ros.org/p/foxglove_bridge/github-foxglove-ros-foxglove-bridge/#humble)
-[![ROS Iron version](https://img.shields.io/ros/v/iron/foxglove_bridge)](https://index.ros.org/p/foxglove_bridge/github-foxglove-ros-foxglove-bridge/#iron)
 [![ROS Jazzy version](https://img.shields.io/ros/v/jazzy/foxglove_bridge)](https://index.ros.org/p/foxglove_bridge/github-foxglove-ros-foxglove-bridge/#jazzy)
 [![ROS Kilted version](https://img.shields.io/ros/v/kilted/foxglove_bridge)](https://index.ros.org/p/foxglove_bridge/github-foxglove-ros-foxglove-bridge/#kilted)
 [![ROS Rolling version](https://img.shields.io/ros/v/rolling/foxglove_bridge)](https://index.ros.org/p/foxglove_bridge/github-foxglove-ros-foxglove-bridge/#rolling)
@@ -34,22 +31,23 @@ git clone https://github.com/foxglove/foxglove-sdk
 cd foxglove-sdk/ros
 ```
 
+All commands in this README hereafter assume you're in the `/ros` subdirectory relative to the repository's root.
+
 ### Build using your ROS environment
 
-Make sure you have ROS installed and your setup files are sourced. Then, proceed to fetch the repository and build:
+Make sure you have ROS installed and your setup files are sourced. Then build:
 
 ```bash
-make build-bridge
+make
 ```
 
 ### Build using Docker
 
-You can also build the bridge using a Docker container:
+You can also build the bridge using a ROS environment within a Docker container:
 
 ```bash
-# In the following commands, replace <distro> with your preferred ROS 2 distro codename (i.e. jazzy, kilted, rolling)
-make docker-build-container-<distro> # Build the Docker container environment, including the Foxglove SDK
-make docker-build-bridge-<distro>    # Build the bridge itself
+# You can also append your preferred ROS 2 distro codename (e.g. make docker-build-jazzy). If omitted, ROS 'rolling' is used.
+make docker-build
 ```
 
 The built ROS workspace will be written to `/ros` in your `foxglove_sdk` directory.
@@ -106,26 +104,35 @@ Parameters are provided to configure the behavior of the bridge. These parameter
 
 ### Building with local SDK changes
 
-The build commands above pull a pre-built Foxglove SDK binary release from GitHub and link against it when building. This
-is convenient because ROS users don't need to have all of the prerequisites required for building the Foxglove SDK installed
-locally, but it also means that local changes you make to the SDK won't be reflected in your `foxglove_bridge` builds.
-
-`make` flags are provided to customize how `foxglove_bridge` satisfies its Foxglove SDK dependency:
-
-- `USE_LOCAL_PREBUILT_SDK`: If `ON`, the build will look for the Foxglove SDK in the local file tree, not artifacts from GitHub. For example, if you've built the C++ SDK by running `make build-cpp` in the root directory, this will hook those built files up to the `foxglove_bridge` build. `OFF` by default.
-- `BUILD_SDK`: If `ON`, the Foxglove SDK will be rebuilt as part of the `foxglove_bridge` build. Setting ``BUILD_SDK` implies `USE_LOCAL_PREBUILT_SDK`. `OFF` by default.
-
-To fully rebuild the SDK and bridge, assuming you have all the prerequisites (i.e. ROS, a working C++ compiler, Rust):
+After making SDK changes, don't forget to re-build the SDK and its C++ library:
 
 ```bash
-make BUILD_SDK=ON build-bridge
+make -C ../cpp       # Build SDK in your local environment
+# OR
+make -C .. build-cpp # Use Docker for SDK build
 ```
 
-If you'd prefer to build using Docker, `USE_LOCAL_PREBUILT_SDK=ON` should be used, since the Foxglove SDK is rebuilt from scratch as a part of the Docker build process:
+The build commands above for end users pull a pre-built Foxglove SDK binary release from GitHub and link against it when building. This
+is convenient because they don't need to have all of the prerequisites required for building the Foxglove SDK installed
+locally, but it also means that local changes you make to the SDK won't be reflected in your `foxglove_bridge` builds.
+
+A `make` flag is provided to customize how `foxglove_bridge` satisfies its Foxglove SDK dependency:
+
+- `USE_LOCAL_SDK`: If `ON`, the build will look for the Foxglove SDK in the local file tree, not artifacts from GitHub. For example, if you've built the C++ SDK by running `make build-cpp` in the root directory, this will hook those built files up to the `foxglove_bridge` build. `OFF` by default.
+
+To rebuild the bridge with your locally re-built Foxglove SDK:
 
 ```bash
-make docker-build-container-<distro> # Required for the first build, or any time you make a change to the SDK
-make USE_LOCAL_PREBUILT_SDK=ON docker-build-bridge-<distro>
+make USE_LOCAL_SDK=ON
+```
+
+If you want to build the bridge using Docker:
+
+```bash
+make USE_LOCAL_SDK=ON docker-build
+
+# Or to optionally target a specific ROS distro
+# make USE_LOCAL_SDK=ON docker-build-<distro codename>
 ```
 
 ### Running tests
@@ -136,10 +143,12 @@ make USE_LOCAL_PREBUILT_SDK=ON docker-build-bridge-<distro>
 make test
 ```
 
-Tests can also be run under Docker (assuming that `foxglove_bridge`'s Docker container exists and you've run a build using one of the methods above):
+Tests can also be run under Docker (again, assuming you've already followed the instructions above to build the bridge):
 
 ```bash
-make docker-test-<distro> # ROS 2 distro codename (i.e. kilted, jazzy, rolling)
+make docker-test
+# Or to optionally target a specific ROS distro
+# make USE_LOCAL_SDK=ON docker-test-<distro codename>
 ```
 
 ## Clients
