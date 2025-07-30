@@ -30,15 +30,15 @@ test:
 	colcon test-result --all --verbose
 
 define generate_ros_targets
-.PHONY: docker-build-container-$(1)
-docker-build-container-$(1):
+.PHONY: docker-build-image-$(1)
+docker-build-image-$(1):
 	docker build -t foxglove-sdk-ros-$(1) -f ../Dockerfile.ros \
 		--build-arg ROS_DISTRIBUTION=$(1) \
 		$(DOCKER_USER_ARGS) \
 		$(EXTRA_DOCKER_ARGS) ..
 
 .PHONY: docker-build-$(1)
-docker-build-$(1): docker-build-container-$(1)
+docker-build-$(1): docker-build-image-$(1)
 	docker run --rm -v $(PWD)/..:/sdk foxglove-sdk-ros-$(1) make USE_LOCAL_SDK=$(USE_LOCAL_SDK) build
 
 .PHONY: docker-test-$(1)
@@ -52,8 +52,8 @@ docker-sh-$(1):
 endef
 $(foreach distribution,$(ROS_DISTRIBUTIONS),$(eval $(call generate_ros_targets,$(strip $(distribution)))))
 
-.PHONY: docker-build-container
-docker-build-container: docker-build-container-rolling
+.PHONY: docker-build-image
+docker-build-image: docker-build-image-rolling
 
 .PHONY: docker-build
 docker-build: docker-build-rolling
