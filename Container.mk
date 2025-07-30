@@ -92,7 +92,3 @@ test-cpp:
 .PHONY: test-cpp-sanitize
 test-cpp-sanitize:
 	make -C cpp SANITIZE=address,undefined test
-
-.PHONY: build-bridge
-build-bridge:
-	make -C ros build-bridge
