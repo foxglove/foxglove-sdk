@@ -21,12 +21,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Run make docker-build-container
-        run: make docker-build-container-${{ matrix.ros_distribution }}
-        working-directory: ros
+      - name: Build Foxglove C++ SDK
+        run: make build-cpp
 
       - name: Run make docker-build
-        run: make USE_LOCAL_PREBUILT_SDK=ON docker-build-${{ matrix.ros_distribution }}
+        run: make USE_LOCAL_SDK=ON EXTRA_DOCKER_ARGS="--build-arg USER_UID=$(id -u) --build-arg USER_GID=$(id -g)" docker-build-${{ matrix.ros_distribution }}
         working-directory: ros
 
       - name: Run make docker-test

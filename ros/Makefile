@@ -1,5 +1,6 @@
 ROS_DISTRIBUTIONS := humble jazzy kilted rolling
 USE_LOCAL_SDK := OFF
+EXTRA_DOCKER_ARGS :=
 
 .PHONY: all
 all: deps build
@@ -23,9 +24,6 @@ test:
 	colcon test
 	colcon test-result --all --verbose
 
-# --build-arg USER_UID=$(shell id -u) \
-# --build-arg USER_GID=$(shell id -g) \
-
 define generate_ros_targets
 .PHONY: docker-build-container-$(1)
 docker-build-container-$(1):
@@ -34,12 +32,12 @@ docker-build-container-$(1):
 		$(EXTRA_DOCKER_ARGS) ..
 
 .PHONY: docker-build-$(1)
-docker-build-$(1):
-	docker run --rm -v $(PWD):/sdk/ros foxglove-sdk-ros-$(1) make USE_LOCAL_SDK=$(USE_LOCAL_SDK) build
+docker-build-$(1): docker-build-container-$(1)
+	docker run --rm -v $(PWD)/..:/sdk foxglove-sdk-ros-$(1) make USE_LOCAL_SDK=$(USE_LOCAL_SDK) build
 
 .PHONY: docker-test-$(1)
 docker-test-$(1):
-	docker run --rm -v $(PWD):/sdk/ros foxglove-sdk-ros-$(1) make test
+	docker run --rm -v $(PWD)/..:/sdk foxglove-sdk-ros-$(1) make test
 
 .PHONY: docker-sh-$(1)
 docker-sh-$(1):
