@@ -10,18 +10,11 @@ ARG USERNAME=foxglove
 ARG USER_UID=1005
 ARG USER_GID=$USER_UID
 
-# If the user ID and group ID already exist, don't create a new user and instead use the existing user
-RUN if ! id -u $USER_UID > /dev/null 2>&1; then \
-        groupadd --gid $USER_GID $USERNAME \
-        && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME \
-        && echo "$USERNAME ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers.d/$USERNAME; \
-    else \
-        echo "User ID $USER_UID already exists, skipping user creation"; \
-    fi
+RUN groupadd --gid $USER_GID $USERNAME \
+    && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME \
+    && echo "$USERNAME ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers.d/$USERNAME
 
-RUN echo "$(id -nu $USER_UID) ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers.d/$(id -nu $USER_UID)
-
-USER $USER_UID
+USER $USERNAME
 
 # rosdep update must run as user
 RUN rosdep update --include-eol-distros
