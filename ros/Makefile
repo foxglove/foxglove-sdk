@@ -56,7 +56,10 @@ $(foreach distribution,$(ROS_DISTRIBUTIONS),$(eval $(call generate_ros_targets,$
 docker-build-container: docker-build-container-rolling
 
 .PHONY: docker-build
-docker-build-msgs: docker-build-rolling
+docker-build: docker-build-rolling
+
+.PHONY: docker-test
+docker-test: docker-test-rolling
 
 .PHONY: docker-sh
 docker-sh: docker-sh-rolling
