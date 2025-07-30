@@ -30,10 +30,8 @@
     <build_depend>libwebsocketpp-dev</build_depend>
     <build_depend>nlohmann-json-dev</build_depend>
     <build_depend>ros_environment</build_depend>
-    <build_depend>zlib</build_depend>
 
     <exec_depend>openssl</exec_depend>
-    <exec_depend>zlib</exec_depend>
 
     <depend>resource_retriever</depend>
     <depend>rosgraph_msgs</depend>

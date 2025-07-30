@@ -28,7 +28,7 @@ endmacro()
 
 find_package(OpenSSL REQUIRED)
 find_package(Threads REQUIRED)
-find_package(ZLIB REQUIRED)
+find_package(websocketpp REQUIRED)
 
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE RelWithDebInfo)
