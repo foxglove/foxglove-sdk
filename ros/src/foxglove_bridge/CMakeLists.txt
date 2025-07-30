@@ -14,7 +14,7 @@ project(foxglove_bridge LANGUAGES CXX VERSION 1.0.0)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-option(USE_LOCAL_PREBUILT_SDK "Use pre-built Foxglove SDK binaries from local source tree" OFF)
+option(USE_LOCAL_SDK "Use pre-built Foxglove SDK binaries from local source tree" OFF)
 
 macro(enable_strict_compiler_warnings target)
   if (MSVC)
@@ -51,7 +51,7 @@ if (ENDIAN)
   add_compile_definitions(ARCH_IS_BIG_ENDIAN=1)
 endif()
 
-if (USE_LOCAL_PREBUILT_SDK)
+if (USE_LOCAL_SDK)
   set(FOXGLOVE_SDK_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/../../..)
   add_library(foxglove_cpp_static STATIC IMPORTED)
   set_target_properties(foxglove_cpp_static PROPERTIES
@@ -136,10 +136,11 @@ target_include_directories(foxglove_bridge_component
     $<INSTALL_INTERFACE:include>
 )
 
-if (USE_LOCAL_PREBUILT_SDK)
+if (USE_LOCAL_SDK)
   # The locally-built C++ SDK needs to be statically linked to the C SDK
   target_link_libraries(foxglove_bridge_component foxglove_c_static)
 endif()
+
 target_link_libraries(foxglove_bridge_component
   foxglove_cpp_static
   OpenSSL::SSL

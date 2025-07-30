@@ -1,25 +1,5 @@
 ARG ROS_DISTRIBUTION=rolling
 
-# Build Foxglove C++ SDK
-FROM rust:latest AS build-sdk
-
-ARG MSRV_RUST_VERSION=1.83.0
-
-WORKDIR /sdk
-
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    cmake
-
-COPY ./cpp /sdk/cpp
-COPY ./c /sdk/c
-COPY ./rust /sdk/rust
-# REVIEW: Is it possible to do this without copying over Python?
-COPY ./python /sdk/python
-COPY ./Cargo.toml /sdk/Cargo.toml
-
-WORKDIR /sdk/cpp
-RUN make
-
 # Build ROS workspace
 FROM ros:$ROS_DISTRIBUTION-ros-base AS build-ros
 
@@ -42,11 +22,6 @@ RUN if ! id -u $USER_UID > /dev/null 2>&1; then \
 RUN echo "$(id -nu $USER_UID) ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers.d/$(id -nu $USER_UID)
 
 USER $USER_UID
-
-# Copy Foxglove SDK build artifacts
-COPY --from=build-sdk --chown=$USER_UID:$USER_GID /sdk/cpp /sdk/cpp
-
-RUN . /opt/ros/$ROS_DISTRO/setup.sh
 
 # rosdep update must run as user
 RUN rosdep update --include-eol-distros
