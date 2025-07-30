@@ -588,19 +588,28 @@ pub trait DataLoader: 'static + Sized {
     /// schemas for the `Initialization` result.
     fn initialize(&mut self) -> Result<Initialization, Self::Error>;
 
-    /// Create a MessageIterator for this DataLoader.
+    /// Create a [`MessageIterator`] for this DataLoader for the requested channels and time range.
     fn create_iter(
         &mut self,
         args: loader::MessageIteratorArgs,
     ) -> Result<Self::MessageIterator, Self::Error>;
 
-    /// Backfill results starting from `args.time` for `args.channels`. The backfill results are the
-    /// first message looking backwards in time so that panels won't be empty before playback
-    /// begins.
+    /// Return the most recent message for each of the requested channels at a particular point in
+    /// time.
+    ///
+    /// Backfill is the first message looking backwards in time from a particular point in time for
+    /// a channel. These messages are used when beginning playback from a certain time so that
+    /// Foxglove panels are not empty as playback begins.
+    ///
+    /// This trait has a default implementation that returns no backfill messages. Implement this
+    /// method with backfill logic specific to your data loader to give users the best experience
+    /// when seeking a recording.
     fn get_backfill(
         &mut self,
-        args: loader::BackfillArgs,
-    ) -> Result<Vec<loader::Message>, Self::Error>;
+        _args: loader::BackfillArgs,
+    ) -> Result<Vec<loader::Message>, Self::Error> {
+        Ok(Vec::new())
+    }
 }
 
 /// Implement MessageIterator for your loader iterator.
