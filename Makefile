@@ -25,7 +25,7 @@ $(TARGETS): image
 	docker run -v $(shell pwd):/app \
 		-e CARGO_HOME=/app/.cargo \
 		-e POETRY_VIRTUALENVS_PATH=/app/.virtualenvs \
-		-it $(IMAGE_NAME) \
+		$(IMAGE_NAME) \
 		make -f $(CONTAINER_MAKEFILE) \
 		MSRV_RUST_VERSION=$(MSRV_RUST_VERSION) \
 		$@
