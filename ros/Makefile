@@ -1,6 +1,11 @@
 ROS_DISTRIBUTIONS := humble jazzy kilted rolling
 USE_LOCAL_SDK := OFF
 EXTRA_DOCKER_ARGS :=
+DOCKER_USER_ARGS :=
+
+ifeq ($(shell uname -s), Linux)
+	DOCKER_USER_ARGS = --build-arg USER_UID=$(shell id -u) --build-arg USER_GID=$(shell id -g)
+endif
 
 .PHONY: all
 all: deps build
@@ -29,6 +34,7 @@ define generate_ros_targets
 docker-build-container-$(1):
 	docker build -t foxglove-sdk-ros-$(1) -f ../Dockerfile.ros \
 		--build-arg ROS_DISTRIBUTION=$(1) \
+		$(DOCKER_USER_ARGS) \
 		$(EXTRA_DOCKER_ARGS) ..
 
 .PHONY: docker-build-$(1)
