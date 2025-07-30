@@ -9,7 +9,7 @@ use send_lossy::SendLossyResult;
 use tokio::net::TcpStream;
 use tokio::sync::oneshot;
 use tokio_tungstenite::tungstenite::Message;
-use tokio_tungstenite::WebSocketStream;
+use tokio_tungstenite::{MaybeTlsStream, WebSocketStream};
 
 use crate::{ChannelId, Context, FoxgloveError, Metadata, RawChannel, Sink, SinkId};
 
@@ -125,7 +125,7 @@ impl ConnectedClient {
     pub fn new(
         context: &Weak<Context>,
         server: &Weak<Server>,
-        websocket: WebSocketStream<TcpStream>,
+        websocket: WebSocketStream<MaybeTlsStream<TcpStream>>,
         addr: SocketAddr,
         message_backlog_size: usize,
     ) -> Arc<Self> {

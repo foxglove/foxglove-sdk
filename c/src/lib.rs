@@ -285,6 +285,15 @@ pub struct FoxgloveServerOptions<'a> {
             responder: *mut FoxgloveFetchAssetResponder,
         ),
     >,
+
+    /// TLS configuration: PEM-formatted x509 certificate for the server.
+    pub tls_cert: *const u8,
+    /// TLS configuration: Length of cert bytes
+    pub tls_cert_len: usize,
+    /// TLS configuration: PEM-formatted pkcs8 private key for the server.
+    pub tls_key: *const u8,
+    /// TLS configuration: Length of key bytes
+    pub tls_key_len: usize,
 }
 
 #[repr(C)]
@@ -545,6 +554,16 @@ unsafe fn do_foxglove_server_start(
     if !options.context.is_null() {
         let context = ManuallyDrop::new(unsafe { Arc::from_raw(options.context) });
         server = server.context(&context);
+    }
+    if !options.tls_cert.is_null() || !options.tls_key.is_null() {
+        if options.tls_cert.is_null() || options.tls_key.is_null() {
+            return Err(foxglove::FoxgloveError::ValueError(
+                "Invalid TLS configuration (null pointer)".to_string(),
+            ));
+        }
+        let cert = unsafe { std::slice::from_raw_parts(options.tls_cert, options.tls_cert_len) };
+        let key = unsafe { std::slice::from_raw_parts(options.tls_key, options.tls_key_len) };
+        server = server.tls(cert, key);
     }
     let server = server.start_blocking()?;
     Ok(Box::into_raw(Box::new(FoxgloveWebSocketServer(Some(
