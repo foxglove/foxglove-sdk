@@ -794,7 +794,7 @@ dependencies = [
 
 [[package]]
 name = "foxglove_data_loader"
-version = "0.10.1"
+version = "0.0.1"
 dependencies = [
  "anyhow",
  "foxglove 0.9.0",
