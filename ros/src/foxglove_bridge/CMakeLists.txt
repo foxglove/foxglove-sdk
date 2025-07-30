@@ -26,6 +26,7 @@ macro(enable_strict_compiler_warnings target)
   endif()
 endmacro()
 
+find_package(nlohmann_json QUIET)
 find_package(OpenSSL REQUIRED)
 find_package(Threads REQUIRED)
 find_package(websocketpp REQUIRED)
@@ -148,6 +149,10 @@ target_link_libraries(foxglove_bridge_component
   foxglove_cpp_static
   OpenSSL::SSL
 )
+
+if (nlohmann_json_FOUND)
+  target_link_libraries(foxglove_bridge_component nlohmann_json::nlohmann_json)
+endif()
 
 target_compile_definitions(foxglove_bridge_component
   PRIVATE
