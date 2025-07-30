@@ -83,13 +83,25 @@ jobs:
     runs-on: ubuntu-latest
     needs: rust
     timeout-minutes: 10
+    env:
+      github_ref: ${{ github.ref }}
     steps:
       - uses: actions/checkout@v4
       - id: detect-version
         name: Detect local Cargo version
         run: |
+          set -eu
+
           version=$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[] | select(.name=="'foxglove_data_loader'").version')
           echo "version=$version" >> $GITHUB_OUTPUT
+
+          # remove the prefix from the github ref to get the version
+          expected_version="${github_ref#"refs/tags/rust/foxglove_data_loader/v"}"
+
+          if [ "$version" != "$expected_version" ]; then
+            echo "Expected version '$expected_version' but got '$version'"
+            exit 1
+          fi
       - name: Publish foxglove_data_loader
         run: cargo publish --package foxglove_data_loader
         env:
