@@ -20,6 +20,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - run: |
+          sudo apt install -y --no-install-recommends clang-format-19
+          echo "/usr/lib/llvm-19/bin" >> $GITHUB_PATH
       - run: clang-format --version
       - run: make lint
         working-directory: cpp

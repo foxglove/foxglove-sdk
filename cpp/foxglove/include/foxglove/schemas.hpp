@@ -130,7 +130,7 @@ struct CameraCalibration {
   /// `rational_polynomial` models are based on the pinhole model
   /// [OpenCV's](https://docs.opencv.org/4.11.0/d9/d0c/group__calib3d.html) [pinhole camera
   /// model](https://en.wikipedia.org/wiki/Distortion_%28optics%29#Software_correction). The
-  /// `kannala_brandt` model is matches the [OpenvCV
+  /// `kannala_brandt` model matches the [OpenvCV
   /// fisheye](https://docs.opencv.org/4.11.0/db/d58/group__calib3d__fisheye.html) model.
   std::string distortion_model;
 
