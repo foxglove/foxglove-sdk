@@ -81,6 +81,8 @@ private:
   ServicesByType _advertisedServices;
   std::unordered_map<std::string, GenericClient::SharedPtr> _serviceClients;
   std::unordered_map<std::string, std::unique_ptr<foxglove::ServiceHandler>> _serviceHandlers;
+  std::optional<std::vector<std::byte>> _tlsCert = std::nullopt;
+  std::optional<std::vector<std::byte>> _tlsKey = std::nullopt;
 
   foxglove_bridge::MessageDefinitionCache _messageDefinitionCache;
   std::vector<std::regex> _topicWhitelistPatterns;
