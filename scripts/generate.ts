@@ -167,13 +167,13 @@ async function main({ clean }: { clean: boolean }) {
   await logProgress("Generating FlatBuffer definitions", async () => {
     await fs.mkdir(path.join(outDir, "flatbuffer"), { recursive: true });
     await fs.writeFile(path.join(outDir, "flatbuffer", "ByteVector.fbs"), BYTE_VECTOR_FB);
-    // The name "Time" is kept for backwards compatibility.
+    // Time and Duration are handled differently:
+    // - The name "Time" is kept for backwards compatibility.
+    // - We use structs instead of tables
+    // - Duration uses int32 for nsec instead of uint32.
     await fs.writeFile(path.join(outDir, "flatbuffer", "Time.fbs"), TIME_FB);
     await fs.writeFile(path.join(outDir, "flatbuffer", "Duration.fbs"), DURATION_FB);
 
-    // We use slightly different definitions for Time and Duration than the standard schema
-    // - Duration uses int32 for nsec instead of uint32
-    // - Time documents specific ranges
     const messageSchemas = Object.values(foxgloveMessageSchemas).filter(
       (schema) => schema.name !== "Timestamp" && schema.name !== "Duration",
     );
