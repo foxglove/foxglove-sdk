@@ -133,12 +133,25 @@ add_library(foxglove_bridge_component SHARED
 target_include_directories(foxglove_bridge_component
   PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../../../cpp/foxglove/include>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../../../c/include>
     # For generated version.hpp
     $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
     $<INSTALL_INTERFACE:include>
 )
+
+# If using the local SDK, include the C++ SDK headers from the local source tree, else
+# include the C++ SDK headers from the installed location
+if (USE_LOCAL_SDK)
+  target_include_directories(foxglove_bridge_component
+    PUBLIC
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../../../cpp/foxglove/include>
+  )
+else()
+  target_include_directories(foxglove_bridge_component
+    PUBLIC
+      $<BUILD_INTERFACE:${foxglove_sdk_SOURCE_DIR}/include>
+  )
+endif()
 
 if (USE_LOCAL_SDK)
   # The locally-built C++ SDK needs to be statically linked to the C SDK
