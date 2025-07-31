@@ -31,7 +31,7 @@ pip install -r requirements.txt
 
 ## Configure the robot and run the code
 
-Configure, and [calibrate your SO-100](https://huggingface.co/docs/lerobot/en/so100#calibrate) using LeRobot. Make sure to identify the configuration name, robot port, and camera ids. Now you are read to run the code.
+Configure and [calibrate your SO-100](https://huggingface.co/docs/lerobot/en/so100#calibrate) using LeRobot. Make sure to identify the configuration name, robot port, and camera IDs. Now you are ready to run the code.
 
 ### Parameters
 

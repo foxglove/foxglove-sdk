@@ -250,7 +250,6 @@ def main():
     except KeyboardInterrupt:
         print("\nShutting down SO-100 visualization...")
     finally:
-        # Cleanup
         server.stop()
         follower.disconnect()
 
