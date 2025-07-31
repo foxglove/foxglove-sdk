@@ -11,13 +11,14 @@ import {
   BYTE_VECTOR_FB,
   DURATION_FB,
   TIME_FB,
+  flatbufferMessageSchemaName,
   generateFlatbuffers,
 } from "../typescript/schemas/src/internal/generateFlatbufferSchema";
 import { generateJsonSchema } from "../typescript/schemas/src/internal/generateJsonSchema";
 import { generateMarkdown } from "../typescript/schemas/src/internal/generateMarkdown";
 import {
   generateOmgIdl,
-  omgIdlSchemaName,
+  omgIdlMessageSchemaName,
 } from "../typescript/schemas/src/internal/generateOmgIdl";
 import { generateProto } from "../typescript/schemas/src/internal/generateProto";
 import {
@@ -182,7 +183,7 @@ async function main({ clean }: { clean: boolean }) {
       const enums = Object.values(foxgloveEnumSchemas).filter(
         (enumSchema) => enumSchema.parentSchemaName === schema.name,
       );
-      const name = schema.name === "Timestamp" ? "Time" : schema.name;
+      const name = flatbufferMessageSchemaName(schema);
       await fs.writeFile(
         path.join(outDir, "flatbuffer", `${name}.fbs`),
         generateFlatbuffers(schema, enums),
@@ -202,7 +203,7 @@ async function main({ clean }: { clean: boolean }) {
   await logProgress("Generating OMG IDL definitions", async () => {
     await fs.mkdir(path.join(outDir, "omgidl", "foxglove"), { recursive: true });
     for (const schema of Object.values(foxgloveMessageSchemas)) {
-      const schemaName = omgIdlSchemaName(schema);
+      const schemaName = omgIdlMessageSchemaName(schema);
       await fs.writeFile(
         path.join(outDir, "omgidl", "foxglove", `${schemaName}.idl`),
         generateOmgIdl(schema),

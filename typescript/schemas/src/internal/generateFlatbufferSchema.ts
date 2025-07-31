@@ -1,4 +1,9 @@
-import { FoxgloveEnumSchema, FoxglovePrimitive, FoxgloveSchema } from "./types";
+import {
+  FoxgloveEnumSchema,
+  FoxgloveMessageSchema,
+  FoxglovePrimitive,
+  FoxgloveSchema,
+} from "./types";
 
 // Flatbuffers only supports nested vectors via table
 export const BYTE_VECTOR_FB = `
@@ -51,6 +56,26 @@ function primitiveToFlatbuffers(type: Exclude<FoxglovePrimitive, "time" | "durat
   }
 }
 
+/**
+ * Time is used instead of Timestamp for backwards compatibility.
+ */
+export function flatbufferMessageSchemaName(schema: FoxgloveMessageSchema): string {
+  if (schema.name === "Timestamp") {
+    return "Time";
+  }
+  return schema.name;
+}
+
+/**
+ * Time and Duration are not namespaced, for backwards compatibility.
+ */
+function namespacedMessageSchemaName(schema: FoxgloveMessageSchema): string {
+  if (schema.name === "Timestamp" || schema.name === "Duration") {
+    return flatbufferMessageSchemaName(schema);
+  }
+  return `foxglove.${flatbufferMessageSchemaName(schema)}`;
+}
+
 export function generateFlatbuffers(
   schema: FoxgloveSchema,
   nestedEnums: FoxgloveEnumSchema[],
@@ -100,16 +125,8 @@ export function generateFlatbuffers(
             type = field.type.enum.name;
             break;
           case "nested":
-            if (field.type.schema.name === "Timestamp") {
-              type = "Time";
-              imports.add(`Time`);
-            } else if (field.type.schema.name === "Duration") {
-              type = "Duration";
-              imports.add(`Duration`);
-            } else {
-              type = `foxglove.${field.type.schema.name}`;
-              imports.add(field.type.schema.name);
-            }
+            type = namespacedMessageSchemaName(field.type.schema);
+            imports.add(flatbufferMessageSchemaName(field.type.schema));
             break;
           case "primitive":
             if (field.type.name === "bytes" && isArray) {
