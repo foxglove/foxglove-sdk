@@ -862,7 +862,7 @@ void FoxgloveBridge::rosMessageHandler(ChannelId channelId, SinkId sinkId,
 
   auto& channel = _channels.at(channelId);
   // TODO: Change to log() when the released SDK is updated to make this a public overload
-  channel.log_(reinterpret_cast<const std::byte*>(rclSerializedMsg.buffer),
+  channel.log(reinterpret_cast<const std::byte*>(rclSerializedMsg.buffer),
                rclSerializedMsg.buffer_length, timestamp, sinkId);
 }
 
