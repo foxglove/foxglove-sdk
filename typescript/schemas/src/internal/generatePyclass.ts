@@ -718,7 +718,7 @@ impl ${channelClass} {
         sink_id: Option<u64>,
     ) {
         let metadata = PartialMetadata{ log_time };
-        let sink_id = sink_id.and_then(|id| NonZero::new(id)).map(|id| SinkId::new(id));
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
         self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
