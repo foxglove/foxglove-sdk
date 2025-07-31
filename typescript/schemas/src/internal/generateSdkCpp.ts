@@ -186,7 +186,8 @@ export function generateHppSchemas(
         ///
         /// @param msg The ${schema.name} message to log.
         /// @param log_time The timestamp of the message. If omitted, the current time is used.
-        FoxgloveError log(const ${schema.name}& msg, std::optional<uint64_t> log_time = std::nullopt) noexcept;
+        /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
+        FoxgloveError log(const ${schema.name}& msg, std::optional<uint64_t> log_time = std::nullopt, std::optional<uint64_t> sink_id = std::nullopt) noexcept;
 
         /// @brief Uniquely identifies a channel in the context of this program.
         ///
@@ -328,14 +329,14 @@ export function generateCppSchemas(schemas: FoxgloveMessageSchema[]): string {
     let conversionCode;
     if (isSameAsCType(schema)) {
       conversionCode = [
-        `    return FoxgloveError(foxglove_channel_log_${snakeName}(impl_.get(), reinterpret_cast<const foxglove_${snakeName}*>(&msg), log_time ? &*log_time : nullptr));`,
+        `    return FoxgloveError(foxglove_channel_log_${snakeName}(impl_.get(), reinterpret_cast<const foxglove_${snakeName}*>(&msg), log_time ? &*log_time : nullptr, sink_id ? *sink_id : 0));`,
       ];
     } else {
       conversionCode = [
         "    Arena arena;",
         `    foxglove_${snakeName} c_msg;`,
         `    ${toCamelCase(schema.name)}ToC(c_msg, msg, arena);`,
-        `    return FoxgloveError(foxglove_channel_log_${snakeName}(impl_.get(), &c_msg, log_time ? &*log_time : nullptr));`,
+        `    return FoxgloveError(foxglove_channel_log_${snakeName}(impl_.get(), &c_msg, log_time ? &*log_time : nullptr, sink_id ? *sink_id : 0));`,
       ];
     }
 
@@ -348,7 +349,7 @@ export function generateCppSchemas(schemas: FoxgloveMessageSchema[]): string {
       "    }",
       `    return ${schema.name}Channel(ChannelUniquePtr(channel));`,
       "}\n",
-      `FoxgloveError ${schema.name}Channel::log(const ${schema.name}& msg, std::optional<uint64_t> log_time) noexcept {`,
+      `FoxgloveError ${schema.name}Channel::log(const ${schema.name}& msg, std::optional<uint64_t> log_time, std::optional<uint64_t> sink_id) noexcept {`,
       ...conversionCode,
       "}\n",
       `uint64_t ${schema.name}Channel::id() const noexcept {`,

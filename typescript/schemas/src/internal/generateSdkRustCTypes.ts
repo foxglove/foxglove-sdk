@@ -230,14 +230,14 @@ impl BorrowToNative for ${name} {
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_${snakeName}.
 #[unsafe(no_mangle)]
-pub extern "C" fn foxglove_channel_log_${snakeName}(channel: Option<&FoxgloveChannel>, msg: Option<&${name}>, log_time: Option<&u64>) -> FoxgloveError {
+pub extern "C" fn foxglove_channel_log_${snakeName}(channel: Option<&FoxgloveChannel>, msg: Option<&${name}>, log_time: Option<&u64>, sink_id: FoxgloveSinkId) -> FoxgloveError {
   let mut arena = pin!(Arena::new());
   let arena_pin = arena.as_mut();
   // Safety: we're borrowing from the msg, but discard the borrowed message before returning
   match unsafe { ${name}::borrow_option_to_native(msg, arena_pin) } {
     Ok(msg) => {
       // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
-      log_msg_to_channel(channel, &*msg, log_time)
+      log_msg_to_channel(channel, &*msg, log_time, sink_id)
     },
     Err(e) => {
       tracing::error!("${name}: {}", e);
@@ -253,7 +253,7 @@ pub extern "C" fn foxglove_channel_log_${snakeName}(channel: Option<&FoxgloveCha
     "use std::mem::ManuallyDrop;",
     "use std::pin::{pin, Pin};",
     "",
-    "use crate::{FoxgloveString, FoxgloveError, FoxgloveChannel, FoxgloveContext, FoxgloveTimestamp, FoxgloveDuration, log_msg_to_channel, result_to_c, do_foxglove_channel_create};",
+    "use crate::{FoxgloveString, FoxgloveError, FoxgloveChannel, FoxgloveContext, FoxgloveTimestamp, FoxgloveDuration, log_msg_to_channel, result_to_c, do_foxglove_channel_create, FoxgloveSinkId};",
     "use crate::arena::{Arena, BorrowToNative};",
     "use crate::util::{bytes_from_raw, string_from_raw, vec_from_raw};",
   ];
