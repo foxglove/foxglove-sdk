@@ -1076,8 +1076,10 @@ public:
   ///
   /// @param msg The ArrowPrimitive message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
   FoxgloveError log(
-    const ArrowPrimitive& msg, std::optional<uint64_t> log_time = std::nullopt
+    const ArrowPrimitive& msg, std::optional<uint64_t> log_time = std::nullopt,
+    std::optional<uint64_t> sink_id = std::nullopt
   ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
@@ -1121,8 +1123,10 @@ public:
   ///
   /// @param msg The CameraCalibration message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
   FoxgloveError log(
-    const CameraCalibration& msg, std::optional<uint64_t> log_time = std::nullopt
+    const CameraCalibration& msg, std::optional<uint64_t> log_time = std::nullopt,
+    std::optional<uint64_t> sink_id = std::nullopt
   ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
@@ -1166,8 +1170,10 @@ public:
   ///
   /// @param msg The CircleAnnotation message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
   FoxgloveError log(
-    const CircleAnnotation& msg, std::optional<uint64_t> log_time = std::nullopt
+    const CircleAnnotation& msg, std::optional<uint64_t> log_time = std::nullopt,
+    std::optional<uint64_t> sink_id = std::nullopt
   ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
@@ -1211,7 +1217,11 @@ public:
   ///
   /// @param msg The Color message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
-  FoxgloveError log(const Color& msg, std::optional<uint64_t> log_time = std::nullopt) noexcept;
+  /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
+  FoxgloveError log(
+    const Color& msg, std::optional<uint64_t> log_time = std::nullopt,
+    std::optional<uint64_t> sink_id = std::nullopt
+  ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
@@ -1254,8 +1264,10 @@ public:
   ///
   /// @param msg The CompressedImage message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
   FoxgloveError log(
-    const CompressedImage& msg, std::optional<uint64_t> log_time = std::nullopt
+    const CompressedImage& msg, std::optional<uint64_t> log_time = std::nullopt,
+    std::optional<uint64_t> sink_id = std::nullopt
   ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
@@ -1299,8 +1311,10 @@ public:
   ///
   /// @param msg The CompressedVideo message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
   FoxgloveError log(
-    const CompressedVideo& msg, std::optional<uint64_t> log_time = std::nullopt
+    const CompressedVideo& msg, std::optional<uint64_t> log_time = std::nullopt,
+    std::optional<uint64_t> sink_id = std::nullopt
   ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
@@ -1344,8 +1358,10 @@ public:
   ///
   /// @param msg The CylinderPrimitive message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
   FoxgloveError log(
-    const CylinderPrimitive& msg, std::optional<uint64_t> log_time = std::nullopt
+    const CylinderPrimitive& msg, std::optional<uint64_t> log_time = std::nullopt,
+    std::optional<uint64_t> sink_id = std::nullopt
   ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
@@ -1389,8 +1405,10 @@ public:
   ///
   /// @param msg The CubePrimitive message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
   FoxgloveError log(
-    const CubePrimitive& msg, std::optional<uint64_t> log_time = std::nullopt
+    const CubePrimitive& msg, std::optional<uint64_t> log_time = std::nullopt,
+    std::optional<uint64_t> sink_id = std::nullopt
   ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
@@ -1434,8 +1452,10 @@ public:
   ///
   /// @param msg The FrameTransform message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
   FoxgloveError log(
-    const FrameTransform& msg, std::optional<uint64_t> log_time = std::nullopt
+    const FrameTransform& msg, std::optional<uint64_t> log_time = std::nullopt,
+    std::optional<uint64_t> sink_id = std::nullopt
   ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
@@ -1479,8 +1499,10 @@ public:
   ///
   /// @param msg The FrameTransforms message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
   FoxgloveError log(
-    const FrameTransforms& msg, std::optional<uint64_t> log_time = std::nullopt
+    const FrameTransforms& msg, std::optional<uint64_t> log_time = std::nullopt,
+    std::optional<uint64_t> sink_id = std::nullopt
   ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
@@ -1524,7 +1546,11 @@ public:
   ///
   /// @param msg The GeoJSON message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
-  FoxgloveError log(const GeoJSON& msg, std::optional<uint64_t> log_time = std::nullopt) noexcept;
+  /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
+  FoxgloveError log(
+    const GeoJSON& msg, std::optional<uint64_t> log_time = std::nullopt,
+    std::optional<uint64_t> sink_id = std::nullopt
+  ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
@@ -1567,7 +1593,11 @@ public:
   ///
   /// @param msg The Grid message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
-  FoxgloveError log(const Grid& msg, std::optional<uint64_t> log_time = std::nullopt) noexcept;
+  /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
+  FoxgloveError log(
+    const Grid& msg, std::optional<uint64_t> log_time = std::nullopt,
+    std::optional<uint64_t> sink_id = std::nullopt
+  ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
@@ -1653,8 +1683,10 @@ public:
   ///
   /// @param msg The ImageAnnotations message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
   FoxgloveError log(
-    const ImageAnnotations& msg, std::optional<uint64_t> log_time = std::nullopt
+    const ImageAnnotations& msg, std::optional<uint64_t> log_time = std::nullopt,
+    std::optional<uint64_t> sink_id = std::nullopt
   ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
@@ -1698,8 +1730,10 @@ public:
   ///
   /// @param msg The KeyValuePair message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
   FoxgloveError log(
-    const KeyValuePair& msg, std::optional<uint64_t> log_time = std::nullopt
+    const KeyValuePair& msg, std::optional<uint64_t> log_time = std::nullopt,
+    std::optional<uint64_t> sink_id = std::nullopt
   ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
@@ -1743,7 +1777,11 @@ public:
   ///
   /// @param msg The LaserScan message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
-  FoxgloveError log(const LaserScan& msg, std::optional<uint64_t> log_time = std::nullopt) noexcept;
+  /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
+  FoxgloveError log(
+    const LaserScan& msg, std::optional<uint64_t> log_time = std::nullopt,
+    std::optional<uint64_t> sink_id = std::nullopt
+  ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
@@ -1786,8 +1824,10 @@ public:
   ///
   /// @param msg The LinePrimitive message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
   FoxgloveError log(
-    const LinePrimitive& msg, std::optional<uint64_t> log_time = std::nullopt
+    const LinePrimitive& msg, std::optional<uint64_t> log_time = std::nullopt,
+    std::optional<uint64_t> sink_id = std::nullopt
   ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
@@ -1831,8 +1871,10 @@ public:
   ///
   /// @param msg The LocationFix message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
   FoxgloveError log(
-    const LocationFix& msg, std::optional<uint64_t> log_time = std::nullopt
+    const LocationFix& msg, std::optional<uint64_t> log_time = std::nullopt,
+    std::optional<uint64_t> sink_id = std::nullopt
   ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
@@ -1876,7 +1918,11 @@ public:
   ///
   /// @param msg The Log message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
-  FoxgloveError log(const Log& msg, std::optional<uint64_t> log_time = std::nullopt) noexcept;
+  /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
+  FoxgloveError log(
+    const Log& msg, std::optional<uint64_t> log_time = std::nullopt,
+    std::optional<uint64_t> sink_id = std::nullopt
+  ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
@@ -1919,8 +1965,10 @@ public:
   ///
   /// @param msg The SceneEntityDeletion message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
   FoxgloveError log(
-    const SceneEntityDeletion& msg, std::optional<uint64_t> log_time = std::nullopt
+    const SceneEntityDeletion& msg, std::optional<uint64_t> log_time = std::nullopt,
+    std::optional<uint64_t> sink_id = std::nullopt
   ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
@@ -1964,8 +2012,10 @@ public:
   ///
   /// @param msg The SceneEntity message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
   FoxgloveError log(
-    const SceneEntity& msg, std::optional<uint64_t> log_time = std::nullopt
+    const SceneEntity& msg, std::optional<uint64_t> log_time = std::nullopt,
+    std::optional<uint64_t> sink_id = std::nullopt
   ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
@@ -2009,8 +2059,10 @@ public:
   ///
   /// @param msg The SceneUpdate message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
   FoxgloveError log(
-    const SceneUpdate& msg, std::optional<uint64_t> log_time = std::nullopt
+    const SceneUpdate& msg, std::optional<uint64_t> log_time = std::nullopt,
+    std::optional<uint64_t> sink_id = std::nullopt
   ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
@@ -2054,8 +2106,10 @@ public:
   ///
   /// @param msg The ModelPrimitive message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
   FoxgloveError log(
-    const ModelPrimitive& msg, std::optional<uint64_t> log_time = std::nullopt
+    const ModelPrimitive& msg, std::optional<uint64_t> log_time = std::nullopt,
+    std::optional<uint64_t> sink_id = std::nullopt
   ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
@@ -2099,8 +2153,10 @@ public:
   ///
   /// @param msg The PackedElementField message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
   FoxgloveError log(
-    const PackedElementField& msg, std::optional<uint64_t> log_time = std::nullopt
+    const PackedElementField& msg, std::optional<uint64_t> log_time = std::nullopt,
+    std::optional<uint64_t> sink_id = std::nullopt
   ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
@@ -2144,7 +2200,11 @@ public:
   ///
   /// @param msg The Point2 message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
-  FoxgloveError log(const Point2& msg, std::optional<uint64_t> log_time = std::nullopt) noexcept;
+  /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
+  FoxgloveError log(
+    const Point2& msg, std::optional<uint64_t> log_time = std::nullopt,
+    std::optional<uint64_t> sink_id = std::nullopt
+  ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
@@ -2187,7 +2247,11 @@ public:
   ///
   /// @param msg The Point3 message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
-  FoxgloveError log(const Point3& msg, std::optional<uint64_t> log_time = std::nullopt) noexcept;
+  /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
+  FoxgloveError log(
+    const Point3& msg, std::optional<uint64_t> log_time = std::nullopt,
+    std::optional<uint64_t> sink_id = std::nullopt
+  ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
@@ -2230,8 +2294,10 @@ public:
   ///
   /// @param msg The PointCloud message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
   FoxgloveError log(
-    const PointCloud& msg, std::optional<uint64_t> log_time = std::nullopt
+    const PointCloud& msg, std::optional<uint64_t> log_time = std::nullopt,
+    std::optional<uint64_t> sink_id = std::nullopt
   ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
@@ -2275,8 +2341,10 @@ public:
   ///
   /// @param msg The PointsAnnotation message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
   FoxgloveError log(
-    const PointsAnnotation& msg, std::optional<uint64_t> log_time = std::nullopt
+    const PointsAnnotation& msg, std::optional<uint64_t> log_time = std::nullopt,
+    std::optional<uint64_t> sink_id = std::nullopt
   ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
@@ -2320,7 +2388,11 @@ public:
   ///
   /// @param msg The Pose message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
-  FoxgloveError log(const Pose& msg, std::optional<uint64_t> log_time = std::nullopt) noexcept;
+  /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
+  FoxgloveError log(
+    const Pose& msg, std::optional<uint64_t> log_time = std::nullopt,
+    std::optional<uint64_t> sink_id = std::nullopt
+  ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
@@ -2363,8 +2435,10 @@ public:
   ///
   /// @param msg The PoseInFrame message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
   FoxgloveError log(
-    const PoseInFrame& msg, std::optional<uint64_t> log_time = std::nullopt
+    const PoseInFrame& msg, std::optional<uint64_t> log_time = std::nullopt,
+    std::optional<uint64_t> sink_id = std::nullopt
   ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
@@ -2408,8 +2482,10 @@ public:
   ///
   /// @param msg The PosesInFrame message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
   FoxgloveError log(
-    const PosesInFrame& msg, std::optional<uint64_t> log_time = std::nullopt
+    const PosesInFrame& msg, std::optional<uint64_t> log_time = std::nullopt,
+    std::optional<uint64_t> sink_id = std::nullopt
   ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
@@ -2453,8 +2529,10 @@ public:
   ///
   /// @param msg The Quaternion message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
   FoxgloveError log(
-    const Quaternion& msg, std::optional<uint64_t> log_time = std::nullopt
+    const Quaternion& msg, std::optional<uint64_t> log_time = std::nullopt,
+    std::optional<uint64_t> sink_id = std::nullopt
   ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
@@ -2498,7 +2576,11 @@ public:
   ///
   /// @param msg The RawAudio message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
-  FoxgloveError log(const RawAudio& msg, std::optional<uint64_t> log_time = std::nullopt) noexcept;
+  /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
+  FoxgloveError log(
+    const RawAudio& msg, std::optional<uint64_t> log_time = std::nullopt,
+    std::optional<uint64_t> sink_id = std::nullopt
+  ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
@@ -2541,7 +2623,11 @@ public:
   ///
   /// @param msg The RawImage message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
-  FoxgloveError log(const RawImage& msg, std::optional<uint64_t> log_time = std::nullopt) noexcept;
+  /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
+  FoxgloveError log(
+    const RawImage& msg, std::optional<uint64_t> log_time = std::nullopt,
+    std::optional<uint64_t> sink_id = std::nullopt
+  ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
@@ -2584,8 +2670,10 @@ public:
   ///
   /// @param msg The SpherePrimitive message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
   FoxgloveError log(
-    const SpherePrimitive& msg, std::optional<uint64_t> log_time = std::nullopt
+    const SpherePrimitive& msg, std::optional<uint64_t> log_time = std::nullopt,
+    std::optional<uint64_t> sink_id = std::nullopt
   ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
@@ -2629,8 +2717,10 @@ public:
   ///
   /// @param msg The TextAnnotation message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
   FoxgloveError log(
-    const TextAnnotation& msg, std::optional<uint64_t> log_time = std::nullopt
+    const TextAnnotation& msg, std::optional<uint64_t> log_time = std::nullopt,
+    std::optional<uint64_t> sink_id = std::nullopt
   ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
@@ -2674,8 +2764,10 @@ public:
   ///
   /// @param msg The TextPrimitive message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
   FoxgloveError log(
-    const TextPrimitive& msg, std::optional<uint64_t> log_time = std::nullopt
+    const TextPrimitive& msg, std::optional<uint64_t> log_time = std::nullopt,
+    std::optional<uint64_t> sink_id = std::nullopt
   ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
@@ -2719,8 +2811,10 @@ public:
   ///
   /// @param msg The TriangleListPrimitive message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
   FoxgloveError log(
-    const TriangleListPrimitive& msg, std::optional<uint64_t> log_time = std::nullopt
+    const TriangleListPrimitive& msg, std::optional<uint64_t> log_time = std::nullopt,
+    std::optional<uint64_t> sink_id = std::nullopt
   ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
@@ -2765,7 +2859,11 @@ public:
   ///
   /// @param msg The Vector2 message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
-  FoxgloveError log(const Vector2& msg, std::optional<uint64_t> log_time = std::nullopt) noexcept;
+  /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
+  FoxgloveError log(
+    const Vector2& msg, std::optional<uint64_t> log_time = std::nullopt,
+    std::optional<uint64_t> sink_id = std::nullopt
+  ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
@@ -2808,7 +2906,11 @@ public:
   ///
   /// @param msg The Vector3 message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
-  FoxgloveError log(const Vector3& msg, std::optional<uint64_t> log_time = std::nullopt) noexcept;
+  /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
+  FoxgloveError log(
+    const Vector3& msg, std::optional<uint64_t> log_time = std::nullopt,
+    std::optional<uint64_t> sink_id = std::nullopt
+  ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
