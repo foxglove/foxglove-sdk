@@ -156,9 +156,7 @@ impl ArrowPrimitiveChannel {
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
     fn log(&self, msg: &schemas::ArrowPrimitive, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        let sink_id = sink_id
-            .and_then(|id| NonZero::new(id))
-            .map(|id| SinkId::new(id));
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
         self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
@@ -267,9 +265,7 @@ impl CameraCalibrationChannel {
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
     fn log(&self, msg: &schemas::CameraCalibration, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        let sink_id = sink_id
-            .and_then(|id| NonZero::new(id))
-            .map(|id| SinkId::new(id));
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
         self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
@@ -378,9 +374,7 @@ impl CircleAnnotationChannel {
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
     fn log(&self, msg: &schemas::CircleAnnotation, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        let sink_id = sink_id
-            .and_then(|id| NonZero::new(id))
-            .map(|id| SinkId::new(id));
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
         self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
@@ -489,9 +483,7 @@ impl ColorChannel {
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
     fn log(&self, msg: &schemas::Color, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        let sink_id = sink_id
-            .and_then(|id| NonZero::new(id))
-            .map(|id| SinkId::new(id));
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
         self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
@@ -595,9 +587,7 @@ impl CompressedImageChannel {
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
     fn log(&self, msg: &schemas::CompressedImage, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        let sink_id = sink_id
-            .and_then(|id| NonZero::new(id))
-            .map(|id| SinkId::new(id));
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
         self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
@@ -706,9 +696,7 @@ impl CompressedVideoChannel {
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
     fn log(&self, msg: &schemas::CompressedVideo, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        let sink_id = sink_id
-            .and_then(|id| NonZero::new(id))
-            .map(|id| SinkId::new(id));
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
         self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
@@ -817,9 +805,7 @@ impl CylinderPrimitiveChannel {
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
     fn log(&self, msg: &schemas::CylinderPrimitive, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        let sink_id = sink_id
-            .and_then(|id| NonZero::new(id))
-            .map(|id| SinkId::new(id));
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
         self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
@@ -928,9 +914,7 @@ impl CubePrimitiveChannel {
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
     fn log(&self, msg: &schemas::CubePrimitive, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        let sink_id = sink_id
-            .and_then(|id| NonZero::new(id))
-            .map(|id| SinkId::new(id));
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
         self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
@@ -1039,9 +1023,7 @@ impl FrameTransformChannel {
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
     fn log(&self, msg: &schemas::FrameTransform, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        let sink_id = sink_id
-            .and_then(|id| NonZero::new(id))
-            .map(|id| SinkId::new(id));
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
         self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
@@ -1150,9 +1132,7 @@ impl FrameTransformsChannel {
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
     fn log(&self, msg: &schemas::FrameTransforms, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        let sink_id = sink_id
-            .and_then(|id| NonZero::new(id))
-            .map(|id| SinkId::new(id));
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
         self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
@@ -1261,9 +1241,7 @@ impl GeoJsonChannel {
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
     fn log(&self, msg: &schemas::GeoJson, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        let sink_id = sink_id
-            .and_then(|id| NonZero::new(id))
-            .map(|id| SinkId::new(id));
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
         self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
@@ -1367,9 +1345,7 @@ impl GridChannel {
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
     fn log(&self, msg: &schemas::Grid, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        let sink_id = sink_id
-            .and_then(|id| NonZero::new(id))
-            .map(|id| SinkId::new(id));
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
         self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
@@ -1473,9 +1449,7 @@ impl ImageAnnotationsChannel {
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
     fn log(&self, msg: &schemas::ImageAnnotations, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        let sink_id = sink_id
-            .and_then(|id| NonZero::new(id))
-            .map(|id| SinkId::new(id));
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
         self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
@@ -1584,9 +1558,7 @@ impl KeyValuePairChannel {
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
     fn log(&self, msg: &schemas::KeyValuePair, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        let sink_id = sink_id
-            .and_then(|id| NonZero::new(id))
-            .map(|id| SinkId::new(id));
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
         self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
@@ -1695,9 +1667,7 @@ impl LaserScanChannel {
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
     fn log(&self, msg: &schemas::LaserScan, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        let sink_id = sink_id
-            .and_then(|id| NonZero::new(id))
-            .map(|id| SinkId::new(id));
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
         self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
@@ -1806,9 +1776,7 @@ impl LinePrimitiveChannel {
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
     fn log(&self, msg: &schemas::LinePrimitive, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        let sink_id = sink_id
-            .and_then(|id| NonZero::new(id))
-            .map(|id| SinkId::new(id));
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
         self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
@@ -1917,9 +1885,7 @@ impl LocationFixChannel {
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
     fn log(&self, msg: &schemas::LocationFix, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        let sink_id = sink_id
-            .and_then(|id| NonZero::new(id))
-            .map(|id| SinkId::new(id));
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
         self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
@@ -2028,9 +1994,7 @@ impl LogChannel {
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
     fn log(&self, msg: &schemas::Log, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        let sink_id = sink_id
-            .and_then(|id| NonZero::new(id))
-            .map(|id| SinkId::new(id));
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
         self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
@@ -2134,9 +2098,7 @@ impl SceneEntityDeletionChannel {
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
     fn log(&self, msg: &schemas::SceneEntityDeletion, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        let sink_id = sink_id
-            .and_then(|id| NonZero::new(id))
-            .map(|id| SinkId::new(id));
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
         self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
@@ -2245,9 +2207,7 @@ impl SceneEntityChannel {
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
     fn log(&self, msg: &schemas::SceneEntity, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        let sink_id = sink_id
-            .and_then(|id| NonZero::new(id))
-            .map(|id| SinkId::new(id));
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
         self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
@@ -2356,9 +2316,7 @@ impl SceneUpdateChannel {
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
     fn log(&self, msg: &schemas::SceneUpdate, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        let sink_id = sink_id
-            .and_then(|id| NonZero::new(id))
-            .map(|id| SinkId::new(id));
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
         self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
@@ -2467,9 +2425,7 @@ impl ModelPrimitiveChannel {
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
     fn log(&self, msg: &schemas::ModelPrimitive, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        let sink_id = sink_id
-            .and_then(|id| NonZero::new(id))
-            .map(|id| SinkId::new(id));
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
         self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
@@ -2578,9 +2534,7 @@ impl PackedElementFieldChannel {
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
     fn log(&self, msg: &schemas::PackedElementField, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        let sink_id = sink_id
-            .and_then(|id| NonZero::new(id))
-            .map(|id| SinkId::new(id));
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
         self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
@@ -2689,9 +2643,7 @@ impl Point2Channel {
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
     fn log(&self, msg: &schemas::Point2, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        let sink_id = sink_id
-            .and_then(|id| NonZero::new(id))
-            .map(|id| SinkId::new(id));
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
         self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
@@ -2795,9 +2747,7 @@ impl Point3Channel {
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
     fn log(&self, msg: &schemas::Point3, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        let sink_id = sink_id
-            .and_then(|id| NonZero::new(id))
-            .map(|id| SinkId::new(id));
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
         self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
@@ -2901,9 +2851,7 @@ impl PointCloudChannel {
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
     fn log(&self, msg: &schemas::PointCloud, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        let sink_id = sink_id
-            .and_then(|id| NonZero::new(id))
-            .map(|id| SinkId::new(id));
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
         self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
@@ -3012,9 +2960,7 @@ impl PointsAnnotationChannel {
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
     fn log(&self, msg: &schemas::PointsAnnotation, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        let sink_id = sink_id
-            .and_then(|id| NonZero::new(id))
-            .map(|id| SinkId::new(id));
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
         self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
@@ -3123,9 +3069,7 @@ impl PoseChannel {
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
     fn log(&self, msg: &schemas::Pose, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        let sink_id = sink_id
-            .and_then(|id| NonZero::new(id))
-            .map(|id| SinkId::new(id));
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
         self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
@@ -3229,9 +3173,7 @@ impl PoseInFrameChannel {
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
     fn log(&self, msg: &schemas::PoseInFrame, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        let sink_id = sink_id
-            .and_then(|id| NonZero::new(id))
-            .map(|id| SinkId::new(id));
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
         self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
@@ -3340,9 +3282,7 @@ impl PosesInFrameChannel {
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
     fn log(&self, msg: &schemas::PosesInFrame, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        let sink_id = sink_id
-            .and_then(|id| NonZero::new(id))
-            .map(|id| SinkId::new(id));
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
         self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
@@ -3451,9 +3391,7 @@ impl QuaternionChannel {
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
     fn log(&self, msg: &schemas::Quaternion, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        let sink_id = sink_id
-            .and_then(|id| NonZero::new(id))
-            .map(|id| SinkId::new(id));
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
         self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
@@ -3562,9 +3500,7 @@ impl RawAudioChannel {
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
     fn log(&self, msg: &schemas::RawAudio, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        let sink_id = sink_id
-            .and_then(|id| NonZero::new(id))
-            .map(|id| SinkId::new(id));
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
         self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
@@ -3673,9 +3609,7 @@ impl RawImageChannel {
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
     fn log(&self, msg: &schemas::RawImage, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        let sink_id = sink_id
-            .and_then(|id| NonZero::new(id))
-            .map(|id| SinkId::new(id));
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
         self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
@@ -3784,9 +3718,7 @@ impl SpherePrimitiveChannel {
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
     fn log(&self, msg: &schemas::SpherePrimitive, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        let sink_id = sink_id
-            .and_then(|id| NonZero::new(id))
-            .map(|id| SinkId::new(id));
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
         self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
@@ -3895,9 +3827,7 @@ impl TextAnnotationChannel {
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
     fn log(&self, msg: &schemas::TextAnnotation, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        let sink_id = sink_id
-            .and_then(|id| NonZero::new(id))
-            .map(|id| SinkId::new(id));
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
         self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
@@ -4006,9 +3936,7 @@ impl TextPrimitiveChannel {
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
     fn log(&self, msg: &schemas::TextPrimitive, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        let sink_id = sink_id
-            .and_then(|id| NonZero::new(id))
-            .map(|id| SinkId::new(id));
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
         self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
@@ -4122,9 +4050,7 @@ impl TriangleListPrimitiveChannel {
         sink_id: Option<u64>,
     ) {
         let metadata = PartialMetadata { log_time };
-        let sink_id = sink_id
-            .and_then(|id| NonZero::new(id))
-            .map(|id| SinkId::new(id));
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
         self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
@@ -4233,9 +4159,7 @@ impl Vector2Channel {
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
     fn log(&self, msg: &schemas::Vector2, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        let sink_id = sink_id
-            .and_then(|id| NonZero::new(id))
-            .map(|id| SinkId::new(id));
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
         self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
@@ -4339,9 +4263,7 @@ impl Vector3Channel {
     #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
     fn log(&self, msg: &schemas::Vector3, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        let sink_id = sink_id
-            .and_then(|id| NonZero::new(id))
-            .map(|id| SinkId::new(id));
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
 
         self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
