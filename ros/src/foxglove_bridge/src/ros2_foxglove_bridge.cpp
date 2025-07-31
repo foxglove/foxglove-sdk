@@ -4,6 +4,7 @@
 
 #include <foxglove_bridge/ros2_foxglove_bridge.hpp>
 #include <foxglove_bridge/version.hpp>
+#include <fstream>
 
 namespace foxglove_bridge {
 namespace {
@@ -38,6 +39,24 @@ inline bool hasCapability(const foxglove::WebSocketServerCapabilities& capabilit
                           foxglove::WebSocketServerCapabilities capability) {
   return (capabilities & capability) == capability;
 }
+
+inline std::vector<std::byte> readFile(const std::string& filepath) {
+  std::ifstream file(filepath, std::ios::binary | std::ios::ate);
+  if (!file.is_open()) {
+    throw std::runtime_error("Failed to open file: " + filepath);
+  }
+
+  std::streamsize length = file.tellg();
+  file.seekg(0, std::ios::beg);
+
+  std::vector<std::byte> buffer(length);
+  if (!file.read(reinterpret_cast<char*>(buffer.data()), length)) {
+    throw std::runtime_error("Failed to read file: " + filepath);
+  }
+
+  return buffer;
+}
+
 }  // namespace
 
 using namespace std::chrono_literals;
@@ -55,6 +74,9 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
   const auto address = this->get_parameter(PARAM_ADDRESS).as_string();
   _minQosDepth = static_cast<size_t>(this->get_parameter(PARAM_MIN_QOS_DEPTH).as_int());
   _maxQosDepth = static_cast<size_t>(this->get_parameter(PARAM_MAX_QOS_DEPTH).as_int());
+  const bool useTls = this->get_parameter(PARAM_USETLS).as_bool();
+  const std::string certfile = this->get_parameter(PARAM_CERTFILE).as_string();
+  const std::string keyfile = this->get_parameter(PARAM_KEYFILE).as_string();
   const auto bestEffortQosTopicWhiteList =
     this->get_parameter(PARAM_BEST_EFFORT_QOS_TOPIC_WHITELIST).as_string_array();
   _bestEffortQosTopicWhiteListPatterns = parseRegexStrings(this, bestEffortQosTopicWhiteList);
@@ -85,6 +107,26 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
   if (_useSimTime) {
     sdkServerOptions.capabilities =
       sdkServerOptions.capabilities | foxglove::WebSocketServerCapabilities::Time;
+  }
+
+  // If TLS is enabled, load the certificate and key files from disk
+  if (useTls) {
+    if (certfile.empty() || !std::filesystem::exists(certfile)) {
+      throw std::invalid_argument("certfile must be provided when TLS is enabled and must exist");
+    }
+
+    if (keyfile.empty() || !std::filesystem::exists(keyfile)) {
+      throw std::invalid_argument("keyfile must be provided when TLS is enabled and must exist");
+    }
+
+    _tlsCert = readFile(certfile);
+    _tlsKey = readFile(keyfile);
+
+    sdkServerOptions.tls_identity = foxglove::TlsIdentity{};
+    sdkServerOptions.tls_identity->cert = _tlsCert->data();
+    sdkServerOptions.tls_identity->cert_len = _tlsCert->size();
+    sdkServerOptions.tls_identity->key = _tlsKey->data();
+    sdkServerOptions.tls_identity->key_len = _tlsKey->size();
   }
 
   // Setup callbacks
