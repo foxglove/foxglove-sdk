@@ -7,7 +7,7 @@ configuration and camera feeds to Foxglove for real-time visualization.
 
 ## Prepare Dependencies
 
-Follow the [LeRobot installation instructions](https://huggingface.co/docs/lerobot/en/installation) to create a lerobot conda environment and install it:
+Follow the [LeRobot installation instructions](https://huggingface.co/docs/lerobot/en/installation) to create a `lerobot` conda environment and install it:
 
 ```bash
 sudo apt-get install cmake build-essential python-dev pkg-config libavformat-dev libavcodec-dev libavdevice-dev libavutil-dev libswscale-dev libswresample-dev libavfilter-dev pkg-config
@@ -31,7 +31,7 @@ pip install -r requirements.txt
 
 ## Configure the robot and run the code
 
-Configure, and [calibrate your SO-100](https://huggingface.co/docs/lerobot/en/so100#calibrate) using LeRobot, and make sure to identify the configuration name, robot port, and camera ids. Now you are read to run the code.
+Configure, and [calibrate your SO-100](https://huggingface.co/docs/lerobot/en/so100#calibrate) using LeRobot. Make sure to identify the configuration name, robot port, and camera ids. Now you are read to run the code.
 
 ### Parameters
 
@@ -67,9 +67,10 @@ python main.py \
     --output.mcap_path=robot_session.mcap
 ```
 
-## Requirements
+## Setting up Foxglove
 
-- SO-100 Follower arm connected via USB
-- Optional: USB cameras for wrist and environment views
-- Foxglove Studio for visualization
-- SO100 URDF files (included in this project under `SO100/` directory)
+1. In Foxglove, select _Open connection_ from the dashboard or left-hand menu.
+2. Select _Foxglove WebSocket_ in the _Open a new connection_ dialog, then enter the URL of your SDK server (`ws://localhost:8765` by default).
+3. Open the layout included with the example. In the layout dropdown in the application toolbar, select _Import from file..._, and select `foxglove-sdk/python/foxglove-sdk-examples/so100-visualization/foxglove/lerobot_layout.json`.
+
+You should now see your robot's data streaming live!

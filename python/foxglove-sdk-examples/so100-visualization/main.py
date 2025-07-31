@@ -128,7 +128,7 @@ def main():
 
     # Start the Foxglove server
     server = foxglove.start_server()
-
+    print(f"Foxglove server started at {server.app_url()}")
     # Setup cameras if requested
     wrist_camera = None
     wrist_image_channel = None
@@ -154,8 +154,6 @@ def main():
             print("Environment camera connected successfully.")
         except Exception as e:
             print(f"Failed to setup environment camera: {e}")
-
-    print("Open Foxglove Studio and connect to ws://localhost:8765")
 
     # Connect to SO-100 arm
     config = SO100FollowerConfig(
