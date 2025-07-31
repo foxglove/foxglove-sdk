@@ -182,7 +182,7 @@ async function main({ clean }: { clean: boolean }) {
       const enums = Object.values(foxgloveEnumSchemas).filter(
         (enumSchema) => enumSchema.parentSchemaName === schema.name,
       );
-      const name = schema.flatbuffersEquivalent ?? schema.name;
+      const name = schema.name === "Timestamp" ? "Time" : schema.name;
       await fs.writeFile(
         path.join(outDir, "flatbuffer", `${name}.fbs`),
         generateFlatbuffers(schema, enums),

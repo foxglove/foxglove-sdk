@@ -34,8 +34,6 @@ export type FoxgloveMessageSchema = {
   rosEquivalent?: keyof typeof import("@foxglove/rosmsg-msgs-common").ros1;
   ros2Equivalent?: keyof typeof import("@foxglove/rosmsg-msgs-common").ros2jazzy;
   protoEquivalent?: "google.protobuf.Timestamp" | "google.protobuf.Duration";
-  flatbuffersEquivalent?: "Time";
-  omgIdlEquivalent?: "Time";
   fields: ReadonlyArray<FoxgloveMessageField>;
 };
 

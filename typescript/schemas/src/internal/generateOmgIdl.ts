@@ -18,8 +18,8 @@ function primitiveToIdl(type: Exclude<FoxglovePrimitive, "time" | "duration">) {
 }
 
 export function omgIdlSchemaName(schema: FoxgloveSchema): string {
-  if (schema.type === "message" && schema.omgIdlEquivalent) {
-    return schema.omgIdlEquivalent;
+  if (schema.type === "message" && schema.name === "Timestamp") {
+    return "Time";
   }
   return schema.name;
 }

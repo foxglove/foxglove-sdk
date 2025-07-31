@@ -28,8 +28,6 @@ const Timestamp: FoxgloveMessageSchema = {
   rosEquivalent: "std_msgs/Time",
   ros2Equivalent: "builtin_interfaces/Time",
   protoEquivalent: "google.protobuf.Timestamp",
-  flatbuffersEquivalent: "Time",
-  omgIdlEquivalent: "Time",
   fields: [
     {
       name: "sec",
