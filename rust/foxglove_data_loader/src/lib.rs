@@ -1,15 +1,103 @@
-pub mod generated {
-    // Confine the mess of the things that generate defines to a dedicated namespace with this
-    // inline module.
-    wit_bindgen::generate!({
-        world: "host",
-        export_macro_name: "export",
-        pub_export_macro: true,
-        path: "./wit",
-    });
-}
+//! Data Loaders are an experimental [Extension API] that allow you to support more file formats in
+//! Foxglove. You build a Data Loader as a Foxglove Extension using WASM.
+//!
+//! To create a Data Loader, implement the [`DataLoader`] and [`MessageIterator`] traits, and make
+//! your Data Loader available using the [`export`] macro.
+//!
+//! The compiled WASM blob can then be bundled with a Foxglove Extension to be installed in the
+//! Foxglove app. View the [Data Loader template] for an end-to-end example of bundling a Data
+//! Loader for use in Foxglove.
+//!
+//! [Extension API]: https://docs.foxglove.dev/docs/extensions
+//! [data loader template]: https://github.com/foxglove/create-foxglove-extension/tree/main/examples/rust-data-loader-template
+//!
+//! # Example
+//!
+//! ```rust
+//! use foxglove_data_loader::*;
+//! use std::io::{ BufReader, Read };
+//!
+//! struct MyDataLoader { paths: Vec<String> }
+//!
+//! impl DataLoader for MyDataLoader {
+//!     // Your error type can be anything that can be converted into a boxed error.
+//!     // This could be an `anyhow` or `thiserror` error, or even a `String`.
+//!     type Error = String;
+//!     // Foxglove will ask your Data Loader for multiple message iterators to fill the Foxglove
+//!     // panels with data. You define a struct that implements [`MessageIterator`] to do this.
+//!     type MessageIterator = MyMessageIterator;
+//!
+//!     fn new(args: DataLoaderArgs) -> Self {
+//!         // Data Loaders are created with a list of paths selected from the Foxglove app.
+//!         // Keep them around so you can open them using the `reader` interface later.
+//!         let DataLoaderArgs { paths } = args;
+//!         Self { paths }
+//!     }
+//!
+//!     fn initialize(&mut self) -> Result<Initialization, Self::Error> {
+//!         // Return an `Initialization` to tell Foxglove what your data looks like.
+//!         let mut builder = Initialization::builder();
+//!
+//!         // Open one of the provided paths:
+//!         let mut file = BufReader::new(reader::open(&self.paths[0]));
+//!         let mut buf = vec![ 0; 1024 ];
+//!         // Read some data from your file:
+//!         file.read(&mut buf)
+//!             .expect("should be able to read");
+//!
+//!         let great_channel = builder
+//!             .add_channel("/my-great-channel")
+//!             .message_count(10);
+//!
+//!         // Keep track of this so you know when Foxglove requests `/my-great-channel`.
+//!         let great_channel_id = great_channel.id();
+//!
+//!         let init = builder
+//!             .add_problem(Problem::warn("this is a warning about the data"))
+//!             .build();
+//!
+//!         Ok(init)
+//!     }
+//!
+//!     fn create_iter(&mut self, args: MessageIteratorArgs) ->
+//!         Result<Self::MessageIterator, Self::Error> {
+//!         // Return an iterator that will return messages for the requested channels
+//!         // and time range.
+//!         Ok(MyMessageIterator {
+//!             current_nanos: args.start_time.unwrap_or(0),
+//!             end_nanos: args.start_time.unwrap_or(u64::MAX),
+//!             channels: args.channels
+//!         })
+//!     }
+//! }
+//!
+//! struct MyMessageIterator {
+//!     channels: Vec<u16>,
+//!     current_nanos: u64,
+//!     end_nanos: u64
+//! }
+//!
+//! impl MessageIterator for MyMessageIterator {
+//!     type Error = String;
+//!
+//!     fn next(&mut self) -> Option<Result<Message, Self::Error>> {
+//!         // When all the data for the time range has been read, return None.
+//!         if self.current_nanos > self.end_nanos {
+//!             return None;
+//!         }
+//!
+//!         // Return a message containing data from your file format.
+//!         Some(Ok(Message {
+//!             channel_id: 1,
+//!             data: vec![ 1, 2, 3, 4 ],
+//!             log_time: 100,
+//!             publish_time: 100
+//!         }))
+//!     }
+//! }
+//! ```
 
-/// Export a data loader to wasm output with this macro.
+/// Export a data loader to WASM output with this macro.
 #[macro_export]
 #[allow(clippy::crate_in_macro_def)]
 macro_rules! export {
@@ -20,8 +108,8 @@ macro_rules! export {
             use crate::$L as Loader;
             use std::cell::RefCell;
             use foxglove_data_loader::{loader, DataLoader, MessageIterator};
-            foxglove_data_loader::generated::export!(
-                DataLoaderWrapper with_types_in foxglove_data_loader::generated
+            foxglove_data_loader::__generated::export!(
+                DataLoaderWrapper with_types_in foxglove_data_loader::__generated
             );
 
             struct DataLoaderWrapper {
@@ -83,13 +171,18 @@ use anyhow::anyhow;
 use std::collections::BTreeMap;
 use std::{cell::RefCell, rc::Rc};
 
-pub use generated::exports::foxglove::loader::loader::{
-    self, BackfillArgs, Channel, ChannelId, DataLoaderArgs, Message, MessageIteratorArgs, Schema,
+#[doc(inline)]
+pub use __generated::exports::foxglove::loader::loader::{
+    BackfillArgs, Channel, ChannelId, DataLoaderArgs, Message, MessageIteratorArgs, Schema,
     SchemaId, Severity, TimeRange,
 };
 
-pub use generated::foxglove::loader::console;
-pub use generated::foxglove::loader::reader;
+#[doc(inline)]
+pub use __generated::foxglove::loader::{console, reader};
+
+// This is used by the export macro but shouldn't be accessed directly.
+#[doc(hidden)]
+pub use __generated::exports::foxglove::loader::loader;
 
 impl std::io::Read for reader::Reader {
     fn read(&mut self, dst: &mut [u8]) -> Result<usize, std::io::Error> {
@@ -338,7 +431,7 @@ impl Default for TimeRange {
     }
 }
 
-/// Builder to make Initializations.
+/// Builder to make an [`Initialization`].
 impl InitializationBuilder {
     /// Set the initialization's time range.
     pub fn time_range(mut self, time_range: TimeRange) -> Self {
@@ -478,17 +571,22 @@ impl InitializationBuilder {
     }
 }
 
-/// A LinkedSchema holds a foxglove::Schema plus the Channels that use this schema and message
+/// A [`LinkedSchema`] holds a [`foxglove::Schema`] plus the Channels that use this schema and message
 /// encoding.
 #[derive(Debug, Clone)]
 pub struct LinkedSchema {
-    id: u16,
+    id: SchemaId,
     schema: foxglove::Schema,
     channels: Rc<RefCell<ChannelManager>>,
     message_encoding: String,
 }
 
 impl LinkedSchema {
+    /// Get the ID of the schema
+    pub fn id(&self) -> SchemaId {
+        self.id
+    }
+
     /// Create a channel from a topic name with a certain channel ID and message encoding from the
     /// schema default message encoding.
     ///
@@ -520,7 +618,7 @@ impl LinkedSchema {
     }
 }
 
-/// Builder interface that links back to the originating LinkedSchema and InitializationBuilder
+/// Builder interface that links back to the originating [`LinkedSchema`] and [`InitializationBuilder`]
 #[derive(Debug, Clone)]
 pub struct LinkedChannel {
     id: ChannelId,
@@ -531,6 +629,11 @@ pub struct LinkedChannel {
 }
 
 impl LinkedChannel {
+    /// Get the ID of the current channel
+    pub fn id(&self) -> ChannelId {
+        self.id
+    }
+
     /// Set the message count for this channel.
     pub fn message_count(self, message_count: u64) -> Self {
         self.message_count.replace(Some(message_count));
@@ -543,7 +646,7 @@ impl LinkedChannel {
         self
     }
 
-    /// Set the schema id for the channel from a LinkedSchema.
+    /// Set the schema ID for the channel from a [`LinkedSchema`].
     pub fn schema(self, linked_schema: &LinkedSchema) -> Self {
         self.schema_id.replace(Some(linked_schema.id));
         self
@@ -581,14 +684,14 @@ pub trait DataLoader: 'static + Sized {
     type MessageIterator: MessageIterator;
     type Error: Into<Box<dyn std::error::Error>>;
 
-    /// Create a new DataLoader.
+    /// Create a new [`DataLoader`].
     fn new(args: DataLoaderArgs) -> Self;
 
-    /// Initialize your DataLoader, reading enough of the file to generate counts, channels, and
+    /// Initialize your [`DataLoader`], reading enough of the file to generate counts, channels, and
     /// schemas for the `Initialization` result.
     fn initialize(&mut self) -> Result<Initialization, Self::Error>;
 
-    /// Create a [`MessageIterator`] for this DataLoader for the requested channels and time range.
+    /// Create a [`MessageIterator`] for this [`DataLoader`] for the requested channels and time range.
     fn create_iter(
         &mut self,
         args: loader::MessageIteratorArgs,
@@ -612,10 +715,22 @@ pub trait DataLoader: 'static + Sized {
     }
 }
 
-/// Implement MessageIterator for your loader iterator.
+/// Implement [`MessageIterator`] for your loader iterator.
 pub trait MessageIterator: 'static + Sized {
     type Error: Into<Box<dyn std::error::Error>>;
     fn next(&mut self) -> Option<Result<Message, Self::Error>>;
+}
+
+#[doc(hidden)]
+pub mod __generated {
+    // Confine the mess of the things that generate defines to a dedicated namespace with this
+    // inline module.
+    wit_bindgen::generate!({
+        world: "host",
+        export_macro_name: "export",
+        pub_export_macro: true,
+        path: "./wit",
+    });
 }
 
 #[cfg(test)]
