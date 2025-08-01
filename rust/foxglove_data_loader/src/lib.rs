@@ -101,7 +101,8 @@
 ///
 /// # Example
 ///
-/// ```no_check
+/// ```compile_fail
+///
 /// struct MyDataLoader;
 ///
 /// // Implement the DataLoader trait for your DataLoader
