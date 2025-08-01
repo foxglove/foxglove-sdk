@@ -267,6 +267,28 @@ impl Encode for Grid {
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
 }
 
+impl Encode for Grid3D {
+    type Error = ::prost::EncodeError;
+
+    fn get_schema() -> Option<Schema> {
+        Some(Schema::new(
+            "foxglove.Grid3D",
+            "protobuf",
+            descriptors::GRID3_D,
+        ))
+    }
+
+    fn get_message_encoding() -> String {
+        "protobuf".to_string()
+    }
+
+    fn encode(&self, buf: &mut impl BufMut) -> Result<(), prost::EncodeError> {
+        ::prost::Message::encode(self, buf)
+    }
+
+    fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
+}
+
 impl Encode for ImageAnnotations {
     type Error = ::prost::EncodeError;
 
