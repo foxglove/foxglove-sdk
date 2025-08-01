@@ -92,7 +92,7 @@ class ArrowPrimitive:
         shaft_diameter: "Optional[float]" = 0.0,
         head_length: "Optional[float]" = 0.0,
         head_diameter: "Optional[float]" = 0.0,
-        color: "Optional[Color]" = None
+        color: "Optional[Color]" = None,
     ) -> "ArrowPrimitive": ...
     @staticmethod
     def get_schema() -> Schema:
@@ -115,7 +115,7 @@ class CameraCalibration:
         D: "Optional[List[float]]" = [],
         K: "Optional[List[float]]" = [],
         R: "Optional[List[float]]" = [],
-        P: "Optional[List[float]]" = []
+        P: "Optional[List[float]]" = [],
     ) -> "CameraCalibration": ...
     @staticmethod
     def get_schema() -> Schema:
@@ -135,7 +135,7 @@ class CircleAnnotation:
         diameter: "Optional[float]" = 0.0,
         thickness: "Optional[float]" = 0.0,
         fill_color: "Optional[Color]" = None,
-        outline_color: "Optional[Color]" = None
+        outline_color: "Optional[Color]" = None,
     ) -> "CircleAnnotation": ...
     @staticmethod
     def get_schema() -> Schema:
@@ -153,7 +153,7 @@ class Color:
         r: "Optional[float]" = 0.0,
         g: "Optional[float]" = 0.0,
         b: "Optional[float]" = 0.0,
-        a: "Optional[float]" = 0.0
+        a: "Optional[float]" = 0.0,
     ) -> "Color": ...
     @staticmethod
     def get_schema() -> Schema:
@@ -171,7 +171,7 @@ class CompressedImage:
         timestamp: "Optional[Timestamp]" = None,
         frame_id: "Optional[str]" = "",
         data: "Optional[bytes]" = b"",
-        format: "Optional[str]" = ""
+        format: "Optional[str]" = "",
     ) -> "CompressedImage": ...
     @staticmethod
     def get_schema() -> Schema:
@@ -189,7 +189,7 @@ class CompressedVideo:
         timestamp: "Optional[Timestamp]" = None,
         frame_id: "Optional[str]" = "",
         data: "Optional[bytes]" = b"",
-        format: "Optional[str]" = ""
+        format: "Optional[str]" = "",
     ) -> "CompressedVideo": ...
     @staticmethod
     def get_schema() -> Schema:
@@ -206,7 +206,7 @@ class CubePrimitive:
         *,
         pose: "Optional[Pose]" = None,
         size: "Optional[Vector3]" = None,
-        color: "Optional[Color]" = None
+        color: "Optional[Color]" = None,
     ) -> "CubePrimitive": ...
     @staticmethod
     def get_schema() -> Schema:
@@ -225,7 +225,7 @@ class CylinderPrimitive:
         size: "Optional[Vector3]" = None,
         bottom_scale: "Optional[float]" = 0.0,
         top_scale: "Optional[float]" = 0.0,
-        color: "Optional[Color]" = None
+        color: "Optional[Color]" = None,
     ) -> "CylinderPrimitive": ...
     @staticmethod
     def get_schema() -> Schema:
@@ -244,7 +244,7 @@ class FrameTransform:
         parent_frame_id: "Optional[str]" = "",
         child_frame_id: "Optional[str]" = "",
         translation: "Optional[Vector3]" = None,
-        rotation: "Optional[Quaternion]" = None
+        rotation: "Optional[Quaternion]" = None,
     ) -> "FrameTransform": ...
     @staticmethod
     def get_schema() -> Schema:
@@ -291,7 +291,7 @@ class Grid:
         row_stride: "Optional[int]" = 0,
         cell_stride: "Optional[int]" = 0,
         fields: "Optional[List[PackedElementField]]" = [],
-        data: "Optional[bytes]" = b""
+        data: "Optional[bytes]" = b"",
     ) -> "Grid": ...
     @staticmethod
     def get_schema() -> Schema:
@@ -308,7 +308,7 @@ class ImageAnnotations:
         *,
         circles: "Optional[List[CircleAnnotation]]" = [],
         points: "Optional[List[PointsAnnotation]]" = [],
-        texts: "Optional[List[TextAnnotation]]" = []
+        texts: "Optional[List[TextAnnotation]]" = [],
     ) -> "ImageAnnotations": ...
     @staticmethod
     def get_schema() -> Schema:
@@ -342,7 +342,7 @@ class LaserScan:
         start_angle: "Optional[float]" = 0.0,
         end_angle: "Optional[float]" = 0.0,
         ranges: "Optional[List[float]]" = [],
-        intensities: "Optional[List[float]]" = []
+        intensities: "Optional[List[float]]" = [],
     ) -> "LaserScan": ...
     @staticmethod
     def get_schema() -> Schema:
@@ -364,7 +364,7 @@ class LinePrimitive:
         points: "Optional[List[Point3]]" = [],
         color: "Optional[Color]" = None,
         colors: "Optional[List[Color]]" = [],
-        indices: "Optional[List[int]]" = []
+        indices: "Optional[List[int]]" = [],
     ) -> "LinePrimitive": ...
     @staticmethod
     def get_schema() -> Schema:
@@ -385,7 +385,7 @@ class LocationFix:
         longitude: "Optional[float]" = 0.0,
         altitude: "Optional[float]" = 0.0,
         position_covariance: "Optional[List[float]]" = [],
-        position_covariance_type: "Optional[LocationFixPositionCovarianceType]" = LocationFixPositionCovarianceType.Unknown
+        position_covariance_type: "Optional[LocationFixPositionCovarianceType]" = LocationFixPositionCovarianceType.Unknown,
     ) -> "LocationFix": ...
     @staticmethod
     def get_schema() -> Schema:
@@ -405,7 +405,7 @@ class Log:
         message: "Optional[str]" = "",
         name: "Optional[str]" = "",
         file: "Optional[str]" = "",
-        line: "Optional[int]" = 0
+        line: "Optional[int]" = 0,
     ) -> "Log": ...
     @staticmethod
     def get_schema() -> Schema:
@@ -426,7 +426,7 @@ class ModelPrimitive:
         override_color: "Optional[bool]" = False,
         url: "Optional[str]" = "",
         media_type: "Optional[str]" = "",
-        data: "Optional[bytes]" = b""
+        data: "Optional[bytes]" = b"",
     ) -> "ModelPrimitive": ...
     @staticmethod
     def get_schema() -> Schema:
@@ -443,7 +443,7 @@ class PackedElementField:
         *,
         name: "Optional[str]" = "",
         offset: "Optional[int]" = 0,
-        type: "Optional[PackedElementFieldNumericType]" = PackedElementFieldNumericType.Unknown
+        type: "Optional[PackedElementFieldNumericType]" = PackedElementFieldNumericType.Unknown,
     ) -> "PackedElementField": ...
     @staticmethod
     def get_schema() -> Schema:
@@ -473,7 +473,7 @@ class Point3:
         *,
         x: "Optional[float]" = 0.0,
         y: "Optional[float]" = 0.0,
-        z: "Optional[float]" = 0.0
+        z: "Optional[float]" = 0.0,
     ) -> "Point3": ...
     @staticmethod
     def get_schema() -> Schema:
@@ -493,7 +493,7 @@ class PointCloud:
         pose: "Optional[Pose]" = None,
         point_stride: "Optional[int]" = 0,
         fields: "Optional[List[PackedElementField]]" = [],
-        data: "Optional[bytes]" = b""
+        data: "Optional[bytes]" = b"",
     ) -> "PointCloud": ...
     @staticmethod
     def get_schema() -> Schema:
@@ -514,7 +514,7 @@ class PointsAnnotation:
         outline_color: "Optional[Color]" = None,
         outline_colors: "Optional[List[Color]]" = [],
         fill_color: "Optional[Color]" = None,
-        thickness: "Optional[float]" = 0.0
+        thickness: "Optional[float]" = 0.0,
     ) -> "PointsAnnotation": ...
     @staticmethod
     def get_schema() -> Schema:
@@ -530,7 +530,7 @@ class Pose:
         cls,
         *,
         position: "Optional[Vector3]" = None,
-        orientation: "Optional[Quaternion]" = None
+        orientation: "Optional[Quaternion]" = None,
     ) -> "Pose": ...
     @staticmethod
     def get_schema() -> Schema:
@@ -547,7 +547,7 @@ class PoseInFrame:
         *,
         timestamp: "Optional[Timestamp]" = None,
         frame_id: "Optional[str]" = "",
-        pose: "Optional[Pose]" = None
+        pose: "Optional[Pose]" = None,
     ) -> "PoseInFrame": ...
     @staticmethod
     def get_schema() -> Schema:
@@ -564,7 +564,7 @@ class PosesInFrame:
         *,
         timestamp: "Optional[Timestamp]" = None,
         frame_id: "Optional[str]" = "",
-        poses: "Optional[List[Pose]]" = []
+        poses: "Optional[List[Pose]]" = [],
     ) -> "PosesInFrame": ...
     @staticmethod
     def get_schema() -> Schema:
@@ -582,7 +582,7 @@ class Quaternion:
         x: "Optional[float]" = 0.0,
         y: "Optional[float]" = 0.0,
         z: "Optional[float]" = 0.0,
-        w: "Optional[float]" = 0.0
+        w: "Optional[float]" = 0.0,
     ) -> "Quaternion": ...
     @staticmethod
     def get_schema() -> Schema:
@@ -601,7 +601,7 @@ class RawAudio:
         data: "Optional[bytes]" = b"",
         format: "Optional[str]" = "",
         sample_rate: "Optional[int]" = 0,
-        number_of_channels: "Optional[int]" = 0
+        number_of_channels: "Optional[int]" = 0,
     ) -> "RawAudio": ...
     @staticmethod
     def get_schema() -> Schema:
@@ -622,7 +622,7 @@ class RawImage:
         height: "Optional[int]" = 0,
         encoding: "Optional[str]" = "",
         step: "Optional[int]" = 0,
-        data: "Optional[bytes]" = b""
+        data: "Optional[bytes]" = b"",
     ) -> "RawImage": ...
     @staticmethod
     def get_schema() -> Schema:
@@ -650,7 +650,7 @@ class SceneEntity:
         lines: "Optional[List[LinePrimitive]]" = [],
         triangles: "Optional[List[TriangleListPrimitive]]" = [],
         texts: "Optional[List[TextPrimitive]]" = [],
-        models: "Optional[List[ModelPrimitive]]" = []
+        models: "Optional[List[ModelPrimitive]]" = [],
     ) -> "SceneEntity": ...
     @staticmethod
     def get_schema() -> Schema:
@@ -667,7 +667,7 @@ class SceneEntityDeletion:
         *,
         timestamp: "Optional[Timestamp]" = None,
         type: "Optional[SceneEntityDeletionType]" = SceneEntityDeletionType.MatchingId,
-        id: "Optional[str]" = ""
+        id: "Optional[str]" = "",
     ) -> "SceneEntityDeletion": ...
     @staticmethod
     def get_schema() -> Schema:
@@ -683,7 +683,7 @@ class SceneUpdate:
         cls,
         *,
         deletions: "Optional[List[SceneEntityDeletion]]" = [],
-        entities: "Optional[List[SceneEntity]]" = []
+        entities: "Optional[List[SceneEntity]]" = [],
     ) -> "SceneUpdate": ...
     @staticmethod
     def get_schema() -> Schema:
@@ -700,7 +700,7 @@ class SpherePrimitive:
         *,
         pose: "Optional[Pose]" = None,
         size: "Optional[Vector3]" = None,
-        color: "Optional[Color]" = None
+        color: "Optional[Color]" = None,
     ) -> "SpherePrimitive": ...
     @staticmethod
     def get_schema() -> Schema:
@@ -720,7 +720,7 @@ class TextAnnotation:
         text: "Optional[str]" = "",
         font_size: "Optional[float]" = 0.0,
         text_color: "Optional[Color]" = None,
-        background_color: "Optional[Color]" = None
+        background_color: "Optional[Color]" = None,
     ) -> "TextAnnotation": ...
     @staticmethod
     def get_schema() -> Schema:
@@ -740,7 +740,7 @@ class TextPrimitive:
         font_size: "Optional[float]" = 0.0,
         scale_invariant: "Optional[bool]" = False,
         color: "Optional[Color]" = None,
-        text: "Optional[str]" = ""
+        text: "Optional[str]" = "",
     ) -> "TextPrimitive": ...
     @staticmethod
     def get_schema() -> Schema:
@@ -759,7 +759,7 @@ class TriangleListPrimitive:
         points: "Optional[List[Point3]]" = [],
         color: "Optional[Color]" = None,
         colors: "Optional[List[Color]]" = [],
-        indices: "Optional[List[int]]" = []
+        indices: "Optional[List[int]]" = [],
     ) -> "TriangleListPrimitive": ...
     @staticmethod
     def get_schema() -> Schema:
@@ -789,7 +789,7 @@ class Vector3:
         *,
         x: "Optional[float]" = 0.0,
         y: "Optional[float]" = 0.0,
-        z: "Optional[float]" = 0.0
+        z: "Optional[float]" = 0.0,
     ) -> "Vector3": ...
     @staticmethod
     def get_schema() -> Schema:

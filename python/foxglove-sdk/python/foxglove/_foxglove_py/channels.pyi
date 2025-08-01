@@ -61,13 +61,16 @@ class ArrowPrimitiveChannel:
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
+
     def topic(self) -> str:
         """The topic name of the channel."""
         ...
+
     @property
     def message_encoding(self) -> str:
         """The message encoding for the channel"""
         ...
+
     def metadata(self) -> Dict[str, str]:
         """
         Returns a copy of the channel's metadata.
@@ -76,6 +79,7 @@ class ArrowPrimitiveChannel:
         the channel's metadata.
         """
         ...
+
     def schema(self) -> Optional[Schema]:
         """
         Returns a copy of the channel's schema.
@@ -84,15 +88,19 @@ class ArrowPrimitiveChannel:
         the channel's schema.
         """
         ...
+
     def schema_name(self) -> Optional[str]:
         """The name of the schema for the channel."""
         ...
+
     def has_sinks(self) -> bool:
         """Returns true if at least one sink is subscribed to this channel"""
         ...
+
     def close(self) -> None:
         """Close the channel."""
         ...
+
     def log(
         self,
         message: "ArrowPrimitive",
@@ -119,13 +127,16 @@ class CameraCalibrationChannel:
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
+
     def topic(self) -> str:
         """The topic name of the channel."""
         ...
+
     @property
     def message_encoding(self) -> str:
         """The message encoding for the channel"""
         ...
+
     def metadata(self) -> Dict[str, str]:
         """
         Returns a copy of the channel's metadata.
@@ -134,6 +145,7 @@ class CameraCalibrationChannel:
         the channel's metadata.
         """
         ...
+
     def schema(self) -> Optional[Schema]:
         """
         Returns a copy of the channel's schema.
@@ -142,15 +154,19 @@ class CameraCalibrationChannel:
         the channel's schema.
         """
         ...
+
     def schema_name(self) -> Optional[str]:
         """The name of the schema for the channel."""
         ...
+
     def has_sinks(self) -> bool:
         """Returns true if at least one sink is subscribed to this channel"""
         ...
+
     def close(self) -> None:
         """Close the channel."""
         ...
+
     def log(
         self,
         message: "CameraCalibration",
@@ -177,13 +193,16 @@ class CircleAnnotationChannel:
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
+
     def topic(self) -> str:
         """The topic name of the channel."""
         ...
+
     @property
     def message_encoding(self) -> str:
         """The message encoding for the channel"""
         ...
+
     def metadata(self) -> Dict[str, str]:
         """
         Returns a copy of the channel's metadata.
@@ -192,6 +211,7 @@ class CircleAnnotationChannel:
         the channel's metadata.
         """
         ...
+
     def schema(self) -> Optional[Schema]:
         """
         Returns a copy of the channel's schema.
@@ -200,15 +220,19 @@ class CircleAnnotationChannel:
         the channel's schema.
         """
         ...
+
     def schema_name(self) -> Optional[str]:
         """The name of the schema for the channel."""
         ...
+
     def has_sinks(self) -> bool:
         """Returns true if at least one sink is subscribed to this channel"""
         ...
+
     def close(self) -> None:
         """Close the channel."""
         ...
+
     def log(
         self,
         message: "CircleAnnotation",
@@ -235,13 +259,16 @@ class ColorChannel:
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
+
     def topic(self) -> str:
         """The topic name of the channel."""
         ...
+
     @property
     def message_encoding(self) -> str:
         """The message encoding for the channel"""
         ...
+
     def metadata(self) -> Dict[str, str]:
         """
         Returns a copy of the channel's metadata.
@@ -250,6 +277,7 @@ class ColorChannel:
         the channel's metadata.
         """
         ...
+
     def schema(self) -> Optional[Schema]:
         """
         Returns a copy of the channel's schema.
@@ -258,15 +286,19 @@ class ColorChannel:
         the channel's schema.
         """
         ...
+
     def schema_name(self) -> Optional[str]:
         """The name of the schema for the channel."""
         ...
+
     def has_sinks(self) -> bool:
         """Returns true if at least one sink is subscribed to this channel"""
         ...
+
     def close(self) -> None:
         """Close the channel."""
         ...
+
     def log(
         self,
         message: "Color",
@@ -293,13 +325,16 @@ class CompressedImageChannel:
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
+
     def topic(self) -> str:
         """The topic name of the channel."""
         ...
+
     @property
     def message_encoding(self) -> str:
         """The message encoding for the channel"""
         ...
+
     def metadata(self) -> Dict[str, str]:
         """
         Returns a copy of the channel's metadata.
@@ -308,6 +343,7 @@ class CompressedImageChannel:
         the channel's metadata.
         """
         ...
+
     def schema(self) -> Optional[Schema]:
         """
         Returns a copy of the channel's schema.
@@ -316,15 +352,19 @@ class CompressedImageChannel:
         the channel's schema.
         """
         ...
+
     def schema_name(self) -> Optional[str]:
         """The name of the schema for the channel."""
         ...
+
     def has_sinks(self) -> bool:
         """Returns true if at least one sink is subscribed to this channel"""
         ...
+
     def close(self) -> None:
         """Close the channel."""
         ...
+
     def log(
         self,
         message: "CompressedImage",
@@ -351,13 +391,16 @@ class CompressedVideoChannel:
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
+
     def topic(self) -> str:
         """The topic name of the channel."""
         ...
+
     @property
     def message_encoding(self) -> str:
         """The message encoding for the channel"""
         ...
+
     def metadata(self) -> Dict[str, str]:
         """
         Returns a copy of the channel's metadata.
@@ -366,6 +409,7 @@ class CompressedVideoChannel:
         the channel's metadata.
         """
         ...
+
     def schema(self) -> Optional[Schema]:
         """
         Returns a copy of the channel's schema.
@@ -374,15 +418,19 @@ class CompressedVideoChannel:
         the channel's schema.
         """
         ...
+
     def schema_name(self) -> Optional[str]:
         """The name of the schema for the channel."""
         ...
+
     def has_sinks(self) -> bool:
         """Returns true if at least one sink is subscribed to this channel"""
         ...
+
     def close(self) -> None:
         """Close the channel."""
         ...
+
     def log(
         self,
         message: "CompressedVideo",
@@ -409,13 +457,16 @@ class CubePrimitiveChannel:
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
+
     def topic(self) -> str:
         """The topic name of the channel."""
         ...
+
     @property
     def message_encoding(self) -> str:
         """The message encoding for the channel"""
         ...
+
     def metadata(self) -> Dict[str, str]:
         """
         Returns a copy of the channel's metadata.
@@ -424,6 +475,7 @@ class CubePrimitiveChannel:
         the channel's metadata.
         """
         ...
+
     def schema(self) -> Optional[Schema]:
         """
         Returns a copy of the channel's schema.
@@ -432,15 +484,19 @@ class CubePrimitiveChannel:
         the channel's schema.
         """
         ...
+
     def schema_name(self) -> Optional[str]:
         """The name of the schema for the channel."""
         ...
+
     def has_sinks(self) -> bool:
         """Returns true if at least one sink is subscribed to this channel"""
         ...
+
     def close(self) -> None:
         """Close the channel."""
         ...
+
     def log(
         self,
         message: "CubePrimitive",
@@ -467,13 +523,16 @@ class CylinderPrimitiveChannel:
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
+
     def topic(self) -> str:
         """The topic name of the channel."""
         ...
+
     @property
     def message_encoding(self) -> str:
         """The message encoding for the channel"""
         ...
+
     def metadata(self) -> Dict[str, str]:
         """
         Returns a copy of the channel's metadata.
@@ -482,6 +541,7 @@ class CylinderPrimitiveChannel:
         the channel's metadata.
         """
         ...
+
     def schema(self) -> Optional[Schema]:
         """
         Returns a copy of the channel's schema.
@@ -490,15 +550,19 @@ class CylinderPrimitiveChannel:
         the channel's schema.
         """
         ...
+
     def schema_name(self) -> Optional[str]:
         """The name of the schema for the channel."""
         ...
+
     def has_sinks(self) -> bool:
         """Returns true if at least one sink is subscribed to this channel"""
         ...
+
     def close(self) -> None:
         """Close the channel."""
         ...
+
     def log(
         self,
         message: "CylinderPrimitive",
@@ -525,13 +589,16 @@ class FrameTransformChannel:
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
+
     def topic(self) -> str:
         """The topic name of the channel."""
         ...
+
     @property
     def message_encoding(self) -> str:
         """The message encoding for the channel"""
         ...
+
     def metadata(self) -> Dict[str, str]:
         """
         Returns a copy of the channel's metadata.
@@ -540,6 +607,7 @@ class FrameTransformChannel:
         the channel's metadata.
         """
         ...
+
     def schema(self) -> Optional[Schema]:
         """
         Returns a copy of the channel's schema.
@@ -548,15 +616,19 @@ class FrameTransformChannel:
         the channel's schema.
         """
         ...
+
     def schema_name(self) -> Optional[str]:
         """The name of the schema for the channel."""
         ...
+
     def has_sinks(self) -> bool:
         """Returns true if at least one sink is subscribed to this channel"""
         ...
+
     def close(self) -> None:
         """Close the channel."""
         ...
+
     def log(
         self,
         message: "FrameTransform",
@@ -583,13 +655,16 @@ class FrameTransformsChannel:
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
+
     def topic(self) -> str:
         """The topic name of the channel."""
         ...
+
     @property
     def message_encoding(self) -> str:
         """The message encoding for the channel"""
         ...
+
     def metadata(self) -> Dict[str, str]:
         """
         Returns a copy of the channel's metadata.
@@ -598,6 +673,7 @@ class FrameTransformsChannel:
         the channel's metadata.
         """
         ...
+
     def schema(self) -> Optional[Schema]:
         """
         Returns a copy of the channel's schema.
@@ -606,15 +682,19 @@ class FrameTransformsChannel:
         the channel's schema.
         """
         ...
+
     def schema_name(self) -> Optional[str]:
         """The name of the schema for the channel."""
         ...
+
     def has_sinks(self) -> bool:
         """Returns true if at least one sink is subscribed to this channel"""
         ...
+
     def close(self) -> None:
         """Close the channel."""
         ...
+
     def log(
         self,
         message: "FrameTransforms",
@@ -641,13 +721,16 @@ class GeoJsonChannel:
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
+
     def topic(self) -> str:
         """The topic name of the channel."""
         ...
+
     @property
     def message_encoding(self) -> str:
         """The message encoding for the channel"""
         ...
+
     def metadata(self) -> Dict[str, str]:
         """
         Returns a copy of the channel's metadata.
@@ -656,6 +739,7 @@ class GeoJsonChannel:
         the channel's metadata.
         """
         ...
+
     def schema(self) -> Optional[Schema]:
         """
         Returns a copy of the channel's schema.
@@ -664,15 +748,19 @@ class GeoJsonChannel:
         the channel's schema.
         """
         ...
+
     def schema_name(self) -> Optional[str]:
         """The name of the schema for the channel."""
         ...
+
     def has_sinks(self) -> bool:
         """Returns true if at least one sink is subscribed to this channel"""
         ...
+
     def close(self) -> None:
         """Close the channel."""
         ...
+
     def log(
         self,
         message: "GeoJson",
@@ -699,13 +787,16 @@ class GridChannel:
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
+
     def topic(self) -> str:
         """The topic name of the channel."""
         ...
+
     @property
     def message_encoding(self) -> str:
         """The message encoding for the channel"""
         ...
+
     def metadata(self) -> Dict[str, str]:
         """
         Returns a copy of the channel's metadata.
@@ -714,6 +805,7 @@ class GridChannel:
         the channel's metadata.
         """
         ...
+
     def schema(self) -> Optional[Schema]:
         """
         Returns a copy of the channel's schema.
@@ -722,15 +814,19 @@ class GridChannel:
         the channel's schema.
         """
         ...
+
     def schema_name(self) -> Optional[str]:
         """The name of the schema for the channel."""
         ...
+
     def has_sinks(self) -> bool:
         """Returns true if at least one sink is subscribed to this channel"""
         ...
+
     def close(self) -> None:
         """Close the channel."""
         ...
+
     def log(
         self,
         message: "Grid",
@@ -757,13 +853,16 @@ class ImageAnnotationsChannel:
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
+
     def topic(self) -> str:
         """The topic name of the channel."""
         ...
+
     @property
     def message_encoding(self) -> str:
         """The message encoding for the channel"""
         ...
+
     def metadata(self) -> Dict[str, str]:
         """
         Returns a copy of the channel's metadata.
@@ -772,6 +871,7 @@ class ImageAnnotationsChannel:
         the channel's metadata.
         """
         ...
+
     def schema(self) -> Optional[Schema]:
         """
         Returns a copy of the channel's schema.
@@ -780,15 +880,19 @@ class ImageAnnotationsChannel:
         the channel's schema.
         """
         ...
+
     def schema_name(self) -> Optional[str]:
         """The name of the schema for the channel."""
         ...
+
     def has_sinks(self) -> bool:
         """Returns true if at least one sink is subscribed to this channel"""
         ...
+
     def close(self) -> None:
         """Close the channel."""
         ...
+
     def log(
         self,
         message: "ImageAnnotations",
@@ -815,13 +919,16 @@ class KeyValuePairChannel:
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
+
     def topic(self) -> str:
         """The topic name of the channel."""
         ...
+
     @property
     def message_encoding(self) -> str:
         """The message encoding for the channel"""
         ...
+
     def metadata(self) -> Dict[str, str]:
         """
         Returns a copy of the channel's metadata.
@@ -830,6 +937,7 @@ class KeyValuePairChannel:
         the channel's metadata.
         """
         ...
+
     def schema(self) -> Optional[Schema]:
         """
         Returns a copy of the channel's schema.
@@ -838,15 +946,19 @@ class KeyValuePairChannel:
         the channel's schema.
         """
         ...
+
     def schema_name(self) -> Optional[str]:
         """The name of the schema for the channel."""
         ...
+
     def has_sinks(self) -> bool:
         """Returns true if at least one sink is subscribed to this channel"""
         ...
+
     def close(self) -> None:
         """Close the channel."""
         ...
+
     def log(
         self,
         message: "KeyValuePair",
@@ -873,13 +985,16 @@ class LaserScanChannel:
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
+
     def topic(self) -> str:
         """The topic name of the channel."""
         ...
+
     @property
     def message_encoding(self) -> str:
         """The message encoding for the channel"""
         ...
+
     def metadata(self) -> Dict[str, str]:
         """
         Returns a copy of the channel's metadata.
@@ -888,6 +1003,7 @@ class LaserScanChannel:
         the channel's metadata.
         """
         ...
+
     def schema(self) -> Optional[Schema]:
         """
         Returns a copy of the channel's schema.
@@ -896,15 +1012,19 @@ class LaserScanChannel:
         the channel's schema.
         """
         ...
+
     def schema_name(self) -> Optional[str]:
         """The name of the schema for the channel."""
         ...
+
     def has_sinks(self) -> bool:
         """Returns true if at least one sink is subscribed to this channel"""
         ...
+
     def close(self) -> None:
         """Close the channel."""
         ...
+
     def log(
         self,
         message: "LaserScan",
@@ -931,13 +1051,16 @@ class LinePrimitiveChannel:
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
+
     def topic(self) -> str:
         """The topic name of the channel."""
         ...
+
     @property
     def message_encoding(self) -> str:
         """The message encoding for the channel"""
         ...
+
     def metadata(self) -> Dict[str, str]:
         """
         Returns a copy of the channel's metadata.
@@ -946,6 +1069,7 @@ class LinePrimitiveChannel:
         the channel's metadata.
         """
         ...
+
     def schema(self) -> Optional[Schema]:
         """
         Returns a copy of the channel's schema.
@@ -954,15 +1078,19 @@ class LinePrimitiveChannel:
         the channel's schema.
         """
         ...
+
     def schema_name(self) -> Optional[str]:
         """The name of the schema for the channel."""
         ...
+
     def has_sinks(self) -> bool:
         """Returns true if at least one sink is subscribed to this channel"""
         ...
+
     def close(self) -> None:
         """Close the channel."""
         ...
+
     def log(
         self,
         message: "LinePrimitive",
@@ -989,13 +1117,16 @@ class LocationFixChannel:
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
+
     def topic(self) -> str:
         """The topic name of the channel."""
         ...
+
     @property
     def message_encoding(self) -> str:
         """The message encoding for the channel"""
         ...
+
     def metadata(self) -> Dict[str, str]:
         """
         Returns a copy of the channel's metadata.
@@ -1004,6 +1135,7 @@ class LocationFixChannel:
         the channel's metadata.
         """
         ...
+
     def schema(self) -> Optional[Schema]:
         """
         Returns a copy of the channel's schema.
@@ -1012,15 +1144,19 @@ class LocationFixChannel:
         the channel's schema.
         """
         ...
+
     def schema_name(self) -> Optional[str]:
         """The name of the schema for the channel."""
         ...
+
     def has_sinks(self) -> bool:
         """Returns true if at least one sink is subscribed to this channel"""
         ...
+
     def close(self) -> None:
         """Close the channel."""
         ...
+
     def log(
         self,
         message: "LocationFix",
@@ -1047,13 +1183,16 @@ class LogChannel:
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
+
     def topic(self) -> str:
         """The topic name of the channel."""
         ...
+
     @property
     def message_encoding(self) -> str:
         """The message encoding for the channel"""
         ...
+
     def metadata(self) -> Dict[str, str]:
         """
         Returns a copy of the channel's metadata.
@@ -1062,6 +1201,7 @@ class LogChannel:
         the channel's metadata.
         """
         ...
+
     def schema(self) -> Optional[Schema]:
         """
         Returns a copy of the channel's schema.
@@ -1070,15 +1210,19 @@ class LogChannel:
         the channel's schema.
         """
         ...
+
     def schema_name(self) -> Optional[str]:
         """The name of the schema for the channel."""
         ...
+
     def has_sinks(self) -> bool:
         """Returns true if at least one sink is subscribed to this channel"""
         ...
+
     def close(self) -> None:
         """Close the channel."""
         ...
+
     def log(
         self,
         message: "Log",
@@ -1105,13 +1249,16 @@ class ModelPrimitiveChannel:
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
+
     def topic(self) -> str:
         """The topic name of the channel."""
         ...
+
     @property
     def message_encoding(self) -> str:
         """The message encoding for the channel"""
         ...
+
     def metadata(self) -> Dict[str, str]:
         """
         Returns a copy of the channel's metadata.
@@ -1120,6 +1267,7 @@ class ModelPrimitiveChannel:
         the channel's metadata.
         """
         ...
+
     def schema(self) -> Optional[Schema]:
         """
         Returns a copy of the channel's schema.
@@ -1128,15 +1276,19 @@ class ModelPrimitiveChannel:
         the channel's schema.
         """
         ...
+
     def schema_name(self) -> Optional[str]:
         """The name of the schema for the channel."""
         ...
+
     def has_sinks(self) -> bool:
         """Returns true if at least one sink is subscribed to this channel"""
         ...
+
     def close(self) -> None:
         """Close the channel."""
         ...
+
     def log(
         self,
         message: "ModelPrimitive",
@@ -1163,13 +1315,16 @@ class PackedElementFieldChannel:
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
+
     def topic(self) -> str:
         """The topic name of the channel."""
         ...
+
     @property
     def message_encoding(self) -> str:
         """The message encoding for the channel"""
         ...
+
     def metadata(self) -> Dict[str, str]:
         """
         Returns a copy of the channel's metadata.
@@ -1178,6 +1333,7 @@ class PackedElementFieldChannel:
         the channel's metadata.
         """
         ...
+
     def schema(self) -> Optional[Schema]:
         """
         Returns a copy of the channel's schema.
@@ -1186,15 +1342,19 @@ class PackedElementFieldChannel:
         the channel's schema.
         """
         ...
+
     def schema_name(self) -> Optional[str]:
         """The name of the schema for the channel."""
         ...
+
     def has_sinks(self) -> bool:
         """Returns true if at least one sink is subscribed to this channel"""
         ...
+
     def close(self) -> None:
         """Close the channel."""
         ...
+
     def log(
         self,
         message: "PackedElementField",
@@ -1221,13 +1381,16 @@ class Point2Channel:
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
+
     def topic(self) -> str:
         """The topic name of the channel."""
         ...
+
     @property
     def message_encoding(self) -> str:
         """The message encoding for the channel"""
         ...
+
     def metadata(self) -> Dict[str, str]:
         """
         Returns a copy of the channel's metadata.
@@ -1236,6 +1399,7 @@ class Point2Channel:
         the channel's metadata.
         """
         ...
+
     def schema(self) -> Optional[Schema]:
         """
         Returns a copy of the channel's schema.
@@ -1244,15 +1408,19 @@ class Point2Channel:
         the channel's schema.
         """
         ...
+
     def schema_name(self) -> Optional[str]:
         """The name of the schema for the channel."""
         ...
+
     def has_sinks(self) -> bool:
         """Returns true if at least one sink is subscribed to this channel"""
         ...
+
     def close(self) -> None:
         """Close the channel."""
         ...
+
     def log(
         self,
         message: "Point2",
@@ -1279,13 +1447,16 @@ class Point3Channel:
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
+
     def topic(self) -> str:
         """The topic name of the channel."""
         ...
+
     @property
     def message_encoding(self) -> str:
         """The message encoding for the channel"""
         ...
+
     def metadata(self) -> Dict[str, str]:
         """
         Returns a copy of the channel's metadata.
@@ -1294,6 +1465,7 @@ class Point3Channel:
         the channel's metadata.
         """
         ...
+
     def schema(self) -> Optional[Schema]:
         """
         Returns a copy of the channel's schema.
@@ -1302,15 +1474,19 @@ class Point3Channel:
         the channel's schema.
         """
         ...
+
     def schema_name(self) -> Optional[str]:
         """The name of the schema for the channel."""
         ...
+
     def has_sinks(self) -> bool:
         """Returns true if at least one sink is subscribed to this channel"""
         ...
+
     def close(self) -> None:
         """Close the channel."""
         ...
+
     def log(
         self,
         message: "Point3",
@@ -1337,13 +1513,16 @@ class PointCloudChannel:
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
+
     def topic(self) -> str:
         """The topic name of the channel."""
         ...
+
     @property
     def message_encoding(self) -> str:
         """The message encoding for the channel"""
         ...
+
     def metadata(self) -> Dict[str, str]:
         """
         Returns a copy of the channel's metadata.
@@ -1352,6 +1531,7 @@ class PointCloudChannel:
         the channel's metadata.
         """
         ...
+
     def schema(self) -> Optional[Schema]:
         """
         Returns a copy of the channel's schema.
@@ -1360,15 +1540,19 @@ class PointCloudChannel:
         the channel's schema.
         """
         ...
+
     def schema_name(self) -> Optional[str]:
         """The name of the schema for the channel."""
         ...
+
     def has_sinks(self) -> bool:
         """Returns true if at least one sink is subscribed to this channel"""
         ...
+
     def close(self) -> None:
         """Close the channel."""
         ...
+
     def log(
         self,
         message: "PointCloud",
@@ -1395,13 +1579,16 @@ class PointsAnnotationChannel:
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
+
     def topic(self) -> str:
         """The topic name of the channel."""
         ...
+
     @property
     def message_encoding(self) -> str:
         """The message encoding for the channel"""
         ...
+
     def metadata(self) -> Dict[str, str]:
         """
         Returns a copy of the channel's metadata.
@@ -1410,6 +1597,7 @@ class PointsAnnotationChannel:
         the channel's metadata.
         """
         ...
+
     def schema(self) -> Optional[Schema]:
         """
         Returns a copy of the channel's schema.
@@ -1418,15 +1606,19 @@ class PointsAnnotationChannel:
         the channel's schema.
         """
         ...
+
     def schema_name(self) -> Optional[str]:
         """The name of the schema for the channel."""
         ...
+
     def has_sinks(self) -> bool:
         """Returns true if at least one sink is subscribed to this channel"""
         ...
+
     def close(self) -> None:
         """Close the channel."""
         ...
+
     def log(
         self,
         message: "PointsAnnotation",
@@ -1453,13 +1645,16 @@ class PoseChannel:
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
+
     def topic(self) -> str:
         """The topic name of the channel."""
         ...
+
     @property
     def message_encoding(self) -> str:
         """The message encoding for the channel"""
         ...
+
     def metadata(self) -> Dict[str, str]:
         """
         Returns a copy of the channel's metadata.
@@ -1468,6 +1663,7 @@ class PoseChannel:
         the channel's metadata.
         """
         ...
+
     def schema(self) -> Optional[Schema]:
         """
         Returns a copy of the channel's schema.
@@ -1476,15 +1672,19 @@ class PoseChannel:
         the channel's schema.
         """
         ...
+
     def schema_name(self) -> Optional[str]:
         """The name of the schema for the channel."""
         ...
+
     def has_sinks(self) -> bool:
         """Returns true if at least one sink is subscribed to this channel"""
         ...
+
     def close(self) -> None:
         """Close the channel."""
         ...
+
     def log(
         self,
         message: "Pose",
@@ -1511,13 +1711,16 @@ class PoseInFrameChannel:
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
+
     def topic(self) -> str:
         """The topic name of the channel."""
         ...
+
     @property
     def message_encoding(self) -> str:
         """The message encoding for the channel"""
         ...
+
     def metadata(self) -> Dict[str, str]:
         """
         Returns a copy of the channel's metadata.
@@ -1526,6 +1729,7 @@ class PoseInFrameChannel:
         the channel's metadata.
         """
         ...
+
     def schema(self) -> Optional[Schema]:
         """
         Returns a copy of the channel's schema.
@@ -1534,15 +1738,19 @@ class PoseInFrameChannel:
         the channel's schema.
         """
         ...
+
     def schema_name(self) -> Optional[str]:
         """The name of the schema for the channel."""
         ...
+
     def has_sinks(self) -> bool:
         """Returns true if at least one sink is subscribed to this channel"""
         ...
+
     def close(self) -> None:
         """Close the channel."""
         ...
+
     def log(
         self,
         message: "PoseInFrame",
@@ -1569,13 +1777,16 @@ class PosesInFrameChannel:
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
+
     def topic(self) -> str:
         """The topic name of the channel."""
         ...
+
     @property
     def message_encoding(self) -> str:
         """The message encoding for the channel"""
         ...
+
     def metadata(self) -> Dict[str, str]:
         """
         Returns a copy of the channel's metadata.
@@ -1584,6 +1795,7 @@ class PosesInFrameChannel:
         the channel's metadata.
         """
         ...
+
     def schema(self) -> Optional[Schema]:
         """
         Returns a copy of the channel's schema.
@@ -1592,15 +1804,19 @@ class PosesInFrameChannel:
         the channel's schema.
         """
         ...
+
     def schema_name(self) -> Optional[str]:
         """The name of the schema for the channel."""
         ...
+
     def has_sinks(self) -> bool:
         """Returns true if at least one sink is subscribed to this channel"""
         ...
+
     def close(self) -> None:
         """Close the channel."""
         ...
+
     def log(
         self,
         message: "PosesInFrame",
@@ -1627,13 +1843,16 @@ class QuaternionChannel:
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
+
     def topic(self) -> str:
         """The topic name of the channel."""
         ...
+
     @property
     def message_encoding(self) -> str:
         """The message encoding for the channel"""
         ...
+
     def metadata(self) -> Dict[str, str]:
         """
         Returns a copy of the channel's metadata.
@@ -1642,6 +1861,7 @@ class QuaternionChannel:
         the channel's metadata.
         """
         ...
+
     def schema(self) -> Optional[Schema]:
         """
         Returns a copy of the channel's schema.
@@ -1650,15 +1870,19 @@ class QuaternionChannel:
         the channel's schema.
         """
         ...
+
     def schema_name(self) -> Optional[str]:
         """The name of the schema for the channel."""
         ...
+
     def has_sinks(self) -> bool:
         """Returns true if at least one sink is subscribed to this channel"""
         ...
+
     def close(self) -> None:
         """Close the channel."""
         ...
+
     def log(
         self,
         message: "Quaternion",
@@ -1685,13 +1909,16 @@ class RawAudioChannel:
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
+
     def topic(self) -> str:
         """The topic name of the channel."""
         ...
+
     @property
     def message_encoding(self) -> str:
         """The message encoding for the channel"""
         ...
+
     def metadata(self) -> Dict[str, str]:
         """
         Returns a copy of the channel's metadata.
@@ -1700,6 +1927,7 @@ class RawAudioChannel:
         the channel's metadata.
         """
         ...
+
     def schema(self) -> Optional[Schema]:
         """
         Returns a copy of the channel's schema.
@@ -1708,15 +1936,19 @@ class RawAudioChannel:
         the channel's schema.
         """
         ...
+
     def schema_name(self) -> Optional[str]:
         """The name of the schema for the channel."""
         ...
+
     def has_sinks(self) -> bool:
         """Returns true if at least one sink is subscribed to this channel"""
         ...
+
     def close(self) -> None:
         """Close the channel."""
         ...
+
     def log(
         self,
         message: "RawAudio",
@@ -1743,13 +1975,16 @@ class RawImageChannel:
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
+
     def topic(self) -> str:
         """The topic name of the channel."""
         ...
+
     @property
     def message_encoding(self) -> str:
         """The message encoding for the channel"""
         ...
+
     def metadata(self) -> Dict[str, str]:
         """
         Returns a copy of the channel's metadata.
@@ -1758,6 +1993,7 @@ class RawImageChannel:
         the channel's metadata.
         """
         ...
+
     def schema(self) -> Optional[Schema]:
         """
         Returns a copy of the channel's schema.
@@ -1766,15 +2002,19 @@ class RawImageChannel:
         the channel's schema.
         """
         ...
+
     def schema_name(self) -> Optional[str]:
         """The name of the schema for the channel."""
         ...
+
     def has_sinks(self) -> bool:
         """Returns true if at least one sink is subscribed to this channel"""
         ...
+
     def close(self) -> None:
         """Close the channel."""
         ...
+
     def log(
         self,
         message: "RawImage",
@@ -1801,13 +2041,16 @@ class SceneEntityChannel:
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
+
     def topic(self) -> str:
         """The topic name of the channel."""
         ...
+
     @property
     def message_encoding(self) -> str:
         """The message encoding for the channel"""
         ...
+
     def metadata(self) -> Dict[str, str]:
         """
         Returns a copy of the channel's metadata.
@@ -1816,6 +2059,7 @@ class SceneEntityChannel:
         the channel's metadata.
         """
         ...
+
     def schema(self) -> Optional[Schema]:
         """
         Returns a copy of the channel's schema.
@@ -1824,15 +2068,19 @@ class SceneEntityChannel:
         the channel's schema.
         """
         ...
+
     def schema_name(self) -> Optional[str]:
         """The name of the schema for the channel."""
         ...
+
     def has_sinks(self) -> bool:
         """Returns true if at least one sink is subscribed to this channel"""
         ...
+
     def close(self) -> None:
         """Close the channel."""
         ...
+
     def log(
         self,
         message: "SceneEntity",
@@ -1859,13 +2107,16 @@ class SceneEntityDeletionChannel:
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
+
     def topic(self) -> str:
         """The topic name of the channel."""
         ...
+
     @property
     def message_encoding(self) -> str:
         """The message encoding for the channel"""
         ...
+
     def metadata(self) -> Dict[str, str]:
         """
         Returns a copy of the channel's metadata.
@@ -1874,6 +2125,7 @@ class SceneEntityDeletionChannel:
         the channel's metadata.
         """
         ...
+
     def schema(self) -> Optional[Schema]:
         """
         Returns a copy of the channel's schema.
@@ -1882,15 +2134,19 @@ class SceneEntityDeletionChannel:
         the channel's schema.
         """
         ...
+
     def schema_name(self) -> Optional[str]:
         """The name of the schema for the channel."""
         ...
+
     def has_sinks(self) -> bool:
         """Returns true if at least one sink is subscribed to this channel"""
         ...
+
     def close(self) -> None:
         """Close the channel."""
         ...
+
     def log(
         self,
         message: "SceneEntityDeletion",
@@ -1917,13 +2173,16 @@ class SceneUpdateChannel:
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
+
     def topic(self) -> str:
         """The topic name of the channel."""
         ...
+
     @property
     def message_encoding(self) -> str:
         """The message encoding for the channel"""
         ...
+
     def metadata(self) -> Dict[str, str]:
         """
         Returns a copy of the channel's metadata.
@@ -1932,6 +2191,7 @@ class SceneUpdateChannel:
         the channel's metadata.
         """
         ...
+
     def schema(self) -> Optional[Schema]:
         """
         Returns a copy of the channel's schema.
@@ -1940,15 +2200,19 @@ class SceneUpdateChannel:
         the channel's schema.
         """
         ...
+
     def schema_name(self) -> Optional[str]:
         """The name of the schema for the channel."""
         ...
+
     def has_sinks(self) -> bool:
         """Returns true if at least one sink is subscribed to this channel"""
         ...
+
     def close(self) -> None:
         """Close the channel."""
         ...
+
     def log(
         self,
         message: "SceneUpdate",
@@ -1975,13 +2239,16 @@ class SpherePrimitiveChannel:
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
+
     def topic(self) -> str:
         """The topic name of the channel."""
         ...
+
     @property
     def message_encoding(self) -> str:
         """The message encoding for the channel"""
         ...
+
     def metadata(self) -> Dict[str, str]:
         """
         Returns a copy of the channel's metadata.
@@ -1990,6 +2257,7 @@ class SpherePrimitiveChannel:
         the channel's metadata.
         """
         ...
+
     def schema(self) -> Optional[Schema]:
         """
         Returns a copy of the channel's schema.
@@ -1998,15 +2266,19 @@ class SpherePrimitiveChannel:
         the channel's schema.
         """
         ...
+
     def schema_name(self) -> Optional[str]:
         """The name of the schema for the channel."""
         ...
+
     def has_sinks(self) -> bool:
         """Returns true if at least one sink is subscribed to this channel"""
         ...
+
     def close(self) -> None:
         """Close the channel."""
         ...
+
     def log(
         self,
         message: "SpherePrimitive",
@@ -2033,13 +2305,16 @@ class TextAnnotationChannel:
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
+
     def topic(self) -> str:
         """The topic name of the channel."""
         ...
+
     @property
     def message_encoding(self) -> str:
         """The message encoding for the channel"""
         ...
+
     def metadata(self) -> Dict[str, str]:
         """
         Returns a copy of the channel's metadata.
@@ -2048,6 +2323,7 @@ class TextAnnotationChannel:
         the channel's metadata.
         """
         ...
+
     def schema(self) -> Optional[Schema]:
         """
         Returns a copy of the channel's schema.
@@ -2056,15 +2332,19 @@ class TextAnnotationChannel:
         the channel's schema.
         """
         ...
+
     def schema_name(self) -> Optional[str]:
         """The name of the schema for the channel."""
         ...
+
     def has_sinks(self) -> bool:
         """Returns true if at least one sink is subscribed to this channel"""
         ...
+
     def close(self) -> None:
         """Close the channel."""
         ...
+
     def log(
         self,
         message: "TextAnnotation",
@@ -2091,13 +2371,16 @@ class TextPrimitiveChannel:
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
+
     def topic(self) -> str:
         """The topic name of the channel."""
         ...
+
     @property
     def message_encoding(self) -> str:
         """The message encoding for the channel"""
         ...
+
     def metadata(self) -> Dict[str, str]:
         """
         Returns a copy of the channel's metadata.
@@ -2106,6 +2389,7 @@ class TextPrimitiveChannel:
         the channel's metadata.
         """
         ...
+
     def schema(self) -> Optional[Schema]:
         """
         Returns a copy of the channel's schema.
@@ -2114,15 +2398,19 @@ class TextPrimitiveChannel:
         the channel's schema.
         """
         ...
+
     def schema_name(self) -> Optional[str]:
         """The name of the schema for the channel."""
         ...
+
     def has_sinks(self) -> bool:
         """Returns true if at least one sink is subscribed to this channel"""
         ...
+
     def close(self) -> None:
         """Close the channel."""
         ...
+
     def log(
         self,
         message: "TextPrimitive",
@@ -2149,13 +2437,16 @@ class TriangleListPrimitiveChannel:
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
+
     def topic(self) -> str:
         """The topic name of the channel."""
         ...
+
     @property
     def message_encoding(self) -> str:
         """The message encoding for the channel"""
         ...
+
     def metadata(self) -> Dict[str, str]:
         """
         Returns a copy of the channel's metadata.
@@ -2164,6 +2455,7 @@ class TriangleListPrimitiveChannel:
         the channel's metadata.
         """
         ...
+
     def schema(self) -> Optional[Schema]:
         """
         Returns a copy of the channel's schema.
@@ -2172,15 +2464,19 @@ class TriangleListPrimitiveChannel:
         the channel's schema.
         """
         ...
+
     def schema_name(self) -> Optional[str]:
         """The name of the schema for the channel."""
         ...
+
     def has_sinks(self) -> bool:
         """Returns true if at least one sink is subscribed to this channel"""
         ...
+
     def close(self) -> None:
         """Close the channel."""
         ...
+
     def log(
         self,
         message: "TriangleListPrimitive",
@@ -2207,13 +2503,16 @@ class Vector2Channel:
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
+
     def topic(self) -> str:
         """The topic name of the channel."""
         ...
+
     @property
     def message_encoding(self) -> str:
         """The message encoding for the channel"""
         ...
+
     def metadata(self) -> Dict[str, str]:
         """
         Returns a copy of the channel's metadata.
@@ -2222,6 +2521,7 @@ class Vector2Channel:
         the channel's metadata.
         """
         ...
+
     def schema(self) -> Optional[Schema]:
         """
         Returns a copy of the channel's schema.
@@ -2230,15 +2530,19 @@ class Vector2Channel:
         the channel's schema.
         """
         ...
+
     def schema_name(self) -> Optional[str]:
         """The name of the schema for the channel."""
         ...
+
     def has_sinks(self) -> bool:
         """Returns true if at least one sink is subscribed to this channel"""
         ...
+
     def close(self) -> None:
         """Close the channel."""
         ...
+
     def log(
         self,
         message: "Vector2",
@@ -2265,13 +2569,16 @@ class Vector3Channel:
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
+
     def topic(self) -> str:
         """The topic name of the channel."""
         ...
+
     @property
     def message_encoding(self) -> str:
         """The message encoding for the channel"""
         ...
+
     def metadata(self) -> Dict[str, str]:
         """
         Returns a copy of the channel's metadata.
@@ -2280,6 +2587,7 @@ class Vector3Channel:
         the channel's metadata.
         """
         ...
+
     def schema(self) -> Optional[Schema]:
         """
         Returns a copy of the channel's schema.
@@ -2288,15 +2596,19 @@ class Vector3Channel:
         the channel's schema.
         """
         ...
+
     def schema_name(self) -> Optional[str]:
         """The name of the schema for the channel."""
         ...
+
     def has_sinks(self) -> bool:
         """Returns true if at least one sink is subscribed to this channel"""
         ...
+
     def close(self) -> None:
         """Close the channel."""
         ...
+
     def log(
         self,
         message: "Vector3",
