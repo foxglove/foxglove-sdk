@@ -957,12 +957,12 @@ struct RawImage {
   /// @brief   - Pixel channel values are represented as unsigned 8-bit integers.
   /// @brief   - Each output pixel is serialized as [R, G, B, Alpha].
   /// @brief   - `step` must be greater than or equal to `width` * 4.
-  /// @brief - `bgr8`:
+  /// @brief - `bgr8` or `8UC3`:
   /// @brief   - Pixel colors are decomposed into Red, Blue, Green, and Alpha channels.
   /// @brief   - Pixel channel values are represented as unsigned 8-bit integers.
   /// @brief   - Each output pixel is serialized as [B, G, R].
   /// @brief   - `step` must be greater than or equal to `width` * 3.
-  /// @brief - `bgra8` or `8UC3`:
+  /// @brief - `bgra8`:
   /// @brief   - Pixel colors are decomposed into Red, Blue, Green, Alpha channels.
   /// @brief   - Pixel channel values are represented as unsigned 8-bit integers.
   /// @brief   - Each output pixel is encoded as [B, G, R, Alpha].
