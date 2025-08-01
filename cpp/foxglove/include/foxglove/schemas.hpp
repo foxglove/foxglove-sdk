@@ -2612,8 +2612,8 @@ public:
   [[nodiscard]] uint64_t id() const noexcept;
 
   TriangleListPrimitiveChannel(const TriangleListPrimitiveChannel& other) noexcept = delete;
-  TriangleListPrimitiveChannel& operator=(const TriangleListPrimitiveChannel& other) noexcept =
-    delete;
+  TriangleListPrimitiveChannel& operator=(const TriangleListPrimitiveChannel& other
+  ) noexcept = delete;
   /// @brief Default move constructor.
   TriangleListPrimitiveChannel(TriangleListPrimitiveChannel&& other) noexcept = default;
   /// @brief Default move assignment.
