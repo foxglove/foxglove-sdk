@@ -930,7 +930,6 @@ pub struct RawImage {
     #[prost(fixed32, tag = "5")]
     pub step: u32,
     /// Raw image data.
-    ///
     /// For each `encoding` value, the `data` field contains image pixel data serialized as follows:
     /// - `yuv422` or  `uyvy`:
     ///    - Pixel colors are decomposed into [Y'UV](<https://en.wikipedia.org/wiki/Y%E2%80%B2UV>) channels.

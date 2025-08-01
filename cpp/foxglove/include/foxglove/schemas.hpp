@@ -929,7 +929,6 @@ struct RawImage {
   uint32_t step = 0;
 
   /// @brief Raw image data.
-  /// @brief
   /// @brief For each `encoding` value, the `data` field contains image pixel data serialized as
   /// follows:
   /// @brief - `yuv422` or  `uyvy`:
@@ -2625,8 +2624,8 @@ public:
   [[nodiscard]] uint64_t id() const noexcept;
 
   TriangleListPrimitiveChannel(const TriangleListPrimitiveChannel& other) noexcept = delete;
-  TriangleListPrimitiveChannel& operator=(const TriangleListPrimitiveChannel& other
-  ) noexcept = delete;
+  TriangleListPrimitiveChannel& operator=(const TriangleListPrimitiveChannel& other) noexcept =
+    delete;
   /// @brief Default move constructor.
   TriangleListPrimitiveChannel(TriangleListPrimitiveChannel&& other) noexcept = default;
   /// @brief Default move assignment.
