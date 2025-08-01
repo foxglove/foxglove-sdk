@@ -46,7 +46,7 @@ prost.workspace = true
 schemars = { version = "0.9.0", optional = true }
 serde_json = "1.0"
 serde_repr = { version = "0.1.19", optional = true }
-serde_with = { version = "3.13.0", features = ["macros", "base64"], optional = true }
+serde_with = { version = "3.14.0", features = ["macros", "base64"], optional = true }
 serde.workspace = true
 smallvec = "1.15.1"
 smallbytes = "0.1.0"
