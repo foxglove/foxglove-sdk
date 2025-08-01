@@ -1770,7 +1770,9 @@ typedef struct foxglove_raw_image {
   uint32_t step;
   /**
    * Raw image data.
+   *
    * For each `encoding` value, the `data` field contains image pixel data serialized as follows:
+   *
    * - `yuv422` or  `uyvy`:
    *   - Pixel colors are decomposed into [Y'UV](https://en.wikipedia.org/wiki/Y%E2%80%B2UV) channels.
    *   - Pixel channel values are represented as unsigned 8-bit integers.

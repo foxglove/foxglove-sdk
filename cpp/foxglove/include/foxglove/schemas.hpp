@@ -929,8 +929,10 @@ struct RawImage {
   uint32_t step = 0;
 
   /// @brief Raw image data.
+  /// @brief
   /// @brief For each `encoding` value, the `data` field contains image pixel data serialized as
   /// follows:
+  /// @brief
   /// @brief - `yuv422` or  `uyvy`:
   /// @brief   - Pixel colors are decomposed into [Y'UV](https://en.wikipedia.org/wiki/Y%E2%80%B2UV)
   /// channels.

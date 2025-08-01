@@ -1792,7 +1792,9 @@ impl From<RawAudio> for foxglove::schemas::RawAudio {
 /// :param encoding: Encoding of the raw image data. See the `data` field description for supported values.
 /// :param step: Byte length of a single row. This is usually some multiple of `width` depending on the encoding, but can be greater to incorporate padding.
 /// :param data: Raw image data.
+///     
 ///     For each `encoding` value, the `data` field contains image pixel data serialized as follows:
+///     
 ///     - `yuv422` or  `uyvy`:
 ///       - Pixel colors are decomposed into `Y'UV <https://en.wikipedia.org/wiki/Y%E2%80%B2UV>`__ channels.
 ///       - Pixel channel values are represented as unsigned 8-bit integers.
