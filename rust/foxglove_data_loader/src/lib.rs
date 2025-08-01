@@ -98,21 +98,6 @@
 //! ```
 
 /// Export a data loader to WASM output with this macro.
-///
-/// # Example
-///
-/// ```compile_fail
-///
-/// struct MyDataLoader;
-///
-/// // Implement the DataLoader trait for your DataLoader
-/// impl DataLoader for MyDataLoader {
-///   // -- snip --
-/// }
-///
-/// // Use the `export` macro to make the Data Loader available from the compiled binary.
-/// foxglove_data_loader::export!(MyDataLoader);
-/// ```
 #[macro_export]
 #[allow(clippy::crate_in_macro_def)]
 macro_rules! export {
