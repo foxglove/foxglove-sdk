@@ -1367,6 +1367,26 @@ const LocationFix: FoxgloveMessageSchema = {
         "If `position_covariance` is available, `position_covariance_type` must be set to indicate the type of covariance.",
       protobufFieldNumber: 5,
     },
+    {
+      name: "color",
+      type: { type: "nested", schema: Color },
+      description: "Color used to visualize the location",
+      protobufFieldNumber: 8,
+    },
+  ],
+};
+
+const LocationFixes: FoxgloveMessageSchema = {
+  type: "message",
+  name: "LocationFixes",
+  description: "A group of LocationFix messages",
+  fields: [
+    {
+      name: "fixes",
+      type: { type: "nested", schema: LocationFix },
+      array: true,
+      description: "One or more location fixes",
+    },
   ],
 };
 
@@ -1530,6 +1550,7 @@ export const foxgloveMessageSchemas = {
   LaserScan,
   LinePrimitive,
   LocationFix,
+  LocationFixes,
   Log,
   SceneEntityDeletion,
   SceneEntity,
