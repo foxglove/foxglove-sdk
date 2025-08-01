@@ -3233,48 +3233,56 @@ pub struct RawImage {
 
     /// Raw image data.
     ///
-    /// The requirements for each `encoding` value are:
-    /// - `yuv422`,  `uyvy`:
-    ///   - 8-bit [Y'UV](https://en.wikipedia.org/wiki/Y%E2%80%B2UV).
-    ///   - U and V values are shared between horizontal pairs of pixels. Each pair of output pixels is encoded as [U, Y1, V, Y2].
+    /// For each `encoding` value, the `data` field contains image pixel data serialized as follows:
+    /// - `yuv422` or  `uyvy`:
+    ///   - Pixel colors are decomposed into [Y'UV](https://en.wikipedia.org/wiki/Y%E2%80%B2UV) channels.
+    ///   - Pixel channel values are represented as unsigned 8-bit integers.
+    ///   - U and V values are shared between horizontal pairs of pixels. Each pair of output pixels is serialized as [U, Y1, V, Y2].
     ///   - `step` must be greater than or equal to `width` * 2.
-    /// - `yuv422_yuy2`,  `yuyv`:
-    ///   - 8-Bit [Y'UV](https://en.wikipedia.org/wiki/Y%E2%80%B2UV).
+    /// - `yuv422_yuy2` or  `yuyv`:
+    ///   - Pixel colors are decomposed into [Y'UV](https://en.wikipedia.org/wiki/Y%E2%80%B2UV) channels.
+    ///   - Pixel channel values are represented as unsigned 8-bit integers.
     ///   - U and V values are shared between horizontal pairs of pixels. Each pair of output pixels is encoded as [Y1, U, Y2, V].
     ///   - `step` must be greater than or equal to `width` * 2.
     /// - `rgb8`:
-    ///   - 8-bit RGB.
-    ///   - Each output pixel is encoded as [R, G, B].
+    ///   - Pixel colors are decomposed into Red, Blue and Green channels.
+    ///   - Pixel channel values are represented as unsigned 8-bit integers.
+    ///   - Each output pixel is serialized as [R, G, B].
     ///   - `step` must be greater than or equal to `width` * 3.
     /// - `rgba8`:
-    ///   - 8-bit RGB + Alpha.
-    ///   - Each output pixel is encoded as [R, G, B, Alpha].
+    ///   - Pixel colors are decomposed into Red, Blue, Green, and Alpha channels.
+    ///   - Pixel channel values are represented as unsigned 8-bit integers.
+    ///   - Each output pixel is serialized as [R, G, B, Alpha].
     ///   - `step` must be greater than or equal to `width` * 4.
     /// - `bgr8`:
-    ///   - RGB, one byte per component.
-    ///   - Each output pixel is encoded as [B, G, R].
+    ///   - Pixel colors are decomposed into Red, Blue, Green, and Alpha channels.
+    ///   - Pixel channel values are represented as unsigned 8-bit integers.
+    ///   - Each output pixel is serialized as [B, G, R].
     ///   - `step` must be greater than or equal to `width` * 3.
-    /// - `bgra8`, `8UC3`:
-    ///   - RGB + Alpha, one byte per component.
+    /// - `bgra8` or `8UC3`:
+    ///   - Pixel colors are decomposed into Red, Blue, Green, Alpha channels.
+    ///   - Pixel channel values are represented as unsigned 8-bit integers.
     ///   - Each output pixel is encoded as [B, G, R, Alpha].
     ///   - `step` must be greater than or equal to `width` * 4.
     /// - `32FC1`:
+    ///   - Pixel colors are decomposed into Red, Blue and Green channels.
     ///   - 32-bit little-endian IEEE754 float brightness values, from 0.0 (black) to 1.0 (white).
     ///   - `step` must be greater than or equal to `width` * 4.
-    /// - `bayer_rggb8`, `bayer_bggr8`, `bayer_rggb8`, `bayer_gbrg8`, `bayer_grgb8`:
-    ///   - 8-bit Bayer filter pattern RGB values.
+    /// - `bayer_rggb8`, `bayer_bggr8`, `bayer_rggb8`, `bayer_gbrg8`, or `bayer_grgb8`:
+    ///   - Pixel colors are decomposed into Red, Blue and Green channels.
+    ///   - Pixel channel values are represented as unsigned 8-bit integers, and serialized in a 2x2 bayer filter pattern.
     ///   - The order of the four letters after `bayer_` determine the layout, so for `bayer_wxyz8` the pattern is:
     ///   ```plaintext
     ///   w | x
-    ///   - | -
+    ///   - + -
     ///   y | z
     ///   ```
     ///   - `step` must be greater than or equal to `width`.
-    /// - `mono8`, `8UC1`:
-    ///   - 8-bit brightness values from 0 (black) to 255 (white).
+    /// - `mono8` or `8UC1`:
+    ///   - Pixel brightness is represented as unsigned 8-bit integers.
     ///   - `step` must be greater than or equal to `width`.
-    /// - `mono16`, `16UC1`:
-    ///   - 16-bit abstract per-pixel values. Rendering of these values is controlled in [Image panel color mode settings](https://docs.foxglove.dev/docs/visualization/panels/image#general).
+    /// - `mono16` or `16UC1`:
+    ///   - 16-bit little-endian integer abstract pixel values. Rendering of these values is controlled in [Image panel color mode settings](https://docs.foxglove.dev/docs/visualization/panels/image#general).
     ///   - `step` must be greater than or equal to `width` * 2.
     ///
     pub data: *const c_uchar,
