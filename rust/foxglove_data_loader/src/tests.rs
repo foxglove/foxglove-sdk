@@ -2,8 +2,6 @@ use std::borrow::Cow;
 
 use foxglove::Encode;
 
-use crate::generated::foxglove::loader::time::TimeRange;
-
 use super::*;
 
 #[test]
