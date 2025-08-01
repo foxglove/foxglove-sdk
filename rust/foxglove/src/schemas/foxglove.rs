@@ -920,7 +920,7 @@ pub struct RawImage {
     /// Image width in pixels
     #[prost(fixed32, tag = "2")]
     pub width: u32,
-    /// Image heigh in pixels
+    /// Image height in pixels
     #[prost(fixed32, tag = "3")]
     pub height: u32,
     /// Encoding of the raw image data. See the `data` field description for supported values.

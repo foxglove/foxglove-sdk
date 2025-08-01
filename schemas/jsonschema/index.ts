@@ -4707,7 +4707,7 @@ export const RawImage = {
     "height": {
       "type": "integer",
       "minimum": 0,
-      "description": "Image heigh in pixels"
+      "description": "Image height in pixels"
     },
     "encoding": {
       "type": "string",

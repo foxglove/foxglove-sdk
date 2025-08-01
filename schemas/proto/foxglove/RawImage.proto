@@ -17,7 +17,7 @@ message RawImage {
   // Image width in pixels
   fixed32 width = 2;
 
-  // Image heigh in pixels
+  // Image height in pixels
   fixed32 height = 3;
 
   // Encoding of the raw image data. See the `data` field description for supported values.

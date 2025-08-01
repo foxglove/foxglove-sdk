@@ -1757,7 +1757,7 @@ typedef struct foxglove_raw_image {
    */
   uint32_t width;
   /**
-   * Image heigh in pixels
+   * Image height in pixels
    */
   uint32_t height;
   /**

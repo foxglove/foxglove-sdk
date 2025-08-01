@@ -918,7 +918,7 @@ struct RawImage {
   /// @brief Image width in pixels
   uint32_t width = 0;
 
-  /// @brief Image heigh in pixels
+  /// @brief Image height in pixels
   uint32_t height = 0;
 
   /// @brief Encoding of the raw image data. See the `data` field description for supported values.

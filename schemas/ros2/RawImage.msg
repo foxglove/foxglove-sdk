@@ -12,7 +12,7 @@ string frame_id
 # Image width in pixels
 uint32 width
 
-# Image heigh in pixels
+# Image height in pixels
 uint32 height
 
 # Encoding of the raw image data. See the `data` field description for supported values.

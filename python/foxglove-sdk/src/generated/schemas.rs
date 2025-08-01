@@ -1788,7 +1788,7 @@ impl From<RawAudio> for foxglove::schemas::RawAudio {
 /// :param timestamp: Timestamp of image
 /// :param frame_id: Frame of reference for the image. The origin of the frame is the optical center of the camera. +x points to the right in the image, +y points down, and +z points into the plane of the image.
 /// :param width: Image width in pixels
-/// :param height: Image heigh in pixels
+/// :param height: Image height in pixels
 /// :param encoding: Encoding of the raw image data. See the `data` field description for supported values.
 /// :param step: Byte length of a single row. This is usually some multiple of `width` depending on the encoding, but can be greater to incorporate padding.
 /// :param data: Raw image data.

@@ -15,7 +15,7 @@ table RawImage {
   /// Image width in pixels
   width:uint32 (id: 2);
 
-  /// Image heigh in pixels
+  /// Image height in pixels
   height:uint32 (id: 3);
 
   /// Encoding of the raw image data. See the `data` field description for supported values.

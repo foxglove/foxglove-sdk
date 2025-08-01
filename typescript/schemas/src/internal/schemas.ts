@@ -900,7 +900,7 @@ const RawImage: FoxgloveMessageSchema = {
     {
       name: "height",
       type: { type: "primitive", name: "uint32" },
-      description: "Image heigh in pixels",
+      description: "Image height in pixels",
     },
     {
       name: "encoding",

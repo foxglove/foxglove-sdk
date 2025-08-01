@@ -2372,7 +2372,7 @@ uint32
 </td>
 <td>
 
-Image heigh in pixels
+Image height in pixels
 
 </td>
 </tr>

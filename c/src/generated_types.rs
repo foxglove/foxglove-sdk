@@ -3222,7 +3222,7 @@ pub struct RawImage {
     /// Image width in pixels
     pub width: u32,
 
-    /// Image heigh in pixels
+    /// Image height in pixels
     pub height: u32,
 
     /// Encoding of the raw image data. See the `data` field description for supported values.
