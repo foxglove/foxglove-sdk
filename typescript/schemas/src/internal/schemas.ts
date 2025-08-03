@@ -932,7 +932,7 @@ For each \`encoding\` value, the \`data\` field contains image pixel data serial
   - U and V values are shared between horizontal pairs of pixels. Each pair of output pixels is encoded as [Y1, U, Y2, V].
   - \`step\` must be greater than or equal to \`width\` * 2.
 - \`rgb8\`:
-  - Pixel colors are decomposed into Red, Blue and Green channels.
+  - Pixel colors are decomposed into Red, Green, and Blue channels.
   - Pixel channel values are represented as unsigned 8-bit integers.
   - Each output pixel is serialized as [R, G, B].
   - \`step\` must be greater than or equal to \`width\` * 3.
