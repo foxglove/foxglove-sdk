@@ -968,7 +968,7 @@ For each \`encoding\` value, the \`data\` field contains image pixel data serial
   - Pixel brightness is represented as unsigned 8-bit integers.
   - \`step\` must be greater than or equal to \`width\`.
 - \`mono16\` or \`16UC1\`:
-  - 16-bit little-endian integer abstract pixel values. Rendering of these values is controlled in [Image panel color mode settings](https://docs.foxglove.dev/docs/visualization/panels/image#general).
+  - Pixel brightness is represented as 16-bit unsigned little-endian integers. Rendering of these values is controlled in [Image panel color mode settings](https://docs.foxglove.dev/docs/visualization/panels/image#general).
   - \`step\` must be greater than or equal to \`width\` * 2.
 `,
     },
