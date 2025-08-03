@@ -25,7 +25,7 @@ uint32 step
 # 
 # For each `encoding` value, the `data` field contains image pixel data serialized as follows:
 # 
-# - `yuv422` or  `uyvy`:
+# - `yuv422` or `uyvy`:
 #   - Pixel colors are decomposed into [Y'UV](https://en.wikipedia.org/wiki/Y%E2%80%B2UV) channels.
 #   - Pixel channel values are represented as unsigned 8-bit integers.
 #   - U and V values are shared between horizontal pairs of pixels. Each pair of output pixels is serialized as [U, Y1, V, Y2].
@@ -36,12 +36,12 @@ uint32 step
 #   - U and V values are shared between horizontal pairs of pixels. Each pair of output pixels is encoded as [Y1, U, Y2, V].
 #   - `step` must be greater than or equal to `width` * 2.
 # - `rgb8`:
-#   - Pixel colors are decomposed into Red, Blue and Green channels.
+#   - Pixel colors are decomposed into Red, Green, and Blue channels.
 #   - Pixel channel values are represented as unsigned 8-bit integers.
 #   - Each output pixel is serialized as [R, G, B].
 #   - `step` must be greater than or equal to `width` * 3.
 # - `rgba8`:
-#   - Pixel colors are decomposed into Red, Blue, Green, and Alpha channels.
+#   - Pixel colors are decomposed into Red, Green, Blue, and Alpha channels.
 #   - Pixel channel values are represented as unsigned 8-bit integers.
 #   - Each output pixel is serialized as [R, G, B, Alpha].
 #   - `step` must be greater than or equal to `width` * 4.
@@ -51,13 +51,12 @@ uint32 step
 #   - Each output pixel is serialized as [B, G, R].
 #   - `step` must be greater than or equal to `width` * 3.
 # - `bgra8`:
-#   - Pixel colors are decomposed into Red, Blue, Green, Alpha channels.
+#   - Pixel colors are decomposed into Blue, Green, Red, and Alpha channels.
 #   - Pixel channel values are represented as unsigned 8-bit integers.
 #   - Each output pixel is encoded as [B, G, R, Alpha].
 #   - `step` must be greater than or equal to `width` * 4.
 # - `32FC1`:
-#   - Pixel colors are decomposed into Red, Blue and Green channels.
-#   - 32-bit little-endian IEEE754 float brightness values, from 0.0 (black) to 1.0 (white).
+#   - Pixel brightness is represented as a single-channel, 32-bit little-endian IEEE 754 floating-point value, ranging from 0.0 (black) to 1.0 (white).
 #   - `step` must be greater than or equal to `width` * 4.
 # - `bayer_rggb8`, `bayer_bggr8`, `bayer_rggb8`, `bayer_gbrg8`, or `bayer_grgb8`:
 #   - Pixel colors are decomposed into Red, Blue and Green channels.
@@ -73,6 +72,6 @@ uint32 step
 #   - Pixel brightness is represented as unsigned 8-bit integers.
 #   - `step` must be greater than or equal to `width`.
 # - `mono16` or `16UC1`:
-#   - 16-bit little-endian integer abstract pixel values. Rendering of these values is controlled in [Image panel color mode settings](https://docs.foxglove.dev/docs/visualization/panels/image#general).
+#   - Pixel brightness is represented as 16-bit unsigned little-endian integers. Rendering of these values is controlled in [Image panel color mode settings](https://docs.foxglove.dev/docs/visualization/panels/image#general).
 #   - `step` must be greater than or equal to `width` * 2.
 uint8[] data

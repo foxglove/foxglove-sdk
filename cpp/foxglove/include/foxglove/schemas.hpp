@@ -933,7 +933,7 @@ struct RawImage {
   /// @brief For each `encoding` value, the `data` field contains image pixel data serialized as
   /// follows:
   /// @brief
-  /// @brief - `yuv422` or  `uyvy`:
+  /// @brief - `yuv422` or `uyvy`:
   /// @brief   - Pixel colors are decomposed into [Y'UV](https://en.wikipedia.org/wiki/Y%E2%80%B2UV)
   /// channels.
   /// @brief   - Pixel channel values are represented as unsigned 8-bit integers.
@@ -948,12 +948,12 @@ struct RawImage {
   /// pixels is encoded as [Y1, U, Y2, V].
   /// @brief   - `step` must be greater than or equal to `width` * 2.
   /// @brief - `rgb8`:
-  /// @brief   - Pixel colors are decomposed into Red, Blue and Green channels.
+  /// @brief   - Pixel colors are decomposed into Red, Green, and Blue channels.
   /// @brief   - Pixel channel values are represented as unsigned 8-bit integers.
   /// @brief   - Each output pixel is serialized as [R, G, B].
   /// @brief   - `step` must be greater than or equal to `width` * 3.
   /// @brief - `rgba8`:
-  /// @brief   - Pixel colors are decomposed into Red, Blue, Green, and Alpha channels.
+  /// @brief   - Pixel colors are decomposed into Red, Green, Blue, and Alpha channels.
   /// @brief   - Pixel channel values are represented as unsigned 8-bit integers.
   /// @brief   - Each output pixel is serialized as [R, G, B, Alpha].
   /// @brief   - `step` must be greater than or equal to `width` * 4.
@@ -963,14 +963,13 @@ struct RawImage {
   /// @brief   - Each output pixel is serialized as [B, G, R].
   /// @brief   - `step` must be greater than or equal to `width` * 3.
   /// @brief - `bgra8`:
-  /// @brief   - Pixel colors are decomposed into Red, Blue, Green, Alpha channels.
+  /// @brief   - Pixel colors are decomposed into Blue, Green, Red, and Alpha channels.
   /// @brief   - Pixel channel values are represented as unsigned 8-bit integers.
   /// @brief   - Each output pixel is encoded as [B, G, R, Alpha].
   /// @brief   - `step` must be greater than or equal to `width` * 4.
   /// @brief - `32FC1`:
-  /// @brief   - Pixel colors are decomposed into Red, Blue and Green channels.
-  /// @brief   - 32-bit little-endian IEEE754 float brightness values, from 0.0 (black) to 1.0
-  /// (white).
+  /// @brief   - Pixel brightness is represented as a single-channel, 32-bit little-endian IEEE 754
+  /// floating-point value, ranging from 0.0 (black) to 1.0 (white).
   /// @brief   - `step` must be greater than or equal to `width` * 4.
   /// @brief - `bayer_rggb8`, `bayer_bggr8`, `bayer_rggb8`, `bayer_gbrg8`, or `bayer_grgb8`:
   /// @brief   - Pixel colors are decomposed into Red, Blue and Green channels.
@@ -988,8 +987,8 @@ struct RawImage {
   /// @brief   - Pixel brightness is represented as unsigned 8-bit integers.
   /// @brief   - `step` must be greater than or equal to `width`.
   /// @brief - `mono16` or `16UC1`:
-  /// @brief   - 16-bit little-endian integer abstract pixel values. Rendering of these values is
-  /// controlled in [Image panel color mode
+  /// @brief   - Pixel brightness is represented as 16-bit unsigned little-endian integers.
+  /// Rendering of these values is controlled in [Image panel color mode
   /// settings](https://docs.foxglove.dev/docs/visualization/panels/image#general).
   /// @brief   - `step` must be greater than or equal to `width` * 2.
   /// @brief
