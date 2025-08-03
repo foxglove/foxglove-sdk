@@ -947,7 +947,7 @@ For each \`encoding\` value, the \`data\` field contains image pixel data serial
   - Each output pixel is serialized as [B, G, R].
   - \`step\` must be greater than or equal to \`width\` * 3.
 - \`bgra8\`:
-  - Pixel colors are decomposed into Red, Blue, Green, Alpha channels.
+  - Pixel colors are decomposed into Blue, Green, Red, and Alpha channels.
   - Pixel channel values are represented as unsigned 8-bit integers.
   - Each output pixel is encoded as [B, G, R, Alpha].
   - \`step\` must be greater than or equal to \`width\` * 4.
