@@ -952,8 +952,7 @@ For each \`encoding\` value, the \`data\` field contains image pixel data serial
   - Each output pixel is encoded as [B, G, R, Alpha].
   - \`step\` must be greater than or equal to \`width\` * 4.
 - \`32FC1\`:
-  - Pixel colors are decomposed into Red, Blue and Green channels.
-  - 32-bit little-endian IEEE754 float brightness values, from 0.0 (black) to 1.0 (white).
+  - Pixel brightness is represented as a single-channel, 32-bit little-endian IEEE 754 floating-point value, ranging from 0.0 (black) to 1.0 (white).
   - \`step\` must be greater than or equal to \`width\` * 4.
 - \`bayer_rggb8\`, \`bayer_bggr8\`, \`bayer_rggb8\`, \`bayer_gbrg8\`, or \`bayer_grgb8\`:
   - Pixel colors are decomposed into Red, Blue and Green channels.
