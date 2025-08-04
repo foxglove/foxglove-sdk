@@ -27,9 +27,7 @@ macro(enable_strict_compiler_warnings target)
 endmacro()
 
 find_package(nlohmann_json QUIET)
-find_package(OpenSSL REQUIRED)
 find_package(Threads REQUIRED)
-find_package(websocketpp REQUIRED)
 
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE RelWithDebInfo)
@@ -158,11 +156,6 @@ if (USE_LOCAL_SDK)
   target_link_libraries(foxglove_bridge_component foxglove_c_static)
 endif()
 
-target_link_libraries(foxglove_bridge_component
-  foxglove_cpp_static
-  OpenSSL::SSL
-)
-
 if (nlohmann_json_FOUND)
   target_link_libraries(foxglove_bridge_component nlohmann_json::nlohmann_json)
 endif()
@@ -177,6 +170,7 @@ target_compile_definitions(foxglove_bridge_component
 target_link_libraries(foxglove_bridge_component
   ${rosgraph_msgs_TARGETS}
   ament_index_cpp::ament_index_cpp
+  foxglove_cpp_static
   rclcpp::rclcpp
   rclcpp_components::component
   rclcpp_components::component_manager
@@ -202,6 +196,9 @@ enable_strict_compiler_warnings(foxglove_bridge)
 if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
   find_package(ament_lint_auto REQUIRED)
+  find_package(OpenSSL REQUIRED)
+  find_package(websocketpp REQUIRED)
+
   ament_lint_auto_find_test_dependencies()
 
   # Repeat tests several times to catch nondeterministic issues
@@ -213,6 +210,7 @@ if(BUILD_TESTING)
     rclcpp::rclcpp
     rclcpp_components::component
     rclcpp_components::component_manager
+    OpenSSL::SSL
   )
   enable_strict_compiler_warnings(smoke_test)
 
