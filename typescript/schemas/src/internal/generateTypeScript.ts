@@ -30,9 +30,6 @@ function primitiveToTypedArray(type: FoxglovePrimitive) {
   }
 }
 
-/**
- * An alias to `Timestamp` for backwards compatibility.
- */
 export const TIME_TS = `export type Time = {
   sec: number;
   nsec: number;
