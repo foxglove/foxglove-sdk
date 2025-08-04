@@ -1,12 +1,9 @@
 # Foxglove Data Loader
 
-Create a Foxglove data loader to parse custom file formats in Foxglove extensions.
+Data Loaders are an experimental [Extension API] that allow you to support more file formats in
+Foxglove. You build a Data Loader as a Foxglove Extension using WASM.
 
-The feature implemented by this crate is currently experimental and must be imported by git url:
-
-``` sh
-cargo add foxglove_data_loader --git 'https://github.com/foxglove/foxglove-sdk.git'
-```
+[Extension API]: https://docs.foxglove.dev/docs/extensions
 
 # Example
 
@@ -73,7 +70,7 @@ $ find -name \*.wasm
 ./target/wasm32-unknown-unknown/release/my_foxglove_data_loader.wasm
 ```
 
-In your [foxglove extension][], pass this wasm file as `wasmUrl` (inline `data:` or otherwise) to
+In your [foxglove extension], pass this WASM file as `wasmUrl` (inline `data:` or otherwise) to
 `extensionContext.registerDataLoader()`:
 
 ``` ts
