@@ -9,7 +9,7 @@
 #include <websocketpp/config/asio_client.hpp>
 
 #include <foxglove_bridge/ros2_foxglove_bridge.hpp>
-#include <foxglove_bridge/test/test_client.hpp>
+#include "client/test_client.hpp"
 
 constexpr char URI[] = "ws://localhost:8765";
 
