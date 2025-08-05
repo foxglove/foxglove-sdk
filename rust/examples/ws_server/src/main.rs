@@ -83,7 +83,7 @@ fn log(counter: u32) {
         ..Default::default()
     });
 
-    SCHEMALESS_CHANNEL.log(format!("{{\"count\": {counter}}}").as_bytes(), None);
+    SCHEMALESS_CHANNEL.log(format!("{{\"count\": {counter}}}").as_bytes());
 }
 
 #[derive(Debug, Parser)]
