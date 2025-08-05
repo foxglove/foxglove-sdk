@@ -474,13 +474,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@foxglove/message-definition@npm:^0.2.0":
-  version: 0.2.0
-  resolution: "@foxglove/message-definition@npm:0.2.0"
-  checksum: 10c0/d9b873ae2b358882a58abab5d081fd37cb63e8c9005f333f5b635019eebe2b73e5d805797c79c2e3aef5acf6c80efd585c8be212c9a8527c121d5fd5b61f100d
-  languageName: node
-  linkType: hard
-
 "@foxglove/message-definition@npm:^0.3.1":
   version: 0.3.1
   resolution: "@foxglove/message-definition@npm:0.3.1"
@@ -507,19 +500,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@foxglove/rosmsg@npm:^4.0.0":
-  version: 4.0.0
-  resolution: "@foxglove/rosmsg@npm:4.0.0"
-  dependencies:
-    "@foxglove/message-definition": "npm:^0.2.0"
-    md5-typescript: "npm:^1.0.5"
-  bin:
-    gendeps2: bin/gendeps2
-  checksum: 10c0/6581ce3cbf10de7dfe0fb6bd3d93256a2188021cbbf8b5f4bdfe58dfbacb6bbe4d577aed12dc2b7927a6a9f8902358dcc921c34ccfa6db8004acdf45c60a144b
-  languageName: node
-  linkType: hard
-
-"@foxglove/rosmsg@npm:^5.0.4":
+"@foxglove/rosmsg@npm:^5.0.0, @foxglove/rosmsg@npm:^5.0.4":
   version: 5.0.4
   resolution: "@foxglove/rosmsg@npm:5.0.4"
   dependencies:
@@ -2928,7 +2909,7 @@ __metadata:
   dependencies:
     "@foxglove/eslint-plugin": "npm:2.0.0"
     "@foxglove/omgidl-parser": "npm:^0.2.0"
-    "@foxglove/rosmsg": "npm:^4.0.0"
+    "@foxglove/rosmsg": "npm:^5.0.0"
     "@foxglove/tsconfig": "npm:2.0.0"
     "@types/glob": "npm:^8.1.0"
     "@types/jest": "npm:29.5.14"
