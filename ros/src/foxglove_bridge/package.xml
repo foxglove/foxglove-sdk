@@ -14,24 +14,20 @@
     <depend>ament_index_cpp</depend>
     <depend>rclcpp</depend>
     <depend>rclcpp_components</depend>
-
     <depend>rosx_introspection</depend>
-
 
     <!-- Test dependencies -->
     <test_depend>ament_cmake_gtest</test_depend>
     <test_depend>ament_lint_auto</test_depend>
     <test_depend>std_msgs</test_depend>
     <test_depend>std_srvs</test_depend>
+    <test_depend>libssl-dev</test_depend>
+    <test_depend>libwebsocketpp-dev</test_depend>
 
     <!-- Common dependencies -->
     <build_depend>asio</build_depend>
-    <build_depend>libssl-dev</build_depend>
-    <build_depend>libwebsocketpp-dev</build_depend>
     <build_depend>nlohmann-json-dev</build_depend>
     <build_depend>ros_environment</build_depend>
-
-    <exec_depend>openssl</exec_depend>
 
     <depend>resource_retriever</depend>
     <depend>rosgraph_msgs</depend>

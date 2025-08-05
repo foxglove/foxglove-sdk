@@ -9,7 +9,6 @@
 #include <rclcpp/rclcpp.hpp>
 #include <rosgraph_msgs/msg/clock.hpp>
 #include <rosx_introspection/ros_parser.hpp>
-#include <websocketpp/common/connection_hdl.hpp>
 
 #include <foxglove/foxglove.hpp>
 #include <foxglove/server.hpp>
