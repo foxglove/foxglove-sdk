@@ -4,7 +4,6 @@
 
 #include <foxglove/context.hpp>
 #include <foxglove/error.hpp>
-#include <foxglove/time.hpp>
 
 #include <array>
 #include <cstdint>
@@ -97,6 +96,15 @@ struct ArrowPrimitive {
 
   /// @brief Color of the arrow
   std::optional<Color> color;
+};
+
+/// @brief A timestamp composed of seconds and nanoseconds
+struct Timestamp {
+  /// @brief The number of seconds since a user-defined epoch
+  uint32_t sec = 0;
+
+  /// @brief The number of nanoseconds since the sec value
+  uint32_t nsec = 0;
 };
 
 /// @brief Camera calibration parameters
@@ -325,6 +333,15 @@ struct CubePrimitive {
 
   /// @brief Color of the cube
   std::optional<Color> color;
+};
+
+/// @brief A duration of time, composed of seconds and nanoseconds
+struct Duration {
+  /// @brief The number of seconds in the duration
+  int32_t sec = 0;
+
+  /// @brief The number of nanoseconds in the positive direction
+  uint32_t nsec = 0;
 };
 
 /// @brief A transform between two reference frames in 3D space

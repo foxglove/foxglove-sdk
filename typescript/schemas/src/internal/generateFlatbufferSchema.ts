@@ -1,4 +1,9 @@
-import { FoxgloveEnumSchema, FoxglovePrimitive, FoxgloveSchema } from "./types";
+import {
+  FoxgloveEnumSchema,
+  FoxgloveMessageSchema,
+  FoxglovePrimitive,
+  FoxgloveSchema,
+} from "./types";
 
 // Flatbuffers only supports nested vectors via table
 export const BYTE_VECTOR_FB = `
@@ -11,7 +16,6 @@ table ByteVector {
 root_type ByteVector;
 `;
 
-// Same as protobuf wellknown types
 export const TIME_FB = `
 namespace foxglove;
 
@@ -27,7 +31,7 @@ export const DURATION_FB = `
 namespace foxglove;
 
 struct Duration {
-  /// Signed seconds of the span of time. Must be from -315,576,000,000 to +315,576,000,000 inclusive.
+  /// Signed seconds of the span of time.
   sec:int32;
   /// if sec === 0 : -999,999,999 <= nsec <= +999,999,999
   /// otherwise sign of sec must match sign of nsec or be 0 and abs(nsec) <= 999,999,999
@@ -37,6 +41,8 @@ struct Duration {
 
 function primitiveToFlatbuffers(type: Exclude<FoxglovePrimitive, "time" | "duration">) {
   switch (type) {
+    case "int32":
+      return "int32";
     case "uint32":
       return "uint32";
     case "bytes":
@@ -48,6 +54,26 @@ function primitiveToFlatbuffers(type: Exclude<FoxglovePrimitive, "time" | "durat
     case "float64":
       return "double";
   }
+}
+
+/**
+ * Time is used instead of Timestamp for backwards compatibility.
+ */
+export function flatbufferMessageSchemaName(schema: FoxgloveMessageSchema): string {
+  if (schema.name === "Timestamp") {
+    return "Time";
+  }
+  return schema.name;
+}
+
+/**
+ * Time and Duration are not namespaced, for backwards compatibility.
+ */
+function namespacedMessageSchemaName(schema: FoxgloveMessageSchema): string {
+  if (schema.name === "Timestamp" || schema.name === "Duration") {
+    return flatbufferMessageSchemaName(schema);
+  }
+  return `foxglove.${flatbufferMessageSchemaName(schema)}`;
 }
 
 export function generateFlatbuffers(
@@ -99,17 +125,11 @@ export function generateFlatbuffers(
             type = field.type.enum.name;
             break;
           case "nested":
-            type = `foxglove.${field.type.schema.name}`;
-            imports.add(field.type.schema.name);
+            type = namespacedMessageSchemaName(field.type.schema);
+            imports.add(flatbufferMessageSchemaName(field.type.schema));
             break;
           case "primitive":
-            if (field.type.name === "time") {
-              type = "Time";
-              imports.add(`Time`);
-            } else if (field.type.name === "duration") {
-              type = "Duration";
-              imports.add(`Duration`);
-            } else if (field.type.name === "bytes" && isArray) {
+            if (field.type.name === "bytes" && isArray) {
               type = "ByteVector";
               imports.add("ByteVector");
             } else {
@@ -125,10 +145,7 @@ export function generateFlatbuffers(
         }
         let defaultValue;
         if (field.defaultValue != undefined && !isArray) {
-          if (
-            field.type.type === "primitive" &&
-            !(field.type.name === "duration" || field.type.name === "time")
-          ) {
+          if (field.type.type === "primitive") {
             if (typeof field.defaultValue === "string") {
               defaultValue = `"${field.defaultValue}"`;
             } else if (typeof field.defaultValue === "number") {

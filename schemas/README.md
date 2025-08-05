@@ -20,6 +20,7 @@ All schemas are generated from [schemas.ts](/internal/schemas.ts).
 - [CompressedVideo](#compressedvideo)
 - [CubePrimitive](#cubeprimitive)
 - [CylinderPrimitive](#cylinderprimitive)
+- [Duration](#duration)
 - [FrameTransform](#frametransform)
 - [FrameTransforms](#frametransforms)
 - [GeoJSON](#geojson)
@@ -48,6 +49,7 @@ All schemas are generated from [schemas.ts](/internal/schemas.ts).
 - [SpherePrimitive](#sphereprimitive)
 - [TextAnnotation](#textannotation)
 - [TextPrimitive](#textprimitive)
+- [Timestamp](#timestamp)
 - [TriangleListPrimitive](#trianglelistprimitive)
 - [Vector2](#vector2)
 - [Vector3](#vector3)
@@ -241,7 +243,7 @@ Camera calibration parameters
 <td><code>timestamp</code></td>
 <td>
 
-time
+[Timestamp](#timestamp)
 
 </td>
 <td>
@@ -410,7 +412,7 @@ A circle annotation on a 2D image
 <td><code>timestamp</code></td>
 <td>
 
-time
+[Timestamp](#timestamp)
 
 </td>
 <td>
@@ -565,7 +567,7 @@ A compressed image
 <td><code>timestamp</code></td>
 <td>
 
-time
+[Timestamp](#timestamp)
 
 </td>
 <td>
@@ -631,7 +633,7 @@ A single frame of a compressed video bitstream
 <td><code>timestamp</code></td>
 <td>
 
-time
+[Timestamp](#timestamp)
 
 </td>
 <td>
@@ -837,6 +839,44 @@ Color of the cylinder
 </tr>
 </table>
 
+## Duration
+
+A duration of time, composed of seconds and nanoseconds
+
+<table>
+  <tr>
+    <th>field</th>
+    <th>type</th>
+    <th>description</th>
+  </tr>
+<tr>
+<td><code>sec</code></td>
+<td>
+
+int32
+
+</td>
+<td>
+
+The number of seconds in the duration
+
+</td>
+</tr>
+<tr>
+<td><code>nsec</code></td>
+<td>
+
+uint32
+
+</td>
+<td>
+
+The number of nanoseconds in the positive direction
+
+</td>
+</tr>
+</table>
+
 ## FrameTransform
 
 A transform between two reference frames in 3D space
@@ -851,7 +891,7 @@ A transform between two reference frames in 3D space
 <td><code>timestamp</code></td>
 <td>
 
-time
+[Timestamp](#timestamp)
 
 </td>
 <td>
@@ -978,7 +1018,7 @@ A 2D grid of data
 <td><code>timestamp</code></td>
 <td>
 
-time
+[Timestamp](#timestamp)
 
 </td>
 <td>
@@ -1196,7 +1236,7 @@ A single scan from a planar laser range-finder
 <td><code>timestamp</code></td>
 <td>
 
-time
+[Timestamp](#timestamp)
 
 </td>
 <td>
@@ -1417,7 +1457,7 @@ A navigation satellite fix for any Global Navigation Satellite System
 <td><code>timestamp</code></td>
 <td>
 
-time
+[Timestamp](#timestamp)
 
 </td>
 <td>
@@ -1520,7 +1560,7 @@ A log message
 <td><code>timestamp</code></td>
 <td>
 
-time
+[Timestamp](#timestamp)
 
 </td>
 <td>
@@ -1853,7 +1893,7 @@ A collection of N-dimensional points, which may contain additional fields with i
 <td><code>timestamp</code></td>
 <td>
 
-time
+[Timestamp](#timestamp)
 
 </td>
 <td>
@@ -1943,7 +1983,7 @@ An array of points on a 2D image
 <td><code>timestamp</code></td>
 <td>
 
-time
+[Timestamp](#timestamp)
 
 </td>
 <td>
@@ -2085,7 +2125,7 @@ A timestamped pose for an object or reference frame in 3D space
 <td><code>timestamp</code></td>
 <td>
 
-time
+[Timestamp](#timestamp)
 
 </td>
 <td>
@@ -2136,7 +2176,7 @@ An array of timestamped poses for an object or reference frame in 3D space
 <td><code>timestamp</code></td>
 <td>
 
-time
+[Timestamp](#timestamp)
 
 </td>
 <td>
@@ -2251,7 +2291,7 @@ A single block of an audio bitstream
 <td><code>timestamp</code></td>
 <td>
 
-time
+[Timestamp](#timestamp)
 
 </td>
 <td>
@@ -2328,7 +2368,7 @@ A raw image
 <td><code>timestamp</code></td>
 <td>
 
-time
+[Timestamp](#timestamp)
 
 </td>
 <td>
@@ -2484,7 +2524,7 @@ A visual element in a 3D scene. An entity may be composed of multiple primitives
 <td><code>timestamp</code></td>
 <td>
 
-time
+[Timestamp](#timestamp)
 
 </td>
 <td>
@@ -2523,7 +2563,7 @@ Identifier for the entity. A entity will replace any prior entity on the same to
 <td><code>lifetime</code></td>
 <td>
 
-duration
+[Duration](#duration)
 
 </td>
 <td>
@@ -2678,7 +2718,7 @@ Command to remove previously published entities
 <td><code>timestamp</code></td>
 <td>
 
-time
+[Timestamp](#timestamp)
 
 </td>
 <td>
@@ -2818,7 +2858,7 @@ A text label on a 2D image
 <td><code>timestamp</code></td>
 <td>
 
-time
+[Timestamp](#timestamp)
 
 </td>
 <td>
@@ -2980,6 +3020,44 @@ string
 <td>
 
 Text
+
+</td>
+</tr>
+</table>
+
+## Timestamp
+
+A timestamp composed of seconds and nanoseconds
+
+<table>
+  <tr>
+    <th>field</th>
+    <th>type</th>
+    <th>description</th>
+  </tr>
+<tr>
+<td><code>sec</code></td>
+<td>
+
+uint32
+
+</td>
+<td>
+
+The number of seconds since a user-defined epoch
+
+</td>
+</tr>
+<tr>
+<td><code>nsec</code></td>
+<td>
+
+uint32
+
+</td>
+<td>
+
+The number of nanoseconds since the sec value
 
 </td>
 </tr>

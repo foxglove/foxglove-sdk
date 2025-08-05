@@ -2188,8 +2188,6 @@ impl From<Vector3> for foxglove::schemas::Vector3 {
 pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     let module = PyModule::new(parent_module.py(), "schemas")?;
 
-    module.add_class::<Duration>()?;
-    module.add_class::<Timestamp>()?;
     module.add_class::<LinePrimitiveLineType>()?;
     module.add_class::<LogLevel>()?;
     module.add_class::<SceneEntityDeletionType>()?;
@@ -2204,6 +2202,7 @@ pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<CompressedVideo>()?;
     module.add_class::<CylinderPrimitive>()?;
     module.add_class::<CubePrimitive>()?;
+    module.add_class::<Duration>()?;
     module.add_class::<FrameTransform>()?;
     module.add_class::<FrameTransforms>()?;
     module.add_class::<GeoJson>()?;
@@ -2232,6 +2231,7 @@ pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<SpherePrimitive>()?;
     module.add_class::<TextAnnotation>()?;
     module.add_class::<TextPrimitive>()?;
+    module.add_class::<Timestamp>()?;
     module.add_class::<TriangleListPrimitive>()?;
     module.add_class::<Vector2>()?;
     module.add_class::<Vector3>()?;
