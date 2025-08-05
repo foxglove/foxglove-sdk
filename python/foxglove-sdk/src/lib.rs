@@ -94,7 +94,7 @@ impl BaseChannel {
     fn log(&self, msg: &[u8], log_time: Option<u64>, sink_id: Option<u64>) -> PyResult<()> {
         let metadata = PartialMetadata { log_time };
         let sink_id = sink_id.and_then(NonZeroU64::new).map(foxglove::SinkId::new);
-        self.0.log_with_meta(msg, metadata, sink_id);
+        self.0.log_with_meta_to_sink(msg, metadata, sink_id);
         Ok(())
     }
 
