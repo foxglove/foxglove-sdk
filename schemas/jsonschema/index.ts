@@ -1779,7 +1779,7 @@ export const LocationFixes = {
           }
         }
       },
-      "description": "One or more location fixes"
+      "description": "An array of location fixes"
     }
   }
 };

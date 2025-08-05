@@ -1825,7 +1825,7 @@ pub extern "C" fn foxglove_channel_log_location_fix(
 /// A group of LocationFix messages
 #[repr(C)]
 pub struct LocationFixes {
-    /// One or more location fixes
+    /// An array of location fixes
     pub fixes: *const LocationFix,
     pub fixes_count: usize,
 }

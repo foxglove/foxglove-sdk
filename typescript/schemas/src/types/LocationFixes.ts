@@ -5,6 +5,6 @@ import { LocationFix } from "./LocationFix";
 
 /** A group of LocationFix messages */
 export type LocationFixes = {
-  /** One or more location fixes */
+  /** An array of location fixes */
   fixes: LocationFix[];
 };

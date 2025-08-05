@@ -1052,7 +1052,7 @@ impl From<LocationFix> for foxglove::schemas::LocationFix {
 
 /// A group of LocationFix messages
 ///
-/// :param fixes: One or more location fixes
+/// :param fixes: An array of location fixes
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/location-fixes
 #[pyclass(module = "foxglove.schemas")]

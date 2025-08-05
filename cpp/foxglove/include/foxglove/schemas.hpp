@@ -641,7 +641,7 @@ struct LocationFix {
 
 /// @brief A group of LocationFix messages
 struct LocationFixes {
-  /// @brief One or more location fixes
+  /// @brief An array of location fixes
   std::vector<LocationFix> fixes;
 };
 

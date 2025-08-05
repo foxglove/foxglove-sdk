@@ -1387,7 +1387,7 @@ typedef struct foxglove_location_fix {
  */
 typedef struct foxglove_location_fixes {
   /**
-   * One or more location fixes
+   * An array of location fixes
    */
   const struct foxglove_location_fix *fixes;
   size_t fixes_count;

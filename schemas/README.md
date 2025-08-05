@@ -1539,7 +1539,7 @@ A group of LocationFix messages
 </td>
 <td>
 
-One or more location fixes
+An array of location fixes
 
 </td>
 </tr>

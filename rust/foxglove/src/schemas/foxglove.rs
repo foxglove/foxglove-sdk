@@ -518,7 +518,7 @@ pub mod location_fix {
 /// <https://docs.foxglove.dev/docs/visualization/message-schemas/location-fixes>
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct LocationFixes {
-    /// One or more location fixes
+    /// An array of location fixes
     #[prost(message, repeated, tag = "1")]
     pub fixes: ::prost::alloc::vec::Vec<LocationFix>,
 }
