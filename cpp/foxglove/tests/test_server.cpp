@@ -102,6 +102,30 @@ public:
     return payload;
   }
 
+  template<typename Predicate>
+  std::optional<std::string> filterRecv(
+    Predicate predicate, std::chrono::milliseconds timeout = std::chrono::milliseconds(500)
+  ) {
+    std::unique_lock lock{mutex_};
+    auto start_time = std::chrono::steady_clock::now();
+
+    constexpr std::chrono::milliseconds single_message_timeout = std::chrono::milliseconds(100);
+
+    while (std::chrono::steady_clock::now() - start_time < timeout) {
+      auto wait_result = cv_.wait_for(lock, single_message_timeout, [this] {
+        return !rx_queue_.empty();
+      });
+      if (wait_result) {
+        std::string payload = rx_queue_.front();
+        rx_queue_.pop();
+        if (predicate(payload)) {
+          return payload;
+        }
+      }
+    }
+    return std::nullopt;
+  }
+
   void send(std::string const& payload) {
     std::error_code ec;
     client_.send(connection_, payload, websocketpp::frame::opcode::text, ec);
@@ -1240,4 +1264,118 @@ TEST_CASE("Publish status") {
   REQUIRE(parsed == expected);
 
   REQUIRE(server.stop() == foxglove::FoxgloveError::Ok);
+}
+
+TEST_CASE("Log message to websocket sinks") {
+  std::mutex mutex;
+  std::condition_variable cv;
+
+  auto context = foxglove::Context::create();
+
+  std::vector<uint64_t> client_sink_ids;
+  auto channel_result = foxglove::RawChannel::create("test", "json", std::nullopt, context);
+  REQUIRE(channel_result.has_value());
+
+  foxglove::RawChannel channel = std::move(channel_result.value());
+
+  foxglove::WebSocketServerCallbacks cb;
+  cb.onSubscribe = [&](uint64_t subscribed_channel_id, const foxglove::ClientMetadata& metadata) {
+    std::scoped_lock lock{mutex};
+    if (subscribed_channel_id == channel.id() && metadata.sink_id.has_value()) {
+      client_sink_ids.push_back(metadata.sink_id.value());
+    }
+    cv.notify_one();
+  };
+
+  auto server = startServer(context, foxglove::WebSocketServerCapabilities(0), std::move(cb));
+
+  // Set up a few clients and connect them
+  constexpr size_t num_clients = 3;
+  std::vector<std::unique_ptr<WebSocketClient>> clients;
+  for (size_t i = 0; i < num_clients; ++i) {
+    clients.emplace_back(std::make_unique<WebSocketClient>());
+    clients.back()->start(server.port());
+    clients.back()->waitForConnection();
+  }
+
+  // Flush the serverInfo and advertise messages from each client
+  for (auto& client : clients) {
+    auto server_info = client->filterRecv([](const std::string& payload) {
+      auto parsed = Json::parse(payload);
+      return parsed.contains("op") && parsed["op"] == "serverInfo";
+    });
+    REQUIRE(server_info.has_value());
+
+    auto advertise_response = client->filterRecv([](const std::string& payload) {
+      auto parsed = Json::parse(payload);
+      return parsed.contains("op") && parsed["op"] == "advertise";
+    });
+    REQUIRE(advertise_response.has_value());
+  }
+
+  // Subscribe clients to the channel
+  uint64_t subscription_id = 100;
+  for (auto& client : clients) {
+    client->send(
+      R"({
+      "op": "subscribe",
+      "subscriptions": [{"id": )" +
+      std::to_string(subscription_id) + R"(, "channelId": )" + std::to_string(channel.id()) +
+      R"(}]})"
+    );
+    subscription_id++;
+  }
+
+  // Wait for subscriptions to set up
+  {
+    std::unique_lock lock{mutex};
+    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1), [&] {
+      return client_sink_ids.size() == num_clients;
+    });
+    REQUIRE(wait_result);
+  }
+
+  uint64_t clients_received_message = 0;
+  std::string message = R"({"data": "foxglove"})";
+  auto messageDataPredicate = [](const std::string& payload) {
+    // Only count messages that start with opcode 1 (MessageData)
+    return payload[0] == '\x01';
+  };
+
+  SECTION("Log message to a specific sink") {
+    uint64_t target_sink_id = client_sink_ids[0];
+
+    // Log message to channel but target only a single client
+    channel.log(
+      reinterpret_cast<const std::byte*>(message.data()),
+      message.size(),
+      std::nullopt,
+      target_sink_id
+    );
+
+    for (auto& client : clients) {
+      auto message_response = client->filterRecv(messageDataPredicate);
+
+      if (message_response.has_value()) {
+        ++clients_received_message;
+      }
+    }
+
+    REQUIRE(clients_received_message == 1);
+  }
+
+  SECTION("Log message to all sinks") {
+    // Log message to channel and target all sinks
+    channel.log(reinterpret_cast<const std::byte*>(message.data()), message.size());
+
+    for (auto& client : clients) {
+      auto message_response = client->filterRecv(messageDataPredicate);
+
+      if (message_response.has_value()) {
+        ++clients_received_message;
+      }
+    }
+
+    REQUIRE(clients_received_message == num_clients);
+  }
 }
