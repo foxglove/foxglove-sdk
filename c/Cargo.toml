@@ -18,6 +18,7 @@ env_logger = "0.11.5"
 foxglove = { path = "../rust/foxglove", default-features = false, features = [
   "live_visualization",
   "lz4",
+  "native-tls",
   "zstd",
 ] }
 log.workspace = true

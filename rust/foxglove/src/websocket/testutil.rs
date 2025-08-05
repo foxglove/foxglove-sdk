@@ -2,11 +2,13 @@ use std::time::Duration;
 
 use futures_util::{SinkExt, StreamExt};
 use tokio::net::TcpStream;
-use tokio_native_tls::native_tls;
 use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 use tokio_tungstenite::tungstenite::http::HeaderValue;
 use tokio_tungstenite::tungstenite::{self, Message};
 use tokio_tungstenite::{MaybeTlsStream, WebSocketStream};
+
+#[cfg(feature = "native-tls")]
+use tokio_native_tls::native_tls;
 
 use super::handshake::SUBPROTOCOL;
 use super::ws_protocol::server::ServerMessage;
@@ -34,6 +36,7 @@ impl WebSocketClient {
         Self::do_connect(addr, false).await
     }
 
+    #[cfg(feature = "native-tls")]
     pub async fn connect_secure(addr: impl std::fmt::Display) -> Self {
         Self::do_connect(addr, true).await
     }
@@ -50,17 +53,29 @@ impl WebSocketClient {
         );
 
         let (stream, response) = if use_tls {
-            // For tests, ignore TLS errors related to self-signed certs
-            let connector = native_tls::TlsConnector::builder()
-                .danger_accept_invalid_certs(true)
-                .build()
-                .expect("Failed to build TLS connector");
+            #[cfg(feature = "native-tls")]
+            {
+                // For tests, ignore TLS errors related to self-signed certs
+                let connector = native_tls::TlsConnector::builder()
+                    .danger_accept_invalid_certs(true)
+                    .build()
+                    .expect("Failed to build TLS connector");
 
-            let connector = tokio_tungstenite::Connector::NativeTls(connector);
+                let connector = tokio_tungstenite::Connector::NativeTls(connector);
 
-            tokio_tungstenite::connect_async_tls_with_config(request, None, false, Some(connector))
+                tokio_tungstenite::connect_async_tls_with_config(
+                    request,
+                    None,
+                    false,
+                    Some(connector),
+                )
                 .await
                 .expect("Failed to connect (TLS)")
+            }
+            #[cfg(not(feature = "native-tls"))]
+            {
+                unimplemented!()
+            }
         } else {
             tokio_tungstenite::connect_async(request)
                 .await

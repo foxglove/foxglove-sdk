@@ -1,6 +1,7 @@
 use assert_matches::assert_matches;
 use bytes::{BufMut, Bytes, BytesMut};
 use futures_util::FutureExt;
+#[cfg(feature = "native-tls")]
 use rcgen::{CertificateParams, KeyPair, PKCS_RSA_SHA256};
 use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
@@ -32,6 +33,7 @@ use crate::websocket::service::{CallId, Service, ServiceSchema};
 use crate::websocket::{
     BlockingAssetHandlerFn, Capability, ClientChannelId, ConnectionGraph, Parameter, Server,
 };
+#[cfg(feature = "native-tls")]
 use crate::websocket_server::TlsIdentity;
 use crate::{ChannelBuilder, Context, FoxgloveError, PartialMetadata, RawChannel, Schema};
 
@@ -104,6 +106,7 @@ async fn test_client_connect() {
 }
 
 #[tokio::test]
+#[cfg(feature = "native-tls")]
 async fn test_secure_client_connect() {
     let ctx = Context::new();
     let pem_str = r#"-----BEGIN PRIVATE KEY-----
@@ -164,6 +167,7 @@ YsBMf7FqiVkT1kUr8bV6kkUJRw==
     let _ = server.stop();
 }
 
+#[cfg(feature = "native-tls")]
 #[tokio::test]
 async fn test_invalid_tls_config() {
     let ctx = Context::new();
