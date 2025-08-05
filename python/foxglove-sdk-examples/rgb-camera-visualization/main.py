@@ -1,5 +1,4 @@
 import argparse
-import time
 from typing import Optional
 
 import cv2
@@ -109,7 +108,6 @@ def main():
         print("Starting camera feed... Press Ctrl+C to stop.")
 
         while True:
-
             frame = camera.read_frame()
             if frame is None:
                 print("Failed to read frame from camera")
@@ -117,8 +115,6 @@ def main():
 
             img_msg = create_raw_image_message(frame)
             image_channel.log(img_msg)
-
-            time.sleep(0.033)
 
     except KeyboardInterrupt:
         print("\nShutting down camera visualization...")
