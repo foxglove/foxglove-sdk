@@ -1385,7 +1385,7 @@ const LocationFixes: FoxgloveMessageSchema = {
       name: "fixes",
       type: { type: "nested", schema: LocationFix },
       array: true,
-      description: "One or more location fixes",
+      description: "An array of location fixes",
     },
   ],
 };
