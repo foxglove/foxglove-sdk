@@ -1452,6 +1452,7 @@ pub extern "C" fn foxglove_channel_log_grid3(
     channel: Option<&FoxgloveChannel>,
     msg: Option<&Grid3>,
     log_time: Option<&u64>,
+    sink_id: FoxgloveSinkId,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
@@ -1459,7 +1460,7 @@ pub extern "C" fn foxglove_channel_log_grid3(
     match unsafe { Grid3::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
             // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
-            log_msg_to_channel(channel, &*msg, log_time)
+            log_msg_to_channel(channel, &*msg, log_time, sink_id)
         }
         Err(e) => {
             tracing::error!("Grid3: {}", e);

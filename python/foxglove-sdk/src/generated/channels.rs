@@ -1446,10 +1446,13 @@ impl Grid3Channel {
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
     ///     message was recorded. Usually this is the time log() is called. If omitted, the
     ///     current time is used.
-    #[pyo3(signature = (msg, *, log_time=None))]
-    fn log(&self, msg: &schemas::Grid3, log_time: Option<u64>) {
+    /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
+    #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
+    fn log(&self, msg: &schemas::Grid3, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        self.0.log_with_meta(&msg.0, metadata);
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
+
+        self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
 
     fn __repr__(&self) -> String {

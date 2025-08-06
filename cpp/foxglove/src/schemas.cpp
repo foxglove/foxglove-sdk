@@ -411,13 +411,15 @@ FoxgloveResult<Grid3Channel> Grid3Channel::create(
   return Grid3Channel(ChannelUniquePtr(channel));
 }
 
-FoxgloveError Grid3Channel::log(const Grid3& msg, std::optional<uint64_t> log_time) noexcept {
+FoxgloveError Grid3Channel::log(
+  const Grid3& msg, std::optional<uint64_t> log_time, std::optional<uint64_t> sink_id
+) noexcept {
   Arena arena;
   foxglove_grid3 c_msg;
   grid3ToC(c_msg, msg, arena);
-  return FoxgloveError(
-    foxglove_channel_log_grid3(impl_.get(), &c_msg, log_time ? &*log_time : nullptr)
-  );
+  return FoxgloveError(foxglove_channel_log_grid3(
+    impl_.get(), &c_msg, log_time ? &*log_time : nullptr, sink_id ? *sink_id : 0
+  ));
 }
 
 uint64_t Grid3Channel::id() const noexcept {

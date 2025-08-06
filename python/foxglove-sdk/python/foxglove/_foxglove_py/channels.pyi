@@ -844,6 +844,7 @@ class Grid3Channel:
         message: "Grid3",
         *,
         log_time: int | None = None,
+        sink_id: int | None = None,
     ) -> None:
         """Log a Foxglove Grid3 message on the channel."""
         ...

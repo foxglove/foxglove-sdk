@@ -2553,7 +2553,8 @@ foxglove_error foxglove_channel_create_grid3(struct foxglove_string topic,
  */
 foxglove_error foxglove_channel_log_grid3(const struct foxglove_channel *channel,
                                           const struct foxglove_grid3 *msg,
-                                          const uint64_t *log_time);
+                                          const uint64_t *log_time,
+                                          FoxgloveSinkId sink_id);
 
 /**
  * Create a new typed channel, and return an owned raw channel pointer to it.
