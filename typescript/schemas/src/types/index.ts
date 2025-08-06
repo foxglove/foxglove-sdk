@@ -11,6 +11,7 @@ export * from "./FrameTransform";
 export * from "./FrameTransforms";
 export * from "./GeoJSON";
 export * from "./Grid";
+export * from "./Grid3";
 export * from "./ImageAnnotations";
 export * from "./KeyValuePair";
 export * from "./LaserScan";

@@ -707,7 +707,10 @@ impl From<GeoJson> for foxglove::schemas::GeoJson {
 /// :param row_stride: Number of bytes between rows in `data`
 /// :param cell_stride: Number of bytes between cells within a row in `data`
 /// :param fields: Fields in `data`. `red`, `green`, `blue`, and `alpha` are optional for customizing the grid's color.
-/// :param data: Grid cell data, interpreted using `fields`, in row-major (y-major) order — values fill each row from left to right along the X axis, with rows ordered from top to bottom along the Y axis, starting at the bottom-left corner when viewed from +Z looking towards -Z with identity orientations
+/// :param data: Grid cell data, interpreted using `fields`, in row-major (y-major) order.
+///      For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
+///      y = (i / cell_stride) % row_stride * cell_size.y
+///      x = i % cell_stride * cell_size.x
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/grid
 #[pyclass(module = "foxglove.schemas")]
@@ -765,6 +768,90 @@ impl Grid {
 
 impl From<Grid> for foxglove::schemas::Grid {
     fn from(value: Grid) -> Self {
+        value.0
+    }
+}
+
+/// A 3D grid of data
+///
+/// :param timestamp: Timestamp of grid
+/// :param frame_id: Frame of reference
+/// :param pose: Origin of grid's corner relative to frame of reference; grid is positioned in the x-y plane relative to this origin
+/// :param row_count: Number of grid rows
+/// :param column_count: Number of grid columns
+/// :param cell_size: Size of single grid cell along x, y, and z axes, relative to `pose`
+/// :param slice_stride: Number of bytes between depth slices in `data`
+/// :param row_stride: Number of bytes between rows in `data`
+/// :param cell_stride: Number of bytes between cells within a row in `data`
+/// :param fields: Fields in `data`. `red`, `green`, `blue`, and `alpha` are optional for customizing the grid's color.
+/// :param data: Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order.
+///      For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
+///      z = (i / (row_stride * cell_stride)) % slice_stride * cell_size.z
+///      y = (i / cell_stride) % row_stride * cell_size.y
+///      x = i % cell_stride * cell_size.x
+///
+/// See https://docs.foxglove.dev/docs/visualization/message-schemas/grid3
+#[pyclass(module = "foxglove.schemas")]
+#[derive(Clone)]
+pub(crate) struct Grid3(pub(crate) foxglove::schemas::Grid3);
+#[pymethods]
+impl Grid3 {
+    #[new]
+    #[pyo3(signature = (*, timestamp=None, frame_id="".to_string(), pose=None, row_count=0, column_count=0, cell_size=None, slice_stride=0, row_stride=0, cell_stride=0, fields=vec![], data=None) )]
+    fn new(
+        timestamp: Option<Timestamp>,
+        frame_id: String,
+        pose: Option<Pose>,
+        row_count: u32,
+        column_count: u32,
+        cell_size: Option<Vector3>,
+        slice_stride: u32,
+        row_stride: u32,
+        cell_stride: u32,
+        fields: Vec<PackedElementField>,
+        data: Option<Bound<'_, PyBytes>>,
+    ) -> Self {
+        Self(foxglove::schemas::Grid3 {
+            timestamp: timestamp.map(Into::into),
+            frame_id,
+            pose: pose.map(Into::into),
+            row_count,
+            column_count,
+            cell_size: cell_size.map(Into::into),
+            slice_stride,
+            row_stride,
+            cell_stride,
+            fields: fields.into_iter().map(|x| x.into()).collect(),
+            data: data
+                .map(|x| Bytes::copy_from_slice(x.as_bytes()))
+                .unwrap_or_default(),
+        })
+    }
+    fn __repr__(&self) -> String {
+        format!(
+            "Grid3(timestamp={:?}, frame_id={:?}, pose={:?}, row_count={:?}, column_count={:?}, cell_size={:?}, slice_stride={:?}, row_stride={:?}, cell_stride={:?}, fields={:?}, data={:?})",
+            self.0.timestamp,
+            self.0.frame_id,
+            self.0.pose,
+            self.0.row_count,
+            self.0.column_count,
+            self.0.cell_size,
+            self.0.slice_stride,
+            self.0.row_stride,
+            self.0.cell_stride,
+            self.0.fields,
+            self.0.data,
+        )
+    }
+    /// Returns the Grid3 schema.
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::Grid3::get_schema().unwrap().into()
+    }
+}
+
+impl From<Grid3> for foxglove::schemas::Grid3 {
+    fn from(value: Grid3) -> Self {
         value.0
     }
 }
@@ -2207,6 +2294,7 @@ pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<FrameTransforms>()?;
     module.add_class::<GeoJson>()?;
     module.add_class::<Grid>()?;
+    module.add_class::<Grid3>()?;
     module.add_class::<ImageAnnotations>()?;
     module.add_class::<KeyValuePair>()?;
     module.add_class::<LaserScan>()?;

@@ -444,10 +444,54 @@ struct Grid {
   /// grid's color.
   std::vector<PackedElementField> fields;
 
-  /// @brief Grid cell data, interpreted using `fields`, in row-major (y-major) order — values fill
-  /// each row from left to right along the X axis, with rows ordered from top to bottom along the Y
-  /// axis, starting at the bottom-left corner when viewed from +Z looking towards -Z with identity
-  /// orientations
+  /// @brief Grid cell data, interpreted using `fields`, in row-major (y-major) order.
+  /// @brief  For the data element starting at byte offset i, the coordinates of its corner closest
+  /// to the origin will be:
+  /// @brief  y = (i / cell_stride) % row_stride * cell_size.y
+  /// @brief  x = i % cell_stride * cell_size.x
+  std::vector<std::byte> data;
+};
+
+/// @brief A 3D grid of data
+struct Grid3 {
+  /// @brief Timestamp of grid
+  std::optional<Timestamp> timestamp;
+
+  /// @brief Frame of reference
+  std::string frame_id;
+
+  /// @brief Origin of grid's corner relative to frame of reference; grid is positioned in the x-y
+  /// plane relative to this origin
+  std::optional<Pose> pose;
+
+  /// @brief Number of grid rows
+  uint32_t row_count = 0;
+
+  /// @brief Number of grid columns
+  uint32_t column_count = 0;
+
+  /// @brief Size of single grid cell along x, y, and z axes, relative to `pose`
+  std::optional<Vector3> cell_size;
+
+  /// @brief Number of bytes between depth slices in `data`
+  uint32_t slice_stride = 0;
+
+  /// @brief Number of bytes between rows in `data`
+  uint32_t row_stride = 0;
+
+  /// @brief Number of bytes between cells within a row in `data`
+  uint32_t cell_stride = 0;
+
+  /// @brief Fields in `data`. `red`, `green`, `blue`, and `alpha` are optional for customizing the
+  /// grid's color.
+  std::vector<PackedElementField> fields;
+
+  /// @brief Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order.
+  /// @brief  For the data element starting at byte offset i, the coordinates of its corner closest
+  /// to the origin will be:
+  /// @brief  z = (i / (row_stride * cell_stride)) % slice_stride * cell_size.z
+  /// @brief  y = (i / cell_stride) % row_stride * cell_size.y
+  /// @brief  x = i % cell_stride * cell_size.x
   std::vector<std::byte> data;
 };
 
@@ -1541,6 +1585,49 @@ public:
 
 private:
   explicit GridChannel(ChannelUniquePtr&& channel)
+      : impl_(std::move(channel)) {}
+
+  ChannelUniquePtr impl_;
+};
+
+/// @brief A channel for logging Grid3 messages to a topic.
+///
+/// @note While channels are fully thread-safe, the Grid3 struct is not thread-safe.
+/// Avoid modifying it concurrently or during a log operation.
+class Grid3Channel {
+public:
+  /// @brief Create a new channel.
+  ///
+  /// @param topic The topic name. You should choose a unique topic name per channel for
+  /// compatibility with the Foxglove app.
+  /// @param context The context which associates logs to a sink. If omitted, the default context is
+  /// used.
+  static FoxgloveResult<Grid3Channel> create(
+    const std::string_view& topic, const Context& context = Context()
+  );
+
+  /// @brief Log a message to the channel.
+  ///
+  /// @param msg The Grid3 message to log.
+  /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  FoxgloveError log(const Grid3& msg, std::optional<uint64_t> log_time = std::nullopt) noexcept;
+
+  /// @brief Uniquely identifies a channel in the context of this program.
+  ///
+  /// @return The ID of the channel.
+  [[nodiscard]] uint64_t id() const noexcept;
+
+  Grid3Channel(const Grid3Channel& other) noexcept = delete;
+  Grid3Channel& operator=(const Grid3Channel& other) noexcept = delete;
+  /// @brief Default move constructor.
+  Grid3Channel(Grid3Channel&& other) noexcept = default;
+  /// @brief Default move assignment.
+  Grid3Channel& operator=(Grid3Channel&& other) noexcept = default;
+  /// @brief Default destructor.
+  ~Grid3Channel() = default;
+
+private:
+  explicit Grid3Channel(ChannelUniquePtr&& channel)
       : impl_(std::move(channel)) {}
 
   ChannelUniquePtr impl_;

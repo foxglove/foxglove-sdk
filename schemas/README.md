@@ -25,6 +25,7 @@ All schemas are generated from [schemas.ts](/internal/schemas.ts).
 - [FrameTransforms](#frametransforms)
 - [GeoJSON](#geojson)
 - [Grid](#grid)
+- [Grid3](#grid3)
 - [ImageAnnotations](#imageannotations)
 - [KeyValuePair](#keyvaluepair)
 - [LaserScan](#laserscan)
@@ -1127,7 +1128,169 @@ bytes
 </td>
 <td>
 
-Grid cell data, interpreted using `fields`, in row-major (y-major) order — values fill each row from left to right along the X axis, with rows ordered from top to bottom along the Y axis, starting at the bottom-left corner when viewed from +Z looking towards -Z with identity orientations
+Grid cell data, interpreted using `fields`, in row-major (y-major) order.
+ For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
+ y = (i / cell_stride) % row_stride * cell_size.y
+ x = i % cell_stride * cell_size.x
+
+</td>
+</tr>
+</table>
+
+## Grid3
+
+A 3D grid of data
+
+<table>
+  <tr>
+    <th>field</th>
+    <th>type</th>
+    <th>description</th>
+  </tr>
+<tr>
+<td><code>timestamp</code></td>
+<td>
+
+[Timestamp](#timestamp)
+
+</td>
+<td>
+
+Timestamp of grid
+
+</td>
+</tr>
+<tr>
+<td><code>frame_id</code></td>
+<td>
+
+string
+
+</td>
+<td>
+
+Frame of reference
+
+</td>
+</tr>
+<tr>
+<td><code>pose</code></td>
+<td>
+
+[Pose](#pose)
+
+</td>
+<td>
+
+Origin of grid's corner relative to frame of reference; grid is positioned in the x-y plane relative to this origin
+
+</td>
+</tr>
+<tr>
+<td><code>row_count</code></td>
+<td>
+
+uint32
+
+</td>
+<td>
+
+Number of grid rows
+
+</td>
+</tr>
+<tr>
+<td><code>column_count</code></td>
+<td>
+
+uint32
+
+</td>
+<td>
+
+Number of grid columns
+
+</td>
+</tr>
+<tr>
+<td><code>cell_size</code></td>
+<td>
+
+[Vector3](#vector3)
+
+</td>
+<td>
+
+Size of single grid cell along x, y, and z axes, relative to `pose`
+
+</td>
+</tr>
+<tr>
+<td><code>slice_stride</code></td>
+<td>
+
+uint32
+
+</td>
+<td>
+
+Number of bytes between depth slices in `data`
+
+</td>
+</tr>
+<tr>
+<td><code>row_stride</code></td>
+<td>
+
+uint32
+
+</td>
+<td>
+
+Number of bytes between rows in `data`
+
+</td>
+</tr>
+<tr>
+<td><code>cell_stride</code></td>
+<td>
+
+uint32
+
+</td>
+<td>
+
+Number of bytes between cells within a row in `data`
+
+</td>
+</tr>
+<tr>
+<td><code>fields</code></td>
+<td>
+
+[PackedElementField](#packedelementfield)[]
+
+</td>
+<td>
+
+Fields in `data`. `red`, `green`, `blue`, and `alpha` are optional for customizing the grid's color.
+
+</td>
+</tr>
+<tr>
+<td><code>data</code></td>
+<td>
+
+bytes
+
+</td>
+<td>
+
+Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order.
+ For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
+ z = (i / (row_stride * cell_stride)) % slice_stride * cell_size.z
+ y = (i / cell_stride) % row_stride * cell_size.y
+ x = i % cell_stride * cell_size.x
 
 </td>
 </tr>

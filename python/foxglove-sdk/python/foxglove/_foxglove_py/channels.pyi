@@ -15,6 +15,7 @@ from .schemas import (
     FrameTransforms,
     GeoJson,
     Grid,
+    Grid3,
     ImageAnnotations,
     KeyValuePair,
     LaserScan,
@@ -768,6 +769,72 @@ class GeoJsonChannel:
         log_time: int | None = None,
     ) -> None:
         """Log a Foxglove GeoJson message on the channel."""
+        ...
+
+class Grid3Channel:
+    """
+    A channel for logging Grid3 messages
+
+    You should choose a unique topic name per channel.
+    """
+
+    def __new__(
+        cls,
+        topic: str,
+        *,
+        metadata: Optional[Dict[str, str]] = None,
+        context: Optional["Context"] = None,
+    ) -> "Grid3Channel": ...
+    def id(self) -> int:
+        """The unique ID of the channel."""
+        ...
+
+    def topic(self) -> str:
+        """The topic name of the channel."""
+        ...
+
+    @property
+    def message_encoding(self) -> str:
+        """The message encoding for the channel"""
+        ...
+
+    def metadata(self) -> Dict[str, str]:
+        """
+        Returns a copy of the channel's metadata.
+
+        Note that changes made to the returned dictionary will not be applied to
+        the channel's metadata.
+        """
+        ...
+
+    def schema(self) -> Optional[Schema]:
+        """
+        Returns a copy of the channel's schema.
+
+        Note that changes made to the returned object will not be applied to
+        the channel's schema.
+        """
+        ...
+
+    def schema_name(self) -> Optional[str]:
+        """The name of the schema for the channel."""
+        ...
+
+    def has_sinks(self) -> bool:
+        """Returns true if at least one sink is subscribed to this channel"""
+        ...
+
+    def close(self) -> None:
+        """Close the channel."""
+        ...
+
+    def log(
+        self,
+        message: "Grid3",
+        *,
+        log_time: int | None = None,
+    ) -> None:
+        """Log a Foxglove Grid3 message on the channel."""
         ...
 
 class GridChannel:

@@ -4,10 +4,10 @@
 import { PackedElementField } from "./PackedElementField";
 import { Pose } from "./Pose";
 import { Time } from "./Time";
-import { Vector2 } from "./Vector2";
+import { Vector3 } from "./Vector3";
 
-/** A 2D grid of data */
-export type Grid = {
+/** A 3D grid of data */
+export type Grid3 = {
   /** Timestamp of grid */
   timestamp: Time;
 
@@ -17,11 +17,17 @@ export type Grid = {
   /** Origin of grid's corner relative to frame of reference; grid is positioned in the x-y plane relative to this origin */
   pose: Pose;
 
+  /** Number of grid rows */
+  row_count: number;
+
   /** Number of grid columns */
   column_count: number;
 
-  /** Size of single grid cell along x and y axes, relative to `pose` */
-  cell_size: Vector2;
+  /** Size of single grid cell along x, y, and z axes, relative to `pose` */
+  cell_size: Vector3;
+
+  /** Number of bytes between depth slices in `data` */
+  slice_stride: number;
 
   /** Number of bytes between rows in `data` */
   row_stride: number;
@@ -33,8 +39,9 @@ export type Grid = {
   fields: PackedElementField[];
 
   /**
-   * Grid cell data, interpreted using `fields`, in row-major (y-major) order.
+   * Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order.
    *  For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
+   *  z = (i / (row_stride * cell_stride)) % slice_stride * cell_size.z
    *  y = (i / cell_stride) % row_stride * cell_size.y
    *  x = i % cell_stride * cell_size.x
    */

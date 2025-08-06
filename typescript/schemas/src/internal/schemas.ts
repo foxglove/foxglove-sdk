@@ -1222,7 +1222,74 @@ const Grid: FoxgloveMessageSchema = {
       name: "data",
       type: { type: "primitive", name: "bytes" },
       description:
-        "Grid cell data, interpreted using `fields`, in row-major (y-major) order — values fill each row from left to right along the X axis, with rows ordered from top to bottom along the Y axis, starting at the bottom-left corner when viewed from +Z looking towards -Z with identity orientations",
+        "Grid cell data, interpreted using `fields`, in row-major (y-major) order.\n For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:\n y = (i / cell_stride) % row_stride * cell_size.y\n x = i % cell_stride * cell_size.x",
+    },
+  ],
+};
+
+const Grid3: FoxgloveMessageSchema = {
+  type: "message",
+  name: "Grid3",
+  description: "A 3D grid of data",
+  fields: [
+    {
+      name: "timestamp",
+      type: { type: "nested", schema: Timestamp },
+      description: "Timestamp of grid",
+    },
+    {
+      name: "frame_id",
+      type: { type: "primitive", name: "string" },
+      description: "Frame of reference",
+    },
+    {
+      name: "pose",
+      type: { type: "nested", schema: Pose },
+      description:
+        "Origin of grid's corner relative to frame of reference; grid is positioned in the x-y plane relative to this origin",
+    },
+    {
+      name: "row_count",
+      type: { type: "primitive", name: "uint32" },
+      description: "Number of grid rows",
+    },
+    {
+      name: "column_count",
+      type: { type: "primitive", name: "uint32" },
+      description: "Number of grid columns",
+    },
+    {
+      name: "cell_size",
+      type: { type: "nested", schema: Vector3 },
+      description: "Size of single grid cell along x, y, and z axes, relative to `pose`",
+    },
+    {
+      name: "slice_stride",
+      type: { type: "primitive", name: "uint32" },
+      description: "Number of bytes between depth slices in `data`",
+    },
+    {
+      name: "row_stride",
+      type: { type: "primitive", name: "uint32" },
+      description: "Number of bytes between rows in `data`",
+    },
+    {
+      name: "cell_stride",
+      type: { type: "primitive", name: "uint32" },
+      description: "Number of bytes between cells within a row in `data`",
+    },
+    {
+      name: "fields",
+      type: { type: "nested", schema: PackedElementField },
+      array: true,
+      description:
+        "Fields in `data`. `red`, `green`, `blue`, and `alpha` are optional for customizing the grid's color.",
+    },
+    {
+      name: "data",
+      type: { type: "primitive", name: "bytes" },
+      description:
+        "Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order.\n For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:\n z = (i / (row_stride * cell_stride)) % slice_stride * cell_size.z\n y = (i / cell_stride) % row_stride * cell_size.y\n x = i % cell_stride * cell_size.x",
     },
   ],
 };
@@ -1626,6 +1693,7 @@ export const foxgloveMessageSchemas = {
   FrameTransforms,
   GeoJSON,
   Grid,
+  Grid3,
   ImageAnnotations,
   KeyValuePair,
   LaserScan,

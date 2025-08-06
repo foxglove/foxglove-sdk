@@ -1225,7 +1225,10 @@ pub struct Grid {
     pub fields: *const PackedElementField,
     pub fields_count: usize,
 
-    /// Grid cell data, interpreted using `fields`, in row-major (y-major) order — values fill each row from left to right along the X axis, with rows ordered from top to bottom along the Y axis, starting at the bottom-left corner when viewed from +Z looking towards -Z with identity orientations
+    /// Grid cell data, interpreted using `fields`, in row-major (y-major) order.
+    ///  For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
+    ///  y = (i / cell_stride) % row_stride * cell_size.y
+    ///  x = i % cell_stride * cell_size.x
     pub data: *const c_uchar,
     pub data_len: usize,
 }
@@ -1314,6 +1317,140 @@ pub extern "C" fn foxglove_channel_log_grid(
         }
         Err(e) => {
             tracing::error!("Grid: {}", e);
+            e.into()
+        }
+    }
+}
+
+/// A 3D grid of data
+#[repr(C)]
+pub struct Grid3 {
+    /// Timestamp of grid
+    pub timestamp: *const FoxgloveTimestamp,
+
+    /// Frame of reference
+    pub frame_id: FoxgloveString,
+
+    /// Origin of grid's corner relative to frame of reference; grid is positioned in the x-y plane relative to this origin
+    pub pose: *const Pose,
+
+    /// Number of grid rows
+    pub row_count: u32,
+
+    /// Number of grid columns
+    pub column_count: u32,
+
+    /// Size of single grid cell along x, y, and z axes, relative to `pose`
+    pub cell_size: *const Vector3,
+
+    /// Number of bytes between depth slices in `data`
+    pub slice_stride: u32,
+
+    /// Number of bytes between rows in `data`
+    pub row_stride: u32,
+
+    /// Number of bytes between cells within a row in `data`
+    pub cell_stride: u32,
+
+    /// Fields in `data`. `red`, `green`, `blue`, and `alpha` are optional for customizing the grid's color.
+    pub fields: *const PackedElementField,
+    pub fields_count: usize,
+
+    /// Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order.
+    ///  For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
+    ///  z = (i / (row_stride * cell_stride)) % slice_stride * cell_size.z
+    ///  y = (i / cell_stride) % row_stride * cell_size.y
+    ///  x = i % cell_stride * cell_size.x
+    pub data: *const c_uchar,
+    pub data_len: usize,
+}
+
+impl Grid3 {
+    /// Create a new typed channel, and return an owned raw channel pointer to it.
+    ///
+    /// # Safety
+    /// We're trusting the caller that the channel will only be used with this type T.
+    #[unsafe(no_mangle)]
+    pub unsafe extern "C" fn foxglove_channel_create_grid3(
+        topic: FoxgloveString,
+        context: *const FoxgloveContext,
+        channel: *mut *const FoxgloveChannel,
+    ) -> FoxgloveError {
+        if channel.is_null() {
+            tracing::error!("channel cannot be null");
+            return FoxgloveError::ValueError;
+        }
+        unsafe {
+            let result = do_foxglove_channel_create::<foxglove::schemas::Grid3>(topic, context);
+            result_to_c(result, channel)
+        }
+    }
+}
+
+impl BorrowToNative for Grid3 {
+    type NativeType = foxglove::schemas::Grid3;
+
+    unsafe fn borrow_to_native(
+        &self,
+        #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
+    ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
+        let frame_id = unsafe {
+            string_from_raw(
+                self.frame_id.as_ptr() as *const _,
+                self.frame_id.len(),
+                "frame_id",
+            )?
+        };
+        let pose = unsafe {
+            self.pose
+                .as_ref()
+                .map(|m| m.borrow_to_native(arena.as_mut()))
+        }
+        .transpose()?;
+        let cell_size = unsafe {
+            self.cell_size
+                .as_ref()
+                .map(|m| m.borrow_to_native(arena.as_mut()))
+        }
+        .transpose()?;
+        let fields = unsafe { arena.as_mut().map(self.fields, self.fields_count)? };
+
+        Ok(ManuallyDrop::new(foxglove::schemas::Grid3 {
+            timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
+            frame_id: ManuallyDrop::into_inner(frame_id),
+            pose: pose.map(ManuallyDrop::into_inner),
+            row_count: self.row_count,
+            column_count: self.column_count,
+            cell_size: cell_size.map(ManuallyDrop::into_inner),
+            slice_stride: self.slice_stride,
+            row_stride: self.row_stride,
+            cell_stride: self.cell_stride,
+            fields: ManuallyDrop::into_inner(fields),
+            data: ManuallyDrop::into_inner(unsafe { bytes_from_raw(self.data, self.data_len) }),
+        }))
+    }
+}
+
+/// Log a Grid3 message to a channel.
+///
+/// # Safety
+/// The channel must have been created for this type with foxglove_channel_create_grid3.
+#[unsafe(no_mangle)]
+pub extern "C" fn foxglove_channel_log_grid3(
+    channel: Option<&FoxgloveChannel>,
+    msg: Option<&Grid3>,
+    log_time: Option<&u64>,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { Grid3::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
+            log_msg_to_channel(channel, &*msg, log_time)
+        }
+        Err(e) => {
+            tracing::error!("Grid3: {}", e);
             e.into()
         }
     }
