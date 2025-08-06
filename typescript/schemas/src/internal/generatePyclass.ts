@@ -609,12 +609,11 @@ export function generateChannelClasses(messageSchemas: FoxgloveMessageSchema[]):
 
   const imports = [
     `use crate::{PyContext, PySchema};`,
-    `use foxglove::{Channel, ChannelBuilder, PartialMetadata, SinkId};`,
+    `use foxglove::{Channel, ChannelBuilder, PartialMetadata};`,
     `use pyo3::prelude::*;`,
     `use pyo3::types::PyDict;`,
     `use super::schemas;`,
     `use std::collections::BTreeMap;`,
-    `use std::num::NonZero;`,
   ].join("\n");
 
   const channelModuleRegistration = generateChannelModuleRegistration(schemas);
@@ -709,18 +708,14 @@ impl ${channelClass} {
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
     ///     message was recorded. Usually this is the time log() is called. If omitted, the
     ///     current time is used.
-    /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
-    #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
+    #[pyo3(signature = (msg, *, log_time=None))]
     fn log(
         &self,
         msg: &schemas::${schemaClass},
         log_time: Option<u64>,
-        sink_id: Option<u64>,
     ) {
         let metadata = PartialMetadata{ log_time };
-        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
-
-        self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
+        self.0.log_with_meta(&msg.0, metadata);
     }
 
     fn __repr__(&self) -> String {
@@ -809,7 +804,6 @@ export function generatePyChannelStub(messageSchemas: FoxgloveMessageSchema[]): 
         `        message: "${schemaClass}",`,
         `        *,`,
         `        log_time: int | None = None,`,
-        `        sink_id: int | None = None,`,
         `    ) -> None:`,
         `        """Log a Foxglove ${schemaClass} message on the channel."""`,
         `        ...`,

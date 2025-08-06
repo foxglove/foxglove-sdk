@@ -235,9 +235,3 @@ def test_exposes_unique_channel_ids(new_topic: str) -> None:
     assert ch_1.id() > 0
     assert ch_1.id() < ch_2.id()
     assert ch_2.id() < ch_3.id()
-
-
-def test_log_message_to_specific_sink(new_topic: str) -> None:
-    ctx = Context()
-    ch = Channel(new_topic, context=ctx)
-    ch.log("test", sink_id=1)

@@ -1694,7 +1694,6 @@ pub(crate) fn log_msg_to_channel<T: foxglove::Encode>(
     channel: Option<&FoxgloveChannel>,
     msg: &T,
     log_time: Option<&u64>,
-    sink_id: FoxgloveSinkId,
 ) -> FoxgloveError {
     let Some(channel) = channel else {
         tracing::error!("log called with null channel");
@@ -1706,15 +1705,11 @@ pub(crate) fn log_msg_to_channel<T: foxglove::Encode>(
         // We can safely create a Channel from any Arc<RawChannel>
         foxglove::Channel::<T>::from_raw_channel(channel_arc)
     });
-
-    let sink_id = std::num::NonZeroU64::new(sink_id).map(foxglove::SinkId::new);
-
-    channel.log_with_meta_to_sink(
+    channel.log_with_meta(
         msg,
         foxglove::PartialMetadata {
             log_time: log_time.copied(),
         },
-        sink_id,
     );
     FoxgloveError::Ok
 }

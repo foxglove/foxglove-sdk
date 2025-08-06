@@ -8,7 +8,7 @@ use crate::arena::{Arena, BorrowToNative};
 use crate::util::{bytes_from_raw, string_from_raw, vec_from_raw};
 use crate::{
     do_foxglove_channel_create, log_msg_to_channel, result_to_c, FoxgloveChannel, FoxgloveContext,
-    FoxgloveDuration, FoxgloveError, FoxgloveSinkId, FoxgloveString, FoxgloveTimestamp,
+    FoxgloveDuration, FoxgloveError, FoxgloveString, FoxgloveTimestamp,
 };
 
 #[derive(Clone, Copy, Debug)]
@@ -155,7 +155,6 @@ pub extern "C" fn foxglove_channel_log_arrow_primitive(
     channel: Option<&FoxgloveChannel>,
     msg: Option<&ArrowPrimitive>,
     log_time: Option<&u64>,
-    sink_id: FoxgloveSinkId,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
@@ -163,7 +162,7 @@ pub extern "C" fn foxglove_channel_log_arrow_primitive(
     match unsafe { ArrowPrimitive::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
             // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
-            log_msg_to_channel(channel, &*msg, log_time, sink_id)
+            log_msg_to_channel(channel, &*msg, log_time)
         }
         Err(e) => {
             tracing::error!("ArrowPrimitive: {}", e);
@@ -318,7 +317,6 @@ pub extern "C" fn foxglove_channel_log_camera_calibration(
     channel: Option<&FoxgloveChannel>,
     msg: Option<&CameraCalibration>,
     log_time: Option<&u64>,
-    sink_id: FoxgloveSinkId,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
@@ -326,7 +324,7 @@ pub extern "C" fn foxglove_channel_log_camera_calibration(
     match unsafe { CameraCalibration::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
             // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
-            log_msg_to_channel(channel, &*msg, log_time, sink_id)
+            log_msg_to_channel(channel, &*msg, log_time)
         }
         Err(e) => {
             tracing::error!("CameraCalibration: {}", e);
@@ -427,7 +425,6 @@ pub extern "C" fn foxglove_channel_log_circle_annotation(
     channel: Option<&FoxgloveChannel>,
     msg: Option<&CircleAnnotation>,
     log_time: Option<&u64>,
-    sink_id: FoxgloveSinkId,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
@@ -435,7 +432,7 @@ pub extern "C" fn foxglove_channel_log_circle_annotation(
     match unsafe { CircleAnnotation::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
             // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
-            log_msg_to_channel(channel, &*msg, log_time, sink_id)
+            log_msg_to_channel(channel, &*msg, log_time)
         }
         Err(e) => {
             tracing::error!("CircleAnnotation: {}", e);
@@ -507,7 +504,6 @@ pub extern "C" fn foxglove_channel_log_color(
     channel: Option<&FoxgloveChannel>,
     msg: Option<&Color>,
     log_time: Option<&u64>,
-    sink_id: FoxgloveSinkId,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
@@ -515,7 +511,7 @@ pub extern "C" fn foxglove_channel_log_color(
     match unsafe { Color::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
             // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
-            log_msg_to_channel(channel, &*msg, log_time, sink_id)
+            log_msg_to_channel(channel, &*msg, log_time)
         }
         Err(e) => {
             tracing::error!("Color: {}", e);
@@ -606,7 +602,6 @@ pub extern "C" fn foxglove_channel_log_compressed_image(
     channel: Option<&FoxgloveChannel>,
     msg: Option<&CompressedImage>,
     log_time: Option<&u64>,
-    sink_id: FoxgloveSinkId,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
@@ -614,7 +609,7 @@ pub extern "C" fn foxglove_channel_log_compressed_image(
     match unsafe { CompressedImage::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
             // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
-            log_msg_to_channel(channel, &*msg, log_time, sink_id)
+            log_msg_to_channel(channel, &*msg, log_time)
         }
         Err(e) => {
             tracing::error!("CompressedImage: {}", e);
@@ -731,7 +726,6 @@ pub extern "C" fn foxglove_channel_log_compressed_video(
     channel: Option<&FoxgloveChannel>,
     msg: Option<&CompressedVideo>,
     log_time: Option<&u64>,
-    sink_id: FoxgloveSinkId,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
@@ -739,7 +733,7 @@ pub extern "C" fn foxglove_channel_log_compressed_video(
     match unsafe { CompressedVideo::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
             // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
-            log_msg_to_channel(channel, &*msg, log_time, sink_id)
+            log_msg_to_channel(channel, &*msg, log_time)
         }
         Err(e) => {
             tracing::error!("CompressedVideo: {}", e);
@@ -835,7 +829,6 @@ pub extern "C" fn foxglove_channel_log_cylinder_primitive(
     channel: Option<&FoxgloveChannel>,
     msg: Option<&CylinderPrimitive>,
     log_time: Option<&u64>,
-    sink_id: FoxgloveSinkId,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
@@ -843,7 +836,7 @@ pub extern "C" fn foxglove_channel_log_cylinder_primitive(
     match unsafe { CylinderPrimitive::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
             // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
-            log_msg_to_channel(channel, &*msg, log_time, sink_id)
+            log_msg_to_channel(channel, &*msg, log_time)
         }
         Err(e) => {
             tracing::error!("CylinderPrimitive: {}", e);
@@ -931,7 +924,6 @@ pub extern "C" fn foxglove_channel_log_cube_primitive(
     channel: Option<&FoxgloveChannel>,
     msg: Option<&CubePrimitive>,
     log_time: Option<&u64>,
-    sink_id: FoxgloveSinkId,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
@@ -939,7 +931,7 @@ pub extern "C" fn foxglove_channel_log_cube_primitive(
     match unsafe { CubePrimitive::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
             // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
-            log_msg_to_channel(channel, &*msg, log_time, sink_id)
+            log_msg_to_channel(channel, &*msg, log_time)
         }
         Err(e) => {
             tracing::error!("CubePrimitive: {}", e);
@@ -1043,7 +1035,6 @@ pub extern "C" fn foxglove_channel_log_frame_transform(
     channel: Option<&FoxgloveChannel>,
     msg: Option<&FrameTransform>,
     log_time: Option<&u64>,
-    sink_id: FoxgloveSinkId,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
@@ -1051,7 +1042,7 @@ pub extern "C" fn foxglove_channel_log_frame_transform(
     match unsafe { FrameTransform::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
             // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
-            log_msg_to_channel(channel, &*msg, log_time, sink_id)
+            log_msg_to_channel(channel, &*msg, log_time)
         }
         Err(e) => {
             tracing::error!("FrameTransform: {}", e);
@@ -1115,7 +1106,6 @@ pub extern "C" fn foxglove_channel_log_frame_transforms(
     channel: Option<&FoxgloveChannel>,
     msg: Option<&FrameTransforms>,
     log_time: Option<&u64>,
-    sink_id: FoxgloveSinkId,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
@@ -1123,7 +1113,7 @@ pub extern "C" fn foxglove_channel_log_frame_transforms(
     match unsafe { FrameTransforms::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
             // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
-            log_msg_to_channel(channel, &*msg, log_time, sink_id)
+            log_msg_to_channel(channel, &*msg, log_time)
         }
         Err(e) => {
             tracing::error!("FrameTransforms: {}", e);
@@ -1191,7 +1181,6 @@ pub extern "C" fn foxglove_channel_log_geo_json(
     channel: Option<&FoxgloveChannel>,
     msg: Option<&GeoJson>,
     log_time: Option<&u64>,
-    sink_id: FoxgloveSinkId,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
@@ -1199,7 +1188,7 @@ pub extern "C" fn foxglove_channel_log_geo_json(
     match unsafe { GeoJson::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
             // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
-            log_msg_to_channel(channel, &*msg, log_time, sink_id)
+            log_msg_to_channel(channel, &*msg, log_time)
         }
         Err(e) => {
             tracing::error!("GeoJson: {}", e);
@@ -1317,7 +1306,6 @@ pub extern "C" fn foxglove_channel_log_grid(
     channel: Option<&FoxgloveChannel>,
     msg: Option<&Grid>,
     log_time: Option<&u64>,
-    sink_id: FoxgloveSinkId,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
@@ -1325,7 +1313,7 @@ pub extern "C" fn foxglove_channel_log_grid(
     match unsafe { Grid::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
             // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
-            log_msg_to_channel(channel, &*msg, log_time, sink_id)
+            log_msg_to_channel(channel, &*msg, log_time)
         }
         Err(e) => {
             tracing::error!("Grid: {}", e);
@@ -1452,7 +1440,6 @@ pub extern "C" fn foxglove_channel_log_grid3(
     channel: Option<&FoxgloveChannel>,
     msg: Option<&Grid3>,
     log_time: Option<&u64>,
-    sink_id: FoxgloveSinkId,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
@@ -1460,7 +1447,7 @@ pub extern "C" fn foxglove_channel_log_grid3(
     match unsafe { Grid3::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
             // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
-            log_msg_to_channel(channel, &*msg, log_time, sink_id)
+            log_msg_to_channel(channel, &*msg, log_time)
         }
         Err(e) => {
             tracing::error!("Grid3: {}", e);
@@ -1536,7 +1523,6 @@ pub extern "C" fn foxglove_channel_log_image_annotations(
     channel: Option<&FoxgloveChannel>,
     msg: Option<&ImageAnnotations>,
     log_time: Option<&u64>,
-    sink_id: FoxgloveSinkId,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
@@ -1544,7 +1530,7 @@ pub extern "C" fn foxglove_channel_log_image_annotations(
     match unsafe { ImageAnnotations::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
             // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
-            log_msg_to_channel(channel, &*msg, log_time, sink_id)
+            log_msg_to_channel(channel, &*msg, log_time)
         }
         Err(e) => {
             tracing::error!("ImageAnnotations: {}", e);
@@ -1613,7 +1599,6 @@ pub extern "C" fn foxglove_channel_log_key_value_pair(
     channel: Option<&FoxgloveChannel>,
     msg: Option<&KeyValuePair>,
     log_time: Option<&u64>,
-    sink_id: FoxgloveSinkId,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
@@ -1621,7 +1606,7 @@ pub extern "C" fn foxglove_channel_log_key_value_pair(
     match unsafe { KeyValuePair::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
             // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
-            log_msg_to_channel(channel, &*msg, log_time, sink_id)
+            log_msg_to_channel(channel, &*msg, log_time)
         }
         Err(e) => {
             tracing::error!("KeyValuePair: {}", e);
@@ -1725,7 +1710,6 @@ pub extern "C" fn foxglove_channel_log_laser_scan(
     channel: Option<&FoxgloveChannel>,
     msg: Option<&LaserScan>,
     log_time: Option<&u64>,
-    sink_id: FoxgloveSinkId,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
@@ -1733,7 +1717,7 @@ pub extern "C" fn foxglove_channel_log_laser_scan(
     match unsafe { LaserScan::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
             // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
-            log_msg_to_channel(channel, &*msg, log_time, sink_id)
+            log_msg_to_channel(channel, &*msg, log_time)
         }
         Err(e) => {
             tracing::error!("LaserScan: {}", e);
@@ -1844,7 +1828,6 @@ pub extern "C" fn foxglove_channel_log_line_primitive(
     channel: Option<&FoxgloveChannel>,
     msg: Option<&LinePrimitive>,
     log_time: Option<&u64>,
-    sink_id: FoxgloveSinkId,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
@@ -1852,7 +1835,7 @@ pub extern "C" fn foxglove_channel_log_line_primitive(
     match unsafe { LinePrimitive::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
             // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
-            log_msg_to_channel(channel, &*msg, log_time, sink_id)
+            log_msg_to_channel(channel, &*msg, log_time)
         }
         Err(e) => {
             tracing::error!("LinePrimitive: {}", e);
@@ -1950,7 +1933,6 @@ pub extern "C" fn foxglove_channel_log_location_fix(
     channel: Option<&FoxgloveChannel>,
     msg: Option<&LocationFix>,
     log_time: Option<&u64>,
-    sink_id: FoxgloveSinkId,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
@@ -1958,7 +1940,7 @@ pub extern "C" fn foxglove_channel_log_location_fix(
     match unsafe { LocationFix::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
             // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
-            log_msg_to_channel(channel, &*msg, log_time, sink_id)
+            log_msg_to_channel(channel, &*msg, log_time)
         }
         Err(e) => {
             tracing::error!("LocationFix: {}", e);
@@ -2050,7 +2032,6 @@ pub extern "C" fn foxglove_channel_log_log(
     channel: Option<&FoxgloveChannel>,
     msg: Option<&Log>,
     log_time: Option<&u64>,
-    sink_id: FoxgloveSinkId,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
@@ -2058,7 +2039,7 @@ pub extern "C" fn foxglove_channel_log_log(
     match unsafe { Log::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
             // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
-            log_msg_to_channel(channel, &*msg, log_time, sink_id)
+            log_msg_to_channel(channel, &*msg, log_time)
         }
         Err(e) => {
             tracing::error!("Log: {}", e);
@@ -2130,7 +2111,6 @@ pub extern "C" fn foxglove_channel_log_scene_entity_deletion(
     channel: Option<&FoxgloveChannel>,
     msg: Option<&SceneEntityDeletion>,
     log_time: Option<&u64>,
-    sink_id: FoxgloveSinkId,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
@@ -2138,7 +2118,7 @@ pub extern "C" fn foxglove_channel_log_scene_entity_deletion(
     match unsafe { SceneEntityDeletion::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
             // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
-            log_msg_to_channel(channel, &*msg, log_time, sink_id)
+            log_msg_to_channel(channel, &*msg, log_time)
         }
         Err(e) => {
             tracing::error!("SceneEntityDeletion: {}", e);
@@ -2278,7 +2258,6 @@ pub extern "C" fn foxglove_channel_log_scene_entity(
     channel: Option<&FoxgloveChannel>,
     msg: Option<&SceneEntity>,
     log_time: Option<&u64>,
-    sink_id: FoxgloveSinkId,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
@@ -2286,7 +2265,7 @@ pub extern "C" fn foxglove_channel_log_scene_entity(
     match unsafe { SceneEntity::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
             // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
-            log_msg_to_channel(channel, &*msg, log_time, sink_id)
+            log_msg_to_channel(channel, &*msg, log_time)
         }
         Err(e) => {
             tracing::error!("SceneEntity: {}", e);
@@ -2356,7 +2335,6 @@ pub extern "C" fn foxglove_channel_log_scene_update(
     channel: Option<&FoxgloveChannel>,
     msg: Option<&SceneUpdate>,
     log_time: Option<&u64>,
-    sink_id: FoxgloveSinkId,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
@@ -2364,7 +2342,7 @@ pub extern "C" fn foxglove_channel_log_scene_update(
     match unsafe { SceneUpdate::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
             // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
-            log_msg_to_channel(channel, &*msg, log_time, sink_id)
+            log_msg_to_channel(channel, &*msg, log_time)
         }
         Err(e) => {
             tracing::error!("SceneUpdate: {}", e);
@@ -2477,7 +2455,6 @@ pub extern "C" fn foxglove_channel_log_model_primitive(
     channel: Option<&FoxgloveChannel>,
     msg: Option<&ModelPrimitive>,
     log_time: Option<&u64>,
-    sink_id: FoxgloveSinkId,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
@@ -2485,7 +2462,7 @@ pub extern "C" fn foxglove_channel_log_model_primitive(
     match unsafe { ModelPrimitive::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
             // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
-            log_msg_to_channel(channel, &*msg, log_time, sink_id)
+            log_msg_to_channel(channel, &*msg, log_time)
         }
         Err(e) => {
             tracing::error!("ModelPrimitive: {}", e);
@@ -2557,7 +2534,6 @@ pub extern "C" fn foxglove_channel_log_packed_element_field(
     channel: Option<&FoxgloveChannel>,
     msg: Option<&PackedElementField>,
     log_time: Option<&u64>,
-    sink_id: FoxgloveSinkId,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
@@ -2565,7 +2541,7 @@ pub extern "C" fn foxglove_channel_log_packed_element_field(
     match unsafe { PackedElementField::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
             // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
-            log_msg_to_channel(channel, &*msg, log_time, sink_id)
+            log_msg_to_channel(channel, &*msg, log_time)
         }
         Err(e) => {
             tracing::error!("PackedElementField: {}", e);
@@ -2629,7 +2605,6 @@ pub extern "C" fn foxglove_channel_log_point2(
     channel: Option<&FoxgloveChannel>,
     msg: Option<&Point2>,
     log_time: Option<&u64>,
-    sink_id: FoxgloveSinkId,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
@@ -2637,7 +2612,7 @@ pub extern "C" fn foxglove_channel_log_point2(
     match unsafe { Point2::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
             // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
-            log_msg_to_channel(channel, &*msg, log_time, sink_id)
+            log_msg_to_channel(channel, &*msg, log_time)
         }
         Err(e) => {
             tracing::error!("Point2: {}", e);
@@ -2705,7 +2680,6 @@ pub extern "C" fn foxglove_channel_log_point3(
     channel: Option<&FoxgloveChannel>,
     msg: Option<&Point3>,
     log_time: Option<&u64>,
-    sink_id: FoxgloveSinkId,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
@@ -2713,7 +2687,7 @@ pub extern "C" fn foxglove_channel_log_point3(
     match unsafe { Point3::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
             // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
-            log_msg_to_channel(channel, &*msg, log_time, sink_id)
+            log_msg_to_channel(channel, &*msg, log_time)
         }
         Err(e) => {
             tracing::error!("Point3: {}", e);
@@ -2811,7 +2785,6 @@ pub extern "C" fn foxglove_channel_log_point_cloud(
     channel: Option<&FoxgloveChannel>,
     msg: Option<&PointCloud>,
     log_time: Option<&u64>,
-    sink_id: FoxgloveSinkId,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
@@ -2819,7 +2792,7 @@ pub extern "C" fn foxglove_channel_log_point_cloud(
     match unsafe { PointCloud::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
             // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
-            log_msg_to_channel(channel, &*msg, log_time, sink_id)
+            log_msg_to_channel(channel, &*msg, log_time)
         }
         Err(e) => {
             tracing::error!("PointCloud: {}", e);
@@ -2926,7 +2899,6 @@ pub extern "C" fn foxglove_channel_log_points_annotation(
     channel: Option<&FoxgloveChannel>,
     msg: Option<&PointsAnnotation>,
     log_time: Option<&u64>,
-    sink_id: FoxgloveSinkId,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
@@ -2934,7 +2906,7 @@ pub extern "C" fn foxglove_channel_log_points_annotation(
     match unsafe { PointsAnnotation::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
             // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
-            log_msg_to_channel(channel, &*msg, log_time, sink_id)
+            log_msg_to_channel(channel, &*msg, log_time)
         }
         Err(e) => {
             tracing::error!("PointsAnnotation: {}", e);
@@ -3011,7 +2983,6 @@ pub extern "C" fn foxglove_channel_log_pose(
     channel: Option<&FoxgloveChannel>,
     msg: Option<&Pose>,
     log_time: Option<&u64>,
-    sink_id: FoxgloveSinkId,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
@@ -3019,7 +2990,7 @@ pub extern "C" fn foxglove_channel_log_pose(
     match unsafe { Pose::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
             // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
-            log_msg_to_channel(channel, &*msg, log_time, sink_id)
+            log_msg_to_channel(channel, &*msg, log_time)
         }
         Err(e) => {
             tracing::error!("Pose: {}", e);
@@ -3102,7 +3073,6 @@ pub extern "C" fn foxglove_channel_log_pose_in_frame(
     channel: Option<&FoxgloveChannel>,
     msg: Option<&PoseInFrame>,
     log_time: Option<&u64>,
-    sink_id: FoxgloveSinkId,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
@@ -3110,7 +3080,7 @@ pub extern "C" fn foxglove_channel_log_pose_in_frame(
     match unsafe { PoseInFrame::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
             // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
-            log_msg_to_channel(channel, &*msg, log_time, sink_id)
+            log_msg_to_channel(channel, &*msg, log_time)
         }
         Err(e) => {
             tracing::error!("PoseInFrame: {}", e);
@@ -3189,7 +3159,6 @@ pub extern "C" fn foxglove_channel_log_poses_in_frame(
     channel: Option<&FoxgloveChannel>,
     msg: Option<&PosesInFrame>,
     log_time: Option<&u64>,
-    sink_id: FoxgloveSinkId,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
@@ -3197,7 +3166,7 @@ pub extern "C" fn foxglove_channel_log_poses_in_frame(
     match unsafe { PosesInFrame::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
             // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
-            log_msg_to_channel(channel, &*msg, log_time, sink_id)
+            log_msg_to_channel(channel, &*msg, log_time)
         }
         Err(e) => {
             tracing::error!("PosesInFrame: {}", e);
@@ -3270,7 +3239,6 @@ pub extern "C" fn foxglove_channel_log_quaternion(
     channel: Option<&FoxgloveChannel>,
     msg: Option<&Quaternion>,
     log_time: Option<&u64>,
-    sink_id: FoxgloveSinkId,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
@@ -3278,7 +3246,7 @@ pub extern "C" fn foxglove_channel_log_quaternion(
     match unsafe { Quaternion::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
             // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
-            log_msg_to_channel(channel, &*msg, log_time, sink_id)
+            log_msg_to_channel(channel, &*msg, log_time)
         }
         Err(e) => {
             tracing::error!("Quaternion: {}", e);
@@ -3363,7 +3331,6 @@ pub extern "C" fn foxglove_channel_log_raw_audio(
     channel: Option<&FoxgloveChannel>,
     msg: Option<&RawAudio>,
     log_time: Option<&u64>,
-    sink_id: FoxgloveSinkId,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
@@ -3371,7 +3338,7 @@ pub extern "C" fn foxglove_channel_log_raw_audio(
     match unsafe { RawAudio::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
             // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
-            log_msg_to_channel(channel, &*msg, log_time, sink_id)
+            log_msg_to_channel(channel, &*msg, log_time)
         }
         Err(e) => {
             tracing::error!("RawAudio: {}", e);
@@ -3524,7 +3491,6 @@ pub extern "C" fn foxglove_channel_log_raw_image(
     channel: Option<&FoxgloveChannel>,
     msg: Option<&RawImage>,
     log_time: Option<&u64>,
-    sink_id: FoxgloveSinkId,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
@@ -3532,7 +3498,7 @@ pub extern "C" fn foxglove_channel_log_raw_image(
     match unsafe { RawImage::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
             // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
-            log_msg_to_channel(channel, &*msg, log_time, sink_id)
+            log_msg_to_channel(channel, &*msg, log_time)
         }
         Err(e) => {
             tracing::error!("RawImage: {}", e);
@@ -3620,7 +3586,6 @@ pub extern "C" fn foxglove_channel_log_sphere_primitive(
     channel: Option<&FoxgloveChannel>,
     msg: Option<&SpherePrimitive>,
     log_time: Option<&u64>,
-    sink_id: FoxgloveSinkId,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
@@ -3628,7 +3593,7 @@ pub extern "C" fn foxglove_channel_log_sphere_primitive(
     match unsafe { SpherePrimitive::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
             // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
-            log_msg_to_channel(channel, &*msg, log_time, sink_id)
+            log_msg_to_channel(channel, &*msg, log_time)
         }
         Err(e) => {
             tracing::error!("SpherePrimitive: {}", e);
@@ -3731,7 +3696,6 @@ pub extern "C" fn foxglove_channel_log_text_annotation(
     channel: Option<&FoxgloveChannel>,
     msg: Option<&TextAnnotation>,
     log_time: Option<&u64>,
-    sink_id: FoxgloveSinkId,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
@@ -3739,7 +3703,7 @@ pub extern "C" fn foxglove_channel_log_text_annotation(
     match unsafe { TextAnnotation::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
             // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
-            log_msg_to_channel(channel, &*msg, log_time, sink_id)
+            log_msg_to_channel(channel, &*msg, log_time)
         }
         Err(e) => {
             tracing::error!("TextAnnotation: {}", e);
@@ -3835,7 +3799,6 @@ pub extern "C" fn foxglove_channel_log_text_primitive(
     channel: Option<&FoxgloveChannel>,
     msg: Option<&TextPrimitive>,
     log_time: Option<&u64>,
-    sink_id: FoxgloveSinkId,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
@@ -3843,7 +3806,7 @@ pub extern "C" fn foxglove_channel_log_text_primitive(
     match unsafe { TextPrimitive::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
             // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
-            log_msg_to_channel(channel, &*msg, log_time, sink_id)
+            log_msg_to_channel(channel, &*msg, log_time)
         }
         Err(e) => {
             tracing::error!("TextPrimitive: {}", e);
@@ -3945,7 +3908,6 @@ pub extern "C" fn foxglove_channel_log_triangle_list_primitive(
     channel: Option<&FoxgloveChannel>,
     msg: Option<&TriangleListPrimitive>,
     log_time: Option<&u64>,
-    sink_id: FoxgloveSinkId,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
@@ -3953,7 +3915,7 @@ pub extern "C" fn foxglove_channel_log_triangle_list_primitive(
     match unsafe { TriangleListPrimitive::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
             // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
-            log_msg_to_channel(channel, &*msg, log_time, sink_id)
+            log_msg_to_channel(channel, &*msg, log_time)
         }
         Err(e) => {
             tracing::error!("TriangleListPrimitive: {}", e);
@@ -4017,7 +3979,6 @@ pub extern "C" fn foxglove_channel_log_vector2(
     channel: Option<&FoxgloveChannel>,
     msg: Option<&Vector2>,
     log_time: Option<&u64>,
-    sink_id: FoxgloveSinkId,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
@@ -4025,7 +3986,7 @@ pub extern "C" fn foxglove_channel_log_vector2(
     match unsafe { Vector2::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
             // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
-            log_msg_to_channel(channel, &*msg, log_time, sink_id)
+            log_msg_to_channel(channel, &*msg, log_time)
         }
         Err(e) => {
             tracing::error!("Vector2: {}", e);
@@ -4093,7 +4054,6 @@ pub extern "C" fn foxglove_channel_log_vector3(
     channel: Option<&FoxgloveChannel>,
     msg: Option<&Vector3>,
     log_time: Option<&u64>,
-    sink_id: FoxgloveSinkId,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
@@ -4101,7 +4061,7 @@ pub extern "C" fn foxglove_channel_log_vector3(
     match unsafe { Vector3::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
             // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
-            log_msg_to_channel(channel, &*msg, log_time, sink_id)
+            log_msg_to_channel(channel, &*msg, log_time)
         }
         Err(e) => {
             tracing::error!("Vector3: {}", e);

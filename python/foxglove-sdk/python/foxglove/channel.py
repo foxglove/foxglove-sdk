@@ -106,7 +106,6 @@ class Channel:
         msg: Union[JsonMessage, list[Any], bytes, str],
         *,
         log_time: Optional[int] = None,
-        sink_id: Optional[int] = None,
     ) -> None:
         """
         Log a message on the channel.
@@ -122,7 +121,7 @@ class Channel:
             msg = msg.encode("utf-8")
 
         if isinstance(msg, bytes):
-            return self.base.log(msg, log_time, sink_id)
+            return self.base.log(msg, log_time)
 
         raise TypeError(f"Unsupported message type: {type(msg)}")
 
@@ -146,7 +145,6 @@ def log(
     message: Union[JsonMessage, list[Any], bytes, str, _schemas.FoxgloveSchema],
     *,
     log_time: Optional[int] = None,
-    sink_id: Optional[int] = None,
 ) -> None:
     """Log a message on a topic.
 
@@ -192,7 +190,6 @@ def log(
     channel.log(
         cast(Any, message),
         log_time=log_time,
-        sink_id=sink_id,
     )
 
 
