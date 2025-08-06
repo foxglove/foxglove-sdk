@@ -194,6 +194,7 @@ target_link_libraries(foxglove_bridge
 enable_strict_compiler_warnings(foxglove_bridge)
 
 if(BUILD_TESTING)
+  find_package(ament_cmake_google_benchmark REQUIRED)
   find_package(ament_cmake_gtest REQUIRED)
   find_package(ament_lint_auto REQUIRED)
   find_package(OpenSSL REQUIRED)
@@ -217,6 +218,10 @@ if(BUILD_TESTING)
   ament_add_gtest(utils_test tests/utils_test.cpp)
   target_link_libraries(utils_test foxglove_bridge_component)
   enable_strict_compiler_warnings(utils_test)
+
+  ament_add_google_benchmark(bridge_benchmark tests/benchmark/bridge_benchmark.cpp)
+  target_link_libraries(bridge_benchmark foxglove_bridge_component ${std_msgs_TARGETS} OpenSSL::SSL)
+  enable_strict_compiler_warnings(bridge_benchmark)
 endif()
 
 install(FILES include/foxglove_bridge/ros2_foxglove_bridge.hpp
