@@ -1,0 +1,39 @@
+<?xml version="1.0"?>
+<package format="3">
+    <name>foxglove_bridge</name>
+    <version>0.9.0</version>
+    <description>ROS Foxglove Bridge</description>
+    <license>MIT</license>
+    <url type="website">https://github.com/foxglove/foxglove-sdk</url>
+    <author email="ros-tooling+foxglove_bridge@foxglove.dev">Foxglove</author>
+    <maintainer email="ros-tooling+foxglove_bridge@foxglove.dev">Foxglove</maintainer>
+
+    <buildtool_depend>ament_cmake</buildtool_depend>
+
+    <!-- ROS 2 runtime dependencies -->
+    <depend>ament_index_cpp</depend>
+    <depend>rclcpp</depend>
+    <depend>rclcpp_components</depend>
+    <depend>rosx_introspection</depend>
+
+    <!-- Test dependencies -->
+    <test_depend>ament_cmake_gtest</test_depend>
+    <test_depend>ament_lint_auto</test_depend>
+    <test_depend>std_msgs</test_depend>
+    <test_depend>std_srvs</test_depend>
+    <test_depend>libssl-dev</test_depend>
+    <test_depend>libwebsocketpp-dev</test_depend>
+
+    <!-- Common dependencies -->
+    <build_depend>asio</build_depend>
+    <build_depend>nlohmann-json-dev</build_depend>
+    <build_depend>ros_environment</build_depend>
+
+    <depend>resource_retriever</depend>
+    <depend>rosgraph_msgs</depend>
+
+    <!-- The export tag contains other, unspecified, tags -->
+    <export>
+        <build_type>ament_cmake</build_type>
+    </export>
+</package>

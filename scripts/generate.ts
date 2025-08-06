@@ -11,14 +11,14 @@ import {
   BYTE_VECTOR_FB,
   DURATION_FB,
   TIME_FB,
+  flatbufferMessageSchemaName,
   generateFlatbuffers,
 } from "../typescript/schemas/src/internal/generateFlatbufferSchema";
 import { generateJsonSchema } from "../typescript/schemas/src/internal/generateJsonSchema";
 import { generateMarkdown } from "../typescript/schemas/src/internal/generateMarkdown";
 import {
-  DURATION_IDL,
-  TIME_IDL,
   generateOmgIdl,
+  omgIdlMessageSchemaName,
 } from "../typescript/schemas/src/internal/generateOmgIdl";
 import { generateProto } from "../typescript/schemas/src/internal/generateProto";
 import {
@@ -35,7 +35,10 @@ import {
   generateCppSchemas,
   generateHppSchemas,
 } from "../typescript/schemas/src/internal/generateSdkCpp";
-import { generateRustTypes } from "../typescript/schemas/src/internal/generateSdkRustCTypes";
+import {
+  generateRustTypes,
+  generateBindgenConfig,
+} from "../typescript/schemas/src/internal/generateSdkRustCTypes";
 import {
   foxgloveEnumSchemas,
   foxgloveMessageSchemas,
@@ -110,6 +113,8 @@ async function main({ clean }: { clean: boolean }) {
       await fs.writeFile(path.join(outDir, "jsonschema", `${schema.name}.json`), json + "\n");
       indexTS += `export const ${schema.name} = ${json};\n\n`;
     }
+    // Include the legacy `Time` export for backwards compatibility.
+    indexTS += `export const Time = Timestamp;\n\n`;
     await fs.writeFile(path.join(outDir, "jsonschema", `index.ts`), indexTS);
   });
 
@@ -146,6 +151,9 @@ async function main({ clean }: { clean: boolean }) {
   await logProgress("Generating Protobuf definitions", async () => {
     await fs.mkdir(path.join(outDir, "proto", "foxglove"), { recursive: true });
     for (const schema of Object.values(foxgloveMessageSchemas)) {
+      if (schema.protoEquivalent != undefined) {
+        continue;
+      }
       const enums = Object.values(foxgloveEnumSchemas).filter(
         (enumSchema) => enumSchema.parentSchemaName === schema.name,
       );
@@ -159,16 +167,25 @@ async function main({ clean }: { clean: boolean }) {
   await logProgress("Generating FlatBuffer definitions", async () => {
     await fs.mkdir(path.join(outDir, "flatbuffer"), { recursive: true });
     await fs.writeFile(path.join(outDir, "flatbuffer", "ByteVector.fbs"), BYTE_VECTOR_FB);
+    // Time and Duration are handled differently:
+    // - The name "Time" is kept for backwards compatibility.
+    // - We use structs instead of tables
+    // - Duration uses int32 for nsec instead of uint32.
     await fs.writeFile(path.join(outDir, "flatbuffer", "Time.fbs"), TIME_FB);
     await fs.writeFile(path.join(outDir, "flatbuffer", "Duration.fbs"), DURATION_FB);
 
-    for (const schema of Object.values(foxgloveMessageSchemas)) {
+    const messageSchemas = Object.values(foxgloveMessageSchemas).filter(
+      (schema) => schema.name !== "Timestamp" && schema.name !== "Duration",
+    );
+
+    for (const schema of messageSchemas) {
       // want enums with their corresponding parent tables for usage
       const enums = Object.values(foxgloveEnumSchemas).filter(
         (enumSchema) => enumSchema.parentSchemaName === schema.name,
       );
+      const name = flatbufferMessageSchemaName(schema);
       await fs.writeFile(
-        path.join(outDir, "flatbuffer", `${schema.name}.fbs`),
+        path.join(outDir, "flatbuffer", `${name}.fbs`),
         generateFlatbuffers(schema, enums),
       );
     }
@@ -185,11 +202,10 @@ async function main({ clean }: { clean: boolean }) {
 
   await logProgress("Generating OMG IDL definitions", async () => {
     await fs.mkdir(path.join(outDir, "omgidl", "foxglove"), { recursive: true });
-    await fs.writeFile(path.join(outDir, "omgidl", "foxglove", "Time.idl"), TIME_IDL);
-    await fs.writeFile(path.join(outDir, "omgidl", "foxglove", "Duration.idl"), DURATION_IDL);
     for (const schema of Object.values(foxgloveMessageSchemas)) {
+      const schemaName = omgIdlMessageSchemaName(schema);
       await fs.writeFile(
-        path.join(outDir, "omgidl", "foxglove", `${schema.name}.idl`),
+        path.join(outDir, "omgidl", "foxglove", `${schemaName}.idl`),
         generateOmgIdl(schema),
       );
     }
@@ -275,12 +291,22 @@ async function main({ clean }: { clean: boolean }) {
     await exec("poetry", ["run", "isort", ...pythonFiles], { cwd: repoRoot });
   });
 
-  await logProgress("Generating Rust code", async () => {
+  await logProgress("Generating C library types", async () => {
     const typesFile = path.join(repoRoot, "c", "src", "generated_types.rs");
     await fs.writeFile(
       typesFile,
       generateRustTypes(Object.values(foxgloveMessageSchemas), Object.values(foxgloveEnumSchemas)),
     );
+
+    const bindgenConfig = await generateBindgenConfig(
+      Object.values(foxgloveMessageSchemas),
+      Object.values(foxgloveEnumSchemas),
+      path.join(repoRoot, "c/cbindgen.prelude.toml"),
+    );
+    const bindgenConfigFile = path.join(repoRoot, "c/cbindgen.toml");
+    await fs.writeFile(bindgenConfigFile, bindgenConfig);
+
+    await exec("cargo", ["build"], { cwd: path.join(repoRoot, "c") });
     await exec("cargo", ["fmt", "--", path.resolve(typesFile)], {
       cwd: repoRoot,
     });

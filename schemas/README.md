@@ -20,6 +20,7 @@ All schemas are generated from [schemas.ts](/internal/schemas.ts).
 - [CompressedVideo](#compressedvideo)
 - [CubePrimitive](#cubeprimitive)
 - [CylinderPrimitive](#cylinderprimitive)
+- [Duration](#duration)
 - [FrameTransform](#frametransform)
 - [FrameTransforms](#frametransforms)
 - [GeoJSON](#geojson)
@@ -49,6 +50,7 @@ All schemas are generated from [schemas.ts](/internal/schemas.ts).
 - [SpherePrimitive](#sphereprimitive)
 - [TextAnnotation](#textannotation)
 - [TextPrimitive](#textprimitive)
+- [Timestamp](#timestamp)
 - [TriangleListPrimitive](#trianglelistprimitive)
 - [Vector2](#vector2)
 - [Vector3](#vector3)
@@ -242,7 +244,7 @@ Camera calibration parameters
 <td><code>timestamp</code></td>
 <td>
 
-time
+[Timestamp](#timestamp)
 
 </td>
 <td>
@@ -301,7 +303,7 @@ string
 
 Name of distortion model
 
-Supported parameters: `plumb_bob` (k1, k2, p1, p2, k3), `rational_polynomial` (k1, k2, p1, p2, k3, k4, k5, k6), and `kannala_brandt` (k1, k2, k3, k4). `plumb_bob` and `rational_polynomial` models are based on the pinhole model [OpenCV's](https://docs.opencv.org/4.11.0/d9/d0c/group__calib3d.html) [pinhole camera model](https://en.wikipedia.org/wiki/Distortion_%28optics%29#Software_correction). The `kannala_brandt` model is matches the [OpenvCV fisheye](https://docs.opencv.org/4.11.0/db/d58/group__calib3d__fisheye.html) model.
+Supported parameters: `plumb_bob` (k1, k2, p1, p2, k3), `rational_polynomial` (k1, k2, p1, p2, k3, k4, k5, k6), and `kannala_brandt` (k1, k2, k3, k4). `plumb_bob` and `rational_polynomial` models are based on the pinhole model [OpenCV's](https://docs.opencv.org/4.11.0/d9/d0c/group__calib3d.html) [pinhole camera model](https://en.wikipedia.org/wiki/Distortion_%28optics%29#Software_correction). The `kannala_brandt` model matches the [OpenvCV fisheye](https://docs.opencv.org/4.11.0/db/d58/group__calib3d__fisheye.html) model.
 
 </td>
 </tr>
@@ -411,7 +413,7 @@ A circle annotation on a 2D image
 <td><code>timestamp</code></td>
 <td>
 
-time
+[Timestamp](#timestamp)
 
 </td>
 <td>
@@ -566,7 +568,7 @@ A compressed image
 <td><code>timestamp</code></td>
 <td>
 
-time
+[Timestamp](#timestamp)
 
 </td>
 <td>
@@ -632,7 +634,7 @@ A single frame of a compressed video bitstream
 <td><code>timestamp</code></td>
 <td>
 
-time
+[Timestamp](#timestamp)
 
 </td>
 <td>
@@ -838,6 +840,44 @@ Color of the cylinder
 </tr>
 </table>
 
+## Duration
+
+A duration of time, composed of seconds and nanoseconds
+
+<table>
+  <tr>
+    <th>field</th>
+    <th>type</th>
+    <th>description</th>
+  </tr>
+<tr>
+<td><code>sec</code></td>
+<td>
+
+int32
+
+</td>
+<td>
+
+The number of seconds in the duration
+
+</td>
+</tr>
+<tr>
+<td><code>nsec</code></td>
+<td>
+
+uint32
+
+</td>
+<td>
+
+The number of nanoseconds in the positive direction
+
+</td>
+</tr>
+</table>
+
 ## FrameTransform
 
 A transform between two reference frames in 3D space
@@ -852,7 +892,7 @@ A transform between two reference frames in 3D space
 <td><code>timestamp</code></td>
 <td>
 
-time
+[Timestamp](#timestamp)
 
 </td>
 <td>
@@ -979,7 +1019,7 @@ A 2D grid of data
 <td><code>timestamp</code></td>
 <td>
 
-time
+[Timestamp](#timestamp)
 
 </td>
 <td>
@@ -1359,7 +1399,7 @@ A single scan from a planar laser range-finder
 <td><code>timestamp</code></td>
 <td>
 
-time
+[Timestamp](#timestamp)
 
 </td>
 <td>
@@ -1580,7 +1620,7 @@ A navigation satellite fix for any Global Navigation Satellite System
 <td><code>timestamp</code></td>
 <td>
 
-time
+[Timestamp](#timestamp)
 
 </td>
 <td>
@@ -1683,7 +1723,7 @@ A log message
 <td><code>timestamp</code></td>
 <td>
 
-time
+[Timestamp](#timestamp)
 
 </td>
 <td>
@@ -2016,7 +2056,7 @@ A collection of N-dimensional points, which may contain additional fields with i
 <td><code>timestamp</code></td>
 <td>
 
-time
+[Timestamp](#timestamp)
 
 </td>
 <td>
@@ -2106,7 +2146,7 @@ An array of points on a 2D image
 <td><code>timestamp</code></td>
 <td>
 
-time
+[Timestamp](#timestamp)
 
 </td>
 <td>
@@ -2248,7 +2288,7 @@ A timestamped pose for an object or reference frame in 3D space
 <td><code>timestamp</code></td>
 <td>
 
-time
+[Timestamp](#timestamp)
 
 </td>
 <td>
@@ -2299,7 +2339,7 @@ An array of timestamped poses for an object or reference frame in 3D space
 <td><code>timestamp</code></td>
 <td>
 
-time
+[Timestamp](#timestamp)
 
 </td>
 <td>
@@ -2414,7 +2454,7 @@ A single block of an audio bitstream
 <td><code>timestamp</code></td>
 <td>
 
-time
+[Timestamp](#timestamp)
 
 </td>
 <td>
@@ -2491,7 +2531,7 @@ A raw image
 <td><code>timestamp</code></td>
 <td>
 
-time
+[Timestamp](#timestamp)
 
 </td>
 <td>
@@ -2522,7 +2562,7 @@ uint32
 </td>
 <td>
 
-Image width
+Image width in pixels
 
 </td>
 </tr>
@@ -2535,7 +2575,7 @@ uint32
 </td>
 <td>
 
-Image height
+Image height in pixels
 
 </td>
 </tr>
@@ -2548,9 +2588,7 @@ string
 </td>
 <td>
 
-Encoding of the raw image data
-
-Supported values: `8UC1`, `8UC3`, `16UC1` (little endian), `32FC1` (little endian), `bayer_bggr8`, `bayer_gbrg8`, `bayer_grbg8`, `bayer_rggb8`, `bgr8`, `bgra8`, `mono8`, `mono16`, `rgb8`, `rgba8`, `uyvy` or `yuv422`, `yuyv` or `yuv422_yuy2`
+Encoding of the raw image data. See the `data` field description for supported values.
 
 </td>
 </tr>
@@ -2563,7 +2601,7 @@ uint32
 </td>
 <td>
 
-Byte length of a single row
+Byte length of a single row. This is usually some multiple of `width` depending on the encoding, but can be greater to incorporate padding.
 
 </td>
 </tr>
@@ -2576,7 +2614,60 @@ bytes
 </td>
 <td>
 
-Raw image data
+Raw image data.
+
+For each `encoding` value, the `data` field contains image pixel data serialized as follows:
+
+- `yuv422` or `uyvy`:
+  - Pixel colors are decomposed into [Y'UV](https://en.wikipedia.org/wiki/Y%E2%80%B2UV) channels.
+  - Pixel channel values are represented as unsigned 8-bit integers.
+  - U and V values are shared between horizontal pairs of pixels. Each pair of output pixels is serialized as [U, Y1, V, Y2].
+  - `step` must be greater than or equal to `width` * 2.
+- `yuv422_yuy2` or  `yuyv`:
+  - Pixel colors are decomposed into [Y'UV](https://en.wikipedia.org/wiki/Y%E2%80%B2UV) channels.
+  - Pixel channel values are represented as unsigned 8-bit integers.
+  - U and V values are shared between horizontal pairs of pixels. Each pair of output pixels is encoded as [Y1, U, Y2, V].
+  - `step` must be greater than or equal to `width` * 2.
+- `rgb8`:
+  - Pixel colors are decomposed into Red, Green, and Blue channels.
+  - Pixel channel values are represented as unsigned 8-bit integers.
+  - Each output pixel is serialized as [R, G, B].
+  - `step` must be greater than or equal to `width` * 3.
+- `rgba8`:
+  - Pixel colors are decomposed into Red, Green, Blue, and Alpha channels.
+  - Pixel channel values are represented as unsigned 8-bit integers.
+  - Each output pixel is serialized as [R, G, B, Alpha].
+  - `step` must be greater than or equal to `width` * 4.
+- `bgr8` or `8UC3`:
+  - Pixel colors are decomposed into Red, Blue, Green, and Alpha channels.
+  - Pixel channel values are represented as unsigned 8-bit integers.
+  - Each output pixel is serialized as [B, G, R].
+  - `step` must be greater than or equal to `width` * 3.
+- `bgra8`:
+  - Pixel colors are decomposed into Blue, Green, Red, and Alpha channels.
+  - Pixel channel values are represented as unsigned 8-bit integers.
+  - Each output pixel is encoded as [B, G, R, Alpha].
+  - `step` must be greater than or equal to `width` * 4.
+- `32FC1`:
+  - Pixel brightness is represented as a single-channel, 32-bit little-endian IEEE 754 floating-point value, ranging from 0.0 (black) to 1.0 (white).
+  - `step` must be greater than or equal to `width` * 4.
+- `bayer_rggb8`, `bayer_bggr8`, `bayer_rggb8`, `bayer_gbrg8`, or `bayer_grgb8`:
+  - Pixel colors are decomposed into Red, Blue and Green channels.
+  - Pixel channel values are represented as unsigned 8-bit integers, and serialized in a 2x2 bayer filter pattern.
+  - The order of the four letters after `bayer_` determine the layout, so for `bayer_wxyz8` the pattern is:
+  ```plaintext
+  w | x
+  - + -
+  y | z
+  ```
+  - `step` must be greater than or equal to `width`.
+- `mono8` or `8UC1`:
+  - Pixel brightness is represented as unsigned 8-bit integers.
+  - `step` must be greater than or equal to `width`.
+- `mono16` or `16UC1`:
+  - Pixel brightness is represented as 16-bit unsigned little-endian integers. Rendering of these values is controlled in [Image panel color mode settings](https://docs.foxglove.dev/docs/visualization/panels/image#general).
+  - `step` must be greater than or equal to `width` * 2.
+
 
 </td>
 </tr>
@@ -2596,7 +2687,7 @@ A visual element in a 3D scene. An entity may be composed of multiple primitives
 <td><code>timestamp</code></td>
 <td>
 
-time
+[Timestamp](#timestamp)
 
 </td>
 <td>
@@ -2635,7 +2726,7 @@ Identifier for the entity. A entity will replace any prior entity on the same to
 <td><code>lifetime</code></td>
 <td>
 
-duration
+[Duration](#duration)
 
 </td>
 <td>
@@ -2790,7 +2881,7 @@ Command to remove previously published entities
 <td><code>timestamp</code></td>
 <td>
 
-time
+[Timestamp](#timestamp)
 
 </td>
 <td>
@@ -2930,7 +3021,7 @@ A text label on a 2D image
 <td><code>timestamp</code></td>
 <td>
 
-time
+[Timestamp](#timestamp)
 
 </td>
 <td>
@@ -3092,6 +3183,44 @@ string
 <td>
 
 Text
+
+</td>
+</tr>
+</table>
+
+## Timestamp
+
+A timestamp composed of seconds and nanoseconds
+
+<table>
+  <tr>
+    <th>field</th>
+    <th>type</th>
+    <th>description</th>
+  </tr>
+<tr>
+<td><code>sec</code></td>
+<td>
+
+uint32
+
+</td>
+<td>
+
+The number of seconds since a user-defined epoch
+
+</td>
+</tr>
+<tr>
+<td><code>nsec</code></td>
+<td>
+
+uint32
+
+</td>
+<td>
+
+The number of nanoseconds since the sec value
 
 </td>
 </tr>

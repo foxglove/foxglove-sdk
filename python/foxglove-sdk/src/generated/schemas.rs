@@ -143,7 +143,7 @@ impl From<ArrowPrimitive> for foxglove::schemas::ArrowPrimitive {
 /// :param height: Image height
 /// :param distortion_model: Name of distortion model
 ///     
-///     Supported parameters: `plumb_bob` (k1, k2, p1, p2, k3), `rational_polynomial` (k1, k2, p1, p2, k3, k4, k5, k6), and `kannala_brandt` (k1, k2, k3, k4). `plumb_bob` and `rational_polynomial` models are based on the pinhole model `OpenCV's <https://docs.opencv.org/4.11.0/d9/d0c/group__calib3d.html>`__ `pinhole camera model <https://en.wikipedia.org/wiki/Distortion_%28optics%29#Software_correction>`__. The `kannala_brandt` model is matches the `OpenvCV fisheye <https://docs.opencv.org/4.11.0/db/d58/group__calib3d__fisheye.html>`__ model.
+///     Supported parameters: `plumb_bob` (k1, k2, p1, p2, k3), `rational_polynomial` (k1, k2, p1, p2, k3, k4, k5, k6), and `kannala_brandt` (k1, k2, k3, k4). `plumb_bob` and `rational_polynomial` models are based on the pinhole model `OpenCV's <https://docs.opencv.org/4.11.0/d9/d0c/group__calib3d.html>`__ `pinhole camera model <https://en.wikipedia.org/wiki/Distortion_%28optics%29#Software_correction>`__. The `kannala_brandt` model matches the `OpenvCV fisheye <https://docs.opencv.org/4.11.0/db/d58/group__calib3d__fisheye.html>`__ model.
 /// :param D: Distortion parameters
 /// :param K: Intrinsic camera matrix (3x3 row-major matrix)
 ///     
@@ -1874,13 +1874,64 @@ impl From<RawAudio> for foxglove::schemas::RawAudio {
 ///
 /// :param timestamp: Timestamp of image
 /// :param frame_id: Frame of reference for the image. The origin of the frame is the optical center of the camera. +x points to the right in the image, +y points down, and +z points into the plane of the image.
-/// :param width: Image width
-/// :param height: Image height
-/// :param encoding: Encoding of the raw image data
+/// :param width: Image width in pixels
+/// :param height: Image height in pixels
+/// :param encoding: Encoding of the raw image data. See the `data` field description for supported values.
+/// :param step: Byte length of a single row. This is usually some multiple of `width` depending on the encoding, but can be greater to incorporate padding.
+/// :param data: Raw image data.
 ///     
-///     Supported values: `8UC1`, `8UC3`, `16UC1` (little endian), `32FC1` (little endian), `bayer_bggr8`, `bayer_gbrg8`, `bayer_grbg8`, `bayer_rggb8`, `bgr8`, `bgra8`, `mono8`, `mono16`, `rgb8`, `rgba8`, `uyvy` or `yuv422`, `yuyv` or `yuv422_yuy2`
-/// :param step: Byte length of a single row
-/// :param data: Raw image data
+///     For each `encoding` value, the `data` field contains image pixel data serialized as follows:
+///     
+///     - `yuv422` or `uyvy`:
+///       - Pixel colors are decomposed into `Y'UV <https://en.wikipedia.org/wiki/Y%E2%80%B2UV>`__ channels.
+///       - Pixel channel values are represented as unsigned 8-bit integers.
+///       - U and V values are shared between horizontal pairs of pixels. Each pair of output pixels is serialized as [U, Y1, V, Y2].
+///       - `step` must be greater than or equal to `width` * 2.
+///     - `yuv422_yuy2` or  `yuyv`:
+///       - Pixel colors are decomposed into `Y'UV <https://en.wikipedia.org/wiki/Y%E2%80%B2UV>`__ channels.
+///       - Pixel channel values are represented as unsigned 8-bit integers.
+///       - U and V values are shared between horizontal pairs of pixels. Each pair of output pixels is encoded as [Y1, U, Y2, V].
+///       - `step` must be greater than or equal to `width` * 2.
+///     - `rgb8`:
+///       - Pixel colors are decomposed into Red, Green, and Blue channels.
+///       - Pixel channel values are represented as unsigned 8-bit integers.
+///       - Each output pixel is serialized as [R, G, B].
+///       - `step` must be greater than or equal to `width` * 3.
+///     - `rgba8`:
+///       - Pixel colors are decomposed into Red, Green, Blue, and Alpha channels.
+///       - Pixel channel values are represented as unsigned 8-bit integers.
+///       - Each output pixel is serialized as [R, G, B, Alpha].
+///       - `step` must be greater than or equal to `width` * 4.
+///     - `bgr8` or `8UC3`:
+///       - Pixel colors are decomposed into Red, Blue, Green, and Alpha channels.
+///       - Pixel channel values are represented as unsigned 8-bit integers.
+///       - Each output pixel is serialized as [B, G, R].
+///       - `step` must be greater than or equal to `width` * 3.
+///     - `bgra8`:
+///       - Pixel colors are decomposed into Blue, Green, Red, and Alpha channels.
+///       - Pixel channel values are represented as unsigned 8-bit integers.
+///       - Each output pixel is encoded as [B, G, R, Alpha].
+///       - `step` must be greater than or equal to `width` * 4.
+///     - `32FC1`:
+///       - Pixel brightness is represented as a single-channel, 32-bit little-endian IEEE 754 floating-point value, ranging from 0.0 (black) to 1.0 (white).
+///       - `step` must be greater than or equal to `width` * 4.
+///     - `bayer_rggb8`, `bayer_bggr8`, `bayer_rggb8`, `bayer_gbrg8`, or `bayer_grgb8`:
+///       - Pixel colors are decomposed into Red, Blue and Green channels.
+///       - Pixel channel values are represented as unsigned 8-bit integers, and serialized in a 2x2 bayer filter pattern.
+///       - The order of the four letters after `bayer_` determine the layout, so for `bayer_wxyz8` the pattern is:
+///       ```plaintext
+///       w | x
+///       - + -
+///       y | z
+///       ```
+///       - `step` must be greater than or equal to `width`.
+///     - `mono8` or `8UC1`:
+///       - Pixel brightness is represented as unsigned 8-bit integers.
+///       - `step` must be greater than or equal to `width`.
+///     - `mono16` or `16UC1`:
+///       - Pixel brightness is represented as 16-bit unsigned little-endian integers. Rendering of these values is controlled in `Image panel color mode settings <https://docs.foxglove.dev/docs/visualization/panels/image#general>`__.
+///       - `step` must be greater than or equal to `width` * 2.
+///     
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/raw-image
 #[pyclass(module = "foxglove.schemas")]
@@ -2224,8 +2275,6 @@ impl From<Vector3> for foxglove::schemas::Vector3 {
 pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     let module = PyModule::new(parent_module.py(), "schemas")?;
 
-    module.add_class::<Duration>()?;
-    module.add_class::<Timestamp>()?;
     module.add_class::<LinePrimitiveLineType>()?;
     module.add_class::<LogLevel>()?;
     module.add_class::<SceneEntityDeletionType>()?;
@@ -2240,6 +2289,7 @@ pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<CompressedVideo>()?;
     module.add_class::<CylinderPrimitive>()?;
     module.add_class::<CubePrimitive>()?;
+    module.add_class::<Duration>()?;
     module.add_class::<FrameTransform>()?;
     module.add_class::<FrameTransforms>()?;
     module.add_class::<GeoJson>()?;
@@ -2269,6 +2319,7 @@ pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<SpherePrimitive>()?;
     module.add_class::<TextAnnotation>()?;
     module.add_class::<TextPrimitive>()?;
+    module.add_class::<Timestamp>()?;
     module.add_class::<TriangleListPrimitive>()?;
     module.add_class::<Vector2>()?;
     module.add_class::<Vector3>()?;
