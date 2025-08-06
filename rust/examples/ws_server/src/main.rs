@@ -97,12 +97,6 @@ struct Cli {
     /// Frames per second.
     #[arg(long, default_value_t = 60)]
     fps: u8,
-    /// Path to a PEM-formatted x509 certificate for TLS.
-    #[arg(long)]
-    cert: Option<String>,
-    /// Path to a PEM-formatted pkcs8 private key for TLS.
-    #[arg(long)]
-    key: Option<String>,
 }
 
 #[tokio::main]
@@ -114,20 +108,10 @@ async fn main() {
 
     let server = foxglove::WebSocketServer::new()
         .name(env!("CARGO_PKG_NAME"))
-        .bind(&args.host, args.port);
-
-    let server = if let (Some(cert), Some(key)) = (args.cert, args.key) {
-        let cert = std::fs::read(cert).expect("Failed to read TLS certificate");
-        let key = std::fs::read(key).expect("Failed to read TLS key");
-        server.tls(&cert, &key)
-    } else {
-        server
-    };
-
-    let server = server.start().await.unwrap_or_else(|err| {
-        eprintln!("Server failed to start: {err}");
-        std::process::exit(1);
-    });
+        .bind(&args.host, args.port)
+        .start()
+        .await
+        .expect("Server failed to start");
 
     let app_url = server.app_url();
     println!("View in browser: {app_url}");

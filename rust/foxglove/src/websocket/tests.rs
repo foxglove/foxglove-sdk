@@ -1,8 +1,8 @@
 use assert_matches::assert_matches;
 use bytes::{BufMut, Bytes, BytesMut};
 use futures_util::FutureExt;
-#[cfg(feature = "native-tls")]
-use rcgen::{CertificateParams, KeyPair, PKCS_RSA_SHA256};
+#[cfg(feature = "tls")]
+use rcgen::{CertificateParams, Issuer, KeyPair};
 use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
@@ -33,7 +33,7 @@ use crate::websocket::service::{CallId, Service, ServiceSchema};
 use crate::websocket::{
     BlockingAssetHandlerFn, Capability, ClientChannelId, ConnectionGraph, Parameter, Server,
 };
-#[cfg(feature = "native-tls")]
+#[cfg(feature = "tls")]
 use crate::websocket_server::TlsIdentity;
 use crate::{ChannelBuilder, Context, FoxgloveError, PartialMetadata, RawChannel, Schema};
 
@@ -105,61 +105,40 @@ async fn test_client_connect() {
     let _ = server.stop();
 }
 
+#[traced_test]
 #[tokio::test]
-#[cfg(feature = "native-tls")]
+#[cfg(feature = "tls")]
 async fn test_secure_client_connect() {
     let ctx = Context::new();
-    let pem_str = r#"-----BEGIN PRIVATE KEY-----
-MIIEvwIBADANBgkqhkiG9w0BAQEFAASCBKkwggSlAgEAAoIBAQD5xv/ifhAshhE0
-2txN9iODeEsaaFRO0iGdegSesxqnLQQ5nm0GnKA4z4IFb2oooh5BAjC/+pPU3+ao
-DIMz/wRSezgUAqRRl9EmJQLYiv6MgSdxu5w4STdaITl/IGemOCIJ8Os+IbMLCfwy
-1t65f3CU+8fxV/cHiFf4EpGGDrXCdYbGZyjfC01vfHG/IYgzPBVV3+C48owpVDdU
-3djvta+VVLprqvTNyGpxQZkbDXpt+SDYDEQ9j5ZE7RpstCM/N/cTxzQf6O+YIbyk
-HnBm36pCeKTo6e2Kbj7NQXmosCeKLjasqflXftLSLoYeHyxMicdIm0K/4/yAov6u
-IATQOecpAgMBAAECggEADF8sGj28gxoOZN/w0M8/5dGJ5chUYbWUiupp62rrZ2uq
-RYjYdV8BbCLyGZ8Rwuq5xSZMwBuTIjSHZhw9jPAlGIlIJyyU00JJ7qHfbNagoli8
-2Ywtghe1TUpvQMHcBG6MGBI18rVEWyf+1Q1RyZ4bd1OrzQNaheXd1pij2uAkZlnn
-GsVpdBEyLtvTzYwNGveKwht/FLKSj+pWnkshSUYpsAYQBYcaYmC6TzqtsRCh/XUR
-Ca55B6wToBY4+EnEcs7KvamSJfNxt0LUNxJdwaWe2xMobydlyhJKzwHd5CQ+2Rfj
-1TjKw+b7AhkLAmVrjCjmt34c6l1x4gjexkH+VH6VYQKBgQD9+0z4+bb9/NlHoeye
-sRQA/sUYmOb8gaBn3zpeB/aGYWD6ibyX0E+JrAWrclNG8gUJ0JJxxjSf82AaoL1P
-sraYDnV343uMDAvuRa1FftByfJyLn0JZr+An+uxPkQpEP6wrCTQcgY7vmybwmrMA
-nYs9W3UZbHf6wcpsZ5XpFJimYQKBgQD7wyVKAtUGZ//2xi7HQrga/g7KHvLdx6to
-pp9nCg5m3oD4aRfIgwczmZgWGMQ2YBSpLsTGW/EiQJFXkhlosWyJntJdySRCdS6F
-k3slwnYTNtcUlKMi2Fmsm837KIEMt4IAgo4Bc81LGezPtZrXqIgTgHgeEeM/i9xS
-lVeZbptlyQKBgQDLfzSXMI2cR6FYMbdDFyKuAXOuV6SLoNkDIOrFOKAf35oyY3XG
-NdPkvP319q4e4/+Bc6pCmsrDdd8EttG4L7r5bmxUWOI+vdA5Y36HdipR8OIFRN+G
-uNJjdjstLUsKj/HEsaUdSflapfe3RFw0HAbabJMQgcZIFkm4Pe7xR91fQQKBgQDC
-YaFgy17+Wz3dopZrcrAC5zU0CUEqywck/cEFJVaJRjH9mearAb+Fr4klRmn4MabC
-GUIEhOhgscmF+19y3coXV3DEyJAeX6tTptLmDIZtv2HAmiJ6vOA/zOv0hwlccDMH
-gcVyiZ5v5cxZcrXi3FRz+jTDwrvaTHoHqRbBeAyzQQKBgQDO5YUR2NrMpQ7N92zE
-B+fGJcSOQk5vd9IvEFt3KbJTzgi8KKJmIjeAytutt1/e7silpXW+deqvFrke/YdT
-ZjWkNIUV1IMTl/L1Fu5sKIYsfdB38jB0EF9OFxdC9Um5AA00HiLNnfi2Rediu0rh
-YsBMf7FqiVkT1kUr8bV6kkUJRw==
------END PRIVATE KEY-----"#;
-    let signing_key = KeyPair::from_pkcs8_pem_and_sign_algo(pem_str, &PKCS_RSA_SHA256).unwrap();
+    let ca_params = CertificateParams::default();
+    let ca_key = KeyPair::generate().expect("default keygen will succeed");
+    let ca_cert = ca_params
+        .self_signed(&ca_key)
+        .expect("failed to sign CA cert");
+    let issuer = Issuer::new(ca_params, ca_key);
 
-    let cert = CertificateParams::default()
-        .self_signed(&signing_key)
-        .expect("Failed to sign cert");
+    let host = "127.0.0.1";
+    let params = CertificateParams::new(vec![host.to_string()]).expect("SAN is valid");
 
-    let cert = cert.pem().as_bytes().to_vec();
-    let key = signing_key.serialize_pem().as_bytes().to_vec();
+    let key = KeyPair::generate().expect("default keygen will succeed");
+    let cert = params
+        .signed_by(&key, &issuer)
+        .expect("failed to sign cert");
 
     let server = create_server(
         &ctx,
         ServerOptions {
             session_id: Some("tls_sess_id".to_string()),
-            tls_identity: Some(TlsIdentity { cert, key }),
+            tls_identity: Some(TlsIdentity {
+                cert: cert.pem().as_bytes().to_vec(),
+                key: key.serialize_pem().as_bytes().to_vec(),
+            }),
             ..Default::default()
         },
     );
-    let addr = server
-        .start("127.0.0.1", 0)
-        .await
-        .expect("Failed to start server");
+    let addr = server.start(host, 0).await.expect("Failed to start server");
 
-    let mut client = WebSocketClient::connect_secure(addr).await;
+    let mut client = WebSocketClient::connect_secure(addr, ca_cert).await;
 
     let msg = expect_recv!(client, ServerMessage::ServerInfo);
     assert_eq!(msg.session_id, Some("tls_sess_id".to_string()));
@@ -167,18 +146,23 @@ YsBMf7FqiVkT1kUr8bV6kkUJRw==
     let _ = server.stop();
 }
 
-#[cfg(feature = "native-tls")]
+#[cfg(feature = "tls")]
+#[traced_test]
 #[tokio::test]
 async fn test_invalid_tls_config() {
     let ctx = Context::new();
+    let cert = rcgen::generate_simple_self_signed(vec![])
+        .expect("default certgen will succeed")
+        .cert;
+    let key = KeyPair::generate().expect("default keygen will succeed");
 
     let result = do_create_server(
         &ctx,
         ServerOptions {
             name: Some("invalid_tls_server".to_string()),
             tls_identity: Some(TlsIdentity {
-                cert: vec![],
-                key: vec![],
+                cert: cert.pem().as_bytes().to_vec(),
+                key: key.serialize_pem().as_bytes().to_vec(),
             }),
             ..Default::default()
         },
@@ -187,10 +171,7 @@ async fn test_invalid_tls_config() {
 
     let error = result.err();
     assert!(matches!(&error, Some(FoxgloveError::ConfigurationError(_))));
-    assert!(error
-        .unwrap()
-        .to_string()
-        .contains("Failed to configure TLS"));
+    assert!(error.unwrap().to_string().contains("KeyMismatch"));
 }
 
 #[traced_test]

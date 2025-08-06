@@ -13,6 +13,7 @@ mod handshake;
 mod semaphore;
 mod server;
 mod server_listener;
+mod server_stream;
 pub mod service;
 mod subscription;
 #[cfg(test)]

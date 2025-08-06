@@ -1,14 +1,16 @@
 use std::time::Duration;
 
 use futures_util::{SinkExt, StreamExt};
+#[cfg(feature = "tls")]
+use rcgen::Certificate;
+use std::sync::Arc;
 use tokio::net::TcpStream;
+#[cfg(feature = "tls")]
+use tokio_rustls::rustls;
 use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 use tokio_tungstenite::tungstenite::http::HeaderValue;
 use tokio_tungstenite::tungstenite::{self, Message};
 use tokio_tungstenite::{MaybeTlsStream, WebSocketStream};
-
-#[cfg(feature = "native-tls")]
-use tokio_native_tls::native_tls;
 
 use super::handshake::SUBPROTOCOL;
 use super::ws_protocol::server::ServerMessage;
@@ -33,15 +35,16 @@ pub struct WebSocketClient {
 impl WebSocketClient {
     /// Connects to a server and validates the handshake response.
     pub async fn connect(addr: impl std::fmt::Display) -> Self {
-        Self::do_connect(addr, false).await
+        Self::do_connect(addr, None).await
     }
 
-    #[cfg(feature = "native-tls")]
-    pub async fn connect_secure(addr: impl std::fmt::Display) -> Self {
-        Self::do_connect(addr, true).await
+    #[cfg(feature = "tls")]
+    pub async fn connect_secure(addr: impl std::fmt::Display, trusted_cert: Certificate) -> Self {
+        Self::do_connect(addr, Some(trusted_cert)).await
     }
 
-    pub async fn do_connect(addr: impl std::fmt::Display, use_tls: bool) -> Self {
+    pub async fn do_connect(addr: impl std::fmt::Display, tls_cert: Option<Certificate>) -> Self {
+        let use_tls = tls_cert.is_some();
         let protocol = if use_tls { "wss" } else { "ws" };
         let mut request = format!("{protocol}://{addr}/")
             .into_client_request()
@@ -52,16 +55,18 @@ impl WebSocketClient {
             HeaderValue::from_static(SUBPROTOCOL),
         );
 
-        let (stream, response) = if use_tls {
-            #[cfg(feature = "native-tls")]
+        let (stream, response) = if let Some(tls_cert) = tls_cert {
+            #[cfg(feature = "tls")]
             {
-                // For tests, ignore TLS errors related to self-signed certs
-                let connector = native_tls::TlsConnector::builder()
-                    .danger_accept_invalid_certs(true)
-                    .build()
-                    .expect("Failed to build TLS connector");
+                let mut root_cert_store = rustls::RootCertStore::empty();
+                root_cert_store
+                    .add(tls_cert.der().clone().into_owned())
+                    .expect("failed to add cert to root cert store");
+                let config = rustls::ClientConfig::builder()
+                    .with_root_certificates(root_cert_store)
+                    .with_no_client_auth();
 
-                let connector = tokio_tungstenite::Connector::NativeTls(connector);
+                let connector = tokio_tungstenite::Connector::Rustls(Arc::new(config));
 
                 tokio_tungstenite::connect_async_tls_with_config(
                     request,
@@ -72,7 +77,7 @@ impl WebSocketClient {
                 .await
                 .expect("Failed to connect (TLS)")
             }
-            #[cfg(not(feature = "native-tls"))]
+            #[cfg(not(feature = "tls"))]
             {
                 unimplemented!()
             }

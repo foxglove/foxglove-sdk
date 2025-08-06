@@ -1,9 +1,10 @@
 use futures_util::{SinkExt, StreamExt};
 use tokio::net::TcpStream;
 use tokio::sync::oneshot;
+use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::WebSocketStream;
-use tokio_tungstenite::{tungstenite::Message, MaybeTlsStream};
 
+use crate::websocket::server_stream::ServerStream;
 use crate::websocket::Status;
 
 use super::{ConnectedClient, ShutdownReason};
@@ -15,7 +16,7 @@ use super::{ConnectedClient, ShutdownReason};
 /// - Receiving messages from the websocket and invoking [`ConnectedClient::handle_message`].
 /// - Waiting for a shutdown signal, and closing the websocket.
 pub(super) struct Poller {
-    websocket: WebSocketStream<MaybeTlsStream<TcpStream>>,
+    websocket: WebSocketStream<ServerStream<TcpStream>>,
     data_plane_rx: flume::Receiver<Message>,
     control_plane_rx: flume::Receiver<Message>,
     shutdown_rx: oneshot::Receiver<ShutdownReason>,
@@ -24,7 +25,7 @@ pub(super) struct Poller {
 impl Poller {
     /// Creates a new poller.
     pub fn new(
-        websocket: WebSocketStream<MaybeTlsStream<TcpStream>>,
+        websocket: WebSocketStream<ServerStream<TcpStream>>,
         data_plane_rx: flume::Receiver<Message>,
         control_plane_rx: flume::Receiver<Message>,
         shutdown_rx: oneshot::Receiver<ShutdownReason>,
