@@ -8,14 +8,14 @@ include "Vector3.fbs";
 namespace foxglove;
 
 /// A 3D grid of data
-table Grid3 {
+table VoxelGrid {
   /// Timestamp of grid
   timestamp:Time (id: 0);
 
   /// Frame of reference
   frame_id:string (id: 1);
 
-  /// Origin of grid's corner relative to frame of reference; grid is positioned in the x-y plane relative to this origin
+  /// Origin of grid's corner relative to frame of reference; grid is positioned in the x-y plane, at z=0, relative to this origin
   pose:foxglove.Pose (id: 2);
 
   /// Number of grid rows
@@ -28,7 +28,7 @@ table Grid3 {
   cell_size:foxglove.Vector3 (id: 5);
 
   /// Number of bytes between depth slices in `data`
-  slice_stride:uint32 (id: 6);
+  depth_stride:uint32 (id: 6);
 
   /// Number of bytes between rows in `data`
   row_stride:uint32 (id: 7);
@@ -41,10 +41,10 @@ table Grid3 {
 
   /// Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order.
   ///  For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
-  ///  z = (i / (row_stride * cell_stride)) % slice_stride * cell_size.z
+  ///  z = (i / (row_stride * cell_stride)) % depth_stride * cell_size.z
   ///  y = (i / cell_stride) % row_stride * cell_size.y
   ///  x = i % cell_stride * cell_size.x
   data:[uint8] (id: 10);
 }
 
-root_type Grid3;
+root_type VoxelGrid;

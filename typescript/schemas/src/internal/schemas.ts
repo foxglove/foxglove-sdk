@@ -1227,9 +1227,9 @@ const Grid: FoxgloveMessageSchema = {
   ],
 };
 
-const Grid3: FoxgloveMessageSchema = {
+const VoxelGrid: FoxgloveMessageSchema = {
   type: "message",
-  name: "Grid3",
+  name: "VoxelGrid",
   description: "A 3D grid of data",
   fields: [
     {
@@ -1246,7 +1246,7 @@ const Grid3: FoxgloveMessageSchema = {
       name: "pose",
       type: { type: "nested", schema: Pose },
       description:
-        "Origin of grid's corner relative to frame of reference; grid is positioned in the x-y plane relative to this origin",
+        "Origin of grid's corner relative to frame of reference; grid is positioned in the x-y plane, at z=0, relative to this origin",
     },
     {
       name: "row_count",
@@ -1264,7 +1264,7 @@ const Grid3: FoxgloveMessageSchema = {
       description: "Size of single grid cell along x, y, and z axes, relative to `pose`",
     },
     {
-      name: "slice_stride",
+      name: "depth_stride",
       type: { type: "primitive", name: "uint32" },
       description: "Number of bytes between depth slices in `data`",
     },
@@ -1289,7 +1289,7 @@ const Grid3: FoxgloveMessageSchema = {
       name: "data",
       type: { type: "primitive", name: "bytes" },
       description:
-        "Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order.\n For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:\n z = (i / (row_stride * cell_stride)) % slice_stride * cell_size.z\n y = (i / cell_stride) % row_stride * cell_size.y\n x = i % cell_stride * cell_size.x",
+        "Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order.\n For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:\n z = (i / (row_stride * cell_stride)) % depth_stride * cell_size.z\n y = (i / cell_stride) % row_stride * cell_size.y\n x = i % cell_stride * cell_size.x",
     },
   ],
 };
@@ -1693,7 +1693,7 @@ export const foxgloveMessageSchemas = {
   FrameTransforms,
   GeoJSON,
   Grid,
-  Grid3,
+  VoxelGrid,
   ImageAnnotations,
   KeyValuePair,
   LaserScan,

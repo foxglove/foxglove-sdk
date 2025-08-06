@@ -7,14 +7,14 @@ import { Time } from "./Time";
 import { Vector3 } from "./Vector3";
 
 /** A 3D grid of data */
-export type Grid3 = {
+export type VoxelGrid = {
   /** Timestamp of grid */
   timestamp: Time;
 
   /** Frame of reference */
   frame_id: string;
 
-  /** Origin of grid's corner relative to frame of reference; grid is positioned in the x-y plane relative to this origin */
+  /** Origin of grid's corner relative to frame of reference; grid is positioned in the x-y plane, at z=0, relative to this origin */
   pose: Pose;
 
   /** Number of grid rows */
@@ -27,7 +27,7 @@ export type Grid3 = {
   cell_size: Vector3;
 
   /** Number of bytes between depth slices in `data` */
-  slice_stride: number;
+  depth_stride: number;
 
   /** Number of bytes between rows in `data` */
   row_stride: number;
@@ -41,7 +41,7 @@ export type Grid3 = {
   /**
    * Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order.
    *  For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
-   *  z = (i / (row_stride * cell_stride)) % slice_stride * cell_size.z
+   *  z = (i / (row_stride * cell_stride)) % depth_stride * cell_size.z
    *  y = (i / cell_stride) % row_stride * cell_size.y
    *  x = i % cell_stride * cell_size.x
    */

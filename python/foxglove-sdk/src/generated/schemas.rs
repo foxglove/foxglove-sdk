@@ -776,28 +776,28 @@ impl From<Grid> for foxglove::schemas::Grid {
 ///
 /// :param timestamp: Timestamp of grid
 /// :param frame_id: Frame of reference
-/// :param pose: Origin of grid's corner relative to frame of reference; grid is positioned in the x-y plane relative to this origin
+/// :param pose: Origin of grid's corner relative to frame of reference; grid is positioned in the x-y plane, at z=0, relative to this origin
 /// :param row_count: Number of grid rows
 /// :param column_count: Number of grid columns
 /// :param cell_size: Size of single grid cell along x, y, and z axes, relative to `pose`
-/// :param slice_stride: Number of bytes between depth slices in `data`
+/// :param depth_stride: Number of bytes between depth slices in `data`
 /// :param row_stride: Number of bytes between rows in `data`
 /// :param cell_stride: Number of bytes between cells within a row in `data`
 /// :param fields: Fields in `data`. `red`, `green`, `blue`, and `alpha` are optional for customizing the grid's color.
 /// :param data: Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order.
 ///      For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
-///      z = (i / (row_stride * cell_stride)) % slice_stride * cell_size.z
+///      z = (i / (row_stride * cell_stride)) % depth_stride * cell_size.z
 ///      y = (i / cell_stride) % row_stride * cell_size.y
 ///      x = i % cell_stride * cell_size.x
 ///
-/// See https://docs.foxglove.dev/docs/visualization/message-schemas/grid3
+/// See https://docs.foxglove.dev/docs/visualization/message-schemas/voxel-grid
 #[pyclass(module = "foxglove.schemas")]
 #[derive(Clone)]
-pub(crate) struct Grid3(pub(crate) foxglove::schemas::Grid3);
+pub(crate) struct VoxelGrid(pub(crate) foxglove::schemas::VoxelGrid);
 #[pymethods]
-impl Grid3 {
+impl VoxelGrid {
     #[new]
-    #[pyo3(signature = (*, timestamp=None, frame_id="".to_string(), pose=None, row_count=0, column_count=0, cell_size=None, slice_stride=0, row_stride=0, cell_stride=0, fields=vec![], data=None) )]
+    #[pyo3(signature = (*, timestamp=None, frame_id="".to_string(), pose=None, row_count=0, column_count=0, cell_size=None, depth_stride=0, row_stride=0, cell_stride=0, fields=vec![], data=None) )]
     fn new(
         timestamp: Option<Timestamp>,
         frame_id: String,
@@ -805,20 +805,20 @@ impl Grid3 {
         row_count: u32,
         column_count: u32,
         cell_size: Option<Vector3>,
-        slice_stride: u32,
+        depth_stride: u32,
         row_stride: u32,
         cell_stride: u32,
         fields: Vec<PackedElementField>,
         data: Option<Bound<'_, PyBytes>>,
     ) -> Self {
-        Self(foxglove::schemas::Grid3 {
+        Self(foxglove::schemas::VoxelGrid {
             timestamp: timestamp.map(Into::into),
             frame_id,
             pose: pose.map(Into::into),
             row_count,
             column_count,
             cell_size: cell_size.map(Into::into),
-            slice_stride,
+            depth_stride,
             row_stride,
             cell_stride,
             fields: fields.into_iter().map(|x| x.into()).collect(),
@@ -829,29 +829,29 @@ impl Grid3 {
     }
     fn __repr__(&self) -> String {
         format!(
-            "Grid3(timestamp={:?}, frame_id={:?}, pose={:?}, row_count={:?}, column_count={:?}, cell_size={:?}, slice_stride={:?}, row_stride={:?}, cell_stride={:?}, fields={:?}, data={:?})",
+            "VoxelGrid(timestamp={:?}, frame_id={:?}, pose={:?}, row_count={:?}, column_count={:?}, cell_size={:?}, depth_stride={:?}, row_stride={:?}, cell_stride={:?}, fields={:?}, data={:?})",
             self.0.timestamp,
             self.0.frame_id,
             self.0.pose,
             self.0.row_count,
             self.0.column_count,
             self.0.cell_size,
-            self.0.slice_stride,
+            self.0.depth_stride,
             self.0.row_stride,
             self.0.cell_stride,
             self.0.fields,
             self.0.data,
         )
     }
-    /// Returns the Grid3 schema.
+    /// Returns the VoxelGrid schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
-        foxglove::schemas::Grid3::get_schema().unwrap().into()
+        foxglove::schemas::VoxelGrid::get_schema().unwrap().into()
     }
 }
 
-impl From<Grid3> for foxglove::schemas::Grid3 {
-    fn from(value: Grid3) -> Self {
+impl From<VoxelGrid> for foxglove::schemas::VoxelGrid {
+    fn from(value: VoxelGrid) -> Self {
         value.0
     }
 }
@@ -2294,7 +2294,7 @@ pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<FrameTransforms>()?;
     module.add_class::<GeoJson>()?;
     module.add_class::<Grid>()?;
-    module.add_class::<Grid3>()?;
+    module.add_class::<VoxelGrid>()?;
     module.add_class::<ImageAnnotations>()?;
     module.add_class::<KeyValuePair>()?;
     module.add_class::<LaserScan>()?;

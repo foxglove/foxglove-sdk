@@ -23,7 +23,7 @@ pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<FrameTransformsChannel>()?;
     module.add_class::<GeoJsonChannel>()?;
     module.add_class::<GridChannel>()?;
-    module.add_class::<Grid3Channel>()?;
+    module.add_class::<VoxelGridChannel>()?;
     module.add_class::<ImageAnnotationsChannel>()?;
     module.add_class::<KeyValuePairChannel>()?;
     module.add_class::<LaserScanChannel>()?;
@@ -1319,12 +1319,12 @@ impl GridChannel {
     }
 }
 
-/// A channel for logging :py:class:`foxglove.schemas.Grid3` messages.
+/// A channel for logging :py:class:`foxglove.schemas.VoxelGrid` messages.
 #[pyclass(module = "foxglove.channels")]
-struct Grid3Channel(Channel<foxglove::schemas::Grid3>);
+struct VoxelGridChannel(Channel<foxglove::schemas::VoxelGrid>);
 
 #[pymethods]
-impl Grid3Channel {
+impl VoxelGridChannel {
     /// Create a new channel.
     ///
     /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
@@ -1403,20 +1403,25 @@ impl Grid3Channel {
         self.0.close();
     }
 
-    /// Log a :py:class:`foxglove.schemas.Grid3` message to the channel.
+    /// Log a :py:class:`foxglove.schemas.VoxelGrid` message to the channel.
     ///
     /// :param msg: The message to log.
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
     ///     message was recorded. Usually this is the time log() is called. If omitted, the
     ///     current time is used.
     #[pyo3(signature = (msg, *, log_time=None))]
-    fn log(&self, msg: &schemas::Grid3, log_time: Option<u64>) {
+    fn log(&self, msg: &schemas::VoxelGrid, log_time: Option<u64>) {
         let metadata = PartialMetadata { log_time };
         self.0.log_with_meta(&msg.0, metadata);
     }
 
     fn __repr__(&self) -> String {
-        format!("Grid3Channel(id={}, topic='{}')", self.id(), self.topic()).to_string()
+        format!(
+            "VoxelGridChannel(id={}, topic='{}')",
+            self.id(),
+            self.topic()
+        )
+        .to_string()
     }
 }
 

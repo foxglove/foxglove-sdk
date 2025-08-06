@@ -17,7 +17,6 @@ from foxglove._foxglove_py.channels import (
     FrameTransformChannel,
     FrameTransformsChannel,
     GeoJsonChannel,
-    Grid3Channel,
     GridChannel,
     ImageAnnotationsChannel,
     KeyValuePairChannel,
@@ -46,6 +45,7 @@ from foxglove._foxglove_py.channels import (
     TriangleListPrimitiveChannel,
     Vector2Channel,
     Vector3Channel,
+    VoxelGridChannel,
 )
 
 __all__ = [
@@ -60,7 +60,6 @@ __all__ = [
     "FrameTransformChannel",
     "FrameTransformsChannel",
     "GeoJsonChannel",
-    "Grid3Channel",
     "GridChannel",
     "ImageAnnotationsChannel",
     "KeyValuePairChannel",
@@ -89,4 +88,5 @@ __all__ = [
     "TriangleListPrimitiveChannel",
     "Vector2Channel",
     "Vector3Channel",
+    "VoxelGridChannel",
 ]
