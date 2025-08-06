@@ -1245,8 +1245,7 @@ const VoxelGrid: FoxgloveMessageSchema = {
     {
       name: "pose",
       type: { type: "nested", schema: Pose },
-      description:
-        "Origin of grid's corner relative to frame of reference; grid is positioned in the x-y plane, at z=0, relative to this origin",
+      description: "Origin of grid's corner relative to frame of reference",
     },
     {
       name: "row_count",
@@ -1264,7 +1263,7 @@ const VoxelGrid: FoxgloveMessageSchema = {
       description: "Size of single grid cell along x, y, and z axes, relative to `pose`",
     },
     {
-      name: "depth_stride",
+      name: "slice_stride",
       type: { type: "primitive", name: "uint32" },
       description: "Number of bytes between depth slices in `data`",
     },
@@ -1289,7 +1288,7 @@ const VoxelGrid: FoxgloveMessageSchema = {
       name: "data",
       type: { type: "primitive", name: "bytes" },
       description:
-        "Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order.\n For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:\n z = (i / (row_stride * cell_stride)) % depth_stride * cell_size.z\n y = (i / cell_stride) % row_stride * cell_size.y\n x = i % cell_stride * cell_size.x",
+        "Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order.\n For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:\n z = i / slice_stride * cell_size.z\n y = (i % slice_stride) / row_stride * cell_size.y\n x = (i % row_stride) / cell_stride * cell_size.x",
     },
   ],
 };

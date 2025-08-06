@@ -15,7 +15,7 @@ table VoxelGrid {
   /// Frame of reference
   frame_id:string (id: 1);
 
-  /// Origin of grid's corner relative to frame of reference; grid is positioned in the x-y plane, at z=0, relative to this origin
+  /// Origin of grid's corner relative to frame of reference
   pose:foxglove.Pose (id: 2);
 
   /// Number of grid rows
@@ -28,7 +28,7 @@ table VoxelGrid {
   cell_size:foxglove.Vector3 (id: 5);
 
   /// Number of bytes between depth slices in `data`
-  depth_stride:uint32 (id: 6);
+  slice_stride:uint32 (id: 6);
 
   /// Number of bytes between rows in `data`
   row_stride:uint32 (id: 7);
@@ -41,9 +41,9 @@ table VoxelGrid {
 
   /// Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order.
   ///  For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
-  ///  z = (i / (row_stride * cell_stride)) % depth_stride * cell_size.z
-  ///  y = (i / cell_stride) % row_stride * cell_size.y
-  ///  x = i % cell_stride * cell_size.x
+  ///  z = i / slice_stride * cell_size.z
+  ///  y = (i % slice_stride) / row_stride * cell_size.y
+  ///  x = (i % row_stride) / cell_stride * cell_size.x
   data:[uint8] (id: 10);
 }
 

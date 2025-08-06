@@ -810,7 +810,7 @@ class VoxelGrid:
         row_count: "Optional[int]" = 0,
         column_count: "Optional[int]" = 0,
         cell_size: "Optional[Vector3]" = None,
-        depth_stride: "Optional[int]" = 0,
+        slice_stride: "Optional[int]" = 0,
         row_stride: "Optional[int]" = 0,
         cell_stride: "Optional[int]" = 0,
         fields: "Optional[List[PackedElementField]]" = [],

@@ -9,7 +9,7 @@ builtin_interfaces/Time timestamp
 # Frame of reference
 string frame_id
 
-# Origin of grid's corner relative to frame of reference; grid is positioned in the x-y plane, at z=0, relative to this origin
+# Origin of grid's corner relative to frame of reference
 geometry_msgs/Pose pose
 
 # Number of grid rows
@@ -22,7 +22,7 @@ uint32 column_count
 geometry_msgs/Vector3 cell_size
 
 # Number of bytes between depth slices in `data`
-uint32 depth_stride
+uint32 slice_stride
 
 # Number of bytes between rows in `data`
 uint32 row_stride
@@ -35,7 +35,7 @@ foxglove_msgs/PackedElementField[] fields
 
 # Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order.
 #  For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
-#  z = (i / (row_stride * cell_stride)) % depth_stride * cell_size.z
-#  y = (i / cell_stride) % row_stride * cell_size.y
-#  x = i % cell_stride * cell_size.x
+#  z = i / slice_stride * cell_size.z
+#  y = (i % slice_stride) / row_stride * cell_size.y
+#  x = (i % row_stride) / cell_stride * cell_size.x
 uint8[] data

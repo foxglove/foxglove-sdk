@@ -460,8 +460,7 @@ struct VoxelGrid {
   /// @brief Frame of reference
   std::string frame_id;
 
-  /// @brief Origin of grid's corner relative to frame of reference; grid is positioned in the x-y
-  /// plane, at z=0, relative to this origin
+  /// @brief Origin of grid's corner relative to frame of reference
   std::optional<Pose> pose;
 
   /// @brief Number of grid rows
@@ -474,7 +473,7 @@ struct VoxelGrid {
   std::optional<Vector3> cell_size;
 
   /// @brief Number of bytes between depth slices in `data`
-  uint32_t depth_stride = 0;
+  uint32_t slice_stride = 0;
 
   /// @brief Number of bytes between rows in `data`
   uint32_t row_stride = 0;
@@ -489,9 +488,9 @@ struct VoxelGrid {
   /// @brief Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order.
   /// @brief  For the data element starting at byte offset i, the coordinates of its corner closest
   /// to the origin will be:
-  /// @brief  z = (i / (row_stride * cell_stride)) % depth_stride * cell_size.z
-  /// @brief  y = (i / cell_stride) % row_stride * cell_size.y
-  /// @brief  x = i % cell_stride * cell_size.x
+  /// @brief  z = i / slice_stride * cell_size.z
+  /// @brief  y = (i % slice_stride) / row_stride * cell_size.y
+  /// @brief  x = (i % row_stride) / cell_stride * cell_size.x
   std::vector<std::byte> data;
 };
 

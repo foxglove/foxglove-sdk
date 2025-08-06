@@ -1160,7 +1160,7 @@ typedef struct foxglove_voxel_grid {
    */
   struct foxglove_string frame_id;
   /**
-   * Origin of grid's corner relative to frame of reference; grid is positioned in the x-y plane, at z=0, relative to this origin
+   * Origin of grid's corner relative to frame of reference
    */
   const struct foxglove_pose *pose;
   /**
@@ -1178,7 +1178,7 @@ typedef struct foxglove_voxel_grid {
   /**
    * Number of bytes between depth slices in `data`
    */
-  uint32_t depth_stride;
+  uint32_t slice_stride;
   /**
    * Number of bytes between rows in `data`
    */
@@ -1195,9 +1195,9 @@ typedef struct foxglove_voxel_grid {
   /**
    * Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order.
    *  For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
-   *  z = (i / (row_stride * cell_stride)) % depth_stride * cell_size.z
-   *  y = (i / cell_stride) % row_stride * cell_size.y
-   *  x = i % cell_stride * cell_size.x
+   *  z = i / slice_stride * cell_size.z
+   *  y = (i % slice_stride) / row_stride * cell_size.y
+   *  x = (i % row_stride) / cell_stride * cell_size.x
    */
   const unsigned char *data;
   size_t data_len;

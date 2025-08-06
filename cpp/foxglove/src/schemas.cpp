@@ -1534,7 +1534,7 @@ void voxelGridToC(foxglove_voxel_grid& dest, const VoxelGrid& src, [[maybe_unuse
   dest.column_count = src.column_count;
   dest.cell_size =
     src.cell_size ? reinterpret_cast<const foxglove_vector3*>(&*src.cell_size) : nullptr;
-  dest.depth_stride = src.depth_stride;
+  dest.slice_stride = src.slice_stride;
   dest.row_stride = src.row_stride;
   dest.cell_stride = src.cell_stride;
   dest.fields = arena.map<foxglove_packed_element_field>(src.fields, packedElementFieldToC);

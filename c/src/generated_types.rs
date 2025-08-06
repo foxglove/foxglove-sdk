@@ -1331,7 +1331,7 @@ pub struct VoxelGrid {
     /// Frame of reference
     pub frame_id: FoxgloveString,
 
-    /// Origin of grid's corner relative to frame of reference; grid is positioned in the x-y plane, at z=0, relative to this origin
+    /// Origin of grid's corner relative to frame of reference
     pub pose: *const Pose,
 
     /// Number of grid rows
@@ -1344,7 +1344,7 @@ pub struct VoxelGrid {
     pub cell_size: *const Vector3,
 
     /// Number of bytes between depth slices in `data`
-    pub depth_stride: u32,
+    pub slice_stride: u32,
 
     /// Number of bytes between rows in `data`
     pub row_stride: u32,
@@ -1358,9 +1358,9 @@ pub struct VoxelGrid {
 
     /// Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order.
     ///  For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
-    ///  z = (i / (row_stride * cell_stride)) % depth_stride * cell_size.z
-    ///  y = (i / cell_stride) % row_stride * cell_size.y
-    ///  x = i % cell_stride * cell_size.x
+    ///  z = i / slice_stride * cell_size.z
+    ///  y = (i % slice_stride) / row_stride * cell_size.y
+    ///  x = (i % row_stride) / cell_stride * cell_size.x
     pub data: *const c_uchar,
     pub data_len: usize,
 }
@@ -1422,7 +1422,7 @@ impl BorrowToNative for VoxelGrid {
             row_count: self.row_count,
             column_count: self.column_count,
             cell_size: cell_size.map(ManuallyDrop::into_inner),
-            depth_stride: self.depth_stride,
+            slice_stride: self.slice_stride,
             row_stride: self.row_stride,
             cell_stride: self.cell_stride,
             fields: ManuallyDrop::into_inner(fields),

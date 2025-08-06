@@ -3280,7 +3280,7 @@ Frame of reference
 </td>
 <td>
 
-Origin of grid's corner relative to frame of reference; grid is positioned in the x-y plane, at z=0, relative to this origin
+Origin of grid's corner relative to frame of reference
 
 </td>
 </tr>
@@ -3324,7 +3324,7 @@ Size of single grid cell along x, y, and z axes, relative to `pose`
 </td>
 </tr>
 <tr>
-<td><code>depth_stride</code></td>
+<td><code>slice_stride</code></td>
 <td>
 
 uint32
@@ -3386,9 +3386,9 @@ bytes
 
 Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order.
  For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
- z = (i / (row_stride * cell_stride)) % depth_stride * cell_size.z
- y = (i / cell_stride) % row_stride * cell_size.y
- x = i % cell_stride * cell_size.x
+ z = i / slice_stride * cell_size.z
+ y = (i % slice_stride) / row_stride * cell_size.y
+ x = (i % row_stride) / cell_stride * cell_size.x
 
 </td>
 </tr>

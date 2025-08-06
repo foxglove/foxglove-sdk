@@ -981,7 +981,7 @@ export const VoxelGrid = {
     },
     "pose": {
       "title": "foxglove.Pose",
-      "description": "Origin of grid's corner relative to frame of reference; grid is positioned in the x-y plane, at z=0, relative to this origin",
+      "description": "Origin of grid's corner relative to frame of reference",
       "type": "object",
       "properties": {
         "position": {
@@ -1057,7 +1057,7 @@ export const VoxelGrid = {
         }
       }
     },
-    "depth_stride": {
+    "slice_stride": {
       "type": "integer",
       "minimum": 0,
       "description": "Number of bytes between depth slices in `data`"
@@ -1146,7 +1146,7 @@ export const VoxelGrid = {
     "data": {
       "type": "string",
       "contentEncoding": "base64",
-      "description": "Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order.\n For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:\n z = (i / (row_stride * cell_stride)) % depth_stride * cell_size.z\n y = (i / cell_stride) % row_stride * cell_size.y\n x = i % cell_stride * cell_size.x"
+      "description": "Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order.\n For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:\n z = i / slice_stride * cell_size.z\n y = (i % slice_stride) / row_stride * cell_size.y\n x = (i % row_stride) / cell_stride * cell_size.x"
     }
   }
 };

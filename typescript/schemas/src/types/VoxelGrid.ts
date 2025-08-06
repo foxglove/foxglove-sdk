@@ -14,7 +14,7 @@ export type VoxelGrid = {
   /** Frame of reference */
   frame_id: string;
 
-  /** Origin of grid's corner relative to frame of reference; grid is positioned in the x-y plane, at z=0, relative to this origin */
+  /** Origin of grid's corner relative to frame of reference */
   pose: Pose;
 
   /** Number of grid rows */
@@ -27,7 +27,7 @@ export type VoxelGrid = {
   cell_size: Vector3;
 
   /** Number of bytes between depth slices in `data` */
-  depth_stride: number;
+  slice_stride: number;
 
   /** Number of bytes between rows in `data` */
   row_stride: number;
@@ -41,9 +41,9 @@ export type VoxelGrid = {
   /**
    * Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order.
    *  For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
-   *  z = (i / (row_stride * cell_stride)) % depth_stride * cell_size.z
-   *  y = (i / cell_stride) % row_stride * cell_size.y
-   *  x = i % cell_stride * cell_size.x
+   *  z = i / slice_stride * cell_size.z
+   *  y = (i % slice_stride) / row_stride * cell_size.y
+   *  x = (i % row_stride) / cell_stride * cell_size.x
    */
   data: Uint8Array;
 };
