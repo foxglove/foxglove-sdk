@@ -1151,7 +1151,7 @@ A 3D grid of data
 <td><code>timestamp</code></td>
 <td>
 
-time
+[Timestamp](#timestamp)
 
 </td>
 <td>

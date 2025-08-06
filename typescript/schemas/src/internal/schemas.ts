@@ -1234,7 +1234,7 @@ const Grid3: FoxgloveMessageSchema = {
   fields: [
     {
       name: "timestamp",
-      type: { type: "primitive", name: "time" },
+      type: { type: "nested", schema: Timestamp },
       description: "Timestamp of grid",
     },
     {
