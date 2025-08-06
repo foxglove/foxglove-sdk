@@ -309,9 +309,9 @@ pub struct Grid {
     pub data: ::prost::bytes::Bytes,
 }
 /// A 3D grid of data
-/// <https://docs.foxglove.dev/docs/visualization/message-schemas/grid3-d>
+/// <https://docs.foxglove.dev/docs/visualization/message-schemas/grid3>
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct Grid3D {
+pub struct Grid3 {
     /// Timestamp of grid
     #[prost(message, optional, tag = "1")]
     pub timestamp: ::core::option::Option<crate::schemas::Timestamp>,

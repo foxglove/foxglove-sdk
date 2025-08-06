@@ -15,7 +15,7 @@ from .schemas import (
     FrameTransforms,
     GeoJson,
     Grid,
-    Grid3D,
+    Grid3,
     ImageAnnotations,
     KeyValuePair,
     LaserScan,
@@ -771,9 +771,9 @@ class GeoJsonChannel:
         """Log a Foxglove GeoJson message on the channel."""
         ...
 
-class Grid3DChannel:
+class Grid3Channel:
     """
-    A channel for logging Grid3D messages
+    A channel for logging Grid3 messages
 
     You should choose a unique topic name per channel.
     """
@@ -784,7 +784,7 @@ class Grid3DChannel:
         *,
         metadata: Optional[Dict[str, str]] = None,
         context: Optional["Context"] = None,
-    ) -> "Grid3DChannel": ...
+    ) -> "Grid3Channel": ...
     def id(self) -> int:
         """The unique ID of the channel."""
         ...
@@ -830,11 +830,11 @@ class Grid3DChannel:
 
     def log(
         self,
-        message: "Grid3D",
+        message: "Grid3",
         *,
         log_time: int | None = None,
     ) -> None:
-        """Log a Foxglove Grid3D message on the channel."""
+        """Log a Foxglove Grid3 message on the channel."""
         ...
 
 class GridChannel:

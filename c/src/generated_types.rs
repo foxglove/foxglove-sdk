@@ -1324,7 +1324,7 @@ pub extern "C" fn foxglove_channel_log_grid(
 
 /// A 3D grid of data
 #[repr(C)]
-pub struct Grid3D {
+pub struct Grid3 {
     /// Timestamp of grid
     pub timestamp: *const FoxgloveTimestamp,
 
@@ -1365,13 +1365,13 @@ pub struct Grid3D {
     pub data_len: usize,
 }
 
-impl Grid3D {
+impl Grid3 {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
     /// # Safety
     /// We're trusting the caller that the channel will only be used with this type T.
     #[unsafe(no_mangle)]
-    pub unsafe extern "C" fn foxglove_channel_create_grid3_d(
+    pub unsafe extern "C" fn foxglove_channel_create_grid3(
         topic: FoxgloveString,
         context: *const FoxgloveContext,
         channel: *mut *const FoxgloveChannel,
@@ -1381,14 +1381,14 @@ impl Grid3D {
             return FoxgloveError::ValueError;
         }
         unsafe {
-            let result = do_foxglove_channel_create::<foxglove::schemas::Grid3D>(topic, context);
+            let result = do_foxglove_channel_create::<foxglove::schemas::Grid3>(topic, context);
             result_to_c(result, channel)
         }
     }
 }
 
-impl BorrowToNative for Grid3D {
-    type NativeType = foxglove::schemas::Grid3D;
+impl BorrowToNative for Grid3 {
+    type NativeType = foxglove::schemas::Grid3;
 
     unsafe fn borrow_to_native(
         &self,
@@ -1415,7 +1415,7 @@ impl BorrowToNative for Grid3D {
         .transpose()?;
         let fields = unsafe { arena.as_mut().map(self.fields, self.fields_count)? };
 
-        Ok(ManuallyDrop::new(foxglove::schemas::Grid3D {
+        Ok(ManuallyDrop::new(foxglove::schemas::Grid3 {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
             frame_id: ManuallyDrop::into_inner(frame_id),
             pose: pose.map(ManuallyDrop::into_inner),
@@ -1431,26 +1431,26 @@ impl BorrowToNative for Grid3D {
     }
 }
 
-/// Log a Grid3D message to a channel.
+/// Log a Grid3 message to a channel.
 ///
 /// # Safety
-/// The channel must have been created for this type with foxglove_channel_create_grid3_d.
+/// The channel must have been created for this type with foxglove_channel_create_grid3.
 #[unsafe(no_mangle)]
-pub extern "C" fn foxglove_channel_log_grid3_d(
+pub extern "C" fn foxglove_channel_log_grid3(
     channel: Option<&FoxgloveChannel>,
-    msg: Option<&Grid3D>,
+    msg: Option<&Grid3>,
     log_time: Option<&u64>,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
-    match unsafe { Grid3D::borrow_option_to_native(msg, arena_pin) } {
+    match unsafe { Grid3::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
             // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
             log_msg_to_channel(channel, &*msg, log_time)
         }
         Err(e) => {
-            tracing::error!("Grid3D: {}", e);
+            tracing::error!("Grid3: {}", e);
             e.into()
         }
     }

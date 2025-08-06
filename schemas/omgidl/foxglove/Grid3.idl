@@ -8,7 +8,7 @@
 module foxglove {
 
 // A 3D grid of data
-struct Grid3D {
+struct Grid3 {
   // Timestamp of grid
   Time timestamp;
 

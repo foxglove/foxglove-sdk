@@ -1127,9 +1127,9 @@ const Grid: FoxgloveMessageSchema = {
   ],
 };
 
-const Grid3D: FoxgloveMessageSchema = {
+const Grid3: FoxgloveMessageSchema = {
   type: "message",
-  name: "Grid3D",
+  name: "Grid3",
   description: "A 3D grid of data",
   fields: [
     {
@@ -1592,7 +1592,7 @@ export const foxgloveMessageSchemas = {
   FrameTransforms,
   GeoJSON,
   Grid,
-  Grid3D,
+  Grid3,
   ImageAnnotations,
   KeyValuePair,
   LaserScan,

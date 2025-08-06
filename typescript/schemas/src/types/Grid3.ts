@@ -7,7 +7,7 @@ import { Time } from "./Time";
 import { Vector3 } from "./Vector3";
 
 /** A 3D grid of data */
-export type Grid3D = {
+export type Grid3 = {
   /** Timestamp of grid */
   timestamp: Time;
 

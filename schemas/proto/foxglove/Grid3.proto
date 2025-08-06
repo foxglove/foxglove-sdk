@@ -10,7 +10,7 @@ import "google/protobuf/timestamp.proto";
 package foxglove;
 
 // A 3D grid of data
-message Grid3D {
+message Grid3 {
   // Timestamp of grid
   google.protobuf.Timestamp timestamp = 1;
 

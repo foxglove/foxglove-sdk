@@ -436,7 +436,7 @@ struct Grid {
 };
 
 /// @brief A 3D grid of data
-struct Grid3D {
+struct Grid3 {
   /// @brief Timestamp of grid
   std::optional<Timestamp> timestamp;
 
@@ -1513,11 +1513,11 @@ private:
   ChannelUniquePtr impl_;
 };
 
-/// @brief A channel for logging Grid3D messages to a topic.
+/// @brief A channel for logging Grid3 messages to a topic.
 ///
-/// @note While channels are fully thread-safe, the Grid3D struct is not thread-safe.
+/// @note While channels are fully thread-safe, the Grid3 struct is not thread-safe.
 /// Avoid modifying it concurrently or during a log operation.
-class Grid3DChannel {
+class Grid3Channel {
 public:
   /// @brief Create a new channel.
   ///
@@ -1525,32 +1525,32 @@ public:
   /// compatibility with the Foxglove app.
   /// @param context The context which associates logs to a sink. If omitted, the default context is
   /// used.
-  static FoxgloveResult<Grid3DChannel> create(
+  static FoxgloveResult<Grid3Channel> create(
     const std::string_view& topic, const Context& context = Context()
   );
 
   /// @brief Log a message to the channel.
   ///
-  /// @param msg The Grid3D message to log.
+  /// @param msg The Grid3 message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
-  FoxgloveError log(const Grid3D& msg, std::optional<uint64_t> log_time = std::nullopt) noexcept;
+  FoxgloveError log(const Grid3& msg, std::optional<uint64_t> log_time = std::nullopt) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.
   [[nodiscard]] uint64_t id() const noexcept;
 
-  Grid3DChannel(const Grid3DChannel& other) noexcept = delete;
-  Grid3DChannel& operator=(const Grid3DChannel& other) noexcept = delete;
+  Grid3Channel(const Grid3Channel& other) noexcept = delete;
+  Grid3Channel& operator=(const Grid3Channel& other) noexcept = delete;
   /// @brief Default move constructor.
-  Grid3DChannel(Grid3DChannel&& other) noexcept = default;
+  Grid3Channel(Grid3Channel&& other) noexcept = default;
   /// @brief Default move assignment.
-  Grid3DChannel& operator=(Grid3DChannel&& other) noexcept = default;
+  Grid3Channel& operator=(Grid3Channel&& other) noexcept = default;
   /// @brief Default destructor.
-  ~Grid3DChannel() = default;
+  ~Grid3Channel() = default;
 
 private:
-  explicit Grid3DChannel(ChannelUniquePtr&& channel)
+  explicit Grid3Channel(ChannelUniquePtr&& channel)
       : impl_(std::move(channel)) {}
 
   ChannelUniquePtr impl_;

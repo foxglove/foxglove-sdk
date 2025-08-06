@@ -267,14 +267,14 @@ impl Encode for Grid {
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
 }
 
-impl Encode for Grid3D {
+impl Encode for Grid3 {
     type Error = ::prost::EncodeError;
 
     fn get_schema() -> Option<Schema> {
         Some(Schema::new(
-            "foxglove.Grid3D",
+            "foxglove.Grid3",
             "protobuf",
-            descriptors::GRID3_D,
+            descriptors::GRID3,
         ))
     }
 

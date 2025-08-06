@@ -24,7 +24,7 @@ All schemas are generated from [schemas.ts](/internal/schemas.ts).
 - [FrameTransforms](#frametransforms)
 - [GeoJSON](#geojson)
 - [Grid](#grid)
-- [Grid3D](#grid3d)
+- [Grid3](#grid3)
 - [ImageAnnotations](#imageannotations)
 - [KeyValuePair](#keyvaluepair)
 - [LaserScan](#laserscan)
@@ -1097,7 +1097,7 @@ Grid cell data, interpreted using `fields`, in row-major (y-major) order.
 </tr>
 </table>
 
-## Grid3D
+## Grid3
 
 A 3D grid of data
 

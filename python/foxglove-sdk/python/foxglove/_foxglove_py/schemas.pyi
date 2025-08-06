@@ -298,7 +298,7 @@ class Grid:
         """Returns the Grid schema"""
         ...
 
-class Grid3D:
+class Grid3:
     """
     A 3D grid of data
     """
@@ -317,10 +317,10 @@ class Grid3D:
         cell_stride: "Optional[int]" = 0,
         fields: "Optional[List[PackedElementField]]" = [],
         data: "Optional[bytes]" = b"",
-    ) -> "Grid3D": ...
+    ) -> "Grid3": ...
     @staticmethod
     def get_schema() -> Schema:
-        """Returns the Grid3D schema"""
+        """Returns the Grid3 schema"""
         ...
 
 class ImageAnnotations:
@@ -834,7 +834,7 @@ FoxgloveSchema = Union[
     FrameTransforms,
     GeoJson,
     Grid,
-    Grid3D,
+    Grid3,
     ImageAnnotations,
     KeyValuePair,
     LaserScan,

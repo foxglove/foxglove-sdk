@@ -790,12 +790,12 @@ impl From<Grid> for foxglove::schemas::Grid {
 ///      y = (i / cell_stride) % row_stride * cell_size.y
 ///      x = i % cell_stride * cell_size.x
 ///
-/// See https://docs.foxglove.dev/docs/visualization/message-schemas/grid3-d
+/// See https://docs.foxglove.dev/docs/visualization/message-schemas/grid3
 #[pyclass(module = "foxglove.schemas")]
 #[derive(Clone)]
-pub(crate) struct Grid3D(pub(crate) foxglove::schemas::Grid3D);
+pub(crate) struct Grid3(pub(crate) foxglove::schemas::Grid3);
 #[pymethods]
-impl Grid3D {
+impl Grid3 {
     #[new]
     #[pyo3(signature = (*, timestamp=None, frame_id="".to_string(), pose=None, row_count=0, column_count=0, cell_size=None, slice_stride=0, row_stride=0, cell_stride=0, fields=vec![], data=None) )]
     fn new(
@@ -811,7 +811,7 @@ impl Grid3D {
         fields: Vec<PackedElementField>,
         data: Option<Bound<'_, PyBytes>>,
     ) -> Self {
-        Self(foxglove::schemas::Grid3D {
+        Self(foxglove::schemas::Grid3 {
             timestamp: timestamp.map(Into::into),
             frame_id,
             pose: pose.map(Into::into),
@@ -829,7 +829,7 @@ impl Grid3D {
     }
     fn __repr__(&self) -> String {
         format!(
-            "Grid3D(timestamp={:?}, frame_id={:?}, pose={:?}, row_count={:?}, column_count={:?}, cell_size={:?}, slice_stride={:?}, row_stride={:?}, cell_stride={:?}, fields={:?}, data={:?})",
+            "Grid3(timestamp={:?}, frame_id={:?}, pose={:?}, row_count={:?}, column_count={:?}, cell_size={:?}, slice_stride={:?}, row_stride={:?}, cell_stride={:?}, fields={:?}, data={:?})",
             self.0.timestamp,
             self.0.frame_id,
             self.0.pose,
@@ -843,15 +843,15 @@ impl Grid3D {
             self.0.data,
         )
     }
-    /// Returns the Grid3D schema.
+    /// Returns the Grid3 schema.
     #[staticmethod]
     fn get_schema() -> PySchema {
-        foxglove::schemas::Grid3D::get_schema().unwrap().into()
+        foxglove::schemas::Grid3::get_schema().unwrap().into()
     }
 }
 
-impl From<Grid3D> for foxglove::schemas::Grid3D {
-    fn from(value: Grid3D) -> Self {
+impl From<Grid3> for foxglove::schemas::Grid3 {
+    fn from(value: Grid3) -> Self {
         value.0
     }
 }
@@ -2244,7 +2244,7 @@ pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<FrameTransforms>()?;
     module.add_class::<GeoJson>()?;
     module.add_class::<Grid>()?;
-    module.add_class::<Grid3D>()?;
+    module.add_class::<Grid3>()?;
     module.add_class::<ImageAnnotations>()?;
     module.add_class::<KeyValuePair>()?;
     module.add_class::<LaserScan>()?;

@@ -8,7 +8,7 @@ include "Vector3.fbs";
 namespace foxglove;
 
 /// A 3D grid of data
-table Grid3D {
+table Grid3 {
   /// Timestamp of grid
   timestamp:Time (id: 0);
 
@@ -47,4 +47,4 @@ table Grid3D {
   data:[uint8] (id: 10);
 }
 
-root_type Grid3D;
+root_type Grid3;

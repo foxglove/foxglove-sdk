@@ -32,7 +32,7 @@ void frameTransformToC(foxglove_frame_transform& dest, const FrameTransform& src
 void frameTransformsToC(foxglove_frame_transforms& dest, const FrameTransforms& src, Arena& arena);
 void geoJSONToC(foxglove_geo_json& dest, const GeoJSON& src, Arena& arena);
 void gridToC(foxglove_grid& dest, const Grid& src, Arena& arena);
-void grid3DToC(foxglove_grid3_d& dest, const Grid3D& src, Arena& arena);
+void grid3ToC(foxglove_grid3& dest, const Grid3& src, Arena& arena);
 void imageAnnotationsToC(
   foxglove_image_annotations& dest, const ImageAnnotations& src, Arena& arena
 );
@@ -390,28 +390,28 @@ uint64_t GridChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
-FoxgloveResult<Grid3DChannel> Grid3DChannel::create(
+FoxgloveResult<Grid3Channel> Grid3Channel::create(
   const std::string_view& topic, const Context& context
 ) {
   const foxglove_channel* channel = nullptr;
   foxglove_error error =
-    foxglove_channel_create_grid3_d({topic.data(), topic.size()}, context.getInner(), &channel);
+    foxglove_channel_create_grid3({topic.data(), topic.size()}, context.getInner(), &channel);
   if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
     return tl::unexpected(FoxgloveError(error));
   }
-  return Grid3DChannel(ChannelUniquePtr(channel));
+  return Grid3Channel(ChannelUniquePtr(channel));
 }
 
-FoxgloveError Grid3DChannel::log(const Grid3D& msg, std::optional<uint64_t> log_time) noexcept {
+FoxgloveError Grid3Channel::log(const Grid3& msg, std::optional<uint64_t> log_time) noexcept {
   Arena arena;
-  foxglove_grid3_d c_msg;
-  grid3DToC(c_msg, msg, arena);
+  foxglove_grid3 c_msg;
+  grid3ToC(c_msg, msg, arena);
   return FoxgloveError(
-    foxglove_channel_log_grid3_d(impl_.get(), &c_msg, log_time ? &*log_time : nullptr)
+    foxglove_channel_log_grid3(impl_.get(), &c_msg, log_time ? &*log_time : nullptr)
   );
 }
 
-uint64_t Grid3DChannel::id() const noexcept {
+uint64_t Grid3Channel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
@@ -1250,7 +1250,7 @@ void gridToC(foxglove_grid& dest, const Grid& src, [[maybe_unused]] Arena& arena
   dest.data_len = src.data.size();
 }
 
-void grid3DToC(foxglove_grid3_d& dest, const Grid3D& src, [[maybe_unused]] Arena& arena) {
+void grid3ToC(foxglove_grid3& dest, const Grid3& src, [[maybe_unused]] Arena& arena) {
   dest.timestamp =
     src.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*src.timestamp) : nullptr;
   dest.frame_id = {src.frame_id.data(), src.frame_id.size()};

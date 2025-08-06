@@ -1150,7 +1150,7 @@ typedef struct foxglove_grid {
 /**
  * A 3D grid of data
  */
-typedef struct foxglove_grid3_d {
+typedef struct foxglove_grid3 {
   /**
    * Timestamp of grid
    */
@@ -1201,7 +1201,7 @@ typedef struct foxglove_grid3_d {
    */
   const unsigned char *data;
   size_t data_len;
-} foxglove_grid3_d;
+} foxglove_grid3;
 
 /**
  * An array of points on a 2D image
@@ -2478,18 +2478,18 @@ foxglove_error foxglove_channel_log_grid(const struct foxglove_channel *channel,
  * # Safety
  * We're trusting the caller that the channel will only be used with this type T.
  */
-foxglove_error foxglove_channel_create_grid3_d(struct foxglove_string topic,
+foxglove_error foxglove_channel_create_grid3(struct foxglove_string topic,
                                                const struct foxglove_context *context,
                                                const struct foxglove_channel **channel);
 
 /**
- * Log a Grid3D message to a channel.
+ * Log a Grid3 message to a channel.
  *
  * # Safety
- * The channel must have been created for this type with foxglove_channel_create_grid3_d.
+ * The channel must have been created for this type with foxglove_channel_create_grid3.
  */
-foxglove_error foxglove_channel_log_grid3_d(const struct foxglove_channel *channel,
-                                            const struct foxglove_grid3_d *msg,
+foxglove_error foxglove_channel_log_grid3(const struct foxglove_channel *channel,
+                                            const struct foxglove_grid3 *msg,
                                             const uint64_t *log_time);
 
 /**
