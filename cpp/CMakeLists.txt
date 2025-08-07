@@ -230,3 +230,13 @@ target_compile_options(example_auto_serialize PUBLIC ${SANITIZER_COMPILE_OPTIONS
 target_include_directories(example_auto_serialize SYSTEM PRIVATE ${json_SOURCE_DIR}/include)
 target_link_options(example_auto_serialize PUBLIC ${SANITIZER_LINK_OPTIONS})
 target_link_libraries(example_auto_serialize foxglove_cpp_static)
+
+find_package(OpenCV REQUIRED)
+include_directories(${OpenCV_INCLUDE_DIRS})
+add_executable(example_rgb_camera_visualization examples/rgb-camera-visualization/main.cpp)
+set_property(TARGET example_rgb_camera_visualization PROPERTY CXX_STANDARD 17)
+set_property(TARGET example_rgb_camera_visualization PROPERTY CXX_STANDARD_REQUIRED True)
+target_compile_options(example_rgb_camera_visualization PUBLIC ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
+target_link_options(example_rgb_camera_visualization PUBLIC ${SANITIZER_LINK_OPTIONS})
+target_include_directories(example_rgb_camera_visualization PRIVATE ${OpenCV_INCLUDE_DIRS})
+target_link_libraries(example_rgb_camera_visualization foxglove_cpp_static ${OpenCV_LIBS})
