@@ -1021,7 +1021,7 @@ impl<'py> FromPyObject<'py> for ParameterValueConverter {
                 let value: ParameterValueConverter = item.extract()?;
                 values.push(value.0);
             }
-            return Ok(Self(PyParameterValue::Array(values)));
+            Ok(Self(PyParameterValue::Array(values)))
         } else if let Ok(dict) = obj.downcast::<PyDict>() {
             let mut values = HashMap::new();
             for (key, value) in dict {
