@@ -5,6 +5,7 @@
 .mypy_cache/
 .pytest_cache/
 .virtualenvs/
+.venv/
 .yarn/
 *.py[cod]
 *.so

@@ -37,6 +37,7 @@ build:
 		$(if $(SANITIZE),-DSANITIZE=$(SANITIZE) -DRust_TOOLCHAIN=nightly) \
 		$(if $(STRICT),-DSTRICT=$(STRICT)) \
 		$(if $(CLANG_TIDY),-DCLANG_TIDY=$(CLANG_TIDY)) \
+		$(if $(BUILD_OPENCV_EXAMPLE),-DBUILD_OPENCV_EXAMPLE=$(BUILD_OPENCV_EXAMPLE)) \
 		-B $(BUILD_DIR)
 	cmake --build $(BUILD_DIR) -j 8 --config $(CMAKE_BUILD_TYPE)
 
