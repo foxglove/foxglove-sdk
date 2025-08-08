@@ -20,38 +20,59 @@
 
 using BenchmarkClient = foxglove::test::Client<websocketpp::config::asio_client>;
 
-static void DoSetup(const benchmark::State& state [[maybe_unused]]) {
-  rclcpp::init(0, nullptr);
-}
+class BridgeBenchmarkFixture : public ::benchmark::Fixture {
+  public:
+  constexpr static uint16_t port = 8765;
 
-static void DoTeardown(const benchmark::State& state [[maybe_unused]]) {
-  rclcpp::shutdown();
-}
+  void SetUp(::benchmark::State& state [[maybe_unused]]) {
+    rclcpp::init(0, nullptr);
+    rclcpp::NodeOptions options;
+    options.parameter_overrides({{"port", port}});
+    _bridge = std::make_unique<foxglove_bridge::FoxgloveBridge>(options);
+    _executor = std::make_unique<rclcpp::executors::SingleThreadedExecutor>();
+    _executor->add_node(_bridge->get_node_base_interface());
 
-static void BM_StringPublish(benchmark::State& state) {
+    _executorThread = std::thread([this]() {
+      _executor->spin();
+    });
+  }
+
+  void TearDown(::benchmark::State& state [[maybe_unused]]) {
+    _executor->cancel();
+    _executorThread.join();
+    for (auto& [_, node] : _publisherNodes) {
+      _executor->remove_node(node->get_node_base_interface());
+    }
+    _publisherNodes.clear();
+    _executor->remove_node(_bridge->get_node_base_interface());
+    _bridge.reset();
+    rclcpp::shutdown();
+  }
+
+  void addNode(const std::string& nodeName, std::unique_ptr<rclcpp::Node>&& node) {
+    _publisherNodes[nodeName] = std::move(node);
+    _executor->add_node(_publisherNodes[nodeName]->get_node_base_interface());
+  }
+
+  rclcpp::Node& node(const std::string& nodeName) {
+    return *_publisherNodes[nodeName];
+  }
+
+private:
+  std::unique_ptr<rclcpp::executors::SingleThreadedExecutor> _executor;
+  std::thread _executorThread;
+  std::unique_ptr<foxglove_bridge::FoxgloveBridge> _bridge;
+  std::unordered_map<std::string, std::unique_ptr<rclcpp::Node>> _publisherNodes;
+};
+
+BENCHMARK_F(BridgeBenchmarkFixture, BM_StringPublish)(benchmark::State& state) {
   constexpr char topic_name[] = "/test";
-  constexpr uint16_t port = 8765;
-
-  // Store port in a ROS parameter that bridge is reading
-  rclcpp::NodeOptions options;
-  options.parameter_overrides({{"port", port}});
-
-  // Set up a bridge
-  foxglove_bridge::FoxgloveBridge bridge(options);
 
   // Set up a publisher node
-  auto publisher = std::make_shared<rclcpp::Node>("publisher", options);
+  auto publisher = std::make_unique<rclcpp::Node>("publisher");
   auto publisher_publisher =
     publisher->create_publisher<std_msgs::msg::String>(topic_name, rclcpp::QoS(rclcpp::KeepLast(10)));
-
-  // Setup executor for manual control in benchmark loop
-  rclcpp::executors::SingleThreadedExecutor executor;
-  executor.add_node(bridge.get_node_base_interface());
-  executor.add_node(publisher->get_node_base_interface());
-
-  std::thread executor_thread([&]() {
-    executor.spin();
-  });
+  addNode("publisher", std::move(publisher));
 
   // TODO: This is a hack to wait for the bridge to be ready.
   // There's a race condition where the rust side can advertise the channel
@@ -102,14 +123,7 @@ static void BM_StringPublish(benchmark::State& state) {
 
   // Unsubscribe after receiving the message
   client->unsubscribe({subscription_id});
-
-  executor.cancel();
-  executor_thread.join();
-  executor.remove_node(bridge.get_node_base_interface());
-  executor.remove_node(publisher->get_node_base_interface());
   client->close();
 }
-
-BENCHMARK(BM_StringPublish)->Setup(DoSetup)->Teardown(DoTeardown);
 
 BENCHMARK_MAIN();
