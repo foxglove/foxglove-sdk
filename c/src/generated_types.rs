@@ -1324,14 +1324,14 @@ pub extern "C" fn foxglove_channel_log_grid(
 
 /// A 3D grid of data
 #[repr(C)]
-pub struct Grid3 {
+pub struct VoxelGrid {
     /// Timestamp of grid
     pub timestamp: *const FoxgloveTimestamp,
 
     /// Frame of reference
     pub frame_id: FoxgloveString,
 
-    /// Origin of grid's corner relative to frame of reference; grid is positioned in the x-y plane relative to this origin
+    /// Origin of grid's corner relative to frame of reference
     pub pose: *const Pose,
 
     /// Number of grid rows
@@ -1358,20 +1358,20 @@ pub struct Grid3 {
 
     /// Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order.
     ///  For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
-    ///  z = (i / (row_stride * cell_stride)) % slice_stride * cell_size.z
-    ///  y = (i / cell_stride) % row_stride * cell_size.y
-    ///  x = i % cell_stride * cell_size.x
+    ///  z = i / slice_stride * cell_size.z
+    ///  y = (i % slice_stride) / row_stride * cell_size.y
+    ///  x = (i % row_stride) / cell_stride * cell_size.x
     pub data: *const c_uchar,
     pub data_len: usize,
 }
 
-impl Grid3 {
+impl VoxelGrid {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
     /// # Safety
     /// We're trusting the caller that the channel will only be used with this type T.
     #[unsafe(no_mangle)]
-    pub unsafe extern "C" fn foxglove_channel_create_grid3(
+    pub unsafe extern "C" fn foxglove_channel_create_voxel_grid(
         topic: FoxgloveString,
         context: *const FoxgloveContext,
         channel: *mut *const FoxgloveChannel,
@@ -1381,14 +1381,14 @@ impl Grid3 {
             return FoxgloveError::ValueError;
         }
         unsafe {
-            let result = do_foxglove_channel_create::<foxglove::schemas::Grid3>(topic, context);
+            let result = do_foxglove_channel_create::<foxglove::schemas::VoxelGrid>(topic, context);
             result_to_c(result, channel)
         }
     }
 }
 
-impl BorrowToNative for Grid3 {
-    type NativeType = foxglove::schemas::Grid3;
+impl BorrowToNative for VoxelGrid {
+    type NativeType = foxglove::schemas::VoxelGrid;
 
     unsafe fn borrow_to_native(
         &self,
@@ -1415,7 +1415,7 @@ impl BorrowToNative for Grid3 {
         .transpose()?;
         let fields = unsafe { arena.as_mut().map(self.fields, self.fields_count)? };
 
-        Ok(ManuallyDrop::new(foxglove::schemas::Grid3 {
+        Ok(ManuallyDrop::new(foxglove::schemas::VoxelGrid {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
             frame_id: ManuallyDrop::into_inner(frame_id),
             pose: pose.map(ManuallyDrop::into_inner),
@@ -1431,26 +1431,26 @@ impl BorrowToNative for Grid3 {
     }
 }
 
-/// Log a Grid3 message to a channel.
+/// Log a VoxelGrid message to a channel.
 ///
 /// # Safety
-/// The channel must have been created for this type with foxglove_channel_create_grid3.
+/// The channel must have been created for this type with foxglove_channel_create_voxel_grid.
 #[unsafe(no_mangle)]
-pub extern "C" fn foxglove_channel_log_grid3(
+pub extern "C" fn foxglove_channel_log_voxel_grid(
     channel: Option<&FoxgloveChannel>,
-    msg: Option<&Grid3>,
+    msg: Option<&VoxelGrid>,
     log_time: Option<&u64>,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
-    match unsafe { Grid3::borrow_option_to_native(msg, arena_pin) } {
+    match unsafe { VoxelGrid::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
             // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
             log_msg_to_channel(channel, &*msg, log_time)
         }
         Err(e) => {
-            tracing::error!("Grid3: {}", e);
+            tracing::error!("VoxelGrid: {}", e);
             e.into()
         }
     }
