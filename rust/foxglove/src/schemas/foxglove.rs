@@ -301,8 +301,53 @@ pub struct Grid {
     /// Fields in `data`. `red`, `green`, `blue`, and `alpha` are optional for customizing the grid's color.
     #[prost(message, repeated, tag = "8")]
     pub fields: ::prost::alloc::vec::Vec<PackedElementField>,
-    /// Grid cell data, interpreted using `fields`, in row-major (y-major) order — values fill each row from left to right along the X axis, with rows ordered from top to bottom along the Y axis, starting at the bottom-left corner when viewed from +Z looking towards -Z with identity orientations
+    /// Grid cell data, interpreted using `fields`, in row-major (y-major) order.
+    ///   For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
+    ///   y = (i / cell_stride) % row_stride * cell_size.y
+    ///   x = i % cell_stride * cell_size.x
     #[prost(bytes = "bytes", tag = "9")]
+    pub data: ::prost::bytes::Bytes,
+}
+/// A 3D grid of data
+/// <https://docs.foxglove.dev/docs/visualization/message-schemas/grid3>
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct Grid3 {
+    /// Timestamp of grid
+    #[prost(message, optional, tag = "1")]
+    pub timestamp: ::core::option::Option<crate::schemas::Timestamp>,
+    /// Frame of reference
+    #[prost(string, tag = "2")]
+    pub frame_id: ::prost::alloc::string::String,
+    /// Origin of grid's corner relative to frame of reference; grid is positioned in the x-y plane relative to this origin
+    #[prost(message, optional, tag = "3")]
+    pub pose: ::core::option::Option<Pose>,
+    /// Number of grid rows
+    #[prost(fixed32, tag = "4")]
+    pub row_count: u32,
+    /// Number of grid columns
+    #[prost(fixed32, tag = "5")]
+    pub column_count: u32,
+    /// Size of single grid cell along x, y, and z axes, relative to `pose`
+    #[prost(message, optional, tag = "6")]
+    pub cell_size: ::core::option::Option<Vector3>,
+    /// Number of bytes between depth slices in `data`
+    #[prost(fixed32, tag = "7")]
+    pub slice_stride: u32,
+    /// Number of bytes between rows in `data`
+    #[prost(fixed32, tag = "8")]
+    pub row_stride: u32,
+    /// Number of bytes between cells within a row in `data`
+    #[prost(fixed32, tag = "9")]
+    pub cell_stride: u32,
+    /// Fields in `data`. `red`, `green`, `blue`, and `alpha` are optional for customizing the grid's color.
+    #[prost(message, repeated, tag = "10")]
+    pub fields: ::prost::alloc::vec::Vec<PackedElementField>,
+    /// Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order.
+    ///   For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
+    ///   z = (i / (row_stride * cell_stride)) % slice_stride * cell_size.z
+    ///   y = (i / cell_stride) % row_stride * cell_size.y
+    ///   x = i % cell_stride * cell_size.x
+    #[prost(bytes = "bytes", tag = "11")]
     pub data: ::prost::bytes::Bytes,
 }
 /// Array of annotations for a 2D image
@@ -917,21 +962,71 @@ pub struct RawImage {
     /// Frame of reference for the image. The origin of the frame is the optical center of the camera. +x points to the right in the image, +y points down, and +z points into the plane of the image.
     #[prost(string, tag = "7")]
     pub frame_id: ::prost::alloc::string::String,
-    /// Image width
+    /// Image width in pixels
     #[prost(fixed32, tag = "2")]
     pub width: u32,
-    /// Image height
+    /// Image height in pixels
     #[prost(fixed32, tag = "3")]
     pub height: u32,
-    /// Encoding of the raw image data
-    ///
-    /// Supported values: `8UC1`, `8UC3`, `16UC1` (little endian), `32FC1` (little endian), `bayer_bggr8`, `bayer_gbrg8`, `bayer_grbg8`, `bayer_rggb8`, `bgr8`, `bgra8`, `mono8`, `mono16`, `rgb8`, `rgba8`, `uyvy` or `yuv422`, `yuyv` or `yuv422_yuy2`
+    /// Encoding of the raw image data. See the `data` field description for supported values.
     #[prost(string, tag = "4")]
     pub encoding: ::prost::alloc::string::String,
-    /// Byte length of a single row
+    /// Byte length of a single row. This is usually some multiple of `width` depending on the encoding, but can be greater to incorporate padding.
     #[prost(fixed32, tag = "5")]
     pub step: u32,
-    /// Raw image data
+    /// Raw image data.
+    ///
+    /// For each `encoding` value, the `data` field contains image pixel data serialized as follows:
+    ///
+    /// - `yuv422` or `uyvy`:
+    ///    - Pixel colors are decomposed into [Y'UV](<https://en.wikipedia.org/wiki/Y%E2%80%B2UV>) channels.
+    ///    - Pixel channel values are represented as unsigned 8-bit integers.
+    ///    - U and V values are shared between horizontal pairs of pixels. Each pair of output pixels is serialized as \[U, Y1, V, Y2\].
+    ///    - `step` must be greater than or equal to `width` * 2.
+    /// - `yuv422_yuy2` or  `yuyv`:
+    ///    - Pixel colors are decomposed into [Y'UV](<https://en.wikipedia.org/wiki/Y%E2%80%B2UV>) channels.
+    ///    - Pixel channel values are represented as unsigned 8-bit integers.
+    ///    - U and V values are shared between horizontal pairs of pixels. Each pair of output pixels is encoded as \[Y1, U, Y2, V\].
+    ///    - `step` must be greater than or equal to `width` * 2.
+    /// - `rgb8`:
+    ///    - Pixel colors are decomposed into Red, Green, and Blue channels.
+    ///    - Pixel channel values are represented as unsigned 8-bit integers.
+    ///    - Each output pixel is serialized as \[R, G, B\].
+    ///    - `step` must be greater than or equal to `width` * 3.
+    /// - `rgba8`:
+    ///    - Pixel colors are decomposed into Red, Green, Blue, and Alpha channels.
+    ///    - Pixel channel values are represented as unsigned 8-bit integers.
+    ///    - Each output pixel is serialized as \[R, G, B, Alpha\].
+    ///    - `step` must be greater than or equal to `width` * 4.
+    /// - `bgr8` or `8UC3`:
+    ///    - Pixel colors are decomposed into Red, Blue, Green, and Alpha channels.
+    ///    - Pixel channel values are represented as unsigned 8-bit integers.
+    ///    - Each output pixel is serialized as \[B, G, R\].
+    ///    - `step` must be greater than or equal to `width` * 3.
+    /// - `bgra8`:
+    ///    - Pixel colors are decomposed into Blue, Green, Red, and Alpha channels.
+    ///    - Pixel channel values are represented as unsigned 8-bit integers.
+    ///    - Each output pixel is encoded as \[B, G, R, Alpha\].
+    ///    - `step` must be greater than or equal to `width` * 4.
+    /// - `32FC1`:
+    ///    - Pixel brightness is represented as a single-channel, 32-bit little-endian IEEE 754 floating-point value, ranging from 0.0 (black) to 1.0 (white).
+    ///    - `step` must be greater than or equal to `width` * 4.
+    /// - `bayer_rggb8`, `bayer_bggr8`, `bayer_rggb8`, `bayer_gbrg8`, or `bayer_grgb8`:
+    ///    - Pixel colors are decomposed into Red, Blue and Green channels.
+    ///    - Pixel channel values are represented as unsigned 8-bit integers, and serialized in a 2x2 bayer filter pattern.
+    ///    - The order of the four letters after `bayer_` determine the layout, so for `bayer_wxyz8` the pattern is:
+    ///    ```plaintext
+    ///    w | x
+    ///    - + -
+    ///    y | z
+    ///    ```
+    ///    - `step` must be greater than or equal to `width`.
+    /// - `mono8` or `8UC1`:
+    ///    - Pixel brightness is represented as unsigned 8-bit integers.
+    ///    - `step` must be greater than or equal to `width`.
+    /// - `mono16` or `16UC1`:
+    ///    - Pixel brightness is represented as 16-bit unsigned little-endian integers. Rendering of these values is controlled in [Image panel color mode settings](<https://docs.foxglove.dev/docs/visualization/panels/image#general>).
+    ///    - `step` must be greater than or equal to `width` * 2.
     #[prost(bytes = "bytes", tag = "6")]
     pub data: ::prost::bytes::Bytes,
 }

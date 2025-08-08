@@ -1,14 +1,9 @@
+import { foxgloveMessageSchemas } from "./schemas";
 import { FoxgloveEnumSchema, FoxgloveMessageSchema, FoxglovePrimitive } from "./types";
 
-const allPrimitives: FoxglovePrimitive[] = [
-  "duration",
-  "time",
-  "boolean",
-  "bytes",
-  "float64",
-  "uint32",
-  "string",
-];
+const { Duration, Timestamp } = foxgloveMessageSchemas;
+
+const allPrimitives: FoxglovePrimitive[] = ["boolean", "bytes", "float64", "uint32", "string"];
 
 export const exampleEnum: FoxgloveEnumSchema = {
   type: "enum",
@@ -40,6 +35,16 @@ export const exampleMessage: FoxgloveMessageSchema = {
   name: "ExampleMessage",
   description: "An example type",
   fields: [
+    {
+      name: "field_duration",
+      description: "duration field",
+      type: { type: "nested", schema: Duration },
+    },
+    {
+      name: "field_time",
+      description: "time field",
+      type: { type: "nested", schema: Timestamp },
+    },
     ...allPrimitives.map((name): FoxgloveMessageSchema["fields"][0] => ({
       name: `field_${name}`,
       description: `${name} field`,
@@ -56,12 +61,36 @@ export const exampleMessage: FoxgloveMessageSchema = {
                 : // time and duration and bytes
                   undefined,
     })),
+    {
+      name: "field_duration_array",
+      description: "duration array field",
+      type: { type: "nested", schema: Duration },
+      array: true,
+    },
+    {
+      name: "field_time_array",
+      description: "time array field",
+      type: { type: "nested", schema: Timestamp },
+      array: true,
+    },
     ...allPrimitives.map((name): FoxgloveMessageSchema["fields"][0] => ({
       name: `field_${name}_array`,
       description: `${name} array field`,
       type: { type: "primitive", name },
       array: true,
     })),
+    {
+      name: "field_duration_fixed_array",
+      description: "duration fixed-length array field",
+      type: { type: "nested", schema: Duration },
+      array: 3,
+    },
+    {
+      name: "field_time_fixed_array",
+      description: "time fixed-length array field",
+      type: { type: "nested", schema: Timestamp },
+      array: 3,
+    },
     ...allPrimitives.map((name): FoxgloveMessageSchema["fields"][0] => ({
       name: `field_${name}_fixed_array`,
       description: `${name} fixed-length array field`,

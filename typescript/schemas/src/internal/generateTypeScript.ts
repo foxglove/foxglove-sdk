@@ -1,6 +1,6 @@
 import { FoxglovePrimitive, FoxgloveSchema } from "./types";
 
-function primitiveToTypeScript(type: Exclude<FoxglovePrimitive, "time" | "duration">) {
+function primitiveToTypeScript(type: FoxglovePrimitive) {
   switch (type) {
     case "bytes":
       return "Uint8Array";
@@ -9,6 +9,7 @@ function primitiveToTypeScript(type: Exclude<FoxglovePrimitive, "time" | "durati
     case "boolean":
       return "boolean";
     case "float64":
+    case "int32":
     case "uint32":
       return "number";
   }
@@ -16,26 +17,20 @@ function primitiveToTypeScript(type: Exclude<FoxglovePrimitive, "time" | "durati
 
 function primitiveToTypedArray(type: FoxglovePrimitive) {
   switch (type) {
-    case "time":
-    case "duration":
     case "bytes":
     case "string":
     case "boolean":
       return [];
     case "float64":
       return ["Float32Array", "Float64Array"];
+    case "int32":
+      return ["Int32Array"];
     case "uint32":
       return ["Uint32Array"];
   }
 }
 
 export const TIME_TS = `export type Time = {
-  sec: number;
-  nsec: number;
-};
-`;
-
-export const DURATION_TS = `export type Duration = {
   sec: number;
   nsec: number;
 };
@@ -80,19 +75,16 @@ export function generateTypeScript(
             imports.add(field.type.enum.name);
             break;
           case "nested":
-            fieldType = field.type.schema.name;
-            imports.add(field.type.schema.name);
-            break;
-          case "primitive":
-            if (field.type.name === "time") {
+            if (field.type.schema.name === "Timestamp") {
               fieldType = "Time";
               imports.add("Time");
-            } else if (field.type.name === "duration") {
-              fieldType = "Duration";
-              imports.add("Duration");
             } else {
-              fieldType = primitiveToTypeScript(field.type.name);
+              fieldType = field.type.schema.name;
+              imports.add(field.type.schema.name);
             }
+            break;
+          case "primitive":
+            fieldType = primitiveToTypeScript(field.type.name);
             break;
         }
         if (typeof field.array === "number") {
