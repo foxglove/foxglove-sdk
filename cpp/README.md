@@ -46,28 +46,8 @@ Run example programs (note that a different `build` directory may be used depend
 
 ### RGB Camera Visualization Example
 
-The RGB camera visualization example requires OpenCV and is not built by default.
+See detailed instructions on dependencies and visualizing data in the [example's readme](cpp/examples/rgb-camera-visualization/README.md).
 
-#### Installing OpenCV Dependencies
-
-**Ubuntu/Debian:**
-```bash
-sudo apt update
-sudo apt install libopencv-dev
-```
-
-**macOS (using Homebrew):**
-```bash
-brew install opencv
-```
-
-**Windows (using vcpkg):**
-```bash
-vcpkg install opencv
-```
-
-**From Source:**
-If you prefer to build OpenCV from source, follow the [official OpenCV installation guide](https://docs.opencv.org/4.x/d7/d9f/tutorial_linux_install.html).
 
 #### Building the Example
 
