@@ -220,7 +220,7 @@ if(BUILD_TESTING)
   enable_strict_compiler_warnings(utils_test)
 
   ament_add_google_benchmark(bridge_benchmark tests/benchmark/bridge_benchmark.cpp)
-  target_link_libraries(bridge_benchmark foxglove_bridge_component ${std_msgs_TARGETS} OpenSSL::SSL)
+  target_link_libraries(bridge_benchmark foxglove_bridge_component ${std_msgs_TARGETS} ${foxglove_msgs_TARGETS} OpenSSL::SSL)
   enable_strict_compiler_warnings(bridge_benchmark)
 endif()
 
