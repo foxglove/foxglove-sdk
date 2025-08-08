@@ -12,6 +12,12 @@ use crate::websocket::{
 };
 use crate::{get_runtime_handle, AppUrl, Context, FoxgloveError};
 
+#[cfg(feature = "tls")]
+pub(crate) struct TlsIdentity {
+    pub cert: Vec<u8>,
+    pub key: Vec<u8>,
+}
+
 /// A WebSocket server for live visualization in Foxglove.
 ///
 /// After your server is started, you can open the Foxglove app to visualize your data. See [Connecting to data].
@@ -74,6 +80,19 @@ impl WebSocketServer {
     pub fn bind(mut self, host: impl Into<String>, port: u16) -> Self {
         self.host = host.into();
         self.port = port;
+        self
+    }
+
+    /// Configure TLS with a PEM-formatted x509 certificate chain and pkcs8 private key.
+    /// If enabled, the server will only accept connections using wss://.
+    /// If TLS configuration fails, starting the server will result in an error.
+    #[doc(hidden)]
+    #[cfg(feature = "tls")]
+    pub fn tls(mut self, cert: &[u8], key: &[u8]) -> Self {
+        self.options.tls_identity = Some(TlsIdentity {
+            cert: cert.to_vec(),
+            key: key.to_vec(),
+        });
         self
     }
 
@@ -197,7 +216,7 @@ impl WebSocketServer {
     /// Returns a handle that can optionally be used to gracefully shutdown the server. The caller
     /// can safely drop the handle, and the server will run forever.
     pub async fn start(self) -> Result<WebSocketServerHandle, FoxgloveError> {
-        let server = create_server(&self.context, self.options);
+        let server = create_server(&self.context, self.options)?;
         let addr = server.start(&self.host, self.port).await?;
         Ok(WebSocketServerHandle(server, addr))
     }
@@ -244,7 +263,12 @@ impl WebSocketServerHandle {
 
     /// Returns an app URL to open the websocket as a data source.
     pub fn app_url(&self) -> AppUrl {
-        AppUrl::new().with_websocket(format!("ws://{}:{}", self.1.ip(), self.1.port()))
+        let protocol = if self.0.is_tls_configured() {
+            "wss"
+        } else {
+            "ws"
+        };
+        AppUrl::new().with_websocket(format!("{protocol}://{}:{}", self.1.ip(), self.1.port()))
     }
 
     /// Advertises support for the provided services.

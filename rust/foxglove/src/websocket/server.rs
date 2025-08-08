@@ -9,11 +9,22 @@ use tokio::net::{TcpListener, TcpStream};
 use tokio::runtime::Handle;
 use tokio::task::{JoinError, JoinSet};
 use tokio::time::MissedTickBehavior;
+#[cfg(feature = "tls")]
+use tokio_rustls::{
+    rustls::{
+        self,
+        pki_types::{pem::PemObject, CertificateDer, PrivateKeyDer},
+    },
+    TlsAcceptor,
+};
 use tokio_tungstenite::tungstenite::Message;
 use tokio_util::sync::CancellationToken;
 
+use super::server_stream::ServerStream;
 use crate::library_version::get_library_version;
 use crate::websocket::connected_client::ShutdownReason;
+#[cfg(feature = "tls")]
+use crate::websocket_server::TlsIdentity;
 use crate::{Context, FoxgloveError};
 
 use super::connected_client::ConnectedClient;
@@ -42,6 +53,8 @@ pub(crate) struct ServerOptions {
     pub supported_encodings: Option<HashSet<String>>,
     pub runtime: Option<Handle>,
     pub fetch_asset_handler: Option<Box<dyn AssetHandler>>,
+    #[cfg(feature = "tls")]
+    pub tls_identity: Option<TlsIdentity>,
 }
 
 impl std::fmt::Debug for ServerOptions {
@@ -55,6 +68,24 @@ impl std::fmt::Debug for ServerOptions {
             .field("supported_encodings", &self.supported_encodings)
             .finish()
     }
+}
+
+/// Load a PEM-encoded certificate and key from the provided identity. This will perform some
+/// basic validation, and result in a ConfigurationError if TLS can't be configured.
+#[cfg(feature = "tls")]
+fn build_tls_acceptor(tls_identity: &TlsIdentity) -> Result<TlsAcceptor, FoxgloveError> {
+    let cert = CertificateDer::from_pem_slice(&tls_identity.cert)
+        .map_err(|e| FoxgloveError::ConfigurationError(format!("TLS configuration: {e}")))?;
+
+    let key = PrivateKeyDer::from_pem_slice(&tls_identity.key)
+        .map_err(|e| FoxgloveError::ConfigurationError(format!("TLS configuration: {e}")))?;
+
+    let config = rustls::ServerConfig::builder()
+        .with_no_client_auth()
+        .with_single_cert(vec![cert], key)
+        .map_err(|e| FoxgloveError::ConfigurationError(format!("TLS configuration: {e}")))?;
+
+    Ok(TlsAcceptor::from(Arc::new(config)))
 }
 
 /// Processes a task result, warning about panics.
@@ -105,9 +136,35 @@ impl ShutdownHandle {
     }
 }
 
+#[cfg(feature = "tls")]
 /// Creates a new server.
-pub(crate) fn create_server(ctx: &Arc<Context>, opts: ServerOptions) -> Arc<Server> {
-    Arc::new_cyclic(|weak_self| Server::new(weak_self.clone(), ctx, opts))
+pub(crate) fn create_server(
+    ctx: &Arc<Context>,
+    opts: ServerOptions,
+) -> Result<Arc<Server>, FoxgloveError> {
+    // TLS configuration is fallible, so build it prior to allocating the Arc with the weak ref
+    let tls_acceptor = if let Some(tls_identity) = &opts.tls_identity {
+        let acceptor = build_tls_acceptor(tls_identity)?;
+        Some(acceptor)
+    } else {
+        None
+    };
+
+    Ok(Arc::new_cyclic(|weak_self| {
+        Server::new(weak_self.clone(), ctx, opts, tls_acceptor)
+    }))
+}
+
+#[cfg(not(feature = "tls"))]
+/// Creates a new server.
+pub(crate) fn create_server(
+    ctx: &Arc<Context>,
+    opts: ServerOptions,
+) -> Result<Arc<Server>, FoxgloveError> {
+    // TLS configuration is fallible, so build it prior to allocating the Arc with the weak ref
+    Ok(Arc::new_cyclic(|weak_self| {
+        Server::new(weak_self.clone(), ctx, opts)
+    }))
 }
 
 /// A websocket server that implements the Foxglove WebSocket Protocol
@@ -143,6 +200,9 @@ pub(crate) struct Server {
     fetch_asset_handler: Option<Box<dyn AssetHandler>>,
     /// Client tasks.
     tasks: parking_lot::Mutex<Option<JoinSet<()>>>,
+    #[cfg(feature = "tls")]
+    /// TLS acceptor, if using native TLS
+    tls_acceptor: Option<TlsAcceptor>,
 }
 
 impl Server {
@@ -155,7 +215,12 @@ impl Server {
             .unwrap_or_default()
     }
 
-    fn new(weak_self: Weak<Self>, ctx: &Arc<Context>, opts: ServerOptions) -> Self {
+    fn new(
+        weak_self: Weak<Self>,
+        ctx: &Arc<Context>,
+        opts: ServerOptions,
+        #[cfg(feature = "tls")] tls_acceptor: Option<TlsAcceptor>,
+    ) -> Self {
         let mut capabilities = opts.capabilities.unwrap_or_default();
         let mut supported_encodings = opts.supported_encodings.unwrap_or_default();
 
@@ -196,6 +261,8 @@ impl Server {
             services: parking_lot::RwLock::new(ServiceMap::from_iter(opts.services.into_values())),
             fetch_asset_handler: opts.fetch_asset_handler,
             tasks: parking_lot::Mutex::default(),
+            #[cfg(feature = "tls")]
+            tls_acceptor,
         }
     }
 
@@ -251,7 +318,12 @@ impl Server {
             }
         });
 
-        tracing::info!("Started server on {}", local_addr);
+        let maybe_tls = if self.is_tls_configured() {
+            " (TLS enabled)"
+        } else {
+            ""
+        };
+        tracing::info!("Started server on {local_addr}{maybe_tls}");
 
         Ok(local_addr)
     }
@@ -507,12 +579,29 @@ impl Server {
     }
 
     /// When a new client connects:
+    /// - SSL handshake (if configured)
     /// - Handshake
     /// - Send ServerInfo
     /// - Advertise existing channels
     /// - Advertise existing services
     /// - Listen for client messages
     async fn handle_connection(self: Arc<Self>, stream: TcpStream, addr: SocketAddr) {
+        #[cfg(feature = "tls")]
+        let stream = if let Some(tls_acceptor) = &self.tls_acceptor {
+            let stream = match tls_acceptor.accept(stream).await {
+                Ok(tls_stream) => tls_stream,
+                Err(e) => {
+                    tracing::error!("Dropping client {addr}: secure handshake failed: {}", e);
+                    return;
+                }
+            };
+            ServerStream::Tls(stream)
+        } else {
+            ServerStream::Plain(stream)
+        };
+        #[cfg(not(feature = "tls"))]
+        let stream = ServerStream::Plain(stream);
+
         let Ok(mut ws_stream) = handshake::do_handshake(stream).await else {
             tracing::error!("Dropping client {addr}: handshake failed");
             return;
@@ -720,5 +809,16 @@ impl Server {
             }
         }
         Ok(())
+    }
+
+    pub(crate) fn is_tls_configured(&self) -> bool {
+        #[cfg(feature = "tls")]
+        {
+            self.tls_acceptor.is_some()
+        }
+        #[cfg(not(feature = "tls"))]
+        {
+            false
+        }
     }
 }
