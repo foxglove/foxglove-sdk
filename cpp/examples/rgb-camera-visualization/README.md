@@ -1,6 +1,10 @@
 # RGB Camera Visualization Example
 
-## Installing dependencies
+This example demonstrates how to stream RGB camera data to Foxglove using the C++ SDK.
+
+## Installing Dependencies
+
+This example uses OpenCV for camera capture. You'll need to install OpenCV development libraries:
 
 *Ubuntu/Debian:**
 ```bash
@@ -13,12 +17,10 @@ sudo apt install libopencv-dev
 brew install opencv
 ```
 
-**Windows (using vcpkg):**
-```bash
-vcpkg install opencv
-```
+**Windows:**
+Follow the OpenCV installation guide for Windows and ensure the OpenCV environment variables are set.
 
-## Build
+## Building the RGB Camera Example
 
 Navigate to the `cpp` directory in this repository, and build all examples including this one:
 
@@ -42,7 +44,7 @@ Navigate to the cpp build directory (`cpp/build`) and run the example_rgb_camera
 
 ## Viewing in Foxglove
 
-1. Open Foxglove (web app or desktop)
+1. Open Foxglove (app or desktop)
 2. Connect to `ws://localhost:8765`
 3. Add a "Raw Image" panel
 4. Select the `/camera/image` topic
