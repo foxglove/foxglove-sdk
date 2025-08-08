@@ -384,8 +384,11 @@ public:
     auto promise = std::make_shared<std::promise<std::vector<uint8_t>>>();
     auto future = promise->get_future();
 
+    std::cout << "Setting up binary message handler for subscription " << subscriptionId << std::endl;
+
     setBinaryMessageHandler(
       [promise = std::move(promise), subscriptionId](const uint8_t* data, size_t dataLength) {
+        std::cout << "Received binary message for subscription " << subscriptionId << std::endl;
         if (ReadUint32LE(data + 1) != subscriptionId) {
           return;
         }

@@ -31,7 +31,6 @@ static void DoTeardown(const benchmark::State& state [[maybe_unused]]) {
 static void BM_StringPublish(benchmark::State& state) {
   constexpr char topic_name[] = "/test";
   constexpr uint16_t port = 8765;
-  constexpr size_t num_clients = 10;
 
   // Store port in a ROS parameter that bridge is reading
   rclcpp::NodeOptions options;
@@ -40,107 +39,75 @@ static void BM_StringPublish(benchmark::State& state) {
   // Set up a bridge
   foxglove_bridge::FoxgloveBridge bridge(options);
 
-  // Set up a publisher
-  auto publisher =
-    bridge.create_publisher<std_msgs::msg::String>(topic_name, rclcpp::QoS(rclcpp::KeepLast(10)));
-  std_msgs::msg::String msg;
-  msg.data = "Hello, world!";
+  // Set up a publisher node
+  auto publisher = std::make_shared<rclcpp::Node>("publisher", options);
+  auto publisher_publisher =
+    publisher->create_publisher<std_msgs::msg::String>(topic_name, rclcpp::QoS(rclcpp::KeepLast(10)));
 
   // Setup executor for manual control in benchmark loop
   rclcpp::executors::SingleThreadedExecutor executor;
   executor.add_node(bridge.get_node_base_interface());
+  executor.add_node(publisher->get_node_base_interface());
 
-  // Minimal bridge initialization - let client creation handle readiness validation
-  executor.spin_some();
+  std::thread executor_thread([&]() {
+    executor.spin();
+  });
+
+  // TODO: This is a hack to wait for the bridge to be ready.
+  // There's a race condition where the rust side can advertise the channel
+  // before the C++ side fully initializes it and inserts it into _channels.
+  std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
   // Create WebSocket clients with reliable connection handling
-  std::vector<std::unique_ptr<BenchmarkClient>> clients;
-  clients.reserve(num_clients);
+  auto client = std::make_unique<BenchmarkClient>();
+  constexpr size_t subscription_id = 100;
 
-  auto createClientReliably = [&](size_t clientId) -> std::unique_ptr<BenchmarkClient> {
-    // Retry logic with executor spinning for connection reliability
-    for (int attempt = 0; attempt < 3; ++attempt) {
-      auto client = std::make_unique<foxglove::test::Client<websocketpp::config::asio_client>>();
-
-      std::string uri = "ws://localhost:" + std::to_string(port);
-      auto connect_future = client->connect(uri);
-
-      // Wait with executor spinning for bridge responsiveness
-      auto connection_start = std::chrono::steady_clock::now();
-
-      while (std::chrono::steady_clock::now() - connection_start < std::chrono::seconds(3)) {
-        if (connect_future.wait_for(std::chrono::milliseconds(100)) == std::future_status::ready) {
-          break;
-        }
-        executor.spin_some();
-      }
-
-      if (connect_future.wait_for(std::chrono::milliseconds(0)) != std::future_status::ready) {
-        if (attempt < 2) {
-          // Brief delay with executor spinning before retry
-          auto delay_start = std::chrono::steady_clock::now();
-          auto delay_duration = std::chrono::milliseconds(100 * (attempt + 1));
-          while (std::chrono::steady_clock::now() - delay_start < delay_duration) {
-            executor.spin_some();
-            std::this_thread::yield();
-          }
-        }
-        continue;
-      }
-
-      // Wait for subscription with executor spinning
-      auto subscribe_future = client->waitForChannel(topic_name);
-      auto subscribe_start = std::chrono::steady_clock::now();
-
-      while (std::chrono::steady_clock::now() - subscribe_start < std::chrono::seconds(2)) {
-        if (subscribe_future.wait_for(std::chrono::milliseconds(100)) ==
-            std::future_status::ready) {
-          break;
-        }
-        executor.spin_some();
-      }
-
-      if (subscribe_future.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready) {
-        return client;  // Success!
-      }
-
-      // Subscription failed, brief delay before retry
-      if (attempt < 2) {
-        auto delay_start = std::chrono::steady_clock::now();
-        auto delay_duration = std::chrono::milliseconds(50 * (attempt + 1));
-        while (std::chrono::steady_clock::now() - delay_start < delay_duration) {
-          executor.spin_some();
-          std::this_thread::yield();
-        }
-      }
-    }
-
-    // All attempts failed
-    std::cerr << "Client " << clientId << " failed to connect after 3 attempts" << std::endl;
-    return nullptr;
-  };
-
-  // Create clients with executor spinning for reliability
-  for (size_t i = 0; i < num_clients; ++i) {
-    auto client = createClientReliably(i);
-    if (client) {
-      clients.push_back(std::move(client));
-    }
-  }
-
-  if (clients.size() < num_clients) {
-    state.SkipWithError(
-      "Failed to connect all clients reliably. Connected: " + std::to_string(clients.size()) + "/" +
-      std::to_string(num_clients)
-    );
+  auto connection_future = client->connect("ws://localhost:" + std::to_string(port));
+  if (connection_future.wait_for(std::chrono::seconds(1)) == std::future_status::timeout) {
+    state.SkipWithError("Client failed to connect after 1 second");
     return;
   }
 
-  // Benchmark: Total server throughput (includes processing and WebSocket transmission)
-  for (auto _ : state) {
-    publisher->publish(msg);
-    executor.spin_some();  // Process and deliver messages to all 10 WebSocket clients
+  auto channel_future = client->waitForChannel(topic_name);
+  if (channel_future.wait_for(std::chrono::seconds(1)) == std::future_status::timeout) {
+    state.SkipWithError("Channel " + std::string(topic_name) + " not found after 1 second");
+    return;
   }
+
+  auto channel = channel_future.get();
+  client->subscribe({{subscription_id, channel.id}});
+
+  std_msgs::msg::String msg;
+  msg.data = "Hello, world!";
+
+  std::atomic<bool> message_received = false;
+  auto message_handler = [&message_received](const uint8_t* data, size_t dataLength) {
+    if (dataLength < 1 + 4 + 8 || foxglove::test::ReadUint32LE(data + 1) != subscription_id) {
+      return;
+    }
+    message_received = true;
+  };
+  client->setBinaryMessageHandler(message_handler);
+
+  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+  for (auto _ : state) {
+    message_received = false;
+    publisher_publisher->publish(msg);
+
+    while (!message_received) {
+      std::this_thread::sleep_for(std::chrono::nanoseconds(100));
+    }
+  }
+
+  // Unsubscribe after receiving the message
+  client->unsubscribe({subscription_id});
+
+  executor.cancel();
+  executor_thread.join();
+  executor.remove_node(bridge.get_node_base_interface());
+  executor.remove_node(publisher->get_node_base_interface());
+  client->close();
 }
 
 BENCHMARK(BM_StringPublish)->Setup(DoSetup)->Teardown(DoTeardown);
