@@ -12,7 +12,7 @@ env_logger = "0.11"
 foxglove = { path = "../../foxglove", default-features = false, features = ["derive", "schemars"] }
 schemars = "0.9"
 serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0.140"
+serde_json = "1.0.142"
 
 [lints]
 workspace = true
