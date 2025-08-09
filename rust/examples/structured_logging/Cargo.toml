@@ -10,7 +10,7 @@ license.workspace = true
 bytes = "1.10"
 env_logger = "0.11"
 foxglove = { path = "../../foxglove", default-features = false, features = ["derive", "schemars"] }
-schemars = "0.9"
+schemars = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0.140"
 
