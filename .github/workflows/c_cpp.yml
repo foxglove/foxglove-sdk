@@ -182,6 +182,8 @@ jobs:
           echo "CC=gcc" >> $GITHUB_ENV
           echo "CXX=g++" >> $GITHUB_ENV
 
+      - if: contains(matrix.target, 'windows')
+        uses: ilammy/setup-nasm@v1
       - name: Build C++ library and run tests
         if: ${{ !fromJson(matrix.cross) }}
         run: make test
