@@ -109,9 +109,7 @@ if(DEFINED SANITIZE)
 endif()
 
 if(WIN32)
-  target_link_libraries(foxglove-static INTERFACE Bcrypt SChannel)
-elseif(APPLE)
-  target_link_libraries(foxglove-static INTERFACE "-framework Security" "-framework CoreFoundation")
+  target_link_libraries(foxglove-static INTERFACE Bcrypt)
 endif()
 
 
