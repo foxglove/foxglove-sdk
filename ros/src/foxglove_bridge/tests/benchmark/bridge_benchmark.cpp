@@ -22,11 +22,11 @@
 using BenchmarkClient = foxglove::test::Client<websocketpp::config::asio_client>;
 using namespace std::placeholders;
 
-static void MessageReceivedHandler(uint32_t subscription_id, std::atomic<bool>& message_received, const uint8_t* data, size_t dataLength) {
+static void MessageReceivedHandler(uint32_t subscription_id, std::atomic<uint64_t>& message_count, const uint8_t* data, size_t dataLength) {
   if (dataLength < 1 + 4 + 8 || foxglove::test::ReadUint32LE(data + 1) != subscription_id) {
     return;
   }
-  message_received = true;
+  message_count.fetch_add(1, std::memory_order_relaxed);
 }
 
 
@@ -120,8 +120,8 @@ BENCHMARK_F(BridgeBenchmarkFixture, BM_StringPublish)(benchmark::State& state) {
     return;
   }
 
-  std::atomic<bool> message_received = false;
-  client->setBinaryMessageHandler(std::bind(MessageReceivedHandler, subscription_id, std::ref(message_received), _1, _2));
+  std::atomic<uint64_t> message_count{0};
+  client->setBinaryMessageHandler(std::bind(MessageReceivedHandler, subscription_id, std::ref(message_count), _1, _2));
 
   // Hack to avoid race condition with the message handler being initialized after we enter the benchmark loop
   std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -129,10 +129,10 @@ BENCHMARK_F(BridgeBenchmarkFixture, BM_StringPublish)(benchmark::State& state) {
   std_msgs::msg::String msg;
   msg.data = "Hello, world!";
   for (auto _ : state) {
-    message_received = false;
+    const uint64_t start_count = message_count.load(std::memory_order_relaxed);
     publisher_publisher->publish(msg);
 
-    while (!message_received) {
+    while (message_count.load(std::memory_order_relaxed) == start_count) {
       std::this_thread::sleep_for(std::chrono::nanoseconds(100));
     }
   }
@@ -143,7 +143,7 @@ BENCHMARK_F(BridgeBenchmarkFixture, BM_StringPublish)(benchmark::State& state) {
 }
 
 BENCHMARK_F(BridgeBenchmarkFixture, BM_RandomImagePublish)(benchmark::State& state) {
-  constexpr char topic_name[] = "/test";
+  constexpr char topic_name[] = "/image_test";
 
   // Set up a publisher node
   auto publisher = std::make_unique<rclcpp::Node>("publisher");
@@ -177,20 +177,86 @@ BENCHMARK_F(BridgeBenchmarkFixture, BM_RandomImagePublish)(benchmark::State& sta
     return;
   }
 
-  std::atomic<bool> message_received = false;
-  client->setBinaryMessageHandler(std::bind(MessageReceivedHandler, subscription_id, std::ref(message_received), _1, _2));
+  std::atomic<uint64_t> message_count{0};
+  client->setBinaryMessageHandler(std::bind(MessageReceivedHandler, subscription_id, std::ref(message_count), _1, _2));
 
-  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
-  // TODO: We still occasionally have issues where the websocket server is advertising the channel and the ROS side
-  // complains with "received subscribe request for unknown channel". This is a race condition that needs to be fixed.
   for (auto _ : state) {
-    message_received = false;
+    const uint64_t start_count = message_count.load(std::memory_order_relaxed);
     publisher_publisher->publish(image_msg);
 
-    while (!message_received) {
+    while (message_count.load(std::memory_order_relaxed) == start_count) {
       std::this_thread::sleep_for(std::chrono::nanoseconds(100));
     }
+  }
+}
+
+// Multi-client tracking now uses MessageReceivedHandler with per-client flags
+
+BENCHMARK_F(BridgeBenchmarkFixture, BM_RandomImageMultipleClients)(benchmark::State& state) {
+  constexpr char topic_name[] = "/image_queue_multi";
+  constexpr size_t num_clients = 10;
+
+  // Set up a publisher node
+  auto publisher = std::make_unique<rclcpp::Node>("log_publisher");
+  auto publisher_publisher =
+    publisher->create_publisher<foxglove_msgs::msg::RawImage>(topic_name, rclcpp::QoS(rclcpp::KeepLast(10)));
+  addNode("log_publisher", std::move(publisher));
+
+  // TODO: This is a hack to wait for the bridge to be ready.
+  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+  // Create WebSocket clients
+  std::vector<std::unique_ptr<BenchmarkClient>> clients;
+  std::vector<uint32_t> subscription_ids;
+  std::atomic<uint64_t> client_counts{0};
+
+  for (size_t i = 0; i < num_clients; ++i) {
+    std::unique_ptr<BenchmarkClient> client;
+    uint32_t subscription_id;
+    std::tie(client, subscription_id) = createClient(topic_name);
+    if (!client) {
+      state.SkipWithError("Client " + std::to_string(i) + " failed to set up");
+      return;
+    }
+
+    // Initialize counter and set up message handler for this client
+    client->setBinaryMessageHandler(std::bind(MessageReceivedHandler, subscription_id, std::ref(client_counts), _1, _2));
+
+    clients.push_back(std::move(client));
+    subscription_ids.push_back(subscription_id);
+  }
+
+  // Hack to avoid race condition with the message handlers being initialized
+  std::this_thread::sleep_for(std::chrono::milliseconds(200));
+
+  // Generate a random image
+  constexpr size_t width = 1920;
+  constexpr size_t height = 1080;
+  foxglove_msgs::msg::RawImage image;
+  image.width = width;
+  image.height = height;
+  image.encoding = "rgb8";
+  image.data.resize(width * height * 3);
+  std::generate(image.data.begin(), image.data.end(), []() { return rand() % 256; });
+
+  for (auto _ : state) {
+    // Reset per-iteration aggregated counter
+    client_counts.store(0, std::memory_order_relaxed);
+
+    publisher_publisher->publish(image);
+
+    // Wait until all clients have received the image
+    while (client_counts.load(std::memory_order_relaxed) < num_clients) {
+      std::this_thread::sleep_for(std::chrono::nanoseconds(100));
+    }
+  }
+
+  // Clean up: unsubscribe and close all clients
+  for (size_t i = 0; i < num_clients; ++i) {
+    clients[i]->unsubscribe({subscription_ids[i]});
+    clients[i]->close();
   }
 }
 
