@@ -1154,11 +1154,70 @@ typedef struct foxglove_grid {
   const struct foxglove_packed_element_field *fields;
   size_t fields_count;
   /**
-   * Grid cell data, interpreted using `fields`, in row-major (y-major) order — values fill each row from left to right along the X axis, with rows ordered from top to bottom along the Y axis, starting at the bottom-left corner when viewed from +Z looking towards -Z with identity orientations
+   * Grid cell data, interpreted using `fields`, in row-major (y-major) order.
+   *  For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
+   *  y = (i / cell_stride) % row_stride * cell_size.y
+   *  x = i % cell_stride * cell_size.x
    */
   const unsigned char *data;
   size_t data_len;
 } foxglove_grid;
+
+/**
+ * A 3D grid of data
+ */
+typedef struct foxglove_grid3 {
+  /**
+   * Timestamp of grid
+   */
+  const struct foxglove_timestamp *timestamp;
+  /**
+   * Frame of reference
+   */
+  struct foxglove_string frame_id;
+  /**
+   * Origin of grid's corner relative to frame of reference; grid is positioned in the x-y plane relative to this origin
+   */
+  const struct foxglove_pose *pose;
+  /**
+   * Number of grid rows
+   */
+  uint32_t row_count;
+  /**
+   * Number of grid columns
+   */
+  uint32_t column_count;
+  /**
+   * Size of single grid cell along x, y, and z axes, relative to `pose`
+   */
+  const struct foxglove_vector3 *cell_size;
+  /**
+   * Number of bytes between depth slices in `data`
+   */
+  uint32_t slice_stride;
+  /**
+   * Number of bytes between rows in `data`
+   */
+  uint32_t row_stride;
+  /**
+   * Number of bytes between cells within a row in `data`
+   */
+  uint32_t cell_stride;
+  /**
+   * Fields in `data`. `red`, `green`, `blue`, and `alpha` are optional for customizing the grid's color.
+   */
+  const struct foxglove_packed_element_field *fields;
+  size_t fields_count;
+  /**
+   * Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order.
+   *  For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
+   *  z = (i / (row_stride * cell_stride)) % slice_stride * cell_size.z
+   *  y = (i / cell_stride) % row_stride * cell_size.y
+   *  x = i % cell_stride * cell_size.x
+   */
+  const unsigned char *data;
+  size_t data_len;
+} foxglove_grid3;
 
 /**
  * An array of points on a 2D image
@@ -1769,25 +1828,76 @@ typedef struct foxglove_raw_image {
    */
   struct foxglove_string frame_id;
   /**
-   * Image width
+   * Image width in pixels
    */
   uint32_t width;
   /**
-   * Image height
+   * Image height in pixels
    */
   uint32_t height;
   /**
-   * Encoding of the raw image data
-   *
-   * Supported values: `8UC1`, `8UC3`, `16UC1` (little endian), `32FC1` (little endian), `bayer_bggr8`, `bayer_gbrg8`, `bayer_grbg8`, `bayer_rggb8`, `bgr8`, `bgra8`, `mono8`, `mono16`, `rgb8`, `rgba8`, `uyvy` or `yuv422`, `yuyv` or `yuv422_yuy2`
+   * Encoding of the raw image data. See the `data` field description for supported values.
    */
   struct foxglove_string encoding;
   /**
-   * Byte length of a single row
+   * Byte length of a single row. This is usually some multiple of `width` depending on the encoding, but can be greater to incorporate padding.
    */
   uint32_t step;
   /**
-   * Raw image data
+   * Raw image data.
+   *
+   * For each `encoding` value, the `data` field contains image pixel data serialized as follows:
+   *
+   * - `yuv422` or `uyvy`:
+   *   - Pixel colors are decomposed into [Y'UV](https://en.wikipedia.org/wiki/Y%E2%80%B2UV) channels.
+   *   - Pixel channel values are represented as unsigned 8-bit integers.
+   *   - U and V values are shared between horizontal pairs of pixels. Each pair of output pixels is serialized as [U, Y1, V, Y2].
+   *   - `step` must be greater than or equal to `width` * 2.
+   * - `yuv422_yuy2` or  `yuyv`:
+   *   - Pixel colors are decomposed into [Y'UV](https://en.wikipedia.org/wiki/Y%E2%80%B2UV) channels.
+   *   - Pixel channel values are represented as unsigned 8-bit integers.
+   *   - U and V values are shared between horizontal pairs of pixels. Each pair of output pixels is encoded as [Y1, U, Y2, V].
+   *   - `step` must be greater than or equal to `width` * 2.
+   * - `rgb8`:
+   *   - Pixel colors are decomposed into Red, Green, and Blue channels.
+   *   - Pixel channel values are represented as unsigned 8-bit integers.
+   *   - Each output pixel is serialized as [R, G, B].
+   *   - `step` must be greater than or equal to `width` * 3.
+   * - `rgba8`:
+   *   - Pixel colors are decomposed into Red, Green, Blue, and Alpha channels.
+   *   - Pixel channel values are represented as unsigned 8-bit integers.
+   *   - Each output pixel is serialized as [R, G, B, Alpha].
+   *   - `step` must be greater than or equal to `width` * 4.
+   * - `bgr8` or `8UC3`:
+   *   - Pixel colors are decomposed into Red, Blue, Green, and Alpha channels.
+   *   - Pixel channel values are represented as unsigned 8-bit integers.
+   *   - Each output pixel is serialized as [B, G, R].
+   *   - `step` must be greater than or equal to `width` * 3.
+   * - `bgra8`:
+   *   - Pixel colors are decomposed into Blue, Green, Red, and Alpha channels.
+   *   - Pixel channel values are represented as unsigned 8-bit integers.
+   *   - Each output pixel is encoded as [B, G, R, Alpha].
+   *   - `step` must be greater than or equal to `width` * 4.
+   * - `32FC1`:
+   *   - Pixel brightness is represented as a single-channel, 32-bit little-endian IEEE 754 floating-point value, ranging from 0.0 (black) to 1.0 (white).
+   *   - `step` must be greater than or equal to `width` * 4.
+   * - `bayer_rggb8`, `bayer_bggr8`, `bayer_rggb8`, `bayer_gbrg8`, or `bayer_grgb8`:
+   *   - Pixel colors are decomposed into Red, Blue and Green channels.
+   *   - Pixel channel values are represented as unsigned 8-bit integers, and serialized in a 2x2 bayer filter pattern.
+   *   - The order of the four letters after `bayer_` determine the layout, so for `bayer_wxyz8` the pattern is:
+   *   ```plaintext
+   *   w | x
+   *   - + -
+   *   y | z
+   *   ```
+   *   - `step` must be greater than or equal to `width`.
+   * - `mono8` or `8UC1`:
+   *   - Pixel brightness is represented as unsigned 8-bit integers.
+   *   - `step` must be greater than or equal to `width`.
+   * - `mono16` or `16UC1`:
+   *   - Pixel brightness is represented as 16-bit unsigned little-endian integers. Rendering of these values is controlled in [Image panel color mode settings](https://docs.foxglove.dev/docs/visualization/panels/image#general).
+   *   - `step` must be greater than or equal to `width` * 2.
+   *
    */
   const unsigned char *data;
   size_t data_len;
@@ -2428,6 +2538,26 @@ foxglove_error foxglove_channel_create_grid(struct foxglove_string topic,
 foxglove_error foxglove_channel_log_grid(const struct foxglove_channel *channel,
                                          const struct foxglove_grid *msg,
                                          const uint64_t *log_time);
+
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
+foxglove_error foxglove_channel_create_grid3(struct foxglove_string topic,
+                                             const struct foxglove_context *context,
+                                             const struct foxglove_channel **channel);
+
+/**
+ * Log a Grid3 message to a channel.
+ *
+ * # Safety
+ * The channel must have been created for this type with foxglove_channel_create_grid3.
+ */
+foxglove_error foxglove_channel_log_grid3(const struct foxglove_channel *channel,
+                                          const struct foxglove_grid3 *msg,
+                                          const uint64_t *log_time);
 
 /**
  * Create a new typed channel, and return an owned raw channel pointer to it.

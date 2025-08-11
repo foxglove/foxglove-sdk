@@ -13,7 +13,7 @@ env_logger = "0.11"
 foxglove = { path = "../../foxglove", features = ["schemars"] }
 futures = "0.3"
 parking_lot = "0.12"
-schemars = "0.9"
+schemars = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 strum = { version = "0.27", features = ["derive"] }

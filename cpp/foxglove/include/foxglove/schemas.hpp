@@ -4,7 +4,6 @@
 
 #include <foxglove/context.hpp>
 #include <foxglove/error.hpp>
-#include <foxglove/time.hpp>
 
 #include <array>
 #include <cstdint>
@@ -97,6 +96,15 @@ struct ArrowPrimitive {
 
   /// @brief Color of the arrow
   std::optional<Color> color;
+};
+
+/// @brief A timestamp composed of seconds and nanoseconds
+struct Timestamp {
+  /// @brief The number of seconds since a user-defined epoch
+  uint32_t sec = 0;
+
+  /// @brief The number of nanoseconds since the sec value
+  uint32_t nsec = 0;
 };
 
 /// @brief Camera calibration parameters
@@ -327,6 +335,15 @@ struct CubePrimitive {
   std::optional<Color> color;
 };
 
+/// @brief A duration of time, composed of seconds and nanoseconds
+struct Duration {
+  /// @brief The number of seconds in the duration
+  int32_t sec = 0;
+
+  /// @brief The number of nanoseconds in the positive direction
+  uint32_t nsec = 0;
+};
+
 /// @brief A transform between two reference frames in 3D space
 struct FrameTransform {
   /// @brief Timestamp of transform
@@ -427,10 +444,54 @@ struct Grid {
   /// grid's color.
   std::vector<PackedElementField> fields;
 
-  /// @brief Grid cell data, interpreted using `fields`, in row-major (y-major) order — values fill
-  /// each row from left to right along the X axis, with rows ordered from top to bottom along the Y
-  /// axis, starting at the bottom-left corner when viewed from +Z looking towards -Z with identity
-  /// orientations
+  /// @brief Grid cell data, interpreted using `fields`, in row-major (y-major) order.
+  /// @brief  For the data element starting at byte offset i, the coordinates of its corner closest
+  /// to the origin will be:
+  /// @brief  y = (i / cell_stride) % row_stride * cell_size.y
+  /// @brief  x = i % cell_stride * cell_size.x
+  std::vector<std::byte> data;
+};
+
+/// @brief A 3D grid of data
+struct Grid3 {
+  /// @brief Timestamp of grid
+  std::optional<Timestamp> timestamp;
+
+  /// @brief Frame of reference
+  std::string frame_id;
+
+  /// @brief Origin of grid's corner relative to frame of reference; grid is positioned in the x-y
+  /// plane relative to this origin
+  std::optional<Pose> pose;
+
+  /// @brief Number of grid rows
+  uint32_t row_count = 0;
+
+  /// @brief Number of grid columns
+  uint32_t column_count = 0;
+
+  /// @brief Size of single grid cell along x, y, and z axes, relative to `pose`
+  std::optional<Vector3> cell_size;
+
+  /// @brief Number of bytes between depth slices in `data`
+  uint32_t slice_stride = 0;
+
+  /// @brief Number of bytes between rows in `data`
+  uint32_t row_stride = 0;
+
+  /// @brief Number of bytes between cells within a row in `data`
+  uint32_t cell_stride = 0;
+
+  /// @brief Fields in `data`. `red`, `green`, `blue`, and `alpha` are optional for customizing the
+  /// grid's color.
+  std::vector<PackedElementField> fields;
+
+  /// @brief Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order.
+  /// @brief  For the data element starting at byte offset i, the coordinates of its corner closest
+  /// to the origin will be:
+  /// @brief  z = (i / (row_stride * cell_stride)) % slice_stride * cell_size.z
+  /// @brief  y = (i / cell_stride) % row_stride * cell_size.y
+  /// @brief  x = i % cell_stride * cell_size.x
   std::vector<std::byte> data;
 };
 
@@ -915,23 +976,83 @@ struct RawImage {
   /// the image.
   std::string frame_id;
 
-  /// @brief Image width
+  /// @brief Image width in pixels
   uint32_t width = 0;
 
-  /// @brief Image height
+  /// @brief Image height in pixels
   uint32_t height = 0;
 
-  /// @brief Encoding of the raw image data
-  /// @brief
-  /// @brief Supported values: `8UC1`, `8UC3`, `16UC1` (little endian), `32FC1` (little endian),
-  /// `bayer_bggr8`, `bayer_gbrg8`, `bayer_grbg8`, `bayer_rggb8`, `bgr8`, `bgra8`, `mono8`,
-  /// `mono16`, `rgb8`, `rgba8`, `uyvy` or `yuv422`, `yuyv` or `yuv422_yuy2`
+  /// @brief Encoding of the raw image data. See the `data` field description for supported values.
   std::string encoding;
 
-  /// @brief Byte length of a single row
+  /// @brief Byte length of a single row. This is usually some multiple of `width` depending on the
+  /// encoding, but can be greater to incorporate padding.
   uint32_t step = 0;
 
-  /// @brief Raw image data
+  /// @brief Raw image data.
+  /// @brief
+  /// @brief For each `encoding` value, the `data` field contains image pixel data serialized as
+  /// follows:
+  /// @brief
+  /// @brief - `yuv422` or `uyvy`:
+  /// @brief   - Pixel colors are decomposed into [Y'UV](https://en.wikipedia.org/wiki/Y%E2%80%B2UV)
+  /// channels.
+  /// @brief   - Pixel channel values are represented as unsigned 8-bit integers.
+  /// @brief   - U and V values are shared between horizontal pairs of pixels. Each pair of output
+  /// pixels is serialized as [U, Y1, V, Y2].
+  /// @brief   - `step` must be greater than or equal to `width` * 2.
+  /// @brief - `yuv422_yuy2` or  `yuyv`:
+  /// @brief   - Pixel colors are decomposed into [Y'UV](https://en.wikipedia.org/wiki/Y%E2%80%B2UV)
+  /// channels.
+  /// @brief   - Pixel channel values are represented as unsigned 8-bit integers.
+  /// @brief   - U and V values are shared between horizontal pairs of pixels. Each pair of output
+  /// pixels is encoded as [Y1, U, Y2, V].
+  /// @brief   - `step` must be greater than or equal to `width` * 2.
+  /// @brief - `rgb8`:
+  /// @brief   - Pixel colors are decomposed into Red, Green, and Blue channels.
+  /// @brief   - Pixel channel values are represented as unsigned 8-bit integers.
+  /// @brief   - Each output pixel is serialized as [R, G, B].
+  /// @brief   - `step` must be greater than or equal to `width` * 3.
+  /// @brief - `rgba8`:
+  /// @brief   - Pixel colors are decomposed into Red, Green, Blue, and Alpha channels.
+  /// @brief   - Pixel channel values are represented as unsigned 8-bit integers.
+  /// @brief   - Each output pixel is serialized as [R, G, B, Alpha].
+  /// @brief   - `step` must be greater than or equal to `width` * 4.
+  /// @brief - `bgr8` or `8UC3`:
+  /// @brief   - Pixel colors are decomposed into Red, Blue, Green, and Alpha channels.
+  /// @brief   - Pixel channel values are represented as unsigned 8-bit integers.
+  /// @brief   - Each output pixel is serialized as [B, G, R].
+  /// @brief   - `step` must be greater than or equal to `width` * 3.
+  /// @brief - `bgra8`:
+  /// @brief   - Pixel colors are decomposed into Blue, Green, Red, and Alpha channels.
+  /// @brief   - Pixel channel values are represented as unsigned 8-bit integers.
+  /// @brief   - Each output pixel is encoded as [B, G, R, Alpha].
+  /// @brief   - `step` must be greater than or equal to `width` * 4.
+  /// @brief - `32FC1`:
+  /// @brief   - Pixel brightness is represented as a single-channel, 32-bit little-endian IEEE 754
+  /// floating-point value, ranging from 0.0 (black) to 1.0 (white).
+  /// @brief   - `step` must be greater than or equal to `width` * 4.
+  /// @brief - `bayer_rggb8`, `bayer_bggr8`, `bayer_rggb8`, `bayer_gbrg8`, or `bayer_grgb8`:
+  /// @brief   - Pixel colors are decomposed into Red, Blue and Green channels.
+  /// @brief   - Pixel channel values are represented as unsigned 8-bit integers, and serialized in
+  /// a 2x2 bayer filter pattern.
+  /// @brief   - The order of the four letters after `bayer_` determine the layout, so for
+  /// `bayer_wxyz8` the pattern is:
+  /// @brief   ```plaintext
+  /// @brief   w | x
+  /// @brief   - + -
+  /// @brief   y | z
+  /// @brief   ```
+  /// @brief   - `step` must be greater than or equal to `width`.
+  /// @brief - `mono8` or `8UC1`:
+  /// @brief   - Pixel brightness is represented as unsigned 8-bit integers.
+  /// @brief   - `step` must be greater than or equal to `width`.
+  /// @brief - `mono16` or `16UC1`:
+  /// @brief   - Pixel brightness is represented as 16-bit unsigned little-endian integers.
+  /// Rendering of these values is controlled in [Image panel color mode
+  /// settings](https://docs.foxglove.dev/docs/visualization/panels/image#general).
+  /// @brief   - `step` must be greater than or equal to `width` * 2.
+  /// @brief
   std::vector<std::byte> data;
 };
 
@@ -1464,6 +1585,49 @@ public:
 
 private:
   explicit GridChannel(ChannelUniquePtr&& channel)
+      : impl_(std::move(channel)) {}
+
+  ChannelUniquePtr impl_;
+};
+
+/// @brief A channel for logging Grid3 messages to a topic.
+///
+/// @note While channels are fully thread-safe, the Grid3 struct is not thread-safe.
+/// Avoid modifying it concurrently or during a log operation.
+class Grid3Channel {
+public:
+  /// @brief Create a new channel.
+  ///
+  /// @param topic The topic name. You should choose a unique topic name per channel for
+  /// compatibility with the Foxglove app.
+  /// @param context The context which associates logs to a sink. If omitted, the default context is
+  /// used.
+  static FoxgloveResult<Grid3Channel> create(
+    const std::string_view& topic, const Context& context = Context()
+  );
+
+  /// @brief Log a message to the channel.
+  ///
+  /// @param msg The Grid3 message to log.
+  /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  FoxgloveError log(const Grid3& msg, std::optional<uint64_t> log_time = std::nullopt) noexcept;
+
+  /// @brief Uniquely identifies a channel in the context of this program.
+  ///
+  /// @return The ID of the channel.
+  [[nodiscard]] uint64_t id() const noexcept;
+
+  Grid3Channel(const Grid3Channel& other) noexcept = delete;
+  Grid3Channel& operator=(const Grid3Channel& other) noexcept = delete;
+  /// @brief Default move constructor.
+  Grid3Channel(Grid3Channel&& other) noexcept = default;
+  /// @brief Default move assignment.
+  Grid3Channel& operator=(Grid3Channel&& other) noexcept = default;
+  /// @brief Default destructor.
+  ~Grid3Channel() = default;
+
+private:
+  explicit Grid3Channel(ChannelUniquePtr&& channel)
       : impl_(std::move(channel)) {}
 
   ChannelUniquePtr impl_;

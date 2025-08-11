@@ -707,7 +707,10 @@ impl From<GeoJson> for foxglove::schemas::GeoJson {
 /// :param row_stride: Number of bytes between rows in `data`
 /// :param cell_stride: Number of bytes between cells within a row in `data`
 /// :param fields: Fields in `data`. `red`, `green`, `blue`, and `alpha` are optional for customizing the grid's color.
-/// :param data: Grid cell data, interpreted using `fields`, in row-major (y-major) order — values fill each row from left to right along the X axis, with rows ordered from top to bottom along the Y axis, starting at the bottom-left corner when viewed from +Z looking towards -Z with identity orientations
+/// :param data: Grid cell data, interpreted using `fields`, in row-major (y-major) order.
+///      For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
+///      y = (i / cell_stride) % row_stride * cell_size.y
+///      x = i % cell_stride * cell_size.x
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/grid
 #[pyclass(module = "foxglove.schemas")]
@@ -765,6 +768,90 @@ impl Grid {
 
 impl From<Grid> for foxglove::schemas::Grid {
     fn from(value: Grid) -> Self {
+        value.0
+    }
+}
+
+/// A 3D grid of data
+///
+/// :param timestamp: Timestamp of grid
+/// :param frame_id: Frame of reference
+/// :param pose: Origin of grid's corner relative to frame of reference; grid is positioned in the x-y plane relative to this origin
+/// :param row_count: Number of grid rows
+/// :param column_count: Number of grid columns
+/// :param cell_size: Size of single grid cell along x, y, and z axes, relative to `pose`
+/// :param slice_stride: Number of bytes between depth slices in `data`
+/// :param row_stride: Number of bytes between rows in `data`
+/// :param cell_stride: Number of bytes between cells within a row in `data`
+/// :param fields: Fields in `data`. `red`, `green`, `blue`, and `alpha` are optional for customizing the grid's color.
+/// :param data: Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order.
+///      For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
+///      z = (i / (row_stride * cell_stride)) % slice_stride * cell_size.z
+///      y = (i / cell_stride) % row_stride * cell_size.y
+///      x = i % cell_stride * cell_size.x
+///
+/// See https://docs.foxglove.dev/docs/visualization/message-schemas/grid3
+#[pyclass(module = "foxglove.schemas")]
+#[derive(Clone)]
+pub(crate) struct Grid3(pub(crate) foxglove::schemas::Grid3);
+#[pymethods]
+impl Grid3 {
+    #[new]
+    #[pyo3(signature = (*, timestamp=None, frame_id="".to_string(), pose=None, row_count=0, column_count=0, cell_size=None, slice_stride=0, row_stride=0, cell_stride=0, fields=vec![], data=None) )]
+    fn new(
+        timestamp: Option<Timestamp>,
+        frame_id: String,
+        pose: Option<Pose>,
+        row_count: u32,
+        column_count: u32,
+        cell_size: Option<Vector3>,
+        slice_stride: u32,
+        row_stride: u32,
+        cell_stride: u32,
+        fields: Vec<PackedElementField>,
+        data: Option<Bound<'_, PyBytes>>,
+    ) -> Self {
+        Self(foxglove::schemas::Grid3 {
+            timestamp: timestamp.map(Into::into),
+            frame_id,
+            pose: pose.map(Into::into),
+            row_count,
+            column_count,
+            cell_size: cell_size.map(Into::into),
+            slice_stride,
+            row_stride,
+            cell_stride,
+            fields: fields.into_iter().map(|x| x.into()).collect(),
+            data: data
+                .map(|x| Bytes::copy_from_slice(x.as_bytes()))
+                .unwrap_or_default(),
+        })
+    }
+    fn __repr__(&self) -> String {
+        format!(
+            "Grid3(timestamp={:?}, frame_id={:?}, pose={:?}, row_count={:?}, column_count={:?}, cell_size={:?}, slice_stride={:?}, row_stride={:?}, cell_stride={:?}, fields={:?}, data={:?})",
+            self.0.timestamp,
+            self.0.frame_id,
+            self.0.pose,
+            self.0.row_count,
+            self.0.column_count,
+            self.0.cell_size,
+            self.0.slice_stride,
+            self.0.row_stride,
+            self.0.cell_stride,
+            self.0.fields,
+            self.0.data,
+        )
+    }
+    /// Returns the Grid3 schema.
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::Grid3::get_schema().unwrap().into()
+    }
+}
+
+impl From<Grid3> for foxglove::schemas::Grid3 {
+    fn from(value: Grid3) -> Self {
         value.0
     }
 }
@@ -1787,13 +1874,64 @@ impl From<RawAudio> for foxglove::schemas::RawAudio {
 ///
 /// :param timestamp: Timestamp of image
 /// :param frame_id: Frame of reference for the image. The origin of the frame is the optical center of the camera. +x points to the right in the image, +y points down, and +z points into the plane of the image.
-/// :param width: Image width
-/// :param height: Image height
-/// :param encoding: Encoding of the raw image data
+/// :param width: Image width in pixels
+/// :param height: Image height in pixels
+/// :param encoding: Encoding of the raw image data. See the `data` field description for supported values.
+/// :param step: Byte length of a single row. This is usually some multiple of `width` depending on the encoding, but can be greater to incorporate padding.
+/// :param data: Raw image data.
 ///     
-///     Supported values: `8UC1`, `8UC3`, `16UC1` (little endian), `32FC1` (little endian), `bayer_bggr8`, `bayer_gbrg8`, `bayer_grbg8`, `bayer_rggb8`, `bgr8`, `bgra8`, `mono8`, `mono16`, `rgb8`, `rgba8`, `uyvy` or `yuv422`, `yuyv` or `yuv422_yuy2`
-/// :param step: Byte length of a single row
-/// :param data: Raw image data
+///     For each `encoding` value, the `data` field contains image pixel data serialized as follows:
+///     
+///     - `yuv422` or `uyvy`:
+///       - Pixel colors are decomposed into `Y'UV <https://en.wikipedia.org/wiki/Y%E2%80%B2UV>`__ channels.
+///       - Pixel channel values are represented as unsigned 8-bit integers.
+///       - U and V values are shared between horizontal pairs of pixels. Each pair of output pixels is serialized as [U, Y1, V, Y2].
+///       - `step` must be greater than or equal to `width` * 2.
+///     - `yuv422_yuy2` or  `yuyv`:
+///       - Pixel colors are decomposed into `Y'UV <https://en.wikipedia.org/wiki/Y%E2%80%B2UV>`__ channels.
+///       - Pixel channel values are represented as unsigned 8-bit integers.
+///       - U and V values are shared between horizontal pairs of pixels. Each pair of output pixels is encoded as [Y1, U, Y2, V].
+///       - `step` must be greater than or equal to `width` * 2.
+///     - `rgb8`:
+///       - Pixel colors are decomposed into Red, Green, and Blue channels.
+///       - Pixel channel values are represented as unsigned 8-bit integers.
+///       - Each output pixel is serialized as [R, G, B].
+///       - `step` must be greater than or equal to `width` * 3.
+///     - `rgba8`:
+///       - Pixel colors are decomposed into Red, Green, Blue, and Alpha channels.
+///       - Pixel channel values are represented as unsigned 8-bit integers.
+///       - Each output pixel is serialized as [R, G, B, Alpha].
+///       - `step` must be greater than or equal to `width` * 4.
+///     - `bgr8` or `8UC3`:
+///       - Pixel colors are decomposed into Red, Blue, Green, and Alpha channels.
+///       - Pixel channel values are represented as unsigned 8-bit integers.
+///       - Each output pixel is serialized as [B, G, R].
+///       - `step` must be greater than or equal to `width` * 3.
+///     - `bgra8`:
+///       - Pixel colors are decomposed into Blue, Green, Red, and Alpha channels.
+///       - Pixel channel values are represented as unsigned 8-bit integers.
+///       - Each output pixel is encoded as [B, G, R, Alpha].
+///       - `step` must be greater than or equal to `width` * 4.
+///     - `32FC1`:
+///       - Pixel brightness is represented as a single-channel, 32-bit little-endian IEEE 754 floating-point value, ranging from 0.0 (black) to 1.0 (white).
+///       - `step` must be greater than or equal to `width` * 4.
+///     - `bayer_rggb8`, `bayer_bggr8`, `bayer_rggb8`, `bayer_gbrg8`, or `bayer_grgb8`:
+///       - Pixel colors are decomposed into Red, Blue and Green channels.
+///       - Pixel channel values are represented as unsigned 8-bit integers, and serialized in a 2x2 bayer filter pattern.
+///       - The order of the four letters after `bayer_` determine the layout, so for `bayer_wxyz8` the pattern is:
+///       ```plaintext
+///       w | x
+///       - + -
+///       y | z
+///       ```
+///       - `step` must be greater than or equal to `width`.
+///     - `mono8` or `8UC1`:
+///       - Pixel brightness is represented as unsigned 8-bit integers.
+///       - `step` must be greater than or equal to `width`.
+///     - `mono16` or `16UC1`:
+///       - Pixel brightness is represented as 16-bit unsigned little-endian integers. Rendering of these values is controlled in `Image panel color mode settings <https://docs.foxglove.dev/docs/visualization/panels/image#general>`__.
+///       - `step` must be greater than or equal to `width` * 2.
+///     
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/raw-image
 #[pyclass(module = "foxglove.schemas")]
@@ -2137,8 +2275,6 @@ impl From<Vector3> for foxglove::schemas::Vector3 {
 pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     let module = PyModule::new(parent_module.py(), "schemas")?;
 
-    module.add_class::<Duration>()?;
-    module.add_class::<Timestamp>()?;
     module.add_class::<LinePrimitiveLineType>()?;
     module.add_class::<LogLevel>()?;
     module.add_class::<SceneEntityDeletionType>()?;
@@ -2153,10 +2289,12 @@ pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<CompressedVideo>()?;
     module.add_class::<CylinderPrimitive>()?;
     module.add_class::<CubePrimitive>()?;
+    module.add_class::<Duration>()?;
     module.add_class::<FrameTransform>()?;
     module.add_class::<FrameTransforms>()?;
     module.add_class::<GeoJson>()?;
     module.add_class::<Grid>()?;
+    module.add_class::<Grid3>()?;
     module.add_class::<ImageAnnotations>()?;
     module.add_class::<KeyValuePair>()?;
     module.add_class::<LaserScan>()?;
@@ -2181,6 +2319,7 @@ pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<SpherePrimitive>()?;
     module.add_class::<TextAnnotation>()?;
     module.add_class::<TextPrimitive>()?;
+    module.add_class::<Timestamp>()?;
     module.add_class::<TriangleListPrimitive>()?;
     module.add_class::<Vector2>()?;
     module.add_class::<Vector3>()?;

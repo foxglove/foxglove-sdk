@@ -6,16 +6,14 @@ import { FoxgloveEnumSchema, FoxgloveMessageSchema, FoxglovePrimitive } from "./
 
 function primitiveToRust(type: FoxglovePrimitive) {
   switch (type) {
+    case "int32":
+      return "i32";
     case "uint32":
       return "u32";
     case "boolean":
       return "bool";
     case "float64":
       return "f64";
-    case "time":
-      return "Timestamp";
-    case "duration":
-      return "Duration";
     case "string":
       return "FoxgloveString";
     case "bytes":
@@ -43,24 +41,37 @@ function toTitleCase(name: string) {
   return name.toLowerCase().replace(/(?:^|_)([a-z])/g, (_, letter: string) => letter.toUpperCase());
 }
 
+// We use special FoxgloveTimestamp and FoxgloveDuration types for the time and duration fields.
+function shouldGenerateRustType(schema: FoxgloveMessageSchema): boolean {
+  return schema.name !== "Timestamp" && schema.name !== "Duration";
+}
+
 function rustEnumName(name: string) {
   return `Foxglove${name}`;
 }
 
 /**
- * Identical to the name, but GeoJSON is renamed to GeoJson in all lanaguages
+ * Identical to the name, except:
+ * - GeoJSON is renamed to GeoJson in all lanaguages
+ * - Timestamp and Duration use existing FoxgloveTimestamp and FoxgloveDuration implementations
  */
-function rustMessageSchemaName(name: string): string {
-  return name.replace("JSON", "Json");
+function rustMessageSchemaName(schema: FoxgloveMessageSchema): string {
+  if (schema.name === "Timestamp") {
+    return "FoxgloveTimestamp";
+  } else if (schema.name === "Duration") {
+    return "FoxgloveDuration";
+  } else {
+    return schema.name.replace("JSON", "Json");
+  }
 }
 
 export function generateRustTypes(
   schemas: readonly FoxgloveMessageSchema[],
   enums: readonly FoxgloveEnumSchema[],
 ): string {
-  const schemaStructs = schemas.map((schema) => {
+  const schemaStructs = schemas.filter(shouldGenerateRustType).map((schema) => {
     const { fields, description } = schema;
-    const name = rustMessageSchemaName(schema.name);
+    const name = rustMessageSchemaName(schema);
     const snakeName = toSnakeCase(name);
     return `\
 ${formatComment(description)}
@@ -77,10 +88,6 @@ pub struct ${name} {
           if (field.type.name === "bytes") {
             fieldType = "*const c_uchar";
             fieldHasLen = true;
-          } else if (field.type.name === "time") {
-            fieldType = "*const FoxgloveTimestamp";
-          } else if (field.type.name === "duration") {
-            fieldType = "*const FoxgloveDuration";
           } else {
             fieldType = primitiveToRust(field.type.name);
           }
@@ -89,7 +96,7 @@ pub struct ${name} {
           fieldType = rustEnumName(field.type.enum.name);
           break;
         case "nested":
-          fieldType = rustMessageSchemaName(field.type.schema.name);
+          fieldType = rustMessageSchemaName(field.type.schema);
           break;
       }
       const lines: string[] = [comment];
@@ -165,6 +172,9 @@ impl BorrowToNative for ${name} {
             }
             return [];
           case "nested":
+            if (field.type.schema.name === "Timestamp" || field.type.schema.name === "Duration") {
+              return [];
+            }
             return [
               `let ${fieldName} = unsafe { self.${fieldName}.as_ref().map(|m| m.borrow_to_native(arena.as_mut())) }.transpose()?;`,
             ];
@@ -199,13 +209,14 @@ impl BorrowToNative for ${name} {
               return `${fieldName}: ManuallyDrop::into_inner(${fieldName})`;
             } else if (field.type.name === "bytes") {
               return `${fieldName}: ManuallyDrop::into_inner(unsafe { bytes_from_raw(self.${fieldName}, self.${fieldName}_len) })`;
-            } else if (field.type.name === "time" || field.type.name === "duration") {
-              return `${fieldName}: unsafe { self.${fieldName}.as_ref() }.map(|&m| m.into())`;
             }
             return `${fieldName}: self.${fieldName}`;
           case "enum":
             return `${fieldName}: self.${fieldName} as i32`;
           case "nested":
+            if (field.type.schema.name === "Timestamp" || field.type.schema.name === "Duration") {
+              return `${fieldName}: unsafe { self.${fieldName}.as_ref() }.map(|&m| m.into())`;
+            }
             return `${fieldName}: ${fieldName}.map(ManuallyDrop::into_inner)`;
         }
       })
@@ -304,8 +315,9 @@ export async function generateBindgenConfig(
   assertValidBindgen(bindgenToml);
 
   schemas.forEach((schema) => {
-    const sourceName = rustMessageSchemaName(schema.name);
-    const exportName = `foxglove_${toSnakeCase(sourceName)}`;
+    const sourceName = rustMessageSchemaName(schema);
+    const prefix = sourceName.startsWith("Foxglove") ? "" : "foxglove_";
+    const exportName = `${prefix}${toSnakeCase(sourceName)}`;
     if (sourceName in bindgenToml.export.rename) {
       throw new Error(`Duplicate name in rename section: ${sourceName}`);
     }

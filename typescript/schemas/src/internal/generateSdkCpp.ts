@@ -4,6 +4,8 @@ import { FoxgloveEnumSchema, FoxgloveMessageSchema, FoxglovePrimitive } from "./
 
 function primitiveToCpp(type: FoxglovePrimitive) {
   switch (type) {
+    case "int32":
+      return "int32_t";
     case "uint32":
       return "uint32_t";
     case "bytes":
@@ -14,15 +16,12 @@ function primitiveToCpp(type: FoxglovePrimitive) {
       return "bool";
     case "float64":
       return "double";
-    case "time":
-      return "std::optional<Timestamp>";
-    case "duration":
-      return "std::optional<Duration>";
   }
 }
 
 function primitiveDefaultValue(type: FoxglovePrimitive) {
   switch (type) {
+    case "int32":
     case "uint32":
       return 0;
     case "boolean":
@@ -31,8 +30,6 @@ function primitiveDefaultValue(type: FoxglovePrimitive) {
       return 0;
     case "string":
     case "bytes":
-    case "time":
-    case "duration":
       return undefined;
   }
 }
@@ -86,6 +83,14 @@ function* topologicalOrder(
     }
     yield schema;
   }
+}
+
+/**
+ * SDK does not yet generate channels for Timestamp and Duration because of custom implementations
+ * in other languages.
+ */
+function shouldGenerateChannel(schema: FoxgloveMessageSchema): boolean {
+  return schema.name !== "Timestamp" && schema.name !== "Duration";
 }
 
 export function generateHppSchemas(
@@ -162,7 +167,7 @@ export function generateHppSchemas(
     ].join("\n");
   });
 
-  const channelClasses = schemas.map(
+  const channelClasses = schemas.filter(shouldGenerateChannel).map(
     (schema) => `/// @brief A channel for logging ${schema.name} messages to a topic.
       ///
       /// @note While channels are fully thread-safe, the ${schema.name} struct is not thread-safe.
@@ -214,7 +219,6 @@ export function generateHppSchemas(
     "#include <optional>",
     "#include <memory>",
     "",
-    "#include <foxglove/time.hpp>",
     "#include <foxglove/error.hpp>",
     "#include <foxglove/context.hpp>",
   ];
@@ -280,16 +284,16 @@ function cppToC(schema: FoxgloveMessageSchema, copyTypes: Set<string>): string[]
           return `dest.${dstName} = {src.${srcName}.data(), src.${srcName}.size()};`;
         } else if (field.type.name === "bytes") {
           return `dest.${dstName} = reinterpret_cast<const unsigned char *>(src.${srcName}.data());\n    dest.${dstName}_len = src.${srcName}.size();`;
-        } else if (field.type.name === "time") {
-          return `dest.${dstName} = src.${srcName} ? reinterpret_cast<const foxglove_timestamp*>(&*src.${srcName}) : nullptr;`;
-        } else if (field.type.name === "duration") {
-          return `dest.${dstName} = src.${srcName} ? reinterpret_cast<const foxglove_duration*>(&*src.${srcName}) : nullptr;`;
         }
         return `dest.${dstName} = src.${srcName};`;
       case "enum":
         return `dest.${dstName} = static_cast<foxglove_${toSnakeCase(field.type.enum.name)}>(src.${srcName});`;
       case "nested":
-        if (copyTypes.has(field.type.schema.name)) {
+        if (field.type.schema.name === "Timestamp") {
+          return `dest.${dstName} = src.${srcName} ? reinterpret_cast<const foxglove_timestamp*>(&*src.${srcName}) : nullptr;`;
+        } else if (field.type.schema.name === "Duration") {
+          return `dest.${dstName} = src.${srcName} ? reinterpret_cast<const foxglove_duration*>(&*src.${srcName}) : nullptr;`;
+        } else if (copyTypes.has(field.type.schema.name)) {
           return `dest.${dstName} = src.${srcName} ? reinterpret_cast<const foxglove_${toSnakeCase(field.type.schema.name)}*>(&*src.${srcName}) : nullptr;`;
         } else {
           return `dest.${dstName} = src.${srcName} ? arena.map_one<foxglove_${toSnakeCase(field.type.schema.name)}>(src.${srcName}.value(), ${toCamelCase(field.type.schema.name)}ToC) : nullptr;`;
@@ -319,7 +323,7 @@ export function generateCppSchemas(schemas: FoxgloveMessageSchema[]): string {
     ];
   });
 
-  const traitSpecializations = schemas.flatMap((schema) => {
+  const traitSpecializations = schemas.filter(shouldGenerateChannel).flatMap((schema) => {
     const snakeName = toSnakeCase(schema.name);
     let conversionCode;
     if (isSameAsCType(schema)) {
