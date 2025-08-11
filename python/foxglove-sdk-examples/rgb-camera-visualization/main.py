@@ -86,7 +86,7 @@ def create_raw_image_message(frame: np.ndarray) -> RawImage:
         width=width,
         height=height,
         step=width * channels,  # bytes per row
-        encoding="bgr8", #OpenCV default
+        encoding="bgr8",  # OpenCV default
     )
 
 
