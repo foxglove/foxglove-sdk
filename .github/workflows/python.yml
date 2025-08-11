@@ -242,7 +242,7 @@ jobs:
       contents: write
       attestations: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v5
         with:
           path: python/foxglove-sdk
       - run: find python/foxglove-sdk/wheels*
