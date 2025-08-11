@@ -96,7 +96,7 @@ def main():
     camera = CameraCapture(args.camera_id)
     if not camera.connect():
         print("Failed to connect to camera. Exiting.")
-        return 1
+        return 0
 
     server = foxglove.start_server()
     print(f"Foxglove server started at {server.app_url()}")
