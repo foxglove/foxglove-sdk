@@ -526,7 +526,7 @@ version = "0.0.0"
 dependencies = [
  "env_logger",
  "foxglove 0.10.1",
- "mcap 0.23.0",
+ "mcap 0.23.2",
  "schemars 1.0.4",
  "serde",
 ]
@@ -657,7 +657,7 @@ dependencies = [
  "ctrlc",
  "env_logger",
  "foxglove 0.10.1",
- "mcap 0.23.0",
+ "mcap 0.23.2",
  "tracing",
 ]
 
@@ -737,7 +737,7 @@ dependencies = [
  "futures-util",
  "insta",
  "maplit",
- "mcap 0.23.0",
+ "mcap 0.23.2",
  "parking_lot",
  "prost",
  "prost-types",
@@ -788,7 +788,7 @@ dependencies = [
  "foxglove 0.10.1",
  "log",
  "maplit",
- "mcap 0.23.0",
+ "mcap 0.23.2",
  "tracing",
 ]
 
@@ -1261,9 +1261,9 @@ dependencies = [
 
 [[package]]
 name = "mcap"
-version = "0.23.0"
+version = "0.23.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "86e39ef6b03ab26a161ce0e28d8f958366e9ea793f0b327b72a8c4f9814e3ae4"
+checksum = "d232d57c96a84a7ef13f6e9035520d911ab1359b107a7266a57149175b9f0034"
 dependencies = [
  "bimap",
  "binrw",
