@@ -44,6 +44,7 @@ jobs:
             compiler: clang
             cross: true
             test_debug: false
+            requires_bindgen: false
           - runner: ubuntu-24.04
             target: x86_64-unknown-linux-gnu
             staticlib_name: libfoxglove.a
@@ -53,6 +54,7 @@ jobs:
             compiler: clang
             cross: false
             test_debug: true
+            requires_bindgen: false
 
           # Linux (extra build to test GCC support)
           - runner: ubuntu-24.04
@@ -65,6 +67,7 @@ jobs:
             compiler: gcc
             skip_upload: true
             test_debug: true
+            requires_bindgen: false
 
           # macOS
           - runner: macos-15
@@ -75,6 +78,7 @@ jobs:
             cdylib_artifact_name: libfoxglove-aarch64-apple-darwin.dylib
             cross: false
             test_debug: true
+            requires_bindgen: false
 
           - runner: macos-15
             target: x86_64-apple-darwin
@@ -84,6 +88,7 @@ jobs:
             cdylib_artifact_name: libfoxglove-x86_64-apple-darwin.dylib
             cross: true
             test_debug: false
+            requires_bindgen: false
 
           # Windows
           - runner: windows-2025
@@ -94,6 +99,7 @@ jobs:
             cdylib_artifact_name: foxglove-x86_64-pc-windows-msvc.dll
             cross: false
             test_debug: false
+            requires_bindgen: false
           - runner: windows-2025
             target: aarch64-pc-windows-msvc
             staticlib_name: foxglove.lib
@@ -102,6 +108,7 @@ jobs:
             cdylib_artifact_name: foxglove-aarch64-pc-windows-msvc.dll
             cross: true
             test_debug: false
+            requires_bindgen: false
 
           # iOS
           - runner: macos-15
@@ -112,6 +119,7 @@ jobs:
             cdylib_artifact_name: libfoxglove-aarch64-apple-ios.dylib
             cross: true
             test_debug: false
+            requires_bindgen: true
           # iOS simulator
           - runner: macos-15
             target: aarch64-apple-ios-sim
@@ -121,6 +129,7 @@ jobs:
             cdylib_artifact_name: libfoxglove-aarch64-apple-ios-sim.dylib
             cross: true
             test_debug: false
+            requires_bindgen: true
           - runner: macos-15
             target: x86_64-apple-ios
             staticlib_name: libfoxglove.a
@@ -129,6 +138,7 @@ jobs:
             cdylib_artifact_name: libfoxglove-x86_64-apple-ios.dylib
             cross: true
             test_debug: false
+            requires_bindgen: true
 
     name: build (${{ matrix.target }}, ${{ matrix.compiler || 'default compiler' }})
     runs-on: ${{ matrix.runner }}
@@ -145,6 +155,9 @@ jobs:
         with:
           target: ${{ matrix.target }}
 
+      - run: cargo install --force --locked bindgen-cli
+        # https://aws.github.io/aws-lc-rs/requirements/apple.html
+        if: ${{ matrix.requires_bindgen }}
       - run: sudo apt-get update && sudo apt-get install gcc-aarch64-linux-gnu
         if: matrix.target == 'aarch64-unknown-linux-gnu'
       - run: echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
