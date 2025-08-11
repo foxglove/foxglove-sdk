@@ -22,7 +22,12 @@ live_visualization = [
   "dep:serde_with",
 ]
 lz4 = ["mcap/lz4"]
-tls = ["live_visualization", "dep:tokio-rustls", "tokio-tungstenite/rustls-tls-native-roots"]
+tls = [
+  "live_visualization",
+  "tokio-tungstenite/rustls-tls-native-roots",
+  "dep:aws-lc-rs",
+  "dep:tokio-rustls",
+]
 schemars = ["dep:schemars"]
 unstable = []
 zstd = ["mcap/zstd"]
@@ -32,6 +37,7 @@ workspace = true
 
 [dependencies]
 arc-swap = "1.7.1"
+aws-lc-rs = { version = "1.13.3", optional = true, features = ["bindgen"] }
 base64 = { version = "0.22", optional = true }
 bimap = "0.6.3"
 bytes.workspace = true
