@@ -552,7 +552,7 @@ version = "0.0.0"
 dependencies = [
  "env_logger",
  "foxglove 0.10.1",
- "mcap",
+ "mcap 0.23.2",
  "schemars 1.0.4",
  "serde",
 ]
@@ -695,7 +695,7 @@ dependencies = [
  "ctrlc",
  "env_logger",
  "foxglove 0.10.1",
- "mcap",
+ "mcap 0.23.2",
  "tracing",
 ]
 
@@ -775,7 +775,7 @@ dependencies = [
  "futures-util",
  "insta",
  "maplit",
- "mcap",
+ "mcap 0.23.2",
  "parking_lot",
  "prost",
  "prost-types",
@@ -826,7 +826,7 @@ dependencies = [
  "foxglove 0.10.1",
  "log",
  "maplit",
- "mcap",
+ "mcap 0.23.2",
  "tracing",
 ]
 
