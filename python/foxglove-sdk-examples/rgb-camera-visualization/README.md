@@ -18,12 +18,12 @@ Navigate to the example directory (`python/foxglove-sdk-examples/rgb-camera-visu
 
 ### Basic usage (default camera):
 ```bash
-poetry run python3 main.py
+poetry run python main.py
 ```
 
 ### Specify camera ID:
 ```bash
-poetry run python3 main.py --camera-id 4
+poetry run python main.py --camera-id 4
 ```
 
 ## Viewing in Foxglove
