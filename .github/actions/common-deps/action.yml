@@ -22,6 +22,5 @@ runs:
         sudo apt-get install -y --no-install-recommends \
           libprotobuf-dev \
           protobuf-compiler \
-          libopencv-dev
-          # clang \
-          # libclang-dev
+          libopencv-dev \
+          libclang-dev
