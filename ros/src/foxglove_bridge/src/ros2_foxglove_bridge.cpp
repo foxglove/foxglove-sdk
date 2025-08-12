@@ -76,6 +76,7 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
   const auto ignoreUnresponsiveParamNodes =
     this->get_parameter(PARAM_IGN_UNRESPONSIVE_PARAM_NODES).as_bool();
 
+  // Create a special context just for the server
   _serverContext = foxglove::Context::create();
 
   foxglove::WebSocketServerOptions sdkServerOptions;
@@ -165,7 +166,10 @@ FoxgloveBridge::~FoxgloveBridge() {
   if (_rosgraphPollThread) {
     _rosgraphPollThread->join();
   }
-  _server->stop();
+  auto stop_result = _server->stop();
+  if (stop_result != foxglove::FoxgloveError::Ok) {
+    RCLCPP_ERROR(this->get_logger(), "Failed to stop server: %s", foxglove::strerror(stop_result));
+  }
   RCLCPP_INFO(this->get_logger(), "Shutdown complete");
 }
 

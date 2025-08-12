@@ -29,7 +29,6 @@ static void MessageReceivedHandler(uint32_t subscription_id, std::atomic<uint64_
   message_count.fetch_add(1, std::memory_order_relaxed);
 }
 
-
 class BridgeBenchmarkFixture : public ::benchmark::Fixture {
   public:
   constexpr static uint16_t port = 8765;
@@ -56,6 +55,7 @@ class BridgeBenchmarkFixture : public ::benchmark::Fixture {
     _publisherNodes.clear();
     _executor->remove_node(_bridge->get_node_base_interface());
     _bridge.reset();
+    _executor.reset();
     rclcpp::shutdown();
   }
 
@@ -65,17 +65,16 @@ class BridgeBenchmarkFixture : public ::benchmark::Fixture {
   }
 
   // Create a client, connect to the bridge, and subscribe to a topic. Subscription ID is automatically generated.
-  // If the client fails to connect or subscribe, returns a future with a null pointer.
+  // If the client fails to connect or subscribe, returns a pair with a null pointer and 0.
   std::pair<std::unique_ptr<BenchmarkClient>, uint32_t> createClient(const std::string& topicName) {
-    std::lock_guard<std::mutex> lock(_clientMutex);
     auto client = std::make_unique<BenchmarkClient>();
-    auto connection_future = client->connect("ws://localhost:" + std::to_string(port));
-    if (connection_future.wait_for(std::chrono::seconds(1)) == std::future_status::timeout) {
+    auto channel_future = client->waitForChannel(topicName);
+    auto connection_status = client->connect("ws://localhost:" + std::to_string(port)).wait_for(std::chrono::seconds(1));
+    if (connection_status == std::future_status::timeout) {
       return {nullptr, 0};
     }
 
-    auto channel_future = client->waitForChannel(topicName);
-    if (channel_future.wait_for(std::chrono::seconds(1)) == std::future_status::timeout) {
+    if (channel_future.wait_for(std::chrono::seconds(10)) == std::future_status::timeout) {
       return {nullptr, 0};
     }
 
@@ -89,7 +88,6 @@ class BridgeBenchmarkFixture : public ::benchmark::Fixture {
   }
 
 private:
-  std::mutex _clientMutex;
   uint32_t _subscriptionId = 1;
   std::unique_ptr<rclcpp::executors::SingleThreadedExecutor> _executor;
   std::thread _executorThread;
@@ -106,12 +104,9 @@ BENCHMARK_F(BridgeBenchmarkFixture, BM_StringPublish)(benchmark::State& state) {
     publisher->create_publisher<std_msgs::msg::String>(topic_name, rclcpp::QoS(rclcpp::KeepLast(10)));
   addNode("publisher", std::move(publisher));
 
-  // TODO: This is a hack to wait for the bridge to be ready.
-  // There's a race condition where the rust side can advertise the channel
-  // before the C++ side fully initializes it and inserts it into _channels.
   std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
-  // Create WebSocket clients with reliable connection handling
+  // Set up a client
   std::unique_ptr<BenchmarkClient> client;
   uint32_t subscription_id;
   std::tie(client, subscription_id) = createClient(topic_name);
@@ -128,6 +123,7 @@ BENCHMARK_F(BridgeBenchmarkFixture, BM_StringPublish)(benchmark::State& state) {
 
   std_msgs::msg::String msg;
   msg.data = "Hello, world!";
+
   for (auto _ : state) {
     const uint64_t start_count = message_count.load(std::memory_order_relaxed);
     publisher_publisher->publish(msg);
