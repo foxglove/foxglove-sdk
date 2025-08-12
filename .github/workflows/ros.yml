@@ -19,7 +19,7 @@ jobs:
           - rolling
     name: "ros (${{ matrix.ros_distribution }})"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Build Foxglove C++ SDK
         run: make build-cpp
