@@ -76,12 +76,15 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
   const auto ignoreUnresponsiveParamNodes =
     this->get_parameter(PARAM_IGN_UNRESPONSIVE_PARAM_NODES).as_bool();
 
+  _serverContext = foxglove::Context::create();
+
   foxglove::WebSocketServerOptions sdkServerOptions;
   _capabilities = processCapabilities(capabilities);
   sdkServerOptions.host = address;
   sdkServerOptions.port = port;
   sdkServerOptions.supported_encodings = {"cdr", "json"};
   sdkServerOptions.capabilities = _capabilities;
+  sdkServerOptions.context = _serverContext;
   if (_useSimTime) {
     sdkServerOptions.capabilities =
       sdkServerOptions.capabilities | foxglove::WebSocketServerCapabilities::Time;
@@ -293,7 +296,7 @@ void FoxgloveBridge::updateAdvertisedTopics(
     }
 
     // Create the new SDK channel
-    auto channelResult = foxglove::RawChannel::create(topic, messageEncoding, schema);
+    auto channelResult = foxglove::RawChannel::create(topic, messageEncoding, schema, _serverContext);
     if (!channelResult.has_value()) {
       RCLCPP_ERROR(this->get_logger(), "Failed to create channel for topic \"%s\" (%s)",
                    topic.c_str(), foxglove::strerror(channelResult.error()));

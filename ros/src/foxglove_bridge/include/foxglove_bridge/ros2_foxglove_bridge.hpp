@@ -104,6 +104,7 @@ private:
   bool _disableLoanMessage = true;
   std::unordered_map<std::string, std::shared_ptr<RosMsgParser::Parser>> _jsonParsers;
   std::atomic<bool> _shuttingDown = false;
+  foxglove::Context _serverContext;
 
   void subscribeConnectionGraph(bool subscribe);
 
