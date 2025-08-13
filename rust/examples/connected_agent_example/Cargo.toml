@@ -1,0 +1,10 @@
+[package]
+name = "example_connected_agent"
+edition = "2021"
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+foxglove = { path = "../../foxglove" }

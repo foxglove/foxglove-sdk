@@ -304,6 +304,7 @@
 
 use thiserror::Error;
 
+mod connected_agent;
 mod app_url;
 mod channel;
 mod channel_builder;
@@ -331,6 +332,7 @@ mod testutil;
 mod throttler;
 mod time;
 
+pub use connected_agent::{AgentSinkConfig, ConnectedAgent};
 pub use app_url::AppUrl;
 // Re-export bytes crate for convenience when implementing the `Encode` trait
 pub use bytes;
