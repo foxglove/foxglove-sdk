@@ -22,22 +22,23 @@ Follow the OpenCV installation guide for Windows and ensure the OpenCV environme
 
 ## Building the RGB Camera Example
 
-Navigate to the `rust` directory in:
+This example is not built by default because of its dependencies, to build it execute in the root of this repository:
 
 ```bash
-cargo build -p example_rgb_camera_visualization
+cargo build --manifest-path rust/examples/rgb_camera_visualization/Cargo.toml
 ```
+
 
 ## Running the Example
 
 ### Basic usage (default camera):
 ```bash
-cargo run -p example_rgb_camera_visualization
+cargo run --manifest-path rust/examples/rgb_camera_visualization/Cargo.toml
 ```
 
 ### Specify camera ID:
 ```bash
-cargo run -p example_rgb_camera_visualization -- --camera-id 1
+cargo run --manifest-path rust/examples/rgb_camera_visualization/Cargo.toml -- --camera-id 2
 ```
 
 ## Viewing in Foxglove

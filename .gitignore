@@ -21,6 +21,7 @@
 /ros/build/
 /ros/install/
 /ros/log/
+/rust/examples/*/target/
 /target/
 /typescript/*/dist/
 /typescript/schemas/src/jsonschema/
