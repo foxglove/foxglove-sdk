@@ -47,13 +47,13 @@ schemars = { version = "1.0.4", optional = true }
 serde_json = "1.0"
 serde_repr = { version = "0.1.19", optional = true }
 serde_with = { version = "3.14.0", features = ["macros", "base64"], optional = true }
-serde.workspace = true
+serde = { workspace = true, features = ["derive"] }
 smallvec = "1.15.1"
 smallbytes = "0.1.0"
 thiserror.workspace = true
 tokio-tungstenite = { workspace = true, optional = true }
-tokio-util = { workspace = true, optional = true }
-tokio = { workspace = true, optional = true }
+tokio-util = { workspace = true, optional = true, features = ["codec"] }
+tokio = { workspace = true, optional = true, features = ["full"] }
 tracing.workspace = true
 urlencoding = "2.1.3"
 

@@ -547,7 +547,10 @@ dependencies = [
 name = "example_connected_agent"
 version = "0.0.0"
 dependencies = [
+ "anyhow",
+ "env_logger",
  "foxglove 0.10.1",
+ "tokio",
 ]
 
 [[package]]

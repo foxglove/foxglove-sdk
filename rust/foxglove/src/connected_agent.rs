@@ -4,13 +4,17 @@
 //! which can handle recording, uploading, and other agent-specific functionality.
 
 use std::sync::Arc;
-
 use std::time::Duration;
 
 use parking_lot::Mutex;
-use tracing::{debug, warn};
+use tracing::debug;
 
 use crate::{ChannelId, FoxgloveError, Metadata, RawChannel, Sink, SinkId};
+
+use std::path::Path;
+use tokio::net::UnixStream;
+use tokio_util::codec::{Framed, LengthDelimitedCodec};
+// serde::{Serialize, Deserialize} - will be used for message protocol
 
 /// Configuration for the agent sink.
 #[derive(Debug, Clone)]
@@ -21,14 +25,17 @@ pub struct AgentSinkConfig {
     pub message_backlog_size: usize,
     /// Timeout for agent operations.
     pub timeout: Duration,
+    /// Path to the Unix domain socket for agent communication.
+    pub socket_path: std::path::PathBuf,
 }
 
 impl Default for AgentSinkConfig {
     fn default() -> Self {
         Self {
-            auto_subscribe: false,
+            auto_subscribe: true,
             message_backlog_size: 1000,
             timeout: Duration::from_secs(30),
+            socket_path: std::path::PathBuf::from("/tmp/foxglove-agent.sock"),
         }
     }
 }
@@ -38,6 +45,27 @@ impl Default for AgentSinkConfig {
 struct AgentSinkState {
     /// Whether the sink is connected to an agent.
     connected: bool,
+}
+
+/// Unix socket connection to the agent.
+#[derive(Debug)]
+struct UnixSocketConnection {
+    stream: Option<Framed<UnixStream, LengthDelimitedCodec>>,
+}
+
+impl UnixSocketConnection {
+    async fn connect<P: AsRef<Path>>(socket_path: P) -> Result<Self, std::io::Error> {
+        let stream = UnixStream::connect(socket_path.as_ref()).await?;
+        let framed = Framed::new(stream, LengthDelimitedCodec::new());
+
+        Ok(Self {
+            stream: Some(framed),
+        })
+    }
+
+    fn disconnect(&mut self) {
+        self.stream = None;
+    }
 }
 
 /// A sink that sends messages to a connected Foxglove agent.
@@ -55,6 +83,7 @@ pub struct ConnectedAgent {
     config: AgentSinkConfig,
     state: Mutex<AgentSinkState>,
     closed: Mutex<bool>,
+    connection: Mutex<Option<UnixSocketConnection>>,
 }
 
 impl ConnectedAgent {
@@ -70,14 +99,14 @@ impl ConnectedAgent {
             config,
             state: Mutex::new(AgentSinkState::default()),
             closed: Mutex::new(false),
+            connection: Mutex::new(None),
         })
     }
 
     /// Attempts to connect to the agent.
     ///
-    /// This is currently a no-op but will be implemented to establish
-    /// IPC communication with the agent process.
-    pub fn connect(&self) -> Result<(), FoxgloveError> {
+    /// This establishes IPC communication with the agent process via Unix domain socket.
+    pub async fn connect(&self) -> Result<(), FoxgloveError> {
         if *self.closed.lock() {
             return Err(FoxgloveError::SinkClosed);
         }
@@ -87,10 +116,15 @@ impl ConnectedAgent {
             return Ok(());
         }
 
-        // TODO: Implement actual connection logic
-        // For now, just simulate a successful connection
-        debug!("Agent sink: simulating connection to agent");
+        // Establish Unix socket connection
+        let connection = UnixSocketConnection::connect(&self.config.socket_path).await
+            .map_err(FoxgloveError::IoError)?;
+
+        // Store connection and update state
+        *self.connection.lock() = Some(connection);
         state.connected = true;
+
+        debug!("Agent sink: connected to agent at {}", self.config.socket_path.display());
         Ok(())
     }
 
@@ -100,6 +134,11 @@ impl ConnectedAgent {
         if state.connected {
             debug!("Agent sink: disconnecting from agent");
             state.connected = false;
+        }
+
+        // Close the Unix socket connection
+        if let Some(ref mut connection) = *self.connection.lock() {
+            connection.disconnect();
         }
     }
 
@@ -117,16 +156,8 @@ impl ConnectedAgent {
             return Err(FoxgloveError::SinkClosed);
         }
 
-        // Ensure we're connected
-        if !self.state.lock().connected {
-            if let Err(e) = self.connect() {
-                warn!("Agent sink: failed to connect: {}", e);
-                return Err(e);
-            }
-        }
-
+        // For now, just log the message without attempting connection
         // TODO: Implement actual message sending via IPC
-        // For now, just log the message
         debug!(
             "Agent sink: would send message to agent - topic: {}, size: {} bytes, time: {}",
             channel.topic(),
@@ -218,19 +249,23 @@ mod tests {
             auto_subscribe: false,
             message_backlog_size: 500,
             timeout: Duration::from_secs(60),
+            socket_path: std::path::PathBuf::from("/tmp/test-agent.sock"),
         };
         let sink = ConnectedAgent::with_config(config);
         assert_eq!(sink.config.auto_subscribe, false);
         assert_eq!(sink.config.message_backlog_size, 500);
         assert_eq!(sink.config.timeout, Duration::from_secs(60));
+        assert_eq!(sink.config.socket_path, std::path::PathBuf::from("/tmp/test-agent.sock"));
     }
 
-    #[test]
-    fn test_agent_sink_connection() {
+    #[tokio::test]
+    async fn test_agent_sink_connection() {
         let sink = ConnectedAgent::new();
 
-        // Should connect successfully
-        assert!(sink.connect().is_ok());
+        // Should fail to connect since no agent is running
+        // This is expected behavior for now
+        let result = sink.connect().await;
+        assert!(result.is_err());
     }
 
     #[test]

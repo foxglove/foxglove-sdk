@@ -5,14 +5,25 @@
 use foxglove::schemas::Log;
 use foxglove::{log, ConnectedAgent, Context};
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Create a context
-    let ctx = Context::new();
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    // Initialize logging
+    let env = env_logger::Env::default().default_filter_or("debug");
+    env_logger::init_from_env(env);
+
+    // Get the default context (same one used by log! macro)
+    let ctx = Context::get_default();
 
     // Create a connected agent for interprocess communication
     let connected_agent = ConnectedAgent::new();
 
-    // Add the connected agent to the context
+    // Attempt to connect to the agent
+    if let Err(e) = connected_agent.connect().await {
+        eprintln!("Failed to connect to agent: {}", e);
+        // Continue anyway to see the debug messages
+    }
+
+    // Add the connected agent to the default context
     ctx.add_sink(connected_agent.clone());
 
     // Log some messages
