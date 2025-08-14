@@ -76,6 +76,12 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
   const auto ignoreUnresponsiveParamNodes =
     this->get_parameter(PARAM_IGN_UNRESPONSIVE_PARAM_NODES).as_bool();
 
+  const bool debug = this->get_parameter(PARAM_DEBUG).as_bool();
+  if (debug) {
+    foxglove::setLogLevel(foxglove::LogLevel::Debug);
+    this->get_logger().set_level(rclcpp::Logger::Level::Debug);
+  }
+
   _serverContext = foxglove::Context::create();
 
   foxglove::WebSocketServerOptions sdkServerOptions;
