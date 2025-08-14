@@ -3,18 +3,21 @@
 //! This sink implementation sends messages to a connected agent process,
 //! which can handle recording, uploading, and other agent-specific functionality.
 
+use std::path::Path;
 use std::sync::Arc;
 use std::time::Duration;
 
+use flume::Sender;
 use parking_lot::Mutex;
-use tracing::debug;
-
-use crate::{ChannelId, FoxgloveError, Metadata, RawChannel, Sink, SinkId};
-
-use std::path::Path;
 use tokio::net::UnixStream;
 use tokio_util::codec::{Framed, LengthDelimitedCodec};
-// serde::{Serialize, Deserialize} - will be used for message protocol
+use crate::{ChannelId, FoxgloveError, Metadata, RawChannel, Sink, SinkId};
+
+use crate::websocket::ws_protocol::server::{ServerMessage, MessageData};
+use crate::websocket::ws_protocol::BinaryMessage;
+use futures_util::SinkExt;
+use tracing::{debug, error};
+
 
 /// Configuration for the agent sink.
 #[derive(Debug, Clone)]
@@ -49,12 +52,12 @@ struct AgentSinkState {
 
 /// Unix socket connection to the agent.
 #[derive(Debug)]
-struct UnixSocketConnection {
+pub struct UnixSocketConnection {
     stream: Option<Framed<UnixStream, LengthDelimitedCodec>>,
 }
 
 impl UnixSocketConnection {
-    async fn connect<P: AsRef<Path>>(socket_path: P) -> Result<Self, std::io::Error> {
+    pub async fn connect<P: AsRef<Path>>(socket_path: P) -> Result<Self, std::io::Error> {
         let stream = UnixStream::connect(socket_path.as_ref()).await?;
         let framed = Framed::new(stream, LengthDelimitedCodec::new());
 
@@ -66,6 +69,118 @@ impl UnixSocketConnection {
     fn disconnect(&mut self) {
         self.stream = None;
     }
+
+    /// Sends a protocol message to the agent
+    async fn send_message(&mut self, message: &ServerMessage<'_>) -> Result<(), std::io::Error> {
+        let stream = self.stream.as_mut().ok_or_else(|| {
+            std::io::Error::new(std::io::ErrorKind::NotConnected, "No active connection")
+        })?;
+
+        // Convert to bytes based on message type
+        let bytes = match message {
+            ServerMessage::MessageData(msg) => msg.to_bytes(),
+            ServerMessage::Advertise(msg) => {
+                // For JSON messages, we need to serialize to string first
+                let json = serde_json::to_string(msg).map_err(|e| {
+                    std::io::Error::new(std::io::ErrorKind::InvalidData, e)
+                })?;
+                json.into_bytes()
+            }
+            _ => {
+                // For other message types, we'll handle them as needed
+                return Err(std::io::Error::new(
+                    std::io::ErrorKind::Unsupported,
+                    "Message type not yet implemented"
+                ));
+            }
+        };
+
+        stream.send(bytes.into()).await?;
+        Ok(())
+    }
+}
+
+/// A poller for the connected agent.
+///
+/// The poller is responsible for:
+/// - Sending messages (from `data_plane` and `control_plane`) to the agent via IPC.
+/// - Managing the Unix socket connection.
+/// - Waiting for a shutdown signal, and closing the connection.
+#[derive(Debug)]
+struct Poller {
+    connection: Option<UnixSocketConnection>,
+    data_plane_rx: flume::Receiver<ServerMessage<'static>>,
+    control_plane_rx: flume::Receiver<ServerMessage<'static>>,
+    shutdown_rx: tokio::sync::oneshot::Receiver<ShutdownReason>,
+}
+
+/// A reason for shutting down the agent connection.
+#[derive(Debug, Clone, Copy)]
+enum ShutdownReason {
+    /// The agent disconnected.
+    AgentDisconnected,
+    /// The sink has been stopped.
+    SinkStopped,
+    /// The control plane queue overflowed.
+    ControlPlaneQueueFull,
+}
+
+impl Poller {
+    /// Creates a new poller.
+    fn new(
+        connection: UnixSocketConnection,
+        data_plane_rx: flume::Receiver<ServerMessage<'static>>,
+        control_plane_rx: flume::Receiver<ServerMessage<'static>>,
+        shutdown_rx: tokio::sync::oneshot::Receiver<ShutdownReason>,
+    ) -> Self {
+        Self {
+            connection: Some(connection),
+            data_plane_rx,
+            control_plane_rx,
+            shutdown_rx,
+        }
+    }
+
+    /// Runs the main poll loop for the agent connection.
+    async fn run(mut self) {
+        debug!("Poller::run starting");
+
+        // Send messages from queues to the agent via IPC
+        let send_loop = async {
+            debug!("Poller send_loop starting");
+            while let Ok(message) = tokio::select! {
+                msg = self.control_plane_rx.recv_async() => msg,
+                msg = self.data_plane_rx.recv_async() => msg,
+            } {
+                debug!("Poller received message from queue: {:?}", message);
+                if let Some(ref mut connection) = self.connection {
+                    debug!("Poller sending message via IPC connection");
+                    match connection.send_message(&message).await {
+                        Ok(_) => {
+                            debug!("Poller: sent message via IPC: {:?}", message);
+                        }
+                        Err(e) => {
+                            error!("Error sending message via IPC: {}", e);
+                            // TODO: Handle connection errors (reconnect, etc.)
+                            break;
+                        }
+                    }
+                } else {
+                    debug!("No active connection, dropping message: {:?}", message);
+                    break;
+                }
+            }
+            debug!("Poller send_loop ending");
+            ShutdownReason::AgentDisconnected
+        };
+
+        let reason = tokio::select! {
+            _ = send_loop => ShutdownReason::AgentDisconnected,
+            r = self.shutdown_rx => r.expect("ConnectedAgent sends before dropping sender"),
+        };
+
+        debug!("Poller shutting down: {:?}", reason);
+    }
 }
 
 /// A sink that sends messages to a connected Foxglove agent.
@@ -73,59 +188,109 @@ impl UnixSocketConnection {
 /// This sink acts as a bridge between the Foxglove SDK and the agent process,
 /// allowing the agent to receive messages for recording, uploading, or other
 /// processing.
-///
-/// Currently, this is a shim implementation that logs messages but doesn't
-/// actually communicate with an agent. In the future, this will be extended
-/// to support IPC communication.
 #[derive(Debug)]
 pub struct ConnectedAgent {
     sink_id: SinkId,
     config: AgentSinkConfig,
     state: Mutex<AgentSinkState>,
     closed: Mutex<bool>,
-    connection: Mutex<Option<UnixSocketConnection>>,
+    poller: parking_lot::Mutex<Option<Poller>>,
+    data_plane_tx: parking_lot::Mutex<Option<Sender<ServerMessage<'static>>>>,
+    control_plane_tx: parking_lot::Mutex<Option<Sender<ServerMessage<'static>>>>,
+    shutdown_tx: parking_lot::Mutex<Option<tokio::sync::oneshot::Sender<ShutdownReason>>>,
 }
 
 impl ConnectedAgent {
-    /// Creates a new agent sink with default configuration.
-    pub fn new() -> Arc<Self> {
-        Self::with_config(AgentSinkConfig::default())
-    }
+    /// Creates a new agent sink with an established connection.
+    pub fn new(
+        config: AgentSinkConfig,
+        connection: UnixSocketConnection,
+    ) -> Arc<Self> {
+        let socket_path = config.socket_path.clone();
+        let (data_plane_tx, data_plane_rx) = flume::bounded(config.message_backlog_size);
+        let (control_plane_tx, control_plane_rx) = flume::bounded(config.message_backlog_size);
+        let (shutdown_tx, shutdown_rx) = tokio::sync::oneshot::channel();
 
-    /// Creates a new agent sink with the specified configuration.
-    pub fn with_config(config: AgentSinkConfig) -> Arc<Self> {
-        Arc::new(Self {
+        let poller = Poller::new(connection, data_plane_rx, control_plane_rx, shutdown_rx);
+
+        let agent = Arc::new(Self {
             sink_id: SinkId::next(),
             config,
-            state: Mutex::new(AgentSinkState::default()),
+            state: Mutex::new(AgentSinkState { connected: true }),
             closed: Mutex::new(false),
-            connection: Mutex::new(None),
-        })
+            poller: parking_lot::Mutex::new(Some(poller)),
+            data_plane_tx: parking_lot::Mutex::new(Some(data_plane_tx)),
+            control_plane_tx: parking_lot::Mutex::new(Some(control_plane_tx)),
+            shutdown_tx: parking_lot::Mutex::new(Some(shutdown_tx)),
+        });
+
+        debug!("Agent sink: created with connection to agent at {}", socket_path.display());
+        agent
     }
 
-    /// Attempts to connect to the agent.
+    /// Send the message on the data plane, dropping up to retries older messages to make room, if necessary.
+    fn send_data_lossy(&self, message: ServerMessage<'static>, _retries: usize) -> bool {
+        debug!("send_data_lossy called with message: {:?}", message);
+
+        // TODO: Implement lossy sending like ConnectedClient
+        // For now, just try to send and return success/failure
+        if let Some(ref tx) = *self.data_plane_tx.lock() {
+            match tx.try_send(message) {
+                Ok(_) => {
+                    debug!("Message successfully sent to data plane queue");
+                    true
+                }
+                Err(_) => {
+                    debug!("Data plane queue full, dropping message");
+                    false
+                }
+            }
+        } else {
+            debug!("No data plane sender available, dropping message");
+            false
+        }
+    }
+
+    /// Send the message on the control plane, disconnecting if the channel is full.
+    fn send_control_msg(&self, message: ServerMessage<'static>) -> bool {
+        debug!("send_control_msg called with message: {:?}", message);
+
+        if let Some(ref tx) = *self.control_plane_tx.lock() {
+            match tx.try_send(message) {
+                Ok(_) => {
+                    debug!("Message successfully sent to control plane queue");
+                    true
+                }
+                Err(_) => {
+                    debug!("Control plane queue full, this should trigger disconnect");
+                    // TODO: Implement proper disconnect logic
+                    false
+                }
+            }
+        } else {
+            debug!("No control plane sender available, dropping message");
+            false
+        }
+    }
+
+
+
+    /// Runs the agent's poll loop to completion.
     ///
-    /// This establishes IPC communication with the agent process via Unix domain socket.
-    pub async fn connect(&self) -> Result<(), FoxgloveError> {
-        if *self.closed.lock() {
-            return Err(FoxgloveError::SinkClosed);
+    /// The poll loop may exit either due to the agent closing the connection, or due to an
+    /// internal call to [`ConnectedAgent::shutdown`].
+    ///
+    /// Panics if called more than once.
+    pub async fn run(&self) {
+        let poller = self.poller.lock().take().expect("only call run once");
+        poller.run().await;
+    }
+
+    /// Shuts down the connection by signalling the [`Poller`] to exit.
+    pub fn shutdown(&self, reason: ShutdownReason) {
+        if let Some(shutdown_tx) = self.shutdown_tx.lock().take() {
+            shutdown_tx.send(reason).ok();
         }
-
-        let mut state = self.state.lock();
-        if state.connected {
-            return Ok(());
-        }
-
-        // Establish Unix socket connection
-        let connection = UnixSocketConnection::connect(&self.config.socket_path).await
-            .map_err(FoxgloveError::IoError)?;
-
-        // Store connection and update state
-        *self.connection.lock() = Some(connection);
-        state.connected = true;
-
-        debug!("Agent sink: connected to agent at {}", self.config.socket_path.display());
-        Ok(())
     }
 
     /// Disconnects from the agent.
@@ -136,36 +301,8 @@ impl ConnectedAgent {
             state.connected = false;
         }
 
-        // Close the Unix socket connection
-        if let Some(ref mut connection) = *self.connection.lock() {
-            connection.disconnect();
-        }
-    }
-
-    /// Sends a message to the agent.
-    ///
-    /// This is currently a no-op but will be implemented to send
-    /// messages via IPC to the agent process.
-    fn send_message(
-        &self,
-        channel: &RawChannel,
-        msg: &[u8],
-        metadata: &Metadata,
-    ) -> Result<(), FoxgloveError> {
-        if *self.closed.lock() {
-            return Err(FoxgloveError::SinkClosed);
-        }
-
-        // For now, just log the message without attempting connection
-        // TODO: Implement actual message sending via IPC
-        debug!(
-            "Agent sink: would send message to agent - topic: {}, size: {} bytes, time: {}",
-            channel.topic(),
-            msg.len(),
-            metadata.log_time
-        );
-
-        Ok(())
+        // Signal shutdown
+        self.shutdown(ShutdownReason::SinkStopped);
     }
 }
 
@@ -180,23 +317,39 @@ impl Sink for ConnectedAgent {
         msg: &[u8],
         metadata: &Metadata,
     ) -> Result<(), FoxgloveError> {
-        self.send_message(channel, msg, metadata)
+        debug!("ConnectedAgent::log called for channel {} with {} bytes", channel.topic(), msg.len());
+
+        // Create MessageData and send via IPC
+        // We need to track channel subscriptions to get the subscription_id
+        // For now, use a placeholder subscription_id
+        let subscription_id = 1; // TODO: Get actual subscription_id from channel tracking
+        let message = ServerMessage::MessageData(MessageData::new(subscription_id, metadata.log_time, msg));
+
+        debug!("Created MessageData message: {:?}", message);
+
+        // Send message data on the data plane (lossy)
+        let sent = self.send_data_lossy(message.into_owned(), 10); // Use 10 retries like ConnectedClient
+        debug!("Message sent to data plane: {}", sent);
+
+        Ok(())
     }
 
     fn add_channels(&self, channels: &[&Arc<RawChannel>]) -> Option<Vec<ChannelId>> {
-        // TODO: Implement channel advertisement to agent
-        debug!(
-            "Agent sink: would advertise {} channels to agent",
-            channels.len()
-        );
+        use crate::websocket::advertise;
 
-        for channel in channels {
-            debug!(
-                "Agent sink: would advertise channel - topic: {}, encoding: {}",
-                channel.topic(),
-                channel.message_encoding()
-            );
+        debug!("ConnectedAgent::add_channels called with {} channels", channels.len());
+
+        let message = advertise::advertise_channels(channels.iter().copied());
+        if message.channels.is_empty() {
+            debug!("No channels to advertise");
+            return None;
         }
+
+        debug!("Created Advertise message: {:?}", message);
+
+        // Send the advertisement message to the agent via IPC
+        let sent = self.send_control_msg(ServerMessage::Advertise(message).into_owned());
+        debug!("Advertise message sent to control plane: {}", sent);
 
         // Return channel IDs if we want to subscribe immediately
         if self.config.auto_subscribe {
@@ -207,11 +360,9 @@ impl Sink for ConnectedAgent {
     }
 
     fn remove_channel(&self, channel: &RawChannel) {
-        // TODO: Implement channel removal notification to agent
-        debug!(
-            "Agent sink: would notify agent of channel removal - topic: {}",
-            channel.topic()
-        );
+        use crate::websocket::ws_protocol::server::Unadvertise;
+        let message = Unadvertise::new([channel.id().into()]);
+        self.send_control_msg(ServerMessage::Unadvertise(message));
     }
 
     fn auto_subscribe(&self) -> bool {

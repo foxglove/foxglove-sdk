@@ -3,7 +3,7 @@
 //! This example shows how to create a connected agent for interprocess communication.
 
 use foxglove::schemas::Log;
-use foxglove::{log, ConnectedAgent, Context};
+use foxglove::{log, ConnectedAgent, Context, AgentSinkConfig, UnixSocketConnection};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -15,16 +15,28 @@ async fn main() -> anyhow::Result<()> {
     let ctx = Context::get_default();
 
     // Create a connected agent for interprocess communication
-    let connected_agent = ConnectedAgent::new();
+    let config = AgentSinkConfig::default();
 
-    // Attempt to connect to the agent
-    if let Err(e) = connected_agent.connect().await {
-        eprintln!("Failed to connect to agent: {}", e);
-        // Continue anyway to see the debug messages
-    }
+    // Establish the connection first
+    let connection = match UnixSocketConnection::connect(&config.socket_path).await {
+        Ok(conn) => conn,
+        Err(e) => {
+            eprintln!("Failed to connect to agent: {}", e);
+            return Ok(());
+        }
+    };
+
+    // Create the connected agent with the established connection
+    let connected_agent = ConnectedAgent::new(config, connection);
 
     // Add the connected agent to the default context
     ctx.add_sink(connected_agent.clone());
+
+    // Run the poller in a background task
+    let agent_clone = connected_agent.clone();
+    tokio::spawn(async move {
+        agent_clone.run().await;
+    });
 
     // Log some messages
     for i in 1..=5 {

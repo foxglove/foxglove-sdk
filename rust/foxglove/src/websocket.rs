@@ -1,6 +1,6 @@
 //! Websocket functionality
 
-mod advertise;
+pub mod advertise;
 mod capability;
 mod channel_view;
 mod client;
