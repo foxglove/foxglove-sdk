@@ -413,6 +413,9 @@ pub enum FoxgloveError {
     /// An error occurred while encoding a message.
     #[error("Encoding error: {0}")]
     EncodeError(String),
+    /// An error related to configuration
+    #[error("Configuration error: {0}")]
+    ConfigurationError(String),
 }
 
 impl From<convert::RangeError> for FoxgloveError {
