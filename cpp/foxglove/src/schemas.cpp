@@ -32,7 +32,6 @@ void frameTransformToC(foxglove_frame_transform& dest, const FrameTransform& src
 void frameTransformsToC(foxglove_frame_transforms& dest, const FrameTransforms& src, Arena& arena);
 void geoJSONToC(foxglove_geo_json& dest, const GeoJSON& src, Arena& arena);
 void gridToC(foxglove_grid& dest, const Grid& src, Arena& arena);
-void grid3ToC(foxglove_grid3& dest, const Grid3& src, Arena& arena);
 void imageAnnotationsToC(
   foxglove_image_annotations& dest, const ImageAnnotations& src, Arena& arena
 );
@@ -65,6 +64,7 @@ void textPrimitiveToC(foxglove_text_primitive& dest, const TextPrimitive& src, A
 void triangleListPrimitiveToC(
   foxglove_triangle_list_primitive& dest, const TriangleListPrimitive& src, Arena& arena
 );
+void voxelGridToC(foxglove_voxel_grid& dest, const VoxelGrid& src, Arena& arena);
 
 FoxgloveResult<ArrowPrimitiveChannel> ArrowPrimitiveChannel::create(
   const std::string_view& topic, const Context& context
@@ -387,31 +387,6 @@ FoxgloveError GridChannel::log(const Grid& msg, std::optional<uint64_t> log_time
 }
 
 uint64_t GridChannel::id() const noexcept {
-  return foxglove_channel_get_id(impl_.get());
-}
-
-FoxgloveResult<Grid3Channel> Grid3Channel::create(
-  const std::string_view& topic, const Context& context
-) {
-  const foxglove_channel* channel = nullptr;
-  foxglove_error error =
-    foxglove_channel_create_grid3({topic.data(), topic.size()}, context.getInner(), &channel);
-  if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
-    return tl::unexpected(FoxgloveError(error));
-  }
-  return Grid3Channel(ChannelUniquePtr(channel));
-}
-
-FoxgloveError Grid3Channel::log(const Grid3& msg, std::optional<uint64_t> log_time) noexcept {
-  Arena arena;
-  foxglove_grid3 c_msg;
-  grid3ToC(c_msg, msg, arena);
-  return FoxgloveError(
-    foxglove_channel_log_grid3(impl_.get(), &c_msg, log_time ? &*log_time : nullptr)
-  );
-}
-
-uint64_t Grid3Channel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
@@ -1129,6 +1104,33 @@ uint64_t Vector3Channel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
+FoxgloveResult<VoxelGridChannel> VoxelGridChannel::create(
+  const std::string_view& topic, const Context& context
+) {
+  const foxglove_channel* channel = nullptr;
+  foxglove_error error =
+    foxglove_channel_create_voxel_grid({topic.data(), topic.size()}, context.getInner(), &channel);
+  if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
+    return tl::unexpected(FoxgloveError(error));
+  }
+  return VoxelGridChannel(ChannelUniquePtr(channel));
+}
+
+FoxgloveError VoxelGridChannel::log(
+  const VoxelGrid& msg, std::optional<uint64_t> log_time
+) noexcept {
+  Arena arena;
+  foxglove_voxel_grid c_msg;
+  voxelGridToC(c_msg, msg, arena);
+  return FoxgloveError(
+    foxglove_channel_log_voxel_grid(impl_.get(), &c_msg, log_time ? &*log_time : nullptr)
+  );
+}
+
+uint64_t VoxelGridChannel::id() const noexcept {
+  return foxglove_channel_get_id(impl_.get());
+}
+
 void arrowPrimitiveToC(
   foxglove_arrow_primitive& dest, const ArrowPrimitive& src, [[maybe_unused]] Arena& arena
 ) {
@@ -1242,24 +1244,6 @@ void gridToC(foxglove_grid& dest, const Grid& src, [[maybe_unused]] Arena& arena
   dest.column_count = src.column_count;
   dest.cell_size =
     src.cell_size ? reinterpret_cast<const foxglove_vector2*>(&*src.cell_size) : nullptr;
-  dest.row_stride = src.row_stride;
-  dest.cell_stride = src.cell_stride;
-  dest.fields = arena.map<foxglove_packed_element_field>(src.fields, packedElementFieldToC);
-  dest.fields_count = src.fields.size();
-  dest.data = reinterpret_cast<const unsigned char*>(src.data.data());
-  dest.data_len = src.data.size();
-}
-
-void grid3ToC(foxglove_grid3& dest, const Grid3& src, [[maybe_unused]] Arena& arena) {
-  dest.timestamp =
-    src.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*src.timestamp) : nullptr;
-  dest.frame_id = {src.frame_id.data(), src.frame_id.size()};
-  dest.pose = src.pose ? arena.map_one<foxglove_pose>(src.pose.value(), poseToC) : nullptr;
-  dest.row_count = src.row_count;
-  dest.column_count = src.column_count;
-  dest.cell_size =
-    src.cell_size ? reinterpret_cast<const foxglove_vector3*>(&*src.cell_size) : nullptr;
-  dest.slice_stride = src.slice_stride;
   dest.row_stride = src.row_stride;
   dest.cell_stride = src.cell_stride;
   dest.fields = arena.map<foxglove_packed_element_field>(src.fields, packedElementFieldToC);
@@ -1539,6 +1523,24 @@ void triangleListPrimitiveToC(
   dest.colors_count = src.colors.size();
   dest.indices = src.indices.data();
   dest.indices_count = src.indices.size();
+}
+
+void voxelGridToC(foxglove_voxel_grid& dest, const VoxelGrid& src, [[maybe_unused]] Arena& arena) {
+  dest.timestamp =
+    src.timestamp ? reinterpret_cast<const foxglove_timestamp*>(&*src.timestamp) : nullptr;
+  dest.frame_id = {src.frame_id.data(), src.frame_id.size()};
+  dest.pose = src.pose ? arena.map_one<foxglove_pose>(src.pose.value(), poseToC) : nullptr;
+  dest.row_count = src.row_count;
+  dest.column_count = src.column_count;
+  dest.cell_size =
+    src.cell_size ? reinterpret_cast<const foxglove_vector3*>(&*src.cell_size) : nullptr;
+  dest.slice_stride = src.slice_stride;
+  dest.row_stride = src.row_stride;
+  dest.cell_stride = src.cell_stride;
+  dest.fields = arena.map<foxglove_packed_element_field>(src.fields, packedElementFieldToC);
+  dest.fields_count = src.fields.size();
+  dest.data = reinterpret_cast<const unsigned char*>(src.data.data());
+  dest.data_len = src.data.size();
 }
 
 }  // namespace foxglove::schemas

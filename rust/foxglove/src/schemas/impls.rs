@@ -267,28 +267,6 @@ impl Encode for Grid {
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
 }
 
-impl Encode for Grid3 {
-    type Error = ::prost::EncodeError;
-
-    fn get_schema() -> Option<Schema> {
-        Some(Schema::new(
-            "foxglove.Grid3",
-            "protobuf",
-            descriptors::GRID3,
-        ))
-    }
-
-    fn get_message_encoding() -> String {
-        "protobuf".to_string()
-    }
-
-    fn encode(&self, buf: &mut impl BufMut) -> Result<(), prost::EncodeError> {
-        ::prost::Message::encode(self, buf)
-    }
-
-    fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
-}
-
 impl Encode for ImageAnnotations {
     type Error = ::prost::EncodeError;
 
@@ -869,6 +847,28 @@ impl Encode for Vector3 {
             "foxglove.Vector3",
             "protobuf",
             descriptors::VECTOR3,
+        ))
+    }
+
+    fn get_message_encoding() -> String {
+        "protobuf".to_string()
+    }
+
+    fn encode(&self, buf: &mut impl BufMut) -> Result<(), prost::EncodeError> {
+        ::prost::Message::encode(self, buf)
+    }
+
+    fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
+}
+
+impl Encode for VoxelGrid {
+    type Error = ::prost::EncodeError;
+
+    fn get_schema() -> Option<Schema> {
+        Some(Schema::new(
+            "foxglove.VoxelGrid",
+            "protobuf",
+            descriptors::VOXEL_GRID,
         ))
     }
 

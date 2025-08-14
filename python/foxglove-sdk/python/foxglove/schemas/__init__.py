@@ -25,7 +25,6 @@ from foxglove._foxglove_py.schemas import (
     FrameTransforms,
     GeoJson,
     Grid,
-    Grid3,
     ImageAnnotations,
     KeyValuePair,
     LaserScan,
@@ -60,6 +59,7 @@ from foxglove._foxglove_py.schemas import (
     TriangleListPrimitive,
     Vector2,
     Vector3,
+    VoxelGrid,
 )
 
 FoxgloveSchema = Union[
@@ -76,7 +76,6 @@ FoxgloveSchema = Union[
     FrameTransforms,
     GeoJson,
     Grid,
-    Grid3,
     ImageAnnotations,
     KeyValuePair,
     LaserScan,
@@ -105,6 +104,7 @@ FoxgloveSchema = Union[
     TriangleListPrimitive,
     Vector2,
     Vector3,
+    VoxelGrid,
 ]
 
 __all__ = [
@@ -122,7 +122,6 @@ __all__ = [
     "FrameTransforms",
     "GeoJson",
     "Grid",
-    "Grid3",
     "ImageAnnotations",
     "KeyValuePair",
     "LaserScan",
@@ -157,4 +156,5 @@ __all__ = [
     "TriangleListPrimitive",
     "Vector2",
     "Vector3",
+    "VoxelGrid",
 ]

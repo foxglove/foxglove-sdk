@@ -308,48 +308,6 @@ pub struct Grid {
     #[prost(bytes = "bytes", tag = "9")]
     pub data: ::prost::bytes::Bytes,
 }
-/// A 3D grid of data
-/// <https://docs.foxglove.dev/docs/visualization/message-schemas/grid3>
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct Grid3 {
-    /// Timestamp of grid
-    #[prost(message, optional, tag = "1")]
-    pub timestamp: ::core::option::Option<crate::schemas::Timestamp>,
-    /// Frame of reference
-    #[prost(string, tag = "2")]
-    pub frame_id: ::prost::alloc::string::String,
-    /// Origin of grid's corner relative to frame of reference; grid is positioned in the x-y plane relative to this origin
-    #[prost(message, optional, tag = "3")]
-    pub pose: ::core::option::Option<Pose>,
-    /// Number of grid rows
-    #[prost(fixed32, tag = "4")]
-    pub row_count: u32,
-    /// Number of grid columns
-    #[prost(fixed32, tag = "5")]
-    pub column_count: u32,
-    /// Size of single grid cell along x, y, and z axes, relative to `pose`
-    #[prost(message, optional, tag = "6")]
-    pub cell_size: ::core::option::Option<Vector3>,
-    /// Number of bytes between depth slices in `data`
-    #[prost(fixed32, tag = "7")]
-    pub slice_stride: u32,
-    /// Number of bytes between rows in `data`
-    #[prost(fixed32, tag = "8")]
-    pub row_stride: u32,
-    /// Number of bytes between cells within a row in `data`
-    #[prost(fixed32, tag = "9")]
-    pub cell_stride: u32,
-    /// Fields in `data`. `red`, `green`, `blue`, and `alpha` are optional for customizing the grid's color.
-    #[prost(message, repeated, tag = "10")]
-    pub fields: ::prost::alloc::vec::Vec<PackedElementField>,
-    /// Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order.
-    ///   For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
-    ///   z = (i / (row_stride * cell_stride)) % slice_stride * cell_size.z
-    ///   y = (i / cell_stride) % row_stride * cell_size.y
-    ///   x = i % cell_stride * cell_size.x
-    #[prost(bytes = "bytes", tag = "11")]
-    pub data: ::prost::bytes::Bytes,
-}
 /// Array of annotations for a 2D image
 /// <https://docs.foxglove.dev/docs/visualization/message-schemas/image-annotations>
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -1251,4 +1209,46 @@ pub struct Vector3 {
     /// z coordinate length
     #[prost(double, tag = "3")]
     pub z: f64,
+}
+/// A 3D grid of data
+/// <https://docs.foxglove.dev/docs/visualization/message-schemas/voxel-grid>
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct VoxelGrid {
+    /// Timestamp of grid
+    #[prost(message, optional, tag = "1")]
+    pub timestamp: ::core::option::Option<crate::schemas::Timestamp>,
+    /// Frame of reference
+    #[prost(string, tag = "2")]
+    pub frame_id: ::prost::alloc::string::String,
+    /// Origin of grid's corner relative to frame of reference
+    #[prost(message, optional, tag = "3")]
+    pub pose: ::core::option::Option<Pose>,
+    /// Number of grid rows
+    #[prost(fixed32, tag = "4")]
+    pub row_count: u32,
+    /// Number of grid columns
+    #[prost(fixed32, tag = "5")]
+    pub column_count: u32,
+    /// Size of single grid cell along x, y, and z axes, relative to `pose`
+    #[prost(message, optional, tag = "6")]
+    pub cell_size: ::core::option::Option<Vector3>,
+    /// Number of bytes between depth slices in `data`
+    #[prost(fixed32, tag = "7")]
+    pub slice_stride: u32,
+    /// Number of bytes between rows in `data`
+    #[prost(fixed32, tag = "8")]
+    pub row_stride: u32,
+    /// Number of bytes between cells within a row in `data`
+    #[prost(fixed32, tag = "9")]
+    pub cell_stride: u32,
+    /// Fields in `data`. `red`, `green`, `blue`, and `alpha` are optional for customizing the grid's color.
+    #[prost(message, repeated, tag = "10")]
+    pub fields: ::prost::alloc::vec::Vec<PackedElementField>,
+    /// Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order.
+    ///   For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
+    ///   z = i / slice_stride * cell_size.z
+    ///   y = (i % slice_stride) / row_stride * cell_size.y
+    ///   x = (i % row_stride) / cell_stride * cell_size.x
+    #[prost(bytes = "bytes", tag = "11")]
+    pub data: ::prost::bytes::Bytes,
 }
