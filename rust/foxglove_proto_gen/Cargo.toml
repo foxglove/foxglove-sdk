@@ -7,7 +7,7 @@ publish = false
 workspace = true
 
 [dependencies]
-anyhow = "1.0.95"
+anyhow = "1.0.99"
 itertools = "0.14.0"
 prost.workspace = true
 prost-build.workspace = true

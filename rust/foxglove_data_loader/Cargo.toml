@@ -9,7 +9,7 @@ license.workspace = true
 
 [dependencies]
 wit-bindgen = "0.43.0"
-anyhow = "1.0.98"
+anyhow = "1.0.99"
 
 [dependencies.foxglove]
 version = "0.9.0"
