@@ -2720,6 +2720,7 @@ class VoxelGridChannel:
         message: "VoxelGrid",
         *,
         log_time: int | None = None,
+        sink_id: int | None = None,
     ) -> None:
         """Log a Foxglove VoxelGrid message on the channel."""
         ...

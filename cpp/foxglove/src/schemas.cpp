@@ -1158,14 +1158,14 @@ FoxgloveResult<VoxelGridChannel> VoxelGridChannel::create(
 }
 
 FoxgloveError VoxelGridChannel::log(
-  const VoxelGrid& msg, std::optional<uint64_t> log_time
+  const VoxelGrid& msg, std::optional<uint64_t> log_time, std::optional<uint64_t> sink_id
 ) noexcept {
   Arena arena;
   foxglove_voxel_grid c_msg;
   voxelGridToC(c_msg, msg, arena);
-  return FoxgloveError(
-    foxglove_channel_log_voxel_grid(impl_.get(), &c_msg, log_time ? &*log_time : nullptr)
-  );
+  return FoxgloveError(foxglove_channel_log_voxel_grid(
+    impl_.get(), &c_msg, log_time ? &*log_time : nullptr, sink_id ? *sink_id : 0
+  ));
 }
 
 uint64_t VoxelGridChannel::id() const noexcept {
