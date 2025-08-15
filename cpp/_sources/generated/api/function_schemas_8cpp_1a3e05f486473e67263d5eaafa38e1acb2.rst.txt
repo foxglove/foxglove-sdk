@@ -1,0 +1,14 @@
+.. _exhale_function_schemas_8cpp_1a3e05f486473e67263d5eaafa38e1acb2:
+
+Function foxglove::schemas::linePrimitiveToC
+============================================
+
+- Defined in :ref:`file_foxglove_src_schemas.cpp`
+
+
+Function Documentation
+----------------------
+
+
+.. doxygenfunction:: foxglove::schemas::linePrimitiveToC(foxglove_line_primitive&, const LinePrimitive&, Arena&)
+   :project: Foxglove SDK

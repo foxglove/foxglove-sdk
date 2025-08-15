@@ -1,0 +1,14 @@
+.. _exhale_function_namespacefoxglove_1a652f9cfa75da3e0935da23d72cf270ec:
+
+Function foxglove::setLogLevel
+==============================
+
+- Defined in :ref:`file_foxglove_src_foxglove.cpp`
+
+
+Function Documentation
+----------------------
+
+
+.. doxygenfunction:: foxglove::setLogLevel(LogLevel)
+   :project: Foxglove SDK

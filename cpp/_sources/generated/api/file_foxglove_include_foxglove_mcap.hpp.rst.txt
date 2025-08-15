@@ -1,0 +1,70 @@
+
+.. _file_foxglove_include_foxglove_mcap.hpp:
+
+File mcap.hpp
+=============
+
+|exhale_lsh| :ref:`Parent directory <dir_foxglove_include_foxglove>` (``foxglove/include/foxglove``)
+
+.. |exhale_lsh| unicode:: U+021B0 .. UPWARDS ARROW WITH TIP LEFTWARDS
+
+Definition (``foxglove/include/foxglove/mcap.hpp``)
+---------------------------------------------------
+
+
+.. toctree::
+   :maxdepth: 1
+
+   program_listing_file_foxglove_include_foxglove_mcap.hpp.rst
+
+
+
+
+
+Includes
+--------
+
+
+- ``foxglove/context.hpp`` (:ref:`file_foxglove_include_foxglove_context.hpp`)
+
+- ``foxglove/error.hpp`` (:ref:`file_foxglove_include_foxglove_error.hpp`)
+
+- ``memory``
+
+- ``optional``
+
+- ``string``
+
+
+
+Included By
+-----------
+
+
+- :ref:`file_foxglove_src_mcap.cpp`
+
+
+
+
+Namespaces
+----------
+
+
+- :ref:`namespace_foxglove`
+
+
+Classes
+-------
+
+
+- :ref:`exhale_struct_structfoxglove_1_1McapWriterOptions`
+
+- :ref:`exhale_class_classfoxglove_1_1McapWriter`
+
+
+Enums
+-----
+
+
+- :ref:`exhale_enum_namespacefoxglove_1ad68fac9cb747dfc3a20fba3339358270`
+

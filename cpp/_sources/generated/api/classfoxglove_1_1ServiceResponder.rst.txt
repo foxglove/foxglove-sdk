@@ -1,0 +1,27 @@
+.. _exhale_class_classfoxglove_1_1ServiceResponder:
+
+Class ServiceResponder
+======================
+
+- Defined in :ref:`file_foxglove_include_foxglove_server_service.hpp`
+
+
+Nested Relationships
+--------------------
+
+
+Nested Types
+************
+
+- :ref:`exhale_struct_structfoxglove_1_1ServiceResponder_1_1Deleter`
+
+
+Class Documentation
+-------------------
+
+
+.. doxygenclass:: foxglove::ServiceResponder
+   :project: Foxglove SDK
+   :members:
+   :protected-members:
+   :undoc-members:

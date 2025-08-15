@@ -1,0 +1,44 @@
+
+.. _file_foxglove_src_server_fetch_asset.cpp:
+
+File fetch_asset.cpp
+====================
+
+|exhale_lsh| :ref:`Parent directory <dir_foxglove_src_server>` (``foxglove/src/server``)
+
+.. |exhale_lsh| unicode:: U+021B0 .. UPWARDS ARROW WITH TIP LEFTWARDS
+
+Definition (``foxglove/src/server/fetch_asset.cpp``)
+----------------------------------------------------
+
+
+.. toctree::
+   :maxdepth: 1
+
+   program_listing_file_foxglove_src_server_fetch_asset.cpp.rst
+
+
+
+
+
+Includes
+--------
+
+
+- ``foxglove-c/foxglove-c.h``
+
+- ``foxglove/server/fetch_asset.hpp`` (:ref:`file_foxglove_include_foxglove_server_fetch_asset.hpp`)
+
+
+
+
+
+
+Namespaces
+----------
+
+
+- :ref:`namespace_foxglove`
+
+- :ref:`namespace_std__string_view_literals`
+

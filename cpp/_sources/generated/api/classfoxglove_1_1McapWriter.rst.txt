@@ -1,0 +1,17 @@
+.. _exhale_class_classfoxglove_1_1McapWriter:
+
+Class McapWriter
+================
+
+- Defined in :ref:`file_foxglove_include_foxglove_mcap.hpp`
+
+
+Class Documentation
+-------------------
+
+
+.. doxygenclass:: foxglove::McapWriter
+   :project: Foxglove SDK
+   :members:
+   :protected-members:
+   :undoc-members:
