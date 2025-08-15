@@ -18,6 +18,25 @@ use crate::websocket::ws_protocol::BinaryMessage;
 use futures_util::SinkExt;
 use tracing::{debug, error};
 
+/// Returns a human-readable name for the given ServerMessage type
+fn get_message_type_name(message: &ServerMessage) -> &'static str {
+    match message {
+        ServerMessage::ServerInfo(_) => "ServerInfo",
+        ServerMessage::Status(_) => "Status",
+        ServerMessage::RemoveStatus(_) => "RemoveStatus",
+        ServerMessage::Advertise(_) => "Advertise",
+        ServerMessage::Unadvertise(_) => "Unadvertise",
+        ServerMessage::MessageData(_) => "MessageData",
+        ServerMessage::Time(_) => "Time",
+        ServerMessage::ParameterValues(_) => "ParameterValues",
+        ServerMessage::AdvertiseServices(_) => "AdvertiseServices",
+        ServerMessage::UnadvertiseServices(_) => "UnadvertiseServices",
+        ServerMessage::ServiceCallResponse(_) => "ServiceCallResponse",
+        ServerMessage::ConnectionGraphUpdate(_) => "ConnectionGraphUpdate",
+        ServerMessage::FetchAssetResponse(_) => "FetchAssetResponse",
+        ServerMessage::ServiceCallFailure(_) => "ServiceCallFailure",
+    }
+}
 
 /// Configuration for the agent sink.
 #[derive(Debug, Clone)]
@@ -152,12 +171,12 @@ impl Poller {
                 msg = self.control_plane_rx.recv_async() => msg,
                 msg = self.data_plane_rx.recv_async() => msg,
             } {
-                debug!("Poller received message from queue: {:?}", message);
+                debug!("Poller received message from queue: {}", get_message_type_name(&message));
                 if let Some(ref mut connection) = self.connection {
                     debug!("Poller sending message via IPC connection");
                     match connection.send_message(&message).await {
                         Ok(_) => {
-                            debug!("Poller: sent message via IPC: {:?}", message);
+                            debug!("Poller: sent message via IPC");
                         }
                         Err(e) => {
                             error!("Error sending message via IPC: {}", e);
@@ -230,7 +249,7 @@ impl ConnectedAgent {
 
     /// Send the message on the data plane, dropping up to retries older messages to make room, if necessary.
     fn send_data_lossy(&self, message: ServerMessage<'static>, _retries: usize) -> bool {
-        debug!("send_data_lossy called with message: {:?}", message);
+        debug!("send_data_lossy called with message: {}", get_message_type_name(&message));
 
         // TODO: Implement lossy sending like ConnectedClient
         // For now, just try to send and return success/failure
@@ -253,7 +272,7 @@ impl ConnectedAgent {
 
     /// Send the message on the control plane, disconnecting if the channel is full.
     fn send_control_msg(&self, message: ServerMessage<'static>) -> bool {
-        debug!("send_control_msg called with message: {:?}", message);
+        debug!("send_control_msg called with message: {}", get_message_type_name(&message));
 
         if let Some(ref tx) = *self.control_plane_tx.lock() {
             match tx.try_send(message) {
@@ -372,6 +391,7 @@ impl Sink for ConnectedAgent {
 
 impl Drop for ConnectedAgent {
     fn drop(&mut self) {
+        debug!("ConnectedAgent::drop called");
         self.disconnect();
     }
 }

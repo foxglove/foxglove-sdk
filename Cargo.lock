@@ -551,6 +551,7 @@ dependencies = [
  "env_logger",
  "foxglove 0.10.1",
  "tokio",
+ "tracing",
 ]
 
 [[package]]

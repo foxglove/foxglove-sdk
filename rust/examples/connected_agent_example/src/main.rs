@@ -4,6 +4,8 @@
 
 use foxglove::schemas::Log;
 use foxglove::{log, ConnectedAgent, Context, AgentSinkConfig, UnixSocketConnection};
+use tokio::signal;
+use tracing::{info, error};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -19,9 +21,12 @@ async fn main() -> anyhow::Result<()> {
 
     // Establish the connection first
     let connection = match UnixSocketConnection::connect(&config.socket_path).await {
-        Ok(conn) => conn,
+        Ok(conn) => {
+            info!("Successfully connected to agent at {}", config.socket_path.display());
+            conn
+        }
         Err(e) => {
-            eprintln!("Failed to connect to agent: {}", e);
+            error!("Failed to connect to agent: {}", e);
             return Ok(());
         }
     };
@@ -38,21 +43,40 @@ async fn main() -> anyhow::Result<()> {
         agent_clone.run().await;
     });
 
-    // Log some messages
-    for i in 1..=5 {
-        let message = format!("Hello from connected agent example! Message {}", i);
-
-        log!(
-            "/log",
-            Log {
-                message: message.clone(),
-                ..Default::default()
+    // Log some messages with signal handling
+    // let mut i = 0;
+    for i in 1..=1 {
+        tokio::select! {
+            // Handle Ctrl+C (SIGINT)
+            _ = signal::ctrl_c() => {
+                println!("\nReceived SIGINT, shutting down gracefully...");
+                break;
             }
-        );
 
-        // Small delay to see the messages
-        std::thread::sleep(std::time::Duration::from_millis(100));
+            // Continue with message logging
+            _ = tokio::time::sleep(tokio::time::Duration::from_millis(1000)) => {
+                let message = format!("Hello from connected agent example! Message {}", i);
+
+                log!(
+                    "/log",
+                    Log {
+                        message: message.clone(),
+                        ..Default::default()
+                    }
+                );
+            }
+        }
     }
+
+    // tokio::select! {
+    //     // Handle Ctrl+C (SIGINT)
+    //     _ = signal::ctrl_c() => {
+    //         println!("\nReceived SIGINT, shutting down gracefully...");
+    //     }
+    //     _ = tokio::time::sleep(tokio::time::Duration::from_secs(60)) => {
+    //         println!("Timeout, shutting down gracefully...");
+    //     }
+    // }
 
     println!("Connected agent example completed!");
     Ok(())
