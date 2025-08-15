@@ -1884,6 +1884,9 @@ pub struct LocationFix {
 
     /// If `position_covariance` is available, `position_covariance_type` must be set to indicate the type of covariance.
     pub position_covariance_type: FoxglovePositionCovarianceType,
+
+    /// Color used to visualize the location
+    pub color: *const Color,
 }
 
 impl LocationFix {
@@ -1923,6 +1926,12 @@ impl BorrowToNative for LocationFix {
                 "frame_id",
             )?
         };
+        let color = unsafe {
+            self.color
+                .as_ref()
+                .map(|m| m.borrow_to_native(arena.as_mut()))
+        }
+        .transpose()?;
 
         Ok(ManuallyDrop::new(foxglove::schemas::LocationFix {
             timestamp: unsafe { self.timestamp.as_ref() }.map(|&m| m.into()),
@@ -1937,6 +1946,7 @@ impl BorrowToNative for LocationFix {
                 )
             }),
             position_covariance_type: self.position_covariance_type as i32,
+            color: color.map(ManuallyDrop::into_inner),
         }))
     }
 }
@@ -1962,6 +1972,77 @@ pub extern "C" fn foxglove_channel_log_location_fix(
         }
         Err(e) => {
             tracing::error!("LocationFix: {}", e);
+            e.into()
+        }
+    }
+}
+
+/// A group of LocationFix messages
+#[repr(C)]
+pub struct LocationFixes {
+    /// An array of location fixes
+    pub fixes: *const LocationFix,
+    pub fixes_count: usize,
+}
+
+impl LocationFixes {
+    /// Create a new typed channel, and return an owned raw channel pointer to it.
+    ///
+    /// # Safety
+    /// We're trusting the caller that the channel will only be used with this type T.
+    #[unsafe(no_mangle)]
+    pub unsafe extern "C" fn foxglove_channel_create_location_fixes(
+        topic: FoxgloveString,
+        context: *const FoxgloveContext,
+        channel: *mut *const FoxgloveChannel,
+    ) -> FoxgloveError {
+        if channel.is_null() {
+            tracing::error!("channel cannot be null");
+            return FoxgloveError::ValueError;
+        }
+        unsafe {
+            let result =
+                do_foxglove_channel_create::<foxglove::schemas::LocationFixes>(topic, context);
+            result_to_c(result, channel)
+        }
+    }
+}
+
+impl BorrowToNative for LocationFixes {
+    type NativeType = foxglove::schemas::LocationFixes;
+
+    unsafe fn borrow_to_native(
+        &self,
+        #[allow(unused_mut, unused_variables)] mut arena: Pin<&mut Arena>,
+    ) -> Result<ManuallyDrop<Self::NativeType>, foxglove::FoxgloveError> {
+        let fixes = unsafe { arena.as_mut().map(self.fixes, self.fixes_count)? };
+
+        Ok(ManuallyDrop::new(foxglove::schemas::LocationFixes {
+            fixes: ManuallyDrop::into_inner(fixes),
+        }))
+    }
+}
+
+/// Log a LocationFixes message to a channel.
+///
+/// # Safety
+/// The channel must have been created for this type with foxglove_channel_create_location_fixes.
+#[unsafe(no_mangle)]
+pub extern "C" fn foxglove_channel_log_location_fixes(
+    channel: Option<&FoxgloveChannel>,
+    msg: Option<&LocationFixes>,
+    log_time: Option<&u64>,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { LocationFixes::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
+            log_msg_to_channel(channel, &*msg, log_time)
+        }
+        Err(e) => {
+            tracing::error!("LocationFixes: {}", e);
             e.into()
         }
     }

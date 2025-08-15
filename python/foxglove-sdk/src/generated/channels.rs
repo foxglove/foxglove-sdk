@@ -30,6 +30,7 @@ pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<LaserScanChannel>()?;
     module.add_class::<LinePrimitiveChannel>()?;
     module.add_class::<LocationFixChannel>()?;
+    module.add_class::<LocationFixesChannel>()?;
     module.add_class::<LogChannel>()?;
     module.add_class::<SceneEntityDeletionChannel>()?;
     module.add_class::<SceneEntityChannel>()?;
@@ -2003,6 +2004,112 @@ impl LocationFixChannel {
     fn __repr__(&self) -> String {
         format!(
             "LocationFixChannel(id={}, topic='{}')",
+            self.id(),
+            self.topic()
+        )
+        .to_string()
+    }
+}
+
+/// A channel for logging :py:class:`foxglove.schemas.LocationFixes` messages.
+#[pyclass(module = "foxglove.channels")]
+struct LocationFixesChannel(Channel<foxglove::schemas::LocationFixes>);
+
+#[pymethods]
+impl LocationFixesChannel {
+    /// Create a new channel.
+    ///
+    /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
+    /// :param metadata: A dictionary of key/value strings to add to the channel.
+    ///     A type error is raised if any key or value is not a string.
+    #[new]
+    #[pyo3(signature = (topic, *, metadata=None, context=None))]
+    fn new(
+        topic: &str,
+        metadata: Option<BTreeMap<String, String>>,
+        context: Option<&PyContext>,
+    ) -> Self {
+        let builder = ChannelBuilder::new(topic).metadata(metadata.unwrap_or_default());
+        let builder = if let Some(context) = context {
+            builder.context(&context.0.clone())
+        } else {
+            builder
+        };
+        let base = builder.build();
+        Self(base)
+    }
+
+    /// The unique ID of the channel.
+    fn id(&self) -> u64 {
+        self.0.id().into()
+    }
+
+    /// The topic name of the channel.
+    fn topic(&self) -> &str {
+        self.0.topic()
+    }
+
+    /// The message encoding for the channel.
+    #[getter]
+    fn message_encoding(&self) -> &str {
+        self.0.message_encoding()
+    }
+
+    /// Returns a copy of the channel's metadata.
+    ///
+    /// Note that changes made to the returned dictionary will not be applied to
+    /// the channel's metadata.
+    fn metadata(&self, py: Python<'_>) -> PyResult<PyObject> {
+        let dict = PyDict::new(py);
+        for (key, value) in self.0.metadata() {
+            dict.set_item(key, value)?;
+        }
+        Ok(dict.into())
+    }
+
+    /// Returns a copy of the channel's schema.
+    ///
+    /// Note that changes made to the returned object will not be applied to
+    /// the channel's schema.
+    fn schema(&self) -> Option<PySchema> {
+        self.0.schema().cloned().map(PySchema::from)
+    }
+
+    /// The name of the schema for the channel.
+    fn schema_name(&self) -> Option<&str> {
+        Some(self.0.schema()?.name.as_str())
+    }
+
+    /// Returns true if at least one sink is subscribed to this channel.
+    fn has_sinks(&self) -> bool {
+        self.0.has_sinks()
+    }
+
+    /// Close the channel.
+    ///
+    /// You can use this to explicitly unadvertise the channel to sinks that subscribe to
+    /// channels dynamically, such as the :py:class:`foxglove.websocket.WebSocketServer`.
+    ///
+    /// Attempts to log on a closed channel will elicit a throttled warning message.
+    fn close(&mut self) {
+        self.0.close();
+    }
+
+    /// Log a :py:class:`foxglove.schemas.LocationFixes` message to the channel.
+    ///
+    /// :param msg: The message to log.
+    /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
+    ///     message was recorded. Usually this is the time log() is called. If omitted, the
+    ///     current time is used.
+    #[pyo3(signature = (msg, *, log_time=None))]
+    fn log(&self, msg: &schemas::LocationFixes, log_time: Option<u64>) {
+        let metadata = PartialMetadata { log_time };
+        self.0.log_with_meta(&msg.0, metadata);
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "LocationFixesChannel(id={}, topic='{}')",
             self.id(),
             self.topic()
         )

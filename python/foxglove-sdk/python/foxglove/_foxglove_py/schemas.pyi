@@ -386,10 +386,24 @@ class LocationFix:
         altitude: "Optional[float]" = 0.0,
         position_covariance: "Optional[List[float]]" = [],
         position_covariance_type: "Optional[LocationFixPositionCovarianceType]" = LocationFixPositionCovarianceType.Unknown,
+        color: "Optional[Color]" = None,
     ) -> "LocationFix": ...
     @staticmethod
     def get_schema() -> Schema:
         """Returns the LocationFix schema"""
+        ...
+
+class LocationFixes:
+    """
+    A group of LocationFix messages
+    """
+
+    def __new__(
+        cls, *, fixes: "Optional[List[LocationFix]]" = []
+    ) -> "LocationFixes": ...
+    @staticmethod
+    def get_schema() -> Schema:
+        """Returns the LocationFixes schema"""
         ...
 
 class Log:
@@ -840,6 +854,7 @@ FoxgloveSchema = Union[
     LaserScan,
     LinePrimitive,
     LocationFix,
+    LocationFixes,
     Log,
     SceneEntityDeletion,
     SceneEntity,
