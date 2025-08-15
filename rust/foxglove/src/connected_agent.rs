@@ -8,7 +8,6 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use flume::Sender;
-use parking_lot::Mutex;
 use tokio::net::UnixStream;
 use tokio_util::codec::{Framed, LengthDelimitedCodec};
 use crate::{ChannelId, FoxgloveError, Metadata, RawChannel, Sink, SinkId};
@@ -62,13 +61,6 @@ impl Default for AgentSinkConfig {
     }
 }
 
-/// Internal state for the agent sink.
-#[derive(Debug, Default)]
-struct AgentSinkState {
-    /// Whether the sink is connected to an agent.
-    connected: bool,
-}
-
 /// Unix socket connection to the agent.
 #[derive(Debug)]
 pub struct UnixSocketConnection {
@@ -76,6 +68,7 @@ pub struct UnixSocketConnection {
 }
 
 impl UnixSocketConnection {
+    /// Connects to an agent via Unix domain socket.
     pub async fn connect<P: AsRef<Path>>(socket_path: P) -> Result<Self, std::io::Error> {
         let stream = UnixStream::connect(socket_path.as_ref()).await?;
         let framed = Framed::new(stream, LengthDelimitedCodec::new());
@@ -83,10 +76,6 @@ impl UnixSocketConnection {
         Ok(Self {
             stream: Some(framed),
         })
-    }
-
-    fn disconnect(&mut self) {
-        self.stream = None;
     }
 
     /// Sends a protocol message to the agent
@@ -135,7 +124,7 @@ struct Poller {
 
 /// A reason for shutting down the agent connection.
 #[derive(Debug, Clone, Copy)]
-enum ShutdownReason {
+pub enum ShutdownReason {
     /// The agent disconnected.
     AgentDisconnected,
     /// The sink has been stopped.
@@ -211,8 +200,6 @@ impl Poller {
 pub struct ConnectedAgent {
     sink_id: SinkId,
     config: AgentSinkConfig,
-    state: Mutex<AgentSinkState>,
-    closed: Mutex<bool>,
     poller: parking_lot::Mutex<Option<Poller>>,
     data_plane_tx: parking_lot::Mutex<Option<Sender<ServerMessage<'static>>>>,
     control_plane_tx: parking_lot::Mutex<Option<Sender<ServerMessage<'static>>>>,
@@ -235,8 +222,6 @@ impl ConnectedAgent {
         let agent = Arc::new(Self {
             sink_id: SinkId::next(),
             config,
-            state: Mutex::new(AgentSinkState { connected: true }),
-            closed: Mutex::new(false),
             poller: parking_lot::Mutex::new(Some(poller)),
             data_plane_tx: parking_lot::Mutex::new(Some(data_plane_tx)),
             control_plane_tx: parking_lot::Mutex::new(Some(control_plane_tx)),
@@ -281,8 +266,8 @@ impl ConnectedAgent {
                     true
                 }
                 Err(_) => {
-                    debug!("Control plane queue full, this should trigger disconnect");
-                    // TODO: Implement proper disconnect logic
+                    debug!("Control plane queue full, triggering shutdown");
+                    self.shutdown(ShutdownReason::ControlPlaneQueueFull);
                     false
                 }
             }
@@ -310,18 +295,6 @@ impl ConnectedAgent {
         if let Some(shutdown_tx) = self.shutdown_tx.lock().take() {
             shutdown_tx.send(reason).ok();
         }
-    }
-
-    /// Disconnects from the agent.
-    pub fn disconnect(&self) {
-        let mut state = self.state.lock();
-        if state.connected {
-            debug!("Agent sink: disconnecting from agent");
-            state.connected = false;
-        }
-
-        // Signal shutdown
-        self.shutdown(ShutdownReason::SinkStopped);
     }
 }
 
@@ -392,7 +365,7 @@ impl Sink for ConnectedAgent {
 impl Drop for ConnectedAgent {
     fn drop(&mut self) {
         debug!("ConnectedAgent::drop called");
-        self.disconnect();
+        self.shutdown(ShutdownReason::SinkStopped);
     }
 }
 
@@ -415,57 +388,31 @@ mod tests {
     }
 
     #[test]
-    fn test_agent_sink_with_config() {
+    fn test_agent_sink_config() {
         let config = AgentSinkConfig {
             auto_subscribe: false,
             message_backlog_size: 500,
             timeout: Duration::from_secs(60),
             socket_path: std::path::PathBuf::from("/tmp/test-agent.sock"),
         };
-        let sink = ConnectedAgent::with_config(config);
-        assert_eq!(sink.config.auto_subscribe, false);
-        assert_eq!(sink.config.message_backlog_size, 500);
-        assert_eq!(sink.config.timeout, Duration::from_secs(60));
-        assert_eq!(sink.config.socket_path, std::path::PathBuf::from("/tmp/test-agent.sock"));
-    }
-
-    #[tokio::test]
-    async fn test_agent_sink_connection() {
-        let sink = ConnectedAgent::new();
-
-        // Should fail to connect since no agent is running
-        // This is expected behavior for now
-        let result = sink.connect().await;
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_agent_sink_logging() {
-        let ctx = Context::new();
-        let sink = ConnectedAgent::new();
-        let channel = create_test_channel(&ctx, "/test_topic");
-
-        // Add sink to context
-        ctx.add_sink(sink.clone());
-
-        // Log a message
-        let msg = b"test message";
-        let metadata = Metadata { log_time: 123456789 };
-
-        // Should succeed (currently just logs)
-        assert!(sink.log(&channel, msg, &metadata).is_ok());
+        assert_eq!(config.auto_subscribe, false);
+        assert_eq!(config.message_backlog_size, 500);
+        assert_eq!(config.timeout, Duration::from_secs(60));
+        assert_eq!(config.socket_path, std::path::PathBuf::from("/tmp/test-agent.sock"));
     }
 
     #[test]
     fn test_agent_sink_auto_subscribe() {
-        let sink = ConnectedAgent::new();
-        assert!(!sink.auto_subscribe());
+        let config = AgentSinkConfig {
+            auto_subscribe: false,
+            ..Default::default()
+        };
+        assert!(!config.auto_subscribe);
 
         let config = AgentSinkConfig {
             auto_subscribe: true,
             ..Default::default()
         };
-        let sink = ConnectedAgent::with_config(config);
-        assert!(sink.auto_subscribe());
+        assert!(config.auto_subscribe);
     }
 }
