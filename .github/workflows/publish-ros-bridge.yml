@@ -19,9 +19,7 @@ jobs:
       matrix:
         ros_distribution: [humble, jazzy, kilted, rolling]
     env:
-      REGION: us-central1
-      DOCKER_REGISTRY: $REGION-docker.pkg.dev
-      DOCKER_REPO: $DOCKER_REGISTRY/foxglove-images/images/foxglove_bridge
+      DOCKER_REPO: us-central1-docker.pkg.dev/foxglove-images/images/foxglove_bridge
 
     steps:
       - name: Checkout
