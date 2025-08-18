@@ -59,12 +59,9 @@ jobs:
           set -euo pipefail
           IMAGE_BASE="${DOCKER_REPO}"
           DISTRO="${{ matrix.ros_distribution }}"
-          TAGS=("${IMAGE_BASE}:ros-${DISTRO}-${IMAGE_VERSION}")
-          if [[ "${GITHUB_REF}" == "refs/heads/main" ]]; then
-            TAGS+=("${IMAGE_BASE}:ros-${DISTRO}-latest")
-          fi
-          printf 'tags<<EOF\n' >> "$GITHUB_OUTPUT"
-          printf '%s\n' "${TAGS[@]}" >> "$GITHUB_OUTPUT"
+          TAG="${IMAGE_BASE}:ros-${DISTRO}-${IMAGE_VERSION}"
+          printf 'tag<<EOF\n' >> "$GITHUB_OUTPUT"
+          printf '%s\n' "${TAG}" >> "$GITHUB_OUTPUT"
           printf 'EOF\n' >> "$GITHUB_OUTPUT"
 
       - name: Build and push
