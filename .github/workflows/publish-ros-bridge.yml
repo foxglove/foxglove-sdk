@@ -42,8 +42,8 @@ jobs:
 
           # Check if this is a release tag (sdk/v*)
           if [[ "${GITHUB_REF}" == refs/tags/sdk/v* ]]; then
-            # Extract version from release tag (remove sdk/v prefix)
-            VERSION=$(echo "${GITHUB_REF}" | sed 's|refs/tags/sdk/v||')
+            # Extract version from release tag (remove sdk/ prefix)
+            VERSION=$(echo "${GITHUB_REF}" | sed 's|refs/tags/sdk/||')
             echo "Using release version: ${VERSION}"
           else
             # Use git SHA for non-release builds
@@ -69,7 +69,7 @@ jobs:
         with:
           context: ros/src/foxglove_bridge
           file: ros/src/foxglove_bridge/Dockerfile
-          push: false # TODO: enable push
+          push: true
           build-args: |
             ROS_DISTRIBUTION=${{ matrix.ros_distribution }}
           tags: ${{ steps.compute-tags.outputs.tags }}
