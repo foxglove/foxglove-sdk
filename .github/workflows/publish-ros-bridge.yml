@@ -56,13 +56,10 @@ jobs:
       - name: Compute image tags
         id: compute-tags
         run: |
-          set -euo pipefail
           IMAGE_BASE="${DOCKER_REPO}"
           DISTRO="${{ matrix.ros_distribution }}"
           TAG="${IMAGE_BASE}:ros-${DISTRO}-${IMAGE_VERSION}"
-          printf 'tag<<EOF\n' >> "$GITHUB_OUTPUT"
-          printf '%s\n' "${TAG}" >> "$GITHUB_OUTPUT"
-          printf 'EOF\n' >> "$GITHUB_OUTPUT"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
 
       - name: Build and push
         uses: docker/build-push-action@v6
@@ -72,6 +69,6 @@ jobs:
           push: true
           build-args: |
             ROS_DISTRIBUTION=${{ matrix.ros_distribution }}
-          tags: ${{ steps.compute-tags.outputs.tags }}
+          tags: ${{ steps.compute-tags.outputs.tag }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
