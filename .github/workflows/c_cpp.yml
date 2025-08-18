@@ -135,6 +135,8 @@ jobs:
 
     env:
       CARGO_BUILD_TARGET: ${{ matrix.target }}
+      # Min version needed for libaws_lc_sys
+      IPHONEOS_DEPLOYMENT_TARGET: "13.0.0"
 
     outputs:
       artifact_pattern: "*.zip"
