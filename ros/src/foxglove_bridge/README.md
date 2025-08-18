@@ -19,10 +19,28 @@ Live debugging of ROS systems has traditionally relied on running ROS tooling su
 The `foxglove_bridge` uses the **Foxglove SDK** (this repo!), a similar protocol to rosbridge but with the ability to support additional schema formats such as ROS 2 `.msg` and ROS 2 `.idl`, parameters, graph introspection, and non-ROS systems. The bridge is written in C++ and designed for high performance with low overhead to minimize the impact to your robot stack.
 
 ## Build and install
+### Install using Docker
+Docker images are built and published to our public Docker image registry for your convenience.
 
-Currently, `foxglove_bridge` must be built from source.
+Images can be pulled with
 
-### Getting the sources
+```bash
+docker pull us-central1-docker.pkg.dev/foxglove-images/images/foxglove_bridge:<tag>
+```
+
+where `<tag>` takes the form of:
+```
+ros-<ROS distro>-<foxglove SDK version>
+```
+
+For example, if you wanted to pull an image based on ROS Kilted and Foxglove SDK v0.11:
+```bash
+docker pull us-central1-docker.pkg.dev/foxglove-images/images/foxglove_bridge:ros-kilted-v0.11
+```
+
+
+### Build from source
+#### Getting the sources
 
 Clone this repo from GitHub and `cd` to the local ROS workspace:
 
@@ -33,7 +51,7 @@ cd foxglove-sdk/ros
 
 All commands in this README hereafter assume you're in the `/ros` subdirectory relative to the repository's root.
 
-### Build using your ROS environment
+#### Build using your ROS environment
 
 Make sure you have ROS installed and your setup files are sourced. Then build:
 
@@ -41,7 +59,7 @@ Make sure you have ROS installed and your setup files are sourced. Then build:
 make
 ```
 
-### Build using Docker
+#### Build using Docker
 
 You can also build the bridge using a ROS environment within a Docker container:
 
