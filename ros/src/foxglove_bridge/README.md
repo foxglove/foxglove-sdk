@@ -22,6 +22,9 @@ The `foxglove_bridge` uses the **Foxglove SDK** (this repo!), a similar protocol
 ### Install using Docker
 Docker images are built and published to our public Docker image registry for your convenience.
 
+> [!NOTE]
+> We currently only provide Docker builds targeted to the `linux/amd64` platform.
+
 Images can be pulled with
 
 ```bash
