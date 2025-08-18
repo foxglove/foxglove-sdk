@@ -10,6 +10,7 @@ use pyo3::types::PyDict;
 use std::collections::BTreeMap;
 use std::fs::File;
 use std::io::BufWriter;
+use std::num::NonZeroU64;
 use std::path::PathBuf;
 use std::sync::Arc;
 use websocket::start_server;
@@ -89,10 +90,11 @@ impl BaseChannel {
         Ok(BaseChannel(channel))
     }
 
-    #[pyo3(signature = (msg, log_time=None))]
-    fn log(&self, msg: &[u8], log_time: Option<u64>) -> PyResult<()> {
+    #[pyo3(signature = (msg, log_time=None, sink_id=None))]
+    fn log(&self, msg: &[u8], log_time: Option<u64>, sink_id: Option<u64>) -> PyResult<()> {
         let metadata = PartialMetadata { log_time };
-        self.0.log_with_meta(msg, metadata);
+        let sink_id = sink_id.and_then(NonZeroU64::new).map(foxglove::SinkId::new);
+        self.0.log_with_meta_to_sink(msg, metadata, sink_id);
         Ok(())
     }
 

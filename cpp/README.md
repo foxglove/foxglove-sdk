@@ -41,3 +41,20 @@ Run example programs (note that a different `build` directory may be used depend
 ```
 ./build/example_server
 ```
+
+## Examples
+
+### RGB Camera Visualization Example
+
+See detailed instructions on dependencies and visualizing data in the [example's readme](cpp/examples/rgb-camera-visualization/README.md).
+
+
+#### Building the Example
+
+Once OpenCV is installed, build the example:
+
+```bash
+make BUILD_OPENCV_EXAMPLE=ON build
+```
+
+This will create the `example_rgb_camera_visualization` executable in the build directory.

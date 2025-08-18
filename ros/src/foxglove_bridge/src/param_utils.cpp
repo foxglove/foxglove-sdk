@@ -19,6 +19,13 @@ void declareParameters(rclcpp::Node* node) {
   portDescription.integer_range[0].step = 1;
   node->declare_parameter(PARAM_PORT, DEFAULT_PORT, portDescription);
 
+  auto debugDescription = rcl_interfaces::msg::ParameterDescriptor{};
+  debugDescription.name = PARAM_DEBUG;
+  debugDescription.type = rcl_interfaces::msg::ParameterType::PARAMETER_BOOL;
+  debugDescription.description = "Enable debug logging";
+  debugDescription.read_only = true;
+  node->declare_parameter(PARAM_DEBUG, false, debugDescription);
+
   auto addressDescription = rcl_interfaces::msg::ParameterDescriptor{};
   addressDescription.name = PARAM_ADDRESS;
   addressDescription.type = rcl_interfaces::msg::ParameterType::PARAMETER_STRING;

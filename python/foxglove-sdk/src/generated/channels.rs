@@ -3,10 +3,11 @@
 
 use super::schemas;
 use crate::{PyContext, PySchema};
-use foxglove::{Channel, ChannelBuilder, PartialMetadata};
+use foxglove::{Channel, ChannelBuilder, PartialMetadata, SinkId};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use std::collections::BTreeMap;
+use std::num::NonZero;
 
 pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     let module = PyModule::new(parent_module.py(), "channels")?;
@@ -23,7 +24,7 @@ pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<FrameTransformsChannel>()?;
     module.add_class::<GeoJsonChannel>()?;
     module.add_class::<GridChannel>()?;
-    module.add_class::<Grid3Channel>()?;
+    module.add_class::<VoxelGridChannel>()?;
     module.add_class::<ImageAnnotationsChannel>()?;
     module.add_class::<KeyValuePairChannel>()?;
     module.add_class::<LaserScanChannel>()?;
@@ -152,10 +153,13 @@ impl ArrowPrimitiveChannel {
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
     ///     message was recorded. Usually this is the time log() is called. If omitted, the
     ///     current time is used.
-    #[pyo3(signature = (msg, *, log_time=None))]
-    fn log(&self, msg: &schemas::ArrowPrimitive, log_time: Option<u64>) {
+    /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
+    #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
+    fn log(&self, msg: &schemas::ArrowPrimitive, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        self.0.log_with_meta(&msg.0, metadata);
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
+
+        self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
 
     fn __repr__(&self) -> String {
@@ -258,10 +262,13 @@ impl CameraCalibrationChannel {
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
     ///     message was recorded. Usually this is the time log() is called. If omitted, the
     ///     current time is used.
-    #[pyo3(signature = (msg, *, log_time=None))]
-    fn log(&self, msg: &schemas::CameraCalibration, log_time: Option<u64>) {
+    /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
+    #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
+    fn log(&self, msg: &schemas::CameraCalibration, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        self.0.log_with_meta(&msg.0, metadata);
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
+
+        self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
 
     fn __repr__(&self) -> String {
@@ -364,10 +371,13 @@ impl CircleAnnotationChannel {
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
     ///     message was recorded. Usually this is the time log() is called. If omitted, the
     ///     current time is used.
-    #[pyo3(signature = (msg, *, log_time=None))]
-    fn log(&self, msg: &schemas::CircleAnnotation, log_time: Option<u64>) {
+    /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
+    #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
+    fn log(&self, msg: &schemas::CircleAnnotation, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        self.0.log_with_meta(&msg.0, metadata);
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
+
+        self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
 
     fn __repr__(&self) -> String {
@@ -470,10 +480,13 @@ impl ColorChannel {
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
     ///     message was recorded. Usually this is the time log() is called. If omitted, the
     ///     current time is used.
-    #[pyo3(signature = (msg, *, log_time=None))]
-    fn log(&self, msg: &schemas::Color, log_time: Option<u64>) {
+    /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
+    #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
+    fn log(&self, msg: &schemas::Color, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        self.0.log_with_meta(&msg.0, metadata);
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
+
+        self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
 
     fn __repr__(&self) -> String {
@@ -571,10 +584,13 @@ impl CompressedImageChannel {
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
     ///     message was recorded. Usually this is the time log() is called. If omitted, the
     ///     current time is used.
-    #[pyo3(signature = (msg, *, log_time=None))]
-    fn log(&self, msg: &schemas::CompressedImage, log_time: Option<u64>) {
+    /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
+    #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
+    fn log(&self, msg: &schemas::CompressedImage, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        self.0.log_with_meta(&msg.0, metadata);
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
+
+        self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
 
     fn __repr__(&self) -> String {
@@ -677,10 +693,13 @@ impl CompressedVideoChannel {
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
     ///     message was recorded. Usually this is the time log() is called. If omitted, the
     ///     current time is used.
-    #[pyo3(signature = (msg, *, log_time=None))]
-    fn log(&self, msg: &schemas::CompressedVideo, log_time: Option<u64>) {
+    /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
+    #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
+    fn log(&self, msg: &schemas::CompressedVideo, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        self.0.log_with_meta(&msg.0, metadata);
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
+
+        self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
 
     fn __repr__(&self) -> String {
@@ -783,10 +802,13 @@ impl CylinderPrimitiveChannel {
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
     ///     message was recorded. Usually this is the time log() is called. If omitted, the
     ///     current time is used.
-    #[pyo3(signature = (msg, *, log_time=None))]
-    fn log(&self, msg: &schemas::CylinderPrimitive, log_time: Option<u64>) {
+    /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
+    #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
+    fn log(&self, msg: &schemas::CylinderPrimitive, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        self.0.log_with_meta(&msg.0, metadata);
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
+
+        self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
 
     fn __repr__(&self) -> String {
@@ -889,10 +911,13 @@ impl CubePrimitiveChannel {
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
     ///     message was recorded. Usually this is the time log() is called. If omitted, the
     ///     current time is used.
-    #[pyo3(signature = (msg, *, log_time=None))]
-    fn log(&self, msg: &schemas::CubePrimitive, log_time: Option<u64>) {
+    /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
+    #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
+    fn log(&self, msg: &schemas::CubePrimitive, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        self.0.log_with_meta(&msg.0, metadata);
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
+
+        self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
 
     fn __repr__(&self) -> String {
@@ -995,10 +1020,13 @@ impl FrameTransformChannel {
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
     ///     message was recorded. Usually this is the time log() is called. If omitted, the
     ///     current time is used.
-    #[pyo3(signature = (msg, *, log_time=None))]
-    fn log(&self, msg: &schemas::FrameTransform, log_time: Option<u64>) {
+    /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
+    #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
+    fn log(&self, msg: &schemas::FrameTransform, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        self.0.log_with_meta(&msg.0, metadata);
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
+
+        self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
 
     fn __repr__(&self) -> String {
@@ -1101,10 +1129,13 @@ impl FrameTransformsChannel {
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
     ///     message was recorded. Usually this is the time log() is called. If omitted, the
     ///     current time is used.
-    #[pyo3(signature = (msg, *, log_time=None))]
-    fn log(&self, msg: &schemas::FrameTransforms, log_time: Option<u64>) {
+    /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
+    #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
+    fn log(&self, msg: &schemas::FrameTransforms, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        self.0.log_with_meta(&msg.0, metadata);
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
+
+        self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
 
     fn __repr__(&self) -> String {
@@ -1207,10 +1238,13 @@ impl GeoJsonChannel {
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
     ///     message was recorded. Usually this is the time log() is called. If omitted, the
     ///     current time is used.
-    #[pyo3(signature = (msg, *, log_time=None))]
-    fn log(&self, msg: &schemas::GeoJson, log_time: Option<u64>) {
+    /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
+    #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
+    fn log(&self, msg: &schemas::GeoJson, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        self.0.log_with_meta(&msg.0, metadata);
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
+
+        self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
 
     fn __repr__(&self) -> String {
@@ -1308,10 +1342,13 @@ impl GridChannel {
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
     ///     message was recorded. Usually this is the time log() is called. If omitted, the
     ///     current time is used.
-    #[pyo3(signature = (msg, *, log_time=None))]
-    fn log(&self, msg: &schemas::Grid, log_time: Option<u64>) {
+    /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
+    #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
+    fn log(&self, msg: &schemas::Grid, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        self.0.log_with_meta(&msg.0, metadata);
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
+
+        self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
 
     fn __repr__(&self) -> String {
@@ -1319,12 +1356,12 @@ impl GridChannel {
     }
 }
 
-/// A channel for logging :py:class:`foxglove.schemas.Grid3` messages.
+/// A channel for logging :py:class:`foxglove.schemas.VoxelGrid` messages.
 #[pyclass(module = "foxglove.channels")]
-struct Grid3Channel(Channel<foxglove::schemas::Grid3>);
+struct VoxelGridChannel(Channel<foxglove::schemas::VoxelGrid>);
 
 #[pymethods]
-impl Grid3Channel {
+impl VoxelGridChannel {
     /// Create a new channel.
     ///
     /// :param topic: The topic to log messages to. You should choose a unique topic name per channel.
@@ -1403,20 +1440,28 @@ impl Grid3Channel {
         self.0.close();
     }
 
-    /// Log a :py:class:`foxglove.schemas.Grid3` message to the channel.
+    /// Log a :py:class:`foxglove.schemas.VoxelGrid` message to the channel.
     ///
     /// :param msg: The message to log.
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
     ///     message was recorded. Usually this is the time log() is called. If omitted, the
     ///     current time is used.
-    #[pyo3(signature = (msg, *, log_time=None))]
-    fn log(&self, msg: &schemas::Grid3, log_time: Option<u64>) {
+    /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
+    #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
+    fn log(&self, msg: &schemas::VoxelGrid, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        self.0.log_with_meta(&msg.0, metadata);
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
+
+        self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
 
     fn __repr__(&self) -> String {
-        format!("Grid3Channel(id={}, topic='{}')", self.id(), self.topic()).to_string()
+        format!(
+            "VoxelGridChannel(id={}, topic='{}')",
+            self.id(),
+            self.topic()
+        )
+        .to_string()
     }
 }
 
@@ -1510,10 +1555,13 @@ impl ImageAnnotationsChannel {
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
     ///     message was recorded. Usually this is the time log() is called. If omitted, the
     ///     current time is used.
-    #[pyo3(signature = (msg, *, log_time=None))]
-    fn log(&self, msg: &schemas::ImageAnnotations, log_time: Option<u64>) {
+    /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
+    #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
+    fn log(&self, msg: &schemas::ImageAnnotations, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        self.0.log_with_meta(&msg.0, metadata);
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
+
+        self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
 
     fn __repr__(&self) -> String {
@@ -1616,10 +1664,13 @@ impl KeyValuePairChannel {
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
     ///     message was recorded. Usually this is the time log() is called. If omitted, the
     ///     current time is used.
-    #[pyo3(signature = (msg, *, log_time=None))]
-    fn log(&self, msg: &schemas::KeyValuePair, log_time: Option<u64>) {
+    /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
+    #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
+    fn log(&self, msg: &schemas::KeyValuePair, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        self.0.log_with_meta(&msg.0, metadata);
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
+
+        self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
 
     fn __repr__(&self) -> String {
@@ -1722,10 +1773,13 @@ impl LaserScanChannel {
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
     ///     message was recorded. Usually this is the time log() is called. If omitted, the
     ///     current time is used.
-    #[pyo3(signature = (msg, *, log_time=None))]
-    fn log(&self, msg: &schemas::LaserScan, log_time: Option<u64>) {
+    /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
+    #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
+    fn log(&self, msg: &schemas::LaserScan, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        self.0.log_with_meta(&msg.0, metadata);
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
+
+        self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
 
     fn __repr__(&self) -> String {
@@ -1828,10 +1882,13 @@ impl LinePrimitiveChannel {
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
     ///     message was recorded. Usually this is the time log() is called. If omitted, the
     ///     current time is used.
-    #[pyo3(signature = (msg, *, log_time=None))]
-    fn log(&self, msg: &schemas::LinePrimitive, log_time: Option<u64>) {
+    /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
+    #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
+    fn log(&self, msg: &schemas::LinePrimitive, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        self.0.log_with_meta(&msg.0, metadata);
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
+
+        self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
 
     fn __repr__(&self) -> String {
@@ -1934,10 +1991,13 @@ impl LocationFixChannel {
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
     ///     message was recorded. Usually this is the time log() is called. If omitted, the
     ///     current time is used.
-    #[pyo3(signature = (msg, *, log_time=None))]
-    fn log(&self, msg: &schemas::LocationFix, log_time: Option<u64>) {
+    /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
+    #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
+    fn log(&self, msg: &schemas::LocationFix, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        self.0.log_with_meta(&msg.0, metadata);
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
+
+        self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
 
     fn __repr__(&self) -> String {
@@ -2040,10 +2100,13 @@ impl LogChannel {
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
     ///     message was recorded. Usually this is the time log() is called. If omitted, the
     ///     current time is used.
-    #[pyo3(signature = (msg, *, log_time=None))]
-    fn log(&self, msg: &schemas::Log, log_time: Option<u64>) {
+    /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
+    #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
+    fn log(&self, msg: &schemas::Log, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        self.0.log_with_meta(&msg.0, metadata);
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
+
+        self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
 
     fn __repr__(&self) -> String {
@@ -2141,10 +2204,13 @@ impl SceneEntityDeletionChannel {
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
     ///     message was recorded. Usually this is the time log() is called. If omitted, the
     ///     current time is used.
-    #[pyo3(signature = (msg, *, log_time=None))]
-    fn log(&self, msg: &schemas::SceneEntityDeletion, log_time: Option<u64>) {
+    /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
+    #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
+    fn log(&self, msg: &schemas::SceneEntityDeletion, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        self.0.log_with_meta(&msg.0, metadata);
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
+
+        self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
 
     fn __repr__(&self) -> String {
@@ -2247,10 +2313,13 @@ impl SceneEntityChannel {
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
     ///     message was recorded. Usually this is the time log() is called. If omitted, the
     ///     current time is used.
-    #[pyo3(signature = (msg, *, log_time=None))]
-    fn log(&self, msg: &schemas::SceneEntity, log_time: Option<u64>) {
+    /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
+    #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
+    fn log(&self, msg: &schemas::SceneEntity, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        self.0.log_with_meta(&msg.0, metadata);
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
+
+        self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
 
     fn __repr__(&self) -> String {
@@ -2353,10 +2422,13 @@ impl SceneUpdateChannel {
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
     ///     message was recorded. Usually this is the time log() is called. If omitted, the
     ///     current time is used.
-    #[pyo3(signature = (msg, *, log_time=None))]
-    fn log(&self, msg: &schemas::SceneUpdate, log_time: Option<u64>) {
+    /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
+    #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
+    fn log(&self, msg: &schemas::SceneUpdate, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        self.0.log_with_meta(&msg.0, metadata);
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
+
+        self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
 
     fn __repr__(&self) -> String {
@@ -2459,10 +2531,13 @@ impl ModelPrimitiveChannel {
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
     ///     message was recorded. Usually this is the time log() is called. If omitted, the
     ///     current time is used.
-    #[pyo3(signature = (msg, *, log_time=None))]
-    fn log(&self, msg: &schemas::ModelPrimitive, log_time: Option<u64>) {
+    /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
+    #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
+    fn log(&self, msg: &schemas::ModelPrimitive, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        self.0.log_with_meta(&msg.0, metadata);
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
+
+        self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
 
     fn __repr__(&self) -> String {
@@ -2565,10 +2640,13 @@ impl PackedElementFieldChannel {
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
     ///     message was recorded. Usually this is the time log() is called. If omitted, the
     ///     current time is used.
-    #[pyo3(signature = (msg, *, log_time=None))]
-    fn log(&self, msg: &schemas::PackedElementField, log_time: Option<u64>) {
+    /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
+    #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
+    fn log(&self, msg: &schemas::PackedElementField, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        self.0.log_with_meta(&msg.0, metadata);
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
+
+        self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
 
     fn __repr__(&self) -> String {
@@ -2671,10 +2749,13 @@ impl Point2Channel {
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
     ///     message was recorded. Usually this is the time log() is called. If omitted, the
     ///     current time is used.
-    #[pyo3(signature = (msg, *, log_time=None))]
-    fn log(&self, msg: &schemas::Point2, log_time: Option<u64>) {
+    /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
+    #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
+    fn log(&self, msg: &schemas::Point2, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        self.0.log_with_meta(&msg.0, metadata);
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
+
+        self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
 
     fn __repr__(&self) -> String {
@@ -2772,10 +2853,13 @@ impl Point3Channel {
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
     ///     message was recorded. Usually this is the time log() is called. If omitted, the
     ///     current time is used.
-    #[pyo3(signature = (msg, *, log_time=None))]
-    fn log(&self, msg: &schemas::Point3, log_time: Option<u64>) {
+    /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
+    #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
+    fn log(&self, msg: &schemas::Point3, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        self.0.log_with_meta(&msg.0, metadata);
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
+
+        self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
 
     fn __repr__(&self) -> String {
@@ -2873,10 +2957,13 @@ impl PointCloudChannel {
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
     ///     message was recorded. Usually this is the time log() is called. If omitted, the
     ///     current time is used.
-    #[pyo3(signature = (msg, *, log_time=None))]
-    fn log(&self, msg: &schemas::PointCloud, log_time: Option<u64>) {
+    /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
+    #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
+    fn log(&self, msg: &schemas::PointCloud, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        self.0.log_with_meta(&msg.0, metadata);
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
+
+        self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
 
     fn __repr__(&self) -> String {
@@ -2979,10 +3066,13 @@ impl PointsAnnotationChannel {
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
     ///     message was recorded. Usually this is the time log() is called. If omitted, the
     ///     current time is used.
-    #[pyo3(signature = (msg, *, log_time=None))]
-    fn log(&self, msg: &schemas::PointsAnnotation, log_time: Option<u64>) {
+    /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
+    #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
+    fn log(&self, msg: &schemas::PointsAnnotation, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        self.0.log_with_meta(&msg.0, metadata);
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
+
+        self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
 
     fn __repr__(&self) -> String {
@@ -3085,10 +3175,13 @@ impl PoseChannel {
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
     ///     message was recorded. Usually this is the time log() is called. If omitted, the
     ///     current time is used.
-    #[pyo3(signature = (msg, *, log_time=None))]
-    fn log(&self, msg: &schemas::Pose, log_time: Option<u64>) {
+    /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
+    #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
+    fn log(&self, msg: &schemas::Pose, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        self.0.log_with_meta(&msg.0, metadata);
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
+
+        self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
 
     fn __repr__(&self) -> String {
@@ -3186,10 +3279,13 @@ impl PoseInFrameChannel {
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
     ///     message was recorded. Usually this is the time log() is called. If omitted, the
     ///     current time is used.
-    #[pyo3(signature = (msg, *, log_time=None))]
-    fn log(&self, msg: &schemas::PoseInFrame, log_time: Option<u64>) {
+    /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
+    #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
+    fn log(&self, msg: &schemas::PoseInFrame, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        self.0.log_with_meta(&msg.0, metadata);
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
+
+        self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
 
     fn __repr__(&self) -> String {
@@ -3292,10 +3388,13 @@ impl PosesInFrameChannel {
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
     ///     message was recorded. Usually this is the time log() is called. If omitted, the
     ///     current time is used.
-    #[pyo3(signature = (msg, *, log_time=None))]
-    fn log(&self, msg: &schemas::PosesInFrame, log_time: Option<u64>) {
+    /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
+    #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
+    fn log(&self, msg: &schemas::PosesInFrame, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        self.0.log_with_meta(&msg.0, metadata);
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
+
+        self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
 
     fn __repr__(&self) -> String {
@@ -3398,10 +3497,13 @@ impl QuaternionChannel {
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
     ///     message was recorded. Usually this is the time log() is called. If omitted, the
     ///     current time is used.
-    #[pyo3(signature = (msg, *, log_time=None))]
-    fn log(&self, msg: &schemas::Quaternion, log_time: Option<u64>) {
+    /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
+    #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
+    fn log(&self, msg: &schemas::Quaternion, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        self.0.log_with_meta(&msg.0, metadata);
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
+
+        self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
 
     fn __repr__(&self) -> String {
@@ -3504,10 +3606,13 @@ impl RawAudioChannel {
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
     ///     message was recorded. Usually this is the time log() is called. If omitted, the
     ///     current time is used.
-    #[pyo3(signature = (msg, *, log_time=None))]
-    fn log(&self, msg: &schemas::RawAudio, log_time: Option<u64>) {
+    /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
+    #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
+    fn log(&self, msg: &schemas::RawAudio, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        self.0.log_with_meta(&msg.0, metadata);
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
+
+        self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
 
     fn __repr__(&self) -> String {
@@ -3610,10 +3715,13 @@ impl RawImageChannel {
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
     ///     message was recorded. Usually this is the time log() is called. If omitted, the
     ///     current time is used.
-    #[pyo3(signature = (msg, *, log_time=None))]
-    fn log(&self, msg: &schemas::RawImage, log_time: Option<u64>) {
+    /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
+    #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
+    fn log(&self, msg: &schemas::RawImage, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        self.0.log_with_meta(&msg.0, metadata);
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
+
+        self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
 
     fn __repr__(&self) -> String {
@@ -3716,10 +3824,13 @@ impl SpherePrimitiveChannel {
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
     ///     message was recorded. Usually this is the time log() is called. If omitted, the
     ///     current time is used.
-    #[pyo3(signature = (msg, *, log_time=None))]
-    fn log(&self, msg: &schemas::SpherePrimitive, log_time: Option<u64>) {
+    /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
+    #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
+    fn log(&self, msg: &schemas::SpherePrimitive, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        self.0.log_with_meta(&msg.0, metadata);
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
+
+        self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
 
     fn __repr__(&self) -> String {
@@ -3822,10 +3933,13 @@ impl TextAnnotationChannel {
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
     ///     message was recorded. Usually this is the time log() is called. If omitted, the
     ///     current time is used.
-    #[pyo3(signature = (msg, *, log_time=None))]
-    fn log(&self, msg: &schemas::TextAnnotation, log_time: Option<u64>) {
+    /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
+    #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
+    fn log(&self, msg: &schemas::TextAnnotation, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        self.0.log_with_meta(&msg.0, metadata);
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
+
+        self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
 
     fn __repr__(&self) -> String {
@@ -3928,10 +4042,13 @@ impl TextPrimitiveChannel {
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
     ///     message was recorded. Usually this is the time log() is called. If omitted, the
     ///     current time is used.
-    #[pyo3(signature = (msg, *, log_time=None))]
-    fn log(&self, msg: &schemas::TextPrimitive, log_time: Option<u64>) {
+    /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
+    #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
+    fn log(&self, msg: &schemas::TextPrimitive, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        self.0.log_with_meta(&msg.0, metadata);
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
+
+        self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
 
     fn __repr__(&self) -> String {
@@ -4034,10 +4151,18 @@ impl TriangleListPrimitiveChannel {
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
     ///     message was recorded. Usually this is the time log() is called. If omitted, the
     ///     current time is used.
-    #[pyo3(signature = (msg, *, log_time=None))]
-    fn log(&self, msg: &schemas::TriangleListPrimitive, log_time: Option<u64>) {
+    /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
+    #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
+    fn log(
+        &self,
+        msg: &schemas::TriangleListPrimitive,
+        log_time: Option<u64>,
+        sink_id: Option<u64>,
+    ) {
         let metadata = PartialMetadata { log_time };
-        self.0.log_with_meta(&msg.0, metadata);
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
+
+        self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
 
     fn __repr__(&self) -> String {
@@ -4140,10 +4265,13 @@ impl Vector2Channel {
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
     ///     message was recorded. Usually this is the time log() is called. If omitted, the
     ///     current time is used.
-    #[pyo3(signature = (msg, *, log_time=None))]
-    fn log(&self, msg: &schemas::Vector2, log_time: Option<u64>) {
+    /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
+    #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
+    fn log(&self, msg: &schemas::Vector2, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        self.0.log_with_meta(&msg.0, metadata);
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
+
+        self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
 
     fn __repr__(&self) -> String {
@@ -4241,10 +4369,13 @@ impl Vector3Channel {
     /// :param log_time: The log time is the time, as nanoseconds from the unix epoch, that the
     ///     message was recorded. Usually this is the time log() is called. If omitted, the
     ///     current time is used.
-    #[pyo3(signature = (msg, *, log_time=None))]
-    fn log(&self, msg: &schemas::Vector3, log_time: Option<u64>) {
+    /// :param sink_id: The ID of the sink to log to. If omitted, the message is logged to all sinks.
+    #[pyo3(signature = (msg, *, log_time=None, sink_id=None))]
+    fn log(&self, msg: &schemas::Vector3, log_time: Option<u64>, sink_id: Option<u64>) {
         let metadata = PartialMetadata { log_time };
-        self.0.log_with_meta(&msg.0, metadata);
+        let sink_id = sink_id.and_then(NonZero::new).map(SinkId::new);
+
+        self.0.log_with_meta_to_sink(&msg.0, metadata, sink_id);
     }
 
     fn __repr__(&self) -> String {

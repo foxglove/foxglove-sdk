@@ -1,5 +1,6 @@
 <launch>
   <arg name="port"                            default="8765" />
+  <arg name="debug"                           default="false" />
   <arg name="address"                         default="0.0.0.0" />
   <arg name="tls"                             default="false" />
   <arg name="certfile"                        default="" />
@@ -20,6 +21,7 @@
 
   <node pkg="foxglove_bridge" exec="foxglove_bridge">
     <param name="port"                            value="$(var port)" />
+    <param name="debug"                           value="$(var debug)" />
     <param name="address"                         value="$(var address)" />
     <param name="tls"                             value="$(var tls)" />
     <param name="certfile"                        value="$(var certfile)" />

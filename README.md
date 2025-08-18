@@ -2,15 +2,14 @@
 
 The Foxglove SDK allows you to log and visualize multimodal data with [Foxglove](https://foxglove.dev).
 
-The SDK is written in Rust, with bindings and packages available for Python and C++.
+The core SDK is written in Rust, with bindings for Python, and C++. We publish prebuilt libraries and Python wheels, so you don’t need a Rust development environment.
 
-For ROS integration, see [ros-foxglove-bridge](https://github.com/foxglove/ros-foxglove-bridge).
+- Stream live data to Foxglove over a local WebSocket
+- Log data to [MCAP](https://mcap.dev/) files for visualization or analysis
+- Leverage built-in [Foxglove schemas](https://docs.foxglove.dev/docs/sdk/schemas) for common visualizations, or your own custom messages using a supported serialization format
+- ROS packages are available for all supported distributions (see our [ROS 2 tutorial](https://docs.foxglove.dev/docs/getting-started/frameworks/ros2))
 
-- Visualize live data using the Foxglove WebSocket protocol
-- Log data to [MCAP](https://mcap.dev/) files for later visualization or analysis
-- Leverage built-in [Foxglove schemas](https://docs.foxglove.dev/docs/visualization/message-schemas/introduction) for common visualizations, or your own custom messages using a supported serialization format
-
-Visit [Foxglove Docs](https://docs.foxglove.dev/) to get started.
+Visit [Foxglove SDK Docs](https://docs.foxglove.dev/sdk) to get started.
 
 ## Packages
 
@@ -33,6 +32,21 @@ Visit [Foxglove Docs](https://docs.foxglove.dev/) to get started.
 
 </td>
 <td>Foxglove SDK for Python</td>
+</tr>
+
+<tr><td><strong>C++</strong></td><td></td><td></td></tr>
+<tr>
+<td>
+
+[foxglove](./cpp)
+
+</td>
+<td>
+
+[![Foxglove SDK version](https://img.shields.io/github/v/release/foxglove/foxglove-sdk?filter=sdk%2F*)](https://github.com/foxglove/foxglove-sdk/releases?q=sdk%2F)
+
+</td>
+<td>Foxglove SDK for C++</td>
 </tr>
 
 <tr><td><strong>Rust</strong></td><td></td><td></td></tr>
@@ -59,13 +73,29 @@ Visit [Foxglove Docs](https://docs.foxglove.dev/) to get started.
 </td>
 <td>
 
-[![ROS Noetic version](https://img.shields.io/ros/v/noetic/foxglove_msgs)](https://index.ros.org/p/foxglove_msgs#noetic)<br/>
 [![ROS Humble version](https://img.shields.io/ros/v/humble/foxglove_msgs)](https://index.ros.org/p/foxglove_msgs#humble)<br/>
 [![ROS Jazzy version](https://img.shields.io/ros/v/jazzy/foxglove_msgs)](https://index.ros.org/p/foxglove_msgs#jazzy)<br/>
+[![ROS Kilted version](https://img.shields.io/ros/v/kilted/foxglove_msgs)](https://index.ros.org/p/foxglove_msgs#kilted)<br/>
 [![ROS Rolling version](https://img.shields.io/ros/v/rolling/foxglove_msgs)](https://index.ros.org/p/foxglove_msgs#rolling)
 
 </td>
 <td>Foxglove schemas for ROS</td>
+</tr>
+<tr>
+<td>
+
+[foxglove_bridge](./ros/src/foxglove_bridge)
+
+</td>
+<td>
+
+[![ROS Humble version](https://img.shields.io/ros/v/humble/foxglove_bridge)](https://index.ros.org/p/foxglove_bridge#humble)<br/>
+[![ROS Jazzy version](https://img.shields.io/ros/v/jazzy/foxglove_bridge)](https://index.ros.org/p/foxglove_bridge#jazzy)<br/>
+[![ROS Kilted version](https://img.shields.io/ros/v/kilted/foxglove_bridge)](https://index.ros.org/p/foxglove_bridge#kilted)<br/>
+[![ROS Rolling version](https://img.shields.io/ros/v/rolling/foxglove_bridge)](https://index.ros.org/p/foxglove_bridge#rolling)
+
+</td>
+<td>Foxglove ROS bridge</td>
 </tr>
 
 <tr><td><strong>TypeScript</strong></td><td></td><td></td></tr>
