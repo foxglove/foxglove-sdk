@@ -3,7 +3,7 @@ name: Publish ROS Bridge Docker image
 on:
   workflow_dispatch: {}
   push:
-    branches: [main, eric/docker-package-bridge]
+    branches: [main]
     tags: ['sdk/v*']
 
 permissions:
