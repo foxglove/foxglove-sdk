@@ -188,13 +188,9 @@ struct WebSocketServerCallbacks {
 /// @brief TLS configuration for a WebSocket server.
 struct TlsIdentity {
   /// @brief PEM-formatted x509 certificate for the server.
-  const std::byte* cert = nullptr;
-  /// @brief Length of cert bytes
-  size_t cert_len = 0;
+  std::vector<std::byte> cert;
   /// @brief PEM-formatted pkcs8 private key for the server.
-  const std::byte* key = nullptr;
-  /// @brief Length of key bytes
-  size_t key_len = 0;
+  std::vector<std::byte> key;
 };
 
 /// @brief Options for a WebSocket server.

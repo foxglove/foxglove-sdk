@@ -104,11 +104,9 @@ int main(int argc, char* argv[]) {
       key_data = readFile(key_path);
 
       foxglove::TlsIdentity tls_identity;
-      tls_identity.cert = cert_data.data();
-      tls_identity.cert_len = cert_data.size();
-      tls_identity.key = key_data.data();
-      tls_identity.key_len = key_data.size();
-      options.tls_identity = std::move(tls_identity);
+      tls_identity.cert = cert_data;
+      tls_identity.key = key_data;
+      options.tls_identity = tls_identity;
     } catch (const std::exception& e) {
       std::cerr << "Error reading TLS files: " << e.what() << '\n';
       return 1;
