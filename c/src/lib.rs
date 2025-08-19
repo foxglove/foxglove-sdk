@@ -561,6 +561,11 @@ unsafe fn do_foxglove_server_start(
                 "Invalid TLS configuration (null pointer)".to_string(),
             ));
         }
+        if options.tls_cert_len == 0 || options.tls_key_len == 0 {
+            return Err(foxglove::FoxgloveError::ValueError(
+                "Invalid TLS configuration (empty certificate or key)".to_string(),
+            ));
+        }
         let cert = unsafe { std::slice::from_raw_parts(options.tls_cert, options.tls_cert_len) };
         let key = unsafe { std::slice::from_raw_parts(options.tls_key, options.tls_key_len) };
         server = server.tls(cert, key);
