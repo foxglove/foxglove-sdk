@@ -1930,8 +1930,10 @@ public:
   ///
   /// @param msg The LocationFixes message to log.
   /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
   FoxgloveError log(
-    const LocationFixes& msg, std::optional<uint64_t> log_time = std::nullopt
+    const LocationFixes& msg, std::optional<uint64_t> log_time = std::nullopt,
+    std::optional<uint64_t> sink_id = std::nullopt
   ) noexcept;
 
   /// @brief Uniquely identifies a channel in the context of this program.

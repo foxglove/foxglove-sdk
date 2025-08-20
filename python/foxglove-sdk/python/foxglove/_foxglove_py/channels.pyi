@@ -1247,6 +1247,7 @@ class LocationFixesChannel:
         message: "LocationFixes",
         *,
         log_time: int | None = None,
+        sink_id: int | None = None,
     ) -> None:
         """Log a Foxglove LocationFixes message on the channel."""
         ...

@@ -553,14 +553,14 @@ FoxgloveResult<LocationFixesChannel> LocationFixesChannel::create(
 }
 
 FoxgloveError LocationFixesChannel::log(
-  const LocationFixes& msg, std::optional<uint64_t> log_time
+  const LocationFixes& msg, std::optional<uint64_t> log_time, std::optional<uint64_t> sink_id
 ) noexcept {
   Arena arena;
   foxglove_location_fixes c_msg;
   locationFixesToC(c_msg, msg, arena);
-  return FoxgloveError(
-    foxglove_channel_log_location_fixes(impl_.get(), &c_msg, log_time ? &*log_time : nullptr)
-  );
+  return FoxgloveError(foxglove_channel_log_location_fixes(
+    impl_.get(), &c_msg, log_time ? &*log_time : nullptr, sink_id ? *sink_id : 0
+  ));
 }
 
 uint64_t LocationFixesChannel::id() const noexcept {
