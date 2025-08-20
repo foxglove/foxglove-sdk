@@ -2032,6 +2032,7 @@ pub extern "C" fn foxglove_channel_log_location_fixes(
     channel: Option<&FoxgloveChannel>,
     msg: Option<&LocationFixes>,
     log_time: Option<&u64>,
+    sink_id: FoxgloveSinkId,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
@@ -2039,7 +2040,7 @@ pub extern "C" fn foxglove_channel_log_location_fixes(
     match unsafe { LocationFixes::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
             // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
-            log_msg_to_channel(channel, &*msg, log_time)
+            log_msg_to_channel(channel, &*msg, log_time, sink_id)
         }
         Err(e) => {
             tracing::error!("LocationFixes: {}", e);

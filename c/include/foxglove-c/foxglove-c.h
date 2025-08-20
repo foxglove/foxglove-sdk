@@ -2694,7 +2694,8 @@ foxglove_error foxglove_channel_create_location_fixes(struct foxglove_string top
  */
 foxglove_error foxglove_channel_log_location_fixes(const struct foxglove_channel *channel,
                                                    const struct foxglove_location_fixes *msg,
-                                                   const uint64_t *log_time);
+                                                   const uint64_t *log_time,
+                                                   FoxgloveSinkId sink_id);
 
 /**
  * Create a new typed channel, and return an owned raw channel pointer to it.
