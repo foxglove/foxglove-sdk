@@ -19,7 +19,8 @@ mod subscription;
 mod tests;
 #[cfg(test)]
 pub(crate) mod testutil;
-pub(crate) mod ws_protocol;
+#[doc(hidden)]
+pub mod ws_protocol;
 
 pub use capability::Capability;
 pub use channel_view::ChannelView;
