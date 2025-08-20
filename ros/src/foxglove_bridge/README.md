@@ -36,9 +36,9 @@ where `<tag>` takes the form of:
 ros-<ROS distro>-<foxglove SDK version>
 ```
 
-For example, if you wanted to pull an image based on ROS Kilted and Foxglove SDK v0.11:
+For example, if you wanted to pull an image based on ROS Kilted and Foxglove SDK v0.11.0:
 ```bash
-docker pull us-central1-docker.pkg.dev/foxglove-images/images/foxglove_bridge:ros-kilted-v0.11
+docker pull us-central1-docker.pkg.dev/foxglove-images/images/foxglove_bridge:ros-kilted-v0.11.0
 ```
 
 
