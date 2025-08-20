@@ -161,7 +161,6 @@ pub(crate) fn create_server(
     ctx: &Arc<Context>,
     opts: ServerOptions,
 ) -> Result<Arc<Server>, FoxgloveError> {
-    // TLS configuration is fallible, so build it prior to allocating the Arc with the weak ref
     Ok(Arc::new_cyclic(|weak_self| {
         Server::new(weak_self.clone(), ctx, opts)
     }))

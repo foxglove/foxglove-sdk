@@ -12,8 +12,10 @@ use crate::websocket::{
 };
 use crate::{get_runtime_handle, AppUrl, Context, FoxgloveError};
 
+/// TLS configuration for a server: a x509 certificate and pkcs8 private key, both PEM-formatted.
+#[doc(hidden)]
 #[cfg(feature = "tls")]
-pub(crate) struct TlsIdentity {
+pub struct TlsIdentity {
     pub cert: Vec<u8>,
     pub key: Vec<u8>,
 }
@@ -88,11 +90,8 @@ impl WebSocketServer {
     /// If TLS configuration fails, starting the server will result in an error.
     #[doc(hidden)]
     #[cfg(feature = "tls")]
-    pub fn tls(mut self, cert: &[u8], key: &[u8]) -> Self {
-        self.options.tls_identity = Some(TlsIdentity {
-            cert: cert.to_vec(),
-            key: key.to_vec(),
-        });
+    pub fn tls(mut self, tls_identity: TlsIdentity) -> Self {
+        self.options.tls_identity = Some(tls_identity);
         self
     }
 
