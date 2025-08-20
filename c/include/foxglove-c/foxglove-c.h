@@ -1451,7 +1451,22 @@ typedef struct foxglove_location_fix {
    * If `position_covariance` is available, `position_covariance_type` must be set to indicate the type of covariance.
    */
   foxglove_position_covariance_type position_covariance_type;
+  /**
+   * Color used to visualize the location
+   */
+  const struct foxglove_color *color;
 } foxglove_location_fix;
+
+/**
+ * A group of LocationFix messages
+ */
+typedef struct foxglove_location_fixes {
+  /**
+   * An array of location fixes
+   */
+  const struct foxglove_location_fix *fixes;
+  size_t fixes_count;
+} foxglove_location_fixes;
 
 /**
  * A log message
@@ -2676,6 +2691,27 @@ foxglove_error foxglove_channel_log_location_fix(const struct foxglove_channel *
                                                  const struct foxglove_location_fix *msg,
                                                  const uint64_t *log_time,
                                                  FoxgloveSinkId sink_id);
+
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
+foxglove_error foxglove_channel_create_location_fixes(struct foxglove_string topic,
+                                                      const struct foxglove_context *context,
+                                                      const struct foxglove_channel **channel);
+
+/**
+ * Log a LocationFixes message to a channel.
+ *
+ * # Safety
+ * The channel must have been created for this type with foxglove_channel_create_location_fixes.
+ */
+foxglove_error foxglove_channel_log_location_fixes(const struct foxglove_channel *channel,
+                                                   const struct foxglove_location_fixes *msg,
+                                                   const uint64_t *log_time,
+                                                   FoxgloveSinkId sink_id);
 
 /**
  * Create a new typed channel, and return an owned raw channel pointer to it.

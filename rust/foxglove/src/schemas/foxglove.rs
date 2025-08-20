@@ -463,6 +463,9 @@ pub struct LocationFix {
     /// If `position_covariance` is available, `position_covariance_type` must be set to indicate the type of covariance.
     #[prost(enumeration = "location_fix::PositionCovarianceType", tag = "5")]
     pub position_covariance_type: i32,
+    /// Color used to visualize the location
+    #[prost(message, optional, tag = "8")]
+    pub color: ::core::option::Option<Color>,
 }
 /// Nested message and enum types in `LocationFix`.
 pub mod location_fix {
@@ -513,6 +516,14 @@ pub mod location_fix {
             }
         }
     }
+}
+/// A group of LocationFix messages
+/// <https://docs.foxglove.dev/docs/visualization/message-schemas/location-fixes>
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct LocationFixes {
+    /// An array of location fixes
+    #[prost(message, repeated, tag = "1")]
+    pub fixes: ::prost::alloc::vec::Vec<LocationFix>,
 }
 /// A log message
 /// <https://docs.foxglove.dev/docs/visualization/message-schemas/log>

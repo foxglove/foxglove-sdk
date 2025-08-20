@@ -39,6 +39,7 @@ void keyValuePairToC(foxglove_key_value_pair& dest, const KeyValuePair& src, Are
 void laserScanToC(foxglove_laser_scan& dest, const LaserScan& src, Arena& arena);
 void linePrimitiveToC(foxglove_line_primitive& dest, const LinePrimitive& src, Arena& arena);
 void locationFixToC(foxglove_location_fix& dest, const LocationFix& src, Arena& arena);
+void locationFixesToC(foxglove_location_fixes& dest, const LocationFixes& src, Arena& arena);
 void logToC(foxglove_log& dest, const Log& src, Arena& arena);
 void modelPrimitiveToC(foxglove_model_primitive& dest, const ModelPrimitive& src, Arena& arena);
 void packedElementFieldToC(
@@ -535,6 +536,34 @@ FoxgloveError LocationFixChannel::log(
 }
 
 uint64_t LocationFixChannel::id() const noexcept {
+  return foxglove_channel_get_id(impl_.get());
+}
+
+FoxgloveResult<LocationFixesChannel> LocationFixesChannel::create(
+  const std::string_view& topic, const Context& context
+) {
+  const foxglove_channel* channel = nullptr;
+  foxglove_error error = foxglove_channel_create_location_fixes(
+    {topic.data(), topic.size()}, context.getInner(), &channel
+  );
+  if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {
+    return tl::unexpected(FoxgloveError(error));
+  }
+  return LocationFixesChannel(ChannelUniquePtr(channel));
+}
+
+FoxgloveError LocationFixesChannel::log(
+  const LocationFixes& msg, std::optional<uint64_t> log_time, std::optional<uint64_t> sink_id
+) noexcept {
+  Arena arena;
+  foxglove_location_fixes c_msg;
+  locationFixesToC(c_msg, msg, arena);
+  return FoxgloveError(foxglove_channel_log_location_fixes(
+    impl_.get(), &c_msg, log_time ? &*log_time : nullptr, sink_id ? *sink_id : 0
+  ));
+}
+
+uint64_t LocationFixesChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
@@ -1356,6 +1385,14 @@ void locationFixToC(
   );
   dest.position_covariance_type =
     static_cast<foxglove_position_covariance_type>(src.position_covariance_type);
+  dest.color = src.color ? reinterpret_cast<const foxglove_color*>(&*src.color) : nullptr;
+}
+
+void locationFixesToC(
+  foxglove_location_fixes& dest, const LocationFixes& src, [[maybe_unused]] Arena& arena
+) {
+  dest.fixes = arena.map<foxglove_location_fix>(src.fixes, locationFixToC);
+  dest.fixes_count = src.fixes.size();
 }
 
 void logToC(foxglove_log& dest, const Log& src, [[maybe_unused]] Arena& arena) {

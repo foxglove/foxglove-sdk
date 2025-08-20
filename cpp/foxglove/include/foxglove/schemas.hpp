@@ -694,6 +694,15 @@ struct LocationFix {
   /// @brief If `position_covariance` is available, `position_covariance_type` must be set to
   /// indicate the type of covariance.
   PositionCovarianceType position_covariance_type;
+
+  /// @brief Color used to visualize the location
+  std::optional<Color> color;
+};
+
+/// @brief A group of LocationFix messages
+struct LocationFixes {
+  /// @brief An array of location fixes
+  std::vector<LocationFix> fixes;
 };
 
 /// @brief A log message
@@ -1896,6 +1905,53 @@ public:
 
 private:
   explicit LocationFixChannel(ChannelUniquePtr&& channel)
+      : impl_(std::move(channel)) {}
+
+  ChannelUniquePtr impl_;
+};
+
+/// @brief A channel for logging LocationFixes messages to a topic.
+///
+/// @note While channels are fully thread-safe, the LocationFixes struct is not thread-safe.
+/// Avoid modifying it concurrently or during a log operation.
+class LocationFixesChannel {
+public:
+  /// @brief Create a new channel.
+  ///
+  /// @param topic The topic name. You should choose a unique topic name per channel for
+  /// compatibility with the Foxglove app.
+  /// @param context The context which associates logs to a sink. If omitted, the default context is
+  /// used.
+  static FoxgloveResult<LocationFixesChannel> create(
+    const std::string_view& topic, const Context& context = Context()
+  );
+
+  /// @brief Log a message to the channel.
+  ///
+  /// @param msg The LocationFixes message to log.
+  /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
+  FoxgloveError log(
+    const LocationFixes& msg, std::optional<uint64_t> log_time = std::nullopt,
+    std::optional<uint64_t> sink_id = std::nullopt
+  ) noexcept;
+
+  /// @brief Uniquely identifies a channel in the context of this program.
+  ///
+  /// @return The ID of the channel.
+  [[nodiscard]] uint64_t id() const noexcept;
+
+  LocationFixesChannel(const LocationFixesChannel& other) noexcept = delete;
+  LocationFixesChannel& operator=(const LocationFixesChannel& other) noexcept = delete;
+  /// @brief Default move constructor.
+  LocationFixesChannel(LocationFixesChannel&& other) noexcept = default;
+  /// @brief Default move assignment.
+  LocationFixesChannel& operator=(LocationFixesChannel&& other) noexcept = default;
+  /// @brief Default destructor.
+  ~LocationFixesChannel() = default;
+
+private:
+  explicit LocationFixesChannel(ChannelUniquePtr&& channel)
       : impl_(std::move(channel)) {}
 
   ChannelUniquePtr impl_;

@@ -35,3 +35,6 @@ uint8 KNOWN=3
 
 # If `position_covariance` is available, `position_covariance_type` must be set to indicate the type of covariance.
 uint8 position_covariance_type
+
+# Color used to visualize the location
+foxglove_msgs/Color color

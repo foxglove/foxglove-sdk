@@ -1,4 +1,4 @@
-FROM rust:latest AS builder
+FROM rust:1.89-bookworm AS builder
 
 ARG MSRV_RUST_VERSION=1.83.0
 

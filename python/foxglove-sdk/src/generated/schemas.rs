@@ -1080,6 +1080,7 @@ impl From<LinePrimitive> for foxglove::schemas::LinePrimitive {
 /// :param altitude: Altitude in meters
 /// :param position_covariance: Position covariance (m^2) defined relative to a tangential plane through the reported position. The components are East, North, and Up (ENU), in row-major order.
 /// :param position_covariance_type: If `position_covariance` is available, `position_covariance_type` must be set to indicate the type of covariance.
+/// :param color: Color used to visualize the location
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/location-fix
 #[pyclass(module = "foxglove.schemas")]
@@ -1088,7 +1089,7 @@ pub(crate) struct LocationFix(pub(crate) foxglove::schemas::LocationFix);
 #[pymethods]
 impl LocationFix {
     #[new]
-    #[pyo3(signature = (*, timestamp=None, frame_id="".to_string(), latitude=0.0, longitude=0.0, altitude=0.0, position_covariance=vec![], position_covariance_type=LocationFixPositionCovarianceType::Unknown) )]
+    #[pyo3(signature = (*, timestamp=None, frame_id="".to_string(), latitude=0.0, longitude=0.0, altitude=0.0, position_covariance=vec![], position_covariance_type=LocationFixPositionCovarianceType::Unknown, color=None) )]
     fn new(
         timestamp: Option<Timestamp>,
         frame_id: String,
@@ -1097,6 +1098,7 @@ impl LocationFix {
         altitude: f64,
         position_covariance: Vec<f64>,
         position_covariance_type: LocationFixPositionCovarianceType,
+        color: Option<Color>,
     ) -> Self {
         Self(foxglove::schemas::LocationFix {
             timestamp: timestamp.map(Into::into),
@@ -1106,11 +1108,12 @@ impl LocationFix {
             altitude,
             position_covariance,
             position_covariance_type: position_covariance_type as i32,
+            color: color.map(Into::into),
         })
     }
     fn __repr__(&self) -> String {
         format!(
-            "LocationFix(timestamp={:?}, frame_id={:?}, latitude={:?}, longitude={:?}, altitude={:?}, position_covariance={:?}, position_covariance_type={:?})",
+            "LocationFix(timestamp={:?}, frame_id={:?}, latitude={:?}, longitude={:?}, altitude={:?}, position_covariance={:?}, position_covariance_type={:?}, color={:?})",
             self.0.timestamp,
             self.0.frame_id,
             self.0.latitude,
@@ -1118,6 +1121,7 @@ impl LocationFix {
             self.0.altitude,
             self.0.position_covariance,
             self.0.position_covariance_type,
+            self.0.color,
         )
     }
     /// Returns the LocationFix schema.
@@ -1129,6 +1133,41 @@ impl LocationFix {
 
 impl From<LocationFix> for foxglove::schemas::LocationFix {
     fn from(value: LocationFix) -> Self {
+        value.0
+    }
+}
+
+/// A group of LocationFix messages
+///
+/// :param fixes: An array of location fixes
+///
+/// See https://docs.foxglove.dev/docs/visualization/message-schemas/location-fixes
+#[pyclass(module = "foxglove.schemas")]
+#[derive(Clone)]
+pub(crate) struct LocationFixes(pub(crate) foxglove::schemas::LocationFixes);
+#[pymethods]
+impl LocationFixes {
+    #[new]
+    #[pyo3(signature = (*, fixes=vec![]) )]
+    fn new(fixes: Vec<LocationFix>) -> Self {
+        Self(foxglove::schemas::LocationFixes {
+            fixes: fixes.into_iter().map(|x| x.into()).collect(),
+        })
+    }
+    fn __repr__(&self) -> String {
+        format!("LocationFixes(fixes={:?})", self.0.fixes,)
+    }
+    /// Returns the LocationFixes schema.
+    #[staticmethod]
+    fn get_schema() -> PySchema {
+        foxglove::schemas::LocationFixes::get_schema()
+            .unwrap()
+            .into()
+    }
+}
+
+impl From<LocationFixes> for foxglove::schemas::LocationFixes {
+    fn from(value: LocationFixes) -> Self {
         value.0
     }
 }
@@ -2300,6 +2339,7 @@ pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<LaserScan>()?;
     module.add_class::<LinePrimitive>()?;
     module.add_class::<LocationFix>()?;
+    module.add_class::<LocationFixes>()?;
     module.add_class::<Log>()?;
     module.add_class::<SceneEntityDeletion>()?;
     module.add_class::<SceneEntity>()?;
