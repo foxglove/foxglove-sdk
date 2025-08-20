@@ -32,9 +32,8 @@ use crate::websocket::server::{create_server as do_create_server, ServerOptions}
 use crate::websocket::service::{CallId, Service, ServiceSchema};
 use crate::websocket::{
     BlockingAssetHandlerFn, Capability, ClientChannelId, ConnectionGraph, Parameter, Server,
+    TlsIdentity,
 };
-#[cfg(feature = "tls")]
-use crate::websocket_server::TlsIdentity;
 use crate::{ChannelBuilder, Context, FoxgloveError, PartialMetadata, RawChannel, Schema};
 
 macro_rules! expect_recv {

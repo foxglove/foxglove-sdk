@@ -4,7 +4,7 @@ use tokio::sync::oneshot;
 use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::WebSocketStream;
 
-use crate::websocket::server_stream::ServerStream;
+use crate::websocket::streams::ServerStream;
 use crate::websocket::Status;
 
 use super::{ConnectedClient, ShutdownReason};

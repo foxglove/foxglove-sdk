@@ -6,19 +6,13 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 
 use crate::websocket::service::Service;
+#[cfg(feature = "tls")]
+use crate::websocket::TlsIdentity;
 use crate::websocket::{
     create_server, AssetHandler, AsyncAssetHandlerFn, BlockingAssetHandlerFn, Capability, Client,
     ConnectionGraph, Parameter, Server, ServerOptions, ShutdownHandle, Status,
 };
 use crate::{get_runtime_handle, AppUrl, Context, FoxgloveError};
-
-/// TLS configuration for a server: a x509 certificate and pkcs8 private key, both PEM-formatted.
-#[doc(hidden)]
-#[cfg(feature = "tls")]
-pub struct TlsIdentity {
-    pub cert: Vec<u8>,
-    pub key: Vec<u8>,
-}
 
 /// A WebSocket server for live visualization in Foxglove.
 ///

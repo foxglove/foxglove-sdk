@@ -568,7 +568,7 @@ unsafe fn do_foxglove_server_start(
         }
         let cert = unsafe { std::slice::from_raw_parts(options.tls_cert, options.tls_cert_len) };
         let key = unsafe { std::slice::from_raw_parts(options.tls_key, options.tls_key_len) };
-        let tls_identity = foxglove::TlsIdentity {
+        let tls_identity = foxglove::websocket::TlsIdentity {
             cert: cert.to_vec(),
             key: key.to_vec(),
         };

@@ -354,8 +354,6 @@ mod websocket_server;
 pub(crate) use runtime::get_runtime_handle;
 #[cfg(feature = "live_visualization")]
 pub use runtime::shutdown_runtime;
-#[cfg(feature = "tls")]
-pub use websocket_server::TlsIdentity;
 #[cfg(feature = "live_visualization")]
 pub use websocket_server::{WebSocketServer, WebSocketServerHandle};
 
