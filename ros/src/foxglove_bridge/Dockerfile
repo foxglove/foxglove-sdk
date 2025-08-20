@@ -29,13 +29,15 @@ RUN rosdep install -y \
 RUN /bin/bash -c '. /opt/ros/$ROS_DISTRO/setup.bash && \
     colcon build --packages-select foxglove_bridge'
 
-RUN echo '#!/bin/bash\n\
-set -e\n\
-\n\
-source /ros/install/setup.bash\n\
-\n\
-exec ros2 launch foxglove_bridge foxglove_bridge_launch.xml "$@"' > /ros/entrypoint.sh \
-    && chmod +x /ros/entrypoint.sh
+RUN <<EOF
+# Write out bash script to source ROS setup script and wrap launch file
+echo '#!/bin/bash
+set -e
+source /ros/install/setup.bash
+exec ros2 launch foxglove_bridge foxglove_bridge_launch.xml "$@"' > /ros/entrypoint.sh
+
+chmod +x /ros/entrypoint.sh
+EOF
 
 
 EXPOSE 8765

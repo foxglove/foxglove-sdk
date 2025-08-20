@@ -3,7 +3,6 @@ name: Publish ROS Bridge Docker image
 on:
   workflow_dispatch: {}
   push:
-    branches: [main]
     tags: ['sdk/v*']
 
 permissions:
@@ -46,11 +45,11 @@ jobs:
           # Check if this is a release tag (sdk/v*)
           if [[ "${GITHUB_REF}" == refs/tags/sdk/v* ]]; then
             # Extract version from release tag (remove sdk/ prefix)
-            VERSION=$(echo "${GITHUB_REF}" | sed 's|refs/tags/sdk/||')
+            VERSION=${GITHUB_REF#refs/tags/sdk/}
             echo "Using release version: ${VERSION}"
           else
             # Use git SHA for non-release builds
-            VERSION=$(echo "${GITHUB_SHA}")
+            VERSION="${GITHUB_SHA}"
             echo "Using SHA version: ${VERSION}"
           fi
 
