@@ -74,10 +74,31 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          set -euo pipefail
+
+          PREV="${{ steps.bump-version.outputs.prev-version }}"
+          NOTES_ARGS=()
+
+          if [ -n "${PREV:-}" ]; then
+            # Normalize to sdk/vX.Y.Z (avoid double 'v')
+            if [[ "$PREV" == v* ]]; then
+              PREV_TAG="sdk/$PREV"
+            else
+              PREV_TAG="sdk/v$PREV"
+            fi
+
+            # Only pass --notes-start-tag if the tag exists
+            if gh release view "$PREV_TAG" >/dev/null 2>&1; then
+              NOTES_ARGS+=(--notes-start-tag "$PREV_TAG")
+            else
+              echo "Previous tag $PREV_TAG not found; skipping --notes-start-tag."
+            fi
+          fi
+
           gh release create "${{ env.SDK_TAG }}" \
             ./ci_artifacts/* \
             --title "${{ env.SDK_TAG }}" \
             --target "${{ env.SDK_BRANCH }}" \
             --generate-notes \
-            --notes-start-tag "sdk/v${{ steps.bump-version.outputs.prev-version }}" \
+            "${NOTES_ARGS[@]}" \
             --draft
