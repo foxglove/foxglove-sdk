@@ -1,4 +1,4 @@
-FROM rust:latest AS builder
+FROM rust:1.89-bookworm AS builder
 
 ARG MSRV_RUST_VERSION=1.83.0
 
@@ -13,14 +13,14 @@ RUN bash nodesource_setup.sh
 
 RUN apt-get update \
     && apt-get install -y \
-        clang-19 \
-        clang-format-19 \
-        clang-tidy-19 \
-        cmake \
-        doxygen \
-        nodejs \
-        protobuf-compiler \
-        python3.13-dev \
+        clang-19=1:19.1.4-1~deb12u1 \
+        clang-format-19=1:19.1.4-1~deb12u1 \
+        clang-tidy-19=1:19.1.4-1~deb12u1 \
+        cmake=3.25.1-1 \
+        doxygen=1.9.4-4 \
+        nodejs=23.11.1-1nodesource1 \
+        protobuf-compiler=3.21.12-3 \
+        python3.11-dev=3.11.2-6+deb12u6 \
     && rm -rf /var/lib/apt/lists/*
 
 RUN corepack enable yarn
