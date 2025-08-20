@@ -1,0 +1,76 @@
+name: Publish ROS Bridge Docker image
+
+on:
+  workflow_dispatch: {}
+  push:
+    tags: ['sdk/v*']
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  build-and-push:
+    name: "publish (${{ matrix.ros_distribution }})"
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        ros_distribution: [humble, jazzy, kilted, rolling]
+    env:
+      DOCKER_REPO: us-central1-docker.pkg.dev/foxglove-images/images/foxglove_bridge
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.1.1
+
+      - name: Setup docker buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Auth gcloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.PUBLISHER_KEY }}
+
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure gcloud docker
+        run: gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
+
+      - name: Compute version for tagging
+        run: |
+          set -euo pipefail
+
+          # Check if this is a release tag (sdk/v*)
+          if [[ "${GITHUB_REF}" == refs/tags/sdk/v* ]]; then
+            # Extract version from release tag (remove sdk/ prefix)
+            VERSION=${GITHUB_REF#refs/tags/sdk/}
+            echo "Using release version: ${VERSION}"
+          else
+            # Use git SHA for non-release builds
+            VERSION="${GITHUB_SHA}"
+            echo "Using SHA version: ${VERSION}"
+          fi
+
+          echo "IMAGE_VERSION=${VERSION}" >> "$GITHUB_ENV"
+
+      - name: Compute image tags
+        id: compute-tags
+        run: |
+          IMAGE_BASE="${DOCKER_REPO}"
+          DISTRO="${{ matrix.ros_distribution }}"
+          TAG="${IMAGE_BASE}:ros-${DISTRO}-${IMAGE_VERSION}"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: ros/src/foxglove_bridge
+          file: ros/src/foxglove_bridge/Dockerfile
+          push: true
+          build-args: |
+            ROS_DISTRIBUTION=${{ matrix.ros_distribution }}
+          tags: ${{ steps.compute-tags.outputs.tag }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
