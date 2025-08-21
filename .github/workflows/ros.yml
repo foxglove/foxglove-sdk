@@ -1,0 +1,33 @@
+name: ROS
+
+on:
+  push:
+    branches: [main]
+    tags: ["**"]
+  pull_request: {}
+
+jobs:
+  ros:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        ros_distribution:
+          - humble
+          - jazzy
+          - kilted
+          - rolling
+    name: "ros (${{ matrix.ros_distribution }})"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Foxglove C++ SDK
+        run: make build-cpp
+
+      - name: Run make docker-build
+        run: make USE_LOCAL_SDK=ON docker-build-${{ matrix.ros_distribution }}
+        working-directory: ros
+
+      - name: Run make docker-test
+        run: make docker-test-${{ matrix.ros_distribution }}
+        working-directory: ros

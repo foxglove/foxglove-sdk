@@ -1,0 +1,65 @@
+ROS_DISTRIBUTIONS := humble jazzy kilted rolling
+USE_LOCAL_SDK := OFF
+EXTRA_DOCKER_ARGS :=
+DOCKER_USER_ARGS :=
+
+ifeq ($(shell uname -s), Linux)
+	DOCKER_USER_ARGS = --build-arg USER_UID=$(shell id -u) --build-arg USER_GID=$(shell id -g)
+endif
+
+.PHONY: all
+all: deps build
+
+.PHONY: clean
+clean:
+	rm -rf build install log
+
+.PHONY: deps
+deps:
+	rosdep install -y \
+		--from-paths src \
+		--ignore-src
+
+.PHONY: build
+build:
+	colcon build --cmake-args -DUSE_LOCAL_SDK=$(USE_LOCAL_SDK)
+
+.PHONY: test
+test:
+	colcon test
+	colcon test-result --all --verbose
+
+define generate_ros_targets
+.PHONY: docker-build-image-$(1)
+docker-build-image-$(1):
+	docker build -t foxglove-sdk-ros-$(1) -f ../Dockerfile.ros \
+		--build-arg ROS_DISTRIBUTION=$(1) \
+		$(DOCKER_USER_ARGS) \
+		$(EXTRA_DOCKER_ARGS) ..
+
+.PHONY: docker-build-$(1)
+docker-build-$(1): docker-build-image-$(1)
+	docker run --rm -v $(PWD)/..:/sdk foxglove-sdk-ros-$(1) make USE_LOCAL_SDK=$(USE_LOCAL_SDK) build
+
+.PHONY: docker-test-$(1)
+docker-test-$(1):
+	docker run --rm -v $(PWD)/..:/sdk foxglove-sdk-ros-$(1) make test
+
+.PHONY: docker-sh-$(1)
+docker-sh-$(1):
+	docker run --rm -it -v $(PWD)/..:/sdk foxglove-sdk-ros-$(1)
+
+endef
+$(foreach distribution,$(ROS_DISTRIBUTIONS),$(eval $(call generate_ros_targets,$(strip $(distribution)))))
+
+.PHONY: docker-build-image
+docker-build-image: docker-build-image-rolling
+
+.PHONY: docker-build
+docker-build: docker-build-rolling
+
+.PHONY: docker-test
+docker-test: docker-test-rolling
+
+.PHONY: docker-sh
+docker-sh: docker-sh-rolling

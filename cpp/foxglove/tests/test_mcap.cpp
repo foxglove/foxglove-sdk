@@ -376,7 +376,7 @@ TEST_CASE("ImageAnnotations channel") {
 
   // Add a circle annotation
   foxglove::schemas::CircleAnnotation circle;
-  circle.timestamp = foxglove::Timestamp{1000000000, 500000000};
+  circle.timestamp = foxglove::schemas::Timestamp{1000000000, 500000000};
   circle.position = foxglove::schemas::Point2{10.0, 20.0};
   circle.diameter = 15.0;
   circle.thickness = 2.0;
@@ -386,7 +386,7 @@ TEST_CASE("ImageAnnotations channel") {
 
   // Add a points annotation
   foxglove::schemas::PointsAnnotation points;
-  points.timestamp = foxglove::Timestamp{1000000000, 500000000};
+  points.timestamp = foxglove::schemas::Timestamp{1000000000, 500000000};
   points.type = foxglove::schemas::PointsAnnotation::PointsAnnotationType::LINE_STRIP;
   points.points.push_back(foxglove::schemas::Point2{5.0, 10.0});
   points.points.push_back(foxglove::schemas::Point2{15.0, 25.0});
@@ -399,7 +399,7 @@ TEST_CASE("ImageAnnotations channel") {
 
   // Add a text annotation
   foxglove::schemas::TextAnnotation text;
-  text.timestamp = foxglove::Timestamp{1000000000, 500000000};
+  text.timestamp = foxglove::schemas::Timestamp{1000000000, 500000000};
   text.position = foxglove::schemas::Point2{50.0, 60.0};
   text.text = "Sample text";
   text.font_size = 14.0;

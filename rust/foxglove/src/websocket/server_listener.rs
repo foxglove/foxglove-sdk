@@ -36,6 +36,8 @@ pub trait ServerListener: Send + Sync {
     /// Should return the updated parameters for the passed parameters.
     /// The implementation could return the modified parameters.
     /// All clients subscribed to updates for the _returned_ parameters will be notified.
+    /// If this callback returns parameters that are unset (i.e. have a None value),
+    /// the unset parameters will not be published to clients.
     ///
     /// Note that only `parameters` which have changed are included in the callback, but the return
     /// value must include all parameters.

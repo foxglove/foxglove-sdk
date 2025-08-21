@@ -377,6 +377,28 @@ impl Encode for LocationFix {
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
 }
 
+impl Encode for LocationFixes {
+    type Error = ::prost::EncodeError;
+
+    fn get_schema() -> Option<Schema> {
+        Some(Schema::new(
+            "foxglove.LocationFixes",
+            "protobuf",
+            descriptors::LOCATION_FIXES,
+        ))
+    }
+
+    fn get_message_encoding() -> String {
+        "protobuf".to_string()
+    }
+
+    fn encode(&self, buf: &mut impl BufMut) -> Result<(), prost::EncodeError> {
+        ::prost::Message::encode(self, buf)
+    }
+
+    fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
+}
+
 impl Encode for Log {
     type Error = ::prost::EncodeError;
 
@@ -847,6 +869,28 @@ impl Encode for Vector3 {
             "foxglove.Vector3",
             "protobuf",
             descriptors::VECTOR3,
+        ))
+    }
+
+    fn get_message_encoding() -> String {
+        "protobuf".to_string()
+    }
+
+    fn encode(&self, buf: &mut impl BufMut) -> Result<(), prost::EncodeError> {
+        ::prost::Message::encode(self, buf)
+    }
+
+    fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
+}
+
+impl Encode for VoxelGrid {
+    type Error = ::prost::EncodeError;
+
+    fn get_schema() -> Option<Schema> {
+        Some(Schema::new(
+            "foxglove.VoxelGrid",
+            "protobuf",
+            descriptors::VOXEL_GRID,
         ))
     }
 

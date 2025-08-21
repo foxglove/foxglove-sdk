@@ -386,10 +386,24 @@ class LocationFix:
         altitude: "Optional[float]" = 0.0,
         position_covariance: "Optional[List[float]]" = [],
         position_covariance_type: "Optional[LocationFixPositionCovarianceType]" = LocationFixPositionCovarianceType.Unknown,
+        color: "Optional[Color]" = None,
     ) -> "LocationFix": ...
     @staticmethod
     def get_schema() -> Schema:
         """Returns the LocationFix schema"""
+        ...
+
+class LocationFixes:
+    """
+    A group of LocationFix messages
+    """
+
+    def __new__(
+        cls, *, fixes: "Optional[List[LocationFix]]" = []
+    ) -> "LocationFixes": ...
+    @staticmethod
+    def get_schema() -> Schema:
+        """Returns the LocationFixes schema"""
         ...
 
 class Log:
@@ -796,6 +810,31 @@ class Vector3:
         """Returns the Vector3 schema"""
         ...
 
+class VoxelGrid:
+    """
+    A 3D grid of data
+    """
+
+    def __new__(
+        cls,
+        *,
+        timestamp: "Optional[Timestamp]" = None,
+        frame_id: "Optional[str]" = "",
+        pose: "Optional[Pose]" = None,
+        row_count: "Optional[int]" = 0,
+        column_count: "Optional[int]" = 0,
+        cell_size: "Optional[Vector3]" = None,
+        slice_stride: "Optional[int]" = 0,
+        row_stride: "Optional[int]" = 0,
+        cell_stride: "Optional[int]" = 0,
+        fields: "Optional[List[PackedElementField]]" = [],
+        data: "Optional[bytes]" = b"",
+    ) -> "VoxelGrid": ...
+    @staticmethod
+    def get_schema() -> Schema:
+        """Returns the VoxelGrid schema"""
+        ...
+
 FoxgloveSchema = Union[
     ArrowPrimitive,
     CameraCalibration,
@@ -809,11 +848,13 @@ FoxgloveSchema = Union[
     FrameTransforms,
     GeoJson,
     Grid,
+    VoxelGrid,
     ImageAnnotations,
     KeyValuePair,
     LaserScan,
     LinePrimitive,
     LocationFix,
+    LocationFixes,
     Log,
     SceneEntityDeletion,
     SceneEntity,

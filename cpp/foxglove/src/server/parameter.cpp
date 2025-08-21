@@ -14,8 +14,10 @@ ParameterValueView::Value ParameterValueView::value() const {
   // Accessing union members is safe, because the tag serves as a valid
   // discriminator.
   switch (impl_->tag) {
-    case FOXGLOVE_PARAMETER_VALUE_TAG_NUMBER:
-      return impl_->data.number;  // NOLINT(cppcoreguidelines-pro-type-union-access)
+    case FOXGLOVE_PARAMETER_VALUE_TAG_FLOAT64:
+      return impl_->data.float64;  // NOLINT(cppcoreguidelines-pro-type-union-access)
+    case FOXGLOVE_PARAMETER_VALUE_TAG_INTEGER:
+      return impl_->data.integer;  // NOLINT(cppcoreguidelines-pro-type-union-access)
     case FOXGLOVE_PARAMETER_VALUE_TAG_BOOLEAN:
       return impl_->data.boolean;  // NOLINT(cppcoreguidelines-pro-type-union-access)
     case FOXGLOVE_PARAMETER_VALUE_TAG_STRING: {
@@ -70,7 +72,16 @@ ParameterValue::ParameterValue(foxglove_parameter_value* ptr)
 
 ParameterValue::ParameterValue(double value)
     : impl_(nullptr) {
-  foxglove_parameter_value* ptr = foxglove_parameter_value_create_number(value);
+  foxglove_parameter_value* ptr = foxglove_parameter_value_create_float64(value);
+  if (ptr == nullptr) {
+    throw std::runtime_error("allocation failed");
+  }
+  impl_.reset(ptr);
+}
+
+ParameterValue::ParameterValue(int64_t value)
+    : impl_(nullptr) {
+  foxglove_parameter_value* ptr = foxglove_parameter_value_create_integer(value);
   if (ptr == nullptr) {
     throw std::runtime_error("allocation failed");
   }
@@ -185,14 +196,14 @@ FoxgloveResult<std::vector<std::byte>> ParameterView::getByteArray() const {
   size_t len = 0;
   auto error = foxglove_parameter_get_byte_array_decoded_size(impl_, &len);
   if (error != foxglove_error::FOXGLOVE_ERROR_OK) {
-    return foxglove::unexpected(FoxgloveError(error));
+    return tl::unexpected(FoxgloveError(error));
   }
   std::vector<std::byte> bytes;
   bytes.resize(len);
   error =
     foxglove_parameter_decode_byte_array(impl_, reinterpret_cast<uint8_t*>(bytes.data()), &len);
   if (error != foxglove_error::FOXGLOVE_ERROR_OK) {
-    return foxglove::unexpected(FoxgloveError(error));
+    return tl::unexpected(FoxgloveError(error));
   }
   bytes.resize(len);
   return bytes;
@@ -238,6 +249,16 @@ Parameter::Parameter(std::string_view name, double value)
   impl_.reset(ptr);
 }
 
+Parameter::Parameter(std::string_view name, int64_t value)
+    : impl_(nullptr) {
+  foxglove_parameter* ptr = nullptr;
+  auto error = foxglove_parameter_create_integer(&ptr, {name.data(), name.length()}, value);
+  if (error != foxglove_error::FOXGLOVE_ERROR_OK) {
+    throw std::runtime_error(foxglove_error_to_cstr(error));
+  }
+  impl_.reset(ptr);
+}
+
 Parameter::Parameter(std::string_view name, std::string_view value)
     : impl_(nullptr) {
   foxglove_parameter* ptr = nullptr;
@@ -265,6 +286,18 @@ Parameter::Parameter(std::string_view name, const std::vector<double>& values)
     : impl_(nullptr) {
   foxglove_parameter* ptr = nullptr;
   auto error = foxglove_parameter_create_float64_array(
+    &ptr, {name.data(), name.length()}, values.data(), values.size()
+  );
+  if (error != foxglove_error::FOXGLOVE_ERROR_OK) {
+    throw std::runtime_error(foxglove_error_to_cstr(error));
+  }
+  impl_.reset(ptr);
+}
+
+Parameter::Parameter(std::string_view name, const std::vector<int64_t>& values)
+    : impl_(nullptr) {
+  foxglove_parameter* ptr = nullptr;
+  auto error = foxglove_parameter_create_integer_array(
     &ptr, {name.data(), name.length()}, values.data(), values.size()
   );
   if (error != foxglove_error::FOXGLOVE_ERROR_OK) {

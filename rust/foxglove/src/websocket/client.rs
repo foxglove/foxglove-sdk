@@ -4,6 +4,7 @@ use std::sync::Weak;
 
 use super::connected_client::ConnectedClient;
 use super::Status;
+use crate::SinkId;
 
 /// Identifies a client connection. Unique for the duration of the server's lifetime.
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
@@ -48,6 +49,11 @@ impl Client {
     /// Returns the client ID.
     pub fn id(&self) -> ClientId {
         self.id
+    }
+
+    /// Returns the client's sink ID
+    pub fn sink_id(&self) -> Option<SinkId> {
+        self.client.upgrade().map(|client| client.sink_id())
     }
 
     /// Send a status message to this client. Does nothing if client is disconnected.

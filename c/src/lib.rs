@@ -70,9 +70,14 @@ impl FoxgloveString {
     ///
     /// # Safety
     ///
-    /// The [`data`] field must be valid UTF-8, and have a length equal to [`FoxgloveString.len`].
+    /// The [`data`] field must be valid UTF-8, correctly aligned, and have a length equal to
+    /// [`FoxgloveString.len`].
     unsafe fn as_utf8_str(&self) -> Result<&str, std::str::Utf8Error> {
-        std::str::from_utf8(unsafe { std::slice::from_raw_parts(self.data.cast(), self.len) })
+        if self.data.is_null() {
+            Ok("")
+        } else {
+            std::str::from_utf8(unsafe { std::slice::from_raw_parts(self.data.cast(), self.len) })
+        }
     }
 
     pub fn as_ptr(&self) -> *const c_char {
@@ -294,12 +299,30 @@ pub struct FoxgloveClientChannel {
 }
 
 #[repr(C)]
+pub struct FoxgloveClientMetadata {
+    pub id: u32,
+    pub sink_id: FoxgloveSinkId,
+}
+
+#[repr(C)]
 #[derive(Clone)]
 pub struct FoxgloveServerCallbacks {
     /// A user-defined value that will be passed to callback functions
     pub context: *const c_void,
-    pub on_subscribe: Option<unsafe extern "C" fn(context: *const c_void, channel_id: u64)>,
-    pub on_unsubscribe: Option<unsafe extern "C" fn(context: *const c_void, channel_id: u64)>,
+    pub on_subscribe: Option<
+        unsafe extern "C" fn(
+            context: *const c_void,
+            channel_id: u64,
+            client: FoxgloveClientMetadata,
+        ),
+    >,
+    pub on_unsubscribe: Option<
+        unsafe extern "C" fn(
+            context: *const c_void,
+            channel_id: u64,
+            client: FoxgloveClientMetadata,
+        ),
+    >,
     pub on_client_advertise: Option<
         unsafe extern "C" fn(
             context: *const c_void,
@@ -356,7 +379,8 @@ pub struct FoxgloveServerCallbacks {
     /// `foxglove_parameter_array_create`. Ownership of this value is transferred to the callee, who
     /// is responsible for freeing it. A NULL return value is treated as an empty array.
     ///
-    /// All clients subscribed to updates for the returned parameters will be notified.
+    /// All clients subscribed to updates for the returned parameters will be notified. Note that if a
+    /// returned parameter is unset, it will not be published to clients.
     pub on_set_parameters: Option<
         unsafe extern "C" fn(
             context: *const c_void,
@@ -419,7 +443,11 @@ impl FoxgloveSchema {
         let encoding = unsafe { self.encoding.as_utf8_str() }.map_err(|e| {
             foxglove::FoxgloveError::Utf8Error(format!("schema encoding invalid: {e}"))
         })?;
-        let data = unsafe { std::slice::from_raw_parts(self.data, self.data_len) };
+        let data = if self.data.is_null() {
+            &[]
+        } else {
+            unsafe { std::slice::from_raw_parts(self.data, self.data_len) }
+        };
         Ok(foxglove::Schema::new(name, encoding, data.to_owned()))
     }
 }
@@ -1275,6 +1303,8 @@ pub unsafe extern "C" fn foxglove_channel_metadata_iter_free(
     }
 }
 
+type FoxgloveSinkId = u64;
+
 /// Log a message on a channel.
 ///
 /// # Safety
@@ -1288,6 +1318,7 @@ pub unsafe extern "C" fn foxglove_channel_log(
     data: *const u8,
     data_len: usize,
     log_time: Option<&u64>,
+    sink_id: FoxgloveSinkId,
 ) -> FoxgloveError {
     // An assert might be reasonable under different circumstances, but here
     // we don't want to crash the program using the library, on a robot in the field,
@@ -1304,11 +1335,15 @@ pub unsafe extern "C" fn foxglove_channel_log(
     let channel = ManuallyDrop::new(unsafe {
         Arc::from_raw(channel as *const _ as *const foxglove::RawChannel)
     });
-    channel.log_with_meta(
+
+    let sink_id = std::num::NonZeroU64::new(sink_id).map(foxglove::SinkId::new);
+
+    channel.log_with_meta_to_sink(
         unsafe { std::slice::from_raw_parts(data, data_len) },
         foxglove::PartialMetadata {
             log_time: log_time.copied(),
         },
+        sink_id,
     );
     FoxgloveError::Ok
 }
@@ -1359,21 +1394,29 @@ pub extern "C" fn foxglove_internal_register_cpp_wrapper() {
 impl foxglove::websocket::ServerListener for FoxgloveServerCallbacks {
     fn on_subscribe(
         &self,
-        _client: foxglove::websocket::Client,
+        client: foxglove::websocket::Client,
         channel: foxglove::websocket::ChannelView,
     ) {
         if let Some(on_subscribe) = self.on_subscribe {
-            unsafe { on_subscribe(self.context, channel.id().into()) };
+            let c_client_metadata = FoxgloveClientMetadata {
+                id: client.id().into(),
+                sink_id: client.sink_id().map(|id| id.into()).unwrap_or(0),
+            };
+            unsafe { on_subscribe(self.context, channel.id().into(), c_client_metadata) };
         }
     }
 
     fn on_unsubscribe(
         &self,
-        _client: foxglove::websocket::Client,
+        client: foxglove::websocket::Client,
         channel: foxglove::websocket::ChannelView,
     ) {
         if let Some(on_unsubscribe) = self.on_unsubscribe {
-            unsafe { on_unsubscribe(self.context, channel.id().into()) };
+            let c_client_metadata = FoxgloveClientMetadata {
+                id: client.id().into(),
+                sink_id: client.sink_id().map(|id| id.into()).unwrap_or(0),
+            };
+            unsafe { on_unsubscribe(self.context, channel.id().into(), c_client_metadata) };
         }
     }
 
@@ -1651,6 +1694,7 @@ pub(crate) fn log_msg_to_channel<T: foxglove::Encode>(
     channel: Option<&FoxgloveChannel>,
     msg: &T,
     log_time: Option<&u64>,
+    sink_id: FoxgloveSinkId,
 ) -> FoxgloveError {
     let Some(channel) = channel else {
         tracing::error!("log called with null channel");
@@ -1662,11 +1706,15 @@ pub(crate) fn log_msg_to_channel<T: foxglove::Encode>(
         // We can safely create a Channel from any Arc<RawChannel>
         foxglove::Channel::<T>::from_raw_channel(channel_arc)
     });
-    channel.log_with_meta(
+
+    let sink_id = std::num::NonZeroU64::new(sink_id).map(foxglove::SinkId::new);
+
+    channel.log_with_meta_to_sink(
         msg,
         foxglove::PartialMetadata {
             log_time: log_time.copied(),
         },
+        sink_id,
     );
     FoxgloveError::Ok
 }

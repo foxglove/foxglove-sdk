@@ -102,7 +102,7 @@ FoxgloveResult<Service> Service::create(
     }
   );
   if (error != foxglove_error::FOXGLOVE_ERROR_OK) {
-    return foxglove::unexpected(static_cast<FoxgloveError>(error));
+    return tl::unexpected(static_cast<FoxgloveError>(error));
   }
   return Service(ptr);
 }

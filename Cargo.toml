@@ -10,8 +10,12 @@ members = [
   "python/foxglove-sdk",
 ]
 
+exclude = [
+  "rust/examples/rgb_camera_visualization"
+]
+
 [workspace.package]
-version = "0.9.1"
+version = "0.11.0"
 edition = "2021"
 rust-version = "1.83.0"
 repository = "https://github.com/foxglove/foxglove-sdk"
@@ -26,7 +30,7 @@ prost-build = "0.13"
 prost-types = "0.13"
 serde = { version = "1.0", features = ["derive"] }
 thiserror = "2.0"
-tokio = { version = "1.45", features = ["macros", "rt-multi-thread", "signal", "time"] }
+tokio = { version = "1.47", features = ["macros", "rt-multi-thread", "signal", "time"] }
 tokio-tungstenite = "0.27"
 tokio-util = { version = "0.7", features = ["rt"] }
 tracing = { version = "0.1", features = ["log"] }

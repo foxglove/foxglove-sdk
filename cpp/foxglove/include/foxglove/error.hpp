@@ -61,7 +61,7 @@ enum class FoxgloveError : uint8_t {
 ///
 /// @tparam T The type of the success value returned by the operation.
 template<typename T>
-using FoxgloveResult = expected<T, FoxgloveError>;
+using FoxgloveResult = tl::expected<T, FoxgloveError>;
 
 /// @brief A string representation of a FoxgloveError.
 ///

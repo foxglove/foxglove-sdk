@@ -16,6 +16,7 @@
 enum foxglove_error : uint8_t;
 struct foxglove_websocket_server;
 struct foxglove_connection_graph;
+struct foxglove_client;
 
 namespace foxglove {
 
@@ -35,6 +36,14 @@ struct ClientChannel {
   const std::byte* schema;
   /// @brief The length of the schema of the channel.
   size_t schema_len;
+};
+
+/// @brief A client connected to the server.
+struct ClientMetadata {
+  /// @brief The ID of the client.
+  uint32_t id;
+  /// @brief The sink ID associated with the client.
+  std::optional<uint64_t> sink_id;
 };
 
 /// @brief The capabilities of a WebSocket server.
@@ -97,12 +106,12 @@ struct WebSocketServerCallbacks {
   ///
   /// Only invoked if the channel is associated with the server and isn't already subscribed to by
   /// the client.
-  std::function<void(uint64_t channel_id)> onSubscribe;
+  std::function<void(uint64_t channel_id, const ClientMetadata& client_metadata)> onSubscribe;
 
   /// @brief Callback invoked when a client unsubscribes from a channel.
   ///
   /// Only invoked for channels that had an active subscription from the client.
-  std::function<void(uint64_t channel_id)> onUnsubscribe;
+  std::function<void(uint64_t channel_id, const ClientMetadata& client_metadata)> onUnsubscribe;
 
   /// @brief Callback invoked when a client advertises a client channel.
   ///

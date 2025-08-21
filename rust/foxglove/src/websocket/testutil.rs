@@ -74,7 +74,7 @@ impl WebSocketClient {
     }
 
     /// Receives and parses a message from the server.
-    pub async fn recv(&mut self) -> Result<ServerMessage, RecvError> {
+    pub async fn recv(&mut self) -> Result<ServerMessage<'_>, RecvError> {
         let msg = tokio::time::timeout(Duration::from_secs(1), self.recv_msg()).await??;
         let msg = ServerMessage::try_from(&msg)?;
         Ok(msg.into_owned())

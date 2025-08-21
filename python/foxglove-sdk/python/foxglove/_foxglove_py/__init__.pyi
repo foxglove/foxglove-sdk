@@ -59,12 +59,15 @@ class BaseChannel:
         self,
         msg: bytes,
         log_time: Optional[int] = None,
+        sink_id: Optional[int] = None,
     ) -> None:
         """
         Log a message to the channel.
 
         :param msg: The message to log.
         :param log_time: The optional time the message was logged.
+        :param sink_id: The sink ID to log the message to. If not provided, the message will be
+            sent to all sinks.
         """
         ...
 
@@ -121,6 +124,7 @@ def start_server(
     services: Optional[List["Service"]] = None,
     asset_handler: Optional["AssetHandler"] = None,
     context: Optional["Context"] = None,
+    session_id: Optional[str] = None,
 ) -> WebSocketServer:
     """
     Start a websocket server for live visualization.

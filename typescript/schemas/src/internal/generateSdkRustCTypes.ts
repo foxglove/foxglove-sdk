@@ -1,19 +1,19 @@
 import assert from "assert";
+import fs from "node:fs/promises";
+import { parse as parseToml, stringify as stringifyToml, TomlTable } from "smol-toml";
 
 import { FoxgloveEnumSchema, FoxgloveMessageSchema, FoxglovePrimitive } from "./types";
 
 function primitiveToRust(type: FoxglovePrimitive) {
   switch (type) {
+    case "int32":
+      return "i32";
     case "uint32":
       return "u32";
     case "boolean":
       return "bool";
     case "float64":
       return "f64";
-    case "time":
-      return "Timestamp";
-    case "duration":
-      return "Duration";
     case "string":
       return "FoxgloveString";
     case "bytes":
@@ -41,13 +41,37 @@ function toTitleCase(name: string) {
   return name.toLowerCase().replace(/(?:^|_)([a-z])/g, (_, letter: string) => letter.toUpperCase());
 }
 
+// We use special FoxgloveTimestamp and FoxgloveDuration types for the time and duration fields.
+function shouldGenerateRustType(schema: FoxgloveMessageSchema): boolean {
+  return schema.name !== "Timestamp" && schema.name !== "Duration";
+}
+
+function rustEnumName(name: string) {
+  return `Foxglove${name}`;
+}
+
+/**
+ * Identical to the name, except:
+ * - GeoJSON is renamed to GeoJson in all lanaguages
+ * - Timestamp and Duration use existing FoxgloveTimestamp and FoxgloveDuration implementations
+ */
+function rustMessageSchemaName(schema: FoxgloveMessageSchema): string {
+  if (schema.name === "Timestamp") {
+    return "FoxgloveTimestamp";
+  } else if (schema.name === "Duration") {
+    return "FoxgloveDuration";
+  } else {
+    return schema.name.replace("JSON", "Json");
+  }
+}
+
 export function generateRustTypes(
   schemas: readonly FoxgloveMessageSchema[],
   enums: readonly FoxgloveEnumSchema[],
 ): string {
-  const schemaStructs = schemas.map((schema) => {
+  const schemaStructs = schemas.filter(shouldGenerateRustType).map((schema) => {
     const { fields, description } = schema;
-    const name = schema.name.replace("JSON", "Json");
+    const name = rustMessageSchemaName(schema);
     const snakeName = toSnakeCase(name);
     return `\
 ${formatComment(description)}
@@ -64,19 +88,15 @@ pub struct ${name} {
           if (field.type.name === "bytes") {
             fieldType = "*const c_uchar";
             fieldHasLen = true;
-          } else if (field.type.name === "time") {
-            fieldType = "*const FoxgloveTimestamp";
-          } else if (field.type.name === "duration") {
-            fieldType = "*const FoxgloveDuration";
           } else {
             fieldType = primitiveToRust(field.type.name);
           }
           break;
         case "enum":
-          fieldType = `Foxglove${field.type.enum.name}`;
+          fieldType = rustEnumName(field.type.enum.name);
           break;
         case "nested":
-          fieldType = field.type.schema.name.replace("JSON", "Json");
+          fieldType = rustMessageSchemaName(field.type.schema);
           break;
       }
       const lines: string[] = [comment];
@@ -152,6 +172,9 @@ impl BorrowToNative for ${name} {
             }
             return [];
           case "nested":
+            if (field.type.schema.name === "Timestamp" || field.type.schema.name === "Duration") {
+              return [];
+            }
             return [
               `let ${fieldName} = unsafe { self.${fieldName}.as_ref().map(|m| m.borrow_to_native(arena.as_mut())) }.transpose()?;`,
             ];
@@ -186,13 +209,14 @@ impl BorrowToNative for ${name} {
               return `${fieldName}: ManuallyDrop::into_inner(${fieldName})`;
             } else if (field.type.name === "bytes") {
               return `${fieldName}: ManuallyDrop::into_inner(unsafe { bytes_from_raw(self.${fieldName}, self.${fieldName}_len) })`;
-            } else if (field.type.name === "time" || field.type.name === "duration") {
-              return `${fieldName}: unsafe { self.${fieldName}.as_ref() }.map(|&m| m.into())`;
             }
             return `${fieldName}: self.${fieldName}`;
           case "enum":
             return `${fieldName}: self.${fieldName} as i32`;
           case "nested":
+            if (field.type.schema.name === "Timestamp" || field.type.schema.name === "Duration") {
+              return `${fieldName}: unsafe { self.${fieldName}.as_ref() }.map(|&m| m.into())`;
+            }
             return `${fieldName}: ${fieldName}.map(ManuallyDrop::into_inner)`;
         }
       })
@@ -206,14 +230,14 @@ impl BorrowToNative for ${name} {
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_${snakeName}.
 #[unsafe(no_mangle)]
-pub extern "C" fn foxglove_channel_log_${snakeName}(channel: Option<&FoxgloveChannel>, msg: Option<&${name}>, log_time: Option<&u64>) -> FoxgloveError {
+pub extern "C" fn foxglove_channel_log_${snakeName}(channel: Option<&FoxgloveChannel>, msg: Option<&${name}>, log_time: Option<&u64>, sink_id: FoxgloveSinkId) -> FoxgloveError {
   let mut arena = pin!(Arena::new());
   let arena_pin = arena.as_mut();
   // Safety: we're borrowing from the msg, but discard the borrowed message before returning
   match unsafe { ${name}::borrow_option_to_native(msg, arena_pin) } {
     Ok(msg) => {
       // Safety: this casts channel back to a typed channel for type of msg, it must have been created for this type.
-      log_msg_to_channel(channel, &*msg, log_time)
+      log_msg_to_channel(channel, &*msg, log_time, sink_id)
     },
     Err(e) => {
       tracing::error!("${name}: {}", e);
@@ -229,7 +253,7 @@ pub extern "C" fn foxglove_channel_log_${snakeName}(channel: Option<&FoxgloveCha
     "use std::mem::ManuallyDrop;",
     "use std::pin::{pin, Pin};",
     "",
-    "use crate::{FoxgloveString, FoxgloveError, FoxgloveChannel, FoxgloveContext, FoxgloveTimestamp, FoxgloveDuration, log_msg_to_channel, result_to_c, do_foxglove_channel_create};",
+    "use crate::{FoxgloveString, FoxgloveError, FoxgloveChannel, FoxgloveContext, FoxgloveTimestamp, FoxgloveDuration, log_msg_to_channel, result_to_c, do_foxglove_channel_create, FoxgloveSinkId};",
     "use crate::arena::{Arena, BorrowToNative};",
     "use crate::util::{bytes_from_raw, string_from_raw, vec_from_raw};",
   ];
@@ -238,7 +262,7 @@ pub extern "C" fn foxglove_channel_log_${snakeName}(channel: Option<&FoxgloveCha
     return `
     #[derive(Clone, Copy, Debug)]
     #[repr(i32)]
-    pub enum Foxglove${enumSchema.name} {
+    pub enum ${rustEnumName(enumSchema.name)} {
       ${enumSchema.values.map((value) => `${toTitleCase(value.name)} = ${value.value},`).join("\n")}
     }`;
   });
@@ -255,4 +279,59 @@ pub extern "C" fn foxglove_channel_log_${snakeName}(channel: Option<&FoxgloveCha
   ];
 
   return outputSections.join("\n\n");
+}
+
+function assertValidBindgen(
+  bindgen: TomlTable,
+): asserts bindgen is { export: { rename: TomlTable } } {
+  if (
+    typeof bindgen.export !== "object" ||
+    !("rename" in bindgen.export) ||
+    typeof bindgen.export.rename !== "object"
+  ) {
+    throw new Error("Invalid bindgen.toml file (export.rename definitions missing)");
+  }
+}
+
+/**
+ * Builds the content of the cbindgen.toml config file, based on a manually-written prelude
+ * and export renames for generated schema types.
+ */
+export async function generateBindgenConfig(
+  schemas: readonly FoxgloveMessageSchema[],
+  enums: readonly FoxgloveEnumSchema[],
+  preludeFile: string,
+): Promise<string> {
+  const comment = `
+#
+# Generated by https://github.com/foxglove/foxglove-sdk
+#
+# Do not edit this file directly. Edit the prelude file instead.
+#
+`;
+  const prelude = await fs.readFile(preludeFile, "utf-8");
+
+  const bindgenToml = parseToml(prelude);
+  assertValidBindgen(bindgenToml);
+
+  schemas.forEach((schema) => {
+    const sourceName = rustMessageSchemaName(schema);
+    const prefix = sourceName.startsWith("Foxglove") ? "" : "foxglove_";
+    const exportName = `${prefix}${toSnakeCase(sourceName)}`;
+    if (sourceName in bindgenToml.export.rename) {
+      throw new Error(`Duplicate name in rename section: ${sourceName}`);
+    }
+    bindgenToml.export.rename[sourceName] = exportName;
+  });
+
+  enums.forEach((enumSchema) => {
+    const sourceName = rustEnumName(enumSchema.name);
+    const exportName = toSnakeCase(sourceName);
+    if (sourceName in bindgenToml.export.rename) {
+      throw new Error(`Duplicate name in rename section: ${sourceName}`);
+    }
+    bindgenToml.export.rename[sourceName] = exportName;
+  });
+
+  return comment + "\n" + stringifyToml(bindgenToml);
 }

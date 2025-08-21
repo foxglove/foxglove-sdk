@@ -177,7 +177,7 @@
     "data": {
       "type": "string",
       "contentEncoding": "base64",
-      "description": "Grid cell data, interpreted using `fields`, in row-major (y-major) order — values fill each row from left to right along the X axis, with rows ordered from top to bottom along the Y axis, starting at the bottom-left corner when viewed from +Z looking towards -Z with identity orientations"
+      "description": "Grid cell data, interpreted using `fields`, in row-major (y-major) order.\n For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:\n y = (i / cell_stride) % row_stride * cell_size.y\n x = i % cell_stride * cell_size.x"
     }
   }
 }

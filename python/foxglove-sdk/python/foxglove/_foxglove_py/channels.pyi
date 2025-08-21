@@ -20,6 +20,7 @@ from .schemas import (
     LaserScan,
     LinePrimitive,
     LocationFix,
+    LocationFixes,
     Log,
     ModelPrimitive,
     PackedElementField,
@@ -42,6 +43,7 @@ from .schemas import (
     TriangleListPrimitive,
     Vector2,
     Vector3,
+    VoxelGrid,
 )
 
 class ArrowPrimitiveChannel:
@@ -106,6 +108,7 @@ class ArrowPrimitiveChannel:
         message: "ArrowPrimitive",
         *,
         log_time: int | None = None,
+        sink_id: int | None = None,
     ) -> None:
         """Log a Foxglove ArrowPrimitive message on the channel."""
         ...
@@ -172,6 +175,7 @@ class CameraCalibrationChannel:
         message: "CameraCalibration",
         *,
         log_time: int | None = None,
+        sink_id: int | None = None,
     ) -> None:
         """Log a Foxglove CameraCalibration message on the channel."""
         ...
@@ -238,6 +242,7 @@ class CircleAnnotationChannel:
         message: "CircleAnnotation",
         *,
         log_time: int | None = None,
+        sink_id: int | None = None,
     ) -> None:
         """Log a Foxglove CircleAnnotation message on the channel."""
         ...
@@ -304,6 +309,7 @@ class ColorChannel:
         message: "Color",
         *,
         log_time: int | None = None,
+        sink_id: int | None = None,
     ) -> None:
         """Log a Foxglove Color message on the channel."""
         ...
@@ -370,6 +376,7 @@ class CompressedImageChannel:
         message: "CompressedImage",
         *,
         log_time: int | None = None,
+        sink_id: int | None = None,
     ) -> None:
         """Log a Foxglove CompressedImage message on the channel."""
         ...
@@ -436,6 +443,7 @@ class CompressedVideoChannel:
         message: "CompressedVideo",
         *,
         log_time: int | None = None,
+        sink_id: int | None = None,
     ) -> None:
         """Log a Foxglove CompressedVideo message on the channel."""
         ...
@@ -502,6 +510,7 @@ class CubePrimitiveChannel:
         message: "CubePrimitive",
         *,
         log_time: int | None = None,
+        sink_id: int | None = None,
     ) -> None:
         """Log a Foxglove CubePrimitive message on the channel."""
         ...
@@ -568,6 +577,7 @@ class CylinderPrimitiveChannel:
         message: "CylinderPrimitive",
         *,
         log_time: int | None = None,
+        sink_id: int | None = None,
     ) -> None:
         """Log a Foxglove CylinderPrimitive message on the channel."""
         ...
@@ -634,6 +644,7 @@ class FrameTransformChannel:
         message: "FrameTransform",
         *,
         log_time: int | None = None,
+        sink_id: int | None = None,
     ) -> None:
         """Log a Foxglove FrameTransform message on the channel."""
         ...
@@ -700,6 +711,7 @@ class FrameTransformsChannel:
         message: "FrameTransforms",
         *,
         log_time: int | None = None,
+        sink_id: int | None = None,
     ) -> None:
         """Log a Foxglove FrameTransforms message on the channel."""
         ...
@@ -766,6 +778,7 @@ class GeoJsonChannel:
         message: "GeoJson",
         *,
         log_time: int | None = None,
+        sink_id: int | None = None,
     ) -> None:
         """Log a Foxglove GeoJson message on the channel."""
         ...
@@ -832,6 +845,7 @@ class GridChannel:
         message: "Grid",
         *,
         log_time: int | None = None,
+        sink_id: int | None = None,
     ) -> None:
         """Log a Foxglove Grid message on the channel."""
         ...
@@ -898,6 +912,7 @@ class ImageAnnotationsChannel:
         message: "ImageAnnotations",
         *,
         log_time: int | None = None,
+        sink_id: int | None = None,
     ) -> None:
         """Log a Foxglove ImageAnnotations message on the channel."""
         ...
@@ -964,6 +979,7 @@ class KeyValuePairChannel:
         message: "KeyValuePair",
         *,
         log_time: int | None = None,
+        sink_id: int | None = None,
     ) -> None:
         """Log a Foxglove KeyValuePair message on the channel."""
         ...
@@ -1030,6 +1046,7 @@ class LaserScanChannel:
         message: "LaserScan",
         *,
         log_time: int | None = None,
+        sink_id: int | None = None,
     ) -> None:
         """Log a Foxglove LaserScan message on the channel."""
         ...
@@ -1096,6 +1113,7 @@ class LinePrimitiveChannel:
         message: "LinePrimitive",
         *,
         log_time: int | None = None,
+        sink_id: int | None = None,
     ) -> None:
         """Log a Foxglove LinePrimitive message on the channel."""
         ...
@@ -1162,8 +1180,76 @@ class LocationFixChannel:
         message: "LocationFix",
         *,
         log_time: int | None = None,
+        sink_id: int | None = None,
     ) -> None:
         """Log a Foxglove LocationFix message on the channel."""
+        ...
+
+class LocationFixesChannel:
+    """
+    A channel for logging LocationFixes messages
+
+    You should choose a unique topic name per channel.
+    """
+
+    def __new__(
+        cls,
+        topic: str,
+        *,
+        metadata: Optional[Dict[str, str]] = None,
+        context: Optional["Context"] = None,
+    ) -> "LocationFixesChannel": ...
+    def id(self) -> int:
+        """The unique ID of the channel."""
+        ...
+
+    def topic(self) -> str:
+        """The topic name of the channel."""
+        ...
+
+    @property
+    def message_encoding(self) -> str:
+        """The message encoding for the channel"""
+        ...
+
+    def metadata(self) -> Dict[str, str]:
+        """
+        Returns a copy of the channel's metadata.
+
+        Note that changes made to the returned dictionary will not be applied to
+        the channel's metadata.
+        """
+        ...
+
+    def schema(self) -> Optional[Schema]:
+        """
+        Returns a copy of the channel's schema.
+
+        Note that changes made to the returned object will not be applied to
+        the channel's schema.
+        """
+        ...
+
+    def schema_name(self) -> Optional[str]:
+        """The name of the schema for the channel."""
+        ...
+
+    def has_sinks(self) -> bool:
+        """Returns true if at least one sink is subscribed to this channel"""
+        ...
+
+    def close(self) -> None:
+        """Close the channel."""
+        ...
+
+    def log(
+        self,
+        message: "LocationFixes",
+        *,
+        log_time: int | None = None,
+        sink_id: int | None = None,
+    ) -> None:
+        """Log a Foxglove LocationFixes message on the channel."""
         ...
 
 class LogChannel:
@@ -1228,6 +1314,7 @@ class LogChannel:
         message: "Log",
         *,
         log_time: int | None = None,
+        sink_id: int | None = None,
     ) -> None:
         """Log a Foxglove Log message on the channel."""
         ...
@@ -1294,6 +1381,7 @@ class ModelPrimitiveChannel:
         message: "ModelPrimitive",
         *,
         log_time: int | None = None,
+        sink_id: int | None = None,
     ) -> None:
         """Log a Foxglove ModelPrimitive message on the channel."""
         ...
@@ -1360,6 +1448,7 @@ class PackedElementFieldChannel:
         message: "PackedElementField",
         *,
         log_time: int | None = None,
+        sink_id: int | None = None,
     ) -> None:
         """Log a Foxglove PackedElementField message on the channel."""
         ...
@@ -1426,6 +1515,7 @@ class Point2Channel:
         message: "Point2",
         *,
         log_time: int | None = None,
+        sink_id: int | None = None,
     ) -> None:
         """Log a Foxglove Point2 message on the channel."""
         ...
@@ -1492,6 +1582,7 @@ class Point3Channel:
         message: "Point3",
         *,
         log_time: int | None = None,
+        sink_id: int | None = None,
     ) -> None:
         """Log a Foxglove Point3 message on the channel."""
         ...
@@ -1558,6 +1649,7 @@ class PointCloudChannel:
         message: "PointCloud",
         *,
         log_time: int | None = None,
+        sink_id: int | None = None,
     ) -> None:
         """Log a Foxglove PointCloud message on the channel."""
         ...
@@ -1624,6 +1716,7 @@ class PointsAnnotationChannel:
         message: "PointsAnnotation",
         *,
         log_time: int | None = None,
+        sink_id: int | None = None,
     ) -> None:
         """Log a Foxglove PointsAnnotation message on the channel."""
         ...
@@ -1690,6 +1783,7 @@ class PoseChannel:
         message: "Pose",
         *,
         log_time: int | None = None,
+        sink_id: int | None = None,
     ) -> None:
         """Log a Foxglove Pose message on the channel."""
         ...
@@ -1756,6 +1850,7 @@ class PoseInFrameChannel:
         message: "PoseInFrame",
         *,
         log_time: int | None = None,
+        sink_id: int | None = None,
     ) -> None:
         """Log a Foxglove PoseInFrame message on the channel."""
         ...
@@ -1822,6 +1917,7 @@ class PosesInFrameChannel:
         message: "PosesInFrame",
         *,
         log_time: int | None = None,
+        sink_id: int | None = None,
     ) -> None:
         """Log a Foxglove PosesInFrame message on the channel."""
         ...
@@ -1888,6 +1984,7 @@ class QuaternionChannel:
         message: "Quaternion",
         *,
         log_time: int | None = None,
+        sink_id: int | None = None,
     ) -> None:
         """Log a Foxglove Quaternion message on the channel."""
         ...
@@ -1954,6 +2051,7 @@ class RawAudioChannel:
         message: "RawAudio",
         *,
         log_time: int | None = None,
+        sink_id: int | None = None,
     ) -> None:
         """Log a Foxglove RawAudio message on the channel."""
         ...
@@ -2020,6 +2118,7 @@ class RawImageChannel:
         message: "RawImage",
         *,
         log_time: int | None = None,
+        sink_id: int | None = None,
     ) -> None:
         """Log a Foxglove RawImage message on the channel."""
         ...
@@ -2086,6 +2185,7 @@ class SceneEntityChannel:
         message: "SceneEntity",
         *,
         log_time: int | None = None,
+        sink_id: int | None = None,
     ) -> None:
         """Log a Foxglove SceneEntity message on the channel."""
         ...
@@ -2152,6 +2252,7 @@ class SceneEntityDeletionChannel:
         message: "SceneEntityDeletion",
         *,
         log_time: int | None = None,
+        sink_id: int | None = None,
     ) -> None:
         """Log a Foxglove SceneEntityDeletion message on the channel."""
         ...
@@ -2218,6 +2319,7 @@ class SceneUpdateChannel:
         message: "SceneUpdate",
         *,
         log_time: int | None = None,
+        sink_id: int | None = None,
     ) -> None:
         """Log a Foxglove SceneUpdate message on the channel."""
         ...
@@ -2284,6 +2386,7 @@ class SpherePrimitiveChannel:
         message: "SpherePrimitive",
         *,
         log_time: int | None = None,
+        sink_id: int | None = None,
     ) -> None:
         """Log a Foxglove SpherePrimitive message on the channel."""
         ...
@@ -2350,6 +2453,7 @@ class TextAnnotationChannel:
         message: "TextAnnotation",
         *,
         log_time: int | None = None,
+        sink_id: int | None = None,
     ) -> None:
         """Log a Foxglove TextAnnotation message on the channel."""
         ...
@@ -2416,6 +2520,7 @@ class TextPrimitiveChannel:
         message: "TextPrimitive",
         *,
         log_time: int | None = None,
+        sink_id: int | None = None,
     ) -> None:
         """Log a Foxglove TextPrimitive message on the channel."""
         ...
@@ -2482,6 +2587,7 @@ class TriangleListPrimitiveChannel:
         message: "TriangleListPrimitive",
         *,
         log_time: int | None = None,
+        sink_id: int | None = None,
     ) -> None:
         """Log a Foxglove TriangleListPrimitive message on the channel."""
         ...
@@ -2548,6 +2654,7 @@ class Vector2Channel:
         message: "Vector2",
         *,
         log_time: int | None = None,
+        sink_id: int | None = None,
     ) -> None:
         """Log a Foxglove Vector2 message on the channel."""
         ...
@@ -2614,6 +2721,74 @@ class Vector3Channel:
         message: "Vector3",
         *,
         log_time: int | None = None,
+        sink_id: int | None = None,
     ) -> None:
         """Log a Foxglove Vector3 message on the channel."""
+        ...
+
+class VoxelGridChannel:
+    """
+    A channel for logging VoxelGrid messages
+
+    You should choose a unique topic name per channel.
+    """
+
+    def __new__(
+        cls,
+        topic: str,
+        *,
+        metadata: Optional[Dict[str, str]] = None,
+        context: Optional["Context"] = None,
+    ) -> "VoxelGridChannel": ...
+    def id(self) -> int:
+        """The unique ID of the channel."""
+        ...
+
+    def topic(self) -> str:
+        """The topic name of the channel."""
+        ...
+
+    @property
+    def message_encoding(self) -> str:
+        """The message encoding for the channel"""
+        ...
+
+    def metadata(self) -> Dict[str, str]:
+        """
+        Returns a copy of the channel's metadata.
+
+        Note that changes made to the returned dictionary will not be applied to
+        the channel's metadata.
+        """
+        ...
+
+    def schema(self) -> Optional[Schema]:
+        """
+        Returns a copy of the channel's schema.
+
+        Note that changes made to the returned object will not be applied to
+        the channel's schema.
+        """
+        ...
+
+    def schema_name(self) -> Optional[str]:
+        """The name of the schema for the channel."""
+        ...
+
+    def has_sinks(self) -> bool:
+        """Returns true if at least one sink is subscribed to this channel"""
+        ...
+
+    def close(self) -> None:
+        """Close the channel."""
+        ...
+
+    def log(
+        self,
+        message: "VoxelGrid",
+        *,
+        log_time: int | None = None,
+        sink_id: int | None = None,
+    ) -> None:
+        """Log a Foxglove VoxelGrid message on the channel."""
         ...

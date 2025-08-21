@@ -4,6 +4,8 @@ import { FoxgloveEnumSchema, FoxgloveMessageSchema, FoxglovePrimitive } from "./
 
 function primitiveToCpp(type: FoxglovePrimitive) {
   switch (type) {
+    case "int32":
+      return "int32_t";
     case "uint32":
       return "uint32_t";
     case "bytes":
@@ -14,15 +16,12 @@ function primitiveToCpp(type: FoxglovePrimitive) {
       return "bool";
     case "float64":
       return "double";
-    case "time":
-      return "std::optional<foxglove::Timestamp>";
-    case "duration":
-      return "std::optional<foxglove::Duration>";
   }
 }
 
 function primitiveDefaultValue(type: FoxglovePrimitive) {
   switch (type) {
+    case "int32":
     case "uint32":
       return 0;
     case "boolean":
@@ -31,8 +30,6 @@ function primitiveDefaultValue(type: FoxglovePrimitive) {
       return 0;
     case "string":
     case "bytes":
-    case "time":
-    case "duration":
       return undefined;
   }
 }
@@ -86,6 +83,14 @@ function* topologicalOrder(
     }
     yield schema;
   }
+}
+
+/**
+ * SDK does not yet generate channels for Timestamp and Duration because of custom implementations
+ * in other languages.
+ */
+function shouldGenerateChannel(schema: FoxgloveMessageSchema): boolean {
+  return schema.name !== "Timestamp" && schema.name !== "Duration";
 }
 
 export function generateHppSchemas(
@@ -162,7 +167,7 @@ export function generateHppSchemas(
     ].join("\n");
   });
 
-  const channelClasses = schemas.map(
+  const channelClasses = schemas.filter(shouldGenerateChannel).map(
     (schema) => `/// @brief A channel for logging ${schema.name} messages to a topic.
       ///
       /// @note While channels are fully thread-safe, the ${schema.name} struct is not thread-safe.
@@ -181,7 +186,8 @@ export function generateHppSchemas(
         ///
         /// @param msg The ${schema.name} message to log.
         /// @param log_time The timestamp of the message. If omitted, the current time is used.
-        FoxgloveError log(const ${schema.name}& msg, std::optional<uint64_t> log_time = std::nullopt) noexcept;
+        /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
+        FoxgloveError log(const ${schema.name}& msg, std::optional<uint64_t> log_time = std::nullopt, std::optional<uint64_t> sink_id = std::nullopt) noexcept;
 
         /// @brief Uniquely identifies a channel in the context of this program.
         ///
@@ -214,7 +220,6 @@ export function generateHppSchemas(
     "#include <optional>",
     "#include <memory>",
     "",
-    "#include <foxglove/time.hpp>",
     "#include <foxglove/error.hpp>",
     "#include <foxglove/context.hpp>",
   ];
@@ -280,16 +285,16 @@ function cppToC(schema: FoxgloveMessageSchema, copyTypes: Set<string>): string[]
           return `dest.${dstName} = {src.${srcName}.data(), src.${srcName}.size()};`;
         } else if (field.type.name === "bytes") {
           return `dest.${dstName} = reinterpret_cast<const unsigned char *>(src.${srcName}.data());\n    dest.${dstName}_len = src.${srcName}.size();`;
-        } else if (field.type.name === "time") {
-          return `dest.${dstName} = src.${srcName} ? reinterpret_cast<const foxglove_timestamp*>(&*src.${srcName}) : nullptr;`;
-        } else if (field.type.name === "duration") {
-          return `dest.${dstName} = src.${srcName} ? reinterpret_cast<const foxglove_duration*>(&*src.${srcName}) : nullptr;`;
         }
         return `dest.${dstName} = src.${srcName};`;
       case "enum":
         return `dest.${dstName} = static_cast<foxglove_${toSnakeCase(field.type.enum.name)}>(src.${srcName});`;
       case "nested":
-        if (copyTypes.has(field.type.schema.name)) {
+        if (field.type.schema.name === "Timestamp") {
+          return `dest.${dstName} = src.${srcName} ? reinterpret_cast<const foxglove_timestamp*>(&*src.${srcName}) : nullptr;`;
+        } else if (field.type.schema.name === "Duration") {
+          return `dest.${dstName} = src.${srcName} ? reinterpret_cast<const foxglove_duration*>(&*src.${srcName}) : nullptr;`;
+        } else if (copyTypes.has(field.type.schema.name)) {
           return `dest.${dstName} = src.${srcName} ? reinterpret_cast<const foxglove_${toSnakeCase(field.type.schema.name)}*>(&*src.${srcName}) : nullptr;`;
         } else {
           return `dest.${dstName} = src.${srcName} ? arena.map_one<foxglove_${toSnakeCase(field.type.schema.name)}>(src.${srcName}.value(), ${toCamelCase(field.type.schema.name)}ToC) : nullptr;`;
@@ -319,19 +324,19 @@ export function generateCppSchemas(schemas: FoxgloveMessageSchema[]): string {
     ];
   });
 
-  const traitSpecializations = schemas.flatMap((schema) => {
+  const traitSpecializations = schemas.filter(shouldGenerateChannel).flatMap((schema) => {
     const snakeName = toSnakeCase(schema.name);
     let conversionCode;
     if (isSameAsCType(schema)) {
       conversionCode = [
-        `    return FoxgloveError(foxglove_channel_log_${snakeName}(impl_.get(), reinterpret_cast<const foxglove_${snakeName}*>(&msg), log_time ? &*log_time : nullptr));`,
+        `    return FoxgloveError(foxglove_channel_log_${snakeName}(impl_.get(), reinterpret_cast<const foxglove_${snakeName}*>(&msg), log_time ? &*log_time : nullptr, sink_id ? *sink_id : 0));`,
       ];
     } else {
       conversionCode = [
         "    Arena arena;",
         `    foxglove_${snakeName} c_msg;`,
         `    ${toCamelCase(schema.name)}ToC(c_msg, msg, arena);`,
-        `    return FoxgloveError(foxglove_channel_log_${snakeName}(impl_.get(), &c_msg, log_time ? &*log_time : nullptr));`,
+        `    return FoxgloveError(foxglove_channel_log_${snakeName}(impl_.get(), &c_msg, log_time ? &*log_time : nullptr, sink_id ? *sink_id : 0));`,
       ];
     }
 
@@ -340,11 +345,11 @@ export function generateCppSchemas(schemas: FoxgloveMessageSchema[]): string {
       "    const foxglove_channel* channel = nullptr;",
       `    foxglove_error error = foxglove_channel_create_${snakeName}({topic.data(), topic.size()}, context.getInner(), &channel);`,
       "    if (error != foxglove_error::FOXGLOVE_ERROR_OK || channel == nullptr) {",
-      "      return foxglove::unexpected(FoxgloveError(error));",
+      "      return tl::unexpected(FoxgloveError(error));",
       "    }",
       `    return ${schema.name}Channel(ChannelUniquePtr(channel));`,
       "}\n",
-      `FoxgloveError ${schema.name}Channel::log(const ${schema.name}& msg, std::optional<uint64_t> log_time) noexcept {`,
+      `FoxgloveError ${schema.name}Channel::log(const ${schema.name}& msg, std::optional<uint64_t> log_time, std::optional<uint64_t> sink_id) noexcept {`,
       ...conversionCode,
       "}\n",
       `uint64_t ${schema.name}Channel::id() const noexcept {`,

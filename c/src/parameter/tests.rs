@@ -118,11 +118,11 @@ fn make_dict_param() -> *mut FoxgloveParameter {
     let array_ptr = foxglove_parameter_value_array_create(2);
     array_insert!(
         array_ptr,
-        foxglove_parameter_value_create_number(std::f64::consts::E)
+        foxglove_parameter_value_create_float64(std::f64::consts::E)
     );
     array_insert!(
         array_ptr,
-        foxglove_parameter_value_create_number(std::f64::consts::PI)
+        foxglove_parameter_value_create_float64(std::f64::consts::PI)
     );
     dict_insert!(
         inner,
@@ -138,8 +138,8 @@ fn make_dict_param() -> *mut FoxgloveParameter {
     );
     dict_insert!(
         outer,
-        "number",
-        foxglove_parameter_value_create_number(1.23)
+        "float64",
+        foxglove_parameter_value_create_float64(1.23)
     );
     dict_insert!(outer, "nested", foxglove_parameter_value_create_dict(inner));
 
@@ -154,16 +154,16 @@ fn make_dict_native() -> Parameter {
         "outer",
         maplit::btreemap! {
             "bool".into() => ParameterValue::Bool(false),
-            "number".into() => ParameterValue::Number(1.23),
             "nested".into() => ParameterValue::Dict(
                 maplit::btreemap! {
                     "string".into() => ParameterValue::String("xyzzy".into()),
                     "f64[]".into() => ParameterValue::Array(vec![
-                        ParameterValue::Number(std::f64::consts::E),
-                        ParameterValue::Number(std::f64::consts::PI),
+                        ParameterValue::Float64(std::f64::consts::E),
+                        ParameterValue::Float64(std::f64::consts::PI),
                     ]),
                 }
-            )
+            ),
+            "float64".into() => ParameterValue::Float64(1.23),
         },
     )
 }

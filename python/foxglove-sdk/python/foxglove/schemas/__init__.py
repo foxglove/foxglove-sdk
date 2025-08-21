@@ -31,6 +31,7 @@ from foxglove._foxglove_py.schemas import (
     LinePrimitive,
     LinePrimitiveLineType,
     LocationFix,
+    LocationFixes,
     LocationFixPositionCovarianceType,
     Log,
     LogLevel,
@@ -59,6 +60,7 @@ from foxglove._foxglove_py.schemas import (
     TriangleListPrimitive,
     Vector2,
     Vector3,
+    VoxelGrid,
 )
 
 FoxgloveSchema = Union[
@@ -70,6 +72,7 @@ FoxgloveSchema = Union[
     CompressedVideo,
     CubePrimitive,
     CylinderPrimitive,
+    Duration,
     FrameTransform,
     FrameTransforms,
     GeoJson,
@@ -79,6 +82,7 @@ FoxgloveSchema = Union[
     LaserScan,
     LinePrimitive,
     LocationFix,
+    LocationFixes,
     Log,
     ModelPrimitive,
     PackedElementField,
@@ -98,9 +102,11 @@ FoxgloveSchema = Union[
     SpherePrimitive,
     TextAnnotation,
     TextPrimitive,
+    Timestamp,
     TriangleListPrimitive,
     Vector2,
     Vector3,
+    VoxelGrid,
 ]
 
 __all__ = [
@@ -125,6 +131,7 @@ __all__ = [
     "LinePrimitiveLineType",
     "LocationFix",
     "LocationFixPositionCovarianceType",
+    "LocationFixes",
     "Log",
     "LogLevel",
     "ModelPrimitive",
@@ -152,4 +159,5 @@ __all__ = [
     "TriangleListPrimitive",
     "Vector2",
     "Vector3",
+    "VoxelGrid",
 ]

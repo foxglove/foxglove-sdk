@@ -204,7 +204,8 @@ enum foxglove_parameter_value_tag
   : uint8_t
 #endif // __cplusplus
  {
-  FOXGLOVE_PARAMETER_VALUE_TAG_NUMBER,
+  FOXGLOVE_PARAMETER_VALUE_TAG_FLOAT64,
+  FOXGLOVE_PARAMETER_VALUE_TAG_INTEGER,
   FOXGLOVE_PARAMETER_VALUE_TAG_BOOLEAN,
   FOXGLOVE_PARAMETER_VALUE_TAG_STRING,
   FOXGLOVE_PARAMETER_VALUE_TAG_ARRAY,
@@ -301,6 +302,13 @@ typedef struct foxglove_string {
   size_t len;
 } foxglove_string;
 
+typedef uint64_t FoxgloveSinkId;
+
+typedef struct foxglove_client_metadata {
+  uint32_t id;
+  FoxgloveSinkId sink_id;
+} foxglove_client_metadata;
+
 typedef struct foxglove_client_channel {
   uint32_t id;
   const char *topic;
@@ -371,7 +379,8 @@ typedef struct foxglove_parameter_value_dict {
  * Storage for `FoxgloveParameterValue`.
  */
 typedef union foxglove_parameter_value_data {
-  double number;
+  double float64;
+  int64_t integer;
   bool boolean;
   struct foxglove_string string;
   struct foxglove_parameter_value_array array;
@@ -439,8 +448,12 @@ typedef struct foxglove_server_callbacks {
    * A user-defined value that will be passed to callback functions
    */
   const void *context;
-  void (*on_subscribe)(const void *context, uint64_t channel_id);
-  void (*on_unsubscribe)(const void *context, uint64_t channel_id);
+  void (*on_subscribe)(const void *context,
+                       uint64_t channel_id,
+                       struct foxglove_client_metadata client);
+  void (*on_unsubscribe)(const void *context,
+                         uint64_t channel_id,
+                         struct foxglove_client_metadata client);
   void (*on_client_advertise)(const void *context,
                               uint32_t client_id,
                               const struct foxglove_client_channel *channel);
@@ -486,7 +499,8 @@ typedef struct foxglove_server_callbacks {
    * `foxglove_parameter_array_create`. Ownership of this value is transferred to the callee, who
    * is responsible for freeing it. A NULL return value is treated as an empty array.
    *
-   * All clients subscribed to updates for the returned parameters will be notified.
+   * All clients subscribed to updates for the returned parameters will be notified. Note that if a
+   * returned parameter is unset, it will not be published to clients.
    */
   struct foxglove_parameter_array *(*on_set_parameters)(const void *context,
                                                         uint32_t client_id,
@@ -782,7 +796,7 @@ typedef struct foxglove_camera_calibration {
   /**
    * Name of distortion model
    *
-   * Supported parameters: `plumb_bob` (k1, k2, p1, p2, k3), `rational_polynomial` (k1, k2, p1, p2, k3, k4, k5, k6), and `kannala_brandt` (k1, k2, k3, k4). `plumb_bob` and `rational_polynomial` models are based on the pinhole model [OpenCV's](https://docs.opencv.org/4.11.0/d9/d0c/group__calib3d.html) [pinhole camera model](https://en.wikipedia.org/wiki/Distortion_%28optics%29#Software_correction). The `kannala_brandt` model is matches the [OpenvCV fisheye](https://docs.opencv.org/4.11.0/db/d58/group__calib3d__fisheye.html) model.
+   * Supported parameters: `plumb_bob` (k1, k2, p1, p2, k3), `rational_polynomial` (k1, k2, p1, p2, k3, k4, k5, k6), and `kannala_brandt` (k1, k2, k3, k4). `plumb_bob` and `rational_polynomial` models are based on the pinhole model [OpenCV's](https://docs.opencv.org/4.11.0/d9/d0c/group__calib3d.html) [pinhole camera model](https://en.wikipedia.org/wiki/Distortion_%28optics%29#Software_correction). The `kannala_brandt` model matches the [OpenvCV fisheye](https://docs.opencv.org/4.11.0/db/d58/group__calib3d__fisheye.html) model.
    */
   struct foxglove_string distortion_model;
   /**
@@ -1124,11 +1138,70 @@ typedef struct foxglove_grid {
   const struct foxglove_packed_element_field *fields;
   size_t fields_count;
   /**
-   * Grid cell data, interpreted using `fields`, in row-major (y-major) order — values fill each row from left to right along the X axis, with rows ordered from top to bottom along the Y axis, starting at the bottom-left corner when viewed from +Z looking towards -Z with identity orientations
+   * Grid cell data, interpreted using `fields`, in row-major (y-major) order.
+   *  For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
+   *  y = (i / cell_stride) % row_stride * cell_size.y
+   *  x = i % cell_stride * cell_size.x
    */
   const unsigned char *data;
   size_t data_len;
 } foxglove_grid;
+
+/**
+ * A 3D grid of data
+ */
+typedef struct foxglove_voxel_grid {
+  /**
+   * Timestamp of grid
+   */
+  const struct foxglove_timestamp *timestamp;
+  /**
+   * Frame of reference
+   */
+  struct foxglove_string frame_id;
+  /**
+   * Origin of grid's corner relative to frame of reference
+   */
+  const struct foxglove_pose *pose;
+  /**
+   * Number of grid rows
+   */
+  uint32_t row_count;
+  /**
+   * Number of grid columns
+   */
+  uint32_t column_count;
+  /**
+   * Size of single grid cell along x, y, and z axes, relative to `pose`
+   */
+  const struct foxglove_vector3 *cell_size;
+  /**
+   * Number of bytes between depth slices in `data`
+   */
+  uint32_t slice_stride;
+  /**
+   * Number of bytes between rows in `data`
+   */
+  uint32_t row_stride;
+  /**
+   * Number of bytes between cells within a row in `data`
+   */
+  uint32_t cell_stride;
+  /**
+   * Fields in `data`. `red`, `green`, `blue`, and `alpha` are optional for customizing the grid's color.
+   */
+  const struct foxglove_packed_element_field *fields;
+  size_t fields_count;
+  /**
+   * Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order.
+   *  For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
+   *  z = i / slice_stride * cell_size.z
+   *  y = (i % slice_stride) / row_stride * cell_size.y
+   *  x = (i % row_stride) / cell_stride * cell_size.x
+   */
+  const unsigned char *data;
+  size_t data_len;
+} foxglove_voxel_grid;
 
 /**
  * An array of points on a 2D image
@@ -1362,7 +1435,22 @@ typedef struct foxglove_location_fix {
    * If `position_covariance` is available, `position_covariance_type` must be set to indicate the type of covariance.
    */
   foxglove_position_covariance_type position_covariance_type;
+  /**
+   * Color used to visualize the location
+   */
+  const struct foxglove_color *color;
 } foxglove_location_fix;
+
+/**
+ * A group of LocationFix messages
+ */
+typedef struct foxglove_location_fixes {
+  /**
+   * An array of location fixes
+   */
+  const struct foxglove_location_fix *fixes;
+  size_t fixes_count;
+} foxglove_location_fixes;
 
 /**
  * A log message
@@ -1739,25 +1827,76 @@ typedef struct foxglove_raw_image {
    */
   struct foxglove_string frame_id;
   /**
-   * Image width
+   * Image width in pixels
    */
   uint32_t width;
   /**
-   * Image height
+   * Image height in pixels
    */
   uint32_t height;
   /**
-   * Encoding of the raw image data
-   *
-   * Supported values: `8UC1`, `8UC3`, `16UC1` (little endian), `32FC1` (little endian), `bayer_bggr8`, `bayer_gbrg8`, `bayer_grbg8`, `bayer_rggb8`, `bgr8`, `bgra8`, `mono8`, `mono16`, `rgb8`, `rgba8`, `uyvy` or `yuv422`, `yuyv` or `yuv422_yuy2`
+   * Encoding of the raw image data. See the `data` field description for supported values.
    */
   struct foxglove_string encoding;
   /**
-   * Byte length of a single row
+   * Byte length of a single row. This is usually some multiple of `width` depending on the encoding, but can be greater to incorporate padding.
    */
   uint32_t step;
   /**
-   * Raw image data
+   * Raw image data.
+   *
+   * For each `encoding` value, the `data` field contains image pixel data serialized as follows:
+   *
+   * - `yuv422` or `uyvy`:
+   *   - Pixel colors are decomposed into [Y'UV](https://en.wikipedia.org/wiki/Y%E2%80%B2UV) channels.
+   *   - Pixel channel values are represented as unsigned 8-bit integers.
+   *   - U and V values are shared between horizontal pairs of pixels. Each pair of output pixels is serialized as [U, Y1, V, Y2].
+   *   - `step` must be greater than or equal to `width` * 2.
+   * - `yuv422_yuy2` or  `yuyv`:
+   *   - Pixel colors are decomposed into [Y'UV](https://en.wikipedia.org/wiki/Y%E2%80%B2UV) channels.
+   *   - Pixel channel values are represented as unsigned 8-bit integers.
+   *   - U and V values are shared between horizontal pairs of pixels. Each pair of output pixels is encoded as [Y1, U, Y2, V].
+   *   - `step` must be greater than or equal to `width` * 2.
+   * - `rgb8`:
+   *   - Pixel colors are decomposed into Red, Green, and Blue channels.
+   *   - Pixel channel values are represented as unsigned 8-bit integers.
+   *   - Each output pixel is serialized as [R, G, B].
+   *   - `step` must be greater than or equal to `width` * 3.
+   * - `rgba8`:
+   *   - Pixel colors are decomposed into Red, Green, Blue, and Alpha channels.
+   *   - Pixel channel values are represented as unsigned 8-bit integers.
+   *   - Each output pixel is serialized as [R, G, B, Alpha].
+   *   - `step` must be greater than or equal to `width` * 4.
+   * - `bgr8` or `8UC3`:
+   *   - Pixel colors are decomposed into Red, Blue, Green, and Alpha channels.
+   *   - Pixel channel values are represented as unsigned 8-bit integers.
+   *   - Each output pixel is serialized as [B, G, R].
+   *   - `step` must be greater than or equal to `width` * 3.
+   * - `bgra8`:
+   *   - Pixel colors are decomposed into Blue, Green, Red, and Alpha channels.
+   *   - Pixel channel values are represented as unsigned 8-bit integers.
+   *   - Each output pixel is encoded as [B, G, R, Alpha].
+   *   - `step` must be greater than or equal to `width` * 4.
+   * - `32FC1`:
+   *   - Pixel brightness is represented as a single-channel, 32-bit little-endian IEEE 754 floating-point value, ranging from 0.0 (black) to 1.0 (white).
+   *   - `step` must be greater than or equal to `width` * 4.
+   * - `bayer_rggb8`, `bayer_bggr8`, `bayer_rggb8`, `bayer_gbrg8`, or `bayer_grgb8`:
+   *   - Pixel colors are decomposed into Red, Blue and Green channels.
+   *   - Pixel channel values are represented as unsigned 8-bit integers, and serialized in a 2x2 bayer filter pattern.
+   *   - The order of the four letters after `bayer_` determine the layout, so for `bayer_wxyz8` the pattern is:
+   *   ```plaintext
+   *   w | x
+   *   - + -
+   *   y | z
+   *   ```
+   *   - `step` must be greater than or equal to `width`.
+   * - `mono8` or `8UC1`:
+   *   - Pixel brightness is represented as unsigned 8-bit integers.
+   *   - `step` must be greater than or equal to `width`.
+   * - `mono16` or `16UC1`:
+   *   - Pixel brightness is represented as 16-bit unsigned little-endian integers. Rendering of these values is controlled in [Image panel color mode settings](https://docs.foxglove.dev/docs/visualization/panels/image#general).
+   *   - `step` must be greater than or equal to `width` * 2.
+   *
    */
   const unsigned char *data;
   size_t data_len;
@@ -2132,7 +2271,8 @@ void foxglove_channel_metadata_iter_free(struct foxglove_channel_metadata_iterat
 foxglove_error foxglove_channel_log(const struct foxglove_channel *channel,
                                     const uint8_t *data,
                                     size_t data_len,
-                                    const uint64_t *log_time);
+                                    const uint64_t *log_time,
+                                    FoxgloveSinkId sink_id);
 
 /**
  * Create a new context. This never fails.
@@ -2176,7 +2316,8 @@ foxglove_error foxglove_channel_create_arrow_primitive(struct foxglove_string to
  */
 foxglove_error foxglove_channel_log_arrow_primitive(const struct foxglove_channel *channel,
                                                     const struct foxglove_arrow_primitive *msg,
-                                                    const uint64_t *log_time);
+                                                    const uint64_t *log_time,
+                                                    FoxgloveSinkId sink_id);
 
 /**
  * Create a new typed channel, and return an owned raw channel pointer to it.
@@ -2196,7 +2337,8 @@ foxglove_error foxglove_channel_create_camera_calibration(struct foxglove_string
  */
 foxglove_error foxglove_channel_log_camera_calibration(const struct foxglove_channel *channel,
                                                        const struct foxglove_camera_calibration *msg,
-                                                       const uint64_t *log_time);
+                                                       const uint64_t *log_time,
+                                                       FoxgloveSinkId sink_id);
 
 /**
  * Create a new typed channel, and return an owned raw channel pointer to it.
@@ -2216,7 +2358,8 @@ foxglove_error foxglove_channel_create_circle_annotation(struct foxglove_string 
  */
 foxglove_error foxglove_channel_log_circle_annotation(const struct foxglove_channel *channel,
                                                       const struct foxglove_circle_annotation *msg,
-                                                      const uint64_t *log_time);
+                                                      const uint64_t *log_time,
+                                                      FoxgloveSinkId sink_id);
 
 /**
  * Create a new typed channel, and return an owned raw channel pointer to it.
@@ -2236,7 +2379,8 @@ foxglove_error foxglove_channel_create_color(struct foxglove_string topic,
  */
 foxglove_error foxglove_channel_log_color(const struct foxglove_channel *channel,
                                           const struct foxglove_color *msg,
-                                          const uint64_t *log_time);
+                                          const uint64_t *log_time,
+                                          FoxgloveSinkId sink_id);
 
 /**
  * Create a new typed channel, and return an owned raw channel pointer to it.
@@ -2256,7 +2400,8 @@ foxglove_error foxglove_channel_create_compressed_image(struct foxglove_string t
  */
 foxglove_error foxglove_channel_log_compressed_image(const struct foxglove_channel *channel,
                                                      const struct foxglove_compressed_image *msg,
-                                                     const uint64_t *log_time);
+                                                     const uint64_t *log_time,
+                                                     FoxgloveSinkId sink_id);
 
 /**
  * Create a new typed channel, and return an owned raw channel pointer to it.
@@ -2276,7 +2421,8 @@ foxglove_error foxglove_channel_create_compressed_video(struct foxglove_string t
  */
 foxglove_error foxglove_channel_log_compressed_video(const struct foxglove_channel *channel,
                                                      const struct foxglove_compressed_video *msg,
-                                                     const uint64_t *log_time);
+                                                     const uint64_t *log_time,
+                                                     FoxgloveSinkId sink_id);
 
 /**
  * Create a new typed channel, and return an owned raw channel pointer to it.
@@ -2296,7 +2442,8 @@ foxglove_error foxglove_channel_create_cylinder_primitive(struct foxglove_string
  */
 foxglove_error foxglove_channel_log_cylinder_primitive(const struct foxglove_channel *channel,
                                                        const struct foxglove_cylinder_primitive *msg,
-                                                       const uint64_t *log_time);
+                                                       const uint64_t *log_time,
+                                                       FoxgloveSinkId sink_id);
 
 /**
  * Create a new typed channel, and return an owned raw channel pointer to it.
@@ -2316,7 +2463,8 @@ foxglove_error foxglove_channel_create_cube_primitive(struct foxglove_string top
  */
 foxglove_error foxglove_channel_log_cube_primitive(const struct foxglove_channel *channel,
                                                    const struct foxglove_cube_primitive *msg,
-                                                   const uint64_t *log_time);
+                                                   const uint64_t *log_time,
+                                                   FoxgloveSinkId sink_id);
 
 /**
  * Create a new typed channel, and return an owned raw channel pointer to it.
@@ -2336,7 +2484,8 @@ foxglove_error foxglove_channel_create_frame_transform(struct foxglove_string to
  */
 foxglove_error foxglove_channel_log_frame_transform(const struct foxglove_channel *channel,
                                                     const struct foxglove_frame_transform *msg,
-                                                    const uint64_t *log_time);
+                                                    const uint64_t *log_time,
+                                                    FoxgloveSinkId sink_id);
 
 /**
  * Create a new typed channel, and return an owned raw channel pointer to it.
@@ -2356,7 +2505,8 @@ foxglove_error foxglove_channel_create_frame_transforms(struct foxglove_string t
  */
 foxglove_error foxglove_channel_log_frame_transforms(const struct foxglove_channel *channel,
                                                      const struct foxglove_frame_transforms *msg,
-                                                     const uint64_t *log_time);
+                                                     const uint64_t *log_time,
+                                                     FoxgloveSinkId sink_id);
 
 /**
  * Create a new typed channel, and return an owned raw channel pointer to it.
@@ -2376,7 +2526,8 @@ foxglove_error foxglove_channel_create_geo_json(struct foxglove_string topic,
  */
 foxglove_error foxglove_channel_log_geo_json(const struct foxglove_channel *channel,
                                              const struct foxglove_geo_json *msg,
-                                             const uint64_t *log_time);
+                                             const uint64_t *log_time,
+                                             FoxgloveSinkId sink_id);
 
 /**
  * Create a new typed channel, and return an owned raw channel pointer to it.
@@ -2396,7 +2547,29 @@ foxglove_error foxglove_channel_create_grid(struct foxglove_string topic,
  */
 foxglove_error foxglove_channel_log_grid(const struct foxglove_channel *channel,
                                          const struct foxglove_grid *msg,
-                                         const uint64_t *log_time);
+                                         const uint64_t *log_time,
+                                         FoxgloveSinkId sink_id);
+
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
+foxglove_error foxglove_channel_create_voxel_grid(struct foxglove_string topic,
+                                                  const struct foxglove_context *context,
+                                                  const struct foxglove_channel **channel);
+
+/**
+ * Log a VoxelGrid message to a channel.
+ *
+ * # Safety
+ * The channel must have been created for this type with foxglove_channel_create_voxel_grid.
+ */
+foxglove_error foxglove_channel_log_voxel_grid(const struct foxglove_channel *channel,
+                                               const struct foxglove_voxel_grid *msg,
+                                               const uint64_t *log_time,
+                                               FoxgloveSinkId sink_id);
 
 /**
  * Create a new typed channel, and return an owned raw channel pointer to it.
@@ -2416,7 +2589,8 @@ foxglove_error foxglove_channel_create_image_annotations(struct foxglove_string 
  */
 foxglove_error foxglove_channel_log_image_annotations(const struct foxglove_channel *channel,
                                                       const struct foxglove_image_annotations *msg,
-                                                      const uint64_t *log_time);
+                                                      const uint64_t *log_time,
+                                                      FoxgloveSinkId sink_id);
 
 /**
  * Create a new typed channel, and return an owned raw channel pointer to it.
@@ -2436,7 +2610,8 @@ foxglove_error foxglove_channel_create_key_value_pair(struct foxglove_string top
  */
 foxglove_error foxglove_channel_log_key_value_pair(const struct foxglove_channel *channel,
                                                    const struct foxglove_key_value_pair *msg,
-                                                   const uint64_t *log_time);
+                                                   const uint64_t *log_time,
+                                                   FoxgloveSinkId sink_id);
 
 /**
  * Create a new typed channel, and return an owned raw channel pointer to it.
@@ -2456,7 +2631,8 @@ foxglove_error foxglove_channel_create_laser_scan(struct foxglove_string topic,
  */
 foxglove_error foxglove_channel_log_laser_scan(const struct foxglove_channel *channel,
                                                const struct foxglove_laser_scan *msg,
-                                               const uint64_t *log_time);
+                                               const uint64_t *log_time,
+                                               FoxgloveSinkId sink_id);
 
 /**
  * Create a new typed channel, and return an owned raw channel pointer to it.
@@ -2476,7 +2652,8 @@ foxglove_error foxglove_channel_create_line_primitive(struct foxglove_string top
  */
 foxglove_error foxglove_channel_log_line_primitive(const struct foxglove_channel *channel,
                                                    const struct foxglove_line_primitive *msg,
-                                                   const uint64_t *log_time);
+                                                   const uint64_t *log_time,
+                                                   FoxgloveSinkId sink_id);
 
 /**
  * Create a new typed channel, and return an owned raw channel pointer to it.
@@ -2496,7 +2673,29 @@ foxglove_error foxglove_channel_create_location_fix(struct foxglove_string topic
  */
 foxglove_error foxglove_channel_log_location_fix(const struct foxglove_channel *channel,
                                                  const struct foxglove_location_fix *msg,
-                                                 const uint64_t *log_time);
+                                                 const uint64_t *log_time,
+                                                 FoxgloveSinkId sink_id);
+
+/**
+ * Create a new typed channel, and return an owned raw channel pointer to it.
+ *
+ * # Safety
+ * We're trusting the caller that the channel will only be used with this type T.
+ */
+foxglove_error foxglove_channel_create_location_fixes(struct foxglove_string topic,
+                                                      const struct foxglove_context *context,
+                                                      const struct foxglove_channel **channel);
+
+/**
+ * Log a LocationFixes message to a channel.
+ *
+ * # Safety
+ * The channel must have been created for this type with foxglove_channel_create_location_fixes.
+ */
+foxglove_error foxglove_channel_log_location_fixes(const struct foxglove_channel *channel,
+                                                   const struct foxglove_location_fixes *msg,
+                                                   const uint64_t *log_time,
+                                                   FoxgloveSinkId sink_id);
 
 /**
  * Create a new typed channel, and return an owned raw channel pointer to it.
@@ -2516,7 +2715,8 @@ foxglove_error foxglove_channel_create_log(struct foxglove_string topic,
  */
 foxglove_error foxglove_channel_log_log(const struct foxglove_channel *channel,
                                         const struct foxglove_log *msg,
-                                        const uint64_t *log_time);
+                                        const uint64_t *log_time,
+                                        FoxgloveSinkId sink_id);
 
 /**
  * Create a new typed channel, and return an owned raw channel pointer to it.
@@ -2536,7 +2736,8 @@ foxglove_error foxglove_channel_create_scene_entity_deletion(struct foxglove_str
  */
 foxglove_error foxglove_channel_log_scene_entity_deletion(const struct foxglove_channel *channel,
                                                           const struct foxglove_scene_entity_deletion *msg,
-                                                          const uint64_t *log_time);
+                                                          const uint64_t *log_time,
+                                                          FoxgloveSinkId sink_id);
 
 /**
  * Create a new typed channel, and return an owned raw channel pointer to it.
@@ -2556,7 +2757,8 @@ foxglove_error foxglove_channel_create_scene_entity(struct foxglove_string topic
  */
 foxglove_error foxglove_channel_log_scene_entity(const struct foxglove_channel *channel,
                                                  const struct foxglove_scene_entity *msg,
-                                                 const uint64_t *log_time);
+                                                 const uint64_t *log_time,
+                                                 FoxgloveSinkId sink_id);
 
 /**
  * Create a new typed channel, and return an owned raw channel pointer to it.
@@ -2576,7 +2778,8 @@ foxglove_error foxglove_channel_create_scene_update(struct foxglove_string topic
  */
 foxglove_error foxglove_channel_log_scene_update(const struct foxglove_channel *channel,
                                                  const struct foxglove_scene_update *msg,
-                                                 const uint64_t *log_time);
+                                                 const uint64_t *log_time,
+                                                 FoxgloveSinkId sink_id);
 
 /**
  * Create a new typed channel, and return an owned raw channel pointer to it.
@@ -2596,7 +2799,8 @@ foxglove_error foxglove_channel_create_model_primitive(struct foxglove_string to
  */
 foxglove_error foxglove_channel_log_model_primitive(const struct foxglove_channel *channel,
                                                     const struct foxglove_model_primitive *msg,
-                                                    const uint64_t *log_time);
+                                                    const uint64_t *log_time,
+                                                    FoxgloveSinkId sink_id);
 
 /**
  * Create a new typed channel, and return an owned raw channel pointer to it.
@@ -2616,7 +2820,8 @@ foxglove_error foxglove_channel_create_packed_element_field(struct foxglove_stri
  */
 foxglove_error foxglove_channel_log_packed_element_field(const struct foxglove_channel *channel,
                                                          const struct foxglove_packed_element_field *msg,
-                                                         const uint64_t *log_time);
+                                                         const uint64_t *log_time,
+                                                         FoxgloveSinkId sink_id);
 
 /**
  * Create a new typed channel, and return an owned raw channel pointer to it.
@@ -2636,7 +2841,8 @@ foxglove_error foxglove_channel_create_point2(struct foxglove_string topic,
  */
 foxglove_error foxglove_channel_log_point2(const struct foxglove_channel *channel,
                                            const struct foxglove_point2 *msg,
-                                           const uint64_t *log_time);
+                                           const uint64_t *log_time,
+                                           FoxgloveSinkId sink_id);
 
 /**
  * Create a new typed channel, and return an owned raw channel pointer to it.
@@ -2656,7 +2862,8 @@ foxglove_error foxglove_channel_create_point3(struct foxglove_string topic,
  */
 foxglove_error foxglove_channel_log_point3(const struct foxglove_channel *channel,
                                            const struct foxglove_point3 *msg,
-                                           const uint64_t *log_time);
+                                           const uint64_t *log_time,
+                                           FoxgloveSinkId sink_id);
 
 /**
  * Create a new typed channel, and return an owned raw channel pointer to it.
@@ -2676,7 +2883,8 @@ foxglove_error foxglove_channel_create_point_cloud(struct foxglove_string topic,
  */
 foxglove_error foxglove_channel_log_point_cloud(const struct foxglove_channel *channel,
                                                 const struct foxglove_point_cloud *msg,
-                                                const uint64_t *log_time);
+                                                const uint64_t *log_time,
+                                                FoxgloveSinkId sink_id);
 
 /**
  * Create a new typed channel, and return an owned raw channel pointer to it.
@@ -2696,7 +2904,8 @@ foxglove_error foxglove_channel_create_points_annotation(struct foxglove_string 
  */
 foxglove_error foxglove_channel_log_points_annotation(const struct foxglove_channel *channel,
                                                       const struct foxglove_points_annotation *msg,
-                                                      const uint64_t *log_time);
+                                                      const uint64_t *log_time,
+                                                      FoxgloveSinkId sink_id);
 
 /**
  * Create a new typed channel, and return an owned raw channel pointer to it.
@@ -2716,7 +2925,8 @@ foxglove_error foxglove_channel_create_pose(struct foxglove_string topic,
  */
 foxglove_error foxglove_channel_log_pose(const struct foxglove_channel *channel,
                                          const struct foxglove_pose *msg,
-                                         const uint64_t *log_time);
+                                         const uint64_t *log_time,
+                                         FoxgloveSinkId sink_id);
 
 /**
  * Create a new typed channel, and return an owned raw channel pointer to it.
@@ -2736,7 +2946,8 @@ foxglove_error foxglove_channel_create_pose_in_frame(struct foxglove_string topi
  */
 foxglove_error foxglove_channel_log_pose_in_frame(const struct foxglove_channel *channel,
                                                   const struct foxglove_pose_in_frame *msg,
-                                                  const uint64_t *log_time);
+                                                  const uint64_t *log_time,
+                                                  FoxgloveSinkId sink_id);
 
 /**
  * Create a new typed channel, and return an owned raw channel pointer to it.
@@ -2756,7 +2967,8 @@ foxglove_error foxglove_channel_create_poses_in_frame(struct foxglove_string top
  */
 foxglove_error foxglove_channel_log_poses_in_frame(const struct foxglove_channel *channel,
                                                    const struct foxglove_poses_in_frame *msg,
-                                                   const uint64_t *log_time);
+                                                   const uint64_t *log_time,
+                                                   FoxgloveSinkId sink_id);
 
 /**
  * Create a new typed channel, and return an owned raw channel pointer to it.
@@ -2776,7 +2988,8 @@ foxglove_error foxglove_channel_create_quaternion(struct foxglove_string topic,
  */
 foxglove_error foxglove_channel_log_quaternion(const struct foxglove_channel *channel,
                                                const struct foxglove_quaternion *msg,
-                                               const uint64_t *log_time);
+                                               const uint64_t *log_time,
+                                               FoxgloveSinkId sink_id);
 
 /**
  * Create a new typed channel, and return an owned raw channel pointer to it.
@@ -2796,7 +3009,8 @@ foxglove_error foxglove_channel_create_raw_audio(struct foxglove_string topic,
  */
 foxglove_error foxglove_channel_log_raw_audio(const struct foxglove_channel *channel,
                                               const struct foxglove_raw_audio *msg,
-                                              const uint64_t *log_time);
+                                              const uint64_t *log_time,
+                                              FoxgloveSinkId sink_id);
 
 /**
  * Create a new typed channel, and return an owned raw channel pointer to it.
@@ -2816,7 +3030,8 @@ foxglove_error foxglove_channel_create_raw_image(struct foxglove_string topic,
  */
 foxglove_error foxglove_channel_log_raw_image(const struct foxglove_channel *channel,
                                               const struct foxglove_raw_image *msg,
-                                              const uint64_t *log_time);
+                                              const uint64_t *log_time,
+                                              FoxgloveSinkId sink_id);
 
 /**
  * Create a new typed channel, and return an owned raw channel pointer to it.
@@ -2836,7 +3051,8 @@ foxglove_error foxglove_channel_create_sphere_primitive(struct foxglove_string t
  */
 foxglove_error foxglove_channel_log_sphere_primitive(const struct foxglove_channel *channel,
                                                      const struct foxglove_sphere_primitive *msg,
-                                                     const uint64_t *log_time);
+                                                     const uint64_t *log_time,
+                                                     FoxgloveSinkId sink_id);
 
 /**
  * Create a new typed channel, and return an owned raw channel pointer to it.
@@ -2856,7 +3072,8 @@ foxglove_error foxglove_channel_create_text_annotation(struct foxglove_string to
  */
 foxglove_error foxglove_channel_log_text_annotation(const struct foxglove_channel *channel,
                                                     const struct foxglove_text_annotation *msg,
-                                                    const uint64_t *log_time);
+                                                    const uint64_t *log_time,
+                                                    FoxgloveSinkId sink_id);
 
 /**
  * Create a new typed channel, and return an owned raw channel pointer to it.
@@ -2876,7 +3093,8 @@ foxglove_error foxglove_channel_create_text_primitive(struct foxglove_string top
  */
 foxglove_error foxglove_channel_log_text_primitive(const struct foxglove_channel *channel,
                                                    const struct foxglove_text_primitive *msg,
-                                                   const uint64_t *log_time);
+                                                   const uint64_t *log_time,
+                                                   FoxgloveSinkId sink_id);
 
 /**
  * Create a new typed channel, and return an owned raw channel pointer to it.
@@ -2896,7 +3114,8 @@ foxglove_error foxglove_channel_create_triangle_list_primitive(struct foxglove_s
  */
 foxglove_error foxglove_channel_log_triangle_list_primitive(const struct foxglove_channel *channel,
                                                             const struct foxglove_triangle_list_primitive *msg,
-                                                            const uint64_t *log_time);
+                                                            const uint64_t *log_time,
+                                                            FoxgloveSinkId sink_id);
 
 /**
  * Create a new typed channel, and return an owned raw channel pointer to it.
@@ -2916,7 +3135,8 @@ foxglove_error foxglove_channel_create_vector2(struct foxglove_string topic,
  */
 foxglove_error foxglove_channel_log_vector2(const struct foxglove_channel *channel,
                                             const struct foxglove_vector2 *msg,
-                                            const uint64_t *log_time);
+                                            const uint64_t *log_time,
+                                            FoxgloveSinkId sink_id);
 
 /**
  * Create a new typed channel, and return an owned raw channel pointer to it.
@@ -2936,7 +3156,8 @@ foxglove_error foxglove_channel_create_vector3(struct foxglove_string topic,
  */
 foxglove_error foxglove_channel_log_vector3(const struct foxglove_channel *channel,
                                             const struct foxglove_vector3 *msg,
-                                            const uint64_t *log_time);
+                                            const uint64_t *log_time,
+                                            FoxgloveSinkId sink_id);
 
 /**
  * Create a new connection graph.
@@ -3117,6 +3338,20 @@ foxglove_error foxglove_parameter_create_float64(struct foxglove_parameter **par
                                                  double value);
 
 /**
+ * Creates a new integer parameter.
+ *
+ * The value must be freed with `foxglove_parameter_free`, or by passing it to a consuming
+ * function such as `foxglove_parameter_array_push`.
+ *
+ * # Safety
+ * - `param` must be a valid pointer.
+ * - `name` must be a valid `foxglove_string`. This value is copied by this function.
+ */
+foxglove_error foxglove_parameter_create_integer(struct foxglove_parameter **param,
+                                                 struct foxglove_string name,
+                                                 int64_t value);
+
+/**
  * Creates a new boolean parameter.
  *
  * The value must be freed with `foxglove_parameter_free`, or by passing it to a consuming
@@ -3175,6 +3410,14 @@ foxglove_error foxglove_parameter_create_byte_array(struct foxglove_parameter **
 foxglove_error foxglove_parameter_create_float64_array(struct foxglove_parameter **param,
                                                        struct foxglove_string name,
                                                        const double *values,
+                                                       size_t values_len);
+
+/**
+ * Creates a new parameter which is an array of integer values.
+ */
+foxglove_error foxglove_parameter_create_integer_array(struct foxglove_parameter **param,
+                                                       struct foxglove_string name,
+                                                       const int64_t *values,
                                                        size_t values_len);
 
 /**
@@ -3245,12 +3488,20 @@ struct foxglove_parameter *foxglove_parameter_clone(const struct foxglove_parame
 void foxglove_parameter_free(struct foxglove_parameter *param);
 
 /**
- * Creates a new number parameter value.
+ * Creates a new float64 parameter value.
  *
  * The value must be freed with `foxglove_parameter_value_free`, or by passing it to a consuming
  * function such as `foxglove_parameter_create`.
  */
-struct foxglove_parameter_value *foxglove_parameter_value_create_number(double number);
+struct foxglove_parameter_value *foxglove_parameter_value_create_float64(double number);
+
+/**
+ * Creates a new integer parameter value.
+ *
+ * The value must be freed with `foxglove_parameter_value_free`, or by passing it to a consuming
+ * function such as `foxglove_parameter_create`.
+ */
+struct foxglove_parameter_value *foxglove_parameter_value_create_integer(int64_t integer);
 
 /**
  * Creates a new boolean parameter value.
