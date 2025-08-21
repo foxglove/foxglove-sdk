@@ -64,8 +64,8 @@ FoxgloveResult<McapWriter> McapWriter::create(const McapWriterOptions& options) 
 McapWriter::McapWriter(
   foxglove_mcap_writer* writer, std::unique_ptr<SinkChannelFilterFn> sink_channel_filter
 )
-    : impl_(writer, foxglove_mcap_close)
-    , sink_channel_filter_(std::move(sink_channel_filter)) {}
+    : sink_channel_filter_(std::move(sink_channel_filter))
+    , impl_(writer, foxglove_mcap_close) {}
 
 FoxgloveError McapWriter::close() {
   foxglove_error error = foxglove_mcap_close(impl_.release());
