@@ -43,18 +43,7 @@ FoxgloveResult<McapWriter> McapWriter::create(const McapWriterOptions& options) 
           return true;
         }
         auto* filter_func = static_cast<const SinkChannelFilterFn*>(context);
-        auto metadata = buildMetadata_(channel->metadata);
-
-        std::optional<std::string> schema_name = std::nullopt;
-        std::optional<std::string> schema_encoding = std::nullopt;
-
-        ChannelDescriptor cpp_channel(
-          std::string(channel->topic.data, channel->topic.len),
-          std::string(channel->encoding.data, channel->encoding.len),
-          std::string(channel->schema_name.data, channel->schema_name.len),
-          std::string(channel->schema_encoding.data, channel->schema_encoding.len),
-          std::move(metadata)
-        );
+        auto cpp_channel = ChannelDescriptor::from_raw(channel);
         return (*filter_func)(std::move(cpp_channel));
       } catch (const std::exception& exc) {
         warn() << "Sink channel filter failed: " << exc.what();

@@ -7,6 +7,32 @@ namespace foxglove {
 
 /// @cond foxglove_internal
 
+ChannelDescriptor ChannelDescriptor::from_raw(const foxglove_channel_descriptor* channel) {
+  std::optional<std::map<std::string, std::string>> metadata;
+  if (channel->metadata != nullptr && channel->metadata->items != nullptr) {
+    std::map<std::string, std::string> metadata_map;
+    for (size_t i = 0; i < channel->metadata->count; ++i) {
+      const auto& item = channel->metadata->items[i];
+      if (item.key.data != nullptr && item.value.data != nullptr) {
+        std::string key(item.key.data, item.key.len);
+        std::string value(item.value.data, item.value.len);
+        metadata_map.emplace(std::move(key), std::move(value));
+      }
+    }
+    metadata = std::move(metadata_map);
+  }
+
+  ChannelDescriptor cpp_channel(
+    std::string(channel->topic.data, channel->topic.len),
+    std::string(channel->encoding.data, channel->encoding.len),
+    std::string(channel->schema_name.data, channel->schema_name.len),
+    std::string(channel->schema_encoding.data, channel->schema_encoding.len),
+    std::move(metadata)
+  );
+
+  return cpp_channel;
+}
+
 ChannelDescriptor::ChannelDescriptor(
   std::string topic, std::string message_encoding, std::optional<std::string> schema_name,
   std::optional<std::string> schema_encoding,
