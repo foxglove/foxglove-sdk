@@ -1,5 +1,6 @@
 #pragma once
 
+#include <foxglove-c/foxglove-c.h>
 #include <foxglove/context.hpp>
 #include <foxglove/error.hpp>
 #include <foxglove/schemas.hpp>
@@ -11,7 +12,6 @@
 #include <string>
 
 struct foxglove_channel;
-struct foxglove_context;
 
 /// The foxglove namespace.
 namespace foxglove {
@@ -34,6 +34,48 @@ struct Schema {
   /// @brief The length of the schema data.
   size_t data_len = 0;
 };
+
+/// @brief A description of a channel. This will be constructed by the SDK and passed to an
+/// implementation of a `SinkChannelFilterFn`.
+class ChannelDescriptor {
+  std::string topic_;
+  std::string message_encoding_;
+  std::optional<std::string> schema_name_;
+  std::optional<std::string> schema_encoding_;
+  std::optional<std::map<std::string, std::string>> metadata_;
+
+public:
+  // @cond foxglove_internal
+  static ChannelDescriptor from_raw(const foxglove_channel_descriptor* channel);
+
+  ChannelDescriptor(
+    std::string topic, std::string message_encoding, std::optional<std::string> schema_name,
+    std::optional<std::string> schema_encoding,
+    std::optional<std::map<std::string, std::string>> metadata = std::nullopt
+  );
+  // @endcond
+
+  /// @brief Get the topic of the channel.
+  [[nodiscard]] const std::string& topic() const noexcept;
+
+  /// @brief Get the message encoding of the channel.
+  [[nodiscard]] const std::string& message_encoding() const noexcept;
+
+  /// @brief Get the metadata for the channel.
+  [[nodiscard]] const std::optional<std::map<std::string, std::string>>& metadata() const noexcept;
+
+  /// @brief Get the schema name of the channel.
+  [[nodiscard]] const std::optional<std::string>& schema_name() const noexcept;
+  /// @brief Get the schema encoding of the channel.
+  [[nodiscard]] const std::optional<std::string>& schema_encoding() const noexcept;
+};
+
+/// @brief A function that can be used to filter channels.
+///
+/// @param channel Information about the channel.
+/// @return false if the channel should not be logged to the given sink. By default, all channels
+/// are logged to a sink.
+using SinkChannelFilterFn = std::function<bool(ChannelDescriptor&& channel)>;
 
 /// @brief A channel for messages logged to a topic.
 ///

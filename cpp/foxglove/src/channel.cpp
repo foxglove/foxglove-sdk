@@ -5,6 +5,68 @@
 
 namespace foxglove {
 
+/// @cond foxglove_internal
+
+ChannelDescriptor ChannelDescriptor::from_raw(const foxglove_channel_descriptor* channel) {
+  std::optional<std::map<std::string, std::string>> metadata;
+  if (channel->metadata != nullptr && channel->metadata->items != nullptr) {
+    std::map<std::string, std::string> metadata_map;
+    for (size_t i = 0; i < channel->metadata->count; ++i) {
+      const auto& item = channel->metadata->items[i];
+      if (item.key.data != nullptr && item.value.data != nullptr) {
+        std::string key(item.key.data, item.key.len);
+        std::string value(item.value.data, item.value.len);
+        metadata_map.emplace(std::move(key), std::move(value));
+      }
+    }
+    metadata = std::move(metadata_map);
+  }
+
+  ChannelDescriptor cpp_channel(
+    std::string(channel->topic.data, channel->topic.len),
+    std::string(channel->encoding.data, channel->encoding.len),
+    std::string(channel->schema_name.data, channel->schema_name.len),
+    std::string(channel->schema_encoding.data, channel->schema_encoding.len),
+    std::move(metadata)
+  );
+
+  return cpp_channel;
+}
+
+ChannelDescriptor::ChannelDescriptor(
+  std::string topic, std::string message_encoding, std::optional<std::string> schema_name,
+  std::optional<std::string> schema_encoding,
+  std::optional<std::map<std::string, std::string>> metadata
+)
+    : topic_(std::move(topic))
+    , message_encoding_(std::move(message_encoding))
+    , schema_name_(std::move(schema_name))
+    , schema_encoding_(std::move(schema_encoding))
+    , metadata_(std::move(metadata)) {}
+
+/// @endcond
+
+const std::string& ChannelDescriptor::topic() const noexcept {
+  return topic_;
+}
+
+const std::string& ChannelDescriptor::message_encoding() const noexcept {
+  return message_encoding_;
+}
+
+const std::optional<std::map<std::string, std::string>>& ChannelDescriptor::metadata(
+) const noexcept {
+  return metadata_;
+}
+
+const std::optional<std::string>& ChannelDescriptor::schema_name() const noexcept {
+  return schema_name_;
+}
+
+const std::optional<std::string>& ChannelDescriptor::schema_encoding() const noexcept {
+  return schema_encoding_;
+}
+
 FoxgloveResult<RawChannel> RawChannel::create(
   const std::string_view& topic, const std::string_view& message_encoding,
   std::optional<Schema> schema, const Context& context,
