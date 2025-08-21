@@ -12,7 +12,13 @@ from typing import List, Optional, Union
 from . import _foxglove_py as _foxglove
 
 # Re-export these imports
-from ._foxglove_py import Context, Schema, open_mcap
+from ._foxglove_py import (
+    ChannelDescriptor,
+    Context,
+    Schema,
+    SinkChannelFilter,
+    open_mcap,
+)
 from .channel import Channel, log
 
 # Deprecated. Use foxglove.mcap.MCAPWriter instead.
@@ -40,6 +46,7 @@ def start_server(
     asset_handler: Optional[AssetHandler] = None,
     context: Optional[Context] = None,
     session_id: Optional[str] = None,
+    channel_filter: Optional[SinkChannelFilter] = None,
 ) -> WebSocketServer:
     """
     Start a websocket server for live visualization.
@@ -54,6 +61,9 @@ def start_server(
     :param services: A list of services to advertise to clients.
     :param asset_handler: A callback function that returns the asset for a given URI, or None if it
         doesn't exist.
+    :param channel_filter: A `Callable` that determines whether a channel should be logged to.
+        Return `True` to log the channel, or `False` to skip it. By default, all channels
+        will be logged.
     :param context: The context to use for logging. If None, the global context is used.
     :param session_id: An ID which allows the client to understand if the connection is a
         re-connection or a new server instance. If None, then an ID is generated based on the
@@ -70,6 +80,7 @@ def start_server(
         asset_handler=asset_handler,
         context=context,
         session_id=session_id,
+        channel_filter=channel_filter,
     )
 
 
@@ -119,9 +130,11 @@ def _level_names() -> dict[str, int]:
 
 __all__ = [
     "Channel",
+    "ChannelDescriptor",
     "Context",
     "MCAPWriter",
     "Schema",
+    "SinkChannelFilter",
     "log",
     "open_mcap",
     "set_log_level",
