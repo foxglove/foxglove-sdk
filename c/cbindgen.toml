@@ -24,6 +24,7 @@ prefix_with_name = false
 [export.rename]
 FoxgloveBytes = "foxglove_bytes"
 FoxgloveChannel = "foxglove_channel"
+FoxgloveChannelDescriptor = "foxglove_channel_descriptor"
 FoxgloveChannelMetadata = "foxglove_channel_metadata"
 FoxgloveChannelMetadataIterator = "foxglove_channel_metadata_iterator"
 FoxgloveClientChannel = "foxglove_client_channel"

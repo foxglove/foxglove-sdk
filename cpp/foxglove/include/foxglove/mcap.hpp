@@ -7,6 +7,8 @@
 #include <optional>
 #include <string>
 
+#include "channel.hpp"
+
 enum foxglove_error : uint8_t;
 struct foxglove_mcap_writer;
 
@@ -61,6 +63,10 @@ struct McapWriterOptions {
   bool repeat_schemas = true;
   /// @brief Whether to truncate the MCAP file.
   bool truncate = false;
+  /// @brief The sink channel filter to use for the MCAP writer.
+  std::function<bool(ChannelDescriptor&&)> sink_channel_filter = [](ChannelDescriptor&&) {
+    return true;
+  };
 
   McapWriterOptions() = default;
 };
@@ -91,9 +97,12 @@ public:
   McapWriter& operator=(const McapWriter&) = delete;
 
 private:
-  explicit McapWriter(foxglove_mcap_writer* writer);
+  explicit McapWriter(
+    foxglove_mcap_writer* writer, std::unique_ptr<SinkChannelFilterFn> sink_channel_filter = nullptr
+  );
 
   std::unique_ptr<foxglove_mcap_writer, foxglove_error (*)(foxglove_mcap_writer*)> impl_;
+  std::unique_ptr<SinkChannelFilterFn> sink_channel_filter_;
 };
 
 }  // namespace foxglove

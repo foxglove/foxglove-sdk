@@ -536,6 +536,14 @@ typedef struct foxglove_server_callbacks {
 
 typedef uint8_t foxglove_server_capability;
 
+/**
+ * Information about a Channel.
+ */
+typedef struct foxglove_channel_descriptor {
+  struct foxglove_string topic;
+  struct foxglove_string encoding;
+} foxglove_channel_descriptor;
+
 typedef struct foxglove_server_options {
   /**
    * `context` can be null, or a valid pointer to a context created via `foxglove_context_new`.
@@ -576,6 +584,23 @@ typedef struct foxglove_server_options {
   void (*fetch_asset)(const void *context,
                       const struct foxglove_string *uri,
                       struct foxglove_fetch_asset_responder *responder);
+  /**
+   * Context provided to the `sink_channel_filter` callback.
+   */
+  const void *sink_channel_filter_context;
+  /**
+   * A filter for channels that can be used to subscribe to or unsubscribe from channels.
+   *
+   * This can be used to omit one or more channels from a sink, but still log all channels to another
+   * sink in the same context. Return false to disable logging of this channel.
+   *
+   * This method is invoked from the client's main poll loop and must not block.
+   *
+   * # Safety
+   * - If provided, the handler callback must be a pointer to the filter callback function,
+   *   and must remain valid until the server is stopped.
+   */
+  bool (*sink_channel_filter)(const void *context, const struct foxglove_channel_descriptor *channel);
 } foxglove_server_options;
 
 typedef struct foxglove_mcap_options {
@@ -602,6 +627,23 @@ typedef struct foxglove_mcap_options {
   bool emit_metadata_indexes;
   bool repeat_channels;
   bool repeat_schemas;
+  /**
+   * Context provided to the `sink_channel_filter` callback.
+   */
+  const void *sink_channel_filter_context;
+  /**
+   * A filter for channels that can be used to subscribe to or unsubscribe from channels.
+   *
+   * This can be used to omit one or more channels from a sink, but still log all channels to another
+   * sink in the same context. Return false to disable logging of this channel.
+   *
+   * This method is invoked from the client's main poll loop and must not block.
+   *
+   * # Safety
+   * - If provided, the handler callback must be a pointer to the filter callback function,
+   *   and must remain valid until the server is stopped.
+   */
+  bool (*sink_channel_filter)(const void *context, const struct foxglove_channel_descriptor *channel);
 } foxglove_mcap_options;
 
 typedef struct foxglove_schema {

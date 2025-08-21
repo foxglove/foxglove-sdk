@@ -420,3 +420,53 @@ TEST_CASE("ImageAnnotations channel") {
   REQUIRE_THAT(content, ContainsSubstring("Sample text"));
   REQUIRE_THAT(content, ContainsSubstring("ImageAnnotations"));
 }
+
+TEST_CASE("Channel filtering") {
+  FileCleanup file_1("test-1.mcap");
+  FileCleanup file_2("test-2.mcap");
+
+  foxglove::McapWriterOptions opts_1;
+  opts_1.path = "test-1.mcap";
+  opts_1.sink_channel_filter = [](foxglove::ChannelDescriptor&& channel) -> bool {
+    return channel.topic == "/1";
+  };
+  auto writer_res_1 = foxglove::McapWriter::create(opts_1);
+  REQUIRE(writer_res_1.has_value());
+  auto writer_1 = std::move(writer_res_1.value());
+
+  foxglove::McapWriterOptions opts_2;
+  opts_2.path = "test-2.mcap";
+  opts_2.sink_channel_filter = [](foxglove::ChannelDescriptor&& channel) -> bool {
+    return channel.topic == "/2";
+  };
+  auto writer_res_2 = foxglove::McapWriter::create(opts_2);
+  REQUIRE(writer_res_2.has_value());
+  auto writer_2 = std::move(writer_res_2.value());
+
+  {
+    auto result = foxglove::RawChannel::create("/1", "json", std::nullopt);
+    REQUIRE(result.has_value());
+    auto channel = std::move(result.value());
+    std::string data = "Topic 1";
+    channel.log(reinterpret_cast<const std::byte*>(data.data()), data.size());
+  }
+  {
+    auto result = foxglove::RawChannel::create("/2", "json", std::nullopt);
+    REQUIRE(result.has_value());
+    auto channel = std::move(result.value());
+    std::string data = "Topic 2";
+    channel.log(reinterpret_cast<const std::byte*>(data.data()), data.size());
+  }
+
+  writer_1.close();
+  writer_2.close();
+
+  // Check that the file contains our annotations
+  std::string content = readFile("test-1.mcap");
+  REQUIRE_THAT(content, ContainsSubstring("Topic 1"));
+  REQUIRE_THAT(content, !ContainsSubstring("Topic 2"));
+
+  content = readFile("test-2.mcap");
+  REQUIRE_THAT(content, !ContainsSubstring("Topic 1"));
+  REQUIRE_THAT(content, ContainsSubstring("Topic 2"));
+}
