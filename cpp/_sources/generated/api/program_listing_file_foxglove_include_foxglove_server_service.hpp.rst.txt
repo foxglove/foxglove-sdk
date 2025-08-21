@@ -1,0 +1,134 @@
+
+.. _program_listing_file_foxglove_include_foxglove_server_service.hpp:
+
+Program Listing for File service.hpp
+====================================
+
+|exhale_lsh| :ref:`Return to documentation for file <file_foxglove_include_foxglove_server_service.hpp>` (``foxglove/include/foxglove/server/service.hpp``)
+
+.. |exhale_lsh| unicode:: U+021B0 .. UPWARDS ARROW WITH TIP LEFTWARDS
+
+.. code-block:: cpp
+
+   #pragma once
+   
+   #include <foxglove/channel.hpp>
+   #include <foxglove/error.hpp>
+   
+   #include <array>
+   #include <cstdint>
+   #include <functional>
+   #include <memory>
+   #include <optional>
+   #include <string>
+   #include <string_view>
+   #include <vector>
+   
+   struct foxglove_service;
+   struct foxglove_service_message_schema;
+   struct foxglove_service_request;
+   struct foxglove_service_responder;
+   struct foxglove_service_schema;
+   
+   namespace foxglove {
+   
+   struct ServiceMessageSchema {
+     std::string encoding;
+     Schema schema;
+   
+   private:
+     friend struct ServiceSchema;
+   
+     void writeTo(foxglove_service_message_schema* c) const noexcept;
+   };
+   
+   struct ServiceSchema {
+     std::string name;
+     std::optional<ServiceMessageSchema> request = std::nullopt;
+     std::optional<ServiceMessageSchema> response = std::nullopt;
+   
+   private:
+     friend class Service;
+   
+     void writeTo(
+       foxglove_service_schema* c, std::array<foxglove_service_message_schema, 2>& msg_schemas
+     ) const noexcept;
+   };
+   
+   struct ServiceRequest {
+     std::string service_name;
+     uint32_t client_id;
+     uint32_t call_id;
+     std::string encoding;
+     std::vector<std::byte> payload;
+   
+     [[nodiscard]] std::string_view payloadStr() const noexcept {
+       return {reinterpret_cast<const char*>(this->payload.data()), this->payload.size()};
+     }
+   
+   private:
+     friend class Service;
+   
+     explicit ServiceRequest(const foxglove_service_request* ptr) noexcept;
+   };
+   
+   class ServiceResponder final {
+   public:
+     void respondOk(const std::byte* data, size_t size) && noexcept;
+   
+     void respondOk(const std::vector<std::byte>& data) && noexcept {
+       std::move(*this).respondOk(data.data(), data.size());
+     };
+   
+     void respondError(std::string_view message) && noexcept;
+   
+     ~ServiceResponder() = default;
+     ServiceResponder(ServiceResponder&&) noexcept = default;
+     ServiceResponder& operator=(ServiceResponder&&) noexcept = default;
+     ServiceResponder(const ServiceResponder&) = delete;
+     ServiceResponder& operator=(const ServiceResponder&) = delete;
+   
+   private:
+     friend class Service;
+   
+     struct Deleter {
+       void operator()(foxglove_service_responder* ptr) const noexcept;
+     };
+   
+     std::unique_ptr<foxglove_service_responder, Deleter> impl_;
+   
+     explicit ServiceResponder(foxglove_service_responder* ptr) noexcept
+         : impl_(ptr) {}
+   };
+   
+   using ServiceHandler =
+     std::function<void(const ServiceRequest& request, ServiceResponder&& responder)>;
+   
+   class Service final {
+   public:
+     static FoxgloveResult<Service> create(
+       std::string_view name, ServiceSchema& schema, ServiceHandler& handler
+     );
+   
+     ~Service() = default;
+     Service(Service&&) noexcept = default;
+     Service& operator=(Service&&) noexcept = default;
+     Service(const Service&) = delete;
+     Service& operator=(const Service&) = delete;
+   
+   private:
+     friend class WebSocketServer;
+   
+     struct Deleter {
+       void operator()(foxglove_service* ptr) const noexcept;
+     };
+   
+     std::unique_ptr<foxglove_service, Deleter> impl_;
+   
+     explicit Service(foxglove_service* ptr) noexcept
+         : impl_(ptr) {}
+   
+     foxglove_service* release() noexcept;
+   };
+   
+   }  // namespace foxglove

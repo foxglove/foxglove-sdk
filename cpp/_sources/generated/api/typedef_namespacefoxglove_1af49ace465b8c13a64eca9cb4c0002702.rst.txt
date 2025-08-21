@@ -1,0 +1,14 @@
+.. _exhale_typedef_namespacefoxglove_1af49ace465b8c13a64eca9cb4c0002702:
+
+Typedef foxglove::FetchAssetHandler
+===================================
+
+- Defined in :ref:`file_foxglove_include_foxglove_server_fetch_asset.hpp`
+
+
+Typedef Documentation
+---------------------
+
+
+.. doxygentypedef:: foxglove::FetchAssetHandler
+   :project: Foxglove SDK

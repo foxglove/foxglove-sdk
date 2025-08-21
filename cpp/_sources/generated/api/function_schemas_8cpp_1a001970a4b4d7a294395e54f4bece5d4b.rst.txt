@@ -1,0 +1,14 @@
+.. _exhale_function_schemas_8cpp_1a001970a4b4d7a294395e54f4bece5d4b:
+
+Function foxglove::schemas::sceneUpdateToC
+==========================================
+
+- Defined in :ref:`file_foxglove_src_schemas.cpp`
+
+
+Function Documentation
+----------------------
+
+
+.. doxygenfunction:: foxglove::schemas::sceneUpdateToC(foxglove_scene_update&, const SceneUpdate&, Arena&)
+   :project: Foxglove SDK

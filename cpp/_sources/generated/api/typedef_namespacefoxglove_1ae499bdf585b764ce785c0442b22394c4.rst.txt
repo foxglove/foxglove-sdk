@@ -1,0 +1,14 @@
+.. _exhale_typedef_namespacefoxglove_1ae499bdf585b764ce785c0442b22394c4:
+
+Typedef foxglove::FoxgloveResult
+================================
+
+- Defined in :ref:`file_foxglove_include_foxglove_error.hpp`
+
+
+Typedef Documentation
+---------------------
+
+
+.. doxygentypedef:: foxglove::FoxgloveResult
+   :project: Foxglove SDK

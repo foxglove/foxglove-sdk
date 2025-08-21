@@ -1,0 +1,17 @@
+.. _exhale_class_classfoxglove_1_1schemas_1_1ModelPrimitiveChannel:
+
+Class ModelPrimitiveChannel
+===========================
+
+- Defined in :ref:`file_foxglove_include_foxglove_schemas.hpp`
+
+
+Class Documentation
+-------------------
+
+
+.. doxygenclass:: foxglove::schemas::ModelPrimitiveChannel
+   :project: Foxglove SDK
+   :members:
+   :protected-members:
+   :undoc-members:
