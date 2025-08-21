@@ -9,7 +9,7 @@ mod connected_client;
 mod connection_graph;
 mod cow_vec;
 mod fetch_asset;
-mod handshake;
+pub(crate) mod handshake;
 mod semaphore;
 mod server;
 mod server_listener;
@@ -17,8 +17,6 @@ pub mod service;
 mod subscription;
 #[cfg(test)]
 mod tests;
-#[cfg(test)]
-pub(crate) mod testutil;
 #[doc(hidden)]
 pub mod ws_protocol;
 

@@ -7,14 +7,17 @@ use tokio_tungstenite::tungstenite::http::HeaderValue;
 use tokio_tungstenite::tungstenite::{self, Message};
 use tokio_tungstenite::{MaybeTlsStream, WebSocketStream};
 
-use super::handshake::SUBPROTOCOL;
+use crate::websocket::handshake::SUBPROTOCOL;
+
 use super::ws_protocol::server::ServerMessage;
 use super::ws_protocol::ParseError;
 
 #[derive(Debug, thiserror::Error)]
-pub enum RecvError {
+pub enum WebSocketClientError {
     #[error("unexpected end of stream")]
     UnexpectedEndOfStream,
+    #[error("invalid subprotocol")]
+    InvalidSubprotocol,
     #[error(transparent)]
     ParseError(#[from] ParseError),
     #[error(transparent)]
@@ -29,7 +32,7 @@ pub struct WebSocketClient {
 
 impl WebSocketClient {
     /// Connects to a server and validates the handshake response.
-    pub async fn connect(addr: impl std::fmt::Display) -> Self {
+    pub async fn connect(addr: impl std::fmt::Display) -> Result<Self, WebSocketClientError> {
         let mut request = format!("ws://{addr}/")
             .into_client_request()
             .expect("Failed to build request");
@@ -39,40 +42,45 @@ impl WebSocketClient {
             HeaderValue::from_static(SUBPROTOCOL),
         );
 
-        let (stream, response) = tokio_tungstenite::connect_async(request)
-            .await
-            .expect("Failed to connect");
+        let (stream, response) = tokio_tungstenite::connect_async(request).await?;
 
-        assert_eq!(
-            response.headers().get("sec-websocket-protocol"),
-            Some(&HeaderValue::from_static(SUBPROTOCOL))
-        );
+        if response.headers().get("sec-websocket-protocol")
+            != Some(&HeaderValue::from_static(SUBPROTOCOL))
+        {
+            return Err(WebSocketClientError::InvalidSubprotocol);
+        }
 
-        Self { stream }
+        Ok(Self { stream })
     }
 
     /// Receives a message from the server.
-    pub async fn recv_msg(&mut self) -> Result<Message, RecvError> {
+    pub async fn recv_msg(&mut self) -> Result<Message, WebSocketClientError> {
         match self.stream.next().await {
-            Some(r) => r.map_err(RecvError::from),
-            None => Err(RecvError::UnexpectedEndOfStream),
+            Some(r) => r.map_err(WebSocketClientError::from),
+            None => Err(WebSocketClientError::UnexpectedEndOfStream),
         }
     }
 
     /// Receives and parses a message from the server.
-    pub async fn recv(&mut self) -> Result<ServerMessage<'_>, RecvError> {
+    pub async fn recv(&mut self) -> Result<ServerMessage<'_>, WebSocketClientError> {
         let msg = tokio::time::timeout(Duration::from_secs(1), self.recv_msg()).await??;
         let msg = ServerMessage::try_from(&msg)?;
         Ok(msg.into_owned())
     }
 
     /// Sends a message to the server.
-    pub async fn send(&mut self, msg: impl Into<Message>) -> Result<(), tungstenite::Error> {
-        self.stream.send(msg.into()).await
+    pub async fn send(&mut self, msg: impl Into<Message>) -> Result<(), WebSocketClientError> {
+        self.stream
+            .send(msg.into())
+            .await
+            .map_err(WebSocketClientError::from)
     }
 
     /// Closes the websocket connection.
-    pub async fn close(&mut self) {
-        self.stream.close(None).await.unwrap();
+    pub async fn close(&mut self) -> Result<(), WebSocketClientError> {
+        self.stream
+            .close(None)
+            .await
+            .map_err(WebSocketClientError::from)
     }
 }
