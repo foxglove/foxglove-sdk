@@ -68,14 +68,6 @@ public:
   [[nodiscard]] const std::optional<std::string>& schema_name() const noexcept;
   /// @brief Get the schema encoding of the channel.
   [[nodiscard]] const std::optional<std::string>& schema_encoding() const noexcept;
-
-  // @cond foxglove_internal
-  ChannelDescriptor(ChannelDescriptor&& other) noexcept = default;
-  ChannelDescriptor& operator=(ChannelDescriptor&& other) noexcept = default;
-  ~ChannelDescriptor() = default;
-  ChannelDescriptor(const ChannelDescriptor&) = default;
-  ChannelDescriptor& operator=(const ChannelDescriptor&) = default;
-  // @endcond
 };
 
 /// @brief A function that can be used to filter channels.
