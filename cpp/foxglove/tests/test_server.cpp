@@ -1391,7 +1391,7 @@ TEST_CASE("Server channel filtering") {
   std::unique_lock lock{mutex};
 
   foxglove::WebSocketServerCallbacks callbacks;
-  callbacks.onSubscribe = [&](uint64_t channel_id, const foxglove::ClientMetadata& _) {
+  callbacks.onSubscribe = [&](uint64_t channel_id, const foxglove::ClientMetadata& _ [[maybe_unused]]) {
     std::scoped_lock lock{mutex};
     std::cerr << "onSubscribe: " << channel_id << std::endl;
     subscribe_calls.push_back(channel_id);
