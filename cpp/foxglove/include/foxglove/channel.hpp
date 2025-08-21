@@ -71,9 +71,8 @@ public:
   ChannelDescriptor(ChannelDescriptor&& other) noexcept = default;
   ChannelDescriptor& operator=(ChannelDescriptor&& other) noexcept = default;
   ~ChannelDescriptor() = default;
-  // Disable copy operations
-  ChannelDescriptor(const ChannelDescriptor&) = delete;
-  ChannelDescriptor& operator=(const ChannelDescriptor&) = delete;
+  ChannelDescriptor(const ChannelDescriptor&) = default;
+  ChannelDescriptor& operator=(const ChannelDescriptor&) = default;
   // @endcond
 };
 

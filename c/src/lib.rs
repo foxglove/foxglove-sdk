@@ -27,7 +27,7 @@ mod logging;
 mod parameter;
 mod service;
 mod sink_channel_filter;
-use sink_channel_filter::SinkChannelFilterHandler;
+use sink_channel_filter::ChannelFilter;
 
 use parameter::FoxgloveParameterArray;
 
@@ -566,7 +566,7 @@ unsafe fn do_foxglove_server_start(
         )));
     }
     if let Some(sink_channel_filter) = options.sink_channel_filter {
-        server = server.channel_filter(Arc::new(SinkChannelFilterHandler::new(
+        server = server.channel_filter(Arc::new(ChannelFilter::new(
             options.sink_channel_filter_context,
             sink_channel_filter,
         )));
@@ -897,7 +897,7 @@ pub struct FoxgloveMcapOptions {
     ///
     /// # Safety
     /// - If provided, the handler callback must be a pointer to the filter callback function,
-    ///   and must remain valid until the server is stopped.
+    ///   and must remain valid until the MCAP sink is dropped.
     pub sink_channel_filter: Option<
         unsafe extern "C" fn(
             context: *const c_void,
@@ -993,7 +993,7 @@ unsafe fn do_foxglove_mcap_open(
         builder = builder.context(&context);
     }
     if let Some(sink_channel_filter) = options.sink_channel_filter {
-        builder = builder.channel_filter(Arc::new(SinkChannelFilterHandler::new(
+        builder = builder.channel_filter(Arc::new(ChannelFilter::new(
             options.sink_channel_filter_context,
             sink_channel_filter,
         )));

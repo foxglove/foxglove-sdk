@@ -672,7 +672,7 @@ typedef struct foxglove_mcap_options {
    *
    * # Safety
    * - If provided, the handler callback must be a pointer to the filter callback function,
-   *   and must remain valid until the server is stopped.
+   *   and must remain valid until the MCAP sink is dropped.
    */
   bool (*sink_channel_filter)(const void *context, const struct foxglove_channel_descriptor *channel);
 } foxglove_mcap_options;

@@ -64,7 +64,7 @@ struct McapWriterOptions {
   /// @brief Whether to truncate the MCAP file.
   bool truncate = false;
   /// @brief Optional channel filter to use for the MCAP file.
-  SinkChannelFilterFn sink_channel_filter = nullptr;
+  SinkChannelFilterFn sink_channel_filter = {};
 
   McapWriterOptions() = default;
 };

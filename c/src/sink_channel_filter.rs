@@ -7,13 +7,13 @@ use crate::{FoxgloveChannelDescriptor, FoxgloveChannelMetadata, FoxgloveKeyValue
 ///
 /// This method is invoked from the client's main poll loop and must not block.
 #[derive(Clone)]
-pub(crate) struct SinkChannelFilterHandler {
+pub(crate) struct ChannelFilter {
     callback_context: *const std::ffi::c_void,
     callback:
         unsafe extern "C" fn(*const std::ffi::c_void, *const FoxgloveChannelDescriptor) -> bool,
 }
 
-impl SinkChannelFilterHandler {
+impl ChannelFilter {
     /// Create a new sink channel filter handler.
     pub fn new(
         callback_context: *const std::ffi::c_void,
@@ -29,9 +29,9 @@ impl SinkChannelFilterHandler {
     }
 }
 
-unsafe impl Send for SinkChannelFilterHandler {}
-unsafe impl Sync for SinkChannelFilterHandler {}
-impl foxglove::SinkChannelFilter for SinkChannelFilterHandler {
+unsafe impl Send for ChannelFilter {}
+unsafe impl Sync for ChannelFilter {}
+impl foxglove::SinkChannelFilter for ChannelFilter {
     /// Indicate whether the channel should be subscribed to.
     /// Safety: the channel is valid only as long as the callback.
     fn should_subscribe(&self, channel: &foxglove::ChannelDescriptor) -> bool {
