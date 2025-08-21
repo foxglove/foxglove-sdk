@@ -12,6 +12,7 @@ use crate::websocket::handshake::SUBPROTOCOL;
 use super::ws_protocol::server::ServerMessage;
 use super::ws_protocol::ParseError;
 
+#[doc(hidden)]
 #[derive(Debug, thiserror::Error)]
 pub enum WebSocketClientError {
     #[error("unexpected end of stream")]
@@ -26,6 +27,7 @@ pub enum WebSocketClientError {
     Timeout(#[from] tokio::time::error::Elapsed),
 }
 
+#[doc(hidden)]
 pub struct WebSocketClient {
     stream: WebSocketStream<MaybeTlsStream<TcpStream>>,
 }
