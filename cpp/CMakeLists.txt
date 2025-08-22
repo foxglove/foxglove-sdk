@@ -85,6 +85,7 @@ if (STRICT)
     set (STRICT_COMPILE_OPTIONS -Wall -Wextra -Wpedantic -Werror -Wold-style-cast -Wmost -Wunused-exception-parameter)
   elseif(MSVC)
     set (STRICT_COMPILE_OPTIONS /W4 /WX)
+    set (add_link_options /VERBOSE:LIB)
   endif()
 endif()
 
