@@ -79,7 +79,7 @@ impl WebSocketClient {
     }
 
     /// Closes the websocket connection.
-    pub async fn close(&mut self) -> Result<(), WebSocketClientError> {
+    pub async fn close(mut self) -> Result<(), WebSocketClientError> {
         self.stream
             .close(None)
             .await
