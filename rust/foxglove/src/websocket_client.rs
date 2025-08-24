@@ -34,8 +34,9 @@ pub struct WebSocketClient {
 
 impl WebSocketClient {
     /// Connects to a server and validates the handshake response.
-    pub async fn connect(addr: impl std::fmt::Display) -> Result<Self, WebSocketClientError> {
-        let mut request = format!("ws://{addr}/")
+    pub async fn connect(url: impl Into<String>) -> Result<Self, WebSocketClientError> {
+        let mut request = url
+            .into()
             .into_client_request()
             .expect("Failed to build request");
 

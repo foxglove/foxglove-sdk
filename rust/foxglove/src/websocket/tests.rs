@@ -84,7 +84,7 @@ async fn test_client_connect() {
         .await
         .expect("Failed to start server");
 
-    let mut client = WebSocketClient::connect(addr)
+    let mut client = WebSocketClient::connect(format!("ws://{addr}"))
         .await
         .expect("Failed to connect");
 
@@ -232,7 +232,7 @@ async fn test_advertise_to_client() {
         .build_raw()
         .expect("Failed to create channel");
 
-    let mut client = WebSocketClient::connect(addr)
+    let mut client = WebSocketClient::connect(format!("ws://{addr}"))
         .await
         .expect("Failed to connect");
     expect_recv!(client, ServerMessage::ServerInfo);
@@ -310,7 +310,7 @@ async fn test_advertise_schemaless_channels() {
         .await
         .expect("Failed to start server");
 
-    let mut client = WebSocketClient::connect(addr)
+    let mut client = WebSocketClient::connect(format!("ws://{addr}"))
         .await
         .expect("Failed to connect");
     expect_recv!(client, ServerMessage::ServerInfo);
@@ -370,13 +370,13 @@ async fn test_log_only_to_subscribers() {
         .await
         .expect("Failed to start server");
 
-    let mut client1 = WebSocketClient::connect(addr)
+    let mut client1 = WebSocketClient::connect(format!("ws://{addr}"))
         .await
         .expect("Failed to connect");
-    let mut client2 = WebSocketClient::connect(addr)
+    let mut client2 = WebSocketClient::connect(format!("ws://{addr}"))
         .await
         .expect("Failed to connect");
-    let mut client3 = WebSocketClient::connect(addr)
+    let mut client3 = WebSocketClient::connect(format!("ws://{addr}"))
         .await
         .expect("Failed to connect");
 
@@ -503,7 +503,7 @@ async fn test_on_unsubscribe_called_after_disconnect() {
         .await
         .expect("Failed to start server");
 
-    let mut client = WebSocketClient::connect(addr)
+    let mut client = WebSocketClient::connect(format!("ws://{addr}"))
         .await
         .expect("Failed to connect");
     expect_recv!(client, ServerMessage::ServerInfo);
@@ -549,7 +549,7 @@ async fn test_error_when_client_publish_unsupported() {
         .await
         .expect("Failed to start server");
 
-    let mut client = WebSocketClient::connect(addr)
+    let mut client = WebSocketClient::connect(format!("ws://{addr}"))
         .await
         .expect("Failed to connect");
     expect_recv!(client, ServerMessage::ServerInfo);
@@ -583,7 +583,7 @@ async fn test_error_status_message() {
         .await
         .expect("Failed to start server");
 
-    let mut client = WebSocketClient::connect(addr)
+    let mut client = WebSocketClient::connect(format!("ws://{addr}"))
         .await
         .expect("Failed to connect");
     expect_recv!(client, ServerMessage::ServerInfo);
@@ -704,7 +704,7 @@ async fn test_publish_status_message() {
         .await
         .expect("Failed to start server");
 
-    let mut client = WebSocketClient::connect(addr)
+    let mut client = WebSocketClient::connect(format!("ws://{addr}"))
         .await
         .expect("Failed to connect");
     expect_recv!(client, ServerMessage::ServerInfo);
@@ -731,10 +731,10 @@ async fn test_remove_status() {
         .await
         .expect("Failed to start server");
 
-    let mut client1 = WebSocketClient::connect(addr)
+    let mut client1 = WebSocketClient::connect(format!("ws://{addr}"))
         .await
         .expect("Failed to connect");
-    let mut client2 = WebSocketClient::connect(addr)
+    let mut client2 = WebSocketClient::connect(format!("ws://{addr}"))
         .await
         .expect("Failed to connect");
     expect_recv!(client1, ServerMessage::ServerInfo);
@@ -770,7 +770,7 @@ async fn test_client_advertising() {
         .await
         .expect("Failed to start server");
 
-    let mut client = WebSocketClient::connect(addr)
+    let mut client = WebSocketClient::connect(format!("ws://{addr}"))
         .await
         .expect("Failed to connect");
     expect_recv!(client, ServerMessage::ServerInfo);
@@ -886,7 +886,7 @@ async fn test_parameter_values_with_empty_values() {
         .await
         .expect("Failed to start server");
 
-    let mut client = WebSocketClient::connect(addr)
+    let mut client = WebSocketClient::connect(format!("ws://{addr}"))
         .await
         .expect("Failed to connect");
     expect_recv!(client, ServerMessage::ServerInfo);
@@ -922,7 +922,7 @@ async fn test_parameter_values() {
         .await
         .expect("Failed to start server");
 
-    let mut client = WebSocketClient::connect(addr)
+    let mut client = WebSocketClient::connect(format!("ws://{addr}"))
         .await
         .expect("Failed to connect");
 
@@ -965,7 +965,7 @@ async fn test_parameter_unsubscribe_no_updates() {
         .await
         .expect("Failed to start server");
 
-    let mut client = WebSocketClient::connect(addr)
+    let mut client = WebSocketClient::connect(format!("ws://{addr}"))
         .await
         .expect("Failed to connect");
 
@@ -1036,7 +1036,7 @@ async fn test_set_parameters() {
         .await
         .expect("Failed to start server");
 
-    let mut client = WebSocketClient::connect(addr)
+    let mut client = WebSocketClient::connect(format!("ws://{addr}"))
         .await
         .expect("Failed to connect");
 
@@ -1097,7 +1097,7 @@ async fn test_get_parameters() {
         .await
         .expect("Failed to start server");
 
-    let mut client = WebSocketClient::connect(addr)
+    let mut client = WebSocketClient::connect(format!("ws://{addr}"))
         .await
         .expect("Failed to connect");
 
@@ -1151,7 +1151,7 @@ async fn test_services() {
         .await
         .expect("Failed to start server");
 
-    let mut client1 = WebSocketClient::connect(addr)
+    let mut client1 = WebSocketClient::connect(format!("ws://{addr}"))
         .await
         .expect("Failed to connect");
     expect_recv!(client1, ServerMessage::ServerInfo);
@@ -1221,7 +1221,7 @@ async fn test_services() {
     );
 
     // New client sees both services immediately.
-    let mut client2 = WebSocketClient::connect(addr)
+    let mut client2 = WebSocketClient::connect(format!("ws://{addr}"))
         .await
         .expect("failed to connect");
     expect_recv!(client2, ServerMessage::ServerInfo);
@@ -1307,7 +1307,7 @@ async fn test_fetch_asset() {
         .await
         .expect("Failed to start server");
 
-    let mut client = WebSocketClient::connect(addr)
+    let mut client = WebSocketClient::connect(format!("ws://{addr}"))
         .await
         .expect("failed to connect");
     expect_recv!(client, ServerMessage::ServerInfo);
@@ -1377,7 +1377,7 @@ async fn test_update_connection_graph() {
     assert_eq!(recording_listener.take_connection_graph_unsubscribe(), 0);
 
     // Connect a client and subscribe to graph updates.
-    let mut c1 = WebSocketClient::connect(addr)
+    let mut c1 = WebSocketClient::connect(format!("ws://{}", addr))
         .await
         .expect("failed to connect");
     c1.send(&SubscribeConnectionGraph {}).await.unwrap();
@@ -1400,7 +1400,7 @@ async fn test_update_connection_graph() {
     );
 
     // Connect a second client and subscribe to graph updates.
-    let mut c2 = WebSocketClient::connect(addr)
+    let mut c2 = WebSocketClient::connect(format!("ws://{}", addr))
         .await
         .expect("failed to connect");
     c2.send(&SubscribeConnectionGraph {}).await.unwrap();
@@ -1474,7 +1474,7 @@ async fn test_slow_client() {
         .await
         .expect("Failed to start server");
 
-    let mut client = WebSocketClient::connect(addr)
+    let mut client = WebSocketClient::connect(format!("ws://{}", addr))
         .await
         .expect("failed to connect");
 
@@ -1519,7 +1519,7 @@ async fn test_broadcast_time() {
         .await
         .expect("Failed to start server");
 
-    let mut client = WebSocketClient::connect(addr)
+    let mut client = WebSocketClient::connect(format!("ws://{}", addr))
         .await
         .expect("failed to connect");
     expect_recv!(client, ServerMessage::ServerInfo);
