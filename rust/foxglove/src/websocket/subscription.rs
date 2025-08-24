@@ -26,13 +26,13 @@ impl std::fmt::Display for SubscriptionId {
 
 /// A client subscription with typed IDs.
 pub(crate) struct Subscription {
-    pub id: SubscriptionId,
+    pub id: Option<SubscriptionId>,
     pub channel_id: ChannelId,
 }
 impl From<subscribe::Subscription> for Subscription {
     fn from(value: subscribe::Subscription) -> Self {
         Self {
-            id: SubscriptionId::new(value.id),
+            id: value.id.map(SubscriptionId::new),
             channel_id: ChannelId::new(value.channel_id),
         }
     }

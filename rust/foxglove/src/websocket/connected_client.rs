@@ -425,11 +425,14 @@ impl ConnectedClient {
 
         let mut channel_ids = Vec::with_capacity(subscribed_channels.len());
         for (subscription, channel) in subscriptions.into_iter().zip(subscribed_channels) {
+            let Some(subscription_id) = subscription.id else {
+                continue;
+            };
             // Using a limited scope here to avoid holding the lock on subscriptions while calling on_subscribe
             {
                 let mut subscriptions = self.subscriptions.lock();
                 if subscriptions
-                    .insert_no_overwrite(subscription.channel_id, subscription.id)
+                    .insert_no_overwrite(subscription.channel_id, subscription_id)
                     .is_err()
                 {
                     if subscriptions.contains_left(&subscription.channel_id) {
@@ -438,10 +441,10 @@ impl ConnectedClient {
                             subscription.channel_id
                         ));
                     } else {
-                        assert!(subscriptions.contains_right(&subscription.id));
+                        assert!(subscriptions.contains_right(&subscription_id));
                         self.send_error(format!(
                             "Subscription ID was already used: {}; ignoring subscription",
-                            subscription.id
+                            subscription_id
                         ));
                     }
                     continue;
@@ -452,7 +455,7 @@ impl ConnectedClient {
                 "Client {} subscribed to channel {} with subscription id {}",
                 self.addr,
                 subscription.channel_id,
-                subscription.id
+                subscription_id
             );
             channel_ids.push(channel.id());
 

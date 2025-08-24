@@ -16,6 +16,7 @@ pub mod server_info;
 mod service_call_failure;
 mod service_call_response;
 pub mod status;
+mod subscription_response;
 mod time;
 mod unadvertise;
 mod unadvertise_services;
@@ -31,6 +32,7 @@ pub use server_info::ServerInfo;
 pub use service_call_failure::ServiceCallFailure;
 pub use service_call_response::ServiceCallResponse;
 pub use status::Status;
+pub use subscription_response::SubscriptionResponse;
 pub use time::Time;
 pub use unadvertise::Unadvertise;
 pub use unadvertise_services::UnadvertiseServices;
@@ -53,6 +55,7 @@ pub enum ServerMessage<'a> {
     ConnectionGraphUpdate(ConnectionGraphUpdate),
     FetchAssetResponse(FetchAssetResponse<'a>),
     ServiceCallFailure(ServiceCallFailure),
+    SubscriptionResponse(SubscriptionResponse),
 }
 
 impl<'a> ServerMessage<'a> {
@@ -106,6 +109,7 @@ impl<'a> ServerMessage<'a> {
                 ServerMessage::FetchAssetResponse(m.into_owned())
             }
             ServerMessage::ServiceCallFailure(m) => ServerMessage::ServiceCallFailure(m),
+            ServerMessage::SubscriptionResponse(m) => ServerMessage::SubscriptionResponse(m),
         }
     }
 }
@@ -125,6 +129,7 @@ enum JsonMessage<'a> {
     UnadvertiseServices(UnadvertiseServices),
     ConnectionGraphUpdate(ConnectionGraphUpdate),
     ServiceCallFailure(ServiceCallFailure),
+    SubscriptionResponse(SubscriptionResponse),
 }
 
 impl<'a> From<JsonMessage<'a>> for ServerMessage<'a> {
@@ -140,6 +145,7 @@ impl<'a> From<JsonMessage<'a>> for ServerMessage<'a> {
             JsonMessage::UnadvertiseServices(m) => Self::UnadvertiseServices(m),
             JsonMessage::ConnectionGraphUpdate(m) => Self::ConnectionGraphUpdate(m),
             JsonMessage::ServiceCallFailure(m) => Self::ServiceCallFailure(m),
+            JsonMessage::SubscriptionResponse(m) => Self::SubscriptionResponse(m),
         }
     }
 }
