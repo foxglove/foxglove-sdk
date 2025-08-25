@@ -129,11 +129,17 @@ impl ArrowPrimitive {
     }
     /// Encodes the ArrowPrimitive.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
-        let mut buf = Vec::new();
-        self.0
-            .encode(&mut buf)
-            .expect("encode to a vec is infallible");
-        PyBytes::new(py, &buf)
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("closure does not return error")
     }
 }
 
@@ -249,11 +255,17 @@ impl CameraCalibration {
     }
     /// Encodes the CameraCalibration.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
-        let mut buf = Vec::new();
-        self.0
-            .encode(&mut buf)
-            .expect("encode to a vec is infallible");
-        PyBytes::new(py, &buf)
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("closure does not return error")
     }
 }
 
@@ -318,11 +330,17 @@ impl CircleAnnotation {
     }
     /// Encodes the CircleAnnotation.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
-        let mut buf = Vec::new();
-        self.0
-            .encode(&mut buf)
-            .expect("encode to a vec is infallible");
-        PyBytes::new(py, &buf)
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("closure does not return error")
     }
 }
 
@@ -363,11 +381,17 @@ impl Color {
     }
     /// Encodes the Color.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
-        let mut buf = Vec::new();
-        self.0
-            .encode(&mut buf)
-            .expect("encode to a vec is infallible");
-        PyBytes::new(py, &buf)
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("closure does not return error")
     }
 }
 
@@ -424,11 +448,17 @@ impl CompressedImage {
     }
     /// Encodes the CompressedImage.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
-        let mut buf = Vec::new();
-        self.0
-            .encode(&mut buf)
-            .expect("encode to a vec is infallible");
-        PyBytes::new(py, &buf)
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("closure does not return error")
     }
 }
 
@@ -511,11 +541,17 @@ impl CompressedVideo {
     }
     /// Encodes the CompressedVideo.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
-        let mut buf = Vec::new();
-        self.0
-            .encode(&mut buf)
-            .expect("encode to a vec is infallible");
-        PyBytes::new(py, &buf)
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("closure does not return error")
     }
 }
 
@@ -575,11 +611,17 @@ impl CylinderPrimitive {
     }
     /// Encodes the CylinderPrimitive.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
-        let mut buf = Vec::new();
-        self.0
-            .encode(&mut buf)
-            .expect("encode to a vec is infallible");
-        PyBytes::new(py, &buf)
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("closure does not return error")
     }
 }
 
@@ -625,11 +667,17 @@ impl CubePrimitive {
     }
     /// Encodes the CubePrimitive.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
-        let mut buf = Vec::new();
-        self.0
-            .encode(&mut buf)
-            .expect("encode to a vec is infallible");
-        PyBytes::new(py, &buf)
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("closure does not return error")
     }
 }
 
@@ -689,11 +737,17 @@ impl FrameTransform {
     }
     /// Encodes the FrameTransform.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
-        let mut buf = Vec::new();
-        self.0
-            .encode(&mut buf)
-            .expect("encode to a vec is infallible");
-        PyBytes::new(py, &buf)
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("closure does not return error")
     }
 }
 
@@ -732,11 +786,17 @@ impl FrameTransforms {
     }
     /// Encodes the FrameTransforms.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
-        let mut buf = Vec::new();
-        self.0
-            .encode(&mut buf)
-            .expect("encode to a vec is infallible");
-        PyBytes::new(py, &buf)
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("closure does not return error")
     }
 }
 
@@ -771,11 +831,17 @@ impl GeoJson {
     }
     /// Encodes the GeoJson.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
-        let mut buf = Vec::new();
-        self.0
-            .encode(&mut buf)
-            .expect("encode to a vec is infallible");
-        PyBytes::new(py, &buf)
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("closure does not return error")
     }
 }
 
@@ -854,11 +920,17 @@ impl Grid {
     }
     /// Encodes the Grid.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
-        let mut buf = Vec::new();
-        self.0
-            .encode(&mut buf)
-            .expect("encode to a vec is infallible");
-        PyBytes::new(py, &buf)
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("closure does not return error")
     }
 }
 
@@ -946,11 +1018,17 @@ impl VoxelGrid {
     }
     /// Encodes the VoxelGrid.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
-        let mut buf = Vec::new();
-        self.0
-            .encode(&mut buf)
-            .expect("encode to a vec is infallible");
-        PyBytes::new(py, &buf)
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("closure does not return error")
     }
 }
 
@@ -1000,11 +1078,17 @@ impl ImageAnnotations {
     }
     /// Encodes the ImageAnnotations.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
-        let mut buf = Vec::new();
-        self.0
-            .encode(&mut buf)
-            .expect("encode to a vec is infallible");
-        PyBytes::new(py, &buf)
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("closure does not return error")
     }
 }
 
@@ -1045,11 +1129,17 @@ impl KeyValuePair {
     }
     /// Encodes the KeyValuePair.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
-        let mut buf = Vec::new();
-        self.0
-            .encode(&mut buf)
-            .expect("encode to a vec is infallible");
-        PyBytes::new(py, &buf)
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("closure does not return error")
     }
 }
 
@@ -1115,11 +1205,17 @@ impl LaserScan {
     }
     /// Encodes the LaserScan.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
-        let mut buf = Vec::new();
-        self.0
-            .encode(&mut buf)
-            .expect("encode to a vec is infallible");
-        PyBytes::new(py, &buf)
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("closure does not return error")
     }
 }
 
@@ -1193,11 +1289,17 @@ impl LinePrimitive {
     }
     /// Encodes the LinePrimitive.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
-        let mut buf = Vec::new();
-        self.0
-            .encode(&mut buf)
-            .expect("encode to a vec is infallible");
-        PyBytes::new(py, &buf)
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("closure does not return error")
     }
 }
 
@@ -1267,11 +1369,17 @@ impl LocationFix {
     }
     /// Encodes the LocationFix.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
-        let mut buf = Vec::new();
-        self.0
-            .encode(&mut buf)
-            .expect("encode to a vec is infallible");
-        PyBytes::new(py, &buf)
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("closure does not return error")
     }
 }
 
@@ -1310,11 +1418,17 @@ impl LocationFixes {
     }
     /// Encodes the LocationFixes.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
-        let mut buf = Vec::new();
-        self.0
-            .encode(&mut buf)
-            .expect("encode to a vec is infallible");
-        PyBytes::new(py, &buf)
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("closure does not return error")
     }
 }
 
@@ -1371,11 +1485,17 @@ impl Log {
     }
     /// Encodes the Log.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
-        let mut buf = Vec::new();
-        self.0
-            .encode(&mut buf)
-            .expect("encode to a vec is infallible");
-        PyBytes::new(py, &buf)
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("closure does not return error")
     }
 }
 
@@ -1421,11 +1541,17 @@ impl SceneEntityDeletion {
     }
     /// Encodes the SceneEntityDeletion.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
-        let mut buf = Vec::new();
-        self.0
-            .encode(&mut buf)
-            .expect("encode to a vec is infallible");
-        PyBytes::new(py, &buf)
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("closure does not return error")
     }
 }
 
@@ -1519,11 +1645,17 @@ impl SceneEntity {
     }
     /// Encodes the SceneEntity.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
-        let mut buf = Vec::new();
-        self.0
-            .encode(&mut buf)
-            .expect("encode to a vec is infallible");
-        PyBytes::new(py, &buf)
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("closure does not return error")
     }
 }
 
@@ -1565,11 +1697,17 @@ impl SceneUpdate {
     }
     /// Encodes the SceneUpdate.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
-        let mut buf = Vec::new();
-        self.0
-            .encode(&mut buf)
-            .expect("encode to a vec is infallible");
-        PyBytes::new(py, &buf)
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("closure does not return error")
     }
 }
 
@@ -1639,11 +1777,17 @@ impl ModelPrimitive {
     }
     /// Encodes the ModelPrimitive.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
-        let mut buf = Vec::new();
-        self.0
-            .encode(&mut buf)
-            .expect("encode to a vec is infallible");
-        PyBytes::new(py, &buf)
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("closure does not return error")
     }
 }
 
@@ -1689,11 +1833,17 @@ impl PackedElementField {
     }
     /// Encodes the PackedElementField.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
-        let mut buf = Vec::new();
-        self.0
-            .encode(&mut buf)
-            .expect("encode to a vec is infallible");
-        PyBytes::new(py, &buf)
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("closure does not return error")
     }
 }
 
@@ -1729,11 +1879,17 @@ impl Point2 {
     }
     /// Encodes the Point2.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
-        let mut buf = Vec::new();
-        self.0
-            .encode(&mut buf)
-            .expect("encode to a vec is infallible");
-        PyBytes::new(py, &buf)
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("closure does not return error")
     }
 }
 
@@ -1773,11 +1929,17 @@ impl Point3 {
     }
     /// Encodes the Point3.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
-        let mut buf = Vec::new();
-        self.0
-            .encode(&mut buf)
-            .expect("encode to a vec is infallible");
-        PyBytes::new(py, &buf)
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("closure does not return error")
     }
 }
 
@@ -1841,11 +2003,17 @@ impl PointCloud {
     }
     /// Encodes the PointCloud.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
-        let mut buf = Vec::new();
-        self.0
-            .encode(&mut buf)
-            .expect("encode to a vec is infallible");
-        PyBytes::new(py, &buf)
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("closure does not return error")
     }
 }
 
@@ -1914,11 +2082,17 @@ impl PointsAnnotation {
     }
     /// Encodes the PointsAnnotation.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
-        let mut buf = Vec::new();
-        self.0
-            .encode(&mut buf)
-            .expect("encode to a vec is infallible");
-        PyBytes::new(py, &buf)
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("closure does not return error")
     }
 }
 
@@ -1960,11 +2134,17 @@ impl Pose {
     }
     /// Encodes the Pose.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
-        let mut buf = Vec::new();
-        self.0
-            .encode(&mut buf)
-            .expect("encode to a vec is infallible");
-        PyBytes::new(py, &buf)
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("closure does not return error")
     }
 }
 
@@ -2008,11 +2188,17 @@ impl PoseInFrame {
     }
     /// Encodes the PoseInFrame.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
-        let mut buf = Vec::new();
-        self.0
-            .encode(&mut buf)
-            .expect("encode to a vec is infallible");
-        PyBytes::new(py, &buf)
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("closure does not return error")
     }
 }
 
@@ -2058,11 +2244,17 @@ impl PosesInFrame {
     }
     /// Encodes the PosesInFrame.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
-        let mut buf = Vec::new();
-        self.0
-            .encode(&mut buf)
-            .expect("encode to a vec is infallible");
-        PyBytes::new(py, &buf)
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("closure does not return error")
     }
 }
 
@@ -2103,11 +2295,17 @@ impl Quaternion {
     }
     /// Encodes the Quaternion.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
-        let mut buf = Vec::new();
-        self.0
-            .encode(&mut buf)
-            .expect("encode to a vec is infallible");
-        PyBytes::new(py, &buf)
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("closure does not return error")
     }
 }
 
@@ -2167,11 +2365,17 @@ impl RawAudio {
     }
     /// Encodes the RawAudio.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
-        let mut buf = Vec::new();
-        self.0
-            .encode(&mut buf)
-            .expect("encode to a vec is infallible");
-        PyBytes::new(py, &buf)
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("closure does not return error")
     }
 }
 
@@ -2292,11 +2496,17 @@ impl RawImage {
     }
     /// Encodes the RawImage.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
-        let mut buf = Vec::new();
-        self.0
-            .encode(&mut buf)
-            .expect("encode to a vec is infallible");
-        PyBytes::new(py, &buf)
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("closure does not return error")
     }
 }
 
@@ -2342,11 +2552,17 @@ impl SpherePrimitive {
     }
     /// Encodes the SpherePrimitive.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
-        let mut buf = Vec::new();
-        self.0
-            .encode(&mut buf)
-            .expect("encode to a vec is infallible");
-        PyBytes::new(py, &buf)
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("closure does not return error")
     }
 }
 
@@ -2411,11 +2627,17 @@ impl TextAnnotation {
     }
     /// Encodes the TextAnnotation.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
-        let mut buf = Vec::new();
-        self.0
-            .encode(&mut buf)
-            .expect("encode to a vec is infallible");
-        PyBytes::new(py, &buf)
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("closure does not return error")
     }
 }
 
@@ -2479,11 +2701,17 @@ impl TextPrimitive {
     }
     /// Encodes the TextPrimitive.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
-        let mut buf = Vec::new();
-        self.0
-            .encode(&mut buf)
-            .expect("encode to a vec is infallible");
-        PyBytes::new(py, &buf)
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("closure does not return error")
     }
 }
 
@@ -2541,11 +2769,17 @@ impl TriangleListPrimitive {
     }
     /// Encodes the TriangleListPrimitive.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
-        let mut buf = Vec::new();
-        self.0
-            .encode(&mut buf)
-            .expect("encode to a vec is infallible");
-        PyBytes::new(py, &buf)
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("closure does not return error")
     }
 }
 
@@ -2581,11 +2815,17 @@ impl Vector2 {
     }
     /// Encodes the Vector2.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
-        let mut buf = Vec::new();
-        self.0
-            .encode(&mut buf)
-            .expect("encode to a vec is infallible");
-        PyBytes::new(py, &buf)
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("closure does not return error")
     }
 }
 
@@ -2625,11 +2865,17 @@ impl Vector3 {
     }
     /// Encodes the Vector3.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
-        let mut buf = Vec::new();
-        self.0
-            .encode(&mut buf)
-            .expect("encode to a vec is infallible");
-        PyBytes::new(py, &buf)
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("closure does not return error")
     }
 }
 

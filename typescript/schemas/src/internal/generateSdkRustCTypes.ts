@@ -260,22 +260,22 @@ pub unsafe extern "C" fn foxglove_${snakeName}_encode(
     msg: Option<&${name}>,
     ptr: *mut u8,
     len: usize,
-    result: Option<&mut usize>,
+    encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { ${name}::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            let mut buf = RawBuf { ptr, len, pos: 0 };
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
             if let Err(encode_error) = msg.encode(&mut buf) {
-                if let Some(result) = result {
-                    *result = encode_error.required_capacity();
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
                 }
                 return FoxgloveError::BufferTooShort;
             }
-            if let Some(result) = result {
-                *result = buf.pos;
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
             }
             FoxgloveError::Ok
         }
@@ -298,7 +298,6 @@ pub unsafe extern "C" fn foxglove_${snakeName}_encode(
     "use crate::{FoxgloveString, FoxgloveError, FoxgloveChannel, FoxgloveContext, FoxgloveTimestamp, FoxgloveDuration, log_msg_to_channel, result_to_c, do_foxglove_channel_create, FoxgloveSinkId};",
     "use crate::arena::{Arena, BorrowToNative};",
     "use crate::util::{bytes_from_raw, string_from_raw, vec_from_raw};",
-    "use crate::raw_buf::RawBuf;",
   ];
 
   const enumDefs = enums.map((enumSchema) => {

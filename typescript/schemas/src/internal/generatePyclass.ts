@@ -294,9 +294,10 @@ function generateMessageClass(schema: FoxgloveMessageSchema): string {
     `    }`,
     `    /// Encodes the ${className}.`,
     `    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {`,
-    `        let mut buf = Vec::new();`,
-    `        self.0.encode(&mut buf).expect("encode to a vec is infallible");`,
-    `        PyBytes::new(py, &buf)`,
+    `        PyBytes::new_with(py, self.0.encoded_len().expect("foxglove schemas provide len"), |mut b: &mut[u8]| {`,
+    `            self.0.encode(&mut b).expect("encoding len was provided above");`,
+    `            Ok(())`,
+    `        }).expect("closure does not return error")`,
     `    }`,
     `}\n\n`,
   ];

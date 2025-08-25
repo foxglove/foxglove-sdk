@@ -7,7 +7,6 @@ use std::pin::{pin, Pin};
 use foxglove::Encode;
 
 use crate::arena::{Arena, BorrowToNative};
-use crate::raw_buf::RawBuf;
 use crate::util::{bytes_from_raw, string_from_raw, vec_from_raw};
 use crate::{
     do_foxglove_channel_create, log_msg_to_channel, result_to_c, FoxgloveChannel, FoxgloveContext,
@@ -189,22 +188,22 @@ pub unsafe extern "C" fn foxglove_arrow_primitive_encode(
     msg: Option<&ArrowPrimitive>,
     ptr: *mut u8,
     len: usize,
-    result: Option<&mut usize>,
+    encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { ArrowPrimitive::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            let mut buf = RawBuf { ptr, len, pos: 0 };
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
             if let Err(encode_error) = msg.encode(&mut buf) {
-                if let Some(result) = result {
-                    *result = encode_error.required_capacity();
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
                 }
                 return FoxgloveError::BufferTooShort;
             }
-            if let Some(result) = result {
-                *result = buf.pos;
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
             }
             FoxgloveError::Ok
         }
@@ -392,22 +391,22 @@ pub unsafe extern "C" fn foxglove_camera_calibration_encode(
     msg: Option<&CameraCalibration>,
     ptr: *mut u8,
     len: usize,
-    result: Option<&mut usize>,
+    encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { CameraCalibration::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            let mut buf = RawBuf { ptr, len, pos: 0 };
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
             if let Err(encode_error) = msg.encode(&mut buf) {
-                if let Some(result) = result {
-                    *result = encode_error.required_capacity();
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
                 }
                 return FoxgloveError::BufferTooShort;
             }
-            if let Some(result) = result {
-                *result = buf.pos;
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
             }
             FoxgloveError::Ok
         }
@@ -541,22 +540,22 @@ pub unsafe extern "C" fn foxglove_circle_annotation_encode(
     msg: Option<&CircleAnnotation>,
     ptr: *mut u8,
     len: usize,
-    result: Option<&mut usize>,
+    encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { CircleAnnotation::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            let mut buf = RawBuf { ptr, len, pos: 0 };
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
             if let Err(encode_error) = msg.encode(&mut buf) {
-                if let Some(result) = result {
-                    *result = encode_error.required_capacity();
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
                 }
                 return FoxgloveError::BufferTooShort;
             }
-            if let Some(result) = result {
-                *result = buf.pos;
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
             }
             FoxgloveError::Ok
         }
@@ -661,22 +660,22 @@ pub unsafe extern "C" fn foxglove_color_encode(
     msg: Option<&Color>,
     ptr: *mut u8,
     len: usize,
-    result: Option<&mut usize>,
+    encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { Color::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            let mut buf = RawBuf { ptr, len, pos: 0 };
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
             if let Err(encode_error) = msg.encode(&mut buf) {
-                if let Some(result) = result {
-                    *result = encode_error.required_capacity();
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
                 }
                 return FoxgloveError::BufferTooShort;
             }
-            if let Some(result) = result {
-                *result = buf.pos;
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
             }
             FoxgloveError::Ok
         }
@@ -800,22 +799,22 @@ pub unsafe extern "C" fn foxglove_compressed_image_encode(
     msg: Option<&CompressedImage>,
     ptr: *mut u8,
     len: usize,
-    result: Option<&mut usize>,
+    encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { CompressedImage::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            let mut buf = RawBuf { ptr, len, pos: 0 };
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
             if let Err(encode_error) = msg.encode(&mut buf) {
-                if let Some(result) = result {
-                    *result = encode_error.required_capacity();
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
                 }
                 return FoxgloveError::BufferTooShort;
             }
-            if let Some(result) = result {
-                *result = buf.pos;
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
             }
             FoxgloveError::Ok
         }
@@ -965,22 +964,22 @@ pub unsafe extern "C" fn foxglove_compressed_video_encode(
     msg: Option<&CompressedVideo>,
     ptr: *mut u8,
     len: usize,
-    result: Option<&mut usize>,
+    encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { CompressedVideo::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            let mut buf = RawBuf { ptr, len, pos: 0 };
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
             if let Err(encode_error) = msg.encode(&mut buf) {
-                if let Some(result) = result {
-                    *result = encode_error.required_capacity();
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
                 }
                 return FoxgloveError::BufferTooShort;
             }
-            if let Some(result) = result {
-                *result = buf.pos;
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
             }
             FoxgloveError::Ok
         }
@@ -1109,22 +1108,22 @@ pub unsafe extern "C" fn foxglove_cylinder_primitive_encode(
     msg: Option<&CylinderPrimitive>,
     ptr: *mut u8,
     len: usize,
-    result: Option<&mut usize>,
+    encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { CylinderPrimitive::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            let mut buf = RawBuf { ptr, len, pos: 0 };
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
             if let Err(encode_error) = msg.encode(&mut buf) {
-                if let Some(result) = result {
-                    *result = encode_error.required_capacity();
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
                 }
                 return FoxgloveError::BufferTooShort;
             }
-            if let Some(result) = result {
-                *result = buf.pos;
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
             }
             FoxgloveError::Ok
         }
@@ -1245,22 +1244,22 @@ pub unsafe extern "C" fn foxglove_cube_primitive_encode(
     msg: Option<&CubePrimitive>,
     ptr: *mut u8,
     len: usize,
-    result: Option<&mut usize>,
+    encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { CubePrimitive::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            let mut buf = RawBuf { ptr, len, pos: 0 };
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
             if let Err(encode_error) = msg.encode(&mut buf) {
-                if let Some(result) = result {
-                    *result = encode_error.required_capacity();
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
                 }
                 return FoxgloveError::BufferTooShort;
             }
-            if let Some(result) = result {
-                *result = buf.pos;
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
             }
             FoxgloveError::Ok
         }
@@ -1397,22 +1396,22 @@ pub unsafe extern "C" fn foxglove_frame_transform_encode(
     msg: Option<&FrameTransform>,
     ptr: *mut u8,
     len: usize,
-    result: Option<&mut usize>,
+    encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { FrameTransform::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            let mut buf = RawBuf { ptr, len, pos: 0 };
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
             if let Err(encode_error) = msg.encode(&mut buf) {
-                if let Some(result) = result {
-                    *result = encode_error.required_capacity();
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
                 }
                 return FoxgloveError::BufferTooShort;
             }
-            if let Some(result) = result {
-                *result = buf.pos;
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
             }
             FoxgloveError::Ok
         }
@@ -1509,22 +1508,22 @@ pub unsafe extern "C" fn foxglove_frame_transforms_encode(
     msg: Option<&FrameTransforms>,
     ptr: *mut u8,
     len: usize,
-    result: Option<&mut usize>,
+    encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { FrameTransforms::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            let mut buf = RawBuf { ptr, len, pos: 0 };
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
             if let Err(encode_error) = msg.encode(&mut buf) {
-                if let Some(result) = result {
-                    *result = encode_error.required_capacity();
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
                 }
                 return FoxgloveError::BufferTooShort;
             }
-            if let Some(result) = result {
-                *result = buf.pos;
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
             }
             FoxgloveError::Ok
         }
@@ -1625,22 +1624,22 @@ pub unsafe extern "C" fn foxglove_geo_json_encode(
     msg: Option<&GeoJson>,
     ptr: *mut u8,
     len: usize,
-    result: Option<&mut usize>,
+    encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { GeoJson::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            let mut buf = RawBuf { ptr, len, pos: 0 };
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
             if let Err(encode_error) = msg.encode(&mut buf) {
-                if let Some(result) = result {
-                    *result = encode_error.required_capacity();
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
                 }
                 return FoxgloveError::BufferTooShort;
             }
-            if let Some(result) = result {
-                *result = buf.pos;
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
             }
             FoxgloveError::Ok
         }
@@ -1791,22 +1790,22 @@ pub unsafe extern "C" fn foxglove_grid_encode(
     msg: Option<&Grid>,
     ptr: *mut u8,
     len: usize,
-    result: Option<&mut usize>,
+    encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { Grid::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            let mut buf = RawBuf { ptr, len, pos: 0 };
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
             if let Err(encode_error) = msg.encode(&mut buf) {
-                if let Some(result) = result {
-                    *result = encode_error.required_capacity();
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
                 }
                 return FoxgloveError::BufferTooShort;
             }
-            if let Some(result) = result {
-                *result = buf.pos;
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
             }
             FoxgloveError::Ok
         }
@@ -1966,22 +1965,22 @@ pub unsafe extern "C" fn foxglove_voxel_grid_encode(
     msg: Option<&VoxelGrid>,
     ptr: *mut u8,
     len: usize,
-    result: Option<&mut usize>,
+    encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { VoxelGrid::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            let mut buf = RawBuf { ptr, len, pos: 0 };
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
             if let Err(encode_error) = msg.encode(&mut buf) {
-                if let Some(result) = result {
-                    *result = encode_error.required_capacity();
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
                 }
                 return FoxgloveError::BufferTooShort;
             }
-            if let Some(result) = result {
-                *result = buf.pos;
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
             }
             FoxgloveError::Ok
         }
@@ -2090,22 +2089,22 @@ pub unsafe extern "C" fn foxglove_image_annotations_encode(
     msg: Option<&ImageAnnotations>,
     ptr: *mut u8,
     len: usize,
-    result: Option<&mut usize>,
+    encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { ImageAnnotations::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            let mut buf = RawBuf { ptr, len, pos: 0 };
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
             if let Err(encode_error) = msg.encode(&mut buf) {
-                if let Some(result) = result {
-                    *result = encode_error.required_capacity();
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
                 }
                 return FoxgloveError::BufferTooShort;
             }
-            if let Some(result) = result {
-                *result = buf.pos;
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
             }
             FoxgloveError::Ok
         }
@@ -2207,22 +2206,22 @@ pub unsafe extern "C" fn foxglove_key_value_pair_encode(
     msg: Option<&KeyValuePair>,
     ptr: *mut u8,
     len: usize,
-    result: Option<&mut usize>,
+    encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { KeyValuePair::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            let mut buf = RawBuf { ptr, len, pos: 0 };
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
             if let Err(encode_error) = msg.encode(&mut buf) {
-                if let Some(result) = result {
-                    *result = encode_error.required_capacity();
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
                 }
                 return FoxgloveError::BufferTooShort;
             }
-            if let Some(result) = result {
-                *result = buf.pos;
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
             }
             FoxgloveError::Ok
         }
@@ -2359,22 +2358,22 @@ pub unsafe extern "C" fn foxglove_laser_scan_encode(
     msg: Option<&LaserScan>,
     ptr: *mut u8,
     len: usize,
-    result: Option<&mut usize>,
+    encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { LaserScan::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            let mut buf = RawBuf { ptr, len, pos: 0 };
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
             if let Err(encode_error) = msg.encode(&mut buf) {
-                if let Some(result) = result {
-                    *result = encode_error.required_capacity();
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
                 }
                 return FoxgloveError::BufferTooShort;
             }
-            if let Some(result) = result {
-                *result = buf.pos;
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
             }
             FoxgloveError::Ok
         }
@@ -2518,22 +2517,22 @@ pub unsafe extern "C" fn foxglove_line_primitive_encode(
     msg: Option<&LinePrimitive>,
     ptr: *mut u8,
     len: usize,
-    result: Option<&mut usize>,
+    encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { LinePrimitive::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            let mut buf = RawBuf { ptr, len, pos: 0 };
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
             if let Err(encode_error) = msg.encode(&mut buf) {
-                if let Some(result) = result {
-                    *result = encode_error.required_capacity();
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
                 }
                 return FoxgloveError::BufferTooShort;
             }
-            if let Some(result) = result {
-                *result = buf.pos;
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
             }
             FoxgloveError::Ok
         }
@@ -2674,22 +2673,22 @@ pub unsafe extern "C" fn foxglove_location_fix_encode(
     msg: Option<&LocationFix>,
     ptr: *mut u8,
     len: usize,
-    result: Option<&mut usize>,
+    encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { LocationFix::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            let mut buf = RawBuf { ptr, len, pos: 0 };
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
             if let Err(encode_error) = msg.encode(&mut buf) {
-                if let Some(result) = result {
-                    *result = encode_error.required_capacity();
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
                 }
                 return FoxgloveError::BufferTooShort;
             }
-            if let Some(result) = result {
-                *result = buf.pos;
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
             }
             FoxgloveError::Ok
         }
@@ -2786,22 +2785,22 @@ pub unsafe extern "C" fn foxglove_location_fixes_encode(
     msg: Option<&LocationFixes>,
     ptr: *mut u8,
     len: usize,
-    result: Option<&mut usize>,
+    encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { LocationFixes::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            let mut buf = RawBuf { ptr, len, pos: 0 };
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
             if let Err(encode_error) = msg.encode(&mut buf) {
-                if let Some(result) = result {
-                    *result = encode_error.required_capacity();
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
                 }
                 return FoxgloveError::BufferTooShort;
             }
-            if let Some(result) = result {
-                *result = buf.pos;
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
             }
             FoxgloveError::Ok
         }
@@ -2926,22 +2925,22 @@ pub unsafe extern "C" fn foxglove_log_encode(
     msg: Option<&Log>,
     ptr: *mut u8,
     len: usize,
-    result: Option<&mut usize>,
+    encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { Log::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            let mut buf = RawBuf { ptr, len, pos: 0 };
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
             if let Err(encode_error) = msg.encode(&mut buf) {
-                if let Some(result) = result {
-                    *result = encode_error.required_capacity();
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
                 }
                 return FoxgloveError::BufferTooShort;
             }
-            if let Some(result) = result {
-                *result = buf.pos;
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
             }
             FoxgloveError::Ok
         }
@@ -3046,22 +3045,22 @@ pub unsafe extern "C" fn foxglove_scene_entity_deletion_encode(
     msg: Option<&SceneEntityDeletion>,
     ptr: *mut u8,
     len: usize,
-    result: Option<&mut usize>,
+    encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { SceneEntityDeletion::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            let mut buf = RawBuf { ptr, len, pos: 0 };
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
             if let Err(encode_error) = msg.encode(&mut buf) {
-                if let Some(result) = result {
-                    *result = encode_error.required_capacity();
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
                 }
                 return FoxgloveError::BufferTooShort;
             }
-            if let Some(result) = result {
-                *result = buf.pos;
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
             }
             FoxgloveError::Ok
         }
@@ -3234,22 +3233,22 @@ pub unsafe extern "C" fn foxglove_scene_entity_encode(
     msg: Option<&SceneEntity>,
     ptr: *mut u8,
     len: usize,
-    result: Option<&mut usize>,
+    encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { SceneEntity::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            let mut buf = RawBuf { ptr, len, pos: 0 };
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
             if let Err(encode_error) = msg.encode(&mut buf) {
-                if let Some(result) = result {
-                    *result = encode_error.required_capacity();
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
                 }
                 return FoxgloveError::BufferTooShort;
             }
-            if let Some(result) = result {
-                *result = buf.pos;
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
             }
             FoxgloveError::Ok
         }
@@ -3352,22 +3351,22 @@ pub unsafe extern "C" fn foxglove_scene_update_encode(
     msg: Option<&SceneUpdate>,
     ptr: *mut u8,
     len: usize,
-    result: Option<&mut usize>,
+    encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { SceneUpdate::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            let mut buf = RawBuf { ptr, len, pos: 0 };
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
             if let Err(encode_error) = msg.encode(&mut buf) {
-                if let Some(result) = result {
-                    *result = encode_error.required_capacity();
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
                 }
                 return FoxgloveError::BufferTooShort;
             }
-            if let Some(result) = result {
-                *result = buf.pos;
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
             }
             FoxgloveError::Ok
         }
@@ -3513,22 +3512,22 @@ pub unsafe extern "C" fn foxglove_model_primitive_encode(
     msg: Option<&ModelPrimitive>,
     ptr: *mut u8,
     len: usize,
-    result: Option<&mut usize>,
+    encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { ModelPrimitive::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            let mut buf = RawBuf { ptr, len, pos: 0 };
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
             if let Err(encode_error) = msg.encode(&mut buf) {
-                if let Some(result) = result {
-                    *result = encode_error.required_capacity();
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
                 }
                 return FoxgloveError::BufferTooShort;
             }
-            if let Some(result) = result {
-                *result = buf.pos;
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
             }
             FoxgloveError::Ok
         }
@@ -3633,22 +3632,22 @@ pub unsafe extern "C" fn foxglove_packed_element_field_encode(
     msg: Option<&PackedElementField>,
     ptr: *mut u8,
     len: usize,
-    result: Option<&mut usize>,
+    encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { PackedElementField::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            let mut buf = RawBuf { ptr, len, pos: 0 };
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
             if let Err(encode_error) = msg.encode(&mut buf) {
-                if let Some(result) = result {
-                    *result = encode_error.required_capacity();
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
                 }
                 return FoxgloveError::BufferTooShort;
             }
-            if let Some(result) = result {
-                *result = buf.pos;
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
             }
             FoxgloveError::Ok
         }
@@ -3745,22 +3744,22 @@ pub unsafe extern "C" fn foxglove_point2_encode(
     msg: Option<&Point2>,
     ptr: *mut u8,
     len: usize,
-    result: Option<&mut usize>,
+    encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { Point2::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            let mut buf = RawBuf { ptr, len, pos: 0 };
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
             if let Err(encode_error) = msg.encode(&mut buf) {
-                if let Some(result) = result {
-                    *result = encode_error.required_capacity();
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
                 }
                 return FoxgloveError::BufferTooShort;
             }
-            if let Some(result) = result {
-                *result = buf.pos;
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
             }
             FoxgloveError::Ok
         }
@@ -3861,22 +3860,22 @@ pub unsafe extern "C" fn foxglove_point3_encode(
     msg: Option<&Point3>,
     ptr: *mut u8,
     len: usize,
-    result: Option<&mut usize>,
+    encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { Point3::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            let mut buf = RawBuf { ptr, len, pos: 0 };
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
             if let Err(encode_error) = msg.encode(&mut buf) {
-                if let Some(result) = result {
-                    *result = encode_error.required_capacity();
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
                 }
                 return FoxgloveError::BufferTooShort;
             }
-            if let Some(result) = result {
-                *result = buf.pos;
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
             }
             FoxgloveError::Ok
         }
@@ -4007,22 +4006,22 @@ pub unsafe extern "C" fn foxglove_point_cloud_encode(
     msg: Option<&PointCloud>,
     ptr: *mut u8,
     len: usize,
-    result: Option<&mut usize>,
+    encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { PointCloud::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            let mut buf = RawBuf { ptr, len, pos: 0 };
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
             if let Err(encode_error) = msg.encode(&mut buf) {
-                if let Some(result) = result {
-                    *result = encode_error.required_capacity();
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
                 }
                 return FoxgloveError::BufferTooShort;
             }
-            if let Some(result) = result {
-                *result = buf.pos;
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
             }
             FoxgloveError::Ok
         }
@@ -4162,22 +4161,22 @@ pub unsafe extern "C" fn foxglove_points_annotation_encode(
     msg: Option<&PointsAnnotation>,
     ptr: *mut u8,
     len: usize,
-    result: Option<&mut usize>,
+    encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { PointsAnnotation::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            let mut buf = RawBuf { ptr, len, pos: 0 };
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
             if let Err(encode_error) = msg.encode(&mut buf) {
-                if let Some(result) = result {
-                    *result = encode_error.required_capacity();
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
                 }
                 return FoxgloveError::BufferTooShort;
             }
-            if let Some(result) = result {
-                *result = buf.pos;
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
             }
             FoxgloveError::Ok
         }
@@ -4287,22 +4286,22 @@ pub unsafe extern "C" fn foxglove_pose_encode(
     msg: Option<&Pose>,
     ptr: *mut u8,
     len: usize,
-    result: Option<&mut usize>,
+    encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { Pose::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            let mut buf = RawBuf { ptr, len, pos: 0 };
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
             if let Err(encode_error) = msg.encode(&mut buf) {
-                if let Some(result) = result {
-                    *result = encode_error.required_capacity();
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
                 }
                 return FoxgloveError::BufferTooShort;
             }
-            if let Some(result) = result {
-                *result = buf.pos;
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
             }
             FoxgloveError::Ok
         }
@@ -4418,22 +4417,22 @@ pub unsafe extern "C" fn foxglove_pose_in_frame_encode(
     msg: Option<&PoseInFrame>,
     ptr: *mut u8,
     len: usize,
-    result: Option<&mut usize>,
+    encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { PoseInFrame::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            let mut buf = RawBuf { ptr, len, pos: 0 };
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
             if let Err(encode_error) = msg.encode(&mut buf) {
-                if let Some(result) = result {
-                    *result = encode_error.required_capacity();
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
                 }
                 return FoxgloveError::BufferTooShort;
             }
-            if let Some(result) = result {
-                *result = buf.pos;
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
             }
             FoxgloveError::Ok
         }
@@ -4545,22 +4544,22 @@ pub unsafe extern "C" fn foxglove_poses_in_frame_encode(
     msg: Option<&PosesInFrame>,
     ptr: *mut u8,
     len: usize,
-    result: Option<&mut usize>,
+    encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { PosesInFrame::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            let mut buf = RawBuf { ptr, len, pos: 0 };
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
             if let Err(encode_error) = msg.encode(&mut buf) {
-                if let Some(result) = result {
-                    *result = encode_error.required_capacity();
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
                 }
                 return FoxgloveError::BufferTooShort;
             }
-            if let Some(result) = result {
-                *result = buf.pos;
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
             }
             FoxgloveError::Ok
         }
@@ -4666,22 +4665,22 @@ pub unsafe extern "C" fn foxglove_quaternion_encode(
     msg: Option<&Quaternion>,
     ptr: *mut u8,
     len: usize,
-    result: Option<&mut usize>,
+    encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { Quaternion::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            let mut buf = RawBuf { ptr, len, pos: 0 };
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
             if let Err(encode_error) = msg.encode(&mut buf) {
-                if let Some(result) = result {
-                    *result = encode_error.required_capacity();
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
                 }
                 return FoxgloveError::BufferTooShort;
             }
-            if let Some(result) = result {
-                *result = buf.pos;
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
             }
             FoxgloveError::Ok
         }
@@ -4799,22 +4798,22 @@ pub unsafe extern "C" fn foxglove_raw_audio_encode(
     msg: Option<&RawAudio>,
     ptr: *mut u8,
     len: usize,
-    result: Option<&mut usize>,
+    encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { RawAudio::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            let mut buf = RawBuf { ptr, len, pos: 0 };
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
             if let Err(encode_error) = msg.encode(&mut buf) {
-                if let Some(result) = result {
-                    *result = encode_error.required_capacity();
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
                 }
                 return FoxgloveError::BufferTooShort;
             }
-            if let Some(result) = result {
-                *result = buf.pos;
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
             }
             FoxgloveError::Ok
         }
@@ -5000,22 +4999,22 @@ pub unsafe extern "C" fn foxglove_raw_image_encode(
     msg: Option<&RawImage>,
     ptr: *mut u8,
     len: usize,
-    result: Option<&mut usize>,
+    encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { RawImage::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            let mut buf = RawBuf { ptr, len, pos: 0 };
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
             if let Err(encode_error) = msg.encode(&mut buf) {
-                if let Some(result) = result {
-                    *result = encode_error.required_capacity();
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
                 }
                 return FoxgloveError::BufferTooShort;
             }
-            if let Some(result) = result {
-                *result = buf.pos;
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
             }
             FoxgloveError::Ok
         }
@@ -5136,22 +5135,22 @@ pub unsafe extern "C" fn foxglove_sphere_primitive_encode(
     msg: Option<&SpherePrimitive>,
     ptr: *mut u8,
     len: usize,
-    result: Option<&mut usize>,
+    encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { SpherePrimitive::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            let mut buf = RawBuf { ptr, len, pos: 0 };
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
             if let Err(encode_error) = msg.encode(&mut buf) {
-                if let Some(result) = result {
-                    *result = encode_error.required_capacity();
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
                 }
                 return FoxgloveError::BufferTooShort;
             }
-            if let Some(result) = result {
-                *result = buf.pos;
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
             }
             FoxgloveError::Ok
         }
@@ -5287,22 +5286,22 @@ pub unsafe extern "C" fn foxglove_text_annotation_encode(
     msg: Option<&TextAnnotation>,
     ptr: *mut u8,
     len: usize,
-    result: Option<&mut usize>,
+    encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { TextAnnotation::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            let mut buf = RawBuf { ptr, len, pos: 0 };
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
             if let Err(encode_error) = msg.encode(&mut buf) {
-                if let Some(result) = result {
-                    *result = encode_error.required_capacity();
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
                 }
                 return FoxgloveError::BufferTooShort;
             }
-            if let Some(result) = result {
-                *result = buf.pos;
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
             }
             FoxgloveError::Ok
         }
@@ -5431,22 +5430,22 @@ pub unsafe extern "C" fn foxglove_text_primitive_encode(
     msg: Option<&TextPrimitive>,
     ptr: *mut u8,
     len: usize,
-    result: Option<&mut usize>,
+    encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { TextPrimitive::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            let mut buf = RawBuf { ptr, len, pos: 0 };
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
             if let Err(encode_error) = msg.encode(&mut buf) {
-                if let Some(result) = result {
-                    *result = encode_error.required_capacity();
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
                 }
                 return FoxgloveError::BufferTooShort;
             }
-            if let Some(result) = result {
-                *result = buf.pos;
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
             }
             FoxgloveError::Ok
         }
@@ -5581,22 +5580,22 @@ pub unsafe extern "C" fn foxglove_triangle_list_primitive_encode(
     msg: Option<&TriangleListPrimitive>,
     ptr: *mut u8,
     len: usize,
-    result: Option<&mut usize>,
+    encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { TriangleListPrimitive::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            let mut buf = RawBuf { ptr, len, pos: 0 };
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
             if let Err(encode_error) = msg.encode(&mut buf) {
-                if let Some(result) = result {
-                    *result = encode_error.required_capacity();
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
                 }
                 return FoxgloveError::BufferTooShort;
             }
-            if let Some(result) = result {
-                *result = buf.pos;
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
             }
             FoxgloveError::Ok
         }
@@ -5693,22 +5692,22 @@ pub unsafe extern "C" fn foxglove_vector2_encode(
     msg: Option<&Vector2>,
     ptr: *mut u8,
     len: usize,
-    result: Option<&mut usize>,
+    encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { Vector2::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            let mut buf = RawBuf { ptr, len, pos: 0 };
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
             if let Err(encode_error) = msg.encode(&mut buf) {
-                if let Some(result) = result {
-                    *result = encode_error.required_capacity();
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
                 }
                 return FoxgloveError::BufferTooShort;
             }
-            if let Some(result) = result {
-                *result = buf.pos;
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
             }
             FoxgloveError::Ok
         }
@@ -5809,22 +5808,22 @@ pub unsafe extern "C" fn foxglove_vector3_encode(
     msg: Option<&Vector3>,
     ptr: *mut u8,
     len: usize,
-    result: Option<&mut usize>,
+    encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
     let mut arena = pin!(Arena::new());
     let arena_pin = arena.as_mut();
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { Vector3::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            let mut buf = RawBuf { ptr, len, pos: 0 };
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
             if let Err(encode_error) = msg.encode(&mut buf) {
-                if let Some(result) = result {
-                    *result = encode_error.required_capacity();
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
                 }
                 return FoxgloveError::BufferTooShort;
             }
-            if let Some(result) = result {
-                *result = buf.pos;
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
             }
             FoxgloveError::Ok
         }
