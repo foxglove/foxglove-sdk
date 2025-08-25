@@ -169,7 +169,7 @@ describe("generatePyclass", () => {
          }
          /// Encodes the ExampleMessage.
          #[pymethod]
-         fn encode(&self, py: Python<'_>) -> PyBytes {
+         fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
              let mut buf = Vec::new();
              self.encode(&mut buf).unwrap("encode to a vec is infallible");
              PyBytes::new(py, &buf)

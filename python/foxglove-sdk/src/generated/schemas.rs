@@ -129,7 +129,7 @@ impl ArrowPrimitive {
     }
     /// Encodes the ArrowPrimitive.
     #[pymethod]
-    fn encode(&self, py: Python<'_>) -> PyBytes {
+    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
         let mut buf = Vec::new();
         self.encode(&mut buf)
             .unwrap("encode to a vec is infallible");
@@ -249,7 +249,7 @@ impl CameraCalibration {
     }
     /// Encodes the CameraCalibration.
     #[pymethod]
-    fn encode(&self, py: Python<'_>) -> PyBytes {
+    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
         let mut buf = Vec::new();
         self.encode(&mut buf)
             .unwrap("encode to a vec is infallible");
@@ -318,7 +318,7 @@ impl CircleAnnotation {
     }
     /// Encodes the CircleAnnotation.
     #[pymethod]
-    fn encode(&self, py: Python<'_>) -> PyBytes {
+    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
         let mut buf = Vec::new();
         self.encode(&mut buf)
             .unwrap("encode to a vec is infallible");
@@ -363,7 +363,7 @@ impl Color {
     }
     /// Encodes the Color.
     #[pymethod]
-    fn encode(&self, py: Python<'_>) -> PyBytes {
+    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
         let mut buf = Vec::new();
         self.encode(&mut buf)
             .unwrap("encode to a vec is infallible");
@@ -424,7 +424,7 @@ impl CompressedImage {
     }
     /// Encodes the CompressedImage.
     #[pymethod]
-    fn encode(&self, py: Python<'_>) -> PyBytes {
+    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
         let mut buf = Vec::new();
         self.encode(&mut buf)
             .unwrap("encode to a vec is infallible");
@@ -511,7 +511,7 @@ impl CompressedVideo {
     }
     /// Encodes the CompressedVideo.
     #[pymethod]
-    fn encode(&self, py: Python<'_>) -> PyBytes {
+    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
         let mut buf = Vec::new();
         self.encode(&mut buf)
             .unwrap("encode to a vec is infallible");
@@ -575,7 +575,7 @@ impl CylinderPrimitive {
     }
     /// Encodes the CylinderPrimitive.
     #[pymethod]
-    fn encode(&self, py: Python<'_>) -> PyBytes {
+    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
         let mut buf = Vec::new();
         self.encode(&mut buf)
             .unwrap("encode to a vec is infallible");
@@ -625,7 +625,7 @@ impl CubePrimitive {
     }
     /// Encodes the CubePrimitive.
     #[pymethod]
-    fn encode(&self, py: Python<'_>) -> PyBytes {
+    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
         let mut buf = Vec::new();
         self.encode(&mut buf)
             .unwrap("encode to a vec is infallible");
@@ -689,7 +689,7 @@ impl FrameTransform {
     }
     /// Encodes the FrameTransform.
     #[pymethod]
-    fn encode(&self, py: Python<'_>) -> PyBytes {
+    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
         let mut buf = Vec::new();
         self.encode(&mut buf)
             .unwrap("encode to a vec is infallible");
@@ -732,7 +732,7 @@ impl FrameTransforms {
     }
     /// Encodes the FrameTransforms.
     #[pymethod]
-    fn encode(&self, py: Python<'_>) -> PyBytes {
+    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
         let mut buf = Vec::new();
         self.encode(&mut buf)
             .unwrap("encode to a vec is infallible");
@@ -771,7 +771,7 @@ impl GeoJson {
     }
     /// Encodes the GeoJson.
     #[pymethod]
-    fn encode(&self, py: Python<'_>) -> PyBytes {
+    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
         let mut buf = Vec::new();
         self.encode(&mut buf)
             .unwrap("encode to a vec is infallible");
@@ -854,7 +854,7 @@ impl Grid {
     }
     /// Encodes the Grid.
     #[pymethod]
-    fn encode(&self, py: Python<'_>) -> PyBytes {
+    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
         let mut buf = Vec::new();
         self.encode(&mut buf)
             .unwrap("encode to a vec is infallible");
@@ -946,7 +946,7 @@ impl VoxelGrid {
     }
     /// Encodes the VoxelGrid.
     #[pymethod]
-    fn encode(&self, py: Python<'_>) -> PyBytes {
+    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
         let mut buf = Vec::new();
         self.encode(&mut buf)
             .unwrap("encode to a vec is infallible");
@@ -1000,7 +1000,7 @@ impl ImageAnnotations {
     }
     /// Encodes the ImageAnnotations.
     #[pymethod]
-    fn encode(&self, py: Python<'_>) -> PyBytes {
+    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
         let mut buf = Vec::new();
         self.encode(&mut buf)
             .unwrap("encode to a vec is infallible");
@@ -1045,7 +1045,7 @@ impl KeyValuePair {
     }
     /// Encodes the KeyValuePair.
     #[pymethod]
-    fn encode(&self, py: Python<'_>) -> PyBytes {
+    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
         let mut buf = Vec::new();
         self.encode(&mut buf)
             .unwrap("encode to a vec is infallible");
@@ -1115,7 +1115,7 @@ impl LaserScan {
     }
     /// Encodes the LaserScan.
     #[pymethod]
-    fn encode(&self, py: Python<'_>) -> PyBytes {
+    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
         let mut buf = Vec::new();
         self.encode(&mut buf)
             .unwrap("encode to a vec is infallible");
@@ -1193,7 +1193,7 @@ impl LinePrimitive {
     }
     /// Encodes the LinePrimitive.
     #[pymethod]
-    fn encode(&self, py: Python<'_>) -> PyBytes {
+    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
         let mut buf = Vec::new();
         self.encode(&mut buf)
             .unwrap("encode to a vec is infallible");
@@ -1267,7 +1267,7 @@ impl LocationFix {
     }
     /// Encodes the LocationFix.
     #[pymethod]
-    fn encode(&self, py: Python<'_>) -> PyBytes {
+    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
         let mut buf = Vec::new();
         self.encode(&mut buf)
             .unwrap("encode to a vec is infallible");
@@ -1310,7 +1310,7 @@ impl LocationFixes {
     }
     /// Encodes the LocationFixes.
     #[pymethod]
-    fn encode(&self, py: Python<'_>) -> PyBytes {
+    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
         let mut buf = Vec::new();
         self.encode(&mut buf)
             .unwrap("encode to a vec is infallible");
@@ -1371,7 +1371,7 @@ impl Log {
     }
     /// Encodes the Log.
     #[pymethod]
-    fn encode(&self, py: Python<'_>) -> PyBytes {
+    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
         let mut buf = Vec::new();
         self.encode(&mut buf)
             .unwrap("encode to a vec is infallible");
@@ -1421,7 +1421,7 @@ impl SceneEntityDeletion {
     }
     /// Encodes the SceneEntityDeletion.
     #[pymethod]
-    fn encode(&self, py: Python<'_>) -> PyBytes {
+    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
         let mut buf = Vec::new();
         self.encode(&mut buf)
             .unwrap("encode to a vec is infallible");
@@ -1519,7 +1519,7 @@ impl SceneEntity {
     }
     /// Encodes the SceneEntity.
     #[pymethod]
-    fn encode(&self, py: Python<'_>) -> PyBytes {
+    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
         let mut buf = Vec::new();
         self.encode(&mut buf)
             .unwrap("encode to a vec is infallible");
@@ -1565,7 +1565,7 @@ impl SceneUpdate {
     }
     /// Encodes the SceneUpdate.
     #[pymethod]
-    fn encode(&self, py: Python<'_>) -> PyBytes {
+    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
         let mut buf = Vec::new();
         self.encode(&mut buf)
             .unwrap("encode to a vec is infallible");
@@ -1639,7 +1639,7 @@ impl ModelPrimitive {
     }
     /// Encodes the ModelPrimitive.
     #[pymethod]
-    fn encode(&self, py: Python<'_>) -> PyBytes {
+    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
         let mut buf = Vec::new();
         self.encode(&mut buf)
             .unwrap("encode to a vec is infallible");
@@ -1689,7 +1689,7 @@ impl PackedElementField {
     }
     /// Encodes the PackedElementField.
     #[pymethod]
-    fn encode(&self, py: Python<'_>) -> PyBytes {
+    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
         let mut buf = Vec::new();
         self.encode(&mut buf)
             .unwrap("encode to a vec is infallible");
@@ -1729,7 +1729,7 @@ impl Point2 {
     }
     /// Encodes the Point2.
     #[pymethod]
-    fn encode(&self, py: Python<'_>) -> PyBytes {
+    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
         let mut buf = Vec::new();
         self.encode(&mut buf)
             .unwrap("encode to a vec is infallible");
@@ -1773,7 +1773,7 @@ impl Point3 {
     }
     /// Encodes the Point3.
     #[pymethod]
-    fn encode(&self, py: Python<'_>) -> PyBytes {
+    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
         let mut buf = Vec::new();
         self.encode(&mut buf)
             .unwrap("encode to a vec is infallible");
@@ -1841,7 +1841,7 @@ impl PointCloud {
     }
     /// Encodes the PointCloud.
     #[pymethod]
-    fn encode(&self, py: Python<'_>) -> PyBytes {
+    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
         let mut buf = Vec::new();
         self.encode(&mut buf)
             .unwrap("encode to a vec is infallible");
@@ -1914,7 +1914,7 @@ impl PointsAnnotation {
     }
     /// Encodes the PointsAnnotation.
     #[pymethod]
-    fn encode(&self, py: Python<'_>) -> PyBytes {
+    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
         let mut buf = Vec::new();
         self.encode(&mut buf)
             .unwrap("encode to a vec is infallible");
@@ -1960,7 +1960,7 @@ impl Pose {
     }
     /// Encodes the Pose.
     #[pymethod]
-    fn encode(&self, py: Python<'_>) -> PyBytes {
+    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
         let mut buf = Vec::new();
         self.encode(&mut buf)
             .unwrap("encode to a vec is infallible");
@@ -2008,7 +2008,7 @@ impl PoseInFrame {
     }
     /// Encodes the PoseInFrame.
     #[pymethod]
-    fn encode(&self, py: Python<'_>) -> PyBytes {
+    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
         let mut buf = Vec::new();
         self.encode(&mut buf)
             .unwrap("encode to a vec is infallible");
@@ -2058,7 +2058,7 @@ impl PosesInFrame {
     }
     /// Encodes the PosesInFrame.
     #[pymethod]
-    fn encode(&self, py: Python<'_>) -> PyBytes {
+    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
         let mut buf = Vec::new();
         self.encode(&mut buf)
             .unwrap("encode to a vec is infallible");
@@ -2103,7 +2103,7 @@ impl Quaternion {
     }
     /// Encodes the Quaternion.
     #[pymethod]
-    fn encode(&self, py: Python<'_>) -> PyBytes {
+    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
         let mut buf = Vec::new();
         self.encode(&mut buf)
             .unwrap("encode to a vec is infallible");
@@ -2167,7 +2167,7 @@ impl RawAudio {
     }
     /// Encodes the RawAudio.
     #[pymethod]
-    fn encode(&self, py: Python<'_>) -> PyBytes {
+    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
         let mut buf = Vec::new();
         self.encode(&mut buf)
             .unwrap("encode to a vec is infallible");
@@ -2292,7 +2292,7 @@ impl RawImage {
     }
     /// Encodes the RawImage.
     #[pymethod]
-    fn encode(&self, py: Python<'_>) -> PyBytes {
+    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
         let mut buf = Vec::new();
         self.encode(&mut buf)
             .unwrap("encode to a vec is infallible");
@@ -2342,7 +2342,7 @@ impl SpherePrimitive {
     }
     /// Encodes the SpherePrimitive.
     #[pymethod]
-    fn encode(&self, py: Python<'_>) -> PyBytes {
+    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
         let mut buf = Vec::new();
         self.encode(&mut buf)
             .unwrap("encode to a vec is infallible");
@@ -2411,7 +2411,7 @@ impl TextAnnotation {
     }
     /// Encodes the TextAnnotation.
     #[pymethod]
-    fn encode(&self, py: Python<'_>) -> PyBytes {
+    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
         let mut buf = Vec::new();
         self.encode(&mut buf)
             .unwrap("encode to a vec is infallible");
@@ -2479,7 +2479,7 @@ impl TextPrimitive {
     }
     /// Encodes the TextPrimitive.
     #[pymethod]
-    fn encode(&self, py: Python<'_>) -> PyBytes {
+    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
         let mut buf = Vec::new();
         self.encode(&mut buf)
             .unwrap("encode to a vec is infallible");
@@ -2541,7 +2541,7 @@ impl TriangleListPrimitive {
     }
     /// Encodes the TriangleListPrimitive.
     #[pymethod]
-    fn encode(&self, py: Python<'_>) -> PyBytes {
+    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
         let mut buf = Vec::new();
         self.encode(&mut buf)
             .unwrap("encode to a vec is infallible");
@@ -2581,7 +2581,7 @@ impl Vector2 {
     }
     /// Encodes the Vector2.
     #[pymethod]
-    fn encode(&self, py: Python<'_>) -> PyBytes {
+    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
         let mut buf = Vec::new();
         self.encode(&mut buf)
             .unwrap("encode to a vec is infallible");
@@ -2625,7 +2625,7 @@ impl Vector3 {
     }
     /// Encodes the Vector3.
     #[pymethod]
-    fn encode(&self, py: Python<'_>) -> PyBytes {
+    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
         let mut buf = Vec::new();
         self.encode(&mut buf)
             .unwrap("encode to a vec is infallible");
