@@ -3,7 +3,7 @@ from foxglove.schemas import Log, LogLevel, Timestamp
 """ Asserts that foxglove schemas can be encoded as protobuf. """
 
 
-def test_can_encode():
+def test_can_encode() -> None:
     msg = Log(
         timestamp=Timestamp(5, 10),
         level=LogLevel.Error,

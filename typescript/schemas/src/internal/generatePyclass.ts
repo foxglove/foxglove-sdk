@@ -106,6 +106,9 @@ export function generatePySchemaStub(schemas: FoxgloveSchema[]): string {
             `    def get_schema() -> Schema:`,
             `        """Returns the ${name} schema"""`,
             `        ...`,
+            `    def encode(self) -> bytes:`,
+            `        """Encodes the ${name}."""`,
+            `        ...`,
           ].join("\n") + "\n\n",
       };
     });
