@@ -14,6 +14,7 @@ use tokio_util::sync::CancellationToken;
 
 use crate::library_version::get_library_version;
 use crate::websocket::connected_client::ShutdownReason;
+use crate::websocket::streams::{Acceptor, StreamConfiguration, TlsIdentity};
 use crate::{Context, FoxgloveError};
 
 use super::connected_client::ConnectedClient;
@@ -42,6 +43,7 @@ pub(crate) struct ServerOptions {
     pub supported_encodings: Option<HashSet<String>>,
     pub runtime: Option<Handle>,
     pub fetch_asset_handler: Option<Box<dyn AssetHandler>>,
+    pub tls_identity: Option<TlsIdentity>,
 }
 
 impl std::fmt::Debug for ServerOptions {
@@ -106,8 +108,16 @@ impl ShutdownHandle {
 }
 
 /// Creates a new server.
-pub(crate) fn create_server(ctx: &Arc<Context>, opts: ServerOptions) -> Arc<Server> {
-    Arc::new_cyclic(|weak_self| Server::new(weak_self.clone(), ctx, opts))
+pub(crate) fn create_server(
+    ctx: &Arc<Context>,
+    opts: ServerOptions,
+) -> Result<Arc<Server>, FoxgloveError> {
+    // TLS configuration is fallible, so build it prior to allocating the Arc with the weak ref
+    let stream_config = StreamConfiguration::new(opts.tls_identity.as_ref())?;
+
+    Ok(Arc::new_cyclic(|weak_self| {
+        Server::new(weak_self.clone(), ctx, opts, stream_config)
+    }))
 }
 
 /// A websocket server that implements the Foxglove WebSocket Protocol
@@ -143,6 +153,8 @@ pub(crate) struct Server {
     fetch_asset_handler: Option<Box<dyn AssetHandler>>,
     /// Client tasks.
     tasks: parking_lot::Mutex<Option<JoinSet<()>>>,
+    /// Configuration to support TLS streams when enabled.
+    stream_config: StreamConfiguration,
 }
 
 impl Server {
@@ -155,7 +167,12 @@ impl Server {
             .unwrap_or_default()
     }
 
-    fn new(weak_self: Weak<Self>, ctx: &Arc<Context>, opts: ServerOptions) -> Self {
+    fn new(
+        weak_self: Weak<Self>,
+        ctx: &Arc<Context>,
+        opts: ServerOptions,
+        stream_config: StreamConfiguration,
+    ) -> Self {
         let mut capabilities = opts.capabilities.unwrap_or_default();
         let mut supported_encodings = opts.supported_encodings.unwrap_or_default();
 
@@ -196,6 +213,7 @@ impl Server {
             services: parking_lot::RwLock::new(ServiceMap::from_iter(opts.services.into_values())),
             fetch_asset_handler: opts.fetch_asset_handler,
             tasks: parking_lot::Mutex::default(),
+            stream_config,
         }
     }
 
@@ -251,7 +269,12 @@ impl Server {
             }
         });
 
-        tracing::info!("Started server on {}", local_addr);
+        let maybe_tls = if self.is_tls_configured() {
+            " (TLS enabled)"
+        } else {
+            ""
+        };
+        tracing::info!("Started server on {local_addr}{maybe_tls}");
 
         Ok(local_addr)
     }
@@ -507,12 +530,21 @@ impl Server {
     }
 
     /// When a new client connects:
+    /// - SSL handshake (if configured)
     /// - Handshake
     /// - Send ServerInfo
     /// - Advertise existing channels
     /// - Advertise existing services
     /// - Listen for client messages
     async fn handle_connection(self: Arc<Self>, stream: TcpStream, addr: SocketAddr) {
+        let stream = match self.stream_config.accept(stream).await {
+            Ok(maybe_tls_stream) => maybe_tls_stream,
+            Err(e) => {
+                tracing::error!("Dropping client {addr}: secure handshake failed: {}", e);
+                return;
+            }
+        };
+
         let Ok(mut ws_stream) = handshake::do_handshake(stream).await else {
             tracing::error!("Dropping client {addr}: handshake failed");
             return;
@@ -720,5 +752,9 @@ impl Server {
             }
         }
         Ok(())
+    }
+
+    pub(crate) fn is_tls_configured(&self) -> bool {
+        self.stream_config.accepts_tls()
     }
 }

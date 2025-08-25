@@ -576,6 +576,22 @@ typedef struct foxglove_server_options {
   void (*fetch_asset)(const void *context,
                       const struct foxglove_string *uri,
                       struct foxglove_fetch_asset_responder *responder);
+  /**
+   * TLS configuration: PEM-formatted x509 certificate for the server.
+   */
+  const uint8_t *tls_cert;
+  /**
+   * TLS configuration: Length of cert bytes
+   */
+  size_t tls_cert_len;
+  /**
+   * TLS configuration: PEM-formatted pkcs8 private key for the server.
+   */
+  const uint8_t *tls_key;
+  /**
+   * TLS configuration: Length of key bytes
+   */
+  size_t tls_key_len;
 } foxglove_server_options;
 
 typedef struct foxglove_mcap_options {

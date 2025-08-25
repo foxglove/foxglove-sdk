@@ -11,6 +11,7 @@ use tokio::sync::oneshot;
 use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::WebSocketStream;
 
+use crate::websocket::streams::ServerStream;
 use crate::{ChannelId, Context, FoxgloveError, Metadata, RawChannel, Sink, SinkId};
 
 use self::ws_protocol::server::{
@@ -125,7 +126,7 @@ impl ConnectedClient {
     pub fn new(
         context: &Weak<Context>,
         server: &Weak<Server>,
-        websocket: WebSocketStream<TcpStream>,
+        websocket: WebSocketStream<ServerStream<TcpStream>>,
         addr: SocketAddr,
         message_backlog_size: usize,
     ) -> Arc<Self> {

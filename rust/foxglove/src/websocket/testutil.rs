@@ -1,7 +1,12 @@
 use std::time::Duration;
 
 use futures_util::{SinkExt, StreamExt};
+#[cfg(feature = "tls")]
+use rcgen::Certificate;
+use std::sync::Arc;
 use tokio::net::TcpStream;
+#[cfg(feature = "tls")]
+use tokio_rustls::rustls;
 use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 use tokio_tungstenite::tungstenite::http::HeaderValue;
 use tokio_tungstenite::tungstenite::{self, Message};
@@ -30,7 +35,18 @@ pub struct WebSocketClient {
 impl WebSocketClient {
     /// Connects to a server and validates the handshake response.
     pub async fn connect(addr: impl std::fmt::Display) -> Self {
-        let mut request = format!("ws://{addr}/")
+        Self::do_connect(addr, None).await
+    }
+
+    #[cfg(feature = "tls")]
+    pub async fn connect_secure(addr: impl std::fmt::Display, trusted_cert: Certificate) -> Self {
+        Self::do_connect(addr, Some(trusted_cert)).await
+    }
+
+    pub async fn do_connect(addr: impl std::fmt::Display, tls_cert: Option<Certificate>) -> Self {
+        let use_tls = tls_cert.is_some();
+        let protocol = if use_tls { "wss" } else { "ws" };
+        let mut request = format!("{protocol}://{addr}/")
             .into_client_request()
             .expect("Failed to build request");
 
@@ -39,9 +55,37 @@ impl WebSocketClient {
             HeaderValue::from_static(SUBPROTOCOL),
         );
 
-        let (stream, response) = tokio_tungstenite::connect_async(request)
-            .await
-            .expect("Failed to connect");
+        let (stream, response) = if let Some(tls_cert) = tls_cert {
+            #[cfg(feature = "tls")]
+            {
+                let mut root_cert_store = rustls::RootCertStore::empty();
+                root_cert_store
+                    .add(tls_cert.der().clone().into_owned())
+                    .expect("failed to add cert to root cert store");
+                let config = rustls::ClientConfig::builder()
+                    .with_root_certificates(root_cert_store)
+                    .with_no_client_auth();
+
+                let connector = tokio_tungstenite::Connector::Rustls(Arc::new(config));
+
+                tokio_tungstenite::connect_async_tls_with_config(
+                    request,
+                    None,
+                    false,
+                    Some(connector),
+                )
+                .await
+                .expect("Failed to connect (TLS)")
+            }
+            #[cfg(not(feature = "tls"))]
+            {
+                unimplemented!()
+            }
+        } else {
+            tokio_tungstenite::connect_async(request)
+                .await
+                .expect("Failed to connect")
+        };
 
         assert_eq!(
             response.headers().get("sec-websocket-protocol"),

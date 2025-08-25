@@ -185,6 +185,14 @@ struct WebSocketServerCallbacks {
   std::function<void()> onConnectionGraphUnsubscribe;
 };
 
+/// @brief TLS configuration for a WebSocket server.
+struct TlsIdentity {
+  /// @brief PEM-formatted x509 certificate for the server.
+  std::vector<std::byte> cert;
+  /// @brief PEM-formatted pkcs8 private key for the server.
+  std::vector<std::byte> key;
+};
+
 /// @brief Options for a WebSocket server.
 struct WebSocketServerOptions {
   friend class WebSocketServer;
@@ -205,6 +213,8 @@ struct WebSocketServerOptions {
   std::vector<std::string> supported_encodings;
   /// @brief A fetch asset handler callback.
   FetchAssetHandler fetch_asset;
+  /// @brief TLS configuration for the server.
+  std::optional<TlsIdentity> tls_identity = std::nullopt;
 };
 
 /// @brief A WebSocket server for visualization in Foxglove.
