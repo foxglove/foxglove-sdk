@@ -36,7 +36,7 @@ struct Vector3 {
   /// @brief z coordinate length
   double z = 0;
 
-  /// @brief Serialize the Vector3 to the provided buffer.
+  /// @brief Encoded the Vector3 as protobuf to the provided buffer.
   ///
   /// On success, writes the serialized length to *encoded_len.
   /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
@@ -64,7 +64,7 @@ struct Quaternion {
   /// @brief w value
   double w = 0;
 
-  /// @brief Serialize the Quaternion to the provided buffer.
+  /// @brief Encoded the Quaternion as protobuf to the provided buffer.
   ///
   /// On success, writes the serialized length to *encoded_len.
   /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
@@ -86,7 +86,7 @@ struct Pose {
   /// @brief Quaternion denoting orientation in 3D space
   std::optional<Quaternion> orientation;
 
-  /// @brief Serialize the Pose to the provided buffer.
+  /// @brief Encoded the Pose as protobuf to the provided buffer.
   ///
   /// On success, writes the serialized length to *encoded_len.
   /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
@@ -114,7 +114,7 @@ struct Color {
   /// @brief Alpha value between 0 and 1
   double a = 0;
 
-  /// @brief Serialize the Color to the provided buffer.
+  /// @brief Encoded the Color as protobuf to the provided buffer.
   ///
   /// On success, writes the serialized length to *encoded_len.
   /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
@@ -149,7 +149,7 @@ struct ArrowPrimitive {
   /// @brief Color of the arrow
   std::optional<Color> color;
 
-  /// @brief Serialize the ArrowPrimitive to the provided buffer.
+  /// @brief Encoded the ArrowPrimitive as protobuf to the provided buffer.
   ///
   /// On success, writes the serialized length to *encoded_len.
   /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
@@ -261,7 +261,7 @@ struct CameraCalibration {
   /// @brief
   std::array<double, 12> p;
 
-  /// @brief Serialize the CameraCalibration to the provided buffer.
+  /// @brief Encoded the CameraCalibration as protobuf to the provided buffer.
   ///
   /// On success, writes the serialized length to *encoded_len.
   /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
@@ -283,7 +283,7 @@ struct Point2 {
   /// @brief y coordinate position
   double y = 0;
 
-  /// @brief Serialize the Point2 to the provided buffer.
+  /// @brief Encoded the Point2 as protobuf to the provided buffer.
   ///
   /// On success, writes the serialized length to *encoded_len.
   /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
@@ -319,7 +319,7 @@ struct CircleAnnotation {
   /// @brief Outline color
   std::optional<Color> outline_color;
 
-  /// @brief Serialize the CircleAnnotation to the provided buffer.
+  /// @brief Encoded the CircleAnnotation as protobuf to the provided buffer.
   ///
   /// On success, writes the serialized length to *encoded_len.
   /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
@@ -351,7 +351,7 @@ struct CompressedImage {
   /// @brief Supported values: `jpeg`, `png`, `webp`, `avif`
   std::string format;
 
-  /// @brief Serialize the CompressedImage to the provided buffer.
+  /// @brief Encoded the CompressedImage as protobuf to the provided buffer.
   ///
   /// On success, writes the serialized length to *encoded_len.
   /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
@@ -418,7 +418,7 @@ struct CompressedVideo {
   /// support](https://caniuse.com/av1).
   std::string format;
 
-  /// @brief Serialize the CompressedVideo to the provided buffer.
+  /// @brief Encoded the CompressedVideo as protobuf to the provided buffer.
   ///
   /// On success, writes the serialized length to *encoded_len.
   /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
@@ -452,7 +452,7 @@ struct CylinderPrimitive {
   /// @brief Color of the cylinder
   std::optional<Color> color;
 
-  /// @brief Serialize the CylinderPrimitive to the provided buffer.
+  /// @brief Encoded the CylinderPrimitive as protobuf to the provided buffer.
   ///
   /// On success, writes the serialized length to *encoded_len.
   /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
@@ -477,7 +477,7 @@ struct CubePrimitive {
   /// @brief Color of the cube
   std::optional<Color> color;
 
-  /// @brief Serialize the CubePrimitive to the provided buffer.
+  /// @brief Encoded the CubePrimitive as protobuf to the provided buffer.
   ///
   /// On success, writes the serialized length to *encoded_len.
   /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
@@ -517,7 +517,7 @@ struct FrameTransform {
   /// @brief Rotation component of the transform
   std::optional<Quaternion> rotation;
 
-  /// @brief Serialize the FrameTransform to the provided buffer.
+  /// @brief Encoded the FrameTransform as protobuf to the provided buffer.
   ///
   /// On success, writes the serialized length to *encoded_len.
   /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
@@ -536,7 +536,7 @@ struct FrameTransforms {
   /// @brief Array of transforms
   std::vector<FrameTransform> transforms;
 
-  /// @brief Serialize the FrameTransforms to the provided buffer.
+  /// @brief Encoded the FrameTransforms as protobuf to the provided buffer.
   ///
   /// On success, writes the serialized length to *encoded_len.
   /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
@@ -555,7 +555,7 @@ struct GeoJSON {
   /// @brief GeoJSON data encoded as a UTF-8 string
   std::string geojson;
 
-  /// @brief Serialize the GeoJSON to the provided buffer.
+  /// @brief Encoded the GeoJSON as protobuf to the provided buffer.
   ///
   /// On success, writes the serialized length to *encoded_len.
   /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
@@ -577,7 +577,7 @@ struct Vector2 {
   /// @brief y coordinate length
   double y = 0;
 
-  /// @brief Serialize the Vector2 to the provided buffer.
+  /// @brief Encoded the Vector2 as protobuf to the provided buffer.
   ///
   /// On success, writes the serialized length to *encoded_len.
   /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
@@ -623,7 +623,7 @@ struct PackedElementField {
   /// @brief Type of data in the field. Integers are stored using little-endian byte order.
   NumericType type;
 
-  /// @brief Serialize the PackedElementField to the provided buffer.
+  /// @brief Encoded the PackedElementField as protobuf to the provided buffer.
   ///
   /// On success, writes the serialized length to *encoded_len.
   /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
@@ -672,7 +672,7 @@ struct Grid {
   /// @brief  x = i % cell_stride * cell_size.x
   std::vector<std::byte> data;
 
-  /// @brief Serialize the Grid to the provided buffer.
+  /// @brief Encoded the Grid as protobuf to the provided buffer.
   ///
   /// On success, writes the serialized length to *encoded_len.
   /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
@@ -727,7 +727,7 @@ struct VoxelGrid {
   /// @brief  x = (i % row_stride) / cell_stride * cell_size.x
   std::vector<std::byte> data;
 
-  /// @brief Serialize the VoxelGrid to the provided buffer.
+  /// @brief Encoded the VoxelGrid as protobuf to the provided buffer.
   ///
   /// On success, writes the serialized length to *encoded_len.
   /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
@@ -780,7 +780,7 @@ struct PointsAnnotation {
   /// @brief Stroke thickness in pixels
   double thickness = 0;
 
-  /// @brief Serialize the PointsAnnotation to the provided buffer.
+  /// @brief Encoded the PointsAnnotation as protobuf to the provided buffer.
   ///
   /// On success, writes the serialized length to *encoded_len.
   /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
@@ -816,7 +816,7 @@ struct TextAnnotation {
   /// @brief Background fill color
   std::optional<Color> background_color;
 
-  /// @brief Serialize the TextAnnotation to the provided buffer.
+  /// @brief Encoded the TextAnnotation as protobuf to the provided buffer.
   ///
   /// On success, writes the serialized length to *encoded_len.
   /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
@@ -841,7 +841,7 @@ struct ImageAnnotations {
   /// @brief Text annotations
   std::vector<TextAnnotation> texts;
 
-  /// @brief Serialize the ImageAnnotations to the provided buffer.
+  /// @brief Encoded the ImageAnnotations as protobuf to the provided buffer.
   ///
   /// On success, writes the serialized length to *encoded_len.
   /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
@@ -863,7 +863,7 @@ struct KeyValuePair {
   /// @brief Value
   std::string value;
 
-  /// @brief Serialize the KeyValuePair to the provided buffer.
+  /// @brief Encoded the KeyValuePair as protobuf to the provided buffer.
   ///
   /// On success, writes the serialized length to *encoded_len.
   /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
@@ -903,7 +903,7 @@ struct LaserScan {
   /// @brief Intensity of detections
   std::vector<double> intensities;
 
-  /// @brief Serialize the LaserScan to the provided buffer.
+  /// @brief Encoded the LaserScan as protobuf to the provided buffer.
   ///
   /// On success, writes the serialized length to *encoded_len.
   /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
@@ -928,7 +928,7 @@ struct Point3 {
   /// @brief z coordinate position
   double z = 0;
 
-  /// @brief Serialize the Point3 to the provided buffer.
+  /// @brief Encoded the Point3 as protobuf to the provided buffer.
   ///
   /// On success, writes the serialized length to *encoded_len.
   /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
@@ -983,7 +983,7 @@ struct LinePrimitive {
   /// specifying [0, 1, ..., N-1] for the indices (where N is the number of `points` provided).
   std::vector<uint32_t> indices;
 
-  /// @brief Serialize the LinePrimitive to the provided buffer.
+  /// @brief Encoded the LinePrimitive as protobuf to the provided buffer.
   ///
   /// On success, writes the serialized length to *encoded_len.
   /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
@@ -1036,7 +1036,7 @@ struct LocationFix {
   /// @brief Color used to visualize the location
   std::optional<Color> color;
 
-  /// @brief Serialize the LocationFix to the provided buffer.
+  /// @brief Encoded the LocationFix as protobuf to the provided buffer.
   ///
   /// On success, writes the serialized length to *encoded_len.
   /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
@@ -1055,7 +1055,7 @@ struct LocationFixes {
   /// @brief An array of location fixes
   std::vector<LocationFix> fixes;
 
-  /// @brief Serialize the LocationFixes to the provided buffer.
+  /// @brief Encoded the LocationFixes as protobuf to the provided buffer.
   ///
   /// On success, writes the serialized length to *encoded_len.
   /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
@@ -1104,7 +1104,7 @@ struct Log {
   /// @brief Line number in the file
   uint32_t line = 0;
 
-  /// @brief Serialize the Log to the provided buffer.
+  /// @brief Encoded the Log as protobuf to the provided buffer.
   ///
   /// On success, writes the serialized length to *encoded_len.
   /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
@@ -1137,7 +1137,7 @@ struct SceneEntityDeletion {
   /// @brief Identifier which must match if `type` is `MATCHING_ID`.
   std::string id;
 
-  /// @brief Serialize the SceneEntityDeletion to the provided buffer.
+  /// @brief Encoded the SceneEntityDeletion as protobuf to the provided buffer.
   ///
   /// On success, writes the serialized length to *encoded_len.
   /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
@@ -1162,7 +1162,7 @@ struct SpherePrimitive {
   /// @brief Color of the sphere
   std::optional<Color> color;
 
-  /// @brief Serialize the SpherePrimitive to the provided buffer.
+  /// @brief Encoded the SpherePrimitive as protobuf to the provided buffer.
   ///
   /// On success, writes the serialized length to *encoded_len.
   /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
@@ -1198,7 +1198,7 @@ struct TriangleListPrimitive {
   /// specifying [0, 1, ..., N-1] for the indices (where N is the number of `points` provided).
   std::vector<uint32_t> indices;
 
-  /// @brief Serialize the TriangleListPrimitive to the provided buffer.
+  /// @brief Encoded the TriangleListPrimitive as protobuf to the provided buffer.
   ///
   /// On success, writes the serialized length to *encoded_len.
   /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
@@ -1235,7 +1235,7 @@ struct TextPrimitive {
   /// @brief Text
   std::string text;
 
-  /// @brief Serialize the TextPrimitive to the provided buffer.
+  /// @brief Encoded the TextPrimitive as protobuf to the provided buffer.
   ///
   /// On success, writes the serialized length to *encoded_len.
   /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
@@ -1277,7 +1277,7 @@ struct ModelPrimitive {
   /// `media_type` must be set to indicate the type of the data.
   std::vector<std::byte> data;
 
-  /// @brief Serialize the ModelPrimitive to the provided buffer.
+  /// @brief Encoded the ModelPrimitive as protobuf to the provided buffer.
   ///
   /// On success, writes the serialized length to *encoded_len.
   /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
@@ -1340,7 +1340,7 @@ struct SceneEntity {
   /// @brief Model primitives
   std::vector<ModelPrimitive> models;
 
-  /// @brief Serialize the SceneEntity to the provided buffer.
+  /// @brief Encoded the SceneEntity as protobuf to the provided buffer.
   ///
   /// On success, writes the serialized length to *encoded_len.
   /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
@@ -1362,7 +1362,7 @@ struct SceneUpdate {
   /// @brief Scene entities to add or replace
   std::vector<SceneEntity> entities;
 
-  /// @brief Serialize the SceneUpdate to the provided buffer.
+  /// @brief Encoded the SceneUpdate as protobuf to the provided buffer.
   ///
   /// On success, writes the serialized length to *encoded_len.
   /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
@@ -1399,7 +1399,7 @@ struct PointCloud {
   /// @brief Point data, interpreted using `fields`
   std::vector<std::byte> data;
 
-  /// @brief Serialize the PointCloud to the provided buffer.
+  /// @brief Encoded the PointCloud as protobuf to the provided buffer.
   ///
   /// On success, writes the serialized length to *encoded_len.
   /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
@@ -1424,7 +1424,7 @@ struct PoseInFrame {
   /// @brief Pose in 3D space
   std::optional<Pose> pose;
 
-  /// @brief Serialize the PoseInFrame to the provided buffer.
+  /// @brief Encoded the PoseInFrame as protobuf to the provided buffer.
   ///
   /// On success, writes the serialized length to *encoded_len.
   /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
@@ -1449,7 +1449,7 @@ struct PosesInFrame {
   /// @brief Poses in 3D space
   std::vector<Pose> poses;
 
-  /// @brief Serialize the PosesInFrame to the provided buffer.
+  /// @brief Encoded the PosesInFrame as protobuf to the provided buffer.
   ///
   /// On success, writes the serialized length to *encoded_len.
   /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
@@ -1480,7 +1480,7 @@ struct RawAudio {
   /// @brief Number of channels in the audio block
   uint32_t number_of_channels = 0;
 
-  /// @brief Serialize the RawAudio to the provided buffer.
+  /// @brief Encoded the RawAudio as protobuf to the provided buffer.
   ///
   /// On success, writes the serialized length to *encoded_len.
   /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
@@ -1583,7 +1583,7 @@ struct RawImage {
   /// @brief
   std::vector<std::byte> data;
 
-  /// @brief Serialize the RawImage to the provided buffer.
+  /// @brief Encoded the RawImage as protobuf to the provided buffer.
   ///
   /// On success, writes the serialized length to *encoded_len.
   /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len

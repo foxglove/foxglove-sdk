@@ -2320,7 +2320,7 @@ foxglove_error foxglove_channel_log_arrow_primitive(const struct foxglove_channe
                                                     FoxgloveSinkId sink_id);
 
 /**
- * Encode a ArrowPrimitive message to the buffer provided.
+ * Encode a ArrowPrimitive message as protobuf to the buffer provided.
  *
  * On success, writes the encoded length to *encoded_len.
  * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -2328,7 +2328,7 @@ foxglove_error foxglove_channel_log_arrow_primitive(const struct foxglove_channe
  * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
  *
  * # Safety
- * The buffer starting at ptr must point to a valid memory region at least len bytes long.
+ * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_arrow_primitive_encode(const struct foxglove_arrow_primitive *msg,
                                                uint8_t *ptr,
@@ -2357,7 +2357,7 @@ foxglove_error foxglove_channel_log_camera_calibration(const struct foxglove_cha
                                                        FoxgloveSinkId sink_id);
 
 /**
- * Encode a CameraCalibration message to the buffer provided.
+ * Encode a CameraCalibration message as protobuf to the buffer provided.
  *
  * On success, writes the encoded length to *encoded_len.
  * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -2365,7 +2365,7 @@ foxglove_error foxglove_channel_log_camera_calibration(const struct foxglove_cha
  * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
  *
  * # Safety
- * The buffer starting at ptr must point to a valid memory region at least len bytes long.
+ * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_camera_calibration_encode(const struct foxglove_camera_calibration *msg,
                                                   uint8_t *ptr,
@@ -2394,7 +2394,7 @@ foxglove_error foxglove_channel_log_circle_annotation(const struct foxglove_chan
                                                       FoxgloveSinkId sink_id);
 
 /**
- * Encode a CircleAnnotation message to the buffer provided.
+ * Encode a CircleAnnotation message as protobuf to the buffer provided.
  *
  * On success, writes the encoded length to *encoded_len.
  * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -2402,7 +2402,7 @@ foxglove_error foxglove_channel_log_circle_annotation(const struct foxglove_chan
  * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
  *
  * # Safety
- * The buffer starting at ptr must point to a valid memory region at least len bytes long.
+ * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_circle_annotation_encode(const struct foxglove_circle_annotation *msg,
                                                  uint8_t *ptr,
@@ -2431,7 +2431,7 @@ foxglove_error foxglove_channel_log_color(const struct foxglove_channel *channel
                                           FoxgloveSinkId sink_id);
 
 /**
- * Encode a Color message to the buffer provided.
+ * Encode a Color message as protobuf to the buffer provided.
  *
  * On success, writes the encoded length to *encoded_len.
  * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -2439,7 +2439,7 @@ foxglove_error foxglove_channel_log_color(const struct foxglove_channel *channel
  * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
  *
  * # Safety
- * The buffer starting at ptr must point to a valid memory region at least len bytes long.
+ * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_color_encode(const struct foxglove_color *msg,
                                      uint8_t *ptr,
@@ -2468,7 +2468,7 @@ foxglove_error foxglove_channel_log_compressed_image(const struct foxglove_chann
                                                      FoxgloveSinkId sink_id);
 
 /**
- * Encode a CompressedImage message to the buffer provided.
+ * Encode a CompressedImage message as protobuf to the buffer provided.
  *
  * On success, writes the encoded length to *encoded_len.
  * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -2476,7 +2476,7 @@ foxglove_error foxglove_channel_log_compressed_image(const struct foxglove_chann
  * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
  *
  * # Safety
- * The buffer starting at ptr must point to a valid memory region at least len bytes long.
+ * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_compressed_image_encode(const struct foxglove_compressed_image *msg,
                                                 uint8_t *ptr,
@@ -2505,7 +2505,7 @@ foxglove_error foxglove_channel_log_compressed_video(const struct foxglove_chann
                                                      FoxgloveSinkId sink_id);
 
 /**
- * Encode a CompressedVideo message to the buffer provided.
+ * Encode a CompressedVideo message as protobuf to the buffer provided.
  *
  * On success, writes the encoded length to *encoded_len.
  * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -2513,7 +2513,7 @@ foxglove_error foxglove_channel_log_compressed_video(const struct foxglove_chann
  * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
  *
  * # Safety
- * The buffer starting at ptr must point to a valid memory region at least len bytes long.
+ * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_compressed_video_encode(const struct foxglove_compressed_video *msg,
                                                 uint8_t *ptr,
@@ -2542,7 +2542,7 @@ foxglove_error foxglove_channel_log_cylinder_primitive(const struct foxglove_cha
                                                        FoxgloveSinkId sink_id);
 
 /**
- * Encode a CylinderPrimitive message to the buffer provided.
+ * Encode a CylinderPrimitive message as protobuf to the buffer provided.
  *
  * On success, writes the encoded length to *encoded_len.
  * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -2550,7 +2550,7 @@ foxglove_error foxglove_channel_log_cylinder_primitive(const struct foxglove_cha
  * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
  *
  * # Safety
- * The buffer starting at ptr must point to a valid memory region at least len bytes long.
+ * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_cylinder_primitive_encode(const struct foxglove_cylinder_primitive *msg,
                                                   uint8_t *ptr,
@@ -2579,7 +2579,7 @@ foxglove_error foxglove_channel_log_cube_primitive(const struct foxglove_channel
                                                    FoxgloveSinkId sink_id);
 
 /**
- * Encode a CubePrimitive message to the buffer provided.
+ * Encode a CubePrimitive message as protobuf to the buffer provided.
  *
  * On success, writes the encoded length to *encoded_len.
  * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -2587,7 +2587,7 @@ foxglove_error foxglove_channel_log_cube_primitive(const struct foxglove_channel
  * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
  *
  * # Safety
- * The buffer starting at ptr must point to a valid memory region at least len bytes long.
+ * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_cube_primitive_encode(const struct foxglove_cube_primitive *msg,
                                               uint8_t *ptr,
@@ -2616,7 +2616,7 @@ foxglove_error foxglove_channel_log_frame_transform(const struct foxglove_channe
                                                     FoxgloveSinkId sink_id);
 
 /**
- * Encode a FrameTransform message to the buffer provided.
+ * Encode a FrameTransform message as protobuf to the buffer provided.
  *
  * On success, writes the encoded length to *encoded_len.
  * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -2624,7 +2624,7 @@ foxglove_error foxglove_channel_log_frame_transform(const struct foxglove_channe
  * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
  *
  * # Safety
- * The buffer starting at ptr must point to a valid memory region at least len bytes long.
+ * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_frame_transform_encode(const struct foxglove_frame_transform *msg,
                                                uint8_t *ptr,
@@ -2653,7 +2653,7 @@ foxglove_error foxglove_channel_log_frame_transforms(const struct foxglove_chann
                                                      FoxgloveSinkId sink_id);
 
 /**
- * Encode a FrameTransforms message to the buffer provided.
+ * Encode a FrameTransforms message as protobuf to the buffer provided.
  *
  * On success, writes the encoded length to *encoded_len.
  * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -2661,7 +2661,7 @@ foxglove_error foxglove_channel_log_frame_transforms(const struct foxglove_chann
  * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
  *
  * # Safety
- * The buffer starting at ptr must point to a valid memory region at least len bytes long.
+ * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_frame_transforms_encode(const struct foxglove_frame_transforms *msg,
                                                 uint8_t *ptr,
@@ -2690,7 +2690,7 @@ foxglove_error foxglove_channel_log_geo_json(const struct foxglove_channel *chan
                                              FoxgloveSinkId sink_id);
 
 /**
- * Encode a GeoJson message to the buffer provided.
+ * Encode a GeoJson message as protobuf to the buffer provided.
  *
  * On success, writes the encoded length to *encoded_len.
  * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -2698,7 +2698,7 @@ foxglove_error foxglove_channel_log_geo_json(const struct foxglove_channel *chan
  * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
  *
  * # Safety
- * The buffer starting at ptr must point to a valid memory region at least len bytes long.
+ * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_geo_json_encode(const struct foxglove_geo_json *msg,
                                         uint8_t *ptr,
@@ -2727,7 +2727,7 @@ foxglove_error foxglove_channel_log_grid(const struct foxglove_channel *channel,
                                          FoxgloveSinkId sink_id);
 
 /**
- * Encode a Grid message to the buffer provided.
+ * Encode a Grid message as protobuf to the buffer provided.
  *
  * On success, writes the encoded length to *encoded_len.
  * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -2735,7 +2735,7 @@ foxglove_error foxglove_channel_log_grid(const struct foxglove_channel *channel,
  * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
  *
  * # Safety
- * The buffer starting at ptr must point to a valid memory region at least len bytes long.
+ * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_grid_encode(const struct foxglove_grid *msg,
                                     uint8_t *ptr,
@@ -2764,7 +2764,7 @@ foxglove_error foxglove_channel_log_voxel_grid(const struct foxglove_channel *ch
                                                FoxgloveSinkId sink_id);
 
 /**
- * Encode a VoxelGrid message to the buffer provided.
+ * Encode a VoxelGrid message as protobuf to the buffer provided.
  *
  * On success, writes the encoded length to *encoded_len.
  * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -2772,7 +2772,7 @@ foxglove_error foxglove_channel_log_voxel_grid(const struct foxglove_channel *ch
  * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
  *
  * # Safety
- * The buffer starting at ptr must point to a valid memory region at least len bytes long.
+ * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_voxel_grid_encode(const struct foxglove_voxel_grid *msg,
                                           uint8_t *ptr,
@@ -2801,7 +2801,7 @@ foxglove_error foxglove_channel_log_image_annotations(const struct foxglove_chan
                                                       FoxgloveSinkId sink_id);
 
 /**
- * Encode a ImageAnnotations message to the buffer provided.
+ * Encode a ImageAnnotations message as protobuf to the buffer provided.
  *
  * On success, writes the encoded length to *encoded_len.
  * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -2809,7 +2809,7 @@ foxglove_error foxglove_channel_log_image_annotations(const struct foxglove_chan
  * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
  *
  * # Safety
- * The buffer starting at ptr must point to a valid memory region at least len bytes long.
+ * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_image_annotations_encode(const struct foxglove_image_annotations *msg,
                                                  uint8_t *ptr,
@@ -2838,7 +2838,7 @@ foxglove_error foxglove_channel_log_key_value_pair(const struct foxglove_channel
                                                    FoxgloveSinkId sink_id);
 
 /**
- * Encode a KeyValuePair message to the buffer provided.
+ * Encode a KeyValuePair message as protobuf to the buffer provided.
  *
  * On success, writes the encoded length to *encoded_len.
  * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -2846,7 +2846,7 @@ foxglove_error foxglove_channel_log_key_value_pair(const struct foxglove_channel
  * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
  *
  * # Safety
- * The buffer starting at ptr must point to a valid memory region at least len bytes long.
+ * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_key_value_pair_encode(const struct foxglove_key_value_pair *msg,
                                               uint8_t *ptr,
@@ -2875,7 +2875,7 @@ foxglove_error foxglove_channel_log_laser_scan(const struct foxglove_channel *ch
                                                FoxgloveSinkId sink_id);
 
 /**
- * Encode a LaserScan message to the buffer provided.
+ * Encode a LaserScan message as protobuf to the buffer provided.
  *
  * On success, writes the encoded length to *encoded_len.
  * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -2883,7 +2883,7 @@ foxglove_error foxglove_channel_log_laser_scan(const struct foxglove_channel *ch
  * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
  *
  * # Safety
- * The buffer starting at ptr must point to a valid memory region at least len bytes long.
+ * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_laser_scan_encode(const struct foxglove_laser_scan *msg,
                                           uint8_t *ptr,
@@ -2912,7 +2912,7 @@ foxglove_error foxglove_channel_log_line_primitive(const struct foxglove_channel
                                                    FoxgloveSinkId sink_id);
 
 /**
- * Encode a LinePrimitive message to the buffer provided.
+ * Encode a LinePrimitive message as protobuf to the buffer provided.
  *
  * On success, writes the encoded length to *encoded_len.
  * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -2920,7 +2920,7 @@ foxglove_error foxglove_channel_log_line_primitive(const struct foxglove_channel
  * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
  *
  * # Safety
- * The buffer starting at ptr must point to a valid memory region at least len bytes long.
+ * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_line_primitive_encode(const struct foxglove_line_primitive *msg,
                                               uint8_t *ptr,
@@ -2949,7 +2949,7 @@ foxglove_error foxglove_channel_log_location_fix(const struct foxglove_channel *
                                                  FoxgloveSinkId sink_id);
 
 /**
- * Encode a LocationFix message to the buffer provided.
+ * Encode a LocationFix message as protobuf to the buffer provided.
  *
  * On success, writes the encoded length to *encoded_len.
  * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -2957,7 +2957,7 @@ foxglove_error foxglove_channel_log_location_fix(const struct foxglove_channel *
  * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
  *
  * # Safety
- * The buffer starting at ptr must point to a valid memory region at least len bytes long.
+ * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_location_fix_encode(const struct foxglove_location_fix *msg,
                                             uint8_t *ptr,
@@ -2986,7 +2986,7 @@ foxglove_error foxglove_channel_log_location_fixes(const struct foxglove_channel
                                                    FoxgloveSinkId sink_id);
 
 /**
- * Encode a LocationFixes message to the buffer provided.
+ * Encode a LocationFixes message as protobuf to the buffer provided.
  *
  * On success, writes the encoded length to *encoded_len.
  * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -2994,7 +2994,7 @@ foxglove_error foxglove_channel_log_location_fixes(const struct foxglove_channel
  * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
  *
  * # Safety
- * The buffer starting at ptr must point to a valid memory region at least len bytes long.
+ * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_location_fixes_encode(const struct foxglove_location_fixes *msg,
                                               uint8_t *ptr,
@@ -3023,7 +3023,7 @@ foxglove_error foxglove_channel_log_log(const struct foxglove_channel *channel,
                                         FoxgloveSinkId sink_id);
 
 /**
- * Encode a Log message to the buffer provided.
+ * Encode a Log message as protobuf to the buffer provided.
  *
  * On success, writes the encoded length to *encoded_len.
  * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -3031,7 +3031,7 @@ foxglove_error foxglove_channel_log_log(const struct foxglove_channel *channel,
  * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
  *
  * # Safety
- * The buffer starting at ptr must point to a valid memory region at least len bytes long.
+ * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_log_encode(const struct foxglove_log *msg,
                                    uint8_t *ptr,
@@ -3060,7 +3060,7 @@ foxglove_error foxglove_channel_log_scene_entity_deletion(const struct foxglove_
                                                           FoxgloveSinkId sink_id);
 
 /**
- * Encode a SceneEntityDeletion message to the buffer provided.
+ * Encode a SceneEntityDeletion message as protobuf to the buffer provided.
  *
  * On success, writes the encoded length to *encoded_len.
  * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -3068,7 +3068,7 @@ foxglove_error foxglove_channel_log_scene_entity_deletion(const struct foxglove_
  * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
  *
  * # Safety
- * The buffer starting at ptr must point to a valid memory region at least len bytes long.
+ * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_scene_entity_deletion_encode(const struct foxglove_scene_entity_deletion *msg,
                                                      uint8_t *ptr,
@@ -3097,7 +3097,7 @@ foxglove_error foxglove_channel_log_scene_entity(const struct foxglove_channel *
                                                  FoxgloveSinkId sink_id);
 
 /**
- * Encode a SceneEntity message to the buffer provided.
+ * Encode a SceneEntity message as protobuf to the buffer provided.
  *
  * On success, writes the encoded length to *encoded_len.
  * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -3105,7 +3105,7 @@ foxglove_error foxglove_channel_log_scene_entity(const struct foxglove_channel *
  * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
  *
  * # Safety
- * The buffer starting at ptr must point to a valid memory region at least len bytes long.
+ * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_scene_entity_encode(const struct foxglove_scene_entity *msg,
                                             uint8_t *ptr,
@@ -3134,7 +3134,7 @@ foxglove_error foxglove_channel_log_scene_update(const struct foxglove_channel *
                                                  FoxgloveSinkId sink_id);
 
 /**
- * Encode a SceneUpdate message to the buffer provided.
+ * Encode a SceneUpdate message as protobuf to the buffer provided.
  *
  * On success, writes the encoded length to *encoded_len.
  * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -3142,7 +3142,7 @@ foxglove_error foxglove_channel_log_scene_update(const struct foxglove_channel *
  * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
  *
  * # Safety
- * The buffer starting at ptr must point to a valid memory region at least len bytes long.
+ * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_scene_update_encode(const struct foxglove_scene_update *msg,
                                             uint8_t *ptr,
@@ -3171,7 +3171,7 @@ foxglove_error foxglove_channel_log_model_primitive(const struct foxglove_channe
                                                     FoxgloveSinkId sink_id);
 
 /**
- * Encode a ModelPrimitive message to the buffer provided.
+ * Encode a ModelPrimitive message as protobuf to the buffer provided.
  *
  * On success, writes the encoded length to *encoded_len.
  * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -3179,7 +3179,7 @@ foxglove_error foxglove_channel_log_model_primitive(const struct foxglove_channe
  * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
  *
  * # Safety
- * The buffer starting at ptr must point to a valid memory region at least len bytes long.
+ * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_model_primitive_encode(const struct foxglove_model_primitive *msg,
                                                uint8_t *ptr,
@@ -3208,7 +3208,7 @@ foxglove_error foxglove_channel_log_packed_element_field(const struct foxglove_c
                                                          FoxgloveSinkId sink_id);
 
 /**
- * Encode a PackedElementField message to the buffer provided.
+ * Encode a PackedElementField message as protobuf to the buffer provided.
  *
  * On success, writes the encoded length to *encoded_len.
  * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -3216,7 +3216,7 @@ foxglove_error foxglove_channel_log_packed_element_field(const struct foxglove_c
  * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
  *
  * # Safety
- * The buffer starting at ptr must point to a valid memory region at least len bytes long.
+ * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_packed_element_field_encode(const struct foxglove_packed_element_field *msg,
                                                     uint8_t *ptr,
@@ -3245,7 +3245,7 @@ foxglove_error foxglove_channel_log_point2(const struct foxglove_channel *channe
                                            FoxgloveSinkId sink_id);
 
 /**
- * Encode a Point2 message to the buffer provided.
+ * Encode a Point2 message as protobuf to the buffer provided.
  *
  * On success, writes the encoded length to *encoded_len.
  * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -3253,7 +3253,7 @@ foxglove_error foxglove_channel_log_point2(const struct foxglove_channel *channe
  * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
  *
  * # Safety
- * The buffer starting at ptr must point to a valid memory region at least len bytes long.
+ * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_point2_encode(const struct foxglove_point2 *msg,
                                       uint8_t *ptr,
@@ -3282,7 +3282,7 @@ foxglove_error foxglove_channel_log_point3(const struct foxglove_channel *channe
                                            FoxgloveSinkId sink_id);
 
 /**
- * Encode a Point3 message to the buffer provided.
+ * Encode a Point3 message as protobuf to the buffer provided.
  *
  * On success, writes the encoded length to *encoded_len.
  * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -3290,7 +3290,7 @@ foxglove_error foxglove_channel_log_point3(const struct foxglove_channel *channe
  * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
  *
  * # Safety
- * The buffer starting at ptr must point to a valid memory region at least len bytes long.
+ * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_point3_encode(const struct foxglove_point3 *msg,
                                       uint8_t *ptr,
@@ -3319,7 +3319,7 @@ foxglove_error foxglove_channel_log_point_cloud(const struct foxglove_channel *c
                                                 FoxgloveSinkId sink_id);
 
 /**
- * Encode a PointCloud message to the buffer provided.
+ * Encode a PointCloud message as protobuf to the buffer provided.
  *
  * On success, writes the encoded length to *encoded_len.
  * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -3327,7 +3327,7 @@ foxglove_error foxglove_channel_log_point_cloud(const struct foxglove_channel *c
  * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
  *
  * # Safety
- * The buffer starting at ptr must point to a valid memory region at least len bytes long.
+ * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_point_cloud_encode(const struct foxglove_point_cloud *msg,
                                            uint8_t *ptr,
@@ -3356,7 +3356,7 @@ foxglove_error foxglove_channel_log_points_annotation(const struct foxglove_chan
                                                       FoxgloveSinkId sink_id);
 
 /**
- * Encode a PointsAnnotation message to the buffer provided.
+ * Encode a PointsAnnotation message as protobuf to the buffer provided.
  *
  * On success, writes the encoded length to *encoded_len.
  * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -3364,7 +3364,7 @@ foxglove_error foxglove_channel_log_points_annotation(const struct foxglove_chan
  * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
  *
  * # Safety
- * The buffer starting at ptr must point to a valid memory region at least len bytes long.
+ * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_points_annotation_encode(const struct foxglove_points_annotation *msg,
                                                  uint8_t *ptr,
@@ -3393,7 +3393,7 @@ foxglove_error foxglove_channel_log_pose(const struct foxglove_channel *channel,
                                          FoxgloveSinkId sink_id);
 
 /**
- * Encode a Pose message to the buffer provided.
+ * Encode a Pose message as protobuf to the buffer provided.
  *
  * On success, writes the encoded length to *encoded_len.
  * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -3401,7 +3401,7 @@ foxglove_error foxglove_channel_log_pose(const struct foxglove_channel *channel,
  * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
  *
  * # Safety
- * The buffer starting at ptr must point to a valid memory region at least len bytes long.
+ * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_pose_encode(const struct foxglove_pose *msg,
                                     uint8_t *ptr,
@@ -3430,7 +3430,7 @@ foxglove_error foxglove_channel_log_pose_in_frame(const struct foxglove_channel 
                                                   FoxgloveSinkId sink_id);
 
 /**
- * Encode a PoseInFrame message to the buffer provided.
+ * Encode a PoseInFrame message as protobuf to the buffer provided.
  *
  * On success, writes the encoded length to *encoded_len.
  * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -3438,7 +3438,7 @@ foxglove_error foxglove_channel_log_pose_in_frame(const struct foxglove_channel 
  * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
  *
  * # Safety
- * The buffer starting at ptr must point to a valid memory region at least len bytes long.
+ * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_pose_in_frame_encode(const struct foxglove_pose_in_frame *msg,
                                              uint8_t *ptr,
@@ -3467,7 +3467,7 @@ foxglove_error foxglove_channel_log_poses_in_frame(const struct foxglove_channel
                                                    FoxgloveSinkId sink_id);
 
 /**
- * Encode a PosesInFrame message to the buffer provided.
+ * Encode a PosesInFrame message as protobuf to the buffer provided.
  *
  * On success, writes the encoded length to *encoded_len.
  * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -3475,7 +3475,7 @@ foxglove_error foxglove_channel_log_poses_in_frame(const struct foxglove_channel
  * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
  *
  * # Safety
- * The buffer starting at ptr must point to a valid memory region at least len bytes long.
+ * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_poses_in_frame_encode(const struct foxglove_poses_in_frame *msg,
                                               uint8_t *ptr,
@@ -3504,7 +3504,7 @@ foxglove_error foxglove_channel_log_quaternion(const struct foxglove_channel *ch
                                                FoxgloveSinkId sink_id);
 
 /**
- * Encode a Quaternion message to the buffer provided.
+ * Encode a Quaternion message as protobuf to the buffer provided.
  *
  * On success, writes the encoded length to *encoded_len.
  * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -3512,7 +3512,7 @@ foxglove_error foxglove_channel_log_quaternion(const struct foxglove_channel *ch
  * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
  *
  * # Safety
- * The buffer starting at ptr must point to a valid memory region at least len bytes long.
+ * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_quaternion_encode(const struct foxglove_quaternion *msg,
                                           uint8_t *ptr,
@@ -3541,7 +3541,7 @@ foxglove_error foxglove_channel_log_raw_audio(const struct foxglove_channel *cha
                                               FoxgloveSinkId sink_id);
 
 /**
- * Encode a RawAudio message to the buffer provided.
+ * Encode a RawAudio message as protobuf to the buffer provided.
  *
  * On success, writes the encoded length to *encoded_len.
  * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -3549,7 +3549,7 @@ foxglove_error foxglove_channel_log_raw_audio(const struct foxglove_channel *cha
  * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
  *
  * # Safety
- * The buffer starting at ptr must point to a valid memory region at least len bytes long.
+ * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_raw_audio_encode(const struct foxglove_raw_audio *msg,
                                          uint8_t *ptr,
@@ -3578,7 +3578,7 @@ foxglove_error foxglove_channel_log_raw_image(const struct foxglove_channel *cha
                                               FoxgloveSinkId sink_id);
 
 /**
- * Encode a RawImage message to the buffer provided.
+ * Encode a RawImage message as protobuf to the buffer provided.
  *
  * On success, writes the encoded length to *encoded_len.
  * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -3586,7 +3586,7 @@ foxglove_error foxglove_channel_log_raw_image(const struct foxglove_channel *cha
  * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
  *
  * # Safety
- * The buffer starting at ptr must point to a valid memory region at least len bytes long.
+ * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_raw_image_encode(const struct foxglove_raw_image *msg,
                                          uint8_t *ptr,
@@ -3615,7 +3615,7 @@ foxglove_error foxglove_channel_log_sphere_primitive(const struct foxglove_chann
                                                      FoxgloveSinkId sink_id);
 
 /**
- * Encode a SpherePrimitive message to the buffer provided.
+ * Encode a SpherePrimitive message as protobuf to the buffer provided.
  *
  * On success, writes the encoded length to *encoded_len.
  * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -3623,7 +3623,7 @@ foxglove_error foxglove_channel_log_sphere_primitive(const struct foxglove_chann
  * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
  *
  * # Safety
- * The buffer starting at ptr must point to a valid memory region at least len bytes long.
+ * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_sphere_primitive_encode(const struct foxglove_sphere_primitive *msg,
                                                 uint8_t *ptr,
@@ -3652,7 +3652,7 @@ foxglove_error foxglove_channel_log_text_annotation(const struct foxglove_channe
                                                     FoxgloveSinkId sink_id);
 
 /**
- * Encode a TextAnnotation message to the buffer provided.
+ * Encode a TextAnnotation message as protobuf to the buffer provided.
  *
  * On success, writes the encoded length to *encoded_len.
  * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -3660,7 +3660,7 @@ foxglove_error foxglove_channel_log_text_annotation(const struct foxglove_channe
  * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
  *
  * # Safety
- * The buffer starting at ptr must point to a valid memory region at least len bytes long.
+ * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_text_annotation_encode(const struct foxglove_text_annotation *msg,
                                                uint8_t *ptr,
@@ -3689,7 +3689,7 @@ foxglove_error foxglove_channel_log_text_primitive(const struct foxglove_channel
                                                    FoxgloveSinkId sink_id);
 
 /**
- * Encode a TextPrimitive message to the buffer provided.
+ * Encode a TextPrimitive message as protobuf to the buffer provided.
  *
  * On success, writes the encoded length to *encoded_len.
  * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -3697,7 +3697,7 @@ foxglove_error foxglove_channel_log_text_primitive(const struct foxglove_channel
  * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
  *
  * # Safety
- * The buffer starting at ptr must point to a valid memory region at least len bytes long.
+ * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_text_primitive_encode(const struct foxglove_text_primitive *msg,
                                               uint8_t *ptr,
@@ -3726,7 +3726,7 @@ foxglove_error foxglove_channel_log_triangle_list_primitive(const struct foxglov
                                                             FoxgloveSinkId sink_id);
 
 /**
- * Encode a TriangleListPrimitive message to the buffer provided.
+ * Encode a TriangleListPrimitive message as protobuf to the buffer provided.
  *
  * On success, writes the encoded length to *encoded_len.
  * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -3734,7 +3734,7 @@ foxglove_error foxglove_channel_log_triangle_list_primitive(const struct foxglov
  * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
  *
  * # Safety
- * The buffer starting at ptr must point to a valid memory region at least len bytes long.
+ * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_triangle_list_primitive_encode(const struct foxglove_triangle_list_primitive *msg,
                                                        uint8_t *ptr,
@@ -3763,7 +3763,7 @@ foxglove_error foxglove_channel_log_vector2(const struct foxglove_channel *chann
                                             FoxgloveSinkId sink_id);
 
 /**
- * Encode a Vector2 message to the buffer provided.
+ * Encode a Vector2 message as protobuf to the buffer provided.
  *
  * On success, writes the encoded length to *encoded_len.
  * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -3771,7 +3771,7 @@ foxglove_error foxglove_channel_log_vector2(const struct foxglove_channel *chann
  * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
  *
  * # Safety
- * The buffer starting at ptr must point to a valid memory region at least len bytes long.
+ * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_vector2_encode(const struct foxglove_vector2 *msg,
                                        uint8_t *ptr,
@@ -3800,7 +3800,7 @@ foxglove_error foxglove_channel_log_vector3(const struct foxglove_channel *chann
                                             FoxgloveSinkId sink_id);
 
 /**
- * Encode a Vector3 message to the buffer provided.
+ * Encode a Vector3 message as protobuf to the buffer provided.
  *
  * On success, writes the encoded length to *encoded_len.
  * If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -3808,7 +3808,7 @@ foxglove_error foxglove_channel_log_vector3(const struct foxglove_channel *chann
  * If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
  *
  * # Safety
- * The buffer starting at ptr must point to a valid memory region at least len bytes long.
+ * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_vector3_encode(const struct foxglove_vector3 *msg,
                                        uint8_t *ptr,

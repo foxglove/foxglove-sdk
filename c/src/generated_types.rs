@@ -174,7 +174,7 @@ pub extern "C" fn foxglove_channel_log_arrow_primitive(
     }
 }
 
-/// Encode a ArrowPrimitive message to the buffer provided.
+/// Encode a ArrowPrimitive message as protobuf to the buffer provided.
 ///
 /// On success, writes the encoded length to *encoded_len.
 /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -182,7 +182,7 @@ pub extern "C" fn foxglove_channel_log_arrow_primitive(
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
 /// # Safety
-/// The buffer starting at ptr must point to a valid memory region at least len bytes long.
+/// ptr must be a valid pointer to a memory region at least len bytes long.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_arrow_primitive_encode(
     msg: Option<&ArrowPrimitive>,
@@ -385,7 +385,7 @@ pub extern "C" fn foxglove_channel_log_camera_calibration(
     }
 }
 
-/// Encode a CameraCalibration message to the buffer provided.
+/// Encode a CameraCalibration message as protobuf to the buffer provided.
 ///
 /// On success, writes the encoded length to *encoded_len.
 /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -393,7 +393,7 @@ pub extern "C" fn foxglove_channel_log_camera_calibration(
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
 /// # Safety
-/// The buffer starting at ptr must point to a valid memory region at least len bytes long.
+/// ptr must be a valid pointer to a memory region at least len bytes long.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_camera_calibration_encode(
     msg: Option<&CameraCalibration>,
@@ -542,7 +542,7 @@ pub extern "C" fn foxglove_channel_log_circle_annotation(
     }
 }
 
-/// Encode a CircleAnnotation message to the buffer provided.
+/// Encode a CircleAnnotation message as protobuf to the buffer provided.
 ///
 /// On success, writes the encoded length to *encoded_len.
 /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -550,7 +550,7 @@ pub extern "C" fn foxglove_channel_log_circle_annotation(
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
 /// # Safety
-/// The buffer starting at ptr must point to a valid memory region at least len bytes long.
+/// ptr must be a valid pointer to a memory region at least len bytes long.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_circle_annotation_encode(
     msg: Option<&CircleAnnotation>,
@@ -670,7 +670,7 @@ pub extern "C" fn foxglove_channel_log_color(
     }
 }
 
-/// Encode a Color message to the buffer provided.
+/// Encode a Color message as protobuf to the buffer provided.
 ///
 /// On success, writes the encoded length to *encoded_len.
 /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -678,7 +678,7 @@ pub extern "C" fn foxglove_channel_log_color(
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
 /// # Safety
-/// The buffer starting at ptr must point to a valid memory region at least len bytes long.
+/// ptr must be a valid pointer to a memory region at least len bytes long.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_color_encode(
     msg: Option<&Color>,
@@ -817,7 +817,7 @@ pub extern "C" fn foxglove_channel_log_compressed_image(
     }
 }
 
-/// Encode a CompressedImage message to the buffer provided.
+/// Encode a CompressedImage message as protobuf to the buffer provided.
 ///
 /// On success, writes the encoded length to *encoded_len.
 /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -825,7 +825,7 @@ pub extern "C" fn foxglove_channel_log_compressed_image(
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
 /// # Safety
-/// The buffer starting at ptr must point to a valid memory region at least len bytes long.
+/// ptr must be a valid pointer to a memory region at least len bytes long.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_compressed_image_encode(
     msg: Option<&CompressedImage>,
@@ -990,7 +990,7 @@ pub extern "C" fn foxglove_channel_log_compressed_video(
     }
 }
 
-/// Encode a CompressedVideo message to the buffer provided.
+/// Encode a CompressedVideo message as protobuf to the buffer provided.
 ///
 /// On success, writes the encoded length to *encoded_len.
 /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -998,7 +998,7 @@ pub extern "C" fn foxglove_channel_log_compressed_video(
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
 /// # Safety
-/// The buffer starting at ptr must point to a valid memory region at least len bytes long.
+/// ptr must be a valid pointer to a memory region at least len bytes long.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_compressed_video_encode(
     msg: Option<&CompressedVideo>,
@@ -1142,7 +1142,7 @@ pub extern "C" fn foxglove_channel_log_cylinder_primitive(
     }
 }
 
-/// Encode a CylinderPrimitive message to the buffer provided.
+/// Encode a CylinderPrimitive message as protobuf to the buffer provided.
 ///
 /// On success, writes the encoded length to *encoded_len.
 /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -1150,7 +1150,7 @@ pub extern "C" fn foxglove_channel_log_cylinder_primitive(
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
 /// # Safety
-/// The buffer starting at ptr must point to a valid memory region at least len bytes long.
+/// ptr must be a valid pointer to a memory region at least len bytes long.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_cylinder_primitive_encode(
     msg: Option<&CylinderPrimitive>,
@@ -1286,7 +1286,7 @@ pub extern "C" fn foxglove_channel_log_cube_primitive(
     }
 }
 
-/// Encode a CubePrimitive message to the buffer provided.
+/// Encode a CubePrimitive message as protobuf to the buffer provided.
 ///
 /// On success, writes the encoded length to *encoded_len.
 /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -1294,7 +1294,7 @@ pub extern "C" fn foxglove_channel_log_cube_primitive(
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
 /// # Safety
-/// The buffer starting at ptr must point to a valid memory region at least len bytes long.
+/// ptr must be a valid pointer to a memory region at least len bytes long.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_cube_primitive_encode(
     msg: Option<&CubePrimitive>,
@@ -1446,7 +1446,7 @@ pub extern "C" fn foxglove_channel_log_frame_transform(
     }
 }
 
-/// Encode a FrameTransform message to the buffer provided.
+/// Encode a FrameTransform message as protobuf to the buffer provided.
 ///
 /// On success, writes the encoded length to *encoded_len.
 /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -1454,7 +1454,7 @@ pub extern "C" fn foxglove_channel_log_frame_transform(
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
 /// # Safety
-/// The buffer starting at ptr must point to a valid memory region at least len bytes long.
+/// ptr must be a valid pointer to a memory region at least len bytes long.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_frame_transform_encode(
     msg: Option<&FrameTransform>,
@@ -1566,7 +1566,7 @@ pub extern "C" fn foxglove_channel_log_frame_transforms(
     }
 }
 
-/// Encode a FrameTransforms message to the buffer provided.
+/// Encode a FrameTransforms message as protobuf to the buffer provided.
 ///
 /// On success, writes the encoded length to *encoded_len.
 /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -1574,7 +1574,7 @@ pub extern "C" fn foxglove_channel_log_frame_transforms(
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
 /// # Safety
-/// The buffer starting at ptr must point to a valid memory region at least len bytes long.
+/// ptr must be a valid pointer to a memory region at least len bytes long.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_frame_transforms_encode(
     msg: Option<&FrameTransforms>,
@@ -1690,7 +1690,7 @@ pub extern "C" fn foxglove_channel_log_geo_json(
     }
 }
 
-/// Encode a GeoJson message to the buffer provided.
+/// Encode a GeoJson message as protobuf to the buffer provided.
 ///
 /// On success, writes the encoded length to *encoded_len.
 /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -1698,7 +1698,7 @@ pub extern "C" fn foxglove_channel_log_geo_json(
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
 /// # Safety
-/// The buffer starting at ptr must point to a valid memory region at least len bytes long.
+/// ptr must be a valid pointer to a memory region at least len bytes long.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_geo_json_encode(
     msg: Option<&GeoJson>,
@@ -1864,7 +1864,7 @@ pub extern "C" fn foxglove_channel_log_grid(
     }
 }
 
-/// Encode a Grid message to the buffer provided.
+/// Encode a Grid message as protobuf to the buffer provided.
 ///
 /// On success, writes the encoded length to *encoded_len.
 /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -1872,7 +1872,7 @@ pub extern "C" fn foxglove_channel_log_grid(
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
 /// # Safety
-/// The buffer starting at ptr must point to a valid memory region at least len bytes long.
+/// ptr must be a valid pointer to a memory region at least len bytes long.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_grid_encode(
     msg: Option<&Grid>,
@@ -2047,7 +2047,7 @@ pub extern "C" fn foxglove_channel_log_voxel_grid(
     }
 }
 
-/// Encode a VoxelGrid message to the buffer provided.
+/// Encode a VoxelGrid message as protobuf to the buffer provided.
 ///
 /// On success, writes the encoded length to *encoded_len.
 /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -2055,7 +2055,7 @@ pub extern "C" fn foxglove_channel_log_voxel_grid(
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
 /// # Safety
-/// The buffer starting at ptr must point to a valid memory region at least len bytes long.
+/// ptr must be a valid pointer to a memory region at least len bytes long.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_voxel_grid_encode(
     msg: Option<&VoxelGrid>,
@@ -2179,7 +2179,7 @@ pub extern "C" fn foxglove_channel_log_image_annotations(
     }
 }
 
-/// Encode a ImageAnnotations message to the buffer provided.
+/// Encode a ImageAnnotations message as protobuf to the buffer provided.
 ///
 /// On success, writes the encoded length to *encoded_len.
 /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -2187,7 +2187,7 @@ pub extern "C" fn foxglove_channel_log_image_annotations(
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
 /// # Safety
-/// The buffer starting at ptr must point to a valid memory region at least len bytes long.
+/// ptr must be a valid pointer to a memory region at least len bytes long.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_image_annotations_encode(
     msg: Option<&ImageAnnotations>,
@@ -2304,7 +2304,7 @@ pub extern "C" fn foxglove_channel_log_key_value_pair(
     }
 }
 
-/// Encode a KeyValuePair message to the buffer provided.
+/// Encode a KeyValuePair message as protobuf to the buffer provided.
 ///
 /// On success, writes the encoded length to *encoded_len.
 /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -2312,7 +2312,7 @@ pub extern "C" fn foxglove_channel_log_key_value_pair(
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
 /// # Safety
-/// The buffer starting at ptr must point to a valid memory region at least len bytes long.
+/// ptr must be a valid pointer to a memory region at least len bytes long.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_key_value_pair_encode(
     msg: Option<&KeyValuePair>,
@@ -2464,7 +2464,7 @@ pub extern "C" fn foxglove_channel_log_laser_scan(
     }
 }
 
-/// Encode a LaserScan message to the buffer provided.
+/// Encode a LaserScan message as protobuf to the buffer provided.
 ///
 /// On success, writes the encoded length to *encoded_len.
 /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -2472,7 +2472,7 @@ pub extern "C" fn foxglove_channel_log_laser_scan(
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
 /// # Safety
-/// The buffer starting at ptr must point to a valid memory region at least len bytes long.
+/// ptr must be a valid pointer to a memory region at least len bytes long.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_laser_scan_encode(
     msg: Option<&LaserScan>,
@@ -2631,7 +2631,7 @@ pub extern "C" fn foxglove_channel_log_line_primitive(
     }
 }
 
-/// Encode a LinePrimitive message to the buffer provided.
+/// Encode a LinePrimitive message as protobuf to the buffer provided.
 ///
 /// On success, writes the encoded length to *encoded_len.
 /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -2639,7 +2639,7 @@ pub extern "C" fn foxglove_channel_log_line_primitive(
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
 /// # Safety
-/// The buffer starting at ptr must point to a valid memory region at least len bytes long.
+/// ptr must be a valid pointer to a memory region at least len bytes long.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_line_primitive_encode(
     msg: Option<&LinePrimitive>,
@@ -2795,7 +2795,7 @@ pub extern "C" fn foxglove_channel_log_location_fix(
     }
 }
 
-/// Encode a LocationFix message to the buffer provided.
+/// Encode a LocationFix message as protobuf to the buffer provided.
 ///
 /// On success, writes the encoded length to *encoded_len.
 /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -2803,7 +2803,7 @@ pub extern "C" fn foxglove_channel_log_location_fix(
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
 /// # Safety
-/// The buffer starting at ptr must point to a valid memory region at least len bytes long.
+/// ptr must be a valid pointer to a memory region at least len bytes long.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_location_fix_encode(
     msg: Option<&LocationFix>,
@@ -2915,7 +2915,7 @@ pub extern "C" fn foxglove_channel_log_location_fixes(
     }
 }
 
-/// Encode a LocationFixes message to the buffer provided.
+/// Encode a LocationFixes message as protobuf to the buffer provided.
 ///
 /// On success, writes the encoded length to *encoded_len.
 /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -2923,7 +2923,7 @@ pub extern "C" fn foxglove_channel_log_location_fixes(
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
 /// # Safety
-/// The buffer starting at ptr must point to a valid memory region at least len bytes long.
+/// ptr must be a valid pointer to a memory region at least len bytes long.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_location_fixes_encode(
     msg: Option<&LocationFixes>,
@@ -3063,7 +3063,7 @@ pub extern "C" fn foxglove_channel_log_log(
     }
 }
 
-/// Encode a Log message to the buffer provided.
+/// Encode a Log message as protobuf to the buffer provided.
 ///
 /// On success, writes the encoded length to *encoded_len.
 /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -3071,7 +3071,7 @@ pub extern "C" fn foxglove_channel_log_log(
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
 /// # Safety
-/// The buffer starting at ptr must point to a valid memory region at least len bytes long.
+/// ptr must be a valid pointer to a memory region at least len bytes long.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_log_encode(
     msg: Option<&Log>,
@@ -3191,7 +3191,7 @@ pub extern "C" fn foxglove_channel_log_scene_entity_deletion(
     }
 }
 
-/// Encode a SceneEntityDeletion message to the buffer provided.
+/// Encode a SceneEntityDeletion message as protobuf to the buffer provided.
 ///
 /// On success, writes the encoded length to *encoded_len.
 /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -3199,7 +3199,7 @@ pub extern "C" fn foxglove_channel_log_scene_entity_deletion(
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
 /// # Safety
-/// The buffer starting at ptr must point to a valid memory region at least len bytes long.
+/// ptr must be a valid pointer to a memory region at least len bytes long.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_scene_entity_deletion_encode(
     msg: Option<&SceneEntityDeletion>,
@@ -3387,7 +3387,7 @@ pub extern "C" fn foxglove_channel_log_scene_entity(
     }
 }
 
-/// Encode a SceneEntity message to the buffer provided.
+/// Encode a SceneEntity message as protobuf to the buffer provided.
 ///
 /// On success, writes the encoded length to *encoded_len.
 /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -3395,7 +3395,7 @@ pub extern "C" fn foxglove_channel_log_scene_entity(
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
 /// # Safety
-/// The buffer starting at ptr must point to a valid memory region at least len bytes long.
+/// ptr must be a valid pointer to a memory region at least len bytes long.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_scene_entity_encode(
     msg: Option<&SceneEntity>,
@@ -3513,7 +3513,7 @@ pub extern "C" fn foxglove_channel_log_scene_update(
     }
 }
 
-/// Encode a SceneUpdate message to the buffer provided.
+/// Encode a SceneUpdate message as protobuf to the buffer provided.
 ///
 /// On success, writes the encoded length to *encoded_len.
 /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -3521,7 +3521,7 @@ pub extern "C" fn foxglove_channel_log_scene_update(
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
 /// # Safety
-/// The buffer starting at ptr must point to a valid memory region at least len bytes long.
+/// ptr must be a valid pointer to a memory region at least len bytes long.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_scene_update_encode(
     msg: Option<&SceneUpdate>,
@@ -3682,7 +3682,7 @@ pub extern "C" fn foxglove_channel_log_model_primitive(
     }
 }
 
-/// Encode a ModelPrimitive message to the buffer provided.
+/// Encode a ModelPrimitive message as protobuf to the buffer provided.
 ///
 /// On success, writes the encoded length to *encoded_len.
 /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -3690,7 +3690,7 @@ pub extern "C" fn foxglove_channel_log_model_primitive(
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
 /// # Safety
-/// The buffer starting at ptr must point to a valid memory region at least len bytes long.
+/// ptr must be a valid pointer to a memory region at least len bytes long.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_model_primitive_encode(
     msg: Option<&ModelPrimitive>,
@@ -3810,7 +3810,7 @@ pub extern "C" fn foxglove_channel_log_packed_element_field(
     }
 }
 
-/// Encode a PackedElementField message to the buffer provided.
+/// Encode a PackedElementField message as protobuf to the buffer provided.
 ///
 /// On success, writes the encoded length to *encoded_len.
 /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -3818,7 +3818,7 @@ pub extern "C" fn foxglove_channel_log_packed_element_field(
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
 /// # Safety
-/// The buffer starting at ptr must point to a valid memory region at least len bytes long.
+/// ptr must be a valid pointer to a memory region at least len bytes long.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_packed_element_field_encode(
     msg: Option<&PackedElementField>,
@@ -3930,7 +3930,7 @@ pub extern "C" fn foxglove_channel_log_point2(
     }
 }
 
-/// Encode a Point2 message to the buffer provided.
+/// Encode a Point2 message as protobuf to the buffer provided.
 ///
 /// On success, writes the encoded length to *encoded_len.
 /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -3938,7 +3938,7 @@ pub extern "C" fn foxglove_channel_log_point2(
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
 /// # Safety
-/// The buffer starting at ptr must point to a valid memory region at least len bytes long.
+/// ptr must be a valid pointer to a memory region at least len bytes long.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_point2_encode(
     msg: Option<&Point2>,
@@ -4054,7 +4054,7 @@ pub extern "C" fn foxglove_channel_log_point3(
     }
 }
 
-/// Encode a Point3 message to the buffer provided.
+/// Encode a Point3 message as protobuf to the buffer provided.
 ///
 /// On success, writes the encoded length to *encoded_len.
 /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -4062,7 +4062,7 @@ pub extern "C" fn foxglove_channel_log_point3(
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
 /// # Safety
-/// The buffer starting at ptr must point to a valid memory region at least len bytes long.
+/// ptr must be a valid pointer to a memory region at least len bytes long.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_point3_encode(
     msg: Option<&Point3>,
@@ -4208,7 +4208,7 @@ pub extern "C" fn foxglove_channel_log_point_cloud(
     }
 }
 
-/// Encode a PointCloud message to the buffer provided.
+/// Encode a PointCloud message as protobuf to the buffer provided.
 ///
 /// On success, writes the encoded length to *encoded_len.
 /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -4216,7 +4216,7 @@ pub extern "C" fn foxglove_channel_log_point_cloud(
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
 /// # Safety
-/// The buffer starting at ptr must point to a valid memory region at least len bytes long.
+/// ptr must be a valid pointer to a memory region at least len bytes long.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_point_cloud_encode(
     msg: Option<&PointCloud>,
@@ -4371,7 +4371,7 @@ pub extern "C" fn foxglove_channel_log_points_annotation(
     }
 }
 
-/// Encode a PointsAnnotation message to the buffer provided.
+/// Encode a PointsAnnotation message as protobuf to the buffer provided.
 ///
 /// On success, writes the encoded length to *encoded_len.
 /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -4379,7 +4379,7 @@ pub extern "C" fn foxglove_channel_log_points_annotation(
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
 /// # Safety
-/// The buffer starting at ptr must point to a valid memory region at least len bytes long.
+/// ptr must be a valid pointer to a memory region at least len bytes long.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_points_annotation_encode(
     msg: Option<&PointsAnnotation>,
@@ -4504,7 +4504,7 @@ pub extern "C" fn foxglove_channel_log_pose(
     }
 }
 
-/// Encode a Pose message to the buffer provided.
+/// Encode a Pose message as protobuf to the buffer provided.
 ///
 /// On success, writes the encoded length to *encoded_len.
 /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -4512,7 +4512,7 @@ pub extern "C" fn foxglove_channel_log_pose(
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
 /// # Safety
-/// The buffer starting at ptr must point to a valid memory region at least len bytes long.
+/// ptr must be a valid pointer to a memory region at least len bytes long.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_pose_encode(
     msg: Option<&Pose>,
@@ -4643,7 +4643,7 @@ pub extern "C" fn foxglove_channel_log_pose_in_frame(
     }
 }
 
-/// Encode a PoseInFrame message to the buffer provided.
+/// Encode a PoseInFrame message as protobuf to the buffer provided.
 ///
 /// On success, writes the encoded length to *encoded_len.
 /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -4651,7 +4651,7 @@ pub extern "C" fn foxglove_channel_log_pose_in_frame(
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
 /// # Safety
-/// The buffer starting at ptr must point to a valid memory region at least len bytes long.
+/// ptr must be a valid pointer to a memory region at least len bytes long.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_pose_in_frame_encode(
     msg: Option<&PoseInFrame>,
@@ -4778,7 +4778,7 @@ pub extern "C" fn foxglove_channel_log_poses_in_frame(
     }
 }
 
-/// Encode a PosesInFrame message to the buffer provided.
+/// Encode a PosesInFrame message as protobuf to the buffer provided.
 ///
 /// On success, writes the encoded length to *encoded_len.
 /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -4786,7 +4786,7 @@ pub extern "C" fn foxglove_channel_log_poses_in_frame(
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
 /// # Safety
-/// The buffer starting at ptr must point to a valid memory region at least len bytes long.
+/// ptr must be a valid pointer to a memory region at least len bytes long.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_poses_in_frame_encode(
     msg: Option<&PosesInFrame>,
@@ -4907,7 +4907,7 @@ pub extern "C" fn foxglove_channel_log_quaternion(
     }
 }
 
-/// Encode a Quaternion message to the buffer provided.
+/// Encode a Quaternion message as protobuf to the buffer provided.
 ///
 /// On success, writes the encoded length to *encoded_len.
 /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -4915,7 +4915,7 @@ pub extern "C" fn foxglove_channel_log_quaternion(
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
 /// # Safety
-/// The buffer starting at ptr must point to a valid memory region at least len bytes long.
+/// ptr must be a valid pointer to a memory region at least len bytes long.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_quaternion_encode(
     msg: Option<&Quaternion>,
@@ -5048,7 +5048,7 @@ pub extern "C" fn foxglove_channel_log_raw_audio(
     }
 }
 
-/// Encode a RawAudio message to the buffer provided.
+/// Encode a RawAudio message as protobuf to the buffer provided.
 ///
 /// On success, writes the encoded length to *encoded_len.
 /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -5056,7 +5056,7 @@ pub extern "C" fn foxglove_channel_log_raw_audio(
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
 /// # Safety
-/// The buffer starting at ptr must point to a valid memory region at least len bytes long.
+/// ptr must be a valid pointer to a memory region at least len bytes long.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_raw_audio_encode(
     msg: Option<&RawAudio>,
@@ -5257,7 +5257,7 @@ pub extern "C" fn foxglove_channel_log_raw_image(
     }
 }
 
-/// Encode a RawImage message to the buffer provided.
+/// Encode a RawImage message as protobuf to the buffer provided.
 ///
 /// On success, writes the encoded length to *encoded_len.
 /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -5265,7 +5265,7 @@ pub extern "C" fn foxglove_channel_log_raw_image(
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
 /// # Safety
-/// The buffer starting at ptr must point to a valid memory region at least len bytes long.
+/// ptr must be a valid pointer to a memory region at least len bytes long.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_raw_image_encode(
     msg: Option<&RawImage>,
@@ -5401,7 +5401,7 @@ pub extern "C" fn foxglove_channel_log_sphere_primitive(
     }
 }
 
-/// Encode a SpherePrimitive message to the buffer provided.
+/// Encode a SpherePrimitive message as protobuf to the buffer provided.
 ///
 /// On success, writes the encoded length to *encoded_len.
 /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -5409,7 +5409,7 @@ pub extern "C" fn foxglove_channel_log_sphere_primitive(
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
 /// # Safety
-/// The buffer starting at ptr must point to a valid memory region at least len bytes long.
+/// ptr must be a valid pointer to a memory region at least len bytes long.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_sphere_primitive_encode(
     msg: Option<&SpherePrimitive>,
@@ -5560,7 +5560,7 @@ pub extern "C" fn foxglove_channel_log_text_annotation(
     }
 }
 
-/// Encode a TextAnnotation message to the buffer provided.
+/// Encode a TextAnnotation message as protobuf to the buffer provided.
 ///
 /// On success, writes the encoded length to *encoded_len.
 /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -5568,7 +5568,7 @@ pub extern "C" fn foxglove_channel_log_text_annotation(
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
 /// # Safety
-/// The buffer starting at ptr must point to a valid memory region at least len bytes long.
+/// ptr must be a valid pointer to a memory region at least len bytes long.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_text_annotation_encode(
     msg: Option<&TextAnnotation>,
@@ -5712,7 +5712,7 @@ pub extern "C" fn foxglove_channel_log_text_primitive(
     }
 }
 
-/// Encode a TextPrimitive message to the buffer provided.
+/// Encode a TextPrimitive message as protobuf to the buffer provided.
 ///
 /// On success, writes the encoded length to *encoded_len.
 /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -5720,7 +5720,7 @@ pub extern "C" fn foxglove_channel_log_text_primitive(
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
 /// # Safety
-/// The buffer starting at ptr must point to a valid memory region at least len bytes long.
+/// ptr must be a valid pointer to a memory region at least len bytes long.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_text_primitive_encode(
     msg: Option<&TextPrimitive>,
@@ -5870,7 +5870,7 @@ pub extern "C" fn foxglove_channel_log_triangle_list_primitive(
     }
 }
 
-/// Encode a TriangleListPrimitive message to the buffer provided.
+/// Encode a TriangleListPrimitive message as protobuf to the buffer provided.
 ///
 /// On success, writes the encoded length to *encoded_len.
 /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -5878,7 +5878,7 @@ pub extern "C" fn foxglove_channel_log_triangle_list_primitive(
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
 /// # Safety
-/// The buffer starting at ptr must point to a valid memory region at least len bytes long.
+/// ptr must be a valid pointer to a memory region at least len bytes long.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_triangle_list_primitive_encode(
     msg: Option<&TriangleListPrimitive>,
@@ -5990,7 +5990,7 @@ pub extern "C" fn foxglove_channel_log_vector2(
     }
 }
 
-/// Encode a Vector2 message to the buffer provided.
+/// Encode a Vector2 message as protobuf to the buffer provided.
 ///
 /// On success, writes the encoded length to *encoded_len.
 /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -5998,7 +5998,7 @@ pub extern "C" fn foxglove_channel_log_vector2(
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
 /// # Safety
-/// The buffer starting at ptr must point to a valid memory region at least len bytes long.
+/// ptr must be a valid pointer to a memory region at least len bytes long.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_vector2_encode(
     msg: Option<&Vector2>,
@@ -6114,7 +6114,7 @@ pub extern "C" fn foxglove_channel_log_vector3(
     }
 }
 
-/// Encode a Vector3 message to the buffer provided.
+/// Encode a Vector3 message as protobuf to the buffer provided.
 ///
 /// On success, writes the encoded length to *encoded_len.
 /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -6122,7 +6122,7 @@ pub extern "C" fn foxglove_channel_log_vector3(
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
 /// # Safety
-/// The buffer starting at ptr must point to a valid memory region at least len bytes long.
+/// ptr must be a valid pointer to a memory region at least len bytes long.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_vector3_encode(
     msg: Option<&Vector3>,

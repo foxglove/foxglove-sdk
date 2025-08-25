@@ -166,7 +166,7 @@ export function generateHppSchemas(
       ...(shouldGenerateChannel(schema)
         ? [
             `
-      /// @brief Serialize the ${schema.name} to the provided buffer.
+      /// @brief Encoded the ${schema.name} as protobuf to the provided buffer.
       ///
       /// On success, writes the serialized length to *encoded_len.
       /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len

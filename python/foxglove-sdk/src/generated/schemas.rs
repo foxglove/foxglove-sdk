@@ -127,7 +127,7 @@ impl ArrowPrimitive {
             .unwrap()
             .into()
     }
-    /// Encodes the ArrowPrimitive.
+    /// Encodes the ArrowPrimitive as protobuf.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
@@ -139,7 +139,7 @@ impl ArrowPrimitive {
                 Ok(())
             },
         )
-        .expect("closure does not return error")
+        .expect("failed to allocate buffer for encoded message")
     }
 }
 
@@ -253,7 +253,7 @@ impl CameraCalibration {
             .unwrap()
             .into()
     }
-    /// Encodes the CameraCalibration.
+    /// Encodes the CameraCalibration as protobuf.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
@@ -265,7 +265,7 @@ impl CameraCalibration {
                 Ok(())
             },
         )
-        .expect("closure does not return error")
+        .expect("failed to allocate buffer for encoded message")
     }
 }
 
@@ -328,7 +328,7 @@ impl CircleAnnotation {
             .unwrap()
             .into()
     }
-    /// Encodes the CircleAnnotation.
+    /// Encodes the CircleAnnotation as protobuf.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
@@ -340,7 +340,7 @@ impl CircleAnnotation {
                 Ok(())
             },
         )
-        .expect("closure does not return error")
+        .expect("failed to allocate buffer for encoded message")
     }
 }
 
@@ -379,7 +379,7 @@ impl Color {
     fn get_schema() -> PySchema {
         foxglove::schemas::Color::get_schema().unwrap().into()
     }
-    /// Encodes the Color.
+    /// Encodes the Color as protobuf.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
@@ -391,7 +391,7 @@ impl Color {
                 Ok(())
             },
         )
-        .expect("closure does not return error")
+        .expect("failed to allocate buffer for encoded message")
     }
 }
 
@@ -446,7 +446,7 @@ impl CompressedImage {
             .unwrap()
             .into()
     }
-    /// Encodes the CompressedImage.
+    /// Encodes the CompressedImage as protobuf.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
@@ -458,7 +458,7 @@ impl CompressedImage {
                 Ok(())
             },
         )
-        .expect("closure does not return error")
+        .expect("failed to allocate buffer for encoded message")
     }
 }
 
@@ -539,7 +539,7 @@ impl CompressedVideo {
             .unwrap()
             .into()
     }
-    /// Encodes the CompressedVideo.
+    /// Encodes the CompressedVideo as protobuf.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
@@ -551,7 +551,7 @@ impl CompressedVideo {
                 Ok(())
             },
         )
-        .expect("closure does not return error")
+        .expect("failed to allocate buffer for encoded message")
     }
 }
 
@@ -609,7 +609,7 @@ impl CylinderPrimitive {
             .unwrap()
             .into()
     }
-    /// Encodes the CylinderPrimitive.
+    /// Encodes the CylinderPrimitive as protobuf.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
@@ -621,7 +621,7 @@ impl CylinderPrimitive {
                 Ok(())
             },
         )
-        .expect("closure does not return error")
+        .expect("failed to allocate buffer for encoded message")
     }
 }
 
@@ -665,7 +665,7 @@ impl CubePrimitive {
             .unwrap()
             .into()
     }
-    /// Encodes the CubePrimitive.
+    /// Encodes the CubePrimitive as protobuf.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
@@ -677,7 +677,7 @@ impl CubePrimitive {
                 Ok(())
             },
         )
-        .expect("closure does not return error")
+        .expect("failed to allocate buffer for encoded message")
     }
 }
 
@@ -735,7 +735,7 @@ impl FrameTransform {
             .unwrap()
             .into()
     }
-    /// Encodes the FrameTransform.
+    /// Encodes the FrameTransform as protobuf.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
@@ -747,7 +747,7 @@ impl FrameTransform {
                 Ok(())
             },
         )
-        .expect("closure does not return error")
+        .expect("failed to allocate buffer for encoded message")
     }
 }
 
@@ -784,7 +784,7 @@ impl FrameTransforms {
             .unwrap()
             .into()
     }
-    /// Encodes the FrameTransforms.
+    /// Encodes the FrameTransforms as protobuf.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
@@ -796,7 +796,7 @@ impl FrameTransforms {
                 Ok(())
             },
         )
-        .expect("closure does not return error")
+        .expect("failed to allocate buffer for encoded message")
     }
 }
 
@@ -829,7 +829,7 @@ impl GeoJson {
     fn get_schema() -> PySchema {
         foxglove::schemas::GeoJson::get_schema().unwrap().into()
     }
-    /// Encodes the GeoJson.
+    /// Encodes the GeoJson as protobuf.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
@@ -841,7 +841,7 @@ impl GeoJson {
                 Ok(())
             },
         )
-        .expect("closure does not return error")
+        .expect("failed to allocate buffer for encoded message")
     }
 }
 
@@ -918,7 +918,7 @@ impl Grid {
     fn get_schema() -> PySchema {
         foxglove::schemas::Grid::get_schema().unwrap().into()
     }
-    /// Encodes the Grid.
+    /// Encodes the Grid as protobuf.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
@@ -930,7 +930,7 @@ impl Grid {
                 Ok(())
             },
         )
-        .expect("closure does not return error")
+        .expect("failed to allocate buffer for encoded message")
     }
 }
 
@@ -1016,7 +1016,7 @@ impl VoxelGrid {
     fn get_schema() -> PySchema {
         foxglove::schemas::VoxelGrid::get_schema().unwrap().into()
     }
-    /// Encodes the VoxelGrid.
+    /// Encodes the VoxelGrid as protobuf.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
@@ -1028,7 +1028,7 @@ impl VoxelGrid {
                 Ok(())
             },
         )
-        .expect("closure does not return error")
+        .expect("failed to allocate buffer for encoded message")
     }
 }
 
@@ -1076,7 +1076,7 @@ impl ImageAnnotations {
             .unwrap()
             .into()
     }
-    /// Encodes the ImageAnnotations.
+    /// Encodes the ImageAnnotations as protobuf.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
@@ -1088,7 +1088,7 @@ impl ImageAnnotations {
                 Ok(())
             },
         )
-        .expect("closure does not return error")
+        .expect("failed to allocate buffer for encoded message")
     }
 }
 
@@ -1127,7 +1127,7 @@ impl KeyValuePair {
             .unwrap()
             .into()
     }
-    /// Encodes the KeyValuePair.
+    /// Encodes the KeyValuePair as protobuf.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
@@ -1139,7 +1139,7 @@ impl KeyValuePair {
                 Ok(())
             },
         )
-        .expect("closure does not return error")
+        .expect("failed to allocate buffer for encoded message")
     }
 }
 
@@ -1203,7 +1203,7 @@ impl LaserScan {
     fn get_schema() -> PySchema {
         foxglove::schemas::LaserScan::get_schema().unwrap().into()
     }
-    /// Encodes the LaserScan.
+    /// Encodes the LaserScan as protobuf.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
@@ -1215,7 +1215,7 @@ impl LaserScan {
                 Ok(())
             },
         )
-        .expect("closure does not return error")
+        .expect("failed to allocate buffer for encoded message")
     }
 }
 
@@ -1287,7 +1287,7 @@ impl LinePrimitive {
             .unwrap()
             .into()
     }
-    /// Encodes the LinePrimitive.
+    /// Encodes the LinePrimitive as protobuf.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
@@ -1299,7 +1299,7 @@ impl LinePrimitive {
                 Ok(())
             },
         )
-        .expect("closure does not return error")
+        .expect("failed to allocate buffer for encoded message")
     }
 }
 
@@ -1367,7 +1367,7 @@ impl LocationFix {
     fn get_schema() -> PySchema {
         foxglove::schemas::LocationFix::get_schema().unwrap().into()
     }
-    /// Encodes the LocationFix.
+    /// Encodes the LocationFix as protobuf.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
@@ -1379,7 +1379,7 @@ impl LocationFix {
                 Ok(())
             },
         )
-        .expect("closure does not return error")
+        .expect("failed to allocate buffer for encoded message")
     }
 }
 
@@ -1416,7 +1416,7 @@ impl LocationFixes {
             .unwrap()
             .into()
     }
-    /// Encodes the LocationFixes.
+    /// Encodes the LocationFixes as protobuf.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
@@ -1428,7 +1428,7 @@ impl LocationFixes {
                 Ok(())
             },
         )
-        .expect("closure does not return error")
+        .expect("failed to allocate buffer for encoded message")
     }
 }
 
@@ -1483,7 +1483,7 @@ impl Log {
     fn get_schema() -> PySchema {
         foxglove::schemas::Log::get_schema().unwrap().into()
     }
-    /// Encodes the Log.
+    /// Encodes the Log as protobuf.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
@@ -1495,7 +1495,7 @@ impl Log {
                 Ok(())
             },
         )
-        .expect("closure does not return error")
+        .expect("failed to allocate buffer for encoded message")
     }
 }
 
@@ -1539,7 +1539,7 @@ impl SceneEntityDeletion {
             .unwrap()
             .into()
     }
-    /// Encodes the SceneEntityDeletion.
+    /// Encodes the SceneEntityDeletion as protobuf.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
@@ -1551,7 +1551,7 @@ impl SceneEntityDeletion {
                 Ok(())
             },
         )
-        .expect("closure does not return error")
+        .expect("failed to allocate buffer for encoded message")
     }
 }
 
@@ -1643,7 +1643,7 @@ impl SceneEntity {
     fn get_schema() -> PySchema {
         foxglove::schemas::SceneEntity::get_schema().unwrap().into()
     }
-    /// Encodes the SceneEntity.
+    /// Encodes the SceneEntity as protobuf.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
@@ -1655,7 +1655,7 @@ impl SceneEntity {
                 Ok(())
             },
         )
-        .expect("closure does not return error")
+        .expect("failed to allocate buffer for encoded message")
     }
 }
 
@@ -1695,7 +1695,7 @@ impl SceneUpdate {
     fn get_schema() -> PySchema {
         foxglove::schemas::SceneUpdate::get_schema().unwrap().into()
     }
-    /// Encodes the SceneUpdate.
+    /// Encodes the SceneUpdate as protobuf.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
@@ -1707,7 +1707,7 @@ impl SceneUpdate {
                 Ok(())
             },
         )
-        .expect("closure does not return error")
+        .expect("failed to allocate buffer for encoded message")
     }
 }
 
@@ -1775,7 +1775,7 @@ impl ModelPrimitive {
             .unwrap()
             .into()
     }
-    /// Encodes the ModelPrimitive.
+    /// Encodes the ModelPrimitive as protobuf.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
@@ -1787,7 +1787,7 @@ impl ModelPrimitive {
                 Ok(())
             },
         )
-        .expect("closure does not return error")
+        .expect("failed to allocate buffer for encoded message")
     }
 }
 
@@ -1831,7 +1831,7 @@ impl PackedElementField {
             .unwrap()
             .into()
     }
-    /// Encodes the PackedElementField.
+    /// Encodes the PackedElementField as protobuf.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
@@ -1843,7 +1843,7 @@ impl PackedElementField {
                 Ok(())
             },
         )
-        .expect("closure does not return error")
+        .expect("failed to allocate buffer for encoded message")
     }
 }
 
@@ -1877,7 +1877,7 @@ impl Point2 {
     fn get_schema() -> PySchema {
         foxglove::schemas::Point2::get_schema().unwrap().into()
     }
-    /// Encodes the Point2.
+    /// Encodes the Point2 as protobuf.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
@@ -1889,7 +1889,7 @@ impl Point2 {
                 Ok(())
             },
         )
-        .expect("closure does not return error")
+        .expect("failed to allocate buffer for encoded message")
     }
 }
 
@@ -1927,7 +1927,7 @@ impl Point3 {
     fn get_schema() -> PySchema {
         foxglove::schemas::Point3::get_schema().unwrap().into()
     }
-    /// Encodes the Point3.
+    /// Encodes the Point3 as protobuf.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
@@ -1939,7 +1939,7 @@ impl Point3 {
                 Ok(())
             },
         )
-        .expect("closure does not return error")
+        .expect("failed to allocate buffer for encoded message")
     }
 }
 
@@ -2001,7 +2001,7 @@ impl PointCloud {
     fn get_schema() -> PySchema {
         foxglove::schemas::PointCloud::get_schema().unwrap().into()
     }
-    /// Encodes the PointCloud.
+    /// Encodes the PointCloud as protobuf.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
@@ -2013,7 +2013,7 @@ impl PointCloud {
                 Ok(())
             },
         )
-        .expect("closure does not return error")
+        .expect("failed to allocate buffer for encoded message")
     }
 }
 
@@ -2080,7 +2080,7 @@ impl PointsAnnotation {
             .unwrap()
             .into()
     }
-    /// Encodes the PointsAnnotation.
+    /// Encodes the PointsAnnotation as protobuf.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
@@ -2092,7 +2092,7 @@ impl PointsAnnotation {
                 Ok(())
             },
         )
-        .expect("closure does not return error")
+        .expect("failed to allocate buffer for encoded message")
     }
 }
 
@@ -2132,7 +2132,7 @@ impl Pose {
     fn get_schema() -> PySchema {
         foxglove::schemas::Pose::get_schema().unwrap().into()
     }
-    /// Encodes the Pose.
+    /// Encodes the Pose as protobuf.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
@@ -2144,7 +2144,7 @@ impl Pose {
                 Ok(())
             },
         )
-        .expect("closure does not return error")
+        .expect("failed to allocate buffer for encoded message")
     }
 }
 
@@ -2186,7 +2186,7 @@ impl PoseInFrame {
     fn get_schema() -> PySchema {
         foxglove::schemas::PoseInFrame::get_schema().unwrap().into()
     }
-    /// Encodes the PoseInFrame.
+    /// Encodes the PoseInFrame as protobuf.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
@@ -2198,7 +2198,7 @@ impl PoseInFrame {
                 Ok(())
             },
         )
-        .expect("closure does not return error")
+        .expect("failed to allocate buffer for encoded message")
     }
 }
 
@@ -2242,7 +2242,7 @@ impl PosesInFrame {
             .unwrap()
             .into()
     }
-    /// Encodes the PosesInFrame.
+    /// Encodes the PosesInFrame as protobuf.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
@@ -2254,7 +2254,7 @@ impl PosesInFrame {
                 Ok(())
             },
         )
-        .expect("closure does not return error")
+        .expect("failed to allocate buffer for encoded message")
     }
 }
 
@@ -2293,7 +2293,7 @@ impl Quaternion {
     fn get_schema() -> PySchema {
         foxglove::schemas::Quaternion::get_schema().unwrap().into()
     }
-    /// Encodes the Quaternion.
+    /// Encodes the Quaternion as protobuf.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
@@ -2305,7 +2305,7 @@ impl Quaternion {
                 Ok(())
             },
         )
-        .expect("closure does not return error")
+        .expect("failed to allocate buffer for encoded message")
     }
 }
 
@@ -2363,7 +2363,7 @@ impl RawAudio {
     fn get_schema() -> PySchema {
         foxglove::schemas::RawAudio::get_schema().unwrap().into()
     }
-    /// Encodes the RawAudio.
+    /// Encodes the RawAudio as protobuf.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
@@ -2375,7 +2375,7 @@ impl RawAudio {
                 Ok(())
             },
         )
-        .expect("closure does not return error")
+        .expect("failed to allocate buffer for encoded message")
     }
 }
 
@@ -2494,7 +2494,7 @@ impl RawImage {
     fn get_schema() -> PySchema {
         foxglove::schemas::RawImage::get_schema().unwrap().into()
     }
-    /// Encodes the RawImage.
+    /// Encodes the RawImage as protobuf.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
@@ -2506,7 +2506,7 @@ impl RawImage {
                 Ok(())
             },
         )
-        .expect("closure does not return error")
+        .expect("failed to allocate buffer for encoded message")
     }
 }
 
@@ -2550,7 +2550,7 @@ impl SpherePrimitive {
             .unwrap()
             .into()
     }
-    /// Encodes the SpherePrimitive.
+    /// Encodes the SpherePrimitive as protobuf.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
@@ -2562,7 +2562,7 @@ impl SpherePrimitive {
                 Ok(())
             },
         )
-        .expect("closure does not return error")
+        .expect("failed to allocate buffer for encoded message")
     }
 }
 
@@ -2625,7 +2625,7 @@ impl TextAnnotation {
             .unwrap()
             .into()
     }
-    /// Encodes the TextAnnotation.
+    /// Encodes the TextAnnotation as protobuf.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
@@ -2637,7 +2637,7 @@ impl TextAnnotation {
                 Ok(())
             },
         )
-        .expect("closure does not return error")
+        .expect("failed to allocate buffer for encoded message")
     }
 }
 
@@ -2699,7 +2699,7 @@ impl TextPrimitive {
             .unwrap()
             .into()
     }
-    /// Encodes the TextPrimitive.
+    /// Encodes the TextPrimitive as protobuf.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
@@ -2711,7 +2711,7 @@ impl TextPrimitive {
                 Ok(())
             },
         )
-        .expect("closure does not return error")
+        .expect("failed to allocate buffer for encoded message")
     }
 }
 
@@ -2767,7 +2767,7 @@ impl TriangleListPrimitive {
             .unwrap()
             .into()
     }
-    /// Encodes the TriangleListPrimitive.
+    /// Encodes the TriangleListPrimitive as protobuf.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
@@ -2779,7 +2779,7 @@ impl TriangleListPrimitive {
                 Ok(())
             },
         )
-        .expect("closure does not return error")
+        .expect("failed to allocate buffer for encoded message")
     }
 }
 
@@ -2813,7 +2813,7 @@ impl Vector2 {
     fn get_schema() -> PySchema {
         foxglove::schemas::Vector2::get_schema().unwrap().into()
     }
-    /// Encodes the Vector2.
+    /// Encodes the Vector2 as protobuf.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
@@ -2825,7 +2825,7 @@ impl Vector2 {
                 Ok(())
             },
         )
-        .expect("closure does not return error")
+        .expect("failed to allocate buffer for encoded message")
     }
 }
 
@@ -2863,7 +2863,7 @@ impl Vector3 {
     fn get_schema() -> PySchema {
         foxglove::schemas::Vector3::get_schema().unwrap().into()
     }
-    /// Encodes the Vector3.
+    /// Encodes the Vector3 as protobuf.
     fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         PyBytes::new_with(
             py,
@@ -2875,7 +2875,7 @@ impl Vector3 {
                 Ok(())
             },
         )
-        .expect("closure does not return error")
+        .expect("failed to allocate buffer for encoded message")
     }
 }
 

@@ -246,7 +246,7 @@ pub extern "C" fn foxglove_channel_log_${snakeName}(channel: Option<&FoxgloveCha
   }
 }
 
-/// Encode a ${name} message to the buffer provided.
+/// Encode a ${name} message as protobuf to the buffer provided.
 ///
 /// On success, writes the encoded length to *encoded_len.
 /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
@@ -254,7 +254,7 @@ pub extern "C" fn foxglove_channel_log_${snakeName}(channel: Option<&FoxgloveCha
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
 /// # Safety
-/// The buffer starting at ptr must point to a valid memory region at least len bytes long.
+/// ptr must be a valid pointer to a memory region at least len bytes long.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_${snakeName}_encode(
     msg: Option<&${name}>,
