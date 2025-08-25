@@ -168,10 +168,9 @@ describe("generatePyclass", () => {
              foxglove::schemas::ExampleMessage::get_schema().unwrap().into()
          }
          /// Encodes the ExampleMessage.
-         #[pymethod]
-         fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
+         fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
              let mut buf = Vec::new();
-             self.encode(&mut buf).unwrap("encode to a vec is infallible");
+             self.0.encode(&mut buf).expect("encode to a vec is infallible");
              PyBytes::new(py, &buf)
          }
      }

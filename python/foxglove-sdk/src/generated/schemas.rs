@@ -128,11 +128,11 @@ impl ArrowPrimitive {
             .into()
     }
     /// Encodes the ArrowPrimitive.
-    #[pymethod]
-    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         let mut buf = Vec::new();
-        self.encode(&mut buf)
-            .unwrap("encode to a vec is infallible");
+        self.0
+            .encode(&mut buf)
+            .expect("encode to a vec is infallible");
         PyBytes::new(py, &buf)
     }
 }
@@ -248,11 +248,11 @@ impl CameraCalibration {
             .into()
     }
     /// Encodes the CameraCalibration.
-    #[pymethod]
-    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         let mut buf = Vec::new();
-        self.encode(&mut buf)
-            .unwrap("encode to a vec is infallible");
+        self.0
+            .encode(&mut buf)
+            .expect("encode to a vec is infallible");
         PyBytes::new(py, &buf)
     }
 }
@@ -317,11 +317,11 @@ impl CircleAnnotation {
             .into()
     }
     /// Encodes the CircleAnnotation.
-    #[pymethod]
-    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         let mut buf = Vec::new();
-        self.encode(&mut buf)
-            .unwrap("encode to a vec is infallible");
+        self.0
+            .encode(&mut buf)
+            .expect("encode to a vec is infallible");
         PyBytes::new(py, &buf)
     }
 }
@@ -362,11 +362,11 @@ impl Color {
         foxglove::schemas::Color::get_schema().unwrap().into()
     }
     /// Encodes the Color.
-    #[pymethod]
-    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         let mut buf = Vec::new();
-        self.encode(&mut buf)
-            .unwrap("encode to a vec is infallible");
+        self.0
+            .encode(&mut buf)
+            .expect("encode to a vec is infallible");
         PyBytes::new(py, &buf)
     }
 }
@@ -423,11 +423,11 @@ impl CompressedImage {
             .into()
     }
     /// Encodes the CompressedImage.
-    #[pymethod]
-    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         let mut buf = Vec::new();
-        self.encode(&mut buf)
-            .unwrap("encode to a vec is infallible");
+        self.0
+            .encode(&mut buf)
+            .expect("encode to a vec is infallible");
         PyBytes::new(py, &buf)
     }
 }
@@ -510,11 +510,11 @@ impl CompressedVideo {
             .into()
     }
     /// Encodes the CompressedVideo.
-    #[pymethod]
-    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         let mut buf = Vec::new();
-        self.encode(&mut buf)
-            .unwrap("encode to a vec is infallible");
+        self.0
+            .encode(&mut buf)
+            .expect("encode to a vec is infallible");
         PyBytes::new(py, &buf)
     }
 }
@@ -574,11 +574,11 @@ impl CylinderPrimitive {
             .into()
     }
     /// Encodes the CylinderPrimitive.
-    #[pymethod]
-    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         let mut buf = Vec::new();
-        self.encode(&mut buf)
-            .unwrap("encode to a vec is infallible");
+        self.0
+            .encode(&mut buf)
+            .expect("encode to a vec is infallible");
         PyBytes::new(py, &buf)
     }
 }
@@ -624,11 +624,11 @@ impl CubePrimitive {
             .into()
     }
     /// Encodes the CubePrimitive.
-    #[pymethod]
-    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         let mut buf = Vec::new();
-        self.encode(&mut buf)
-            .unwrap("encode to a vec is infallible");
+        self.0
+            .encode(&mut buf)
+            .expect("encode to a vec is infallible");
         PyBytes::new(py, &buf)
     }
 }
@@ -688,11 +688,11 @@ impl FrameTransform {
             .into()
     }
     /// Encodes the FrameTransform.
-    #[pymethod]
-    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         let mut buf = Vec::new();
-        self.encode(&mut buf)
-            .unwrap("encode to a vec is infallible");
+        self.0
+            .encode(&mut buf)
+            .expect("encode to a vec is infallible");
         PyBytes::new(py, &buf)
     }
 }
@@ -731,11 +731,11 @@ impl FrameTransforms {
             .into()
     }
     /// Encodes the FrameTransforms.
-    #[pymethod]
-    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         let mut buf = Vec::new();
-        self.encode(&mut buf)
-            .unwrap("encode to a vec is infallible");
+        self.0
+            .encode(&mut buf)
+            .expect("encode to a vec is infallible");
         PyBytes::new(py, &buf)
     }
 }
@@ -770,11 +770,11 @@ impl GeoJson {
         foxglove::schemas::GeoJson::get_schema().unwrap().into()
     }
     /// Encodes the GeoJson.
-    #[pymethod]
-    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         let mut buf = Vec::new();
-        self.encode(&mut buf)
-            .unwrap("encode to a vec is infallible");
+        self.0
+            .encode(&mut buf)
+            .expect("encode to a vec is infallible");
         PyBytes::new(py, &buf)
     }
 }
@@ -853,11 +853,11 @@ impl Grid {
         foxglove::schemas::Grid::get_schema().unwrap().into()
     }
     /// Encodes the Grid.
-    #[pymethod]
-    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         let mut buf = Vec::new();
-        self.encode(&mut buf)
-            .unwrap("encode to a vec is infallible");
+        self.0
+            .encode(&mut buf)
+            .expect("encode to a vec is infallible");
         PyBytes::new(py, &buf)
     }
 }
@@ -945,11 +945,11 @@ impl VoxelGrid {
         foxglove::schemas::VoxelGrid::get_schema().unwrap().into()
     }
     /// Encodes the VoxelGrid.
-    #[pymethod]
-    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         let mut buf = Vec::new();
-        self.encode(&mut buf)
-            .unwrap("encode to a vec is infallible");
+        self.0
+            .encode(&mut buf)
+            .expect("encode to a vec is infallible");
         PyBytes::new(py, &buf)
     }
 }
@@ -999,11 +999,11 @@ impl ImageAnnotations {
             .into()
     }
     /// Encodes the ImageAnnotations.
-    #[pymethod]
-    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         let mut buf = Vec::new();
-        self.encode(&mut buf)
-            .unwrap("encode to a vec is infallible");
+        self.0
+            .encode(&mut buf)
+            .expect("encode to a vec is infallible");
         PyBytes::new(py, &buf)
     }
 }
@@ -1044,11 +1044,11 @@ impl KeyValuePair {
             .into()
     }
     /// Encodes the KeyValuePair.
-    #[pymethod]
-    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         let mut buf = Vec::new();
-        self.encode(&mut buf)
-            .unwrap("encode to a vec is infallible");
+        self.0
+            .encode(&mut buf)
+            .expect("encode to a vec is infallible");
         PyBytes::new(py, &buf)
     }
 }
@@ -1114,11 +1114,11 @@ impl LaserScan {
         foxglove::schemas::LaserScan::get_schema().unwrap().into()
     }
     /// Encodes the LaserScan.
-    #[pymethod]
-    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         let mut buf = Vec::new();
-        self.encode(&mut buf)
-            .unwrap("encode to a vec is infallible");
+        self.0
+            .encode(&mut buf)
+            .expect("encode to a vec is infallible");
         PyBytes::new(py, &buf)
     }
 }
@@ -1192,11 +1192,11 @@ impl LinePrimitive {
             .into()
     }
     /// Encodes the LinePrimitive.
-    #[pymethod]
-    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         let mut buf = Vec::new();
-        self.encode(&mut buf)
-            .unwrap("encode to a vec is infallible");
+        self.0
+            .encode(&mut buf)
+            .expect("encode to a vec is infallible");
         PyBytes::new(py, &buf)
     }
 }
@@ -1266,11 +1266,11 @@ impl LocationFix {
         foxglove::schemas::LocationFix::get_schema().unwrap().into()
     }
     /// Encodes the LocationFix.
-    #[pymethod]
-    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         let mut buf = Vec::new();
-        self.encode(&mut buf)
-            .unwrap("encode to a vec is infallible");
+        self.0
+            .encode(&mut buf)
+            .expect("encode to a vec is infallible");
         PyBytes::new(py, &buf)
     }
 }
@@ -1309,11 +1309,11 @@ impl LocationFixes {
             .into()
     }
     /// Encodes the LocationFixes.
-    #[pymethod]
-    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         let mut buf = Vec::new();
-        self.encode(&mut buf)
-            .unwrap("encode to a vec is infallible");
+        self.0
+            .encode(&mut buf)
+            .expect("encode to a vec is infallible");
         PyBytes::new(py, &buf)
     }
 }
@@ -1370,11 +1370,11 @@ impl Log {
         foxglove::schemas::Log::get_schema().unwrap().into()
     }
     /// Encodes the Log.
-    #[pymethod]
-    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         let mut buf = Vec::new();
-        self.encode(&mut buf)
-            .unwrap("encode to a vec is infallible");
+        self.0
+            .encode(&mut buf)
+            .expect("encode to a vec is infallible");
         PyBytes::new(py, &buf)
     }
 }
@@ -1420,11 +1420,11 @@ impl SceneEntityDeletion {
             .into()
     }
     /// Encodes the SceneEntityDeletion.
-    #[pymethod]
-    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         let mut buf = Vec::new();
-        self.encode(&mut buf)
-            .unwrap("encode to a vec is infallible");
+        self.0
+            .encode(&mut buf)
+            .expect("encode to a vec is infallible");
         PyBytes::new(py, &buf)
     }
 }
@@ -1518,11 +1518,11 @@ impl SceneEntity {
         foxglove::schemas::SceneEntity::get_schema().unwrap().into()
     }
     /// Encodes the SceneEntity.
-    #[pymethod]
-    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         let mut buf = Vec::new();
-        self.encode(&mut buf)
-            .unwrap("encode to a vec is infallible");
+        self.0
+            .encode(&mut buf)
+            .expect("encode to a vec is infallible");
         PyBytes::new(py, &buf)
     }
 }
@@ -1564,11 +1564,11 @@ impl SceneUpdate {
         foxglove::schemas::SceneUpdate::get_schema().unwrap().into()
     }
     /// Encodes the SceneUpdate.
-    #[pymethod]
-    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         let mut buf = Vec::new();
-        self.encode(&mut buf)
-            .unwrap("encode to a vec is infallible");
+        self.0
+            .encode(&mut buf)
+            .expect("encode to a vec is infallible");
         PyBytes::new(py, &buf)
     }
 }
@@ -1638,11 +1638,11 @@ impl ModelPrimitive {
             .into()
     }
     /// Encodes the ModelPrimitive.
-    #[pymethod]
-    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         let mut buf = Vec::new();
-        self.encode(&mut buf)
-            .unwrap("encode to a vec is infallible");
+        self.0
+            .encode(&mut buf)
+            .expect("encode to a vec is infallible");
         PyBytes::new(py, &buf)
     }
 }
@@ -1688,11 +1688,11 @@ impl PackedElementField {
             .into()
     }
     /// Encodes the PackedElementField.
-    #[pymethod]
-    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         let mut buf = Vec::new();
-        self.encode(&mut buf)
-            .unwrap("encode to a vec is infallible");
+        self.0
+            .encode(&mut buf)
+            .expect("encode to a vec is infallible");
         PyBytes::new(py, &buf)
     }
 }
@@ -1728,11 +1728,11 @@ impl Point2 {
         foxglove::schemas::Point2::get_schema().unwrap().into()
     }
     /// Encodes the Point2.
-    #[pymethod]
-    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         let mut buf = Vec::new();
-        self.encode(&mut buf)
-            .unwrap("encode to a vec is infallible");
+        self.0
+            .encode(&mut buf)
+            .expect("encode to a vec is infallible");
         PyBytes::new(py, &buf)
     }
 }
@@ -1772,11 +1772,11 @@ impl Point3 {
         foxglove::schemas::Point3::get_schema().unwrap().into()
     }
     /// Encodes the Point3.
-    #[pymethod]
-    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         let mut buf = Vec::new();
-        self.encode(&mut buf)
-            .unwrap("encode to a vec is infallible");
+        self.0
+            .encode(&mut buf)
+            .expect("encode to a vec is infallible");
         PyBytes::new(py, &buf)
     }
 }
@@ -1840,11 +1840,11 @@ impl PointCloud {
         foxglove::schemas::PointCloud::get_schema().unwrap().into()
     }
     /// Encodes the PointCloud.
-    #[pymethod]
-    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         let mut buf = Vec::new();
-        self.encode(&mut buf)
-            .unwrap("encode to a vec is infallible");
+        self.0
+            .encode(&mut buf)
+            .expect("encode to a vec is infallible");
         PyBytes::new(py, &buf)
     }
 }
@@ -1913,11 +1913,11 @@ impl PointsAnnotation {
             .into()
     }
     /// Encodes the PointsAnnotation.
-    #[pymethod]
-    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         let mut buf = Vec::new();
-        self.encode(&mut buf)
-            .unwrap("encode to a vec is infallible");
+        self.0
+            .encode(&mut buf)
+            .expect("encode to a vec is infallible");
         PyBytes::new(py, &buf)
     }
 }
@@ -1959,11 +1959,11 @@ impl Pose {
         foxglove::schemas::Pose::get_schema().unwrap().into()
     }
     /// Encodes the Pose.
-    #[pymethod]
-    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         let mut buf = Vec::new();
-        self.encode(&mut buf)
-            .unwrap("encode to a vec is infallible");
+        self.0
+            .encode(&mut buf)
+            .expect("encode to a vec is infallible");
         PyBytes::new(py, &buf)
     }
 }
@@ -2007,11 +2007,11 @@ impl PoseInFrame {
         foxglove::schemas::PoseInFrame::get_schema().unwrap().into()
     }
     /// Encodes the PoseInFrame.
-    #[pymethod]
-    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         let mut buf = Vec::new();
-        self.encode(&mut buf)
-            .unwrap("encode to a vec is infallible");
+        self.0
+            .encode(&mut buf)
+            .expect("encode to a vec is infallible");
         PyBytes::new(py, &buf)
     }
 }
@@ -2057,11 +2057,11 @@ impl PosesInFrame {
             .into()
     }
     /// Encodes the PosesInFrame.
-    #[pymethod]
-    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         let mut buf = Vec::new();
-        self.encode(&mut buf)
-            .unwrap("encode to a vec is infallible");
+        self.0
+            .encode(&mut buf)
+            .expect("encode to a vec is infallible");
         PyBytes::new(py, &buf)
     }
 }
@@ -2102,11 +2102,11 @@ impl Quaternion {
         foxglove::schemas::Quaternion::get_schema().unwrap().into()
     }
     /// Encodes the Quaternion.
-    #[pymethod]
-    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         let mut buf = Vec::new();
-        self.encode(&mut buf)
-            .unwrap("encode to a vec is infallible");
+        self.0
+            .encode(&mut buf)
+            .expect("encode to a vec is infallible");
         PyBytes::new(py, &buf)
     }
 }
@@ -2166,11 +2166,11 @@ impl RawAudio {
         foxglove::schemas::RawAudio::get_schema().unwrap().into()
     }
     /// Encodes the RawAudio.
-    #[pymethod]
-    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         let mut buf = Vec::new();
-        self.encode(&mut buf)
-            .unwrap("encode to a vec is infallible");
+        self.0
+            .encode(&mut buf)
+            .expect("encode to a vec is infallible");
         PyBytes::new(py, &buf)
     }
 }
@@ -2291,11 +2291,11 @@ impl RawImage {
         foxglove::schemas::RawImage::get_schema().unwrap().into()
     }
     /// Encodes the RawImage.
-    #[pymethod]
-    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         let mut buf = Vec::new();
-        self.encode(&mut buf)
-            .unwrap("encode to a vec is infallible");
+        self.0
+            .encode(&mut buf)
+            .expect("encode to a vec is infallible");
         PyBytes::new(py, &buf)
     }
 }
@@ -2341,11 +2341,11 @@ impl SpherePrimitive {
             .into()
     }
     /// Encodes the SpherePrimitive.
-    #[pymethod]
-    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         let mut buf = Vec::new();
-        self.encode(&mut buf)
-            .unwrap("encode to a vec is infallible");
+        self.0
+            .encode(&mut buf)
+            .expect("encode to a vec is infallible");
         PyBytes::new(py, &buf)
     }
 }
@@ -2410,11 +2410,11 @@ impl TextAnnotation {
             .into()
     }
     /// Encodes the TextAnnotation.
-    #[pymethod]
-    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         let mut buf = Vec::new();
-        self.encode(&mut buf)
-            .unwrap("encode to a vec is infallible");
+        self.0
+            .encode(&mut buf)
+            .expect("encode to a vec is infallible");
         PyBytes::new(py, &buf)
     }
 }
@@ -2478,11 +2478,11 @@ impl TextPrimitive {
             .into()
     }
     /// Encodes the TextPrimitive.
-    #[pymethod]
-    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         let mut buf = Vec::new();
-        self.encode(&mut buf)
-            .unwrap("encode to a vec is infallible");
+        self.0
+            .encode(&mut buf)
+            .expect("encode to a vec is infallible");
         PyBytes::new(py, &buf)
     }
 }
@@ -2540,11 +2540,11 @@ impl TriangleListPrimitive {
             .into()
     }
     /// Encodes the TriangleListPrimitive.
-    #[pymethod]
-    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         let mut buf = Vec::new();
-        self.encode(&mut buf)
-            .unwrap("encode to a vec is infallible");
+        self.0
+            .encode(&mut buf)
+            .expect("encode to a vec is infallible");
         PyBytes::new(py, &buf)
     }
 }
@@ -2580,11 +2580,11 @@ impl Vector2 {
         foxglove::schemas::Vector2::get_schema().unwrap().into()
     }
     /// Encodes the Vector2.
-    #[pymethod]
-    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         let mut buf = Vec::new();
-        self.encode(&mut buf)
-            .unwrap("encode to a vec is infallible");
+        self.0
+            .encode(&mut buf)
+            .expect("encode to a vec is infallible");
         PyBytes::new(py, &buf)
     }
 }
@@ -2624,11 +2624,11 @@ impl Vector3 {
         foxglove::schemas::Vector3::get_schema().unwrap().into()
     }
     /// Encodes the Vector3.
-    #[pymethod]
-    fn encode(&self, py: Python<'_>) -> Bound<'_, PyBytes> {
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
         let mut buf = Vec::new();
-        self.encode(&mut buf)
-            .unwrap("encode to a vec is infallible");
+        self.0
+            .encode(&mut buf)
+            .expect("encode to a vec is infallible");
         PyBytes::new(py, &buf)
     }
 }

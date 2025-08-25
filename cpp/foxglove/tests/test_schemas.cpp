@@ -108,9 +108,9 @@ TEST_CASE("triangle list primitive to protobuf") {
 
   size_t capacity = 0;
   std::vector<uint8_t> buf = {};
-  REQUIRE(msg.encode(buf.data(), buf.size(). &capacity) == FoxgloveError::BufferTooShort);
+  REQUIRE(msg.encode(buf.data(), buf.size(), &capacity) == FoxgloveError::BufferTooShort);
   buf.resize(capacity);
-  REQUIRE(msg.encode(buf.data(), buf.size(). &capacity) == FoxgloveError::Ok);
+  REQUIRE(msg.encode(buf.data(), buf.size(), &capacity) == FoxgloveError::Ok);
   REQUIRE(capacity == buf.size());
   REQUIRE(capacity > 0);
 }
