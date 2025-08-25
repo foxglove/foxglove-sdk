@@ -245,6 +245,46 @@ pub extern "C" fn foxglove_channel_log_${snakeName}(channel: Option<&FoxgloveCha
     }
   }
 }
+
+/// Encode a ${name} message to the buffer provided.
+///
+/// On success, writes the encoded length to *result.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *result and
+/// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+/// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+///
+/// # Safety
+/// The buffer starting at ptr must point to a valid memory region at least len bytes long.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_${snakeName}_encode(
+    msg: Option<&${name}>,
+    ptr: *mut u8,
+    len: usize,
+    result: Option<&mut usize>,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { ${name}::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            let mut buf = RawBuf { ptr, len, pos: 0 };
+            if let Err(encode_error) = msg.encode(&mut buf) {
+                if let Some(result) = result {
+                    *result = encode_error.required_capacity();
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            if let Some(result) = result {
+                *result = buf.pos;
+            }
+            FoxgloveError::Ok
+        }
+        Err(e) => {
+            tracing::error!("${name}: {}", e);
+            FoxgloveError::EncodeError
+        }
+    }
+}
 `;
   });
 
@@ -253,9 +293,12 @@ pub extern "C" fn foxglove_channel_log_${snakeName}(channel: Option<&FoxgloveCha
     "use std::mem::ManuallyDrop;",
     "use std::pin::{pin, Pin};",
     "",
+    "use foxglove::Encode;",
+    "",
     "use crate::{FoxgloveString, FoxgloveError, FoxgloveChannel, FoxgloveContext, FoxgloveTimestamp, FoxgloveDuration, log_msg_to_channel, result_to_c, do_foxglove_channel_create, FoxgloveSinkId};",
     "use crate::arena::{Arena, BorrowToNative};",
     "use crate::util::{bytes_from_raw, string_from_raw, vec_from_raw};",
+    "use crate::raw_buf::RawBuf;",
   ];
 
   const enumDefs = enums.map((enumSchema) => {

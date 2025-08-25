@@ -25,6 +25,7 @@ mod connection_graph;
 mod fetch_asset;
 mod logging;
 mod parameter;
+mod raw_buf;
 mod service;
 
 use parameter::FoxgloveParameterArray;

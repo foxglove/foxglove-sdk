@@ -289,6 +289,13 @@ function generateMessageClass(schema: FoxgloveMessageSchema): string {
     `    fn get_schema() -> PySchema {`,
     `        foxglove::schemas::${className}::get_schema().unwrap().into()`,
     `    }`,
+    `    /// Encodes the ${className}.`,
+    `    #[pymethod]`,
+    `    fn encode(&self, py: Python<'_>) -> PyBytes {`,
+    `        let mut buf = Vec::new();`,
+    `        self.encode(&mut buf).unwrap("encode to a vec is infallible");`,
+    `        PyBytes::new(py, &buf)`,
+    `    }`,
     `}\n\n`,
   ];
 
