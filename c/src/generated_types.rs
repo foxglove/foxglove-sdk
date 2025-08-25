@@ -195,7 +195,7 @@ pub unsafe extern "C" fn foxglove_arrow_primitive_encode(
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { ArrowPrimitive::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            if len == 0 {
+            if len == 0 || ptr.is_null() {
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
@@ -406,7 +406,7 @@ pub unsafe extern "C" fn foxglove_camera_calibration_encode(
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { CameraCalibration::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            if len == 0 {
+            if len == 0 || ptr.is_null() {
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
@@ -563,7 +563,7 @@ pub unsafe extern "C" fn foxglove_circle_annotation_encode(
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { CircleAnnotation::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            if len == 0 {
+            if len == 0 || ptr.is_null() {
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
@@ -691,7 +691,7 @@ pub unsafe extern "C" fn foxglove_color_encode(
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { Color::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            if len == 0 {
+            if len == 0 || ptr.is_null() {
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
@@ -838,7 +838,7 @@ pub unsafe extern "C" fn foxglove_compressed_image_encode(
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { CompressedImage::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            if len == 0 {
+            if len == 0 || ptr.is_null() {
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
@@ -1011,7 +1011,7 @@ pub unsafe extern "C" fn foxglove_compressed_video_encode(
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { CompressedVideo::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            if len == 0 {
+            if len == 0 || ptr.is_null() {
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
@@ -1163,7 +1163,7 @@ pub unsafe extern "C" fn foxglove_cylinder_primitive_encode(
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { CylinderPrimitive::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            if len == 0 {
+            if len == 0 || ptr.is_null() {
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
@@ -1307,7 +1307,7 @@ pub unsafe extern "C" fn foxglove_cube_primitive_encode(
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { CubePrimitive::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            if len == 0 {
+            if len == 0 || ptr.is_null() {
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
@@ -1467,7 +1467,7 @@ pub unsafe extern "C" fn foxglove_frame_transform_encode(
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { FrameTransform::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            if len == 0 {
+            if len == 0 || ptr.is_null() {
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
@@ -1587,7 +1587,7 @@ pub unsafe extern "C" fn foxglove_frame_transforms_encode(
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { FrameTransforms::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            if len == 0 {
+            if len == 0 || ptr.is_null() {
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
@@ -1711,7 +1711,7 @@ pub unsafe extern "C" fn foxglove_geo_json_encode(
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { GeoJson::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            if len == 0 {
+            if len == 0 || ptr.is_null() {
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
@@ -1885,7 +1885,7 @@ pub unsafe extern "C" fn foxglove_grid_encode(
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { Grid::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            if len == 0 {
+            if len == 0 || ptr.is_null() {
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
@@ -2068,7 +2068,7 @@ pub unsafe extern "C" fn foxglove_voxel_grid_encode(
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { VoxelGrid::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            if len == 0 {
+            if len == 0 || ptr.is_null() {
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
@@ -2200,7 +2200,7 @@ pub unsafe extern "C" fn foxglove_image_annotations_encode(
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { ImageAnnotations::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            if len == 0 {
+            if len == 0 || ptr.is_null() {
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
@@ -2325,7 +2325,7 @@ pub unsafe extern "C" fn foxglove_key_value_pair_encode(
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { KeyValuePair::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            if len == 0 {
+            if len == 0 || ptr.is_null() {
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
@@ -2485,7 +2485,7 @@ pub unsafe extern "C" fn foxglove_laser_scan_encode(
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { LaserScan::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            if len == 0 {
+            if len == 0 || ptr.is_null() {
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
@@ -2652,7 +2652,7 @@ pub unsafe extern "C" fn foxglove_line_primitive_encode(
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { LinePrimitive::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            if len == 0 {
+            if len == 0 || ptr.is_null() {
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
@@ -2816,7 +2816,7 @@ pub unsafe extern "C" fn foxglove_location_fix_encode(
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { LocationFix::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            if len == 0 {
+            if len == 0 || ptr.is_null() {
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
@@ -2936,7 +2936,7 @@ pub unsafe extern "C" fn foxglove_location_fixes_encode(
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { LocationFixes::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            if len == 0 {
+            if len == 0 || ptr.is_null() {
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
@@ -3084,7 +3084,7 @@ pub unsafe extern "C" fn foxglove_log_encode(
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { Log::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            if len == 0 {
+            if len == 0 || ptr.is_null() {
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
@@ -3212,7 +3212,7 @@ pub unsafe extern "C" fn foxglove_scene_entity_deletion_encode(
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { SceneEntityDeletion::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            if len == 0 {
+            if len == 0 || ptr.is_null() {
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
@@ -3408,7 +3408,7 @@ pub unsafe extern "C" fn foxglove_scene_entity_encode(
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { SceneEntity::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            if len == 0 {
+            if len == 0 || ptr.is_null() {
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
@@ -3534,7 +3534,7 @@ pub unsafe extern "C" fn foxglove_scene_update_encode(
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { SceneUpdate::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            if len == 0 {
+            if len == 0 || ptr.is_null() {
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
@@ -3703,7 +3703,7 @@ pub unsafe extern "C" fn foxglove_model_primitive_encode(
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { ModelPrimitive::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            if len == 0 {
+            if len == 0 || ptr.is_null() {
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
@@ -3831,7 +3831,7 @@ pub unsafe extern "C" fn foxglove_packed_element_field_encode(
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { PackedElementField::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            if len == 0 {
+            if len == 0 || ptr.is_null() {
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
@@ -3951,7 +3951,7 @@ pub unsafe extern "C" fn foxglove_point2_encode(
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { Point2::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            if len == 0 {
+            if len == 0 || ptr.is_null() {
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
@@ -4075,7 +4075,7 @@ pub unsafe extern "C" fn foxglove_point3_encode(
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { Point3::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            if len == 0 {
+            if len == 0 || ptr.is_null() {
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
@@ -4229,7 +4229,7 @@ pub unsafe extern "C" fn foxglove_point_cloud_encode(
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { PointCloud::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            if len == 0 {
+            if len == 0 || ptr.is_null() {
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
@@ -4392,7 +4392,7 @@ pub unsafe extern "C" fn foxglove_points_annotation_encode(
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { PointsAnnotation::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            if len == 0 {
+            if len == 0 || ptr.is_null() {
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
@@ -4525,7 +4525,7 @@ pub unsafe extern "C" fn foxglove_pose_encode(
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { Pose::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            if len == 0 {
+            if len == 0 || ptr.is_null() {
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
@@ -4664,7 +4664,7 @@ pub unsafe extern "C" fn foxglove_pose_in_frame_encode(
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { PoseInFrame::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            if len == 0 {
+            if len == 0 || ptr.is_null() {
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
@@ -4799,7 +4799,7 @@ pub unsafe extern "C" fn foxglove_poses_in_frame_encode(
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { PosesInFrame::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            if len == 0 {
+            if len == 0 || ptr.is_null() {
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
@@ -4928,7 +4928,7 @@ pub unsafe extern "C" fn foxglove_quaternion_encode(
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { Quaternion::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            if len == 0 {
+            if len == 0 || ptr.is_null() {
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
@@ -5069,7 +5069,7 @@ pub unsafe extern "C" fn foxglove_raw_audio_encode(
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { RawAudio::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            if len == 0 {
+            if len == 0 || ptr.is_null() {
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
@@ -5278,7 +5278,7 @@ pub unsafe extern "C" fn foxglove_raw_image_encode(
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { RawImage::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            if len == 0 {
+            if len == 0 || ptr.is_null() {
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
@@ -5422,7 +5422,7 @@ pub unsafe extern "C" fn foxglove_sphere_primitive_encode(
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { SpherePrimitive::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            if len == 0 {
+            if len == 0 || ptr.is_null() {
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
@@ -5581,7 +5581,7 @@ pub unsafe extern "C" fn foxglove_text_annotation_encode(
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { TextAnnotation::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            if len == 0 {
+            if len == 0 || ptr.is_null() {
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
@@ -5733,7 +5733,7 @@ pub unsafe extern "C" fn foxglove_text_primitive_encode(
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { TextPrimitive::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            if len == 0 {
+            if len == 0 || ptr.is_null() {
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
@@ -5891,7 +5891,7 @@ pub unsafe extern "C" fn foxglove_triangle_list_primitive_encode(
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { TriangleListPrimitive::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            if len == 0 {
+            if len == 0 || ptr.is_null() {
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
@@ -6011,7 +6011,7 @@ pub unsafe extern "C" fn foxglove_vector2_encode(
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { Vector2::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            if len == 0 {
+            if len == 0 || ptr.is_null() {
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
@@ -6135,7 +6135,7 @@ pub unsafe extern "C" fn foxglove_vector3_encode(
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { Vector3::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
-            if len == 0 {
+            if len == 0 || ptr.is_null() {
                 if let Some(encoded_len) = encoded_len {
                     *encoded_len = msg
                         .encoded_len()
