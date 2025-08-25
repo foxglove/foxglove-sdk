@@ -16,7 +16,7 @@ using namespace std::chrono_literals;
 static std::function<void()> sigint_handler;
 
 // NOLINTNEXTLINE(bugprone-exception-escape)
-int main(int argc, char* argv[]) {
+int main() {
   std::signal(SIGINT, [](int) {
     if (sigint_handler) {
       sigint_handler();
