@@ -267,6 +267,12 @@ pub unsafe extern "C" fn foxglove_${snakeName}_encode(
     // Safety: we're borrowing from the msg, but discard the borrowed message before returning
     match unsafe { ${name}::borrow_option_to_native(msg, arena_pin) } {
         Ok(msg) => {
+            if len == 0 {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = msg.encoded_len().expect("foxglove schemas return Some(len)");
+                }
+                return FoxgloveError::BufferTooShort;
+            }
             let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
             if let Err(encode_error) = msg.encode(&mut buf) {
                 if let Some(encoded_len) = encoded_len {
