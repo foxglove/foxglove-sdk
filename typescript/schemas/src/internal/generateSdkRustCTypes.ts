@@ -248,8 +248,8 @@ pub extern "C" fn foxglove_channel_log_${snakeName}(channel: Option<&FoxgloveCha
 
 /// Encode a ${name} message to the buffer provided.
 ///
-/// On success, writes the encoded length to *result.
-/// If the provided buffer has insufficient capacity, writes the required capacity to *result and
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
 /// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///

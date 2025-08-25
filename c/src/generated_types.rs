@@ -176,8 +176,8 @@ pub extern "C" fn foxglove_channel_log_arrow_primitive(
 
 /// Encode a ArrowPrimitive message to the buffer provided.
 ///
-/// On success, writes the encoded length to *result.
-/// If the provided buffer has insufficient capacity, writes the required capacity to *result and
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
 /// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
@@ -379,8 +379,8 @@ pub extern "C" fn foxglove_channel_log_camera_calibration(
 
 /// Encode a CameraCalibration message to the buffer provided.
 ///
-/// On success, writes the encoded length to *result.
-/// If the provided buffer has insufficient capacity, writes the required capacity to *result and
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
 /// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
@@ -528,8 +528,8 @@ pub extern "C" fn foxglove_channel_log_circle_annotation(
 
 /// Encode a CircleAnnotation message to the buffer provided.
 ///
-/// On success, writes the encoded length to *result.
-/// If the provided buffer has insufficient capacity, writes the required capacity to *result and
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
 /// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
@@ -648,8 +648,8 @@ pub extern "C" fn foxglove_channel_log_color(
 
 /// Encode a Color message to the buffer provided.
 ///
-/// On success, writes the encoded length to *result.
-/// If the provided buffer has insufficient capacity, writes the required capacity to *result and
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
 /// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
@@ -787,8 +787,8 @@ pub extern "C" fn foxglove_channel_log_compressed_image(
 
 /// Encode a CompressedImage message to the buffer provided.
 ///
-/// On success, writes the encoded length to *result.
-/// If the provided buffer has insufficient capacity, writes the required capacity to *result and
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
 /// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
@@ -952,8 +952,8 @@ pub extern "C" fn foxglove_channel_log_compressed_video(
 
 /// Encode a CompressedVideo message to the buffer provided.
 ///
-/// On success, writes the encoded length to *result.
-/// If the provided buffer has insufficient capacity, writes the required capacity to *result and
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
 /// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
@@ -1096,8 +1096,8 @@ pub extern "C" fn foxglove_channel_log_cylinder_primitive(
 
 /// Encode a CylinderPrimitive message to the buffer provided.
 ///
-/// On success, writes the encoded length to *result.
-/// If the provided buffer has insufficient capacity, writes the required capacity to *result and
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
 /// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
@@ -1232,8 +1232,8 @@ pub extern "C" fn foxglove_channel_log_cube_primitive(
 
 /// Encode a CubePrimitive message to the buffer provided.
 ///
-/// On success, writes the encoded length to *result.
-/// If the provided buffer has insufficient capacity, writes the required capacity to *result and
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
 /// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
@@ -1384,8 +1384,8 @@ pub extern "C" fn foxglove_channel_log_frame_transform(
 
 /// Encode a FrameTransform message to the buffer provided.
 ///
-/// On success, writes the encoded length to *result.
-/// If the provided buffer has insufficient capacity, writes the required capacity to *result and
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
 /// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
@@ -1496,8 +1496,8 @@ pub extern "C" fn foxglove_channel_log_frame_transforms(
 
 /// Encode a FrameTransforms message to the buffer provided.
 ///
-/// On success, writes the encoded length to *result.
-/// If the provided buffer has insufficient capacity, writes the required capacity to *result and
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
 /// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
@@ -1612,8 +1612,8 @@ pub extern "C" fn foxglove_channel_log_geo_json(
 
 /// Encode a GeoJson message to the buffer provided.
 ///
-/// On success, writes the encoded length to *result.
-/// If the provided buffer has insufficient capacity, writes the required capacity to *result and
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
 /// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
@@ -1778,8 +1778,8 @@ pub extern "C" fn foxglove_channel_log_grid(
 
 /// Encode a Grid message to the buffer provided.
 ///
-/// On success, writes the encoded length to *result.
-/// If the provided buffer has insufficient capacity, writes the required capacity to *result and
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
 /// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
@@ -1953,8 +1953,8 @@ pub extern "C" fn foxglove_channel_log_voxel_grid(
 
 /// Encode a VoxelGrid message to the buffer provided.
 ///
-/// On success, writes the encoded length to *result.
-/// If the provided buffer has insufficient capacity, writes the required capacity to *result and
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
 /// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
@@ -2077,8 +2077,8 @@ pub extern "C" fn foxglove_channel_log_image_annotations(
 
 /// Encode a ImageAnnotations message to the buffer provided.
 ///
-/// On success, writes the encoded length to *result.
-/// If the provided buffer has insufficient capacity, writes the required capacity to *result and
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
 /// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
@@ -2194,8 +2194,8 @@ pub extern "C" fn foxglove_channel_log_key_value_pair(
 
 /// Encode a KeyValuePair message to the buffer provided.
 ///
-/// On success, writes the encoded length to *result.
-/// If the provided buffer has insufficient capacity, writes the required capacity to *result and
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
 /// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
@@ -2346,8 +2346,8 @@ pub extern "C" fn foxglove_channel_log_laser_scan(
 
 /// Encode a LaserScan message to the buffer provided.
 ///
-/// On success, writes the encoded length to *result.
-/// If the provided buffer has insufficient capacity, writes the required capacity to *result and
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
 /// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
@@ -2505,8 +2505,8 @@ pub extern "C" fn foxglove_channel_log_line_primitive(
 
 /// Encode a LinePrimitive message to the buffer provided.
 ///
-/// On success, writes the encoded length to *result.
-/// If the provided buffer has insufficient capacity, writes the required capacity to *result and
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
 /// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
@@ -2661,8 +2661,8 @@ pub extern "C" fn foxglove_channel_log_location_fix(
 
 /// Encode a LocationFix message to the buffer provided.
 ///
-/// On success, writes the encoded length to *result.
-/// If the provided buffer has insufficient capacity, writes the required capacity to *result and
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
 /// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
@@ -2773,8 +2773,8 @@ pub extern "C" fn foxglove_channel_log_location_fixes(
 
 /// Encode a LocationFixes message to the buffer provided.
 ///
-/// On success, writes the encoded length to *result.
-/// If the provided buffer has insufficient capacity, writes the required capacity to *result and
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
 /// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
@@ -2913,8 +2913,8 @@ pub extern "C" fn foxglove_channel_log_log(
 
 /// Encode a Log message to the buffer provided.
 ///
-/// On success, writes the encoded length to *result.
-/// If the provided buffer has insufficient capacity, writes the required capacity to *result and
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
 /// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
@@ -3033,8 +3033,8 @@ pub extern "C" fn foxglove_channel_log_scene_entity_deletion(
 
 /// Encode a SceneEntityDeletion message to the buffer provided.
 ///
-/// On success, writes the encoded length to *result.
-/// If the provided buffer has insufficient capacity, writes the required capacity to *result and
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
 /// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
@@ -3221,8 +3221,8 @@ pub extern "C" fn foxglove_channel_log_scene_entity(
 
 /// Encode a SceneEntity message to the buffer provided.
 ///
-/// On success, writes the encoded length to *result.
-/// If the provided buffer has insufficient capacity, writes the required capacity to *result and
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
 /// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
@@ -3339,8 +3339,8 @@ pub extern "C" fn foxglove_channel_log_scene_update(
 
 /// Encode a SceneUpdate message to the buffer provided.
 ///
-/// On success, writes the encoded length to *result.
-/// If the provided buffer has insufficient capacity, writes the required capacity to *result and
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
 /// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
@@ -3500,8 +3500,8 @@ pub extern "C" fn foxglove_channel_log_model_primitive(
 
 /// Encode a ModelPrimitive message to the buffer provided.
 ///
-/// On success, writes the encoded length to *result.
-/// If the provided buffer has insufficient capacity, writes the required capacity to *result and
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
 /// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
@@ -3620,8 +3620,8 @@ pub extern "C" fn foxglove_channel_log_packed_element_field(
 
 /// Encode a PackedElementField message to the buffer provided.
 ///
-/// On success, writes the encoded length to *result.
-/// If the provided buffer has insufficient capacity, writes the required capacity to *result and
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
 /// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
@@ -3732,8 +3732,8 @@ pub extern "C" fn foxglove_channel_log_point2(
 
 /// Encode a Point2 message to the buffer provided.
 ///
-/// On success, writes the encoded length to *result.
-/// If the provided buffer has insufficient capacity, writes the required capacity to *result and
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
 /// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
@@ -3848,8 +3848,8 @@ pub extern "C" fn foxglove_channel_log_point3(
 
 /// Encode a Point3 message to the buffer provided.
 ///
-/// On success, writes the encoded length to *result.
-/// If the provided buffer has insufficient capacity, writes the required capacity to *result and
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
 /// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
@@ -3994,8 +3994,8 @@ pub extern "C" fn foxglove_channel_log_point_cloud(
 
 /// Encode a PointCloud message to the buffer provided.
 ///
-/// On success, writes the encoded length to *result.
-/// If the provided buffer has insufficient capacity, writes the required capacity to *result and
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
 /// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
@@ -4149,8 +4149,8 @@ pub extern "C" fn foxglove_channel_log_points_annotation(
 
 /// Encode a PointsAnnotation message to the buffer provided.
 ///
-/// On success, writes the encoded length to *result.
-/// If the provided buffer has insufficient capacity, writes the required capacity to *result and
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
 /// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
@@ -4274,8 +4274,8 @@ pub extern "C" fn foxglove_channel_log_pose(
 
 /// Encode a Pose message to the buffer provided.
 ///
-/// On success, writes the encoded length to *result.
-/// If the provided buffer has insufficient capacity, writes the required capacity to *result and
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
 /// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
@@ -4405,8 +4405,8 @@ pub extern "C" fn foxglove_channel_log_pose_in_frame(
 
 /// Encode a PoseInFrame message to the buffer provided.
 ///
-/// On success, writes the encoded length to *result.
-/// If the provided buffer has insufficient capacity, writes the required capacity to *result and
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
 /// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
@@ -4532,8 +4532,8 @@ pub extern "C" fn foxglove_channel_log_poses_in_frame(
 
 /// Encode a PosesInFrame message to the buffer provided.
 ///
-/// On success, writes the encoded length to *result.
-/// If the provided buffer has insufficient capacity, writes the required capacity to *result and
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
 /// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
@@ -4653,8 +4653,8 @@ pub extern "C" fn foxglove_channel_log_quaternion(
 
 /// Encode a Quaternion message to the buffer provided.
 ///
-/// On success, writes the encoded length to *result.
-/// If the provided buffer has insufficient capacity, writes the required capacity to *result and
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
 /// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
@@ -4786,8 +4786,8 @@ pub extern "C" fn foxglove_channel_log_raw_audio(
 
 /// Encode a RawAudio message to the buffer provided.
 ///
-/// On success, writes the encoded length to *result.
-/// If the provided buffer has insufficient capacity, writes the required capacity to *result and
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
 /// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
@@ -4987,8 +4987,8 @@ pub extern "C" fn foxglove_channel_log_raw_image(
 
 /// Encode a RawImage message to the buffer provided.
 ///
-/// On success, writes the encoded length to *result.
-/// If the provided buffer has insufficient capacity, writes the required capacity to *result and
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
 /// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
@@ -5123,8 +5123,8 @@ pub extern "C" fn foxglove_channel_log_sphere_primitive(
 
 /// Encode a SpherePrimitive message to the buffer provided.
 ///
-/// On success, writes the encoded length to *result.
-/// If the provided buffer has insufficient capacity, writes the required capacity to *result and
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
 /// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
@@ -5274,8 +5274,8 @@ pub extern "C" fn foxglove_channel_log_text_annotation(
 
 /// Encode a TextAnnotation message to the buffer provided.
 ///
-/// On success, writes the encoded length to *result.
-/// If the provided buffer has insufficient capacity, writes the required capacity to *result and
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
 /// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
@@ -5418,8 +5418,8 @@ pub extern "C" fn foxglove_channel_log_text_primitive(
 
 /// Encode a TextPrimitive message to the buffer provided.
 ///
-/// On success, writes the encoded length to *result.
-/// If the provided buffer has insufficient capacity, writes the required capacity to *result and
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
 /// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
@@ -5568,8 +5568,8 @@ pub extern "C" fn foxglove_channel_log_triangle_list_primitive(
 
 /// Encode a TriangleListPrimitive message to the buffer provided.
 ///
-/// On success, writes the encoded length to *result.
-/// If the provided buffer has insufficient capacity, writes the required capacity to *result and
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
 /// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
@@ -5680,8 +5680,8 @@ pub extern "C" fn foxglove_channel_log_vector2(
 
 /// Encode a Vector2 message to the buffer provided.
 ///
-/// On success, writes the encoded length to *result.
-/// If the provided buffer has insufficient capacity, writes the required capacity to *result and
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
 /// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///
@@ -5796,8 +5796,8 @@ pub extern "C" fn foxglove_channel_log_vector3(
 
 /// Encode a Vector3 message to the buffer provided.
 ///
-/// On success, writes the encoded length to *result.
-/// If the provided buffer has insufficient capacity, writes the required capacity to *result and
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
 /// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
 /// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
 ///

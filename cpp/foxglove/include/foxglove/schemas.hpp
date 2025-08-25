@@ -38,16 +38,16 @@ struct Vector3 {
 
   /// @brief Serialize the Vector3 to the provided buffer.
   ///
-  /// On success, writes the serialized length to *result.
-  /// If the provided buffer has insufficient capacity, writes the required capacity to *result
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
   /// and returns FoxgloveError::BufferTooShort.
   /// If the message cannot be encoded, writes the reason to stderr and returns
   /// FoxgloveError::EncodeError.
   ///
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
-  /// @param result where the serialized length or required capacity will be written to.
-  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* result);
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief A [quaternion](https://eater.net/quaternions) representing a rotation in 3D space
@@ -66,16 +66,16 @@ struct Quaternion {
 
   /// @brief Serialize the Quaternion to the provided buffer.
   ///
-  /// On success, writes the serialized length to *result.
-  /// If the provided buffer has insufficient capacity, writes the required capacity to *result
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
   /// and returns FoxgloveError::BufferTooShort.
   /// If the message cannot be encoded, writes the reason to stderr and returns
   /// FoxgloveError::EncodeError.
   ///
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
-  /// @param result where the serialized length or required capacity will be written to.
-  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* result);
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief A position and orientation for an object or reference frame in 3D space
@@ -88,16 +88,16 @@ struct Pose {
 
   /// @brief Serialize the Pose to the provided buffer.
   ///
-  /// On success, writes the serialized length to *result.
-  /// If the provided buffer has insufficient capacity, writes the required capacity to *result
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
   /// and returns FoxgloveError::BufferTooShort.
   /// If the message cannot be encoded, writes the reason to stderr and returns
   /// FoxgloveError::EncodeError.
   ///
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
-  /// @param result where the serialized length or required capacity will be written to.
-  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* result);
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief A color in RGBA format
@@ -116,16 +116,16 @@ struct Color {
 
   /// @brief Serialize the Color to the provided buffer.
   ///
-  /// On success, writes the serialized length to *result.
-  /// If the provided buffer has insufficient capacity, writes the required capacity to *result
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
   /// and returns FoxgloveError::BufferTooShort.
   /// If the message cannot be encoded, writes the reason to stderr and returns
   /// FoxgloveError::EncodeError.
   ///
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
-  /// @param result where the serialized length or required capacity will be written to.
-  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* result);
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief A primitive representing an arrow
@@ -151,16 +151,16 @@ struct ArrowPrimitive {
 
   /// @brief Serialize the ArrowPrimitive to the provided buffer.
   ///
-  /// On success, writes the serialized length to *result.
-  /// If the provided buffer has insufficient capacity, writes the required capacity to *result
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
   /// and returns FoxgloveError::BufferTooShort.
   /// If the message cannot be encoded, writes the reason to stderr and returns
   /// FoxgloveError::EncodeError.
   ///
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
-  /// @param result where the serialized length or required capacity will be written to.
-  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* result);
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief A timestamp composed of seconds and nanoseconds
@@ -263,16 +263,16 @@ struct CameraCalibration {
 
   /// @brief Serialize the CameraCalibration to the provided buffer.
   ///
-  /// On success, writes the serialized length to *result.
-  /// If the provided buffer has insufficient capacity, writes the required capacity to *result
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
   /// and returns FoxgloveError::BufferTooShort.
   /// If the message cannot be encoded, writes the reason to stderr and returns
   /// FoxgloveError::EncodeError.
   ///
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
-  /// @param result where the serialized length or required capacity will be written to.
-  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* result);
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief A point representing a position in 2D space
@@ -285,16 +285,16 @@ struct Point2 {
 
   /// @brief Serialize the Point2 to the provided buffer.
   ///
-  /// On success, writes the serialized length to *result.
-  /// If the provided buffer has insufficient capacity, writes the required capacity to *result
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
   /// and returns FoxgloveError::BufferTooShort.
   /// If the message cannot be encoded, writes the reason to stderr and returns
   /// FoxgloveError::EncodeError.
   ///
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
-  /// @param result where the serialized length or required capacity will be written to.
-  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* result);
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief A circle annotation on a 2D image
@@ -321,16 +321,16 @@ struct CircleAnnotation {
 
   /// @brief Serialize the CircleAnnotation to the provided buffer.
   ///
-  /// On success, writes the serialized length to *result.
-  /// If the provided buffer has insufficient capacity, writes the required capacity to *result
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
   /// and returns FoxgloveError::BufferTooShort.
   /// If the message cannot be encoded, writes the reason to stderr and returns
   /// FoxgloveError::EncodeError.
   ///
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
-  /// @param result where the serialized length or required capacity will be written to.
-  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* result);
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief A compressed image
@@ -353,16 +353,16 @@ struct CompressedImage {
 
   /// @brief Serialize the CompressedImage to the provided buffer.
   ///
-  /// On success, writes the serialized length to *result.
-  /// If the provided buffer has insufficient capacity, writes the required capacity to *result
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
   /// and returns FoxgloveError::BufferTooShort.
   /// If the message cannot be encoded, writes the reason to stderr and returns
   /// FoxgloveError::EncodeError.
   ///
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
-  /// @param result where the serialized length or required capacity will be written to.
-  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* result);
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief A single frame of a compressed video bitstream
@@ -420,16 +420,16 @@ struct CompressedVideo {
 
   /// @brief Serialize the CompressedVideo to the provided buffer.
   ///
-  /// On success, writes the serialized length to *result.
-  /// If the provided buffer has insufficient capacity, writes the required capacity to *result
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
   /// and returns FoxgloveError::BufferTooShort.
   /// If the message cannot be encoded, writes the reason to stderr and returns
   /// FoxgloveError::EncodeError.
   ///
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
-  /// @param result where the serialized length or required capacity will be written to.
-  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* result);
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief A primitive representing a cylinder, elliptic cylinder, or truncated cone
@@ -454,16 +454,16 @@ struct CylinderPrimitive {
 
   /// @brief Serialize the CylinderPrimitive to the provided buffer.
   ///
-  /// On success, writes the serialized length to *result.
-  /// If the provided buffer has insufficient capacity, writes the required capacity to *result
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
   /// and returns FoxgloveError::BufferTooShort.
   /// If the message cannot be encoded, writes the reason to stderr and returns
   /// FoxgloveError::EncodeError.
   ///
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
-  /// @param result where the serialized length or required capacity will be written to.
-  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* result);
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief A primitive representing a cube or rectangular prism
@@ -479,16 +479,16 @@ struct CubePrimitive {
 
   /// @brief Serialize the CubePrimitive to the provided buffer.
   ///
-  /// On success, writes the serialized length to *result.
-  /// If the provided buffer has insufficient capacity, writes the required capacity to *result
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
   /// and returns FoxgloveError::BufferTooShort.
   /// If the message cannot be encoded, writes the reason to stderr and returns
   /// FoxgloveError::EncodeError.
   ///
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
-  /// @param result where the serialized length or required capacity will be written to.
-  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* result);
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief A duration of time, composed of seconds and nanoseconds
@@ -519,16 +519,16 @@ struct FrameTransform {
 
   /// @brief Serialize the FrameTransform to the provided buffer.
   ///
-  /// On success, writes the serialized length to *result.
-  /// If the provided buffer has insufficient capacity, writes the required capacity to *result
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
   /// and returns FoxgloveError::BufferTooShort.
   /// If the message cannot be encoded, writes the reason to stderr and returns
   /// FoxgloveError::EncodeError.
   ///
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
-  /// @param result where the serialized length or required capacity will be written to.
-  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* result);
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief An array of FrameTransform messages
@@ -538,16 +538,16 @@ struct FrameTransforms {
 
   /// @brief Serialize the FrameTransforms to the provided buffer.
   ///
-  /// On success, writes the serialized length to *result.
-  /// If the provided buffer has insufficient capacity, writes the required capacity to *result
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
   /// and returns FoxgloveError::BufferTooShort.
   /// If the message cannot be encoded, writes the reason to stderr and returns
   /// FoxgloveError::EncodeError.
   ///
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
-  /// @param result where the serialized length or required capacity will be written to.
-  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* result);
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief GeoJSON data for annotating maps
@@ -557,16 +557,16 @@ struct GeoJSON {
 
   /// @brief Serialize the GeoJSON to the provided buffer.
   ///
-  /// On success, writes the serialized length to *result.
-  /// If the provided buffer has insufficient capacity, writes the required capacity to *result
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
   /// and returns FoxgloveError::BufferTooShort.
   /// If the message cannot be encoded, writes the reason to stderr and returns
   /// FoxgloveError::EncodeError.
   ///
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
-  /// @param result where the serialized length or required capacity will be written to.
-  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* result);
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief A vector in 2D space that represents a direction only
@@ -579,16 +579,16 @@ struct Vector2 {
 
   /// @brief Serialize the Vector2 to the provided buffer.
   ///
-  /// On success, writes the serialized length to *result.
-  /// If the provided buffer has insufficient capacity, writes the required capacity to *result
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
   /// and returns FoxgloveError::BufferTooShort.
   /// If the message cannot be encoded, writes the reason to stderr and returns
   /// FoxgloveError::EncodeError.
   ///
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
-  /// @param result where the serialized length or required capacity will be written to.
-  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* result);
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief A field present within each element in a byte array of packed elements.
@@ -625,16 +625,16 @@ struct PackedElementField {
 
   /// @brief Serialize the PackedElementField to the provided buffer.
   ///
-  /// On success, writes the serialized length to *result.
-  /// If the provided buffer has insufficient capacity, writes the required capacity to *result
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
   /// and returns FoxgloveError::BufferTooShort.
   /// If the message cannot be encoded, writes the reason to stderr and returns
   /// FoxgloveError::EncodeError.
   ///
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
-  /// @param result where the serialized length or required capacity will be written to.
-  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* result);
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief A 2D grid of data
@@ -674,16 +674,16 @@ struct Grid {
 
   /// @brief Serialize the Grid to the provided buffer.
   ///
-  /// On success, writes the serialized length to *result.
-  /// If the provided buffer has insufficient capacity, writes the required capacity to *result
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
   /// and returns FoxgloveError::BufferTooShort.
   /// If the message cannot be encoded, writes the reason to stderr and returns
   /// FoxgloveError::EncodeError.
   ///
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
-  /// @param result where the serialized length or required capacity will be written to.
-  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* result);
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief A 3D grid of data
@@ -729,16 +729,16 @@ struct VoxelGrid {
 
   /// @brief Serialize the VoxelGrid to the provided buffer.
   ///
-  /// On success, writes the serialized length to *result.
-  /// If the provided buffer has insufficient capacity, writes the required capacity to *result
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
   /// and returns FoxgloveError::BufferTooShort.
   /// If the message cannot be encoded, writes the reason to stderr and returns
   /// FoxgloveError::EncodeError.
   ///
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
-  /// @param result where the serialized length or required capacity will be written to.
-  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* result);
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief An array of points on a 2D image
@@ -782,16 +782,16 @@ struct PointsAnnotation {
 
   /// @brief Serialize the PointsAnnotation to the provided buffer.
   ///
-  /// On success, writes the serialized length to *result.
-  /// If the provided buffer has insufficient capacity, writes the required capacity to *result
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
   /// and returns FoxgloveError::BufferTooShort.
   /// If the message cannot be encoded, writes the reason to stderr and returns
   /// FoxgloveError::EncodeError.
   ///
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
-  /// @param result where the serialized length or required capacity will be written to.
-  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* result);
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief A text label on a 2D image
@@ -818,16 +818,16 @@ struct TextAnnotation {
 
   /// @brief Serialize the TextAnnotation to the provided buffer.
   ///
-  /// On success, writes the serialized length to *result.
-  /// If the provided buffer has insufficient capacity, writes the required capacity to *result
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
   /// and returns FoxgloveError::BufferTooShort.
   /// If the message cannot be encoded, writes the reason to stderr and returns
   /// FoxgloveError::EncodeError.
   ///
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
-  /// @param result where the serialized length or required capacity will be written to.
-  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* result);
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief Array of annotations for a 2D image
@@ -843,16 +843,16 @@ struct ImageAnnotations {
 
   /// @brief Serialize the ImageAnnotations to the provided buffer.
   ///
-  /// On success, writes the serialized length to *result.
-  /// If the provided buffer has insufficient capacity, writes the required capacity to *result
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
   /// and returns FoxgloveError::BufferTooShort.
   /// If the message cannot be encoded, writes the reason to stderr and returns
   /// FoxgloveError::EncodeError.
   ///
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
-  /// @param result where the serialized length or required capacity will be written to.
-  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* result);
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief A key with its associated value
@@ -865,16 +865,16 @@ struct KeyValuePair {
 
   /// @brief Serialize the KeyValuePair to the provided buffer.
   ///
-  /// On success, writes the serialized length to *result.
-  /// If the provided buffer has insufficient capacity, writes the required capacity to *result
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
   /// and returns FoxgloveError::BufferTooShort.
   /// If the message cannot be encoded, writes the reason to stderr and returns
   /// FoxgloveError::EncodeError.
   ///
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
-  /// @param result where the serialized length or required capacity will be written to.
-  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* result);
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief A single scan from a planar laser range-finder
@@ -905,16 +905,16 @@ struct LaserScan {
 
   /// @brief Serialize the LaserScan to the provided buffer.
   ///
-  /// On success, writes the serialized length to *result.
-  /// If the provided buffer has insufficient capacity, writes the required capacity to *result
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
   /// and returns FoxgloveError::BufferTooShort.
   /// If the message cannot be encoded, writes the reason to stderr and returns
   /// FoxgloveError::EncodeError.
   ///
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
-  /// @param result where the serialized length or required capacity will be written to.
-  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* result);
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief A point representing a position in 3D space
@@ -930,16 +930,16 @@ struct Point3 {
 
   /// @brief Serialize the Point3 to the provided buffer.
   ///
-  /// On success, writes the serialized length to *result.
-  /// If the provided buffer has insufficient capacity, writes the required capacity to *result
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
   /// and returns FoxgloveError::BufferTooShort.
   /// If the message cannot be encoded, writes the reason to stderr and returns
   /// FoxgloveError::EncodeError.
   ///
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
-  /// @param result where the serialized length or required capacity will be written to.
-  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* result);
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief A primitive representing a series of points connected by lines
@@ -985,16 +985,16 @@ struct LinePrimitive {
 
   /// @brief Serialize the LinePrimitive to the provided buffer.
   ///
-  /// On success, writes the serialized length to *result.
-  /// If the provided buffer has insufficient capacity, writes the required capacity to *result
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
   /// and returns FoxgloveError::BufferTooShort.
   /// If the message cannot be encoded, writes the reason to stderr and returns
   /// FoxgloveError::EncodeError.
   ///
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
-  /// @param result where the serialized length or required capacity will be written to.
-  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* result);
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief A navigation satellite fix for any Global Navigation Satellite System
@@ -1038,16 +1038,16 @@ struct LocationFix {
 
   /// @brief Serialize the LocationFix to the provided buffer.
   ///
-  /// On success, writes the serialized length to *result.
-  /// If the provided buffer has insufficient capacity, writes the required capacity to *result
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
   /// and returns FoxgloveError::BufferTooShort.
   /// If the message cannot be encoded, writes the reason to stderr and returns
   /// FoxgloveError::EncodeError.
   ///
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
-  /// @param result where the serialized length or required capacity will be written to.
-  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* result);
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief A group of LocationFix messages
@@ -1057,16 +1057,16 @@ struct LocationFixes {
 
   /// @brief Serialize the LocationFixes to the provided buffer.
   ///
-  /// On success, writes the serialized length to *result.
-  /// If the provided buffer has insufficient capacity, writes the required capacity to *result
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
   /// and returns FoxgloveError::BufferTooShort.
   /// If the message cannot be encoded, writes the reason to stderr and returns
   /// FoxgloveError::EncodeError.
   ///
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
-  /// @param result where the serialized length or required capacity will be written to.
-  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* result);
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief A log message
@@ -1106,16 +1106,16 @@ struct Log {
 
   /// @brief Serialize the Log to the provided buffer.
   ///
-  /// On success, writes the serialized length to *result.
-  /// If the provided buffer has insufficient capacity, writes the required capacity to *result
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
   /// and returns FoxgloveError::BufferTooShort.
   /// If the message cannot be encoded, writes the reason to stderr and returns
   /// FoxgloveError::EncodeError.
   ///
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
-  /// @param result where the serialized length or required capacity will be written to.
-  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* result);
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief Command to remove previously published entities
@@ -1139,16 +1139,16 @@ struct SceneEntityDeletion {
 
   /// @brief Serialize the SceneEntityDeletion to the provided buffer.
   ///
-  /// On success, writes the serialized length to *result.
-  /// If the provided buffer has insufficient capacity, writes the required capacity to *result
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
   /// and returns FoxgloveError::BufferTooShort.
   /// If the message cannot be encoded, writes the reason to stderr and returns
   /// FoxgloveError::EncodeError.
   ///
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
-  /// @param result where the serialized length or required capacity will be written to.
-  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* result);
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief A primitive representing a sphere or ellipsoid
@@ -1164,16 +1164,16 @@ struct SpherePrimitive {
 
   /// @brief Serialize the SpherePrimitive to the provided buffer.
   ///
-  /// On success, writes the serialized length to *result.
-  /// If the provided buffer has insufficient capacity, writes the required capacity to *result
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
   /// and returns FoxgloveError::BufferTooShort.
   /// If the message cannot be encoded, writes the reason to stderr and returns
   /// FoxgloveError::EncodeError.
   ///
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
-  /// @param result where the serialized length or required capacity will be written to.
-  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* result);
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief A primitive representing a set of triangles or a surface tiled by triangles
@@ -1200,16 +1200,16 @@ struct TriangleListPrimitive {
 
   /// @brief Serialize the TriangleListPrimitive to the provided buffer.
   ///
-  /// On success, writes the serialized length to *result.
-  /// If the provided buffer has insufficient capacity, writes the required capacity to *result
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
   /// and returns FoxgloveError::BufferTooShort.
   /// If the message cannot be encoded, writes the reason to stderr and returns
   /// FoxgloveError::EncodeError.
   ///
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
-  /// @param result where the serialized length or required capacity will be written to.
-  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* result);
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief A primitive representing a text label
@@ -1237,16 +1237,16 @@ struct TextPrimitive {
 
   /// @brief Serialize the TextPrimitive to the provided buffer.
   ///
-  /// On success, writes the serialized length to *result.
-  /// If the provided buffer has insufficient capacity, writes the required capacity to *result
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
   /// and returns FoxgloveError::BufferTooShort.
   /// If the message cannot be encoded, writes the reason to stderr and returns
   /// FoxgloveError::EncodeError.
   ///
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
-  /// @param result where the serialized length or required capacity will be written to.
-  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* result);
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief A primitive representing a 3D model file loaded from an external URL or embedded data
@@ -1279,16 +1279,16 @@ struct ModelPrimitive {
 
   /// @brief Serialize the ModelPrimitive to the provided buffer.
   ///
-  /// On success, writes the serialized length to *result.
-  /// If the provided buffer has insufficient capacity, writes the required capacity to *result
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
   /// and returns FoxgloveError::BufferTooShort.
   /// If the message cannot be encoded, writes the reason to stderr and returns
   /// FoxgloveError::EncodeError.
   ///
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
-  /// @param result where the serialized length or required capacity will be written to.
-  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* result);
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief A visual element in a 3D scene. An entity may be composed of multiple primitives which
@@ -1342,16 +1342,16 @@ struct SceneEntity {
 
   /// @brief Serialize the SceneEntity to the provided buffer.
   ///
-  /// On success, writes the serialized length to *result.
-  /// If the provided buffer has insufficient capacity, writes the required capacity to *result
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
   /// and returns FoxgloveError::BufferTooShort.
   /// If the message cannot be encoded, writes the reason to stderr and returns
   /// FoxgloveError::EncodeError.
   ///
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
-  /// @param result where the serialized length or required capacity will be written to.
-  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* result);
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief An update to the entities displayed in a 3D scene
@@ -1364,16 +1364,16 @@ struct SceneUpdate {
 
   /// @brief Serialize the SceneUpdate to the provided buffer.
   ///
-  /// On success, writes the serialized length to *result.
-  /// If the provided buffer has insufficient capacity, writes the required capacity to *result
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
   /// and returns FoxgloveError::BufferTooShort.
   /// If the message cannot be encoded, writes the reason to stderr and returns
   /// FoxgloveError::EncodeError.
   ///
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
-  /// @param result where the serialized length or required capacity will be written to.
-  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* result);
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief A collection of N-dimensional points, which may contain additional fields with
@@ -1401,16 +1401,16 @@ struct PointCloud {
 
   /// @brief Serialize the PointCloud to the provided buffer.
   ///
-  /// On success, writes the serialized length to *result.
-  /// If the provided buffer has insufficient capacity, writes the required capacity to *result
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
   /// and returns FoxgloveError::BufferTooShort.
   /// If the message cannot be encoded, writes the reason to stderr and returns
   /// FoxgloveError::EncodeError.
   ///
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
-  /// @param result where the serialized length or required capacity will be written to.
-  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* result);
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief A timestamped pose for an object or reference frame in 3D space
@@ -1426,16 +1426,16 @@ struct PoseInFrame {
 
   /// @brief Serialize the PoseInFrame to the provided buffer.
   ///
-  /// On success, writes the serialized length to *result.
-  /// If the provided buffer has insufficient capacity, writes the required capacity to *result
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
   /// and returns FoxgloveError::BufferTooShort.
   /// If the message cannot be encoded, writes the reason to stderr and returns
   /// FoxgloveError::EncodeError.
   ///
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
-  /// @param result where the serialized length or required capacity will be written to.
-  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* result);
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief An array of timestamped poses for an object or reference frame in 3D space
@@ -1451,16 +1451,16 @@ struct PosesInFrame {
 
   /// @brief Serialize the PosesInFrame to the provided buffer.
   ///
-  /// On success, writes the serialized length to *result.
-  /// If the provided buffer has insufficient capacity, writes the required capacity to *result
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
   /// and returns FoxgloveError::BufferTooShort.
   /// If the message cannot be encoded, writes the reason to stderr and returns
   /// FoxgloveError::EncodeError.
   ///
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
-  /// @param result where the serialized length or required capacity will be written to.
-  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* result);
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief A single block of an audio bitstream
@@ -1482,16 +1482,16 @@ struct RawAudio {
 
   /// @brief Serialize the RawAudio to the provided buffer.
   ///
-  /// On success, writes the serialized length to *result.
-  /// If the provided buffer has insufficient capacity, writes the required capacity to *result
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
   /// and returns FoxgloveError::BufferTooShort.
   /// If the message cannot be encoded, writes the reason to stderr and returns
   /// FoxgloveError::EncodeError.
   ///
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
-  /// @param result where the serialized length or required capacity will be written to.
-  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* result);
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief A raw image
@@ -1585,16 +1585,16 @@ struct RawImage {
 
   /// @brief Serialize the RawImage to the provided buffer.
   ///
-  /// On success, writes the serialized length to *result.
-  /// If the provided buffer has insufficient capacity, writes the required capacity to *result
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
   /// and returns FoxgloveError::BufferTooShort.
   /// If the message cannot be encoded, writes the reason to stderr and returns
   /// FoxgloveError::EncodeError.
   ///
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
-  /// @param result where the serialized length or required capacity will be written to.
-  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* result);
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief A channel for logging ArrowPrimitive messages to a topic.

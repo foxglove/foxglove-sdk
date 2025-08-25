@@ -168,16 +168,16 @@ export function generateHppSchemas(
             `
       /// @brief Serialize the ${schema.name} to the provided buffer.
       ///
-      /// On success, writes the serialized length to *result.
-      /// If the provided buffer has insufficient capacity, writes the required capacity to *result
+      /// On success, writes the serialized length to *encoded_len.
+      /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
       /// and returns FoxgloveError::BufferTooShort.
       /// If the message cannot be encoded, writes the reason to stderr and returns
       /// FoxgloveError::EncodeError.
       ///
       /// @param ptr the destination buffer. must point to at least len valid bytes.
       /// @param len the length of the destination buffer.
-      /// @param result where the serialized length or required capacity will be written to.
-      FoxgloveError encode(uint8_t* ptr, size_t len, size_t* result);`,
+      /// @param encoded_len where the serialized length or required capacity will be written to.
+      FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);`,
           ]
         : []),
       `};`,
@@ -390,17 +390,17 @@ export function generateCppSchemas(schemas: FoxgloveMessageSchema[]): string {
     const snakeName = toSnakeCase(schema.name);
     if (isSameAsCType(schema)) {
       return [
-        `FoxgloveError ${schema.name}::encode(uint8_t* ptr, size_t len, size_t* result) {`,
-        `    return FoxgloveError(foxglove_${snakeName}_encode(reinterpret_cast<const foxglove_${snakeName}*>(this), ptr, len, result));`,
+        `FoxgloveError ${schema.name}::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {`,
+        `    return FoxgloveError(foxglove_${snakeName}_encode(reinterpret_cast<const foxglove_${snakeName}*>(this), ptr, len, encoded_len));`,
         "}\n",
       ];
     } else {
       return [
-        `FoxgloveError ${schema.name}::encode(uint8_t* ptr, size_t len, size_t* result) {`,
+        `FoxgloveError ${schema.name}::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {`,
         "    Arena arena;",
         `    foxglove_${snakeName} c_msg;`,
         `    ${toCamelCase(schema.name)}ToC(c_msg, *this, arena);`,
-        `    return FoxgloveError(foxglove_${snakeName}_encode(&c_msg, ptr, len, result));`,
+        `    return FoxgloveError(foxglove_${snakeName}_encode(&c_msg, ptr, len, encoded_len));`,
         "}\n",
       ];
     }
