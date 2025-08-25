@@ -85,7 +85,6 @@ if (STRICT)
     set (STRICT_COMPILE_OPTIONS -Wall -Wextra -Wpedantic -Werror -Wold-style-cast -Wmost -Wunused-exception-parameter)
   elseif(MSVC)
     set (STRICT_COMPILE_OPTIONS /W4 /WX)
-    set (add_link_options /VERBOSE:LIB)
   endif()
 endif()
 
@@ -111,6 +110,14 @@ endif()
 
 if(WIN32)
   target_link_libraries(foxglove-static INTERFACE Bcrypt SChannel Crypt32 Ncrypt)
+  if(MSVC AND CMAKE_BUILD_TYPE STREQUAL "Debug")
+    # For Windows debug builds, exclude the release version of the MS VC++ runtime (MSVCRT) from linking.
+    # Rust's libc crate by default links with the release version of MSVCRT, which causes link-time
+    # conflicts with the debug version of the runtime (MSVCRTD). While there's no exposed way of
+    # configuring this on the Rust side (see https://github.com/rust-lang/libs-team/issues/211), we can
+    # work around this by disabling linking to the release configuration for debug builds.
+    add_link_options(/NODEFAULTLIB:msvcrt)
+  endif()
 elseif(APPLE)
   target_link_libraries(foxglove-static INTERFACE "-framework Security" "-framework CoreFoundation")
 endif()
