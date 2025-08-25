@@ -79,3 +79,38 @@ TEST_CASE("triangle list primitive to c") {
   REQUIRE(dest.indices[1] == 1);
   REQUIRE(dest.indices[2] == 2);
 }
+
+TEST_CASE("triangle list primitive to protobuf") {
+  TriangleListPrimitive msg;
+
+  // Populate the pose
+  msg.pose = Pose{};
+  msg.pose->position = Vector3{1.0, 2.0, 3.0};
+  msg.pose->orientation = Quaternion{0.1, 0.2, 0.3, 0.4};
+
+  // Add at least one triangle (3 points)
+  msg.points.push_back(Point3{0.0, 0.0, 0.0});
+  msg.points.push_back(Point3{1.0, 0.0, 0.0});
+  msg.points.push_back(Point3{0.5, 1.0, 0.0});
+
+  // Set a solid color for the whole shape
+  msg.color = Color{1.0, 0.0, 0.0, 1.0};
+
+  // Add per-vertex colors (same length as points)
+  msg.colors.push_back(Color{1.0, 0.0, 0.0, 1.0});
+  msg.colors.push_back(Color{0.0, 1.0, 0.0, 1.0});
+  msg.colors.push_back(Color{0.0, 0.0, 1.0, 1.0});
+
+  // Add some indices
+  msg.indices.push_back(0);
+  msg.indices.push_back(1);
+  msg.indices.push_back(2);
+
+  size_t capacity = 0;
+  std::vector<uint8_t> buf(10);
+  REQUIRE(msg.encode(buf.data(), buf.size(), &capacity) == FoxgloveError::BufferTooShort);
+  buf.resize(capacity);
+  REQUIRE(msg.encode(buf.data(), buf.size(), &capacity) == FoxgloveError::Ok);
+  REQUIRE(capacity == buf.size());
+  REQUIRE(capacity > 0);
+}

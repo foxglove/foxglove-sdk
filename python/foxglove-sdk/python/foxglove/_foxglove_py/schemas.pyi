@@ -99,6 +99,10 @@ class ArrowPrimitive:
         """Returns the ArrowPrimitive schema"""
         ...
 
+    def encode(self) -> bytes:
+        """Encodes the ArrowPrimitive."""
+        ...
+
 class CameraCalibration:
     """
     Camera calibration parameters
@@ -122,6 +126,10 @@ class CameraCalibration:
         """Returns the CameraCalibration schema"""
         ...
 
+    def encode(self) -> bytes:
+        """Encodes the CameraCalibration."""
+        ...
+
 class CircleAnnotation:
     """
     A circle annotation on a 2D image
@@ -142,6 +150,10 @@ class CircleAnnotation:
         """Returns the CircleAnnotation schema"""
         ...
 
+    def encode(self) -> bytes:
+        """Encodes the CircleAnnotation."""
+        ...
+
 class Color:
     """
     A color in RGBA format
@@ -158,6 +170,10 @@ class Color:
     @staticmethod
     def get_schema() -> Schema:
         """Returns the Color schema"""
+        ...
+
+    def encode(self) -> bytes:
+        """Encodes the Color."""
         ...
 
 class CompressedImage:
@@ -178,6 +194,10 @@ class CompressedImage:
         """Returns the CompressedImage schema"""
         ...
 
+    def encode(self) -> bytes:
+        """Encodes the CompressedImage."""
+        ...
+
 class CompressedVideo:
     """
     A single frame of a compressed video bitstream
@@ -196,6 +216,10 @@ class CompressedVideo:
         """Returns the CompressedVideo schema"""
         ...
 
+    def encode(self) -> bytes:
+        """Encodes the CompressedVideo."""
+        ...
+
 class CubePrimitive:
     """
     A primitive representing a cube or rectangular prism
@@ -211,6 +235,10 @@ class CubePrimitive:
     @staticmethod
     def get_schema() -> Schema:
         """Returns the CubePrimitive schema"""
+        ...
+
+    def encode(self) -> bytes:
+        """Encodes the CubePrimitive."""
         ...
 
 class CylinderPrimitive:
@@ -232,6 +260,10 @@ class CylinderPrimitive:
         """Returns the CylinderPrimitive schema"""
         ...
 
+    def encode(self) -> bytes:
+        """Encodes the CylinderPrimitive."""
+        ...
+
 class FrameTransform:
     """
     A transform between two reference frames in 3D space
@@ -251,6 +283,10 @@ class FrameTransform:
         """Returns the FrameTransform schema"""
         ...
 
+    def encode(self) -> bytes:
+        """Encodes the FrameTransform."""
+        ...
+
 class FrameTransforms:
     """
     An array of FrameTransform messages
@@ -264,6 +300,10 @@ class FrameTransforms:
         """Returns the FrameTransforms schema"""
         ...
 
+    def encode(self) -> bytes:
+        """Encodes the FrameTransforms."""
+        ...
+
 class GeoJson:
     """
     GeoJSON data for annotating maps
@@ -273,6 +313,10 @@ class GeoJson:
     @staticmethod
     def get_schema() -> Schema:
         """Returns the GeoJson schema"""
+        ...
+
+    def encode(self) -> bytes:
+        """Encodes the GeoJson."""
         ...
 
 class Grid:
@@ -298,6 +342,10 @@ class Grid:
         """Returns the Grid schema"""
         ...
 
+    def encode(self) -> bytes:
+        """Encodes the Grid."""
+        ...
+
 class ImageAnnotations:
     """
     Array of annotations for a 2D image
@@ -315,6 +363,10 @@ class ImageAnnotations:
         """Returns the ImageAnnotations schema"""
         ...
 
+    def encode(self) -> bytes:
+        """Encodes the ImageAnnotations."""
+        ...
+
 class KeyValuePair:
     """
     A key with its associated value
@@ -326,6 +378,10 @@ class KeyValuePair:
     @staticmethod
     def get_schema() -> Schema:
         """Returns the KeyValuePair schema"""
+        ...
+
+    def encode(self) -> bytes:
+        """Encodes the KeyValuePair."""
         ...
 
 class LaserScan:
@@ -347,6 +403,10 @@ class LaserScan:
     @staticmethod
     def get_schema() -> Schema:
         """Returns the LaserScan schema"""
+        ...
+
+    def encode(self) -> bytes:
+        """Encodes the LaserScan."""
         ...
 
 class LinePrimitive:
@@ -371,6 +431,10 @@ class LinePrimitive:
         """Returns the LinePrimitive schema"""
         ...
 
+    def encode(self) -> bytes:
+        """Encodes the LinePrimitive."""
+        ...
+
 class LocationFix:
     """
     A navigation satellite fix for any Global Navigation Satellite System
@@ -393,6 +457,10 @@ class LocationFix:
         """Returns the LocationFix schema"""
         ...
 
+    def encode(self) -> bytes:
+        """Encodes the LocationFix."""
+        ...
+
 class LocationFixes:
     """
     A group of LocationFix messages
@@ -404,6 +472,10 @@ class LocationFixes:
     @staticmethod
     def get_schema() -> Schema:
         """Returns the LocationFixes schema"""
+        ...
+
+    def encode(self) -> bytes:
+        """Encodes the LocationFixes."""
         ...
 
 class Log:
@@ -424,6 +496,10 @@ class Log:
     @staticmethod
     def get_schema() -> Schema:
         """Returns the Log schema"""
+        ...
+
+    def encode(self) -> bytes:
+        """Encodes the Log."""
         ...
 
 class ModelPrimitive:
@@ -447,6 +523,10 @@ class ModelPrimitive:
         """Returns the ModelPrimitive schema"""
         ...
 
+    def encode(self) -> bytes:
+        """Encodes the ModelPrimitive."""
+        ...
+
 class PackedElementField:
     """
     A field present within each element in a byte array of packed elements.
@@ -464,6 +544,10 @@ class PackedElementField:
         """Returns the PackedElementField schema"""
         ...
 
+    def encode(self) -> bytes:
+        """Encodes the PackedElementField."""
+        ...
+
 class Point2:
     """
     A point representing a position in 2D space
@@ -475,6 +559,10 @@ class Point2:
     @staticmethod
     def get_schema() -> Schema:
         """Returns the Point2 schema"""
+        ...
+
+    def encode(self) -> bytes:
+        """Encodes the Point2."""
         ...
 
 class Point3:
@@ -492,6 +580,10 @@ class Point3:
     @staticmethod
     def get_schema() -> Schema:
         """Returns the Point3 schema"""
+        ...
+
+    def encode(self) -> bytes:
+        """Encodes the Point3."""
         ...
 
 class PointCloud:
@@ -512,6 +604,10 @@ class PointCloud:
     @staticmethod
     def get_schema() -> Schema:
         """Returns the PointCloud schema"""
+        ...
+
+    def encode(self) -> bytes:
+        """Encodes the PointCloud."""
         ...
 
 class PointsAnnotation:
@@ -535,6 +631,10 @@ class PointsAnnotation:
         """Returns the PointsAnnotation schema"""
         ...
 
+    def encode(self) -> bytes:
+        """Encodes the PointsAnnotation."""
+        ...
+
 class Pose:
     """
     A position and orientation for an object or reference frame in 3D space
@@ -549,6 +649,10 @@ class Pose:
     @staticmethod
     def get_schema() -> Schema:
         """Returns the Pose schema"""
+        ...
+
+    def encode(self) -> bytes:
+        """Encodes the Pose."""
         ...
 
 class PoseInFrame:
@@ -568,6 +672,10 @@ class PoseInFrame:
         """Returns the PoseInFrame schema"""
         ...
 
+    def encode(self) -> bytes:
+        """Encodes the PoseInFrame."""
+        ...
+
 class PosesInFrame:
     """
     An array of timestamped poses for an object or reference frame in 3D space
@@ -583,6 +691,10 @@ class PosesInFrame:
     @staticmethod
     def get_schema() -> Schema:
         """Returns the PosesInFrame schema"""
+        ...
+
+    def encode(self) -> bytes:
+        """Encodes the PosesInFrame."""
         ...
 
 class Quaternion:
@@ -601,6 +713,10 @@ class Quaternion:
     @staticmethod
     def get_schema() -> Schema:
         """Returns the Quaternion schema"""
+        ...
+
+    def encode(self) -> bytes:
+        """Encodes the Quaternion."""
         ...
 
 class RawAudio:
@@ -622,6 +738,10 @@ class RawAudio:
         """Returns the RawAudio schema"""
         ...
 
+    def encode(self) -> bytes:
+        """Encodes the RawAudio."""
+        ...
+
 class RawImage:
     """
     A raw image
@@ -641,6 +761,10 @@ class RawImage:
     @staticmethod
     def get_schema() -> Schema:
         """Returns the RawImage schema"""
+        ...
+
+    def encode(self) -> bytes:
+        """Encodes the RawImage."""
         ...
 
 class SceneEntity:
@@ -671,6 +795,10 @@ class SceneEntity:
         """Returns the SceneEntity schema"""
         ...
 
+    def encode(self) -> bytes:
+        """Encodes the SceneEntity."""
+        ...
+
 class SceneEntityDeletion:
     """
     Command to remove previously published entities
@@ -686,6 +814,10 @@ class SceneEntityDeletion:
     @staticmethod
     def get_schema() -> Schema:
         """Returns the SceneEntityDeletion schema"""
+        ...
+
+    def encode(self) -> bytes:
+        """Encodes the SceneEntityDeletion."""
         ...
 
 class SceneUpdate:
@@ -704,6 +836,10 @@ class SceneUpdate:
         """Returns the SceneUpdate schema"""
         ...
 
+    def encode(self) -> bytes:
+        """Encodes the SceneUpdate."""
+        ...
+
 class SpherePrimitive:
     """
     A primitive representing a sphere or ellipsoid
@@ -719,6 +855,10 @@ class SpherePrimitive:
     @staticmethod
     def get_schema() -> Schema:
         """Returns the SpherePrimitive schema"""
+        ...
+
+    def encode(self) -> bytes:
+        """Encodes the SpherePrimitive."""
         ...
 
 class TextAnnotation:
@@ -741,6 +881,10 @@ class TextAnnotation:
         """Returns the TextAnnotation schema"""
         ...
 
+    def encode(self) -> bytes:
+        """Encodes the TextAnnotation."""
+        ...
+
 class TextPrimitive:
     """
     A primitive representing a text label
@@ -759,6 +903,10 @@ class TextPrimitive:
     @staticmethod
     def get_schema() -> Schema:
         """Returns the TextPrimitive schema"""
+        ...
+
+    def encode(self) -> bytes:
+        """Encodes the TextPrimitive."""
         ...
 
 class TriangleListPrimitive:
@@ -780,6 +928,10 @@ class TriangleListPrimitive:
         """Returns the TriangleListPrimitive schema"""
         ...
 
+    def encode(self) -> bytes:
+        """Encodes the TriangleListPrimitive."""
+        ...
+
 class Vector2:
     """
     A vector in 2D space that represents a direction only
@@ -791,6 +943,10 @@ class Vector2:
     @staticmethod
     def get_schema() -> Schema:
         """Returns the Vector2 schema"""
+        ...
+
+    def encode(self) -> bytes:
+        """Encodes the Vector2."""
         ...
 
 class Vector3:
@@ -808,6 +964,10 @@ class Vector3:
     @staticmethod
     def get_schema() -> Schema:
         """Returns the Vector3 schema"""
+        ...
+
+    def encode(self) -> bytes:
+        """Encodes the Vector3."""
         ...
 
 class VoxelGrid:
@@ -833,6 +993,10 @@ class VoxelGrid:
     @staticmethod
     def get_schema() -> Schema:
         """Returns the VoxelGrid schema"""
+        ...
+
+    def encode(self) -> bytes:
+        """Encodes the VoxelGrid."""
         ...
 
 FoxgloveSchema = Union[
