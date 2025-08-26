@@ -246,23 +246,23 @@ pub extern "C" fn foxglove_channel_log_${snakeName}(channel: Option<&FoxgloveCha
   }
 }
 
-/// Gets the schema for ${name}.
+/// Get the ${name} schema.
 ///
-/// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+/// All buffers in the returned schema are statically allocated.
 #[allow(clippy::missing_safety_doc, reason="no preconditions and returned lifetime is static")]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_${snakeName}_schema() -> FoxgloveSchema {
-    let native = foxglove::schemas::${name}::get_schema().expect("${name} schema is be Some");
+    let native = foxglove::schemas::${name}::get_schema().expect("${name} schema is Some");
     let name: &'static str = "foxglove.${name}";
     let encoding: &'static str = "protobuf";
     assert_eq!(name, &native.name);
     assert_eq!(encoding, &native.encoding);
     let std::borrow::Cow::Borrowed(data) = native.data else {
-      unreachable!("${name} schema data is 'static");
+      unreachable!("${name} schema data is static");
     };
     FoxgloveSchema {
-      name: "foxglove.${name}".into(),
-      encoding: "protobuf".into(),
+      name: name.into(),
+      encoding: encoding.into(),
       data: data.as_ptr(),
       data_len: data.len(),
     }

@@ -52,7 +52,7 @@ struct Vector3 {
 
   /// @brief Get the Vector3 schema.
   ///
-  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  /// All buffers in the returned schema are statically allocated.
   static FoxgloveSchema schema();
 };
 
@@ -85,7 +85,7 @@ struct Quaternion {
 
   /// @brief Get the Quaternion schema.
   ///
-  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  /// All buffers in the returned schema are statically allocated.
   static FoxgloveSchema schema();
 };
 
@@ -112,7 +112,7 @@ struct Pose {
 
   /// @brief Get the Pose schema.
   ///
-  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  /// All buffers in the returned schema are statically allocated.
   static FoxgloveSchema schema();
 };
 
@@ -145,7 +145,7 @@ struct Color {
 
   /// @brief Get the Color schema.
   ///
-  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  /// All buffers in the returned schema are statically allocated.
   static FoxgloveSchema schema();
 };
 
@@ -185,7 +185,7 @@ struct ArrowPrimitive {
 
   /// @brief Get the ArrowPrimitive schema.
   ///
-  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  /// All buffers in the returned schema are statically allocated.
   static FoxgloveSchema schema();
 };
 
@@ -302,7 +302,7 @@ struct CameraCalibration {
 
   /// @brief Get the CameraCalibration schema.
   ///
-  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  /// All buffers in the returned schema are statically allocated.
   static FoxgloveSchema schema();
 };
 
@@ -329,7 +329,7 @@ struct Point2 {
 
   /// @brief Get the Point2 schema.
   ///
-  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  /// All buffers in the returned schema are statically allocated.
   static FoxgloveSchema schema();
 };
 
@@ -370,7 +370,7 @@ struct CircleAnnotation {
 
   /// @brief Get the CircleAnnotation schema.
   ///
-  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  /// All buffers in the returned schema are statically allocated.
   static FoxgloveSchema schema();
 };
 
@@ -407,7 +407,7 @@ struct CompressedImage {
 
   /// @brief Get the CompressedImage schema.
   ///
-  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  /// All buffers in the returned schema are statically allocated.
   static FoxgloveSchema schema();
 };
 
@@ -479,7 +479,7 @@ struct CompressedVideo {
 
   /// @brief Get the CompressedVideo schema.
   ///
-  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  /// All buffers in the returned schema are statically allocated.
   static FoxgloveSchema schema();
 };
 
@@ -518,7 +518,7 @@ struct CylinderPrimitive {
 
   /// @brief Get the CylinderPrimitive schema.
   ///
-  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  /// All buffers in the returned schema are statically allocated.
   static FoxgloveSchema schema();
 };
 
@@ -548,7 +548,7 @@ struct CubePrimitive {
 
   /// @brief Get the CubePrimitive schema.
   ///
-  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  /// All buffers in the returned schema are statically allocated.
   static FoxgloveSchema schema();
 };
 
@@ -593,7 +593,7 @@ struct FrameTransform {
 
   /// @brief Get the FrameTransform schema.
   ///
-  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  /// All buffers in the returned schema are statically allocated.
   static FoxgloveSchema schema();
 };
 
@@ -617,7 +617,7 @@ struct FrameTransforms {
 
   /// @brief Get the FrameTransforms schema.
   ///
-  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  /// All buffers in the returned schema are statically allocated.
   static FoxgloveSchema schema();
 };
 
@@ -641,7 +641,7 @@ struct GeoJSON {
 
   /// @brief Get the GeoJSON schema.
   ///
-  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  /// All buffers in the returned schema are statically allocated.
   static FoxgloveSchema schema();
 };
 
@@ -668,7 +668,7 @@ struct Vector2 {
 
   /// @brief Get the Vector2 schema.
   ///
-  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  /// All buffers in the returned schema are statically allocated.
   static FoxgloveSchema schema();
 };
 
@@ -719,7 +719,7 @@ struct PackedElementField {
 
   /// @brief Get the PackedElementField schema.
   ///
-  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  /// All buffers in the returned schema are statically allocated.
   static FoxgloveSchema schema();
 };
 
@@ -773,7 +773,7 @@ struct Grid {
 
   /// @brief Get the Grid schema.
   ///
-  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  /// All buffers in the returned schema are statically allocated.
   static FoxgloveSchema schema();
 };
 
@@ -833,7 +833,7 @@ struct VoxelGrid {
 
   /// @brief Get the VoxelGrid schema.
   ///
-  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  /// All buffers in the returned schema are statically allocated.
   static FoxgloveSchema schema();
 };
 
@@ -891,7 +891,7 @@ struct PointsAnnotation {
 
   /// @brief Get the PointsAnnotation schema.
   ///
-  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  /// All buffers in the returned schema are statically allocated.
   static FoxgloveSchema schema();
 };
 
@@ -932,7 +932,7 @@ struct TextAnnotation {
 
   /// @brief Get the TextAnnotation schema.
   ///
-  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  /// All buffers in the returned schema are statically allocated.
   static FoxgloveSchema schema();
 };
 
@@ -962,7 +962,7 @@ struct ImageAnnotations {
 
   /// @brief Get the ImageAnnotations schema.
   ///
-  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  /// All buffers in the returned schema are statically allocated.
   static FoxgloveSchema schema();
 };
 
@@ -989,7 +989,7 @@ struct KeyValuePair {
 
   /// @brief Get the KeyValuePair schema.
   ///
-  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  /// All buffers in the returned schema are statically allocated.
   static FoxgloveSchema schema();
 };
 
@@ -1034,7 +1034,7 @@ struct LaserScan {
 
   /// @brief Get the LaserScan schema.
   ///
-  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  /// All buffers in the returned schema are statically allocated.
   static FoxgloveSchema schema();
 };
 
@@ -1064,7 +1064,7 @@ struct Point3 {
 
   /// @brief Get the Point3 schema.
   ///
-  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  /// All buffers in the returned schema are statically allocated.
   static FoxgloveSchema schema();
 };
 
@@ -1124,7 +1124,7 @@ struct LinePrimitive {
 
   /// @brief Get the LinePrimitive schema.
   ///
-  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  /// All buffers in the returned schema are statically allocated.
   static FoxgloveSchema schema();
 };
 
@@ -1182,7 +1182,7 @@ struct LocationFix {
 
   /// @brief Get the LocationFix schema.
   ///
-  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  /// All buffers in the returned schema are statically allocated.
   static FoxgloveSchema schema();
 };
 
@@ -1206,7 +1206,7 @@ struct LocationFixes {
 
   /// @brief Get the LocationFixes schema.
   ///
-  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  /// All buffers in the returned schema are statically allocated.
   static FoxgloveSchema schema();
 };
 
@@ -1260,7 +1260,7 @@ struct Log {
 
   /// @brief Get the Log schema.
   ///
-  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  /// All buffers in the returned schema are statically allocated.
   static FoxgloveSchema schema();
 };
 
@@ -1298,7 +1298,7 @@ struct SceneEntityDeletion {
 
   /// @brief Get the SceneEntityDeletion schema.
   ///
-  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  /// All buffers in the returned schema are statically allocated.
   static FoxgloveSchema schema();
 };
 
@@ -1328,7 +1328,7 @@ struct SpherePrimitive {
 
   /// @brief Get the SpherePrimitive schema.
   ///
-  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  /// All buffers in the returned schema are statically allocated.
   static FoxgloveSchema schema();
 };
 
@@ -1369,7 +1369,7 @@ struct TriangleListPrimitive {
 
   /// @brief Get the TriangleListPrimitive schema.
   ///
-  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  /// All buffers in the returned schema are statically allocated.
   static FoxgloveSchema schema();
 };
 
@@ -1411,7 +1411,7 @@ struct TextPrimitive {
 
   /// @brief Get the TextPrimitive schema.
   ///
-  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  /// All buffers in the returned schema are statically allocated.
   static FoxgloveSchema schema();
 };
 
@@ -1458,7 +1458,7 @@ struct ModelPrimitive {
 
   /// @brief Get the ModelPrimitive schema.
   ///
-  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  /// All buffers in the returned schema are statically allocated.
   static FoxgloveSchema schema();
 };
 
@@ -1526,7 +1526,7 @@ struct SceneEntity {
 
   /// @brief Get the SceneEntity schema.
   ///
-  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  /// All buffers in the returned schema are statically allocated.
   static FoxgloveSchema schema();
 };
 
@@ -1553,7 +1553,7 @@ struct SceneUpdate {
 
   /// @brief Get the SceneUpdate schema.
   ///
-  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  /// All buffers in the returned schema are statically allocated.
   static FoxgloveSchema schema();
 };
 
@@ -1595,7 +1595,7 @@ struct PointCloud {
 
   /// @brief Get the PointCloud schema.
   ///
-  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  /// All buffers in the returned schema are statically allocated.
   static FoxgloveSchema schema();
 };
 
@@ -1625,7 +1625,7 @@ struct PoseInFrame {
 
   /// @brief Get the PoseInFrame schema.
   ///
-  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  /// All buffers in the returned schema are statically allocated.
   static FoxgloveSchema schema();
 };
 
@@ -1655,7 +1655,7 @@ struct PosesInFrame {
 
   /// @brief Get the PosesInFrame schema.
   ///
-  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  /// All buffers in the returned schema are statically allocated.
   static FoxgloveSchema schema();
 };
 
@@ -1691,7 +1691,7 @@ struct RawAudio {
 
   /// @brief Get the RawAudio schema.
   ///
-  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  /// All buffers in the returned schema are statically allocated.
   static FoxgloveSchema schema();
 };
 
@@ -1799,7 +1799,7 @@ struct RawImage {
 
   /// @brief Get the RawImage schema.
   ///
-  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  /// All buffers in the returned schema are statically allocated.
   static FoxgloveSchema schema();
 };
 

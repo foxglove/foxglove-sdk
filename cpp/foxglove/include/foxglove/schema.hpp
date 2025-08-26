@@ -11,7 +11,7 @@ namespace foxglove {
 struct FoxgloveSchema {
   /// An identifier for the schema.
   std::string_view name;
-  /// The encoding of the schema data. For foxglove schemas, this is always "protobuf".
+  /// The encoding of the schema data.
   /// [well-known schema encodings]: https://mcap.dev/spec/registry#well-known-schema-encodings
   std::string_view encoding;
   /// The schema data.

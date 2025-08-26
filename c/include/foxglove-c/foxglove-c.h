@@ -2342,9 +2342,9 @@ foxglove_error foxglove_channel_log_arrow_primitive(const struct foxglove_channe
                                                     FoxgloveSinkId sink_id);
 
 /**
- * Gets the schema for ArrowPrimitive.
+ * Get the ArrowPrimitive schema.
  *
- * All pointers in the returned FoxgloveSchema point to statically-allocated values.
+ * All buffers in the returned schema are statically allocated.
  */
 struct foxglove_schema foxglove_arrow_primitive_schema(void);
 
@@ -2386,9 +2386,9 @@ foxglove_error foxglove_channel_log_camera_calibration(const struct foxglove_cha
                                                        FoxgloveSinkId sink_id);
 
 /**
- * Gets the schema for CameraCalibration.
+ * Get the CameraCalibration schema.
  *
- * All pointers in the returned FoxgloveSchema point to statically-allocated values.
+ * All buffers in the returned schema are statically allocated.
  */
 struct foxglove_schema foxglove_camera_calibration_schema(void);
 
@@ -2430,9 +2430,9 @@ foxglove_error foxglove_channel_log_circle_annotation(const struct foxglove_chan
                                                       FoxgloveSinkId sink_id);
 
 /**
- * Gets the schema for CircleAnnotation.
+ * Get the CircleAnnotation schema.
  *
- * All pointers in the returned FoxgloveSchema point to statically-allocated values.
+ * All buffers in the returned schema are statically allocated.
  */
 struct foxglove_schema foxglove_circle_annotation_schema(void);
 
@@ -2474,9 +2474,9 @@ foxglove_error foxglove_channel_log_color(const struct foxglove_channel *channel
                                           FoxgloveSinkId sink_id);
 
 /**
- * Gets the schema for Color.
+ * Get the Color schema.
  *
- * All pointers in the returned FoxgloveSchema point to statically-allocated values.
+ * All buffers in the returned schema are statically allocated.
  */
 struct foxglove_schema foxglove_color_schema(void);
 
@@ -2518,9 +2518,9 @@ foxglove_error foxglove_channel_log_compressed_image(const struct foxglove_chann
                                                      FoxgloveSinkId sink_id);
 
 /**
- * Gets the schema for CompressedImage.
+ * Get the CompressedImage schema.
  *
- * All pointers in the returned FoxgloveSchema point to statically-allocated values.
+ * All buffers in the returned schema are statically allocated.
  */
 struct foxglove_schema foxglove_compressed_image_schema(void);
 
@@ -2562,9 +2562,9 @@ foxglove_error foxglove_channel_log_compressed_video(const struct foxglove_chann
                                                      FoxgloveSinkId sink_id);
 
 /**
- * Gets the schema for CompressedVideo.
+ * Get the CompressedVideo schema.
  *
- * All pointers in the returned FoxgloveSchema point to statically-allocated values.
+ * All buffers in the returned schema are statically allocated.
  */
 struct foxglove_schema foxglove_compressed_video_schema(void);
 
@@ -2606,9 +2606,9 @@ foxglove_error foxglove_channel_log_cylinder_primitive(const struct foxglove_cha
                                                        FoxgloveSinkId sink_id);
 
 /**
- * Gets the schema for CylinderPrimitive.
+ * Get the CylinderPrimitive schema.
  *
- * All pointers in the returned FoxgloveSchema point to statically-allocated values.
+ * All buffers in the returned schema are statically allocated.
  */
 struct foxglove_schema foxglove_cylinder_primitive_schema(void);
 
@@ -2650,9 +2650,9 @@ foxglove_error foxglove_channel_log_cube_primitive(const struct foxglove_channel
                                                    FoxgloveSinkId sink_id);
 
 /**
- * Gets the schema for CubePrimitive.
+ * Get the CubePrimitive schema.
  *
- * All pointers in the returned FoxgloveSchema point to statically-allocated values.
+ * All buffers in the returned schema are statically allocated.
  */
 struct foxglove_schema foxglove_cube_primitive_schema(void);
 
@@ -2694,9 +2694,9 @@ foxglove_error foxglove_channel_log_frame_transform(const struct foxglove_channe
                                                     FoxgloveSinkId sink_id);
 
 /**
- * Gets the schema for FrameTransform.
+ * Get the FrameTransform schema.
  *
- * All pointers in the returned FoxgloveSchema point to statically-allocated values.
+ * All buffers in the returned schema are statically allocated.
  */
 struct foxglove_schema foxglove_frame_transform_schema(void);
 
@@ -2738,9 +2738,9 @@ foxglove_error foxglove_channel_log_frame_transforms(const struct foxglove_chann
                                                      FoxgloveSinkId sink_id);
 
 /**
- * Gets the schema for FrameTransforms.
+ * Get the FrameTransforms schema.
  *
- * All pointers in the returned FoxgloveSchema point to statically-allocated values.
+ * All buffers in the returned schema are statically allocated.
  */
 struct foxglove_schema foxglove_frame_transforms_schema(void);
 
@@ -2782,9 +2782,9 @@ foxglove_error foxglove_channel_log_geo_json(const struct foxglove_channel *chan
                                              FoxgloveSinkId sink_id);
 
 /**
- * Gets the schema for GeoJson.
+ * Get the GeoJson schema.
  *
- * All pointers in the returned FoxgloveSchema point to statically-allocated values.
+ * All buffers in the returned schema are statically allocated.
  */
 struct foxglove_schema foxglove_geo_json_schema(void);
 
@@ -2826,9 +2826,9 @@ foxglove_error foxglove_channel_log_grid(const struct foxglove_channel *channel,
                                          FoxgloveSinkId sink_id);
 
 /**
- * Gets the schema for Grid.
+ * Get the Grid schema.
  *
- * All pointers in the returned FoxgloveSchema point to statically-allocated values.
+ * All buffers in the returned schema are statically allocated.
  */
 struct foxglove_schema foxglove_grid_schema(void);
 
@@ -2870,9 +2870,9 @@ foxglove_error foxglove_channel_log_voxel_grid(const struct foxglove_channel *ch
                                                FoxgloveSinkId sink_id);
 
 /**
- * Gets the schema for VoxelGrid.
+ * Get the VoxelGrid schema.
  *
- * All pointers in the returned FoxgloveSchema point to statically-allocated values.
+ * All buffers in the returned schema are statically allocated.
  */
 struct foxglove_schema foxglove_voxel_grid_schema(void);
 
@@ -2914,9 +2914,9 @@ foxglove_error foxglove_channel_log_image_annotations(const struct foxglove_chan
                                                       FoxgloveSinkId sink_id);
 
 /**
- * Gets the schema for ImageAnnotations.
+ * Get the ImageAnnotations schema.
  *
- * All pointers in the returned FoxgloveSchema point to statically-allocated values.
+ * All buffers in the returned schema are statically allocated.
  */
 struct foxglove_schema foxglove_image_annotations_schema(void);
 
@@ -2958,9 +2958,9 @@ foxglove_error foxglove_channel_log_key_value_pair(const struct foxglove_channel
                                                    FoxgloveSinkId sink_id);
 
 /**
- * Gets the schema for KeyValuePair.
+ * Get the KeyValuePair schema.
  *
- * All pointers in the returned FoxgloveSchema point to statically-allocated values.
+ * All buffers in the returned schema are statically allocated.
  */
 struct foxglove_schema foxglove_key_value_pair_schema(void);
 
@@ -3002,9 +3002,9 @@ foxglove_error foxglove_channel_log_laser_scan(const struct foxglove_channel *ch
                                                FoxgloveSinkId sink_id);
 
 /**
- * Gets the schema for LaserScan.
+ * Get the LaserScan schema.
  *
- * All pointers in the returned FoxgloveSchema point to statically-allocated values.
+ * All buffers in the returned schema are statically allocated.
  */
 struct foxglove_schema foxglove_laser_scan_schema(void);
 
@@ -3046,9 +3046,9 @@ foxglove_error foxglove_channel_log_line_primitive(const struct foxglove_channel
                                                    FoxgloveSinkId sink_id);
 
 /**
- * Gets the schema for LinePrimitive.
+ * Get the LinePrimitive schema.
  *
- * All pointers in the returned FoxgloveSchema point to statically-allocated values.
+ * All buffers in the returned schema are statically allocated.
  */
 struct foxglove_schema foxglove_line_primitive_schema(void);
 
@@ -3090,9 +3090,9 @@ foxglove_error foxglove_channel_log_location_fix(const struct foxglove_channel *
                                                  FoxgloveSinkId sink_id);
 
 /**
- * Gets the schema for LocationFix.
+ * Get the LocationFix schema.
  *
- * All pointers in the returned FoxgloveSchema point to statically-allocated values.
+ * All buffers in the returned schema are statically allocated.
  */
 struct foxglove_schema foxglove_location_fix_schema(void);
 
@@ -3134,9 +3134,9 @@ foxglove_error foxglove_channel_log_location_fixes(const struct foxglove_channel
                                                    FoxgloveSinkId sink_id);
 
 /**
- * Gets the schema for LocationFixes.
+ * Get the LocationFixes schema.
  *
- * All pointers in the returned FoxgloveSchema point to statically-allocated values.
+ * All buffers in the returned schema are statically allocated.
  */
 struct foxglove_schema foxglove_location_fixes_schema(void);
 
@@ -3178,9 +3178,9 @@ foxglove_error foxglove_channel_log_log(const struct foxglove_channel *channel,
                                         FoxgloveSinkId sink_id);
 
 /**
- * Gets the schema for Log.
+ * Get the Log schema.
  *
- * All pointers in the returned FoxgloveSchema point to statically-allocated values.
+ * All buffers in the returned schema are statically allocated.
  */
 struct foxglove_schema foxglove_log_schema(void);
 
@@ -3222,9 +3222,9 @@ foxglove_error foxglove_channel_log_scene_entity_deletion(const struct foxglove_
                                                           FoxgloveSinkId sink_id);
 
 /**
- * Gets the schema for SceneEntityDeletion.
+ * Get the SceneEntityDeletion schema.
  *
- * All pointers in the returned FoxgloveSchema point to statically-allocated values.
+ * All buffers in the returned schema are statically allocated.
  */
 struct foxglove_schema foxglove_scene_entity_deletion_schema(void);
 
@@ -3266,9 +3266,9 @@ foxglove_error foxglove_channel_log_scene_entity(const struct foxglove_channel *
                                                  FoxgloveSinkId sink_id);
 
 /**
- * Gets the schema for SceneEntity.
+ * Get the SceneEntity schema.
  *
- * All pointers in the returned FoxgloveSchema point to statically-allocated values.
+ * All buffers in the returned schema are statically allocated.
  */
 struct foxglove_schema foxglove_scene_entity_schema(void);
 
@@ -3310,9 +3310,9 @@ foxglove_error foxglove_channel_log_scene_update(const struct foxglove_channel *
                                                  FoxgloveSinkId sink_id);
 
 /**
- * Gets the schema for SceneUpdate.
+ * Get the SceneUpdate schema.
  *
- * All pointers in the returned FoxgloveSchema point to statically-allocated values.
+ * All buffers in the returned schema are statically allocated.
  */
 struct foxglove_schema foxglove_scene_update_schema(void);
 
@@ -3354,9 +3354,9 @@ foxglove_error foxglove_channel_log_model_primitive(const struct foxglove_channe
                                                     FoxgloveSinkId sink_id);
 
 /**
- * Gets the schema for ModelPrimitive.
+ * Get the ModelPrimitive schema.
  *
- * All pointers in the returned FoxgloveSchema point to statically-allocated values.
+ * All buffers in the returned schema are statically allocated.
  */
 struct foxglove_schema foxglove_model_primitive_schema(void);
 
@@ -3398,9 +3398,9 @@ foxglove_error foxglove_channel_log_packed_element_field(const struct foxglove_c
                                                          FoxgloveSinkId sink_id);
 
 /**
- * Gets the schema for PackedElementField.
+ * Get the PackedElementField schema.
  *
- * All pointers in the returned FoxgloveSchema point to statically-allocated values.
+ * All buffers in the returned schema are statically allocated.
  */
 struct foxglove_schema foxglove_packed_element_field_schema(void);
 
@@ -3442,9 +3442,9 @@ foxglove_error foxglove_channel_log_point2(const struct foxglove_channel *channe
                                            FoxgloveSinkId sink_id);
 
 /**
- * Gets the schema for Point2.
+ * Get the Point2 schema.
  *
- * All pointers in the returned FoxgloveSchema point to statically-allocated values.
+ * All buffers in the returned schema are statically allocated.
  */
 struct foxglove_schema foxglove_point2_schema(void);
 
@@ -3486,9 +3486,9 @@ foxglove_error foxglove_channel_log_point3(const struct foxglove_channel *channe
                                            FoxgloveSinkId sink_id);
 
 /**
- * Gets the schema for Point3.
+ * Get the Point3 schema.
  *
- * All pointers in the returned FoxgloveSchema point to statically-allocated values.
+ * All buffers in the returned schema are statically allocated.
  */
 struct foxglove_schema foxglove_point3_schema(void);
 
@@ -3530,9 +3530,9 @@ foxglove_error foxglove_channel_log_point_cloud(const struct foxglove_channel *c
                                                 FoxgloveSinkId sink_id);
 
 /**
- * Gets the schema for PointCloud.
+ * Get the PointCloud schema.
  *
- * All pointers in the returned FoxgloveSchema point to statically-allocated values.
+ * All buffers in the returned schema are statically allocated.
  */
 struct foxglove_schema foxglove_point_cloud_schema(void);
 
@@ -3574,9 +3574,9 @@ foxglove_error foxglove_channel_log_points_annotation(const struct foxglove_chan
                                                       FoxgloveSinkId sink_id);
 
 /**
- * Gets the schema for PointsAnnotation.
+ * Get the PointsAnnotation schema.
  *
- * All pointers in the returned FoxgloveSchema point to statically-allocated values.
+ * All buffers in the returned schema are statically allocated.
  */
 struct foxglove_schema foxglove_points_annotation_schema(void);
 
@@ -3618,9 +3618,9 @@ foxglove_error foxglove_channel_log_pose(const struct foxglove_channel *channel,
                                          FoxgloveSinkId sink_id);
 
 /**
- * Gets the schema for Pose.
+ * Get the Pose schema.
  *
- * All pointers in the returned FoxgloveSchema point to statically-allocated values.
+ * All buffers in the returned schema are statically allocated.
  */
 struct foxglove_schema foxglove_pose_schema(void);
 
@@ -3662,9 +3662,9 @@ foxglove_error foxglove_channel_log_pose_in_frame(const struct foxglove_channel 
                                                   FoxgloveSinkId sink_id);
 
 /**
- * Gets the schema for PoseInFrame.
+ * Get the PoseInFrame schema.
  *
- * All pointers in the returned FoxgloveSchema point to statically-allocated values.
+ * All buffers in the returned schema are statically allocated.
  */
 struct foxglove_schema foxglove_pose_in_frame_schema(void);
 
@@ -3706,9 +3706,9 @@ foxglove_error foxglove_channel_log_poses_in_frame(const struct foxglove_channel
                                                    FoxgloveSinkId sink_id);
 
 /**
- * Gets the schema for PosesInFrame.
+ * Get the PosesInFrame schema.
  *
- * All pointers in the returned FoxgloveSchema point to statically-allocated values.
+ * All buffers in the returned schema are statically allocated.
  */
 struct foxglove_schema foxglove_poses_in_frame_schema(void);
 
@@ -3750,9 +3750,9 @@ foxglove_error foxglove_channel_log_quaternion(const struct foxglove_channel *ch
                                                FoxgloveSinkId sink_id);
 
 /**
- * Gets the schema for Quaternion.
+ * Get the Quaternion schema.
  *
- * All pointers in the returned FoxgloveSchema point to statically-allocated values.
+ * All buffers in the returned schema are statically allocated.
  */
 struct foxglove_schema foxglove_quaternion_schema(void);
 
@@ -3794,9 +3794,9 @@ foxglove_error foxglove_channel_log_raw_audio(const struct foxglove_channel *cha
                                               FoxgloveSinkId sink_id);
 
 /**
- * Gets the schema for RawAudio.
+ * Get the RawAudio schema.
  *
- * All pointers in the returned FoxgloveSchema point to statically-allocated values.
+ * All buffers in the returned schema are statically allocated.
  */
 struct foxglove_schema foxglove_raw_audio_schema(void);
 
@@ -3838,9 +3838,9 @@ foxglove_error foxglove_channel_log_raw_image(const struct foxglove_channel *cha
                                               FoxgloveSinkId sink_id);
 
 /**
- * Gets the schema for RawImage.
+ * Get the RawImage schema.
  *
- * All pointers in the returned FoxgloveSchema point to statically-allocated values.
+ * All buffers in the returned schema are statically allocated.
  */
 struct foxglove_schema foxglove_raw_image_schema(void);
 
@@ -3882,9 +3882,9 @@ foxglove_error foxglove_channel_log_sphere_primitive(const struct foxglove_chann
                                                      FoxgloveSinkId sink_id);
 
 /**
- * Gets the schema for SpherePrimitive.
+ * Get the SpherePrimitive schema.
  *
- * All pointers in the returned FoxgloveSchema point to statically-allocated values.
+ * All buffers in the returned schema are statically allocated.
  */
 struct foxglove_schema foxglove_sphere_primitive_schema(void);
 
@@ -3926,9 +3926,9 @@ foxglove_error foxglove_channel_log_text_annotation(const struct foxglove_channe
                                                     FoxgloveSinkId sink_id);
 
 /**
- * Gets the schema for TextAnnotation.
+ * Get the TextAnnotation schema.
  *
- * All pointers in the returned FoxgloveSchema point to statically-allocated values.
+ * All buffers in the returned schema are statically allocated.
  */
 struct foxglove_schema foxglove_text_annotation_schema(void);
 
@@ -3970,9 +3970,9 @@ foxglove_error foxglove_channel_log_text_primitive(const struct foxglove_channel
                                                    FoxgloveSinkId sink_id);
 
 /**
- * Gets the schema for TextPrimitive.
+ * Get the TextPrimitive schema.
  *
- * All pointers in the returned FoxgloveSchema point to statically-allocated values.
+ * All buffers in the returned schema are statically allocated.
  */
 struct foxglove_schema foxglove_text_primitive_schema(void);
 
@@ -4014,9 +4014,9 @@ foxglove_error foxglove_channel_log_triangle_list_primitive(const struct foxglov
                                                             FoxgloveSinkId sink_id);
 
 /**
- * Gets the schema for TriangleListPrimitive.
+ * Get the TriangleListPrimitive schema.
  *
- * All pointers in the returned FoxgloveSchema point to statically-allocated values.
+ * All buffers in the returned schema are statically allocated.
  */
 struct foxglove_schema foxglove_triangle_list_primitive_schema(void);
 
@@ -4058,9 +4058,9 @@ foxglove_error foxglove_channel_log_vector2(const struct foxglove_channel *chann
                                             FoxgloveSinkId sink_id);
 
 /**
- * Gets the schema for Vector2.
+ * Get the Vector2 schema.
  *
- * All pointers in the returned FoxgloveSchema point to statically-allocated values.
+ * All buffers in the returned schema are statically allocated.
  */
 struct foxglove_schema foxglove_vector2_schema(void);
 
@@ -4102,9 +4102,9 @@ foxglove_error foxglove_channel_log_vector3(const struct foxglove_channel *chann
                                             FoxgloveSinkId sink_id);
 
 /**
- * Gets the schema for Vector3.
+ * Get the Vector3 schema.
  *
- * All pointers in the returned FoxgloveSchema point to statically-allocated values.
+ * All buffers in the returned schema are statically allocated.
  */
 struct foxglove_schema foxglove_vector3_schema(void);
 

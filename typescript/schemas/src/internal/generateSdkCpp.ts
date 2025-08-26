@@ -181,7 +181,7 @@ export function generateHppSchemas(
             `
       /// @brief Get the ${schema.name} schema.
       ///
-      /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+      /// All buffers in the returned schema are statically allocated.
       static FoxgloveSchema schema();
             `,
           ]
