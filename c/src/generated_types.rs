@@ -10,7 +10,8 @@ use crate::arena::{Arena, BorrowToNative};
 use crate::util::{bytes_from_raw, string_from_raw, vec_from_raw};
 use crate::{
     do_foxglove_channel_create, log_msg_to_channel, result_to_c, FoxgloveChannel, FoxgloveContext,
-    FoxgloveDuration, FoxgloveError, FoxgloveSinkId, FoxgloveString, FoxgloveTimestamp,
+    FoxgloveDuration, FoxgloveError, FoxgloveSchema, FoxgloveSinkId, FoxgloveString,
+    FoxgloveTimestamp,
 };
 
 #[derive(Clone, Copy, Debug)]
@@ -171,6 +172,28 @@ pub extern "C" fn foxglove_channel_log_arrow_primitive(
             tracing::error!("ArrowPrimitive: {}", e);
             e.into()
         }
+    }
+}
+
+/// Gets the schema for ArrowPrimitive.
+///
+/// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_arrow_primitive_schema() -> FoxgloveSchema {
+    let native =
+        foxglove::schemas::ArrowPrimitive::get_schema().expect("ArrowPrimitive schema is be Some");
+    let name: &'static str = "foxglove.ArrowPrimitive";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("ArrowPrimitive schema data is 'static");
+    };
+    FoxgloveSchema {
+        name: "foxglove.ArrowPrimitive".into(),
+        encoding: "protobuf".into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
     }
 }
 
@@ -385,6 +408,28 @@ pub extern "C" fn foxglove_channel_log_camera_calibration(
     }
 }
 
+/// Gets the schema for CameraCalibration.
+///
+/// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_camera_calibration_schema() -> FoxgloveSchema {
+    let native = foxglove::schemas::CameraCalibration::get_schema()
+        .expect("CameraCalibration schema is be Some");
+    let name: &'static str = "foxglove.CameraCalibration";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("CameraCalibration schema data is 'static");
+    };
+    FoxgloveSchema {
+        name: "foxglove.CameraCalibration".into(),
+        encoding: "protobuf".into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
 /// Encode a CameraCalibration message as protobuf to the buffer provided.
 ///
 /// On success, writes the encoded length to *encoded_len.
@@ -542,6 +587,28 @@ pub extern "C" fn foxglove_channel_log_circle_annotation(
     }
 }
 
+/// Gets the schema for CircleAnnotation.
+///
+/// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_circle_annotation_schema() -> FoxgloveSchema {
+    let native = foxglove::schemas::CircleAnnotation::get_schema()
+        .expect("CircleAnnotation schema is be Some");
+    let name: &'static str = "foxglove.CircleAnnotation";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("CircleAnnotation schema data is 'static");
+    };
+    FoxgloveSchema {
+        name: "foxglove.CircleAnnotation".into(),
+        encoding: "protobuf".into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
 /// Encode a CircleAnnotation message as protobuf to the buffer provided.
 ///
 /// On success, writes the encoded length to *encoded_len.
@@ -667,6 +734,27 @@ pub extern "C" fn foxglove_channel_log_color(
             tracing::error!("Color: {}", e);
             e.into()
         }
+    }
+}
+
+/// Gets the schema for Color.
+///
+/// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_color_schema() -> FoxgloveSchema {
+    let native = foxglove::schemas::Color::get_schema().expect("Color schema is be Some");
+    let name: &'static str = "foxglove.Color";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("Color schema data is 'static");
+    };
+    FoxgloveSchema {
+        name: "foxglove.Color".into(),
+        encoding: "protobuf".into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
     }
 }
 
@@ -814,6 +902,28 @@ pub extern "C" fn foxglove_channel_log_compressed_image(
             tracing::error!("CompressedImage: {}", e);
             e.into()
         }
+    }
+}
+
+/// Gets the schema for CompressedImage.
+///
+/// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_compressed_image_schema() -> FoxgloveSchema {
+    let native = foxglove::schemas::CompressedImage::get_schema()
+        .expect("CompressedImage schema is be Some");
+    let name: &'static str = "foxglove.CompressedImage";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("CompressedImage schema data is 'static");
+    };
+    FoxgloveSchema {
+        name: "foxglove.CompressedImage".into(),
+        encoding: "protobuf".into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
     }
 }
 
@@ -990,6 +1100,28 @@ pub extern "C" fn foxglove_channel_log_compressed_video(
     }
 }
 
+/// Gets the schema for CompressedVideo.
+///
+/// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_compressed_video_schema() -> FoxgloveSchema {
+    let native = foxglove::schemas::CompressedVideo::get_schema()
+        .expect("CompressedVideo schema is be Some");
+    let name: &'static str = "foxglove.CompressedVideo";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("CompressedVideo schema data is 'static");
+    };
+    FoxgloveSchema {
+        name: "foxglove.CompressedVideo".into(),
+        encoding: "protobuf".into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
 /// Encode a CompressedVideo message as protobuf to the buffer provided.
 ///
 /// On success, writes the encoded length to *encoded_len.
@@ -1142,6 +1274,28 @@ pub extern "C" fn foxglove_channel_log_cylinder_primitive(
     }
 }
 
+/// Gets the schema for CylinderPrimitive.
+///
+/// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_cylinder_primitive_schema() -> FoxgloveSchema {
+    let native = foxglove::schemas::CylinderPrimitive::get_schema()
+        .expect("CylinderPrimitive schema is be Some");
+    let name: &'static str = "foxglove.CylinderPrimitive";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("CylinderPrimitive schema data is 'static");
+    };
+    FoxgloveSchema {
+        name: "foxglove.CylinderPrimitive".into(),
+        encoding: "protobuf".into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
 /// Encode a CylinderPrimitive message as protobuf to the buffer provided.
 ///
 /// On success, writes the encoded length to *encoded_len.
@@ -1283,6 +1437,28 @@ pub extern "C" fn foxglove_channel_log_cube_primitive(
             tracing::error!("CubePrimitive: {}", e);
             e.into()
         }
+    }
+}
+
+/// Gets the schema for CubePrimitive.
+///
+/// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_cube_primitive_schema() -> FoxgloveSchema {
+    let native =
+        foxglove::schemas::CubePrimitive::get_schema().expect("CubePrimitive schema is be Some");
+    let name: &'static str = "foxglove.CubePrimitive";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("CubePrimitive schema data is 'static");
+    };
+    FoxgloveSchema {
+        name: "foxglove.CubePrimitive".into(),
+        encoding: "protobuf".into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
     }
 }
 
@@ -1446,6 +1622,28 @@ pub extern "C" fn foxglove_channel_log_frame_transform(
     }
 }
 
+/// Gets the schema for FrameTransform.
+///
+/// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_frame_transform_schema() -> FoxgloveSchema {
+    let native =
+        foxglove::schemas::FrameTransform::get_schema().expect("FrameTransform schema is be Some");
+    let name: &'static str = "foxglove.FrameTransform";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("FrameTransform schema data is 'static");
+    };
+    FoxgloveSchema {
+        name: "foxglove.FrameTransform".into(),
+        encoding: "protobuf".into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
 /// Encode a FrameTransform message as protobuf to the buffer provided.
 ///
 /// On success, writes the encoded length to *encoded_len.
@@ -1563,6 +1761,28 @@ pub extern "C" fn foxglove_channel_log_frame_transforms(
             tracing::error!("FrameTransforms: {}", e);
             e.into()
         }
+    }
+}
+
+/// Gets the schema for FrameTransforms.
+///
+/// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_frame_transforms_schema() -> FoxgloveSchema {
+    let native = foxglove::schemas::FrameTransforms::get_schema()
+        .expect("FrameTransforms schema is be Some");
+    let name: &'static str = "foxglove.FrameTransforms";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("FrameTransforms schema data is 'static");
+    };
+    FoxgloveSchema {
+        name: "foxglove.FrameTransforms".into(),
+        encoding: "protobuf".into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
     }
 }
 
@@ -1687,6 +1907,27 @@ pub extern "C" fn foxglove_channel_log_geo_json(
             tracing::error!("GeoJson: {}", e);
             e.into()
         }
+    }
+}
+
+/// Gets the schema for GeoJson.
+///
+/// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_geo_json_schema() -> FoxgloveSchema {
+    let native = foxglove::schemas::GeoJson::get_schema().expect("GeoJson schema is be Some");
+    let name: &'static str = "foxglove.GeoJson";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("GeoJson schema data is 'static");
+    };
+    FoxgloveSchema {
+        name: "foxglove.GeoJson".into(),
+        encoding: "protobuf".into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
     }
 }
 
@@ -1861,6 +2102,27 @@ pub extern "C" fn foxglove_channel_log_grid(
             tracing::error!("Grid: {}", e);
             e.into()
         }
+    }
+}
+
+/// Gets the schema for Grid.
+///
+/// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_grid_schema() -> FoxgloveSchema {
+    let native = foxglove::schemas::Grid::get_schema().expect("Grid schema is be Some");
+    let name: &'static str = "foxglove.Grid";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("Grid schema data is 'static");
+    };
+    FoxgloveSchema {
+        name: "foxglove.Grid".into(),
+        encoding: "protobuf".into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
     }
 }
 
@@ -2047,6 +2309,27 @@ pub extern "C" fn foxglove_channel_log_voxel_grid(
     }
 }
 
+/// Gets the schema for VoxelGrid.
+///
+/// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_voxel_grid_schema() -> FoxgloveSchema {
+    let native = foxglove::schemas::VoxelGrid::get_schema().expect("VoxelGrid schema is be Some");
+    let name: &'static str = "foxglove.VoxelGrid";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("VoxelGrid schema data is 'static");
+    };
+    FoxgloveSchema {
+        name: "foxglove.VoxelGrid".into(),
+        encoding: "protobuf".into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
 /// Encode a VoxelGrid message as protobuf to the buffer provided.
 ///
 /// On success, writes the encoded length to *encoded_len.
@@ -2179,6 +2462,28 @@ pub extern "C" fn foxglove_channel_log_image_annotations(
     }
 }
 
+/// Gets the schema for ImageAnnotations.
+///
+/// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_image_annotations_schema() -> FoxgloveSchema {
+    let native = foxglove::schemas::ImageAnnotations::get_schema()
+        .expect("ImageAnnotations schema is be Some");
+    let name: &'static str = "foxglove.ImageAnnotations";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("ImageAnnotations schema data is 'static");
+    };
+    FoxgloveSchema {
+        name: "foxglove.ImageAnnotations".into(),
+        encoding: "protobuf".into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
 /// Encode a ImageAnnotations message as protobuf to the buffer provided.
 ///
 /// On success, writes the encoded length to *encoded_len.
@@ -2301,6 +2606,28 @@ pub extern "C" fn foxglove_channel_log_key_value_pair(
             tracing::error!("KeyValuePair: {}", e);
             e.into()
         }
+    }
+}
+
+/// Gets the schema for KeyValuePair.
+///
+/// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_key_value_pair_schema() -> FoxgloveSchema {
+    let native =
+        foxglove::schemas::KeyValuePair::get_schema().expect("KeyValuePair schema is be Some");
+    let name: &'static str = "foxglove.KeyValuePair";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("KeyValuePair schema data is 'static");
+    };
+    FoxgloveSchema {
+        name: "foxglove.KeyValuePair".into(),
+        encoding: "protobuf".into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
     }
 }
 
@@ -2461,6 +2788,27 @@ pub extern "C" fn foxglove_channel_log_laser_scan(
             tracing::error!("LaserScan: {}", e);
             e.into()
         }
+    }
+}
+
+/// Gets the schema for LaserScan.
+///
+/// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_laser_scan_schema() -> FoxgloveSchema {
+    let native = foxglove::schemas::LaserScan::get_schema().expect("LaserScan schema is be Some");
+    let name: &'static str = "foxglove.LaserScan";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("LaserScan schema data is 'static");
+    };
+    FoxgloveSchema {
+        name: "foxglove.LaserScan".into(),
+        encoding: "protobuf".into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
     }
 }
 
@@ -2631,6 +2979,28 @@ pub extern "C" fn foxglove_channel_log_line_primitive(
     }
 }
 
+/// Gets the schema for LinePrimitive.
+///
+/// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_line_primitive_schema() -> FoxgloveSchema {
+    let native =
+        foxglove::schemas::LinePrimitive::get_schema().expect("LinePrimitive schema is be Some");
+    let name: &'static str = "foxglove.LinePrimitive";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("LinePrimitive schema data is 'static");
+    };
+    FoxgloveSchema {
+        name: "foxglove.LinePrimitive".into(),
+        encoding: "protobuf".into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
 /// Encode a LinePrimitive message as protobuf to the buffer provided.
 ///
 /// On success, writes the encoded length to *encoded_len.
@@ -2795,6 +3165,28 @@ pub extern "C" fn foxglove_channel_log_location_fix(
     }
 }
 
+/// Gets the schema for LocationFix.
+///
+/// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_location_fix_schema() -> FoxgloveSchema {
+    let native =
+        foxglove::schemas::LocationFix::get_schema().expect("LocationFix schema is be Some");
+    let name: &'static str = "foxglove.LocationFix";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("LocationFix schema data is 'static");
+    };
+    FoxgloveSchema {
+        name: "foxglove.LocationFix".into(),
+        encoding: "protobuf".into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
 /// Encode a LocationFix message as protobuf to the buffer provided.
 ///
 /// On success, writes the encoded length to *encoded_len.
@@ -2912,6 +3304,28 @@ pub extern "C" fn foxglove_channel_log_location_fixes(
             tracing::error!("LocationFixes: {}", e);
             e.into()
         }
+    }
+}
+
+/// Gets the schema for LocationFixes.
+///
+/// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_location_fixes_schema() -> FoxgloveSchema {
+    let native =
+        foxglove::schemas::LocationFixes::get_schema().expect("LocationFixes schema is be Some");
+    let name: &'static str = "foxglove.LocationFixes";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("LocationFixes schema data is 'static");
+    };
+    FoxgloveSchema {
+        name: "foxglove.LocationFixes".into(),
+        encoding: "protobuf".into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
     }
 }
 
@@ -3063,6 +3477,27 @@ pub extern "C" fn foxglove_channel_log_log(
     }
 }
 
+/// Gets the schema for Log.
+///
+/// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_log_schema() -> FoxgloveSchema {
+    let native = foxglove::schemas::Log::get_schema().expect("Log schema is be Some");
+    let name: &'static str = "foxglove.Log";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("Log schema data is 'static");
+    };
+    FoxgloveSchema {
+        name: "foxglove.Log".into(),
+        encoding: "protobuf".into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
 /// Encode a Log message as protobuf to the buffer provided.
 ///
 /// On success, writes the encoded length to *encoded_len.
@@ -3188,6 +3623,28 @@ pub extern "C" fn foxglove_channel_log_scene_entity_deletion(
             tracing::error!("SceneEntityDeletion: {}", e);
             e.into()
         }
+    }
+}
+
+/// Gets the schema for SceneEntityDeletion.
+///
+/// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_scene_entity_deletion_schema() -> FoxgloveSchema {
+    let native = foxglove::schemas::SceneEntityDeletion::get_schema()
+        .expect("SceneEntityDeletion schema is be Some");
+    let name: &'static str = "foxglove.SceneEntityDeletion";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("SceneEntityDeletion schema data is 'static");
+    };
+    FoxgloveSchema {
+        name: "foxglove.SceneEntityDeletion".into(),
+        encoding: "protobuf".into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
     }
 }
 
@@ -3387,6 +3844,28 @@ pub extern "C" fn foxglove_channel_log_scene_entity(
     }
 }
 
+/// Gets the schema for SceneEntity.
+///
+/// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_scene_entity_schema() -> FoxgloveSchema {
+    let native =
+        foxglove::schemas::SceneEntity::get_schema().expect("SceneEntity schema is be Some");
+    let name: &'static str = "foxglove.SceneEntity";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("SceneEntity schema data is 'static");
+    };
+    FoxgloveSchema {
+        name: "foxglove.SceneEntity".into(),
+        encoding: "protobuf".into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
 /// Encode a SceneEntity message as protobuf to the buffer provided.
 ///
 /// On success, writes the encoded length to *encoded_len.
@@ -3510,6 +3989,28 @@ pub extern "C" fn foxglove_channel_log_scene_update(
             tracing::error!("SceneUpdate: {}", e);
             e.into()
         }
+    }
+}
+
+/// Gets the schema for SceneUpdate.
+///
+/// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_scene_update_schema() -> FoxgloveSchema {
+    let native =
+        foxglove::schemas::SceneUpdate::get_schema().expect("SceneUpdate schema is be Some");
+    let name: &'static str = "foxglove.SceneUpdate";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("SceneUpdate schema data is 'static");
+    };
+    FoxgloveSchema {
+        name: "foxglove.SceneUpdate".into(),
+        encoding: "protobuf".into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
     }
 }
 
@@ -3682,6 +4183,28 @@ pub extern "C" fn foxglove_channel_log_model_primitive(
     }
 }
 
+/// Gets the schema for ModelPrimitive.
+///
+/// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_model_primitive_schema() -> FoxgloveSchema {
+    let native =
+        foxglove::schemas::ModelPrimitive::get_schema().expect("ModelPrimitive schema is be Some");
+    let name: &'static str = "foxglove.ModelPrimitive";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("ModelPrimitive schema data is 'static");
+    };
+    FoxgloveSchema {
+        name: "foxglove.ModelPrimitive".into(),
+        encoding: "protobuf".into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
 /// Encode a ModelPrimitive message as protobuf to the buffer provided.
 ///
 /// On success, writes the encoded length to *encoded_len.
@@ -3810,6 +4333,28 @@ pub extern "C" fn foxglove_channel_log_packed_element_field(
     }
 }
 
+/// Gets the schema for PackedElementField.
+///
+/// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_packed_element_field_schema() -> FoxgloveSchema {
+    let native = foxglove::schemas::PackedElementField::get_schema()
+        .expect("PackedElementField schema is be Some");
+    let name: &'static str = "foxglove.PackedElementField";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("PackedElementField schema data is 'static");
+    };
+    FoxgloveSchema {
+        name: "foxglove.PackedElementField".into(),
+        encoding: "protobuf".into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
 /// Encode a PackedElementField message as protobuf to the buffer provided.
 ///
 /// On success, writes the encoded length to *encoded_len.
@@ -3927,6 +4472,27 @@ pub extern "C" fn foxglove_channel_log_point2(
             tracing::error!("Point2: {}", e);
             e.into()
         }
+    }
+}
+
+/// Gets the schema for Point2.
+///
+/// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_point2_schema() -> FoxgloveSchema {
+    let native = foxglove::schemas::Point2::get_schema().expect("Point2 schema is be Some");
+    let name: &'static str = "foxglove.Point2";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("Point2 schema data is 'static");
+    };
+    FoxgloveSchema {
+        name: "foxglove.Point2".into(),
+        encoding: "protobuf".into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
     }
 }
 
@@ -4051,6 +4617,27 @@ pub extern "C" fn foxglove_channel_log_point3(
             tracing::error!("Point3: {}", e);
             e.into()
         }
+    }
+}
+
+/// Gets the schema for Point3.
+///
+/// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_point3_schema() -> FoxgloveSchema {
+    let native = foxglove::schemas::Point3::get_schema().expect("Point3 schema is be Some");
+    let name: &'static str = "foxglove.Point3";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("Point3 schema data is 'static");
+    };
+    FoxgloveSchema {
+        name: "foxglove.Point3".into(),
+        encoding: "protobuf".into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
     }
 }
 
@@ -4205,6 +4792,27 @@ pub extern "C" fn foxglove_channel_log_point_cloud(
             tracing::error!("PointCloud: {}", e);
             e.into()
         }
+    }
+}
+
+/// Gets the schema for PointCloud.
+///
+/// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_point_cloud_schema() -> FoxgloveSchema {
+    let native = foxglove::schemas::PointCloud::get_schema().expect("PointCloud schema is be Some");
+    let name: &'static str = "foxglove.PointCloud";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("PointCloud schema data is 'static");
+    };
+    FoxgloveSchema {
+        name: "foxglove.PointCloud".into(),
+        encoding: "protobuf".into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
     }
 }
 
@@ -4371,6 +4979,28 @@ pub extern "C" fn foxglove_channel_log_points_annotation(
     }
 }
 
+/// Gets the schema for PointsAnnotation.
+///
+/// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_points_annotation_schema() -> FoxgloveSchema {
+    let native = foxglove::schemas::PointsAnnotation::get_schema()
+        .expect("PointsAnnotation schema is be Some");
+    let name: &'static str = "foxglove.PointsAnnotation";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("PointsAnnotation schema data is 'static");
+    };
+    FoxgloveSchema {
+        name: "foxglove.PointsAnnotation".into(),
+        encoding: "protobuf".into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
 /// Encode a PointsAnnotation message as protobuf to the buffer provided.
 ///
 /// On success, writes the encoded length to *encoded_len.
@@ -4501,6 +5131,27 @@ pub extern "C" fn foxglove_channel_log_pose(
             tracing::error!("Pose: {}", e);
             e.into()
         }
+    }
+}
+
+/// Gets the schema for Pose.
+///
+/// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_pose_schema() -> FoxgloveSchema {
+    let native = foxglove::schemas::Pose::get_schema().expect("Pose schema is be Some");
+    let name: &'static str = "foxglove.Pose";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("Pose schema data is 'static");
+    };
+    FoxgloveSchema {
+        name: "foxglove.Pose".into(),
+        encoding: "protobuf".into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
     }
 }
 
@@ -4643,6 +5294,28 @@ pub extern "C" fn foxglove_channel_log_pose_in_frame(
     }
 }
 
+/// Gets the schema for PoseInFrame.
+///
+/// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_pose_in_frame_schema() -> FoxgloveSchema {
+    let native =
+        foxglove::schemas::PoseInFrame::get_schema().expect("PoseInFrame schema is be Some");
+    let name: &'static str = "foxglove.PoseInFrame";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("PoseInFrame schema data is 'static");
+    };
+    FoxgloveSchema {
+        name: "foxglove.PoseInFrame".into(),
+        encoding: "protobuf".into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
 /// Encode a PoseInFrame message as protobuf to the buffer provided.
 ///
 /// On success, writes the encoded length to *encoded_len.
@@ -4778,6 +5451,28 @@ pub extern "C" fn foxglove_channel_log_poses_in_frame(
     }
 }
 
+/// Gets the schema for PosesInFrame.
+///
+/// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_poses_in_frame_schema() -> FoxgloveSchema {
+    let native =
+        foxglove::schemas::PosesInFrame::get_schema().expect("PosesInFrame schema is be Some");
+    let name: &'static str = "foxglove.PosesInFrame";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("PosesInFrame schema data is 'static");
+    };
+    FoxgloveSchema {
+        name: "foxglove.PosesInFrame".into(),
+        encoding: "protobuf".into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
 /// Encode a PosesInFrame message as protobuf to the buffer provided.
 ///
 /// On success, writes the encoded length to *encoded_len.
@@ -4904,6 +5599,27 @@ pub extern "C" fn foxglove_channel_log_quaternion(
             tracing::error!("Quaternion: {}", e);
             e.into()
         }
+    }
+}
+
+/// Gets the schema for Quaternion.
+///
+/// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_quaternion_schema() -> FoxgloveSchema {
+    let native = foxglove::schemas::Quaternion::get_schema().expect("Quaternion schema is be Some");
+    let name: &'static str = "foxglove.Quaternion";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("Quaternion schema data is 'static");
+    };
+    FoxgloveSchema {
+        name: "foxglove.Quaternion".into(),
+        encoding: "protobuf".into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
     }
 }
 
@@ -5045,6 +5761,27 @@ pub extern "C" fn foxglove_channel_log_raw_audio(
             tracing::error!("RawAudio: {}", e);
             e.into()
         }
+    }
+}
+
+/// Gets the schema for RawAudio.
+///
+/// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_raw_audio_schema() -> FoxgloveSchema {
+    let native = foxglove::schemas::RawAudio::get_schema().expect("RawAudio schema is be Some");
+    let name: &'static str = "foxglove.RawAudio";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("RawAudio schema data is 'static");
+    };
+    FoxgloveSchema {
+        name: "foxglove.RawAudio".into(),
+        encoding: "protobuf".into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
     }
 }
 
@@ -5257,6 +5994,27 @@ pub extern "C" fn foxglove_channel_log_raw_image(
     }
 }
 
+/// Gets the schema for RawImage.
+///
+/// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_raw_image_schema() -> FoxgloveSchema {
+    let native = foxglove::schemas::RawImage::get_schema().expect("RawImage schema is be Some");
+    let name: &'static str = "foxglove.RawImage";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("RawImage schema data is 'static");
+    };
+    FoxgloveSchema {
+        name: "foxglove.RawImage".into(),
+        encoding: "protobuf".into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
 /// Encode a RawImage message as protobuf to the buffer provided.
 ///
 /// On success, writes the encoded length to *encoded_len.
@@ -5398,6 +6156,28 @@ pub extern "C" fn foxglove_channel_log_sphere_primitive(
             tracing::error!("SpherePrimitive: {}", e);
             e.into()
         }
+    }
+}
+
+/// Gets the schema for SpherePrimitive.
+///
+/// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_sphere_primitive_schema() -> FoxgloveSchema {
+    let native = foxglove::schemas::SpherePrimitive::get_schema()
+        .expect("SpherePrimitive schema is be Some");
+    let name: &'static str = "foxglove.SpherePrimitive";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("SpherePrimitive schema data is 'static");
+    };
+    FoxgloveSchema {
+        name: "foxglove.SpherePrimitive".into(),
+        encoding: "protobuf".into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
     }
 }
 
@@ -5560,6 +6340,28 @@ pub extern "C" fn foxglove_channel_log_text_annotation(
     }
 }
 
+/// Gets the schema for TextAnnotation.
+///
+/// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_text_annotation_schema() -> FoxgloveSchema {
+    let native =
+        foxglove::schemas::TextAnnotation::get_schema().expect("TextAnnotation schema is be Some");
+    let name: &'static str = "foxglove.TextAnnotation";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("TextAnnotation schema data is 'static");
+    };
+    FoxgloveSchema {
+        name: "foxglove.TextAnnotation".into(),
+        encoding: "protobuf".into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
 /// Encode a TextAnnotation message as protobuf to the buffer provided.
 ///
 /// On success, writes the encoded length to *encoded_len.
@@ -5709,6 +6511,28 @@ pub extern "C" fn foxglove_channel_log_text_primitive(
             tracing::error!("TextPrimitive: {}", e);
             e.into()
         }
+    }
+}
+
+/// Gets the schema for TextPrimitive.
+///
+/// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_text_primitive_schema() -> FoxgloveSchema {
+    let native =
+        foxglove::schemas::TextPrimitive::get_schema().expect("TextPrimitive schema is be Some");
+    let name: &'static str = "foxglove.TextPrimitive";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("TextPrimitive schema data is 'static");
+    };
+    FoxgloveSchema {
+        name: "foxglove.TextPrimitive".into(),
+        encoding: "protobuf".into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
     }
 }
 
@@ -5870,6 +6694,28 @@ pub extern "C" fn foxglove_channel_log_triangle_list_primitive(
     }
 }
 
+/// Gets the schema for TriangleListPrimitive.
+///
+/// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_triangle_list_primitive_schema() -> FoxgloveSchema {
+    let native = foxglove::schemas::TriangleListPrimitive::get_schema()
+        .expect("TriangleListPrimitive schema is be Some");
+    let name: &'static str = "foxglove.TriangleListPrimitive";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("TriangleListPrimitive schema data is 'static");
+    };
+    FoxgloveSchema {
+        name: "foxglove.TriangleListPrimitive".into(),
+        encoding: "protobuf".into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
 /// Encode a TriangleListPrimitive message as protobuf to the buffer provided.
 ///
 /// On success, writes the encoded length to *encoded_len.
@@ -5987,6 +6833,27 @@ pub extern "C" fn foxglove_channel_log_vector2(
             tracing::error!("Vector2: {}", e);
             e.into()
         }
+    }
+}
+
+/// Gets the schema for Vector2.
+///
+/// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_vector2_schema() -> FoxgloveSchema {
+    let native = foxglove::schemas::Vector2::get_schema().expect("Vector2 schema is be Some");
+    let name: &'static str = "foxglove.Vector2";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("Vector2 schema data is 'static");
+    };
+    FoxgloveSchema {
+        name: "foxglove.Vector2".into(),
+        encoding: "protobuf".into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
     }
 }
 
@@ -6111,6 +6978,27 @@ pub extern "C" fn foxglove_channel_log_vector3(
             tracing::error!("Vector3: {}", e);
             e.into()
         }
+    }
+}
+
+/// Gets the schema for Vector3.
+///
+/// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_vector3_schema() -> FoxgloveSchema {
+    let native = foxglove::schemas::Vector3::get_schema().expect("Vector3 schema is be Some");
+    let name: &'static str = "foxglove.Vector3";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("Vector3 schema data is 'static");
+    };
+    FoxgloveSchema {
+        name: "foxglove.Vector3".into(),
+        encoding: "protobuf".into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
     }
 }
 

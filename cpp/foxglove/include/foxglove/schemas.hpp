@@ -4,6 +4,7 @@
 
 #include <foxglove/context.hpp>
 #include <foxglove/error.hpp>
+#include <foxglove/schema.hpp>
 
 #include <array>
 #include <cstdint>
@@ -48,6 +49,11 @@ struct Vector3 {
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
   FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
+
+  /// @brief Get the Vector3 schema.
+  ///
+  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  static FoxgloveSchema schema();
 };
 
 /// @brief A [quaternion](https://eater.net/quaternions) representing a rotation in 3D space
@@ -76,6 +82,11 @@ struct Quaternion {
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
   FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
+
+  /// @brief Get the Quaternion schema.
+  ///
+  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  static FoxgloveSchema schema();
 };
 
 /// @brief A position and orientation for an object or reference frame in 3D space
@@ -98,6 +109,11 @@ struct Pose {
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
   FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
+
+  /// @brief Get the Pose schema.
+  ///
+  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  static FoxgloveSchema schema();
 };
 
 /// @brief A color in RGBA format
@@ -126,6 +142,11 @@ struct Color {
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
   FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
+
+  /// @brief Get the Color schema.
+  ///
+  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  static FoxgloveSchema schema();
 };
 
 /// @brief A primitive representing an arrow
@@ -161,6 +182,11 @@ struct ArrowPrimitive {
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
   FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
+
+  /// @brief Get the ArrowPrimitive schema.
+  ///
+  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  static FoxgloveSchema schema();
 };
 
 /// @brief A timestamp composed of seconds and nanoseconds
@@ -273,6 +299,11 @@ struct CameraCalibration {
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
   FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
+
+  /// @brief Get the CameraCalibration schema.
+  ///
+  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  static FoxgloveSchema schema();
 };
 
 /// @brief A point representing a position in 2D space
@@ -295,6 +326,11 @@ struct Point2 {
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
   FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
+
+  /// @brief Get the Point2 schema.
+  ///
+  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  static FoxgloveSchema schema();
 };
 
 /// @brief A circle annotation on a 2D image
@@ -331,6 +367,11 @@ struct CircleAnnotation {
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
   FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
+
+  /// @brief Get the CircleAnnotation schema.
+  ///
+  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  static FoxgloveSchema schema();
 };
 
 /// @brief A compressed image
@@ -363,6 +404,11 @@ struct CompressedImage {
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
   FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
+
+  /// @brief Get the CompressedImage schema.
+  ///
+  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  static FoxgloveSchema schema();
 };
 
 /// @brief A single frame of a compressed video bitstream
@@ -430,6 +476,11 @@ struct CompressedVideo {
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
   FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
+
+  /// @brief Get the CompressedVideo schema.
+  ///
+  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  static FoxgloveSchema schema();
 };
 
 /// @brief A primitive representing a cylinder, elliptic cylinder, or truncated cone
@@ -464,6 +515,11 @@ struct CylinderPrimitive {
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
   FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
+
+  /// @brief Get the CylinderPrimitive schema.
+  ///
+  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  static FoxgloveSchema schema();
 };
 
 /// @brief A primitive representing a cube or rectangular prism
@@ -489,6 +545,11 @@ struct CubePrimitive {
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
   FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
+
+  /// @brief Get the CubePrimitive schema.
+  ///
+  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  static FoxgloveSchema schema();
 };
 
 /// @brief A duration of time, composed of seconds and nanoseconds
@@ -529,6 +590,11 @@ struct FrameTransform {
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
   FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
+
+  /// @brief Get the FrameTransform schema.
+  ///
+  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  static FoxgloveSchema schema();
 };
 
 /// @brief An array of FrameTransform messages
@@ -548,6 +614,11 @@ struct FrameTransforms {
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
   FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
+
+  /// @brief Get the FrameTransforms schema.
+  ///
+  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  static FoxgloveSchema schema();
 };
 
 /// @brief GeoJSON data for annotating maps
@@ -567,6 +638,11 @@ struct GeoJSON {
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
   FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
+
+  /// @brief Get the GeoJSON schema.
+  ///
+  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  static FoxgloveSchema schema();
 };
 
 /// @brief A vector in 2D space that represents a direction only
@@ -589,6 +665,11 @@ struct Vector2 {
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
   FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
+
+  /// @brief Get the Vector2 schema.
+  ///
+  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  static FoxgloveSchema schema();
 };
 
 /// @brief A field present within each element in a byte array of packed elements.
@@ -635,6 +716,11 @@ struct PackedElementField {
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
   FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
+
+  /// @brief Get the PackedElementField schema.
+  ///
+  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  static FoxgloveSchema schema();
 };
 
 /// @brief A 2D grid of data
@@ -684,6 +770,11 @@ struct Grid {
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
   FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
+
+  /// @brief Get the Grid schema.
+  ///
+  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  static FoxgloveSchema schema();
 };
 
 /// @brief A 3D grid of data
@@ -739,6 +830,11 @@ struct VoxelGrid {
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
   FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
+
+  /// @brief Get the VoxelGrid schema.
+  ///
+  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  static FoxgloveSchema schema();
 };
 
 /// @brief An array of points on a 2D image
@@ -792,6 +888,11 @@ struct PointsAnnotation {
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
   FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
+
+  /// @brief Get the PointsAnnotation schema.
+  ///
+  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  static FoxgloveSchema schema();
 };
 
 /// @brief A text label on a 2D image
@@ -828,6 +929,11 @@ struct TextAnnotation {
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
   FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
+
+  /// @brief Get the TextAnnotation schema.
+  ///
+  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  static FoxgloveSchema schema();
 };
 
 /// @brief Array of annotations for a 2D image
@@ -853,6 +959,11 @@ struct ImageAnnotations {
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
   FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
+
+  /// @brief Get the ImageAnnotations schema.
+  ///
+  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  static FoxgloveSchema schema();
 };
 
 /// @brief A key with its associated value
@@ -875,6 +986,11 @@ struct KeyValuePair {
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
   FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
+
+  /// @brief Get the KeyValuePair schema.
+  ///
+  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  static FoxgloveSchema schema();
 };
 
 /// @brief A single scan from a planar laser range-finder
@@ -915,6 +1031,11 @@ struct LaserScan {
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
   FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
+
+  /// @brief Get the LaserScan schema.
+  ///
+  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  static FoxgloveSchema schema();
 };
 
 /// @brief A point representing a position in 3D space
@@ -940,6 +1061,11 @@ struct Point3 {
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
   FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
+
+  /// @brief Get the Point3 schema.
+  ///
+  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  static FoxgloveSchema schema();
 };
 
 /// @brief A primitive representing a series of points connected by lines
@@ -995,6 +1121,11 @@ struct LinePrimitive {
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
   FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
+
+  /// @brief Get the LinePrimitive schema.
+  ///
+  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  static FoxgloveSchema schema();
 };
 
 /// @brief A navigation satellite fix for any Global Navigation Satellite System
@@ -1048,6 +1179,11 @@ struct LocationFix {
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
   FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
+
+  /// @brief Get the LocationFix schema.
+  ///
+  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  static FoxgloveSchema schema();
 };
 
 /// @brief A group of LocationFix messages
@@ -1067,6 +1203,11 @@ struct LocationFixes {
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
   FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
+
+  /// @brief Get the LocationFixes schema.
+  ///
+  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  static FoxgloveSchema schema();
 };
 
 /// @brief A log message
@@ -1116,6 +1257,11 @@ struct Log {
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
   FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
+
+  /// @brief Get the Log schema.
+  ///
+  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  static FoxgloveSchema schema();
 };
 
 /// @brief Command to remove previously published entities
@@ -1149,6 +1295,11 @@ struct SceneEntityDeletion {
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
   FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
+
+  /// @brief Get the SceneEntityDeletion schema.
+  ///
+  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  static FoxgloveSchema schema();
 };
 
 /// @brief A primitive representing a sphere or ellipsoid
@@ -1174,6 +1325,11 @@ struct SpherePrimitive {
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
   FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
+
+  /// @brief Get the SpherePrimitive schema.
+  ///
+  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  static FoxgloveSchema schema();
 };
 
 /// @brief A primitive representing a set of triangles or a surface tiled by triangles
@@ -1210,6 +1366,11 @@ struct TriangleListPrimitive {
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
   FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
+
+  /// @brief Get the TriangleListPrimitive schema.
+  ///
+  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  static FoxgloveSchema schema();
 };
 
 /// @brief A primitive representing a text label
@@ -1247,6 +1408,11 @@ struct TextPrimitive {
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
   FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
+
+  /// @brief Get the TextPrimitive schema.
+  ///
+  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  static FoxgloveSchema schema();
 };
 
 /// @brief A primitive representing a 3D model file loaded from an external URL or embedded data
@@ -1289,6 +1455,11 @@ struct ModelPrimitive {
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
   FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
+
+  /// @brief Get the ModelPrimitive schema.
+  ///
+  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  static FoxgloveSchema schema();
 };
 
 /// @brief A visual element in a 3D scene. An entity may be composed of multiple primitives which
@@ -1352,6 +1523,11 @@ struct SceneEntity {
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
   FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
+
+  /// @brief Get the SceneEntity schema.
+  ///
+  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  static FoxgloveSchema schema();
 };
 
 /// @brief An update to the entities displayed in a 3D scene
@@ -1374,6 +1550,11 @@ struct SceneUpdate {
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
   FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
+
+  /// @brief Get the SceneUpdate schema.
+  ///
+  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  static FoxgloveSchema schema();
 };
 
 /// @brief A collection of N-dimensional points, which may contain additional fields with
@@ -1411,6 +1592,11 @@ struct PointCloud {
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
   FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
+
+  /// @brief Get the PointCloud schema.
+  ///
+  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  static FoxgloveSchema schema();
 };
 
 /// @brief A timestamped pose for an object or reference frame in 3D space
@@ -1436,6 +1622,11 @@ struct PoseInFrame {
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
   FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
+
+  /// @brief Get the PoseInFrame schema.
+  ///
+  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  static FoxgloveSchema schema();
 };
 
 /// @brief An array of timestamped poses for an object or reference frame in 3D space
@@ -1461,6 +1652,11 @@ struct PosesInFrame {
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
   FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
+
+  /// @brief Get the PosesInFrame schema.
+  ///
+  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  static FoxgloveSchema schema();
 };
 
 /// @brief A single block of an audio bitstream
@@ -1492,6 +1688,11 @@ struct RawAudio {
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
   FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
+
+  /// @brief Get the RawAudio schema.
+  ///
+  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  static FoxgloveSchema schema();
 };
 
 /// @brief A raw image
@@ -1595,6 +1796,11 @@ struct RawImage {
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
   FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
+
+  /// @brief Get the RawImage schema.
+  ///
+  /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+  static FoxgloveSchema schema();
 };
 
 /// @brief A channel for logging ArrowPrimitive messages to a topic.

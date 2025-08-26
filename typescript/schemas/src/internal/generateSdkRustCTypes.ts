@@ -246,6 +246,27 @@ pub extern "C" fn foxglove_channel_log_${snakeName}(channel: Option<&FoxgloveCha
   }
 }
 
+/// Gets the schema for ${name}.
+///
+/// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_${snakeName}_schema() -> FoxgloveSchema {
+    let native = foxglove::schemas::${name}::get_schema().expect("${name} schema is be Some");
+    let name: &'static str = "foxglove.${name}";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+      unreachable!("${name} schema data is 'static");
+    };
+    FoxgloveSchema {
+      name: "foxglove.${name}".into(),
+      encoding: "protobuf".into(),
+      data: data.as_ptr(),
+      data_len: data.len(),
+    }
+}
+
 /// Encode a ${name} message as protobuf to the buffer provided.
 ///
 /// On success, writes the encoded length to *encoded_len.
@@ -301,7 +322,7 @@ pub unsafe extern "C" fn foxglove_${snakeName}_encode(
     "",
     "use foxglove::Encode;",
     "",
-    "use crate::{FoxgloveString, FoxgloveError, FoxgloveChannel, FoxgloveContext, FoxgloveTimestamp, FoxgloveDuration, log_msg_to_channel, result_to_c, do_foxglove_channel_create, FoxgloveSinkId};",
+    "use crate::{FoxgloveSchema, FoxgloveString, FoxgloveError, FoxgloveChannel, FoxgloveContext, FoxgloveTimestamp, FoxgloveDuration, log_msg_to_channel, result_to_c, do_foxglove_channel_create, FoxgloveSinkId};",
     "use crate::arena::{Arena, BorrowToNative};",
     "use crate::util::{bytes_from_raw, string_from_raw, vec_from_raw};",
   ];
