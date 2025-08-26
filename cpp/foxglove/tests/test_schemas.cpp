@@ -116,7 +116,7 @@ TEST_CASE("triangle list primitive to protobuf") {
 }
 
 TEST_CASE("triangle list primitive returns a schema") {
-  FoxgloveSchema schema = TriangleListPrimitive::schema();
+  Schema schema = TriangleListPrimitive::schema();
   REQUIRE(schema.name == "foxglove.TriangleListPrimitive");
   REQUIRE(schema.encoding == "protobuf");
   REQUIRE(schema.data != NULL);

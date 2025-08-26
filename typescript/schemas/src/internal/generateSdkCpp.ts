@@ -181,8 +181,8 @@ export function generateHppSchemas(
             `
       /// @brief Get the ${schema.name} schema.
       ///
-      /// All buffers in the returned schema are statically allocated.
-      static FoxgloveSchema schema();
+      /// The schema data returned is statically allocated.
+      static Schema schema();
             `,
           ]
         : []),
@@ -416,12 +416,12 @@ export function generateCppSchemas(schemas: FoxgloveMessageSchema[]): string {
   const getSchemaImpls = schemas.filter(shouldGenerateChannel).flatMap((schema) => {
     const snakeName = toSnakeCase(schema.name);
     return [
-      `FoxgloveSchema ${schema.name}::schema() {`,
+      `Schema ${schema.name}::schema() {`,
       `    struct foxglove_schema c_schema = foxglove_${snakeName}_schema();`,
-      "    FoxgloveSchema result;",
-      "    result.name = std::string_view(c_schema.name.data, c_schema.name.len);",
-      "    result.encoding = std::string_view(c_schema.encoding.data, c_schema.encoding.len);",
-      "    result.data = c_schema.data;",
+      "    Schema result;",
+      "    result.name = std::string(c_schema.name.data, c_schema.name.len);",
+      "    result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);",
+      "    result.data = (const std::byte*)(c_schema.data);",
       "    result.data_len = c_schema.data_len;",
       "    return result;",
       "}\n",

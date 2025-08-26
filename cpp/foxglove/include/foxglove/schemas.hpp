@@ -52,8 +52,8 @@ struct Vector3 {
 
   /// @brief Get the Vector3 schema.
   ///
-  /// All buffers in the returned schema are statically allocated.
-  static FoxgloveSchema schema();
+  /// The schema data returned is statically allocated.
+  static Schema schema();
 };
 
 /// @brief A [quaternion](https://eater.net/quaternions) representing a rotation in 3D space
@@ -85,8 +85,8 @@ struct Quaternion {
 
   /// @brief Get the Quaternion schema.
   ///
-  /// All buffers in the returned schema are statically allocated.
-  static FoxgloveSchema schema();
+  /// The schema data returned is statically allocated.
+  static Schema schema();
 };
 
 /// @brief A position and orientation for an object or reference frame in 3D space
@@ -112,8 +112,8 @@ struct Pose {
 
   /// @brief Get the Pose schema.
   ///
-  /// All buffers in the returned schema are statically allocated.
-  static FoxgloveSchema schema();
+  /// The schema data returned is statically allocated.
+  static Schema schema();
 };
 
 /// @brief A color in RGBA format
@@ -145,8 +145,8 @@ struct Color {
 
   /// @brief Get the Color schema.
   ///
-  /// All buffers in the returned schema are statically allocated.
-  static FoxgloveSchema schema();
+  /// The schema data returned is statically allocated.
+  static Schema schema();
 };
 
 /// @brief A primitive representing an arrow
@@ -185,8 +185,8 @@ struct ArrowPrimitive {
 
   /// @brief Get the ArrowPrimitive schema.
   ///
-  /// All buffers in the returned schema are statically allocated.
-  static FoxgloveSchema schema();
+  /// The schema data returned is statically allocated.
+  static Schema schema();
 };
 
 /// @brief A timestamp composed of seconds and nanoseconds
@@ -302,8 +302,8 @@ struct CameraCalibration {
 
   /// @brief Get the CameraCalibration schema.
   ///
-  /// All buffers in the returned schema are statically allocated.
-  static FoxgloveSchema schema();
+  /// The schema data returned is statically allocated.
+  static Schema schema();
 };
 
 /// @brief A point representing a position in 2D space
@@ -329,8 +329,8 @@ struct Point2 {
 
   /// @brief Get the Point2 schema.
   ///
-  /// All buffers in the returned schema are statically allocated.
-  static FoxgloveSchema schema();
+  /// The schema data returned is statically allocated.
+  static Schema schema();
 };
 
 /// @brief A circle annotation on a 2D image
@@ -370,8 +370,8 @@ struct CircleAnnotation {
 
   /// @brief Get the CircleAnnotation schema.
   ///
-  /// All buffers in the returned schema are statically allocated.
-  static FoxgloveSchema schema();
+  /// The schema data returned is statically allocated.
+  static Schema schema();
 };
 
 /// @brief A compressed image
@@ -407,8 +407,8 @@ struct CompressedImage {
 
   /// @brief Get the CompressedImage schema.
   ///
-  /// All buffers in the returned schema are statically allocated.
-  static FoxgloveSchema schema();
+  /// The schema data returned is statically allocated.
+  static Schema schema();
 };
 
 /// @brief A single frame of a compressed video bitstream
@@ -479,8 +479,8 @@ struct CompressedVideo {
 
   /// @brief Get the CompressedVideo schema.
   ///
-  /// All buffers in the returned schema are statically allocated.
-  static FoxgloveSchema schema();
+  /// The schema data returned is statically allocated.
+  static Schema schema();
 };
 
 /// @brief A primitive representing a cylinder, elliptic cylinder, or truncated cone
@@ -518,8 +518,8 @@ struct CylinderPrimitive {
 
   /// @brief Get the CylinderPrimitive schema.
   ///
-  /// All buffers in the returned schema are statically allocated.
-  static FoxgloveSchema schema();
+  /// The schema data returned is statically allocated.
+  static Schema schema();
 };
 
 /// @brief A primitive representing a cube or rectangular prism
@@ -548,8 +548,8 @@ struct CubePrimitive {
 
   /// @brief Get the CubePrimitive schema.
   ///
-  /// All buffers in the returned schema are statically allocated.
-  static FoxgloveSchema schema();
+  /// The schema data returned is statically allocated.
+  static Schema schema();
 };
 
 /// @brief A duration of time, composed of seconds and nanoseconds
@@ -593,8 +593,8 @@ struct FrameTransform {
 
   /// @brief Get the FrameTransform schema.
   ///
-  /// All buffers in the returned schema are statically allocated.
-  static FoxgloveSchema schema();
+  /// The schema data returned is statically allocated.
+  static Schema schema();
 };
 
 /// @brief An array of FrameTransform messages
@@ -617,8 +617,8 @@ struct FrameTransforms {
 
   /// @brief Get the FrameTransforms schema.
   ///
-  /// All buffers in the returned schema are statically allocated.
-  static FoxgloveSchema schema();
+  /// The schema data returned is statically allocated.
+  static Schema schema();
 };
 
 /// @brief GeoJSON data for annotating maps
@@ -641,8 +641,8 @@ struct GeoJSON {
 
   /// @brief Get the GeoJSON schema.
   ///
-  /// All buffers in the returned schema are statically allocated.
-  static FoxgloveSchema schema();
+  /// The schema data returned is statically allocated.
+  static Schema schema();
 };
 
 /// @brief A vector in 2D space that represents a direction only
@@ -668,8 +668,8 @@ struct Vector2 {
 
   /// @brief Get the Vector2 schema.
   ///
-  /// All buffers in the returned schema are statically allocated.
-  static FoxgloveSchema schema();
+  /// The schema data returned is statically allocated.
+  static Schema schema();
 };
 
 /// @brief A field present within each element in a byte array of packed elements.
@@ -719,8 +719,8 @@ struct PackedElementField {
 
   /// @brief Get the PackedElementField schema.
   ///
-  /// All buffers in the returned schema are statically allocated.
-  static FoxgloveSchema schema();
+  /// The schema data returned is statically allocated.
+  static Schema schema();
 };
 
 /// @brief A 2D grid of data
@@ -773,8 +773,8 @@ struct Grid {
 
   /// @brief Get the Grid schema.
   ///
-  /// All buffers in the returned schema are statically allocated.
-  static FoxgloveSchema schema();
+  /// The schema data returned is statically allocated.
+  static Schema schema();
 };
 
 /// @brief A 3D grid of data
@@ -833,8 +833,8 @@ struct VoxelGrid {
 
   /// @brief Get the VoxelGrid schema.
   ///
-  /// All buffers in the returned schema are statically allocated.
-  static FoxgloveSchema schema();
+  /// The schema data returned is statically allocated.
+  static Schema schema();
 };
 
 /// @brief An array of points on a 2D image
@@ -891,8 +891,8 @@ struct PointsAnnotation {
 
   /// @brief Get the PointsAnnotation schema.
   ///
-  /// All buffers in the returned schema are statically allocated.
-  static FoxgloveSchema schema();
+  /// The schema data returned is statically allocated.
+  static Schema schema();
 };
 
 /// @brief A text label on a 2D image
@@ -932,8 +932,8 @@ struct TextAnnotation {
 
   /// @brief Get the TextAnnotation schema.
   ///
-  /// All buffers in the returned schema are statically allocated.
-  static FoxgloveSchema schema();
+  /// The schema data returned is statically allocated.
+  static Schema schema();
 };
 
 /// @brief Array of annotations for a 2D image
@@ -962,8 +962,8 @@ struct ImageAnnotations {
 
   /// @brief Get the ImageAnnotations schema.
   ///
-  /// All buffers in the returned schema are statically allocated.
-  static FoxgloveSchema schema();
+  /// The schema data returned is statically allocated.
+  static Schema schema();
 };
 
 /// @brief A key with its associated value
@@ -989,8 +989,8 @@ struct KeyValuePair {
 
   /// @brief Get the KeyValuePair schema.
   ///
-  /// All buffers in the returned schema are statically allocated.
-  static FoxgloveSchema schema();
+  /// The schema data returned is statically allocated.
+  static Schema schema();
 };
 
 /// @brief A single scan from a planar laser range-finder
@@ -1034,8 +1034,8 @@ struct LaserScan {
 
   /// @brief Get the LaserScan schema.
   ///
-  /// All buffers in the returned schema are statically allocated.
-  static FoxgloveSchema schema();
+  /// The schema data returned is statically allocated.
+  static Schema schema();
 };
 
 /// @brief A point representing a position in 3D space
@@ -1064,8 +1064,8 @@ struct Point3 {
 
   /// @brief Get the Point3 schema.
   ///
-  /// All buffers in the returned schema are statically allocated.
-  static FoxgloveSchema schema();
+  /// The schema data returned is statically allocated.
+  static Schema schema();
 };
 
 /// @brief A primitive representing a series of points connected by lines
@@ -1124,8 +1124,8 @@ struct LinePrimitive {
 
   /// @brief Get the LinePrimitive schema.
   ///
-  /// All buffers in the returned schema are statically allocated.
-  static FoxgloveSchema schema();
+  /// The schema data returned is statically allocated.
+  static Schema schema();
 };
 
 /// @brief A navigation satellite fix for any Global Navigation Satellite System
@@ -1182,8 +1182,8 @@ struct LocationFix {
 
   /// @brief Get the LocationFix schema.
   ///
-  /// All buffers in the returned schema are statically allocated.
-  static FoxgloveSchema schema();
+  /// The schema data returned is statically allocated.
+  static Schema schema();
 };
 
 /// @brief A group of LocationFix messages
@@ -1206,8 +1206,8 @@ struct LocationFixes {
 
   /// @brief Get the LocationFixes schema.
   ///
-  /// All buffers in the returned schema are statically allocated.
-  static FoxgloveSchema schema();
+  /// The schema data returned is statically allocated.
+  static Schema schema();
 };
 
 /// @brief A log message
@@ -1260,8 +1260,8 @@ struct Log {
 
   /// @brief Get the Log schema.
   ///
-  /// All buffers in the returned schema are statically allocated.
-  static FoxgloveSchema schema();
+  /// The schema data returned is statically allocated.
+  static Schema schema();
 };
 
 /// @brief Command to remove previously published entities
@@ -1298,8 +1298,8 @@ struct SceneEntityDeletion {
 
   /// @brief Get the SceneEntityDeletion schema.
   ///
-  /// All buffers in the returned schema are statically allocated.
-  static FoxgloveSchema schema();
+  /// The schema data returned is statically allocated.
+  static Schema schema();
 };
 
 /// @brief A primitive representing a sphere or ellipsoid
@@ -1328,8 +1328,8 @@ struct SpherePrimitive {
 
   /// @brief Get the SpherePrimitive schema.
   ///
-  /// All buffers in the returned schema are statically allocated.
-  static FoxgloveSchema schema();
+  /// The schema data returned is statically allocated.
+  static Schema schema();
 };
 
 /// @brief A primitive representing a set of triangles or a surface tiled by triangles
@@ -1369,8 +1369,8 @@ struct TriangleListPrimitive {
 
   /// @brief Get the TriangleListPrimitive schema.
   ///
-  /// All buffers in the returned schema are statically allocated.
-  static FoxgloveSchema schema();
+  /// The schema data returned is statically allocated.
+  static Schema schema();
 };
 
 /// @brief A primitive representing a text label
@@ -1411,8 +1411,8 @@ struct TextPrimitive {
 
   /// @brief Get the TextPrimitive schema.
   ///
-  /// All buffers in the returned schema are statically allocated.
-  static FoxgloveSchema schema();
+  /// The schema data returned is statically allocated.
+  static Schema schema();
 };
 
 /// @brief A primitive representing a 3D model file loaded from an external URL or embedded data
@@ -1458,8 +1458,8 @@ struct ModelPrimitive {
 
   /// @brief Get the ModelPrimitive schema.
   ///
-  /// All buffers in the returned schema are statically allocated.
-  static FoxgloveSchema schema();
+  /// The schema data returned is statically allocated.
+  static Schema schema();
 };
 
 /// @brief A visual element in a 3D scene. An entity may be composed of multiple primitives which
@@ -1526,8 +1526,8 @@ struct SceneEntity {
 
   /// @brief Get the SceneEntity schema.
   ///
-  /// All buffers in the returned schema are statically allocated.
-  static FoxgloveSchema schema();
+  /// The schema data returned is statically allocated.
+  static Schema schema();
 };
 
 /// @brief An update to the entities displayed in a 3D scene
@@ -1553,8 +1553,8 @@ struct SceneUpdate {
 
   /// @brief Get the SceneUpdate schema.
   ///
-  /// All buffers in the returned schema are statically allocated.
-  static FoxgloveSchema schema();
+  /// The schema data returned is statically allocated.
+  static Schema schema();
 };
 
 /// @brief A collection of N-dimensional points, which may contain additional fields with
@@ -1595,8 +1595,8 @@ struct PointCloud {
 
   /// @brief Get the PointCloud schema.
   ///
-  /// All buffers in the returned schema are statically allocated.
-  static FoxgloveSchema schema();
+  /// The schema data returned is statically allocated.
+  static Schema schema();
 };
 
 /// @brief A timestamped pose for an object or reference frame in 3D space
@@ -1625,8 +1625,8 @@ struct PoseInFrame {
 
   /// @brief Get the PoseInFrame schema.
   ///
-  /// All buffers in the returned schema are statically allocated.
-  static FoxgloveSchema schema();
+  /// The schema data returned is statically allocated.
+  static Schema schema();
 };
 
 /// @brief An array of timestamped poses for an object or reference frame in 3D space
@@ -1655,8 +1655,8 @@ struct PosesInFrame {
 
   /// @brief Get the PosesInFrame schema.
   ///
-  /// All buffers in the returned schema are statically allocated.
-  static FoxgloveSchema schema();
+  /// The schema data returned is statically allocated.
+  static Schema schema();
 };
 
 /// @brief A single block of an audio bitstream
@@ -1691,8 +1691,8 @@ struct RawAudio {
 
   /// @brief Get the RawAudio schema.
   ///
-  /// All buffers in the returned schema are statically allocated.
-  static FoxgloveSchema schema();
+  /// The schema data returned is statically allocated.
+  static Schema schema();
 };
 
 /// @brief A raw image
@@ -1799,8 +1799,8 @@ struct RawImage {
 
   /// @brief Get the RawImage schema.
   ///
-  /// All buffers in the returned schema are statically allocated.
-  static FoxgloveSchema schema();
+  /// The schema data returned is statically allocated.
+  static Schema schema();
 };
 
 /// @brief A channel for logging ArrowPrimitive messages to a topic.

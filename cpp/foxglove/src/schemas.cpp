@@ -1903,412 +1903,412 @@ FoxgloveError VoxelGrid::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   return FoxgloveError(foxglove_voxel_grid_encode(&c_msg, ptr, len, encoded_len));
 }
 
-FoxgloveSchema ArrowPrimitive::schema() {
+Schema ArrowPrimitive::schema() {
   struct foxglove_schema c_schema = foxglove_arrow_primitive_schema();
-  FoxgloveSchema result;
-  result.name = std::string_view(c_schema.name.data, c_schema.name.len);
-  result.encoding = std::string_view(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = c_schema.data;
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = (const std::byte*)(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
 
-FoxgloveSchema CameraCalibration::schema() {
+Schema CameraCalibration::schema() {
   struct foxglove_schema c_schema = foxglove_camera_calibration_schema();
-  FoxgloveSchema result;
-  result.name = std::string_view(c_schema.name.data, c_schema.name.len);
-  result.encoding = std::string_view(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = c_schema.data;
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = (const std::byte*)(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
 
-FoxgloveSchema CircleAnnotation::schema() {
+Schema CircleAnnotation::schema() {
   struct foxglove_schema c_schema = foxglove_circle_annotation_schema();
-  FoxgloveSchema result;
-  result.name = std::string_view(c_schema.name.data, c_schema.name.len);
-  result.encoding = std::string_view(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = c_schema.data;
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = (const std::byte*)(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
 
-FoxgloveSchema Color::schema() {
+Schema Color::schema() {
   struct foxglove_schema c_schema = foxglove_color_schema();
-  FoxgloveSchema result;
-  result.name = std::string_view(c_schema.name.data, c_schema.name.len);
-  result.encoding = std::string_view(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = c_schema.data;
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = (const std::byte*)(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
 
-FoxgloveSchema CompressedImage::schema() {
+Schema CompressedImage::schema() {
   struct foxglove_schema c_schema = foxglove_compressed_image_schema();
-  FoxgloveSchema result;
-  result.name = std::string_view(c_schema.name.data, c_schema.name.len);
-  result.encoding = std::string_view(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = c_schema.data;
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = (const std::byte*)(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
 
-FoxgloveSchema CompressedVideo::schema() {
+Schema CompressedVideo::schema() {
   struct foxglove_schema c_schema = foxglove_compressed_video_schema();
-  FoxgloveSchema result;
-  result.name = std::string_view(c_schema.name.data, c_schema.name.len);
-  result.encoding = std::string_view(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = c_schema.data;
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = (const std::byte*)(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
 
-FoxgloveSchema CubePrimitive::schema() {
+Schema CubePrimitive::schema() {
   struct foxglove_schema c_schema = foxglove_cube_primitive_schema();
-  FoxgloveSchema result;
-  result.name = std::string_view(c_schema.name.data, c_schema.name.len);
-  result.encoding = std::string_view(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = c_schema.data;
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = (const std::byte*)(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
 
-FoxgloveSchema CylinderPrimitive::schema() {
+Schema CylinderPrimitive::schema() {
   struct foxglove_schema c_schema = foxglove_cylinder_primitive_schema();
-  FoxgloveSchema result;
-  result.name = std::string_view(c_schema.name.data, c_schema.name.len);
-  result.encoding = std::string_view(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = c_schema.data;
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = (const std::byte*)(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
 
-FoxgloveSchema FrameTransform::schema() {
+Schema FrameTransform::schema() {
   struct foxglove_schema c_schema = foxglove_frame_transform_schema();
-  FoxgloveSchema result;
-  result.name = std::string_view(c_schema.name.data, c_schema.name.len);
-  result.encoding = std::string_view(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = c_schema.data;
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = (const std::byte*)(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
 
-FoxgloveSchema FrameTransforms::schema() {
+Schema FrameTransforms::schema() {
   struct foxglove_schema c_schema = foxglove_frame_transforms_schema();
-  FoxgloveSchema result;
-  result.name = std::string_view(c_schema.name.data, c_schema.name.len);
-  result.encoding = std::string_view(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = c_schema.data;
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = (const std::byte*)(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
 
-FoxgloveSchema GeoJSON::schema() {
+Schema GeoJSON::schema() {
   struct foxglove_schema c_schema = foxglove_geo_json_schema();
-  FoxgloveSchema result;
-  result.name = std::string_view(c_schema.name.data, c_schema.name.len);
-  result.encoding = std::string_view(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = c_schema.data;
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = (const std::byte*)(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
 
-FoxgloveSchema Grid::schema() {
+Schema Grid::schema() {
   struct foxglove_schema c_schema = foxglove_grid_schema();
-  FoxgloveSchema result;
-  result.name = std::string_view(c_schema.name.data, c_schema.name.len);
-  result.encoding = std::string_view(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = c_schema.data;
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = (const std::byte*)(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
 
-FoxgloveSchema ImageAnnotations::schema() {
+Schema ImageAnnotations::schema() {
   struct foxglove_schema c_schema = foxglove_image_annotations_schema();
-  FoxgloveSchema result;
-  result.name = std::string_view(c_schema.name.data, c_schema.name.len);
-  result.encoding = std::string_view(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = c_schema.data;
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = (const std::byte*)(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
 
-FoxgloveSchema KeyValuePair::schema() {
+Schema KeyValuePair::schema() {
   struct foxglove_schema c_schema = foxglove_key_value_pair_schema();
-  FoxgloveSchema result;
-  result.name = std::string_view(c_schema.name.data, c_schema.name.len);
-  result.encoding = std::string_view(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = c_schema.data;
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = (const std::byte*)(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
 
-FoxgloveSchema LaserScan::schema() {
+Schema LaserScan::schema() {
   struct foxglove_schema c_schema = foxglove_laser_scan_schema();
-  FoxgloveSchema result;
-  result.name = std::string_view(c_schema.name.data, c_schema.name.len);
-  result.encoding = std::string_view(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = c_schema.data;
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = (const std::byte*)(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
 
-FoxgloveSchema LinePrimitive::schema() {
+Schema LinePrimitive::schema() {
   struct foxglove_schema c_schema = foxglove_line_primitive_schema();
-  FoxgloveSchema result;
-  result.name = std::string_view(c_schema.name.data, c_schema.name.len);
-  result.encoding = std::string_view(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = c_schema.data;
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = (const std::byte*)(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
 
-FoxgloveSchema LocationFix::schema() {
+Schema LocationFix::schema() {
   struct foxglove_schema c_schema = foxglove_location_fix_schema();
-  FoxgloveSchema result;
-  result.name = std::string_view(c_schema.name.data, c_schema.name.len);
-  result.encoding = std::string_view(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = c_schema.data;
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = (const std::byte*)(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
 
-FoxgloveSchema LocationFixes::schema() {
+Schema LocationFixes::schema() {
   struct foxglove_schema c_schema = foxglove_location_fixes_schema();
-  FoxgloveSchema result;
-  result.name = std::string_view(c_schema.name.data, c_schema.name.len);
-  result.encoding = std::string_view(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = c_schema.data;
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = (const std::byte*)(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
 
-FoxgloveSchema Log::schema() {
+Schema Log::schema() {
   struct foxglove_schema c_schema = foxglove_log_schema();
-  FoxgloveSchema result;
-  result.name = std::string_view(c_schema.name.data, c_schema.name.len);
-  result.encoding = std::string_view(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = c_schema.data;
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = (const std::byte*)(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
 
-FoxgloveSchema ModelPrimitive::schema() {
+Schema ModelPrimitive::schema() {
   struct foxglove_schema c_schema = foxglove_model_primitive_schema();
-  FoxgloveSchema result;
-  result.name = std::string_view(c_schema.name.data, c_schema.name.len);
-  result.encoding = std::string_view(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = c_schema.data;
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = (const std::byte*)(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
 
-FoxgloveSchema PackedElementField::schema() {
+Schema PackedElementField::schema() {
   struct foxglove_schema c_schema = foxglove_packed_element_field_schema();
-  FoxgloveSchema result;
-  result.name = std::string_view(c_schema.name.data, c_schema.name.len);
-  result.encoding = std::string_view(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = c_schema.data;
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = (const std::byte*)(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
 
-FoxgloveSchema Point2::schema() {
+Schema Point2::schema() {
   struct foxglove_schema c_schema = foxglove_point2_schema();
-  FoxgloveSchema result;
-  result.name = std::string_view(c_schema.name.data, c_schema.name.len);
-  result.encoding = std::string_view(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = c_schema.data;
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = (const std::byte*)(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
 
-FoxgloveSchema Point3::schema() {
+Schema Point3::schema() {
   struct foxglove_schema c_schema = foxglove_point3_schema();
-  FoxgloveSchema result;
-  result.name = std::string_view(c_schema.name.data, c_schema.name.len);
-  result.encoding = std::string_view(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = c_schema.data;
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = (const std::byte*)(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
 
-FoxgloveSchema PointCloud::schema() {
+Schema PointCloud::schema() {
   struct foxglove_schema c_schema = foxglove_point_cloud_schema();
-  FoxgloveSchema result;
-  result.name = std::string_view(c_schema.name.data, c_schema.name.len);
-  result.encoding = std::string_view(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = c_schema.data;
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = (const std::byte*)(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
 
-FoxgloveSchema PointsAnnotation::schema() {
+Schema PointsAnnotation::schema() {
   struct foxglove_schema c_schema = foxglove_points_annotation_schema();
-  FoxgloveSchema result;
-  result.name = std::string_view(c_schema.name.data, c_schema.name.len);
-  result.encoding = std::string_view(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = c_schema.data;
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = (const std::byte*)(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
 
-FoxgloveSchema Pose::schema() {
+Schema Pose::schema() {
   struct foxglove_schema c_schema = foxglove_pose_schema();
-  FoxgloveSchema result;
-  result.name = std::string_view(c_schema.name.data, c_schema.name.len);
-  result.encoding = std::string_view(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = c_schema.data;
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = (const std::byte*)(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
 
-FoxgloveSchema PoseInFrame::schema() {
+Schema PoseInFrame::schema() {
   struct foxglove_schema c_schema = foxglove_pose_in_frame_schema();
-  FoxgloveSchema result;
-  result.name = std::string_view(c_schema.name.data, c_schema.name.len);
-  result.encoding = std::string_view(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = c_schema.data;
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = (const std::byte*)(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
 
-FoxgloveSchema PosesInFrame::schema() {
+Schema PosesInFrame::schema() {
   struct foxglove_schema c_schema = foxglove_poses_in_frame_schema();
-  FoxgloveSchema result;
-  result.name = std::string_view(c_schema.name.data, c_schema.name.len);
-  result.encoding = std::string_view(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = c_schema.data;
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = (const std::byte*)(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
 
-FoxgloveSchema Quaternion::schema() {
+Schema Quaternion::schema() {
   struct foxglove_schema c_schema = foxglove_quaternion_schema();
-  FoxgloveSchema result;
-  result.name = std::string_view(c_schema.name.data, c_schema.name.len);
-  result.encoding = std::string_view(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = c_schema.data;
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = (const std::byte*)(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
 
-FoxgloveSchema RawAudio::schema() {
+Schema RawAudio::schema() {
   struct foxglove_schema c_schema = foxglove_raw_audio_schema();
-  FoxgloveSchema result;
-  result.name = std::string_view(c_schema.name.data, c_schema.name.len);
-  result.encoding = std::string_view(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = c_schema.data;
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = (const std::byte*)(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
 
-FoxgloveSchema RawImage::schema() {
+Schema RawImage::schema() {
   struct foxglove_schema c_schema = foxglove_raw_image_schema();
-  FoxgloveSchema result;
-  result.name = std::string_view(c_schema.name.data, c_schema.name.len);
-  result.encoding = std::string_view(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = c_schema.data;
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = (const std::byte*)(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
 
-FoxgloveSchema SceneEntity::schema() {
+Schema SceneEntity::schema() {
   struct foxglove_schema c_schema = foxglove_scene_entity_schema();
-  FoxgloveSchema result;
-  result.name = std::string_view(c_schema.name.data, c_schema.name.len);
-  result.encoding = std::string_view(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = c_schema.data;
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = (const std::byte*)(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
 
-FoxgloveSchema SceneEntityDeletion::schema() {
+Schema SceneEntityDeletion::schema() {
   struct foxglove_schema c_schema = foxglove_scene_entity_deletion_schema();
-  FoxgloveSchema result;
-  result.name = std::string_view(c_schema.name.data, c_schema.name.len);
-  result.encoding = std::string_view(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = c_schema.data;
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = (const std::byte*)(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
 
-FoxgloveSchema SceneUpdate::schema() {
+Schema SceneUpdate::schema() {
   struct foxglove_schema c_schema = foxglove_scene_update_schema();
-  FoxgloveSchema result;
-  result.name = std::string_view(c_schema.name.data, c_schema.name.len);
-  result.encoding = std::string_view(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = c_schema.data;
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = (const std::byte*)(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
 
-FoxgloveSchema SpherePrimitive::schema() {
+Schema SpherePrimitive::schema() {
   struct foxglove_schema c_schema = foxglove_sphere_primitive_schema();
-  FoxgloveSchema result;
-  result.name = std::string_view(c_schema.name.data, c_schema.name.len);
-  result.encoding = std::string_view(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = c_schema.data;
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = (const std::byte*)(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
 
-FoxgloveSchema TextAnnotation::schema() {
+Schema TextAnnotation::schema() {
   struct foxglove_schema c_schema = foxglove_text_annotation_schema();
-  FoxgloveSchema result;
-  result.name = std::string_view(c_schema.name.data, c_schema.name.len);
-  result.encoding = std::string_view(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = c_schema.data;
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = (const std::byte*)(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
 
-FoxgloveSchema TextPrimitive::schema() {
+Schema TextPrimitive::schema() {
   struct foxglove_schema c_schema = foxglove_text_primitive_schema();
-  FoxgloveSchema result;
-  result.name = std::string_view(c_schema.name.data, c_schema.name.len);
-  result.encoding = std::string_view(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = c_schema.data;
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = (const std::byte*)(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
 
-FoxgloveSchema TriangleListPrimitive::schema() {
+Schema TriangleListPrimitive::schema() {
   struct foxglove_schema c_schema = foxglove_triangle_list_primitive_schema();
-  FoxgloveSchema result;
-  result.name = std::string_view(c_schema.name.data, c_schema.name.len);
-  result.encoding = std::string_view(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = c_schema.data;
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = (const std::byte*)(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
 
-FoxgloveSchema Vector2::schema() {
+Schema Vector2::schema() {
   struct foxglove_schema c_schema = foxglove_vector2_schema();
-  FoxgloveSchema result;
-  result.name = std::string_view(c_schema.name.data, c_schema.name.len);
-  result.encoding = std::string_view(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = c_schema.data;
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = (const std::byte*)(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
 
-FoxgloveSchema Vector3::schema() {
+Schema Vector3::schema() {
   struct foxglove_schema c_schema = foxglove_vector3_schema();
-  FoxgloveSchema result;
-  result.name = std::string_view(c_schema.name.data, c_schema.name.len);
-  result.encoding = std::string_view(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = c_schema.data;
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = (const std::byte*)(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
 
-FoxgloveSchema VoxelGrid::schema() {
+Schema VoxelGrid::schema() {
   struct foxglove_schema c_schema = foxglove_voxel_grid_schema();
-  FoxgloveSchema result;
-  result.name = std::string_view(c_schema.name.data, c_schema.name.len);
-  result.encoding = std::string_view(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = c_schema.data;
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = (const std::byte*)(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
