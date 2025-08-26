@@ -21,7 +21,7 @@ mod time;
 mod unadvertise;
 mod unadvertise_services;
 
-pub use advertise::Advertise;
+pub use advertise::{Advertise, Channel};
 pub use advertise_services::AdvertiseServices;
 pub use connection_graph_update::ConnectionGraphUpdate;
 pub use fetch_asset_response::FetchAssetResponse;
