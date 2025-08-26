@@ -178,6 +178,10 @@ pub extern "C" fn foxglove_channel_log_arrow_primitive(
 /// Gets the schema for ArrowPrimitive.
 ///
 /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_arrow_primitive_schema() -> FoxgloveSchema {
     let native =
@@ -411,6 +415,10 @@ pub extern "C" fn foxglove_channel_log_camera_calibration(
 /// Gets the schema for CameraCalibration.
 ///
 /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_camera_calibration_schema() -> FoxgloveSchema {
     let native = foxglove::schemas::CameraCalibration::get_schema()
@@ -590,6 +598,10 @@ pub extern "C" fn foxglove_channel_log_circle_annotation(
 /// Gets the schema for CircleAnnotation.
 ///
 /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_circle_annotation_schema() -> FoxgloveSchema {
     let native = foxglove::schemas::CircleAnnotation::get_schema()
@@ -740,6 +752,10 @@ pub extern "C" fn foxglove_channel_log_color(
 /// Gets the schema for Color.
 ///
 /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_color_schema() -> FoxgloveSchema {
     let native = foxglove::schemas::Color::get_schema().expect("Color schema is be Some");
@@ -908,6 +924,10 @@ pub extern "C" fn foxglove_channel_log_compressed_image(
 /// Gets the schema for CompressedImage.
 ///
 /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_compressed_image_schema() -> FoxgloveSchema {
     let native = foxglove::schemas::CompressedImage::get_schema()
@@ -1103,6 +1123,10 @@ pub extern "C" fn foxglove_channel_log_compressed_video(
 /// Gets the schema for CompressedVideo.
 ///
 /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_compressed_video_schema() -> FoxgloveSchema {
     let native = foxglove::schemas::CompressedVideo::get_schema()
@@ -1277,6 +1301,10 @@ pub extern "C" fn foxglove_channel_log_cylinder_primitive(
 /// Gets the schema for CylinderPrimitive.
 ///
 /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_cylinder_primitive_schema() -> FoxgloveSchema {
     let native = foxglove::schemas::CylinderPrimitive::get_schema()
@@ -1443,6 +1471,10 @@ pub extern "C" fn foxglove_channel_log_cube_primitive(
 /// Gets the schema for CubePrimitive.
 ///
 /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_cube_primitive_schema() -> FoxgloveSchema {
     let native =
@@ -1625,6 +1657,10 @@ pub extern "C" fn foxglove_channel_log_frame_transform(
 /// Gets the schema for FrameTransform.
 ///
 /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_frame_transform_schema() -> FoxgloveSchema {
     let native =
@@ -1767,6 +1803,10 @@ pub extern "C" fn foxglove_channel_log_frame_transforms(
 /// Gets the schema for FrameTransforms.
 ///
 /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_frame_transforms_schema() -> FoxgloveSchema {
     let native = foxglove::schemas::FrameTransforms::get_schema()
@@ -1913,6 +1953,10 @@ pub extern "C" fn foxglove_channel_log_geo_json(
 /// Gets the schema for GeoJson.
 ///
 /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_geo_json_schema() -> FoxgloveSchema {
     let native = foxglove::schemas::GeoJson::get_schema().expect("GeoJson schema is be Some");
@@ -2108,6 +2152,10 @@ pub extern "C" fn foxglove_channel_log_grid(
 /// Gets the schema for Grid.
 ///
 /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_grid_schema() -> FoxgloveSchema {
     let native = foxglove::schemas::Grid::get_schema().expect("Grid schema is be Some");
@@ -2312,6 +2360,10 @@ pub extern "C" fn foxglove_channel_log_voxel_grid(
 /// Gets the schema for VoxelGrid.
 ///
 /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_voxel_grid_schema() -> FoxgloveSchema {
     let native = foxglove::schemas::VoxelGrid::get_schema().expect("VoxelGrid schema is be Some");
@@ -2465,6 +2517,10 @@ pub extern "C" fn foxglove_channel_log_image_annotations(
 /// Gets the schema for ImageAnnotations.
 ///
 /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_image_annotations_schema() -> FoxgloveSchema {
     let native = foxglove::schemas::ImageAnnotations::get_schema()
@@ -2612,6 +2668,10 @@ pub extern "C" fn foxglove_channel_log_key_value_pair(
 /// Gets the schema for KeyValuePair.
 ///
 /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_key_value_pair_schema() -> FoxgloveSchema {
     let native =
@@ -2794,6 +2854,10 @@ pub extern "C" fn foxglove_channel_log_laser_scan(
 /// Gets the schema for LaserScan.
 ///
 /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_laser_scan_schema() -> FoxgloveSchema {
     let native = foxglove::schemas::LaserScan::get_schema().expect("LaserScan schema is be Some");
@@ -2982,6 +3046,10 @@ pub extern "C" fn foxglove_channel_log_line_primitive(
 /// Gets the schema for LinePrimitive.
 ///
 /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_line_primitive_schema() -> FoxgloveSchema {
     let native =
@@ -3168,6 +3236,10 @@ pub extern "C" fn foxglove_channel_log_location_fix(
 /// Gets the schema for LocationFix.
 ///
 /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_location_fix_schema() -> FoxgloveSchema {
     let native =
@@ -3310,6 +3382,10 @@ pub extern "C" fn foxglove_channel_log_location_fixes(
 /// Gets the schema for LocationFixes.
 ///
 /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_location_fixes_schema() -> FoxgloveSchema {
     let native =
@@ -3480,6 +3556,10 @@ pub extern "C" fn foxglove_channel_log_log(
 /// Gets the schema for Log.
 ///
 /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_log_schema() -> FoxgloveSchema {
     let native = foxglove::schemas::Log::get_schema().expect("Log schema is be Some");
@@ -3629,6 +3709,10 @@ pub extern "C" fn foxglove_channel_log_scene_entity_deletion(
 /// Gets the schema for SceneEntityDeletion.
 ///
 /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_scene_entity_deletion_schema() -> FoxgloveSchema {
     let native = foxglove::schemas::SceneEntityDeletion::get_schema()
@@ -3847,6 +3931,10 @@ pub extern "C" fn foxglove_channel_log_scene_entity(
 /// Gets the schema for SceneEntity.
 ///
 /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_scene_entity_schema() -> FoxgloveSchema {
     let native =
@@ -3995,6 +4083,10 @@ pub extern "C" fn foxglove_channel_log_scene_update(
 /// Gets the schema for SceneUpdate.
 ///
 /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_scene_update_schema() -> FoxgloveSchema {
     let native =
@@ -4186,6 +4278,10 @@ pub extern "C" fn foxglove_channel_log_model_primitive(
 /// Gets the schema for ModelPrimitive.
 ///
 /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_model_primitive_schema() -> FoxgloveSchema {
     let native =
@@ -4336,6 +4432,10 @@ pub extern "C" fn foxglove_channel_log_packed_element_field(
 /// Gets the schema for PackedElementField.
 ///
 /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_packed_element_field_schema() -> FoxgloveSchema {
     let native = foxglove::schemas::PackedElementField::get_schema()
@@ -4478,6 +4578,10 @@ pub extern "C" fn foxglove_channel_log_point2(
 /// Gets the schema for Point2.
 ///
 /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_point2_schema() -> FoxgloveSchema {
     let native = foxglove::schemas::Point2::get_schema().expect("Point2 schema is be Some");
@@ -4623,6 +4727,10 @@ pub extern "C" fn foxglove_channel_log_point3(
 /// Gets the schema for Point3.
 ///
 /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_point3_schema() -> FoxgloveSchema {
     let native = foxglove::schemas::Point3::get_schema().expect("Point3 schema is be Some");
@@ -4798,6 +4906,10 @@ pub extern "C" fn foxglove_channel_log_point_cloud(
 /// Gets the schema for PointCloud.
 ///
 /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_point_cloud_schema() -> FoxgloveSchema {
     let native = foxglove::schemas::PointCloud::get_schema().expect("PointCloud schema is be Some");
@@ -4982,6 +5094,10 @@ pub extern "C" fn foxglove_channel_log_points_annotation(
 /// Gets the schema for PointsAnnotation.
 ///
 /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_points_annotation_schema() -> FoxgloveSchema {
     let native = foxglove::schemas::PointsAnnotation::get_schema()
@@ -5137,6 +5253,10 @@ pub extern "C" fn foxglove_channel_log_pose(
 /// Gets the schema for Pose.
 ///
 /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_pose_schema() -> FoxgloveSchema {
     let native = foxglove::schemas::Pose::get_schema().expect("Pose schema is be Some");
@@ -5297,6 +5417,10 @@ pub extern "C" fn foxglove_channel_log_pose_in_frame(
 /// Gets the schema for PoseInFrame.
 ///
 /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_pose_in_frame_schema() -> FoxgloveSchema {
     let native =
@@ -5454,6 +5578,10 @@ pub extern "C" fn foxglove_channel_log_poses_in_frame(
 /// Gets the schema for PosesInFrame.
 ///
 /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_poses_in_frame_schema() -> FoxgloveSchema {
     let native =
@@ -5605,6 +5733,10 @@ pub extern "C" fn foxglove_channel_log_quaternion(
 /// Gets the schema for Quaternion.
 ///
 /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_quaternion_schema() -> FoxgloveSchema {
     let native = foxglove::schemas::Quaternion::get_schema().expect("Quaternion schema is be Some");
@@ -5767,6 +5899,10 @@ pub extern "C" fn foxglove_channel_log_raw_audio(
 /// Gets the schema for RawAudio.
 ///
 /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_raw_audio_schema() -> FoxgloveSchema {
     let native = foxglove::schemas::RawAudio::get_schema().expect("RawAudio schema is be Some");
@@ -5997,6 +6133,10 @@ pub extern "C" fn foxglove_channel_log_raw_image(
 /// Gets the schema for RawImage.
 ///
 /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_raw_image_schema() -> FoxgloveSchema {
     let native = foxglove::schemas::RawImage::get_schema().expect("RawImage schema is be Some");
@@ -6162,6 +6302,10 @@ pub extern "C" fn foxglove_channel_log_sphere_primitive(
 /// Gets the schema for SpherePrimitive.
 ///
 /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_sphere_primitive_schema() -> FoxgloveSchema {
     let native = foxglove::schemas::SpherePrimitive::get_schema()
@@ -6343,6 +6487,10 @@ pub extern "C" fn foxglove_channel_log_text_annotation(
 /// Gets the schema for TextAnnotation.
 ///
 /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_text_annotation_schema() -> FoxgloveSchema {
     let native =
@@ -6517,6 +6665,10 @@ pub extern "C" fn foxglove_channel_log_text_primitive(
 /// Gets the schema for TextPrimitive.
 ///
 /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_text_primitive_schema() -> FoxgloveSchema {
     let native =
@@ -6697,6 +6849,10 @@ pub extern "C" fn foxglove_channel_log_triangle_list_primitive(
 /// Gets the schema for TriangleListPrimitive.
 ///
 /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_triangle_list_primitive_schema() -> FoxgloveSchema {
     let native = foxglove::schemas::TriangleListPrimitive::get_schema()
@@ -6839,6 +6995,10 @@ pub extern "C" fn foxglove_channel_log_vector2(
 /// Gets the schema for Vector2.
 ///
 /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_vector2_schema() -> FoxgloveSchema {
     let native = foxglove::schemas::Vector2::get_schema().expect("Vector2 schema is be Some");
@@ -6984,6 +7144,10 @@ pub extern "C" fn foxglove_channel_log_vector3(
 /// Gets the schema for Vector3.
 ///
 /// All pointers in the returned FoxgloveSchema point to statically-allocated values.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_vector3_schema() -> FoxgloveSchema {
     let native = foxglove::schemas::Vector3::get_schema().expect("Vector3 schema is be Some");
