@@ -35,6 +35,19 @@ struct Vector3 {
 
   /// @brief z coordinate length
   double z = 0;
+
+  /// @brief Encoded the Vector3 as protobuf to the provided buffer.
+  ///
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
+  /// and returns FoxgloveError::BufferTooShort.
+  /// If the message cannot be encoded, writes the reason to stderr and returns
+  /// FoxgloveError::EncodeError.
+  ///
+  /// @param ptr the destination buffer. must point to at least len valid bytes.
+  /// @param len the length of the destination buffer.
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief A [quaternion](https://eater.net/quaternions) representing a rotation in 3D space
@@ -50,6 +63,19 @@ struct Quaternion {
 
   /// @brief w value
   double w = 0;
+
+  /// @brief Encoded the Quaternion as protobuf to the provided buffer.
+  ///
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
+  /// and returns FoxgloveError::BufferTooShort.
+  /// If the message cannot be encoded, writes the reason to stderr and returns
+  /// FoxgloveError::EncodeError.
+  ///
+  /// @param ptr the destination buffer. must point to at least len valid bytes.
+  /// @param len the length of the destination buffer.
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief A position and orientation for an object or reference frame in 3D space
@@ -59,6 +85,19 @@ struct Pose {
 
   /// @brief Quaternion denoting orientation in 3D space
   std::optional<Quaternion> orientation;
+
+  /// @brief Encoded the Pose as protobuf to the provided buffer.
+  ///
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
+  /// and returns FoxgloveError::BufferTooShort.
+  /// If the message cannot be encoded, writes the reason to stderr and returns
+  /// FoxgloveError::EncodeError.
+  ///
+  /// @param ptr the destination buffer. must point to at least len valid bytes.
+  /// @param len the length of the destination buffer.
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief A color in RGBA format
@@ -74,6 +113,19 @@ struct Color {
 
   /// @brief Alpha value between 0 and 1
   double a = 0;
+
+  /// @brief Encoded the Color as protobuf to the provided buffer.
+  ///
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
+  /// and returns FoxgloveError::BufferTooShort.
+  /// If the message cannot be encoded, writes the reason to stderr and returns
+  /// FoxgloveError::EncodeError.
+  ///
+  /// @param ptr the destination buffer. must point to at least len valid bytes.
+  /// @param len the length of the destination buffer.
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief A primitive representing an arrow
@@ -96,6 +148,19 @@ struct ArrowPrimitive {
 
   /// @brief Color of the arrow
   std::optional<Color> color;
+
+  /// @brief Encoded the ArrowPrimitive as protobuf to the provided buffer.
+  ///
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
+  /// and returns FoxgloveError::BufferTooShort.
+  /// If the message cannot be encoded, writes the reason to stderr and returns
+  /// FoxgloveError::EncodeError.
+  ///
+  /// @param ptr the destination buffer. must point to at least len valid bytes.
+  /// @param len the length of the destination buffer.
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief A timestamp composed of seconds and nanoseconds
@@ -195,6 +260,19 @@ struct CameraCalibration {
   /// @brief This holds for both images of a stereo pair.
   /// @brief
   std::array<double, 12> p;
+
+  /// @brief Encoded the CameraCalibration as protobuf to the provided buffer.
+  ///
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
+  /// and returns FoxgloveError::BufferTooShort.
+  /// If the message cannot be encoded, writes the reason to stderr and returns
+  /// FoxgloveError::EncodeError.
+  ///
+  /// @param ptr the destination buffer. must point to at least len valid bytes.
+  /// @param len the length of the destination buffer.
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief A point representing a position in 2D space
@@ -204,6 +282,19 @@ struct Point2 {
 
   /// @brief y coordinate position
   double y = 0;
+
+  /// @brief Encoded the Point2 as protobuf to the provided buffer.
+  ///
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
+  /// and returns FoxgloveError::BufferTooShort.
+  /// If the message cannot be encoded, writes the reason to stderr and returns
+  /// FoxgloveError::EncodeError.
+  ///
+  /// @param ptr the destination buffer. must point to at least len valid bytes.
+  /// @param len the length of the destination buffer.
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief A circle annotation on a 2D image
@@ -227,6 +318,19 @@ struct CircleAnnotation {
 
   /// @brief Outline color
   std::optional<Color> outline_color;
+
+  /// @brief Encoded the CircleAnnotation as protobuf to the provided buffer.
+  ///
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
+  /// and returns FoxgloveError::BufferTooShort.
+  /// If the message cannot be encoded, writes the reason to stderr and returns
+  /// FoxgloveError::EncodeError.
+  ///
+  /// @param ptr the destination buffer. must point to at least len valid bytes.
+  /// @param len the length of the destination buffer.
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief A compressed image
@@ -246,6 +350,19 @@ struct CompressedImage {
   /// @brief
   /// @brief Supported values: `jpeg`, `png`, `webp`, `avif`
   std::string format;
+
+  /// @brief Encoded the CompressedImage as protobuf to the provided buffer.
+  ///
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
+  /// and returns FoxgloveError::BufferTooShort.
+  /// If the message cannot be encoded, writes the reason to stderr and returns
+  /// FoxgloveError::EncodeError.
+  ///
+  /// @param ptr the destination buffer. must point to at least len valid bytes.
+  /// @param len the length of the destination buffer.
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief A single frame of a compressed video bitstream
@@ -300,6 +417,19 @@ struct CompressedVideo {
   /// support](https://caniuse.com/hevc), [VP9 support](https://caniuse.com/webm), and [AV1
   /// support](https://caniuse.com/av1).
   std::string format;
+
+  /// @brief Encoded the CompressedVideo as protobuf to the provided buffer.
+  ///
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
+  /// and returns FoxgloveError::BufferTooShort.
+  /// If the message cannot be encoded, writes the reason to stderr and returns
+  /// FoxgloveError::EncodeError.
+  ///
+  /// @param ptr the destination buffer. must point to at least len valid bytes.
+  /// @param len the length of the destination buffer.
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief A primitive representing a cylinder, elliptic cylinder, or truncated cone
@@ -321,6 +451,19 @@ struct CylinderPrimitive {
 
   /// @brief Color of the cylinder
   std::optional<Color> color;
+
+  /// @brief Encoded the CylinderPrimitive as protobuf to the provided buffer.
+  ///
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
+  /// and returns FoxgloveError::BufferTooShort.
+  /// If the message cannot be encoded, writes the reason to stderr and returns
+  /// FoxgloveError::EncodeError.
+  ///
+  /// @param ptr the destination buffer. must point to at least len valid bytes.
+  /// @param len the length of the destination buffer.
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief A primitive representing a cube or rectangular prism
@@ -333,6 +476,19 @@ struct CubePrimitive {
 
   /// @brief Color of the cube
   std::optional<Color> color;
+
+  /// @brief Encoded the CubePrimitive as protobuf to the provided buffer.
+  ///
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
+  /// and returns FoxgloveError::BufferTooShort.
+  /// If the message cannot be encoded, writes the reason to stderr and returns
+  /// FoxgloveError::EncodeError.
+  ///
+  /// @param ptr the destination buffer. must point to at least len valid bytes.
+  /// @param len the length of the destination buffer.
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief A duration of time, composed of seconds and nanoseconds
@@ -360,18 +516,57 @@ struct FrameTransform {
 
   /// @brief Rotation component of the transform
   std::optional<Quaternion> rotation;
+
+  /// @brief Encoded the FrameTransform as protobuf to the provided buffer.
+  ///
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
+  /// and returns FoxgloveError::BufferTooShort.
+  /// If the message cannot be encoded, writes the reason to stderr and returns
+  /// FoxgloveError::EncodeError.
+  ///
+  /// @param ptr the destination buffer. must point to at least len valid bytes.
+  /// @param len the length of the destination buffer.
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief An array of FrameTransform messages
 struct FrameTransforms {
   /// @brief Array of transforms
   std::vector<FrameTransform> transforms;
+
+  /// @brief Encoded the FrameTransforms as protobuf to the provided buffer.
+  ///
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
+  /// and returns FoxgloveError::BufferTooShort.
+  /// If the message cannot be encoded, writes the reason to stderr and returns
+  /// FoxgloveError::EncodeError.
+  ///
+  /// @param ptr the destination buffer. must point to at least len valid bytes.
+  /// @param len the length of the destination buffer.
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief GeoJSON data for annotating maps
 struct GeoJSON {
   /// @brief GeoJSON data encoded as a UTF-8 string
   std::string geojson;
+
+  /// @brief Encoded the GeoJSON as protobuf to the provided buffer.
+  ///
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
+  /// and returns FoxgloveError::BufferTooShort.
+  /// If the message cannot be encoded, writes the reason to stderr and returns
+  /// FoxgloveError::EncodeError.
+  ///
+  /// @param ptr the destination buffer. must point to at least len valid bytes.
+  /// @param len the length of the destination buffer.
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief A vector in 2D space that represents a direction only
@@ -381,6 +576,19 @@ struct Vector2 {
 
   /// @brief y coordinate length
   double y = 0;
+
+  /// @brief Encoded the Vector2 as protobuf to the provided buffer.
+  ///
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
+  /// and returns FoxgloveError::BufferTooShort.
+  /// If the message cannot be encoded, writes the reason to stderr and returns
+  /// FoxgloveError::EncodeError.
+  ///
+  /// @param ptr the destination buffer. must point to at least len valid bytes.
+  /// @param len the length of the destination buffer.
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief A field present within each element in a byte array of packed elements.
@@ -414,6 +622,19 @@ struct PackedElementField {
 
   /// @brief Type of data in the field. Integers are stored using little-endian byte order.
   NumericType type;
+
+  /// @brief Encoded the PackedElementField as protobuf to the provided buffer.
+  ///
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
+  /// and returns FoxgloveError::BufferTooShort.
+  /// If the message cannot be encoded, writes the reason to stderr and returns
+  /// FoxgloveError::EncodeError.
+  ///
+  /// @param ptr the destination buffer. must point to at least len valid bytes.
+  /// @param len the length of the destination buffer.
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief A 2D grid of data
@@ -450,6 +671,19 @@ struct Grid {
   /// @brief  y = (i / cell_stride) % row_stride * cell_size.y
   /// @brief  x = i % cell_stride * cell_size.x
   std::vector<std::byte> data;
+
+  /// @brief Encoded the Grid as protobuf to the provided buffer.
+  ///
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
+  /// and returns FoxgloveError::BufferTooShort.
+  /// If the message cannot be encoded, writes the reason to stderr and returns
+  /// FoxgloveError::EncodeError.
+  ///
+  /// @param ptr the destination buffer. must point to at least len valid bytes.
+  /// @param len the length of the destination buffer.
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief A 3D grid of data
@@ -492,6 +726,19 @@ struct VoxelGrid {
   /// @brief  y = (i % slice_stride) / row_stride * cell_size.y
   /// @brief  x = (i % row_stride) / cell_stride * cell_size.x
   std::vector<std::byte> data;
+
+  /// @brief Encoded the VoxelGrid as protobuf to the provided buffer.
+  ///
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
+  /// and returns FoxgloveError::BufferTooShort.
+  /// If the message cannot be encoded, writes the reason to stderr and returns
+  /// FoxgloveError::EncodeError.
+  ///
+  /// @param ptr the destination buffer. must point to at least len valid bytes.
+  /// @param len the length of the destination buffer.
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief An array of points on a 2D image
@@ -532,6 +779,19 @@ struct PointsAnnotation {
 
   /// @brief Stroke thickness in pixels
   double thickness = 0;
+
+  /// @brief Encoded the PointsAnnotation as protobuf to the provided buffer.
+  ///
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
+  /// and returns FoxgloveError::BufferTooShort.
+  /// If the message cannot be encoded, writes the reason to stderr and returns
+  /// FoxgloveError::EncodeError.
+  ///
+  /// @param ptr the destination buffer. must point to at least len valid bytes.
+  /// @param len the length of the destination buffer.
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief A text label on a 2D image
@@ -555,6 +815,19 @@ struct TextAnnotation {
 
   /// @brief Background fill color
   std::optional<Color> background_color;
+
+  /// @brief Encoded the TextAnnotation as protobuf to the provided buffer.
+  ///
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
+  /// and returns FoxgloveError::BufferTooShort.
+  /// If the message cannot be encoded, writes the reason to stderr and returns
+  /// FoxgloveError::EncodeError.
+  ///
+  /// @param ptr the destination buffer. must point to at least len valid bytes.
+  /// @param len the length of the destination buffer.
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief Array of annotations for a 2D image
@@ -567,6 +840,19 @@ struct ImageAnnotations {
 
   /// @brief Text annotations
   std::vector<TextAnnotation> texts;
+
+  /// @brief Encoded the ImageAnnotations as protobuf to the provided buffer.
+  ///
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
+  /// and returns FoxgloveError::BufferTooShort.
+  /// If the message cannot be encoded, writes the reason to stderr and returns
+  /// FoxgloveError::EncodeError.
+  ///
+  /// @param ptr the destination buffer. must point to at least len valid bytes.
+  /// @param len the length of the destination buffer.
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief A key with its associated value
@@ -576,6 +862,19 @@ struct KeyValuePair {
 
   /// @brief Value
   std::string value;
+
+  /// @brief Encoded the KeyValuePair as protobuf to the provided buffer.
+  ///
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
+  /// and returns FoxgloveError::BufferTooShort.
+  /// If the message cannot be encoded, writes the reason to stderr and returns
+  /// FoxgloveError::EncodeError.
+  ///
+  /// @param ptr the destination buffer. must point to at least len valid bytes.
+  /// @param len the length of the destination buffer.
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief A single scan from a planar laser range-finder
@@ -603,6 +902,19 @@ struct LaserScan {
 
   /// @brief Intensity of detections
   std::vector<double> intensities;
+
+  /// @brief Encoded the LaserScan as protobuf to the provided buffer.
+  ///
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
+  /// and returns FoxgloveError::BufferTooShort.
+  /// If the message cannot be encoded, writes the reason to stderr and returns
+  /// FoxgloveError::EncodeError.
+  ///
+  /// @param ptr the destination buffer. must point to at least len valid bytes.
+  /// @param len the length of the destination buffer.
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief A point representing a position in 3D space
@@ -615,6 +927,19 @@ struct Point3 {
 
   /// @brief z coordinate position
   double z = 0;
+
+  /// @brief Encoded the Point3 as protobuf to the provided buffer.
+  ///
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
+  /// and returns FoxgloveError::BufferTooShort.
+  /// If the message cannot be encoded, writes the reason to stderr and returns
+  /// FoxgloveError::EncodeError.
+  ///
+  /// @param ptr the destination buffer. must point to at least len valid bytes.
+  /// @param len the length of the destination buffer.
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief A primitive representing a series of points connected by lines
@@ -657,6 +982,19 @@ struct LinePrimitive {
   /// @brief If omitted or empty, indexing will not be used. This default behavior is equivalent to
   /// specifying [0, 1, ..., N-1] for the indices (where N is the number of `points` provided).
   std::vector<uint32_t> indices;
+
+  /// @brief Encoded the LinePrimitive as protobuf to the provided buffer.
+  ///
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
+  /// and returns FoxgloveError::BufferTooShort.
+  /// If the message cannot be encoded, writes the reason to stderr and returns
+  /// FoxgloveError::EncodeError.
+  ///
+  /// @param ptr the destination buffer. must point to at least len valid bytes.
+  /// @param len the length of the destination buffer.
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief A navigation satellite fix for any Global Navigation Satellite System
@@ -697,12 +1035,38 @@ struct LocationFix {
 
   /// @brief Color used to visualize the location
   std::optional<Color> color;
+
+  /// @brief Encoded the LocationFix as protobuf to the provided buffer.
+  ///
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
+  /// and returns FoxgloveError::BufferTooShort.
+  /// If the message cannot be encoded, writes the reason to stderr and returns
+  /// FoxgloveError::EncodeError.
+  ///
+  /// @param ptr the destination buffer. must point to at least len valid bytes.
+  /// @param len the length of the destination buffer.
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief A group of LocationFix messages
 struct LocationFixes {
   /// @brief An array of location fixes
   std::vector<LocationFix> fixes;
+
+  /// @brief Encoded the LocationFixes as protobuf to the provided buffer.
+  ///
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
+  /// and returns FoxgloveError::BufferTooShort.
+  /// If the message cannot be encoded, writes the reason to stderr and returns
+  /// FoxgloveError::EncodeError.
+  ///
+  /// @param ptr the destination buffer. must point to at least len valid bytes.
+  /// @param len the length of the destination buffer.
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief A log message
@@ -739,6 +1103,19 @@ struct Log {
 
   /// @brief Line number in the file
   uint32_t line = 0;
+
+  /// @brief Encoded the Log as protobuf to the provided buffer.
+  ///
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
+  /// and returns FoxgloveError::BufferTooShort.
+  /// If the message cannot be encoded, writes the reason to stderr and returns
+  /// FoxgloveError::EncodeError.
+  ///
+  /// @param ptr the destination buffer. must point to at least len valid bytes.
+  /// @param len the length of the destination buffer.
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief Command to remove previously published entities
@@ -759,6 +1136,19 @@ struct SceneEntityDeletion {
 
   /// @brief Identifier which must match if `type` is `MATCHING_ID`.
   std::string id;
+
+  /// @brief Encoded the SceneEntityDeletion as protobuf to the provided buffer.
+  ///
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
+  /// and returns FoxgloveError::BufferTooShort.
+  /// If the message cannot be encoded, writes the reason to stderr and returns
+  /// FoxgloveError::EncodeError.
+  ///
+  /// @param ptr the destination buffer. must point to at least len valid bytes.
+  /// @param len the length of the destination buffer.
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief A primitive representing a sphere or ellipsoid
@@ -771,6 +1161,19 @@ struct SpherePrimitive {
 
   /// @brief Color of the sphere
   std::optional<Color> color;
+
+  /// @brief Encoded the SpherePrimitive as protobuf to the provided buffer.
+  ///
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
+  /// and returns FoxgloveError::BufferTooShort.
+  /// If the message cannot be encoded, writes the reason to stderr and returns
+  /// FoxgloveError::EncodeError.
+  ///
+  /// @param ptr the destination buffer. must point to at least len valid bytes.
+  /// @param len the length of the destination buffer.
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief A primitive representing a set of triangles or a surface tiled by triangles
@@ -794,6 +1197,19 @@ struct TriangleListPrimitive {
   /// @brief If omitted or empty, indexing will not be used. This default behavior is equivalent to
   /// specifying [0, 1, ..., N-1] for the indices (where N is the number of `points` provided).
   std::vector<uint32_t> indices;
+
+  /// @brief Encoded the TriangleListPrimitive as protobuf to the provided buffer.
+  ///
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
+  /// and returns FoxgloveError::BufferTooShort.
+  /// If the message cannot be encoded, writes the reason to stderr and returns
+  /// FoxgloveError::EncodeError.
+  ///
+  /// @param ptr the destination buffer. must point to at least len valid bytes.
+  /// @param len the length of the destination buffer.
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief A primitive representing a text label
@@ -818,6 +1234,19 @@ struct TextPrimitive {
 
   /// @brief Text
   std::string text;
+
+  /// @brief Encoded the TextPrimitive as protobuf to the provided buffer.
+  ///
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
+  /// and returns FoxgloveError::BufferTooShort.
+  /// If the message cannot be encoded, writes the reason to stderr and returns
+  /// FoxgloveError::EncodeError.
+  ///
+  /// @param ptr the destination buffer. must point to at least len valid bytes.
+  /// @param len the length of the destination buffer.
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief A primitive representing a 3D model file loaded from an external URL or embedded data
@@ -847,6 +1276,19 @@ struct ModelPrimitive {
   /// @brief Embedded model. One of `url` or `data` should be provided. If `data` is provided,
   /// `media_type` must be set to indicate the type of the data.
   std::vector<std::byte> data;
+
+  /// @brief Encoded the ModelPrimitive as protobuf to the provided buffer.
+  ///
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
+  /// and returns FoxgloveError::BufferTooShort.
+  /// If the message cannot be encoded, writes the reason to stderr and returns
+  /// FoxgloveError::EncodeError.
+  ///
+  /// @param ptr the destination buffer. must point to at least len valid bytes.
+  /// @param len the length of the destination buffer.
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief A visual element in a 3D scene. An entity may be composed of multiple primitives which
@@ -897,6 +1339,19 @@ struct SceneEntity {
 
   /// @brief Model primitives
   std::vector<ModelPrimitive> models;
+
+  /// @brief Encoded the SceneEntity as protobuf to the provided buffer.
+  ///
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
+  /// and returns FoxgloveError::BufferTooShort.
+  /// If the message cannot be encoded, writes the reason to stderr and returns
+  /// FoxgloveError::EncodeError.
+  ///
+  /// @param ptr the destination buffer. must point to at least len valid bytes.
+  /// @param len the length of the destination buffer.
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief An update to the entities displayed in a 3D scene
@@ -906,6 +1361,19 @@ struct SceneUpdate {
 
   /// @brief Scene entities to add or replace
   std::vector<SceneEntity> entities;
+
+  /// @brief Encoded the SceneUpdate as protobuf to the provided buffer.
+  ///
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
+  /// and returns FoxgloveError::BufferTooShort.
+  /// If the message cannot be encoded, writes the reason to stderr and returns
+  /// FoxgloveError::EncodeError.
+  ///
+  /// @param ptr the destination buffer. must point to at least len valid bytes.
+  /// @param len the length of the destination buffer.
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief A collection of N-dimensional points, which may contain additional fields with
@@ -930,6 +1398,19 @@ struct PointCloud {
 
   /// @brief Point data, interpreted using `fields`
   std::vector<std::byte> data;
+
+  /// @brief Encoded the PointCloud as protobuf to the provided buffer.
+  ///
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
+  /// and returns FoxgloveError::BufferTooShort.
+  /// If the message cannot be encoded, writes the reason to stderr and returns
+  /// FoxgloveError::EncodeError.
+  ///
+  /// @param ptr the destination buffer. must point to at least len valid bytes.
+  /// @param len the length of the destination buffer.
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief A timestamped pose for an object or reference frame in 3D space
@@ -942,6 +1423,19 @@ struct PoseInFrame {
 
   /// @brief Pose in 3D space
   std::optional<Pose> pose;
+
+  /// @brief Encoded the PoseInFrame as protobuf to the provided buffer.
+  ///
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
+  /// and returns FoxgloveError::BufferTooShort.
+  /// If the message cannot be encoded, writes the reason to stderr and returns
+  /// FoxgloveError::EncodeError.
+  ///
+  /// @param ptr the destination buffer. must point to at least len valid bytes.
+  /// @param len the length of the destination buffer.
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief An array of timestamped poses for an object or reference frame in 3D space
@@ -954,6 +1448,19 @@ struct PosesInFrame {
 
   /// @brief Poses in 3D space
   std::vector<Pose> poses;
+
+  /// @brief Encoded the PosesInFrame as protobuf to the provided buffer.
+  ///
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
+  /// and returns FoxgloveError::BufferTooShort.
+  /// If the message cannot be encoded, writes the reason to stderr and returns
+  /// FoxgloveError::EncodeError.
+  ///
+  /// @param ptr the destination buffer. must point to at least len valid bytes.
+  /// @param len the length of the destination buffer.
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief A single block of an audio bitstream
@@ -972,6 +1479,19 @@ struct RawAudio {
 
   /// @brief Number of channels in the audio block
   uint32_t number_of_channels = 0;
+
+  /// @brief Encoded the RawAudio as protobuf to the provided buffer.
+  ///
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
+  /// and returns FoxgloveError::BufferTooShort.
+  /// If the message cannot be encoded, writes the reason to stderr and returns
+  /// FoxgloveError::EncodeError.
+  ///
+  /// @param ptr the destination buffer. must point to at least len valid bytes.
+  /// @param len the length of the destination buffer.
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief A raw image
@@ -1062,6 +1582,19 @@ struct RawImage {
   /// @brief   - `step` must be greater than or equal to `width` * 2.
   /// @brief
   std::vector<std::byte> data;
+
+  /// @brief Encoded the RawImage as protobuf to the provided buffer.
+  ///
+  /// On success, writes the serialized length to *encoded_len.
+  /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
+  /// and returns FoxgloveError::BufferTooShort.
+  /// If the message cannot be encoded, writes the reason to stderr and returns
+  /// FoxgloveError::EncodeError.
+  ///
+  /// @param ptr the destination buffer. must point to at least len valid bytes.
+  /// @param len the length of the destination buffer.
+  /// @param encoded_len where the serialized length or required capacity will be written to.
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 };
 
 /// @brief A channel for logging ArrowPrimitive messages to a topic.

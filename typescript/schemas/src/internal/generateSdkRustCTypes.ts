@@ -245,6 +245,52 @@ pub extern "C" fn foxglove_channel_log_${snakeName}(channel: Option<&FoxgloveCha
     }
   }
 }
+
+/// Encode a ${name} message as protobuf to the buffer provided.
+///
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+/// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+/// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+///
+/// # Safety
+/// ptr must be a valid pointer to a memory region at least len bytes long.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_${snakeName}_encode(
+    msg: Option<&${name}>,
+    ptr: *mut u8,
+    len: usize,
+    encoded_len: Option<&mut usize>,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { ${name}::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            if len == 0 || ptr.is_null() {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = msg.encoded_len().expect("foxglove schemas return Some(len)");
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
+            if let Err(encode_error) = msg.encode(&mut buf) {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
+            }
+            FoxgloveError::Ok
+        }
+        Err(e) => {
+            tracing::error!("${name}: {}", e);
+            FoxgloveError::EncodeError
+        }
+    }
+}
 `;
   });
 
@@ -252,6 +298,8 @@ pub extern "C" fn foxglove_channel_log_${snakeName}(channel: Option<&FoxgloveCha
     "use std::ffi::c_uchar;",
     "use std::mem::ManuallyDrop;",
     "use std::pin::{pin, Pin};",
+    "",
+    "use foxglove::Encode;",
     "",
     "use crate::{FoxgloveString, FoxgloveError, FoxgloveChannel, FoxgloveContext, FoxgloveTimestamp, FoxgloveDuration, log_msg_to_channel, result_to_c, do_foxglove_channel_create, FoxgloveSinkId};",
     "use crate::arena::{Arena, BorrowToNative};",

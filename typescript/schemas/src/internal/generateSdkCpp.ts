@@ -163,6 +163,23 @@ export function generateHppSchemas(
           return `${formatComment(field.description, 2)}\n  ${fieldType} ${toSnakeCase(field.name)}${defaultStr};`;
         })
         .join("\n\n"),
+      ...(shouldGenerateChannel(schema)
+        ? [
+            `
+      /// @brief Encoded the ${schema.name} as protobuf to the provided buffer.
+      ///
+      /// On success, writes the serialized length to *encoded_len.
+      /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
+      /// and returns FoxgloveError::BufferTooShort.
+      /// If the message cannot be encoded, writes the reason to stderr and returns
+      /// FoxgloveError::EncodeError.
+      ///
+      /// @param ptr the destination buffer. must point to at least len valid bytes.
+      /// @param len the length of the destination buffer.
+      /// @param encoded_len where the serialized length or required capacity will be written to.
+      FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);`,
+          ]
+        : []),
       `};`,
     ].join("\n");
   });
@@ -369,6 +386,26 @@ export function generateCppSchemas(schemas: FoxgloveMessageSchema[]): string {
     ];
   });
 
+  const encodeImpls = schemas.filter(shouldGenerateChannel).flatMap((schema) => {
+    const snakeName = toSnakeCase(schema.name);
+    if (isSameAsCType(schema)) {
+      return [
+        `FoxgloveError ${schema.name}::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {`,
+        `    return FoxgloveError(foxglove_${snakeName}_encode(reinterpret_cast<const foxglove_${snakeName}*>(this), ptr, len, encoded_len));`,
+        "}\n",
+      ];
+    } else {
+      return [
+        `FoxgloveError ${schema.name}::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {`,
+        "    Arena arena;",
+        `    foxglove_${snakeName} c_msg;`,
+        `    ${toCamelCase(schema.name)}ToC(c_msg, *this, arena);`,
+        `    return FoxgloveError(foxglove_${snakeName}_encode(&c_msg, ptr, len, encoded_len));`,
+        "}\n",
+      ];
+    }
+  });
+
   const channelUniquePtr = [
     "void ChannelDeleter::operator()(const foxglove_channel* ptr) const noexcept {",
     "  foxglove_channel_free(ptr);",
@@ -403,6 +440,7 @@ export function generateCppSchemas(schemas: FoxgloveMessageSchema[]): string {
 
     conversionFuncs.join("\n"),
 
+    encodeImpls.join("\n"),
     "} // namespace foxglove::schemas",
   ];
 
