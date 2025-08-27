@@ -2,6 +2,19 @@ ifndef WASI_SDK
 $(error Download the WASI SDK from https://github.com/WebAssembly/wasi-sdk/releases and set WASI_SDK to the extracted path)
 endif
 
+.PHONY: all
+all: package example
+
+.PHONY: package
+package: target/foxglove_data_loader.tar.gz
+
+.PHONY: clean
+clean:
+	rm -rf target
+
+.PHONY: example
+example: target/data_loader_example.wasm
+
 tgzfiles:=\
   target/include/foxglove-c/foxglove-c.h \
   target/include/foxglove/arena.hpp \

@@ -89,7 +89,9 @@ public:
       auto ptr = ::malloc(size_with_alignment);
       aligned_ptr = std::align(alignment, bytes_needed, ptr, size_with_alignment);
       if (aligned_ptr == nullptr) {
+#ifndef __wasm32__
         throw std::bad_alloc();
+#endif
       }
       overflow_.emplace_back(static_cast<char*>(aligned_ptr));
       return reinterpret_cast<T*>(aligned_ptr);
