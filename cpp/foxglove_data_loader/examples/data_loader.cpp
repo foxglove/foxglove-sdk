@@ -1,9 +1,10 @@
 #define FOXGLOVE_DATA_LOADER_IMPLEMENTATION
 #include "foxglove_data_loader/data_loader.hpp"
-#include "foxglove/schemas.hpp"
 
 #include <memory>
 #include <sstream>
+
+#include "foxglove/schemas.hpp"
 
 using namespace foxglove_data_loader;
 
