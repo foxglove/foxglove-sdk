@@ -421,7 +421,7 @@ export function generateCppSchemas(schemas: FoxgloveMessageSchema[]): string {
       "    Schema result;",
       "    result.name = std::string(c_schema.name.data, c_schema.name.len);",
       "    result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);",
-      "    result.data = (const std::byte*)(c_schema.data);",
+      "    result.data = reinterpret_cast<const std::byte*>(c_schema.data);",
       "    result.data_len = c_schema.data_len;",
       "    return result;",
       "}\n",
