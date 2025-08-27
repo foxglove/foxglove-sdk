@@ -20,28 +20,28 @@
 #endif
 
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Allow clients to advertise channels to send data messages to the server.
  */
 #define FOXGLOVE_SERVER_CAPABILITY_CLIENT_PUBLISH (1 << 0)
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Allow clients to subscribe and make connection graph updates
  */
 #define FOXGLOVE_SERVER_CAPABILITY_CONNECTION_GRAPH (1 << 1)
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Allow clients to get & set parameters.
  */
 #define FOXGLOVE_SERVER_CAPABILITY_PARAMETERS (1 << 2)
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Inform clients about the latest server time.
  *
@@ -52,14 +52,14 @@
 #define FOXGLOVE_SERVER_CAPABILITY_TIME (1 << 3)
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Allow clients to call services.
  */
 #define FOXGLOVE_SERVER_CAPABILITY_SERVICES (1 << 4)
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Allow clients to request assets. If you supply an asset handler to the server, this capability
  * will be advertised automatically.
@@ -124,7 +124,7 @@ enum foxglove_log_level
 typedef int32_t foxglove_log_level;
 #endif // __cplusplus
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Logging level for the Foxglove SDK.
  *
@@ -135,19 +135,19 @@ enum foxglove_logging_level
   : uint8_t
 #endif // __cplusplus
  {
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
   FOXGLOVE_LOGGING_LEVEL_OFF = 0,
 #endif
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
   FOXGLOVE_LOGGING_LEVEL_DEBUG = 1,
 #endif
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
   FOXGLOVE_LOGGING_LEVEL_INFO = 2,
 #endif
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
   FOXGLOVE_LOGGING_LEVEL_WARN = 3,
 #endif
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
   FOXGLOVE_LOGGING_LEVEL_ERROR = 4,
 #endif
 };
@@ -156,19 +156,19 @@ typedef uint8_t foxglove_logging_level;
 #endif // __cplusplus
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 enum foxglove_mcap_compression
 #ifdef __cplusplus
   : uint8_t
 #endif // __cplusplus
  {
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
   FOXGLOVE_MCAP_COMPRESSION_NONE,
 #endif
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
   FOXGLOVE_MCAP_COMPRESSION_ZSTD,
 #endif
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
   FOXGLOVE_MCAP_COMPRESSION_LZ4,
 #endif
 };
@@ -196,7 +196,7 @@ enum foxglove_numeric_type
 typedef int32_t foxglove_numeric_type;
 #endif // __cplusplus
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * A parameter type.
  *
@@ -208,25 +208,25 @@ enum foxglove_parameter_type
   : uint8_t
 #endif // __cplusplus
  {
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
   /**
    * The parameter value can be inferred from the inner parameter value tag.
    */
   FOXGLOVE_PARAMETER_TYPE_NONE,
 #endif
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
   /**
    * An array of bytes.
    */
   FOXGLOVE_PARAMETER_TYPE_BYTE_ARRAY,
 #endif
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
   /**
    * A decimal or integer value that can be represented as a `float64`.
    */
   FOXGLOVE_PARAMETER_TYPE_FLOAT64,
 #endif
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
   /**
    * An array of decimal or integer values that can be represented as `float64`s.
    */
@@ -238,7 +238,7 @@ typedef uint8_t foxglove_parameter_type;
 #endif // __cplusplus
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * A variant discriminator for `FoxgloveParameterValueData`.
  */
@@ -247,22 +247,22 @@ enum foxglove_parameter_value_tag
   : uint8_t
 #endif // __cplusplus
  {
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
   FOXGLOVE_PARAMETER_VALUE_TAG_FLOAT64,
 #endif
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
   FOXGLOVE_PARAMETER_VALUE_TAG_INTEGER,
 #endif
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
   FOXGLOVE_PARAMETER_VALUE_TAG_BOOLEAN,
 #endif
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
   FOXGLOVE_PARAMETER_VALUE_TAG_STRING,
 #endif
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
   FOXGLOVE_PARAMETER_VALUE_TAG_ARRAY,
 #endif
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
   FOXGLOVE_PARAMETER_VALUE_TAG_DICT,
 #endif
 };
@@ -312,7 +312,7 @@ enum foxglove_scene_entity_deletion_type
 typedef int32_t foxglove_scene_entity_deletion_type;
 #endif // __cplusplus
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Level indicator for a server status message.
  */
@@ -321,13 +321,13 @@ enum foxglove_server_status_level
   : uint8_t
 #endif // __cplusplus
  {
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
   FOXGLOVE_SERVER_STATUS_LEVEL_INFO,
 #endif
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
   FOXGLOVE_SERVER_STATUS_LEVEL_WARNING,
 #endif
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
   FOXGLOVE_SERVER_STATUS_LEVEL_ERROR,
 #endif
 };
@@ -336,35 +336,35 @@ typedef uint8_t foxglove_server_status_level;
 #endif // __cplusplus
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 typedef struct foxglove_channel foxglove_channel;
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 typedef struct foxglove_connection_graph foxglove_connection_graph;
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 typedef struct foxglove_context foxglove_context;
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 typedef struct foxglove_fetch_asset_responder foxglove_fetch_asset_responder;
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 typedef struct foxglove_mcap_writer foxglove_mcap_writer;
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 typedef struct foxglove_service foxglove_service;
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 typedef struct foxglove_service_responder foxglove_service_responder;
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 typedef struct foxglove_websocket_server foxglove_websocket_server;
 #endif
 
@@ -488,7 +488,7 @@ typedef struct foxglove_arrow_primitive {
   const struct foxglove_color *color;
 } foxglove_arrow_primitive;
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 typedef uint64_t FoxgloveSinkId;
 #endif
 
@@ -1648,7 +1648,7 @@ typedef struct foxglove_raw_image {
   size_t data_len;
 } foxglove_raw_image;
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 typedef struct foxglove_mcap_options {
   /**
    * `context` can be null, or a valid pointer to a context created via `foxglove_context_new`.
@@ -1704,7 +1704,7 @@ typedef struct foxglove_channel_metadata {
   size_t count;
 } foxglove_channel_metadata;
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * An iterator over channel metadata key-value pairs.
  */
@@ -1720,7 +1720,7 @@ typedef struct foxglove_channel_metadata_iterator {
 } foxglove_channel_metadata_iterator;
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * A byte array with associated length.
  */
@@ -1736,7 +1736,7 @@ typedef struct foxglove_bytes {
 } foxglove_bytes;
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * An array of parameter values.
  *
@@ -1758,7 +1758,7 @@ typedef struct foxglove_parameter_value_array {
 } foxglove_parameter_value_array;
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * An dictionary entry for a parameter value.
  *
@@ -1776,7 +1776,7 @@ typedef struct foxglove_parameter_value_dict_entry {
 } foxglove_parameter_value_dict_entry;
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * An dictionary of parameter values.
  *
@@ -1798,7 +1798,7 @@ typedef struct foxglove_parameter_value_dict {
 } foxglove_parameter_value_dict;
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Storage for `FoxgloveParameterValue`.
  */
@@ -1812,7 +1812,7 @@ typedef union foxglove_parameter_value_data {
 } foxglove_parameter_value_data;
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * A websocket parameter value.
  *
@@ -1830,7 +1830,7 @@ typedef struct foxglove_parameter_value {
 } foxglove_parameter_value;
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * A websocket parameter.
  *
@@ -1852,7 +1852,7 @@ typedef struct foxglove_parameter {
 } foxglove_parameter;
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * An array of websocket parameters.
  *
@@ -1874,14 +1874,14 @@ typedef struct foxglove_parameter_array {
 } foxglove_parameter_array;
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 typedef struct foxglove_client_metadata {
   uint32_t id;
   FoxgloveSinkId sink_id;
 } foxglove_client_metadata;
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 typedef struct foxglove_client_channel {
   uint32_t id;
   const char *topic;
@@ -1893,7 +1893,7 @@ typedef struct foxglove_client_channel {
 } foxglove_client_channel;
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 typedef struct foxglove_server_callbacks {
   /**
    * A user-defined value that will be passed to callback functions
@@ -1986,11 +1986,11 @@ typedef struct foxglove_server_callbacks {
 } foxglove_server_callbacks;
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 typedef uint8_t foxglove_server_capability;
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 typedef struct foxglove_server_options {
   /**
    * `context` can be null, or a valid pointer to a context created via `foxglove_context_new`.
@@ -2050,7 +2050,7 @@ typedef struct foxglove_server_options {
 } foxglove_server_options;
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * A schema describing either a websocket service request or response.
  */
@@ -2066,7 +2066,7 @@ typedef struct foxglove_service_message_schema {
 } foxglove_service_message_schema;
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * A websocket service schema.
  */
@@ -2086,7 +2086,7 @@ typedef struct foxglove_service_schema {
 } foxglove_service_schema;
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * A websocket service request message.
  */
@@ -2118,7 +2118,7 @@ typedef struct foxglove_service_request {
 extern "C" {
 #endif // __cplusplus
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * For use by the C++ SDK. Identifies that wrapper as the source of logs.
  */
@@ -2140,7 +2140,7 @@ foxglove_error foxglove_channel_create_arrow_primitive(struct foxglove_string to
                                                        const struct foxglove_context *context,
                                                        const struct foxglove_channel **channel);
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Log a ArrowPrimitive message to a channel.
  *
@@ -2186,7 +2186,7 @@ foxglove_error foxglove_channel_create_camera_calibration(struct foxglove_string
                                                           const struct foxglove_context *context,
                                                           const struct foxglove_channel **channel);
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Log a CameraCalibration message to a channel.
  *
@@ -2232,7 +2232,7 @@ foxglove_error foxglove_channel_create_circle_annotation(struct foxglove_string 
                                                          const struct foxglove_context *context,
                                                          const struct foxglove_channel **channel);
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Log a CircleAnnotation message to a channel.
  *
@@ -2278,7 +2278,7 @@ foxglove_error foxglove_channel_create_color(struct foxglove_string topic,
                                              const struct foxglove_context *context,
                                              const struct foxglove_channel **channel);
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Log a Color message to a channel.
  *
@@ -2324,7 +2324,7 @@ foxglove_error foxglove_channel_create_compressed_image(struct foxglove_string t
                                                         const struct foxglove_context *context,
                                                         const struct foxglove_channel **channel);
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Log a CompressedImage message to a channel.
  *
@@ -2370,7 +2370,7 @@ foxglove_error foxglove_channel_create_compressed_video(struct foxglove_string t
                                                         const struct foxglove_context *context,
                                                         const struct foxglove_channel **channel);
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Log a CompressedVideo message to a channel.
  *
@@ -2416,7 +2416,7 @@ foxglove_error foxglove_channel_create_cylinder_primitive(struct foxglove_string
                                                           const struct foxglove_context *context,
                                                           const struct foxglove_channel **channel);
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Log a CylinderPrimitive message to a channel.
  *
@@ -2462,7 +2462,7 @@ foxglove_error foxglove_channel_create_cube_primitive(struct foxglove_string top
                                                       const struct foxglove_context *context,
                                                       const struct foxglove_channel **channel);
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Log a CubePrimitive message to a channel.
  *
@@ -2508,7 +2508,7 @@ foxglove_error foxglove_channel_create_frame_transform(struct foxglove_string to
                                                        const struct foxglove_context *context,
                                                        const struct foxglove_channel **channel);
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Log a FrameTransform message to a channel.
  *
@@ -2554,7 +2554,7 @@ foxglove_error foxglove_channel_create_frame_transforms(struct foxglove_string t
                                                         const struct foxglove_context *context,
                                                         const struct foxglove_channel **channel);
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Log a FrameTransforms message to a channel.
  *
@@ -2600,7 +2600,7 @@ foxglove_error foxglove_channel_create_geo_json(struct foxglove_string topic,
                                                 const struct foxglove_context *context,
                                                 const struct foxglove_channel **channel);
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Log a GeoJson message to a channel.
  *
@@ -2646,7 +2646,7 @@ foxglove_error foxglove_channel_create_grid(struct foxglove_string topic,
                                             const struct foxglove_context *context,
                                             const struct foxglove_channel **channel);
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Log a Grid message to a channel.
  *
@@ -2692,7 +2692,7 @@ foxglove_error foxglove_channel_create_voxel_grid(struct foxglove_string topic,
                                                   const struct foxglove_context *context,
                                                   const struct foxglove_channel **channel);
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Log a VoxelGrid message to a channel.
  *
@@ -2738,7 +2738,7 @@ foxglove_error foxglove_channel_create_image_annotations(struct foxglove_string 
                                                          const struct foxglove_context *context,
                                                          const struct foxglove_channel **channel);
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Log a ImageAnnotations message to a channel.
  *
@@ -2784,7 +2784,7 @@ foxglove_error foxglove_channel_create_key_value_pair(struct foxglove_string top
                                                       const struct foxglove_context *context,
                                                       const struct foxglove_channel **channel);
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Log a KeyValuePair message to a channel.
  *
@@ -2830,7 +2830,7 @@ foxglove_error foxglove_channel_create_laser_scan(struct foxglove_string topic,
                                                   const struct foxglove_context *context,
                                                   const struct foxglove_channel **channel);
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Log a LaserScan message to a channel.
  *
@@ -2876,7 +2876,7 @@ foxglove_error foxglove_channel_create_line_primitive(struct foxglove_string top
                                                       const struct foxglove_context *context,
                                                       const struct foxglove_channel **channel);
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Log a LinePrimitive message to a channel.
  *
@@ -2922,7 +2922,7 @@ foxglove_error foxglove_channel_create_location_fix(struct foxglove_string topic
                                                     const struct foxglove_context *context,
                                                     const struct foxglove_channel **channel);
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Log a LocationFix message to a channel.
  *
@@ -2968,7 +2968,7 @@ foxglove_error foxglove_channel_create_location_fixes(struct foxglove_string top
                                                       const struct foxglove_context *context,
                                                       const struct foxglove_channel **channel);
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Log a LocationFixes message to a channel.
  *
@@ -3014,7 +3014,7 @@ foxglove_error foxglove_channel_create_log(struct foxglove_string topic,
                                            const struct foxglove_context *context,
                                            const struct foxglove_channel **channel);
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Log a Log message to a channel.
  *
@@ -3060,7 +3060,7 @@ foxglove_error foxglove_channel_create_scene_entity_deletion(struct foxglove_str
                                                              const struct foxglove_context *context,
                                                              const struct foxglove_channel **channel);
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Log a SceneEntityDeletion message to a channel.
  *
@@ -3106,7 +3106,7 @@ foxglove_error foxglove_channel_create_scene_entity(struct foxglove_string topic
                                                     const struct foxglove_context *context,
                                                     const struct foxglove_channel **channel);
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Log a SceneEntity message to a channel.
  *
@@ -3152,7 +3152,7 @@ foxglove_error foxglove_channel_create_scene_update(struct foxglove_string topic
                                                     const struct foxglove_context *context,
                                                     const struct foxglove_channel **channel);
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Log a SceneUpdate message to a channel.
  *
@@ -3198,7 +3198,7 @@ foxglove_error foxglove_channel_create_model_primitive(struct foxglove_string to
                                                        const struct foxglove_context *context,
                                                        const struct foxglove_channel **channel);
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Log a ModelPrimitive message to a channel.
  *
@@ -3244,7 +3244,7 @@ foxglove_error foxglove_channel_create_packed_element_field(struct foxglove_stri
                                                             const struct foxglove_context *context,
                                                             const struct foxglove_channel **channel);
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Log a PackedElementField message to a channel.
  *
@@ -3290,7 +3290,7 @@ foxglove_error foxglove_channel_create_point2(struct foxglove_string topic,
                                               const struct foxglove_context *context,
                                               const struct foxglove_channel **channel);
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Log a Point2 message to a channel.
  *
@@ -3336,7 +3336,7 @@ foxglove_error foxglove_channel_create_point3(struct foxglove_string topic,
                                               const struct foxglove_context *context,
                                               const struct foxglove_channel **channel);
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Log a Point3 message to a channel.
  *
@@ -3382,7 +3382,7 @@ foxglove_error foxglove_channel_create_point_cloud(struct foxglove_string topic,
                                                    const struct foxglove_context *context,
                                                    const struct foxglove_channel **channel);
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Log a PointCloud message to a channel.
  *
@@ -3428,7 +3428,7 @@ foxglove_error foxglove_channel_create_points_annotation(struct foxglove_string 
                                                          const struct foxglove_context *context,
                                                          const struct foxglove_channel **channel);
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Log a PointsAnnotation message to a channel.
  *
@@ -3474,7 +3474,7 @@ foxglove_error foxglove_channel_create_pose(struct foxglove_string topic,
                                             const struct foxglove_context *context,
                                             const struct foxglove_channel **channel);
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Log a Pose message to a channel.
  *
@@ -3520,7 +3520,7 @@ foxglove_error foxglove_channel_create_pose_in_frame(struct foxglove_string topi
                                                      const struct foxglove_context *context,
                                                      const struct foxglove_channel **channel);
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Log a PoseInFrame message to a channel.
  *
@@ -3566,7 +3566,7 @@ foxglove_error foxglove_channel_create_poses_in_frame(struct foxglove_string top
                                                       const struct foxglove_context *context,
                                                       const struct foxglove_channel **channel);
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Log a PosesInFrame message to a channel.
  *
@@ -3612,7 +3612,7 @@ foxglove_error foxglove_channel_create_quaternion(struct foxglove_string topic,
                                                   const struct foxglove_context *context,
                                                   const struct foxglove_channel **channel);
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Log a Quaternion message to a channel.
  *
@@ -3658,7 +3658,7 @@ foxglove_error foxglove_channel_create_raw_audio(struct foxglove_string topic,
                                                  const struct foxglove_context *context,
                                                  const struct foxglove_channel **channel);
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Log a RawAudio message to a channel.
  *
@@ -3704,7 +3704,7 @@ foxglove_error foxglove_channel_create_raw_image(struct foxglove_string topic,
                                                  const struct foxglove_context *context,
                                                  const struct foxglove_channel **channel);
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Log a RawImage message to a channel.
  *
@@ -3750,7 +3750,7 @@ foxglove_error foxglove_channel_create_sphere_primitive(struct foxglove_string t
                                                         const struct foxglove_context *context,
                                                         const struct foxglove_channel **channel);
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Log a SpherePrimitive message to a channel.
  *
@@ -3796,7 +3796,7 @@ foxglove_error foxglove_channel_create_text_annotation(struct foxglove_string to
                                                        const struct foxglove_context *context,
                                                        const struct foxglove_channel **channel);
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Log a TextAnnotation message to a channel.
  *
@@ -3842,7 +3842,7 @@ foxglove_error foxglove_channel_create_text_primitive(struct foxglove_string top
                                                       const struct foxglove_context *context,
                                                       const struct foxglove_channel **channel);
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Log a TextPrimitive message to a channel.
  *
@@ -3888,7 +3888,7 @@ foxglove_error foxglove_channel_create_triangle_list_primitive(struct foxglove_s
                                                                const struct foxglove_context *context,
                                                                const struct foxglove_channel **channel);
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Log a TriangleListPrimitive message to a channel.
  *
@@ -3934,7 +3934,7 @@ foxglove_error foxglove_channel_create_vector2(struct foxglove_string topic,
                                                const struct foxglove_context *context,
                                                const struct foxglove_channel **channel);
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Log a Vector2 message to a channel.
  *
@@ -3980,7 +3980,7 @@ foxglove_error foxglove_channel_create_vector3(struct foxglove_string topic,
                                                const struct foxglove_context *context,
                                                const struct foxglove_channel **channel);
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Log a Vector3 message to a channel.
  *
@@ -4016,7 +4016,7 @@ foxglove_error foxglove_vector3_encode(const struct foxglove_vector3 *msg,
                                        size_t len,
                                        size_t *encoded_len);
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Create or open an MCAP file for writing.
  * Resources must later be freed with `foxglove_mcap_close`.
@@ -4031,7 +4031,7 @@ foxglove_error foxglove_mcap_open(const struct foxglove_mcap_options *FOXGLOVE_N
                                   struct foxglove_mcap_writer **writer);
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Close an MCAP file writer created via `foxglove_mcap_open`.
  *
@@ -4043,7 +4043,7 @@ foxglove_error foxglove_mcap_open(const struct foxglove_mcap_options *FOXGLOVE_N
 foxglove_error foxglove_mcap_close(struct foxglove_mcap_writer *writer);
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Create a new channel. The channel must later be freed with `foxglove_channel_free`.
  *
@@ -4067,7 +4067,7 @@ foxglove_error foxglove_raw_channel_create(struct foxglove_string topic,
                                            const struct foxglove_channel **channel);
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Close a channel.
  *
@@ -4085,7 +4085,7 @@ foxglove_error foxglove_raw_channel_create(struct foxglove_string topic,
 void foxglove_channel_close(const struct foxglove_channel *channel);
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Free a channel created via `foxglove_channel_create`.
  *
@@ -4096,7 +4096,7 @@ void foxglove_channel_close(const struct foxglove_channel *channel);
 void foxglove_channel_free(const struct foxglove_channel *channel);
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Get the ID of a channel.
  *
@@ -4108,7 +4108,7 @@ void foxglove_channel_free(const struct foxglove_channel *channel);
 uint64_t foxglove_channel_get_id(const struct foxglove_channel *channel);
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Get the topic of a channel.
  *
@@ -4122,7 +4122,7 @@ uint64_t foxglove_channel_get_id(const struct foxglove_channel *channel);
 struct foxglove_string foxglove_channel_get_topic(const struct foxglove_channel *channel);
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Get the message_encoding of a channel.
  *
@@ -4136,7 +4136,7 @@ struct foxglove_string foxglove_channel_get_topic(const struct foxglove_channel 
 struct foxglove_string foxglove_channel_get_message_encoding(const struct foxglove_channel *channel);
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Get the schema of a channel.
  *
@@ -4152,7 +4152,7 @@ foxglove_error foxglove_channel_get_schema(const struct foxglove_channel *channe
                                            struct foxglove_schema *schema);
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Find out if any sinks have been added to a channel.
  *
@@ -4164,7 +4164,7 @@ foxglove_error foxglove_channel_get_schema(const struct foxglove_channel *channe
 bool foxglove_channel_has_sinks(const struct foxglove_channel *channel);
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Create an iterator over a channel's metadata.
  *
@@ -4179,7 +4179,7 @@ bool foxglove_channel_has_sinks(const struct foxglove_channel *channel);
 struct foxglove_channel_metadata_iterator *foxglove_channel_metadata_iter_create(const struct foxglove_channel *channel);
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Get the next key-value pair from the metadata iterator.
  *
@@ -4195,7 +4195,7 @@ bool foxglove_channel_metadata_iter_next(struct foxglove_channel_metadata_iterat
                                          struct foxglove_key_value *key_value);
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Free a metadata iterator created via `foxglove_channel_metadata_iter_create`.
  *
@@ -4206,7 +4206,7 @@ bool foxglove_channel_metadata_iter_next(struct foxglove_channel_metadata_iterat
 void foxglove_channel_metadata_iter_free(struct foxglove_channel_metadata_iterator *iter);
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Log a message on a channel.
  *
@@ -4223,7 +4223,7 @@ foxglove_error foxglove_channel_log(const struct foxglove_channel *channel,
                                     FoxgloveSinkId sink_id);
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Create a new context. This never fails.
  * You must pass this to `foxglove_context_free` when done with it.
@@ -4231,7 +4231,7 @@ foxglove_error foxglove_channel_log(const struct foxglove_channel *channel,
 const struct foxglove_context *foxglove_context_new(void);
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Free a context created via `foxglove_context_new` or `foxglove_context_free`.
  *
@@ -4241,7 +4241,7 @@ const struct foxglove_context *foxglove_context_new(void);
 void foxglove_context_free(const struct foxglove_context *context);
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Create a new connection graph.
  *
@@ -4253,7 +4253,7 @@ void foxglove_context_free(const struct foxglove_context *context);
 foxglove_error foxglove_connection_graph_create(struct foxglove_connection_graph **graph);
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Free the connection graph.
  *
@@ -4264,7 +4264,7 @@ foxglove_error foxglove_connection_graph_create(struct foxglove_connection_graph
 void foxglove_connection_graph_free(struct foxglove_connection_graph *graph);
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Set a published topic and its associated publisher ids. Overwrites any existing topic with the
  * same name.
@@ -4282,7 +4282,7 @@ foxglove_error foxglove_connection_graph_set_published_topic(struct foxglove_con
                                                              size_t publisher_ids_count);
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Set a subscribed topic and its associated subscriber ids. Overwrites any existing topic with the
  * same name.
@@ -4297,7 +4297,7 @@ foxglove_error foxglove_connection_graph_set_subscribed_topic(struct foxglove_co
                                                               size_t subscriber_ids_count);
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Set an advertised service and its associated provider ids. Overwrites any existing service with
  * the same name.
@@ -4314,7 +4314,7 @@ foxglove_error foxglove_connection_graph_set_advertised_service(struct foxglove_
                                                                 size_t provider_ids_count);
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Completes a fetch asset request by sending asset data to the client.
  *
@@ -4328,7 +4328,7 @@ void foxglove_fetch_asset_respond_ok(struct foxglove_fetch_asset_responder *resp
                                      struct foxglove_bytes data);
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Completes a request by sending an error message to the client.
  *
@@ -4342,7 +4342,7 @@ void foxglove_fetch_asset_respond_error(struct foxglove_fetch_asset_responder *r
                                         struct foxglove_string message);
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Initialize SDK logging with the given severity level.
  *
@@ -4363,7 +4363,7 @@ void foxglove_fetch_asset_respond_error(struct foxglove_fetch_asset_responder *r
 void foxglove_set_log_level(foxglove_logging_level level);
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Creates a new parameter array with the specified capacity.
  *
@@ -4372,7 +4372,7 @@ void foxglove_set_log_level(foxglove_logging_level level);
 struct foxglove_parameter_array *foxglove_parameter_array_create(size_t capacity);
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Pushes a parameter into the array.
  *
@@ -4386,7 +4386,7 @@ foxglove_error foxglove_parameter_array_push(struct foxglove_parameter_array *ar
                                              struct foxglove_parameter *param);
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Frees the parameter array and its contained parameters.
  *
@@ -4396,7 +4396,7 @@ foxglove_error foxglove_parameter_array_push(struct foxglove_parameter_array *ar
 void foxglove_parameter_array_free(struct foxglove_parameter_array *array);
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Creates a new parameter.
  *
@@ -4416,7 +4416,7 @@ foxglove_error foxglove_parameter_create(struct foxglove_parameter **param,
                                          struct foxglove_parameter_value *value);
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Creates a new empty parameter.
  *
@@ -4431,7 +4431,7 @@ foxglove_error foxglove_parameter_create_empty(struct foxglove_parameter **param
                                                struct foxglove_string name);
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Creates a new number parameter.
  *
@@ -4447,7 +4447,7 @@ foxglove_error foxglove_parameter_create_float64(struct foxglove_parameter **par
                                                  double value);
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Creates a new integer parameter.
  *
@@ -4463,7 +4463,7 @@ foxglove_error foxglove_parameter_create_integer(struct foxglove_parameter **par
                                                  int64_t value);
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Creates a new boolean parameter.
  *
@@ -4479,7 +4479,7 @@ foxglove_error foxglove_parameter_create_boolean(struct foxglove_parameter **par
                                                  bool value);
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Creates a new string parameter.
  *
@@ -4496,7 +4496,7 @@ foxglove_error foxglove_parameter_create_string(struct foxglove_parameter **para
                                                 struct foxglove_string value);
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Creates a new byte array parameter.
  *
@@ -4513,7 +4513,7 @@ foxglove_error foxglove_parameter_create_byte_array(struct foxglove_parameter **
                                                     struct foxglove_bytes value);
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Creates a new parameter which is an array of float64 values.
  *
@@ -4532,7 +4532,7 @@ foxglove_error foxglove_parameter_create_float64_array(struct foxglove_parameter
                                                        size_t values_len);
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Creates a new parameter which is an array of integer values.
  */
@@ -4542,7 +4542,7 @@ foxglove_error foxglove_parameter_create_integer_array(struct foxglove_parameter
                                                        size_t values_len);
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Creates a new parameter which is a dictionary of parameter values.
  *
@@ -4561,7 +4561,7 @@ foxglove_error foxglove_parameter_create_dict(struct foxglove_parameter **param,
                                               struct foxglove_parameter_value_dict *dict);
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Returns an estimate of the decoded length for the byte array in bytes.
  *
@@ -4574,7 +4574,7 @@ foxglove_error foxglove_parameter_get_byte_array_decoded_size(const struct foxgl
                                                               size_t *len);
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Decodes a byte array into the provided buffer.
  *
@@ -4594,7 +4594,7 @@ foxglove_error foxglove_parameter_decode_byte_array(const struct foxglove_parame
                                                     size_t *len);
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Clones a parameter.
  *
@@ -4608,7 +4608,7 @@ foxglove_error foxglove_parameter_decode_byte_array(const struct foxglove_parame
 struct foxglove_parameter *foxglove_parameter_clone(const struct foxglove_parameter *param);
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Frees a parameter.
  *
@@ -4619,7 +4619,7 @@ struct foxglove_parameter *foxglove_parameter_clone(const struct foxglove_parame
 void foxglove_parameter_free(struct foxglove_parameter *param);
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Creates a new float64 parameter value.
  *
@@ -4629,7 +4629,7 @@ void foxglove_parameter_free(struct foxglove_parameter *param);
 struct foxglove_parameter_value *foxglove_parameter_value_create_float64(double number);
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Creates a new integer parameter value.
  *
@@ -4639,7 +4639,7 @@ struct foxglove_parameter_value *foxglove_parameter_value_create_float64(double 
 struct foxglove_parameter_value *foxglove_parameter_value_create_integer(int64_t integer);
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Creates a new boolean parameter value.
  *
@@ -4649,7 +4649,7 @@ struct foxglove_parameter_value *foxglove_parameter_value_create_integer(int64_t
 struct foxglove_parameter_value *foxglove_parameter_value_create_boolean(bool boolean);
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Creates a new string parameter value.
  *
@@ -4663,7 +4663,7 @@ foxglove_error foxglove_parameter_value_create_string(struct foxglove_parameter_
                                                       struct foxglove_string string);
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Creates a new array parameter value.
  *
@@ -4678,7 +4678,7 @@ foxglove_error foxglove_parameter_value_create_string(struct foxglove_parameter_
 struct foxglove_parameter_value *foxglove_parameter_value_create_array(struct foxglove_parameter_value_array *array);
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Creates a new dict parameter value.
  *
@@ -4693,7 +4693,7 @@ struct foxglove_parameter_value *foxglove_parameter_value_create_array(struct fo
 struct foxglove_parameter_value *foxglove_parameter_value_create_dict(struct foxglove_parameter_value_dict *dict);
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Clones a parameter value.
  *
@@ -4707,7 +4707,7 @@ struct foxglove_parameter_value *foxglove_parameter_value_create_dict(struct fox
 struct foxglove_parameter_value *foxglove_parameter_value_clone(const struct foxglove_parameter_value *value);
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Frees a parameter value.
  *
@@ -4717,7 +4717,7 @@ struct foxglove_parameter_value *foxglove_parameter_value_clone(const struct fox
 void foxglove_parameter_value_free(struct foxglove_parameter_value *value);
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Creates a new value array with the specified capacity.
  *
@@ -4727,7 +4727,7 @@ void foxglove_parameter_value_free(struct foxglove_parameter_value *value);
 struct foxglove_parameter_value_array *foxglove_parameter_value_array_create(size_t capacity);
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Pushes a parameter value into the array.
  *
@@ -4741,7 +4741,7 @@ foxglove_error foxglove_parameter_value_array_push(struct foxglove_parameter_val
                                                    struct foxglove_parameter_value *value);
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Frees a parameter value array.
  *
@@ -4751,7 +4751,7 @@ foxglove_error foxglove_parameter_value_array_push(struct foxglove_parameter_val
 void foxglove_parameter_value_array_free(struct foxglove_parameter_value_array *array);
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Creates a new value dict with the specified capacity.
  *
@@ -4761,7 +4761,7 @@ void foxglove_parameter_value_array_free(struct foxglove_parameter_value_array *
 struct foxglove_parameter_value_dict *foxglove_parameter_value_dict_create(size_t capacity);
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Inserts an entry into the parameter value dict.
  *
@@ -4775,7 +4775,7 @@ foxglove_error foxglove_parameter_value_dict_insert(struct foxglove_parameter_va
                                                     struct foxglove_parameter_value *value);
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Frees a parameter value dict.
  *
@@ -4785,7 +4785,7 @@ foxglove_error foxglove_parameter_value_dict_insert(struct foxglove_parameter_va
 void foxglove_parameter_value_dict_free(struct foxglove_parameter_value_dict *dict);
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Create and start a server.
  *
@@ -4805,7 +4805,7 @@ foxglove_error foxglove_server_start(const struct foxglove_server_options *FOXGL
                                      struct foxglove_websocket_server **server);
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Publishes the current server timestamp to all clients.
  *
@@ -4815,7 +4815,7 @@ foxglove_error foxglove_server_broadcast_time(const struct foxglove_websocket_se
                                               uint64_t timestamp_nanos);
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Sets a new session ID and notifies all clients, causing them to reset their state.
  *
@@ -4828,7 +4828,7 @@ foxglove_error foxglove_server_clear_session(const struct foxglove_websocket_ser
                                              const struct foxglove_string *session_id);
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Adds a service to the server.
  *
@@ -4841,7 +4841,7 @@ foxglove_error foxglove_server_add_service(const struct foxglove_websocket_serve
                                            struct foxglove_service *service);
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Removes a service from the server.
  *
@@ -4853,21 +4853,21 @@ foxglove_error foxglove_server_remove_service(const struct foxglove_websocket_se
                                               struct foxglove_string service_name);
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Get the port on which the server is listening.
  */
 uint16_t foxglove_server_get_port(struct foxglove_websocket_server *server);
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Stop and shut down `server` and free the resources associated with it.
  */
 foxglove_error foxglove_server_stop(struct foxglove_websocket_server *server);
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Publish parameter values to all subscribed clients.
  *
@@ -4879,7 +4879,7 @@ foxglove_error foxglove_server_publish_parameter_values(struct foxglove_websocke
                                                         struct foxglove_parameter_array *params);
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Publish a connection graph to the server.
  */
@@ -4887,7 +4887,7 @@ foxglove_error foxglove_server_publish_connection_graph(struct foxglove_websocke
                                                         struct foxglove_connection_graph *graph);
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Publishes a status message to all clients.
  *
@@ -4909,7 +4909,7 @@ foxglove_error foxglove_server_publish_status(struct foxglove_websocket_server *
                                               const struct foxglove_string *id);
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Removes status messages from all clients.
  *
@@ -4924,7 +4924,7 @@ foxglove_error foxglove_server_remove_status(struct foxglove_websocket_server *s
                                              size_t ids_count);
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Creates a new websocket service.
  *
@@ -4960,7 +4960,7 @@ foxglove_error foxglove_service_create(struct foxglove_service **service,
                                                         struct foxglove_service_responder *responder));
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Frees a service that was never registered to a websocket server.
  *
@@ -4971,7 +4971,7 @@ foxglove_error foxglove_service_create(struct foxglove_service **service,
 void foxglove_service_free(struct foxglove_service *service);
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Overrides the default response encoding.
  *
@@ -4984,7 +4984,7 @@ foxglove_error foxglove_service_set_response_encoding(struct foxglove_service_re
                                                       struct foxglove_string encoding);
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Completes a request by sending response data to the client.
  *
@@ -4998,7 +4998,7 @@ void foxglove_service_respond_ok(struct foxglove_service_responder *responder,
                                  struct foxglove_bytes data);
 #endif
 
-#if !defined(__WASM32__)
+#if !defined(__wasm32__)
 /**
  * Completes a request by sending an error message to the client.
  *
