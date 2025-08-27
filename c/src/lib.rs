@@ -432,6 +432,10 @@ pub struct FoxgloveServerCallbacks {
 unsafe impl Send for FoxgloveServerCallbacks {}
 unsafe impl Sync for FoxgloveServerCallbacks {}
 
+/// A Schema is a description of the data format of messages in a channel.
+///
+/// It allows Foxglove to validate messages and provide richer visualizations.
+/// See the [MCAP spec](https://mcap.dev/spec#schema-op0x03) for more information.
 #[repr(C)]
 pub struct FoxgloveSchema {
     pub name: FoxgloveString,

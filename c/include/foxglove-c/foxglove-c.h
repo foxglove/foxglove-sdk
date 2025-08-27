@@ -620,6 +620,12 @@ typedef struct foxglove_mcap_options {
   bool repeat_schemas;
 } foxglove_mcap_options;
 
+/**
+ * A Schema is a description of the data format of messages in a channel.
+ *
+ * It allows Foxglove to validate messages and provide richer visualizations.
+ * See the [MCAP spec](https://mcap.dev/spec#schema-op0x03) for more information.
+ */
 typedef struct foxglove_schema {
   struct foxglove_string name;
   struct foxglove_string encoding;
@@ -2336,6 +2342,13 @@ foxglove_error foxglove_channel_log_arrow_primitive(const struct foxglove_channe
                                                     FoxgloveSinkId sink_id);
 
 /**
+ * Get the ArrowPrimitive schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_arrow_primitive_schema(void);
+
+/**
  * Encode a ArrowPrimitive message as protobuf to the buffer provided.
  *
  * On success, writes the encoded length to *encoded_len.
@@ -2371,6 +2384,13 @@ foxglove_error foxglove_channel_log_camera_calibration(const struct foxglove_cha
                                                        const struct foxglove_camera_calibration *msg,
                                                        const uint64_t *log_time,
                                                        FoxgloveSinkId sink_id);
+
+/**
+ * Get the CameraCalibration schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_camera_calibration_schema(void);
 
 /**
  * Encode a CameraCalibration message as protobuf to the buffer provided.
@@ -2410,6 +2430,13 @@ foxglove_error foxglove_channel_log_circle_annotation(const struct foxglove_chan
                                                       FoxgloveSinkId sink_id);
 
 /**
+ * Get the CircleAnnotation schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_circle_annotation_schema(void);
+
+/**
  * Encode a CircleAnnotation message as protobuf to the buffer provided.
  *
  * On success, writes the encoded length to *encoded_len.
@@ -2445,6 +2472,13 @@ foxglove_error foxglove_channel_log_color(const struct foxglove_channel *channel
                                           const struct foxglove_color *msg,
                                           const uint64_t *log_time,
                                           FoxgloveSinkId sink_id);
+
+/**
+ * Get the Color schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_color_schema(void);
 
 /**
  * Encode a Color message as protobuf to the buffer provided.
@@ -2484,6 +2518,13 @@ foxglove_error foxglove_channel_log_compressed_image(const struct foxglove_chann
                                                      FoxgloveSinkId sink_id);
 
 /**
+ * Get the CompressedImage schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_compressed_image_schema(void);
+
+/**
  * Encode a CompressedImage message as protobuf to the buffer provided.
  *
  * On success, writes the encoded length to *encoded_len.
@@ -2519,6 +2560,13 @@ foxglove_error foxglove_channel_log_compressed_video(const struct foxglove_chann
                                                      const struct foxglove_compressed_video *msg,
                                                      const uint64_t *log_time,
                                                      FoxgloveSinkId sink_id);
+
+/**
+ * Get the CompressedVideo schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_compressed_video_schema(void);
 
 /**
  * Encode a CompressedVideo message as protobuf to the buffer provided.
@@ -2558,6 +2606,13 @@ foxglove_error foxglove_channel_log_cylinder_primitive(const struct foxglove_cha
                                                        FoxgloveSinkId sink_id);
 
 /**
+ * Get the CylinderPrimitive schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_cylinder_primitive_schema(void);
+
+/**
  * Encode a CylinderPrimitive message as protobuf to the buffer provided.
  *
  * On success, writes the encoded length to *encoded_len.
@@ -2593,6 +2648,13 @@ foxglove_error foxglove_channel_log_cube_primitive(const struct foxglove_channel
                                                    const struct foxglove_cube_primitive *msg,
                                                    const uint64_t *log_time,
                                                    FoxgloveSinkId sink_id);
+
+/**
+ * Get the CubePrimitive schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_cube_primitive_schema(void);
 
 /**
  * Encode a CubePrimitive message as protobuf to the buffer provided.
@@ -2632,6 +2694,13 @@ foxglove_error foxglove_channel_log_frame_transform(const struct foxglove_channe
                                                     FoxgloveSinkId sink_id);
 
 /**
+ * Get the FrameTransform schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_frame_transform_schema(void);
+
+/**
  * Encode a FrameTransform message as protobuf to the buffer provided.
  *
  * On success, writes the encoded length to *encoded_len.
@@ -2667,6 +2736,13 @@ foxglove_error foxglove_channel_log_frame_transforms(const struct foxglove_chann
                                                      const struct foxglove_frame_transforms *msg,
                                                      const uint64_t *log_time,
                                                      FoxgloveSinkId sink_id);
+
+/**
+ * Get the FrameTransforms schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_frame_transforms_schema(void);
 
 /**
  * Encode a FrameTransforms message as protobuf to the buffer provided.
@@ -2706,6 +2782,13 @@ foxglove_error foxglove_channel_log_geo_json(const struct foxglove_channel *chan
                                              FoxgloveSinkId sink_id);
 
 /**
+ * Get the GeoJson schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_geo_json_schema(void);
+
+/**
  * Encode a GeoJson message as protobuf to the buffer provided.
  *
  * On success, writes the encoded length to *encoded_len.
@@ -2741,6 +2824,13 @@ foxglove_error foxglove_channel_log_grid(const struct foxglove_channel *channel,
                                          const struct foxglove_grid *msg,
                                          const uint64_t *log_time,
                                          FoxgloveSinkId sink_id);
+
+/**
+ * Get the Grid schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_grid_schema(void);
 
 /**
  * Encode a Grid message as protobuf to the buffer provided.
@@ -2780,6 +2870,13 @@ foxglove_error foxglove_channel_log_voxel_grid(const struct foxglove_channel *ch
                                                FoxgloveSinkId sink_id);
 
 /**
+ * Get the VoxelGrid schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_voxel_grid_schema(void);
+
+/**
  * Encode a VoxelGrid message as protobuf to the buffer provided.
  *
  * On success, writes the encoded length to *encoded_len.
@@ -2815,6 +2912,13 @@ foxglove_error foxglove_channel_log_image_annotations(const struct foxglove_chan
                                                       const struct foxglove_image_annotations *msg,
                                                       const uint64_t *log_time,
                                                       FoxgloveSinkId sink_id);
+
+/**
+ * Get the ImageAnnotations schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_image_annotations_schema(void);
 
 /**
  * Encode a ImageAnnotations message as protobuf to the buffer provided.
@@ -2854,6 +2958,13 @@ foxglove_error foxglove_channel_log_key_value_pair(const struct foxglove_channel
                                                    FoxgloveSinkId sink_id);
 
 /**
+ * Get the KeyValuePair schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_key_value_pair_schema(void);
+
+/**
  * Encode a KeyValuePair message as protobuf to the buffer provided.
  *
  * On success, writes the encoded length to *encoded_len.
@@ -2889,6 +3000,13 @@ foxglove_error foxglove_channel_log_laser_scan(const struct foxglove_channel *ch
                                                const struct foxglove_laser_scan *msg,
                                                const uint64_t *log_time,
                                                FoxgloveSinkId sink_id);
+
+/**
+ * Get the LaserScan schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_laser_scan_schema(void);
 
 /**
  * Encode a LaserScan message as protobuf to the buffer provided.
@@ -2928,6 +3046,13 @@ foxglove_error foxglove_channel_log_line_primitive(const struct foxglove_channel
                                                    FoxgloveSinkId sink_id);
 
 /**
+ * Get the LinePrimitive schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_line_primitive_schema(void);
+
+/**
  * Encode a LinePrimitive message as protobuf to the buffer provided.
  *
  * On success, writes the encoded length to *encoded_len.
@@ -2963,6 +3088,13 @@ foxglove_error foxglove_channel_log_location_fix(const struct foxglove_channel *
                                                  const struct foxglove_location_fix *msg,
                                                  const uint64_t *log_time,
                                                  FoxgloveSinkId sink_id);
+
+/**
+ * Get the LocationFix schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_location_fix_schema(void);
 
 /**
  * Encode a LocationFix message as protobuf to the buffer provided.
@@ -3002,6 +3134,13 @@ foxglove_error foxglove_channel_log_location_fixes(const struct foxglove_channel
                                                    FoxgloveSinkId sink_id);
 
 /**
+ * Get the LocationFixes schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_location_fixes_schema(void);
+
+/**
  * Encode a LocationFixes message as protobuf to the buffer provided.
  *
  * On success, writes the encoded length to *encoded_len.
@@ -3037,6 +3176,13 @@ foxglove_error foxglove_channel_log_log(const struct foxglove_channel *channel,
                                         const struct foxglove_log *msg,
                                         const uint64_t *log_time,
                                         FoxgloveSinkId sink_id);
+
+/**
+ * Get the Log schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_log_schema(void);
 
 /**
  * Encode a Log message as protobuf to the buffer provided.
@@ -3076,6 +3222,13 @@ foxglove_error foxglove_channel_log_scene_entity_deletion(const struct foxglove_
                                                           FoxgloveSinkId sink_id);
 
 /**
+ * Get the SceneEntityDeletion schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_scene_entity_deletion_schema(void);
+
+/**
  * Encode a SceneEntityDeletion message as protobuf to the buffer provided.
  *
  * On success, writes the encoded length to *encoded_len.
@@ -3111,6 +3264,13 @@ foxglove_error foxglove_channel_log_scene_entity(const struct foxglove_channel *
                                                  const struct foxglove_scene_entity *msg,
                                                  const uint64_t *log_time,
                                                  FoxgloveSinkId sink_id);
+
+/**
+ * Get the SceneEntity schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_scene_entity_schema(void);
 
 /**
  * Encode a SceneEntity message as protobuf to the buffer provided.
@@ -3150,6 +3310,13 @@ foxglove_error foxglove_channel_log_scene_update(const struct foxglove_channel *
                                                  FoxgloveSinkId sink_id);
 
 /**
+ * Get the SceneUpdate schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_scene_update_schema(void);
+
+/**
  * Encode a SceneUpdate message as protobuf to the buffer provided.
  *
  * On success, writes the encoded length to *encoded_len.
@@ -3185,6 +3352,13 @@ foxglove_error foxglove_channel_log_model_primitive(const struct foxglove_channe
                                                     const struct foxglove_model_primitive *msg,
                                                     const uint64_t *log_time,
                                                     FoxgloveSinkId sink_id);
+
+/**
+ * Get the ModelPrimitive schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_model_primitive_schema(void);
 
 /**
  * Encode a ModelPrimitive message as protobuf to the buffer provided.
@@ -3224,6 +3398,13 @@ foxglove_error foxglove_channel_log_packed_element_field(const struct foxglove_c
                                                          FoxgloveSinkId sink_id);
 
 /**
+ * Get the PackedElementField schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_packed_element_field_schema(void);
+
+/**
  * Encode a PackedElementField message as protobuf to the buffer provided.
  *
  * On success, writes the encoded length to *encoded_len.
@@ -3259,6 +3440,13 @@ foxglove_error foxglove_channel_log_point2(const struct foxglove_channel *channe
                                            const struct foxglove_point2 *msg,
                                            const uint64_t *log_time,
                                            FoxgloveSinkId sink_id);
+
+/**
+ * Get the Point2 schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_point2_schema(void);
 
 /**
  * Encode a Point2 message as protobuf to the buffer provided.
@@ -3298,6 +3486,13 @@ foxglove_error foxglove_channel_log_point3(const struct foxglove_channel *channe
                                            FoxgloveSinkId sink_id);
 
 /**
+ * Get the Point3 schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_point3_schema(void);
+
+/**
  * Encode a Point3 message as protobuf to the buffer provided.
  *
  * On success, writes the encoded length to *encoded_len.
@@ -3333,6 +3528,13 @@ foxglove_error foxglove_channel_log_point_cloud(const struct foxglove_channel *c
                                                 const struct foxglove_point_cloud *msg,
                                                 const uint64_t *log_time,
                                                 FoxgloveSinkId sink_id);
+
+/**
+ * Get the PointCloud schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_point_cloud_schema(void);
 
 /**
  * Encode a PointCloud message as protobuf to the buffer provided.
@@ -3372,6 +3574,13 @@ foxglove_error foxglove_channel_log_points_annotation(const struct foxglove_chan
                                                       FoxgloveSinkId sink_id);
 
 /**
+ * Get the PointsAnnotation schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_points_annotation_schema(void);
+
+/**
  * Encode a PointsAnnotation message as protobuf to the buffer provided.
  *
  * On success, writes the encoded length to *encoded_len.
@@ -3407,6 +3616,13 @@ foxglove_error foxglove_channel_log_pose(const struct foxglove_channel *channel,
                                          const struct foxglove_pose *msg,
                                          const uint64_t *log_time,
                                          FoxgloveSinkId sink_id);
+
+/**
+ * Get the Pose schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_pose_schema(void);
 
 /**
  * Encode a Pose message as protobuf to the buffer provided.
@@ -3446,6 +3662,13 @@ foxglove_error foxglove_channel_log_pose_in_frame(const struct foxglove_channel 
                                                   FoxgloveSinkId sink_id);
 
 /**
+ * Get the PoseInFrame schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_pose_in_frame_schema(void);
+
+/**
  * Encode a PoseInFrame message as protobuf to the buffer provided.
  *
  * On success, writes the encoded length to *encoded_len.
@@ -3481,6 +3704,13 @@ foxglove_error foxglove_channel_log_poses_in_frame(const struct foxglove_channel
                                                    const struct foxglove_poses_in_frame *msg,
                                                    const uint64_t *log_time,
                                                    FoxgloveSinkId sink_id);
+
+/**
+ * Get the PosesInFrame schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_poses_in_frame_schema(void);
 
 /**
  * Encode a PosesInFrame message as protobuf to the buffer provided.
@@ -3520,6 +3750,13 @@ foxglove_error foxglove_channel_log_quaternion(const struct foxglove_channel *ch
                                                FoxgloveSinkId sink_id);
 
 /**
+ * Get the Quaternion schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_quaternion_schema(void);
+
+/**
  * Encode a Quaternion message as protobuf to the buffer provided.
  *
  * On success, writes the encoded length to *encoded_len.
@@ -3555,6 +3792,13 @@ foxglove_error foxglove_channel_log_raw_audio(const struct foxglove_channel *cha
                                               const struct foxglove_raw_audio *msg,
                                               const uint64_t *log_time,
                                               FoxgloveSinkId sink_id);
+
+/**
+ * Get the RawAudio schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_raw_audio_schema(void);
 
 /**
  * Encode a RawAudio message as protobuf to the buffer provided.
@@ -3594,6 +3838,13 @@ foxglove_error foxglove_channel_log_raw_image(const struct foxglove_channel *cha
                                               FoxgloveSinkId sink_id);
 
 /**
+ * Get the RawImage schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_raw_image_schema(void);
+
+/**
  * Encode a RawImage message as protobuf to the buffer provided.
  *
  * On success, writes the encoded length to *encoded_len.
@@ -3629,6 +3880,13 @@ foxglove_error foxglove_channel_log_sphere_primitive(const struct foxglove_chann
                                                      const struct foxglove_sphere_primitive *msg,
                                                      const uint64_t *log_time,
                                                      FoxgloveSinkId sink_id);
+
+/**
+ * Get the SpherePrimitive schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_sphere_primitive_schema(void);
 
 /**
  * Encode a SpherePrimitive message as protobuf to the buffer provided.
@@ -3668,6 +3926,13 @@ foxglove_error foxglove_channel_log_text_annotation(const struct foxglove_channe
                                                     FoxgloveSinkId sink_id);
 
 /**
+ * Get the TextAnnotation schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_text_annotation_schema(void);
+
+/**
  * Encode a TextAnnotation message as protobuf to the buffer provided.
  *
  * On success, writes the encoded length to *encoded_len.
@@ -3703,6 +3968,13 @@ foxglove_error foxglove_channel_log_text_primitive(const struct foxglove_channel
                                                    const struct foxglove_text_primitive *msg,
                                                    const uint64_t *log_time,
                                                    FoxgloveSinkId sink_id);
+
+/**
+ * Get the TextPrimitive schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_text_primitive_schema(void);
 
 /**
  * Encode a TextPrimitive message as protobuf to the buffer provided.
@@ -3742,6 +4014,13 @@ foxglove_error foxglove_channel_log_triangle_list_primitive(const struct foxglov
                                                             FoxgloveSinkId sink_id);
 
 /**
+ * Get the TriangleListPrimitive schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_triangle_list_primitive_schema(void);
+
+/**
  * Encode a TriangleListPrimitive message as protobuf to the buffer provided.
  *
  * On success, writes the encoded length to *encoded_len.
@@ -3779,6 +4058,13 @@ foxglove_error foxglove_channel_log_vector2(const struct foxglove_channel *chann
                                             FoxgloveSinkId sink_id);
 
 /**
+ * Get the Vector2 schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_vector2_schema(void);
+
+/**
  * Encode a Vector2 message as protobuf to the buffer provided.
  *
  * On success, writes the encoded length to *encoded_len.
@@ -3814,6 +4100,13 @@ foxglove_error foxglove_channel_log_vector3(const struct foxglove_channel *chann
                                             const struct foxglove_vector3 *msg,
                                             const uint64_t *log_time,
                                             FoxgloveSinkId sink_id);
+
+/**
+ * Get the Vector3 schema.
+ *
+ * All buffers in the returned schema are statically allocated.
+ */
+struct foxglove_schema foxglove_vector3_schema(void);
 
 /**
  * Encode a Vector3 message as protobuf to the buffer provided.

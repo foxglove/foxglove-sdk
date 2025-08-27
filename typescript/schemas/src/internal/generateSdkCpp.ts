@@ -178,6 +178,12 @@ export function generateHppSchemas(
       /// @param len the length of the destination buffer.
       /// @param encoded_len where the serialized length or required capacity will be written to.
       FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);`,
+            `
+      /// @brief Get the ${schema.name} schema.
+      ///
+      /// The schema data returned is statically allocated.
+      static Schema schema();
+            `,
           ]
         : []),
       `};`,
@@ -239,6 +245,7 @@ export function generateHppSchemas(
     "",
     "#include <foxglove/error.hpp>",
     "#include <foxglove/context.hpp>",
+    "#include <foxglove/schema.hpp>",
   ];
 
   const uniquePtr = [
@@ -406,6 +413,21 @@ export function generateCppSchemas(schemas: FoxgloveMessageSchema[]): string {
     }
   });
 
+  const getSchemaImpls = schemas.filter(shouldGenerateChannel).flatMap((schema) => {
+    const snakeName = toSnakeCase(schema.name);
+    return [
+      `Schema ${schema.name}::schema() {`,
+      `    struct foxglove_schema c_schema = foxglove_${snakeName}_schema();`,
+      "    Schema result;",
+      "    result.name = std::string(c_schema.name.data, c_schema.name.len);",
+      "    result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);",
+      "    result.data = reinterpret_cast<const std::byte*>(c_schema.data);",
+      "    result.data_len = c_schema.data_len;",
+      "    return result;",
+      "}\n",
+    ];
+  });
+
   const channelUniquePtr = [
     "void ChannelDeleter::operator()(const foxglove_channel* ptr) const noexcept {",
     "  foxglove_channel_free(ptr);",
@@ -419,6 +441,7 @@ export function generateCppSchemas(schemas: FoxgloveMessageSchema[]): string {
     "#include <foxglove/schemas.hpp>",
     "#include <foxglove/arena.hpp>",
     "#include <foxglove/context.hpp>",
+    "#include <foxglove/schema.hpp>",
   ];
 
   const outputSections = [
@@ -441,6 +464,8 @@ export function generateCppSchemas(schemas: FoxgloveMessageSchema[]): string {
     conversionFuncs.join("\n"),
 
     encodeImpls.join("\n"),
+
+    getSchemaImpls.join("\n"),
     "} // namespace foxglove::schemas",
   ];
 

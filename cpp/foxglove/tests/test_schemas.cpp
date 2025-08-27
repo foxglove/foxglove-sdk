@@ -114,3 +114,11 @@ TEST_CASE("triangle list primitive to protobuf") {
   REQUIRE(capacity == buf.size());
   REQUIRE(capacity > 0);
 }
+
+TEST_CASE("triangle list primitive returns a schema") {
+  Schema schema = TriangleListPrimitive::schema();
+  REQUIRE(schema.name == "foxglove.TriangleListPrimitive");
+  REQUIRE(schema.encoding == "protobuf");
+  REQUIRE(schema.data != NULL);
+  REQUIRE(schema.data_len > 0);
+}
