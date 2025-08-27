@@ -63,3 +63,13 @@ docker-test: docker-test-rolling
 
 .PHONY: docker-sh
 docker-sh: docker-sh-rolling
+
+.PHONY: lint
+lint:
+	find src/ -name '*.cpp' -o -name '*.hpp' -o -name '*.h' -o -name '*.cc' -o -name '*.inl' \
+		| xargs clang-format --dry-run -Werror
+
+.PHONY:fix 
+fix:
+	find src/ -name '*.cpp' -o -name '*.hpp' -o -name '*.h' -o -name '*.cc' -o -name '*.inl' \
+		| xargs clang-format -i
