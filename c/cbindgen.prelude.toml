@@ -35,6 +35,9 @@ rename_variants = "QUALIFIED_SCREAMING_SNAKE_CASE"
 enum_class = true
 prefix_with_name = false
 
+[defines]
+"target_arch = wasm32" = "__WASM32__"
+
 [export.rename]
 FoxgloveBytes = "foxglove_bytes"
 FoxgloveChannel = "foxglove_channel"
