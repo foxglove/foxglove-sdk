@@ -46,7 +46,7 @@ uint32 step
 #   - Each output pixel is serialized as [R, G, B, Alpha].
 #   - `step` must be greater than or equal to `width` * 4.
 # - `bgr8` or `8UC3`:
-#   - Pixel colors are decomposed into Red, Blue, Green, and Alpha channels.
+#   - Pixel colors are decomposed into Blue, Green, and Red channels.
 #   - Pixel channel values are represented as unsigned 8-bit integers.
 #   - Each output pixel is serialized as [B, G, R].
 #   - `step` must be greater than or equal to `width` * 3.
