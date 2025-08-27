@@ -24,6 +24,10 @@ jobs:
       - name: Build Foxglove C++ SDK
         run: make build-cpp
 
+      - name: Run make lint
+        run: make lint
+        working-directory: ros
+
       - name: Run make docker-build
         run: make USE_LOCAL_SDK=ON docker-build-${{ matrix.ros_distribution }}
         working-directory: ros
@@ -31,3 +35,4 @@ jobs:
       - name: Run make docker-test
         run: make docker-test-${{ matrix.ros_distribution }}
         working-directory: ros
+
