@@ -137,7 +137,7 @@ fn generate_impls(out_dir: &Path, fds: &FileDescriptorSet) -> anyhow::Result<()>
         module,
         "use crate::schemas::{{descriptors, foxglove::*}};"
     ));
-    result = result.and(writeln!(module, "use crate::{{Schema, Encode}};"));
+    result = result.and(writeln!(module, "use crate::{{Schema, Decode, Encode}};"));
     result = result.and(writeln!(module, "use bytes::BufMut;"));
     result.context("Failed to write impls.rs")?;
 
@@ -181,6 +181,19 @@ fn generate_impls(out_dir: &Path, fds: &FileDescriptorSet) -> anyhow::Result<()>
 }}"
         )
         .context("Failed to write trait impl in impls.rs")?;
+
+        writeln!(
+            module,
+            "\nimpl Decode for {name} {{
+    type Error = ::prost::DecodeError;
+
+    /// Decode a message from a serialized buffer.
+    fn decode(buf: impl bytes::Buf) -> Result<Self, ::prost::DecodeError> {{
+        ::prost::Message::decode(buf)
+    }}
+}}"
+        )
+        .context("Failed to write impl in impls.rs")?;
     }
 
     Ok(())
