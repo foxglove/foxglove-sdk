@@ -1,0 +1,26 @@
+diff --git a/src/pre.js b/src/pre.js
+index 8df02ffff38b831584cab7a7d4f883ef6105ff03..b8e11e045805d974c68583b04c0d8e1e05324306 100644
+--- a/src/pre.js
++++ b/src/pre.js
+@@ -11,7 +11,7 @@ Module.locateFile = function (input, prefix) {
+   if (input.endsWith(".wasm")) {
+     // In a web context, the bundler (e.g. webpack) will see this require(), include the .wasm file
+     // in its output, and replace this with a correct URL to the file.
+-    const wasmPath = require("./module.wasm");
++    const wasmPath = require("./module.wasm?url").default;
+     return wasmPath;
+   }
+ 
+diff --git a/wasm/module.js b/wasm/module.js
+index b1d4d2c9af43e5c7f802e9726a0816538b20441e..5f52288357fe06ea9838fc0b6b232186be271321 100644
+--- a/wasm/module.js
++++ b/wasm/module.js
+@@ -49,7 +49,7 @@ Module.locateFile = function (input, prefix) {
+   if (input.endsWith(".wasm")) {
+     // In a web context, the bundler (e.g. webpack) will see this require(), include the .wasm file
+     // in its output, and replace this with a correct URL to the file.
+-    const wasmPath = require("./module.wasm");
++    const wasmPath = require("./module.wasm?url").default;
+     return wasmPath;
+   }
+ 

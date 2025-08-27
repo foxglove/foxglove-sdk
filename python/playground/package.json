@@ -1,0 +1,38 @@
+{
+  "name": "playground",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "eslint .",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.33.0",
+    "@mcap/core": "^2.1.7",
+    "@mcap/support": "patch:@mcap/support@npm%3A1.0.4#~/.yarn/patches/@mcap-support-npm-1.0.4-77a4e685f2.patch",
+    "@types/react": "19.1.10",
+    "@types/react-dom": "19.1.7",
+    "@vitejs/plugin-react": "5.0.0",
+    "@xterm/addon-fit": "^0.10.0",
+    "@xterm/xterm": "^5.5.0",
+    "eslint": "9.33.0",
+    "eslint-plugin-react-hooks": "5.2.0",
+    "eslint-plugin-react-refresh": "0.4.20",
+    "eventemitter3": "^5.0.1",
+    "globals": "16.3.0",
+    "pyodide": "0.27.7",
+    "react": "19.1.1",
+    "react-dom": "19.1.1",
+    "typescript": "5.7.3",
+    "typescript-eslint": "8.39.1",
+    "vite": "7.1.2",
+    "vite-plugin-static-copy": "3.1.2",
+    "vite-plugin-top-level-await": "^1.6.0",
+    "vite-plugin-wasm": "^3.5.0",
+    "xterm-pty": "^0.11.1"
+  },
+  "packageManager": "yarn@4.6.0"
+}

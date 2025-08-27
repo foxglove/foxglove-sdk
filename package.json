@@ -3,7 +3,8 @@
   "private": true,
   "packageManager": "yarn@4.6.0",
   "workspaces": [
-    "typescript/*"
+    "typescript/*",
+    "python/playground"
   ],
   "scripts": {
     "build": "tsc -b",
@@ -47,5 +48,10 @@
     "ts-jest": "29.2.5",
     "ts-node": "^10.9.2",
     "typescript": "5.7.3"
+  },
+  "resolutions": {
+    "@foxglove/wasm-lz4@npm:^1.0.2": "patch:@foxglove/wasm-lz4@npm%3A1.0.2#~/.yarn/patches/@foxglove-wasm-lz4-npm-1.0.2-594d96b31e.patch",
+    "@foxglove/wasm-bz2@npm:^0.1.1": "patch:@foxglove/wasm-bz2@npm%3A0.1.1#~/.yarn/patches/@foxglove-wasm-bz2-npm-0.1.1-4af947265d.patch",
+    "@foxglove/wasm-zstd@npm:^1.0.1": "patch:@foxglove/wasm-zstd@npm%3A1.0.1#~/.yarn/patches/@foxglove-wasm-zstd-npm-1.0.1-bcf0bb6d0b.patch"
   }
 }

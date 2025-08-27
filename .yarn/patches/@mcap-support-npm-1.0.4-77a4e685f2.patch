@@ -1,0 +1,26 @@
+diff --git a/dist/cjs/src/decompressHandlers.js b/dist/cjs/src/decompressHandlers.js
+index dd0c0d0d72f5451b4d6c25b76ab87ba1092bc211..d1a17a846951d689446425a85d3a69923658afdb 100644
+--- a/dist/cjs/src/decompressHandlers.js
++++ b/dist/cjs/src/decompressHandlers.js
+@@ -40,7 +40,7 @@ async function _loadDecompressHandlers() {
+             await mod.default.isLoaded;
+             return mod.default;
+         }),
+-        Promise.resolve().then(() => __importStar(require("@foxglove/wasm-bz2"))).then(async (mod) => await mod.default.init()),
++        Promise.resolve().then(() => __importStar(require("@foxglove/wasm-bz2"))).then(async (mod) => await mod.default.default.init()),
+     ]);
+     return {
+         lz4: (buffer, decompressedSize) => decompressLZ4(buffer, Number(decompressedSize)),
+diff --git a/dist/esm/src/decompressHandlers.js b/dist/esm/src/decompressHandlers.js
+index 864fec361a85f8baa2206a1c591a33dabbc767a3..c90f7508743facf071371c029c99bdbfb2e1fedd 100644
+--- a/dist/esm/src/decompressHandlers.js
++++ b/dist/esm/src/decompressHandlers.js
+@@ -13,7 +13,7 @@ async function _loadDecompressHandlers() {
+             await mod.default.isLoaded;
+             return mod.default;
+         }),
+-        import("@foxglove/wasm-bz2").then(async (mod) => await mod.default.init()),
++        import("@foxglove/wasm-bz2").then(async (mod) => await mod.default.default.init()),
+     ]);
+     return {
+         lz4: (buffer, decompressedSize) => decompressLZ4(buffer, Number(decompressedSize)),

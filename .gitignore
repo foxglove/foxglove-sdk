@@ -6,7 +6,8 @@
 .pytest_cache/
 .virtualenvs/
 .venv/
-.yarn/
+.yarn/*
+!.yarn/patches
 *.py[cod]
 *.so
 *.tsbuildinfo
