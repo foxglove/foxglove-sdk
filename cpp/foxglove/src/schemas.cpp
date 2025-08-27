@@ -2,19 +2,17 @@
 
 #include <foxglove-c/foxglove-c.h>
 #include <foxglove/arena.hpp>
-#include <foxglove/context.hpp>
 #include <foxglove/error.hpp>
 #include <foxglove/schema.hpp>
 #include <foxglove/schemas.hpp>
+#ifndef __wasm32__
+#include <foxglove/context.hpp>
+#endif
 
 #include <cstring>
 #include <optional>
 
 namespace foxglove::schemas {
-
-void ChannelDeleter::operator()(const foxglove_channel* ptr) const noexcept {
-  foxglove_channel_free(ptr);
-};
 
 void arrowPrimitiveToC(foxglove_arrow_primitive& dest, const ArrowPrimitive& src, Arena& arena);
 void cameraCalibrationToC(
@@ -67,6 +65,12 @@ void triangleListPrimitiveToC(
   foxglove_triangle_list_primitive& dest, const TriangleListPrimitive& src, Arena& arena
 );
 void voxelGridToC(foxglove_voxel_grid& dest, const VoxelGrid& src, Arena& arena);
+
+#ifndef __wasm32__
+
+void ChannelDeleter::operator()(const foxglove_channel* ptr) const noexcept {
+  foxglove_channel_free(ptr);
+};
 
 FoxgloveResult<ArrowPrimitiveChannel> ArrowPrimitiveChannel::create(
   const std::string_view& topic, const Context& context
@@ -1201,6 +1205,8 @@ FoxgloveError VoxelGridChannel::log(
 uint64_t VoxelGridChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
+
+#endif
 
 void arrowPrimitiveToC(
   foxglove_arrow_primitive& dest, const ArrowPrimitive& src, [[maybe_unused]] Arena& arena

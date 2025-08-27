@@ -36,7 +36,7 @@ enum_class = true
 prefix_with_name = false
 
 [defines]
-"target_arch = wasm32" = "__WASM32__"
+"target_arch = wasm32" = "__wasm32__"
 
 [export.rename]
 FoxgloveBytes = "foxglove_bytes"
