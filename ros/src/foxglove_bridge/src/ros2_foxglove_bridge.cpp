@@ -302,7 +302,8 @@ void FoxgloveBridge::updateAdvertisedTopics(
     }
 
     // Create the new SDK channel
-    auto channelResult = foxglove::RawChannel::create(topic, messageEncoding, schema, _serverContext);
+    auto channelResult =
+      foxglove::RawChannel::create(topic, messageEncoding, schema, _serverContext);
     if (!channelResult.has_value()) {
       RCLCPP_ERROR(this->get_logger(), "Failed to create channel for topic \"%s\" (%s)",
                    topic.c_str(), foxglove::strerror(channelResult.error()));
@@ -871,7 +872,7 @@ void FoxgloveBridge::rosMessageHandler(ChannelId channelId, SinkId sinkId,
 
   auto& channel = _channels.at(channelId);
   channel.log(reinterpret_cast<const std::byte*>(rclSerializedMsg.buffer),
-               rclSerializedMsg.buffer_length, timestamp, sinkId);
+              rclSerializedMsg.buffer_length, timestamp, sinkId);
 }
 
 void FoxgloveBridge::handleServiceRequest(const foxglove::ServiceRequest& request,
