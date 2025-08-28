@@ -1754,9 +1754,9 @@ FoxgloveError LocationFixes::encode(uint8_t* ptr, size_t len, size_t* encoded_le
 }
 
 FoxgloveError Log::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
-  Arena arena;
+  std::unique_ptr<Arena> arena = std::make_unique<Arena>();
   foxglove_log c_msg;
-  logToC(c_msg, *this, arena);
+  logToC(c_msg, *this, *arena.get());
   return FoxgloveError(foxglove_log_encode(&c_msg, ptr, len, encoded_len));
 }
 

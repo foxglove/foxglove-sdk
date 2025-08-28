@@ -63,7 +63,6 @@ public:
 
   Result<std::unique_ptr<AbstractMessageIterator>> create_iterator(const MessageIteratorArgs& args
   ) override;
-  Result<std::vector<Message>> get_backfill(const BackfillArgs& args) override;
 };
 
 /** Iterates over 'messages' that match the requested args. */
@@ -81,9 +80,6 @@ public:
 
 TextDataLoader::TextDataLoader(std::vector<std::string> paths) {
   this->paths = paths;
-  this->files = {};
-  this->file_line_indexes = {};
-  this->file_line_counts = {};
 }
 
 /** initialize() is meant to read and return summary information to the foxglove
@@ -126,7 +122,7 @@ Result<Initialization> TextDataLoader::initialize() {
     channels.push_back(Channel{
       .id = channel_id,
       .schema_id = 1,
-      .topic_name = path,
+      .topic_name = "/log",
       .message_encoding = "protobuf",
       .message_count = line_count,
     });
@@ -166,21 +162,12 @@ Result<std::unique_ptr<AbstractMessageIterator>> TextDataLoader::create_iterator
   };
 }
 
-/** Returns the latest message before `args.time` on the requested channels. This is used by the
- * Foxglove app to display up the state of the scene at the beginning of a requested time range,
- * before any of the messages from that time range have been read.
- */
-Result<std::vector<Message>> TextDataLoader::get_backfill(const BackfillArgs& args) {
-  std::vector<Message> results = {};
-  return Result<std::vector<Message>>{
-    .value = results,
-  };
-}
-
 TextMessageIterator::TextMessageIterator(TextDataLoader* loader, MessageIteratorArgs args_) {
   data_loader = loader;
   args = args_;
   index = 0;
+  message = foxglove::schemas::Log{};
+  last_encoded_message = std::vector<uint8_t>(1024);
 }
 
 /** `next()` returns the next message from the loaded files that matches the arguments provided to
@@ -206,17 +193,19 @@ std::optional<Result<Message>> TextMessageIterator::next() {
         message.level = foxglove::schemas::Log::LogLevel::INFO;
         message.name = "log line";
         message.line = index;
-        message.message = std::string((const char*)(&data_loader->files[line.file][line.start]), line.end - line.start);
+        message.message = std::string((const char*)(&(data_loader->files[line.file][line.start])), line.end - line.start);
         size_t encoded_len = 0;
+
         auto result = message.encode(last_encoded_message.data(), last_encoded_message.size(), &encoded_len);
         if (result == foxglove::FoxgloveError::BufferTooShort) {
           last_encoded_message.resize(encoded_len);
           result = message.encode(last_encoded_message.data(), last_encoded_message.size(), &encoded_len);
           if (result != foxglove::FoxgloveError::Ok) {
             error("failed to encode message:", foxglove::strerror(result));
-            encoded_len = 0;
+            return Result<Message>{.error = "failed to encode message"};
           }
         }
+        index++;
         return Result<Message>{
           .value =
             Message{

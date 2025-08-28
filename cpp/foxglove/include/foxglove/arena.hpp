@@ -91,6 +91,8 @@ public:
       if (aligned_ptr == nullptr) {
 #ifndef __wasm32__
         throw std::bad_alloc();
+#else
+        std::abort();
 #endif
       }
       overflow_.emplace_back(static_cast<char*>(aligned_ptr));
