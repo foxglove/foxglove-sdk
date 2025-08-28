@@ -12,8 +12,8 @@
 
 namespace foxglove {
 
-/// A fixed-size memory arena that allocates aligned arrays of POD types on the stack.
-/// The arena contains a single inline array and allocates from it.
+/// A fixed-size memory arena that allocates aligned arrays of POD types in a contiguous array.
+/// The arena contains a single heap-allocated and allocates from it.
 /// If the arena runs out of space, it throws std::bad_alloc.
 /// The allocated arrays are "freed" by dropping the arena, destructors are not run.
 /// @cond foxglove_internal
@@ -77,7 +77,7 @@ public:
 
     // Calculate space available in the buffer
     size_t space_left = available();
-    void* buffer_ptr = &buffer_[offset_];
+    void* buffer_ptr = &(buffer_.get()[offset_]);
 
     // Align the pointer within the buffer
     void* aligned_ptr = std::align(alignment, bytes_needed, buffer_ptr, space_left);
@@ -121,7 +121,7 @@ private:
     }
   };
 
-  std::array<uint8_t, Size> buffer_;
+  std::unique_ptr<std::array<uint8_t, Size>> buffer_;
   std::size_t offset_;
   std::vector<std::unique_ptr<char, Deleter>> overflow_;
 };
