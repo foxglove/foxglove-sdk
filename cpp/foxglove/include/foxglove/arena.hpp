@@ -81,7 +81,7 @@ public:
 
     // Calculate space available in the buffer
     size_t space_left = available();
-    void* buffer_ptr = &(buffer_.get()[offset_]);
+    void* buffer_ptr = buffer_.get()->data() + offset_;
 
     // Align the pointer within the buffer
     void* aligned_ptr = std::align(alignment, bytes_needed, buffer_ptr, space_left);
