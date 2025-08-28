@@ -1,12 +1,13 @@
 ifndef WASI_SDK
 $(error Download the WASI SDK from https://github.com/WebAssembly/wasi-sdk/releases and set WASI_SDK to the extracted path)
 endif
+SDK_VERSION?=devel
 
 .PHONY: all
 all: package example
 
 .PHONY: package
-package: target/foxglove_data_loader.tar.gz
+package: foxglove_data_loader-$(SDK_VERSION)-cpp-wasm32-unknown-unknown.zip
 
 .PHONY: clean
 clean:
@@ -58,8 +59,8 @@ target/README.md: README.md
 cargo-build-foxglove-c:
 	cd ../../c && cargo build --release --target wasm32-unknown-unknown
 
-target/foxglove_data_loader.tar.gz: $(packagefiles)
-	tar --strip-components=1 -czf $@ $^
+foxglove_data_loader-$(SDK_VERSION)-cpp-wasm32-unknown-unknown.zip: $(packagefiles)
+	cd target && zip -r ../$@ .
 
 target/data_loader_example.wasm: examples/data_loader.cpp $(packagefiles)
 	$(WASI_SDK)/bin/clang++ \

@@ -54,7 +54,7 @@ class TextDataLoader : public foxglove_data_loader::AbstractDataLoader {
 public:
   std::vector<std::string> paths;
   std::vector<std::vector<uint8_t>> files;
-  std::vector<LineIndex> file_line_indexes;
+  std::vector<LineIndex> line_indexes;
   std::vector<size_t> file_line_counts;
 
   TextDataLoader(std::vector<std::string> paths);
@@ -103,19 +103,17 @@ Result<Initialization> TextDataLoader::initialize() {
     if (reader.position() != size) {
       return Result<Initialization>::error_with_message("expected reader cursor to be at EOF");
     }
-    size_t line_count = 1;
-    size_t last_line_ending = 0;
+    size_t line_count = 0;
+    size_t line_start = 0;
     for (size_t pos = 0; pos < size; pos++) {
       if (buf[pos] == '\n') {
-        this->file_line_indexes.push_back(LineIndex{file_index, last_line_ending + 1, pos});
-        last_line_ending = pos;
+        this->line_indexes.push_back(LineIndex{file_index, line_start, pos});
+        line_start = pos + 1;
         line_count += 1;
       }
     }
-    if (last_line_ending < (size - 1)) {
-      this->file_line_indexes.push_back(
-        LineIndex{file_index, last_line_ending + 1, size_t(size - 1)}
-      );
+    if (line_start < size) {
+      this->line_indexes.push_back(LineIndex{file_index, line_start, size_t(size - 1)});
     }
     this->files.emplace_back(buf);
     uint16_t channel_id = file_index;
@@ -145,7 +143,7 @@ Result<Initialization> TextDataLoader::initialize() {
         .time_range =
           TimeRange{
             .start_time = 0,
-            .end_time = this->file_line_indexes.size(),
+            .end_time = this->line_indexes.size(),
           }
       }
   };
@@ -173,7 +171,7 @@ TextMessageIterator::TextMessageIterator(TextDataLoader* loader, MessageIterator
  * `create_iterator(args)`. If none are left to read, it returns std::nullopt.
  */
 std::optional<Result<Message>> TextMessageIterator::next() {
-  for (; index < data_loader->file_line_indexes.size(); index++) {
+  for (; index < data_loader->line_indexes.size(); index++) {
     TimeNanos time = index;
     // skip lines before start time
     if (args.start_time.has_value() && args.start_time > time) {
@@ -184,7 +182,7 @@ std::optional<Result<Message>> TextMessageIterator::next() {
       return std::nullopt;
     }
 
-    LineIndex line = data_loader->file_line_indexes[index];
+    LineIndex line = data_loader->line_indexes[index];
     // filter by channel ID
     for (const ChannelId channel_id : args.channel_ids) {
       if (channel_id == line.file) {
