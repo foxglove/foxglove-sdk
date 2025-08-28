@@ -72,7 +72,7 @@ class TextMessageIterator : public foxglove_data_loader::AbstractMessageIterator
   MessageIteratorArgs args;
   size_t index;
   foxglove::schemas::Log message;
-  std::vector<uint8_t> lastEncodedMessage;
+  std::vector<uint8_t> last_encoded_message;
 
 public:
   explicit TextMessageIterator(TextDataLoader* loader, MessageIteratorArgs args_);
@@ -131,7 +131,7 @@ Result<Initialization> TextDataLoader::initialize() {
       .message_count = line_count,
     });
   }
-  foxglove::Schema foxglove_schema = foxglove::schemas::Log::schema();
+  foxglove::Schema log_schema = foxglove::schemas::Log::schema();
   return Result<Initialization>{
     .value =
       Initialization{
@@ -139,11 +139,11 @@ Result<Initialization> TextDataLoader::initialize() {
         .schemas = {
           Schema{
             .id = 1,
-            .name = foxglove_schema.name,
-            .encoding = foxglove_schema.encoding,
+            .name = log_schema.name,
+            .encoding = log_schema.encoding,
             .data = BytesView {
-              .ptr = reinterpret_cast<const uint8_t*>(foxglove_schema.data),
-              .len = foxglove_schema.data_len,
+              .ptr = reinterpret_cast<const uint8_t*>(log_schema.data),
+              .len = log_schema.data_len,
             }
           }
         },
@@ -208,10 +208,10 @@ std::optional<Result<Message>> TextMessageIterator::next() {
         message.line = index;
         message.message = std::string((const char*)(&data_loader->files[line.file][line.start]), line.end - line.start);
         size_t encoded_len = 0;
-        auto result = message.encode(lastEncodedMessage.data(), lastEncodedMessage.size(), &encoded_len);
+        auto result = message.encode(last_encoded_message.data(), last_encoded_message.size(), &encoded_len);
         if (result == foxglove::FoxgloveError::BufferTooShort) {
-          lastEncodedMessage.resize(encoded_len);
-          result = message.encode(lastEncodedMessage.data(), lastEncodedMessage.size(), &encoded_len);
+          last_encoded_message.resize(encoded_len);
+          result = message.encode(last_encoded_message.data(), last_encoded_message.size(), &encoded_len);
           if (result != foxglove::FoxgloveError::Ok) {
             error("failed to encode message:", foxglove::strerror(result));
             encoded_len = 0;
@@ -225,7 +225,7 @@ std::optional<Result<Message>> TextMessageIterator::next() {
               .publish_time = time,
               .data =
                 BytesView{
-                  .ptr = lastEncodedMessage.data(),
+                  .ptr = last_encoded_message.data(),
                   .len = encoded_len,
                 }
             }
