@@ -22,7 +22,8 @@ public:
   static constexpr std::size_t Size = 128 * 1024;  // 128 KB
 
   Arena()
-      : offset_(0), buffer_(std::make_unique<std::array<uint8_t, Size>>()) {}
+      : buffer_(std::make_unique<std::array<uint8_t, Size>>())
+      , offset_(0) {}
 
   /// Maps elements from a vector to a new array allocated from the arena.
   ///
