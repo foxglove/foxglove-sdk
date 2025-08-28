@@ -112,6 +112,11 @@ jobs:
     name: "Build C/C++ Data Loader SDK"
 
     steps:
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          # The last-specified toolchain is the default.
+          toolchain: 1.83.0,nightly,stable
+          target: wasm32-unknown-unknown
       - uses: actions/checkout@v5
 
       - name: Install WASI SDK
@@ -123,7 +128,7 @@ jobs:
           echo WASI_SDK=$(pwd)/wasi-sdk-25.0-x86_64-linux >> $GITHUB_ENV
       - name:
         working-directory: cpp/foxglove_data_loader
-        run: make
+        run: make example
 
   typescript:
     runs-on: ubuntu-latest
