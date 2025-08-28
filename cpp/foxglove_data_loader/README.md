@@ -15,17 +15,19 @@ from the [Releases](https://github.com/foxglove/foxglove-sdk/releases) page. Thi
 2. A limited subset of the [Foxglove C++ SDK](../README.md), which includes [Foxglove Schema](https://docs.foxglove.dev/docs/sdk/schemas)
    struct definitions and serialization functionality.
 
-### Build your data loader
+### Build with the SDK
 
 Use the `clang++` binary from the extracted SDK release to compile your C++ code. In exactly one
 `.cpp` file, define `FOXGLOVE_DATA_LOADER_IMPLEMENTATION` and include `foxglove_data_loader/data_loader.hpp`.
 
-To use the Foxglove SDK to serialize messages, you will need to link the included `libfoxglove-c.a`
+To use the Foxglove SDK to serialize messages, you will need to link the included `libfoxglove.a`
 and build the C++ source files in `src/foxglove`. See the `example` target in [https://github.com/foxglove/foxglove-sdk/blob/main/cpp/foxglove_data_loader/Makefile] for an example.
+
+Function definitions in `host_internal.h` are not intended for external use.
+
+### Define your Data Loader implementation
 
 You will need to define the implementation for `construct_data_loader(const DataLoaderArgs& args)`.
 Use this to construct your implementation of the `foxglove_data_loader::AbstractDataLoader` interface.
 
 See `examples/data_loader.cpp` for a simple example data loader implementation.
-
-Function definitions in `host_internal.h` are not intended for external use.
