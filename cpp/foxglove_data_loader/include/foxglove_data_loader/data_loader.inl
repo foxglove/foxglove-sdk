@@ -96,7 +96,7 @@ extern bool exports_foxglove_loader_loader_method_message_iterator_next(
     // abiding by the WIT component model ABI here, so we can choose to avoid that copy. The
     // generated code in `host_internal.inl` has been modified to remove the corresponding free()
     // call.
-    ret->val.ok.data.ptr = msg.data.ptr;
+    ret->val.ok.data.ptr = const_cast<uint8_t*>(msg.data.ptr);
   } else {
     ret->is_err = true;
     host_string_dup(&ret->val.err, result.error.c_str());
@@ -268,7 +268,7 @@ extern bool exports_foxglove_loader_loader_method_data_loader_get_backfill(
       // abiding by the WIT component model ABI here, so we can choose to avoid that copy. The
       // generated code in `host_internal.inl` has been modified to remove the corresponding free()
       // call.
-      ret_message->data.ptr = message.data.ptr;
+      ret_message->data.ptr = const_cast<uint8_t*>(message.data.ptr);
       ret_message->data.len = message.data.len;
     }
     return true;
