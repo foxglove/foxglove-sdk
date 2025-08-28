@@ -15,7 +15,7 @@ clean:
 .PHONY: example
 example: target/data_loader_example.wasm
 
-tgzfiles:=\
+packagefiles:=\
   target/include/foxglove-c/foxglove-c.h \
   target/include/foxglove/arena.hpp \
   target/include/foxglove/schema.hpp \
@@ -26,11 +26,12 @@ tgzfiles:=\
   target/include/foxglove_data_loader/data_loader.inl \
   target/include/foxglove_data_loader/host_internal.h \
   target/include/foxglove_data_loader/host_internal.inl \
-  target/src/schemas.cpp \
+  target/src/foxglove/schemas.cpp \
+  target/src/foxglove/error.cpp \
   target/lib/libfoxglove.a \
   target/README.md \
 
-target/include/foxglove-c/foxglove-c.h: ../../c/include/foxglove-c/foxglove-c.h
+target/include/foxglove-c/%: ../../c/include/foxglove-c/%
 	mkdir -p target/include/foxglove-c
 	cp $< $@
 
@@ -42,8 +43,8 @@ target/include/foxglove/%: ../foxglove/include/foxglove/%
 	mkdir -p target/include/foxglove
 	cp $< $@
 
-target/src/schemas.cpp: ../foxglove/src/schemas.cpp
-	mkdir -p target/src
+target/src/foxglove/%: ../foxglove/src/%
+	mkdir -p target/src/foxglove
 	cp $< $@
 
 target/lib/libfoxglove.a: cargo-build-foxglove-c
@@ -57,13 +58,14 @@ target/README.md: README.md
 cargo-build-foxglove-c:
 	cd ../../c && cargo build --release --target wasm32-unknown-unknown
 
-target/foxglove_data_loader.tar.gz: $(tgzfiles)
+target/foxglove_data_loader.tar.gz: $(packagefiles)
 	tar --strip-components=1 -czf $@ $^
 
-target/data_loader_example.wasm: examples/data_loader.cpp target/foxglove_data_loader.tar.gz
+target/data_loader_example.wasm: examples/data_loader.cpp $(packagefiles)
 	$(WASI_SDK)/bin/clang++ \
 		$< \
-		target/src/schemas.cpp \
+		target/src/foxglove/schemas.cpp \
+		target/src/foxglove/error.cpp \
 		-Itarget/include \
 		-Ltarget/lib \
 		-lfoxglove \
