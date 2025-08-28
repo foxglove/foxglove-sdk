@@ -132,17 +132,16 @@ Result<Initialization> TextDataLoader::initialize() {
     .value =
       Initialization{
         .channels = channels,
-        .schemas = {
-          Schema{
-            .id = 1,
-            .name = log_schema.name,
-            .encoding = log_schema.encoding,
-            .data = BytesView {
+        .schemas = {Schema{
+          .id = 1,
+          .name = log_schema.name,
+          .encoding = log_schema.encoding,
+          .data =
+            BytesView{
               .ptr = reinterpret_cast<const uint8_t*>(log_schema.data),
               .len = log_schema.data_len,
             }
-          }
-        },
+        }},
         .time_range =
           TimeRange{
             .start_time = 0,
@@ -193,13 +192,17 @@ std::optional<Result<Message>> TextMessageIterator::next() {
         message.level = foxglove::schemas::Log::LogLevel::INFO;
         message.name = "log line";
         message.line = index;
-        message.message = std::string((const char*)(&(data_loader->files[line.file][line.start])), line.end - line.start);
+        message.message = std::string(
+          (const char*)(&(data_loader->files[line.file][line.start])), line.end - line.start
+        );
         size_t encoded_len = 0;
 
-        auto result = message.encode(last_encoded_message.data(), last_encoded_message.size(), &encoded_len);
+        auto result =
+          message.encode(last_encoded_message.data(), last_encoded_message.size(), &encoded_len);
         if (result == foxglove::FoxgloveError::BufferTooShort) {
           last_encoded_message.resize(encoded_len);
-          result = message.encode(last_encoded_message.data(), last_encoded_message.size(), &encoded_len);
+          result =
+            message.encode(last_encoded_message.data(), last_encoded_message.size(), &encoded_len);
           if (result != foxglove::FoxgloveError::Ok) {
             error("failed to encode message:", foxglove::strerror(result));
             return Result<Message>{.error = "failed to encode message"};

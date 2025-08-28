@@ -13,7 +13,7 @@
 namespace foxglove {
 
 /// A fixed-size memory arena that allocates aligned arrays of POD types in a contiguous array.
-/// The arena contains a single heap-allocated and allocates from it.
+/// The arena contains a single heap-allocated byte array and allocates from it.
 /// If the arena runs out of space, it throws std::bad_alloc.
 /// The allocated arrays are "freed" by dropping the arena, destructors are not run.
 /// @cond foxglove_internal
