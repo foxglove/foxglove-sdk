@@ -51,7 +51,7 @@ public:
   /// providing a sink_id is not yet part of the public API. To partition logs among specific sinks,
   /// set up different `Context`s.
   FoxgloveError log(
-    const std::byte* data, size_t data_len, std::optional<uint64_t> log_time = std::nullopt,
+    const uint8_t* data, size_t data_len, std::optional<uint64_t> log_time = std::nullopt,
     std::optional<uint64_t> sink_id = std::nullopt
   ) noexcept;
 

@@ -1908,7 +1908,7 @@ Schema ArrowPrimitive::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -1918,7 +1918,7 @@ Schema CameraCalibration::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -1928,7 +1928,7 @@ Schema CircleAnnotation::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -1938,7 +1938,7 @@ Schema Color::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -1948,7 +1948,7 @@ Schema CompressedImage::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -1958,7 +1958,7 @@ Schema CompressedVideo::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -1968,7 +1968,7 @@ Schema CubePrimitive::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -1978,7 +1978,7 @@ Schema CylinderPrimitive::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -1988,7 +1988,7 @@ Schema FrameTransform::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -1998,7 +1998,7 @@ Schema FrameTransforms::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -2008,7 +2008,7 @@ Schema GeoJSON::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -2018,7 +2018,7 @@ Schema Grid::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -2028,7 +2028,7 @@ Schema ImageAnnotations::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -2038,7 +2038,7 @@ Schema KeyValuePair::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -2048,7 +2048,7 @@ Schema LaserScan::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -2058,7 +2058,7 @@ Schema LinePrimitive::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -2068,7 +2068,7 @@ Schema LocationFix::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -2078,7 +2078,7 @@ Schema LocationFixes::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -2088,7 +2088,7 @@ Schema Log::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -2098,7 +2098,7 @@ Schema ModelPrimitive::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -2108,7 +2108,7 @@ Schema PackedElementField::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -2118,7 +2118,7 @@ Schema Point2::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -2128,7 +2128,7 @@ Schema Point3::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -2138,7 +2138,7 @@ Schema PointCloud::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -2148,7 +2148,7 @@ Schema PointsAnnotation::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -2158,7 +2158,7 @@ Schema Pose::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -2168,7 +2168,7 @@ Schema PoseInFrame::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -2178,7 +2178,7 @@ Schema PosesInFrame::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -2188,7 +2188,7 @@ Schema Quaternion::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -2198,7 +2198,7 @@ Schema RawAudio::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -2208,7 +2208,7 @@ Schema RawImage::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -2218,7 +2218,7 @@ Schema SceneEntity::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -2228,7 +2228,7 @@ Schema SceneEntityDeletion::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -2238,7 +2238,7 @@ Schema SceneUpdate::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -2248,7 +2248,7 @@ Schema SpherePrimitive::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -2258,7 +2258,7 @@ Schema TextAnnotation::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -2268,7 +2268,7 @@ Schema TextPrimitive::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -2278,7 +2278,7 @@ Schema TriangleListPrimitive::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -2288,7 +2288,7 @@ Schema Vector2::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -2298,7 +2298,7 @@ Schema Vector3::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -2308,7 +2308,7 @@ Schema VoxelGrid::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }

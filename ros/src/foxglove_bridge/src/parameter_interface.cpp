@@ -27,16 +27,16 @@ static std::string prependNodeNameToParamName(const std::string& paramName,
   return nodeName + PARAM_SEP + paramName;
 }
 
-static std::vector<std::byte> toByteArray(const std::vector<uint8_t>& arr) {
-  std::vector<std::byte> result;
+static std::vector<uint8_t> toByteArray(const std::vector<uint8_t>& arr) {
+  std::vector<uint8_t> result;
   result.reserve(arr.size());
   for (const auto& byte : arr) {
-    result.emplace_back(std::byte{byte});
+    result.emplace_back(uint8_t{byte});
   }
   return result;
 }
 
-static std::vector<uint8_t> toUnsignedIntArray(const std::vector<std::byte>& arr) {
+static std::vector<uint8_t> toUnsignedIntArray(const std::vector<uint8_t>& arr) {
   std::vector<uint8_t> result;
   result.reserve(arr.size());
   for (const auto& byte : arr) {

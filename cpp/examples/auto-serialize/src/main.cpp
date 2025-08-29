@@ -59,7 +59,7 @@ int main() {
   schema.name = "Test";
   schema.encoding = "jsonschema";
   std::string schema_data = msg_schema.dump();
-  schema.data = reinterpret_cast<const std::byte*>(schema_data.data());
+  schema.data = reinterpret_cast<const uint8_t*>(schema_data.data());
   schema.data_len = schema_data.size();
 
   auto chan1_result = foxglove::RawChannel::create("/json", "json", schema);
@@ -89,11 +89,11 @@ int main() {
     json value = msg;
 
     auto json_val = value.dump();
-    ch1.log(reinterpret_cast<const std::byte*>(json_val.c_str()), json_val.size());
+    ch1.log(reinterpret_cast<const uint8_t*>(json_val.c_str()), json_val.size());
 
     // MessagePack
     std::vector<std::uint8_t> msgpack_val = json::to_msgpack(value);
-    ch2.log(reinterpret_cast<const std::byte*>(msgpack_val.data()), msgpack_val.size());
+    ch2.log(reinterpret_cast<const uint8_t*>(msgpack_val.data()), msgpack_val.size());
 
     std::this_thread::sleep_for(100ms);
   }

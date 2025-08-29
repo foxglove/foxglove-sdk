@@ -9,7 +9,7 @@ function primitiveToCpp(type: FoxglovePrimitive) {
     case "uint32":
       return "uint32_t";
     case "bytes":
-      return "std::vector<std::byte>";
+      return "std::vector<uint8_t>";
     case "string":
       return "std::string";
     case "boolean":
@@ -421,7 +421,7 @@ export function generateCppSchemas(schemas: FoxgloveMessageSchema[]): string {
       "    Schema result;",
       "    result.name = std::string(c_schema.name.data, c_schema.name.len);",
       "    result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);",
-      "    result.data = reinterpret_cast<const std::byte*>(c_schema.data);",
+      "    result.data = reinterpret_cast<const uint8_t*>(c_schema.data);",
       "    result.data_len = c_schema.data_len;",
       "    return result;",
       "}\n",

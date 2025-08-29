@@ -274,7 +274,7 @@ void FoxgloveBridge::updateAdvertisedTopics(
     try {
       auto [format, msgDefinition] = _messageDefinitionCache.get_full_text(schemaName);
       schema->data_len = msgDefinition.size();
-      schema->data = reinterpret_cast<const std::byte*>(msgDefinition.data());
+      schema->data = reinterpret_cast<const uint8_t*>(msgDefinition.data());
 
       switch (format) {
         case foxglove_bridge::MessageDefinitionFormat::MSG:
@@ -403,7 +403,7 @@ void FoxgloveBridge::updateAdvertisedServices() {
       serviceSchema.request->schema = foxglove::Schema{
         requestTypeName,
         schemaEncoding,
-        reinterpret_cast<const std::byte*>(reqSchema.data()),
+        reinterpret_cast<const uint8_t*>(reqSchema.data()),
         reqSchema.size(),
       };
 
@@ -412,7 +412,7 @@ void FoxgloveBridge::updateAdvertisedServices() {
       serviceSchema.response->schema = foxglove::Schema{
         responseTypeName,
         schemaEncoding,
-        reinterpret_cast<const std::byte*>(resSchema.data()),
+        reinterpret_cast<const uint8_t*>(resSchema.data()),
         resSchema.size(),
       };
     } catch (const foxglove_bridge::DefinitionNotFoundError& err) {
@@ -729,7 +729,7 @@ void FoxgloveBridge::clientUnadvertise(ClientId clientId, ChannelId clientChanne
 }
 
 void FoxgloveBridge::clientMessage(ClientId clientId, ChannelId clientChannelId,
-                                   const std::byte* data, size_t dataLen) {
+                                   const uint8_t* data, size_t dataLen) {
   // Get the publisher
   rclcpp::GenericPublisher::SharedPtr publisher;
   std::string encoding;
@@ -871,7 +871,7 @@ void FoxgloveBridge::rosMessageHandler(ChannelId channelId, SinkId sinkId,
   }
 
   auto& channel = _channels.at(channelId);
-  channel.log(reinterpret_cast<const std::byte*>(rclSerializedMsg.buffer),
+  channel.log(reinterpret_cast<const uint8_t*>(rclSerializedMsg.buffer),
               rclSerializedMsg.buffer_length, timestamp, sinkId);
 }
 
@@ -943,12 +943,12 @@ void FoxgloveBridge::fetchAsset(const std::string_view uriView,
 #if RESOURCE_RETRIEVER_VERSION_MAJOR > 3 || \
   (RESOURCE_RETRIEVER_VERSION_MAJOR == 3 && RESOURCE_RETRIEVER_VERSION_MINOR > 6)
     const auto memoryResource = resource_retriever.get_shared(uri);
-    std::vector<std::byte> data(memoryResource->data.size());
+    std::vector<uint8_t> data(memoryResource->data.size());
     std::memcpy(data.data(), memoryResource->data.data(), memoryResource->data.size());
     std::move(responder).respondOk(data);
 #else
     const resource_retriever::MemoryResource memoryResource = resource_retriever.get(uri);
-    std::vector<std::byte> data(memoryResource.size);
+    std::vector<uint8_t> data(memoryResource.size);
     std::memcpy(data.data(), memoryResource.data.get(), memoryResource.size);
     std::move(responder).respondOk(data);
 #endif

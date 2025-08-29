@@ -49,8 +49,8 @@ ServiceRequest::ServiceRequest(const foxglove_service_request* r) noexcept
     , call_id(r->call_id)
     , encoding(r->encoding.data, r->encoding.len)
     , payload(
-        reinterpret_cast<const std::byte*>(r->payload.data),
-        reinterpret_cast<const std::byte*>(r->payload.data + r->payload.len)
+        reinterpret_cast<const uint8_t*>(r->payload.data),
+        reinterpret_cast<const uint8_t*>(r->payload.data + r->payload.len)
       ) {}
 
 /**
@@ -61,7 +61,7 @@ void ServiceResponder::Deleter::operator()(foxglove_service_responder* ptr) cons
   foxglove_service_respond_error(ptr, {message.data(), message.length()});
 }
 
-void ServiceResponder::respondOk(const std::byte* data, size_t size) && noexcept {
+void ServiceResponder::respondOk(const uint8_t* data, size_t size) && noexcept {
   auto* ptr = impl_.release();
   foxglove_service_respond_ok(ptr, {reinterpret_cast<const uint8_t*>(data), size});
 }

@@ -344,7 +344,7 @@ public:
   /// This method will return `ValueError` if the value is unset or the value is
   /// not a byte array. It will return `Base64DecodeError` if the value is not a
   /// valid base64-encoding.
-  [[nodiscard]] FoxgloveResult<std::vector<std::byte>> getByteArray() const;
+  [[nodiscard]] FoxgloveResult<std::vector<uint8_t>> getByteArray() const;
 
 private:
   friend class Parameter;
@@ -383,8 +383,8 @@ template<>
 /// @fn ParameterView::is<std::string>()
 /// @tparam std::string Checks whether the parameter value is a string.
 
-/// @fn ParameterView::is<std::vector<std::byte>>()
-/// @tparam std::vector<std::byte> Checks whether the parameter value is a byte array.
+/// @fn ParameterView::is<std::vector<uint8_t>>()
+/// @tparam std::vector<uint8_t> Checks whether the parameter value is a byte array.
 
 /// @fn ParameterView::is<std::vector<double>>()
 /// @tparam std::vector<double> Checks whether the parameter value is a vector of floating point
@@ -412,9 +412,9 @@ template<>
   return this->is<std::string_view>();
 }
 
-/// @brief Checks whether the parameter value is a std::vector<std::byte>.
+/// @brief Checks whether the parameter value is a std::vector<uint8_t>.
 template<>
-[[nodiscard]] inline bool ParameterView::is<std::vector<std::byte>>() const noexcept {
+[[nodiscard]] inline bool ParameterView::is<std::vector<uint8_t>>() const noexcept {
   auto value = this->value();
   return value.has_value() && value->is<std::string_view>() &&
          this->type() == ParameterType::ByteArray;
@@ -435,16 +435,16 @@ template<>
 /// @endcond
 
 [[nodiscard]] inline bool ParameterView::isByteArray() const noexcept {
-  return this->is<std::vector<std::byte>>();
+  return this->is<std::vector<uint8_t>>();
 }
 
 /// @brief Extracts the value as a byte array.
 ///
 /// This method will throw an exception if the value is unset or is not a byte
-/// array. You can use `ParameterView::is<std::vector<std::byte>>()` to check
+/// array. You can use `ParameterView::is<std::vector<uint8_t>>()` to check
 /// that the type matches before calling this method.
 template<>
-[[nodiscard]] inline std::vector<std::byte> ParameterView::get() const {
+[[nodiscard]] inline std::vector<uint8_t> ParameterView::get() const {
   auto result = this->getByteArray();
   if (!result.has_value()) {
     throw std::runtime_error(strerror(result.error()));
@@ -511,7 +511,7 @@ public:
   /// @brief Constructor for a byte array parameter.
   explicit Parameter(std::string_view name, const uint8_t* data, size_t data_length);
   /// @brief Constructor for a byte array parameter from a vector of bytes.
-  explicit Parameter(std::string_view name, const std::vector<std::byte>& bytes)
+  explicit Parameter(std::string_view name, const std::vector<uint8_t>& bytes)
       : Parameter(name, reinterpret_cast<const uint8_t*>(bytes.data()), bytes.size()) {}
   /// @brief Constructor for an array of floating point values.
   explicit Parameter(std::string_view name, const std::vector<double>& values);
@@ -637,7 +637,7 @@ public:
   /// This method will return `ValueError` if the value is unset or the value is
   /// not a byte array. It will return `Base64DecodeError` if the value is not a
   /// valid base64-encoding.
-  [[nodiscard]] FoxgloveResult<std::vector<std::byte>> getByteArray() const {
+  [[nodiscard]] FoxgloveResult<std::vector<uint8_t>> getByteArray() const {
     return this->view().getByteArray();
   }
 

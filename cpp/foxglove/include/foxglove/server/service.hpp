@@ -67,7 +67,7 @@ struct ServiceRequest {
   /// Message encoding.
   std::string encoding;
   /// Request message data.
-  std::vector<std::byte> payload;
+  std::vector<uint8_t> payload;
 
   /// @brief Returns a string view of the payload.
   [[nodiscard]] std::string_view payloadStr() const noexcept {
@@ -92,12 +92,12 @@ public:
   ///
   /// @param data Response data pointer.
   /// @param size Response data length.
-  void respondOk(const std::byte* data, size_t size) && noexcept;
+  void respondOk(const uint8_t* data, size_t size) && noexcept;
 
   /// @brief Sends response data to the client.
   ///
   /// @param data Response data.
-  void respondOk(const std::vector<std::byte>& data) && noexcept {
+  void respondOk(const std::vector<uint8_t>& data) && noexcept {
     std::move(*this).respondOk(data.data(), data.size());
   };
 

@@ -80,7 +80,7 @@ std::optional<Schema> RawChannel::schema() const noexcept {
   Schema schema;
   schema.name = std::string(c_schema.name.data, c_schema.name.len);
   schema.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  schema.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  schema.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   schema.data_len = c_schema.data_len;
   return schema;
 }
@@ -104,7 +104,7 @@ std::optional<std::map<std::string, std::string>> RawChannel::metadata() const n
 }
 
 FoxgloveError RawChannel::log(
-  const std::byte* data, size_t data_len, std::optional<uint64_t> log_time,
+  const uint8_t* data, size_t data_len, std::optional<uint64_t> log_time,
   std::optional<uint64_t> sink_id
 ) noexcept {
   foxglove_error error = foxglove_channel_log(

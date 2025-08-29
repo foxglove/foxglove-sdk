@@ -184,7 +184,7 @@ void GenericClient::handle_response(std::shared_ptr<rmw_request_id_t> request_he
   lock.unlock();
 
   std::move(responder).respondOk(
-    reinterpret_cast<const std::byte*>(ser_response->get_rcl_serialized_message().buffer),
+    reinterpret_cast<const uint8_t*>(ser_response->get_rcl_serialized_message().buffer),
     ser_response->get_rcl_serialized_message().buffer_length);
 }
 

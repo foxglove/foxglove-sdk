@@ -13,7 +13,7 @@ void FetchAssetResponder::Deleter::operator()(foxglove_fetch_asset_responder* pt
   foxglove_fetch_asset_respond_error(ptr, {message.data(), message.length()});
 }
 
-void FetchAssetResponder::respondOk(const std::byte* data, size_t size) && noexcept {
+void FetchAssetResponder::respondOk(const uint8_t* data, size_t size) && noexcept {
   auto* ptr = impl_.release();
   foxglove_fetch_asset_respond_ok(ptr, {reinterpret_cast<const uint8_t*>(data), size});
 }

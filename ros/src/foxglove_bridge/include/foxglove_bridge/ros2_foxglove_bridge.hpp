@@ -116,7 +116,7 @@ private:
 
   void clientUnadvertise(ClientId clientId, ChannelId clientChannelId);
 
-  void clientMessage(ClientId clientId, ChannelId clientChannelId, const std::byte* data,
+  void clientMessage(ClientId clientId, ChannelId clientChannelId, const uint8_t* data,
                      size_t dataLen);
 
   std::vector<foxglove::Parameter> setParameters(

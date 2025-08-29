@@ -69,9 +69,9 @@ foxglove::schemas::RawImage create_raw_image_message(const cv::Mat& frame) {
   int width = frame.cols;
   int channels = frame.channels();
 
-  // Convert uint8_t data to std::byte
+  // Convert uint8_t data to uint8_t
   size_t data_size = frame.total() * frame.elemSize();
-  std::vector<std::byte> data(data_size);
+  std::vector<uint8_t> data(data_size);
   std::memcpy(data.data(), frame.data, data_size);
 
   foxglove::schemas::RawImage msg;

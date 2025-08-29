@@ -140,7 +140,7 @@ public:
     REQUIRE(!ec);
   }
 
-  void send(std::vector<std::byte>& payload) {
+  void send(std::vector<uint8_t>& payload) {
     this->send(payload.data(), payload.size());
   }
 
@@ -258,11 +258,11 @@ TEST_CASE("Log a message with and without metadata") {
   auto channel = std::move(channel_result.value());
   const std::array<uint8_t, 3> data = {1, 2, 3};
   REQUIRE(
-    channel.log(reinterpret_cast<const std::byte*>(data.data()), data.size()) ==
+    channel.log(reinterpret_cast<const uint8_t*>(data.data()), data.size()) ==
     foxglove::FoxgloveError::Ok
   );
   REQUIRE(
-    channel.log(reinterpret_cast<const std::byte*>(data.data()), data.size(), 1) ==
+    channel.log(reinterpret_cast<const uint8_t*>(data.data()), data.size(), 1) ==
     foxglove::FoxgloveError::Ok
   );
 }
@@ -389,7 +389,7 @@ TEST_CASE("Client advertise/publish callbacks") {
     [&](
       uint32_t client_id [[maybe_unused]],
       uint32_t client_channel_id [[maybe_unused]],
-      const std::byte* data,
+      const uint8_t* data,
       size_t data_len
     ) {
       std::scoped_lock lock{mutex};
@@ -726,8 +726,8 @@ TEST_CASE("Publish a connection graph") {
   server.publishConnectionGraph(graph);
 }
 
-std::vector<std::byte> makeBytes(std::string_view sv) {
-  const auto* data = reinterpret_cast<const std::byte*>(sv.data());
+std::vector<uint8_t> makeBytes(std::string_view sv) {
+  const auto* data = reinterpret_cast<const uint8_t*>(sv.data());
   return {data, data + sv.size()};
 }
 
@@ -752,14 +752,14 @@ foxglove::ServiceSchema makeServiceSchema(std::string_view name) {
   };
 }
 
-void writeUint32LE(std::vector<std::byte>& buffer, uint32_t value) {
-  buffer.push_back(static_cast<std::byte>(value & 0xffU));
-  buffer.push_back(static_cast<std::byte>((value >> 8) & 0xffU));
-  buffer.push_back(static_cast<std::byte>((value >> 16) & 0xffU));
-  buffer.push_back(static_cast<std::byte>((value >> 24) & 0xffU));
+void writeUint32LE(std::vector<uint8_t>& buffer, uint32_t value) {
+  buffer.push_back(static_cast<uint8_t>(value & 0xffU));
+  buffer.push_back(static_cast<uint8_t>((value >> 8) & 0xffU));
+  buffer.push_back(static_cast<uint8_t>((value >> 16) & 0xffU));
+  buffer.push_back(static_cast<uint8_t>((value >> 24) & 0xffU));
 }
 
-uint32_t readUint32LE(const std::vector<std::byte>& buffer, size_t offset) {
+uint32_t readUint32LE(const std::vector<uint8_t>& buffer, size_t offset) {
   REQUIRE(offset + 4 <= buffer.size());
   return (static_cast<uint32_t>(buffer[offset + 0]) << 0) |
          (static_cast<uint32_t>(buffer[offset + 1]) << 8) |
@@ -767,18 +767,18 @@ uint32_t readUint32LE(const std::vector<std::byte>& buffer, size_t offset) {
          (static_cast<uint32_t>(buffer[offset + 3]) << 24);
 }
 
-std::vector<std::byte> makeServiceRequest(
+std::vector<uint8_t> makeServiceRequest(
   uint32_t service_id, uint32_t call_id, std::string_view encoding,
-  const std::vector<std::byte>& payload
+  const std::vector<uint8_t>& payload
 ) {
-  std::vector<std::byte> buffer;
+  std::vector<uint8_t> buffer;
   buffer.reserve(1 + 4 + 4 + 4 + encoding.size() + payload.size());
-  buffer.emplace_back(static_cast<std::byte>(2));  // Service call request opcode
+  buffer.emplace_back(static_cast<uint8_t>(2));  // Service call request opcode
   writeUint32LE(buffer, service_id);
   writeUint32LE(buffer, call_id);
   writeUint32LE(buffer, static_cast<uint32_t>(encoding.size()));
   for (char c : encoding) {
-    buffer.emplace_back(static_cast<std::byte>(c));
+    buffer.emplace_back(static_cast<uint8_t>(c));
   }
   for (auto b : payload) {
     buffer.emplace_back(b);
@@ -789,9 +789,9 @@ std::vector<std::byte> makeServiceRequest(
 void validateServiceResponse(
   // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
   const std::string_view response, uint32_t service_id, uint32_t call_id, std::string_view encoding,
-  const std::vector<std::byte>& payload
+  const std::vector<uint8_t>& payload
 ) {
-  std::vector<std::byte> bytes(response.size());
+  std::vector<uint8_t> bytes(response.size());
   std::memcpy(bytes.data(), response.data(), response.size());
   REQUIRE(response.size() >= 1 + 4 + 4 + 4);
   REQUIRE(static_cast<uint8_t>(bytes[0]) == 3);  // Service call response opcode
@@ -977,14 +977,14 @@ TEST_CASE("Service callbacks") {
 }
 
 void validateFetchAssetOkResponse(
-  const std::string_view response, uint32_t request_id, const std::vector<std::byte>& payload
+  const std::string_view response, uint32_t request_id, const std::vector<uint8_t>& payload
 ) {
-  std::vector<std::byte> bytes(response.size());
+  std::vector<uint8_t> bytes(response.size());
   std::memcpy(bytes.data(), response.data(), response.size());
   REQUIRE(response.size() >= 1 + 4 + 1 + 4);
   REQUIRE(static_cast<uint8_t>(bytes[0]) == 4);  // Fetch asset response opcode
   REQUIRE(readUint32LE(bytes, 1) == request_id);
-  REQUIRE(bytes[5] == std::byte{0});     // Success
+  REQUIRE(bytes[5] == uint8_t{0});       // Success
   REQUIRE(readUint32LE(bytes, 6) == 0);  // Error message length
   REQUIRE(response.size() >= 10 + payload.size());
   REQUIRE(memcmp(response.data() + 10, payload.data(), payload.size()) == 0);
@@ -1050,12 +1050,12 @@ TEST_CASE("Fetch asset callback") {
 void validateFetchAssetErrorResponse(
   const std::string_view response, uint32_t request_id, std::string_view error_message
 ) {
-  std::vector<std::byte> bytes(response.size());
+  std::vector<uint8_t> bytes(response.size());
   std::memcpy(bytes.data(), response.data(), response.size());
   REQUIRE(response.size() >= 1 + 4 + 1 + 4);
   REQUIRE(static_cast<uint8_t>(bytes[0]) == 4);  // Fetch asset response opcode
   REQUIRE(readUint32LE(bytes, 1) == request_id);
-  REQUIRE(bytes[5] == std::byte{1});  // Error
+  REQUIRE(bytes[5] == uint8_t{1});  // Error
   REQUIRE(readUint32LE(bytes, 6) == error_message.size());
   REQUIRE(response.size() >= 10 + error_message.size());
   REQUIRE(memcmp(response.data() + 10, error_message.data(), error_message.size()) == 0);
@@ -1117,7 +1117,7 @@ TEST_CASE("Fetch asset error") {
   REQUIRE(server.stop() == foxglove::FoxgloveError::Ok);
 }
 
-uint64_t readUint64LE(const std::vector<std::byte>& buffer, size_t offset) {
+uint64_t readUint64LE(const std::vector<uint8_t>& buffer, size_t offset) {
   REQUIRE(offset + 8 <= buffer.size());
   return (static_cast<uint64_t>(buffer[offset + 0]) << 0) |
          (static_cast<uint64_t>(buffer[offset + 1]) << 8) |
@@ -1130,7 +1130,7 @@ uint64_t readUint64LE(const std::vector<std::byte>& buffer, size_t offset) {
 }
 
 void validateTimeMessage(const std::string_view msg, uint64_t timestamp) {
-  std::vector<std::byte> bytes(msg.size());
+  std::vector<uint8_t> bytes(msg.size());
   std::memcpy(bytes.data(), msg.data(), msg.size());
   REQUIRE(msg.size() >= 1 + 8);
   REQUIRE(static_cast<uint8_t>(bytes[0]) == 2);  // Time opcode
@@ -1347,10 +1347,7 @@ TEST_CASE("Log message to websocket sinks") {
 
     // Log message to channel but target only a single client
     channel.log(
-      reinterpret_cast<const std::byte*>(message.data()),
-      message.size(),
-      std::nullopt,
-      target_sink_id
+      reinterpret_cast<const uint8_t*>(message.data()), message.size(), std::nullopt, target_sink_id
     );
 
     for (auto& client : clients) {
@@ -1366,7 +1363,7 @@ TEST_CASE("Log message to websocket sinks") {
 
   SECTION("Log message to all sinks") {
     // Log message to channel and target all sinks
-    channel.log(reinterpret_cast<const std::byte*>(message.data()), message.size());
+    channel.log(reinterpret_cast<const uint8_t*>(message.data()), message.size());
 
     for (auto& client : clients) {
       auto message_response = client->filterRecv(messageDataPredicate);
