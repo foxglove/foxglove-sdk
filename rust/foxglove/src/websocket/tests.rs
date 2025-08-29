@@ -247,7 +247,7 @@ async fn test_advertise_to_client() {
     ch2.log(b"{\"a\":1}");
 
     let subscription_id = 42;
-    let subscribe_msg = Subscribe::new([Subscription::with_id(subscription_id, ch.id().into())]);
+    let subscribe_msg = Subscribe::new([Subscription::new(subscription_id, ch.id().into())]);
     client.send(&subscribe_msg).await.expect("Failed to send");
 
     // Allow the server to process the subscription
@@ -396,12 +396,12 @@ async fn test_log_only_to_subscribers() {
     }
 
     client1
-        .send(&Subscribe::new([Subscription::with_id(1, ch1.id().into())]))
+        .send(&Subscribe::new([Subscription::new(1, ch1.id().into())]))
         .await
         .expect("Failed to send");
 
     client2
-        .send(&Subscribe::new([Subscription::with_id(2, ch2.id().into())]))
+        .send(&Subscribe::new([Subscription::new(2, ch2.id().into())]))
         .await
         .expect("Failed to send");
 
@@ -410,8 +410,8 @@ async fn test_log_only_to_subscribers() {
 
     client3
         .send(&Subscribe::new([
-            Subscription::with_id(111, ch1.id().into()),
-            Subscription::with_id(222, ch2.id().into()),
+            Subscription::new(111, ch1.id().into()),
+            Subscription::new(222, ch2.id().into()),
         ]))
         .await
         .expect("Failed to send");
@@ -495,10 +495,7 @@ async fn test_on_unsubscribe_called_after_disconnect() {
     expect_recv!(client, ServerMessage::Advertise);
 
     client
-        .send(&Subscribe::new([Subscription::with_id(
-            1,
-            chan.id().into(),
-        )]))
+        .send(&Subscribe::new([Subscription::new(1, chan.id().into())]))
         .await
         .expect("Failed to send");
 
@@ -587,7 +584,7 @@ async fn test_error_status_message() {
 
     {
         client
-            .send(&Subscribe::new([Subscription::with_id(1, 555)]))
+            .send(&Subscribe::new([Subscription::new(1, 555)]))
             .await
             .expect("Failed to send message");
 

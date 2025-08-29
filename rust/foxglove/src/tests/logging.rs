@@ -67,7 +67,7 @@ async fn test_logging_to_file_and_live_sinks() {
 
         // Client subscription
         client
-            .send(&Subscribe::new([Subscription::with_id(1, channel_id)]))
+            .send(&Subscribe::new([Subscription::new(1, channel_id)]))
             .await
             .expect("Failed to subscribe");
 
