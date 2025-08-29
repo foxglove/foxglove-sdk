@@ -1,0 +1,176 @@
+import { McapIndexedReader } from "@mcap/core";
+import { loadDecompressHandlers } from "@mcap/support";
+import { useCallback, useEffect, useRef, useState } from "react";
+
+import { Editor, EditorInterface } from "./Editor";
+import { Runner } from "./Runner";
+
+import "./Playground.css";
+
+export function Playground(): React.JSX.Element {
+  const outputRef = useRef<HTMLPreElement>(null);
+  const runnerRef = useRef<Runner>(undefined);
+  const editorRef = useRef<EditorInterface>(null);
+
+  const [ready, setReady] = useState(false);
+  const [hasMCAP, setHasMCAP] = useState(false);
+
+  useEffect(() => {
+    setReady(false);
+    const runner = new Runner({
+      output: outputRef.current!,
+    });
+    runner.on("ready", () => {
+      setReady(true);
+    });
+    runner.on("has-mcap", (value) => {
+      setHasMCAP(value);
+    });
+    runnerRef.current = runner;
+    return () => {
+      runner.dispose();
+      runnerRef.current = undefined;
+    };
+  }, []);
+
+  const run = useCallback(async () => {
+    const runner = runnerRef.current;
+    if (!runner) {
+      return;
+    }
+    try {
+      await runner.run(editorRef.current?.getValue() ?? "");
+
+      const file = await runner.readFile();
+      const reader = await McapIndexedReader.Initialize({
+        readable: {
+          async size() {
+            return BigInt(file.length);
+          },
+          async read(offset, size) {
+            return file.slice(Number(offset), Number(offset + size));
+          },
+        },
+        decompressHandlers: await loadDecompressHandlers(),
+      });
+      console.log(reader);
+    } catch (err) {
+      console.error("Run failed:", err);
+    }
+  }, []);
+
+  const download = useCallback(async () => {
+    const runner = runnerRef.current;
+    if (!runner) {
+      return;
+    }
+    try {
+      const file = await runner.readFile();
+
+      const link = document.createElement("a");
+      link.style.display = "none";
+      document.body.appendChild(link);
+
+      const url = URL.createObjectURL(new Blob([file], { type: "application/octet-stream" }));
+      link.setAttribute("download", "output.mcap");
+      link.setAttribute("href", url);
+      link.click();
+      requestAnimationFrame(() => {
+        link.remove();
+        URL.revokeObjectURL(url);
+      });
+
+      await runner.run(editorRef.current?.getValue() ?? "");
+
+      const reader = await McapIndexedReader.Initialize({
+        readable: {
+          async size() {
+            return BigInt(file.length);
+          },
+          async read(offset, size) {
+            return file.slice(Number(offset), Number(offset + size));
+          },
+        },
+        decompressHandlers: await loadDecompressHandlers(),
+      });
+      console.log(reader);
+    } catch (err) {
+      console.error("Run failed:", err);
+    }
+  }, []);
+
+  return (
+    <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column" }}>
+      <div
+        style={{
+          flex: "0 0 auto",
+          display: "flex",
+          padding: "8px 8px 8px 16px",
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+          backgroundColor: "#eee",
+        }}
+      >
+        <div>Foxglove SDK Playground</div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button onClick={() => void download()} disabled={!hasMCAP}>
+            Download MCAP
+          </button>
+          <button onClick={() => void run()} disabled={!ready}>
+            Run
+          </button>
+        </div>
+      </div>
+      <div style={{ display: "flex", gap: 16, flex: "1 1 0", minWidth: 0, minHeight: 0 }}>
+        <Editor initialValue={DEFAULT_CODE} ref={editorRef} />
+        <pre
+          ref={outputRef}
+          style={{
+            flex: "1 1 0",
+            minWidth: 0,
+            minHeight: 0,
+            border: "1px solid gray",
+            overflow: "auto",
+          }}
+        ></pre>
+      </div>
+    </div>
+  );
+}
+
+const DEFAULT_CODE = `\
+import foxglove
+from foxglove import Channel
+from foxglove.channels import SceneUpdateChannel
+from foxglove.schemas import (
+  Color,
+  CubePrimitive,
+  SceneEntity,
+  SceneUpdate,
+  Vector3,
+)
+
+foxglove.set_log_level("DEBUG")
+
+file_name = "quickstart-python.mcap"
+with foxglove.open_mcap(file_name) as writer:
+  scene_channel = SceneUpdateChannel("/scene")
+  for i in range(10):
+    size = 1 + 0.2 * i
+    scene_channel.log(
+        SceneUpdate(
+            entities=[
+                SceneEntity(
+                    cubes=[
+                        CubePrimitive(
+                            size=Vector3(x=size, y=size, z=size),
+                            color=Color(r=1.0, g=0, b=0, a=1.0),
+                        )
+                    ],
+                ),
+            ]
+        ),
+        log_time=i * 200_000_000,
+    )
+`;

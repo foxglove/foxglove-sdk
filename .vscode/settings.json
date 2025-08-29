@@ -18,9 +18,6 @@
     "yarn.lock": true
   },
   "typescript.tsdk": "node_modules/typescript/lib",
-  "eslint.options": {
-    "reportUnusedDisableDirectives": "error"
-  },
   "jest.jestCommandLine": "yarn test",
   "python.analysis.typeCheckingMode": "strict",
   "[python]": {

@@ -43,6 +43,34 @@ jobs:
       - run: poetry run mypy .
       - run: poetry run pytest --with-benchmarks
 
+  playground:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: python/foxglove-sdk
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - run: corepack enable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+
+      - name: Install common dependencies
+        uses: ./.github/actions/common-deps
+
+      - run: pipx install poetry
+      - run: poetry check --strict
+      - run: poetry install
+      - run: CFLAGS=-fPIC RUSTC_BOOTSTRAP=1 poetry run maturin build --release --out dist --target wasm32-unknown-emscripten -i python3.12
+      - run: mkdir -p ../playground/public
+      - run: cp dist/*.whl ../playground/public
+      - run: yarn install
+        working-directory: python/playground
+      - run: yarn build
+        working-directory: python/playground
+
   schemas:
     runs-on: ubuntu-latest
     permissions:
