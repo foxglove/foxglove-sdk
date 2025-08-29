@@ -8,11 +8,12 @@ use foxglove::Encode;
 
 use crate::arena::{Arena, BorrowToNative};
 use crate::util::{bytes_from_raw, string_from_raw, vec_from_raw};
+#[cfg(not(target_arch = "wasm32"))]
 use crate::{
     do_foxglove_channel_create, log_msg_to_channel, result_to_c, FoxgloveChannel, FoxgloveContext,
-    FoxgloveDuration, FoxgloveError, FoxgloveSchema, FoxgloveSinkId, FoxgloveString,
-    FoxgloveTimestamp,
+    FoxgloveSinkId,
 };
+use crate::{FoxgloveDuration, FoxgloveError, FoxgloveSchema, FoxgloveString, FoxgloveTimestamp};
 
 #[derive(Clone, Copy, Debug)]
 #[repr(i32)]
@@ -95,6 +96,7 @@ pub struct ArrowPrimitive {
     pub color: *const Color,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl ArrowPrimitive {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -153,6 +155,7 @@ impl BorrowToNative for ArrowPrimitive {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_arrow_primitive.
+#[cfg(not(target_arch = "wasm32"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_arrow_primitive(
     channel: Option<&FoxgloveChannel>,
@@ -321,6 +324,7 @@ pub struct CameraCalibration {
     pub p: [f64; 12],
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl CameraCalibration {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -390,6 +394,7 @@ impl BorrowToNative for CameraCalibration {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_camera_calibration.
+#[cfg(not(target_arch = "wasm32"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_camera_calibration(
     channel: Option<&FoxgloveChannel>,
@@ -509,6 +514,7 @@ pub struct CircleAnnotation {
     pub outline_color: *const Color,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl CircleAnnotation {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -573,6 +579,7 @@ impl BorrowToNative for CircleAnnotation {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_circle_annotation.
+#[cfg(not(target_arch = "wasm32"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_circle_annotation(
     channel: Option<&FoxgloveChannel>,
@@ -685,6 +692,7 @@ pub struct Color {
     pub a: f64,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl Color {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -727,6 +735,7 @@ impl BorrowToNative for Color {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_color.
+#[cfg(not(target_arch = "wasm32"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_color(
     channel: Option<&FoxgloveChannel>,
@@ -841,6 +850,7 @@ pub struct CompressedImage {
     pub format: FoxgloveString,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl CompressedImage {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -899,6 +909,7 @@ impl BorrowToNative for CompressedImage {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_compressed_image.
+#[cfg(not(target_arch = "wasm32"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_compressed_image(
     channel: Option<&FoxgloveChannel>,
@@ -1040,6 +1051,7 @@ pub struct CompressedVideo {
     pub format: FoxgloveString,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl CompressedVideo {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -1098,6 +1110,7 @@ impl BorrowToNative for CompressedVideo {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_compressed_video.
+#[cfg(not(target_arch = "wasm32"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_compressed_video(
     channel: Option<&FoxgloveChannel>,
@@ -1213,6 +1226,7 @@ pub struct CylinderPrimitive {
     pub color: *const Color,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl CylinderPrimitive {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -1276,6 +1290,7 @@ impl BorrowToNative for CylinderPrimitive {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_cylinder_primitive.
+#[cfg(not(target_arch = "wasm32"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_cylinder_primitive(
     channel: Option<&FoxgloveChannel>,
@@ -1385,6 +1400,7 @@ pub struct CubePrimitive {
     pub color: *const Color,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl CubePrimitive {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -1446,6 +1462,7 @@ impl BorrowToNative for CubePrimitive {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_cube_primitive.
+#[cfg(not(target_arch = "wasm32"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_cube_primitive(
     channel: Option<&FoxgloveChannel>,
@@ -1561,6 +1578,7 @@ pub struct FrameTransform {
     pub rotation: *const Quaternion,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl FrameTransform {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -1632,6 +1650,7 @@ impl BorrowToNative for FrameTransform {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_frame_transform.
+#[cfg(not(target_arch = "wasm32"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_frame_transform(
     channel: Option<&FoxgloveChannel>,
@@ -1736,6 +1755,7 @@ pub struct FrameTransforms {
     pub transforms_count: usize,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl FrameTransforms {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -1778,6 +1798,7 @@ impl BorrowToNative for FrameTransforms {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_frame_transforms.
+#[cfg(not(target_arch = "wasm32"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_frame_transforms(
     channel: Option<&FoxgloveChannel>,
@@ -1881,6 +1902,7 @@ pub struct GeoJson {
     pub geojson: FoxgloveString,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl GeoJson {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -1928,6 +1950,7 @@ impl BorrowToNative for GeoJson {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_geo_json.
+#[cfg(not(target_arch = "wasm32"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_geo_json(
     channel: Option<&FoxgloveChannel>,
@@ -2059,6 +2082,7 @@ pub struct Grid {
     pub data_len: usize,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl Grid {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -2127,6 +2151,7 @@ impl BorrowToNative for Grid {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_grid.
+#[cfg(not(target_arch = "wasm32"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_grid(
     channel: Option<&FoxgloveChannel>,
@@ -2265,6 +2290,7 @@ pub struct VoxelGrid {
     pub data_len: usize,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl VoxelGrid {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -2335,6 +2361,7 @@ impl BorrowToNative for VoxelGrid {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_voxel_grid.
+#[cfg(not(target_arch = "wasm32"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_voxel_grid(
     channel: Option<&FoxgloveChannel>,
@@ -2446,6 +2473,7 @@ pub struct ImageAnnotations {
     pub texts_count: usize,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl ImageAnnotations {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -2492,6 +2520,7 @@ impl BorrowToNative for ImageAnnotations {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_image_annotations.
+#[cfg(not(target_arch = "wasm32"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_image_annotations(
     channel: Option<&FoxgloveChannel>,
@@ -2598,6 +2627,7 @@ pub struct KeyValuePair {
     pub value: FoxgloveString,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl KeyValuePair {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -2643,6 +2673,7 @@ impl BorrowToNative for KeyValuePair {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_key_value_pair.
+#[cfg(not(target_arch = "wasm32"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_key_value_pair(
     channel: Option<&FoxgloveChannel>,
@@ -2766,6 +2797,7 @@ pub struct LaserScan {
     pub intensities_count: usize,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl LaserScan {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -2829,6 +2861,7 @@ impl BorrowToNative for LaserScan {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_laser_scan.
+#[cfg(not(target_arch = "wasm32"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_laser_scan(
     channel: Option<&FoxgloveChannel>,
@@ -2957,6 +2990,7 @@ pub struct LinePrimitive {
     pub indices_count: usize,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl LinePrimitive {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -3021,6 +3055,7 @@ impl BorrowToNative for LinePrimitive {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_line_primitive.
+#[cfg(not(target_arch = "wasm32"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_line_primitive(
     channel: Option<&FoxgloveChannel>,
@@ -3145,6 +3180,7 @@ pub struct LocationFix {
     pub color: *const Color,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl LocationFix {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -3211,6 +3247,7 @@ impl BorrowToNative for LocationFix {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_location_fix.
+#[cfg(not(target_arch = "wasm32"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_location_fix(
     channel: Option<&FoxgloveChannel>,
@@ -3314,6 +3351,7 @@ pub struct LocationFixes {
     pub fixes_count: usize,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl LocationFixes {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -3356,6 +3394,7 @@ impl BorrowToNative for LocationFixes {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_location_fixes.
+#[cfg(not(target_arch = "wasm32"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_location_fixes(
     channel: Option<&FoxgloveChannel>,
@@ -3474,6 +3513,7 @@ pub struct Log {
     pub line: u32,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl Log {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -3530,6 +3570,7 @@ impl BorrowToNative for Log {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_log.
+#[cfg(not(target_arch = "wasm32"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_log(
     channel: Option<&FoxgloveChannel>,
@@ -3638,6 +3679,7 @@ pub struct SceneEntityDeletion {
     pub id: FoxgloveString,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl SceneEntityDeletion {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -3683,6 +3725,7 @@ impl BorrowToNative for SceneEntityDeletion {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_scene_entity_deletion.
+#[cfg(not(target_arch = "wasm32"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_scene_entity_deletion(
     channel: Option<&FoxgloveChannel>,
@@ -3834,6 +3877,7 @@ pub struct SceneEntity {
     pub models_count: usize,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl SceneEntity {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -3905,6 +3949,7 @@ impl BorrowToNative for SceneEntity {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_scene_entity.
+#[cfg(not(target_arch = "wasm32"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_scene_entity(
     channel: Option<&FoxgloveChannel>,
@@ -4012,6 +4057,7 @@ pub struct SceneUpdate {
     pub entities_count: usize,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl SceneUpdate {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -4056,6 +4102,7 @@ impl BorrowToNative for SceneUpdate {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_scene_update.
+#[cfg(not(target_arch = "wasm32"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_scene_update(
     channel: Option<&FoxgloveChannel>,
@@ -4177,6 +4224,7 @@ pub struct ModelPrimitive {
     pub data_len: usize,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl ModelPrimitive {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -4250,6 +4298,7 @@ impl BorrowToNative for ModelPrimitive {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_model_primitive.
+#[cfg(not(target_arch = "wasm32"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_model_primitive(
     channel: Option<&FoxgloveChannel>,
@@ -4359,6 +4408,7 @@ pub struct PackedElementField {
     pub r#type: FoxgloveNumericType,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl PackedElementField {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -4404,6 +4454,7 @@ impl BorrowToNative for PackedElementField {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_packed_element_field.
+#[cfg(not(target_arch = "wasm32"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_packed_element_field(
     channel: Option<&FoxgloveChannel>,
@@ -4510,6 +4561,7 @@ pub struct Point2 {
     pub y: f64,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl Point2 {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -4550,6 +4602,7 @@ impl BorrowToNative for Point2 {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_point2.
+#[cfg(not(target_arch = "wasm32"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_point2(
     channel: Option<&FoxgloveChannel>,
@@ -4658,6 +4711,7 @@ pub struct Point3 {
     pub z: f64,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl Point3 {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -4699,6 +4753,7 @@ impl BorrowToNative for Point3 {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_point3.
+#[cfg(not(target_arch = "wasm32"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_point3(
     channel: Option<&FoxgloveChannel>,
@@ -4818,6 +4873,7 @@ pub struct PointCloud {
     pub data_len: usize,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl PointCloud {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -4878,6 +4934,7 @@ impl BorrowToNative for PointCloud {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_point_cloud.
+#[cfg(not(target_arch = "wasm32"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_point_cloud(
     channel: Option<&FoxgloveChannel>,
@@ -5001,6 +5058,7 @@ pub struct PointsAnnotation {
     pub thickness: f64,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl PointsAnnotation {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -5066,6 +5124,7 @@ impl BorrowToNative for PointsAnnotation {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_points_annotation.
+#[cfg(not(target_arch = "wasm32"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_points_annotation(
     channel: Option<&FoxgloveChannel>,
@@ -5172,6 +5231,7 @@ pub struct Pose {
     pub orientation: *const Quaternion,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl Pose {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -5225,6 +5285,7 @@ impl BorrowToNative for Pose {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_pose.
+#[cfg(not(target_arch = "wasm32"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_pose(
     channel: Option<&FoxgloveChannel>,
@@ -5333,6 +5394,7 @@ pub struct PoseInFrame {
     pub pose: *const Pose,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl PoseInFrame {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -5389,6 +5451,7 @@ impl BorrowToNative for PoseInFrame {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_pose_in_frame.
+#[cfg(not(target_arch = "wasm32"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_pose_in_frame(
     channel: Option<&FoxgloveChannel>,
@@ -5498,6 +5561,7 @@ pub struct PosesInFrame {
     pub poses_count: usize,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl PosesInFrame {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -5549,6 +5613,7 @@ impl BorrowToNative for PosesInFrame {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_poses_in_frame.
+#[cfg(not(target_arch = "wasm32"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_poses_in_frame(
     channel: Option<&FoxgloveChannel>,
@@ -5661,6 +5726,7 @@ pub struct Quaternion {
     pub w: f64,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl Quaternion {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -5704,6 +5770,7 @@ impl BorrowToNative for Quaternion {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_quaternion.
+#[cfg(not(target_arch = "wasm32"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_quaternion(
     channel: Option<&FoxgloveChannel>,
@@ -5819,6 +5886,7 @@ pub struct RawAudio {
     pub number_of_channels: u32,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl RawAudio {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -5870,6 +5938,7 @@ impl BorrowToNative for RawAudio {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_raw_audio.
+#[cfg(not(target_arch = "wasm32"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_raw_audio(
     channel: Option<&FoxgloveChannel>,
@@ -6044,6 +6113,7 @@ pub struct RawImage {
     pub data_len: usize,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl RawImage {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -6104,6 +6174,7 @@ impl BorrowToNative for RawImage {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_raw_image.
+#[cfg(not(target_arch = "wasm32"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_raw_image(
     channel: Option<&FoxgloveChannel>,
@@ -6212,6 +6283,7 @@ pub struct SpherePrimitive {
     pub color: *const Color,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl SpherePrimitive {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -6273,6 +6345,7 @@ impl BorrowToNative for SpherePrimitive {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_sphere_primitive.
+#[cfg(not(target_arch = "wasm32"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_sphere_primitive(
     channel: Option<&FoxgloveChannel>,
@@ -6392,6 +6465,7 @@ pub struct TextAnnotation {
     pub background_color: *const Color,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl TextAnnotation {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -6458,6 +6532,7 @@ impl BorrowToNative for TextAnnotation {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_text_annotation.
+#[cfg(not(target_arch = "wasm32"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_text_annotation(
     channel: Option<&FoxgloveChannel>,
@@ -6576,6 +6651,7 @@ pub struct TextPrimitive {
     pub text: FoxgloveString,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl TextPrimitive {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -6636,6 +6712,7 @@ impl BorrowToNative for TextPrimitive {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_text_primitive.
+#[cfg(not(target_arch = "wasm32"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_text_primitive(
     channel: Option<&FoxgloveChannel>,
@@ -6756,6 +6833,7 @@ pub struct TriangleListPrimitive {
     pub indices_count: usize,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl TriangleListPrimitive {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -6820,6 +6898,7 @@ impl BorrowToNative for TriangleListPrimitive {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_triangle_list_primitive.
+#[cfg(not(target_arch = "wasm32"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_triangle_list_primitive(
     channel: Option<&FoxgloveChannel>,
@@ -6926,6 +7005,7 @@ pub struct Vector2 {
     pub y: f64,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl Vector2 {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -6966,6 +7046,7 @@ impl BorrowToNative for Vector2 {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_vector2.
+#[cfg(not(target_arch = "wasm32"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_vector2(
     channel: Option<&FoxgloveChannel>,
@@ -7074,6 +7155,7 @@ pub struct Vector3 {
     pub z: f64,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl Vector3 {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -7115,6 +7197,7 @@ impl BorrowToNative for Vector3 {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_vector3.
+#[cfg(not(target_arch = "wasm32"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_vector3(
     channel: Option<&FoxgloveChannel>,
