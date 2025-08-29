@@ -13,7 +13,7 @@
 namespace foxglove {
 
 /// A fixed-size memory arena that allocates aligned arrays of POD types on the stack.
-/// The arena contains a singjle inline array and allocates from it.
+/// The arena contains a single inline array and allocates from it.
 /// If the arena runs out of space, it attempts to allocate the required space on the stack.
 /// If this fails, it throws std::bad_alloc(). On wasm32 platforms which do not support exceptions,
 /// It calls std::terminate().
