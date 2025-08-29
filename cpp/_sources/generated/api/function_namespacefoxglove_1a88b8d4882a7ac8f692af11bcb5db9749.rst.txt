@@ -1,0 +1,14 @@
+.. _exhale_function_namespacefoxglove_1a88b8d4882a7ac8f692af11bcb5db9749:
+
+Function foxglove::operator|
+============================
+
+- Defined in :ref:`file_foxglove_include_foxglove_server.hpp`
+
+
+Function Documentation
+----------------------
+
+
+.. doxygenfunction:: foxglove::operator|(WebSocketServerCapabilities, WebSocketServerCapabilities)
+   :project: Foxglove SDK

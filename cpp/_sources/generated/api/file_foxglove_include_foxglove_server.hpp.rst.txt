@@ -1,0 +1,99 @@
+
+.. _file_foxglove_include_foxglove_server.hpp:
+
+File server.hpp
+===============
+
+|exhale_lsh| :ref:`Parent directory <dir_foxglove_include_foxglove>` (``foxglove/include/foxglove``)
+
+.. |exhale_lsh| unicode:: U+021B0 .. UPWARDS ARROW WITH TIP LEFTWARDS
+
+Definition (``foxglove/include/foxglove/server.hpp``)
+-----------------------------------------------------
+
+
+.. toctree::
+   :maxdepth: 1
+
+   program_listing_file_foxglove_include_foxglove_server.hpp.rst
+
+
+
+
+
+Includes
+--------
+
+
+- ``cstdint``
+
+- ``foxglove/context.hpp`` (:ref:`file_foxglove_include_foxglove_context.hpp`)
+
+- ``foxglove/error.hpp`` (:ref:`file_foxglove_include_foxglove_error.hpp`)
+
+- ``foxglove/server/connection_graph.hpp`` (:ref:`file_foxglove_include_foxglove_server_connection_graph.hpp`)
+
+- ``foxglove/server/fetch_asset.hpp`` (:ref:`file_foxglove_include_foxglove_server_fetch_asset.hpp`)
+
+- ``foxglove/server/parameter.hpp`` (:ref:`file_foxglove_include_foxglove_server_parameter.hpp`)
+
+- ``foxglove/server/service.hpp`` (:ref:`file_foxglove_include_foxglove_server_service.hpp`)
+
+- ``functional``
+
+- ``memory``
+
+- ``optional``
+
+- ``string``
+
+
+
+Included By
+-----------
+
+
+- :ref:`file_foxglove_src_server.cpp`
+
+
+
+
+Namespaces
+----------
+
+
+- :ref:`namespace_foxglove`
+
+
+Classes
+-------
+
+
+- :ref:`exhale_struct_structfoxglove_1_1ClientChannel`
+
+- :ref:`exhale_struct_structfoxglove_1_1ClientMetadata`
+
+- :ref:`exhale_struct_structfoxglove_1_1WebSocketServerCallbacks`
+
+- :ref:`exhale_struct_structfoxglove_1_1WebSocketServerOptions`
+
+- :ref:`exhale_class_classfoxglove_1_1WebSocketServer`
+
+
+Enums
+-----
+
+
+- :ref:`exhale_enum_namespacefoxglove_1ab8cf6dbc1d35cb961cf5c6fd34ac294b`
+
+- :ref:`exhale_enum_namespacefoxglove_1ad173012e55635dbea0da1182376bec72`
+
+
+Functions
+---------
+
+
+- :ref:`exhale_function_namespacefoxglove_1a69424f01ca419187639827f343f88118`
+
+- :ref:`exhale_function_namespacefoxglove_1a88b8d4882a7ac8f692af11bcb5db9749`
+

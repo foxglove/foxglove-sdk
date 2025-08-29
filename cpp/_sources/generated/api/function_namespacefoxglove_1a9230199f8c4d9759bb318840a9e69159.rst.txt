@@ -1,0 +1,14 @@
+.. _exhale_function_namespacefoxglove_1a9230199f8c4d9759bb318840a9e69159:
+
+Function foxglove::strerror
+===========================
+
+- Defined in :ref:`file_foxglove_src_error.cpp`
+
+
+Function Documentation
+----------------------
+
+
+.. doxygenfunction:: foxglove::strerror(FoxgloveError)
+   :project: Foxglove SDK

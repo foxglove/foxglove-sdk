@@ -1,0 +1,77 @@
+
+.. _program_listing_file_foxglove_include_foxglove_mcap.hpp:
+
+Program Listing for File mcap.hpp
+=================================
+
+|exhale_lsh| :ref:`Return to documentation for file <file_foxglove_include_foxglove_mcap.hpp>` (``foxglove/include/foxglove/mcap.hpp``)
+
+.. |exhale_lsh| unicode:: U+021B0 .. UPWARDS ARROW WITH TIP LEFTWARDS
+
+.. code-block:: cpp
+
+   #pragma once
+   
+   #include <foxglove/context.hpp>
+   #include <foxglove/error.hpp>
+   
+   #include <memory>
+   #include <optional>
+   #include <string>
+   
+   enum foxglove_error : uint8_t;
+   struct foxglove_mcap_writer;
+   
+   namespace foxglove {
+   
+   class Context;
+   
+   enum class McapCompression : uint8_t {
+     None,
+     Zstd,
+     Lz4,
+   };
+   
+   struct McapWriterOptions {
+     friend class McapWriter;
+   
+     Context context;
+     std::string_view path;
+     std::string_view profile;
+     uint64_t chunk_size = static_cast<uint64_t>(1024 * 768);
+     McapCompression compression = McapCompression::Zstd;
+     bool use_chunks = true;
+     bool disable_seeking = false;
+     bool emit_statistics = true;
+     bool emit_summary_offsets = true;
+     bool emit_message_indexes = true;
+     bool emit_chunk_indexes = true;
+     bool emit_attachment_indexes = true;
+     bool emit_metadata_indexes = true;
+     bool repeat_channels = true;
+     bool repeat_schemas = true;
+     bool truncate = false;
+   
+     McapWriterOptions() = default;
+   };
+   
+   class McapWriter final {
+   public:
+     static FoxgloveResult<McapWriter> create(const McapWriterOptions& options);
+   
+     FoxgloveError close();
+   
+     McapWriter(McapWriter&&) = default;
+     McapWriter& operator=(McapWriter&&) = default;
+     ~McapWriter() = default;
+   
+     McapWriter(const McapWriter&) = delete;
+     McapWriter& operator=(const McapWriter&) = delete;
+   
+   private:
+     explicit McapWriter(foxglove_mcap_writer* writer);
+   
+     std::unique_ptr<foxglove_mcap_writer, foxglove_error (*)(foxglove_mcap_writer*)> impl_;
+   };
+   
+   }  // namespace foxglove

@@ -1,0 +1,25 @@
+
+.. _program_listing_file_foxglove_src_context.cpp:
+
+Program Listing for File context.cpp
+====================================
+
+|exhale_lsh| :ref:`Return to documentation for file <file_foxglove_src_context.cpp>` (``foxglove/src/context.cpp``)
+
+.. |exhale_lsh| unicode:: U+021B0 .. UPWARDS ARROW WITH TIP LEFTWARDS
+
+.. code-block:: cpp
+
+   #include <foxglove-c/foxglove-c.h>
+   #include <foxglove/context.hpp>
+   
+   namespace foxglove {
+   
+   Context::Context(const foxglove_context* context)
+       : impl_(context, foxglove_context_free) {}
+   
+   Context Context::create() {
+     return Context(foxglove_context_new());
+   }
+   
+   }  // namespace foxglove

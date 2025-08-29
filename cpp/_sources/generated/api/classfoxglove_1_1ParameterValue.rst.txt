@@ -1,0 +1,27 @@
+.. _exhale_class_classfoxglove_1_1ParameterValue:
+
+Class ParameterValue
+====================
+
+- Defined in :ref:`file_foxglove_include_foxglove_server_parameter.hpp`
+
+
+Nested Relationships
+--------------------
+
+
+Nested Types
+************
+
+- :ref:`exhale_struct_structfoxglove_1_1ParameterValue_1_1Deleter`
+
+
+Class Documentation
+-------------------
+
+
+.. doxygenclass:: foxglove::ParameterValue
+   :project: Foxglove SDK
+   :members:
+   :protected-members:
+   :undoc-members:

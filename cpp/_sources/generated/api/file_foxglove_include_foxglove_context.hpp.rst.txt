@@ -1,0 +1,75 @@
+
+.. _file_foxglove_include_foxglove_context.hpp:
+
+File context.hpp
+================
+
+|exhale_lsh| :ref:`Parent directory <dir_foxglove_include_foxglove>` (``foxglove/include/foxglove``)
+
+.. |exhale_lsh| unicode:: U+021B0 .. UPWARDS ARROW WITH TIP LEFTWARDS
+
+Definition (``foxglove/include/foxglove/context.hpp``)
+------------------------------------------------------
+
+
+.. toctree::
+   :maxdepth: 1
+
+   program_listing_file_foxglove_include_foxglove_context.hpp.rst
+
+
+
+
+
+Includes
+--------
+
+
+- ``cstdint``
+
+- ``memory``
+
+- ``optional``
+
+- ``string``
+
+
+
+Included By
+-----------
+
+
+- :ref:`file_foxglove_include_foxglove_channel.hpp`
+
+- :ref:`file_foxglove_include_foxglove_mcap.hpp`
+
+- :ref:`file_foxglove_include_foxglove_schemas.hpp`
+
+- :ref:`file_foxglove_include_foxglove_server.hpp`
+
+- :ref:`file_foxglove_src_channel.cpp`
+
+- :ref:`file_foxglove_src_context.cpp`
+
+- :ref:`file_foxglove_src_mcap.cpp`
+
+- :ref:`file_foxglove_src_schemas.cpp`
+
+- :ref:`file_foxglove_src_server.cpp`
+
+
+
+
+Namespaces
+----------
+
+
+- :ref:`namespace_foxglove`
+
+
+Classes
+-------
+
+
+- :ref:`exhale_class_classfoxglove_1_1Context`
+

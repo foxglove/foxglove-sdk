@@ -1,0 +1,14 @@
+.. _exhale_typedef_schemas_8hpp_1ab547b1a1f1cbf46b90946047bab783fb:
+
+Typedef foxglove::schemas::ChannelUniquePtr
+===========================================
+
+- Defined in :ref:`file_foxglove_include_foxglove_schemas.hpp`
+
+
+Typedef Documentation
+---------------------
+
+
+.. doxygentypedef:: foxglove::schemas::ChannelUniquePtr
+   :project: Foxglove SDK

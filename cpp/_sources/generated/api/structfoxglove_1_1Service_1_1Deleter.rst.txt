@@ -1,0 +1,23 @@
+.. _exhale_struct_structfoxglove_1_1Service_1_1Deleter:
+
+Struct Service::Deleter
+=======================
+
+- Defined in :ref:`file_foxglove_include_foxglove_server_service.hpp`
+
+
+Nested Relationships
+--------------------
+
+This struct is a nested type of :ref:`exhale_class_classfoxglove_1_1Service`.
+
+
+Struct Documentation
+--------------------
+
+
+.. doxygenstruct:: foxglove::Service::Deleter
+   :project: Foxglove SDK
+   :members:
+   :protected-members:
+   :undoc-members:

@@ -1,0 +1,14 @@
+.. _exhale_function_schemas_8cpp_1ab5aae2a5d34f9a70cc6b1885ace2f248:
+
+Function foxglove::schemas::circleAnnotationToC
+===============================================
+
+- Defined in :ref:`file_foxglove_src_schemas.cpp`
+
+
+Function Documentation
+----------------------
+
+
+.. doxygenfunction:: foxglove::schemas::circleAnnotationToC(foxglove_circle_annotation&, const CircleAnnotation&, Arena&)
+   :project: Foxglove SDK

@@ -1,0 +1,17 @@
+.. _exhale_class_classfoxglove_1_1Context:
+
+Class Context
+=============
+
+- Defined in :ref:`file_foxglove_include_foxglove_context.hpp`
+
+
+Class Documentation
+-------------------
+
+
+.. doxygenclass:: foxglove::Context
+   :project: Foxglove SDK
+   :members:
+   :protected-members:
+   :undoc-members:
