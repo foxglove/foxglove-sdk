@@ -120,6 +120,9 @@ Parameters are provided to configure the behavior of the bridge. These parameter
 - **include_hidden**: Include hidden topics and services. Defaults to `false`.
 - **disable_load_message**: Do not publish as loaned message when publishing a client message. Defaults to `true`.
 - **ignore_unresponsive_param_nodes**: Avoid requesting parameters from previously unresponsive nodes. Defaults to `true`.
+- **tls**: Enable TLS/WebSocket Secure (WSS). Defaults to `false`.
+- **certfile**: Path to an X.509 certificate used for WSS. **Must be supplied if `tls` is set to `true`.**
+- **keyfile**: Path to the PEM-encoded PKCS#8 private key used to generate `certfile`. **Must be supplied if `tls` is set to `true`.**
 
 ## For developers
 
