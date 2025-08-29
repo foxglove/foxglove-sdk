@@ -12,18 +12,19 @@
 
 namespace foxglove {
 
-/// A fixed-size memory arena that allocates aligned arrays of POD types in a contiguous array.
-/// The arena contains a single heap-allocated byte array and allocates from it.
-/// If the arena runs out of space, it throws std::bad_alloc.
+/// A fixed-size memory arena that allocates aligned arrays of POD types on the stack.
+/// The arena contains a singjle inline array and allocates from it.
+/// If the arena runs out of space, it attempts to allocate the required space on the stack.
+/// If this fails, it throws std::bad_alloc(). On wasm32 platforms which do not support exceptions,
+/// It calls std::terminate().
 /// The allocated arrays are "freed" by dropping the arena, destructors are not run.
 /// @cond foxglove_internal
 class Arena {
 public:
-  static constexpr std::size_t Size = 128 * 1024;  // 128 KB
+  static constexpr std::size_t Size = 8 * 1024;  // 128 KB
 
   Arena()
-      : buffer_(std::make_unique<std::array<uint8_t, Size>>())
-      , offset_(0) {}
+      : offset_(0) {}
 
   /// Maps elements from a vector to a new array allocated from the arena.
   ///
@@ -32,8 +33,8 @@ public:
   /// T must be a POD type, without a custom constructor or destructor.
   /// @return Pointer to the beginning of the allocated array of src.size() T elements, or null if
   /// elements is 0.
-  /// @throws std::bad_alloc if the arena doesn't have enough space.
-  /// On wasm32 targets, where exceptions are not supported, calls std::terminate().
+  /// @throws std::bad_alloc if the the fallback to heap allocation fails.
+  /// On wasm32 platforms which do not support exceptions, calls std::terminate().
   template<
     typename T, typename S, typename Fn,
     typename = std::enable_if_t<std::is_pod_v<T> && std::is_invocable_v<Fn, T&, const S&, Arena&>>>
@@ -56,8 +57,8 @@ public:
   /// @param map_fn Function taking (T& dest, const S& src) to map elements.
   /// T must be a POD type, without a custom constructor or destructor.
   /// @return Pointer to the beginning of the allocated array of src.size() T elements
-  /// @throws std::bad_alloc if the arena doesn't have enough space.
-  /// On wasm32 targets, where exceptions are not supported, calls std::terminate().
+  /// @throws std::bad_alloc if the the fallback to heap allocation fails.
+  /// On wasm32 platforms which do not support exceptions, calls std::terminate().
   template<
     typename T, typename S, typename Fn,
     typename = std::enable_if_t<std::is_pod_v<T> && std::is_invocable_v<Fn, T&, const S&, Arena&>>>
@@ -71,8 +72,8 @@ public:
   ///
   /// @param elements Number of elements to allocate
   /// @return Pointer to the aligned memory for the requested elements
-  /// @throws std::bad_alloc if the arena doesn't have enough space.
-  /// On wasm32 targets, where exceptions are not supported, calls std::terminate().
+  /// @throws std::bad_alloc if the the fallback to heap allocation fails.
+  /// On wasm32 platforms which do not support exceptions, calls std::terminate().
   template<typename T>
   T* alloc(size_t elements) {
     assert(elements > 0);
@@ -81,7 +82,7 @@ public:
 
     // Calculate space available in the buffer
     size_t space_left = available();
-    void* buffer_ptr = buffer_.get()->data() + offset_;
+    void* buffer_ptr = &buffer_[offset_];
 
     // Align the pointer within the buffer
     void* aligned_ptr = std::align(alignment, bytes_needed, buffer_ptr, space_left);
@@ -125,7 +126,7 @@ private:
     }
   };
 
-  std::unique_ptr<std::array<uint8_t, Size>> buffer_;
+  std::array<uint8_t, Size> buffer_;
   std::size_t offset_;
   std::vector<std::unique_ptr<char, Deleter>> overflow_;
 };
