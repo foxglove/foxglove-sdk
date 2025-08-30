@@ -244,8 +244,10 @@ export function generateHppSchemas(
     "#include <memory>",
     "",
     "#include <foxglove/error.hpp>",
-    "#include <foxglove/context.hpp>",
     "#include <foxglove/schema.hpp>",
+    "#ifndef __wasm32__",
+    "#include <foxglove/context.hpp>",
+    "#endif",
   ];
 
   const uniquePtr = [
@@ -267,13 +269,12 @@ export function generateHppSchemas(
     "struct foxglove_channel;",
 
     "namespace foxglove::schemas {",
-
-    uniquePtr.join("\n"),
-
     structDefs.join("\n\n"),
 
+    "#ifndef __wasm32__",
+    uniquePtr.join("\n"),
     channelClasses.join("\n\n"),
-
+    "#endif",
     "} // namespace foxglove::schemas",
   ].filter(Boolean);
 
@@ -440,8 +441,10 @@ export function generateCppSchemas(schemas: FoxgloveMessageSchema[]): string {
     "#include <foxglove/error.hpp>",
     "#include <foxglove/schemas.hpp>",
     "#include <foxglove/arena.hpp>",
-    "#include <foxglove/context.hpp>",
     "#include <foxglove/schema.hpp>",
+    "#ifndef __wasm32__",
+    "#include <foxglove/context.hpp>",
+    "#endif",
   ];
 
   const outputSections = [
@@ -454,13 +457,11 @@ export function generateCppSchemas(schemas: FoxgloveMessageSchema[]): string {
     systemIncludes.join("\n"),
 
     "namespace foxglove::schemas {",
-
-    channelUniquePtr.join("\n"),
-
     conversionFuncDecls.join("\n"),
-
+    "#ifndef __wasm32__",
+    channelUniquePtr.join("\n"),
     traitSpecializations.join("\n"),
-
+    "#endif",
     conversionFuncs.join("\n"),
 
     encodeImpls.join("\n"),
