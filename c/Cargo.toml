@@ -14,10 +14,10 @@ workspace = true
 [dependencies]
 tracing.workspace = true
 
-[target.'cfg(target_arch = "wasm32")'.dependencies]
+[target.'cfg(target_family = "wasm")'.dependencies]
 foxglove = { path = "../rust/foxglove", default-features = false }
 
-[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+[target.'cfg(not(target_family = "wasm"))'.dependencies]
 foxglove = { path = "../rust/foxglove", default-features = false, features = [
   "live_visualization",
   "lz4",

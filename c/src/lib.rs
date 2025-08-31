@@ -11,30 +11,30 @@ mod arena;
 mod generated_types;
 mod util;
 pub use generated_types::*;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(not(target_family = "wasm"))]
 mod bytes;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(not(target_family = "wasm"))]
 mod channel;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(not(target_family = "wasm"))]
 mod connection_graph;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(not(target_family = "wasm"))]
 mod fetch_asset;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(not(target_family = "wasm"))]
 mod logging;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(not(target_family = "wasm"))]
 mod parameter;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(not(target_family = "wasm"))]
 mod server;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(not(target_family = "wasm"))]
 mod service;
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(not(target_family = "wasm"))]
 pub use server::*;
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(not(target_family = "wasm"))]
 pub use channel::*;
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(not(target_family = "wasm"))]
 pub use logging::foxglove_set_log_level;
 
 pub use foxglove::Context as FoxgloveContext;
@@ -66,7 +66,7 @@ pub struct FoxgloveString {
     len: usize,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(not(target_family = "wasm"))]
 pub(crate) type FoxgloveSinkId = u64;
 
 impl Default for FoxgloveString {
@@ -203,7 +203,7 @@ pub struct FoxgloveSchema {
     pub data_len: usize,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(not(target_family = "wasm"))]
 impl FoxgloveSchema {
     /// Converts a schema to the native type.
     ///
@@ -227,7 +227,7 @@ impl FoxgloveSchema {
 }
 
 /// For use by the C++ SDK. Identifies that wrapper as the source of logs.
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(not(target_family = "wasm"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_internal_register_cpp_wrapper() {
     foxglove::library_version::set_sdk_language("cpp");
@@ -316,7 +316,7 @@ impl FoxgloveError {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(not(target_family = "wasm"))]
 pub(crate) unsafe fn result_to_c<T>(
     result: Result<T, foxglove::FoxgloveError>,
     out_ptr: *mut T,

@@ -21,7 +21,7 @@ enum_class = true
 prefix_with_name = false
 
 [defines]
-"target_arch = wasm32" = "__wasm32__"
+"target_family = wasm" = "__wasm__"
 
 [export]
 [export.rename]
