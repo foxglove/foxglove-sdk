@@ -7,7 +7,7 @@ SDK_VERSION?=devel
 all: package example
 
 .PHONY: package
-package: foxglove_data_loader-$(SDK_VERSION)-cpp-wasm32-unknown-unknown.zip
+package: target/foxglove_data_loader-$(SDK_VERSION)-cpp-wasm32-unknown-unknown.zip
 
 .PHONY: clean
 clean:
@@ -17,58 +17,58 @@ clean:
 example: target/data_loader_example.wasm
 
 packagefiles:=\
-  target/include/foxglove-c/foxglove-c.h \
-  target/include/foxglove/arena.hpp \
-  target/include/foxglove/schema.hpp \
-  target/include/foxglove/schemas.hpp \
-  target/include/foxglove/expected.hpp \
-  target/include/foxglove/error.hpp \
-  target/include/foxglove_data_loader/data_loader.hpp \
-  target/include/foxglove_data_loader/data_loader.inl \
-  target/include/foxglove_data_loader/host_internal.h \
-  target/include/foxglove_data_loader/host_internal.inl \
-  target/src/foxglove/schemas.cpp \
-  target/src/foxglove/error.cpp \
-  target/lib/libfoxglove.a \
-  target/README.md
+  target/sdk/include/foxglove-c/foxglove-c.h \
+  target/sdk/include/foxglove/arena.hpp \
+  target/sdk/include/foxglove/schema.hpp \
+  target/sdk/include/foxglove/schemas.hpp \
+  target/sdk/include/foxglove/expected.hpp \
+  target/sdk/include/foxglove/error.hpp \
+  target/sdk/include/foxglove_data_loader/data_loader.hpp \
+  target/sdk/include/foxglove_data_loader/data_loader.inl \
+  target/sdk/include/foxglove_data_loader/host_internal.h \
+  target/sdk/include/foxglove_data_loader/host_internal.inl \
+  target/sdk/src/foxglove/schemas.cpp \
+  target/sdk/src/foxglove/error.cpp \
+  target/sdk/lib/libfoxglove.a \
+  target/sdk/README.md
 
-target/include/foxglove-c/%: ../../c/include/foxglove-c/%
-	mkdir -p target/include/foxglove-c
+target/sdk/include/foxglove-c/%: ../../c/include/foxglove-c/%
+	mkdir -p target/sdk/include/foxglove-c
 	cp $< $@
 
-target/include/foxglove_data_loader/%: include/foxglove_data_loader/%
-	mkdir -p target/include/foxglove_data_loader
+target/sdk/include/foxglove_data_loader/%: include/foxglove_data_loader/%
+	mkdir -p target/sdk/include/foxglove_data_loader
 	cp $< $@
 
-target/include/foxglove/%: ../foxglove/include/foxglove/%
-	mkdir -p target/include/foxglove
+target/sdk/include/foxglove/%: ../foxglove/include/foxglove/%
+	mkdir -p target/sdk/include/foxglove
 	cp $< $@
 
-target/src/foxglove/%: ../foxglove/src/%
-	mkdir -p target/src/foxglove
+target/sdk/src/foxglove/%: ../foxglove/src/%
+	mkdir -p target/sdk/src/foxglove
 	cp $< $@
 
-target/lib/libfoxglove.a: cargo-build-foxglove-c
-	mkdir -p target/lib
+target/sdk/lib/libfoxglove.a: cargo-build-foxglove-c
+	mkdir -p target/sdk/lib
 	cp ../../target/wasm32-unknown-unknown/release/libfoxglove.a $@
 
-target/README.md: README.md
+target/sdk/README.md: README.md
 	cp $< $@
 
 .PHONY: cargo-build-foxglove-c
 cargo-build-foxglove-c:
 	cd ../../c && cargo build --release --target wasm32-unknown-unknown
 
-foxglove_data_loader-$(SDK_VERSION)-cpp-wasm32-unknown-unknown.zip: $(packagefiles)
-	cd target && zip -r ../$@ .
+target/foxglove_data_loader-$(SDK_VERSION)-cpp-wasm32-unknown-unknown.zip: $(packagefiles)
+	cd target/sdk && zip -r ../../$@ .
 
 target/data_loader_example.wasm: examples/data_loader.cpp $(packagefiles)
 	$(WASI_SDK)/bin/clang++ \
 		$< \
-		target/src/foxglove/schemas.cpp \
-		target/src/foxglove/error.cpp \
-		-Itarget/include \
-		-Ltarget/lib \
+		target/sdk/src/foxglove/schemas.cpp \
+		target/sdk/src/foxglove/error.cpp \
+		-Itarget/sdk/include \
+		-Ltarget/sdk/lib \
 		-lfoxglove \
 		-o $@ \
 		-Wall -Werror \

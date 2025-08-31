@@ -43,5 +43,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: foxglove_data_loader-${{inputs.sdk-version || github.sha}}-cpp-wasm32-unknown-unknown.zip
-          path: cpp/foxglove_data_loader/foxglove_data_loader-${{inputs.sdk-version || github.sha}}-cpp-wasm32-unknown-unknown.zip
+          path: cpp/foxglove_data_loader/target/foxglove_data_loader-${{inputs.sdk-version || github.sha}}-cpp-wasm32-unknown-unknown.zip
           if-no-files-found: error
