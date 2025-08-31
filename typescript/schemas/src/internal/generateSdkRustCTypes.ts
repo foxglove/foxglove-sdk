@@ -125,6 +125,7 @@ pub struct ${name} {
     .join("\n\n")}
 }
 
+#[cfg(not(target_family = "wasm"))]
 impl ${name} {
   /// Create a new typed channel, and return an owned raw channel pointer to it.
   ///
@@ -229,6 +230,7 @@ impl BorrowToNative for ${name} {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_${snakeName}.
+#[cfg(not(target_family = "wasm"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_${snakeName}(channel: Option<&FoxgloveChannel>, msg: Option<&${name}>, log_time: Option<&u64>, sink_id: FoxgloveSinkId) -> FoxgloveError {
   let mut arena = pin!(Arena::new());
@@ -323,7 +325,9 @@ pub unsafe extern "C" fn foxglove_${snakeName}_encode(
     "",
     "use foxglove::Encode;",
     "",
-    "use crate::{FoxgloveSchema, FoxgloveString, FoxgloveError, FoxgloveChannel, FoxgloveContext, FoxgloveTimestamp, FoxgloveDuration, log_msg_to_channel, result_to_c, do_foxglove_channel_create, FoxgloveSinkId};",
+    "use crate::{FoxgloveSchema, FoxgloveString, FoxgloveError, FoxgloveTimestamp, FoxgloveDuration};",
+    `#[cfg(not(target_family = "wasm"))]`,
+    "use crate::{FoxgloveChannel, FoxgloveContext, log_msg_to_channel, result_to_c, do_foxglove_channel_create, FoxgloveSinkId};",
     "use crate::arena::{Arena, BorrowToNative};",
     "use crate::util::{bytes_from_raw, string_from_raw, vec_from_raw};",
   ];
