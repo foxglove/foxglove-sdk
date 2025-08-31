@@ -4,6 +4,8 @@
 #include <memory>
 #include <sstream>
 
+#include "foxglove/schemas.hpp"
+
 using namespace foxglove_data_loader;
 
 struct LineIndex {
@@ -52,7 +54,7 @@ class TextDataLoader : public foxglove_data_loader::AbstractDataLoader {
 public:
   std::vector<std::string> paths;
   std::vector<std::vector<uint8_t>> files;
-  std::vector<LineIndex> file_line_indexes;
+  std::vector<LineIndex> line_indexes;
   std::vector<size_t> file_line_counts;
 
   TextDataLoader(std::vector<std::string> paths);
@@ -61,7 +63,6 @@ public:
 
   Result<std::unique_ptr<AbstractMessageIterator>> create_iterator(const MessageIteratorArgs& args
   ) override;
-  Result<std::vector<Message>> get_backfill(const BackfillArgs& args) override;
 };
 
 /** Iterates over 'messages' that match the requested args. */
@@ -69,6 +70,8 @@ class TextMessageIterator : public foxglove_data_loader::AbstractMessageIterator
   TextDataLoader* data_loader;
   MessageIteratorArgs args;
   size_t index;
+  foxglove::schemas::Log message;
+  std::vector<uint8_t> last_encoded_message;
 
 public:
   explicit TextMessageIterator(TextDataLoader* loader, MessageIteratorArgs args_);
@@ -77,9 +80,6 @@ public:
 
 TextDataLoader::TextDataLoader(std::vector<std::string> paths) {
   this->paths = paths;
-  this->files = {};
-  this->file_line_indexes = {};
-  this->file_line_counts = {};
 }
 
 /** initialize() is meant to read and return summary information to the foxglove
@@ -103,39 +103,47 @@ Result<Initialization> TextDataLoader::initialize() {
     if (reader.position() != size) {
       return Result<Initialization>::error_with_message("expected reader cursor to be at EOF");
     }
-    size_t line_count = 1;
-    size_t last_line_ending = 0;
+    size_t line_count = 0;
+    size_t line_start = 0;
     for (size_t pos = 0; pos < size; pos++) {
       if (buf[pos] == '\n') {
-        this->file_line_indexes.push_back(LineIndex{file_index, last_line_ending + 1, pos});
-        last_line_ending = pos;
+        this->line_indexes.push_back(LineIndex{file_index, line_start, pos});
+        line_start = pos + 1;
         line_count += 1;
       }
     }
-    if (last_line_ending < (size - 1)) {
-      this->file_line_indexes.push_back(
-        LineIndex{file_index, last_line_ending + 1, size_t(size - 1)}
-      );
+    if (line_start < size) {
+      this->line_indexes.push_back(LineIndex{file_index, line_start, size_t(size - 1)});
     }
     this->files.emplace_back(buf);
     uint16_t channel_id = file_index;
     channels.push_back(Channel{
       .id = channel_id,
-      .schema_id = 0,
-      .topic_name = path,
-      .message_encoding = "json",
+      .schema_id = 1,
+      .topic_name = "/log",
+      .message_encoding = "protobuf",
       .message_count = line_count,
     });
   }
+  foxglove::Schema log_schema = foxglove::schemas::Log::schema();
   return Result<Initialization>{
     .value =
       Initialization{
         .channels = channels,
-        .schemas = {},
+        .schemas = {Schema{
+          .id = 1,
+          .name = log_schema.name,
+          .encoding = log_schema.encoding,
+          .data =
+            BytesView{
+              .ptr = reinterpret_cast<const uint8_t*>(log_schema.data),
+              .len = log_schema.data_len,
+            }
+        }},
         .time_range =
           TimeRange{
             .start_time = 0,
-            .end_time = this->file_line_indexes.size(),
+            .end_time = this->line_indexes.size(),
           }
       }
   };
@@ -151,55 +159,19 @@ Result<std::unique_ptr<AbstractMessageIterator>> TextDataLoader::create_iterator
   };
 }
 
-/** Returns the latest message before `args.time` on the requested channels. This is used by the
- * Foxglove app to display up the state of the scene at the beginning of a requested time range,
- * before any of the messages from that time range have been read.
- */
-Result<std::vector<Message>> TextDataLoader::get_backfill(const BackfillArgs& args) {
-  std::vector<Message> results = {};
-  for (const uint16_t id : args.channel_ids) {
-    std::optional<size_t> to_push = std::nullopt;
-    for (size_t message_index = 0; message_index < file_line_indexes.size(); message_index++) {
-      TimeNanos time = message_index;
-      LineIndex line = file_line_indexes[message_index];
-      if (line.file == id) {
-        if (time > args.time) {
-          break;
-        }
-        to_push = time;
-      }
-    }
-    if (to_push.has_value()) {
-      TimeNanos time = *to_push;
-      LineIndex line = file_line_indexes[*to_push];
-      results.push_back(Message{
-        .channel_id = id,
-        .log_time = time,
-        .publish_time = time,
-        .data =
-          BytesView{
-            .ptr = &files[line.file][line.start],
-            .len = line.end - line.start,
-          }
-      });
-    }
-  }
-  return Result<std::vector<Message>>{
-    .value = results,
-  };
-}
-
 TextMessageIterator::TextMessageIterator(TextDataLoader* loader, MessageIteratorArgs args_) {
   data_loader = loader;
   args = args_;
   index = 0;
+  message = foxglove::schemas::Log{};
+  last_encoded_message = std::vector<uint8_t>(1024);
 }
 
 /** `next()` returns the next message from the loaded files that matches the arguments provided to
  * `create_iterator(args)`. If none are left to read, it returns std::nullopt.
  */
 std::optional<Result<Message>> TextMessageIterator::next() {
-  for (; index < data_loader->file_line_indexes.size(); index++) {
+  for (; index < data_loader->line_indexes.size(); index++) {
     TimeNanos time = index;
     // skip lines before start time
     if (args.start_time.has_value() && args.start_time > time) {
@@ -210,10 +182,32 @@ std::optional<Result<Message>> TextMessageIterator::next() {
       return std::nullopt;
     }
 
-    LineIndex line = data_loader->file_line_indexes[index];
+    LineIndex line = data_loader->line_indexes[index];
     // filter by channel ID
     for (const ChannelId channel_id : args.channel_ids) {
       if (channel_id == line.file) {
+        message.file = data_loader->paths[line.file];
+        message.level = foxglove::schemas::Log::LogLevel::INFO;
+        message.name = "log line";
+        message.line = index;
+        message.message = std::string(
+          reinterpret_cast<const char*>(&(data_loader->files[line.file][line.start])),
+          line.end - line.start
+        );
+        size_t encoded_len = 0;
+
+        auto result =
+          message.encode(last_encoded_message.data(), last_encoded_message.size(), &encoded_len);
+        if (result == foxglove::FoxgloveError::BufferTooShort) {
+          last_encoded_message.resize(encoded_len);
+          result =
+            message.encode(last_encoded_message.data(), last_encoded_message.size(), &encoded_len);
+        }
+        if (result != foxglove::FoxgloveError::Ok) {
+          error("failed to encode message:", foxglove::strerror(result));
+          return Result<Message>{.error = "failed to encode message"};
+        }
+        index++;
         return Result<Message>{
           .value =
             Message{
@@ -222,8 +216,8 @@ std::optional<Result<Message>> TextMessageIterator::next() {
               .publish_time = time,
               .data =
                 BytesView{
-                  .ptr = &data_loader->files[line.file][line.start],
-                  .len = line.end - line.start,
+                  .ptr = last_encoded_message.data(),
+                  .len = encoded_len,
                 }
             }
         };

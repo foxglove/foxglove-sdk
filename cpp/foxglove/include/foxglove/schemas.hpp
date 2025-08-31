@@ -2,7 +2,6 @@
 
 #pragma once
 
-#include <foxglove/context.hpp>
 #include <foxglove/error.hpp>
 #include <foxglove/schema.hpp>
 
@@ -13,18 +12,13 @@
 #include <string>
 #include <type_traits>
 #include <vector>
+#ifndef __wasm32__
+#include <foxglove/context.hpp>
+#endif
 
 struct foxglove_channel;
 
 namespace foxglove::schemas {
-
-/// @brief A functor for freeing a channel. Used by ChannelUniquePtr. For internal use only.
-struct ChannelDeleter {
-  /// @brief free the channel
-  void operator()(const foxglove_channel* ptr) const noexcept;
-};
-/// @brief A unique pointer to a C foxglove_channel pointer. For internal use only.
-typedef std::unique_ptr<const foxglove_channel, ChannelDeleter> ChannelUniquePtr;
 
 /// @brief A vector in 3D space that represents a direction only
 struct Vector3 {
@@ -1802,6 +1796,16 @@ struct RawImage {
   /// The schema data returned is statically allocated.
   static Schema schema();
 };
+
+#ifndef __wasm32__
+
+/// @brief A functor for freeing a channel. Used by ChannelUniquePtr. For internal use only.
+struct ChannelDeleter {
+  /// @brief free the channel
+  void operator()(const foxglove_channel* ptr) const noexcept;
+};
+/// @brief A unique pointer to a C foxglove_channel pointer. For internal use only.
+typedef std::unique_ptr<const foxglove_channel, ChannelDeleter> ChannelUniquePtr;
 
 /// @brief A channel for logging ArrowPrimitive messages to a topic.
 ///
@@ -3730,5 +3734,7 @@ private:
 
   ChannelUniquePtr impl_;
 };
+
+#endif
 
 }  // namespace foxglove::schemas
