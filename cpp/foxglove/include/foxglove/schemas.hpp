@@ -4,9 +4,6 @@
 
 #include <foxglove/error.hpp>
 #include <foxglove/schema.hpp>
-#ifndef __wasm32__
-#include <foxglove/context.hpp>
-#endif
 
 #include <array>
 #include <cstdint>
@@ -15,6 +12,9 @@
 #include <string>
 #include <type_traits>
 #include <vector>
+#ifndef __wasm32__
+#include <foxglove/context.hpp>
+#endif
 
 struct foxglove_channel;
 
