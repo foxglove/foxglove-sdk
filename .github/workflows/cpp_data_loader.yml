@@ -33,14 +33,10 @@ jobs:
           echo WASI_SDK=$(pwd)/wasi-sdk-25.0-x86_64-linux >> $GITHUB_ENV
       - name: Build the example
         working-directory: cpp/foxglove_data_loader
-        env:
-          SDK_VERSION: ${{inputs.sdk_version || github.sha}}
-        run: make example
+        run: SDK_VERSION=${{inputs.sdk_version || github.sha}} make example
       - name: Build the package
         working-directory: cpp/foxglove_data_loader
-        env:
-          SDK_VERSION: ${{inputs.sdk_version || github.sha}}
-        run: make package
+        run: SDK_VERSION=${{inputs.sdk_version || github.sha}} make package
       - name: Upload static & shared library to artifacts
         uses: actions/upload-artifact@v4
         with:
