@@ -73,7 +73,7 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
             channel->encoding,
             channel->schema_name,
             channel->schema_encoding == nullptr ? std::string_view{} : channel->schema_encoding,
-            reinterpret_cast<const unsigned char*>(channel->schema),
+            reinterpret_cast<const uint8_t*>(channel->schema),
             channel->schema_len
           };
           try {
@@ -96,10 +96,7 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
         try {
           (static_cast<const WebSocketServerCallbacks*>(context))
             ->onMessageData(
-              client_id,
-              client_channel_id,
-              reinterpret_cast<const unsigned char*>(payload),
-              payload_len
+              client_id, client_channel_id, reinterpret_cast<const uint8_t*>(payload), payload_len
             );
         } catch (const std::exception& exc) {
           warn() << "onMessageData callback failed: " << exc.what();

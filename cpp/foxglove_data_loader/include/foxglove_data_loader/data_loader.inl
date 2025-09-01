@@ -53,7 +53,7 @@ uint64_t Reader::seek(uint64_t pos) {
   return foxglove_loader_reader_method_reader_seek(reader, pos);
 }
 
-uint64_t Reader::read(unsigned char* into, size_t len) {
+uint64_t Reader::read(uint8_t* into, size_t len) {
   foxglove_loader_reader_borrow_reader_t reader;
   reader.__handle = this->handle;
   host_list_u8_t target;
@@ -96,7 +96,7 @@ extern bool exports_foxglove_loader_loader_method_message_iterator_next(
     // abiding by the WIT component model ABI here, so we can choose to avoid that copy. The
     // generated code in `host_internal.inl` has been modified to remove the corresponding free()
     // call.
-    ret->val.ok.data.ptr = const_cast<unsigned char*>(msg.data.ptr);
+    ret->val.ok.data.ptr = const_cast<uint8_t*>(msg.data.ptr);
   } else {
     ret->is_err = true;
     host_string_dup(&ret->val.err, result.error.c_str());
@@ -174,7 +174,7 @@ extern bool exports_foxglove_loader_loader_method_data_loader_initialize(
       host_string_dup(&(h_schema->name), schema.name.c_str());
       host_string_dup(&(h_schema->encoding), schema.encoding.c_str());
       h_schema->data.len = schema.data.len;
-      h_schema->data.ptr = (unsigned char*)calloc(schema.data.len, sizeof(unsigned char));
+      h_schema->data.ptr = (uint8_t*)calloc(schema.data.len, sizeof(uint8_t));
       memcpy(h_schema->data.ptr, schema.data.ptr, schema.data.len);
     }
   }
@@ -268,7 +268,7 @@ extern bool exports_foxglove_loader_loader_method_data_loader_get_backfill(
       // abiding by the WIT component model ABI here, so we can choose to avoid that copy. The
       // generated code in `host_internal.inl` has been modified to remove the corresponding free()
       // call.
-      ret_message->data.ptr = const_cast<unsigned char*>(message.data.ptr);
+      ret_message->data.ptr = const_cast<uint8_t*>(message.data.ptr);
       ret_message->data.len = message.data.len;
     }
     return true;

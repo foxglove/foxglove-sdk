@@ -59,7 +59,7 @@ int main() {
   schema.name = "Test";
   schema.encoding = "jsonschema";
   std::string schema_data = msg_schema.dump();
-  schema.data = reinterpret_cast<const unsigned char*>(schema_data.data());
+  schema.data = reinterpret_cast<const uint8_t*>(schema_data.data());
   schema.data_len = schema_data.size();
 
   auto chan1_result = foxglove::RawChannel::create("/json", "json", schema);

@@ -20,12 +20,12 @@ public:
   ///
   /// @param data Asset data pointer.
   /// @param size Asset data length.
-  void respondOk(const unsigned char* data, size_t size) && noexcept;
+  void respondOk(const uint8_t* data, size_t size) && noexcept;
 
   /// @brief Sends asset data to the client.
   ///
   /// @param data Asset data.
-  void respondOk(const std::vector<unsigned char>& data) && noexcept {
+  void respondOk(const std::vector<uint8_t>& data) && noexcept {
     std::move(*this).respondOk(data.data(), data.size());
   };
 

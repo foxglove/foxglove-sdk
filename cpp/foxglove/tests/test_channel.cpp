@@ -90,7 +90,7 @@ TEST_CASE("channel.schema()") {
   foxglove::Schema mock_schema;
   mock_schema.encoding = "jsonschema";
   std::string schema_data = R"({ "type": "object", "additionalProperties": true })";
-  mock_schema.data = reinterpret_cast<const unsigned char*>(schema_data.data());
+  mock_schema.data = reinterpret_cast<const uint8_t*>(schema_data.data());
   mock_schema.data_len = schema_data.size();
   mock_schema.name = "test_schema";
   mock_schema.encoding = "jsonschema";

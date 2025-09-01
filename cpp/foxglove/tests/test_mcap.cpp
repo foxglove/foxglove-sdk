@@ -132,7 +132,7 @@ TEST_CASE("different contexts") {
   REQUIRE(channel_result.has_value());
   auto channel = std::move(channel_result.value());
   std::string data = "Hello, world!";
-  channel.log(reinterpret_cast<const unsigned char*>(data.data()), data.size());
+  channel.log(reinterpret_cast<const uint8_t*>(data.data()), data.size());
 
   writer->close();
 
@@ -162,7 +162,7 @@ TEST_CASE("specify profile") {
   REQUIRE(channel_result.has_value());
   auto& channel = channel_result.value();
   std::string data = "Hello, world!";
-  channel.log(reinterpret_cast<const unsigned char*>(data.data()), data.size());
+  channel.log(reinterpret_cast<const uint8_t*>(data.data()), data.size());
 
   writer->close();
 
@@ -194,7 +194,7 @@ TEST_CASE("zstd compression") {
   REQUIRE(channel_result.has_value());
   auto channel = std::move(channel_result.value());
   std::string data = "Hello, world!";
-  channel.log(reinterpret_cast<const unsigned char*>(data.data()), data.size());
+  channel.log(reinterpret_cast<const uint8_t*>(data.data()), data.size());
 
   writer->close();
 
@@ -226,7 +226,7 @@ TEST_CASE("lz4 compression") {
   REQUIRE(channel_result.has_value());
   auto& channel = channel_result.value();
   std::string data = "Hello, world!";
-  channel.log(reinterpret_cast<const unsigned char*>(data.data()), data.size());
+  channel.log(reinterpret_cast<const uint8_t*>(data.data()), data.size());
 
   auto error = writer->close();
   REQUIRE(error == foxglove::FoxgloveError::Ok);
@@ -256,7 +256,7 @@ TEST_CASE("Channel can outlive Schema") {
     schema.name = "ExampleSchema";
     schema.encoding = "unknown";
     std::string data = "FAKESCHEMA";
-    schema.data = reinterpret_cast<const unsigned char*>(data.data());
+    schema.data = reinterpret_cast<const uint8_t*>(data.data());
     schema.data_len = data.size();
     auto result = foxglove::RawChannel::create("example", "json", schema, context);
     REQUIRE(result.has_value());
@@ -268,7 +268,7 @@ TEST_CASE("Channel can outlive Schema") {
   }
 
   const std::array<uint8_t, 3> data = {4, 5, 6};
-  channel->log(reinterpret_cast<const unsigned char*>(data.data()), data.size());
+  channel->log(reinterpret_cast<const uint8_t*>(data.data()), data.size());
 
   writer->close();
 

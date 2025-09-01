@@ -71,8 +71,8 @@ int main() {
   return 0;
 }
 
-std::vector<unsigned char> makeBytes(std::string_view sv) {
-  const auto* data = reinterpret_cast<const unsigned char*>(sv.data());
+std::vector<uint8_t> makeBytes(std::string_view sv) {
+  const auto* data = reinterpret_cast<const uint8_t*>(sv.data());
   return {data, data + sv.size()};
 }
 
@@ -236,7 +236,7 @@ void intMathHandlerImpl(
   }
 
   std::string str = obj.dump();
-  const auto* const data = reinterpret_cast<const unsigned char*>(str.data());
+  const auto* const data = reinterpret_cast<const uint8_t*>(str.data());
   std::vector bytes(data, data + str.size());
   std::move(responder).respondOk(bytes);
 }

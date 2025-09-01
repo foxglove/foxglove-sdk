@@ -24,7 +24,7 @@ int main() {
         "val": { "type": "number" }
     }
     })";
-  schema.data = reinterpret_cast<const unsigned char*>(schema_data.data());
+  schema.data = reinterpret_cast<const uint8_t*>(schema_data.data());
   schema.data_len = schema_data.size();
   auto channel_result = foxglove::RawChannel::create("example", "json", std::move(schema));
   if (!channel_result.has_value()) {
@@ -35,7 +35,7 @@ int main() {
 
   for (int i = 0; i < 100; ++i) {
     std::string msg = "{\"val\": " + std::to_string(i) + "}";
-    channel.log(reinterpret_cast<const unsigned char*>(msg.data()), msg.size());
+    channel.log(reinterpret_cast<const uint8_t*>(msg.data()), msg.size());
   }
 
   // Optional, if you want to check for or handle errors

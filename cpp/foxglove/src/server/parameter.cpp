@@ -192,15 +192,16 @@ Parameter ParameterView::clone() const {
   return Parameter(ptr);
 }
 
-FoxgloveResult<std::vector<unsigned char>> ParameterView::getByteArray() const {
+FoxgloveResult<std::vector<uint8_t>> ParameterView::getByteArray() const {
   size_t len = 0;
   auto error = foxglove_parameter_get_byte_array_decoded_size(impl_, &len);
   if (error != foxglove_error::FOXGLOVE_ERROR_OK) {
     return tl::unexpected(FoxgloveError(error));
   }
-  std::vector<unsigned char> bytes;
+  std::vector<uint8_t> bytes;
   bytes.resize(len);
-  error = foxglove_parameter_decode_byte_array(impl_, bytes.data(), &len);
+  error =
+    foxglove_parameter_decode_byte_array(impl_, reinterpret_cast<uint8_t*>(bytes.data()), &len);
   if (error != foxglove_error::FOXGLOVE_ERROR_OK) {
     return tl::unexpected(FoxgloveError(error));
   }
@@ -270,7 +271,7 @@ Parameter::Parameter(std::string_view name, std::string_view value)
   impl_.reset(ptr);
 }
 
-Parameter::Parameter(std::string_view name, const unsigned char* data, size_t data_length)
+Parameter::Parameter(std::string_view name, const uint8_t* data, size_t data_length)
     : impl_(nullptr) {
   foxglove_parameter* ptr = nullptr;
   auto error =

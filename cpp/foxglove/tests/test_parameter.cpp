@@ -113,19 +113,19 @@ TEST_CASE("Parameter construction and access") {
     REQUIRE(param.type() == foxglove::ParameterType::None);
     REQUIRE(param.is<std::string>());
     REQUIRE(param.is<std::string_view>());
-    REQUIRE(!param.is<std::vector<unsigned char>>());
+    REQUIRE(!param.is<std::vector<uint8_t>>());
     REQUIRE(param.get<std::string>() == "test string");
     REQUIRE(param.get<std::string_view>() == "test string");
   }
 
   SECTION("parameter with byte array value") {
-    std::array<unsigned char, 4> data = {1, 2, 3, 4};
+    std::array<uint8_t, 4> data = {1, 2, 3, 4};
     foxglove::Parameter param("test_param", data.data(), data.size());
     REQUIRE(param.name() == "test_param");
     REQUIRE(param.type() == foxglove::ParameterType::ByteArray);
     REQUIRE(!param.is<std::string>());
-    REQUIRE(param.is<std::vector<unsigned char>>());
-    auto decoded = param.get<std::vector<unsigned char>>();
+    REQUIRE(param.is<std::vector<uint8_t>>());
+    auto decoded = param.get<std::vector<uint8_t>>();
     REQUIRE(decoded.size() == data.size());
     REQUIRE(memcmp(decoded.data(), data.data(), data.size()) == 0);
 

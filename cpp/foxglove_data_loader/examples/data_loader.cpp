@@ -53,7 +53,7 @@ void error(Types... vars) {
 class TextDataLoader : public foxglove_data_loader::AbstractDataLoader {
 public:
   std::vector<std::string> paths;
-  std::vector<std::vector<unsigned char>> files;
+  std::vector<std::vector<uint8_t>> files;
   std::vector<LineIndex> line_indexes;
   std::vector<size_t> file_line_counts;
 
@@ -71,7 +71,7 @@ class TextMessageIterator : public foxglove_data_loader::AbstractMessageIterator
   MessageIteratorArgs args;
   size_t index;
   foxglove::schemas::Log message;
-  std::vector<unsigned char> last_encoded_message;
+  std::vector<uint8_t> last_encoded_message;
 
 public:
   explicit TextMessageIterator(TextDataLoader* loader, MessageIteratorArgs args_);
@@ -94,7 +94,7 @@ Result<Initialization> TextDataLoader::initialize() {
     const std::string& path = paths[file_index];
     Reader reader = Reader::open(path.c_str());
     uint64_t size = reader.size();
-    std::vector<unsigned char> buf(size);
+    std::vector<uint8_t> buf(size);
     uint64_t n_read = reader.read(buf.data(), size);
 
     if (n_read != size) {
@@ -136,7 +136,7 @@ Result<Initialization> TextDataLoader::initialize() {
           .encoding = log_schema.encoding,
           .data =
             BytesView{
-              .ptr = log_schema.data,
+              .ptr = reinterpret_cast<const uint8_t*>(log_schema.data),
               .len = log_schema.data_len,
             }
         }},
@@ -164,7 +164,7 @@ TextMessageIterator::TextMessageIterator(TextDataLoader* loader, MessageIterator
   args = args_;
   index = 0;
   message = foxglove::schemas::Log{};
-  last_encoded_message = std::vector<unsigned char>(1024);
+  last_encoded_message = std::vector<uint8_t>(1024);
 }
 
 /** `next()` returns the next message from the loaded files that matches the arguments provided to

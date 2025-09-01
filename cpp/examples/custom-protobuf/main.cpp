@@ -42,7 +42,7 @@ int main(int argc, const char* argv[]) {
   file_descriptor->CopyTo(file_descriptor_set.add_file());
 
   std::string serialized_descriptor = file_descriptor_set.SerializeAsString();
-  schema.data = reinterpret_cast<const unsigned char*>(serialized_descriptor.data());
+  schema.data = reinterpret_cast<const uint8_t*>(serialized_descriptor.data());
   schema.data_len = serialized_descriptor.size();
 
   auto channel_result = foxglove::RawChannel::create("/apple", "protobuf", std::move(schema));
@@ -57,7 +57,7 @@ int main(int argc, const char* argv[]) {
   apple.set_color("red");
   apple.set_diameter(10);
   std::string apple_data = apple.SerializeAsString();
-  apple_channel.log(reinterpret_cast<const unsigned char*>(apple_data.data()), apple_data.size());
+  apple_channel.log(reinterpret_cast<const uint8_t*>(apple_data.data()), apple_data.size());
 
   return 0;
 }

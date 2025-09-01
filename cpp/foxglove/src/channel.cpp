@@ -14,7 +14,7 @@ FoxgloveResult<RawChannel> RawChannel::create(
   if (schema) {
     c_schema.name = {schema->name.data(), schema->name.length()};
     c_schema.encoding = {schema->encoding.data(), schema->encoding.length()};
-    c_schema.data = schema->data;
+    c_schema.data = reinterpret_cast<const uint8_t*>(schema->data);
     c_schema.data_len = schema->data_len;
   }
   foxglove_channel_metadata c_metadata = {};
@@ -80,7 +80,7 @@ std::optional<Schema> RawChannel::schema() const noexcept {
   Schema schema;
   schema.name = std::string(c_schema.name.data, c_schema.name.len);
   schema.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  schema.data = reinterpret_cast<const unsigned char*>(c_schema.data);
+  schema.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   schema.data_len = c_schema.data_len;
   return schema;
 }
@@ -104,11 +104,15 @@ std::optional<std::map<std::string, std::string>> RawChannel::metadata() const n
 }
 
 FoxgloveError RawChannel::log(
-  const unsigned char* data, size_t data_len, std::optional<uint64_t> log_time,
+  const uint8_t* data, size_t data_len, std::optional<uint64_t> log_time,
   std::optional<uint64_t> sink_id
 ) noexcept {
   foxglove_error error = foxglove_channel_log(
-    impl_.get(), data, data_len, log_time ? &*log_time : nullptr, sink_id ? *sink_id : 0
+    impl_.get(),
+    reinterpret_cast<const uint8_t*>(data),
+    data_len,
+    log_time ? &*log_time : nullptr,
+    sink_id ? *sink_id : 0
   );
   return FoxgloveError(error);
 }

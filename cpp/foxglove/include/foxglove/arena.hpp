@@ -126,7 +126,7 @@ private:
     }
   };
 
-  std::array<unsigned char, Size> buffer_;
+  std::array<uint8_t, Size> buffer_;
   std::size_t offset_;
   std::vector<std::unique_ptr<char, Deleter>> overflow_;
 };

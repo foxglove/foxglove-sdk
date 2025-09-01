@@ -14,7 +14,7 @@ void ServiceMessageSchema::writeTo(foxglove_service_message_schema* c) const noe
   c->encoding = {this->encoding.data(), this->encoding.length()};
   c->schema.name = {this->schema.name.data(), this->schema.name.length()};
   c->schema.encoding = {this->schema.encoding.data(), this->schema.encoding.length()};
-  c->schema.data = this->schema.data;
+  c->schema.data = reinterpret_cast<const uint8_t*>(this->schema.data);
   c->schema.data_len = this->schema.data_len;
 }
 
@@ -49,8 +49,8 @@ ServiceRequest::ServiceRequest(const foxglove_service_request* r) noexcept
     , call_id(r->call_id)
     , encoding(r->encoding.data, r->encoding.len)
     , payload(
-        reinterpret_cast<const unsigned char*>(r->payload.data),
-        reinterpret_cast<const unsigned char*>(r->payload.data + r->payload.len)
+        reinterpret_cast<const uint8_t*>(r->payload.data),
+        reinterpret_cast<const uint8_t*>(r->payload.data + r->payload.len)
       ) {}
 
 /**
@@ -61,9 +61,9 @@ void ServiceResponder::Deleter::operator()(foxglove_service_responder* ptr) cons
   foxglove_service_respond_error(ptr, {message.data(), message.length()});
 }
 
-void ServiceResponder::respondOk(const unsigned char* data, size_t size) && noexcept {
+void ServiceResponder::respondOk(const uint8_t* data, size_t size) && noexcept {
   auto* ptr = impl_.release();
-  foxglove_service_respond_ok(ptr, {data, size});
+  foxglove_service_respond_ok(ptr, {reinterpret_cast<const uint8_t*>(data), size});
 }
 
 void ServiceResponder::respondError(std::string_view message) && noexcept {

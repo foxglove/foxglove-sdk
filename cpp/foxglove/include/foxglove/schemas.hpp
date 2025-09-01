@@ -42,7 +42,7 @@ struct Vector3 {
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
-  FoxgloveError encode(unsigned char* ptr, size_t len, size_t* encoded_len);
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 
   /// @brief Get the Vector3 schema.
   ///
@@ -75,7 +75,7 @@ struct Quaternion {
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
-  FoxgloveError encode(unsigned char* ptr, size_t len, size_t* encoded_len);
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 
   /// @brief Get the Quaternion schema.
   ///
@@ -102,7 +102,7 @@ struct Pose {
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
-  FoxgloveError encode(unsigned char* ptr, size_t len, size_t* encoded_len);
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 
   /// @brief Get the Pose schema.
   ///
@@ -135,7 +135,7 @@ struct Color {
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
-  FoxgloveError encode(unsigned char* ptr, size_t len, size_t* encoded_len);
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 
   /// @brief Get the Color schema.
   ///
@@ -175,7 +175,7 @@ struct ArrowPrimitive {
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
-  FoxgloveError encode(unsigned char* ptr, size_t len, size_t* encoded_len);
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 
   /// @brief Get the ArrowPrimitive schema.
   ///
@@ -292,7 +292,7 @@ struct CameraCalibration {
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
-  FoxgloveError encode(unsigned char* ptr, size_t len, size_t* encoded_len);
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 
   /// @brief Get the CameraCalibration schema.
   ///
@@ -319,7 +319,7 @@ struct Point2 {
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
-  FoxgloveError encode(unsigned char* ptr, size_t len, size_t* encoded_len);
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 
   /// @brief Get the Point2 schema.
   ///
@@ -360,7 +360,7 @@ struct CircleAnnotation {
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
-  FoxgloveError encode(unsigned char* ptr, size_t len, size_t* encoded_len);
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 
   /// @brief Get the CircleAnnotation schema.
   ///
@@ -379,7 +379,7 @@ struct CompressedImage {
   std::string frame_id;
 
   /// @brief Compressed image data
-  std::vector<unsigned char> data;
+  std::vector<uint8_t> data;
 
   /// @brief Image format
   /// @brief
@@ -397,7 +397,7 @@ struct CompressedImage {
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
-  FoxgloveError encode(unsigned char* ptr, size_t len, size_t* encoded_len);
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 
   /// @brief Get the CompressedImage schema.
   ///
@@ -446,7 +446,7 @@ struct CompressedVideo {
   /// @brief   - Each CompressedVideo message should contain enough OBUs to decode exactly one video
   /// frame
   /// @brief   - Each message containing a key frame must also include a Sequence Header OBU
-  std::vector<unsigned char> data;
+  std::vector<uint8_t> data;
 
   /// @brief Video format.
   /// @brief
@@ -469,7 +469,7 @@ struct CompressedVideo {
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
-  FoxgloveError encode(unsigned char* ptr, size_t len, size_t* encoded_len);
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 
   /// @brief Get the CompressedVideo schema.
   ///
@@ -508,7 +508,7 @@ struct CylinderPrimitive {
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
-  FoxgloveError encode(unsigned char* ptr, size_t len, size_t* encoded_len);
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 
   /// @brief Get the CylinderPrimitive schema.
   ///
@@ -538,7 +538,7 @@ struct CubePrimitive {
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
-  FoxgloveError encode(unsigned char* ptr, size_t len, size_t* encoded_len);
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 
   /// @brief Get the CubePrimitive schema.
   ///
@@ -583,7 +583,7 @@ struct FrameTransform {
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
-  FoxgloveError encode(unsigned char* ptr, size_t len, size_t* encoded_len);
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 
   /// @brief Get the FrameTransform schema.
   ///
@@ -607,7 +607,7 @@ struct FrameTransforms {
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
-  FoxgloveError encode(unsigned char* ptr, size_t len, size_t* encoded_len);
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 
   /// @brief Get the FrameTransforms schema.
   ///
@@ -631,7 +631,7 @@ struct GeoJSON {
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
-  FoxgloveError encode(unsigned char* ptr, size_t len, size_t* encoded_len);
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 
   /// @brief Get the GeoJSON schema.
   ///
@@ -658,7 +658,7 @@ struct Vector2 {
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
-  FoxgloveError encode(unsigned char* ptr, size_t len, size_t* encoded_len);
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 
   /// @brief Get the Vector2 schema.
   ///
@@ -709,7 +709,7 @@ struct PackedElementField {
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
-  FoxgloveError encode(unsigned char* ptr, size_t len, size_t* encoded_len);
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 
   /// @brief Get the PackedElementField schema.
   ///
@@ -750,7 +750,7 @@ struct Grid {
   /// to the origin will be:
   /// @brief  y = (i / cell_stride) % row_stride * cell_size.y
   /// @brief  x = i % cell_stride * cell_size.x
-  std::vector<unsigned char> data;
+  std::vector<uint8_t> data;
 
   /// @brief Encoded the Grid as protobuf to the provided buffer.
   ///
@@ -763,7 +763,7 @@ struct Grid {
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
-  FoxgloveError encode(unsigned char* ptr, size_t len, size_t* encoded_len);
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 
   /// @brief Get the Grid schema.
   ///
@@ -810,7 +810,7 @@ struct VoxelGrid {
   /// @brief  z = i / slice_stride * cell_size.z
   /// @brief  y = (i % slice_stride) / row_stride * cell_size.y
   /// @brief  x = (i % row_stride) / cell_stride * cell_size.x
-  std::vector<unsigned char> data;
+  std::vector<uint8_t> data;
 
   /// @brief Encoded the VoxelGrid as protobuf to the provided buffer.
   ///
@@ -823,7 +823,7 @@ struct VoxelGrid {
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
-  FoxgloveError encode(unsigned char* ptr, size_t len, size_t* encoded_len);
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 
   /// @brief Get the VoxelGrid schema.
   ///
@@ -881,7 +881,7 @@ struct PointsAnnotation {
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
-  FoxgloveError encode(unsigned char* ptr, size_t len, size_t* encoded_len);
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 
   /// @brief Get the PointsAnnotation schema.
   ///
@@ -922,7 +922,7 @@ struct TextAnnotation {
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
-  FoxgloveError encode(unsigned char* ptr, size_t len, size_t* encoded_len);
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 
   /// @brief Get the TextAnnotation schema.
   ///
@@ -952,7 +952,7 @@ struct ImageAnnotations {
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
-  FoxgloveError encode(unsigned char* ptr, size_t len, size_t* encoded_len);
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 
   /// @brief Get the ImageAnnotations schema.
   ///
@@ -979,7 +979,7 @@ struct KeyValuePair {
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
-  FoxgloveError encode(unsigned char* ptr, size_t len, size_t* encoded_len);
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 
   /// @brief Get the KeyValuePair schema.
   ///
@@ -1024,7 +1024,7 @@ struct LaserScan {
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
-  FoxgloveError encode(unsigned char* ptr, size_t len, size_t* encoded_len);
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 
   /// @brief Get the LaserScan schema.
   ///
@@ -1054,7 +1054,7 @@ struct Point3 {
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
-  FoxgloveError encode(unsigned char* ptr, size_t len, size_t* encoded_len);
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 
   /// @brief Get the Point3 schema.
   ///
@@ -1114,7 +1114,7 @@ struct LinePrimitive {
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
-  FoxgloveError encode(unsigned char* ptr, size_t len, size_t* encoded_len);
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 
   /// @brief Get the LinePrimitive schema.
   ///
@@ -1172,7 +1172,7 @@ struct LocationFix {
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
-  FoxgloveError encode(unsigned char* ptr, size_t len, size_t* encoded_len);
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 
   /// @brief Get the LocationFix schema.
   ///
@@ -1196,7 +1196,7 @@ struct LocationFixes {
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
-  FoxgloveError encode(unsigned char* ptr, size_t len, size_t* encoded_len);
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 
   /// @brief Get the LocationFixes schema.
   ///
@@ -1250,7 +1250,7 @@ struct Log {
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
-  FoxgloveError encode(unsigned char* ptr, size_t len, size_t* encoded_len);
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 
   /// @brief Get the Log schema.
   ///
@@ -1288,7 +1288,7 @@ struct SceneEntityDeletion {
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
-  FoxgloveError encode(unsigned char* ptr, size_t len, size_t* encoded_len);
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 
   /// @brief Get the SceneEntityDeletion schema.
   ///
@@ -1318,7 +1318,7 @@ struct SpherePrimitive {
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
-  FoxgloveError encode(unsigned char* ptr, size_t len, size_t* encoded_len);
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 
   /// @brief Get the SpherePrimitive schema.
   ///
@@ -1359,7 +1359,7 @@ struct TriangleListPrimitive {
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
-  FoxgloveError encode(unsigned char* ptr, size_t len, size_t* encoded_len);
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 
   /// @brief Get the TriangleListPrimitive schema.
   ///
@@ -1401,7 +1401,7 @@ struct TextPrimitive {
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
-  FoxgloveError encode(unsigned char* ptr, size_t len, size_t* encoded_len);
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 
   /// @brief Get the TextPrimitive schema.
   ///
@@ -1435,7 +1435,7 @@ struct ModelPrimitive {
 
   /// @brief Embedded model. One of `url` or `data` should be provided. If `data` is provided,
   /// `media_type` must be set to indicate the type of the data.
-  std::vector<unsigned char> data;
+  std::vector<uint8_t> data;
 
   /// @brief Encoded the ModelPrimitive as protobuf to the provided buffer.
   ///
@@ -1448,7 +1448,7 @@ struct ModelPrimitive {
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
-  FoxgloveError encode(unsigned char* ptr, size_t len, size_t* encoded_len);
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 
   /// @brief Get the ModelPrimitive schema.
   ///
@@ -1516,7 +1516,7 @@ struct SceneEntity {
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
-  FoxgloveError encode(unsigned char* ptr, size_t len, size_t* encoded_len);
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 
   /// @brief Get the SceneEntity schema.
   ///
@@ -1543,7 +1543,7 @@ struct SceneUpdate {
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
-  FoxgloveError encode(unsigned char* ptr, size_t len, size_t* encoded_len);
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 
   /// @brief Get the SceneUpdate schema.
   ///
@@ -1572,7 +1572,7 @@ struct PointCloud {
   std::vector<PackedElementField> fields;
 
   /// @brief Point data, interpreted using `fields`
-  std::vector<unsigned char> data;
+  std::vector<uint8_t> data;
 
   /// @brief Encoded the PointCloud as protobuf to the provided buffer.
   ///
@@ -1585,7 +1585,7 @@ struct PointCloud {
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
-  FoxgloveError encode(unsigned char* ptr, size_t len, size_t* encoded_len);
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 
   /// @brief Get the PointCloud schema.
   ///
@@ -1615,7 +1615,7 @@ struct PoseInFrame {
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
-  FoxgloveError encode(unsigned char* ptr, size_t len, size_t* encoded_len);
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 
   /// @brief Get the PoseInFrame schema.
   ///
@@ -1645,7 +1645,7 @@ struct PosesInFrame {
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
-  FoxgloveError encode(unsigned char* ptr, size_t len, size_t* encoded_len);
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 
   /// @brief Get the PosesInFrame schema.
   ///
@@ -1659,7 +1659,7 @@ struct RawAudio {
   std::optional<Timestamp> timestamp;
 
   /// @brief Audio data. The samples in the data must be interleaved and little-endian
-  std::vector<unsigned char> data;
+  std::vector<uint8_t> data;
 
   /// @brief Audio format. Only 'pcm-s16' is currently supported
   std::string format;
@@ -1681,7 +1681,7 @@ struct RawAudio {
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
-  FoxgloveError encode(unsigned char* ptr, size_t len, size_t* encoded_len);
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 
   /// @brief Get the RawAudio schema.
   ///
@@ -1776,7 +1776,7 @@ struct RawImage {
   /// settings](https://docs.foxglove.dev/docs/visualization/panels/image#general).
   /// @brief   - `step` must be greater than or equal to `width` * 2.
   /// @brief
-  std::vector<unsigned char> data;
+  std::vector<uint8_t> data;
 
   /// @brief Encoded the RawImage as protobuf to the provided buffer.
   ///
@@ -1789,7 +1789,7 @@ struct RawImage {
   /// @param ptr the destination buffer. must point to at least len valid bytes.
   /// @param len the length of the destination buffer.
   /// @param encoded_len where the serialized length or required capacity will be written to.
-  FoxgloveError encode(unsigned char* ptr, size_t len, size_t* encoded_len);
+  FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);
 
   /// @brief Get the RawImage schema.
   ///

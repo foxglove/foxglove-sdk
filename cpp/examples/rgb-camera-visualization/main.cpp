@@ -69,10 +69,7 @@ foxglove::schemas::RawImage create_raw_image_message(const cv::Mat& frame) {
   int width = frame.cols;
   int channels = frame.channels();
 
-  // Convert uint8_t data to unsigned char
   size_t data_size = frame.total() * frame.elemSize();
-  std::vector<unsigned char> data(data_size);
-  std::memcpy(data.data(), frame.data, data_size);
 
   foxglove::schemas::RawImage msg;
   msg.width = width;
@@ -80,7 +77,7 @@ foxglove::schemas::RawImage create_raw_image_message(const cv::Mat& frame) {
   msg.step = width * channels;
   msg.encoding = "bgr8";
   msg.frame_id = "camera";
-  msg.data = std::move(data);
+  msg.data.insert(msg.data.end(), frame.data, data_size);
 
   // Create timestamp manually
   auto now = std::chrono::system_clock::now();

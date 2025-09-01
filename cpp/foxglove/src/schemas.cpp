@@ -1628,281 +1628,281 @@ void voxelGridToC(foxglove_voxel_grid& dest, const VoxelGrid& src, [[maybe_unuse
   dest.data_len = src.data.size();
 }
 
-FoxgloveError ArrowPrimitive::encode(unsigned char* ptr, size_t len, size_t* encoded_len) {
+FoxgloveError ArrowPrimitive::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_arrow_primitive c_msg;
   arrowPrimitiveToC(c_msg, *this, arena);
   return FoxgloveError(foxglove_arrow_primitive_encode(&c_msg, ptr, len, encoded_len));
 }
 
-FoxgloveError CameraCalibration::encode(unsigned char* ptr, size_t len, size_t* encoded_len) {
+FoxgloveError CameraCalibration::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_camera_calibration c_msg;
   cameraCalibrationToC(c_msg, *this, arena);
   return FoxgloveError(foxglove_camera_calibration_encode(&c_msg, ptr, len, encoded_len));
 }
 
-FoxgloveError CircleAnnotation::encode(unsigned char* ptr, size_t len, size_t* encoded_len) {
+FoxgloveError CircleAnnotation::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_circle_annotation c_msg;
   circleAnnotationToC(c_msg, *this, arena);
   return FoxgloveError(foxglove_circle_annotation_encode(&c_msg, ptr, len, encoded_len));
 }
 
-FoxgloveError Color::encode(unsigned char* ptr, size_t len, size_t* encoded_len) {
+FoxgloveError Color::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   return FoxgloveError(
     foxglove_color_encode(reinterpret_cast<const foxglove_color*>(this), ptr, len, encoded_len)
   );
 }
 
-FoxgloveError CompressedImage::encode(unsigned char* ptr, size_t len, size_t* encoded_len) {
+FoxgloveError CompressedImage::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_compressed_image c_msg;
   compressedImageToC(c_msg, *this, arena);
   return FoxgloveError(foxglove_compressed_image_encode(&c_msg, ptr, len, encoded_len));
 }
 
-FoxgloveError CompressedVideo::encode(unsigned char* ptr, size_t len, size_t* encoded_len) {
+FoxgloveError CompressedVideo::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_compressed_video c_msg;
   compressedVideoToC(c_msg, *this, arena);
   return FoxgloveError(foxglove_compressed_video_encode(&c_msg, ptr, len, encoded_len));
 }
 
-FoxgloveError CubePrimitive::encode(unsigned char* ptr, size_t len, size_t* encoded_len) {
+FoxgloveError CubePrimitive::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_cube_primitive c_msg;
   cubePrimitiveToC(c_msg, *this, arena);
   return FoxgloveError(foxglove_cube_primitive_encode(&c_msg, ptr, len, encoded_len));
 }
 
-FoxgloveError CylinderPrimitive::encode(unsigned char* ptr, size_t len, size_t* encoded_len) {
+FoxgloveError CylinderPrimitive::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_cylinder_primitive c_msg;
   cylinderPrimitiveToC(c_msg, *this, arena);
   return FoxgloveError(foxglove_cylinder_primitive_encode(&c_msg, ptr, len, encoded_len));
 }
 
-FoxgloveError FrameTransform::encode(unsigned char* ptr, size_t len, size_t* encoded_len) {
+FoxgloveError FrameTransform::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_frame_transform c_msg;
   frameTransformToC(c_msg, *this, arena);
   return FoxgloveError(foxglove_frame_transform_encode(&c_msg, ptr, len, encoded_len));
 }
 
-FoxgloveError FrameTransforms::encode(unsigned char* ptr, size_t len, size_t* encoded_len) {
+FoxgloveError FrameTransforms::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_frame_transforms c_msg;
   frameTransformsToC(c_msg, *this, arena);
   return FoxgloveError(foxglove_frame_transforms_encode(&c_msg, ptr, len, encoded_len));
 }
 
-FoxgloveError GeoJSON::encode(unsigned char* ptr, size_t len, size_t* encoded_len) {
+FoxgloveError GeoJSON::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_geo_json c_msg;
   geoJSONToC(c_msg, *this, arena);
   return FoxgloveError(foxglove_geo_json_encode(&c_msg, ptr, len, encoded_len));
 }
 
-FoxgloveError Grid::encode(unsigned char* ptr, size_t len, size_t* encoded_len) {
+FoxgloveError Grid::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_grid c_msg;
   gridToC(c_msg, *this, arena);
   return FoxgloveError(foxglove_grid_encode(&c_msg, ptr, len, encoded_len));
 }
 
-FoxgloveError ImageAnnotations::encode(unsigned char* ptr, size_t len, size_t* encoded_len) {
+FoxgloveError ImageAnnotations::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_image_annotations c_msg;
   imageAnnotationsToC(c_msg, *this, arena);
   return FoxgloveError(foxglove_image_annotations_encode(&c_msg, ptr, len, encoded_len));
 }
 
-FoxgloveError KeyValuePair::encode(unsigned char* ptr, size_t len, size_t* encoded_len) {
+FoxgloveError KeyValuePair::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_key_value_pair c_msg;
   keyValuePairToC(c_msg, *this, arena);
   return FoxgloveError(foxglove_key_value_pair_encode(&c_msg, ptr, len, encoded_len));
 }
 
-FoxgloveError LaserScan::encode(unsigned char* ptr, size_t len, size_t* encoded_len) {
+FoxgloveError LaserScan::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_laser_scan c_msg;
   laserScanToC(c_msg, *this, arena);
   return FoxgloveError(foxglove_laser_scan_encode(&c_msg, ptr, len, encoded_len));
 }
 
-FoxgloveError LinePrimitive::encode(unsigned char* ptr, size_t len, size_t* encoded_len) {
+FoxgloveError LinePrimitive::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_line_primitive c_msg;
   linePrimitiveToC(c_msg, *this, arena);
   return FoxgloveError(foxglove_line_primitive_encode(&c_msg, ptr, len, encoded_len));
 }
 
-FoxgloveError LocationFix::encode(unsigned char* ptr, size_t len, size_t* encoded_len) {
+FoxgloveError LocationFix::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_location_fix c_msg;
   locationFixToC(c_msg, *this, arena);
   return FoxgloveError(foxglove_location_fix_encode(&c_msg, ptr, len, encoded_len));
 }
 
-FoxgloveError LocationFixes::encode(unsigned char* ptr, size_t len, size_t* encoded_len) {
+FoxgloveError LocationFixes::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_location_fixes c_msg;
   locationFixesToC(c_msg, *this, arena);
   return FoxgloveError(foxglove_location_fixes_encode(&c_msg, ptr, len, encoded_len));
 }
 
-FoxgloveError Log::encode(unsigned char* ptr, size_t len, size_t* encoded_len) {
+FoxgloveError Log::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_log c_msg;
   logToC(c_msg, *this, arena);
   return FoxgloveError(foxglove_log_encode(&c_msg, ptr, len, encoded_len));
 }
 
-FoxgloveError ModelPrimitive::encode(unsigned char* ptr, size_t len, size_t* encoded_len) {
+FoxgloveError ModelPrimitive::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_model_primitive c_msg;
   modelPrimitiveToC(c_msg, *this, arena);
   return FoxgloveError(foxglove_model_primitive_encode(&c_msg, ptr, len, encoded_len));
 }
 
-FoxgloveError PackedElementField::encode(unsigned char* ptr, size_t len, size_t* encoded_len) {
+FoxgloveError PackedElementField::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_packed_element_field c_msg;
   packedElementFieldToC(c_msg, *this, arena);
   return FoxgloveError(foxglove_packed_element_field_encode(&c_msg, ptr, len, encoded_len));
 }
 
-FoxgloveError Point2::encode(unsigned char* ptr, size_t len, size_t* encoded_len) {
+FoxgloveError Point2::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   return FoxgloveError(
     foxglove_point2_encode(reinterpret_cast<const foxglove_point2*>(this), ptr, len, encoded_len)
   );
 }
 
-FoxgloveError Point3::encode(unsigned char* ptr, size_t len, size_t* encoded_len) {
+FoxgloveError Point3::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   return FoxgloveError(
     foxglove_point3_encode(reinterpret_cast<const foxglove_point3*>(this), ptr, len, encoded_len)
   );
 }
 
-FoxgloveError PointCloud::encode(unsigned char* ptr, size_t len, size_t* encoded_len) {
+FoxgloveError PointCloud::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_point_cloud c_msg;
   pointCloudToC(c_msg, *this, arena);
   return FoxgloveError(foxglove_point_cloud_encode(&c_msg, ptr, len, encoded_len));
 }
 
-FoxgloveError PointsAnnotation::encode(unsigned char* ptr, size_t len, size_t* encoded_len) {
+FoxgloveError PointsAnnotation::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_points_annotation c_msg;
   pointsAnnotationToC(c_msg, *this, arena);
   return FoxgloveError(foxglove_points_annotation_encode(&c_msg, ptr, len, encoded_len));
 }
 
-FoxgloveError Pose::encode(unsigned char* ptr, size_t len, size_t* encoded_len) {
+FoxgloveError Pose::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_pose c_msg;
   poseToC(c_msg, *this, arena);
   return FoxgloveError(foxglove_pose_encode(&c_msg, ptr, len, encoded_len));
 }
 
-FoxgloveError PoseInFrame::encode(unsigned char* ptr, size_t len, size_t* encoded_len) {
+FoxgloveError PoseInFrame::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_pose_in_frame c_msg;
   poseInFrameToC(c_msg, *this, arena);
   return FoxgloveError(foxglove_pose_in_frame_encode(&c_msg, ptr, len, encoded_len));
 }
 
-FoxgloveError PosesInFrame::encode(unsigned char* ptr, size_t len, size_t* encoded_len) {
+FoxgloveError PosesInFrame::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_poses_in_frame c_msg;
   posesInFrameToC(c_msg, *this, arena);
   return FoxgloveError(foxglove_poses_in_frame_encode(&c_msg, ptr, len, encoded_len));
 }
 
-FoxgloveError Quaternion::encode(unsigned char* ptr, size_t len, size_t* encoded_len) {
+FoxgloveError Quaternion::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   return FoxgloveError(foxglove_quaternion_encode(
     reinterpret_cast<const foxglove_quaternion*>(this), ptr, len, encoded_len
   ));
 }
 
-FoxgloveError RawAudio::encode(unsigned char* ptr, size_t len, size_t* encoded_len) {
+FoxgloveError RawAudio::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_raw_audio c_msg;
   rawAudioToC(c_msg, *this, arena);
   return FoxgloveError(foxglove_raw_audio_encode(&c_msg, ptr, len, encoded_len));
 }
 
-FoxgloveError RawImage::encode(unsigned char* ptr, size_t len, size_t* encoded_len) {
+FoxgloveError RawImage::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_raw_image c_msg;
   rawImageToC(c_msg, *this, arena);
   return FoxgloveError(foxglove_raw_image_encode(&c_msg, ptr, len, encoded_len));
 }
 
-FoxgloveError SceneEntity::encode(unsigned char* ptr, size_t len, size_t* encoded_len) {
+FoxgloveError SceneEntity::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_scene_entity c_msg;
   sceneEntityToC(c_msg, *this, arena);
   return FoxgloveError(foxglove_scene_entity_encode(&c_msg, ptr, len, encoded_len));
 }
 
-FoxgloveError SceneEntityDeletion::encode(unsigned char* ptr, size_t len, size_t* encoded_len) {
+FoxgloveError SceneEntityDeletion::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_scene_entity_deletion c_msg;
   sceneEntityDeletionToC(c_msg, *this, arena);
   return FoxgloveError(foxglove_scene_entity_deletion_encode(&c_msg, ptr, len, encoded_len));
 }
 
-FoxgloveError SceneUpdate::encode(unsigned char* ptr, size_t len, size_t* encoded_len) {
+FoxgloveError SceneUpdate::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_scene_update c_msg;
   sceneUpdateToC(c_msg, *this, arena);
   return FoxgloveError(foxglove_scene_update_encode(&c_msg, ptr, len, encoded_len));
 }
 
-FoxgloveError SpherePrimitive::encode(unsigned char* ptr, size_t len, size_t* encoded_len) {
+FoxgloveError SpherePrimitive::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_sphere_primitive c_msg;
   spherePrimitiveToC(c_msg, *this, arena);
   return FoxgloveError(foxglove_sphere_primitive_encode(&c_msg, ptr, len, encoded_len));
 }
 
-FoxgloveError TextAnnotation::encode(unsigned char* ptr, size_t len, size_t* encoded_len) {
+FoxgloveError TextAnnotation::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_text_annotation c_msg;
   textAnnotationToC(c_msg, *this, arena);
   return FoxgloveError(foxglove_text_annotation_encode(&c_msg, ptr, len, encoded_len));
 }
 
-FoxgloveError TextPrimitive::encode(unsigned char* ptr, size_t len, size_t* encoded_len) {
+FoxgloveError TextPrimitive::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_text_primitive c_msg;
   textPrimitiveToC(c_msg, *this, arena);
   return FoxgloveError(foxglove_text_primitive_encode(&c_msg, ptr, len, encoded_len));
 }
 
-FoxgloveError TriangleListPrimitive::encode(unsigned char* ptr, size_t len, size_t* encoded_len) {
+FoxgloveError TriangleListPrimitive::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_triangle_list_primitive c_msg;
   triangleListPrimitiveToC(c_msg, *this, arena);
   return FoxgloveError(foxglove_triangle_list_primitive_encode(&c_msg, ptr, len, encoded_len));
 }
 
-FoxgloveError Vector2::encode(unsigned char* ptr, size_t len, size_t* encoded_len) {
+FoxgloveError Vector2::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   return FoxgloveError(
     foxglove_vector2_encode(reinterpret_cast<const foxglove_vector2*>(this), ptr, len, encoded_len)
   );
 }
 
-FoxgloveError Vector3::encode(unsigned char* ptr, size_t len, size_t* encoded_len) {
+FoxgloveError Vector3::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   return FoxgloveError(
     foxglove_vector3_encode(reinterpret_cast<const foxglove_vector3*>(this), ptr, len, encoded_len)
   );
 }
 
-FoxgloveError VoxelGrid::encode(unsigned char* ptr, size_t len, size_t* encoded_len) {
+FoxgloveError VoxelGrid::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
   Arena arena;
   foxglove_voxel_grid c_msg;
   voxelGridToC(c_msg, *this, arena);
@@ -1914,7 +1914,7 @@ Schema ArrowPrimitive::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const unsigned char*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -1924,7 +1924,7 @@ Schema CameraCalibration::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const unsigned char*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -1934,7 +1934,7 @@ Schema CircleAnnotation::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const unsigned char*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -1944,7 +1944,7 @@ Schema Color::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const unsigned char*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -1954,7 +1954,7 @@ Schema CompressedImage::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const unsigned char*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -1964,7 +1964,7 @@ Schema CompressedVideo::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const unsigned char*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -1974,7 +1974,7 @@ Schema CubePrimitive::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const unsigned char*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -1984,7 +1984,7 @@ Schema CylinderPrimitive::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const unsigned char*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -1994,7 +1994,7 @@ Schema FrameTransform::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const unsigned char*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -2004,7 +2004,7 @@ Schema FrameTransforms::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const unsigned char*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -2014,7 +2014,7 @@ Schema GeoJSON::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const unsigned char*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -2024,7 +2024,7 @@ Schema Grid::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const unsigned char*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -2034,7 +2034,7 @@ Schema ImageAnnotations::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const unsigned char*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -2044,7 +2044,7 @@ Schema KeyValuePair::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const unsigned char*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -2054,7 +2054,7 @@ Schema LaserScan::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const unsigned char*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -2064,7 +2064,7 @@ Schema LinePrimitive::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const unsigned char*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -2074,7 +2074,7 @@ Schema LocationFix::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const unsigned char*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -2084,7 +2084,7 @@ Schema LocationFixes::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const unsigned char*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -2094,7 +2094,7 @@ Schema Log::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const unsigned char*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -2104,7 +2104,7 @@ Schema ModelPrimitive::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const unsigned char*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -2114,7 +2114,7 @@ Schema PackedElementField::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const unsigned char*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -2124,7 +2124,7 @@ Schema Point2::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const unsigned char*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -2134,7 +2134,7 @@ Schema Point3::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const unsigned char*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -2144,7 +2144,7 @@ Schema PointCloud::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const unsigned char*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -2154,7 +2154,7 @@ Schema PointsAnnotation::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const unsigned char*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -2164,7 +2164,7 @@ Schema Pose::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const unsigned char*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -2174,7 +2174,7 @@ Schema PoseInFrame::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const unsigned char*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -2184,7 +2184,7 @@ Schema PosesInFrame::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const unsigned char*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -2194,7 +2194,7 @@ Schema Quaternion::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const unsigned char*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -2204,7 +2204,7 @@ Schema RawAudio::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const unsigned char*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -2214,7 +2214,7 @@ Schema RawImage::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const unsigned char*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -2224,7 +2224,7 @@ Schema SceneEntity::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const unsigned char*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -2234,7 +2234,7 @@ Schema SceneEntityDeletion::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const unsigned char*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -2244,7 +2244,7 @@ Schema SceneUpdate::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const unsigned char*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -2254,7 +2254,7 @@ Schema SpherePrimitive::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const unsigned char*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -2264,7 +2264,7 @@ Schema TextAnnotation::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const unsigned char*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -2274,7 +2274,7 @@ Schema TextPrimitive::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const unsigned char*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -2284,7 +2284,7 @@ Schema TriangleListPrimitive::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const unsigned char*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -2294,7 +2294,7 @@ Schema Vector2::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const unsigned char*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -2304,7 +2304,7 @@ Schema Vector3::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const unsigned char*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }
@@ -2314,7 +2314,7 @@ Schema VoxelGrid::schema() {
   Schema result;
   result.name = std::string(c_schema.name.data, c_schema.name.len);
   result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
-  result.data = reinterpret_cast<const unsigned char*>(c_schema.data);
+  result.data = reinterpret_cast<const uint8_t*>(c_schema.data);
   result.data_len = c_schema.data_len;
   return result;
 }

@@ -54,7 +54,7 @@ int main() {
               << '\n';
   };
   options.callbacks.onMessageData =
-    [](uint32_t client_id, uint32_t client_channel_id, const unsigned char* data, size_t data_len) {
+    [](uint32_t client_id, uint32_t client_channel_id, const uint8_t* data, size_t data_len) {
       std::cerr << "Client " << client_id << " published on channel " << client_channel_id << ": "
                 << std::string(reinterpret_cast<const char*>(data), data_len) << '\n';
     };
@@ -85,7 +85,7 @@ int main() {
       "val": { "type": "number" }
     }
   })";
-  schema.data = reinterpret_cast<const unsigned char*>(schema_data.data());
+  schema.data = reinterpret_cast<const uint8_t*>(schema_data.data());
   schema.data_len = schema_data.size();
   auto channel_result = foxglove::RawChannel::create("example", "json", std::move(schema));
   if (!channel_result.has_value()) {
@@ -100,7 +100,7 @@ int main() {
     std::string msg = "{\"val\": " + std::to_string(i) + "}";
     auto now =
       std::chrono::nanoseconds(std::chrono::system_clock::now().time_since_epoch()).count();
-    channel.log(reinterpret_cast<const unsigned char*>(msg.data()), msg.size(), now);
+    channel.log(reinterpret_cast<const uint8_t*>(msg.data()), msg.size(), now);
     ++i;
   }
 

@@ -33,7 +33,7 @@ struct ClientChannel {
   /// @brief The encoding of the schema of the channel.
   std::string_view schema_encoding;
   /// @brief The schema of the channel.
-  const unsigned char* schema;
+  const uint8_t* schema;
   /// @brief The length of the schema of the channel.
   size_t schema_len;
 };
@@ -119,9 +119,8 @@ struct WebSocketServerCallbacks {
   std::function<void(uint32_t client_id, const ClientChannel& channel)> onClientAdvertise;
 
   /// @brief Callback invoked when a client message is received
-  std::function<void(
-    uint32_t client_id, uint32_t client_channel_id, const unsigned char* data, size_t data_len
-  )>
+  std::function<
+    void(uint32_t client_id, uint32_t client_channel_id, const uint8_t* data, size_t data_len)>
     onMessageData;
 
   /// @brief Callback invoked when a client unadvertises a client channel.
@@ -190,9 +189,9 @@ struct WebSocketServerCallbacks {
 /// @brief TLS configuration for a WebSocket server.
 struct TlsIdentity {
   /// @brief PEM-formatted x509 certificate for the server.
-  std::vector<unsigned char> cert;
+  std::vector<uint8_t> cert;
   /// @brief PEM-formatted pkcs8 private key for the server.
-  std::vector<unsigned char> key;
+  std::vector<uint8_t> key;
 };
 /// @endcond
 
