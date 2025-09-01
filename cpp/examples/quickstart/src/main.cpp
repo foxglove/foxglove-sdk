@@ -57,7 +57,7 @@ int main() {
         "size": { "type": "number" }
         }
     })";
-  schema.data = reinterpret_cast<const std::byte*>(schema_data.data());
+  schema.data = reinterpret_cast<const unsigned char*>(schema_data.data());
   schema.data_len = schema_data.size();
   auto channel_result = foxglove::RawChannel::create("/size", "json", std::move(schema));
   if (!channel_result.has_value()) {
@@ -87,7 +87,7 @@ int main() {
                  .count();
     double size = std::abs(std::sin(now)) + 1.0;
     std::string msg = "{\"size\": " + std::to_string(size) + "}";
-    size_channel.log(reinterpret_cast<const std::byte*>(msg.data()), msg.size());
+    size_channel.log(reinterpret_cast<const unsigned char*>(msg.data()), msg.size());
 
     foxglove::schemas::CubePrimitive cube;
     cube.size = foxglove::schemas::Vector3{size, size, size};

@@ -379,7 +379,7 @@ struct CompressedImage {
   std::string frame_id;
 
   /// @brief Compressed image data
-  std::vector<std::byte> data;
+  std::vector<unsigned char> data;
 
   /// @brief Image format
   /// @brief
@@ -446,7 +446,7 @@ struct CompressedVideo {
   /// @brief   - Each CompressedVideo message should contain enough OBUs to decode exactly one video
   /// frame
   /// @brief   - Each message containing a key frame must also include a Sequence Header OBU
-  std::vector<std::byte> data;
+  std::vector<unsigned char> data;
 
   /// @brief Video format.
   /// @brief
@@ -750,7 +750,7 @@ struct Grid {
   /// to the origin will be:
   /// @brief  y = (i / cell_stride) % row_stride * cell_size.y
   /// @brief  x = i % cell_stride * cell_size.x
-  std::vector<std::byte> data;
+  std::vector<unsigned char> data;
 
   /// @brief Encoded the Grid as protobuf to the provided buffer.
   ///
@@ -810,7 +810,7 @@ struct VoxelGrid {
   /// @brief  z = i / slice_stride * cell_size.z
   /// @brief  y = (i % slice_stride) / row_stride * cell_size.y
   /// @brief  x = (i % row_stride) / cell_stride * cell_size.x
-  std::vector<std::byte> data;
+  std::vector<unsigned char> data;
 
   /// @brief Encoded the VoxelGrid as protobuf to the provided buffer.
   ///
@@ -1435,7 +1435,7 @@ struct ModelPrimitive {
 
   /// @brief Embedded model. One of `url` or `data` should be provided. If `data` is provided,
   /// `media_type` must be set to indicate the type of the data.
-  std::vector<std::byte> data;
+  std::vector<unsigned char> data;
 
   /// @brief Encoded the ModelPrimitive as protobuf to the provided buffer.
   ///
@@ -1572,7 +1572,7 @@ struct PointCloud {
   std::vector<PackedElementField> fields;
 
   /// @brief Point data, interpreted using `fields`
-  std::vector<std::byte> data;
+  std::vector<unsigned char> data;
 
   /// @brief Encoded the PointCloud as protobuf to the provided buffer.
   ///
@@ -1659,7 +1659,7 @@ struct RawAudio {
   std::optional<Timestamp> timestamp;
 
   /// @brief Audio data. The samples in the data must be interleaved and little-endian
-  std::vector<std::byte> data;
+  std::vector<unsigned char> data;
 
   /// @brief Audio format. Only 'pcm-s16' is currently supported
   std::string format;
@@ -1776,7 +1776,7 @@ struct RawImage {
   /// settings](https://docs.foxglove.dev/docs/visualization/panels/image#general).
   /// @brief   - `step` must be greater than or equal to `width` * 2.
   /// @brief
-  std::vector<std::byte> data;
+  std::vector<unsigned char> data;
 
   /// @brief Encoded the RawImage as protobuf to the provided buffer.
   ///

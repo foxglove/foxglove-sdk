@@ -113,7 +113,7 @@ TEST_CASE("Parameter construction and access") {
     REQUIRE(param.type() == foxglove::ParameterType::None);
     REQUIRE(param.is<std::string>());
     REQUIRE(param.is<std::string_view>());
-    REQUIRE(!param.is<std::vector<std::byte>>());
+    REQUIRE(!param.is<std::vector<unsigned char>>());
     REQUIRE(param.get<std::string>() == "test string");
     REQUIRE(param.get<std::string_view>() == "test string");
   }
@@ -124,8 +124,8 @@ TEST_CASE("Parameter construction and access") {
     REQUIRE(param.name() == "test_param");
     REQUIRE(param.type() == foxglove::ParameterType::ByteArray);
     REQUIRE(!param.is<std::string>());
-    REQUIRE(param.is<std::vector<std::byte>>());
-    auto decoded = param.get<std::vector<std::byte>>();
+    REQUIRE(param.is<std::vector<unsigned char>>());
+    auto decoded = param.get<std::vector<unsigned char>>();
     REQUIRE(decoded.size() == data.size());
     REQUIRE(memcmp(decoded.data(), data.data(), data.size()) == 0);
 

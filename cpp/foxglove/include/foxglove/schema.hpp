@@ -19,7 +19,7 @@ struct Schema {
   std::string encoding;
   /// @brief Must conform to the schema encoding. If encoding is an empty string, data should be 0
   /// length.
-  const std::byte* data = nullptr;
+  const unsigned char* data = nullptr;
   /// @brief The length of the schema data.
   size_t data_len = 0;
 };
