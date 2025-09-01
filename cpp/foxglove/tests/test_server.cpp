@@ -978,7 +978,7 @@ void validateFetchAssetOkResponse(
   REQUIRE(response.size() >= 1 + 4 + 1 + 4);
   REQUIRE(static_cast<uint8_t>(bytes[0]) == 4);  // Fetch asset response opcode
   REQUIRE(readUint32LE(bytes, 1) == request_id);
-  REQUIRE(bytes[5] == uint8_t{0});     // Success
+  REQUIRE(bytes[5] == 0);                // Success
   REQUIRE(readUint32LE(bytes, 6) == 0);  // Error message length
   REQUIRE(response.size() >= 10 + payload.size());
   REQUIRE(memcmp(response.data() + 10, payload.data(), payload.size()) == 0);
@@ -1047,9 +1047,9 @@ void validateFetchAssetErrorResponse(
   std::vector<uint8_t> bytes(response.size());
   std::memcpy(bytes.data(), response.data(), response.size());
   REQUIRE(response.size() >= 1 + 4 + 1 + 4);
-  REQUIRE(static_cast<uint8_t>(bytes[0]) == 4);  // Fetch asset response opcode
+  REQUIRE(bytes[0] == 4);  // Fetch asset response opcode
   REQUIRE(readUint32LE(bytes, 1) == request_id);
-  REQUIRE(bytes[5] == uint8_t{1});  // Error
+  REQUIRE(bytes[5] == 1);  // Error
   REQUIRE(readUint32LE(bytes, 6) == error_message.size());
   REQUIRE(response.size() >= 10 + error_message.size());
   REQUIRE(memcmp(response.data() + 10, error_message.data(), error_message.size()) == 0);
@@ -1127,7 +1127,7 @@ void validateTimeMessage(const std::string_view msg, uint64_t timestamp) {
   std::vector<uint8_t> bytes(msg.size());
   std::memcpy(bytes.data(), msg.data(), msg.size());
   REQUIRE(msg.size() >= 1 + 8);
-  REQUIRE(static_cast<uint8_t>(bytes[0]) == 2);  // Time opcode
+  REQUIRE(bytes[0] == 2);  // Time opcode
   REQUIRE(readUint64LE(bytes, 1) == timestamp);
 }
 
@@ -1341,10 +1341,7 @@ TEST_CASE("Log message to websocket sinks") {
 
     // Log message to channel but target only a single client
     channel.log(
-      reinterpret_cast<const uint8_t*>(message.data()),
-      message.size(),
-      std::nullopt,
-      target_sink_id
+      reinterpret_cast<const uint8_t*>(message.data()), message.size(), std::nullopt, target_sink_id
     );
 
     for (auto& client : clients) {
