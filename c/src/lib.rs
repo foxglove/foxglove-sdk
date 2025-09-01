@@ -5,7 +5,10 @@
 #[cfg(test)]
 mod tests;
 
-use std::{ffi::c_char, mem::ManuallyDrop};
+use std::{
+    ffi::{c_char, c_uchar},
+    mem::ManuallyDrop,
+};
 
 mod arena;
 mod generated_types;
@@ -199,7 +202,7 @@ impl Drop for FoxgloveStringBuf {
 pub struct FoxgloveSchema {
     pub name: FoxgloveString,
     pub encoding: FoxgloveString,
-    pub data: *const u8,
+    pub data: *const c_uchar,
     pub data_len: usize,
 }
 

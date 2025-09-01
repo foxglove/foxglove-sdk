@@ -282,7 +282,7 @@ pub unsafe extern "C" fn foxglove_${snakeName}_schema() -> FoxgloveSchema {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_${snakeName}_encode(
     msg: Option<&${name}>,
-    ptr: *mut u8,
+    ptr: *mut c_uchar,
     len: usize,
     encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
