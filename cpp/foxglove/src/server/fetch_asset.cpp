@@ -15,7 +15,7 @@ void FetchAssetResponder::Deleter::operator()(foxglove_fetch_asset_responder* pt
 
 void FetchAssetResponder::respondOk(const unsigned char* data, size_t size) && noexcept {
   auto* ptr = impl_.release();
-  foxglove_fetch_asset_respond_ok(ptr, {reinterpret_cast<const uint8_t*>(data), size});
+  foxglove_fetch_asset_respond_ok(ptr, {data, size});
 }
 
 void FetchAssetResponder::respondError(std::string_view message) && noexcept {

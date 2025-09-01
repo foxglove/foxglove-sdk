@@ -75,7 +75,7 @@ struct FetchAssetResponse {
   uint32_t requestId;
   FetchAssetStatus status;
   std::string errorMessage;
-  std::vector<uint8_t> data;
+  std::vector<unsigned char> data;
 };
 
 struct ClientAdvertisement {

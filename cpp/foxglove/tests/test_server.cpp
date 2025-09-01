@@ -256,15 +256,9 @@ TEST_CASE("Log a message with and without metadata") {
   auto channel_result = foxglove::RawChannel::create("example", "json", std::nullopt, context);
   REQUIRE(channel_result.has_value());
   auto channel = std::move(channel_result.value());
-  const std::array<uint8_t, 3> data = {1, 2, 3};
-  REQUIRE(
-    channel.log(reinterpret_cast<const unsigned char*>(data.data()), data.size()) ==
-    foxglove::FoxgloveError::Ok
-  );
-  REQUIRE(
-    channel.log(reinterpret_cast<const unsigned char*>(data.data()), data.size(), 1) ==
-    foxglove::FoxgloveError::Ok
-  );
+  const std::array<unsigned char, 3> data = {1, 2, 3};
+  REQUIRE(channel.log(data.data(), data.size()) == foxglove::FoxgloveError::Ok);
+  REQUIRE(channel.log(data.data(), data.size(), 1) == foxglove::FoxgloveError::Ok);
 }
 
 TEST_CASE("Subscribe and unsubscribe callbacks") {
@@ -511,7 +505,7 @@ TEST_CASE("Parameter callbacks") {
     }
     server_set_parameters = std::make_pair(owned_request_id, std::move(owned_params));
     cv.notify_one();
-    std::array<uint8_t, 6> data{115, 101, 99, 114, 101, 116};
+    std::array<unsigned char, 6> data{115, 101, 99, 114, 101, 116};
     std::vector<foxglove::Parameter> result;
     result.emplace_back("zip");
     result.emplace_back("bar", 99.99);
@@ -794,7 +788,7 @@ void validateServiceResponse(
   std::vector<unsigned char> bytes(response.size());
   std::memcpy(bytes.data(), response.data(), response.size());
   REQUIRE(response.size() >= 1 + 4 + 4 + 4);
-  REQUIRE(static_cast<uint8_t>(bytes[0]) == 3);  // Service call response opcode
+  REQUIRE(bytes[0] == 3);  // Service call response opcode
   REQUIRE(readUint32LE(bytes, 1) == service_id);
   REQUIRE(readUint32LE(bytes, 5) == call_id);
   REQUIRE(readUint32LE(bytes, 9) == encoding.size());
@@ -982,7 +976,7 @@ void validateFetchAssetOkResponse(
   std::vector<unsigned char> bytes(response.size());
   std::memcpy(bytes.data(), response.data(), response.size());
   REQUIRE(response.size() >= 1 + 4 + 1 + 4);
-  REQUIRE(static_cast<uint8_t>(bytes[0]) == 4);  // Fetch asset response opcode
+  REQUIRE(bytes[0] == 4);  // Fetch asset response opcode
   REQUIRE(readUint32LE(bytes, 1) == request_id);
   REQUIRE(bytes[5] == 0);                // Success
   REQUIRE(readUint32LE(bytes, 6) == 0);  // Error message length
@@ -1053,7 +1047,7 @@ void validateFetchAssetErrorResponse(
   std::vector<unsigned char> bytes(response.size());
   std::memcpy(bytes.data(), response.data(), response.size());
   REQUIRE(response.size() >= 1 + 4 + 1 + 4);
-  REQUIRE(static_cast<uint8_t>(bytes[0]) == 4);  // Fetch asset response opcode
+  REQUIRE(bytes[0] == 4);  // Fetch asset response opcode
   REQUIRE(readUint32LE(bytes, 1) == request_id);
   REQUIRE(bytes[5] == 1);  // Error
   REQUIRE(readUint32LE(bytes, 6) == error_message.size());
@@ -1133,7 +1127,7 @@ void validateTimeMessage(const std::string_view msg, uint64_t timestamp) {
   std::vector<unsigned char> bytes(msg.size());
   std::memcpy(bytes.data(), msg.data(), msg.size());
   REQUIRE(msg.size() >= 1 + 8);
-  REQUIRE(static_cast<uint8_t>(bytes[0]) == 2);  // Time opcode
+  REQUIRE(bytes[0] == 2);  // Time opcode
   REQUIRE(readUint64LE(bytes, 1) == timestamp);
 }
 

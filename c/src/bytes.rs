@@ -1,8 +1,9 @@
+use std::ffi::c_uchar;
 /// A byte array with associated length.
 #[repr(C)]
 pub struct FoxgloveBytes {
     /// Pointer to data
-    data: *const u8,
+    data: *const c_uchar,
     /// Number of bytes
     len: usize,
 }

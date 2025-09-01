@@ -18,7 +18,7 @@ typedef uint16_t SchemaId;
 typedef uint64_t TimeNanos;
 
 struct BytesView {
-  const uint8_t* ptr;
+  const unsigned char* ptr;
   size_t len;
 };
 
@@ -169,7 +169,7 @@ public:
   uint64_t position();
   /** read up to `len` bytes into `target`, returning the number of bytes successfully read.
    */
-  uint64_t read(uint8_t* target, size_t len);
+  uint64_t read(unsigned char* target, size_t len);
 };
 
 /** Logs an info-level diagnostic message to the console. */

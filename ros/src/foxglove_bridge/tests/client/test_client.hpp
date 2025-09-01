@@ -16,14 +16,14 @@
 
 namespace foxglove::test {
 
-inline void WriteUint32LE(uint8_t* buf, uint32_t val) {
-  buf[0] = static_cast<uint8_t>(val & 0xFF);
-  buf[1] = static_cast<uint8_t>((val >> 8) & 0xFF);
-  buf[2] = static_cast<uint8_t>((val >> 16) & 0xFF);
-  buf[3] = static_cast<uint8_t>((val >> 24) & 0xFF);
+inline void WriteUint32LE(unsigned char* buf, uint32_t val) {
+  buf[0] = static_cast<unsigned char>(val & 0xFF);
+  buf[1] = static_cast<unsigned char>((val >> 8) & 0xFF);
+  buf[2] = static_cast<unsigned char>((val >> 16) & 0xFF);
+  buf[3] = static_cast<unsigned char>((val >> 24) & 0xFF);
 }
 
-inline uint32_t ReadUint32LE(const uint8_t* buf) {
+inline uint32_t ReadUint32LE(const unsigned char* buf) {
   return static_cast<uint32_t>(buf[0]) | (static_cast<uint32_t>(buf[1]) << 8) |
          (static_cast<uint32_t>(buf[2]) << 16) | (static_cast<uint32_t>(buf[3]) << 24);
 }
@@ -167,7 +167,7 @@ inline void from_json(const nlohmann::json& j, Service& s) {
 }
 
 using TextMessageHandler = std::function<void(const std::string&)>;
-using BinaryMessageHandler = std::function<void(const uint8_t*, size_t)>;
+using BinaryMessageHandler = std::function<void(const unsigned char*, size_t)>;
 using OpCode = websocketpp::frame::opcode::value;
 
 template <typename ClientConfiguration>
@@ -255,7 +255,7 @@ public:
         std::shared_lock<std::shared_mutex> lock(_mutex);
         const auto& payload = msg->get_payload();
         if (_binaryMessageHandler) {
-          _binaryMessageHandler(reinterpret_cast<const uint8_t*>(payload.data()), payload.size());
+          _binaryMessageHandler(reinterpret_cast<const unsigned char*>(payload.data()), payload.size());
         }
       } break;
       default:
@@ -291,9 +291,9 @@ public:
     sendText(payload);
   }
 
-  void publish(ClientChannelId channelId, const uint8_t* buffer, size_t size) {
-    std::vector<uint8_t> payload(1 + 4 + size);
-    payload[0] = uint8_t(ClientBinaryOpcode::MESSAGE_DATA);
+  void publish(ClientChannelId channelId, const unsigned char* buffer, size_t size) {
+    std::vector<unsigned char> payload(1 + 4 + size);
+    payload[0] = unsigned char(ClientBinaryOpcode::MESSAGE_DATA);
     WriteUint32LE(payload.data() + 1, channelId);
     std::memcpy(payload.data() + 1 + 4, buffer, size);
     sendBinary(payload.data(), payload.size());
@@ -301,9 +301,9 @@ public:
 
   void sendServiceRequest(const ServiceRequest& request) {
     size_t payloadSize = 1 + 4 + 4 + 4 + request.encoding.size() + request.data.size();
-    std::vector<uint8_t> payload(payloadSize);
+    std::vector<unsigned char> payload(payloadSize);
 
-    payload[0] = uint8_t(ClientBinaryOpcode::SERVICE_CALL_REQUEST);
+    payload[0] = unsigned char(ClientBinaryOpcode::SERVICE_CALL_REQUEST);
     size_t offset = 1;
     WriteUint32LE(payload.data() + offset, request.serviceId);
     offset += 4;
@@ -374,23 +374,23 @@ public:
     _endpoint.send(_con, payload, OpCode::TEXT);
   }
 
-  void sendBinary(const uint8_t* data, size_t dataLength) {
+  void sendBinary(const unsigned char* data, size_t dataLength) {
     std::shared_lock<std::shared_mutex> lock(_mutex);
     _endpoint.send(_con, data, dataLength, OpCode::BINARY);
   }
 
-  std::future<std::vector<uint8_t>> waitForChannelMsg(SubscriptionId subscriptionId) {
+  std::future<std::vector<unsigned char>> waitForChannelMsg(SubscriptionId subscriptionId) {
     // Set up binary message handler to resolve when a binary message has been received
-    auto promise = std::make_shared<std::promise<std::vector<uint8_t>>>();
+    auto promise = std::make_shared<std::promise<std::vector<unsigned char>>>();
     auto future = promise->get_future();
 
     setBinaryMessageHandler(
-      [promise = std::move(promise), subscriptionId](const uint8_t* data, size_t dataLength) {
+      [promise = std::move(promise), subscriptionId](const unsigned char* data, size_t dataLength) {
         if (ReadUint32LE(data + 1) != subscriptionId) {
           return;
         }
         const size_t offset = 1 + 4 + 8;
-        std::vector<uint8_t> dataCopy(dataLength - offset);
+        std::vector<unsigned char> dataCopy(dataLength - offset);
         std::memcpy(dataCopy.data(), data + offset, dataLength - offset);
         promise->set_value(std::move(dataCopy));
       });
@@ -422,7 +422,7 @@ public:
     auto promise = std::make_shared<std::promise<ServiceResponse>>();
     auto future = promise->get_future();
 
-    setBinaryMessageHandler([promise = std::move(promise)](const uint8_t* data,
+    setBinaryMessageHandler([promise = std::move(promise)](const unsigned char* data,
                                                            size_t dataLength) mutable {
       if (static_cast<ServerBinaryOpcode>(data[0]) != ServerBinaryOpcode::SERVICE_CALL_RESPONSE) {
         return;
@@ -498,7 +498,7 @@ public:
     auto future = promise->get_future();
 
     setBinaryMessageHandler(
-      [promise = std::move(promise)](const uint8_t* data, size_t dataLength) mutable {
+      [promise = std::move(promise)](const unsigned char* data, size_t dataLength) mutable {
         if (static_cast<ServerBinaryOpcode>(data[0]) != ServerBinaryOpcode::FETCH_ASSET_RESPONSE) {
           return;
         }

@@ -509,10 +509,10 @@ public:
   explicit Parameter(std::string_view name, const char* value)
       : Parameter(name, std::string_view(value)) {}
   /// @brief Constructor for a byte array parameter.
-  explicit Parameter(std::string_view name, const uint8_t* data, size_t data_length);
+  explicit Parameter(std::string_view name, const unsigned char* data, size_t data_length);
   /// @brief Constructor for a byte array parameter from a vector of bytes.
   explicit Parameter(std::string_view name, const std::vector<unsigned char>& bytes)
-      : Parameter(name, reinterpret_cast<const uint8_t*>(bytes.data()), bytes.size()) {}
+      : Parameter(name, bytes.data(), bytes.size()) {}
   /// @brief Constructor for an array of floating point values.
   explicit Parameter(std::string_view name, const std::vector<double>& values);
   /// @brief Constructor for an array of integer values.

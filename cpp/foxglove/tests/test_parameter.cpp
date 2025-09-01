@@ -119,7 +119,7 @@ TEST_CASE("Parameter construction and access") {
   }
 
   SECTION("parameter with byte array value") {
-    std::array<uint8_t, 4> data = {1, 2, 3, 4};
+    std::array<unsigned char, 4> data = {1, 2, 3, 4};
     foxglove::Parameter param("test_param", data.data(), data.size());
     REQUIRE(param.name() == "test_param");
     REQUIRE(param.type() == foxglove::ParameterType::ByteArray);

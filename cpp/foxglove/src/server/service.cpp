@@ -14,7 +14,7 @@ void ServiceMessageSchema::writeTo(foxglove_service_message_schema* c) const noe
   c->encoding = {this->encoding.data(), this->encoding.length()};
   c->schema.name = {this->schema.name.data(), this->schema.name.length()};
   c->schema.encoding = {this->schema.encoding.data(), this->schema.encoding.length()};
-  c->schema.data = reinterpret_cast<const uint8_t*>(this->schema.data);
+  c->schema.data = this->schema.data;
   c->schema.data_len = this->schema.data_len;
 }
 
@@ -63,7 +63,7 @@ void ServiceResponder::Deleter::operator()(foxglove_service_responder* ptr) cons
 
 void ServiceResponder::respondOk(const unsigned char* data, size_t size) && noexcept {
   auto* ptr = impl_.release();
-  foxglove_service_respond_ok(ptr, {reinterpret_cast<const uint8_t*>(data), size});
+  foxglove_service_respond_ok(ptr, {data, size});
 }
 
 void ServiceResponder::respondError(std::string_view message) && noexcept {

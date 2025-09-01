@@ -177,7 +177,7 @@ export function generateHppSchemas(
       /// @param ptr the destination buffer. must point to at least len valid bytes.
       /// @param len the length of the destination buffer.
       /// @param encoded_len where the serialized length or required capacity will be written to.
-      FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);`,
+      FoxgloveError encode(unsigned char* ptr, size_t len, size_t* encoded_len);`,
             `
       /// @brief Get the ${schema.name} schema.
       ///
@@ -398,13 +398,13 @@ export function generateCppSchemas(schemas: FoxgloveMessageSchema[]): string {
     const snakeName = toSnakeCase(schema.name);
     if (isSameAsCType(schema)) {
       return [
-        `FoxgloveError ${schema.name}::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {`,
+        `FoxgloveError ${schema.name}::encode(unsigned char* ptr, size_t len, size_t* encoded_len) {`,
         `    return FoxgloveError(foxglove_${snakeName}_encode(reinterpret_cast<const foxglove_${snakeName}*>(this), ptr, len, encoded_len));`,
         "}\n",
       ];
     } else {
       return [
-        `FoxgloveError ${schema.name}::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {`,
+        `FoxgloveError ${schema.name}::encode(unsigned char* ptr, size_t len, size_t* encoded_len) {`,
         "    Arena arena;",
         `    foxglove_${snakeName} c_msg;`,
         `    ${toCamelCase(schema.name)}ToC(c_msg, *this, arena);`,

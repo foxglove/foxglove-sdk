@@ -1728,7 +1728,7 @@ typedef struct foxglove_bytes {
   /**
    * Pointer to data
    */
-  const uint8_t *data;
+  const unsigned char *data;
   /**
    * Number of bytes
    */
@@ -1911,7 +1911,7 @@ typedef struct foxglove_server_callbacks {
   void (*on_message_data)(const void *context,
                           uint32_t client_id,
                           uint32_t client_channel_id,
-                          const uint8_t *payload,
+                          const unsigned char *payload,
                           size_t payload_len);
   void (*on_client_unadvertise)(uint32_t client_id, uint32_t client_channel_id, const void *context);
   /**
@@ -2034,7 +2034,7 @@ typedef struct foxglove_server_options {
   /**
    * TLS configuration: PEM-formatted x509 certificate for the server.
    */
-  const uint8_t *tls_cert;
+  const unsigned char *tls_cert;
   /**
    * TLS configuration: Length of cert bytes
    */
@@ -2042,7 +2042,7 @@ typedef struct foxglove_server_options {
   /**
    * TLS configuration: PEM-formatted pkcs8 private key for the server.
    */
-  const uint8_t *tls_key;
+  const unsigned char *tls_key;
   /**
    * TLS configuration: Length of key bytes
    */
@@ -4217,7 +4217,7 @@ void foxglove_channel_metadata_iter_free(struct foxglove_channel_metadata_iterat
  * `log_time` Some(nanoseconds since epoch timestamp) or None to use the current time.
  */
 foxglove_error foxglove_channel_log(const struct foxglove_channel *channel,
-                                    const uint8_t *data,
+                                    const unsigned char *data,
                                     size_t data_len,
                                     const uint64_t *log_time,
                                     FoxgloveSinkId sink_id);

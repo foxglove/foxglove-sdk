@@ -14,7 +14,7 @@ FoxgloveResult<RawChannel> RawChannel::create(
   if (schema) {
     c_schema.name = {schema->name.data(), schema->name.length()};
     c_schema.encoding = {schema->encoding.data(), schema->encoding.length()};
-    c_schema.data = reinterpret_cast<const uint8_t*>(schema->data);
+    c_schema.data = schema->data;
     c_schema.data_len = schema->data_len;
   }
   foxglove_channel_metadata c_metadata = {};
@@ -108,11 +108,7 @@ FoxgloveError RawChannel::log(
   std::optional<uint64_t> sink_id
 ) noexcept {
   foxglove_error error = foxglove_channel_log(
-    impl_.get(),
-    reinterpret_cast<const uint8_t*>(data),
-    data_len,
-    log_time ? &*log_time : nullptr,
-    sink_id ? *sink_id : 0
+    impl_.get(), data, data_len, log_time ? &*log_time : nullptr, sink_id ? *sink_id : 0
   );
   return FoxgloveError(error);
 }

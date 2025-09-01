@@ -15,7 +15,7 @@
 constexpr char URI[] = "ws://localhost:8765";
 
 // Binary representation of std_msgs/msg/String for "hello world"
-constexpr uint8_t HELLO_WORLD_CDR[] = {0,   1,   0,   0,  12,  0,   0,   0,   104, 101,
+constexpr unsigned char HELLO_WORLD_CDR[] = {0,   1,   0,   0,  12,  0,   0,   0,   104, 101,
                                        108, 108, 111, 32, 119, 111, 114, 108, 100, 0};
 constexpr char HELLO_WORLD_JSON[] = "{\"data\": \"hello world\"}";
 constexpr char STD_MSGS_STRING_SCHEMA[] = "data string";
@@ -134,7 +134,7 @@ protected:
 
 class PublisherTest
     : public TestWithExecutor,
-      public testing::WithParamInterface<std::pair<std::string, std::vector<uint8_t>>> {};
+      public testing::WithParamInterface<std::pair<std::string, std::vector<unsigned char>>> {};
 
 class ExistingPublisherTest : public PublisherTest {
 public:
@@ -239,7 +239,7 @@ TEST(SmokeTest, testSubscriptionParallel) {
     std::make_shared<foxglove::test::Client<websocketpp::config::asio_client>>(),
   };
 
-  std::vector<std::future<std::vector<uint8_t>>> futures;
+  std::vector<std::future<std::vector<unsigned char>>> futures;
   for (auto client : clients) {
     futures.push_back(client->waitForChannelMsg(subscriptionId));
   }
@@ -309,12 +309,12 @@ TEST_P(PublisherTest, testPublishing) {
 
 INSTANTIATE_TEST_SUITE_P(
   TestPublishingCDR, PublisherTest,
-  testing::Values(std::make_pair("cdr", std::vector<uint8_t>(HELLO_WORLD_CDR,
+  testing::Values(std::make_pair("cdr", std::vector<unsigned char>(HELLO_WORLD_CDR,
                                                              std::end(HELLO_WORLD_CDR)))));
 
 INSTANTIATE_TEST_SUITE_P(
   TestPublishingJSON, PublisherTest,
-  testing::Values(std::make_pair("json", std::vector<uint8_t>(HELLO_WORLD_JSON,
+  testing::Values(std::make_pair("json", std::vector<unsigned char>(HELLO_WORLD_JSON,
                                                               std::end(HELLO_WORLD_JSON)))));
 
 TEST_P(ExistingPublisherTest, testPublishingWithExistingPublisher) {
@@ -359,12 +359,12 @@ TEST_P(ExistingPublisherTest, testPublishingWithExistingPublisher) {
 
 INSTANTIATE_TEST_SUITE_P(
   ExistingPublisherTestCDR, ExistingPublisherTest,
-  testing::Values(std::make_pair("cdr", std::vector<uint8_t>(HELLO_WORLD_CDR,
+  testing::Values(std::make_pair("cdr", std::vector<unsigned char>(HELLO_WORLD_CDR,
                                                              std::end(HELLO_WORLD_CDR)))));
 
 INSTANTIATE_TEST_SUITE_P(
   ExistingPublisherTestJSON, ExistingPublisherTest,
-  testing::Values(std::make_pair("json", std::vector<uint8_t>(HELLO_WORLD_JSON,
+  testing::Values(std::make_pair("json", std::vector<unsigned char>(HELLO_WORLD_JSON,
                                                               std::end(HELLO_WORLD_JSON)))));
 TEST_F(ParameterTest, testGetAllParams) {
   const std::string requestId = "req-testGetAllParams";
@@ -723,7 +723,7 @@ TEST(SmokeTest, receiveMessagesOfMultipleTransientLocalPublishers) {
   // Set up binary message handler to resolve the promise when all nPub message have been received
   std::promise<void> promise;
   std::atomic<size_t> nReceivedMessages = 0;
-  client->setBinaryMessageHandler([&promise, &nReceivedMessages](const uint8_t*, size_t) {
+  client->setBinaryMessageHandler([&promise, &nReceivedMessages](const unsigned char*, size_t) {
     if (++nReceivedMessages == nPubs) {
       promise.set_value();
     }
