@@ -1,4 +1,4 @@
-use std::{ffi::c_uchar, fs::File, io::BufWriter, mem::ManuallyDrop, sync::Arc};
+use std::{fs::File, io::BufWriter, mem::ManuallyDrop, sync::Arc};
 
 use crate::{
     result_to_c, FoxgloveChannelMetadata, FoxgloveError, FoxgloveKeyValue, FoxgloveSchema,
@@ -492,7 +492,7 @@ pub unsafe extern "C" fn foxglove_channel_metadata_iter_free(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_channel_log(
     channel: Option<&FoxgloveChannel>,
-    data: *const c_uchar,
+    data: *const u8,
     data_len: usize,
     log_time: Option<&u64>,
     sink_id: FoxgloveSinkId,

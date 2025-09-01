@@ -2,7 +2,7 @@ use crate::connection_graph::FoxgloveConnectionGraph;
 use crate::fetch_asset::{FetchAssetHandler, FoxgloveFetchAssetResponder};
 use crate::service::FoxgloveService;
 use bitflags::bitflags;
-use std::ffi::{c_char, c_uchar, c_void, CString};
+use std::ffi::{c_char, c_void, CString};
 use std::mem::ManuallyDrop;
 use std::sync::Arc;
 
@@ -119,11 +119,11 @@ pub struct FoxgloveServerOptions<'a> {
     >,
 
     /// TLS configuration: PEM-formatted x509 certificate for the server.
-    pub tls_cert: *const c_uchar,
+    pub tls_cert: *const u8,
     /// TLS configuration: Length of cert bytes
     pub tls_cert_len: usize,
     /// TLS configuration: PEM-formatted pkcs8 private key for the server.
-    pub tls_key: *const c_uchar,
+    pub tls_key: *const u8,
     /// TLS configuration: Length of key bytes
     pub tls_key_len: usize,
 }
@@ -176,7 +176,7 @@ pub struct FoxgloveServerCallbacks {
             context: *const c_void,
             client_id: u32,
             client_channel_id: u32,
-            payload: *const c_uchar,
+            payload: *const u8,
             payload_len: usize,
         ),
     >,

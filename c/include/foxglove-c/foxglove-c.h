@@ -501,7 +501,7 @@ typedef uint64_t FoxgloveSinkId;
 typedef struct foxglove_schema {
   struct foxglove_string name;
   struct foxglove_string encoding;
-  const unsigned char *data;
+  const uint8_t *data;
   size_t data_len;
 } foxglove_schema;
 
@@ -1728,7 +1728,7 @@ typedef struct foxglove_bytes {
   /**
    * Pointer to data
    */
-  const unsigned char *data;
+  const uint8_t *data;
   /**
    * Number of bytes
    */
@@ -1911,7 +1911,7 @@ typedef struct foxglove_server_callbacks {
   void (*on_message_data)(const void *context,
                           uint32_t client_id,
                           uint32_t client_channel_id,
-                          const unsigned char *payload,
+                          const uint8_t *payload,
                           size_t payload_len);
   void (*on_client_unadvertise)(uint32_t client_id, uint32_t client_channel_id, const void *context);
   /**
@@ -2034,7 +2034,7 @@ typedef struct foxglove_server_options {
   /**
    * TLS configuration: PEM-formatted x509 certificate for the server.
    */
-  const unsigned char *tls_cert;
+  const uint8_t *tls_cert;
   /**
    * TLS configuration: Length of cert bytes
    */
@@ -2042,7 +2042,7 @@ typedef struct foxglove_server_options {
   /**
    * TLS configuration: PEM-formatted pkcs8 private key for the server.
    */
-  const unsigned char *tls_key;
+  const uint8_t *tls_key;
   /**
    * TLS configuration: Length of key bytes
    */
@@ -2172,7 +2172,7 @@ struct foxglove_schema foxglove_arrow_primitive_schema(void);
  * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_arrow_primitive_encode(const struct foxglove_arrow_primitive *msg,
-                                               unsigned char *ptr,
+                                               uint8_t *ptr,
                                                size_t len,
                                                size_t *encoded_len);
 
@@ -2218,7 +2218,7 @@ struct foxglove_schema foxglove_camera_calibration_schema(void);
  * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_camera_calibration_encode(const struct foxglove_camera_calibration *msg,
-                                                  unsigned char *ptr,
+                                                  uint8_t *ptr,
                                                   size_t len,
                                                   size_t *encoded_len);
 
@@ -2264,7 +2264,7 @@ struct foxglove_schema foxglove_circle_annotation_schema(void);
  * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_circle_annotation_encode(const struct foxglove_circle_annotation *msg,
-                                                 unsigned char *ptr,
+                                                 uint8_t *ptr,
                                                  size_t len,
                                                  size_t *encoded_len);
 
@@ -2310,7 +2310,7 @@ struct foxglove_schema foxglove_color_schema(void);
  * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_color_encode(const struct foxglove_color *msg,
-                                     unsigned char *ptr,
+                                     uint8_t *ptr,
                                      size_t len,
                                      size_t *encoded_len);
 
@@ -2356,7 +2356,7 @@ struct foxglove_schema foxglove_compressed_image_schema(void);
  * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_compressed_image_encode(const struct foxglove_compressed_image *msg,
-                                                unsigned char *ptr,
+                                                uint8_t *ptr,
                                                 size_t len,
                                                 size_t *encoded_len);
 
@@ -2402,7 +2402,7 @@ struct foxglove_schema foxglove_compressed_video_schema(void);
  * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_compressed_video_encode(const struct foxglove_compressed_video *msg,
-                                                unsigned char *ptr,
+                                                uint8_t *ptr,
                                                 size_t len,
                                                 size_t *encoded_len);
 
@@ -2448,7 +2448,7 @@ struct foxglove_schema foxglove_cylinder_primitive_schema(void);
  * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_cylinder_primitive_encode(const struct foxglove_cylinder_primitive *msg,
-                                                  unsigned char *ptr,
+                                                  uint8_t *ptr,
                                                   size_t len,
                                                   size_t *encoded_len);
 
@@ -2494,7 +2494,7 @@ struct foxglove_schema foxglove_cube_primitive_schema(void);
  * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_cube_primitive_encode(const struct foxglove_cube_primitive *msg,
-                                              unsigned char *ptr,
+                                              uint8_t *ptr,
                                               size_t len,
                                               size_t *encoded_len);
 
@@ -2540,7 +2540,7 @@ struct foxglove_schema foxglove_frame_transform_schema(void);
  * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_frame_transform_encode(const struct foxglove_frame_transform *msg,
-                                               unsigned char *ptr,
+                                               uint8_t *ptr,
                                                size_t len,
                                                size_t *encoded_len);
 
@@ -2586,7 +2586,7 @@ struct foxglove_schema foxglove_frame_transforms_schema(void);
  * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_frame_transforms_encode(const struct foxglove_frame_transforms *msg,
-                                                unsigned char *ptr,
+                                                uint8_t *ptr,
                                                 size_t len,
                                                 size_t *encoded_len);
 
@@ -2632,7 +2632,7 @@ struct foxglove_schema foxglove_geo_json_schema(void);
  * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_geo_json_encode(const struct foxglove_geo_json *msg,
-                                        unsigned char *ptr,
+                                        uint8_t *ptr,
                                         size_t len,
                                         size_t *encoded_len);
 
@@ -2678,7 +2678,7 @@ struct foxglove_schema foxglove_grid_schema(void);
  * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_grid_encode(const struct foxglove_grid *msg,
-                                    unsigned char *ptr,
+                                    uint8_t *ptr,
                                     size_t len,
                                     size_t *encoded_len);
 
@@ -2724,7 +2724,7 @@ struct foxglove_schema foxglove_voxel_grid_schema(void);
  * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_voxel_grid_encode(const struct foxglove_voxel_grid *msg,
-                                          unsigned char *ptr,
+                                          uint8_t *ptr,
                                           size_t len,
                                           size_t *encoded_len);
 
@@ -2770,7 +2770,7 @@ struct foxglove_schema foxglove_image_annotations_schema(void);
  * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_image_annotations_encode(const struct foxglove_image_annotations *msg,
-                                                 unsigned char *ptr,
+                                                 uint8_t *ptr,
                                                  size_t len,
                                                  size_t *encoded_len);
 
@@ -2816,7 +2816,7 @@ struct foxglove_schema foxglove_key_value_pair_schema(void);
  * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_key_value_pair_encode(const struct foxglove_key_value_pair *msg,
-                                              unsigned char *ptr,
+                                              uint8_t *ptr,
                                               size_t len,
                                               size_t *encoded_len);
 
@@ -2862,7 +2862,7 @@ struct foxglove_schema foxglove_laser_scan_schema(void);
  * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_laser_scan_encode(const struct foxglove_laser_scan *msg,
-                                          unsigned char *ptr,
+                                          uint8_t *ptr,
                                           size_t len,
                                           size_t *encoded_len);
 
@@ -2908,7 +2908,7 @@ struct foxglove_schema foxglove_line_primitive_schema(void);
  * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_line_primitive_encode(const struct foxglove_line_primitive *msg,
-                                              unsigned char *ptr,
+                                              uint8_t *ptr,
                                               size_t len,
                                               size_t *encoded_len);
 
@@ -2954,7 +2954,7 @@ struct foxglove_schema foxglove_location_fix_schema(void);
  * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_location_fix_encode(const struct foxglove_location_fix *msg,
-                                            unsigned char *ptr,
+                                            uint8_t *ptr,
                                             size_t len,
                                             size_t *encoded_len);
 
@@ -3000,7 +3000,7 @@ struct foxglove_schema foxglove_location_fixes_schema(void);
  * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_location_fixes_encode(const struct foxglove_location_fixes *msg,
-                                              unsigned char *ptr,
+                                              uint8_t *ptr,
                                               size_t len,
                                               size_t *encoded_len);
 
@@ -3046,7 +3046,7 @@ struct foxglove_schema foxglove_log_schema(void);
  * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_log_encode(const struct foxglove_log *msg,
-                                   unsigned char *ptr,
+                                   uint8_t *ptr,
                                    size_t len,
                                    size_t *encoded_len);
 
@@ -3092,7 +3092,7 @@ struct foxglove_schema foxglove_scene_entity_deletion_schema(void);
  * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_scene_entity_deletion_encode(const struct foxglove_scene_entity_deletion *msg,
-                                                     unsigned char *ptr,
+                                                     uint8_t *ptr,
                                                      size_t len,
                                                      size_t *encoded_len);
 
@@ -3138,7 +3138,7 @@ struct foxglove_schema foxglove_scene_entity_schema(void);
  * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_scene_entity_encode(const struct foxglove_scene_entity *msg,
-                                            unsigned char *ptr,
+                                            uint8_t *ptr,
                                             size_t len,
                                             size_t *encoded_len);
 
@@ -3184,7 +3184,7 @@ struct foxglove_schema foxglove_scene_update_schema(void);
  * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_scene_update_encode(const struct foxglove_scene_update *msg,
-                                            unsigned char *ptr,
+                                            uint8_t *ptr,
                                             size_t len,
                                             size_t *encoded_len);
 
@@ -3230,7 +3230,7 @@ struct foxglove_schema foxglove_model_primitive_schema(void);
  * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_model_primitive_encode(const struct foxglove_model_primitive *msg,
-                                               unsigned char *ptr,
+                                               uint8_t *ptr,
                                                size_t len,
                                                size_t *encoded_len);
 
@@ -3276,7 +3276,7 @@ struct foxglove_schema foxglove_packed_element_field_schema(void);
  * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_packed_element_field_encode(const struct foxglove_packed_element_field *msg,
-                                                    unsigned char *ptr,
+                                                    uint8_t *ptr,
                                                     size_t len,
                                                     size_t *encoded_len);
 
@@ -3322,7 +3322,7 @@ struct foxglove_schema foxglove_point2_schema(void);
  * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_point2_encode(const struct foxglove_point2 *msg,
-                                      unsigned char *ptr,
+                                      uint8_t *ptr,
                                       size_t len,
                                       size_t *encoded_len);
 
@@ -3368,7 +3368,7 @@ struct foxglove_schema foxglove_point3_schema(void);
  * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_point3_encode(const struct foxglove_point3 *msg,
-                                      unsigned char *ptr,
+                                      uint8_t *ptr,
                                       size_t len,
                                       size_t *encoded_len);
 
@@ -3414,7 +3414,7 @@ struct foxglove_schema foxglove_point_cloud_schema(void);
  * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_point_cloud_encode(const struct foxglove_point_cloud *msg,
-                                           unsigned char *ptr,
+                                           uint8_t *ptr,
                                            size_t len,
                                            size_t *encoded_len);
 
@@ -3460,7 +3460,7 @@ struct foxglove_schema foxglove_points_annotation_schema(void);
  * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_points_annotation_encode(const struct foxglove_points_annotation *msg,
-                                                 unsigned char *ptr,
+                                                 uint8_t *ptr,
                                                  size_t len,
                                                  size_t *encoded_len);
 
@@ -3506,7 +3506,7 @@ struct foxglove_schema foxglove_pose_schema(void);
  * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_pose_encode(const struct foxglove_pose *msg,
-                                    unsigned char *ptr,
+                                    uint8_t *ptr,
                                     size_t len,
                                     size_t *encoded_len);
 
@@ -3552,7 +3552,7 @@ struct foxglove_schema foxglove_pose_in_frame_schema(void);
  * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_pose_in_frame_encode(const struct foxglove_pose_in_frame *msg,
-                                             unsigned char *ptr,
+                                             uint8_t *ptr,
                                              size_t len,
                                              size_t *encoded_len);
 
@@ -3598,7 +3598,7 @@ struct foxglove_schema foxglove_poses_in_frame_schema(void);
  * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_poses_in_frame_encode(const struct foxglove_poses_in_frame *msg,
-                                              unsigned char *ptr,
+                                              uint8_t *ptr,
                                               size_t len,
                                               size_t *encoded_len);
 
@@ -3644,7 +3644,7 @@ struct foxglove_schema foxglove_quaternion_schema(void);
  * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_quaternion_encode(const struct foxglove_quaternion *msg,
-                                          unsigned char *ptr,
+                                          uint8_t *ptr,
                                           size_t len,
                                           size_t *encoded_len);
 
@@ -3690,7 +3690,7 @@ struct foxglove_schema foxglove_raw_audio_schema(void);
  * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_raw_audio_encode(const struct foxglove_raw_audio *msg,
-                                         unsigned char *ptr,
+                                         uint8_t *ptr,
                                          size_t len,
                                          size_t *encoded_len);
 
@@ -3736,7 +3736,7 @@ struct foxglove_schema foxglove_raw_image_schema(void);
  * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_raw_image_encode(const struct foxglove_raw_image *msg,
-                                         unsigned char *ptr,
+                                         uint8_t *ptr,
                                          size_t len,
                                          size_t *encoded_len);
 
@@ -3782,7 +3782,7 @@ struct foxglove_schema foxglove_sphere_primitive_schema(void);
  * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_sphere_primitive_encode(const struct foxglove_sphere_primitive *msg,
-                                                unsigned char *ptr,
+                                                uint8_t *ptr,
                                                 size_t len,
                                                 size_t *encoded_len);
 
@@ -3828,7 +3828,7 @@ struct foxglove_schema foxglove_text_annotation_schema(void);
  * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_text_annotation_encode(const struct foxglove_text_annotation *msg,
-                                               unsigned char *ptr,
+                                               uint8_t *ptr,
                                                size_t len,
                                                size_t *encoded_len);
 
@@ -3874,7 +3874,7 @@ struct foxglove_schema foxglove_text_primitive_schema(void);
  * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_text_primitive_encode(const struct foxglove_text_primitive *msg,
-                                              unsigned char *ptr,
+                                              uint8_t *ptr,
                                               size_t len,
                                               size_t *encoded_len);
 
@@ -3920,7 +3920,7 @@ struct foxglove_schema foxglove_triangle_list_primitive_schema(void);
  * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_triangle_list_primitive_encode(const struct foxglove_triangle_list_primitive *msg,
-                                                       unsigned char *ptr,
+                                                       uint8_t *ptr,
                                                        size_t len,
                                                        size_t *encoded_len);
 
@@ -3966,7 +3966,7 @@ struct foxglove_schema foxglove_vector2_schema(void);
  * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_vector2_encode(const struct foxglove_vector2 *msg,
-                                       unsigned char *ptr,
+                                       uint8_t *ptr,
                                        size_t len,
                                        size_t *encoded_len);
 
@@ -4012,7 +4012,7 @@ struct foxglove_schema foxglove_vector3_schema(void);
  * ptr must be a valid pointer to a memory region at least len bytes long.
  */
 foxglove_error foxglove_vector3_encode(const struct foxglove_vector3 *msg,
-                                       unsigned char *ptr,
+                                       uint8_t *ptr,
                                        size_t len,
                                        size_t *encoded_len);
 
@@ -4217,7 +4217,7 @@ void foxglove_channel_metadata_iter_free(struct foxglove_channel_metadata_iterat
  * `log_time` Some(nanoseconds since epoch timestamp) or None to use the current time.
  */
 foxglove_error foxglove_channel_log(const struct foxglove_channel *channel,
-                                    const unsigned char *data,
+                                    const uint8_t *data,
                                     size_t data_len,
                                     const uint64_t *log_time,
                                     FoxgloveSinkId sink_id);

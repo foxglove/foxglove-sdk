@@ -216,7 +216,7 @@ pub unsafe extern "C" fn foxglove_arrow_primitive_schema() -> FoxgloveSchema {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_arrow_primitive_encode(
     msg: Option<&ArrowPrimitive>,
-    ptr: *mut c_uchar,
+    ptr: *mut u8,
     len: usize,
     encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
@@ -455,7 +455,7 @@ pub unsafe extern "C" fn foxglove_camera_calibration_schema() -> FoxgloveSchema 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_camera_calibration_encode(
     msg: Option<&CameraCalibration>,
-    ptr: *mut c_uchar,
+    ptr: *mut u8,
     len: usize,
     encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
@@ -640,7 +640,7 @@ pub unsafe extern "C" fn foxglove_circle_annotation_schema() -> FoxgloveSchema {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_circle_annotation_encode(
     msg: Option<&CircleAnnotation>,
-    ptr: *mut c_uchar,
+    ptr: *mut u8,
     len: usize,
     encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
@@ -795,7 +795,7 @@ pub unsafe extern "C" fn foxglove_color_schema() -> FoxgloveSchema {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_color_encode(
     msg: Option<&Color>,
-    ptr: *mut c_uchar,
+    ptr: *mut u8,
     len: usize,
     encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
@@ -970,7 +970,7 @@ pub unsafe extern "C" fn foxglove_compressed_image_schema() -> FoxgloveSchema {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_compressed_image_encode(
     msg: Option<&CompressedImage>,
-    ptr: *mut c_uchar,
+    ptr: *mut u8,
     len: usize,
     encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
@@ -1171,7 +1171,7 @@ pub unsafe extern "C" fn foxglove_compressed_video_schema() -> FoxgloveSchema {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_compressed_video_encode(
     msg: Option<&CompressedVideo>,
-    ptr: *mut c_uchar,
+    ptr: *mut u8,
     len: usize,
     encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
@@ -1351,7 +1351,7 @@ pub unsafe extern "C" fn foxglove_cylinder_primitive_schema() -> FoxgloveSchema 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_cylinder_primitive_encode(
     msg: Option<&CylinderPrimitive>,
-    ptr: *mut c_uchar,
+    ptr: *mut u8,
     len: usize,
     encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
@@ -1523,7 +1523,7 @@ pub unsafe extern "C" fn foxglove_cube_primitive_schema() -> FoxgloveSchema {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_cube_primitive_encode(
     msg: Option<&CubePrimitive>,
-    ptr: *mut c_uchar,
+    ptr: *mut u8,
     len: usize,
     encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
@@ -1711,7 +1711,7 @@ pub unsafe extern "C" fn foxglove_frame_transform_schema() -> FoxgloveSchema {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_frame_transform_encode(
     msg: Option<&FrameTransform>,
-    ptr: *mut c_uchar,
+    ptr: *mut u8,
     len: usize,
     encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
@@ -1859,7 +1859,7 @@ pub unsafe extern "C" fn foxglove_frame_transforms_schema() -> FoxgloveSchema {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_frame_transforms_encode(
     msg: Option<&FrameTransforms>,
-    ptr: *mut c_uchar,
+    ptr: *mut u8,
     len: usize,
     encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
@@ -2010,7 +2010,7 @@ pub unsafe extern "C" fn foxglove_geo_json_schema() -> FoxgloveSchema {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_geo_json_encode(
     msg: Option<&GeoJson>,
-    ptr: *mut c_uchar,
+    ptr: *mut u8,
     len: usize,
     encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
@@ -2211,7 +2211,7 @@ pub unsafe extern "C" fn foxglove_grid_schema() -> FoxgloveSchema {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_grid_encode(
     msg: Option<&Grid>,
-    ptr: *mut c_uchar,
+    ptr: *mut u8,
     len: usize,
     encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
@@ -2421,7 +2421,7 @@ pub unsafe extern "C" fn foxglove_voxel_grid_schema() -> FoxgloveSchema {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_voxel_grid_encode(
     msg: Option<&VoxelGrid>,
-    ptr: *mut c_uchar,
+    ptr: *mut u8,
     len: usize,
     encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
@@ -2581,7 +2581,7 @@ pub unsafe extern "C" fn foxglove_image_annotations_schema() -> FoxgloveSchema {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_image_annotations_encode(
     msg: Option<&ImageAnnotations>,
-    ptr: *mut c_uchar,
+    ptr: *mut u8,
     len: usize,
     encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
@@ -2734,7 +2734,7 @@ pub unsafe extern "C" fn foxglove_key_value_pair_schema() -> FoxgloveSchema {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_key_value_pair_encode(
     msg: Option<&KeyValuePair>,
-    ptr: *mut c_uchar,
+    ptr: *mut u8,
     len: usize,
     encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
@@ -2921,7 +2921,7 @@ pub unsafe extern "C" fn foxglove_laser_scan_schema() -> FoxgloveSchema {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_laser_scan_encode(
     msg: Option<&LaserScan>,
-    ptr: *mut c_uchar,
+    ptr: *mut u8,
     len: usize,
     encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
@@ -3116,7 +3116,7 @@ pub unsafe extern "C" fn foxglove_line_primitive_schema() -> FoxgloveSchema {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_line_primitive_encode(
     msg: Option<&LinePrimitive>,
-    ptr: *mut c_uchar,
+    ptr: *mut u8,
     len: usize,
     encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
@@ -3307,7 +3307,7 @@ pub unsafe extern "C" fn foxglove_location_fix_schema() -> FoxgloveSchema {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_location_fix_encode(
     msg: Option<&LocationFix>,
-    ptr: *mut c_uchar,
+    ptr: *mut u8,
     len: usize,
     encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
@@ -3455,7 +3455,7 @@ pub unsafe extern "C" fn foxglove_location_fixes_schema() -> FoxgloveSchema {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_location_fixes_encode(
     msg: Option<&LocationFixes>,
-    ptr: *mut c_uchar,
+    ptr: *mut u8,
     len: usize,
     encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
@@ -3630,7 +3630,7 @@ pub unsafe extern "C" fn foxglove_log_schema() -> FoxgloveSchema {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_log_encode(
     msg: Option<&Log>,
-    ptr: *mut c_uchar,
+    ptr: *mut u8,
     len: usize,
     encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
@@ -3786,7 +3786,7 @@ pub unsafe extern "C" fn foxglove_scene_entity_deletion_schema() -> FoxgloveSche
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_scene_entity_deletion_encode(
     msg: Option<&SceneEntityDeletion>,
-    ptr: *mut c_uchar,
+    ptr: *mut u8,
     len: usize,
     encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
@@ -4009,7 +4009,7 @@ pub unsafe extern "C" fn foxglove_scene_entity_schema() -> FoxgloveSchema {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_scene_entity_encode(
     msg: Option<&SceneEntity>,
-    ptr: *mut c_uchar,
+    ptr: *mut u8,
     len: usize,
     encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
@@ -4162,7 +4162,7 @@ pub unsafe extern "C" fn foxglove_scene_update_schema() -> FoxgloveSchema {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_scene_update_encode(
     msg: Option<&SceneUpdate>,
-    ptr: *mut c_uchar,
+    ptr: *mut u8,
     len: usize,
     encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
@@ -4359,7 +4359,7 @@ pub unsafe extern "C" fn foxglove_model_primitive_schema() -> FoxgloveSchema {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_model_primitive_encode(
     msg: Option<&ModelPrimitive>,
-    ptr: *mut c_uchar,
+    ptr: *mut u8,
     len: usize,
     encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
@@ -4515,7 +4515,7 @@ pub unsafe extern "C" fn foxglove_packed_element_field_schema() -> FoxgloveSchem
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_packed_element_field_encode(
     msg: Option<&PackedElementField>,
-    ptr: *mut c_uchar,
+    ptr: *mut u8,
     len: usize,
     encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
@@ -4662,7 +4662,7 @@ pub unsafe extern "C" fn foxglove_point2_schema() -> FoxgloveSchema {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_point2_encode(
     msg: Option<&Point2>,
-    ptr: *mut c_uchar,
+    ptr: *mut u8,
     len: usize,
     encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
@@ -4813,7 +4813,7 @@ pub unsafe extern "C" fn foxglove_point3_schema() -> FoxgloveSchema {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_point3_encode(
     msg: Option<&Point3>,
-    ptr: *mut c_uchar,
+    ptr: *mut u8,
     len: usize,
     encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
@@ -4994,7 +4994,7 @@ pub unsafe extern "C" fn foxglove_point_cloud_schema() -> FoxgloveSchema {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_point_cloud_encode(
     msg: Option<&PointCloud>,
-    ptr: *mut c_uchar,
+    ptr: *mut u8,
     len: usize,
     encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
@@ -5185,7 +5185,7 @@ pub unsafe extern "C" fn foxglove_points_annotation_schema() -> FoxgloveSchema {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_points_annotation_encode(
     msg: Option<&PointsAnnotation>,
-    ptr: *mut c_uchar,
+    ptr: *mut u8,
     len: usize,
     encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
@@ -5345,7 +5345,7 @@ pub unsafe extern "C" fn foxglove_pose_schema() -> FoxgloveSchema {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_pose_encode(
     msg: Option<&Pose>,
-    ptr: *mut c_uchar,
+    ptr: *mut u8,
     len: usize,
     encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
@@ -5511,7 +5511,7 @@ pub unsafe extern "C" fn foxglove_pose_in_frame_schema() -> FoxgloveSchema {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_pose_in_frame_encode(
     msg: Option<&PoseInFrame>,
-    ptr: *mut c_uchar,
+    ptr: *mut u8,
     len: usize,
     encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
@@ -5674,7 +5674,7 @@ pub unsafe extern "C" fn foxglove_poses_in_frame_schema() -> FoxgloveSchema {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_poses_in_frame_encode(
     msg: Option<&PosesInFrame>,
-    ptr: *mut c_uchar,
+    ptr: *mut u8,
     len: usize,
     encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
@@ -5830,7 +5830,7 @@ pub unsafe extern "C" fn foxglove_quaternion_schema() -> FoxgloveSchema {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_quaternion_encode(
     msg: Option<&Quaternion>,
-    ptr: *mut c_uchar,
+    ptr: *mut u8,
     len: usize,
     encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
@@ -5998,7 +5998,7 @@ pub unsafe extern "C" fn foxglove_raw_audio_schema() -> FoxgloveSchema {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_raw_audio_encode(
     msg: Option<&RawAudio>,
-    ptr: *mut c_uchar,
+    ptr: *mut u8,
     len: usize,
     encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
@@ -6234,7 +6234,7 @@ pub unsafe extern "C" fn foxglove_raw_image_schema() -> FoxgloveSchema {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_raw_image_encode(
     msg: Option<&RawImage>,
-    ptr: *mut c_uchar,
+    ptr: *mut u8,
     len: usize,
     encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
@@ -6406,7 +6406,7 @@ pub unsafe extern "C" fn foxglove_sphere_primitive_schema() -> FoxgloveSchema {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_sphere_primitive_encode(
     msg: Option<&SpherePrimitive>,
-    ptr: *mut c_uchar,
+    ptr: *mut u8,
     len: usize,
     encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
@@ -6593,7 +6593,7 @@ pub unsafe extern "C" fn foxglove_text_annotation_schema() -> FoxgloveSchema {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_text_annotation_encode(
     msg: Option<&TextAnnotation>,
-    ptr: *mut c_uchar,
+    ptr: *mut u8,
     len: usize,
     encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
@@ -6773,7 +6773,7 @@ pub unsafe extern "C" fn foxglove_text_primitive_schema() -> FoxgloveSchema {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_text_primitive_encode(
     msg: Option<&TextPrimitive>,
-    ptr: *mut c_uchar,
+    ptr: *mut u8,
     len: usize,
     encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
@@ -6959,7 +6959,7 @@ pub unsafe extern "C" fn foxglove_triangle_list_primitive_schema() -> FoxgloveSc
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_triangle_list_primitive_encode(
     msg: Option<&TriangleListPrimitive>,
-    ptr: *mut c_uchar,
+    ptr: *mut u8,
     len: usize,
     encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
@@ -7106,7 +7106,7 @@ pub unsafe extern "C" fn foxglove_vector2_schema() -> FoxgloveSchema {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_vector2_encode(
     msg: Option<&Vector2>,
-    ptr: *mut c_uchar,
+    ptr: *mut u8,
     len: usize,
     encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
@@ -7257,7 +7257,7 @@ pub unsafe extern "C" fn foxglove_vector3_schema() -> FoxgloveSchema {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_vector3_encode(
     msg: Option<&Vector3>,
-    ptr: *mut c_uchar,
+    ptr: *mut u8,
     len: usize,
     encoded_len: Option<&mut usize>,
 ) -> FoxgloveError {
