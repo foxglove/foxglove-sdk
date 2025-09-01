@@ -51,7 +51,7 @@ inline std::vector<unsigned char> readFile(const std::string& filepath) {
   file.seekg(0, std::ios::beg);
 
   std::vector<unsigned char> buffer(length);
-  if (!file.read(buffer.data(), length)) {
+  if (!file.read(reinterpret_cast<char*>(buffer.data()), length)) {
     throw std::runtime_error("Failed to read file: " + filepath);
   }
 

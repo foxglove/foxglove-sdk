@@ -294,7 +294,7 @@ public:
 
   void publish(ClientChannelId channelId, const unsigned char* buffer, size_t size) {
     std::vector<unsigned char> payload(1 + 4 + size);
-    payload[0] = unsigned char(ClientBinaryOpcode::MESSAGE_DATA);
+    payload[0] = ClientBinaryOpcode::MESSAGE_DATA;
     WriteUint32LE(payload.data() + 1, channelId);
     std::memcpy(payload.data() + 1 + 4, buffer, size);
     sendBinary(payload.data(), payload.size());
