@@ -27,22 +27,8 @@ static std::string prependNodeNameToParamName(const std::string& paramName,
   return nodeName + PARAM_SEP + paramName;
 }
 
-static std::vector<std::byte> toByteArray(const std::vector<uint8_t>& arr) {
-  std::vector<std::byte> result;
-  result.reserve(arr.size());
-  for (const auto& byte : arr) {
-    result.emplace_back(std::byte{byte});
-  }
-  return result;
-}
-
-static std::vector<uint8_t> toUnsignedIntArray(const std::vector<std::byte>& arr) {
-  std::vector<uint8_t> result;
-  result.reserve(arr.size());
-  for (const auto& byte : arr) {
-    result.emplace_back(static_cast<uint8_t>(byte));
-  }
-  return result;
+static std::vector<uint8_t> toUnsignedIntArray(const std::vector<unsigned char>& arr) {
+  return {arr.begin(), arr.end()};
 }
 
 static rclcpp::Parameter toRosParam(const foxglove::Parameter& p) {
@@ -122,7 +108,7 @@ static foxglove::Parameter fromRosParam(const rclcpp::Parameter& p) {
   } else if (type == rclcpp::ParameterType::PARAMETER_STRING) {
     return foxglove::Parameter(p.get_name(), p.as_string());
   } else if (type == rclcpp::ParameterType::PARAMETER_BYTE_ARRAY) {
-    return foxglove::Parameter(p.get_name(), toByteArray(p.as_byte_array()));
+    return foxglove::Parameter(p.get_name(), p.as_byte_array());
   }
 
   // Handle arrays

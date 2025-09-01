@@ -984,8 +984,8 @@ void validateFetchAssetOkResponse(
   REQUIRE(response.size() >= 1 + 4 + 1 + 4);
   REQUIRE(static_cast<uint8_t>(bytes[0]) == 4);  // Fetch asset response opcode
   REQUIRE(readUint32LE(bytes, 1) == request_id);
-  REQUIRE(bytes[5] == unsigned char{0});     // Success
-  REQUIRE(readUint32LE(bytes, 6) == 0);  // Error message length
+  REQUIRE(bytes[5] == unsigned char{0});  // Success
+  REQUIRE(readUint32LE(bytes, 6) == 0);   // Error message length
   REQUIRE(response.size() >= 10 + payload.size());
   REQUIRE(memcmp(response.data() + 10, payload.data(), payload.size()) == 0);
 }

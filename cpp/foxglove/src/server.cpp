@@ -96,7 +96,10 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
         try {
           (static_cast<const WebSocketServerCallbacks*>(context))
             ->onMessageData(
-              client_id, client_channel_id, reinterpret_cast<const unsigned char*>(payload), payload_len
+              client_id,
+              client_channel_id,
+              reinterpret_cast<const unsigned char*>(payload),
+              payload_len
             );
         } catch (const std::exception& exc) {
           warn() << "onMessageData callback failed: " << exc.what();

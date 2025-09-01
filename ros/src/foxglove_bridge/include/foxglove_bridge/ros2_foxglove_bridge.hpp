@@ -44,7 +44,7 @@ struct ClientAdvertisement {
 class ClientChannelError : public std::runtime_error {
 public:
   ClientChannelError(const std::string& msg)
-      : std::runtime_error(msg){};
+      : std::runtime_error(msg) {};
 };
 
 class FoxgloveBridge : public rclcpp::Node {
@@ -116,7 +116,7 @@ private:
 
   void clientUnadvertise(ClientId clientId, ChannelId clientChannelId);
 
-  void clientMessage(ClientId clientId, ChannelId clientChannelId, const std::byte* data,
+  void clientMessage(ClientId clientId, ChannelId clientChannelId, const unsigned char* data,
                      size_t dataLen);
 
   std::vector<foxglove::Parameter> setParameters(

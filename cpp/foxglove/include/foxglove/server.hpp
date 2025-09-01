@@ -1,4 +1,4 @@
-#pragma once
+t #pragma once
 
 #include <foxglove/context.hpp>
 #include <foxglove/error.hpp>
@@ -13,7 +13,7 @@
 #include <optional>
 #include <string>
 
-enum foxglove_error : uint8_t;
+  enum foxglove_error : uint8_t;
 struct foxglove_websocket_server;
 struct foxglove_connection_graph;
 struct foxglove_client;
@@ -119,8 +119,9 @@ struct WebSocketServerCallbacks {
   std::function<void(uint32_t client_id, const ClientChannel& channel)> onClientAdvertise;
 
   /// @brief Callback invoked when a client message is received
-  std::function<
-    void(uint32_t client_id, uint32_t client_channel_id, const unsigned char* data, size_t data_len)>
+  std::function<void(
+    uint32_t client_id, uint32_t client_channel_id, const unsigned char* data, size_t data_len
+  )>
     onMessageData;
 
   /// @brief Callback invoked when a client unadvertises a client channel.

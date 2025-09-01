@@ -61,14 +61,14 @@ struct ServiceRequest {
   ServiceId serviceId;
   CallId callId;
   std::string encoding;
-  std::vector<std::byte> data;
+  std::vector<unsigned char> data;
 };
 
 struct ServiceResponse {
   ServiceId serviceId;
   CallId callId;
   std::string encoding;
-  std::vector<std::byte> data;
+  std::vector<unsigned char> data;
 };
 
 struct FetchAssetResponse {
