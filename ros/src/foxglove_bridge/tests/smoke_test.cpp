@@ -16,7 +16,7 @@ constexpr char URI[] = "ws://localhost:8765";
 
 // Binary representation of std_msgs/msg/String for "hello world"
 constexpr unsigned char HELLO_WORLD_CDR[] = {0,   1,   0,   0,  12,  0,   0,   0,   104, 101,
-                                       108, 108, 111, 32, 119, 111, 114, 108, 100, 0};
+                                             108, 108, 111, 32, 119, 111, 114, 108, 100, 0};
 constexpr char HELLO_WORLD_JSON[] = "{\"data\": \"hello world\"}";
 constexpr char STD_MSGS_STRING_SCHEMA[] = "data string";
 
@@ -310,12 +310,12 @@ TEST_P(PublisherTest, testPublishing) {
 INSTANTIATE_TEST_SUITE_P(
   TestPublishingCDR, PublisherTest,
   testing::Values(std::make_pair("cdr", std::vector<unsigned char>(HELLO_WORLD_CDR,
-                                                             std::end(HELLO_WORLD_CDR)))));
+                                                                   std::end(HELLO_WORLD_CDR)))));
 
 INSTANTIATE_TEST_SUITE_P(
   TestPublishingJSON, PublisherTest,
   testing::Values(std::make_pair("json", std::vector<unsigned char>(HELLO_WORLD_JSON,
-                                                              std::end(HELLO_WORLD_JSON)))));
+                                                                    std::end(HELLO_WORLD_JSON)))));
 
 TEST_P(ExistingPublisherTest, testPublishingWithExistingPublisher) {
   const auto& [encoding, message] = GetParam();
@@ -360,12 +360,12 @@ TEST_P(ExistingPublisherTest, testPublishingWithExistingPublisher) {
 INSTANTIATE_TEST_SUITE_P(
   ExistingPublisherTestCDR, ExistingPublisherTest,
   testing::Values(std::make_pair("cdr", std::vector<unsigned char>(HELLO_WORLD_CDR,
-                                                             std::end(HELLO_WORLD_CDR)))));
+                                                                   std::end(HELLO_WORLD_CDR)))));
 
 INSTANTIATE_TEST_SUITE_P(
   ExistingPublisherTestJSON, ExistingPublisherTest,
   testing::Values(std::make_pair("json", std::vector<unsigned char>(HELLO_WORLD_JSON,
-                                                              std::end(HELLO_WORLD_JSON)))));
+                                                                    std::end(HELLO_WORLD_JSON)))));
 TEST_F(ParameterTest, testGetAllParams) {
   const std::string requestId = "req-testGetAllParams";
   auto future = _wsClient->waitForParameters(requestId);

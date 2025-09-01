@@ -255,7 +255,8 @@ public:
         std::shared_lock<std::shared_mutex> lock(_mutex);
         const auto& payload = msg->get_payload();
         if (_binaryMessageHandler) {
-          _binaryMessageHandler(reinterpret_cast<const unsigned char*>(payload.data()), payload.size());
+          _binaryMessageHandler(reinterpret_cast<const unsigned char*>(payload.data()),
+                                payload.size());
         }
       } break;
       default:
