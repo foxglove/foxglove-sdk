@@ -9,7 +9,7 @@ function primitiveToCpp(type: FoxglovePrimitive) {
     case "uint32":
       return "uint32_t";
     case "bytes":
-      return "std::vector<unsigned char>";
+      return "std::vector<uint8_t>";
     case "string":
       return "std::string";
     case "boolean":
@@ -177,7 +177,7 @@ export function generateHppSchemas(
       /// @param ptr the destination buffer. must point to at least len valid bytes.
       /// @param len the length of the destination buffer.
       /// @param encoded_len where the serialized length or required capacity will be written to.
-      FoxgloveError encode(unsigned char* ptr, size_t len, size_t* encoded_len);`,
+      FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);`,
             `
       /// @brief Get the ${schema.name} schema.
       ///
@@ -309,7 +309,7 @@ function cppToC(schema: FoxgloveMessageSchema, copyTypes: Set<string>): string[]
         if (field.type.name === "string") {
           return `dest.${dstName} = {src.${srcName}.data(), src.${srcName}.size()};`;
         } else if (field.type.name === "bytes") {
-          return `dest.${dstName} = reinterpret_cast<const unsigned char *>(src.${srcName}.data());\n    dest.${dstName}_len = src.${srcName}.size();`;
+          return `dest.${dstName} = src.${srcName}.data();\n    dest.${dstName}_len = src.${srcName}.size();`;
         }
         return `dest.${dstName} = src.${srcName};`;
       case "enum":
@@ -398,13 +398,13 @@ export function generateCppSchemas(schemas: FoxgloveMessageSchema[]): string {
     const snakeName = toSnakeCase(schema.name);
     if (isSameAsCType(schema)) {
       return [
-        `FoxgloveError ${schema.name}::encode(unsigned char* ptr, size_t len, size_t* encoded_len) {`,
+        `FoxgloveError ${schema.name}::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {`,
         `    return FoxgloveError(foxglove_${snakeName}_encode(reinterpret_cast<const foxglove_${snakeName}*>(this), ptr, len, encoded_len));`,
         "}\n",
       ];
     } else {
       return [
-        `FoxgloveError ${schema.name}::encode(unsigned char* ptr, size_t len, size_t* encoded_len) {`,
+        `FoxgloveError ${schema.name}::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {`,
         "    Arena arena;",
         `    foxglove_${snakeName} c_msg;`,
         `    ${toCamelCase(schema.name)}ToC(c_msg, *this, arena);`,
@@ -422,7 +422,7 @@ export function generateCppSchemas(schemas: FoxgloveMessageSchema[]): string {
       "    Schema result;",
       "    result.name = std::string(c_schema.name.data, c_schema.name.len);",
       "    result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);",
-      "    result.data = reinterpret_cast<const unsigned char*>(c_schema.data);",
+      "    result.data = c_schema.data;",
       "    result.data_len = c_schema.data_len;",
       "    return result;",
       "}\n",
