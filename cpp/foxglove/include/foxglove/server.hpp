@@ -1,4 +1,4 @@
-t #pragma once
+#pragma once
 
 #include <foxglove/context.hpp>
 #include <foxglove/error.hpp>
@@ -13,7 +13,7 @@ t #pragma once
 #include <optional>
 #include <string>
 
-  enum foxglove_error : uint8_t;
+enum foxglove_error : uint8_t;
 struct foxglove_websocket_server;
 struct foxglove_connection_graph;
 struct foxglove_client;

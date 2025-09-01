@@ -753,10 +753,10 @@ foxglove::ServiceSchema makeServiceSchema(std::string_view name) {
 }
 
 void writeUint32LE(std::vector<unsigned char>& buffer, uint32_t value) {
-  buffer.push_back(static_cast<unsigned char>(value & 0xffU));
-  buffer.push_back(static_cast<unsigned char>((value >> 8) & 0xffU));
-  buffer.push_back(static_cast<unsigned char>((value >> 16) & 0xffU));
-  buffer.push_back(static_cast<unsigned char>((value >> 24) & 0xffU));
+  buffer.push_back(value & 0xffU);
+  buffer.push_back((value >> 8) & 0xffU);
+  buffer.push_back((value >> 16) & 0xffU);
+  buffer.push_back((value >> 24) & 0xffU);
 }
 
 uint32_t readUint32LE(const std::vector<unsigned char>& buffer, size_t offset) {
@@ -778,7 +778,7 @@ std::vector<unsigned char> makeServiceRequest(
   writeUint32LE(buffer, call_id);
   writeUint32LE(buffer, static_cast<uint32_t>(encoding.size()));
   for (char c : encoding) {
-    buffer.emplace_back(static_cast<unsigned char>(c));
+    buffer.emplace_back(c);
   }
   for (auto b : payload) {
     buffer.emplace_back(b);
@@ -984,8 +984,8 @@ void validateFetchAssetOkResponse(
   REQUIRE(response.size() >= 1 + 4 + 1 + 4);
   REQUIRE(static_cast<uint8_t>(bytes[0]) == 4);  // Fetch asset response opcode
   REQUIRE(readUint32LE(bytes, 1) == request_id);
-  REQUIRE(bytes[5] == unsigned char{0});  // Success
-  REQUIRE(readUint32LE(bytes, 6) == 0);   // Error message length
+  REQUIRE(bytes[5] == 0);                // Success
+  REQUIRE(readUint32LE(bytes, 6) == 0);  // Error message length
   REQUIRE(response.size() >= 10 + payload.size());
   REQUIRE(memcmp(response.data() + 10, payload.data(), payload.size()) == 0);
 }
@@ -1055,7 +1055,7 @@ void validateFetchAssetErrorResponse(
   REQUIRE(response.size() >= 1 + 4 + 1 + 4);
   REQUIRE(static_cast<uint8_t>(bytes[0]) == 4);  // Fetch asset response opcode
   REQUIRE(readUint32LE(bytes, 1) == request_id);
-  REQUIRE(bytes[5] == unsigned char{1});  // Error
+  REQUIRE(bytes[5] == 1);  // Error
   REQUIRE(readUint32LE(bytes, 6) == error_message.size());
   REQUIRE(response.size() >= 10 + error_message.size());
   REQUIRE(memcmp(response.data() + 10, error_message.data(), error_message.size()) == 0);
