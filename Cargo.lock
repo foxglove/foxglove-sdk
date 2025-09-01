@@ -696,7 +696,7 @@ name = "example_channelless"
 version = "0.0.0"
 dependencies = [
  "env_logger",
- "foxglove 0.13.0",
+ "foxglove 0.14.0",
  "mcap",
  "schemars 1.0.4",
  "serde",
@@ -708,7 +708,7 @@ version = "0.0.0"
 dependencies = [
  "clap",
  "env_logger",
- "foxglove 0.13.0",
+ "foxglove 0.14.0",
  "serde_json",
  "tokio",
  "tokio-util",
@@ -721,7 +721,7 @@ dependencies = [
  "clap",
  "ctrlc",
  "env_logger",
- "foxglove 0.13.0",
+ "foxglove 0.14.0",
  "schemars 1.0.4",
  "serde",
 ]
@@ -732,7 +732,7 @@ version = "0.0.0"
 dependencies = [
  "clap",
  "env_logger",
- "foxglove 0.13.0",
+ "foxglove 0.14.0",
  "tokio",
  "tokio-util",
 ]
@@ -741,7 +741,7 @@ dependencies = [
 name = "example_prost"
 version = "0.0.0"
 dependencies = [
- "foxglove 0.13.0",
+ "foxglove 0.14.0",
  "prost",
  "prost-build",
 ]
@@ -752,16 +752,16 @@ version = "0.0.0"
 dependencies = [
  "ctrlc",
  "env_logger",
- "foxglove 0.13.0",
+ "foxglove 0.14.0",
 ]
 
 [[package]]
 name = "example_structured_logging"
-version = "0.13.0"
+version = "0.14.0"
 dependencies = [
  "bytes",
  "env_logger",
- "foxglove 0.13.0",
+ "foxglove 0.14.0",
  "schemars 1.0.4",
  "serde",
  "serde_json",
@@ -773,7 +773,7 @@ version = "0.0.0"
 dependencies = [
  "clap",
  "env_logger",
- "foxglove 0.13.0",
+ "foxglove 0.14.0",
  "quaternion",
  "tokio",
 ]
@@ -785,7 +785,7 @@ dependencies = [
  "clap",
  "ctrlc",
  "env_logger",
- "foxglove 0.13.0",
+ "foxglove 0.14.0",
 ]
 
 [[package]]
@@ -794,7 +794,7 @@ version = "0.0.0"
 dependencies = [
  "clap",
  "env_logger",
- "foxglove 0.13.0",
+ "foxglove 0.14.0",
  "tokio",
 ]
 
@@ -806,7 +806,7 @@ dependencies = [
  "bytes",
  "clap",
  "env_logger",
- "foxglove 0.13.0",
+ "foxglove 0.14.0",
  "futures",
  "parking_lot",
  "schemars 1.0.4",
@@ -827,7 +827,7 @@ dependencies = [
  "clap",
  "ctrlc",
  "env_logger",
- "foxglove 0.13.0",
+ "foxglove 0.14.0",
  "mcap",
  "tracing",
 ]
@@ -894,7 +894,7 @@ dependencies = [
 
 [[package]]
 name = "foxglove"
-version = "0.13.0"
+version = "0.14.0"
 dependencies = [
  "arc-swap",
  "assert_matches",
@@ -905,7 +905,7 @@ dependencies = [
  "chrono",
  "delegate",
  "flume",
- "foxglove_derive 0.13.0",
+ "foxglove_derive 0.14.0",
  "futures-util",
  "insta",
  "maplit",
@@ -934,11 +934,11 @@ dependencies = [
 
 [[package]]
 name = "foxglove-sdk-python"
-version = "0.13.0"
+version = "0.14.0"
 dependencies = [
  "base64",
  "bytes",
- "foxglove 0.13.0",
+ "foxglove 0.14.0",
  "log",
  "prost-types",
  "pyo3",
@@ -953,13 +953,13 @@ dependencies = [
 
 [[package]]
 name = "foxglove_c"
-version = "0.13.0"
+version = "0.14.0"
 dependencies = [
  "base64",
  "bitflags",
  "cbindgen",
  "env_logger",
- "foxglove 0.13.0",
+ "foxglove 0.14.0",
  "log",
  "maplit",
  "mcap",
@@ -992,10 +992,10 @@ dependencies = [
 
 [[package]]
 name = "foxglove_derive"
-version = "0.13.0"
+version = "0.14.0"
 dependencies = [
  "bytes",
- "foxglove 0.13.0",
+ "foxglove 0.14.0",
  "proc-macro2",
  "prost",
  "prost-reflect",
