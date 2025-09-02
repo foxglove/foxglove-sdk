@@ -1,10 +1,11 @@
+use std::io;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
 use anyhow::{Context, Result};
 use clap::Parser;
 use foxglove::schemas::{RawImage, Timestamp};
-use foxglove::LazyChannel;
+use foxglove::{Encode, LazyChannel};
 use opencv::{
     core::Mat,
     prelude::*,
@@ -26,6 +27,7 @@ static IMAGE_CHANNEL: LazyChannel<RawImage> = LazyChannel::new("/camera/image");
 struct CameraCapture {
     cap: VideoCapture,
     camera_id: String,
+    info: CameraInfo,
 }
 
 impl CameraCapture {
@@ -45,13 +47,23 @@ impl CameraCapture {
         let width = cap.get(opencv::videoio::CAP_PROP_FRAME_WIDTH)?;
         let height = cap.get(opencv::videoio::CAP_PROP_FRAME_HEIGHT)?;
         let fps = cap.get(opencv::videoio::CAP_PROP_FPS)?;
+        let fourcc = cap.get(opencv::videoio::CAP_PROP_FOURCC)?;
 
         println!("Camera connected successfully:");
         println!("  ID/Path: {}", camera_id);
         println!("  Resolution: {} x {}", width as i32, height as i32);
         println!("  Frame Rate: {:.1} fps", fps);
 
-        Ok(Self { cap, camera_id })
+        Ok(Self {
+            cap,
+            camera_id,
+            info: CameraInfo {
+                fourcc,
+                fps,
+                frames_recorded: 0,
+                failures_recorded: 0,
+            },
+        })
     }
 
     fn read_frame(&mut self) -> Result<Option<Mat>> {
@@ -68,6 +80,39 @@ impl CameraCapture {
         Ok(Some(frame))
     }
 }
+
+struct CameraInfo {
+    fourcc: f64,
+    fps: f64,
+    frames_recorded: u64,
+    failures_recorded: u64,
+}
+
+impl Encode for CameraInfo {
+    type Error = io::Error;
+
+    fn get_schema() -> Option<foxglove::Schema> {
+        None
+    }
+
+    fn get_message_encoding() -> String {
+        "json".to_string()
+    }
+
+    fn encode(
+        &self,
+        buf: &mut impl foxglove::bytes::BufMut,
+    ) -> std::result::Result<(), Self::Error> {
+        let msg = format!(
+            "{{\"fourcc\": {}, \"fps\": {}, \"frames_recorded\": {}, \"failures_recorded\": {}}}",
+            self.fourcc, self.fps, self.frames_recorded, self.failures_recorded
+        );
+        buf.put_slice(msg.as_bytes());
+        Ok(())
+    }
+}
+
+static INFO_CHANNEL: LazyChannel<CameraInfo> = LazyChannel::new("/camera/info");
 
 fn create_raw_image_message(frame: &Mat) -> Result<RawImage> {
     let height = frame.rows() as u32;
@@ -89,11 +134,24 @@ fn create_raw_image_message(frame: &Mat) -> Result<RawImage> {
     })
 }
 
+fn create_info_message(camera: &CameraCapture) -> CameraInfo {
+    CameraInfo {
+        fourcc: camera.info.fourcc,
+        fps: camera.info.fps,
+        frames_recorded: camera.info.frames_recorded,
+        failures_recorded: camera.info.failures_recorded,
+    }
+}
+
 fn camera_loop(mut camera: CameraCapture, done: Arc<AtomicBool>) -> Result<()> {
     while !done.load(Ordering::Relaxed) {
         match camera.read_frame() {
             Ok(Some(frame)) => match create_raw_image_message(&frame) {
                 Ok(img_msg) => {
+                    camera.info.frames_recorded += 1;
+                    let info = create_info_message(&camera);
+                    INFO_CHANNEL.log(&info);
+
                     IMAGE_CHANNEL.log(&img_msg);
                 }
                 Err(e) => {
@@ -101,6 +159,7 @@ fn camera_loop(mut camera: CameraCapture, done: Arc<AtomicBool>) -> Result<()> {
                 }
             },
             Ok(None) => {
+                camera.info.failures_recorded += 1;
                 eprintln!("Failed to read frame from camera");
             }
             Err(e) => {
