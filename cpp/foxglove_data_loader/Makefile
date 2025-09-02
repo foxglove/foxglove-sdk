@@ -74,4 +74,5 @@ target/data_loader_example.wasm: examples/data_loader.cpp $(packagefiles)
 		-Wall -Werror \
 		-mexec-model=reactor \
 		-fno-exceptions \
-		--target=wasm32-wasi
+		--target=wasm32-wasip1 \
+		--sysroot=$(WASI_SDK)/share/wasi-sysroot
