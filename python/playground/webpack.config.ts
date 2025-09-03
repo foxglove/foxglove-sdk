@@ -1,5 +1,6 @@
 import ReactRefreshPlugin from "@pmmmwh/react-refresh-webpack-plugin";
 import { PyodidePlugin } from "@pyodide/webpack-plugin";
+import CopyWebpackPlugin from "copy-webpack-plugin";
 import HtmlWebpackPlugin from "html-webpack-plugin";
 import MonacoWebpackPlugin from "monaco-editor-webpack-plugin";
 import fs from "node:fs";
@@ -72,6 +73,9 @@ export default (_env: unknown, argv: WebpackArgv): Configuration => {
     plugins: [
       new webpack.DefinePlugin({
         FOXGLOVE_SDK_WHEEL_FILENAME: JSON.stringify(path.basename(wheelPath)),
+      }),
+      new CopyWebpackPlugin({
+        patterns: [{ from: path.resolve(thisDirname, "public") }],
       }),
       new HtmlWebpackPlugin({
         templateContent: /* html */ `

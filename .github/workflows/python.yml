@@ -48,6 +48,8 @@ jobs:
     defaults:
       run:
         working-directory: python/foxglove-sdk
+    permissions:
+      deployments: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions-rust-lang/setup-rust-toolchain@v1
@@ -81,6 +83,15 @@ jobs:
         working-directory: python/playground
       - run: yarn build
         working-directory: python/playground
+      - uses: cloudflare/pages-action@v1.5.0
+        id: deploy
+        with:
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          gitHubToken: ${{ secrets.FOXGLOVEBOT_GITHUB_TOKEN }}
+          branch: ${{ github.head_ref || github.ref_name }}
+          projectName: foxglove-sdk-playground
+          directory: python/playground/dist
 
   schemas:
     runs-on: ubuntu-latest
