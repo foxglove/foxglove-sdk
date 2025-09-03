@@ -62,6 +62,13 @@ jobs:
       - name: Install common dependencies
         uses: ./.github/actions/common-deps
 
+      - name: Set up Emscripten
+        run: |
+          git clone https://github.com/emscripten-core/emsdk.git
+          ./emsdk/emsdk install 3.1.58
+          ./emsdk/emsdk activate 3.1.58
+          echo "source $(pwd)/emsdk/emsdk_env.sh" >> $GITHUB_ENV
+
       - run: pipx install poetry
       - run: poetry check --strict
       - run: poetry install
