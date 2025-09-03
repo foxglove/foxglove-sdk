@@ -309,6 +309,7 @@ mod channel;
 mod channel_builder;
 mod context;
 pub mod convert;
+mod decode;
 mod encode;
 pub mod library_version;
 #[doc(hidden)]
@@ -337,6 +338,8 @@ pub use bytes;
 pub use channel::{Channel, ChannelId, LazyChannel, LazyRawChannel, RawChannel};
 pub use channel_builder::ChannelBuilder;
 pub use context::{Context, LazyContext};
+#[doc(hidden)]
+pub use decode::Decode;
 pub use encode::Encode;
 pub use mcap_writer::{McapCompression, McapWriteOptions, McapWriter, McapWriterHandle};
 pub use metadata::{Metadata, PartialMetadata, ToUnixNanos};
