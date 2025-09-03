@@ -140,7 +140,9 @@ async fn test_secure_client_connect() {
     );
     let addr = server.start(host, 0).await.expect("Failed to start server");
 
-    let mut client = WebSocketClient::connect_secure(addr, ca_cert).await;
+    let mut client = WebSocketClient::connect_secure(addr.to_string(), ca_cert)
+        .await
+        .expect("Failed to connect");
 
     let msg = expect_recv!(client, ServerMessage::ServerInfo);
     assert_eq!(msg.session_id, Some("tls_sess_id".to_string()));
