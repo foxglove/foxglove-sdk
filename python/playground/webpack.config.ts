@@ -22,7 +22,8 @@ if (!wheelPath) {
 }
 
 export default (_env: unknown, argv: WebpackArgv): Configuration => {
-  const allowUnusedVariables = argv.mode !== "production";
+  const isDev = argv.mode !== "production";
+  const allowUnusedVariables = isDev;
   return {
     entry: "./src/index",
     output: {
@@ -39,7 +40,7 @@ export default (_env: unknown, argv: WebpackArgv): Configuration => {
             loader: "ts-loader",
             options: {
               getCustomTransformers: () => ({
-                before: [reactRefreshTypescript()],
+                before: isDev ? [reactRefreshTypescript()] : [],
               }),
               compilerOptions: {
                 noUnusedLocals: !allowUnusedVariables,
@@ -90,10 +91,11 @@ export default (_env: unknown, argv: WebpackArgv): Configuration => {
       }),
       new PyodidePlugin(),
       new MonacoWebpackPlugin(),
-      new ReactRefreshPlugin({
-        // Don't duplicate webpack dev server overlay
-        overlay: false,
-      }),
+      isDev &&
+        new ReactRefreshPlugin({
+          // Don't duplicate webpack dev server overlay
+          overlay: false,
+        }),
       new PyodideCdnDownloadPlugin([
         "annotated_types-0.6.0-py3-none-any.whl",
         "certifi-2024.12.14-py3-none-any.whl",
