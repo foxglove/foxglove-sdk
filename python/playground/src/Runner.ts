@@ -5,8 +5,7 @@ import type { RunnerWorker } from "./RunnerWorker";
 
 type EventMap = {
   ready: () => void;
-  // eslint-disable-next-line @foxglove/no-boolean-parameters
-  ["has-mcap"]: (value: boolean) => void;
+  ["run-completed"]: (mcapFilename: string | undefined) => void;
 };
 
 export class Runner extends EventEmitter<EventMap> {
@@ -32,7 +31,7 @@ export class Runner extends EventEmitter<EventMap> {
   }
 
   async run(code: string): Promise<void> {
-    this.emit("has-mcap", await this.#remote.run(code));
+    this.emit("run-completed", await this.#remote.run(code));
   }
 
   async readFile(): Promise<{ name: string; data: Uint8Array<ArrayBuffer> }> {

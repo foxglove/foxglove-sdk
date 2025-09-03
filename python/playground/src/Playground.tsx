@@ -13,7 +13,7 @@ export function Playground(): React.JSX.Element {
   const editorRef = useRef<EditorInterface>(null);
 
   const [ready, setReady] = useState(false);
-  const [hasMCAP, setHasMCAP] = useState(false);
+  const [mcapFilename, setMcapFilename] = useState<string | undefined>();
 
   useEffect(() => {
     setReady(false);
@@ -23,8 +23,8 @@ export function Playground(): React.JSX.Element {
     runner.on("ready", () => {
       setReady(true);
     });
-    runner.on("has-mcap", (value) => {
-      setHasMCAP(value);
+    runner.on("run-completed", (value) => {
+      setMcapFilename(value);
     });
     runnerRef.current = runner;
     return () => {
@@ -114,8 +114,8 @@ export function Playground(): React.JSX.Element {
       >
         <div>Foxglove SDK Playground</div>
         <div style={{ display: "flex", gap: 8 }}>
-          <button onClick={() => void download()} disabled={!hasMCAP}>
-            Download MCAP
+          <button onClick={() => void download()} disabled={!mcapFilename}>
+            Download {mcapFilename}
           </button>
           <button onClick={() => void run()} disabled={!ready}>
             Run

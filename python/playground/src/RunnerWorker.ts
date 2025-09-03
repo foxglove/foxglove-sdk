@@ -50,7 +50,7 @@ export class RunnerWorker {
     return pyodide;
   }
 
-  async run(code: string): Promise<boolean> {
+  async run(code: string): Promise<string | undefined> {
     const pyodide = await this.#pyodide;
     try {
       pyodide.runPython(
@@ -67,7 +67,7 @@ export class RunnerWorker {
       // ignore
     }
     pyodide.runPython(code);
-    return this.#getFileNames(pyodide).length > 0;
+    return this.#getFileNames(pyodide)[0];
   }
 
   #getFileNames(pyodide: PyodideInterface): string[] {
