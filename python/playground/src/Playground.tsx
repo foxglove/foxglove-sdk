@@ -41,14 +41,14 @@ export function Playground(): React.JSX.Element {
     try {
       await runner.run(editorRef.current?.getValue() ?? "");
 
-      const file = await runner.readFile();
+      const { data } = await runner.readFile();
       const reader = await McapIndexedReader.Initialize({
         readable: {
           async size() {
-            return BigInt(file.length);
+            return BigInt(data.length);
           },
           async read(offset, size) {
-            return file.slice(Number(offset), Number(offset + size));
+            return data.slice(Number(offset), Number(offset + size));
           },
         },
         decompressHandlers: await loadDecompressHandlers(),
@@ -65,14 +65,14 @@ export function Playground(): React.JSX.Element {
       return;
     }
     try {
-      const file = await runner.readFile();
+      const { name, data } = await runner.readFile();
 
       const link = document.createElement("a");
       link.style.display = "none";
       document.body.appendChild(link);
 
-      const url = URL.createObjectURL(new Blob([file], { type: "application/octet-stream" }));
-      link.setAttribute("download", "output.mcap");
+      const url = URL.createObjectURL(new Blob([data], { type: "application/octet-stream" }));
+      link.setAttribute("download", name);
       link.setAttribute("href", url);
       link.click();
       requestAnimationFrame(() => {
@@ -85,10 +85,10 @@ export function Playground(): React.JSX.Element {
       const reader = await McapIndexedReader.Initialize({
         readable: {
           async size() {
-            return BigInt(file.length);
+            return BigInt(data.length);
           },
           async read(offset, size) {
-            return file.slice(Number(offset), Number(offset + size));
+            return data.slice(Number(offset), Number(offset + size));
           },
         },
         decompressHandlers: await loadDecompressHandlers(),

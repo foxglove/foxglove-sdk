@@ -53,20 +53,50 @@ export class RunnerWorker {
   async run(code: string): Promise<boolean> {
     const pyodide = await this.#pyodide;
     try {
-      pyodide.FS.unlink("/home/pyodide/quickstart-python.mcap");
+      pyodide.runPython(
+        `
+          import os, pathlib, shutil
+          shutil.rmtree("/home/pyodide/playground", ignore_errors=True)
+          pathlib.Path("/home/pyodide/playground").mkdir(parents=True)
+          os.chdir("/home/pyodide/playground")
+        `,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        { globals: pyodide.toPy({}) },
+      );
     } catch (err: unknown) {
       // ignore
     }
     pyodide.runPython(code);
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    const stat = pyodide.FS.stat("/home/pyodide/quickstart-python.mcap");
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-    return stat.size > 0;
+    return this.#getFileNames(pyodide).length > 0;
   }
 
-  async readFile(): Promise<Uint8Array<ArrayBuffer>> {
-    const data = (await this.#pyodide).FS.readFile("/home/pyodide/quickstart-python.mcap");
-    return Comlink.transfer(data as Uint8Array<ArrayBuffer>, [data.buffer]);
+  #getFileNames(pyodide: PyodideInterface): string[] {
+    return (
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+      pyodide
+        .runPython(
+          `
+            from glob import glob
+            glob("*.mcap", root_dir="/home/pyodide/playground")
+          `,
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+          { globals: pyodide.toPy({}) },
+        )
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        .toJs() as string[]
+    );
+  }
+
+  async readFile(): Promise<{ name: string; data: Uint8Array<ArrayBuffer> }> {
+    const pyodide = await this.#pyodide;
+    const filename = this.#getFileNames(pyodide)[0];
+    if (!filename) {
+      throw new Error("No .mcap file found");
+    }
+    const data = pyodide.FS.readFile(`/home/pyodide/playground/${filename}`);
+    return Comlink.transfer({ name: filename, data: data as Uint8Array<ArrayBuffer> }, [
+      data.buffer,
+    ]);
   }
 }
 

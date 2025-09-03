@@ -35,7 +35,7 @@ export class Runner extends EventEmitter<EventMap> {
     this.emit("has-mcap", await this.#remote.run(code));
   }
 
-  async readFile(): Promise<Uint8Array<ArrayBuffer>> {
+  async readFile(): Promise<{ name: string; data: Uint8Array<ArrayBuffer> }> {
     return await this.#remote.readFile();
   }
 
