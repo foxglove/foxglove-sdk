@@ -2,15 +2,23 @@ import ReactRefreshPlugin from "@pmmmwh/react-refresh-webpack-plugin";
 import { PyodidePlugin } from "@pyodide/webpack-plugin";
 import HtmlWebpackPlugin from "html-webpack-plugin";
 import MonacoWebpackPlugin from "monaco-editor-webpack-plugin";
+import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { version as pyodideVersion } from "pyodide";
 import reactRefreshTypescript from "react-refresh-typescript";
-import { Compiler, Configuration } from "webpack";
+import webpack, { Compiler, Configuration } from "webpack";
+
+const thisDirname = path.dirname(fileURLToPath(import.meta.url));
 
 type WebpackArgv = {
   mode?: string;
 };
+
+const wheelPath = fs.globSync("public/foxglove_sdk-*.whl", { cwd: thisDirname })[0];
+if (!wheelPath) {
+  throw new Error("Expected a foxglove_sdk .whl file in the public directory");
+}
 
 export default (_env: unknown, argv: WebpackArgv): Configuration => {
   const allowUnusedVariables = argv.mode !== "production";
@@ -18,7 +26,7 @@ export default (_env: unknown, argv: WebpackArgv): Configuration => {
     entry: "./src/index",
     output: {
       filename: "index.js",
-      path: path.resolve(path.dirname(fileURLToPath(import.meta.url)), "dist"),
+      path: path.resolve(thisDirname, "dist"),
     },
     devtool: argv.mode === "production" ? false : "eval-source-map",
     module: {
@@ -62,6 +70,9 @@ export default (_env: unknown, argv: WebpackArgv): Configuration => {
       },
     },
     plugins: [
+      new webpack.DefinePlugin({
+        FOXGLOVE_SDK_WHEEL_FILENAME: JSON.stringify(path.basename(wheelPath)),
+      }),
       new HtmlWebpackPlugin({
         templateContent: /* html */ `
 <!doctype html>

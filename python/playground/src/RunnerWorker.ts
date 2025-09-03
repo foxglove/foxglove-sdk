@@ -1,6 +1,9 @@
 import * as Comlink from "comlink";
 import { loadPyodide, PyodideInterface } from "pyodide";
 
+// defined via webpack.DefinePlugin
+declare let FOXGLOVE_SDK_WHEEL_FILENAME: string;
+
 export class RunnerWorker {
   #abortController = new AbortController();
   #pyodide: Promise<PyodideInterface>;
@@ -22,15 +25,14 @@ export class RunnerWorker {
   }
 
   async #setup(): Promise<PyodideInterface> {
-    const wheelUrl = new URL(
-      "../public/foxglove_sdk-0.11.0-cp312-cp312-emscripten_3_1_58_wasm32.whl",
-      import.meta.url,
-    );
     const pyodide = await loadPyodide({
       indexURL: "/pyodide", // use files bundled by @pyodide/webpack-plugin
     });
-    const wheelPath = "/home/pyodide/foxglove_sdk-0.11.0-cp312-cp312-emscripten_3_1_58_wasm32.whl";
-    pyodide.FS.writeFile(wheelPath, new Uint8Array(await (await fetch(wheelUrl)).arrayBuffer()));
+    const wheelPath = `/home/pyodide/${FOXGLOVE_SDK_WHEEL_FILENAME}`;
+    pyodide.FS.writeFile(
+      wheelPath,
+      new Uint8Array(await (await fetch(`/${FOXGLOVE_SDK_WHEEL_FILENAME}`)).arrayBuffer()),
+    );
     pyodide.setStdout({
       batched: (output) => {
         this.#abortController.signal.throwIfAborted();
