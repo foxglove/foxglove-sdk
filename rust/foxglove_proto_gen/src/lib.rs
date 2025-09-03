@@ -184,7 +184,8 @@ fn generate_impls(out_dir: &Path, fds: &FileDescriptorSet) -> anyhow::Result<()>
 
         writeln!(
             module,
-            "\nimpl Decode for {name} {{
+            "\n#[doc(hidden)]
+impl Decode for {name} {{
     type Error = ::prost::DecodeError;
 
     /// Decode a message from a serialized buffer.

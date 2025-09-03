@@ -25,6 +25,7 @@ impl Encode for ArrowPrimitive {
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
 }
 
+#[doc(hidden)]
 impl Decode for ArrowPrimitive {
     type Error = ::prost::DecodeError;
 
@@ -56,6 +57,7 @@ impl Encode for CameraCalibration {
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
 }
 
+#[doc(hidden)]
 impl Decode for CameraCalibration {
     type Error = ::prost::DecodeError;
 
@@ -87,6 +89,7 @@ impl Encode for CircleAnnotation {
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
 }
 
+#[doc(hidden)]
 impl Decode for CircleAnnotation {
     type Error = ::prost::DecodeError;
 
@@ -118,6 +121,7 @@ impl Encode for Color {
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
 }
 
+#[doc(hidden)]
 impl Decode for Color {
     type Error = ::prost::DecodeError;
 
@@ -149,6 +153,7 @@ impl Encode for CompressedImage {
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
 }
 
+#[doc(hidden)]
 impl Decode for CompressedImage {
     type Error = ::prost::DecodeError;
 
@@ -180,6 +185,7 @@ impl Encode for CompressedVideo {
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
 }
 
+#[doc(hidden)]
 impl Decode for CompressedVideo {
     type Error = ::prost::DecodeError;
 
@@ -211,6 +217,7 @@ impl Encode for CubePrimitive {
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
 }
 
+#[doc(hidden)]
 impl Decode for CubePrimitive {
     type Error = ::prost::DecodeError;
 
@@ -242,6 +249,7 @@ impl Encode for CylinderPrimitive {
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
 }
 
+#[doc(hidden)]
 impl Decode for CylinderPrimitive {
     type Error = ::prost::DecodeError;
 
@@ -273,6 +281,7 @@ impl Encode for FrameTransform {
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
 }
 
+#[doc(hidden)]
 impl Decode for FrameTransform {
     type Error = ::prost::DecodeError;
 
@@ -304,6 +313,7 @@ impl Encode for FrameTransforms {
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
 }
 
+#[doc(hidden)]
 impl Decode for FrameTransforms {
     type Error = ::prost::DecodeError;
 
@@ -335,6 +345,7 @@ impl Encode for GeoJson {
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
 }
 
+#[doc(hidden)]
 impl Decode for GeoJson {
     type Error = ::prost::DecodeError;
 
@@ -366,6 +377,7 @@ impl Encode for Grid {
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
 }
 
+#[doc(hidden)]
 impl Decode for Grid {
     type Error = ::prost::DecodeError;
 
@@ -397,6 +409,7 @@ impl Encode for ImageAnnotations {
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
 }
 
+#[doc(hidden)]
 impl Decode for ImageAnnotations {
     type Error = ::prost::DecodeError;
 
@@ -428,6 +441,7 @@ impl Encode for KeyValuePair {
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
 }
 
+#[doc(hidden)]
 impl Decode for KeyValuePair {
     type Error = ::prost::DecodeError;
 
@@ -459,6 +473,7 @@ impl Encode for LaserScan {
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
 }
 
+#[doc(hidden)]
 impl Decode for LaserScan {
     type Error = ::prost::DecodeError;
 
@@ -490,6 +505,7 @@ impl Encode for LinePrimitive {
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
 }
 
+#[doc(hidden)]
 impl Decode for LinePrimitive {
     type Error = ::prost::DecodeError;
 
@@ -521,6 +537,7 @@ impl Encode for LocationFix {
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
 }
 
+#[doc(hidden)]
 impl Decode for LocationFix {
     type Error = ::prost::DecodeError;
 
@@ -552,6 +569,7 @@ impl Encode for LocationFixes {
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
 }
 
+#[doc(hidden)]
 impl Decode for LocationFixes {
     type Error = ::prost::DecodeError;
 
@@ -583,6 +601,7 @@ impl Encode for Log {
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
 }
 
+#[doc(hidden)]
 impl Decode for Log {
     type Error = ::prost::DecodeError;
 
@@ -614,6 +633,7 @@ impl Encode for ModelPrimitive {
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
 }
 
+#[doc(hidden)]
 impl Decode for ModelPrimitive {
     type Error = ::prost::DecodeError;
 
@@ -645,6 +665,7 @@ impl Encode for PackedElementField {
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
 }
 
+#[doc(hidden)]
 impl Decode for PackedElementField {
     type Error = ::prost::DecodeError;
 
@@ -676,6 +697,7 @@ impl Encode for Point2 {
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
 }
 
+#[doc(hidden)]
 impl Decode for Point2 {
     type Error = ::prost::DecodeError;
 
@@ -707,6 +729,7 @@ impl Encode for Point3 {
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
 }
 
+#[doc(hidden)]
 impl Decode for Point3 {
     type Error = ::prost::DecodeError;
 
@@ -738,6 +761,7 @@ impl Encode for PointCloud {
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
 }
 
+#[doc(hidden)]
 impl Decode for PointCloud {
     type Error = ::prost::DecodeError;
 
@@ -769,6 +793,7 @@ impl Encode for PointsAnnotation {
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
 }
 
+#[doc(hidden)]
 impl Decode for PointsAnnotation {
     type Error = ::prost::DecodeError;
 
@@ -800,6 +825,7 @@ impl Encode for Pose {
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
 }
 
+#[doc(hidden)]
 impl Decode for Pose {
     type Error = ::prost::DecodeError;
 
@@ -831,6 +857,7 @@ impl Encode for PoseInFrame {
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
 }
 
+#[doc(hidden)]
 impl Decode for PoseInFrame {
     type Error = ::prost::DecodeError;
 
@@ -862,6 +889,7 @@ impl Encode for PosesInFrame {
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
 }
 
+#[doc(hidden)]
 impl Decode for PosesInFrame {
     type Error = ::prost::DecodeError;
 
@@ -893,6 +921,7 @@ impl Encode for Quaternion {
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
 }
 
+#[doc(hidden)]
 impl Decode for Quaternion {
     type Error = ::prost::DecodeError;
 
@@ -924,6 +953,7 @@ impl Encode for RawAudio {
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
 }
 
+#[doc(hidden)]
 impl Decode for RawAudio {
     type Error = ::prost::DecodeError;
 
@@ -955,6 +985,7 @@ impl Encode for RawImage {
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
 }
 
+#[doc(hidden)]
 impl Decode for RawImage {
     type Error = ::prost::DecodeError;
 
@@ -986,6 +1017,7 @@ impl Encode for SceneEntity {
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
 }
 
+#[doc(hidden)]
 impl Decode for SceneEntity {
     type Error = ::prost::DecodeError;
 
@@ -1017,6 +1049,7 @@ impl Encode for SceneEntityDeletion {
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
 }
 
+#[doc(hidden)]
 impl Decode for SceneEntityDeletion {
     type Error = ::prost::DecodeError;
 
@@ -1048,6 +1081,7 @@ impl Encode for SceneUpdate {
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
 }
 
+#[doc(hidden)]
 impl Decode for SceneUpdate {
     type Error = ::prost::DecodeError;
 
@@ -1079,6 +1113,7 @@ impl Encode for SpherePrimitive {
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
 }
 
+#[doc(hidden)]
 impl Decode for SpherePrimitive {
     type Error = ::prost::DecodeError;
 
@@ -1110,6 +1145,7 @@ impl Encode for TextAnnotation {
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
 }
 
+#[doc(hidden)]
 impl Decode for TextAnnotation {
     type Error = ::prost::DecodeError;
 
@@ -1141,6 +1177,7 @@ impl Encode for TextPrimitive {
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
 }
 
+#[doc(hidden)]
 impl Decode for TextPrimitive {
     type Error = ::prost::DecodeError;
 
@@ -1172,6 +1209,7 @@ impl Encode for TriangleListPrimitive {
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
 }
 
+#[doc(hidden)]
 impl Decode for TriangleListPrimitive {
     type Error = ::prost::DecodeError;
 
@@ -1203,6 +1241,7 @@ impl Encode for Vector2 {
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
 }
 
+#[doc(hidden)]
 impl Decode for Vector2 {
     type Error = ::prost::DecodeError;
 
@@ -1234,6 +1273,7 @@ impl Encode for Vector3 {
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
 }
 
+#[doc(hidden)]
 impl Decode for Vector3 {
     type Error = ::prost::DecodeError;
 
@@ -1265,6 +1305,7 @@ impl Encode for VoxelGrid {
     fn encoded_len(&self) -> Option<usize> { Some(::prost::Message::encoded_len(self)) }
 }
 
+#[doc(hidden)]
 impl Decode for VoxelGrid {
     type Error = ::prost::DecodeError;
 

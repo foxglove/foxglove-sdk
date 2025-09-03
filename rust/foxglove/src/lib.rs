@@ -338,6 +338,7 @@ pub use bytes;
 pub use channel::{Channel, ChannelId, LazyChannel, LazyRawChannel, RawChannel};
 pub use channel_builder::ChannelBuilder;
 pub use context::{Context, LazyContext};
+#[doc(hidden)]
 pub use decode::Decode;
 pub use encode::Encode;
 pub use mcap_writer::{McapCompression, McapWriteOptions, McapWriter, McapWriterHandle};
