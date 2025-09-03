@@ -760,10 +760,12 @@ void FoxgloveBridge::clientUnadvertise(ClientId clientId, ChannelId clientChanne
 
   _clientAdvertisedTopics.erase(it);
 
-  // Create a timer that immedeately goes out of scope (so it never fires) which will trigger
-  // the previously destroyed publisher to be cleaned up. This is a workaround for
-  // https://github.com/ros2/rclcpp/issues/2146
-  this->create_wall_timer(1s, []() {});
+  if (!_shuttingDown && rclcpp::ok()) {
+    // Create a timer that immedeately goes out of scope (so it never fires) which will trigger
+    // the previously destroyed publisher to be cleaned up. This is a workaround for
+    // https://github.com/ros2/rclcpp/issues/2146
+    this->create_wall_timer(1s, []() {});
+  }
 }
 
 void FoxgloveBridge::clientMessage(ClientId clientId, ChannelId clientChannelId,
