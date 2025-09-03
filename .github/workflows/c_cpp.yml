@@ -154,6 +154,8 @@ jobs:
           # https://github.com/aws/aws-lc-rs/issues/761
           echo "AWS_LC_SYS_EXTERNAL_BINDGEN=1" >> $GITHUB_ENV
           echo "~/.cargo/bin" >> $GITHUB_PATH
+      - if: matrix.target == 'aarch64-apple-ios-sim'
+        run: which bindgen
 
       - name: Build C library for ${{ matrix.target }}
         env:
