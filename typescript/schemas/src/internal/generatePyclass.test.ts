@@ -167,6 +167,13 @@ describe("generatePyclass", () => {
          fn get_schema() -> PySchema {
              foxglove::schemas::ExampleMessage::get_schema().unwrap().into()
          }
+         /// Encodes the ExampleMessage as protobuf.
+         fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
+             PyBytes::new_with(py, self.0.encoded_len().expect("foxglove schemas provide len"), |mut b: &mut[u8]| {
+                 self.0.encode(&mut b).expect("encoding len was provided above");
+                 Ok(())
+             }).expect("failed to allocate buffer for encoded message")
+         }
      }
 
 

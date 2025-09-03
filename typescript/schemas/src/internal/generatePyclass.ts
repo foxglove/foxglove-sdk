@@ -106,6 +106,9 @@ export function generatePySchemaStub(schemas: FoxgloveSchema[]): string {
             `    def get_schema() -> Schema:`,
             `        """Returns the ${name} schema"""`,
             `        ...`,
+            `    def encode(self) -> bytes:`,
+            `        """Encodes the ${name}."""`,
+            `        ...`,
           ].join("\n") + "\n\n",
       };
     });
@@ -288,6 +291,13 @@ function generateMessageClass(schema: FoxgloveMessageSchema): string {
     `    #[staticmethod]`,
     `    fn get_schema() -> PySchema {`,
     `        foxglove::schemas::${className}::get_schema().unwrap().into()`,
+    `    }`,
+    `    /// Encodes the ${className} as protobuf.`,
+    `    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {`,
+    `        PyBytes::new_with(py, self.0.encoded_len().expect("foxglove schemas provide len"), |mut b: &mut[u8]| {`,
+    `            self.0.encode(&mut b).expect("encoding len was provided above");`,
+    `            Ok(())`,
+    `        }).expect("failed to allocate buffer for encoded message")`,
     `    }`,
     `}\n\n`,
   ];

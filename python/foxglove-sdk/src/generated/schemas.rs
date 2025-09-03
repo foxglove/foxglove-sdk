@@ -127,6 +127,20 @@ impl ArrowPrimitive {
             .unwrap()
             .into()
     }
+    /// Encodes the ArrowPrimitive as protobuf.
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("failed to allocate buffer for encoded message")
+    }
 }
 
 impl From<ArrowPrimitive> for foxglove::schemas::ArrowPrimitive {
@@ -239,6 +253,20 @@ impl CameraCalibration {
             .unwrap()
             .into()
     }
+    /// Encodes the CameraCalibration as protobuf.
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("failed to allocate buffer for encoded message")
+    }
 }
 
 impl From<CameraCalibration> for foxglove::schemas::CameraCalibration {
@@ -300,6 +328,20 @@ impl CircleAnnotation {
             .unwrap()
             .into()
     }
+    /// Encodes the CircleAnnotation as protobuf.
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("failed to allocate buffer for encoded message")
+    }
 }
 
 impl From<CircleAnnotation> for foxglove::schemas::CircleAnnotation {
@@ -336,6 +378,20 @@ impl Color {
     #[staticmethod]
     fn get_schema() -> PySchema {
         foxglove::schemas::Color::get_schema().unwrap().into()
+    }
+    /// Encodes the Color as protobuf.
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("failed to allocate buffer for encoded message")
     }
 }
 
@@ -389,6 +445,20 @@ impl CompressedImage {
         foxglove::schemas::CompressedImage::get_schema()
             .unwrap()
             .into()
+    }
+    /// Encodes the CompressedImage as protobuf.
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("failed to allocate buffer for encoded message")
     }
 }
 
@@ -469,6 +539,20 @@ impl CompressedVideo {
             .unwrap()
             .into()
     }
+    /// Encodes the CompressedVideo as protobuf.
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("failed to allocate buffer for encoded message")
+    }
 }
 
 impl From<CompressedVideo> for foxglove::schemas::CompressedVideo {
@@ -525,6 +609,20 @@ impl CylinderPrimitive {
             .unwrap()
             .into()
     }
+    /// Encodes the CylinderPrimitive as protobuf.
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("failed to allocate buffer for encoded message")
+    }
 }
 
 impl From<CylinderPrimitive> for foxglove::schemas::CylinderPrimitive {
@@ -566,6 +664,20 @@ impl CubePrimitive {
         foxglove::schemas::CubePrimitive::get_schema()
             .unwrap()
             .into()
+    }
+    /// Encodes the CubePrimitive as protobuf.
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("failed to allocate buffer for encoded message")
     }
 }
 
@@ -623,6 +735,20 @@ impl FrameTransform {
             .unwrap()
             .into()
     }
+    /// Encodes the FrameTransform as protobuf.
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("failed to allocate buffer for encoded message")
+    }
 }
 
 impl From<FrameTransform> for foxglove::schemas::FrameTransform {
@@ -658,6 +784,20 @@ impl FrameTransforms {
             .unwrap()
             .into()
     }
+    /// Encodes the FrameTransforms as protobuf.
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("failed to allocate buffer for encoded message")
+    }
 }
 
 impl From<FrameTransforms> for foxglove::schemas::FrameTransforms {
@@ -688,6 +828,20 @@ impl GeoJson {
     #[staticmethod]
     fn get_schema() -> PySchema {
         foxglove::schemas::GeoJson::get_schema().unwrap().into()
+    }
+    /// Encodes the GeoJson as protobuf.
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("failed to allocate buffer for encoded message")
     }
 }
 
@@ -763,6 +917,20 @@ impl Grid {
     #[staticmethod]
     fn get_schema() -> PySchema {
         foxglove::schemas::Grid::get_schema().unwrap().into()
+    }
+    /// Encodes the Grid as protobuf.
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("failed to allocate buffer for encoded message")
     }
 }
 
@@ -848,6 +1016,20 @@ impl VoxelGrid {
     fn get_schema() -> PySchema {
         foxglove::schemas::VoxelGrid::get_schema().unwrap().into()
     }
+    /// Encodes the VoxelGrid as protobuf.
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("failed to allocate buffer for encoded message")
+    }
 }
 
 impl From<VoxelGrid> for foxglove::schemas::VoxelGrid {
@@ -894,6 +1076,20 @@ impl ImageAnnotations {
             .unwrap()
             .into()
     }
+    /// Encodes the ImageAnnotations as protobuf.
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("failed to allocate buffer for encoded message")
+    }
 }
 
 impl From<ImageAnnotations> for foxglove::schemas::ImageAnnotations {
@@ -930,6 +1126,20 @@ impl KeyValuePair {
         foxglove::schemas::KeyValuePair::get_schema()
             .unwrap()
             .into()
+    }
+    /// Encodes the KeyValuePair as protobuf.
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("failed to allocate buffer for encoded message")
     }
 }
 
@@ -992,6 +1202,20 @@ impl LaserScan {
     #[staticmethod]
     fn get_schema() -> PySchema {
         foxglove::schemas::LaserScan::get_schema().unwrap().into()
+    }
+    /// Encodes the LaserScan as protobuf.
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("failed to allocate buffer for encoded message")
     }
 }
 
@@ -1063,6 +1287,20 @@ impl LinePrimitive {
             .unwrap()
             .into()
     }
+    /// Encodes the LinePrimitive as protobuf.
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("failed to allocate buffer for encoded message")
+    }
 }
 
 impl From<LinePrimitive> for foxglove::schemas::LinePrimitive {
@@ -1129,6 +1367,20 @@ impl LocationFix {
     fn get_schema() -> PySchema {
         foxglove::schemas::LocationFix::get_schema().unwrap().into()
     }
+    /// Encodes the LocationFix as protobuf.
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("failed to allocate buffer for encoded message")
+    }
 }
 
 impl From<LocationFix> for foxglove::schemas::LocationFix {
@@ -1163,6 +1415,20 @@ impl LocationFixes {
         foxglove::schemas::LocationFixes::get_schema()
             .unwrap()
             .into()
+    }
+    /// Encodes the LocationFixes as protobuf.
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("failed to allocate buffer for encoded message")
     }
 }
 
@@ -1217,6 +1483,20 @@ impl Log {
     fn get_schema() -> PySchema {
         foxglove::schemas::Log::get_schema().unwrap().into()
     }
+    /// Encodes the Log as protobuf.
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("failed to allocate buffer for encoded message")
+    }
 }
 
 impl From<Log> for foxglove::schemas::Log {
@@ -1258,6 +1538,20 @@ impl SceneEntityDeletion {
         foxglove::schemas::SceneEntityDeletion::get_schema()
             .unwrap()
             .into()
+    }
+    /// Encodes the SceneEntityDeletion as protobuf.
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("failed to allocate buffer for encoded message")
     }
 }
 
@@ -1349,6 +1643,20 @@ impl SceneEntity {
     fn get_schema() -> PySchema {
         foxglove::schemas::SceneEntity::get_schema().unwrap().into()
     }
+    /// Encodes the SceneEntity as protobuf.
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("failed to allocate buffer for encoded message")
+    }
 }
 
 impl From<SceneEntity> for foxglove::schemas::SceneEntity {
@@ -1386,6 +1694,20 @@ impl SceneUpdate {
     #[staticmethod]
     fn get_schema() -> PySchema {
         foxglove::schemas::SceneUpdate::get_schema().unwrap().into()
+    }
+    /// Encodes the SceneUpdate as protobuf.
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("failed to allocate buffer for encoded message")
     }
 }
 
@@ -1453,6 +1775,20 @@ impl ModelPrimitive {
             .unwrap()
             .into()
     }
+    /// Encodes the ModelPrimitive as protobuf.
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("failed to allocate buffer for encoded message")
+    }
 }
 
 impl From<ModelPrimitive> for foxglove::schemas::ModelPrimitive {
@@ -1495,6 +1831,20 @@ impl PackedElementField {
             .unwrap()
             .into()
     }
+    /// Encodes the PackedElementField as protobuf.
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("failed to allocate buffer for encoded message")
+    }
 }
 
 impl From<PackedElementField> for foxglove::schemas::PackedElementField {
@@ -1526,6 +1876,20 @@ impl Point2 {
     #[staticmethod]
     fn get_schema() -> PySchema {
         foxglove::schemas::Point2::get_schema().unwrap().into()
+    }
+    /// Encodes the Point2 as protobuf.
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("failed to allocate buffer for encoded message")
     }
 }
 
@@ -1562,6 +1926,20 @@ impl Point3 {
     #[staticmethod]
     fn get_schema() -> PySchema {
         foxglove::schemas::Point3::get_schema().unwrap().into()
+    }
+    /// Encodes the Point3 as protobuf.
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("failed to allocate buffer for encoded message")
     }
 }
 
@@ -1622,6 +2000,20 @@ impl PointCloud {
     #[staticmethod]
     fn get_schema() -> PySchema {
         foxglove::schemas::PointCloud::get_schema().unwrap().into()
+    }
+    /// Encodes the PointCloud as protobuf.
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("failed to allocate buffer for encoded message")
     }
 }
 
@@ -1688,6 +2080,20 @@ impl PointsAnnotation {
             .unwrap()
             .into()
     }
+    /// Encodes the PointsAnnotation as protobuf.
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("failed to allocate buffer for encoded message")
+    }
 }
 
 impl From<PointsAnnotation> for foxglove::schemas::PointsAnnotation {
@@ -1725,6 +2131,20 @@ impl Pose {
     #[staticmethod]
     fn get_schema() -> PySchema {
         foxglove::schemas::Pose::get_schema().unwrap().into()
+    }
+    /// Encodes the Pose as protobuf.
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("failed to allocate buffer for encoded message")
     }
 }
 
@@ -1765,6 +2185,20 @@ impl PoseInFrame {
     #[staticmethod]
     fn get_schema() -> PySchema {
         foxglove::schemas::PoseInFrame::get_schema().unwrap().into()
+    }
+    /// Encodes the PoseInFrame as protobuf.
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("failed to allocate buffer for encoded message")
     }
 }
 
@@ -1808,6 +2242,20 @@ impl PosesInFrame {
             .unwrap()
             .into()
     }
+    /// Encodes the PosesInFrame as protobuf.
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("failed to allocate buffer for encoded message")
+    }
 }
 
 impl From<PosesInFrame> for foxglove::schemas::PosesInFrame {
@@ -1844,6 +2292,20 @@ impl Quaternion {
     #[staticmethod]
     fn get_schema() -> PySchema {
         foxglove::schemas::Quaternion::get_schema().unwrap().into()
+    }
+    /// Encodes the Quaternion as protobuf.
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("failed to allocate buffer for encoded message")
     }
 }
 
@@ -1901,6 +2363,20 @@ impl RawAudio {
     fn get_schema() -> PySchema {
         foxglove::schemas::RawAudio::get_schema().unwrap().into()
     }
+    /// Encodes the RawAudio as protobuf.
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("failed to allocate buffer for encoded message")
+    }
 }
 
 impl From<RawAudio> for foxglove::schemas::RawAudio {
@@ -1942,7 +2418,7 @@ impl From<RawAudio> for foxglove::schemas::RawAudio {
 ///       - Each output pixel is serialized as [R, G, B, Alpha].
 ///       - `step` must be greater than or equal to `width` * 4.
 ///     - `bgr8` or `8UC3`:
-///       - Pixel colors are decomposed into Red, Blue, Green, and Alpha channels.
+///       - Pixel colors are decomposed into Blue, Green, and Red channels.
 ///       - Pixel channel values are represented as unsigned 8-bit integers.
 ///       - Each output pixel is serialized as [B, G, R].
 ///       - `step` must be greater than or equal to `width` * 3.
@@ -2018,6 +2494,20 @@ impl RawImage {
     fn get_schema() -> PySchema {
         foxglove::schemas::RawImage::get_schema().unwrap().into()
     }
+    /// Encodes the RawImage as protobuf.
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("failed to allocate buffer for encoded message")
+    }
 }
 
 impl From<RawImage> for foxglove::schemas::RawImage {
@@ -2059,6 +2549,20 @@ impl SpherePrimitive {
         foxglove::schemas::SpherePrimitive::get_schema()
             .unwrap()
             .into()
+    }
+    /// Encodes the SpherePrimitive as protobuf.
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("failed to allocate buffer for encoded message")
     }
 }
 
@@ -2121,6 +2625,20 @@ impl TextAnnotation {
             .unwrap()
             .into()
     }
+    /// Encodes the TextAnnotation as protobuf.
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("failed to allocate buffer for encoded message")
+    }
 }
 
 impl From<TextAnnotation> for foxglove::schemas::TextAnnotation {
@@ -2181,6 +2699,20 @@ impl TextPrimitive {
             .unwrap()
             .into()
     }
+    /// Encodes the TextPrimitive as protobuf.
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("failed to allocate buffer for encoded message")
+    }
 }
 
 impl From<TextPrimitive> for foxglove::schemas::TextPrimitive {
@@ -2235,6 +2767,20 @@ impl TriangleListPrimitive {
             .unwrap()
             .into()
     }
+    /// Encodes the TriangleListPrimitive as protobuf.
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("failed to allocate buffer for encoded message")
+    }
 }
 
 impl From<TriangleListPrimitive> for foxglove::schemas::TriangleListPrimitive {
@@ -2266,6 +2812,20 @@ impl Vector2 {
     #[staticmethod]
     fn get_schema() -> PySchema {
         foxglove::schemas::Vector2::get_schema().unwrap().into()
+    }
+    /// Encodes the Vector2 as protobuf.
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("failed to allocate buffer for encoded message")
     }
 }
 
@@ -2302,6 +2862,20 @@ impl Vector3 {
     #[staticmethod]
     fn get_schema() -> PySchema {
         foxglove::schemas::Vector3::get_schema().unwrap().into()
+    }
+    /// Encodes the Vector3 as protobuf.
+    fn encode<'a>(&self, py: Python<'a>) -> Bound<'a, PyBytes> {
+        PyBytes::new_with(
+            py,
+            self.0.encoded_len().expect("foxglove schemas provide len"),
+            |mut b: &mut [u8]| {
+                self.0
+                    .encode(&mut b)
+                    .expect("encoding len was provided above");
+                Ok(())
+            },
+        )
+        .expect("failed to allocate buffer for encoded message")
     }
 }
 

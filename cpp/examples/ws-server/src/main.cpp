@@ -61,6 +61,7 @@ int main() {
   options.callbacks.onClientUnadvertise = [](uint32_t client_id, uint32_t client_channel_id) {
     std::cerr << "Client " << client_id << " unadvertised channel " << client_channel_id << '\n';
   };
+
   auto server_result = foxglove::WebSocketServer::create(std::move(options));
   if (!server_result.has_value()) {
     std::cerr << "Failed to create server: " << foxglove::strerror(server_result.error()) << '\n';

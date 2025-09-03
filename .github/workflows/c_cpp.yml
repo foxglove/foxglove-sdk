@@ -19,7 +19,7 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - run: |
           sudo apt install -y --no-install-recommends clang-format-19
           echo "/usr/lib/llvm-19/bin" >> $GITHUB_PATH
@@ -136,11 +136,8 @@ jobs:
     env:
       CARGO_BUILD_TARGET: ${{ matrix.target }}
 
-    outputs:
-      artifact_pattern: "*.zip"
-
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           target: ${{ matrix.target }}
@@ -149,6 +146,18 @@ jobs:
         if: matrix.target == 'aarch64-unknown-linux-gnu'
       - run: echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
         if: matrix.target == 'aarch64-unknown-linux-gnu'
+      - run: echo "IPHONEOS_DEPLOYMENT_TARGET=13.0.0" >> $GITHUB_ENV
+        # Min version needed for libaws_lc_sys
+        if: contains(matrix.target, 'apple-ios')
+      - if: matrix.target == 'aarch64-apple-ios-sim'
+        run: |
+          # https://github.com/aws/aws-lc-rs/issues/761
+          unset CARGO_BUILD_TARGET
+          cargo install bindgen-cli --version 0.72.0
+          echo "AWS_LC_SYS_EXTERNAL_BINDGEN=1" >> $GITHUB_ENV
+          echo "~/.cargo/bin" >> $GITHUB_PATH
+      - if: matrix.target == 'aarch64-apple-ios-sim'
+        run: which bindgen
 
       - name: Build C library for ${{ matrix.target }}
         env:
@@ -169,6 +178,8 @@ jobs:
           echo "CC=gcc" >> $GITHUB_ENV
           echo "CXX=g++" >> $GITHUB_ENV
 
+      - if: contains(matrix.target, 'windows')
+        uses: ilammy/setup-nasm@v1
       - name: Build C++ library and run tests
         if: ${{ !fromJson(matrix.cross) }}
         run: make test
@@ -223,7 +234,7 @@ jobs:
       CC: clang
       CXX: clang++
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           toolchain: nightly

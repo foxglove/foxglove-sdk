@@ -1,6 +1,8 @@
 use assert_matches::assert_matches;
 use bytes::{BufMut, Bytes, BytesMut};
 use futures_util::FutureExt;
+#[cfg(feature = "tls")]
+use rcgen::{CertificateParams, Issuer, KeyPair};
 use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
@@ -25,10 +27,11 @@ use super::ws_protocol::server::{
 use crate::library_version::get_library_version;
 use crate::testutil::{assert_eventually, RecordingServerListener};
 use crate::websocket::handshake::SUBPROTOCOL;
-use crate::websocket::server::{create_server, ServerOptions};
+use crate::websocket::server::{create_server as do_create_server, ServerOptions};
 use crate::websocket::service::{CallId, Service, ServiceSchema};
 use crate::websocket::{
-    BlockingAssetHandlerFn, Capability, ClientChannelId, ConnectionGraph, Parameter,
+    BlockingAssetHandlerFn, Capability, ClientChannelId, ConnectionGraph, Parameter, Server,
+    TlsIdentity,
 };
 use crate::websocket_client::WebSocketClient;
 use crate::{ChannelBuilder, Context, FoxgloveError, PartialMetadata, RawChannel, Schema};
@@ -51,6 +54,10 @@ macro_rules! expect_recv_close {
             m => panic!("Received unexpected message: {m:?}"),
         }
     }};
+}
+
+fn create_server(ctx: &Arc<Context>, opts: ServerOptions) -> Arc<Server> {
+    do_create_server(ctx, opts).expect("Failed to create server")
 }
 
 fn new_channel(topic: &str, ctx: &Arc<Context>) -> Arc<RawChannel> {
@@ -97,6 +104,75 @@ async fn test_client_connect() {
     );
 
     let _ = server.stop();
+}
+
+#[traced_test]
+#[tokio::test]
+#[cfg(feature = "tls")]
+async fn test_secure_client_connect() {
+    let ctx = Context::new();
+    let ca_params = CertificateParams::default();
+    let ca_key = KeyPair::generate().expect("default keygen will succeed");
+    let ca_cert = ca_params
+        .self_signed(&ca_key)
+        .expect("failed to sign CA cert");
+    let issuer = Issuer::new(ca_params, ca_key);
+
+    let host = "127.0.0.1";
+    let params = CertificateParams::new(vec![host.to_string()]).expect("SAN is valid");
+
+    let key = KeyPair::generate().expect("default keygen will succeed");
+    let cert = params
+        .signed_by(&key, &issuer)
+        .expect("failed to sign cert");
+
+    let server = create_server(
+        &ctx,
+        ServerOptions {
+            session_id: Some("tls_sess_id".to_string()),
+            tls_identity: Some(TlsIdentity {
+                cert: cert.pem().as_bytes().to_vec(),
+                key: key.serialize_pem().as_bytes().to_vec(),
+            }),
+            ..Default::default()
+        },
+    );
+    let addr = server.start(host, 0).await.expect("Failed to start server");
+
+    let mut client = WebSocketClient::connect_secure(addr, ca_cert).await;
+
+    let msg = expect_recv!(client, ServerMessage::ServerInfo);
+    assert_eq!(msg.session_id, Some("tls_sess_id".to_string()));
+
+    let _ = server.stop();
+}
+
+#[cfg(feature = "tls")]
+#[traced_test]
+#[tokio::test]
+async fn test_invalid_tls_config() {
+    let ctx = Context::new();
+    let cert = rcgen::generate_simple_self_signed(vec![])
+        .expect("default certgen will succeed")
+        .cert;
+    let key = KeyPair::generate().expect("default keygen will succeed");
+
+    let result = do_create_server(
+        &ctx,
+        ServerOptions {
+            name: Some("invalid_tls_server".to_string()),
+            tls_identity: Some(TlsIdentity {
+                cert: cert.pem().as_bytes().to_vec(),
+                key: key.serialize_pem().as_bytes().to_vec(),
+            }),
+            ..Default::default()
+        },
+    );
+    assert!(result.is_err());
+
+    let error = result.err();
+    assert!(matches!(&error, Some(FoxgloveError::ConfigurationError(_))));
+    assert!(error.unwrap().to_string().contains("KeyMismatch"));
 }
 
 #[traced_test]

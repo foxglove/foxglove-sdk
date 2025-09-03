@@ -18,7 +18,7 @@ typedef uint16_t SchemaId;
 typedef uint64_t TimeNanos;
 
 struct BytesView {
-  uint8_t* ptr;
+  const uint8_t* ptr;
   size_t len;
 };
 

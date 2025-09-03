@@ -22,6 +22,12 @@ live_visualization = [
   "dep:serde_with",
 ]
 lz4 = ["mcap/lz4"]
+tls = [
+  "live_visualization",
+  "tokio-tungstenite/rustls-tls-native-roots",
+  "dep:aws-lc-rs",
+  "dep:tokio-rustls",
+]
 schemars = ["dep:schemars"]
 unstable = []
 zstd = ["mcap/zstd"]
@@ -31,13 +37,14 @@ workspace = true
 
 [dependencies]
 arc-swap = "1.7.1"
+aws-lc-rs = { version = "1.13.3", optional = true, features = ["bindgen"] }
 base64 = { version = "0.22", optional = true }
 bimap = "0.6.3"
 bytes.workspace = true
 chrono = { version = "0.4.39", optional = true }
 delegate = "0.13.2"
 flume = { version = "0.11.1", optional = true }
-foxglove_derive = { version = "0.11.0", path = "../foxglove_derive", optional = true }
+foxglove_derive = { version = "0.14.0", path = "../foxglove_derive", optional = true }
 futures-util = { version = "0.3.31", features = ["sink", "std"], optional = true }
 mcap.workspace = true
 parking_lot = "0.12.4"
@@ -51,16 +58,19 @@ serde.workspace = true
 smallvec = "1.15.1"
 smallbytes = "0.1.0"
 thiserror.workspace = true
+tokio-rustls = { version = "0.26.0", optional = true }
 tokio-tungstenite = { workspace = true, optional = true }
 tokio-util = { workspace = true, optional = true }
 tokio = { workspace = true, optional = true }
 tracing.workspace = true
 urlencoding = "2.1.3"
+rcgen = "0.14.3"
 
 [dev-dependencies]
 assert_matches = "1.5.0"
 insta = { version = "1.42.2", features = ["json"] }
 maplit = "1.0.2"
+rcgen = { version = "0.14.3", features = ["crypto", "pem", "x509-parser"] }
 tempfile = "3.15.0"
 tracing-test.workspace = true
 
