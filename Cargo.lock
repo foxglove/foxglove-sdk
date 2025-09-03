@@ -42,6 +42,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "annotate-snippets"
+version = "0.11.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "710e8eae58854cdc1790fcb56cca04d712a17be849eeb81da2a724bf4bae2bc4"
+dependencies = [
+ "anstyle",
+ "unicode-width",
+]
+
+[[package]]
 name = "anstream"
 version = "0.6.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -163,9 +173,10 @@ checksum = "c08606f8c3cbf4ce6ec8e28fb0014a2c086708fe954eaa885384a6165172e7e8"
 [[package]]
 name = "aws-lc-fips-sys"
 version = "0.13.7"
-source = "git+https://github.com/aws/aws-lc-rs?rev=2630afad94b3d8d419fb278041cdbcd5c1cfba35#2630afad94b3d8d419fb278041cdbcd5c1cfba35"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2608e5a7965cc9d58c56234d346c9c89b824c4c8652b6f047b3bd0a777c0644f"
 dependencies = [
- "bindgen 0.72.1",
+ "bindgen 0.69.5",
  "cc",
  "cmake",
  "dunce",
@@ -175,21 +186,12 @@ dependencies = [
 
 [[package]]
 name = "aws-lc-rs"
-version = "1.13.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "08b5d4e069cbc868041a64bd68dc8cb39a0d79585cd6c5a24caa8c2d622121be"
-dependencies = [
- "aws-lc-sys 0.30.0",
- "zeroize",
-]
-
-[[package]]
-name = "aws-lc-rs"
 version = "1.13.3"
-source = "git+https://github.com/aws/aws-lc-rs?rev=2630afad94b3d8d419fb278041cdbcd5c1cfba35#2630afad94b3d8d419fb278041cdbcd5c1cfba35"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5c953fe1ba023e6b7730c0d4b031d06f267f23a46167dcbd40316644b10a17ba"
 dependencies = [
  "aws-lc-fips-sys",
- "aws-lc-sys 0.31.0",
+ "aws-lc-sys",
  "untrusted 0.7.1",
  "zeroize",
 ]
@@ -201,18 +203,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dbfd150b5dbdb988bcc8fb1fe787eb6b7ee6180ca24da683b61ea5405f3d43ff"
 dependencies = [
  "bindgen 0.69.5",
- "cc",
- "cmake",
- "dunce",
- "fs_extra",
-]
-
-[[package]]
-name = "aws-lc-sys"
-version = "0.31.0"
-source = "git+https://github.com/aws/aws-lc-rs?rev=2630afad94b3d8d419fb278041cdbcd5c1cfba35#2630afad94b3d8d419fb278041cdbcd5c1cfba35"
-dependencies = [
- "bindgen 0.72.1",
  "cc",
  "cmake",
  "dunce",
@@ -275,9 +265,12 @@ version = "0.72.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "993776b509cfb49c750f11b8f07a46fa23e0a1386ffc01fb1e7d343efc387895"
 dependencies = [
+ "annotate-snippets",
  "bitflags",
  "cexpr",
  "clang-sys",
+ "clap",
+ "clap_complete",
  "itertools 0.12.1",
  "log",
  "prettyplease",
@@ -287,6 +280,19 @@ dependencies = [
  "rustc-hash 2.1.1",
  "shlex",
  "syn 2.0.104",
+]
+
+[[package]]
+name = "bindgen-cli"
+version = "0.72.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8a408c0fcb20bf7bd4ceaf4bf990e223e3543a04b84d2394f3edeee29a0e87e2"
+dependencies = [
+ "bindgen 0.72.1",
+ "env_logger 0.10.2",
+ "log",
+ "proc-macro2",
+ "shlex",
 ]
 
 [[package]]
@@ -449,6 +455,15 @@ dependencies = [
  "anstyle",
  "clap_lex",
  "strsim",
+]
+
+[[package]]
+name = "clap_complete"
+version = "4.5.57"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4d9501bd3f5f09f7bbee01da9a511073ed30a80cd7a509f1214bb74eadea71ad"
+dependencies = [
+ "clap",
 ]
 
 [[package]]
@@ -704,6 +719,19 @@ dependencies = [
 
 [[package]]
 name = "env_logger"
+version = "0.10.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4cd405aab171cb85d6735e5c8d9db038c17d3ca007a4d2c25f337935c3d90580"
+dependencies = [
+ "humantime",
+ "is-terminal",
+ "log",
+ "regex",
+ "termcolor",
+]
+
+[[package]]
+name = "env_logger"
 version = "0.11.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "13c863f0904021b108aa8b2f55046443e6b1ebde8fd4a15c399893aae4fa069f"
@@ -728,14 +756,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "778e2ac28f6c47af28e4907f13ffd1e1ddbd400980a9abd7c8df189bf578a5ad"
 dependencies = [
  "libc",
- "windows-sys 0.59.0",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
 name = "example_channelless"
 version = "0.0.0"
 dependencies = [
- "env_logger",
+ "env_logger 0.11.8",
  "foxglove 0.14.0",
  "mcap",
  "schemars 1.0.4",
@@ -747,7 +775,7 @@ name = "example_client_publish"
 version = "0.0.0"
 dependencies = [
  "clap",
- "env_logger",
+ "env_logger 0.11.8",
  "foxglove 0.14.0",
  "serde_json",
  "tokio",
@@ -760,7 +788,7 @@ version = "0.0.0"
 dependencies = [
  "clap",
  "ctrlc",
- "env_logger",
+ "env_logger 0.11.8",
  "foxglove 0.14.0",
  "schemars 1.0.4",
  "serde",
@@ -771,7 +799,7 @@ name = "example_param_server"
 version = "0.0.0"
 dependencies = [
  "clap",
- "env_logger",
+ "env_logger 0.11.8",
  "foxglove 0.14.0",
  "tokio",
  "tokio-util",
@@ -791,7 +819,7 @@ name = "example_quickstart"
 version = "0.0.0"
 dependencies = [
  "ctrlc",
- "env_logger",
+ "env_logger 0.11.8",
  "foxglove 0.14.0",
 ]
 
@@ -800,7 +828,7 @@ name = "example_structured_logging"
 version = "0.14.0"
 dependencies = [
  "bytes",
- "env_logger",
+ "env_logger 0.11.8",
  "foxglove 0.14.0",
  "schemars 1.0.4",
  "serde",
@@ -812,7 +840,7 @@ name = "example_ws_server"
 version = "0.0.0"
 dependencies = [
  "clap",
- "env_logger",
+ "env_logger 0.11.8",
  "foxglove 0.14.0",
  "quaternion",
  "tokio",
@@ -824,7 +852,7 @@ version = "0.0.0"
 dependencies = [
  "clap",
  "ctrlc",
- "env_logger",
+ "env_logger 0.11.8",
  "foxglove 0.14.0",
 ]
 
@@ -833,7 +861,7 @@ name = "example_ws_server_fetch_asset"
 version = "0.0.0"
 dependencies = [
  "clap",
- "env_logger",
+ "env_logger 0.11.8",
  "foxglove 0.14.0",
  "tokio",
 ]
@@ -845,7 +873,7 @@ dependencies = [
  "anyhow",
  "bytes",
  "clap",
- "env_logger",
+ "env_logger 0.11.8",
  "foxglove 0.14.0",
  "futures",
  "parking_lot",
@@ -866,7 +894,7 @@ dependencies = [
  "bytes",
  "clap",
  "ctrlc",
- "env_logger",
+ "env_logger 0.11.8",
  "foxglove 0.14.0",
  "mcap",
  "tracing",
@@ -938,9 +966,10 @@ version = "0.14.0"
 dependencies = [
  "arc-swap",
  "assert_matches",
- "aws-lc-rs 1.13.3",
+ "aws-lc-rs",
  "base64",
  "bimap",
+ "bindgen-cli",
  "bytes",
  "chrono",
  "delegate",
@@ -998,7 +1027,7 @@ dependencies = [
  "base64",
  "bitflags",
  "cbindgen",
- "env_logger",
+ "env_logger 0.11.8",
  "foxglove 0.14.0",
  "log",
  "maplit",
@@ -1262,6 +1291,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6dbf3de79e51f3d586ab4cb9d5c3e2c14aa28ed23d180cf89b4df0454a69cc87"
 
 [[package]]
+name = "humantime"
+version = "2.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9b112acc8b3adf4b107a8ec20977da0273a8c386765a3ec0229bd500a1443f9f"
+
+[[package]]
 name = "iana-time-zone"
 version = "0.1.63"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1346,6 +1381,17 @@ dependencies = [
  "bitflags",
  "cfg-if",
  "libc",
+]
+
+[[package]]
+name = "is-terminal"
+version = "0.4.16"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e04d7f318608d35d4b61ddd75cbdaee86b023ebe2bd5a66ee0915f0bf93095a9"
+dependencies = [
+ "hermit-abi",
+ "libc",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -1453,7 +1499,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "07033963ba89ebaf1584d767badaa2e8fcec21aedea6b8c0346d487d49c28667"
 dependencies = [
  "cfg-if",
- "windows-targets 0.52.6",
+ "windows-targets 0.53.3",
 ]
 
 [[package]]
@@ -2179,7 +2225,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys 0.9.4",
- "windows-sys 0.59.0",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -2188,7 +2234,7 @@ version = "0.23.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c0ebcbd2f03de0fc1122ad9bb24b127a5a6cd51d72604a3f3c50ac459762b6cc"
 dependencies = [
- "aws-lc-rs 1.13.2",
+ "aws-lc-rs",
  "log",
  "once_cell",
  "rustls-pki-types",
@@ -2224,7 +2270,7 @@ version = "0.103.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0a17884ae0c1b773f1ccd2bd4a8c72f16da897310a98b0e84bf349ad5ead92fc"
 dependencies = [
- "aws-lc-rs 1.13.2",
+ "aws-lc-rs",
  "ring",
  "rustls-pki-types",
  "untrusted 0.9.0",
@@ -2601,6 +2647,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "termcolor"
+version = "1.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "06794f8f6c5c898b3275aebefa6b8a1cb24cd2c6c79397ab15774837a0bc5755"
+dependencies = [
+ "winapi-util",
+]
+
+[[package]]
 name = "thiserror"
 version = "1.0.69"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2905,6 +2960,12 @@ name = "unicode-ident"
 version = "1.0.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5a5f39404a5da50712a4c1eecf25e90dd62b613502b7e925fd4e4d19b5c96512"
+
+[[package]]
+name = "unicode-width"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4a1a07cc7db3810833284e8d372ccdc6da29741639ecc70c9ec107df0fa6154c"
 
 [[package]]
 name = "unicode-xid"

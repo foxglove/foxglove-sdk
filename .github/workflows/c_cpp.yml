@@ -135,6 +135,8 @@ jobs:
 
     env:
       CARGO_BUILD_TARGET: ${{ matrix.target }}
+      # https://github.com/aws/aws-lc-rs/issues/761
+      AWS_LC_SYS_EXTERNAL_BINDGEN: "1"
 
     steps:
       - uses: actions/checkout@v5

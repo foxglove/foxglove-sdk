@@ -37,10 +37,7 @@ workspace = true
 
 [dependencies]
 arc-swap = "1.7.1"
-# https://github.com/aws/aws-lc-rs/issues/761
-aws-lc-rs = { git = "https://github.com/aws/aws-lc-rs", rev = "2630afad94b3d8d419fb278041cdbcd5c1cfba35", optional = true, features = [
-  "bindgen",
-] }
+aws-lc-rs = { version = "1.13.3", optional = true, features = ["bindgen"] }
 base64 = { version = "0.22", optional = true }
 bimap = "0.6.3"
 bytes.workspace = true
@@ -69,6 +66,8 @@ tracing.workspace = true
 urlencoding = "2.1.3"
 
 [dev-dependencies]
+# https://github.com/aws/aws-lc-rs/issues/761
+bindgen-cli = "0.72.0"
 assert_matches = "1.5.0"
 insta = { version = "1.42.2", features = ["json"] }
 maplit = "1.0.2"
