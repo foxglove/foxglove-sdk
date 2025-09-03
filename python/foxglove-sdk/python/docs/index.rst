@@ -50,7 +50,7 @@ Channels
 
 A :py:class:`.Channel` gives a way to log related messages which have the same type, or
 :py:class:`.Schema`. Each channel is instantiated with a unique "topic", or name, which is typically
-prefixed by a `/`. If you're familiar with MCAP, it's the same concept as an [MCAP channel](https://mcap.dev/guides/concepts#channel).
+prefixed by a `/`. If you're familiar with MCAP, it's the same concept as an `MCAP channel <https://mcap.dev/guides/concepts#channel>`_.
 
 A channel is always associated with exactly one :py:class:`.Context` throughout its lifecycle. The
 channel remains attached to the context until it is either explicitly closed with
