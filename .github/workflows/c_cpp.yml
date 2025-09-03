@@ -152,7 +152,7 @@ jobs:
       - if: matrix.target == 'aarch64-apple-ios-sim'
         run: |
           # https://github.com/aws/aws-lc-rs/issues/761
-          cargo install bindgen --version 0.72.0
+          cargo install bindgen-cli --version 0.72.0
           echo "AWS_LC_SYS_EXTERNAL_BINDGEN=1" >> $GITHUB_ENV
           echo "~/.cargo/bin" >> $GITHUB_PATH
       - if: matrix.target == 'aarch64-apple-ios-sim'
