@@ -36,7 +36,7 @@ async fn test_logging_to_file_and_live_sinks() {
         .await
         .expect("Failed to start server");
 
-    let mut client = WebSocketClient::connect(format!("ws://127.0.0.1:{port}"))
+    let mut client = WebSocketClient::connect(format!("127.0.0.1:{port}"))
         .await
         .expect("failed to connect");
 

@@ -28,6 +28,9 @@ pub enum WebSocketClientError {
     Tungstenite(#[from] tungstenite::Error),
     #[error(transparent)]
     Timeout(#[from] tokio::time::error::Elapsed),
+    #[cfg(feature = "tls")]
+    #[error(transparent)]
+    Rustls(#[from] rustls::Error),
 }
 
 #[doc(hidden)]
@@ -74,7 +77,7 @@ impl WebSocketClient {
                     .with_root_certificates(root_cert_store)
                     .with_no_client_auth();
 
-                let connector = tokio_tungstenite::Connector::Rustls(Arc::new(config));
+                let connector = tokio_tungstenite::Connector::Rustls(std::sync::Arc::new(config));
 
                 tokio_tungstenite::connect_async_tls_with_config(
                     request,
