@@ -50,12 +50,12 @@ try:
         :param host: The host to bind to.
         :param port: The port to bind to.
         :param capabilities: A list of capabilities to advertise to clients.
-        :param server_listener: A Python object that implements the :py:class:`websocket.ServerListener`
-            protocol.
+        :param server_listener: A Python object that implements the
+            :py:class:`websocket.ServerListener` protocol.
         :param supported_encodings: A list of encodings to advertise to clients.
         :param services: A list of services to advertise to clients.
-        :param asset_handler: A callback function that returns the asset for a given URI, or None if it
-            doesn't exist.
+        :param asset_handler: A callback function that returns the asset for a given URI, or None if
+            it doesn't exist.
         :param context: The context to use for logging. If None, the global context is used.
         :param session_id: An ID which allows the client to understand if the connection is a
             re-connection or a new server instance. If None, then an ID is generated based on the
