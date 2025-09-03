@@ -29,9 +29,10 @@ use crate::testutil::{assert_eventually, RecordingServerListener};
 use crate::websocket::handshake::SUBPROTOCOL;
 use crate::websocket::server::{create_server as do_create_server, ServerOptions};
 use crate::websocket::service::{CallId, Service, ServiceSchema};
+#[cfg(feature = "tls")]
+use crate::websocket::TlsIdentity;
 use crate::websocket::{
     BlockingAssetHandlerFn, Capability, ClientChannelId, ConnectionGraph, Parameter, Server,
-    TlsIdentity,
 };
 use crate::websocket_client::WebSocketClient;
 use crate::{ChannelBuilder, Context, FoxgloveError, PartialMetadata, RawChannel, Schema};
@@ -1432,7 +1433,7 @@ async fn test_update_connection_graph() {
     assert_eq!(recording_listener.take_connection_graph_unsubscribe(), 0);
 
     // Connect a client and subscribe to graph updates.
-    let mut c1 = WebSocketClient::connect(format!("ws://{}", addr))
+    let mut c1 = WebSocketClient::connect(format!("ws://{addr}"))
         .await
         .expect("failed to connect");
     c1.send(&SubscribeConnectionGraph {}).await.unwrap();
@@ -1455,7 +1456,7 @@ async fn test_update_connection_graph() {
     );
 
     // Connect a second client and subscribe to graph updates.
-    let mut c2 = WebSocketClient::connect(format!("ws://{}", addr))
+    let mut c2 = WebSocketClient::connect(format!("ws://{addr}"))
         .await
         .expect("failed to connect");
     c2.send(&SubscribeConnectionGraph {}).await.unwrap();
@@ -1529,7 +1530,7 @@ async fn test_slow_client() {
         .await
         .expect("Failed to start server");
 
-    let mut client = WebSocketClient::connect(format!("ws://{}", addr))
+    let mut client = WebSocketClient::connect(format!("ws://{addr}"))
         .await
         .expect("failed to connect");
 
@@ -1574,7 +1575,7 @@ async fn test_broadcast_time() {
         .await
         .expect("Failed to start server");
 
-    let mut client = WebSocketClient::connect(format!("ws://{}", addr))
+    let mut client = WebSocketClient::connect(format!("ws://{addr}"))
         .await
         .expect("failed to connect");
     expect_recv!(client, ServerMessage::ServerInfo);

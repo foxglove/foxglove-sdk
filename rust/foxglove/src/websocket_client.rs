@@ -2,7 +2,6 @@ use std::time::Duration;
 
 use futures_util::{SinkExt, StreamExt};
 use rcgen::Certificate;
-use std::sync::Arc;
 use tokio::net::TcpStream;
 #[cfg(feature = "tls")]
 use tokio_rustls::rustls;
@@ -43,10 +42,14 @@ impl WebSocketClient {
         addr: impl AsRef<str>,
         trusted_cert: Certificate,
     ) -> Result<Self, WebSocketClientError> {
-        Self::connect(addr, Some(trusted_cert)).await
+        Self::do_connect(addr, Some(trusted_cert)).await
     }
 
-    pub async fn connect(
+    pub async fn connect(addr: impl AsRef<str>) -> Result<Self, WebSocketClientError> {
+        Self::do_connect(addr, None).await
+    }
+
+    pub async fn do_connect(
         addr: impl AsRef<str>,
         tls_cert: Option<Certificate>,
     ) -> Result<Self, WebSocketClientError> {
@@ -84,6 +87,7 @@ impl WebSocketClient {
             }
             #[cfg(not(feature = "tls"))]
             {
+                _ = tls_cert;
                 panic!("TLS is not enabled")
             }
         } else {
