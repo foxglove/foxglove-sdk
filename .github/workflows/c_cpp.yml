@@ -114,11 +114,11 @@ jobs:
             test_debug: false
           # iOS simulator
           - runner: macos-15
-            target: aarch64-apple-ios-simulator
+            target: aarch64-apple-ios-sim
             staticlib_name: libfoxglove.a
             cdylib_name: libfoxglove.dylib
-            staticlib_artifact_name: libfoxglove-aarch64-apple-ios-simulator.a
-            cdylib_artifact_name: libfoxglove-aarch64-apple-ios-simulator.dylib
+            staticlib_artifact_name: libfoxglove-aarch64-apple-ios-sim.a
+            cdylib_artifact_name: libfoxglove-aarch64-apple-ios-sim.dylib
             cross: true
             test_debug: false
           - runner: macos-15

@@ -37,7 +37,10 @@ workspace = true
 
 [dependencies]
 arc-swap = "1.7.1"
-aws-lc-rs = { version = "1.13.3", optional = true, features = ["bindgen"] }
+# https://github.com/aws/aws-lc-rs/issues/761
+aws-lc-rs = { git = "https://github.com/aws/aws-lc-rs", rev = "2630afad94b3d8d419fb278041cdbcd5c1cfba35", optional = true, features = [
+  "bindgen",
+] }
 base64 = { version = "0.22", optional = true }
 bimap = "0.6.3"
 bytes.workspace = true
