@@ -135,8 +135,6 @@ jobs:
 
     env:
       CARGO_BUILD_TARGET: ${{ matrix.target }}
-      # https://github.com/aws/aws-lc-rs/issues/761
-      AWS_LC_SYS_EXTERNAL_BINDGEN: "1"
 
     steps:
       - uses: actions/checkout@v5
@@ -151,6 +149,11 @@ jobs:
       - run: echo "IPHONEOS_DEPLOYMENT_TARGET=13.0.0" >> $GITHUB_ENV
         # Min version needed for libaws_lc_sys
         if: contains(matrix.target, 'apple-ios')
+      - if: matrix.target == 'aarch64-apple-ios-sim'
+        run: |
+          # https://github.com/aws/aws-lc-rs/issues/761
+          echo "AWS_LC_SYS_EXTERNAL_BINDGEN=1" >> $GITHUB_ENV
+          echo "~/.cargo/bin" >> $GITHUB_PATH
 
       - name: Build C library for ${{ matrix.target }}
         env:
