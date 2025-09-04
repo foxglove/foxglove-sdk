@@ -647,6 +647,28 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@foxglove/embed-react@npm:^0.1.1":
+  version: 0.1.1
+  resolution: "@foxglove/embed-react@npm:0.1.1"
+  dependencies:
+    "@foxglove/embed": "npm:0.1.1"
+    tslib: "npm:2.8.1"
+  peerDependencies:
+    react: ">=18"
+    react-dom: ">=18"
+  checksum: 10c0/5555fe803620cea41509a9077f90edd32033932b912a9711fa6a96700c4f55a2122d1a337625c47cd75f19c78e74e46aeb47b2e51ab14b7668102236579825e8
+  languageName: node
+  linkType: hard
+
+"@foxglove/embed@npm:0.1.1, @foxglove/embed@npm:^0.1.1":
+  version: 0.1.1
+  resolution: "@foxglove/embed@npm:0.1.1"
+  dependencies:
+    tslib: "npm:2.8.1"
+  checksum: 10c0/c1fc09a685d3f4e6fb27f2da95cfceb4f11a97645445b45a31b9ffd4a012b86a2868e48045e6acb7dc2d4de6e0528c424a71781b967b60e3822b388a69fda846
+  languageName: node
+  linkType: hard
+
 "@foxglove/eslint-plugin@npm:2.1.0":
   version: 2.1.0
   resolution: "@foxglove/eslint-plugin@npm:2.1.0"
@@ -7541,6 +7563,8 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "playground@workspace:python/playground"
   dependencies:
+    "@foxglove/embed": "npm:^0.1.1"
+    "@foxglove/embed-react": "npm:^0.1.1"
     "@foxglove/tsconfig": "npm:^2.0.0"
     "@mcap/core": "npm:^2.1.7"
     "@mcap/support": "npm:^1.0.4"
@@ -9114,17 +9138,17 @@ __metadata:
   languageName: node
   linkType: hard
 
+"tslib@npm:2.8.1, tslib@npm:^2, tslib@npm:^2.0.0, tslib@npm:^2.0.3, tslib@npm:^2.5.0, tslib@npm:^2.6.2":
+  version: 2.8.1
+  resolution: "tslib@npm:2.8.1"
+  checksum: 10c0/9c4759110a19c53f992d9aae23aac5ced636e99887b51b9e61def52611732872ff7668757d4e4c61f19691e36f4da981cd9485e869b4a7408d689f6bf1f14e62
+  languageName: node
+  linkType: hard
+
 "tslib@npm:^1.8.1":
   version: 1.14.1
   resolution: "tslib@npm:1.14.1"
   checksum: 10c0/69ae09c49eea644bc5ebe1bca4fa4cc2c82b7b3e02f43b84bd891504edf66dbc6b2ec0eef31a957042de2269139e4acff911e6d186a258fb14069cd7f6febce2
-  languageName: node
-  linkType: hard
-
-"tslib@npm:^2, tslib@npm:^2.0.0, tslib@npm:^2.0.3, tslib@npm:^2.5.0, tslib@npm:^2.6.2":
-  version: 2.8.1
-  resolution: "tslib@npm:2.8.1"
-  checksum: 10c0/9c4759110a19c53f992d9aae23aac5ced636e99887b51b9e61def52611732872ff7668757d4e4c61f19691e36f4da981cd9485e869b4a7408d689f6bf1f14e62
   languageName: node
   linkType: hard
 

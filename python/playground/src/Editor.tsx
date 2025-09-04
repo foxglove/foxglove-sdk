@@ -22,6 +22,7 @@ export const Editor = forwardRef<EditorInterface, EditorProps>(
         value: initialValue,
         language: "python",
         automaticLayout: true,
+        tabSize: 2,
       });
       editorRef.current = editor;
       return () => {

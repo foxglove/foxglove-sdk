@@ -1,3 +1,5 @@
+import { DataSource } from "@foxglove/embed";
+import { FoxgloveViewer } from "@foxglove/embed-react";
 import { McapIndexedReader } from "@mcap/core";
 import { loadDecompressHandlers } from "@mcap/support";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -14,6 +16,7 @@ export function Playground(): React.JSX.Element {
 
   const [ready, setReady] = useState(false);
   const [mcapFilename, setMcapFilename] = useState<string | undefined>();
+  const [dataSource, setDataSource] = useState<DataSource | undefined>();
 
   useEffect(() => {
     setReady(false);
@@ -41,7 +44,9 @@ export function Playground(): React.JSX.Element {
     try {
       await runner.run(editorRef.current?.getValue() ?? "");
 
-      const { data } = await runner.readFile();
+      const { name, data } = await runner.readFile();
+      setDataSource({ type: "file", file: new File([data], name) });
+
       const reader = await McapIndexedReader.Initialize({
         readable: {
           async size() {
@@ -123,17 +128,31 @@ export function Playground(): React.JSX.Element {
         </div>
       </div>
       <div style={{ display: "flex", gap: 16, flex: "1 1 0", minWidth: 0, minHeight: 0 }}>
-        <Editor initialValue={DEFAULT_CODE} ref={editorRef} />
-        <pre
-          ref={outputRef}
+        <div
           style={{
+            display: "flex",
+            flexDirection: "column",
             flex: "1 1 0",
-            minWidth: 0,
-            minHeight: 0,
-            border: "1px solid gray",
-            overflow: "auto",
+            width: 0,
           }}
-        ></pre>
+        >
+          <Editor initialValue={DEFAULT_CODE} ref={editorRef} />
+          <pre
+            ref={outputRef}
+            style={{
+              flex: "0 1 100px",
+              minWidth: 0,
+              minHeight: 0,
+              border: "1px solid gray",
+              borderLeft: "none",
+              borderBottom: "none",
+              overflow: "auto",
+              margin: 0,
+            }}
+          ></pre>
+        </div>
+
+        <FoxgloveViewer data={dataSource} style={{ flex: "1 1 0", overflow: "hidden" }} />
       </div>
     </div>
   );
@@ -159,18 +178,18 @@ with foxglove.open_mcap(file_name) as writer:
   for i in range(10):
     size = 1 + 0.2 * i
     scene_channel.log(
-        SceneUpdate(
-            entities=[
-                SceneEntity(
-                    cubes=[
-                        CubePrimitive(
-                            size=Vector3(x=size, y=size, z=size),
-                            color=Color(r=1.0, g=0, b=0, a=1.0),
-                        )
-                    ],
-                ),
-            ]
-        ),
-        log_time=i * 200_000_000,
+      SceneUpdate(
+        entities=[
+          SceneEntity(
+            cubes=[
+              CubePrimitive(
+                size=Vector3(x=size, y=size, z=size),
+                color=Color(r=1.0, g=0, b=0, a=1.0),
+              )
+            ],
+          ),
+        ]
+      ),
+      log_time=i * 200_000_000,
     )
 `;
