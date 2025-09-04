@@ -25,7 +25,7 @@ pub use get_parameters::GetParameters;
 pub use message_data::MessageData;
 pub use service_call_request::ServiceCallRequest;
 pub use set_parameters::SetParameters;
-pub use subscribe::Subscribe;
+pub use subscribe::{Subscribe, Subscription};
 pub use subscribe_connection_graph::SubscribeConnectionGraph;
 pub use subscribe_parameter_updates::SubscribeParameterUpdates;
 pub use unadvertise::Unadvertise;

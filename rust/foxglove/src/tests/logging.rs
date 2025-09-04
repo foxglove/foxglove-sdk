@@ -4,10 +4,10 @@ use serde_json::json;
 use tempfile::NamedTempFile;
 
 use crate::testutil::assert_eventually;
-use crate::websocket::testutil::WebSocketClient;
 use crate::websocket::ws_protocol::client::subscribe::Subscription;
 use crate::websocket::ws_protocol::client::Subscribe;
 use crate::websocket::ws_protocol::server::ServerMessage;
+use crate::websocket_client::WebSocketClient;
 use crate::{ChannelBuilder, Context, McapWriter, Schema, WebSocketServer};
 
 macro_rules! expect_recv {
@@ -36,7 +36,9 @@ async fn test_logging_to_file_and_live_sinks() {
         .await
         .expect("Failed to start server");
 
-    let mut client = WebSocketClient::connect(format!("127.0.0.1:{port}")).await;
+    let mut client = WebSocketClient::connect(format!("127.0.0.1:{port}"))
+        .await
+        .expect("failed to connect");
 
     let channel = ChannelBuilder::new("/test-topic")
         .message_encoding("json")
@@ -65,7 +67,7 @@ async fn test_logging_to_file_and_live_sinks() {
 
         // Client subscription
         client
-            .send(&Subscribe::new([Subscription { id: 1, channel_id }]))
+            .send(&Subscribe::new([Subscription::new(1, channel_id)]))
             .await
             .expect("Failed to subscribe");
 
