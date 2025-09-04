@@ -152,7 +152,11 @@ export function Playground(): React.JSX.Element {
           ></pre>
         </div>
 
-        <FoxgloveViewer data={dataSource} style={{ flex: "1 1 0", overflow: "hidden" }} />
+        <FoxgloveViewer
+          data={dataSource}
+          style={{ flex: "1 1 0", overflow: "hidden" }}
+          colorScheme="light"
+        />
       </div>
     </div>
   );
