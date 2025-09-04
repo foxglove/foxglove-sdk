@@ -1,6 +1,7 @@
 use std::time::Duration;
 
 use futures_util::{SinkExt, StreamExt};
+#[cfg(feature = "tls")]
 use rcgen::Certificate;
 use tokio::net::TcpStream;
 #[cfg(feature = "tls")]
@@ -45,19 +46,7 @@ impl WebSocketClient {
         addr: impl AsRef<str>,
         trusted_cert: Certificate,
     ) -> Result<Self, WebSocketClientError> {
-        Self::do_connect(addr, Some(trusted_cert)).await
-    }
-
-    pub async fn connect(addr: impl AsRef<str>) -> Result<Self, WebSocketClientError> {
-        Self::do_connect(addr, None).await
-    }
-
-    pub async fn do_connect(
-        addr: impl AsRef<str>,
-        tls_cert: Option<Certificate>,
-    ) -> Result<Self, WebSocketClientError> {
-        let protocol = if tls_cert.is_some() { "wss" } else { "ws" };
-        let mut request = format!("{protocol}://{addr}/", addr = addr.as_ref())
+        let mut request = format!("wss://{addr}/", addr = addr.as_ref())
             .into_client_request()
             .expect("Failed to build request");
 
@@ -66,38 +55,43 @@ impl WebSocketClient {
             HeaderValue::from_static(SUBPROTOCOL),
         );
 
-        let (stream, response) = if let Some(tls_cert) = tls_cert {
-            #[cfg(feature = "tls")]
-            {
-                let mut root_cert_store = rustls::RootCertStore::empty();
-                root_cert_store
-                    .add(tls_cert.der().clone().into_owned())
-                    .map_err(WebSocketClientError::from)?;
-                let config = rustls::ClientConfig::builder()
-                    .with_root_certificates(root_cert_store)
-                    .with_no_client_auth();
+        let mut root_cert_store = rustls::RootCertStore::empty();
+        root_cert_store
+            .add(trusted_cert.der().clone().into_owned())
+            .map_err(WebSocketClientError::from)?;
+        let config = rustls::ClientConfig::builder()
+            .with_root_certificates(root_cert_store)
+            .with_no_client_auth();
 
-                let connector = tokio_tungstenite::Connector::Rustls(std::sync::Arc::new(config));
+        let connector = tokio_tungstenite::Connector::Rustls(std::sync::Arc::new(config));
 
-                tokio_tungstenite::connect_async_tls_with_config(
-                    request,
-                    None,
-                    false,
-                    Some(connector),
-                )
+        let (stream, response) =
+            tokio_tungstenite::connect_async_tls_with_config(request, None, false, Some(connector))
                 .await
-                .map_err(WebSocketClientError::from)?
-            }
-            #[cfg(not(feature = "tls"))]
-            {
-                _ = tls_cert;
-                panic!("TLS is not enabled")
-            }
-        } else {
-            tokio_tungstenite::connect_async(request)
-                .await
-                .map_err(WebSocketClientError::from)?
-        };
+                .map_err(WebSocketClientError::from)?;
+
+        if response.headers().get("sec-websocket-protocol")
+            != Some(&HeaderValue::from_static(SUBPROTOCOL))
+        {
+            return Err(WebSocketClientError::InvalidSubprotocol);
+        }
+
+        Ok(Self { stream })
+    }
+
+    pub async fn connect(addr: impl AsRef<str>) -> Result<Self, WebSocketClientError> {
+        let mut request = format!("ws://{addr}/", addr = addr.as_ref())
+            .into_client_request()
+            .expect("Failed to build request");
+
+        request.headers_mut().insert(
+            "sec-websocket-protocol",
+            HeaderValue::from_static(SUBPROTOCOL),
+        );
+
+        let (stream, response) = tokio_tungstenite::connect_async(request)
+            .await
+            .map_err(WebSocketClientError::from)?;
 
         if response.headers().get("sec-websocket-protocol")
             != Some(&HeaderValue::from_static(SUBPROTOCOL))
