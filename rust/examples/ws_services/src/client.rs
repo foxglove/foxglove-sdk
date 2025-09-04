@@ -75,7 +75,7 @@ impl Drop for Client {
 impl Client {
     /// Connects to a websocket server and validates the subprotocol.
     async fn connect(host: &str, port: u16) -> Result<Self> {
-        let mut request = format!("{host}:{port}/")
+        let mut request = format!("ws://{host}:{port}/")
             .into_client_request()
             .context("Failed to build request")?;
 
