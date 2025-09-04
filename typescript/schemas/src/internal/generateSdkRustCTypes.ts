@@ -255,7 +255,7 @@ pub extern "C" fn foxglove_channel_log_${snakeName}(channel: Option<&FoxgloveCha
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_${snakeName}_schema() -> FoxgloveSchema {
     let native = foxglove::schemas::${name}::get_schema().expect("${name} schema is Some");
-    let name: &'static str = "foxglove.${name}";
+    let name: &'static str = "foxglove.${schema.name}";
     let encoding: &'static str = "protobuf";
     assert_eq!(name, &native.name);
     assert_eq!(encoding, &native.encoding);

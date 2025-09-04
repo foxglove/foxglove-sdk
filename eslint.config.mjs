@@ -1,10 +1,18 @@
 import foxglove from "@foxglove/eslint-plugin";
+import { defineConfig } from "eslint/config";
 import globals from "globals";
-import tseslint from "typescript-eslint";
 
-export default tseslint.config(
+export default defineConfig(
   {
-    ignores: ["**/dist", "python/foxglove-sdk/**/_build", ".cargo", "cpp/build"],
+    ignores: [
+      ".cargo",
+      "**/.venv",
+      "**/dist",
+      "cpp/build-*",
+      "cpp/build",
+      "python/foxglove-sdk/**/_build",
+      "target",
+    ],
   },
   ...foxglove.configs.base,
   {

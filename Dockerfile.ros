@@ -3,14 +3,22 @@ FROM ros:$ROS_DISTRIBUTION-ros-base
 
 RUN apt-get update
 
-# create foxglove user
+# create foxglove user (or use existing user if UID matches)
 ARG USERNAME=foxglove
 ARG USER_UID=1005
 ARG USER_GID=$USER_UID
-RUN groupadd --gid $USER_GID $USERNAME \
-    && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME \
-    && echo "$USERNAME ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers.d/$USERNAME
-USER $USERNAME
+RUN <<EOF
+if ! getent passwd $USER_UID >/dev/null 2>&1; then
+    groupadd --gid $USER_GID $USERNAME
+    useradd --uid $USER_UID --gid $USER_GID -m $USERNAME
+    echo "$USERNAME ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers.d/$USERNAME
+else
+    EXISTING_USER=$(getent passwd $USER_UID | cut -d: -f1)
+    echo "User with UID $USER_UID already exists: $EXISTING_USER"
+    echo "$EXISTING_USER ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers.d/$EXISTING_USER
+fi
+EOF
+USER $USER_UID
 
 # rosdep update must run as user
 RUN rosdep update --include-eol-distros

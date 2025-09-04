@@ -33,6 +33,7 @@ define generate_ros_targets
 .PHONY: docker-build-image-$(1)
 docker-build-image-$(1):
 	docker build -t foxglove-sdk-ros-$(1) -f ../Dockerfile.ros \
+		--pull \
 		--build-arg ROS_DISTRIBUTION=$(1) \
 		$(DOCKER_USER_ARGS) \
 		$(EXTRA_DOCKER_ARGS) ..
