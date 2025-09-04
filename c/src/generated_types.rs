@@ -1983,7 +1983,7 @@ pub extern "C" fn foxglove_channel_log_geo_json(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_geo_json_schema() -> FoxgloveSchema {
     let native = foxglove::schemas::GeoJson::get_schema().expect("GeoJson schema is Some");
-    let name: &'static str = "foxglove.GeoJson";
+    let name: &'static str = "foxglove.GeoJSON";
     let encoding: &'static str = "protobuf";
     assert_eq!(name, &native.name);
     assert_eq!(encoding, &native.encoding);
