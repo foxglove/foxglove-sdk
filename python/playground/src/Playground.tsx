@@ -84,21 +84,6 @@ export function Playground(): React.JSX.Element {
         link.remove();
         URL.revokeObjectURL(url);
       });
-
-      await runner.run(editorRef.current?.getValue() ?? "");
-
-      const reader = await McapIndexedReader.Initialize({
-        readable: {
-          async size() {
-            return BigInt(data.length);
-          },
-          async read(offset, size) {
-            return data.slice(Number(offset), Number(offset + size));
-          },
-        },
-        decompressHandlers: await loadDecompressHandlers(),
-      });
-      console.log(reader);
     } catch (err) {
       console.error("Run failed:", err);
     }
