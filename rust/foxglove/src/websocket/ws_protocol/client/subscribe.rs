@@ -29,16 +29,14 @@ impl JsonMessage for Subscribe {}
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Subscription {
-    /// Subscription ID.
-    pub id: u32,
     /// Channel ID.
-    pub channel_id: u64,
+    pub channel_id: u32,
 }
 
 impl Subscription {
     /// Creates a new subscription with the specified channel ID and subscription ID.
-    pub fn new(id: u32, channel_id: u64) -> Self {
-        Self { id, channel_id }
+    pub fn new(channel_id: u32) -> Self {
+        Self { channel_id }
     }
 }
 
@@ -49,7 +47,10 @@ mod tests {
     use super::*;
 
     fn message() -> Subscribe {
-        Subscribe::new([Subscription::new(1, 10), Subscription::new(2, 20)])
+        Subscribe::new([
+            Subscription { channel_id: 10 },
+            Subscription { channel_id: 20 },
+        ])
     }
 
     #[test]

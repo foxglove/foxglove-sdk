@@ -263,10 +263,10 @@ public:
     }
   }
 
-  void subscribe(const std::vector<std::pair<SubscriptionId, ChannelId>>& subscriptions) {
+  void subscribe(const std::vector<ChannelId>& channelIds) {
     nlohmann::json subscriptionsJson;
-    for (const auto& [subId, channelId] : subscriptions) {
-      subscriptionsJson.push_back({{"id", subId}, {"channelId", channelId}});
+    for (const auto channelId : channelIds) {
+      subscriptionsJson.push_back({{"channelId", channelId}});
     }
 
     const std::string payload =
@@ -274,9 +274,9 @@ public:
     sendText(payload);
   }
 
-  void unsubscribe(const std::vector<SubscriptionId>& subscriptionIds) {
+  void unsubscribe(const std::vector<ChannelId>& channelIds) {
     const std::string payload =
-      nlohmann::json{{"op", "unsubscribe"}, {"subscriptionIds", subscriptionIds}}.dump();
+      nlohmann::json{{"op", "unsubscribe"}, {"channelIds", channelIds}}.dump();
     sendText(payload);
   }
 
@@ -379,14 +379,14 @@ public:
     _endpoint.send(_con, data, dataLength, OpCode::BINARY);
   }
 
-  std::future<std::vector<uint8_t>> waitForChannelMsg(SubscriptionId subscriptionId) {
+  std::future<std::vector<uint8_t>> waitForChannelMsg(ChannelId channelId) {
     // Set up binary message handler to resolve when a binary message has been received
     auto promise = std::make_shared<std::promise<std::vector<uint8_t>>>();
     auto future = promise->get_future();
 
     setBinaryMessageHandler(
-      [promise = std::move(promise), subscriptionId](const uint8_t* data, size_t dataLength) {
-        if (ReadUint32LE(data + 1) != subscriptionId) {
+      [promise = std::move(promise), channelId](const uint8_t* data, size_t dataLength) {
+        if (ReadUint32LE(data + 1) != channelId) {
           return;
         }
         const size_t offset = 1 + 4 + 8;

@@ -1,10 +1,11 @@
 ---
 source: rust/foxglove/src/websocket/ws_protocol/client/unsubscribe.rs
+assertion_line: 38
 expression: message()
 ---
 {
   "op": "unsubscribe",
-  "subscriptionIds": [
+  "channelIds": [
     1,
     2,
     3

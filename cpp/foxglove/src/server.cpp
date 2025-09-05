@@ -31,7 +31,7 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
     if (callbacks->onSubscribe) {
       c_callbacks.on_subscribe = [](
                                    const void* context,
-                                   uint64_t channel_id,
+                                   uint32_t channel_id,
                                    const foxglove_client_metadata c_client_metadata
                                  ) {
         try {
@@ -49,7 +49,7 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
     }
     if (callbacks->onUnsubscribe) {
       c_callbacks.on_unsubscribe =
-        [](const void* context, uint64_t channel_id, foxglove_client_metadata c_client_metadata) {
+        [](const void* context, uint32_t channel_id, foxglove_client_metadata c_client_metadata) {
           try {
             ClientMetadata client_metadata{
               c_client_metadata.id,

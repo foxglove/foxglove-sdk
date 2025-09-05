@@ -294,11 +294,11 @@ pub extern "C" fn foxglove_channel_free(channel: Option<&FoxgloveChannel>) {
 ///
 /// If the passed channel is null, an invalid id of 0 is returned.
 #[unsafe(no_mangle)]
-pub extern "C" fn foxglove_channel_get_id(channel: Option<&FoxgloveChannel>) -> u64 {
+pub extern "C" fn foxglove_channel_get_id(channel: Option<&FoxgloveChannel>) -> u32 {
     let Some(channel) = channel else {
         return 0;
     };
-    u64::from(channel.0.id())
+    u32::from(channel.0.id())
 }
 
 /// Get the topic of a channel.

@@ -98,7 +98,7 @@ impl BaseChannel {
         Ok(())
     }
 
-    fn id(&self) -> u64 {
+    fn id(&self) -> u32 {
         self.0.id().into()
     }
 
