@@ -1,0 +1,23 @@
+.. _exhale_struct_structfoxglove_1_1FetchAssetResponder_1_1Deleter:
+
+Struct FetchAssetResponder::Deleter
+===================================
+
+- Defined in :ref:`file_foxglove_include_foxglove_server_fetch_asset.hpp`
+
+
+Nested Relationships
+--------------------
+
+This struct is a nested type of :ref:`exhale_class_classfoxglove_1_1FetchAssetResponder`.
+
+
+Struct Documentation
+--------------------
+
+
+.. doxygenstruct:: foxglove::FetchAssetResponder::Deleter
+   :project: Foxglove SDK
+   :members:
+   :protected-members:
+   :undoc-members:

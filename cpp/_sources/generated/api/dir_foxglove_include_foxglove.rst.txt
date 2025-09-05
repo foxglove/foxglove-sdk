@@ -1,0 +1,34 @@
+.. _dir_foxglove_include_foxglove:
+
+
+Directory foxglove
+==================
+
+
+|exhale_lsh| :ref:`Parent directory <dir_foxglove_include>` (``foxglove/include``)
+
+.. |exhale_lsh| unicode:: U+021B0 .. UPWARDS ARROW WITH TIP LEFTWARDS
+
+
+*Directory path:* ``foxglove/include/foxglove``
+
+Subdirectories
+--------------
+
+- :ref:`dir_foxglove_include_foxglove_server`
+
+
+Files
+-----
+
+- :ref:`file_foxglove_include_foxglove_arena.hpp`
+- :ref:`file_foxglove_include_foxglove_channel.hpp`
+- :ref:`file_foxglove_include_foxglove_context.hpp`
+- :ref:`file_foxglove_include_foxglove_error.hpp`
+- :ref:`file_foxglove_include_foxglove_foxglove.hpp`
+- :ref:`file_foxglove_include_foxglove_mcap.hpp`
+- :ref:`file_foxglove_include_foxglove_schema.hpp`
+- :ref:`file_foxglove_include_foxglove_schemas.hpp`
+- :ref:`file_foxglove_include_foxglove_server.hpp`
+
+

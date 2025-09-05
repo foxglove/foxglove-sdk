@@ -1,0 +1,69 @@
+
+.. _program_listing_file_foxglove_include_foxglove_channel.hpp:
+
+Program Listing for File channel.hpp
+====================================
+
+|exhale_lsh| :ref:`Return to documentation for file <file_foxglove_include_foxglove_channel.hpp>` (``foxglove/include/foxglove/channel.hpp``)
+
+.. |exhale_lsh| unicode:: U+021B0 .. UPWARDS ARROW WITH TIP LEFTWARDS
+
+.. code-block:: cpp
+
+   #pragma once
+   
+   #include <foxglove/context.hpp>
+   #include <foxglove/error.hpp>
+   #include <foxglove/schema.hpp>
+   #include <foxglove/schemas.hpp>
+   
+   #include <cstdint>
+   #include <map>
+   #include <memory>
+   #include <optional>
+   #include <string>
+   
+   struct foxglove_channel;
+   struct foxglove_context;
+   
+   namespace foxglove {
+   class RawChannel final {
+   public:
+     static FoxgloveResult<RawChannel> create(
+       const std::string_view& topic, const std::string_view& message_encoding,
+       std::optional<Schema> schema = std::nullopt, const Context& context = Context(),
+       std::optional<std::map<std::string, std::string>> metadata = std::nullopt
+     );
+   
+     FoxgloveError log(
+       const std::byte* data, size_t data_len, std::optional<uint64_t> log_time = std::nullopt,
+       std::optional<uint64_t> sink_id = std::nullopt
+     ) noexcept;
+   
+     void close() noexcept;
+   
+     [[nodiscard]] uint64_t id() const noexcept;
+   
+     [[nodiscard]] std::string_view topic() const noexcept;
+   
+     [[nodiscard]] std::string_view message_encoding() const noexcept;
+   
+     [[nodiscard]] bool has_sinks() const noexcept;
+   
+     [[nodiscard]] std::optional<Schema> schema() const noexcept;
+   
+     std::optional<std::map<std::string, std::string>> metadata() const noexcept;
+   
+     RawChannel(const RawChannel&) = delete;
+     RawChannel& operator=(const RawChannel&) = delete;
+     RawChannel(RawChannel&& other) noexcept = default;
+     RawChannel& operator=(RawChannel&& other) noexcept = default;
+     ~RawChannel() = default;
+   
+   private:
+     explicit RawChannel(const foxglove_channel* channel);
+   
+     schemas::ChannelUniquePtr impl_;
+   };
+   
+   }  // namespace foxglove

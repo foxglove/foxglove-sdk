@@ -1,0 +1,14 @@
+.. _exhale_function_schemas_8cpp_1a07e3bd47116cab267b6dc34f1c277d69:
+
+Function foxglove::schemas::sceneEntityToC
+==========================================
+
+- Defined in :ref:`file_foxglove_src_schemas.cpp`
+
+
+Function Documentation
+----------------------
+
+
+.. doxygenfunction:: foxglove::schemas::sceneEntityToC(foxglove_scene_entity&, const SceneEntity&, Arena&)
+   :project: Foxglove SDK
