@@ -3,7 +3,6 @@ use std::collections::HashSet;
 use std::sync::Weak;
 use std::{collections::HashMap, net::SocketAddr, sync::Arc};
 
-use bimap::BiHashMap;
 use flume::TrySendError;
 use send_lossy::SendLossyResult;
 use tokio::net::TcpStream;
@@ -21,7 +20,7 @@ use self::ws_protocol::server::{
 use super::semaphore::Semaphore;
 use super::server::Server;
 use super::service::{self, CallId, ServiceId};
-use super::subscription::{Subscription, SubscriptionId};
+use super::subscription::Subscription;
 use super::ws_protocol::client::ClientMessage;
 use super::ws_protocol::server::MessageData;
 use super::ws_protocol::{self, ParseError};
@@ -67,7 +66,7 @@ pub(super) struct ConnectedClient {
     service_call_sem: Semaphore,
     fetch_asset_sem: Semaphore,
     /// Subscriptions from this client
-    subscriptions: parking_lot::Mutex<BiHashMap<ChannelId, SubscriptionId>>,
+    subscriptions: parking_lot::Mutex<HashSet<ChannelId>>,
     /// Channels advertised by this client
     advertised_channels: parking_lot::Mutex<HashMap<ClientChannelId, Arc<ClientChannel>>>,
     server: Weak<Server>,
@@ -94,12 +93,8 @@ impl Sink for ConnectedClient {
         msg: &[u8],
         metadata: &Metadata,
     ) -> Result<(), FoxgloveError> {
-        let subscriptions = self.subscriptions.lock();
-        let Some(subscription_id) = subscriptions.get_by_left(&channel.id()).copied() else {
-            return Ok(());
-        };
-
-        let message = MessageData::new(subscription_id.into(), metadata.log_time, msg);
+        let channel_id = channel.id();
+        let message = MessageData::new(channel_id.into(), metadata.log_time, msg);
         self.send_data_lossy(&message, MAX_SEND_RETRIES);
         Ok(())
     }
@@ -274,7 +269,7 @@ impl ConnectedClient {
 
     /// Called when the server finally drops the connection.
     pub fn on_disconnect(&self) {
-        let channel_ids = self.subscriptions.lock().left_values().copied().collect();
+        let channel_ids = self.subscriptions.lock().iter().copied().collect();
         self.unsubscribe_channel_ids(channel_ids);
     }
 
@@ -373,18 +368,18 @@ impl ConnectedClient {
     }
 
     fn on_unsubscribe(&self, message: ws_protocol::client::Unsubscribe) {
-        let subscription_ids: Vec<_> = message
-            .subscription_ids
+        let channel_ids: Vec<ChannelId> = message
+            .channel_ids
             .into_iter()
-            .map(SubscriptionId::new)
+            .map(ChannelId::new)
             .collect();
 
-        let mut unsubscribed_channel_ids = Vec::with_capacity(subscription_ids.len());
+        let mut unsubscribed_channel_ids = Vec::with_capacity(channel_ids.len());
         // First gather the unsubscribed channel ids while holding the subscriptions lock
         {
             let mut subscriptions = self.subscriptions.lock();
-            for subscription_id in subscription_ids {
-                if let Some((channel_id, _)) = subscriptions.remove_by_right(&subscription_id) {
+            for channel_id in channel_ids {
+                if subscriptions.remove(&channel_id) {
                     unsubscribed_channel_ids.push(channel_id);
                 }
             }
@@ -429,31 +424,19 @@ impl ConnectedClient {
             // Using a limited scope here to avoid holding the lock on subscriptions while calling on_subscribe
             {
                 let mut subscriptions = self.subscriptions.lock();
-                if subscriptions
-                    .insert_no_overwrite(subscription.channel_id, subscription.id)
-                    .is_err()
-                {
-                    if subscriptions.contains_left(&subscription.channel_id) {
-                        self.send_warning(format!(
-                            "Client is already subscribed to channel: {}; ignoring subscription",
-                            subscription.channel_id
-                        ));
-                    } else {
-                        assert!(subscriptions.contains_right(&subscription.id));
-                        self.send_error(format!(
-                            "Subscription ID was already used: {}; ignoring subscription",
-                            subscription.id
-                        ));
-                    }
+                if !subscriptions.insert(subscription.channel_id) {
+                    self.send_warning(format!(
+                        "Client is already subscribed to channel: {}; ignoring subscription",
+                        subscription.channel_id
+                    ));
                     continue;
                 }
             }
 
             tracing::debug!(
-                "Client {} subscribed to channel {} with subscription id {}",
+                "Client {} subscribed to channel {}",
                 self.addr,
                 subscription.channel_id,
-                subscription.id
             );
             channel_ids.push(channel.id());
 

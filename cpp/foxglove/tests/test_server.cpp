@@ -312,7 +312,7 @@ TEST_CASE("Subscribe and unsubscribe callbacks") {
       "op": "subscribe",
       "subscriptions": [
         {
-          "id": 100, "channelId": )" +
+          "channelId": )" +
     std::to_string(channel.id()) + R"( }
       ]
     })"
@@ -325,7 +325,8 @@ TEST_CASE("Subscribe and unsubscribe callbacks") {
   client.send(
     R"({
       "op": "unsubscribe",
-      "subscriptionIds": [100]
+      "channelIds": [)" +
+    std::to_string(channel.id()) + R"(]
     })"
   );
   cv.wait_for(lock, std::chrono::seconds(1), [&] {

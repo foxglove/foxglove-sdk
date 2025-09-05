@@ -319,14 +319,15 @@ async fn test_advertise_to_client() {
     let msg = expect_recv!(client, ServerMessage::Advertise);
     assert_eq!(msg.channels.len(), 1);
     let adv_ch = &msg.channels[0];
-    assert_eq!(adv_ch.id, u64::from(ch.id()));
+    assert_eq!(adv_ch.id, u32::from(ch.id()));
     assert_eq!(adv_ch.topic, ch.topic());
 
     ch.log(b"foo bar");
     ch2.log(b"{\"a\":1}");
 
-    let subscription_id = 42;
-    let subscribe_msg = Subscribe::new([Subscription::new(subscription_id, ch.id().into())]);
+    let subscribe_msg = Subscribe::new([Subscription {
+        channel_id: ch.id().into(),
+    }]);
     client.send(&subscribe_msg).await.expect("Failed to send");
 
     // Allow the server to process the subscription
@@ -335,7 +336,7 @@ async fn test_advertise_to_client() {
     ch.log(b"{\"a\":1}");
 
     let msg = expect_recv!(client, ServerMessage::MessageData);
-    assert_eq!(msg.subscription_id, subscription_id);
+    assert_eq!(msg.channel_id, u32::from(ch.id()));
 
     let subscriptions = recording_listener.take_subscribe();
     assert_eq!(subscriptions.len(), 1);
@@ -360,7 +361,7 @@ async fn test_advertise_to_client() {
     // Ensure we get an unadvertise message only for the first channel
     let msg = expect_recv!(client, ServerMessage::Unadvertise);
     assert_eq!(msg.channel_ids.len(), 1);
-    assert_eq!(msg.channel_ids[0], u64::from(ch.id()));
+    assert_eq!(msg.channel_ids[0], u32::from(ch.id()));
 
     assert!(client.recv().now_or_never().is_none());
 
@@ -402,7 +403,7 @@ async fn test_advertise_schemaless_channels() {
 
     let msg = expect_recv!(client, ServerMessage::Advertise);
     let adv_chan = msg.channels.first().expect("not empty");
-    assert_eq!(adv_chan.id, u64::from(json_chan.id()));
+    assert_eq!(adv_chan.id, u32::from(json_chan.id()));
     assert_eq!(adv_chan.topic, json_chan.topic());
 
     // Client receives no advertisements for other schemaless channels (not supported)
@@ -465,7 +466,7 @@ async fn test_log_only_to_subscribers() {
     // Read the channel advertisement from each client for all 3 channels
     let expect_ch_ids: Vec<_> = [&ch1, &ch2, &ch3]
         .iter()
-        .map(|c| u64::from(c.id()))
+        .map(|c| u32::from(c.id()))
         .collect();
     for client in [&mut client1, &mut client2, &mut client3] {
         let msg = expect_recv!(client, ServerMessage::Advertise);
@@ -475,12 +476,16 @@ async fn test_log_only_to_subscribers() {
     }
 
     client1
-        .send(&Subscribe::new([Subscription::new(1, ch1.id().into())]))
+        .send(&Subscribe::new([Subscription {
+            channel_id: ch1.id().into(),
+        }]))
         .await
         .expect("Failed to send");
 
     client2
-        .send(&Subscribe::new([Subscription::new(2, ch2.id().into())]))
+        .send(&Subscribe::new([Subscription {
+            channel_id: ch2.id().into(),
+        }]))
         .await
         .expect("Failed to send");
 
@@ -489,8 +494,12 @@ async fn test_log_only_to_subscribers() {
 
     client3
         .send(&Subscribe::new([
-            Subscription::new(111, ch1.id().into()),
-            Subscription::new(222, ch2.id().into()),
+            Subscription {
+                channel_id: ch1.id().into(),
+            },
+            Subscription {
+                channel_id: ch2.id().into(),
+            },
         ]))
         .await
         .expect("Failed to send");
@@ -499,7 +508,7 @@ async fn test_log_only_to_subscribers() {
     assert_eventually(|| dbg!(ch1.num_sinks()) == 2 && dbg!(ch2.num_sinks()) == 2).await;
 
     client3
-        .send(&Unsubscribe::new([111, 222]))
+        .send(&Unsubscribe::new([ch1.id().into(), ch2.id().into()]))
         .await
         .expect("Failed to send");
 
@@ -533,12 +542,12 @@ async fn test_log_only_to_subscribers() {
 
     // Receive the message for client1 and client2
     let msg = expect_recv!(client1, ServerMessage::MessageData);
-    assert_eq!(msg.subscription_id, 1);
+    assert_eq!(msg.channel_id, u32::from(ch1.id()));
     assert_eq!(msg.log_time, 123456);
     assert_eq!(msg.data, Cow::Borrowed(b"channel1"));
 
     let msg = expect_recv!(client2, ServerMessage::MessageData);
-    assert_eq!(msg.subscription_id, 2);
+    assert_eq!(msg.channel_id, u32::from(ch2.id()));
     assert_eq!(msg.log_time, 123456);
     assert_eq!(msg.data, Cow::Borrowed(b"channel2"));
 
@@ -574,7 +583,9 @@ async fn test_on_unsubscribe_called_after_disconnect() {
     expect_recv!(client, ServerMessage::Advertise);
 
     client
-        .send(&Subscribe::new([Subscription::new(1, chan.id().into())]))
+        .send(&Subscribe::new([Subscription {
+            channel_id: chan.id().into(),
+        }]))
         .await
         .expect("Failed to send");
 
@@ -663,7 +674,7 @@ async fn test_error_status_message() {
 
     {
         client
-            .send(&Subscribe::new([Subscription::new(1, 555)]))
+            .send(&Subscribe::new([Subscription { channel_id: 555 }]))
             .await
             .expect("Failed to send message");
 

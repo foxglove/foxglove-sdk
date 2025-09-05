@@ -658,7 +658,7 @@ impl ${channelClass} {
     }
 
     /// The unique ID of the channel.
-    fn id(&self) -> u64 {
+    fn id(&self) -> u32 {
         self.0.id().into()
     }
 
