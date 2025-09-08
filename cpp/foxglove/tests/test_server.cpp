@@ -75,6 +75,7 @@ public:
   void start(uint16_t port) {
     std::error_code ec;
     connection_ = client_.get_connection("ws://127.0.0.1:" + std::to_string(port), ec);
+    connection_->add_subprotocol("foxglove.sdk.v2");
     connection_->add_subprotocol("foxglove.sdk.v1");
     UNSCOPED_INFO(ec.message());
     REQUIRE(!ec);
