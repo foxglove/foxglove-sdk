@@ -15,4 +15,4 @@ See [docs.rs](https://docs.rs/foxglove).
 
 # Supported Rust Versions
 
-The current MSRV (minimum supported rust version) is 1.83.0.
+The current MSRV (minimum supported rust version) is 1.82.0.
