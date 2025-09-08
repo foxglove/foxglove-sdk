@@ -23,7 +23,7 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           # The last-specified toolchain is the default.
-          toolchain: 1.78.0
+          toolchain: 1.82.0
           components: clippy,rustfmt
 
       - name: Ensure generated protobuf schemas are up to date

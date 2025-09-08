@@ -10,14 +10,12 @@ members = [
   "python/foxglove-sdk",
 ]
 
-exclude = [
-  "rust/examples/rgb_camera_visualization"
-]
+exclude = ["rust/examples/rgb_camera_visualization"]
 
 [workspace.package]
 version = "0.14.1"
 edition = "2021"
-rust-version = "1.83.0"
+rust-version = "1.82.0"
 repository = "https://github.com/foxglove/foxglove-sdk"
 license = "MIT"
 
