@@ -23,7 +23,7 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           # The last-specified toolchain is the default.
-          toolchain: 1.83.0,nightly,stable
+          toolchain: 1.78.0
 
       - name: Ensure generated protobuf schemas are up to date
         run: cargo run --bin foxglove_proto_gen && git diff --exit-code
