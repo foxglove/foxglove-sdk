@@ -13,9 +13,9 @@ RUN bash nodesource_setup.sh
 
 RUN apt-get update \
     && apt-get install -y \
-        clang-19=1:19.1.4-1~deb12u1 \
-        clang-format-19=1:19.1.4-1~deb12u1 \
-        clang-tidy-19=1:19.1.4-1~deb12u1 \
+        clang-19=1:19.1.7-3~deb12u1 \
+        clang-format-19=1:19.1.7-3~deb12u1 \
+        clang-tidy-19=1:19.1.7-3~deb12u1 \
         cmake=3.25.1-1 \
         doxygen=1.9.4-4 \
         nodejs=23.11.1-1nodesource1 \
