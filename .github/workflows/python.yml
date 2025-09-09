@@ -77,12 +77,12 @@ jobs:
       - run: poetry check --strict
       - run: poetry install
       - run: CFLAGS=-fPIC RUSTC_BOOTSTRAP=1 poetry run maturin build --release --out dist --target wasm32-unknown-emscripten -i python3.12
-      - run: mkdir -p ../playground/public
-      - run: cp dist/*.whl ../playground/public
+      - run: mkdir -p ../../playground/public
+      - run: cp dist/*.whl ../../playground/public
       - run: yarn install
-        working-directory: python/playground
+        working-directory: playground
       - run: yarn build
-        working-directory: python/playground
+        working-directory: playground
       - uses: cloudflare/pages-action@v1.5.0
         id: deploy
         with:
@@ -91,7 +91,7 @@ jobs:
           gitHubToken: ${{ secrets.FOXGLOVEBOT_GITHUB_TOKEN }}
           branch: ${{ github.head_ref || github.ref_name }}
           projectName: foxglove-sdk-playground
-          directory: python/playground/dist
+          directory: playground/dist
 
   schemas:
     runs-on: ubuntu-latest
