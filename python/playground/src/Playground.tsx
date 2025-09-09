@@ -1,7 +1,5 @@
 import { DataSource } from "@foxglove/embed";
 import { FoxgloveViewer } from "@foxglove/embed-react";
-import { McapIndexedReader } from "@mcap/core";
-import { loadDecompressHandlers } from "@mcap/support";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Editor, EditorInterface } from "./Editor";
@@ -46,19 +44,6 @@ export function Playground(): React.JSX.Element {
 
       const { name, data } = await runner.readFile();
       setDataSource({ type: "file", file: new File([data], name) });
-
-      const reader = await McapIndexedReader.Initialize({
-        readable: {
-          async size() {
-            return BigInt(data.length);
-          },
-          async read(offset, size) {
-            return data.slice(Number(offset), Number(offset + size));
-          },
-        },
-        decompressHandlers: await loadDecompressHandlers(),
-      });
-      console.log(reader);
     } catch (err) {
       console.error("Run failed:", err);
     }

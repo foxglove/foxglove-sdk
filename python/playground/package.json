@@ -11,8 +11,6 @@
     "@foxglove/embed": "^0.1.1",
     "@foxglove/embed-react": "^0.1.1",
     "@foxglove/tsconfig": "^2.0.0",
-    "@mcap/core": "^2.1.7",
-    "@mcap/support": "^1.0.4",
     "@pmmmwh/react-refresh-webpack-plugin": "^0.6.1",
     "@pyodide/webpack-plugin": "^1.3.3",
     "@types/node": "^24.3.0",
