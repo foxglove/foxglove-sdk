@@ -9,7 +9,7 @@ mod connected_client;
 mod connection_graph;
 mod cow_vec;
 mod fetch_asset;
-mod handshake;
+pub(crate) mod handshake;
 mod semaphore;
 mod server;
 mod server_listener;
@@ -18,9 +18,8 @@ mod streams;
 mod subscription;
 #[cfg(test)]
 mod tests;
-#[cfg(test)]
-pub(crate) mod testutil;
-pub(crate) mod ws_protocol;
+#[doc(hidden)]
+pub mod ws_protocol;
 
 pub use capability::Capability;
 pub use channel_view::ChannelView;

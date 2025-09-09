@@ -352,11 +352,19 @@ mod runtime;
 #[cfg(feature = "live_visualization")]
 pub mod websocket;
 #[cfg(feature = "live_visualization")]
+mod websocket_client;
+#[cfg(feature = "live_visualization")]
 mod websocket_server;
 #[cfg(feature = "live_visualization")]
 pub(crate) use runtime::get_runtime_handle;
 #[cfg(feature = "live_visualization")]
 pub use runtime::shutdown_runtime;
+#[doc(hidden)]
+#[cfg(feature = "live_visualization")]
+pub use websocket::ws_protocol;
+#[doc(hidden)]
+#[cfg(feature = "live_visualization")]
+pub use websocket_client::{WebSocketClient, WebSocketClientError};
 #[cfg(feature = "live_visualization")]
 pub use websocket_server::{WebSocketServer, WebSocketServerHandle};
 
