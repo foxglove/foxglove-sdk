@@ -3,7 +3,8 @@
   "private": true,
   "packageManager": "yarn@4.6.0",
   "workspaces": [
-    "typescript/*"
+    "typescript/*",
+    "playground"
   ],
   "scripts": {
     "build": "tsc -b",

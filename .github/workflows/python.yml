@@ -43,6 +43,59 @@ jobs:
       - run: poetry run mypy .
       - run: poetry run pytest --with-benchmarks
 
+  playground:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: python/foxglove-sdk
+    permissions:
+      deployments: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          # Use an older rust toolchain to avoid emscripten build error "Unknown option '--enable-bulk-memory-opt'"
+          # similar to https://github.com/godotengine/godot/issues/100841
+          toolchain: 1.86.0
+          target: wasm32-unknown-emscripten
+      - run: corepack enable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+
+      - name: Install common dependencies
+        uses: ./.github/actions/common-deps
+
+      - name: Set up Emscripten
+        run: |
+          git clone https://github.com/emscripten-core/emsdk.git
+          # Use an older emscripten version to avoid errors with building Rust packages https://github.com/pyodide/pyodide/pull/5646#issuecomment-3215934664
+          ./emsdk/emsdk install 3.1.58
+          ./emsdk/emsdk activate 3.1.58
+          echo "$(pwd)/emsdk" >> $GITHUB_PATH
+          echo "$(pwd)/emsdk/upstream/emscripten" >> $GITHUB_PATH
+
+      - run: pipx install poetry
+      - run: poetry check --strict
+      - run: poetry install
+      - run: CFLAGS=-fPIC RUSTC_BOOTSTRAP=1 poetry run maturin build --release --out dist --target wasm32-unknown-emscripten -i python3.12
+      - run: mkdir -p ../../playground/public
+      - run: cp dist/*.whl ../../playground/public
+      - run: yarn install
+        working-directory: playground
+      - run: yarn build
+        working-directory: playground
+      - uses: cloudflare/pages-action@v1.5.0
+        id: deploy
+        with:
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          gitHubToken: ${{ secrets.FOXGLOVEBOT_GITHUB_TOKEN }}
+          branch: ${{ github.head_ref || github.ref_name }}
+          projectName: foxglove-sdk-playground
+          directory: playground/dist
+
   schemas:
     runs-on: ubuntu-latest
     permissions:
