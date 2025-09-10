@@ -3,7 +3,7 @@ use bytes::{Buf, BufMut, Bytes, BytesMut};
 use serde::Deserialize;
 use tokio_tungstenite::tungstenite::{http::HeaderValue, Message};
 
-pub const SDK_SUBPROTOCOL: HeaderValue = HeaderValue::from_static("foxglove.sdk.v1");
+pub const SDK_SUBPROTOCOL: HeaderValue = HeaderValue::from_static("foxglove.websocket.v1");
 
 pub enum ServerMessage {
     ServerInfo,
