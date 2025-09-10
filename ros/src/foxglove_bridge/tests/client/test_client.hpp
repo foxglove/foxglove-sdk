@@ -527,7 +527,7 @@ public:
   }
 
 protected:
-  static constexpr char SUPPORTED_SUBPROTOCOL[] = "foxglove.sdk.v1";
+  static constexpr char SUPPORTED_SUBPROTOCOL[] = "foxglove.sdk.v2";
   ClientType _endpoint;
   websocketpp::lib::shared_ptr<websocketpp::lib::thread> _thread;
   ConnectionPtr _con;
