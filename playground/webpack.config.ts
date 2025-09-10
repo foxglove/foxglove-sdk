@@ -72,6 +72,9 @@ export default (_env: unknown, argv: WebpackArgv): Configuration => {
       },
     },
     plugins: [
+      new webpack.ProvidePlugin({
+        Buffer: ["buffer", "Buffer"],
+      }),
       new webpack.DefinePlugin({
         FOXGLOVE_SDK_WHEEL_FILENAME: JSON.stringify(path.basename(wheelPath)),
       }),

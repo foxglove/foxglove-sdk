@@ -3,6 +3,8 @@ import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 
 type EditorProps = {
   initialValue?: string;
+  // eslint-disable-next-line react/no-unused-prop-types
+  onSave?: () => void;
 };
 
 export type EditorInterface = {
@@ -12,6 +14,10 @@ export type EditorInterface = {
 export const Editor = forwardRef<EditorInterface, EditorProps>(
   function Editor(props, ref): React.JSX.Element {
     const { initialValue } = props;
+    const latestProps = useRef(props);
+    useEffect(() => {
+      latestProps.current = props;
+    }, [props]);
     const containerRef = useRef<HTMLDivElement>(null);
     const editorRef = useRef<monaco.editor.IStandaloneCodeEditor>(null);
     useEffect(() => {
@@ -23,6 +29,9 @@ export const Editor = forwardRef<EditorInterface, EditorProps>(
         language: "python",
         automaticLayout: true,
         tabSize: 2,
+      });
+      editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
+        latestProps.current.onSave?.();
       });
       editorRef.current = editor;
       return () => {

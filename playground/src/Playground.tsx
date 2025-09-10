@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Editor, EditorInterface } from "./Editor";
 import { Runner } from "./Runner";
+import { getUrlState, setUrlState } from "./urlState";
 
 import "./Playground.css";
 
@@ -12,6 +13,7 @@ export function Playground(): React.JSX.Element {
   const runnerRef = useRef<Runner>(undefined);
   const editorRef = useRef<EditorInterface>(null);
 
+  const [initialState] = useState(() => getUrlState());
   const [ready, setReady] = useState(false);
   const [mcapFilename, setMcapFilename] = useState<string | undefined>();
   const [dataSource, setDataSource] = useState<DataSource | undefined>();
@@ -47,6 +49,14 @@ export function Playground(): React.JSX.Element {
     } catch (err) {
       console.error("Run failed:", err);
     }
+  }, []);
+
+  const share = useCallback(() => {
+    const editor = editorRef.current;
+    if (!editor) {
+      return;
+    }
+    setUrlState({ code: editor.getValue() });
   }, []);
 
   const download = useCallback(async () => {
@@ -92,6 +102,7 @@ export function Playground(): React.JSX.Element {
           <button onClick={() => void download()} disabled={!mcapFilename}>
             Download {mcapFilename}
           </button>
+          <button onClick={share}>Share</button>
           <button onClick={() => void run()} disabled={!ready}>
             Run
           </button>
@@ -106,7 +117,11 @@ export function Playground(): React.JSX.Element {
             width: 0,
           }}
         >
-          <Editor initialValue={DEFAULT_CODE} ref={editorRef} />
+          <Editor
+            initialValue={initialState?.code ?? DEFAULT_CODE}
+            onSave={share}
+            ref={editorRef}
+          />
           <pre
             ref={outputRef}
             style={{
