@@ -9,12 +9,12 @@ use crate::websocket::ws_protocol::JsonMessage;
 #[serde(tag = "op", rename = "unadvertise", rename_all = "camelCase")]
 pub struct Unadvertise {
     /// IDs of the channels to unadvertise.
-    pub channel_ids: Vec<u64>,
+    pub channel_ids: Vec<u32>,
 }
 
 impl Unadvertise {
     /// Creates a new unadvertise message with the given channel IDs.
-    pub fn new(channel_ids: impl IntoIterator<Item = u64>) -> Self {
+    pub fn new(channel_ids: impl IntoIterator<Item = u32>) -> Self {
         Self {
             channel_ids: channel_ids.into_iter().collect(),
         }
