@@ -54,6 +54,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
+          # Use an older rust toolchain to avoid emscripten build error "Unknown option '--enable-bulk-memory-opt'"
+          # similar to https://github.com/godotengine/godot/issues/100841
           toolchain: 1.86.0
           target: wasm32-unknown-emscripten
       - run: corepack enable
@@ -68,6 +70,7 @@ jobs:
       - name: Set up Emscripten
         run: |
           git clone https://github.com/emscripten-core/emsdk.git
+          # Use an older emscripten version to avoid errors with building Rust packages https://github.com/pyodide/pyodide/pull/5646#issuecomment-3215934664
           ./emsdk/emsdk install 3.1.58
           ./emsdk/emsdk activate 3.1.58
           echo "$(pwd)/emsdk" >> $GITHUB_PATH
