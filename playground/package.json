@@ -34,6 +34,7 @@
     "pyodide": "0.27.7",
     "react": "19.1.1",
     "react-dom": "19.1.1",
+    "react-hot-toast": "^2.6.0",
     "react-refresh": "^0.17.0",
     "react-refresh-typescript": "^2.0.10",
     "style-loader": "^4.0.0",
