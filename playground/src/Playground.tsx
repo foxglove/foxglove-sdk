@@ -106,7 +106,7 @@ export function Playground(): React.JSX.Element {
             width: 0,
           }}
         >
-          <Editor initialValue={DEFAULT_CODE} ref={editorRef} />
+          <Editor initialValue={DEFAULT_CODE} ref={editorRef} runner={runnerRef} />
           <pre
             ref={outputRef}
             style={{
