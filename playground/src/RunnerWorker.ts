@@ -234,7 +234,7 @@ function normalizeCompletion(
       kind = 4 satisfies monaco.languages.CompletionItemKind.Variable;
       break;
   }
-  const result: monaco.languages.CompletionItem = {
+  return {
     insertText: item.name,
     label: item.name,
     kind,
@@ -246,7 +246,6 @@ function normalizeCompletion(
     },
     detail: item.doc,
   };
-  return result;
 }
 
 function normalizeSignatureHelp(
