@@ -4,6 +4,6 @@
     "declaration": false,
     "declarationMap": false,
     "jsx": "react-jsx",
-    "lib": ["DOM"]
+    "lib": ["es2022", "DOM"]
   }
 }
