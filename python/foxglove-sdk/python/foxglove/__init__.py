@@ -5,9 +5,10 @@ See :py:mod:`foxglove.schemas` and :py:mod:`foxglove.channels` for working with 
 schemas.
 """
 
+from __future__ import annotations
+
 import atexit
 import logging
-from typing import List, Optional, Union
 
 from . import _foxglove_py as _foxglove
 
@@ -32,16 +33,16 @@ try:
 
     def start_server(
         *,
-        name: Optional[str] = None,
-        host: Optional[str] = "127.0.0.1",
-        port: Optional[int] = 8765,
-        capabilities: Optional[List[Capability]] = None,
-        server_listener: Optional[ServerListener] = None,
-        supported_encodings: Optional[List[str]] = None,
-        services: Optional[List[Service]] = None,
-        asset_handler: Optional[AssetHandler] = None,
-        context: Optional[Context] = None,
-        session_id: Optional[str] = None,
+        name: str | None = None,
+        host: str | None = "127.0.0.1",
+        port: int | None = 8765,
+        capabilities: list[Capability] | None = None,
+        server_listener: ServerListener | None = None,
+        supported_encodings: list[str] | None = None,
+        services: list[Service] | None = None,
+        asset_handler: AssetHandler | None = None,
+        context: Context | None = None,
+        session_id: str | None = None,
     ) -> WebSocketServer:
         """
         Start a websocket server for live visualization.
@@ -78,7 +79,7 @@ except ImportError:
     pass
 
 
-def set_log_level(level: Union[int, str] = "INFO") -> None:
+def set_log_level(level: int | str = "INFO") -> None:
     """
     Enable SDK logging.
 
