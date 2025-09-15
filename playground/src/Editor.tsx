@@ -5,6 +5,8 @@ import { Runner } from "./Runner";
 
 type EditorProps = {
   initialValue?: string;
+  // eslint-disable-next-line react/no-unused-prop-types
+  onSave?: () => void;
   runner: React.RefObject<Runner | undefined>;
 };
 
@@ -15,6 +17,10 @@ export type EditorInterface = {
 export const Editor = forwardRef<EditorInterface, EditorProps>(
   function Editor(props, ref): React.JSX.Element {
     const { initialValue, runner } = props;
+    const latestProps = useRef(props);
+    useEffect(() => {
+      latestProps.current = props;
+    }, [props]);
     const containerRef = useRef<HTMLDivElement>(null);
     const editorRef = useRef<monaco.editor.IStandaloneCodeEditor>(null);
     useEffect(() => {
@@ -62,6 +68,9 @@ export const Editor = forwardRef<EditorInterface, EditorProps>(
             },
           };
         },
+      });
+      editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
+        latestProps.current.onSave?.();
       });
       editorRef.current = editor;
       return () => {
