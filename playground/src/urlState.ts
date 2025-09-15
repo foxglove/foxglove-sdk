@@ -1,6 +1,5 @@
 // note: we assume the wasm module has already been loaded, which is done in index.tsx
 import zstd from "@foxglove/wasm-zstd";
-import base64 from "@protobufjs/base64";
 
 export type UrlState = {
   code: string;
@@ -29,7 +28,7 @@ function compressEncode(value: string | undefined): string {
   }
   const uncompressed = textEncoder.encode(value);
   const compressed = zstd.compress(uncompressed);
-  return base64ToUrlSafe(base64.encode(compressed, 0, compressed.length));
+  return base64ToUrlSafe(compressed.toString("base64"));
 }
 
 /** Decode base64 and decompress zstd */
@@ -37,12 +36,7 @@ function uncompressDecode(encodedUrlSafe: string | undefined): string {
   if (!encodedUrlSafe) {
     return "";
   }
-  const encoded = urlSafeToBase64(encodedUrlSafe);
-  const compressed = new Uint8Array(base64.length(encoded));
-  const compressedLen = base64.decode(encoded, compressed, 0);
-  if (compressedLen !== compressed.length) {
-    throw new Error("Invalid base64 length");
-  }
+  const compressed = Buffer.from(urlSafeToBase64(encodedUrlSafe), "base64");
   if (compressed.length === 0) {
     return "";
   }
@@ -81,12 +75,7 @@ function deserializeState(serialized: string): UrlState | undefined {
 }
 
 export function getUrlState(): UrlState | undefined {
-  try {
-    return deserializeState(window.location.hash.substring(1));
-  } catch (err) {
-    console.warn("Decoding failed:", err);
-    return undefined;
-  }
+  return deserializeState(window.location.hash.substring(1));
 }
 
 export function setUrlState(state: UrlState): void {

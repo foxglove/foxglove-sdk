@@ -22,7 +22,14 @@ export function Playground(): React.JSX.Element {
   const runnerRef = useRef<Runner>(undefined);
   const editorRef = useRef<EditorInterface>(null);
 
-  const [initialState] = useState(() => getUrlState());
+  const [initialState] = useState(() => {
+    try {
+      return getUrlState();
+    } catch (err) {
+      toast.error(`Unable to restore from URL: ${String(err)}`);
+      return undefined;
+    }
+  });
   const [selectedLayout, setSelectedLayout] = useState(initialState?.layout);
   const [ready, setReady] = useState(false);
   const [mcapFilename, setMcapFilename] = useState<string | undefined>();
