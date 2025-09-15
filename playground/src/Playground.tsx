@@ -161,9 +161,10 @@ export function Playground(): React.JSX.Element {
           }}
         >
           <Editor
+            ref={editorRef}
             initialValue={initialState?.code ?? DEFAULT_CODE}
             onSave={share}
-            ref={editorRef}
+            runner={runnerRef}
           />
           <pre
             ref={outputRef}

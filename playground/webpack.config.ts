@@ -102,6 +102,8 @@ export default (_env: unknown, argv: WebpackArgv): Configuration => {
       new PyodideCdnDownloadPlugin([
         "micropip-0.9.0-py3-none-any.whl",
         "packaging-24.2-py3-none-any.whl",
+        "jedi-0.19.1-py2.py3-none-any.whl",
+        "parso-0.8.4-py2.py3-none-any.whl",
       ]),
     ],
   };

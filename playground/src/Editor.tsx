@@ -1,10 +1,13 @@
 import * as monaco from "monaco-editor";
 import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 
+import { Runner } from "./Runner";
+
 type EditorProps = {
   initialValue?: string;
   // eslint-disable-next-line react/no-unused-prop-types
   onSave?: () => void;
+  runner: React.RefObject<Runner | undefined>;
 };
 
 export type EditorInterface = {
@@ -13,7 +16,7 @@ export type EditorInterface = {
 
 export const Editor = forwardRef<EditorInterface, EditorProps>(
   function Editor(props, ref): React.JSX.Element {
-    const { initialValue } = props;
+    const { initialValue, runner } = props;
     const latestProps = useRef(props);
     useEffect(() => {
       latestProps.current = props;
@@ -29,16 +32,54 @@ export const Editor = forwardRef<EditorInterface, EditorProps>(
         language: "python",
         automaticLayout: true,
         tabSize: 2,
+        minimap: { enabled: false },
+      });
+
+      // Provide autocompletion/intellisense using jedi, based on https://github.com/pybricks/pybricks-code
+      const completionProvider = monaco.languages.registerCompletionItemProvider("python", {
+        triggerCharacters: ["."],
+        async provideCompletionItems(model, position, _context, _token) {
+          return {
+            suggestions:
+              (await runner.current?.getCompletionItems(
+                model.getValue(),
+                position.lineNumber,
+                position.column,
+              )) ?? [],
+          };
+        },
+      });
+      const signatureProvider = monaco.languages.registerSignatureHelpProvider("python", {
+        signatureHelpTriggerCharacters: ["(", ","],
+        signatureHelpRetriggerCharacters: [")"],
+        async provideSignatureHelp(model, position, _token, _context) {
+          return {
+            dispose() {
+              // noop
+            },
+            value: (await runner.current?.getSignatureHelp(
+              model.getValue(),
+              position.lineNumber,
+              position.column,
+            )) ?? {
+              signatures: [],
+              activeSignature: 0,
+              activeParameter: 0,
+            },
+          };
+        },
       });
       editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
         latestProps.current.onSave?.();
       });
       editorRef.current = editor;
       return () => {
+        signatureProvider.dispose();
+        completionProvider.dispose();
         editor.dispose();
         editorRef.current = null;
       };
-    }, [initialValue]);
+    }, [initialValue, runner]);
 
     useImperativeHandle(
       ref,
