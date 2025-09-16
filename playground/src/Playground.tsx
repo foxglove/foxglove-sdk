@@ -1,20 +1,40 @@
 import { DataSource } from "@foxglove/embed";
 import { FoxgloveViewer } from "@foxglove/embed-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import toast, { Toaster } from "react-hot-toast";
 
 import { Editor, EditorInterface } from "./Editor";
 import { Runner } from "./Runner";
+import { getUrlState, setUrlState, UrlState } from "./urlState";
 
 import "./Playground.css";
+
+function setAndCopyUrlState(state: UrlState) {
+  setUrlState(state);
+  navigator.clipboard.writeText(window.location.href).then(
+    () => toast.success("URL copied to clipboard"),
+    () => toast.error("Failed to copy URL"),
+  );
+}
 
 export function Playground(): React.JSX.Element {
   const outputRef = useRef<HTMLPreElement>(null);
   const runnerRef = useRef<Runner>(undefined);
   const editorRef = useRef<EditorInterface>(null);
 
+  const [initialState] = useState(() => {
+    try {
+      return getUrlState();
+    } catch (err) {
+      toast.error(`Unable to restore from URL: ${String(err)}`);
+      return undefined;
+    }
+  });
+  const [selectedLayout, setSelectedLayout] = useState(initialState?.layout);
   const [ready, setReady] = useState(false);
   const [mcapFilename, setMcapFilename] = useState<string | undefined>();
   const [dataSource, setDataSource] = useState<DataSource | undefined>();
+  const layoutInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setReady(false);
@@ -45,8 +65,39 @@ export function Playground(): React.JSX.Element {
       const { name, data } = await runner.readFile();
       setDataSource({ type: "file", file: new File([data], name) });
     } catch (err) {
-      console.error("Run failed:", err);
+      toast.error(`Run failed: ${String(err)}`);
     }
+  }, []);
+
+  const share = useCallback(() => {
+    const editor = editorRef.current;
+    if (!editor) {
+      return;
+    }
+    setAndCopyUrlState({ code: editor.getValue(), layout: selectedLayout });
+  }, [selectedLayout]);
+
+  const chooseLayout = useCallback(() => {
+    layoutInputRef.current?.click();
+  }, []);
+
+  const onLayoutSelected = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) {
+      return;
+    }
+    file
+      .text()
+      .then(JSON.parse)
+      .then(
+        (layout) => {
+          setSelectedLayout(layout);
+          setAndCopyUrlState({ code: editorRef.current?.getValue() ?? "", layout });
+        },
+        (err: unknown) => {
+          toast.error(`Failed to load layout: ${String(err)}`);
+        },
+      );
   }, []);
 
   const download = useCallback(async () => {
@@ -70,12 +121,13 @@ export function Playground(): React.JSX.Element {
         URL.revokeObjectURL(url);
       });
     } catch (err) {
-      console.error("Run failed:", err);
+      toast.error(`Download failed: ${String(err)}`);
     }
   }, []);
 
   return (
     <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column" }}>
+      <Toaster />
       <div
         style={{
           flex: "0 0 auto",
@@ -92,6 +144,15 @@ export function Playground(): React.JSX.Element {
           <button onClick={() => void download()} disabled={!mcapFilename}>
             Download {mcapFilename}
           </button>
+          <button onClick={share}>Share</button>
+          <button onClick={chooseLayout}>Choose layout…</button>
+          <input
+            ref={layoutInputRef}
+            type="file"
+            accept=".json"
+            style={{ display: "none" }}
+            onChange={onLayoutSelected}
+          />
           <button onClick={() => void run()} disabled={!ready}>
             Run
           </button>
@@ -106,7 +167,12 @@ export function Playground(): React.JSX.Element {
             width: 0,
           }}
         >
-          <Editor initialValue={DEFAULT_CODE} ref={editorRef} runner={runnerRef} />
+          <Editor
+            ref={editorRef}
+            initialValue={initialState?.code ?? DEFAULT_CODE}
+            onSave={share}
+            runner={runnerRef}
+          />
           <pre
             ref={outputRef}
             style={{
@@ -123,9 +189,10 @@ export function Playground(): React.JSX.Element {
         </div>
 
         <FoxgloveViewer
-          data={dataSource}
           style={{ flex: "1 1 0", overflow: "hidden" }}
           colorScheme="light"
+          data={dataSource}
+          layoutData={selectedLayout ?? DEFAULT_LAYOUT}
         />
       </div>
     </div>
@@ -167,3 +234,62 @@ with foxglove.open_mcap(file_name) as writer:
       log_time=i * 200_000_000,
     )
 `;
+
+const DEFAULT_LAYOUT = {
+  globalVariables: {},
+  userNodes: {},
+  playbackConfig: {
+    speed: 1,
+  },
+  layout: "3D!2xs2cbr",
+  configById: {
+    "3D!2xs2cbr": {
+      cameraState: {
+        distance: 20,
+        perspective: true,
+        phi: 60,
+        target: [0, 0, 0],
+        targetOffset: [0, 0, 0],
+        targetOrientation: [0, 0, 0, 1],
+        thetaOffset: 45,
+        fovy: 45,
+        near: 0.5,
+        far: 5000,
+      },
+      followMode: "follow-pose",
+      scene: {},
+      transforms: {},
+      topics: {
+        "/scene": {
+          visible: true,
+        },
+      },
+      layers: {
+        grid: {
+          visible: true,
+          drawBehind: false,
+          frameLocked: true,
+          label: "Grid",
+          instanceId: "12bf7bad-7660-42b2-aec8-ac7f9ce200ba",
+          layerId: "foxglove.Grid",
+          size: 10,
+          divisions: 10,
+          lineWidth: 1,
+          color: "#248eff",
+          position: [0, 0, 0],
+          rotation: [0, 0, 0],
+        },
+      },
+      publish: {
+        type: "point",
+        poseTopic: "/move_base_simple/goal",
+        pointTopic: "/clicked_point",
+        poseEstimateTopic: "/initialpose",
+        poseEstimateXDeviation: 0.5,
+        poseEstimateYDeviation: 0.5,
+        poseEstimateThetaDeviation: 0.26179939,
+      },
+      imageMode: {},
+    },
+  },
+};
