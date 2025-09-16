@@ -1,5 +1,6 @@
 import * as Comlink from "comlink";
 import EventEmitter from "eventemitter3";
+import type * as monaco from "monaco-editor";
 
 import type { RunnerWorker } from "./RunnerWorker";
 
@@ -36,6 +37,22 @@ export class Runner extends EventEmitter<EventMap> {
 
   async readFile(): Promise<{ name: string; data: Uint8Array<ArrayBuffer> }> {
     return await this.#remote.readFile();
+  }
+
+  async getCompletionItems(
+    code: string,
+    line: number,
+    col: number,
+  ): Promise<monaco.languages.CompletionItem[]> {
+    return await this.#remote.getCompletionItems(code, line, col);
+  }
+
+  async getSignatureHelp(
+    code: string,
+    line: number,
+    col: number,
+  ): Promise<monaco.languages.SignatureHelp> {
+    return await this.#remote.getSignatureHelp(code, line, col);
   }
 
   dispose(): void {
