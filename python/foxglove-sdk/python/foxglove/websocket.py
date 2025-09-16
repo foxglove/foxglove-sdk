@@ -1,5 +1,13 @@
+from __future__ import annotations
+
+import sys
 from collections.abc import Callable
-from typing import Dict, List, Optional, Protocol, Union
+from typing import Protocol, Union
+
+if sys.version_info >= (3, 10):
+    from typing import TypeAlias
+else:
+    from typing import Any as TypeAlias
 
 from ._foxglove_py.websocket import (
     Capability,
@@ -18,10 +26,9 @@ from ._foxglove_py.websocket import (
     WebSocketServer,
 )
 
-# Redefine types from the stub interface so they're available for documentation.
-ServiceHandler = Callable[["ServiceRequest"], bytes]
-AssetHandler = Callable[[str], Optional[bytes]]
-AnyParameterValue = Union[
+ServiceHandler: TypeAlias = Callable[[ServiceRequest], bytes]
+AssetHandler: TypeAlias = Callable[[str], "bytes | None"]
+AnyParameterValue: TypeAlias = Union[
     ParameterValue.Integer,
     ParameterValue.Bool,
     ParameterValue.Float64,
@@ -29,17 +36,16 @@ AnyParameterValue = Union[
     ParameterValue.Array,
     ParameterValue.Dict,
 ]
-AnyInnerParameterValue = Union[
+AnyInnerParameterValue: TypeAlias = Union[
     AnyParameterValue,
     bool,
     int,
     float,
     str,
-    List["AnyInnerParameterValue"],
-    Dict[str, "AnyInnerParameterValue"],
+    "list[AnyInnerParameterValue]",
+    "dict[str, AnyInnerParameterValue]",
 ]
-
-AnyNativeParameterValue = Union[
+AnyNativeParameterValue: TypeAlias = Union[
     AnyInnerParameterValue,
     bytes,
 ]
@@ -101,9 +107,9 @@ class ServerListener(Protocol):
     def on_get_parameters(
         self,
         client: Client,
-        param_names: List[str],
-        request_id: Optional[str] = None,
-    ) -> List["Parameter"]:
+        param_names: list[str],
+        request_id: str | None = None,
+    ) -> list[Parameter]:
         """
         Called by the server when a client requests parameters.
 
@@ -118,9 +124,9 @@ class ServerListener(Protocol):
     def on_set_parameters(
         self,
         client: Client,
-        parameters: List["Parameter"],
-        request_id: Optional[str] = None,
-    ) -> List["Parameter"]:
+        parameters: list[Parameter],
+        request_id: str | None = None,
+    ) -> list[Parameter]:
         """
         Called by the server when a client sets parameters.
         Note that only `parameters` which have changed are included in the callback, but the return
@@ -137,7 +143,7 @@ class ServerListener(Protocol):
 
     def on_parameters_subscribe(
         self,
-        param_names: List[str],
+        param_names: list[str],
     ) -> None:
         """
         Called by the server when a client subscribes to one or more parameters for the first time.
@@ -150,7 +156,7 @@ class ServerListener(Protocol):
 
     def on_parameters_unsubscribe(
         self,
-        param_names: List[str],
+        param_names: list[str],
     ) -> None:
         """
         Called by the server when the last client subscription to one or more parameters has been
@@ -179,6 +185,7 @@ __all__ = [
     "AnyInnerParameterValue",
     "AnyNativeParameterValue",
     "AnyParameterValue",
+    "AssetHandler",
     "Capability",
     "ChannelView",
     "Client",
