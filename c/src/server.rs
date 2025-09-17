@@ -153,14 +153,14 @@ pub struct FoxgloveServerCallbacks {
     pub on_subscribe: Option<
         unsafe extern "C" fn(
             context: *const c_void,
-            channel_id: u64,
+            channel_id: u32,
             client: FoxgloveClientMetadata,
         ),
     >,
     pub on_unsubscribe: Option<
         unsafe extern "C" fn(
             context: *const c_void,
-            channel_id: u64,
+            channel_id: u32,
             client: FoxgloveClientMetadata,
         ),
     >,

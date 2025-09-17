@@ -12,7 +12,7 @@
 namespace foxglove::test {
 
 // Protocol type aliases
-using ChannelId = uint64_t;
+using ChannelId = uint32_t;
 using SubscriptionId = uint32_t;
 using ClientChannelId = uint32_t;
 using ServiceId = uint32_t;

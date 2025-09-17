@@ -319,7 +319,7 @@ async fn test_advertise_to_client() {
     let msg = expect_recv!(client, ServerMessage::Advertise);
     assert_eq!(msg.channels.len(), 1);
     let adv_ch = &msg.channels[0];
-    assert_eq!(adv_ch.id, u64::from(ch.id()));
+    assert_eq!(adv_ch.id, u32::from(ch.id()));
     assert_eq!(adv_ch.topic, ch.topic());
 
     ch.log(b"foo bar");
@@ -360,7 +360,7 @@ async fn test_advertise_to_client() {
     // Ensure we get an unadvertise message only for the first channel
     let msg = expect_recv!(client, ServerMessage::Unadvertise);
     assert_eq!(msg.channel_ids.len(), 1);
-    assert_eq!(msg.channel_ids[0], u64::from(ch.id()));
+    assert_eq!(msg.channel_ids[0], u32::from(ch.id()));
 
     assert!(client.recv().now_or_never().is_none());
 
@@ -402,7 +402,7 @@ async fn test_advertise_schemaless_channels() {
 
     let msg = expect_recv!(client, ServerMessage::Advertise);
     let adv_chan = msg.channels.first().expect("not empty");
-    assert_eq!(adv_chan.id, u64::from(json_chan.id()));
+    assert_eq!(adv_chan.id, u32::from(json_chan.id()));
     assert_eq!(adv_chan.topic, json_chan.topic());
 
     // Client receives no advertisements for other schemaless channels (not supported)
@@ -465,7 +465,7 @@ async fn test_log_only_to_subscribers() {
     // Read the channel advertisement from each client for all 3 channels
     let expect_ch_ids: Vec<_> = [&ch1, &ch2, &ch3]
         .iter()
-        .map(|c| u64::from(c.id()))
+        .map(|c| u32::from(c.id()))
         .collect();
     for client in [&mut client1, &mut client2, &mut client3] {
         let msg = expect_recv!(client, ServerMessage::Advertise);

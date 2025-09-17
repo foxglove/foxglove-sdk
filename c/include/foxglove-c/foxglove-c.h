@@ -1900,10 +1900,10 @@ typedef struct foxglove_server_callbacks {
    */
   const void *context;
   void (*on_subscribe)(const void *context,
-                       uint64_t channel_id,
+                       uint32_t channel_id,
                        struct foxglove_client_metadata client);
   void (*on_unsubscribe)(const void *context,
-                         uint64_t channel_id,
+                         uint32_t channel_id,
                          struct foxglove_client_metadata client);
   void (*on_client_advertise)(const void *context,
                               uint32_t client_id,
@@ -4105,7 +4105,7 @@ void foxglove_channel_free(const struct foxglove_channel *channel);
  *
  * If the passed channel is null, an invalid id of 0 is returned.
  */
-uint64_t foxglove_channel_get_id(const struct foxglove_channel *channel);
+uint32_t foxglove_channel_get_id(const struct foxglove_channel *channel);
 #endif
 
 #if !defined(__wasm__)
