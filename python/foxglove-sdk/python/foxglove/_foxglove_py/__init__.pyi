@@ -1,21 +1,23 @@
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
+
+from foxglove.websocket import AssetHandler
 
 from .mcap import MCAPWriteOptions, MCAPWriter
-from .websocket import AssetHandler, Capability, Service, WebSocketServer
+from .websocket import Capability, Service, WebSocketServer
 
 class BaseChannel:
     """
     A channel for logging messages.
     """
 
-    def __new__(
-        cls,
+    def __init__(
+        self,
         topic: str,
         message_encoding: str,
-        schema: Optional["Schema"] = None,
-        metadata: Optional[Dict[str, str]] = None,
-    ) -> "BaseChannel": ...
+        schema: Schema | None = None,
+        metadata: dict[str, str] | None = None,
+    ) -> None: ...
     def id(self) -> int:
         """The unique ID of the channel"""
         ...
@@ -29,7 +31,7 @@ class BaseChannel:
         """The message encoding for the channel"""
         ...
 
-    def metadata(self) -> Dict[str, str]:
+    def metadata(self) -> dict[str, str]:
         """
         Returns a copy of the channel's metadata.
 
@@ -38,7 +40,7 @@ class BaseChannel:
         """
         ...
 
-    def schema(self) -> Optional["Schema"]:
+    def schema(self) -> "Schema" | None:
         """
         Returns a copy of the channel's schema.
 
@@ -47,7 +49,7 @@ class BaseChannel:
         """
         ...
 
-    def schema_name(self) -> Optional[str]:
+    def schema_name(self) -> str | None:
         """The name of the schema for the channel"""
         ...
 
@@ -58,8 +60,8 @@ class BaseChannel:
     def log(
         self,
         msg: bytes,
-        log_time: Optional[int] = None,
-        sink_id: Optional[int] = None,
+        log_time: int | None = None,
+        sink_id: int | None = None,
     ) -> None:
         """
         Log a message to the channel.
@@ -82,13 +84,13 @@ class Schema:
     encoding: str
     data: bytes
 
-    def __new__(
-        cls,
+    def __init__(
+        self,
         *,
         name: str,
         encoding: str,
         data: bytes,
-    ) -> "Schema": ...
+    ) -> None: ...
 
 class Context:
     """
@@ -100,13 +102,13 @@ class Context:
     channel constructor and to :py:func:`open_mcap` or :py:func:`start_server`.
     """
 
-    def __new__(cls) -> "Context": ...
+    def __init__(self) -> None: ...
     def _create_channel(
         self,
         topic: str,
         message_encoding: str,
-        schema: Optional["Schema"] = None,
-        metadata: Optional[List[Tuple[str, str]]] = None,
+        schema: Schema | None = None,
+        metadata: list[tuple[str, str]] | None = None,
     ) -> "BaseChannel":
         """
         Instead of calling this method, pass a context to a channel constructor.
@@ -115,16 +117,16 @@ class Context:
 
 def start_server(
     *,
-    name: Optional[str] = None,
-    host: Optional[str] = "127.0.0.1",
-    port: Optional[int] = 8765,
-    capabilities: Optional[List[Capability]] = None,
+    name: str | None = None,
+    host: str | None = "127.0.0.1",
+    port: int | None = 8765,
+    capabilities: list[Capability] | None = None,
     server_listener: Any = None,
-    supported_encodings: Optional[List[str]] = None,
-    services: Optional[List["Service"]] = None,
-    asset_handler: Optional["AssetHandler"] = None,
-    context: Optional["Context"] = None,
-    session_id: Optional[str] = None,
+    supported_encodings: list[str] | None = None,
+    services: list[Service] | None = None,
+    asset_handler: AssetHandler | None = None,
+    context: Context | None = None,
+    session_id: str | None = None,
 ) -> WebSocketServer:
     """
     Start a websocket server for live visualization.
@@ -153,8 +155,8 @@ def open_mcap(
     path: str | Path,
     *,
     allow_overwrite: bool = False,
-    context: Optional["Context"] = None,
-    writer_options: Optional[MCAPWriteOptions] = None,
+    context: Context | None = None,
+    writer_options: MCAPWriteOptions | None = None,
 ) -> MCAPWriter:
     """
     Creates a new MCAP file for recording.
@@ -164,7 +166,7 @@ def open_mcap(
     """
     ...
 
-def get_channel_for_topic(topic: str) -> Optional[BaseChannel]:
+def get_channel_for_topic(topic: str) -> BaseChannel | None:
     """
     Get a previously-registered channel.
     """
