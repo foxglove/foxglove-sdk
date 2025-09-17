@@ -23,10 +23,6 @@ const tempFiles: string[] = [];
 
 async function main(opts: { timeout: string; installSdkFromPath: boolean }) {
   for (const example of await readdir(pyExamplesDir)) {
-    // Skip s100-visualization until we figure out what's causing CI failures.
-    if (example === "so100-visualization") {
-      continue;
-    }
     console.debug(`Install & run example ${example}`);
     await installDependencies(example, { installSdkFromPath: opts.installSdkFromPath });
     await runExample(example, parseInt(opts.timeout));
