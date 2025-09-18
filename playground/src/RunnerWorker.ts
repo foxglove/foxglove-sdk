@@ -136,7 +136,11 @@ export class RunnerWorker {
     pyodide.runPython(
       `
         import os, pathlib, shutil
-        shutil.rmtree("/home/pyodide/playground", ignore_errors=True)
+        os.chdir("/home/pyodide")
+        try:
+          shutil.rmtree("/home/pyodide/playground")
+        except FileNotFoundError:
+          pass
         pathlib.Path("/home/pyodide/playground").mkdir(parents=True)
         os.chdir("/home/pyodide/playground")
       `,
