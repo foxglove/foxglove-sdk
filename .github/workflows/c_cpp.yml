@@ -93,7 +93,7 @@ jobs:
             staticlib_artifact_name: foxglove-x86_64-pc-windows-msvc.lib
             cdylib_artifact_name: foxglove-x86_64-pc-windows-msvc.dll
             cross: false
-            test_debug: false
+            test_debug: true
           - runner: windows-2025
             target: aarch64-pc-windows-msvc
             staticlib_name: foxglove.lib
@@ -101,7 +101,7 @@ jobs:
             staticlib_artifact_name: foxglove-aarch64-pc-windows-msvc.lib
             cdylib_artifact_name: foxglove-aarch64-pc-windows-msvc.dll
             cross: true
-            test_debug: false
+            test_debug: true 
 
           # iOS
           - runner: macos-15
