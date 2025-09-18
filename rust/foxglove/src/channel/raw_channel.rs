@@ -13,6 +13,7 @@ use super::ChannelId;
 use crate::log_sink_set::LogSinkSet;
 use crate::sink::SmallSinkVec;
 use crate::throttler::Throttler;
+use crate::FoxgloveError;
 use crate::{nanoseconds_since_epoch, Context, Metadata, PartialMetadata, Schema, SinkId};
 
 /// Interval for throttled warnings.
@@ -52,9 +53,11 @@ impl RawChannel {
         message_encoding: String,
         schema: Option<Schema>,
         metadata: BTreeMap<String, String>,
-    ) -> Arc<Self> {
-        Arc::new(Self {
-            id: ChannelId::next(),
+    ) -> Result<Arc<Self>, FoxgloveError> {
+        let id = ChannelId::next()?;
+
+        Ok(Arc::new(Self {
+            id,
             context: Arc::downgrade(context),
             topic,
             message_encoding,
@@ -63,7 +66,7 @@ impl RawChannel {
             sinks: LogSinkSet::new(),
             closed: AtomicBool::new(false),
             warn_throttler: Mutex::new(Throttler::new(WARN_THROTTLER_INTERVAL)),
-        })
+        }))
     }
 
     /// Returns the channel ID.

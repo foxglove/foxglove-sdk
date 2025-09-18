@@ -7,7 +7,9 @@ use delegate::delegate;
 use serde::{Deserialize, Serialize};
 use smallbytes::SmallBytes;
 
-use crate::{metadata::ToUnixNanos, ChannelBuilder, Encode, PartialMetadata, Schema, SinkId};
+use crate::{
+    metadata::ToUnixNanos, ChannelBuilder, Encode, FoxgloveError, PartialMetadata, Schema, SinkId,
+};
 
 mod lazy_channel;
 mod raw_channel;
@@ -29,10 +31,16 @@ impl ChannelId {
     }
 
     /// Allocates the next channel ID.
-    pub(crate) fn next() -> Self {
+    pub(crate) fn next() -> Result<Self, FoxgloveError> {
         static NEXT_ID: AtomicU32 = AtomicU32::new(1);
+        // Overflow
+        if NEXT_ID.load(Relaxed) == 0xFFFFFFFF {
+            return Err(FoxgloveError::ChannelError(
+                "channel id pool is exhausted".into(),
+            ));
+        }
         let id = NEXT_ID.fetch_add(1, Relaxed);
-        Self(id)
+        Ok(Self(id))
     }
 }
 
