@@ -1,0 +1,26 @@
+[project]
+name = "foxglove-notebook"
+version = "0.1.0"
+description = "Foxglove Jupyter Viewer"
+authors = [{ name = "Foxglove", email = "support@foxglove.dev" }]
+license = "MIT"
+readme = "README.md"
+dynamic = []
+classifiers = ["Programming Language :: Python :: 3"]
+requires-python = ">=3.10"
+dependencies = ["anywidget", "traitlets", "foxglove-sdk"]
+
+[project.urls]
+repository = "https://github.com/foxglove/foxglove-sdk"
+documentation = "https://docs.foxglove.dev/"
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+packages = [{ include = "foxglove_notebook", from = "src" }]
+
+[tool.poetry.group.dev.dependencies]
+watchfiles = "1.1.0"
+jupyterlab = "4.4.7"

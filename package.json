@@ -4,7 +4,8 @@
   "packageManager": "yarn@4.6.0",
   "workspaces": [
     "typescript/*",
-    "playground"
+    "playground",
+    "python/notebook"
   ],
   "scripts": {
     "build": "tsc -b",
