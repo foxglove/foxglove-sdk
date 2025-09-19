@@ -427,6 +427,9 @@ pub enum FoxgloveError {
     /// An error related to configuration
     #[error("Configuration error: {0}")]
     ConfigurationError(String),
+    /// An error creating or logging to a Channel
+    #[error("Channel error: {0}")]
+    ChannelError(String),
 }
 
 impl From<convert::RangeError> for FoxgloveError {

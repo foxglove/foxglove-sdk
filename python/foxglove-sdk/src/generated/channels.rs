@@ -93,7 +93,7 @@ impl ArrowPrimitiveChannel {
     }
 
     /// The unique ID of the channel.
-    fn id(&self) -> u64 {
+    fn id(&self) -> u32 {
         self.0.id().into()
     }
 
@@ -202,7 +202,7 @@ impl CameraCalibrationChannel {
     }
 
     /// The unique ID of the channel.
-    fn id(&self) -> u64 {
+    fn id(&self) -> u32 {
         self.0.id().into()
     }
 
@@ -311,7 +311,7 @@ impl CircleAnnotationChannel {
     }
 
     /// The unique ID of the channel.
-    fn id(&self) -> u64 {
+    fn id(&self) -> u32 {
         self.0.id().into()
     }
 
@@ -420,7 +420,7 @@ impl ColorChannel {
     }
 
     /// The unique ID of the channel.
-    fn id(&self) -> u64 {
+    fn id(&self) -> u32 {
         self.0.id().into()
     }
 
@@ -524,7 +524,7 @@ impl CompressedImageChannel {
     }
 
     /// The unique ID of the channel.
-    fn id(&self) -> u64 {
+    fn id(&self) -> u32 {
         self.0.id().into()
     }
 
@@ -633,7 +633,7 @@ impl CompressedVideoChannel {
     }
 
     /// The unique ID of the channel.
-    fn id(&self) -> u64 {
+    fn id(&self) -> u32 {
         self.0.id().into()
     }
 
@@ -742,7 +742,7 @@ impl CylinderPrimitiveChannel {
     }
 
     /// The unique ID of the channel.
-    fn id(&self) -> u64 {
+    fn id(&self) -> u32 {
         self.0.id().into()
     }
 
@@ -851,7 +851,7 @@ impl CubePrimitiveChannel {
     }
 
     /// The unique ID of the channel.
-    fn id(&self) -> u64 {
+    fn id(&self) -> u32 {
         self.0.id().into()
     }
 
@@ -960,7 +960,7 @@ impl FrameTransformChannel {
     }
 
     /// The unique ID of the channel.
-    fn id(&self) -> u64 {
+    fn id(&self) -> u32 {
         self.0.id().into()
     }
 
@@ -1069,7 +1069,7 @@ impl FrameTransformsChannel {
     }
 
     /// The unique ID of the channel.
-    fn id(&self) -> u64 {
+    fn id(&self) -> u32 {
         self.0.id().into()
     }
 
@@ -1178,7 +1178,7 @@ impl GeoJsonChannel {
     }
 
     /// The unique ID of the channel.
-    fn id(&self) -> u64 {
+    fn id(&self) -> u32 {
         self.0.id().into()
     }
 
@@ -1282,7 +1282,7 @@ impl GridChannel {
     }
 
     /// The unique ID of the channel.
-    fn id(&self) -> u64 {
+    fn id(&self) -> u32 {
         self.0.id().into()
     }
 
@@ -1386,7 +1386,7 @@ impl VoxelGridChannel {
     }
 
     /// The unique ID of the channel.
-    fn id(&self) -> u64 {
+    fn id(&self) -> u32 {
         self.0.id().into()
     }
 
@@ -1495,7 +1495,7 @@ impl ImageAnnotationsChannel {
     }
 
     /// The unique ID of the channel.
-    fn id(&self) -> u64 {
+    fn id(&self) -> u32 {
         self.0.id().into()
     }
 
@@ -1604,7 +1604,7 @@ impl KeyValuePairChannel {
     }
 
     /// The unique ID of the channel.
-    fn id(&self) -> u64 {
+    fn id(&self) -> u32 {
         self.0.id().into()
     }
 
@@ -1713,7 +1713,7 @@ impl LaserScanChannel {
     }
 
     /// The unique ID of the channel.
-    fn id(&self) -> u64 {
+    fn id(&self) -> u32 {
         self.0.id().into()
     }
 
@@ -1822,7 +1822,7 @@ impl LinePrimitiveChannel {
     }
 
     /// The unique ID of the channel.
-    fn id(&self) -> u64 {
+    fn id(&self) -> u32 {
         self.0.id().into()
     }
 
@@ -1931,7 +1931,7 @@ impl LocationFixChannel {
     }
 
     /// The unique ID of the channel.
-    fn id(&self) -> u64 {
+    fn id(&self) -> u32 {
         self.0.id().into()
     }
 
@@ -2040,7 +2040,7 @@ impl LocationFixesChannel {
     }
 
     /// The unique ID of the channel.
-    fn id(&self) -> u64 {
+    fn id(&self) -> u32 {
         self.0.id().into()
     }
 
@@ -2149,7 +2149,7 @@ impl LogChannel {
     }
 
     /// The unique ID of the channel.
-    fn id(&self) -> u64 {
+    fn id(&self) -> u32 {
         self.0.id().into()
     }
 
@@ -2253,7 +2253,7 @@ impl SceneEntityDeletionChannel {
     }
 
     /// The unique ID of the channel.
-    fn id(&self) -> u64 {
+    fn id(&self) -> u32 {
         self.0.id().into()
     }
 
@@ -2362,7 +2362,7 @@ impl SceneEntityChannel {
     }
 
     /// The unique ID of the channel.
-    fn id(&self) -> u64 {
+    fn id(&self) -> u32 {
         self.0.id().into()
     }
 
@@ -2471,7 +2471,7 @@ impl SceneUpdateChannel {
     }
 
     /// The unique ID of the channel.
-    fn id(&self) -> u64 {
+    fn id(&self) -> u32 {
         self.0.id().into()
     }
 
@@ -2580,7 +2580,7 @@ impl ModelPrimitiveChannel {
     }
 
     /// The unique ID of the channel.
-    fn id(&self) -> u64 {
+    fn id(&self) -> u32 {
         self.0.id().into()
     }
 
@@ -2689,7 +2689,7 @@ impl PackedElementFieldChannel {
     }
 
     /// The unique ID of the channel.
-    fn id(&self) -> u64 {
+    fn id(&self) -> u32 {
         self.0.id().into()
     }
 
@@ -2798,7 +2798,7 @@ impl Point2Channel {
     }
 
     /// The unique ID of the channel.
-    fn id(&self) -> u64 {
+    fn id(&self) -> u32 {
         self.0.id().into()
     }
 
@@ -2902,7 +2902,7 @@ impl Point3Channel {
     }
 
     /// The unique ID of the channel.
-    fn id(&self) -> u64 {
+    fn id(&self) -> u32 {
         self.0.id().into()
     }
 
@@ -3006,7 +3006,7 @@ impl PointCloudChannel {
     }
 
     /// The unique ID of the channel.
-    fn id(&self) -> u64 {
+    fn id(&self) -> u32 {
         self.0.id().into()
     }
 
@@ -3115,7 +3115,7 @@ impl PointsAnnotationChannel {
     }
 
     /// The unique ID of the channel.
-    fn id(&self) -> u64 {
+    fn id(&self) -> u32 {
         self.0.id().into()
     }
 
@@ -3224,7 +3224,7 @@ impl PoseChannel {
     }
 
     /// The unique ID of the channel.
-    fn id(&self) -> u64 {
+    fn id(&self) -> u32 {
         self.0.id().into()
     }
 
@@ -3328,7 +3328,7 @@ impl PoseInFrameChannel {
     }
 
     /// The unique ID of the channel.
-    fn id(&self) -> u64 {
+    fn id(&self) -> u32 {
         self.0.id().into()
     }
 
@@ -3437,7 +3437,7 @@ impl PosesInFrameChannel {
     }
 
     /// The unique ID of the channel.
-    fn id(&self) -> u64 {
+    fn id(&self) -> u32 {
         self.0.id().into()
     }
 
@@ -3546,7 +3546,7 @@ impl QuaternionChannel {
     }
 
     /// The unique ID of the channel.
-    fn id(&self) -> u64 {
+    fn id(&self) -> u32 {
         self.0.id().into()
     }
 
@@ -3655,7 +3655,7 @@ impl RawAudioChannel {
     }
 
     /// The unique ID of the channel.
-    fn id(&self) -> u64 {
+    fn id(&self) -> u32 {
         self.0.id().into()
     }
 
@@ -3764,7 +3764,7 @@ impl RawImageChannel {
     }
 
     /// The unique ID of the channel.
-    fn id(&self) -> u64 {
+    fn id(&self) -> u32 {
         self.0.id().into()
     }
 
@@ -3873,7 +3873,7 @@ impl SpherePrimitiveChannel {
     }
 
     /// The unique ID of the channel.
-    fn id(&self) -> u64 {
+    fn id(&self) -> u32 {
         self.0.id().into()
     }
 
@@ -3982,7 +3982,7 @@ impl TextAnnotationChannel {
     }
 
     /// The unique ID of the channel.
-    fn id(&self) -> u64 {
+    fn id(&self) -> u32 {
         self.0.id().into()
     }
 
@@ -4091,7 +4091,7 @@ impl TextPrimitiveChannel {
     }
 
     /// The unique ID of the channel.
-    fn id(&self) -> u64 {
+    fn id(&self) -> u32 {
         self.0.id().into()
     }
 
@@ -4200,7 +4200,7 @@ impl TriangleListPrimitiveChannel {
     }
 
     /// The unique ID of the channel.
-    fn id(&self) -> u64 {
+    fn id(&self) -> u32 {
         self.0.id().into()
     }
 
@@ -4314,7 +4314,7 @@ impl Vector2Channel {
     }
 
     /// The unique ID of the channel.
-    fn id(&self) -> u64 {
+    fn id(&self) -> u32 {
         self.0.id().into()
     }
 
@@ -4418,7 +4418,7 @@ impl Vector3Channel {
     }
 
     /// The unique ID of the channel.
-    fn id(&self) -> u64 {
+    fn id(&self) -> u32 {
         self.0.id().into()
     }
 

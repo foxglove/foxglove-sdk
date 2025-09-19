@@ -76,7 +76,7 @@ impl ChannelBuilder {
                 .ok_or_else(|| FoxgloveError::MessageEncodingRequired)?,
             self.schema,
             self.metadata,
-        );
+        )?;
         channel = self.context.add_channel(channel);
         Ok(channel)
     }

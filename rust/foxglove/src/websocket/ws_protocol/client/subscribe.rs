@@ -32,12 +32,12 @@ pub struct Subscription {
     /// Subscription ID.
     pub id: u32,
     /// Channel ID.
-    pub channel_id: u64,
+    pub channel_id: u32,
 }
 
 impl Subscription {
     /// Creates a new subscription with the specified channel ID and subscription ID.
-    pub fn new(id: u32, channel_id: u64) -> Self {
+    pub fn new(id: u32, channel_id: u32) -> Self {
         Self { id, channel_id }
     }
 }
