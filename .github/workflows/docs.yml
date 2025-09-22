@@ -38,7 +38,7 @@ jobs:
         with:
           python-version: "3.13"
       - run: pipx install poetry
-      - run: poetry install
+      - run: poetry install --all-extras
       - run: poetry run maturin develop
       - name: Sphinx build
         run: |

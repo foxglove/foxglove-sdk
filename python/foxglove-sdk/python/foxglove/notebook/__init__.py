@@ -35,7 +35,7 @@ class FoxgloveViewer(anywidget.AnyWidget):
         src: Optional[str] = None,
         orgSlug: Optional[str] = None,
         layout: Optional[dict] = None,
-        **kwargs: Any
+        **kwargs: Any,
     ):
         """
         Initialize the FoxgloveViewer widget and prepares it for logging
@@ -52,7 +52,6 @@ class FoxgloveViewer(anywidget.AnyWidget):
             self.orgSlug = orgSlug
         if layout is not None:
             self.layout = layout
-
 
         # Create a temporary directory where the MCAP file will be stored
         self.temp_directory = TemporaryDirectory()
@@ -89,7 +88,7 @@ class FoxgloveViewer(anywidget.AnyWidget):
 
         self.writer.close()
 
-        with open(self.file_name, 'rb') as f_read:
+        with open(self.file_name, "rb") as f_read:
             # Read the entire content of the file
             content = f_read.read()
             self.data = content

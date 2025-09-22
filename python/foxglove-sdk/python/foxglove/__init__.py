@@ -143,10 +143,14 @@ def create_notebook_viewer(
     try:
         from .notebook import FoxgloveViewer
 
-        return FoxgloveViewer(width=width, height=height, src=src, orgSlug=orgSlug, layout=layout)
+        return FoxgloveViewer(
+            width=width, height=height, src=src, orgSlug=orgSlug, layout=layout
+        )
 
     except ImportError:
-        raise Exception("FoxgloveViewer is not installed. Please install it with `pip install foxglove-sdk[notebook]`")
+        raise Exception(
+            "FoxgloveViewer is not installed. Please install it with `pip install foxglove-sdk[notebook]`"
+        )
 
 
 __all__ = [
