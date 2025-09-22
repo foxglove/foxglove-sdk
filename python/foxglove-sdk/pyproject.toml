@@ -13,6 +13,9 @@ dependencies = []
 repository = "https://github.com/foxglove/foxglove-sdk"
 documentation = "https://docs.foxglove.dev/"
 
+[project.optional-dependencies]
+notebook = ["anywidget", "traitlets"]
+
 [build-system]
 requires = ["maturin>=1.7,<2.0", "poetry-core>=2.0"]
 build-backend = "maturin"
@@ -37,6 +40,7 @@ pytest = "^8.3.4"
 pytest-benchmark = "^5.1.0"
 sphinx = "^7.0.0"
 sphinx-autodoc-typehints = "^2.0.0"
+jupyterlab = "^4.4.7"
 
 [tool.mypy]
 python_version = "3.9"

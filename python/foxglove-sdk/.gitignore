@@ -6,6 +6,8 @@ dist
 # Python
 __pycache__
 .ipynb_checkpoints
-example.ipynb
+example*.ipynb
+example*.json
+SO100
 
-src/foxglove_notebook/notebook/static
+python/foxglove/notebook/static

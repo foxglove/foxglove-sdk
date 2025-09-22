@@ -19,6 +19,11 @@ from .channel import Channel, log
 # Deprecated. Use foxglove.mcap.MCAPWriter instead.
 from .mcap import MCAPWriter
 
+from typing import TYPE_CHECKING, Optional
+
+if TYPE_CHECKING:
+    from .notebook import FoxgloveViewer
+
 atexit.register(_foxglove.shutdown)
 
 
@@ -121,6 +126,27 @@ def _level_names() -> dict[str, int]:
         "DEBUG": logging.DEBUG,
         "NOTSET": logging.NOTSET,
     }
+
+
+def create_notebook_viewer(
+    width: Optional[str] = None,
+    height: Optional[str] = None,
+    src: Optional[str] = None,
+    orgSlug: Optional[str] = None,
+    layout: Optional[dict] = None,
+) -> FoxgloveViewer:
+    """
+    Create a FoxgloveViewer widget. This is only available if the notebook extra package is installed.
+
+    You can install it with `pip install foxglove-sdk[notebook]`.
+    """
+    try:
+        from .notebook import FoxgloveViewer
+
+        return FoxgloveViewer(width=width, height=height, src=src, orgSlug=orgSlug, layout=layout)
+
+    except ImportError:
+        raise Exception("FoxgloveViewer is not installed. Please install it with `pip install foxglove-sdk[notebook]`")
 
 
 __all__ = [

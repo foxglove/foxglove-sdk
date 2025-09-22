@@ -5,7 +5,7 @@
   "workspaces": [
     "typescript/*",
     "playground",
-    "python/notebook"
+    "python/foxglove-sdk"
   ],
   "scripts": {
     "build": "tsc -b",

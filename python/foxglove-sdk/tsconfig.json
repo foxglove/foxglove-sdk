@@ -1,7 +1,7 @@
 {
   "include": ["ts"],
   "compilerOptions": {
-    "outDir": "./src/foxglove_notebook/notebook/static",
+    "outDir": "./python/notebook/static",
     "target": "ES2020",
     "module": "ESNext",
     "lib": ["ES2020", "DOM", "DOM.Iterable"],

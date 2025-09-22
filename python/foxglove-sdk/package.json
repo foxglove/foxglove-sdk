@@ -9,7 +9,7 @@
   "homepage": "https://foxglove.dev/",
   "scripts": {
     "dev": "yarn run build --sourcemap=inline --watch",
-    "build": "esbuild ts/widget.ts --format=esm --bundle --outdir=src/foxglove_notebook/notebook/static",
+    "build": "esbuild ts/widget.ts --format=esm --bundle --outdir=python/foxglove/notebook/static",
     "build:prod": "yarn build --minify",
     "typecheck": "tsc --noEmit"
   },
