@@ -1,7 +1,5 @@
 use std::collections::BTreeMap;
-use std::sync::atomic::AtomicU32;
-use std::sync::atomic::Ordering::Relaxed;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use delegate::delegate;
 use serde::{Deserialize, Serialize};
@@ -32,14 +30,19 @@ impl ChannelId {
 
     /// Allocates the next channel ID.
     pub(crate) fn next() -> Result<Self, FoxgloveError> {
-        static NEXT_ID: AtomicU32 = AtomicU32::new(1);
-        // Overflow
-        if NEXT_ID.load(Relaxed) == 0xFFFFFFFF {
+        static NEXT_ID: Mutex<u32> = Mutex::new(1);
+        let mut next_id = NEXT_ID
+            .lock()
+            .map_err(|_| FoxgloveError::ChannelError("couldn't lock channel id counter".into()))?;
+
+        // Check for overflow
+        if *next_id == u32::MAX {
             return Err(FoxgloveError::ChannelError(
                 "channel id pool is exhausted".into(),
             ));
         }
-        let id = NEXT_ID.fetch_add(1, Relaxed);
+        let id = *next_id;
+        *next_id += 1;
         Ok(Self(id))
     }
 }
