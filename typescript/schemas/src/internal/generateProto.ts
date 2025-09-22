@@ -45,6 +45,7 @@ function protoImportPath(schema: FoxgloveMessageSchema): string {
 export function generateProto(
   schema: FoxgloveMessageSchema,
   nestedEnums: FoxgloveEnumSchema[],
+  allSchemas: { [key: string]: FoxgloveMessageSchema },
 ): string {
   const enumDefinitions: string[] = [];
   for (const enumSchema of nestedEnums) {
@@ -99,7 +100,18 @@ export function generateProto(
     }
     switch (field.type.type) {
       case "enum":
-        qualifiers.push(field.type.enum.protobufEnumName);
+        {
+          // Add prefix when enum is reused in other message to avoid issue in protobuf
+          let prefix = "";
+          if (schema.name !== field.type.enum.parentSchemaName) {
+            prefix = "foxglove." + field.type.enum.parentSchemaName + ".";
+            const parentSchema = allSchemas[field.type.enum.parentSchemaName];
+            if (parentSchema != undefined) {
+              imports.add(protoImportPath(parentSchema));
+            }
+          }
+          qualifiers.push(prefix + field.type.enum.protobufEnumName);
+        }
         break;
       case "nested":
         qualifiers.push(protoName(field.type.schema));

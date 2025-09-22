@@ -159,7 +159,7 @@ async function main({ clean }: { clean: boolean }) {
       );
       await fs.writeFile(
         path.join(outDir, "proto", "foxglove", `${schema.name}.proto`),
-        generateProto(schema, enums),
+        generateProto(schema, enums, foxgloveMessageSchemas),
       );
     }
   });
