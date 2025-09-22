@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import atexit
 import logging
+from typing import TYPE_CHECKING, Optional
 
 from . import _foxglove_py as _foxglove
 
@@ -18,8 +19,6 @@ from .channel import Channel, log
 
 # Deprecated. Use foxglove.mcap.MCAPWriter instead.
 from .mcap import MCAPWriter
-
-from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
     from .notebook import FoxgloveViewer
@@ -136,7 +135,8 @@ def create_notebook_viewer(
     layout: Optional[dict] = None,
 ) -> FoxgloveViewer:
     """
-    Create a FoxgloveViewer widget. This is only available if the notebook extra package is installed.
+    Create a FoxgloveViewer widget. This is only available if the `notebook` extra package
+    is installed.
 
     You can install it with `pip install foxglove-sdk[notebook]`.
     """
@@ -149,7 +149,8 @@ def create_notebook_viewer(
 
     except ImportError:
         raise Exception(
-            "FoxgloveViewer is not installed. Please install it with `pip install foxglove-sdk[notebook]`"
+            "FoxgloveViewer is not installed."
+            "Please install it with `pip install foxglove-sdk[notebook]`"
         )
 
 

@@ -1,12 +1,12 @@
 import importlib.metadata
 import pathlib
 import uuid
+from tempfile import TemporaryDirectory
 from typing import Any, Optional
 
-from tempfile import TemporaryDirectory
 import anywidget
-import traitlets
 import foxglove
+import traitlets
 
 try:
     __version__ = importlib.metadata.version("foxglove_notebook")
@@ -20,13 +20,14 @@ class FoxgloveViewer(anywidget.AnyWidget):
     """
 
     _esm = pathlib.Path(__file__).parent / "static" / "widget.js"
+    _writer: Optional[foxglove.mcap.MCAPWriter] = None
+    _file_name: Optional[str] = None
     width = traitlets.Unicode("100%").tag(sync=True)
     height = traitlets.Unicode("500px").tag(sync=True)
     src = traitlets.Unicode("https://embed.foxglove.dev/").tag(sync=True)
     orgSlug = traitlets.Unicode("").tag(sync=True)
     data = traitlets.Bytes(b"").tag(sync=True)
     layout = traitlets.Dict({}).tag(sync=True)
-    writer = None
 
     def __init__(
         self,
@@ -69,31 +70,31 @@ class FoxgloveViewer(anywidget.AnyWidget):
         """
         Prepare the widget for logging.
         """
-        if self.writer is not None:
+        if self._writer is not None:
             # Close the previous writer if it exists
-            self.writer.close()
-            self.writer = None
-            self.file_name = None
+            self._writer.close()
+            self._writer = None
+            self._file_name = None
 
         random_id = uuid.uuid4().hex[:8]
-        self.file_name = f"{self.temp_directory.name}/log-{random_id}.mcap"
-        self.writer = foxglove.open_mcap(self.file_name)
+        self._file_name = f"{self.temp_directory.name}/log-{random_id}.mcap"
+        self._writer = foxglove.open_mcap(self._file_name)
 
-    def show(self) -> None:
+    def show(self) -> "FoxgloveViewer":
         """
         Show logged data using Foxglove.
         """
-        if self.writer is None:
+        if self._writer is None or self._file_name is None:
             raise Exception("Logging not started")
 
-        self.writer.close()
+        self._writer.close()
 
-        with open(self.file_name, "rb") as f_read:
+        with open(self._file_name, "rb") as f_read:
             # Read the entire content of the file
             content = f_read.read()
             self.data = content
 
-        self.writer = None
-        self.file_name = None
+        self._writer = None
+        self._file_name = None
 
         return self
