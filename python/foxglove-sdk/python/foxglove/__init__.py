@@ -130,7 +130,35 @@ def _level_names() -> dict[str, int]:
 
 def create_notebook_buffer(context: Context | None = None) -> NotebookBuffer:
     """
-    Create a MessageBuffer to be used with the FoxgloveViewer widget.
+    Create a data buffer for collecting messages in Jupyter notebooks.
+
+    This function creates a NotebookBuffer that can collect logged messages
+    and data for visualization with the FoxgloveViewer widget. The buffer
+    acts as an intermediate storage layer between your data logging code
+    and the visualization widget.
+
+    Args:
+        context: Optional Foxglove context to use for logging. If not provided,
+            the global context will be used. This allows you to isolate the
+            buffer's data collection from other parts of your application.
+
+    Returns:
+        NotebookBuffer: A buffer instance ready to collect logged messages
+            and data for visualization.
+
+    Example:
+        >>> import foxglove
+        >>> from foxglove.schemas import SceneUpdate
+        >>>
+        >>> # Create a buffer with the global context
+        >>> buffer = foxglove.create_notebook_buffer()
+        >>>
+        >>> # Or create a buffer with a specific context
+        >>> context = foxglove.Context()
+        >>> buffer = foxglove.create_notebook_buffer(context=context)
+        >>>
+        >>> # Use the buffer with a viewer
+        >>> viewer = foxglove.visualize(buffer)
     """
     from .notebook.NotebookBuffer import NotebookBuffer
 
@@ -146,10 +174,62 @@ def visualize(
     layout: Optional[dict] = None,
 ) -> FoxgloveViewer:
     """
-    Create a FoxgloveViewer widget. This is only available if the `notebook` extra package
-    is installed.
+    Create a FoxgloveViewer widget for interactive data visualization in Jupyter notebooks.
 
-    You can install it with `pip install foxglove-sdk[notebook]`.
+    This function creates an embedded Foxglove visualization widget that displays
+    the data collected in the provided NotebookBuffer. The widget provides a
+    fully-featured Foxglove interface directly within your Jupyter notebook,
+    allowing you to explore multi-modal robotics data including 3D scenes,
+    plots, images, and more.
+
+    Args:
+        datasource: The NotebookBuffer containing the data to visualize. This buffer
+            should have been populated with logged messages before creating the viewer.
+        width: Optional width for the widget. Can be specified as CSS values like
+            "800px", "100%", "50vw", etc. If not provided, defaults to "100%".
+        height: Optional height for the widget. Can be specified as CSS values like
+            "600px", "80vh", "400px", etc. If not provided, defaults to "500px".
+        src: Optional URL of the Foxglove app instance to use. If not provided or empty,
+            uses the default Foxglove embed server (https://embed.foxglove.dev/).
+        orgSlug: Optional Foxglove organization the user should be signed into.
+        layout: Optional custom layout configuration. Should be a dictionary that
+            was exported from the Foxglove app. If not provided, uses the default layout.
+
+    Returns:
+        FoxgloveViewer: A Jupyter widget that displays the embedded Foxglove
+            visualization interface with the provided data.
+
+    Raises:
+        Exception: If the notebook extra package is not installed. Install it
+            with `pip install foxglove-sdk[notebook]`.
+
+    Note:
+        This function is only available when the `notebook` extra package
+        is installed. Install it with `pip install foxglove-sdk[notebook]`.
+        The widget will automatically load the data from the provided datasource
+        and display it in the embedded Foxglove viewer.
+
+    Example:
+        >>> import foxglove
+        >>> from foxglove.schemas import SceneUpdate
+        >>>
+        >>> # Create a buffer and log some data
+        >>> buffer = foxglove.create_notebook_buffer()
+        >>> # ... your application logs data to the buffer ...
+        >>>
+        >>> # Create a basic viewer
+        >>> viewer = foxglove.visualize(buffer)
+        >>>
+        >>> # Create a custom-sized viewer
+        >>> viewer = foxglove.visualize(
+        ...     buffer,
+        ...     width="800px",
+        ...     height="600px",
+        ...     orgSlug="my-org"
+        ... )
+        >>>
+        >>> # Display the widget in the notebook
+        >>> viewer
     """
     try:
         from .notebook.FoxgloveViewer import FoxgloveViewer
@@ -175,8 +255,10 @@ __all__ = [
     "Context",
     "MCAPWriter",
     "Schema",
+    "create_notebook_buffer",
     "log",
     "open_mcap",
     "set_log_level",
     "start_server",
+    "visualize",
 ]
