@@ -15,7 +15,8 @@ except importlib.metadata.PackageNotFoundError:
 
 class FoxgloveViewer(anywidget.AnyWidget):
     """
-    A Jupyter notebook widget that embeds the Foxglove visualization app for interactive data exploration.
+    A Jupyter notebook widget that embeds the Foxglove visualization app for interactive
+    data exploration.
 
     This widget provides a fully-featured Foxglove interface directly within Jupyter notebooks,
     allowing you to visualize multi-modal robotics data including 3D scenes, plots, images,
@@ -24,7 +25,8 @@ class FoxgloveViewer(anywidget.AnyWidget):
     Attributes:
         width (str): The width of the widget. Defaults to "100%".
         height (str): The height of the widget. Defaults to "500px".
-        src (str): The URL of the Foxglove app instance to use. If empty, uses the default embed server.
+        src (str): The URL of the Foxglove app instance to use.
+            If empty, uses the default embed server.
         orgSlug (str): Foxglove organization the user should be signed into.
         layout (dict): A custom layout configuration exported from the Foxglove app.
 
