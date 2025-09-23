@@ -6,22 +6,20 @@ interface WidgetModel {
   width: string;
   height: string;
   src: string;
-  orgSlug?: string;
-  layout?: OpaqueLayoutData;
-  _data?: DataView<ArrayBuffer>;
+  orgSlug: string;
+  layout: OpaqueLayoutData;
+  _data: DataView<ArrayBuffer>;
 }
 
 function render({ model, el }: RenderProps<WidgetModel>): void {
-  function getDataSource(): DataSource | undefined {
+  function getDataSource(): DataSource {
     // Read data from the model and convert it to a DataSource
     const data = model.get("_data");
 
-    return data != undefined
-      ? {
-          type: "file",
-          file: new File([data.buffer], "data.mcap"),
-        }
-      : undefined;
+    return {
+      type: "file",
+      file: new File([data.buffer], "data.mcap"),
+    };
   }
 
   function getLayout(): OpaqueLayoutData {
@@ -35,8 +33,8 @@ function render({ model, el }: RenderProps<WidgetModel>): void {
 
   const viewer = new FoxgloveViewer({
     parent,
-    src: model.get("src"),
-    orgSlug: model.get("orgSlug") === "" ? undefined : model.get("orgSlug"),
+    src: model.get("src") !== "" ? model.get("src") : undefined,
+    orgSlug: model.get("orgSlug") !== "" ? model.get("orgSlug") : undefined,
     initialDataSource: getDataSource(),
     initialLayout: getLayout(),
   });
@@ -55,17 +53,13 @@ function render({ model, el }: RenderProps<WidgetModel>): void {
   model.on("change:data", () => {
     const dataSource = getDataSource();
 
-    if (dataSource != undefined) {
-      viewer.setDataSource(dataSource);
-    }
+    viewer.setDataSource(dataSource);
   });
 
   model.on("change:layout", () => {
     const layout = getLayout();
 
-    if (layout != undefined) {
-      viewer.setLayoutData(layout);
-    }
+    viewer.setLayoutData(layout);
   });
 
   el.appendChild(parent);
