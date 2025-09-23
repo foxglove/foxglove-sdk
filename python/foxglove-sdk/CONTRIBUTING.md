@@ -30,6 +30,23 @@ After making changes to rust code, rebuild with:
 poetry run maturin develop
 ```
 
+After making changes to the typescript code, rebuild with:
+
+```sh
+yarn build
+```
+
+To test the notebook integration:
+
+```sh
+# activate poetry environment
+eval $(poetry env activate)
+# install extra dependencies
+pip install -e ".[notebook]"
+# launch jupyter lab
+jupyter lab
+```
+
 To check types, run:
 
 ```sh
@@ -66,7 +83,7 @@ poetry run pytest -m benchmark
 
 ### Examples
 
-Examples exist in the `foxglove-sdk-examples` directotry. See each example's readme for usage.
+Examples exist in the `foxglove-sdk-examples` directory. See each example's readme for usage.
 
 ### Documentation
 
