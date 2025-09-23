@@ -11,7 +11,8 @@
     "dev": "yarn run build --sourcemap=inline --watch",
     "build": "esbuild ts/widget.ts --format=esm --bundle --outdir=python/foxglove/notebook/static",
     "build:prod": "yarn build --minify",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "run-python-sdk-examples": "yarn workspace foxglove-sdk run-python-sdk-examples"
   },
   "dependencies": {
     "@foxglove/embed": "0.1.2"
