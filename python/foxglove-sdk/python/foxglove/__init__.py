@@ -21,7 +21,8 @@ from .channel import Channel, log
 from .mcap import MCAPWriter
 
 if TYPE_CHECKING:
-    from .notebook import FoxgloveViewer
+    from .notebook.FoxgloveViewer import FoxgloveViewer
+    from .notebook.NotebookBuffer import NotebookBuffer
 
 atexit.register(_foxglove.shutdown)
 
@@ -127,7 +128,17 @@ def _level_names() -> dict[str, int]:
     }
 
 
-def create_notebook_viewer(
+def create_notebook_buffer(context: Context | None = None) -> NotebookBuffer:
+    """
+    Create a MessageBuffer to be used with the FoxgloveViewer widget.
+    """
+    from .notebook.NotebookBuffer import NotebookBuffer
+
+    return NotebookBuffer(context=context)
+
+
+def visualize(
+    datasource: NotebookBuffer,
     width: Optional[str] = None,
     height: Optional[str] = None,
     src: Optional[str] = None,
@@ -141,10 +152,15 @@ def create_notebook_viewer(
     You can install it with `pip install foxglove-sdk[notebook]`.
     """
     try:
-        from .notebook import FoxgloveViewer
+        from .notebook.FoxgloveViewer import FoxgloveViewer
 
         return FoxgloveViewer(
-            width=width, height=height, src=src, orgSlug=orgSlug, layout=layout
+            datasource=datasource,
+            width=width,
+            height=height,
+            src=src,
+            orgSlug=orgSlug,
+            layout=layout,
         )
 
     except ImportError:

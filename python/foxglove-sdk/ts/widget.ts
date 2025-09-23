@@ -7,14 +7,14 @@ interface WidgetModel {
   height: string;
   src: string;
   orgSlug?: string;
-  data?: DataView<ArrayBuffer>;
   layout?: OpaqueLayoutData;
+  _data?: DataView<ArrayBuffer>;
 }
 
 function render({ model, el }: RenderProps<WidgetModel>): void {
   function getDataSource(): DataSource | undefined {
     // Read data from the model and convert it to a DataSource
-    const data = model.get("data");
+    const data = model.get("_data");
 
     return data != undefined
       ? {
