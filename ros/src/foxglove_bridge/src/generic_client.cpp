@@ -49,7 +49,16 @@ std::shared_ptr<void> allocate_message(const MessageMembers* members) {
   }
   memset(buffer, 0, members->size_of_);
   members->init_function(buffer, rosidl_runtime_cpp::MessageInitialization::ALL);
-  return std::shared_ptr<void>(buffer, free);
+  auto deleter = [members](void* ptr) {
+    if (ptr) {
+      // Call the message's destructor to clean up nested allocations
+      members->fini_function(ptr);
+      // Then free the main buffer
+      free(ptr);
+    }
+  };
+
+  return std::shared_ptr<void>(buffer, deleter);
 }
 
 std::string getTypeIntrospectionSymbolName(const std::string& serviceType) {
