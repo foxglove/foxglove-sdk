@@ -21,7 +21,7 @@ EOF
 USER $USER_UID
 
 # rosdep update must run as user
-RUN rosdep update --include-eol-distros
+RUN rosdep update
 
 WORKDIR /sdk/ros
 COPY --chown=$USER_UID:$USER_GID ./ros /sdk/ros
