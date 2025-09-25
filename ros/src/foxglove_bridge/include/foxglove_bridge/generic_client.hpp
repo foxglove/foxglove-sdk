@@ -29,7 +29,7 @@ public:
 private:
   RCLCPP_DISABLE_COPY(GenericClient)
 
-  const rosidl_service_type_support_t* getServiceTypeSupportHandle(const std::string & serviceType);
+  const rosidl_service_type_support_t* getServiceTypeSupportHandle(const std::string& serviceType);
 
   std::map<int64_t, foxglove::ServiceResponder> pending_requests_;
   std::mutex pending_requests_mutex_;
