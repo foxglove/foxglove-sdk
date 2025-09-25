@@ -4,7 +4,6 @@
 #include <cstdint>
 #include <optional>
 #include <string>
-#include <variant>
 #include <vector>
 
 #include <foxglove/server/parameter.hpp>
@@ -12,8 +11,7 @@
 namespace foxglove::test {
 
 // Protocol type aliases
-using ChannelId = uint64_t;
-using SubscriptionId = uint32_t;
+using ChannelId = uint32_t;
 using ClientChannelId = uint32_t;
 using ServiceId = uint32_t;
 using CallId = uint32_t;
