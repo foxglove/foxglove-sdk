@@ -208,7 +208,7 @@ export function generateHppSchemas(
         /// @brief Log a message to the channel.
         ///
         /// @param msg The ${schema.name} message to log.
-        /// @param log_time The timestamp of the message. If omitted, the current time is used.
+        /// @param log_time The timestamp of the message, as nanoseconds since epoch. If omitted, the current time is used.
         /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
         FoxgloveError log(const ${schema.name}& msg, std::optional<uint64_t> log_time = std::nullopt, std::optional<uint64_t> sink_id = std::nullopt) noexcept;
 
