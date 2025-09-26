@@ -24,6 +24,7 @@ jobs:
         with:
           # The last-specified toolchain is the default.
           toolchain: 1.83.0,nightly,stable
+          components: rustfmt, clippy
 
       - name: Ensure generated protobuf schemas are up to date
         run: cargo run --bin foxglove_proto_gen && git diff --exit-code
