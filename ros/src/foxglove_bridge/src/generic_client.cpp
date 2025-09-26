@@ -66,44 +66,13 @@ const rosidl_service_type_support_t* GenericClient::getServiceTypeSupportHandle(
   return rclcpp::get_service_typesupport_handle(serviceType, TYPESUPPORT_LIB_NAME,
                                                 *_typeSupportLib);
 #else
-  // Humble needs to do additional work.
+  // Humble needs to do additional work; the code below is essentially a copy of what
+  // rclcpp::get_service_typesupport_handle() does in later ROS 2 versions.
   const auto [pkgName, middleModule, typeName] = extract_type_identifier(serviceType);
 
-  // Humble rosidl 3.1.6 is the first version to have the appropriate
-  // __get_service_type_support_handle__ methods available.  However, rosidl does not have a version
-  // macro, so we approximate this with rclcpp versions.
-  // https://github.com/ros2/ros2/commit/9f7d334291ff77a07d68d4d8976871b99e03612b is the version
-  // where rosidl was bumped to 3.1.6, and also bumped rclcpp to version 16.0.11.  Thus, anything
-  // older than that version needs to use the old symbol hack.
-#if RCLCPP_VERSION_GTE(16, 0, 11)
   const auto typesupportSymbolName =
     std::string(TYPESUPPORT_LIB_NAME) + "__get_service_type_support_handle__" + pkgName + "__" +
     (middleModule.empty() ? "srv" : middleModule) + "__" + typeName;
-#else
-  /**
-   * The default symbol names for getting type support handles for services are missing from the
-   * rosidl_typesupport_cpp shared libraries, see
-   * https://github.com/ros2/rosidl_typesupport/issues/122
-   *
-   * We can however, as a (hacky) workaround, use other symbols defined in the shared library.
-   * With `nm -C -D /opt/ros/humble/lib/libtest_msgs__rosidl_typesupport_cpp.so` we see that there
-   * is `rosidl_service_type_support_t const*
-   * rosidl_typesupport_cpp::get_service_type_support_handle<test_msgs::srv::BasicTypes>()` which
-   * mangled becomes
-   * `_ZN22rosidl_typesupport_cpp31get_service_type_support_handleIN9test_msgs3srv10BasicTypesEEEPK29rosidl_service_type_support_tv`
-   * This is the same for galactic, humble and rolling (tested with gcc / clang)
-   */
-  const auto lengthPrefixedString = [](const std::string& s) {
-    return std::to_string(s.size()) + s;
-  };
-
-  const auto typesupportSymbolName =
-    "_ZN" + lengthPrefixedString(TYPESUPPORT_LIB_NAME) +
-    lengthPrefixedString("get_service_type_support_handle") + "IN" + lengthPrefixedString(pkgName) +
-    lengthPrefixedString(middleModule.empty() ? "srv" : middleModule) +
-    lengthPrefixedString(typeName) + "EEEPK" +
-    lengthPrefixedString("rosidl_service_type_support_t") + "v";
-#endif
 
   if (!_typeSupportLib->has_symbol(typesupportSymbolName)) {
     throw std::runtime_error("Failed to find symbol '" + typesupportSymbolName + "' in " +
