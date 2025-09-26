@@ -1,3 +1,8 @@
+/// This file is the source of truth for all generated Foxglove schemas.
+/// It is used to generate the JSON schema, FlatBuffer, Protobuf,and TypeScript definitions.
+///
+/// Edit this file and run `make generate` to regenerate all the various schema files.
+
 import { FoxgloveEnumSchema, FoxgloveMessageSchema } from "./types";
 
 const Duration: FoxgloveMessageSchema = {
