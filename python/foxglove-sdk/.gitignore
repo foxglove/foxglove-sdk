@@ -9,5 +9,3 @@ __pycache__
 example*.ipynb
 example*.json
 SO100
-
-python/foxglove/notebook/static

@@ -234,20 +234,20 @@ def visualize(
     try:
         from .notebook.FoxgloveViewer import FoxgloveViewer
 
-        return FoxgloveViewer(
-            datasource=datasource,
-            width=width,
-            height=height,
-            src=src,
-            orgSlug=orgSlug,
-            layout=layout,
-        )
-
     except ImportError:
         raise Exception(
-            "FoxgloveViewer is not installed."
+            "FoxgloveViewer is not installed. "
             "Please install it with `pip install foxglove-sdk[notebook]`"
         )
+
+    return FoxgloveViewer(
+        datasource=datasource,
+        width=width,
+        height=height,
+        src=src,
+        orgSlug=orgSlug,
+        layout=layout,
+    )
 
 
 __all__ = [
