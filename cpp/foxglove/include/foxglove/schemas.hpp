@@ -262,11 +262,7 @@ struct CameraCalibration {
   /// @brief For monocular cameras, Tx = Ty = 0. Normally, monocular cameras will also have R = the
   /// identity and P[1:3,1:3] = K.
   /// @brief
-  /// @brief For a stereo pair, the fourth column [Tx Ty 0]' is related to the position of the
-  /// optical center of the second camera in the first camera's frame. We assume Tz = 0 so both
-  /// cameras are in the same stereo image plane. The first camera always has Tx = Ty = 0. For the
-  /// right (second) camera of a horizontal stereo pair, Ty = 0 and Tx = -fx' * B, where B is the
-  /// baseline between the cameras.
+  /// @brief Foxglove currently does not support displaying stereo images, so Tx and Ty are ignored.
   /// @brief
   /// @brief Given a 3D point [X Y Z]', the projection (x, y) of the point onto the rectified image
   /// is given by:
