@@ -154,6 +154,7 @@ impl PyContext {
         Self(foxglove::Context::new())
     }
 
+    /// Returns the default context.
     #[staticmethod]
     fn default() -> Self {
         Self(foxglove::Context::get_default())
