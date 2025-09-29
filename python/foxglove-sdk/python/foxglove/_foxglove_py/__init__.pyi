@@ -115,6 +115,13 @@ class Context:
         """
         ...
 
+    @staticmethod
+    def default() -> "Context":
+        """
+        Returns the default context.
+        """
+        ...
+
 def start_server(
     *,
     name: str | None = None,
