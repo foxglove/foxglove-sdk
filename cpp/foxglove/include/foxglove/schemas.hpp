@@ -1751,7 +1751,7 @@ struct RawImage {
   /// @brief   - Pixel brightness is represented as a single-channel, 32-bit little-endian IEEE 754
   /// floating-point value, ranging from 0.0 (black) to 1.0 (white).
   /// @brief   - `step` must be greater than or equal to `width` * 4.
-  /// @brief - `bayer_rggb8`, `bayer_bggr8`, `bayer_rggb8`, `bayer_gbrg8`, or `bayer_grbg8`:
+  /// @brief - `bayer_rggb8`, `bayer_bggr8`, `bayer_gbrg8`, or `bayer_grbg8`:
   /// @brief   - Pixel colors are decomposed into Red, Blue and Green channels.
   /// @brief   - Pixel channel values are represented as unsigned 8-bit integers, and serialized in
   /// a 2x2 bayer filter pattern.
