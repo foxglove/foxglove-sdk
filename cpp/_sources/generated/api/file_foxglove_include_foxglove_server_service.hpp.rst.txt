@@ -1,0 +1,92 @@
+
+.. _file_foxglove_include_foxglove_server_service.hpp:
+
+File service.hpp
+================
+
+|exhale_lsh| :ref:`Parent directory <dir_foxglove_include_foxglove_server>` (``foxglove/include/foxglove/server``)
+
+.. |exhale_lsh| unicode:: U+021B0 .. UPWARDS ARROW WITH TIP LEFTWARDS
+
+Definition (``foxglove/include/foxglove/server/service.hpp``)
+-------------------------------------------------------------
+
+
+.. toctree::
+   :maxdepth: 1
+
+   program_listing_file_foxglove_include_foxglove_server_service.hpp.rst
+
+
+
+
+
+Includes
+--------
+
+
+- ``array``
+
+- ``cstdint``
+
+- ``foxglove/channel.hpp`` (:ref:`file_foxglove_include_foxglove_channel.hpp`)
+
+- ``foxglove/error.hpp`` (:ref:`file_foxglove_include_foxglove_error.hpp`)
+
+- ``functional``
+
+- ``memory``
+
+- ``optional``
+
+- ``string``
+
+- ``string_view``
+
+- ``vector``
+
+
+
+Included By
+-----------
+
+
+- :ref:`file_foxglove_include_foxglove_server.hpp`
+
+- :ref:`file_foxglove_src_server_service.cpp`
+
+
+
+
+Namespaces
+----------
+
+
+- :ref:`namespace_foxglove`
+
+
+Classes
+-------
+
+
+- :ref:`exhale_struct_structfoxglove_1_1Service_1_1Deleter`
+
+- :ref:`exhale_struct_structfoxglove_1_1ServiceMessageSchema`
+
+- :ref:`exhale_struct_structfoxglove_1_1ServiceRequest`
+
+- :ref:`exhale_struct_structfoxglove_1_1ServiceResponder_1_1Deleter`
+
+- :ref:`exhale_struct_structfoxglove_1_1ServiceSchema`
+
+- :ref:`exhale_class_classfoxglove_1_1Service`
+
+- :ref:`exhale_class_classfoxglove_1_1ServiceResponder`
+
+
+Typedefs
+--------
+
+
+- :ref:`exhale_typedef_namespacefoxglove_1a16ed83bd12356a08dace136deb185192`
+

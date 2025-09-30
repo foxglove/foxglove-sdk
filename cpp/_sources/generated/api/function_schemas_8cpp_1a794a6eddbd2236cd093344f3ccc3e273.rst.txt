@@ -1,0 +1,14 @@
+.. _exhale_function_schemas_8cpp_1a794a6eddbd2236cd093344f3ccc3e273:
+
+Function foxglove::schemas::geoJSONToC
+======================================
+
+- Defined in :ref:`file_foxglove_src_schemas.cpp`
+
+
+Function Documentation
+----------------------
+
+
+.. doxygenfunction:: foxglove::schemas::geoJSONToC(foxglove_geo_json&, const GeoJSON&, Arena&)
+   :project: Foxglove SDK

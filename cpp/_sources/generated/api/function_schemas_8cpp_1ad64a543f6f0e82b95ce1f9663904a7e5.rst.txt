@@ -1,0 +1,14 @@
+.. _exhale_function_schemas_8cpp_1ad64a543f6f0e82b95ce1f9663904a7e5:
+
+Function foxglove::schemas::posesInFrameToC
+===========================================
+
+- Defined in :ref:`file_foxglove_src_schemas.cpp`
+
+
+Function Documentation
+----------------------
+
+
+.. doxygenfunction:: foxglove::schemas::posesInFrameToC(foxglove_poses_in_frame&, const PosesInFrame&, Arena&)
+   :project: Foxglove SDK

@@ -1,0 +1,24 @@
+.. _dir_foxglove_src_server:
+
+
+Directory server
+================
+
+
+|exhale_lsh| :ref:`Parent directory <dir_foxglove_src>` (``foxglove/src``)
+
+.. |exhale_lsh| unicode:: U+021B0 .. UPWARDS ARROW WITH TIP LEFTWARDS
+
+
+*Directory path:* ``foxglove/src/server``
+
+
+Files
+-----
+
+- :ref:`file_foxglove_src_server_connection_graph.cpp`
+- :ref:`file_foxglove_src_server_fetch_asset.cpp`
+- :ref:`file_foxglove_src_server_parameter.cpp`
+- :ref:`file_foxglove_src_server_service.cpp`
+
+

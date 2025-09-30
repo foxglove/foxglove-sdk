@@ -1,0 +1,170 @@
+
+.. _program_listing_file_foxglove_include_foxglove_server.hpp:
+
+Program Listing for File server.hpp
+===================================
+
+|exhale_lsh| :ref:`Return to documentation for file <file_foxglove_include_foxglove_server.hpp>` (``foxglove/include/foxglove/server.hpp``)
+
+.. |exhale_lsh| unicode:: U+021B0 .. UPWARDS ARROW WITH TIP LEFTWARDS
+
+.. code-block:: cpp
+
+   #pragma once
+   
+   #include <foxglove/context.hpp>
+   #include <foxglove/error.hpp>
+   #include <foxglove/server/connection_graph.hpp>
+   #include <foxglove/server/fetch_asset.hpp>
+   #include <foxglove/server/parameter.hpp>
+   #include <foxglove/server/service.hpp>
+   
+   #include <cstdint>
+   #include <functional>
+   #include <memory>
+   #include <optional>
+   #include <string>
+   
+   enum foxglove_error : uint8_t;
+   struct foxglove_websocket_server;
+   struct foxglove_connection_graph;
+   struct foxglove_client;
+   
+   namespace foxglove {
+   
+   struct ClientChannel {
+     uint32_t id;
+     std::string_view topic;
+     std::string_view encoding;
+     std::string_view schema_name;
+     std::string_view schema_encoding;
+     const std::byte* schema;
+     size_t schema_len;
+   };
+   
+   struct ClientMetadata {
+     uint32_t id;
+     std::optional<uint64_t> sink_id;
+   };
+   
+   enum class WebSocketServerCapabilities : uint8_t {
+     ClientPublish = 1 << 0,
+     ConnectionGraph = 1 << 1,
+     Parameters = 1 << 2,
+     Time = 1 << 3,
+     Services = 1 << 4,
+     Assets = 1 << 5,
+   };
+   
+   enum class WebSocketServerStatusLevel : uint8_t {
+     Info = 0,
+     Warning = 1,
+     Error = 2,
+   };
+   
+   inline WebSocketServerCapabilities operator|(
+     WebSocketServerCapabilities a, WebSocketServerCapabilities b
+   ) {
+     return WebSocketServerCapabilities(uint8_t(a) | uint8_t(b));
+   }
+   
+   inline WebSocketServerCapabilities operator&(
+     WebSocketServerCapabilities a, WebSocketServerCapabilities b
+   ) {
+     return WebSocketServerCapabilities(uint8_t(a) & uint8_t(b));
+   }
+   
+   struct WebSocketServerCallbacks {
+     std::function<void(uint64_t channel_id, const ClientMetadata& client_metadata)> onSubscribe;
+   
+     std::function<void(uint64_t channel_id, const ClientMetadata& client_metadata)> onUnsubscribe;
+   
+     std::function<void(uint32_t client_id, const ClientChannel& channel)> onClientAdvertise;
+   
+     std::function<
+       void(uint32_t client_id, uint32_t client_channel_id, const std::byte* data, size_t data_len)>
+       onMessageData;
+   
+     std::function<void(uint32_t client_id, uint32_t client_channel_id)> onClientUnadvertise;
+   
+     std::function<std::vector<Parameter>(
+       uint32_t client_id, std::optional<std::string_view> request_id,
+       const std::vector<std::string_view>& param_names
+     )>
+       onGetParameters;
+   
+     std::function<std::vector<Parameter>(
+       uint32_t client_id, std::optional<std::string_view> request_id,
+       const std::vector<ParameterView>& params
+     )>
+       onSetParameters;
+   
+     std::function<void(const std::vector<std::string_view>& param_names)> onParametersSubscribe;
+   
+     std::function<void(const std::vector<std::string_view>& param_names)> onParametersUnsubscribe;
+   
+     std::function<void()> onConnectionGraphSubscribe;
+   
+     std::function<void()> onConnectionGraphUnsubscribe;
+   };
+   
+   struct TlsIdentity {
+     std::vector<std::byte> cert;
+     std::vector<std::byte> key;
+   };
+   
+   struct WebSocketServerOptions {
+     friend class WebSocketServer;
+   
+     Context context;
+     std::string name;
+     std::string host = "127.0.0.1";
+     uint16_t port = 8765;
+     WebSocketServerCallbacks callbacks;
+     WebSocketServerCapabilities capabilities = WebSocketServerCapabilities(0);
+     std::vector<std::string> supported_encodings;
+     FetchAssetHandler fetch_asset;
+     std::optional<TlsIdentity> tls_identity = std::nullopt;
+   };
+   
+   class WebSocketServer final {
+   public:
+     static FoxgloveResult<WebSocketServer> create(WebSocketServerOptions&& options);
+   
+     [[nodiscard]] uint16_t port() const;
+   
+     FoxgloveError stop();
+   
+     void broadcastTime(uint64_t timestamp_nanos) const noexcept;
+   
+     [[nodiscard]] FoxgloveError clearSession(
+       std::optional<std::string_view> session_id = std::nullopt
+     ) const noexcept;
+   
+     [[nodiscard]] FoxgloveError addService(Service&& service) const noexcept;
+   
+     [[nodiscard]] FoxgloveError removeService(std::string_view name) const noexcept;
+   
+     void publishParameterValues(std::vector<Parameter>&& params);
+   
+     void publishConnectionGraph(ConnectionGraph& graph);
+   
+     [[nodiscard]] FoxgloveError publishStatus(
+       WebSocketServerStatusLevel level, std::string_view message,
+       std::optional<std::string_view> id = std::nullopt
+     ) const noexcept;
+   
+     [[nodiscard]] FoxgloveError removeStatus(const std::vector<std::string_view>& ids) const;
+   
+   private:
+     WebSocketServer(
+       foxglove_websocket_server* server, std::unique_ptr<WebSocketServerCallbacks> callbacks,
+       std::unique_ptr<FetchAssetHandler> fetch_asset
+     );
+   
+     std::unique_ptr<WebSocketServerCallbacks> callbacks_;
+     std::unique_ptr<FetchAssetHandler> fetch_asset_;
+     std::unique_ptr<foxglove_websocket_server, foxglove_error (*)(foxglove_websocket_server*)> impl_;
+   };
+   
+   }  // namespace foxglove
