@@ -6,8 +6,7 @@ interface WidgetModel {
   width: string;
   height: string;
   src: string;
-  orgSlug: string;
-  layout: OpaqueLayoutData;
+  layout_data: OpaqueLayoutData;
   _data: DataView<ArrayBuffer>;
 }
 
@@ -22,11 +21,11 @@ function render({ model, el }: RenderProps<WidgetModel>): void {
     };
   }
 
-  function getLayout(): OpaqueLayoutData {
+  function getLayoutData(): OpaqueLayoutData {
     // Read layout from the model and verify it is not empty
-    const layout = model.get("layout");
+    const layoutData = model.get("layout_data");
 
-    return JSON.stringify(layout) !== "{}" ? layout : undefined;
+    return JSON.stringify(layoutData) !== "{}" ? layoutData : undefined;
   }
 
   const parent = document.createElement("div");
@@ -34,9 +33,9 @@ function render({ model, el }: RenderProps<WidgetModel>): void {
   const viewer = new FoxgloveViewer({
     parent,
     src: model.get("src") !== "" ? model.get("src") : undefined,
-    orgSlug: model.get("orgSlug") !== "" ? model.get("orgSlug") : undefined,
+    orgSlug: undefined,
     initialDataSource: getDataSource(),
-    initialLayout: getLayout(),
+    initialLayout: getLayoutData(),
   });
 
   parent.style.width = model.get("width");
@@ -57,9 +56,9 @@ function render({ model, el }: RenderProps<WidgetModel>): void {
   });
 
   model.on("change:layout", () => {
-    const layout = getLayout();
+    const layoutData = getLayoutData();
 
-    viewer.setLayoutData(layout);
+    viewer.setLayoutData(layoutData);
   });
 
   el.appendChild(parent);

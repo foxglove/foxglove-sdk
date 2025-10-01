@@ -19,46 +19,43 @@ Notebook Integration
 
 Functions and classes for integrating with Jupyter notebooks and creating interactive visualizations.
 
-.. py:function:: create_notebook_buffer(context: Context | None = None) -> NotebookBuffer
+.. py:function:: create_notebook_buffer(context: Context | None = None) -> None
 
-   Create a data buffer for collecting messages in Jupyter notebooks.
-
-   This function creates a NotebookBuffer that can collect logged messages
-   and data for visualization with the FoxgloveViewer widget. The buffer
-   acts as an intermediate storage layer between your data logging code
-   and the visualization widget.
+   Create a data buffer for collecting messages in Jupyter notebooks. The buffer
+   will be associated with the provided context, so every message logged to the context
+   will be collected by the buffer.
 
    :param context: Optional Foxglove context to use for logging. If not provided,
        the global context will be used. This allows you to isolate the
        buffer's data collection from other parts of your application.
-   :return: A buffer instance ready to collect logged messages
-       and data for visualization.
 
    .. note::
       This function is only available when the `notebook` extra package
       is installed.
 
-.. py:function:: visualize(datasource: NotebookBuffer, width: Optional[str] = None, height: Optional[str] = None, src: Optional[str] = None, orgSlug: Optional[str] = None, layout: Optional[dict] = None) -> FoxgloveViewer
+.. py:function:: visualize(context: Optional[Context] = None, width: Optional[str] = None, height: Optional[str] = None, src: Optional[str] = None, layout_data: Optional[dict] = None) -> FoxgloveViewer
 
    Create a FoxgloveViewer widget for interactive data visualization in Jupyter notebooks.
 
    This function creates an embedded Foxglove visualization widget that displays
-   the data collected in the provided NotebookBuffer. The widget provides a
-   fully-featured Foxglove interface directly within your Jupyter notebook,
-   allowing you to explore multi-modal robotics data including 3D scenes,
-   plots, images, and more.
+   the data collected in the NotebookBuffer associated with the provided context.
+   The widget provides a fully-featured Foxglove interface directly within
+   your Jupyter notebook, allowing you to explore multi-modal robotics data
+   including 3D scenes, plots, images, and more.
 
-   :param datasource: The NotebookBuffer containing the data to visualize. This buffer
-       should have been populated with logged messages before creating the viewer.
+   :param context: The Context used to log the messages. If no Context is provided, the global
+       context will be used. The visualization data will be retrieved from the NotebookBuffer
+       associated with the provided context. This buffer should have been populated with
+       logged messages before creating the viewer.
    :param width: Optional width for the widget. Can be specified as CSS values like
        "800px", "100%", "50vw", etc. If not provided, defaults to "100%".
    :param height: Optional height for the widget. Can be specified as CSS values like
        "600px", "80vh", "400px", etc. If not provided, defaults to "500px".
    :param src: Optional URL of the Foxglove app instance to use. If not provided or empty,
        uses the default Foxglove embed server (https://embed.foxglove.dev/).
-   :param orgSlug: Optional Foxglove organization the user should be signed into.
-   :param layout: Optional custom layout configuration. Should be a dictionary that
-       was exported from the Foxglove app. If not provided, uses the default layout.
+   :param layout_data: Optional layout data to be used by the Foxglove viewer. Should be a
+       dictionary that was exported from the Foxglove app. If not provided, uses the
+       default layout.
    :return: A Jupyter widget that displays the embedded Foxglove
        visualization interface with the provided data.
    :raises Exception: If the notebook extra package is not installed. Install it
@@ -108,7 +105,7 @@ Notebook Classes
 
       :return: The collected data in a format suitable for visualization
           with the FoxgloveViewer widget. The data includes all logged
-          messages, schemas, and metadata.
+          messages, schemas, and metadata.``
 
       .. note::
          This method is typically called automatically by the FoxgloveViewer
@@ -139,29 +136,27 @@ Notebook Classes
       The URL of the Foxglove app instance to use. If empty, uses the default embed server
       (https://embed.foxglove.dev/).
 
-   .. py:attribute:: orgSlug
+   .. py:attribute:: layout_data
 
-      Foxglove organization the user should be signed into.
+      Optional layout data to be used by the Foxglove viewer.
 
-   .. py:attribute:: layout
-
-      A custom layout configuration exported from the Foxglove app.
-
-   .. py:method:: __init__(datasource: NotebookBuffer, width: Optional[str] = None, height: Optional[str] = None, src: Optional[str] = None, orgSlug: Optional[str] = None, layout: Optional[dict] = None, **kwargs: Any)
+   .. py:method:: __init__(context: Optional[Context], width: Optional[str] = None, height: Optional[str] = None, src: Optional[str] = None, layout_data: Optional[dict] = None, **kwargs: Any)
 
       Initialize the FoxgloveViewer widget with the specified data source and configuration.
 
-      :param datasource: The NotebookBuffer containing the data to visualize. This buffer
-          should have been populated with logged messages before creating the viewer.
+      :param context: The Context used to log the messages. If no Context is provided, the global
+          context will be used. The visualization data will be retrieved from the NotebookBuffer
+          associated with the provided context. This buffer should have been populated with
+          logged messages before creating the viewer.
       :param width: Optional width for the widget. Can be specified as CSS values like
           "800px", "100%", "50vw", etc. If not provided, defaults to "100%".
       :param height: Optional height for the widget. Can be specified as CSS values like
           "600px", "80vh", "400px", etc. If not provided, defaults to "500px".
       :param src: Optional URL of the Foxglove app instance to use. If not provided or empty,
           uses the default Foxglove embed server (https://embed.foxglove.dev/).
-      :param orgSlug: Optional Foxglove organization the user should be signed into.
-      :param layout: Optional custom layout configuration. Should be a dictionary that
-          was exported from the Foxglove app. If not provided, uses the default layout.
+      :param layout_data: Optional layout data to be used by the Foxglove viewer. Should be a
+          dictionary that was exported from the Foxglove app. If not provided, uses the
+          default layout.
       :param kwargs: Additional keyword arguments passed to the parent AnyWidget class.
 
       .. note::
@@ -169,15 +164,18 @@ Notebook Classes
          and display it in the embedded Foxglove viewer. The data is loaded once
          during initialization - to update the data, use the :meth:`set_datasource` method.
 
-   .. py:method:: set_datasource(datasource: NotebookBuffer) -> None
+   .. py:method:: set_data_from_context(context: Context) -> None
 
-      Update the data source for the Foxglove viewer widget.
+      Update the data visualized using the provided context.
 
       This method allows you to dynamically change the data being visualized
       without recreating the widget. The new data will be loaded from the
-      provided NotebookBuffer and the viewer will update to display it.
+      NotebookBuffer associated with the provided context and the viewer will update to
+      display it.
 
-      :param datasource: The new NotebookBuffer containing the data to visualize.
+      :param context: The Context used to log the messages. The visualization data will be retrieved
+         from the NotebookBuffer associated with the provided context. This buffer should
+         have been populated with logged messages before creating the viewer.
 
 Schemas
 ^^^^^^^

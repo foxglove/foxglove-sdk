@@ -5,6 +5,7 @@ from typing import Any, Optional
 import anywidget
 import traitlets
 
+from .._foxglove_py import Context
 from .NotebookBuffer import NotebookBuffer
 
 try:
@@ -27,14 +28,13 @@ class FoxgloveViewer(anywidget.AnyWidget):
         height (str): The height of the widget. Defaults to "500px".
         src (str): The URL of the Foxglove app instance to use.
             If empty, uses the default embed server.
-        orgSlug (str): Foxglove organization the user should be signed into.
-        layout (dict): A custom layout configuration exported from the Foxglove app.
+        layout_data (dict): A custom layout configuration exported from the Foxglove app.
 
     Example:
         >>> import foxglove
-        >>> buffer = foxglove.create_notebook_buffer()
+        >>> foxglove.create_notebook_buffer()
         >>> # ... log some data to the buffer ...
-        >>> viewer = foxglove.visualize(buffer, width="800px", height="600px")
+        >>> viewer = foxglove.visualize(width="800px", height="600px")
         >>> viewer  # Display the widget in the notebook
     """
 
@@ -43,34 +43,36 @@ class FoxgloveViewer(anywidget.AnyWidget):
     width = traitlets.Unicode("100%").tag(sync=True)
     height = traitlets.Unicode("500px").tag(sync=True)
     src = traitlets.Unicode("").tag(sync=True)
-    orgSlug = traitlets.Unicode("").tag(sync=True)
-    layout = traitlets.Dict({}).tag(sync=True)
+    layout_data = traitlets.Dict({}).tag(sync=True)
+    # A mapping of Context to NotebookBuffer, shared across all instances
+    _notebook_buffers_by_context: dict[Context, NotebookBuffer] = {}
 
     def __init__(
         self,
-        datasource: NotebookBuffer,
+        context: Optional[Context] = None,
         width: Optional[str] = None,
         height: Optional[str] = None,
         src: Optional[str] = None,
-        orgSlug: Optional[str] = None,
-        layout: Optional[dict] = None,
+        layout_data: Optional[dict] = None,
         **kwargs: Any,
     ):
         """
         Initialize the FoxgloveViewer widget with the specified data source and configuration.
 
         Args:
-            datasource: The NotebookBuffer containing the data to visualize. This buffer
-                should have been populated with logged messages before creating the viewer.
+            context: The Context used to log the messages. If no Context is provided, the global
+                context will be used. The visualization data will be retrieved from the
+                NotebookBuffer associated with the provided context. This buffer should have been
+                populated with logged messages before creating the viewer.
             width: Optional width for the widget. Can be specified as CSS values like
                 "800px", "100%", "50vw", etc. If not provided, defaults to "100%".
             height: Optional height for the widget. Can be specified as CSS values like
                 "600px", "80vh", "400px", etc. If not provided, defaults to "500px".
             src: Optional URL of the Foxglove app instance to use. If not provided or empty,
                 uses the default Foxglove embed server (https://embed.foxglove.dev/).
-            orgSlug: Optional Foxglove organization the user should be signed into.
-            layout: Optional custom layout configuration. Should be a dictionary that
-                was exported from the Foxglove app. If not provided, uses the default layout.
+            layout_data: Optional layout data to be used by the Foxglove viewer. Should be a
+                dictionary that was exported from the Foxglove app. If not provided, uses the
+                default layout.
             **kwargs: Additional keyword arguments passed to the parent AnyWidget class.
 
         Note:
@@ -80,13 +82,11 @@ class FoxgloveViewer(anywidget.AnyWidget):
 
         Example:
             >>> import foxglove
-            >>> buffer = foxglove.create_notebook_buffer()
-            >>> # ... log some data to the buffer ...
+            >>> foxglove.create_notebook_buffer()
+            >>> # ... log some data ...
             >>> viewer = FoxgloveViewer(
-            ...     datasource=buffer,
             ...     width="800px",
-            ...     height="600px",
-            ...     orgSlug="my-org"
+            ...     height="600px"
             ... )
         """
         super().__init__(**kwargs)
@@ -97,33 +97,59 @@ class FoxgloveViewer(anywidget.AnyWidget):
             self.height = height
         if src is not None:
             self.src = src
-        if orgSlug is not None:
-            self.orgSlug = orgSlug
-        if layout is not None:
-            self.layout = layout
+        if layout_data is not None:
+            self.layout_data = layout_data
 
-        self._data = datasource.get_data()
+        # Use default context if no context is provided
+        ctx = context or Context.default()
+        self.set_data_from_context(ctx)
 
-    def set_datasource(self, datasource: NotebookBuffer) -> None:
+    def set_data_from_context(self, context: Context) -> None:
         """
-        Update the data source for the Foxglove viewer widget.
+        Update the data visualized using the provided context.
 
         This method allows you to dynamically change the data being visualized
         without recreating the widget. The new data will be loaded from the
-        provided NotebookBuffer and the viewer will update to display it.
+        NotebookBuffer associated with the provided context and the viewer will update to
+        display it.
 
         Args:
-            datasource: The new NotebookBuffer containing the data to visualize.
+            context: The Context used to log the messages. The visualization data will be retrieved
+                from the NotebookBuffer associated with the provided context. This buffer should
+                have been populated with logged messages before creating the viewer.
 
         Example:
             >>> import foxglove
-            >>> buffer1 = foxglove.create_notebook_buffer()
-            >>> # ... log some initial data to buffer1 ...
-            >>> viewer = foxglove.visualize(buffer1)
+            >>> ctx_1 = Context()
+            >>> foxglove.create_notebook_buffer(context=ctx_1)
+            >>> # ... log some data to ctx_1 ...
+            >>> viewer.set_data_from_context(ctx_1)
             >>>
             >>> # Later, update with new data
-            >>> buffer2 = foxglove.create_notebook_buffer()
+            >>> ctx_2 = Context()
+            >>> foxglove.create_notebook_buffer(context=ctx_2)
             >>> # ... log different data to buffer2 ...
-            >>> viewer.set_datasource(buffer2)
+            >>> viewer.set_datasource(ctx_2)
         """
+        # Create a new buffer if one doesn't exist
+        if context not in self._notebook_buffers_by_context:
+            self._notebook_buffers_by_context[context] = NotebookBuffer(context=context)
+
+        # Get the buffer associated with the context
+        datasource = self._notebook_buffers_by_context[context]
+
+        # Set the viewer data
         self._data = datasource.get_data()
+
+    @classmethod
+    def create_notebook_buffer(cls, context: Optional[Context] = None) -> None:
+        """
+        Create a data buffer for collecting messages in Jupyter notebooks. The buffer
+        will be associated with the provided context, so every message logged to the context
+        will be collected by the buffer.
+        """
+        # Use default context if no context is provided
+        ctx = context or Context.default()
+        # Create a new buffer if one doesn't exist
+        if ctx not in cls._notebook_buffers_by_context:
+            cls._notebook_buffers_by_context[ctx] = NotebookBuffer(context=ctx)
