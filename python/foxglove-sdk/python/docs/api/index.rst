@@ -160,9 +160,9 @@ Notebook Classes
       :param kwargs: Additional keyword arguments passed to the parent AnyWidget class.
 
       .. note::
-         The widget will automatically load the data from the provided datasource
-         and display it in the embedded Foxglove viewer. The data is loaded once
-         during initialization - to update the data, use the :meth:`set_datasource` method.
+         The widget will automatically load the data from the buffer associated with the provided
+         context and display it in the embedded Foxglove viewer. The data is loaded once
+         during initialization - to update the data, use the :meth:`set_data_from_context` method.
 
    .. py:method:: set_data_from_context(context: Context) -> None
 
