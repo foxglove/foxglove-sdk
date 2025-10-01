@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package format="3">
     <name>foxglove_bridge</name>
-    <version>3.2.0</version>
+    <version>3.2.1</version>
     <description>ROS Foxglove Bridge</description>
     <license>MIT</license>
     <url type="website">https://github.com/foxglove/foxglove-sdk</url>

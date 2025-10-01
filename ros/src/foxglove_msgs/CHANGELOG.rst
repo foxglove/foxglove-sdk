@@ -2,6 +2,10 @@
 Changelog for package foxglove_msgs
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+3.2.1 (2025-09-26)
+-----------
+* No changes to foxglove_msgs
+
 3.2.0 (2025-09-22)
 ------------------
 * Add RawAudio schema

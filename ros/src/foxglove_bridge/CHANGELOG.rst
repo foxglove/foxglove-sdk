@@ -2,6 +2,11 @@
 Changelog for package foxglove_bridge
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+3.2.1 (2025-09-26)
+------------------
+* Fix memory leak in generic_client allocate_message (`#667 <https://github.com/foxglove/foxglove-sdk/issues/667>`_)
+* Contributors: Chris Lalancette, Matthew Harrison
+
 3.2.0 (2025-09-22)
 ------------------
 * Rewrite of foxglove_bridge to use the Foxglove SDK (various)
