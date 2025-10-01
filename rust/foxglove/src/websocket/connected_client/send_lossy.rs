@@ -21,15 +21,17 @@ pub(crate) enum SendLossyResult {
 ///
 /// If the channel is non-full, this function returns `SendLossyResult::Sent`.
 ///
-/// If the channel is full, drop the oldest message and try again. If the send eventually succeeds
-/// in this manner, this function returns `SendLossyResult::SentLossy(dropped)`. If the maximum
-/// number of retries is reached, it returns `SendLossyResult::ExhaustedRetries`.
+/// If the channel is full, and drop_oldest=true, drop the oldest message and try again.
+/// If the send eventually succeeds in this manner, this function returns `SendLossyResult::SentLossy(dropped)`.
+/// If the maximum number of retries is reached, it returns `SendLossyResult::ExhaustedRetries`.
+/// If drop_oldest=false, retries is ignored, and this message is immediately dropped when channel is full.
 pub(crate) fn send_lossy(
     client_addr: &SocketAddr,
     tx: &flume::Sender<Message>,
     rx: &flume::Receiver<Message>,
     mut message: Message,
     retries: usize,
+    drop_oldest: bool,
 ) -> SendLossyResult {
     // If the queue is full, drop the oldest message(s). We do this because the websocket
     // client is falling behind, and we either start dropping messages, or we'll end up
@@ -47,7 +49,8 @@ pub(crate) fn send_lossy(
             }
             (_, Err(TrySendError::Disconnected(_))) => unreachable!("we're holding rx"),
             (_, Err(TrySendError::Full(rejected))) => {
-                if dropped >= retries {
+                // If drop_oldest=false, drop this message instead
+                if !drop_oldest || dropped >= retries {
                     if THROTTLER.lock().try_acquire() {
                         tracing::info!("outbox for client {client_addr} full");
                     }
@@ -90,7 +93,7 @@ mod tests {
         let (tx, rx) = flume::bounded(BACKLOG);
         for i in 0..BACKLOG {
             assert_matches!(
-                send_lossy(&addr, &tx, &rx, make_message(i), 0),
+                send_lossy(&addr, &tx, &rx, make_message(i), 0, true),
                 SendLossyResult::Sent
             );
         }
@@ -98,11 +101,11 @@ mod tests {
         // The queue is full now. We'll only succeed with retries.
         for i in BACKLOG..TOTAL {
             assert_matches!(
-                send_lossy(&addr, &tx, &rx, make_message(TOTAL + i), 0),
+                send_lossy(&addr, &tx, &rx, make_message(TOTAL + i), 0, true),
                 SendLossyResult::ExhaustedRetries
             );
             assert_matches!(
-                send_lossy(&addr, &tx, &rx, make_message(i), 1),
+                send_lossy(&addr, &tx, &rx, make_message(i), 1, true),
                 SendLossyResult::SentLossy(1)
             );
         }
@@ -113,5 +116,40 @@ mod tests {
             received.push(parse_message(msg));
         }
         assert_eq!(received, ((TOTAL - BACKLOG)..TOTAL).collect::<Vec<_>>());
+    }
+
+    #[traced_test]
+    #[test]
+    fn test_send_lossy_drop_newest() {
+        const BACKLOG: usize = 4;
+        const TOTAL: usize = 10;
+
+        let addr = SocketAddr::new("127.0.0.1".parse().unwrap(), 1234);
+
+        let (tx, rx) = flume::bounded(BACKLOG);
+        // Fill the queue with initial messages
+        for i in 0..BACKLOG {
+            assert_matches!(
+                send_lossy(&addr, &tx, &rx, make_message(i), 0, true),
+                SendLossyResult::Sent
+            );
+        }
+
+        // The queue is full now. With drop_oldest=false, new messages should be dropped
+        // instead of the old ones in the queue.
+        for i in BACKLOG..TOTAL {
+            assert_matches!(
+                send_lossy(&addr, &tx, &rx, make_message(i), 1, false),
+                SendLossyResult::ExhaustedRetries
+            );
+        }
+
+        // Receive everything, expect that the original messages are still there
+        // (the new messages were dropped, not the old ones)
+        let mut received: Vec<usize> = vec![];
+        while let Ok(msg) = rx.try_recv() {
+            received.push(parse_message(msg));
+        }
+        assert_eq!(received, (0..BACKLOG).collect::<Vec<_>>());
     }
 }

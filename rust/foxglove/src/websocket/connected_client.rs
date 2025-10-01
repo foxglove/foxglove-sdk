@@ -100,7 +100,7 @@ impl Sink for ConnectedClient {
         };
 
         let message = MessageData::new(subscription_id.into(), metadata.log_time, msg);
-        self.send_data_lossy(&message, MAX_SEND_RETRIES);
+        self.send_data_lossy(&message, MAX_SEND_RETRIES, !channel.unreliable());
         Ok(())
     }
 
@@ -252,13 +252,19 @@ impl ConnectedClient {
     }
 
     /// Send the message on the data plane, dropping up to retries older messages to make room, if necessary.
-    fn send_data_lossy(&self, message: impl Into<Message>, retries: usize) -> SendLossyResult {
+    fn send_data_lossy(
+        &self,
+        message: impl Into<Message>,
+        retries: usize,
+        drop_oldest: bool,
+    ) -> SendLossyResult {
         send_lossy::send_lossy(
             &self.addr,
             &self.data_plane_tx,
             &self.data_plane_rx,
             message.into(),
             retries,
+            drop_oldest,
         )
     }
 
@@ -672,7 +678,7 @@ impl ConnectedClient {
     pub fn send_status(&self, status: Status) {
         match status.level {
             StatusLevel::Info => {
-                self.send_data_lossy(&status, MAX_SEND_RETRIES);
+                self.send_data_lossy(&status, MAX_SEND_RETRIES, true);
             }
             _ => {
                 self.send_control_msg(&status);
