@@ -52,7 +52,12 @@
                 "type": "number",
                 "description": "z coordinate length"
               }
-            }
+            },
+            "required": [
+              "x",
+              "y",
+              "z"
+            ]
           },
           "rotation": {
             "title": "foxglove.Quaternion",
@@ -75,11 +80,27 @@
                 "type": "number",
                 "description": "w value"
               }
-            }
+            },
+            "required": [
+              "x",
+              "y",
+              "z",
+              "w"
+            ]
           }
-        }
+        },
+        "required": [
+          "timestamp",
+          "parent_frame_id",
+          "child_frame_id",
+          "translation",
+          "rotation"
+        ]
       },
       "description": "Array of transforms"
     }
-  }
+  },
+  "required": [
+    "transforms"
+  ]
 }

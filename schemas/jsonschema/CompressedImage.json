@@ -33,5 +33,11 @@
       "type": "string",
       "description": "Image format\n\nSupported values: `jpeg`, `png`, `webp`, `avif`"
     }
-  }
+  },
+  "required": [
+    "timestamp",
+    "frame_id",
+    "data",
+    "format"
+  ]
 }

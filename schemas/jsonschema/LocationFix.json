@@ -92,7 +92,23 @@
           "type": "number",
           "description": "Alpha value between 0 and 1"
         }
-      }
+      },
+      "required": [
+        "r",
+        "g",
+        "b",
+        "a"
+      ]
     }
-  }
+  },
+  "required": [
+    "timestamp",
+    "frame_id",
+    "latitude",
+    "longitude",
+    "altitude",
+    "position_covariance",
+    "position_covariance_type",
+    "color"
+  ]
 }
