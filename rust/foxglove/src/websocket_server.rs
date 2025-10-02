@@ -5,6 +5,7 @@ use std::future::Future;
 use std::net::SocketAddr;
 use std::sync::Arc;
 
+use crate::sink_channel_filter::{SinkChannelFilter, SinkChannelFilterFn};
 use crate::websocket::service::Service;
 #[cfg(feature = "tls")]
 use crate::websocket::TlsIdentity;
@@ -12,7 +13,7 @@ use crate::websocket::{
     create_server, AssetHandler, AsyncAssetHandlerFn, BlockingAssetHandlerFn, Capability, Client,
     ConnectionGraph, Parameter, Server, ServerOptions, ShutdownHandle, Status,
 };
-use crate::{get_runtime_handle, AppUrl, Context, FoxgloveError};
+use crate::{get_runtime_handle, AppUrl, ChannelDescriptor, Context, FoxgloveError};
 
 /// A WebSocket server for live visualization in Foxglove.
 ///
@@ -76,6 +77,24 @@ impl WebSocketServer {
     pub fn bind(mut self, host: impl Into<String>, port: u16) -> Self {
         self.host = host.into();
         self.port = port;
+        self
+    }
+
+    /// Sets a [`SinkChannelFilter`] for connected clients.
+    ///
+    /// The filter is a function that takes a channel and returns a boolean indicating whether the
+    /// channel should be logged.
+    pub fn channel_filter(mut self, filter: Arc<dyn SinkChannelFilter>) -> Self {
+        self.options.channel_filter = Some(filter);
+        self
+    }
+
+    /// Sets a channel filter for connected clients. See [`SinkChannelFilter`] for more information.
+    pub fn channel_filter_fn(
+        mut self,
+        filter: impl Fn(&ChannelDescriptor) -> bool + Sync + Send + 'static,
+    ) -> Self {
+        self.options.channel_filter = Some(Arc::new(SinkChannelFilterFn(filter)));
         self
     }
 
