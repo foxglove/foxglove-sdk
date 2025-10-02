@@ -55,11 +55,12 @@ impl Acceptor for StreamConfiguration {
         &self,
         stream: TcpStream,
     ) -> Result<ServerStream<TcpStream>, crate::FoxgloveError> {
-        let stream = if let Some(tls_acceptor) = &self.tls_acceptor {
-            let stream = tls_acceptor.accept(stream).await?;
-            Either::Right(stream)
-        } else {
-            Either::Left(stream)
+        let stream = match &self.tls_acceptor {
+            Some(tls_acceptor) => {
+                let stream = tls_acceptor.accept(stream).await?;
+                Either::Right(stream)
+            }
+            _ => Either::Left(stream),
         };
         Ok(stream)
     }

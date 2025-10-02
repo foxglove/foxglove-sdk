@@ -6,10 +6,10 @@ use crate::{ChannelId, Sink};
 use super::Subscriptions;
 
 macro_rules! assert_subscribers_eq {
-    ($left:expr, $right:expr) => {
+    ($left:expr_2021, $right:expr_2021) => {
         assert_subscribers_eq!($left, $right,);
     };
-    ($left:expr, $right:expr, $($arg:tt),*) => {
+    ($left:expr_2021, $right:expr_2021, $($arg:tt),*) => {
         let mut left: Vec<_> = $left.into_iter().map(|sink| sink.id()).collect();
         left.sort_unstable();
         let right: Vec<_> = $right.into_iter().collect();

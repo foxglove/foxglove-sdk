@@ -10,9 +10,7 @@ members = [
   "python/foxglove-sdk",
 ]
 
-exclude = [
-  "rust/examples/rgb_camera_visualization"
-]
+exclude = ["rust/examples/rgb_camera_visualization"]
 
 [workspace.package]
 version = "0.14.3"
@@ -35,6 +33,15 @@ tokio-tungstenite = "0.27"
 tokio-util = { version = "0.7", features = ["rt"] }
 tracing = { version = "0.1", features = ["log"] }
 tracing-test = "0.2.5"
+
+[workspace.lints.rust]
+# Group to warn about changes coming in Rust 2024 edition. Having this on will make a future
+# transition smoother. Lowering the piority allows overriding individual lints in the group.
+rust-2024-compatibility = { level = "warn", priority = 0 }
+
+# `cargo fix --edition` cannot rewrite code to fix this lint, and disabling it on a per-line basis
+# does not work, so just disabling it globally for now
+tail-expr-drop-order = { level = "allow", priority = 1 }
 
 [workspace.lints.clippy]
 assigning_clones = "warn"

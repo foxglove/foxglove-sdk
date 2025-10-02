@@ -11,7 +11,7 @@ use crate::websocket_client::WebSocketClient;
 use crate::{ChannelBuilder, Context, McapWriter, Schema, WebSocketServer};
 
 macro_rules! expect_recv {
-    ($client:expr, $variant:path) => {{
+    ($client:expr_2021, $variant:path) => {{
         let msg = $client.recv().await.expect("Failed to recv");
         match msg {
             $variant(m) => m,

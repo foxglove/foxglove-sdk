@@ -242,10 +242,9 @@ impl ServiceMap {
 
     /// Removes a service by name.
     pub fn remove_by_name(&mut self, name: impl AsRef<str>) -> Option<Arc<Service>> {
-        if let Some(id) = self.name.remove(name.as_ref()) {
-            self.id.remove(&id)
-        } else {
-            None
+        match self.name.remove(name.as_ref()) {
+            Some(id) => self.id.remove(&id),
+            _ => None,
         }
     }
 

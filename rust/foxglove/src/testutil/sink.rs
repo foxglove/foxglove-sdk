@@ -78,10 +78,9 @@ impl Sink for RecordingSink {
     }
 
     fn add_channels(&self, channels: &[&Arc<RawChannel>]) -> Option<Vec<ChannelId>> {
-        if let Some(func) = self.add_channels_func.as_ref() {
-            func(channels)
-        } else {
-            None
+        match self.add_channels_func.as_ref() {
+            Some(func) => func(channels),
+            _ => None,
         }
     }
 

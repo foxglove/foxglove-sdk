@@ -82,7 +82,7 @@ fn test_bool() {
 }
 
 macro_rules! make_value {
-    ($ctor:ident, $value:expr) => {{
+    ($ctor:ident, $value:expr_2021) => {{
         let mut value_ptr = std::ptr::null_mut();
         #[allow(unused_unsafe)]
         let err = unsafe { $ctor(&mut value_ptr, $value) };
@@ -92,7 +92,7 @@ macro_rules! make_value {
 }
 
 macro_rules! array_insert {
-    ($array_ptr:ident, $value_ptr:expr) => {
+    ($array_ptr:ident, $value_ptr:expr_2021) => {
         let err =
             unsafe { foxglove_parameter_value_array_push(Some(&mut *$array_ptr), $value_ptr) };
         assert_eq!(err, FoxgloveError::Ok);
@@ -100,7 +100,7 @@ macro_rules! array_insert {
 }
 
 macro_rules! dict_insert {
-    ($dict:ident, $key:literal, $value_ptr:expr) => {
+    ($dict:ident, $key:literal, $value_ptr:expr_2021) => {
         let err = unsafe {
             foxglove_parameter_value_dict_insert(Some(&mut *$dict), $key.into(), $value_ptr)
         };
