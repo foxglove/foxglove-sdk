@@ -3,7 +3,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
 use clap::{Parser, ValueEnum};
-use foxglove::{LazyChannel, McapCompression, McapWriteOptions, McapWriter};
+use foxglove::{LazyChannel, McapCompression, McapWriteOptions, McapWriter, StdoutSink};
 use std::time::Duration;
 
 #[derive(Debug, Parser)]
@@ -92,14 +92,16 @@ fn main() {
         std::fs::remove_file(&args.path).expect("Failed to remove file");
     }
 
-    let options = McapWriteOptions::new()
-        .chunk_size(Some(args.chunk_size))
-        .compression(args.compression.into());
+    // let options = McapWriteOptions::new()
+    //     .chunk_size(Some(args.chunk_size))
+    //     .compression(args.compression.into());
 
-    let writer = McapWriter::with_options(options)
-        .create_new_buffered_file(&args.path)
-        .expect("Failed to start mcap writer");
+    // let writer = McapWriter::with_options(options)
+    //     .create_new_buffered_file(&args.path)
+    //     .expect("Failed to start mcap writer");
+
+    let sink = StdoutSink::new();
 
     log_until(args.fps, done);
-    writer.close().expect("Failed to flush mcap file");
+    // writer.close().expect("Failed to flush mcap file");
 }
