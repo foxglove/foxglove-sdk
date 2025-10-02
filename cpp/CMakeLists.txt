@@ -70,11 +70,23 @@ if(NOT TARGET websocketpp::websocketpp)
   FetchContent_MakeAvailable(websocketpp)
 endif()
 
-FetchContent_Declare(asio
-  GIT_REPOSITORY https://github.com/chriskohlhoff/asio.git
-  GIT_TAG asio-1-31-0
-)
-FetchContent_MakeAvailable(asio)
+if(USE_PACKAGE_MANAGER_DEPENDENCIES)
+  list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+  find_package(asio QUIET)
+endif()
+if(NOT TARGET asio::asio)
+  FetchContent_Declare(asio
+    GIT_REPOSITORY https://github.com/chriskohlhoff/asio.git
+    GIT_TAG asio-1-31-0
+  )
+  FetchContent_MakeAvailable(asio)
+  add_library(asio::asio IMPORTED INTERFACE)
+  target_include_directories(asio::asio INTERFACE ${asio_SOURCE_DIR}/asio/include)
+  target_compile_definitions(asio::asio
+    INTERFACE
+      ASIO_STANDALONE
+  )
+endif()
 
 if(USE_PACKAGE_MANAGER_DEPENDENCIES)
   find_package(nlohmann_json QUIET)
@@ -165,11 +177,9 @@ file(GLOB_RECURSE foxglove_test_srcs CONFIGURE_DEPENDS
 add_executable(tests "${foxglove_test_srcs}")
 set_property(TARGET tests PROPERTY CXX_STANDARD 17)
 set_property(TARGET tests PROPERTY CXX_STANDARD_REQUIRED True)
-target_compile_definitions(tests PRIVATE ASIO_STANDALONE)
 target_compile_options(tests PUBLIC ${SANITIZER_COMPILE_OPTIONS})
 target_link_options(tests PUBLIC ${SANITIZER_LINK_OPTIONS})
-target_include_directories(tests SYSTEM PRIVATE ${asio_SOURCE_DIR}/asio/include)
-target_link_libraries(tests PRIVATE foxglove_cpp_static Catch2::Catch2WithMain nlohmann_json::nlohmann_json websocketpp::websocketpp)
+target_link_libraries(tests PRIVATE foxglove_cpp_static asio::asio Catch2::Catch2WithMain nlohmann_json::nlohmann_json websocketpp::websocketpp)
 catch_discover_tests(tests)
 if(MSVC)
   # Auto-detection of C++11 support is not working on the windows-2025 runner with default settings
