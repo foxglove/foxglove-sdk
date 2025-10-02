@@ -95,20 +95,21 @@ where
     R: Read + Seek,
     F: FnMut(Record<'_>) -> Result<()>,
 {
-    if let Some(event) = reader.next_event() {
-        match event? {
-            LinearReadEvent::ReadRequest(count) => {
-                let count = file.read(reader.insert(count))?;
-                reader.notify_read(count);
+    match reader.next_event() {
+        Some(event) => {
+            match event? {
+                LinearReadEvent::ReadRequest(count) => {
+                    let count = file.read(reader.insert(count))?;
+                    reader.notify_read(count);
+                }
+                LinearReadEvent::Record { data, opcode } => {
+                    let record = mcap::parse_record(opcode, data)?;
+                    handle_record(record)?;
+                }
             }
-            LinearReadEvent::Record { data, opcode } => {
-                let record = mcap::parse_record(opcode, data)?;
-                handle_record(record)?;
-            }
+            Ok(true)
         }
-        Ok(true)
-    } else {
-        Ok(false)
+        _ => Ok(false),
     }
 }
 

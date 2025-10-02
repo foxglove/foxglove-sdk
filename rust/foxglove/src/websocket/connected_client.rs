@@ -264,11 +264,12 @@ impl ConnectedClient {
 
     /// Send the message on the control plane, disconnecting the client if the channel is full.
     pub fn send_control_msg(&self, message: impl Into<Message>) -> bool {
-        if let Err(TrySendError::Full(_)) = self.control_plane_tx.try_send(message.into()) {
-            self.shutdown(ShutdownReason::ControlPlaneQueueFull);
-            false
-        } else {
-            true
+        match self.control_plane_tx.try_send(message.into()) {
+            Err(TrySendError::Full(_)) => {
+                self.shutdown(ShutdownReason::ControlPlaneQueueFull);
+                false
+            }
+            _ => true,
         }
     }
 
@@ -498,21 +499,24 @@ impl ConnectedClient {
             return;
         }
 
-        let updated_parameters = if let Some(handler) = server.listener() {
-            let updated =
-                handler.on_set_parameters(Client::new(self), parameters, request_id.as_deref());
+        let updated_parameters = match server.listener() {
+            Some(handler) => {
+                let updated =
+                    handler.on_set_parameters(Client::new(self), parameters, request_id.as_deref());
 
-            // Send all the updated_parameters back to the client if request_id is provided.
-            // This is the behavior of the reference Python server implementation.
-            if request_id.is_some() {
-                self.update_parameters(updated.clone(), request_id);
+                // Send all the updated_parameters back to the client if request_id is provided.
+                // This is the behavior of the reference Python server implementation.
+                if request_id.is_some() {
+                    self.update_parameters(updated.clone(), request_id);
+                }
+                updated
             }
-            updated
-        } else {
-            // This differs from the Python legacy ws-protocol implementation in that here we notify
-            // subscribers about the parameters even if there's no ServerListener configured.
-            // This seems to be a more sensible default.
-            parameters
+            _ => {
+                // This differs from the Python legacy ws-protocol implementation in that here we notify
+                // subscribers about the parameters even if there's no ServerListener configured.
+                // This seems to be a more sensible default.
+                parameters
+            }
         };
         server.publish_parameter_values(updated_parameters);
     }
@@ -617,12 +621,17 @@ impl ConnectedClient {
             return;
         };
 
-        if let Some(handler) = server.fetch_asset_handler() {
-            let asset_responder = AssetResponder::new(Client::new(self), request_id, guard);
-            handler.fetch(uri, asset_responder);
-        } else {
-            tracing::error!("Server advertised the Assets capability without providing a handler");
-            self.send_asset_error("Server does not have a fetch asset handler", request_id);
+        match server.fetch_asset_handler() {
+            Some(handler) => {
+                let asset_responder = AssetResponder::new(Client::new(self), request_id, guard);
+                handler.fetch(uri, asset_responder);
+            }
+            _ => {
+                tracing::error!(
+                    "Server advertised the Assets capability without providing a handler"
+                );
+                self.send_asset_error("Server does not have a fetch asset handler", request_id);
+            }
         }
     }
 
@@ -632,13 +641,16 @@ impl ConnectedClient {
             return;
         }
 
-        if let Some(initial_update) = server.subscribe_connection_graph(self.id) {
-            self.send_control_msg(initial_update);
-        } else {
-            tracing::debug!(
-                "Client {} is already subscribed to connection graph updates",
-                self.addr
-            );
+        match server.subscribe_connection_graph(self.id) {
+            Some(initial_update) => {
+                self.send_control_msg(initial_update);
+            }
+            _ => {
+                tracing::debug!(
+                    "Client {} is already subscribed to connection graph updates",
+                    self.addr
+                );
+            }
         }
     }
 
