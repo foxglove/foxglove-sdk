@@ -171,6 +171,8 @@ private:
 };
 
 foxglove::WebSocketServer startServer(foxglove::WebSocketServerOptions&& options) {
+  // always select an available port
+  options.port = 0;
   auto result = foxglove::WebSocketServer::create(std::move(options));
   REQUIRE(result.has_value());
   auto server = std::move(result.value());
@@ -184,35 +186,23 @@ foxglove::WebSocketServer startServer(
   foxglove::WebSocketServerCallbacks&& callbacks = {},
   std::vector<std::string> supported_encodings = {}
 ) {
-  return startServer({
-    std::move(context),
-    "unit-test",
-    "127.0.0.1",
-    0,
-    std::move(callbacks),
-    capabilities,
-    std::move(supported_encodings),
-    {},
-    std::nullopt,
-    {},
-  });
+  foxglove::WebSocketServerOptions options;
+  options.context = std::move(context);
+  options.name = "unit-test";
+  options.callbacks = std::move(callbacks);
+  options.capabilities = capabilities;
+  options.supported_encodings = std::move(supported_encodings);
+  return startServer(std::move(options));
 }
 
 foxglove::WebSocketServer startServer(
   foxglove::Context context, foxglove::FetchAssetHandler&& fetch_asset
 ) {
-  return startServer({
-    std::move(context),
-    "unit-test",
-    "127.0.0.1",
-    0,
-    {},
-    {},
-    {},
-    std::move(fetch_asset),
-    std::nullopt,
-    {},
-  });
+  foxglove::WebSocketServerOptions options;
+  options.context = std::move(context);
+  options.name = "unit-test";
+  options.fetch_asset = std::move(fetch_asset);
+  return startServer(std::move(options));
 }
 
 }  // namespace
