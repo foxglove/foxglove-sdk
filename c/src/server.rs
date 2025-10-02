@@ -1,3 +1,4 @@
+use crate::channel_descriptor::FoxgloveChannelDescriptor;
 use crate::connection_graph::FoxgloveConnectionGraph;
 use crate::fetch_asset::{FetchAssetHandler, FoxgloveFetchAssetResponder};
 use crate::service::FoxgloveService;
@@ -9,10 +10,7 @@ use std::sync::Arc;
 
 use crate::parameter::FoxgloveParameterArray;
 
-use crate::{
-    result_to_c, FoxgloveChannelDescriptor, FoxgloveContext, FoxgloveError, FoxgloveSinkId,
-    FoxgloveString,
-};
+use crate::{result_to_c, FoxgloveContext, FoxgloveError, FoxgloveSinkId, FoxgloveString};
 
 // Easier to get reasonable C output from cbindgen with constants rather than directly exporting the bitflags macro
 #[derive(Clone, Copy)]

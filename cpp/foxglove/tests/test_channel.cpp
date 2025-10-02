@@ -1,3 +1,4 @@
+#include <foxglove-c/foxglove-c.h>
 #include <foxglove/channel.hpp>
 #include <foxglove/error.hpp>
 #include <foxglove/mcap.hpp>
@@ -134,28 +135,4 @@ TEST_CASE("channel with no metadata returns an empty value from metadata()") {
   REQUIRE(channel.has_value());
   REQUIRE(channel.value().metadata().has_value());
   REQUIRE(channel.value().metadata().value().empty());
-}
-
-TEST_CASE("channel descriptor") {
-  foxglove::Schema schema;
-  schema.encoding = "jsonschema";
-  std::string schema_data = R"({ "type": "object", "additionalProperties": true })";
-  schema.data = reinterpret_cast<const std::byte*>(schema_data.data());
-  schema.data_len = schema_data.size();
-  schema.name = "test_schema";
-  schema.encoding = "jsonschema";
-
-  std::map<std::string, std::string> metadata = {{"key1", "value1"}, {"key2", "value2"}};
-
-  foxglove::ChannelDescriptor channel_descriptor(
-    "test", "json", "test_schema", "jsonschema", metadata
-  );
-  REQUIRE(channel_descriptor.topic() == "test");
-  REQUIRE(channel_descriptor.message_encoding() == "json");
-  REQUIRE(channel_descriptor.metadata().has_value());
-  REQUIRE(channel_descriptor.metadata().value() == metadata);
-  REQUIRE(channel_descriptor.schema_name().has_value());
-  REQUIRE(channel_descriptor.schema_name().value() == "test_schema");
-  REQUIRE(channel_descriptor.schema_encoding().has_value());
-  REQUIRE(channel_descriptor.schema_encoding().value() == "jsonschema");
 }

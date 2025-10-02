@@ -6,65 +6,53 @@
 namespace foxglove {
 
 /// @cond foxglove_internal
-
-ChannelDescriptor ChannelDescriptor::from_raw(const foxglove_channel_descriptor* channel) {
-  std::optional<std::map<std::string, std::string>> metadata;
-  if (channel->metadata != nullptr && channel->metadata->items != nullptr) {
-    std::map<std::string, std::string> metadata_map;
-    for (size_t i = 0; i < channel->metadata->count; ++i) {
-      const auto& item = channel->metadata->items[i];
-      if (item.key.data != nullptr && item.value.data != nullptr) {
-        std::string key(item.key.data, item.key.len);
-        std::string value(item.value.data, item.value.len);
-        metadata_map.emplace(std::move(key), std::move(value));
-      }
-    }
-    metadata = std::move(metadata_map);
-  }
-
-  ChannelDescriptor cpp_channel(
-    std::string(channel->topic.data, channel->topic.len),
-    std::string(channel->encoding.data, channel->encoding.len),
-    std::string(channel->schema_name.data, channel->schema_name.len),
-    std::string(channel->schema_encoding.data, channel->schema_encoding.len),
-    std::move(metadata)
-  );
-
-  return cpp_channel;
-}
-
-ChannelDescriptor::ChannelDescriptor(
-  std::string topic, std::string message_encoding, std::optional<std::string> schema_name,
-  std::optional<std::string> schema_encoding,
-  std::optional<std::map<std::string, std::string>> metadata
-)
-    : topic_(std::move(topic))
-    , message_encoding_(std::move(message_encoding))
-    , schema_name_(std::move(schema_name))
-    , schema_encoding_(std::move(schema_encoding))
-    , metadata_(std::move(metadata)) {}
-
+ChannelDescriptor::ChannelDescriptor(const foxglove_channel_descriptor* channel_descriptor)
+    : channel_descriptor_(channel_descriptor) {}
 /// @endcond
 
-const std::string& ChannelDescriptor::topic() const noexcept {
-  return topic_;
+const std::string_view ChannelDescriptor::topic() const noexcept {
+  foxglove_string topic = foxglove_channel_descriptor_get_topic(channel_descriptor_);
+  return std::string_view(topic.data, topic.len);
 }
 
-const std::string& ChannelDescriptor::message_encoding() const noexcept {
-  return message_encoding_;
+const std::string_view ChannelDescriptor::message_encoding() const noexcept {
+  foxglove_string message_encoding =
+    foxglove_channel_descriptor_get_message_encoding(channel_descriptor_);
+  return std::string_view(message_encoding.data, message_encoding.len);
 }
 
-const std::optional<std::map<std::string, std::string>>& ChannelDescriptor::metadata(
+const std::optional<std::map<std::string, std::string>> ChannelDescriptor::metadata(
 ) const noexcept {
-  return metadata_;
+  std::map<std::string, std::string> metadata;
+  auto iter = foxglove_channel_descriptor_metadata_iter_create(channel_descriptor_);
+  if (!iter) {
+    return std::nullopt;
+  }
+
+  struct foxglove_key_value item;
+  while (foxglove_channel_descriptor_metadata_iter_next(iter, &item)) {
+    metadata[std::string(item.key.data, item.key.len)] =
+      std::string(item.value.data, item.value.len);
+  }
+
+  foxglove_channel_descriptor_metadata_iter_free(iter);
+
+  return metadata;
 }
 
-const std::optional<std::string>& ChannelDescriptor::schema_name() const noexcept {
-  return schema_name_;
-}
+const std::optional<Schema> ChannelDescriptor::schema() const noexcept {
+  foxglove_schema c_schema = {};
+  foxglove_error error = foxglove_channel_descriptor_get_schema(channel_descriptor_, &c_schema);
+  if (error != foxglove_error::FOXGLOVE_ERROR_OK) {
+    return std::nullopt;
+  }
 
-const std::optional<std::string>& ChannelDescriptor::schema_encoding() const noexcept {
-  return schema_encoding_;
+  Schema schema;
+  schema.name = std::string(c_schema.name.data, c_schema.name.len);
+  schema.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  schema.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  schema.data_len = c_schema.data_len;
+  return schema;
 }
 
 FoxgloveResult<RawChannel> RawChannel::create(

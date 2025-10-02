@@ -16,6 +16,8 @@ mod bytes;
 #[cfg(not(target_family = "wasm"))]
 mod channel;
 #[cfg(not(target_family = "wasm"))]
+mod channel_descriptor;
+#[cfg(not(target_family = "wasm"))]
 mod connection_graph;
 #[cfg(not(target_family = "wasm"))]
 mod fetch_asset;

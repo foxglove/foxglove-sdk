@@ -1,8 +1,9 @@
 use std::{ffi::c_void, fs::File, io::BufWriter, mem::ManuallyDrop, sync::Arc};
 
 use crate::{
-    result_to_c, sink_channel_filter::ChannelFilter, FoxgloveChannelMetadata, FoxgloveError,
-    FoxgloveKeyValue, FoxgloveSchema, FoxgloveSinkId, FoxgloveString,
+    channel_descriptor::FoxgloveChannelDescriptor, result_to_c, sink_channel_filter::ChannelFilter,
+    FoxgloveChannelMetadata, FoxgloveError, FoxgloveKeyValue, FoxgloveSchema, FoxgloveSinkId,
+    FoxgloveString,
 };
 use mcap::{Compression, WriteOptions};
 
@@ -181,15 +182,6 @@ pub unsafe extern "C" fn foxglove_mcap_close(
     unsafe { result_to_c(result, std::ptr::null_mut()) }
 }
 
-/// Information about a Channel.
-#[repr(C)]
-pub struct FoxgloveChannelDescriptor {
-    pub topic: FoxgloveString,
-    pub encoding: FoxgloveString,
-    pub schema_name: FoxgloveString,
-    pub schema_encoding: FoxgloveString,
-    pub metadata: *const FoxgloveChannelMetadata,
-}
 pub struct FoxgloveChannel(foxglove::RawChannel);
 
 /// Create a new channel. The channel must later be freed with `foxglove_channel_free`.

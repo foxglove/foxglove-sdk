@@ -13,6 +13,7 @@
 #include <string>
 
 struct foxglove_channel;
+struct foxglove_channel_descriptor;
 
 /// The foxglove namespace.
 namespace foxglove {
@@ -20,36 +21,25 @@ namespace foxglove {
 /// @brief A description of a channel. This will be constructed by the SDK and passed to an
 /// implementation of a `SinkChannelFilterFn`.
 class ChannelDescriptor {
-  std::string topic_;
-  std::string message_encoding_;
-  std::optional<std::string> schema_name_;
-  std::optional<std::string> schema_encoding_;
-  std::optional<std::map<std::string, std::string>> metadata_;
+  const foxglove_channel_descriptor* channel_descriptor_;
 
 public:
-  // @cond foxglove_internal
-  static ChannelDescriptor from_raw(const foxglove_channel_descriptor* channel);
+  /// @cond foxglove_internal
+  /// @brief Information about a channel. This is constructed internally.
+  explicit ChannelDescriptor(const foxglove_channel_descriptor* channel_descriptor);
+  /// @endcond
 
-  ChannelDescriptor(
-    std::string topic, std::string message_encoding, std::optional<std::string> schema_name,
-    std::optional<std::string> schema_encoding,
-    std::optional<std::map<std::string, std::string>> metadata = std::nullopt
-  );
-  // @endcond
+  /// @brief Get the topic of the channel descriptor.
+  [[nodiscard]] const std::string_view topic() const noexcept;
 
-  /// @brief Get the topic of the channel.
-  [[nodiscard]] const std::string& topic() const noexcept;
+  /// @brief Get the message encoding of the channel descriptor.
+  [[nodiscard]] const std::string_view message_encoding() const noexcept;
 
-  /// @brief Get the message encoding of the channel.
-  [[nodiscard]] const std::string& message_encoding() const noexcept;
+  /// @brief Get the metadata for the channel descriptor.
+  [[nodiscard]] const std::optional<std::map<std::string, std::string>> metadata() const noexcept;
 
-  /// @brief Get the metadata for the channel.
-  [[nodiscard]] const std::optional<std::map<std::string, std::string>>& metadata() const noexcept;
-
-  /// @brief Get the schema name of the channel.
-  [[nodiscard]] const std::optional<std::string>& schema_name() const noexcept;
-  /// @brief Get the schema encoding of the channel.
-  [[nodiscard]] const std::optional<std::string>& schema_encoding() const noexcept;
+  /// @brief Get the schema of the channel descriptor.
+  [[nodiscard]] const std::optional<Schema> schema() const noexcept;
 };
 
 /// @brief A function that can be used to filter channels.

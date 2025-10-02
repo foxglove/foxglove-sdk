@@ -447,10 +447,9 @@ TEST_CASE("MCAP Channel filtering") {
   opts_2.sink_channel_filter = [](foxglove::ChannelDescriptor&& channel) -> bool {
     // Only log to topic /2, and validate the schema while we're at it
     if (channel.topic() == "/2") {
-      REQUIRE(channel.schema_name().has_value());
-      REQUIRE(channel.schema_name().value() == "Topic2Schema");
-      REQUIRE(channel.schema_encoding().has_value());
-      REQUIRE(channel.schema_encoding().value() == "fake-encoding");
+      REQUIRE(channel.schema().has_value());
+      REQUIRE(channel.schema().value().name == "Topic2Schema");
+      REQUIRE(channel.schema().value().encoding == "fake-encoding");
       REQUIRE(channel.metadata().has_value());
       REQUIRE(channel.metadata().value().size() == 2);
       REQUIRE(channel.metadata().value().at("key1") == "value1");

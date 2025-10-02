@@ -277,7 +277,7 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
           return true;  // Default to allowing if no filter
         }
         auto* filter_func = static_cast<const SinkChannelFilterFn*>(context);
-        auto cpp_channel = ChannelDescriptor::from_raw(channel);
+        auto cpp_channel = ChannelDescriptor(channel);
         return (*filter_func)(std::move(cpp_channel));
       } catch (const std::exception& exc) {
         warn() << "Sink channel filter failed: " << exc.what();
