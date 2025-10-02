@@ -420,3 +420,83 @@ TEST_CASE("ImageAnnotations channel") {
   REQUIRE_THAT(content, ContainsSubstring("Sample text"));
   REQUIRE_THAT(content, ContainsSubstring("ImageAnnotations"));
 }
+
+TEST_CASE("MCAP Channel filtering") {
+  FileCleanup file_1("test-1.mcap");
+  FileCleanup file_2("test-2.mcap");
+  auto context = foxglove::Context::create();
+
+  foxglove::McapWriterOptions opts_1;
+  opts_1.context = context;
+  opts_1.compression = foxglove::McapCompression::None;
+  opts_1.path = "test-1.mcap";
+  opts_1.sink_channel_filter = [](foxglove::ChannelDescriptor&& channel) -> bool {
+    return channel.topic() == "/1";
+  };
+  auto writer_res_1 = foxglove::McapWriter::create(opts_1);
+  if (!writer_res_1.has_value()) {
+    std::cerr << "Failed to create writer: " << foxglove::strerror(writer_res_1.error()) << '\n';
+  }
+  REQUIRE(writer_res_1.has_value());
+  auto writer_1 = std::move(writer_res_1.value());
+
+  foxglove::McapWriterOptions opts_2;
+  opts_2.context = context;
+  opts_2.compression = foxglove::McapCompression::None;
+  opts_2.path = "test-2.mcap";
+  opts_2.sink_channel_filter = [](foxglove::ChannelDescriptor&& channel) -> bool {
+    // Only log to topic /2, and validate the schema while we're at it
+    if (channel.topic() == "/2") {
+      REQUIRE(channel.schema().has_value());
+      REQUIRE(channel.schema().value().name == "Topic2Schema");
+      REQUIRE(channel.schema().value().encoding == "fake-encoding");
+      REQUIRE(channel.metadata().has_value());
+      REQUIRE(channel.metadata().value().size() == 2);
+      REQUIRE(channel.metadata().value().at("key1") == "value1");
+      REQUIRE(channel.metadata().value().at("key2") == "value2");
+      return true;
+    }
+    return false;
+  };
+  auto writer_res_2 = foxglove::McapWriter::create(opts_2);
+  REQUIRE(writer_res_2.has_value());
+  auto writer_2 = std::move(writer_res_2.value());
+
+  {
+    auto result = foxglove::RawChannel::create("/1", "json", std::nullopt, context);
+    REQUIRE(result.has_value());
+    auto channel = std::move(result.value());
+    std::string data = "Topic 1 msg";
+    channel.log(reinterpret_cast<const std::byte*>(data.data()), data.size());
+  }
+  {
+    foxglove::Schema topic2Schema;
+    topic2Schema.name = "Topic2Schema";
+    topic2Schema.encoding = "fake-encoding";
+    std::string schemaData = "FAKESCHEMA";
+    topic2Schema.data = reinterpret_cast<const std::byte*>(schemaData.data());
+    topic2Schema.data_len = schemaData.size();
+
+    std::map<std::string, std::string> metadata = {{"key1", "value1"}, {"key2", "value2"}};
+
+    auto result =
+      foxglove::RawChannel::create("/2", "json", std::move(topic2Schema), context, metadata);
+    REQUIRE(result.has_value());
+    auto channel = std::move(result.value());
+    std::string data = "Topic 2 msg";
+    channel.log(reinterpret_cast<const std::byte*>(data.data()), data.size());
+  }
+
+  writer_1.close();
+  writer_2.close();
+
+  // Check that the file contains the correct filtered messages
+  std::string content = readFile("test-1.mcap");
+  std::cerr << "test-1 content.length: " << content.length() << "\n";
+  REQUIRE_THAT(content, ContainsSubstring("Topic 1 msg"));
+  REQUIRE_THAT(content, !ContainsSubstring("Topic 2 msg"));
+
+  content = readFile("test-2.mcap");
+  REQUIRE_THAT(content, !ContainsSubstring("Topic 1 msg"));
+  REQUIRE_THAT(content, ContainsSubstring("Topic 2 msg"));
+}

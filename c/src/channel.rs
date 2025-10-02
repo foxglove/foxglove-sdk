@@ -1,8 +1,9 @@
-use std::{fs::File, io::BufWriter, mem::ManuallyDrop, sync::Arc};
+use std::{ffi::c_void, fs::File, io::BufWriter, mem::ManuallyDrop, sync::Arc};
 
 use crate::{
-    result_to_c, FoxgloveChannelMetadata, FoxgloveError, FoxgloveKeyValue, FoxgloveSchema,
-    FoxgloveSinkId, FoxgloveString,
+    channel_descriptor::FoxgloveChannelDescriptor, result_to_c, sink_channel_filter::ChannelFilter,
+    FoxgloveChannelMetadata, FoxgloveError, FoxgloveKeyValue, FoxgloveSchema, FoxgloveSinkId,
+    FoxgloveString,
 };
 use mcap::{Compression, WriteOptions};
 
@@ -35,6 +36,24 @@ pub struct FoxgloveMcapOptions {
     pub emit_metadata_indexes: bool,
     pub repeat_channels: bool,
     pub repeat_schemas: bool,
+    /// Context provided to the `sink_channel_filter` callback.
+    pub sink_channel_filter_context: *const c_void,
+    /// A filter for channels that can be used to subscribe to or unsubscribe from channels.
+    ///
+    /// This can be used to omit one or more channels from a sink, but still log all channels to another
+    /// sink in the same context. Return false to disable logging of this channel.
+    ///
+    /// This method is invoked from the client's main poll loop and must not block.
+    ///
+    /// # Safety
+    /// - If provided, the handler callback must be a pointer to the filter callback function,
+    ///   and must remain valid until the MCAP sink is dropped.
+    pub sink_channel_filter: Option<
+        unsafe extern "C" fn(
+            context: *const c_void,
+            channel: *const FoxgloveChannelDescriptor,
+        ) -> bool,
+    >,
 }
 
 impl FoxgloveMcapOptions {
@@ -122,6 +141,12 @@ unsafe fn do_foxglove_mcap_open(
     if !context.is_null() {
         let context = ManuallyDrop::new(unsafe { Arc::from_raw(context) });
         builder = builder.context(&context);
+    }
+    if let Some(sink_channel_filter) = options.sink_channel_filter {
+        builder = builder.channel_filter(Arc::new(ChannelFilter::new(
+            options.sink_channel_filter_context,
+            sink_channel_filter,
+        )));
     }
     let writer = builder
         .create(BufWriter::new(file))

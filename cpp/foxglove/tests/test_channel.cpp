@@ -1,3 +1,4 @@
+#include <foxglove-c/foxglove-c.h>
 #include <foxglove/channel.hpp>
 #include <foxglove/error.hpp>
 #include <foxglove/mcap.hpp>

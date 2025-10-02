@@ -341,6 +341,10 @@ typedef struct foxglove_channel foxglove_channel;
 #endif
 
 #if !defined(__wasm__)
+typedef struct foxglove_channel_descriptor foxglove_channel_descriptor;
+#endif
+
+#if !defined(__wasm__)
 typedef struct foxglove_connection_graph foxglove_connection_graph;
 #endif
 
@@ -1673,6 +1677,23 @@ typedef struct foxglove_mcap_options {
   bool emit_metadata_indexes;
   bool repeat_channels;
   bool repeat_schemas;
+  /**
+   * Context provided to the `sink_channel_filter` callback.
+   */
+  const void *sink_channel_filter_context;
+  /**
+   * A filter for channels that can be used to subscribe to or unsubscribe from channels.
+   *
+   * This can be used to omit one or more channels from a sink, but still log all channels to another
+   * sink in the same context. Return false to disable logging of this channel.
+   *
+   * This method is invoked from the client's main poll loop and must not block.
+   *
+   * # Safety
+   * - If provided, the handler callback must be a pointer to the filter callback function,
+   *   and must remain valid until the MCAP sink is dropped.
+   */
+  bool (*sink_channel_filter)(const void *context, const struct foxglove_channel_descriptor *channel);
 } foxglove_mcap_options;
 #endif
 
@@ -1718,6 +1739,16 @@ typedef struct foxglove_channel_metadata_iterator {
    */
   size_t index;
 } foxglove_channel_metadata_iterator;
+#endif
+
+#if !defined(__wasm__)
+/**
+ * An iterator over a channel descriptor's metadata key-value pairs.
+ */
+typedef struct foxglove_channel_descriptor_metadata_iterator {
+  const struct foxglove_channel_descriptor *channel;
+  size_t index;
+} foxglove_channel_descriptor_metadata_iterator;
 #endif
 
 #if !defined(__wasm__)
@@ -2047,6 +2078,23 @@ typedef struct foxglove_server_options {
    * TLS configuration: Length of key bytes
    */
   size_t tls_key_len;
+  /**
+   * Context provided to the `sink_channel_filter` callback.
+   */
+  const void *sink_channel_filter_context;
+  /**
+   * A filter for channels that can be used to subscribe to or unsubscribe from channels.
+   *
+   * This can be used to omit one or more channels from a sink, but still log all channels to another
+   * sink in the same context. Return false to disable logging of this channel.
+   *
+   * This method is invoked from the client's main poll loop and must not block.
+   *
+   * # Safety
+   * - If provided, the handler callback must be a pointer to the filter callback function,
+   *   and must remain valid until the server is stopped.
+   */
+  bool (*sink_channel_filter)(const void *context, const struct foxglove_channel_descriptor *channel);
 } foxglove_server_options;
 #endif
 
@@ -4239,6 +4287,95 @@ const struct foxglove_context *foxglove_context_new(void);
  * `context` must be a valid pointer to a context created via `foxglove_context_new`.
  */
 void foxglove_context_free(const struct foxglove_context *context);
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Get the topic of a channel descriptor.
+ *
+ * # Safety
+ * `channel` must be a valid pointer to a `foxglove_channel_descriptor`.
+ *
+ * If the passed channel is null, an empty value is returned.
+ *
+ * The returned value is valid only for the lifetime of the channel, which is typically the
+ * duration of a callback where a descriptor is passed.
+ */
+struct foxglove_string foxglove_channel_descriptor_get_topic(const struct foxglove_channel_descriptor *channel);
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Get the message_encoding of a channel descriptor.
+ *
+ * # Safety
+ * `channel` must be a valid pointer to a `foxglove_channel_descriptor`.
+ *
+ * If the passed channel is null, an empty value is returned.
+ *
+ * The returned value is valid only for the lifetime of the channel, which is typically the
+ * duration of a callback where a descriptor is passed.
+ */
+struct foxglove_string foxglove_channel_descriptor_get_message_encoding(const struct foxglove_channel_descriptor *channel);
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Get the schema of a channel.
+ *
+ * If the passed channel is null or has no schema, returns `FoxgloveError::ValueError`.
+ *
+ * # Safety
+ * `channel` must be a valid pointer to a `foxglove_channel_descriptor`.
+ * `schema` must be a valid pointer to a `FoxgloveSchema` struct that will be filled in.
+ *
+ * The returned value is valid only for the lifetime of the channel, which is typically the
+ * duration of a callback where a descriptor is passed.
+ */
+foxglove_error foxglove_channel_descriptor_get_schema(const struct foxglove_channel_descriptor *channel,
+                                                      struct foxglove_schema *schema);
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Create an iterator over a channel descriptor's metadata.
+ *
+ * You must later free the iterator using foxglove_channel_descriptor_metadata_iter_free.
+ *
+ * Iterate items using foxglove_channel_descriptor_metadata_iter_next.
+ *
+ * # Safety
+ * `channel` must be a valid pointer to a `foxglove_channel_descriptor`.
+ * The channel descriptor must remain valid for the lifetime of the iterator.
+ */
+struct foxglove_channel_descriptor_metadata_iterator *foxglove_channel_descriptor_metadata_iter_create(const struct foxglove_channel_descriptor *channel);
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Get the next key-value pair from the metadata iterator.
+ *
+ * Returns true if a pair was found and stored in `key_value`, false if the iterator is exhausted.
+ *
+ * # Safety
+ * `iter` must be a valid pointer to a `foxglove_channel_descriptor_metadata_iterator` created via
+ * `foxglove_channel_descriptor_metadata_iter_create`.
+ * `key_value` must be a valid pointer to a `FoxgloveKeyValue` that will be filled in.
+ * The channel descriptor itself must still be valid.
+ */
+bool foxglove_channel_descriptor_metadata_iter_next(struct foxglove_channel_descriptor_metadata_iterator *iter,
+                                                    struct foxglove_key_value *key_value);
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Free a metadata iterator created via `foxglove_channel_descriptor_metadata_iter_create`.
+ *
+ * # Safety
+ * `iter` must be a valid pointer to a `foxglove_channel_descriptor_metadata_iterator` created via
+ * `foxglove_channel_descriptor_metadata_iter_create`.
+ */
+void foxglove_channel_descriptor_metadata_iter_free(struct foxglove_channel_descriptor_metadata_iterator *iter);
 #endif
 
 #if !defined(__wasm__)

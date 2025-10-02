@@ -5,6 +5,56 @@
 
 namespace foxglove {
 
+/// @cond foxglove_internal
+ChannelDescriptor::ChannelDescriptor(const foxglove_channel_descriptor* channel_descriptor)
+    : channel_descriptor_(channel_descriptor) {}
+/// @endcond
+
+const std::string_view ChannelDescriptor::topic() const noexcept {
+  foxglove_string topic = foxglove_channel_descriptor_get_topic(channel_descriptor_);
+  return std::string_view(topic.data, topic.len);
+}
+
+const std::string_view ChannelDescriptor::message_encoding() const noexcept {
+  foxglove_string message_encoding =
+    foxglove_channel_descriptor_get_message_encoding(channel_descriptor_);
+  return std::string_view(message_encoding.data, message_encoding.len);
+}
+
+const std::optional<std::map<std::string, std::string>> ChannelDescriptor::metadata(
+) const noexcept {
+  std::map<std::string, std::string> metadata;
+  auto iter = foxglove_channel_descriptor_metadata_iter_create(channel_descriptor_);
+  if (!iter) {
+    return std::nullopt;
+  }
+
+  struct foxglove_key_value item;
+  while (foxglove_channel_descriptor_metadata_iter_next(iter, &item)) {
+    metadata[std::string(item.key.data, item.key.len)] =
+      std::string(item.value.data, item.value.len);
+  }
+
+  foxglove_channel_descriptor_metadata_iter_free(iter);
+
+  return metadata;
+}
+
+const std::optional<Schema> ChannelDescriptor::schema() const noexcept {
+  foxglove_schema c_schema = {};
+  foxglove_error error = foxglove_channel_descriptor_get_schema(channel_descriptor_, &c_schema);
+  if (error != foxglove_error::FOXGLOVE_ERROR_OK) {
+    return std::nullopt;
+  }
+
+  Schema schema;
+  schema.name = std::string(c_schema.name.data, c_schema.name.len);
+  schema.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  schema.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  schema.data_len = c_schema.data_len;
+  return schema;
+}
+
 FoxgloveResult<RawChannel> RawChannel::create(
   const std::string_view& topic, const std::string_view& message_encoding,
   std::optional<Schema> schema, const Context& context,

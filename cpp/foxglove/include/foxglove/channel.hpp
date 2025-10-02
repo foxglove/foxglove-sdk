@@ -1,5 +1,6 @@
 #pragma once
 
+#include <foxglove-c/foxglove-c.h>
 #include <foxglove/context.hpp>
 #include <foxglove/error.hpp>
 #include <foxglove/schema.hpp>
@@ -12,10 +13,42 @@
 #include <string>
 
 struct foxglove_channel;
-struct foxglove_context;
+struct foxglove_channel_descriptor;
 
 /// The foxglove namespace.
 namespace foxglove {
+
+/// @brief A description of a channel. This will be constructed by the SDK and passed to an
+/// implementation of a `SinkChannelFilterFn`.
+class ChannelDescriptor {
+  const foxglove_channel_descriptor* channel_descriptor_;
+
+public:
+  /// @cond foxglove_internal
+  /// @brief Information about a channel. This is constructed internally.
+  explicit ChannelDescriptor(const foxglove_channel_descriptor* channel_descriptor);
+  /// @endcond
+
+  /// @brief Get the topic of the channel descriptor.
+  [[nodiscard]] const std::string_view topic() const noexcept;
+
+  /// @brief Get the message encoding of the channel descriptor.
+  [[nodiscard]] const std::string_view message_encoding() const noexcept;
+
+  /// @brief Get the metadata for the channel descriptor.
+  [[nodiscard]] const std::optional<std::map<std::string, std::string>> metadata() const noexcept;
+
+  /// @brief Get the schema of the channel descriptor.
+  [[nodiscard]] const std::optional<Schema> schema() const noexcept;
+};
+
+/// @brief A function that can be used to filter channels.
+///
+/// @param channel Information about the channel.
+/// @return false if the channel should not be logged to the given sink. By default, all channels
+/// are logged to a sink.
+using SinkChannelFilterFn = std::function<bool(ChannelDescriptor&& channel)>;
+
 /// @brief A channel for messages logged to a topic.
 ///
 /// @note Channels are fully thread-safe. Creating channels and logging on them
