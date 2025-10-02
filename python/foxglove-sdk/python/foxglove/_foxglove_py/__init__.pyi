@@ -131,6 +131,7 @@ class ChannelDescriptor:
     topic: str
     message_encoding: str
     metadata: dict[str, str]
+    schema: "Schema" | None
 
 SinkChannelFilter = Callable[[ChannelDescriptor], bool]
 

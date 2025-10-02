@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Callable, Generator, Optional
 
 import pytest
-from foxglove import Channel, Context, open_mcap
+from foxglove import Channel, ChannelDescriptor, Context, open_mcap
 from foxglove.mcap import MCAPWriteOptions
 
 chan = Channel("test", schema={"type": "object"})
@@ -123,7 +123,10 @@ def test_channel_filter(make_tmp_mcap: Callable[[], Path]) -> None:
     ch1 = Channel("/1", schema={"type": "object"})
     ch2 = Channel("/2", schema={"type": "object"})
 
-    mcap1 = open_mcap(tmp_1, channel_filter=lambda ch: ch.topic.startswith("/1"))
+    def filter(ch: ChannelDescriptor) -> bool:
+        return ch.topic.startswith("/1")
+
+    mcap1 = open_mcap(tmp_1, channel_filter=filter)
     mcap2 = open_mcap(tmp_2, channel_filter=None)
 
     ch1.log({})
