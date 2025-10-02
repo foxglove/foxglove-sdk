@@ -14,6 +14,7 @@ use crate::{
     Channel, ChannelBuilder, Context, McapWriter, WebSocketServer,
 };
 
+#[cfg(feature = "live_visualization")]
 macro_rules! expect_recv {
     ($client:expr, $variant:path) => {{
         let msg = $client.recv().await.expect("Failed to recv");
