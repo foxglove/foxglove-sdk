@@ -13,7 +13,13 @@ import logging
 from . import _foxglove_py as _foxglove
 
 # Re-export these imports
-from ._foxglove_py import Context, Schema, open_mcap
+from ._foxglove_py import (
+    Context,
+    FilterableChannel,
+    Schema,
+    SinkChannelFilter,
+    open_mcap,
+)
 from .channel import Channel, log
 
 # Deprecated. Use foxglove.mcap.MCAPWriter instead.
@@ -43,6 +49,7 @@ try:
         asset_handler: AssetHandler | None = None,
         context: Context | None = None,
         session_id: str | None = None,
+        channel_filter: SinkChannelFilter | None = None,
     ) -> WebSocketServer:
         """
         Start a websocket server for live visualization.
@@ -61,6 +68,9 @@ try:
         :param session_id: An ID which allows the client to understand if the connection is a
             re-connection or a new server instance. If None, then an ID is generated based on the
             current time.
+        :param channel_filter: A `Callable` that determines whether a channel should be logged to.
+            Return `True` to log the channel, or `False` to skip it. By default, all channels
+            will be logged.
         """
         return _foxglove.start_server(
             name=name,
@@ -73,6 +83,7 @@ try:
             asset_handler=asset_handler,
             context=context,
             session_id=session_id,
+            channel_filter=channel_filter,
         )
 
 except ImportError:
@@ -126,8 +137,10 @@ def _level_names() -> dict[str, int]:
 __all__ = [
     "Channel",
     "Context",
+    "FilterableChannel",
     "MCAPWriter",
     "Schema",
+    "SinkChannelFilter",
     "log",
     "open_mcap",
     "set_log_level",

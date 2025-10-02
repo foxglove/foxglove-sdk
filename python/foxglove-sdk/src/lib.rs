@@ -7,6 +7,7 @@ use log::LevelFilter;
 use mcap::{PyMcapWriteOptions, PyMcapWriter};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
+use sink_channel_filter::{PyFilterableChannel, PySinkChannelFilter};
 use std::collections::BTreeMap;
 use std::fs::File;
 use std::io::BufWriter;
@@ -20,6 +21,7 @@ mod errors;
 mod generated;
 mod mcap;
 mod schemas_wkt;
+mod sink_channel_filter;
 #[cfg(not(target_family = "wasm"))]
 mod websocket;
 
@@ -198,15 +200,19 @@ impl PyContext {
 /// :type allow_overwrite: Optional[bool]
 /// :param context: The context to use for logging. If None, the global context is used.
 /// :type context: :py:class:`Context`
+/// :param channel_filter: A `Callable` that determines whether a channel should be logged to. Return
+///     `True` to log the channel, or `False` to skip it. By default, all channels will be logged.
+/// :type channel_filter: Optional[Callable[[FilterableChannel], bool]]
 /// :param writer_options: Options for the MCAP writer.
 /// :type writer_options: :py:class:`mcap.MCAPWriteOptions`
 /// :rtype: :py:class:`mcap.MCAPWriter`
 #[pyfunction]
-#[pyo3(signature = (path, *, allow_overwrite = false, context = None, writer_options = None))]
+#[pyo3(signature = (path, *, allow_overwrite = false, context = None, channel_filter = None, writer_options = None))]
 fn open_mcap(
     path: PathBuf,
     allow_overwrite: bool,
     context: Option<PyRef<PyContext>>,
+    channel_filter: Option<Py<PyAny>>,
     writer_options: Option<PyMcapWriteOptions>,
 ) -> PyResult<PyMcapWriter> {
     let file = if allow_overwrite {
@@ -222,6 +228,12 @@ fn open_mcap(
     } else {
         McapWriter::with_options(options)
     };
+    let handle = if let Some(channel_filter) = channel_filter {
+        handle.with_channel_filter(Arc::new(PySinkChannelFilter(Arc::new(channel_filter))))
+    } else {
+        handle
+    };
+
     let handle = handle.create(writer).map_err(PyFoxgloveError::from)?;
     Ok(PyMcapWriter(Some(handle)))
 }
@@ -279,6 +291,8 @@ fn _foxglove_py(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<BaseChannel>()?;
     m.add_class::<PySchema>()?;
     m.add_class::<PyContext>()?;
+    m.add_class::<PySinkChannelFilter>()?;
+    m.add_class::<PyFilterableChannel>()?;
     // Register nested modules.
     schemas::register_submodule(m)?;
     channels::register_submodule(m)?;

@@ -1,0 +1,21 @@
+[project]
+name = "message-filtering"
+version = "0.0.0"
+description = "Example message filtering with MCAP and live visualization"
+authors = [{ name = "Foxglove", email = "support@foxglove.dev" }]
+readme = "README.md"
+requires-python = ">=3.9"
+#dependencies = ["foxglove-sdk>=0.4.0", "numpy>=2.0"]
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+package-mode = false
+
+[tool.poetry.group.dev.dependencies]
+mypy = "^1"
+
+[tool.poetry.dependencies]
+foxglove-sdk = { path = "../../foxglove-sdk" }

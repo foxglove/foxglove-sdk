@@ -1,5 +1,5 @@
-use crate::PyContext;
 use crate::{errors::PyFoxgloveError, PySchema};
+use crate::{PyContext, PySinkChannelFilter};
 use base64::prelude::*;
 use foxglove::websocket::{
     AssetHandler, ChannelView, Client, ClientChannel, ServerListener, Status, StatusLevel,
@@ -365,7 +365,7 @@ impl foxglove::websocket::service::Handler for ServiceHandler {
 /// To connect to this server: open Foxglove, choose "Open a new connection", and select Foxglove
 /// WebSocket. The default connection string matches the defaults used by the SDK.
 #[pyfunction]
-#[pyo3(signature = (*, name = None, host="127.0.0.1", port=8765, capabilities=None, server_listener=None, supported_encodings=None, services=None, asset_handler=None, context=None, session_id=None))]
+#[pyo3(signature = (*, name = None, host="127.0.0.1", port=8765, capabilities=None, server_listener=None, supported_encodings=None, services=None, asset_handler=None, context=None, session_id=None, channel_filter=None))]
 #[allow(clippy::too_many_arguments)]
 pub fn start_server(
     py: Python<'_>,
@@ -379,6 +379,7 @@ pub fn start_server(
     asset_handler: Option<Py<PyAny>>,
     context: Option<PyRef<PyContext>>,
     session_id: Option<String>,
+    channel_filter: Option<Py<PyAny>>,
 ) -> PyResult<PyWebSocketServer> {
     let mut server = WebSocketServer::new().bind(host, port);
 
@@ -409,6 +410,10 @@ pub fn start_server(
 
     if let Some(context) = context {
         server = server.context(&context.0);
+    }
+
+    if let Some(channel_filter) = channel_filter {
+        server = server.channel_filter(Arc::new(PySinkChannelFilter(Arc::new(channel_filter))));
     }
 
     if let Some(asset_handler) = asset_handler {

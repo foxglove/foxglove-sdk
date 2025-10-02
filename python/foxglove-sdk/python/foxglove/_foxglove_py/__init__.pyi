@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from foxglove.websocket import AssetHandler
 
@@ -15,7 +15,7 @@ class BaseChannel:
         self,
         topic: str,
         message_encoding: str,
-        schema: Schema | None = None,
+        schema: "Schema" | None = None,
         metadata: dict[str, str] | None = None,
     ) -> None: ...
     def id(self) -> int:
@@ -122,6 +122,17 @@ class Context:
         """
         ...
 
+class FilterableChannel:
+    """
+    A channel that can be filtered.
+    """
+
+    id: int
+    topic: str
+    metadata: Dict[str, str]
+
+SinkChannelFilter = Callable[[FilterableChannel], bool]
+
 def start_server(
     *,
     name: str | None = None,
@@ -134,6 +145,7 @@ def start_server(
     asset_handler: AssetHandler | None = None,
     context: Context | None = None,
     session_id: str | None = None,
+    channel_filter: SinkChannelFilter | None = None,
 ) -> WebSocketServer:
     """
     Start a websocket server for live visualization.
@@ -163,6 +175,7 @@ def open_mcap(
     *,
     allow_overwrite: bool = False,
     context: Context | None = None,
+    channel_filter: SinkChannelFilter | None = None,
     writer_options: MCAPWriteOptions | None = None,
 ) -> MCAPWriter:
     """
