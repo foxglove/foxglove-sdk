@@ -70,49 +70,6 @@ Functions and classes for integrating with Jupyter notebooks and creating intera
 Notebook Classes
 ^^^^^^^^^^^^^^^^
 
-.. py:class:: NotebookBuffer
-
-   A data buffer for collecting and managing messages in Jupyter notebooks.
-
-   The NotebookBuffer provides a convenient way to collect logged messages and data
-   that can be visualized using the FoxgloveViewer widget. It acts as an intermediate
-   storage layer between your data logging code and the visualization widget.
-
-   The buffer automatically manages data storage and provides methods to retrieve
-   the collected data for visualization. It's designed to work seamlessly with
-   the Foxglove SDK's logging functions and the FoxgloveViewer widget.
-
-   .. py:method:: __init__(context: Union[Context, None] = None)
-
-      Initialize a new NotebookBuffer for collecting logged messages.
-
-      :param context: Optional Foxglove context to use for logging. If not provided,
-          the global context will be used. This allows you to isolate the
-          buffer's data collection from other parts of your application.
-
-      .. note::
-         The buffer is immediately ready to collect data after initialization.
-         Any messages logged through the Foxglove SDK will be automatically
-         collected by this buffer if it's associated with the active context.
-
-   .. py:method:: get_data() -> bytes
-
-      Retrieve all collected data and reset the buffer for new data collection.
-
-      This method returns all the data that has been collected by the buffer
-      since its creation (or since the last call to get_data). After calling
-      this method, the buffer is reset and ready to collect new data.
-
-      :return: The collected data in a format suitable for visualization
-          with the FoxgloveViewer widget. The data includes all logged
-          messages, schemas, and metadata.``
-
-      .. note::
-         This method is typically called automatically by the FoxgloveViewer
-         widget when it needs to display the data. You generally don't need
-         to call this method directly unless you're implementing custom
-         visualization logic.
-
 .. py:class:: FoxgloveViewer
 
    A Jupyter notebook widget that embeds the Foxglove visualization app for interactive data exploration.
