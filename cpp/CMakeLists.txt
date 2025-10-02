@@ -49,23 +49,26 @@ if(CMAKE_GENERATOR MATCHES "Unix Makefiles|Ninja")
 endif()
 FetchContent_MakeAvailable(Corrosion)
 
-FetchContent_Declare(
-  websocketpp
-  GIT_REPOSITORY https://github.com/zaphoyd/websocketpp.git
-  GIT_TAG 0.8.2
-  OVERRIDE_FIND_PACKAGE
-)
-# Set WebSocketPP CMake policy to suppress the warning
-set(FETCHCONTENT_TRY_FIND_PACKAGE_MODE NEVER)
-FetchContent_GetProperties(websocketpp)
-if(NOT websocketpp_POPULATED)
-  FetchContent_Populate(websocketpp)
-  # Don't call add_subdirectory to avoid running the original CMakeLists.txt
-  # Just set up the include directory
-  add_library(websocketpp INTERFACE)
-  target_include_directories(websocketpp INTERFACE ${websocketpp_SOURCE_DIR})
+if(USE_PACKAGE_MANAGER_DEPENDENCIES)
+  find_package(websocketpp QUIET)
 endif()
-FetchContent_MakeAvailable(websocketpp)
+if(NOT TARGET websocketpp::websocketpp)
+  FetchContent_Declare(
+    websocketpp
+    GIT_REPOSITORY https://github.com/zaphoyd/websocketpp.git
+    GIT_TAG 0.8.2
+  )
+  # Set WebSocketPP CMake policy to suppress the warning
+  FetchContent_GetProperties(websocketpp)
+  if(NOT websocketpp_POPULATED)
+    FetchContent_Populate(websocketpp)
+    # Don't call add_subdirectory to avoid running the original CMakeLists.txt
+    # Just set up the include directory
+    add_library(websocketpp::websocketpp INTERFACE IMPORTED)
+    target_include_directories(websocketpp::websocketpp INTERFACE ${websocketpp_SOURCE_DIR})
+  endif()
+  FetchContent_MakeAvailable(websocketpp)
+endif()
 
 FetchContent_Declare(asio
   GIT_REPOSITORY https://github.com/chriskohlhoff/asio.git
@@ -166,8 +169,7 @@ target_compile_definitions(tests PRIVATE ASIO_STANDALONE)
 target_compile_options(tests PUBLIC ${SANITIZER_COMPILE_OPTIONS})
 target_link_options(tests PUBLIC ${SANITIZER_LINK_OPTIONS})
 target_include_directories(tests SYSTEM PRIVATE ${asio_SOURCE_DIR}/asio/include)
-target_include_directories(tests SYSTEM PRIVATE ${websocketpp_SOURCE_DIR})
-target_link_libraries(tests PRIVATE foxglove_cpp_static Catch2::Catch2WithMain nlohmann_json::nlohmann_json)
+target_link_libraries(tests PRIVATE foxglove_cpp_static Catch2::Catch2WithMain nlohmann_json::nlohmann_json websocketpp::websocketpp)
 catch_discover_tests(tests)
 if(MSVC)
   # Auto-detection of C++11 support is not working on the windows-2025 runner with default settings
