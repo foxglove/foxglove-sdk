@@ -12,13 +12,15 @@ use std::fs::File;
 use std::io::BufWriter;
 use std::num::NonZeroU64;
 use std::path::PathBuf;
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
+#[cfg(not(target_family = "wasm"))]
 use websocket::start_server;
 
 mod errors;
 mod generated;
 mod mcap;
 mod schemas_wkt;
+#[cfg(not(target_family = "wasm"))]
 mod websocket;
 
 /// A Schema is a description of the data format of messages or service calls.
@@ -152,9 +154,16 @@ impl PyContext {
         Self(foxglove::Context::new())
     }
 
+    /// Returns the default context.
     #[staticmethod]
-    fn default() -> Self {
-        Self(foxglove::Context::get_default())
+    fn default(py: Python) -> Py<Self> {
+        static DEFAULT_CONTEXT: OnceLock<Py<PyContext>> = OnceLock::new();
+        DEFAULT_CONTEXT
+            .get_or_init(|| {
+                let inner = foxglove::Context::get_default();
+                Py::new(py, PyContext(inner)).unwrap()
+            })
+            .clone_ref(py)
     }
 
     /// Create a new channel for logging messages on a topic.
@@ -249,7 +258,8 @@ fn disable_logging() -> PyResult<()> {
 
 // Not public. Registered as an atexit handler.
 #[pyfunction]
-fn shutdown(py: Python<'_>) {
+fn shutdown(#[allow(unused_variables)] py: Python<'_>) {
+    #[cfg(not(target_family = "wasm"))]
     py.allow_threads(foxglove::shutdown_runtime);
 }
 
@@ -263,6 +273,7 @@ fn _foxglove_py(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(disable_logging, m)?)?;
     m.add_function(wrap_pyfunction!(shutdown, m)?)?;
     m.add_function(wrap_pyfunction!(open_mcap, m)?)?;
+    #[cfg(not(target_family = "wasm"))]
     m.add_function(wrap_pyfunction!(start_server, m)?)?;
     m.add_function(wrap_pyfunction!(get_channel_for_topic, m)?)?;
     m.add_class::<BaseChannel>()?;
@@ -272,6 +283,7 @@ fn _foxglove_py(m: &Bound<'_, PyModule>) -> PyResult<()> {
     schemas::register_submodule(m)?;
     channels::register_submodule(m)?;
     mcap::register_submodule(m)?;
+    #[cfg(not(target_family = "wasm"))]
     websocket::register_submodule(m)?;
     Ok(())
 }

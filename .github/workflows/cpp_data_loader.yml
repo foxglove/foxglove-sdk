@@ -1,0 +1,45 @@
+name: C/C++ Data Loader SDK
+
+on:
+  push:
+    branches: [main]
+    tags: ["**"]
+  pull_request: {}
+  workflow_call:
+    inputs:
+      sdk-version:
+        required: true
+        type: string
+    outputs:
+      artifact_pattern:
+        description: "pattern to match all uploaded artifact names"
+        value: ${{ jobs.build.outputs.artifact_pattern }}
+
+jobs:
+  build:
+    name: Build C++ Foxglove Data Loader SDK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          target: wasm32-unknown-unknown
+      - name: Install WASI SDK
+        run: |
+          curl -LO https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-25/wasi-sdk-25.0-x86_64-linux.tar.gz
+          echo "421bb47e79ccfb704e98f44ccd097e30cc34f2f7  wasi-sdk-25.0-x86_64-linux.tar.gz" | shasum -a 1 -c
+          tar xf wasi-sdk-25.0-x86_64-linux.tar.gz
+          rm wasi-sdk-25.0-x86_64-linux.tar.gz
+          echo WASI_SDK=$(pwd)/wasi-sdk-25.0-x86_64-linux >> $GITHUB_ENV
+      - name: Build the example
+        working-directory: cpp/foxglove_data_loader
+        run: SDK_VERSION=${{inputs.sdk-version || github.sha}} make example
+      - name: Build the package
+        working-directory: cpp/foxglove_data_loader
+        run: SDK_VERSION=${{inputs.sdk-version || github.sha}} make package
+      - name: Upload static & shared library to artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: foxglove_data_loader-${{inputs.sdk-version || github.sha}}-cpp-wasm32-unknown-unknown.zip
+          path: cpp/foxglove_data_loader/target/foxglove_data_loader-${{inputs.sdk-version || github.sha}}-cpp-wasm32-unknown-unknown.zip
+          if-no-files-found: error

@@ -7,6 +7,8 @@ use std::sync::Arc;
 
 use crate::sink_channel_filter::{SinkChannelFilter, SinkChannelFilterFn};
 use crate::websocket::service::Service;
+#[cfg(feature = "tls")]
+use crate::websocket::TlsIdentity;
 use crate::websocket::{
     create_server, AssetHandler, AsyncAssetHandlerFn, BlockingAssetHandlerFn, Capability, Client,
     ConnectionGraph, Parameter, Server, ServerOptions, ShutdownHandle, Status,
@@ -93,6 +95,16 @@ impl WebSocketServer {
         filter: impl Fn(&ChannelDescriptor) -> bool + Sync + Send + 'static,
     ) -> Self {
         self.options.channel_filter = Some(Arc::new(SinkChannelFilterFn(filter)));
+        self
+    }
+
+    /// Configure TLS with a PEM-formatted x509 certificate chain and pkcs8 private key.
+    /// If enabled, the server will only accept connections using wss://.
+    /// If TLS configuration fails, starting the server will result in an error.
+    #[doc(hidden)]
+    #[cfg(feature = "tls")]
+    pub fn tls(mut self, tls_identity: TlsIdentity) -> Self {
+        self.options.tls_identity = Some(tls_identity);
         self
     }
 
@@ -216,7 +228,7 @@ impl WebSocketServer {
     /// Returns a handle that can optionally be used to gracefully shutdown the server. The caller
     /// can safely drop the handle, and the server will run forever.
     pub async fn start(self) -> Result<WebSocketServerHandle, FoxgloveError> {
-        let server = create_server(&self.context, self.options);
+        let server = create_server(&self.context, self.options)?;
         let addr = server.start(&self.host, self.port).await?;
         Ok(WebSocketServerHandle(server, addr))
     }
@@ -263,7 +275,12 @@ impl WebSocketServerHandle {
 
     /// Returns an app URL to open the websocket as a data source.
     pub fn app_url(&self) -> AppUrl {
-        AppUrl::new().with_websocket(format!("ws://{}:{}", self.1.ip(), self.1.port()))
+        let protocol = if self.0.is_tls_configured() {
+            "wss"
+        } else {
+            "ws"
+        };
+        AppUrl::new().with_websocket(format!("{protocol}://{}:{}", self.1.ip(), self.1.port()))
     }
 
     /// Advertises support for the provided services.

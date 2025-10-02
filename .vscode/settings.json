@@ -18,9 +18,6 @@
     "yarn.lock": true
   },
   "typescript.tsdk": "node_modules/typescript/lib",
-  "eslint.options": {
-    "reportUnusedDisableDirectives": "error"
-  },
   "jest.jestCommandLine": "yarn test",
   "python.analysis.typeCheckingMode": "strict",
   "[python]": {
@@ -33,6 +30,5 @@
   // https://github.com/microsoft/vscode-cpptools/issues/722
   "C_Cpp.autoAddFileAssociations": false,
   "C_Cpp.default.cppStandard": "c++17",
-  "rust-analyzer.check.command": "clippy",
-  "cmake.sourceDirectory": "/home/eloff/foxglove/sdk/cpp"
+  "rust-analyzer.check.command": "clippy"
 }

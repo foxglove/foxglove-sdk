@@ -163,6 +163,29 @@ export function generateHppSchemas(
           return `${formatComment(field.description, 2)}\n  ${fieldType} ${toSnakeCase(field.name)}${defaultStr};`;
         })
         .join("\n\n"),
+      ...(shouldGenerateChannel(schema)
+        ? [
+            `
+      /// @brief Encoded the ${schema.name} as protobuf to the provided buffer.
+      ///
+      /// On success, writes the serialized length to *encoded_len.
+      /// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len
+      /// and returns FoxgloveError::BufferTooShort.
+      /// If the message cannot be encoded, writes the reason to stderr and returns
+      /// FoxgloveError::EncodeError.
+      ///
+      /// @param ptr the destination buffer. must point to at least len valid bytes.
+      /// @param len the length of the destination buffer.
+      /// @param encoded_len where the serialized length or required capacity will be written to.
+      FoxgloveError encode(uint8_t* ptr, size_t len, size_t* encoded_len);`,
+            `
+      /// @brief Get the ${schema.name} schema.
+      ///
+      /// The schema data returned is statically allocated.
+      static Schema schema();
+            `,
+          ]
+        : []),
       `};`,
     ].join("\n");
   });
@@ -185,7 +208,7 @@ export function generateHppSchemas(
         /// @brief Log a message to the channel.
         ///
         /// @param msg The ${schema.name} message to log.
-        /// @param log_time The timestamp of the message. If omitted, the current time is used.
+        /// @param log_time The timestamp of the message, as nanoseconds since epoch. If omitted, the current time is used.
         /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
         FoxgloveError log(const ${schema.name}& msg, std::optional<uint64_t> log_time = std::nullopt, std::optional<uint64_t> sink_id = std::nullopt) noexcept;
 
@@ -221,7 +244,10 @@ export function generateHppSchemas(
     "#include <memory>",
     "",
     "#include <foxglove/error.hpp>",
+    "#include <foxglove/schema.hpp>",
+    "#ifndef __wasm32__",
     "#include <foxglove/context.hpp>",
+    "#endif",
   ];
 
   const uniquePtr = [
@@ -243,13 +269,12 @@ export function generateHppSchemas(
     "struct foxglove_channel;",
 
     "namespace foxglove::schemas {",
-
-    uniquePtr.join("\n"),
-
     structDefs.join("\n\n"),
 
+    "#ifndef __wasm32__",
+    uniquePtr.join("\n"),
     channelClasses.join("\n\n"),
-
+    "#endif",
     "} // namespace foxglove::schemas",
   ].filter(Boolean);
 
@@ -369,6 +394,41 @@ export function generateCppSchemas(schemas: FoxgloveMessageSchema[]): string {
     ];
   });
 
+  const encodeImpls = schemas.filter(shouldGenerateChannel).flatMap((schema) => {
+    const snakeName = toSnakeCase(schema.name);
+    if (isSameAsCType(schema)) {
+      return [
+        `FoxgloveError ${schema.name}::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {`,
+        `    return FoxgloveError(foxglove_${snakeName}_encode(reinterpret_cast<const foxglove_${snakeName}*>(this), ptr, len, encoded_len));`,
+        "}\n",
+      ];
+    } else {
+      return [
+        `FoxgloveError ${schema.name}::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {`,
+        "    Arena arena;",
+        `    foxglove_${snakeName} c_msg;`,
+        `    ${toCamelCase(schema.name)}ToC(c_msg, *this, arena);`,
+        `    return FoxgloveError(foxglove_${snakeName}_encode(&c_msg, ptr, len, encoded_len));`,
+        "}\n",
+      ];
+    }
+  });
+
+  const getSchemaImpls = schemas.filter(shouldGenerateChannel).flatMap((schema) => {
+    const snakeName = toSnakeCase(schema.name);
+    return [
+      `Schema ${schema.name}::schema() {`,
+      `    struct foxglove_schema c_schema = foxglove_${snakeName}_schema();`,
+      "    Schema result;",
+      "    result.name = std::string(c_schema.name.data, c_schema.name.len);",
+      "    result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);",
+      "    result.data = reinterpret_cast<const std::byte*>(c_schema.data);",
+      "    result.data_len = c_schema.data_len;",
+      "    return result;",
+      "}\n",
+    ];
+  });
+
   const channelUniquePtr = [
     "void ChannelDeleter::operator()(const foxglove_channel* ptr) const noexcept {",
     "  foxglove_channel_free(ptr);",
@@ -381,7 +441,10 @@ export function generateCppSchemas(schemas: FoxgloveMessageSchema[]): string {
     "#include <foxglove/error.hpp>",
     "#include <foxglove/schemas.hpp>",
     "#include <foxglove/arena.hpp>",
+    "#include <foxglove/schema.hpp>",
+    "#ifndef __wasm32__",
     "#include <foxglove/context.hpp>",
+    "#endif",
   ];
 
   const outputSections = [
@@ -394,15 +457,16 @@ export function generateCppSchemas(schemas: FoxgloveMessageSchema[]): string {
     systemIncludes.join("\n"),
 
     "namespace foxglove::schemas {",
-
-    channelUniquePtr.join("\n"),
-
     conversionFuncDecls.join("\n"),
-
+    "#ifndef __wasm32__",
+    channelUniquePtr.join("\n"),
     traitSpecializations.join("\n"),
-
+    "#endif",
     conversionFuncs.join("\n"),
 
+    encodeImpls.join("\n"),
+
+    getSchemaImpls.join("\n"),
     "} // namespace foxglove::schemas",
   ];
 

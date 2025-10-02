@@ -125,6 +125,7 @@ pub struct ${name} {
     .join("\n\n")}
 }
 
+#[cfg(not(target_family = "wasm"))]
 impl ${name} {
   /// Create a new typed channel, and return an owned raw channel pointer to it.
   ///
@@ -229,6 +230,7 @@ impl BorrowToNative for ${name} {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_${snakeName}.
+#[cfg(not(target_family = "wasm"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_${snakeName}(channel: Option<&FoxgloveChannel>, msg: Option<&${name}>, log_time: Option<&u64>, sink_id: FoxgloveSinkId) -> FoxgloveError {
   let mut arena = pin!(Arena::new());
@@ -245,6 +247,74 @@ pub extern "C" fn foxglove_channel_log_${snakeName}(channel: Option<&FoxgloveCha
     }
   }
 }
+
+/// Get the ${name} schema.
+///
+/// All buffers in the returned schema are statically allocated.
+#[allow(clippy::missing_safety_doc, reason="no preconditions and returned lifetime is static")]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_${snakeName}_schema() -> FoxgloveSchema {
+    let native = foxglove::schemas::${name}::get_schema().expect("${name} schema is Some");
+    let name: &'static str = "foxglove.${schema.name}";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+      unreachable!("${name} schema data is static");
+    };
+    FoxgloveSchema {
+      name: name.into(),
+      encoding: encoding.into(),
+      data: data.as_ptr(),
+      data_len: data.len(),
+    }
+}
+
+/// Encode a ${name} message as protobuf to the buffer provided.
+///
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+/// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+/// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+///
+/// # Safety
+/// ptr must be a valid pointer to a memory region at least len bytes long.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_${snakeName}_encode(
+    msg: Option<&${name}>,
+    ptr: *mut u8,
+    len: usize,
+    encoded_len: Option<&mut usize>,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { ${name}::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            if len == 0 || ptr.is_null() {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = msg.encoded_len().expect("foxglove schemas return Some(len)");
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
+            if let Err(encode_error) = msg.encode(&mut buf) {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
+            }
+            FoxgloveError::Ok
+        }
+        Err(e) => {
+            tracing::error!("${name}: {}", e);
+            FoxgloveError::EncodeError
+        }
+    }
+}
 `;
   });
 
@@ -253,7 +323,11 @@ pub extern "C" fn foxglove_channel_log_${snakeName}(channel: Option<&FoxgloveCha
     "use std::mem::ManuallyDrop;",
     "use std::pin::{pin, Pin};",
     "",
-    "use crate::{FoxgloveString, FoxgloveError, FoxgloveChannel, FoxgloveContext, FoxgloveTimestamp, FoxgloveDuration, log_msg_to_channel, result_to_c, do_foxglove_channel_create, FoxgloveSinkId};",
+    "use foxglove::Encode;",
+    "",
+    "use crate::{FoxgloveSchema, FoxgloveString, FoxgloveError, FoxgloveTimestamp, FoxgloveDuration};",
+    `#[cfg(not(target_family = "wasm"))]`,
+    "use crate::{FoxgloveChannel, FoxgloveContext, log_msg_to_channel, result_to_c, do_foxglove_channel_create, FoxgloveSinkId};",
     "use crate::arena::{Arena, BorrowToNative};",
     "use crate::util::{bytes_from_raw, string_from_raw, vec_from_raw};",
   ];

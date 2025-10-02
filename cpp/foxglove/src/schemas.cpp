@@ -2,18 +2,17 @@
 
 #include <foxglove-c/foxglove-c.h>
 #include <foxglove/arena.hpp>
-#include <foxglove/context.hpp>
 #include <foxglove/error.hpp>
+#include <foxglove/schema.hpp>
 #include <foxglove/schemas.hpp>
+#ifndef __wasm32__
+#include <foxglove/context.hpp>
+#endif
 
 #include <cstring>
 #include <optional>
 
 namespace foxglove::schemas {
-
-void ChannelDeleter::operator()(const foxglove_channel* ptr) const noexcept {
-  foxglove_channel_free(ptr);
-};
 
 void arrowPrimitiveToC(foxglove_arrow_primitive& dest, const ArrowPrimitive& src, Arena& arena);
 void cameraCalibrationToC(
@@ -66,6 +65,12 @@ void triangleListPrimitiveToC(
   foxglove_triangle_list_primitive& dest, const TriangleListPrimitive& src, Arena& arena
 );
 void voxelGridToC(foxglove_voxel_grid& dest, const VoxelGrid& src, Arena& arena);
+
+#ifndef __wasm32__
+
+void ChannelDeleter::operator()(const foxglove_channel* ptr) const noexcept {
+  foxglove_channel_free(ptr);
+};
 
 FoxgloveResult<ArrowPrimitiveChannel> ArrowPrimitiveChannel::create(
   const std::string_view& topic, const Context& context
@@ -1201,6 +1206,8 @@ uint64_t VoxelGridChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
 }
 
+#endif
+
 void arrowPrimitiveToC(
   foxglove_arrow_primitive& dest, const ArrowPrimitive& src, [[maybe_unused]] Arena& arena
 ) {
@@ -1619,6 +1626,697 @@ void voxelGridToC(foxglove_voxel_grid& dest, const VoxelGrid& src, [[maybe_unuse
   dest.fields_count = src.fields.size();
   dest.data = reinterpret_cast<const unsigned char*>(src.data.data());
   dest.data_len = src.data.size();
+}
+
+FoxgloveError ArrowPrimitive::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
+  Arena arena;
+  foxglove_arrow_primitive c_msg;
+  arrowPrimitiveToC(c_msg, *this, arena);
+  return FoxgloveError(foxglove_arrow_primitive_encode(&c_msg, ptr, len, encoded_len));
+}
+
+FoxgloveError CameraCalibration::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
+  Arena arena;
+  foxglove_camera_calibration c_msg;
+  cameraCalibrationToC(c_msg, *this, arena);
+  return FoxgloveError(foxglove_camera_calibration_encode(&c_msg, ptr, len, encoded_len));
+}
+
+FoxgloveError CircleAnnotation::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
+  Arena arena;
+  foxglove_circle_annotation c_msg;
+  circleAnnotationToC(c_msg, *this, arena);
+  return FoxgloveError(foxglove_circle_annotation_encode(&c_msg, ptr, len, encoded_len));
+}
+
+FoxgloveError Color::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
+  return FoxgloveError(
+    foxglove_color_encode(reinterpret_cast<const foxglove_color*>(this), ptr, len, encoded_len)
+  );
+}
+
+FoxgloveError CompressedImage::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
+  Arena arena;
+  foxglove_compressed_image c_msg;
+  compressedImageToC(c_msg, *this, arena);
+  return FoxgloveError(foxglove_compressed_image_encode(&c_msg, ptr, len, encoded_len));
+}
+
+FoxgloveError CompressedVideo::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
+  Arena arena;
+  foxglove_compressed_video c_msg;
+  compressedVideoToC(c_msg, *this, arena);
+  return FoxgloveError(foxglove_compressed_video_encode(&c_msg, ptr, len, encoded_len));
+}
+
+FoxgloveError CubePrimitive::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
+  Arena arena;
+  foxglove_cube_primitive c_msg;
+  cubePrimitiveToC(c_msg, *this, arena);
+  return FoxgloveError(foxglove_cube_primitive_encode(&c_msg, ptr, len, encoded_len));
+}
+
+FoxgloveError CylinderPrimitive::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
+  Arena arena;
+  foxglove_cylinder_primitive c_msg;
+  cylinderPrimitiveToC(c_msg, *this, arena);
+  return FoxgloveError(foxglove_cylinder_primitive_encode(&c_msg, ptr, len, encoded_len));
+}
+
+FoxgloveError FrameTransform::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
+  Arena arena;
+  foxglove_frame_transform c_msg;
+  frameTransformToC(c_msg, *this, arena);
+  return FoxgloveError(foxglove_frame_transform_encode(&c_msg, ptr, len, encoded_len));
+}
+
+FoxgloveError FrameTransforms::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
+  Arena arena;
+  foxglove_frame_transforms c_msg;
+  frameTransformsToC(c_msg, *this, arena);
+  return FoxgloveError(foxglove_frame_transforms_encode(&c_msg, ptr, len, encoded_len));
+}
+
+FoxgloveError GeoJSON::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
+  Arena arena;
+  foxglove_geo_json c_msg;
+  geoJSONToC(c_msg, *this, arena);
+  return FoxgloveError(foxglove_geo_json_encode(&c_msg, ptr, len, encoded_len));
+}
+
+FoxgloveError Grid::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
+  Arena arena;
+  foxglove_grid c_msg;
+  gridToC(c_msg, *this, arena);
+  return FoxgloveError(foxglove_grid_encode(&c_msg, ptr, len, encoded_len));
+}
+
+FoxgloveError ImageAnnotations::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
+  Arena arena;
+  foxglove_image_annotations c_msg;
+  imageAnnotationsToC(c_msg, *this, arena);
+  return FoxgloveError(foxglove_image_annotations_encode(&c_msg, ptr, len, encoded_len));
+}
+
+FoxgloveError KeyValuePair::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
+  Arena arena;
+  foxglove_key_value_pair c_msg;
+  keyValuePairToC(c_msg, *this, arena);
+  return FoxgloveError(foxglove_key_value_pair_encode(&c_msg, ptr, len, encoded_len));
+}
+
+FoxgloveError LaserScan::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
+  Arena arena;
+  foxglove_laser_scan c_msg;
+  laserScanToC(c_msg, *this, arena);
+  return FoxgloveError(foxglove_laser_scan_encode(&c_msg, ptr, len, encoded_len));
+}
+
+FoxgloveError LinePrimitive::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
+  Arena arena;
+  foxglove_line_primitive c_msg;
+  linePrimitiveToC(c_msg, *this, arena);
+  return FoxgloveError(foxglove_line_primitive_encode(&c_msg, ptr, len, encoded_len));
+}
+
+FoxgloveError LocationFix::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
+  Arena arena;
+  foxglove_location_fix c_msg;
+  locationFixToC(c_msg, *this, arena);
+  return FoxgloveError(foxglove_location_fix_encode(&c_msg, ptr, len, encoded_len));
+}
+
+FoxgloveError LocationFixes::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
+  Arena arena;
+  foxglove_location_fixes c_msg;
+  locationFixesToC(c_msg, *this, arena);
+  return FoxgloveError(foxglove_location_fixes_encode(&c_msg, ptr, len, encoded_len));
+}
+
+FoxgloveError Log::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
+  Arena arena;
+  foxglove_log c_msg;
+  logToC(c_msg, *this, arena);
+  return FoxgloveError(foxglove_log_encode(&c_msg, ptr, len, encoded_len));
+}
+
+FoxgloveError ModelPrimitive::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
+  Arena arena;
+  foxglove_model_primitive c_msg;
+  modelPrimitiveToC(c_msg, *this, arena);
+  return FoxgloveError(foxglove_model_primitive_encode(&c_msg, ptr, len, encoded_len));
+}
+
+FoxgloveError PackedElementField::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
+  Arena arena;
+  foxglove_packed_element_field c_msg;
+  packedElementFieldToC(c_msg, *this, arena);
+  return FoxgloveError(foxglove_packed_element_field_encode(&c_msg, ptr, len, encoded_len));
+}
+
+FoxgloveError Point2::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
+  return FoxgloveError(
+    foxglove_point2_encode(reinterpret_cast<const foxglove_point2*>(this), ptr, len, encoded_len)
+  );
+}
+
+FoxgloveError Point3::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
+  return FoxgloveError(
+    foxglove_point3_encode(reinterpret_cast<const foxglove_point3*>(this), ptr, len, encoded_len)
+  );
+}
+
+FoxgloveError PointCloud::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
+  Arena arena;
+  foxglove_point_cloud c_msg;
+  pointCloudToC(c_msg, *this, arena);
+  return FoxgloveError(foxglove_point_cloud_encode(&c_msg, ptr, len, encoded_len));
+}
+
+FoxgloveError PointsAnnotation::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
+  Arena arena;
+  foxglove_points_annotation c_msg;
+  pointsAnnotationToC(c_msg, *this, arena);
+  return FoxgloveError(foxglove_points_annotation_encode(&c_msg, ptr, len, encoded_len));
+}
+
+FoxgloveError Pose::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
+  Arena arena;
+  foxglove_pose c_msg;
+  poseToC(c_msg, *this, arena);
+  return FoxgloveError(foxglove_pose_encode(&c_msg, ptr, len, encoded_len));
+}
+
+FoxgloveError PoseInFrame::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
+  Arena arena;
+  foxglove_pose_in_frame c_msg;
+  poseInFrameToC(c_msg, *this, arena);
+  return FoxgloveError(foxglove_pose_in_frame_encode(&c_msg, ptr, len, encoded_len));
+}
+
+FoxgloveError PosesInFrame::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
+  Arena arena;
+  foxglove_poses_in_frame c_msg;
+  posesInFrameToC(c_msg, *this, arena);
+  return FoxgloveError(foxglove_poses_in_frame_encode(&c_msg, ptr, len, encoded_len));
+}
+
+FoxgloveError Quaternion::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
+  return FoxgloveError(foxglove_quaternion_encode(
+    reinterpret_cast<const foxglove_quaternion*>(this), ptr, len, encoded_len
+  ));
+}
+
+FoxgloveError RawAudio::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
+  Arena arena;
+  foxglove_raw_audio c_msg;
+  rawAudioToC(c_msg, *this, arena);
+  return FoxgloveError(foxglove_raw_audio_encode(&c_msg, ptr, len, encoded_len));
+}
+
+FoxgloveError RawImage::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
+  Arena arena;
+  foxglove_raw_image c_msg;
+  rawImageToC(c_msg, *this, arena);
+  return FoxgloveError(foxglove_raw_image_encode(&c_msg, ptr, len, encoded_len));
+}
+
+FoxgloveError SceneEntity::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
+  Arena arena;
+  foxglove_scene_entity c_msg;
+  sceneEntityToC(c_msg, *this, arena);
+  return FoxgloveError(foxglove_scene_entity_encode(&c_msg, ptr, len, encoded_len));
+}
+
+FoxgloveError SceneEntityDeletion::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
+  Arena arena;
+  foxglove_scene_entity_deletion c_msg;
+  sceneEntityDeletionToC(c_msg, *this, arena);
+  return FoxgloveError(foxglove_scene_entity_deletion_encode(&c_msg, ptr, len, encoded_len));
+}
+
+FoxgloveError SceneUpdate::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
+  Arena arena;
+  foxglove_scene_update c_msg;
+  sceneUpdateToC(c_msg, *this, arena);
+  return FoxgloveError(foxglove_scene_update_encode(&c_msg, ptr, len, encoded_len));
+}
+
+FoxgloveError SpherePrimitive::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
+  Arena arena;
+  foxglove_sphere_primitive c_msg;
+  spherePrimitiveToC(c_msg, *this, arena);
+  return FoxgloveError(foxglove_sphere_primitive_encode(&c_msg, ptr, len, encoded_len));
+}
+
+FoxgloveError TextAnnotation::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
+  Arena arena;
+  foxglove_text_annotation c_msg;
+  textAnnotationToC(c_msg, *this, arena);
+  return FoxgloveError(foxglove_text_annotation_encode(&c_msg, ptr, len, encoded_len));
+}
+
+FoxgloveError TextPrimitive::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
+  Arena arena;
+  foxglove_text_primitive c_msg;
+  textPrimitiveToC(c_msg, *this, arena);
+  return FoxgloveError(foxglove_text_primitive_encode(&c_msg, ptr, len, encoded_len));
+}
+
+FoxgloveError TriangleListPrimitive::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
+  Arena arena;
+  foxglove_triangle_list_primitive c_msg;
+  triangleListPrimitiveToC(c_msg, *this, arena);
+  return FoxgloveError(foxglove_triangle_list_primitive_encode(&c_msg, ptr, len, encoded_len));
+}
+
+FoxgloveError Vector2::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
+  return FoxgloveError(
+    foxglove_vector2_encode(reinterpret_cast<const foxglove_vector2*>(this), ptr, len, encoded_len)
+  );
+}
+
+FoxgloveError Vector3::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
+  return FoxgloveError(
+    foxglove_vector3_encode(reinterpret_cast<const foxglove_vector3*>(this), ptr, len, encoded_len)
+  );
+}
+
+FoxgloveError VoxelGrid::encode(uint8_t* ptr, size_t len, size_t* encoded_len) {
+  Arena arena;
+  foxglove_voxel_grid c_msg;
+  voxelGridToC(c_msg, *this, arena);
+  return FoxgloveError(foxglove_voxel_grid_encode(&c_msg, ptr, len, encoded_len));
+}
+
+Schema ArrowPrimitive::schema() {
+  struct foxglove_schema c_schema = foxglove_arrow_primitive_schema();
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data_len = c_schema.data_len;
+  return result;
+}
+
+Schema CameraCalibration::schema() {
+  struct foxglove_schema c_schema = foxglove_camera_calibration_schema();
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data_len = c_schema.data_len;
+  return result;
+}
+
+Schema CircleAnnotation::schema() {
+  struct foxglove_schema c_schema = foxglove_circle_annotation_schema();
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data_len = c_schema.data_len;
+  return result;
+}
+
+Schema Color::schema() {
+  struct foxglove_schema c_schema = foxglove_color_schema();
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data_len = c_schema.data_len;
+  return result;
+}
+
+Schema CompressedImage::schema() {
+  struct foxglove_schema c_schema = foxglove_compressed_image_schema();
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data_len = c_schema.data_len;
+  return result;
+}
+
+Schema CompressedVideo::schema() {
+  struct foxglove_schema c_schema = foxglove_compressed_video_schema();
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data_len = c_schema.data_len;
+  return result;
+}
+
+Schema CubePrimitive::schema() {
+  struct foxglove_schema c_schema = foxglove_cube_primitive_schema();
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data_len = c_schema.data_len;
+  return result;
+}
+
+Schema CylinderPrimitive::schema() {
+  struct foxglove_schema c_schema = foxglove_cylinder_primitive_schema();
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data_len = c_schema.data_len;
+  return result;
+}
+
+Schema FrameTransform::schema() {
+  struct foxglove_schema c_schema = foxglove_frame_transform_schema();
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data_len = c_schema.data_len;
+  return result;
+}
+
+Schema FrameTransforms::schema() {
+  struct foxglove_schema c_schema = foxglove_frame_transforms_schema();
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data_len = c_schema.data_len;
+  return result;
+}
+
+Schema GeoJSON::schema() {
+  struct foxglove_schema c_schema = foxglove_geo_json_schema();
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data_len = c_schema.data_len;
+  return result;
+}
+
+Schema Grid::schema() {
+  struct foxglove_schema c_schema = foxglove_grid_schema();
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data_len = c_schema.data_len;
+  return result;
+}
+
+Schema ImageAnnotations::schema() {
+  struct foxglove_schema c_schema = foxglove_image_annotations_schema();
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data_len = c_schema.data_len;
+  return result;
+}
+
+Schema KeyValuePair::schema() {
+  struct foxglove_schema c_schema = foxglove_key_value_pair_schema();
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data_len = c_schema.data_len;
+  return result;
+}
+
+Schema LaserScan::schema() {
+  struct foxglove_schema c_schema = foxglove_laser_scan_schema();
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data_len = c_schema.data_len;
+  return result;
+}
+
+Schema LinePrimitive::schema() {
+  struct foxglove_schema c_schema = foxglove_line_primitive_schema();
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data_len = c_schema.data_len;
+  return result;
+}
+
+Schema LocationFix::schema() {
+  struct foxglove_schema c_schema = foxglove_location_fix_schema();
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data_len = c_schema.data_len;
+  return result;
+}
+
+Schema LocationFixes::schema() {
+  struct foxglove_schema c_schema = foxglove_location_fixes_schema();
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data_len = c_schema.data_len;
+  return result;
+}
+
+Schema Log::schema() {
+  struct foxglove_schema c_schema = foxglove_log_schema();
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data_len = c_schema.data_len;
+  return result;
+}
+
+Schema ModelPrimitive::schema() {
+  struct foxglove_schema c_schema = foxglove_model_primitive_schema();
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data_len = c_schema.data_len;
+  return result;
+}
+
+Schema PackedElementField::schema() {
+  struct foxglove_schema c_schema = foxglove_packed_element_field_schema();
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data_len = c_schema.data_len;
+  return result;
+}
+
+Schema Point2::schema() {
+  struct foxglove_schema c_schema = foxglove_point2_schema();
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data_len = c_schema.data_len;
+  return result;
+}
+
+Schema Point3::schema() {
+  struct foxglove_schema c_schema = foxglove_point3_schema();
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data_len = c_schema.data_len;
+  return result;
+}
+
+Schema PointCloud::schema() {
+  struct foxglove_schema c_schema = foxglove_point_cloud_schema();
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data_len = c_schema.data_len;
+  return result;
+}
+
+Schema PointsAnnotation::schema() {
+  struct foxglove_schema c_schema = foxglove_points_annotation_schema();
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data_len = c_schema.data_len;
+  return result;
+}
+
+Schema Pose::schema() {
+  struct foxglove_schema c_schema = foxglove_pose_schema();
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data_len = c_schema.data_len;
+  return result;
+}
+
+Schema PoseInFrame::schema() {
+  struct foxglove_schema c_schema = foxglove_pose_in_frame_schema();
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data_len = c_schema.data_len;
+  return result;
+}
+
+Schema PosesInFrame::schema() {
+  struct foxglove_schema c_schema = foxglove_poses_in_frame_schema();
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data_len = c_schema.data_len;
+  return result;
+}
+
+Schema Quaternion::schema() {
+  struct foxglove_schema c_schema = foxglove_quaternion_schema();
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data_len = c_schema.data_len;
+  return result;
+}
+
+Schema RawAudio::schema() {
+  struct foxglove_schema c_schema = foxglove_raw_audio_schema();
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data_len = c_schema.data_len;
+  return result;
+}
+
+Schema RawImage::schema() {
+  struct foxglove_schema c_schema = foxglove_raw_image_schema();
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data_len = c_schema.data_len;
+  return result;
+}
+
+Schema SceneEntity::schema() {
+  struct foxglove_schema c_schema = foxglove_scene_entity_schema();
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data_len = c_schema.data_len;
+  return result;
+}
+
+Schema SceneEntityDeletion::schema() {
+  struct foxglove_schema c_schema = foxglove_scene_entity_deletion_schema();
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data_len = c_schema.data_len;
+  return result;
+}
+
+Schema SceneUpdate::schema() {
+  struct foxglove_schema c_schema = foxglove_scene_update_schema();
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data_len = c_schema.data_len;
+  return result;
+}
+
+Schema SpherePrimitive::schema() {
+  struct foxglove_schema c_schema = foxglove_sphere_primitive_schema();
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data_len = c_schema.data_len;
+  return result;
+}
+
+Schema TextAnnotation::schema() {
+  struct foxglove_schema c_schema = foxglove_text_annotation_schema();
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data_len = c_schema.data_len;
+  return result;
+}
+
+Schema TextPrimitive::schema() {
+  struct foxglove_schema c_schema = foxglove_text_primitive_schema();
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data_len = c_schema.data_len;
+  return result;
+}
+
+Schema TriangleListPrimitive::schema() {
+  struct foxglove_schema c_schema = foxglove_triangle_list_primitive_schema();
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data_len = c_schema.data_len;
+  return result;
+}
+
+Schema Vector2::schema() {
+  struct foxglove_schema c_schema = foxglove_vector2_schema();
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data_len = c_schema.data_len;
+  return result;
+}
+
+Schema Vector3::schema() {
+  struct foxglove_schema c_schema = foxglove_vector3_schema();
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data_len = c_schema.data_len;
+  return result;
+}
+
+Schema VoxelGrid::schema() {
+  struct foxglove_schema c_schema = foxglove_voxel_grid_schema();
+  Schema result;
+  result.name = std::string(c_schema.name.data, c_schema.name.len);
+  result.encoding = std::string(c_schema.encoding.data, c_schema.encoding.len);
+  result.data = reinterpret_cast<const std::byte*>(c_schema.data);
+  result.data_len = c_schema.data_len;
+  return result;
 }
 
 }  // namespace foxglove::schemas

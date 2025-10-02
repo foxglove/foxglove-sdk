@@ -2,6 +2,17 @@
 Changelog for package foxglove_msgs
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+3.2.1 (2025-09-26)
+-----------
+* No changes to foxglove_msgs
+
+3.2.0 (2025-09-22)
+------------------
+* Add RawAudio schema
+* Add generated schema types for C++
+* Add Kannala-Brandt distortion model to CameraCalibration
+* Remove ImageMarkerArray schema
+
 3.1.0 (2025-02-11)
 ------------------
 * Remove invalid generated schemas from package

@@ -14,12 +14,14 @@ namespace foxglove {
 
 /// A fixed-size memory arena that allocates aligned arrays of POD types on the stack.
 /// The arena contains a single inline array and allocates from it.
-/// If the arena runs out of space, it throws std::bad_alloc.
+/// If the arena runs out of space, it attempts to allocate the required space on the heap.
+/// If this fails, it throws std::bad_alloc(). On wasm32 platforms which do not support exceptions,
+/// It calls std::terminate().
 /// The allocated arrays are "freed" by dropping the arena, destructors are not run.
 /// @cond foxglove_internal
 class Arena {
 public:
-  static constexpr std::size_t Size = 128 * 1024;  // 128 KB
+  static constexpr std::size_t Size = 8 * 1024;  // 128 KB
 
   Arena()
       : offset_(0) {}
@@ -31,7 +33,8 @@ public:
   /// T must be a POD type, without a custom constructor or destructor.
   /// @return Pointer to the beginning of the allocated array of src.size() T elements, or null if
   /// elements is 0.
-  /// @throws std::bad_alloc if the arena doesn't have enough space
+  /// @throws std::bad_alloc if the the fallback to heap allocation fails.
+  /// On wasm32 platforms which do not support exceptions, calls std::terminate().
   template<
     typename T, typename S, typename Fn,
     typename = std::enable_if_t<std::is_pod_v<T> && std::is_invocable_v<Fn, T&, const S&, Arena&>>>
@@ -54,7 +57,8 @@ public:
   /// @param map_fn Function taking (T& dest, const S& src) to map elements.
   /// T must be a POD type, without a custom constructor or destructor.
   /// @return Pointer to the beginning of the allocated array of src.size() T elements
-  /// @throws std::bad_alloc if the arena doesn't have enough space
+  /// @throws std::bad_alloc if the the fallback to heap allocation fails.
+  /// On wasm32 platforms which do not support exceptions, calls std::terminate().
   template<
     typename T, typename S, typename Fn,
     typename = std::enable_if_t<std::is_pod_v<T> && std::is_invocable_v<Fn, T&, const S&, Arena&>>>
@@ -68,7 +72,8 @@ public:
   ///
   /// @param elements Number of elements to allocate
   /// @return Pointer to the aligned memory for the requested elements
-  /// @throws std::bad_alloc if the arena doesn't have enough space
+  /// @throws std::bad_alloc if the the fallback to heap allocation fails.
+  /// On wasm32 platforms which do not support exceptions, calls std::terminate().
   template<typename T>
   T* alloc(size_t elements) {
     assert(elements > 0);
@@ -89,7 +94,11 @@ public:
       auto ptr = ::malloc(size_with_alignment);
       aligned_ptr = std::align(alignment, bytes_needed, ptr, size_with_alignment);
       if (aligned_ptr == nullptr) {
+#ifndef __wasm32__
         throw std::bad_alloc();
+#else
+        std::terminate();
+#endif
       }
       overflow_.emplace_back(static_cast<char*>(aligned_ptr));
       return reinterpret_cast<T*>(aligned_ptr);

@@ -12,6 +12,7 @@ use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::WebSocketStream;
 
 use crate::sink_channel_filter::SinkChannelFilter;
+use crate::websocket::streams::ServerStream;
 use crate::{ChannelId, Context, FoxgloveError, Metadata, RawChannel, Sink, SinkId};
 
 use self::ws_protocol::server::{
@@ -138,7 +139,7 @@ impl ConnectedClient {
     pub fn new(
         context: &Weak<Context>,
         server: &Weak<Server>,
-        websocket: WebSocketStream<TcpStream>,
+        websocket: WebSocketStream<ServerStream<TcpStream>>,
         addr: SocketAddr,
         message_backlog_size: usize,
         channel_filter: Option<Arc<dyn SinkChannelFilter>>,

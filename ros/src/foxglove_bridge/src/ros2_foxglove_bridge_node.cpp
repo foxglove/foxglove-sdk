@@ -26,12 +26,17 @@ int main(int argc, char* argv[]) {
     numThreads = static_cast<size_t>(dummyNode->get_parameter(numThreadsDescription.name).as_int());
   }
 
-  auto executor =
-    rclcpp::executors::MultiThreadedExecutor::make_shared(rclcpp::ExecutorOptions{}, numThreads);
+  {
+    auto executor =
+      rclcpp::executors::MultiThreadedExecutor::make_shared(rclcpp::ExecutorOptions{}, numThreads);
 
-  foxglove_bridge::FoxgloveBridge node;
-  executor->add_node(node.get_node_base_interface());
-  executor->spin();
+    auto node = std::make_shared<foxglove_bridge::FoxgloveBridge>();
+    executor->add_node(node->get_node_base_interface());
+    executor->spin();
+    executor->remove_node(node->get_node_base_interface());
+    // node and executor go out of scope here; node destructor stops the server while ROS is valid
+  }
+
   rclcpp::shutdown();
 
   return EXIT_SUCCESS;

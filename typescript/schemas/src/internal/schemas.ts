@@ -1,3 +1,8 @@
+/// This file is the source of truth for all generated Foxglove schemas.
+/// It is used to generate the JSON schema, FlatBuffer, Protobuf,and TypeScript definitions.
+///
+/// Edit this file and run `make generate` to regenerate all the various schema files.
+
 import { FoxgloveEnumSchema, FoxgloveMessageSchema } from "./types";
 
 const Duration: FoxgloveMessageSchema = {
@@ -823,7 +828,7 @@ It projects 3D points in the camera coordinate frame to 2D pixel coordinates usi
 
 For monocular cameras, Tx = Ty = 0. Normally, monocular cameras will also have R = the identity and P[1:3,1:3] = K.
 
-For a stereo pair, the fourth column [Tx Ty 0]' is related to the position of the optical center of the second camera in the first camera's frame. We assume Tz = 0 so both cameras are in the same stereo image plane. The first camera always has Tx = Ty = 0. For the right (second) camera of a horizontal stereo pair, Ty = 0 and Tx = -fx' * B, where B is the baseline between the cameras.
+Foxglove currently does not support displaying stereo images, so Tx and Ty are ignored.
 
 Given a 3D point [X Y Z]', the projection (x, y) of the point onto the rectified image is given by:
 
@@ -988,7 +993,7 @@ For each \`encoding\` value, the \`data\` field contains image pixel data serial
   - Each output pixel is serialized as [R, G, B, Alpha].
   - \`step\` must be greater than or equal to \`width\` * 4.
 - \`bgr8\` or \`8UC3\`:
-  - Pixel colors are decomposed into Red, Blue, Green, and Alpha channels.
+  - Pixel colors are decomposed into Blue, Green, and Red channels.
   - Pixel channel values are represented as unsigned 8-bit integers.
   - Each output pixel is serialized as [B, G, R].
   - \`step\` must be greater than or equal to \`width\` * 3.
@@ -1000,7 +1005,7 @@ For each \`encoding\` value, the \`data\` field contains image pixel data serial
 - \`32FC1\`:
   - Pixel brightness is represented as a single-channel, 32-bit little-endian IEEE 754 floating-point value, ranging from 0.0 (black) to 1.0 (white).
   - \`step\` must be greater than or equal to \`width\` * 4.
-- \`bayer_rggb8\`, \`bayer_bggr8\`, \`bayer_rggb8\`, \`bayer_gbrg8\`, or \`bayer_grgb8\`:
+- \`bayer_rggb8\`, \`bayer_bggr8\`, \`bayer_gbrg8\`, or \`bayer_grbg8\`:
   - Pixel colors are decomposed into Red, Blue and Green channels.
   - Pixel channel values are represented as unsigned 8-bit integers, and serialized in a 2x2 bayer filter pattern.
   - The order of the four letters after \`bayer_\` determine the layout, so for \`bayer_wxyz8\` the pattern is:

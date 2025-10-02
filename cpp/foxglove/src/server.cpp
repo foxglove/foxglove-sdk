@@ -257,6 +257,13 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
     };
   }
 
+  if (options.tls_identity) {
+    c_options.tls_cert = reinterpret_cast<const uint8_t*>(options.tls_identity->cert.data());
+    c_options.tls_cert_len = options.tls_identity->cert.size();
+    c_options.tls_key = reinterpret_cast<const uint8_t*>(options.tls_identity->key.data());
+    c_options.tls_key_len = options.tls_identity->key.size();
+  }
+
   foxglove_websocket_server* server = nullptr;
   foxglove_error error = foxglove_server_start(&c_options, &server);
   if (error != foxglove_error::FOXGLOVE_ERROR_OK || server == nullptr) {
