@@ -1,0 +1,15 @@
+[package]
+name = "foxglove_enterprise"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+license.workspace = true
+
+[dependencies]
+
+[build-dependencies]
+bindgen = "0.72.1"
+
+[lints]
+workspace = true
