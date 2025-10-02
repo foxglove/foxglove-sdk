@@ -12,7 +12,7 @@ foxglove
 
 .. automodule:: foxglove
    :members:
-   :exclude-members: MCAPWriter, create_notebook_buffer, visualize
+   :exclude-members: MCAPWriter, create_notebook_buffer, notebook_viewer
 
 Notebook Integration
 ^^^^^^^^^^^^^^^^^^^^
@@ -33,18 +33,18 @@ Functions and classes for integrating with Jupyter notebooks and creating intera
       This function is only available when the `notebook` extra package
       is installed.
 
-.. py:function:: visualize(context: Optional[Context] = None, width: Optional[str] = None, height: Optional[str] = None, src: Optional[str] = None, layout_data: Optional[dict] = None) -> FoxgloveViewer
+.. py:function:: notebook_viewer(context: Optional[Context] = None, width: Optional[str] = None, height: Optional[str] = None, src: Optional[str] = None, layout_data: Optional[dict] = None) -> FoxgloveViewer
 
    Create a FoxgloveViewer widget for interactive data visualization in Jupyter notebooks.
 
    This function creates an embedded Foxglove visualization widget that displays
-   the data collected in the NotebookBuffer associated with the provided context.
+   the data collected in a buffer associated with the provided context.
    The widget provides a fully-featured Foxglove interface directly within
    your Jupyter notebook, allowing you to explore multi-modal robotics data
    including 3D scenes, plots, images, and more.
 
    :param context: The Context used to log the messages. If no Context is provided, the global
-       context will be used. The visualization data will be retrieved from the NotebookBuffer
+       context will be used. The visualization data will be retrieved from a buffer
        associated with the provided context. This buffer should have been populated with
        logged messages before creating the viewer.
    :param width: Optional width for the widget. Can be specified as CSS values like
@@ -102,7 +102,7 @@ Notebook Classes
       Initialize the FoxgloveViewer widget with the specified data source and configuration.
 
       :param context: The Context used to log the messages. If no Context is provided, the global
-          context will be used. The visualization data will be retrieved from the NotebookBuffer
+          context will be used. The visualization data will be retrieved from a buffer
           associated with the provided context. This buffer should have been populated with
           logged messages before creating the viewer.
       :param width: Optional width for the widget. Can be specified as CSS values like
@@ -119,19 +119,19 @@ Notebook Classes
       .. note::
          The widget will automatically load the data from the buffer associated with the provided
          context and display it in the embedded Foxglove viewer. The data is loaded once
-         during initialization - to update the data, use the :meth:`set_data_from_context` method.
+         during initialization - to update the data, use the :meth:`reload_data` method.
 
-   .. py:method:: set_data_from_context(context: Context) -> None
+   .. py:method:: reload_data(context: Optional[Context]) -> None
 
       Update the data visualized using the provided context.
 
       This method allows you to dynamically change the data being visualized
       without recreating the widget. The new data will be loaded from the
-      NotebookBuffer associated with the provided context and the viewer will update to
+      bugger associated with the provided context and the viewer will update to
       display it.
 
       :param context: The Context used to log the messages. The visualization data will be retrieved
-         from the NotebookBuffer associated with the provided context. This buffer should
+         from the buffer associated with the provided context. This buffer should
          have been populated with logged messages before creating the viewer.
 
 Schemas

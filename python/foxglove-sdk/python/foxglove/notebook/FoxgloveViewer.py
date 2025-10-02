@@ -34,7 +34,7 @@ class FoxgloveViewer(anywidget.AnyWidget):
         >>> import foxglove
         >>> foxglove.create_notebook_buffer()
         >>> # ... log some data to the buffer ...
-        >>> viewer = foxglove.visualize(width="800px", height="600px")
+        >>> viewer = foxglove.notebook_viewer(width="800px", height="600px")
         >>> viewer  # Display the widget in the notebook
     """
 
@@ -102,9 +102,9 @@ class FoxgloveViewer(anywidget.AnyWidget):
 
         # Use default context if no context is provided
         ctx = context or Context.default()
-        self.set_data_from_context(ctx)
+        self.reload_data(ctx)
 
-    def set_data_from_context(self, context: Context) -> None:
+    def reload_data(self, context: Optional[Context] = None) -> None:
         """
         Update the data visualized using the provided context.
 
@@ -123,20 +123,24 @@ class FoxgloveViewer(anywidget.AnyWidget):
             >>> ctx_1 = Context()
             >>> foxglove.create_notebook_buffer(context=ctx_1)
             >>> # ... log some data to ctx_1 ...
-            >>> viewer.set_data_from_context(ctx_1)
+            >>> viewer.reload_data(ctx_1)
             >>>
             >>> # Later, update with new data
             >>> ctx_2 = Context()
             >>> foxglove.create_notebook_buffer(context=ctx_2)
             >>> # ... log different data to buffer2 ...
-            >>> viewer.set_datasource(ctx_2)
+            >>> viewer.reload_data(ctx_2)
         """
-        # Create a new buffer if one doesn't exist
-        if context not in self._notebook_buffers_by_context:
-            self._notebook_buffers_by_context[context] = NotebookBuffer(context=context)
+        # Update _context with the provided context. If no context is provided, use the
+        # current context.
+        self._context = context or self._context
+
+        # Check if there is a NotebookBuffer for the context
+        if self._context not in self._notebook_buffers_by_context:
+            raise Exception("NotebookBuffer for the context not found")
 
         # Get the buffer associated with the context
-        datasource = self._notebook_buffers_by_context[context]
+        datasource = self._notebook_buffers_by_context[self._context]
 
         # Set the viewer data
         self._data = datasource.get_data()

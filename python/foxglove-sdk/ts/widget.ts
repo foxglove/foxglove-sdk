@@ -49,7 +49,7 @@ function render({ model, el }: RenderProps<WidgetModel>): void {
     parent.style.height = model.get("height");
   });
 
-  model.on("change:data", () => {
+  model.on("change:_data", () => {
     const dataSource = getDataSource();
 
     viewer.setDataSource(dataSource);

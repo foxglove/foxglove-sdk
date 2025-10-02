@@ -161,7 +161,7 @@ def create_notebook_buffer(context: Context | None = None) -> None:
     FoxgloveViewer.create_notebook_buffer(context=context)
 
 
-def visualize(
+def notebook_viewer(
     context: Context | None = None,
     width: Optional[str] = None,
     height: Optional[str] = None,
@@ -215,17 +215,17 @@ def visualize(
         >>> # ... your application logs data to the buffer ...
         >>>
         >>> # Create a basic viewer using the default context
-        >>> viewer = foxglove.visualize()
+        >>> viewer = foxglove.notebook_viewer()
         >>>
         >>> # Create a custom-sized viewer
-        >>> viewer = foxglove.visualize(
+        >>> viewer = foxglove.notebook_viewer(
         ...     width="800px",
         ...     height="600px",
         ...     orgSlug="my-org"
         ... )
         >>>
         >>> # Create a viewer using a specific context
-        >>> viewer = foxglove.visualize(context=my_ctx)
+        >>> viewer = foxglove.notebook_viewer(context=my_ctx)
         >>>
         >>> # Display the widget in the notebook
         >>> viewer
@@ -258,5 +258,5 @@ __all__ = [
     "open_mcap",
     "set_log_level",
     "start_server",
-    "visualize",
+    "notebook_viewer",
 ]
