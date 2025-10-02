@@ -61,11 +61,16 @@ set(LWS_WITHOUT_TEST_PING ON CACHE BOOL "" FORCE)
 set(LWS_WITHOUT_TEST_CLIENT ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(libwebsockets)
 
-FetchContent_Declare(json
-  GIT_REPOSITORY https://github.com/nlohmann/json.git
-  GIT_TAG v3.12.0
-)
-FetchContent_MakeAvailable(json)
+if(USE_PACKAGE_MANAGER_DEPENDENCIES)
+  find_package(nlohmann_json QUIET)
+endif()
+if(NOT TARGET nlohmann_json::nlohmann_json)
+  FetchContent_Declare(nlohmann_json
+    GIT_REPOSITORY https://github.com/nlohmann/json.git
+    GIT_TAG v3.12.0
+  )
+  FetchContent_MakeAvailable(nlohmann_json)
+endif()
 
 FetchContent_Declare(base64
   GIT_REPOSITORY https://github.com/tobiaslocker/base64.git
@@ -181,8 +186,7 @@ set_property(TARGET tests PROPERTY CXX_STANDARD 17)
 set_property(TARGET tests PROPERTY CXX_STANDARD_REQUIRED True)
 target_compile_options(tests PUBLIC ${SANITIZER_COMPILE_OPTIONS})
 target_link_options(tests PUBLIC ${SANITIZER_LINK_OPTIONS})
-target_include_directories(tests SYSTEM PRIVATE ${json_SOURCE_DIR}/include)
-target_link_libraries(tests PRIVATE foxglove_cpp_static Catch2::Catch2WithMain websockets)
+target_link_libraries(tests PRIVATE foxglove_cpp_static Catch2::Catch2WithMain nlohmann_json::nlohmann_json websockets)
 # Suppress warnings from libwebsockets headers by treating them as system includes
 get_target_property(LWS_INCLUDE_DIRS websockets INTERFACE_INCLUDE_DIRECTORIES)
 target_include_directories(tests SYSTEM PRIVATE ${LWS_INCLUDE_DIRS})
@@ -217,9 +221,8 @@ add_executable(example_services examples/ws-services/src/main.cpp)
 set_property(TARGET example_services PROPERTY CXX_STANDARD 17)
 set_property(TARGET example_services PROPERTY CXX_STANDARD_REQUIRED True)
 target_compile_options(example_services PUBLIC ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
-target_include_directories(example_services SYSTEM PRIVATE ${json_SOURCE_DIR}/include)
 target_link_options(example_services PUBLIC ${SANITIZER_LINK_OPTIONS})
-target_link_libraries(example_services foxglove_cpp_static)
+target_link_libraries(example_services foxglove_cpp_static nlohmann_json::nlohmann_json)
 
 add_executable(example_mcap examples/mcap/src/main.cpp)
 set_property(TARGET example_mcap PROPERTY CXX_STANDARD 17)
@@ -260,9 +263,8 @@ add_executable(example_auto_serialize examples/auto-serialize/src/main.cpp)
 set_property(TARGET example_auto_serialize PROPERTY CXX_STANDARD 17)
 set_property(TARGET example_auto_serialize PROPERTY CXX_STANDARD_REQUIRED True)
 target_compile_options(example_auto_serialize PUBLIC ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
-target_include_directories(example_auto_serialize SYSTEM PRIVATE ${json_SOURCE_DIR}/include)
 target_link_options(example_auto_serialize PUBLIC ${SANITIZER_LINK_OPTIONS})
-target_link_libraries(example_auto_serialize foxglove_cpp_static)
+target_link_libraries(example_auto_serialize foxglove_cpp_static nlohmann_json::nlohmann_json)
 
 option(BUILD_OPENCV_EXAMPLE "Build the RGB camera visualization example (requires OpenCV)" OFF)
 
