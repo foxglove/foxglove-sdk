@@ -59,6 +59,14 @@ impl ChannelBuilder {
         self
     }
 
+    /// Prefer using a unreliable/lossy transport when a sink supports it.
+    /// This enables sending log messages over UDP or similar for sinks that support it.
+    /// It may also effect which messages are dropped when the [`crate::WebSocketServer`] queue fills.
+    /// Has no effect for MCAP sinks.
+    pub fn unreliable(self) -> Self {
+        self.add_metadata("foxglove_unreliable", "1")
+    }
+
     /// Sets the context for this channel.
     pub fn context(mut self, ctx: &Arc<Context>) -> Self {
         self.context = ctx.clone();
