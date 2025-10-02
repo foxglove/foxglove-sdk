@@ -122,16 +122,17 @@ class Context:
         """
         ...
 
-class FilterableChannel:
+class ChannelDescriptor:
     """
-    A channel that can be filtered.
+    Information about a channel
     """
 
     id: int
     topic: str
-    metadata: Dict[str, str]
+    message_encoding: str
+    metadata: dict[str, str]
 
-SinkChannelFilter = Callable[[FilterableChannel], bool]
+SinkChannelFilter = Callable[[ChannelDescriptor], bool]
 
 def start_server(
     *,

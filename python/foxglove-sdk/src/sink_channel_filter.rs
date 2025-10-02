@@ -1,31 +1,45 @@
 use std::sync::Arc;
 
+use foxglove::ChannelDescriptor;
 use pyo3::prelude::*;
 use pyo3::types::IntoPyDict;
-use pyo3::{
-    types::{PyDict, PyInt, PyString},
-    Py,
-};
+use pyo3::{types::PyDict, Py};
 
-/// Information about a channel, which is passed to a :py:class:`SinkChannelFilter`.
-///
-/// This is a view into a :py:class:`Channel`.
-#[pyclass(name = "FilterableChannel", module = "foxglove")]
-pub struct PyFilterableChannel {
-    #[pyo3(get)]
-    id: Py<PyInt>,
-    #[pyo3(get)]
-    topic: Py<PyString>,
-    #[pyo3(get)]
-    metadata: Py<PyDict>,
-}
+#[pyclass(name = "ChannelDescriptor", module = "foxglove")]
+pub struct PyChannelDescriptor(Arc<ChannelDescriptor>);
 
 #[pymethods]
-impl PyFilterableChannel {
+impl PyChannelDescriptor {
+    #[getter]
+    fn id(&self) -> u64 {
+        u64::from(self.0.id())
+    }
+
+    #[getter]
+    fn topic(&self) -> &str {
+        self.0.topic()
+    }
+
+    #[getter]
+    fn message_encoding(&self) -> &str {
+        self.0.message_encoding()
+    }
+
+    #[getter]
+    fn metadata<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
+        println!("[getter] copy metadata");
+        let metadata = self.0.metadata().into_py_dict(py).unwrap_or_else(|err| {
+            tracing::error!("Failed to constrcut channel metadata: {}", err.to_string());
+            PyDict::new(py)
+        });
+        Ok(metadata)
+    }
+
     fn __repr__(&self) -> String {
         format!(
-            "FilterableChannel(id={}, topic='{}', metadata='{:?}')",
-            self.id, self.topic, self.metadata
+            "ChannelDescriptor(id={}, topic='{}')",
+            self.0.id(),
+            self.0.topic(),
         )
     }
 }
@@ -38,22 +52,15 @@ impl PyFilterableChannel {
 /// Return `True` to log the channel, or `False` to skip it.
 #[pyclass(name = "SinkChannelFilter", module = "foxglove")]
 pub struct PySinkChannelFilter(pub Arc<Py<PyAny>>);
+
 impl foxglove::SinkChannelFilter for PySinkChannelFilter {
-    fn should_subscribe(&self, channel: &dyn foxglove::FilterableChannel) -> bool {
+    fn should_subscribe(&self, channel: Arc<ChannelDescriptor>) -> bool {
         let handler = self.0.clone();
         Python::with_gil(|py| {
-            let metadata = channel.metadata().into_py_dict(py).unwrap_or_else(|err| {
-                tracing::error!("Failed to constrcut channel metadata: {}", err.to_string());
-                PyDict::new(py)
-            });
-            let channel = PyFilterableChannel {
-                id: PyInt::new(py, u64::from(channel.id())).into(),
-                topic: PyString::new(py, channel.topic()).into(),
-                metadata: metadata.into(),
-            };
+            let descriptor = PyChannelDescriptor(channel.clone());
             let result = handler
                 .bind(py)
-                .call((channel,), None)
+                .call((descriptor,), None)
                 .and_then(|f| f.extract::<bool>());
 
             match result {

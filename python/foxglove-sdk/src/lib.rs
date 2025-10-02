@@ -7,7 +7,7 @@ use log::LevelFilter;
 use mcap::{PyMcapWriteOptions, PyMcapWriter};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
-use sink_channel_filter::{PyFilterableChannel, PySinkChannelFilter};
+use sink_channel_filter::{PyChannelDescriptor, PySinkChannelFilter};
 use std::collections::BTreeMap;
 use std::fs::File;
 use std::io::BufWriter;
@@ -202,7 +202,7 @@ impl PyContext {
 /// :type context: :py:class:`Context`
 /// :param channel_filter: A `Callable` that determines whether a channel should be logged to. Return
 ///     `True` to log the channel, or `False` to skip it. By default, all channels will be logged.
-/// :type channel_filter: Optional[Callable[[FilterableChannel], bool]]
+/// :type channel_filter: Optional[Callable[[ChannelDescriptor], bool]]
 /// :param writer_options: Options for the MCAP writer.
 /// :type writer_options: :py:class:`mcap.MCAPWriteOptions`
 /// :rtype: :py:class:`mcap.MCAPWriter`
@@ -229,7 +229,7 @@ fn open_mcap(
         McapWriter::with_options(options)
     };
     let handle = if let Some(channel_filter) = channel_filter {
-        handle.with_channel_filter(Arc::new(PySinkChannelFilter(Arc::new(channel_filter))))
+        handle.channel_filter(Arc::new(PySinkChannelFilter(Arc::new(channel_filter))))
     } else {
         handle
     };
@@ -292,7 +292,7 @@ fn _foxglove_py(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PySchema>()?;
     m.add_class::<PyContext>()?;
     m.add_class::<PySinkChannelFilter>()?;
-    m.add_class::<PyFilterableChannel>()?;
+    m.add_class::<PyChannelDescriptor>()?;
     // Register nested modules.
     schemas::register_submodule(m)?;
     channels::register_submodule(m)?;

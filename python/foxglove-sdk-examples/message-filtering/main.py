@@ -4,7 +4,7 @@ import time
 from math import cos, sin
 
 import foxglove
-from foxglove import FilterableChannel
+from foxglove import ChannelDescriptor
 from foxglove.schemas import (
     FrameTransform,
     FrameTransforms,
@@ -17,17 +17,17 @@ from foxglove.schemas import (
 )
 
 
-def keep_large_topics(channel: FilterableChannel) -> bool:
+def keep_large_topics(channel: ChannelDescriptor) -> bool:
     return channel.topic.startswith("/point_cloud")
 
 
-def drop_large_topics(channel: FilterableChannel) -> bool:
+def drop_large_topics(channel: ChannelDescriptor) -> bool:
     return not keep_large_topics(channel)
 
 
 # We'll send all messages to the Foxglove app. We don't need a filter for this, since its the same
 # as having no filter applied, but this demonstrates how to apply a filter to the server.
-def live_viz_filter(_: FilterableChannel) -> bool:
+def live_viz_filter(_: ChannelDescriptor) -> bool:
     return True
 
 
