@@ -35,6 +35,13 @@ pub struct Subscription {
     pub channel_id: u64,
 }
 
+impl Subscription {
+    /// Creates a new subscription with the specified channel ID and subscription ID.
+    pub fn new(id: u32, channel_id: u64) -> Self {
+        Self { id, channel_id }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::websocket::ws_protocol::client::ClientMessage;
@@ -42,16 +49,7 @@ mod tests {
     use super::*;
 
     fn message() -> Subscribe {
-        Subscribe::new([
-            Subscription {
-                id: 1,
-                channel_id: 10,
-            },
-            Subscription {
-                id: 2,
-                channel_id: 20,
-            },
-        ])
+        Subscribe::new([Subscription::new(1, 10), Subscription::new(2, 20)])
     }
 
     #[test]

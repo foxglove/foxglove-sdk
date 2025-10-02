@@ -9,17 +9,17 @@ mod connected_client;
 mod connection_graph;
 mod cow_vec;
 mod fetch_asset;
-mod handshake;
+pub(crate) mod handshake;
 mod semaphore;
 mod server;
 mod server_listener;
 pub mod service;
+mod streams;
 mod subscription;
 #[cfg(test)]
 mod tests;
-#[cfg(test)]
-pub(crate) mod testutil;
-pub(crate) mod ws_protocol;
+#[doc(hidden)]
+pub mod ws_protocol;
 
 pub use capability::Capability;
 pub use channel_view::ChannelView;
@@ -31,6 +31,7 @@ pub(crate) use fetch_asset::{AsyncAssetHandlerFn, BlockingAssetHandlerFn};
 pub use server::ShutdownHandle;
 pub(crate) use server::{create_server, Server, ServerOptions};
 pub use server_listener::ServerListener;
+pub use streams::TlsIdentity;
 pub use ws_protocol::parameter::{
     DecodeError as ParameterDecodeError, Parameter, ParameterType, ParameterValue,
 };

@@ -17,18 +17,24 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  build-artifacts:
+  c-cpp:
     uses: ./.github/workflows/c_cpp.yml
+    with:
+      sdk-version: ${{ github.event.inputs.version }}
+  cpp-data-loader:
+    uses: ./.github/workflows/cpp_data_loader.yml
     with:
       sdk-version: ${{ github.event.inputs.version }}
 
   draft:
     runs-on: ubuntu-latest
-    needs: build-artifacts
+    needs:
+      - c-cpp
+      - cpp-data-loader
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - run: corepack enable
 
@@ -63,7 +69,7 @@ jobs:
       - name: Download C/C++ artifacts
         uses: actions/download-artifact@v5
         with:
-          pattern: ${{ needs.build-artifacts.outputs.artifact_pattern }}
+          pattern: "*.zip"
           path: ci_artifacts/
           merge-multiple: true
 

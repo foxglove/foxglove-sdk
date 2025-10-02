@@ -5,9 +5,10 @@ See :py:mod:`foxglove.schemas` and :py:mod:`foxglove.channels` for working with 
 schemas.
 """
 
+from __future__ import annotations
+
 import atexit
 import logging
-from typing import List, Optional, Union
 
 from . import _foxglove_py as _foxglove
 
@@ -17,63 +18,68 @@ from .channel import Channel, log
 
 # Deprecated. Use foxglove.mcap.MCAPWriter instead.
 from .mcap import MCAPWriter
-from .websocket import (
-    AssetHandler,
-    Capability,
-    ServerListener,
-    Service,
-    WebSocketServer,
-)
 
 atexit.register(_foxglove.shutdown)
 
 
-def start_server(
-    *,
-    name: Optional[str] = None,
-    host: Optional[str] = "127.0.0.1",
-    port: Optional[int] = 8765,
-    capabilities: Optional[List[Capability]] = None,
-    server_listener: Optional[ServerListener] = None,
-    supported_encodings: Optional[List[str]] = None,
-    services: Optional[List[Service]] = None,
-    asset_handler: Optional[AssetHandler] = None,
-    context: Optional[Context] = None,
-    session_id: Optional[str] = None,
-) -> WebSocketServer:
-    """
-    Start a websocket server for live visualization.
-
-    :param name: The name of the server.
-    :param host: The host to bind to.
-    :param port: The port to bind to.
-    :param capabilities: A list of capabilities to advertise to clients.
-    :param server_listener: A Python object that implements the :py:class:`websocket.ServerListener`
-        protocol.
-    :param supported_encodings: A list of encodings to advertise to clients.
-    :param services: A list of services to advertise to clients.
-    :param asset_handler: A callback function that returns the asset for a given URI, or None if it
-        doesn't exist.
-    :param context: The context to use for logging. If None, the global context is used.
-    :param session_id: An ID which allows the client to understand if the connection is a
-        re-connection or a new server instance. If None, then an ID is generated based on the
-        current time.
-    """
-    return _foxglove.start_server(
-        name=name,
-        host=host,
-        port=port,
-        capabilities=capabilities,
-        server_listener=server_listener,
-        supported_encodings=supported_encodings,
-        services=services,
-        asset_handler=asset_handler,
-        context=context,
-        session_id=session_id,
+try:
+    from .websocket import (
+        AssetHandler,
+        Capability,
+        ServerListener,
+        Service,
+        WebSocketServer,
     )
 
+    def start_server(
+        *,
+        name: str | None = None,
+        host: str | None = "127.0.0.1",
+        port: int | None = 8765,
+        capabilities: list[Capability] | None = None,
+        server_listener: ServerListener | None = None,
+        supported_encodings: list[str] | None = None,
+        services: list[Service] | None = None,
+        asset_handler: AssetHandler | None = None,
+        context: Context | None = None,
+        session_id: str | None = None,
+    ) -> WebSocketServer:
+        """
+        Start a websocket server for live visualization.
 
-def set_log_level(level: Union[int, str] = "INFO") -> None:
+        :param name: The name of the server.
+        :param host: The host to bind to.
+        :param port: The port to bind to.
+        :param capabilities: A list of capabilities to advertise to clients.
+        :param server_listener: A Python object that implements the
+            :py:class:`websocket.ServerListener` protocol.
+        :param supported_encodings: A list of encodings to advertise to clients.
+        :param services: A list of services to advertise to clients.
+        :param asset_handler: A callback function that returns the asset for a given URI, or None if
+            it doesn't exist.
+        :param context: The context to use for logging. If None, the global context is used.
+        :param session_id: An ID which allows the client to understand if the connection is a
+            re-connection or a new server instance. If None, then an ID is generated based on the
+            current time.
+        """
+        return _foxglove.start_server(
+            name=name,
+            host=host,
+            port=port,
+            capabilities=capabilities,
+            server_listener=server_listener,
+            supported_encodings=supported_encodings,
+            services=services,
+            asset_handler=asset_handler,
+            context=context,
+            session_id=session_id,
+        )
+
+except ImportError:
+    pass
+
+
+def set_log_level(level: int | str = "INFO") -> None:
     """
     Enable SDK logging.
 

@@ -3,6 +3,7 @@
 #include <foxglove-c/foxglove-c.h>
 #include <foxglove/context.hpp>
 #include <foxglove/error.hpp>
+#include <foxglove/schema.hpp>
 #include <foxglove/schemas.hpp>
 
 #include <cstdint>
@@ -15,25 +16,6 @@ struct foxglove_channel;
 
 /// The foxglove namespace.
 namespace foxglove {
-
-/// @brief A description of the data format of messages in a channel.
-///
-/// It allows Foxglove to validate messages and provide richer visualizations.
-struct Schema {
-  /// @brief An identifier for the schema.
-  std::string name;
-  /// @brief The encoding of the schema data. For example "jsonschema" or "protobuf".
-  ///
-  /// The [well-known schema encodings] are preferred.
-  ///
-  /// [well-known schema encodings]: https://mcap.dev/spec/registry#well-known-schema-encodings
-  std::string encoding;
-  /// @brief Must conform to the schema encoding. If encoding is an empty string, data should be 0
-  /// length.
-  const std::byte* data = nullptr;
-  /// @brief The length of the schema data.
-  size_t data_len = 0;
-};
 
 /// @brief A description of a channel. This will be constructed by the SDK and passed to an
 /// implementation of a `SinkChannelFilterFn`.
@@ -106,7 +88,8 @@ public:
   ///
   /// @param data The message data.
   /// @param data_len The length of the message data, in bytes.
-  /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  /// @param log_time The timestamp of the message, as nanoseconds since epoch. If omitted, the
+  /// current time is used.
   /// @param sink_id The sink ID associated with the message. Can be used to target logging messages
   /// to a specific client or mcap file. If omitted, the message is logged to all sinks. Note that
   /// providing a sink_id is not yet part of the public API. To partition logs among specific sinks,

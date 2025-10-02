@@ -1,6 +1,8 @@
 use assert_matches::assert_matches;
 use bytes::{BufMut, Bytes, BytesMut};
 use futures_util::FutureExt;
+#[cfg(feature = "tls")]
+use rcgen::{CertificateParams, Issuer, KeyPair};
 use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
@@ -9,7 +11,6 @@ use tokio_tungstenite::tungstenite::{self, http::HeaderValue, Message};
 use tracing_test::traced_test;
 use tungstenite::client::IntoClientRequest;
 
-use super::testutil::WebSocketClient;
 use super::ws_protocol::client::subscribe::Subscription;
 use super::ws_protocol::client::{
     self, Advertise, FetchAsset, GetParameters, ServiceCallRequest, SetParameters, Subscribe,
@@ -26,15 +27,17 @@ use super::ws_protocol::server::{
 use crate::library_version::get_library_version;
 use crate::testutil::{assert_eventually, RecordingServerListener};
 use crate::websocket::handshake::SUBPROTOCOL;
-use crate::websocket::server::{create_server, ServerOptions};
+use crate::websocket::server::{create_server as do_create_server, ServerOptions};
 use crate::websocket::service::{CallId, Service, ServiceSchema};
-use crate::websocket::testutil::RecvError;
+#[cfg(feature = "tls")]
+use crate::websocket::TlsIdentity;
 use crate::websocket::{
-    BlockingAssetHandlerFn, Capability, ClientChannelId, ConnectionGraph, Parameter,
+    BlockingAssetHandlerFn, Capability, ClientChannelId, ConnectionGraph, Parameter, Server,
 };
+use crate::websocket_client::WebSocketClient;
 use crate::{
     ChannelBuilder, ChannelDescriptor, Context, FoxgloveError, PartialMetadata, RawChannel, Schema,
-    SinkChannelFilter,
+    SinkChannelFilter, WebSocketClientError,
 };
 
 macro_rules! expect_recv {
@@ -55,6 +58,10 @@ macro_rules! expect_recv_close {
             m => panic!("Received unexpected message: {m:?}"),
         }
     }};
+}
+
+fn create_server(ctx: &Arc<Context>, opts: ServerOptions) -> Arc<Server> {
+    do_create_server(ctx, opts).expect("Failed to create server")
 }
 
 fn new_channel(topic: &str, ctx: &Arc<Context>) -> Arc<RawChannel> {
@@ -88,7 +95,9 @@ async fn test_client_connect() {
         .await
         .expect("Failed to start server");
 
-    let mut client = WebSocketClient::connect(addr).await;
+    let mut client = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("Failed to connect");
 
     let msg = expect_recv!(client, ServerMessage::ServerInfo);
     assert_eq!(
@@ -99,6 +108,77 @@ async fn test_client_connect() {
     );
 
     let _ = server.stop();
+}
+
+#[traced_test]
+#[tokio::test]
+#[cfg(feature = "tls")]
+async fn test_secure_client_connect() {
+    let ctx = Context::new();
+    let ca_params = CertificateParams::default();
+    let ca_key = KeyPair::generate().expect("default keygen will succeed");
+    let ca_cert = ca_params
+        .self_signed(&ca_key)
+        .expect("failed to sign CA cert");
+    let issuer = Issuer::new(ca_params, ca_key);
+
+    let host = "127.0.0.1";
+    let params = CertificateParams::new(vec![host.to_string()]).expect("SAN is valid");
+
+    let key = KeyPair::generate().expect("default keygen will succeed");
+    let cert = params
+        .signed_by(&key, &issuer)
+        .expect("failed to sign cert");
+
+    let server = create_server(
+        &ctx,
+        ServerOptions {
+            session_id: Some("tls_sess_id".to_string()),
+            tls_identity: Some(TlsIdentity {
+                cert: cert.pem().as_bytes().to_vec(),
+                key: key.serialize_pem().as_bytes().to_vec(),
+            }),
+            ..Default::default()
+        },
+    );
+    let addr = server.start(host, 0).await.expect("Failed to start server");
+
+    let mut client = WebSocketClient::connect_secure(addr.to_string(), ca_cert)
+        .await
+        .expect("Failed to connect");
+
+    let msg = expect_recv!(client, ServerMessage::ServerInfo);
+    assert_eq!(msg.session_id, Some("tls_sess_id".to_string()));
+
+    let _ = server.stop();
+}
+
+#[cfg(feature = "tls")]
+#[traced_test]
+#[tokio::test]
+async fn test_invalid_tls_config() {
+    let ctx = Context::new();
+    let cert = rcgen::generate_simple_self_signed(vec![])
+        .expect("default certgen will succeed")
+        .cert;
+    let key = KeyPair::generate().expect("default keygen will succeed");
+
+    let result = do_create_server(
+        &ctx,
+        ServerOptions {
+            name: Some("invalid_tls_server".to_string()),
+            tls_identity: Some(TlsIdentity {
+                cert: cert.pem().as_bytes().to_vec(),
+                key: key.serialize_pem().as_bytes().to_vec(),
+            }),
+            ..Default::default()
+        },
+    );
+    assert!(result.is_err());
+
+    let error = result.err();
+    assert!(matches!(&error, Some(FoxgloveError::ConfigurationError(_))));
+    assert!(error.unwrap().to_string().contains("KeyMismatch"));
 }
 
 #[traced_test]
@@ -234,7 +314,9 @@ async fn test_advertise_to_client() {
         .build_raw()
         .expect("Failed to create channel");
 
-    let mut client = WebSocketClient::connect(addr).await;
+    let mut client = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("Failed to connect");
     expect_recv!(client, ServerMessage::ServerInfo);
 
     let msg = expect_recv!(client, ServerMessage::Advertise);
@@ -247,10 +329,7 @@ async fn test_advertise_to_client() {
     ch2.log(b"{\"a\":1}");
 
     let subscription_id = 42;
-    let subscribe_msg = Subscribe::new([Subscription {
-        id: subscription_id,
-        channel_id: ch.id().into(),
-    }]);
+    let subscribe_msg = Subscribe::new([Subscription::new(subscription_id, ch.id().into())]);
     client.send(&subscribe_msg).await.expect("Failed to send");
 
     // Allow the server to process the subscription
@@ -310,7 +389,9 @@ async fn test_advertise_schemaless_channels() {
         .await
         .expect("Failed to start server");
 
-    let mut client = WebSocketClient::connect(addr).await;
+    let mut client = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("Failed to connect");
     expect_recv!(client, ServerMessage::ServerInfo);
 
     // Client receives the correct advertisement for schemaless JSON
@@ -368,9 +449,15 @@ async fn test_log_only_to_subscribers() {
         .await
         .expect("Failed to start server");
 
-    let mut client1 = WebSocketClient::connect(addr).await;
-    let mut client2 = WebSocketClient::connect(addr).await;
-    let mut client3 = WebSocketClient::connect(addr).await;
+    let mut client1 = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("Failed to connect");
+    let mut client2 = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("Failed to connect");
+    let mut client3 = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("Failed to connect");
 
     // client1 subscribes to ch1; client2 subscribes to ch2; client3 unsubscribes from all
     // Read the server info message from each
@@ -391,18 +478,12 @@ async fn test_log_only_to_subscribers() {
     }
 
     client1
-        .send(&Subscribe::new([Subscription {
-            id: 1,
-            channel_id: ch1.id().into(),
-        }]))
+        .send(&Subscribe::new([Subscription::new(1, ch1.id().into())]))
         .await
         .expect("Failed to send");
 
     client2
-        .send(&Subscribe::new([Subscription {
-            id: 2,
-            channel_id: ch2.id().into(),
-        }]))
+        .send(&Subscribe::new([Subscription::new(2, ch2.id().into())]))
         .await
         .expect("Failed to send");
 
@@ -411,14 +492,8 @@ async fn test_log_only_to_subscribers() {
 
     client3
         .send(&Subscribe::new([
-            Subscription {
-                id: 111,
-                channel_id: ch1.id().into(),
-            },
-            Subscription {
-                id: 222,
-                channel_id: ch2.id().into(),
-            },
+            Subscription::new(111, ch1.id().into()),
+            Subscription::new(222, ch2.id().into()),
         ]))
         .await
         .expect("Failed to send");
@@ -495,15 +570,14 @@ async fn test_on_unsubscribe_called_after_disconnect() {
         .await
         .expect("Failed to start server");
 
-    let mut client = WebSocketClient::connect(addr).await;
+    let mut client = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("Failed to connect");
     expect_recv!(client, ServerMessage::ServerInfo);
     expect_recv!(client, ServerMessage::Advertise);
 
     client
-        .send(&Subscribe::new([Subscription {
-            id: 1,
-            channel_id: chan.id().into(),
-        }]))
+        .send(&Subscribe::new([Subscription::new(1, chan.id().into())]))
         .await
         .expect("Failed to send");
 
@@ -517,7 +591,7 @@ async fn test_on_unsubscribe_called_after_disconnect() {
     assert_eq!(unsubscriptions.len(), 0);
 
     // Disconnect the client without unsubscribing explicitly
-    client.close().await;
+    client.close().await.expect("Failed to close");
 
     // Allow the server to process the disconnection
     assert_eventually(|| dbg!(chan.num_sinks()) == 0).await;
@@ -539,7 +613,9 @@ async fn test_error_when_client_publish_unsupported() {
         .await
         .expect("Failed to start server");
 
-    let mut client = WebSocketClient::connect(addr).await;
+    let mut client = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("Failed to connect");
     expect_recv!(client, ServerMessage::ServerInfo);
 
     let advertise = Advertise::new([client::advertise::Channel::builder(1, "/test", "json")
@@ -557,7 +633,7 @@ async fn test_error_when_client_publish_unsupported() {
         Status::error("Server does not support clientPublish capability")
     );
 
-    client.close().await;
+    client.close().await.expect("Failed to close");
     let _ = server.stop();
 }
 
@@ -571,7 +647,9 @@ async fn test_error_status_message() {
         .await
         .expect("Failed to start server");
 
-    let mut client = WebSocketClient::connect(addr).await;
+    let mut client = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("Failed to connect");
     expect_recv!(client, ServerMessage::ServerInfo);
 
     {
@@ -588,10 +666,7 @@ async fn test_error_status_message() {
 
     {
         client
-            .send(&Subscribe::new([Subscription {
-                id: 1,
-                channel_id: 555,
-            }]))
+            .send(&Subscribe::new([Subscription::new(1, 555)]))
             .await
             .expect("Failed to send message");
 
@@ -690,7 +765,9 @@ async fn test_publish_status_message() {
         .await
         .expect("Failed to start server");
 
-    let mut client = WebSocketClient::connect(addr).await;
+    let mut client = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("Failed to connect");
     expect_recv!(client, ServerMessage::ServerInfo);
 
     let statuses = [
@@ -715,8 +792,12 @@ async fn test_remove_status() {
         .await
         .expect("Failed to start server");
 
-    let mut client1 = WebSocketClient::connect(addr).await;
-    let mut client2 = WebSocketClient::connect(addr).await;
+    let mut client1 = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("Failed to connect");
+    let mut client2 = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("Failed to connect");
     expect_recv!(client1, ServerMessage::ServerInfo);
     expect_recv!(client2, ServerMessage::ServerInfo);
 
@@ -750,7 +831,9 @@ async fn test_client_advertising() {
         .await
         .expect("Failed to start server");
 
-    let mut client = WebSocketClient::connect(addr).await;
+    let mut client = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("Failed to connect");
     expect_recv!(client, ServerMessage::ServerInfo);
 
     let channel_id = 1;
@@ -830,7 +913,7 @@ async fn test_client_advertising() {
     assert_eq!(unadvertises.len(), 1);
     assert_eq!(unadvertises[0].1.id, ClientChannelId::new(channel_id));
 
-    client.close().await;
+    client.close().await.expect("Failed to close");
     let _ = server.stop();
 }
 
@@ -864,7 +947,9 @@ async fn test_parameter_values_with_empty_values() {
         .await
         .expect("Failed to start server");
 
-    let mut client = WebSocketClient::connect(addr).await;
+    let mut client = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("Failed to connect");
     expect_recv!(client, ServerMessage::ServerInfo);
 
     client
@@ -898,7 +983,9 @@ async fn test_parameter_values() {
         .await
         .expect("Failed to start server");
 
-    let mut client = WebSocketClient::connect(addr).await;
+    let mut client = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("Failed to connect");
 
     // Send the Subscribe Parameter Update message for "some-float-value"
     // Otherwise we won't get the update after we publish it.
@@ -939,7 +1026,9 @@ async fn test_parameter_unsubscribe_no_updates() {
         .await
         .expect("Failed to start server");
 
-    let mut client = WebSocketClient::connect(addr).await;
+    let mut client = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("Failed to connect");
 
     // Send the Subscribe Parameter Update message for "some-float-value"
     client
@@ -1008,7 +1097,9 @@ async fn test_set_parameters() {
         .await
         .expect("Failed to start server");
 
-    let mut client = WebSocketClient::connect(addr).await;
+    let mut client = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("Failed to connect");
 
     // Subscribe to "foo" and "bar"
     client
@@ -1067,7 +1158,9 @@ async fn test_get_parameters() {
         .await
         .expect("Failed to start server");
 
-    let mut client = WebSocketClient::connect(addr).await;
+    let mut client = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("Failed to connect");
 
     client
         .send(&GetParameters::new(["foo", "bar", "baz"]).with_id("123"))
@@ -1119,7 +1212,9 @@ async fn test_services() {
         .await
         .expect("Failed to start server");
 
-    let mut client1 = WebSocketClient::connect(addr).await;
+    let mut client1 = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("Failed to connect");
     expect_recv!(client1, ServerMessage::ServerInfo);
     let msg = expect_recv!(client1, ServerMessage::AdvertiseServices);
     assert_eq!(
@@ -1187,7 +1282,9 @@ async fn test_services() {
     );
 
     // New client sees both services immediately.
-    let mut client2 = WebSocketClient::connect(addr).await;
+    let mut client2 = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("failed to connect");
     expect_recv!(client2, ServerMessage::ServerInfo);
     let msg = expect_recv!(client2, ServerMessage::AdvertiseServices);
     assert_eq!(msg.services.len(), 2);
@@ -1271,7 +1368,9 @@ async fn test_fetch_asset() {
         .await
         .expect("Failed to start server");
 
-    let mut client = WebSocketClient::connect(addr).await;
+    let mut client = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("failed to connect");
     expect_recv!(client, ServerMessage::ServerInfo);
 
     #[derive(Debug)]
@@ -1339,7 +1438,9 @@ async fn test_update_connection_graph() {
     assert_eq!(recording_listener.take_connection_graph_unsubscribe(), 0);
 
     // Connect a client and subscribe to graph updates.
-    let mut c1 = WebSocketClient::connect(addr).await;
+    let mut c1 = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("failed to connect");
     c1.send(&SubscribeConnectionGraph {}).await.unwrap();
 
     // There should be a server listener callback, since this is the first subscriber.
@@ -1360,7 +1461,9 @@ async fn test_update_connection_graph() {
     );
 
     // Connect a second client and subscribe to graph updates.
-    let mut c2 = WebSocketClient::connect(addr).await;
+    let mut c2 = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("failed to connect");
     c2.send(&SubscribeConnectionGraph {}).await.unwrap();
 
     // Second client also gets the complete initial state.
@@ -1382,7 +1485,7 @@ async fn test_update_connection_graph() {
 
     // Close the client. No unsubscribe callback because c1 is still subscribed. Since the server
     // processes the client disconnect asynchronously, just sleep a little while.
-    c2.close().await;
+    c2.close().await.expect("Failed to close");
     tokio::time::sleep(Duration::from_millis(10)).await;
     assert_eq!(recording_listener.take_connection_graph_unsubscribe(), 0);
 
@@ -1432,7 +1535,9 @@ async fn test_slow_client() {
         .await
         .expect("Failed to start server");
 
-    let mut client = WebSocketClient::connect(addr).await;
+    let mut client = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("failed to connect");
 
     // Publish more status messages than the client can handle
     for i in 0..50 {
@@ -1475,7 +1580,9 @@ async fn test_broadcast_time() {
         .await
         .expect("Failed to start server");
 
-    let mut client = WebSocketClient::connect(addr).await;
+    let mut client = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("failed to connect");
     expect_recv!(client, ServerMessage::ServerInfo);
 
     server.broadcast_time(42);
@@ -1505,7 +1612,9 @@ async fn test_channel_filter() {
         .await
         .expect("Failed to start server");
 
-    let mut client = WebSocketClient::connect(addr).await;
+    let mut client = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("failed to connect");
     expect_recv!(client, ServerMessage::ServerInfo);
 
     let ch1 = new_channel("/1", &ctx);
@@ -1545,5 +1654,5 @@ async fn test_channel_filter() {
 
     ch2.log(b"{}");
     let result = client.recv().await;
-    assert!(matches!(result, Err(RecvError::Timeout(_))));
+    assert!(matches!(result, Err(WebSocketClientError::Timeout(_))));
 }

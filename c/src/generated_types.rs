@@ -4,12 +4,16 @@ use std::ffi::c_uchar;
 use std::mem::ManuallyDrop;
 use std::pin::{pin, Pin};
 
+use foxglove::Encode;
+
 use crate::arena::{Arena, BorrowToNative};
 use crate::util::{bytes_from_raw, string_from_raw, vec_from_raw};
+#[cfg(not(target_family = "wasm"))]
 use crate::{
     do_foxglove_channel_create, log_msg_to_channel, result_to_c, FoxgloveChannel, FoxgloveContext,
-    FoxgloveDuration, FoxgloveError, FoxgloveSinkId, FoxgloveString, FoxgloveTimestamp,
+    FoxgloveSinkId,
 };
+use crate::{FoxgloveDuration, FoxgloveError, FoxgloveSchema, FoxgloveString, FoxgloveTimestamp};
 
 #[derive(Clone, Copy, Debug)]
 #[repr(i32)]
@@ -92,6 +96,7 @@ pub struct ArrowPrimitive {
     pub color: *const Color,
 }
 
+#[cfg(not(target_family = "wasm"))]
 impl ArrowPrimitive {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -150,6 +155,7 @@ impl BorrowToNative for ArrowPrimitive {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_arrow_primitive.
+#[cfg(not(target_family = "wasm"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_arrow_primitive(
     channel: Option<&FoxgloveChannel>,
@@ -168,6 +174,80 @@ pub extern "C" fn foxglove_channel_log_arrow_primitive(
         Err(e) => {
             tracing::error!("ArrowPrimitive: {}", e);
             e.into()
+        }
+    }
+}
+
+/// Get the ArrowPrimitive schema.
+///
+/// All buffers in the returned schema are statically allocated.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_arrow_primitive_schema() -> FoxgloveSchema {
+    let native =
+        foxglove::schemas::ArrowPrimitive::get_schema().expect("ArrowPrimitive schema is Some");
+    let name: &'static str = "foxglove.ArrowPrimitive";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("ArrowPrimitive schema data is static");
+    };
+    FoxgloveSchema {
+        name: name.into(),
+        encoding: encoding.into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
+/// Encode a ArrowPrimitive message as protobuf to the buffer provided.
+///
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+/// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+/// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+///
+/// # Safety
+/// ptr must be a valid pointer to a memory region at least len bytes long.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_arrow_primitive_encode(
+    msg: Option<&ArrowPrimitive>,
+    ptr: *mut u8,
+    len: usize,
+    encoded_len: Option<&mut usize>,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { ArrowPrimitive::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            if len == 0 || ptr.is_null() {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = msg
+                        .encoded_len()
+                        .expect("foxglove schemas return Some(len)");
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
+            if let Err(encode_error) = msg.encode(&mut buf) {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
+            }
+            FoxgloveError::Ok
+        }
+        Err(e) => {
+            tracing::error!("ArrowPrimitive: {}", e);
+            FoxgloveError::EncodeError
         }
     }
 }
@@ -229,7 +309,7 @@ pub struct CameraCalibration {
     ///
     /// For monocular cameras, Tx = Ty = 0. Normally, monocular cameras will also have R = the identity and P[1:3,1:3] = K.
     ///
-    /// For a stereo pair, the fourth column [Tx Ty 0]' is related to the position of the optical center of the second camera in the first camera's frame. We assume Tz = 0 so both cameras are in the same stereo image plane. The first camera always has Tx = Ty = 0. For the right (second) camera of a horizontal stereo pair, Ty = 0 and Tx = -fx' * B, where B is the baseline between the cameras.
+    /// Foxglove currently does not support displaying stereo images, so Tx and Ty are ignored.
     ///
     /// Given a 3D point [X Y Z]', the projection (x, y) of the point onto the rectified image is given by:
     ///
@@ -244,6 +324,7 @@ pub struct CameraCalibration {
     pub p: [f64; 12],
 }
 
+#[cfg(not(target_family = "wasm"))]
 impl CameraCalibration {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -313,6 +394,7 @@ impl BorrowToNative for CameraCalibration {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_camera_calibration.
+#[cfg(not(target_family = "wasm"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_camera_calibration(
     channel: Option<&FoxgloveChannel>,
@@ -331,6 +413,80 @@ pub extern "C" fn foxglove_channel_log_camera_calibration(
         Err(e) => {
             tracing::error!("CameraCalibration: {}", e);
             e.into()
+        }
+    }
+}
+
+/// Get the CameraCalibration schema.
+///
+/// All buffers in the returned schema are statically allocated.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_camera_calibration_schema() -> FoxgloveSchema {
+    let native = foxglove::schemas::CameraCalibration::get_schema()
+        .expect("CameraCalibration schema is Some");
+    let name: &'static str = "foxglove.CameraCalibration";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("CameraCalibration schema data is static");
+    };
+    FoxgloveSchema {
+        name: name.into(),
+        encoding: encoding.into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
+/// Encode a CameraCalibration message as protobuf to the buffer provided.
+///
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+/// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+/// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+///
+/// # Safety
+/// ptr must be a valid pointer to a memory region at least len bytes long.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_camera_calibration_encode(
+    msg: Option<&CameraCalibration>,
+    ptr: *mut u8,
+    len: usize,
+    encoded_len: Option<&mut usize>,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { CameraCalibration::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            if len == 0 || ptr.is_null() {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = msg
+                        .encoded_len()
+                        .expect("foxglove schemas return Some(len)");
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
+            if let Err(encode_error) = msg.encode(&mut buf) {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
+            }
+            FoxgloveError::Ok
+        }
+        Err(e) => {
+            tracing::error!("CameraCalibration: {}", e);
+            FoxgloveError::EncodeError
         }
     }
 }
@@ -358,6 +514,7 @@ pub struct CircleAnnotation {
     pub outline_color: *const Color,
 }
 
+#[cfg(not(target_family = "wasm"))]
 impl CircleAnnotation {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -422,6 +579,7 @@ impl BorrowToNative for CircleAnnotation {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_circle_annotation.
+#[cfg(not(target_family = "wasm"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_circle_annotation(
     channel: Option<&FoxgloveChannel>,
@@ -444,6 +602,80 @@ pub extern "C" fn foxglove_channel_log_circle_annotation(
     }
 }
 
+/// Get the CircleAnnotation schema.
+///
+/// All buffers in the returned schema are statically allocated.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_circle_annotation_schema() -> FoxgloveSchema {
+    let native =
+        foxglove::schemas::CircleAnnotation::get_schema().expect("CircleAnnotation schema is Some");
+    let name: &'static str = "foxglove.CircleAnnotation";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("CircleAnnotation schema data is static");
+    };
+    FoxgloveSchema {
+        name: name.into(),
+        encoding: encoding.into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
+/// Encode a CircleAnnotation message as protobuf to the buffer provided.
+///
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+/// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+/// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+///
+/// # Safety
+/// ptr must be a valid pointer to a memory region at least len bytes long.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_circle_annotation_encode(
+    msg: Option<&CircleAnnotation>,
+    ptr: *mut u8,
+    len: usize,
+    encoded_len: Option<&mut usize>,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { CircleAnnotation::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            if len == 0 || ptr.is_null() {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = msg
+                        .encoded_len()
+                        .expect("foxglove schemas return Some(len)");
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
+            if let Err(encode_error) = msg.encode(&mut buf) {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
+            }
+            FoxgloveError::Ok
+        }
+        Err(e) => {
+            tracing::error!("CircleAnnotation: {}", e);
+            FoxgloveError::EncodeError
+        }
+    }
+}
+
 /// A color in RGBA format
 #[repr(C)]
 pub struct Color {
@@ -460,6 +692,7 @@ pub struct Color {
     pub a: f64,
 }
 
+#[cfg(not(target_family = "wasm"))]
 impl Color {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -502,6 +735,7 @@ impl BorrowToNative for Color {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_color.
+#[cfg(not(target_family = "wasm"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_color(
     channel: Option<&FoxgloveChannel>,
@@ -520,6 +754,79 @@ pub extern "C" fn foxglove_channel_log_color(
         Err(e) => {
             tracing::error!("Color: {}", e);
             e.into()
+        }
+    }
+}
+
+/// Get the Color schema.
+///
+/// All buffers in the returned schema are statically allocated.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_color_schema() -> FoxgloveSchema {
+    let native = foxglove::schemas::Color::get_schema().expect("Color schema is Some");
+    let name: &'static str = "foxglove.Color";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("Color schema data is static");
+    };
+    FoxgloveSchema {
+        name: name.into(),
+        encoding: encoding.into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
+/// Encode a Color message as protobuf to the buffer provided.
+///
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+/// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+/// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+///
+/// # Safety
+/// ptr must be a valid pointer to a memory region at least len bytes long.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_color_encode(
+    msg: Option<&Color>,
+    ptr: *mut u8,
+    len: usize,
+    encoded_len: Option<&mut usize>,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { Color::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            if len == 0 || ptr.is_null() {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = msg
+                        .encoded_len()
+                        .expect("foxglove schemas return Some(len)");
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
+            if let Err(encode_error) = msg.encode(&mut buf) {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
+            }
+            FoxgloveError::Ok
+        }
+        Err(e) => {
+            tracing::error!("Color: {}", e);
+            FoxgloveError::EncodeError
         }
     }
 }
@@ -543,6 +850,7 @@ pub struct CompressedImage {
     pub format: FoxgloveString,
 }
 
+#[cfg(not(target_family = "wasm"))]
 impl CompressedImage {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -601,6 +909,7 @@ impl BorrowToNative for CompressedImage {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_compressed_image.
+#[cfg(not(target_family = "wasm"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_compressed_image(
     channel: Option<&FoxgloveChannel>,
@@ -619,6 +928,80 @@ pub extern "C" fn foxglove_channel_log_compressed_image(
         Err(e) => {
             tracing::error!("CompressedImage: {}", e);
             e.into()
+        }
+    }
+}
+
+/// Get the CompressedImage schema.
+///
+/// All buffers in the returned schema are statically allocated.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_compressed_image_schema() -> FoxgloveSchema {
+    let native =
+        foxglove::schemas::CompressedImage::get_schema().expect("CompressedImage schema is Some");
+    let name: &'static str = "foxglove.CompressedImage";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("CompressedImage schema data is static");
+    };
+    FoxgloveSchema {
+        name: name.into(),
+        encoding: encoding.into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
+/// Encode a CompressedImage message as protobuf to the buffer provided.
+///
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+/// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+/// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+///
+/// # Safety
+/// ptr must be a valid pointer to a memory region at least len bytes long.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_compressed_image_encode(
+    msg: Option<&CompressedImage>,
+    ptr: *mut u8,
+    len: usize,
+    encoded_len: Option<&mut usize>,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { CompressedImage::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            if len == 0 || ptr.is_null() {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = msg
+                        .encoded_len()
+                        .expect("foxglove schemas return Some(len)");
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
+            if let Err(encode_error) = msg.encode(&mut buf) {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
+            }
+            FoxgloveError::Ok
+        }
+        Err(e) => {
+            tracing::error!("CompressedImage: {}", e);
+            FoxgloveError::EncodeError
         }
     }
 }
@@ -668,6 +1051,7 @@ pub struct CompressedVideo {
     pub format: FoxgloveString,
 }
 
+#[cfg(not(target_family = "wasm"))]
 impl CompressedVideo {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -726,6 +1110,7 @@ impl BorrowToNative for CompressedVideo {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_compressed_video.
+#[cfg(not(target_family = "wasm"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_compressed_video(
     channel: Option<&FoxgloveChannel>,
@@ -744,6 +1129,80 @@ pub extern "C" fn foxglove_channel_log_compressed_video(
         Err(e) => {
             tracing::error!("CompressedVideo: {}", e);
             e.into()
+        }
+    }
+}
+
+/// Get the CompressedVideo schema.
+///
+/// All buffers in the returned schema are statically allocated.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_compressed_video_schema() -> FoxgloveSchema {
+    let native =
+        foxglove::schemas::CompressedVideo::get_schema().expect("CompressedVideo schema is Some");
+    let name: &'static str = "foxglove.CompressedVideo";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("CompressedVideo schema data is static");
+    };
+    FoxgloveSchema {
+        name: name.into(),
+        encoding: encoding.into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
+/// Encode a CompressedVideo message as protobuf to the buffer provided.
+///
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+/// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+/// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+///
+/// # Safety
+/// ptr must be a valid pointer to a memory region at least len bytes long.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_compressed_video_encode(
+    msg: Option<&CompressedVideo>,
+    ptr: *mut u8,
+    len: usize,
+    encoded_len: Option<&mut usize>,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { CompressedVideo::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            if len == 0 || ptr.is_null() {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = msg
+                        .encoded_len()
+                        .expect("foxglove schemas return Some(len)");
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
+            if let Err(encode_error) = msg.encode(&mut buf) {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
+            }
+            FoxgloveError::Ok
+        }
+        Err(e) => {
+            tracing::error!("CompressedVideo: {}", e);
+            FoxgloveError::EncodeError
         }
     }
 }
@@ -767,6 +1226,7 @@ pub struct CylinderPrimitive {
     pub color: *const Color,
 }
 
+#[cfg(not(target_family = "wasm"))]
 impl CylinderPrimitive {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -830,6 +1290,7 @@ impl BorrowToNative for CylinderPrimitive {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_cylinder_primitive.
+#[cfg(not(target_family = "wasm"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_cylinder_primitive(
     channel: Option<&FoxgloveChannel>,
@@ -852,6 +1313,80 @@ pub extern "C" fn foxglove_channel_log_cylinder_primitive(
     }
 }
 
+/// Get the CylinderPrimitive schema.
+///
+/// All buffers in the returned schema are statically allocated.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_cylinder_primitive_schema() -> FoxgloveSchema {
+    let native = foxglove::schemas::CylinderPrimitive::get_schema()
+        .expect("CylinderPrimitive schema is Some");
+    let name: &'static str = "foxglove.CylinderPrimitive";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("CylinderPrimitive schema data is static");
+    };
+    FoxgloveSchema {
+        name: name.into(),
+        encoding: encoding.into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
+/// Encode a CylinderPrimitive message as protobuf to the buffer provided.
+///
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+/// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+/// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+///
+/// # Safety
+/// ptr must be a valid pointer to a memory region at least len bytes long.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_cylinder_primitive_encode(
+    msg: Option<&CylinderPrimitive>,
+    ptr: *mut u8,
+    len: usize,
+    encoded_len: Option<&mut usize>,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { CylinderPrimitive::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            if len == 0 || ptr.is_null() {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = msg
+                        .encoded_len()
+                        .expect("foxglove schemas return Some(len)");
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
+            if let Err(encode_error) = msg.encode(&mut buf) {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
+            }
+            FoxgloveError::Ok
+        }
+        Err(e) => {
+            tracing::error!("CylinderPrimitive: {}", e);
+            FoxgloveError::EncodeError
+        }
+    }
+}
+
 /// A primitive representing a cube or rectangular prism
 #[repr(C)]
 pub struct CubePrimitive {
@@ -865,6 +1400,7 @@ pub struct CubePrimitive {
     pub color: *const Color,
 }
 
+#[cfg(not(target_family = "wasm"))]
 impl CubePrimitive {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -926,6 +1462,7 @@ impl BorrowToNative for CubePrimitive {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_cube_primitive.
+#[cfg(not(target_family = "wasm"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_cube_primitive(
     channel: Option<&FoxgloveChannel>,
@@ -944,6 +1481,80 @@ pub extern "C" fn foxglove_channel_log_cube_primitive(
         Err(e) => {
             tracing::error!("CubePrimitive: {}", e);
             e.into()
+        }
+    }
+}
+
+/// Get the CubePrimitive schema.
+///
+/// All buffers in the returned schema are statically allocated.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_cube_primitive_schema() -> FoxgloveSchema {
+    let native =
+        foxglove::schemas::CubePrimitive::get_schema().expect("CubePrimitive schema is Some");
+    let name: &'static str = "foxglove.CubePrimitive";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("CubePrimitive schema data is static");
+    };
+    FoxgloveSchema {
+        name: name.into(),
+        encoding: encoding.into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
+/// Encode a CubePrimitive message as protobuf to the buffer provided.
+///
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+/// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+/// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+///
+/// # Safety
+/// ptr must be a valid pointer to a memory region at least len bytes long.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_cube_primitive_encode(
+    msg: Option<&CubePrimitive>,
+    ptr: *mut u8,
+    len: usize,
+    encoded_len: Option<&mut usize>,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { CubePrimitive::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            if len == 0 || ptr.is_null() {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = msg
+                        .encoded_len()
+                        .expect("foxglove schemas return Some(len)");
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
+            if let Err(encode_error) = msg.encode(&mut buf) {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
+            }
+            FoxgloveError::Ok
+        }
+        Err(e) => {
+            tracing::error!("CubePrimitive: {}", e);
+            FoxgloveError::EncodeError
         }
     }
 }
@@ -967,6 +1578,7 @@ pub struct FrameTransform {
     pub rotation: *const Quaternion,
 }
 
+#[cfg(not(target_family = "wasm"))]
 impl FrameTransform {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -1038,6 +1650,7 @@ impl BorrowToNative for FrameTransform {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_frame_transform.
+#[cfg(not(target_family = "wasm"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_frame_transform(
     channel: Option<&FoxgloveChannel>,
@@ -1060,6 +1673,80 @@ pub extern "C" fn foxglove_channel_log_frame_transform(
     }
 }
 
+/// Get the FrameTransform schema.
+///
+/// All buffers in the returned schema are statically allocated.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_frame_transform_schema() -> FoxgloveSchema {
+    let native =
+        foxglove::schemas::FrameTransform::get_schema().expect("FrameTransform schema is Some");
+    let name: &'static str = "foxglove.FrameTransform";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("FrameTransform schema data is static");
+    };
+    FoxgloveSchema {
+        name: name.into(),
+        encoding: encoding.into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
+/// Encode a FrameTransform message as protobuf to the buffer provided.
+///
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+/// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+/// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+///
+/// # Safety
+/// ptr must be a valid pointer to a memory region at least len bytes long.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_frame_transform_encode(
+    msg: Option<&FrameTransform>,
+    ptr: *mut u8,
+    len: usize,
+    encoded_len: Option<&mut usize>,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { FrameTransform::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            if len == 0 || ptr.is_null() {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = msg
+                        .encoded_len()
+                        .expect("foxglove schemas return Some(len)");
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
+            if let Err(encode_error) = msg.encode(&mut buf) {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
+            }
+            FoxgloveError::Ok
+        }
+        Err(e) => {
+            tracing::error!("FrameTransform: {}", e);
+            FoxgloveError::EncodeError
+        }
+    }
+}
+
 /// An array of FrameTransform messages
 #[repr(C)]
 pub struct FrameTransforms {
@@ -1068,6 +1755,7 @@ pub struct FrameTransforms {
     pub transforms_count: usize,
 }
 
+#[cfg(not(target_family = "wasm"))]
 impl FrameTransforms {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -1110,6 +1798,7 @@ impl BorrowToNative for FrameTransforms {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_frame_transforms.
+#[cfg(not(target_family = "wasm"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_frame_transforms(
     channel: Option<&FoxgloveChannel>,
@@ -1132,6 +1821,80 @@ pub extern "C" fn foxglove_channel_log_frame_transforms(
     }
 }
 
+/// Get the FrameTransforms schema.
+///
+/// All buffers in the returned schema are statically allocated.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_frame_transforms_schema() -> FoxgloveSchema {
+    let native =
+        foxglove::schemas::FrameTransforms::get_schema().expect("FrameTransforms schema is Some");
+    let name: &'static str = "foxglove.FrameTransforms";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("FrameTransforms schema data is static");
+    };
+    FoxgloveSchema {
+        name: name.into(),
+        encoding: encoding.into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
+/// Encode a FrameTransforms message as protobuf to the buffer provided.
+///
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+/// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+/// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+///
+/// # Safety
+/// ptr must be a valid pointer to a memory region at least len bytes long.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_frame_transforms_encode(
+    msg: Option<&FrameTransforms>,
+    ptr: *mut u8,
+    len: usize,
+    encoded_len: Option<&mut usize>,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { FrameTransforms::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            if len == 0 || ptr.is_null() {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = msg
+                        .encoded_len()
+                        .expect("foxglove schemas return Some(len)");
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
+            if let Err(encode_error) = msg.encode(&mut buf) {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
+            }
+            FoxgloveError::Ok
+        }
+        Err(e) => {
+            tracing::error!("FrameTransforms: {}", e);
+            FoxgloveError::EncodeError
+        }
+    }
+}
+
 /// GeoJSON data for annotating maps
 #[repr(C)]
 pub struct GeoJson {
@@ -1139,6 +1902,7 @@ pub struct GeoJson {
     pub geojson: FoxgloveString,
 }
 
+#[cfg(not(target_family = "wasm"))]
 impl GeoJson {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -1186,6 +1950,7 @@ impl BorrowToNative for GeoJson {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_geo_json.
+#[cfg(not(target_family = "wasm"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_geo_json(
     channel: Option<&FoxgloveChannel>,
@@ -1204,6 +1969,79 @@ pub extern "C" fn foxglove_channel_log_geo_json(
         Err(e) => {
             tracing::error!("GeoJson: {}", e);
             e.into()
+        }
+    }
+}
+
+/// Get the GeoJson schema.
+///
+/// All buffers in the returned schema are statically allocated.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_geo_json_schema() -> FoxgloveSchema {
+    let native = foxglove::schemas::GeoJson::get_schema().expect("GeoJson schema is Some");
+    let name: &'static str = "foxglove.GeoJSON";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("GeoJson schema data is static");
+    };
+    FoxgloveSchema {
+        name: name.into(),
+        encoding: encoding.into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
+/// Encode a GeoJson message as protobuf to the buffer provided.
+///
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+/// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+/// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+///
+/// # Safety
+/// ptr must be a valid pointer to a memory region at least len bytes long.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_geo_json_encode(
+    msg: Option<&GeoJson>,
+    ptr: *mut u8,
+    len: usize,
+    encoded_len: Option<&mut usize>,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { GeoJson::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            if len == 0 || ptr.is_null() {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = msg
+                        .encoded_len()
+                        .expect("foxglove schemas return Some(len)");
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
+            if let Err(encode_error) = msg.encode(&mut buf) {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
+            }
+            FoxgloveError::Ok
+        }
+        Err(e) => {
+            tracing::error!("GeoJson: {}", e);
+            FoxgloveError::EncodeError
         }
     }
 }
@@ -1244,6 +2082,7 @@ pub struct Grid {
     pub data_len: usize,
 }
 
+#[cfg(not(target_family = "wasm"))]
 impl Grid {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -1312,6 +2151,7 @@ impl BorrowToNative for Grid {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_grid.
+#[cfg(not(target_family = "wasm"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_grid(
     channel: Option<&FoxgloveChannel>,
@@ -1330,6 +2170,79 @@ pub extern "C" fn foxglove_channel_log_grid(
         Err(e) => {
             tracing::error!("Grid: {}", e);
             e.into()
+        }
+    }
+}
+
+/// Get the Grid schema.
+///
+/// All buffers in the returned schema are statically allocated.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_grid_schema() -> FoxgloveSchema {
+    let native = foxglove::schemas::Grid::get_schema().expect("Grid schema is Some");
+    let name: &'static str = "foxglove.Grid";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("Grid schema data is static");
+    };
+    FoxgloveSchema {
+        name: name.into(),
+        encoding: encoding.into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
+/// Encode a Grid message as protobuf to the buffer provided.
+///
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+/// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+/// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+///
+/// # Safety
+/// ptr must be a valid pointer to a memory region at least len bytes long.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_grid_encode(
+    msg: Option<&Grid>,
+    ptr: *mut u8,
+    len: usize,
+    encoded_len: Option<&mut usize>,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { Grid::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            if len == 0 || ptr.is_null() {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = msg
+                        .encoded_len()
+                        .expect("foxglove schemas return Some(len)");
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
+            if let Err(encode_error) = msg.encode(&mut buf) {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
+            }
+            FoxgloveError::Ok
+        }
+        Err(e) => {
+            tracing::error!("Grid: {}", e);
+            FoxgloveError::EncodeError
         }
     }
 }
@@ -1377,6 +2290,7 @@ pub struct VoxelGrid {
     pub data_len: usize,
 }
 
+#[cfg(not(target_family = "wasm"))]
 impl VoxelGrid {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -1447,6 +2361,7 @@ impl BorrowToNative for VoxelGrid {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_voxel_grid.
+#[cfg(not(target_family = "wasm"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_voxel_grid(
     channel: Option<&FoxgloveChannel>,
@@ -1469,6 +2384,79 @@ pub extern "C" fn foxglove_channel_log_voxel_grid(
     }
 }
 
+/// Get the VoxelGrid schema.
+///
+/// All buffers in the returned schema are statically allocated.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_voxel_grid_schema() -> FoxgloveSchema {
+    let native = foxglove::schemas::VoxelGrid::get_schema().expect("VoxelGrid schema is Some");
+    let name: &'static str = "foxglove.VoxelGrid";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("VoxelGrid schema data is static");
+    };
+    FoxgloveSchema {
+        name: name.into(),
+        encoding: encoding.into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
+/// Encode a VoxelGrid message as protobuf to the buffer provided.
+///
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+/// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+/// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+///
+/// # Safety
+/// ptr must be a valid pointer to a memory region at least len bytes long.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_voxel_grid_encode(
+    msg: Option<&VoxelGrid>,
+    ptr: *mut u8,
+    len: usize,
+    encoded_len: Option<&mut usize>,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { VoxelGrid::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            if len == 0 || ptr.is_null() {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = msg
+                        .encoded_len()
+                        .expect("foxglove schemas return Some(len)");
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
+            if let Err(encode_error) = msg.encode(&mut buf) {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
+            }
+            FoxgloveError::Ok
+        }
+        Err(e) => {
+            tracing::error!("VoxelGrid: {}", e);
+            FoxgloveError::EncodeError
+        }
+    }
+}
+
 /// Array of annotations for a 2D image
 #[repr(C)]
 pub struct ImageAnnotations {
@@ -1485,6 +2473,7 @@ pub struct ImageAnnotations {
     pub texts_count: usize,
 }
 
+#[cfg(not(target_family = "wasm"))]
 impl ImageAnnotations {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -1531,6 +2520,7 @@ impl BorrowToNative for ImageAnnotations {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_image_annotations.
+#[cfg(not(target_family = "wasm"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_image_annotations(
     channel: Option<&FoxgloveChannel>,
@@ -1553,6 +2543,80 @@ pub extern "C" fn foxglove_channel_log_image_annotations(
     }
 }
 
+/// Get the ImageAnnotations schema.
+///
+/// All buffers in the returned schema are statically allocated.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_image_annotations_schema() -> FoxgloveSchema {
+    let native =
+        foxglove::schemas::ImageAnnotations::get_schema().expect("ImageAnnotations schema is Some");
+    let name: &'static str = "foxglove.ImageAnnotations";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("ImageAnnotations schema data is static");
+    };
+    FoxgloveSchema {
+        name: name.into(),
+        encoding: encoding.into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
+/// Encode a ImageAnnotations message as protobuf to the buffer provided.
+///
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+/// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+/// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+///
+/// # Safety
+/// ptr must be a valid pointer to a memory region at least len bytes long.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_image_annotations_encode(
+    msg: Option<&ImageAnnotations>,
+    ptr: *mut u8,
+    len: usize,
+    encoded_len: Option<&mut usize>,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { ImageAnnotations::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            if len == 0 || ptr.is_null() {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = msg
+                        .encoded_len()
+                        .expect("foxglove schemas return Some(len)");
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
+            if let Err(encode_error) = msg.encode(&mut buf) {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
+            }
+            FoxgloveError::Ok
+        }
+        Err(e) => {
+            tracing::error!("ImageAnnotations: {}", e);
+            FoxgloveError::EncodeError
+        }
+    }
+}
+
 /// A key with its associated value
 #[repr(C)]
 pub struct KeyValuePair {
@@ -1563,6 +2627,7 @@ pub struct KeyValuePair {
     pub value: FoxgloveString,
 }
 
+#[cfg(not(target_family = "wasm"))]
 impl KeyValuePair {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -1608,6 +2673,7 @@ impl BorrowToNative for KeyValuePair {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_key_value_pair.
+#[cfg(not(target_family = "wasm"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_key_value_pair(
     channel: Option<&FoxgloveChannel>,
@@ -1626,6 +2692,80 @@ pub extern "C" fn foxglove_channel_log_key_value_pair(
         Err(e) => {
             tracing::error!("KeyValuePair: {}", e);
             e.into()
+        }
+    }
+}
+
+/// Get the KeyValuePair schema.
+///
+/// All buffers in the returned schema are statically allocated.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_key_value_pair_schema() -> FoxgloveSchema {
+    let native =
+        foxglove::schemas::KeyValuePair::get_schema().expect("KeyValuePair schema is Some");
+    let name: &'static str = "foxglove.KeyValuePair";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("KeyValuePair schema data is static");
+    };
+    FoxgloveSchema {
+        name: name.into(),
+        encoding: encoding.into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
+/// Encode a KeyValuePair message as protobuf to the buffer provided.
+///
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+/// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+/// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+///
+/// # Safety
+/// ptr must be a valid pointer to a memory region at least len bytes long.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_key_value_pair_encode(
+    msg: Option<&KeyValuePair>,
+    ptr: *mut u8,
+    len: usize,
+    encoded_len: Option<&mut usize>,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { KeyValuePair::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            if len == 0 || ptr.is_null() {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = msg
+                        .encoded_len()
+                        .expect("foxglove schemas return Some(len)");
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
+            if let Err(encode_error) = msg.encode(&mut buf) {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
+            }
+            FoxgloveError::Ok
+        }
+        Err(e) => {
+            tracing::error!("KeyValuePair: {}", e);
+            FoxgloveError::EncodeError
         }
     }
 }
@@ -1657,6 +2797,7 @@ pub struct LaserScan {
     pub intensities_count: usize,
 }
 
+#[cfg(not(target_family = "wasm"))]
 impl LaserScan {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -1720,6 +2861,7 @@ impl BorrowToNative for LaserScan {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_laser_scan.
+#[cfg(not(target_family = "wasm"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_laser_scan(
     channel: Option<&FoxgloveChannel>,
@@ -1738,6 +2880,79 @@ pub extern "C" fn foxglove_channel_log_laser_scan(
         Err(e) => {
             tracing::error!("LaserScan: {}", e);
             e.into()
+        }
+    }
+}
+
+/// Get the LaserScan schema.
+///
+/// All buffers in the returned schema are statically allocated.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_laser_scan_schema() -> FoxgloveSchema {
+    let native = foxglove::schemas::LaserScan::get_schema().expect("LaserScan schema is Some");
+    let name: &'static str = "foxglove.LaserScan";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("LaserScan schema data is static");
+    };
+    FoxgloveSchema {
+        name: name.into(),
+        encoding: encoding.into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
+/// Encode a LaserScan message as protobuf to the buffer provided.
+///
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+/// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+/// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+///
+/// # Safety
+/// ptr must be a valid pointer to a memory region at least len bytes long.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_laser_scan_encode(
+    msg: Option<&LaserScan>,
+    ptr: *mut u8,
+    len: usize,
+    encoded_len: Option<&mut usize>,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { LaserScan::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            if len == 0 || ptr.is_null() {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = msg
+                        .encoded_len()
+                        .expect("foxglove schemas return Some(len)");
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
+            if let Err(encode_error) = msg.encode(&mut buf) {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
+            }
+            FoxgloveError::Ok
+        }
+        Err(e) => {
+            tracing::error!("LaserScan: {}", e);
+            FoxgloveError::EncodeError
         }
     }
 }
@@ -1775,6 +2990,7 @@ pub struct LinePrimitive {
     pub indices_count: usize,
 }
 
+#[cfg(not(target_family = "wasm"))]
 impl LinePrimitive {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -1839,6 +3055,7 @@ impl BorrowToNative for LinePrimitive {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_line_primitive.
+#[cfg(not(target_family = "wasm"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_line_primitive(
     channel: Option<&FoxgloveChannel>,
@@ -1857,6 +3074,80 @@ pub extern "C" fn foxglove_channel_log_line_primitive(
         Err(e) => {
             tracing::error!("LinePrimitive: {}", e);
             e.into()
+        }
+    }
+}
+
+/// Get the LinePrimitive schema.
+///
+/// All buffers in the returned schema are statically allocated.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_line_primitive_schema() -> FoxgloveSchema {
+    let native =
+        foxglove::schemas::LinePrimitive::get_schema().expect("LinePrimitive schema is Some");
+    let name: &'static str = "foxglove.LinePrimitive";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("LinePrimitive schema data is static");
+    };
+    FoxgloveSchema {
+        name: name.into(),
+        encoding: encoding.into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
+/// Encode a LinePrimitive message as protobuf to the buffer provided.
+///
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+/// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+/// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+///
+/// # Safety
+/// ptr must be a valid pointer to a memory region at least len bytes long.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_line_primitive_encode(
+    msg: Option<&LinePrimitive>,
+    ptr: *mut u8,
+    len: usize,
+    encoded_len: Option<&mut usize>,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { LinePrimitive::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            if len == 0 || ptr.is_null() {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = msg
+                        .encoded_len()
+                        .expect("foxglove schemas return Some(len)");
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
+            if let Err(encode_error) = msg.encode(&mut buf) {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
+            }
+            FoxgloveError::Ok
+        }
+        Err(e) => {
+            tracing::error!("LinePrimitive: {}", e);
+            FoxgloveError::EncodeError
         }
     }
 }
@@ -1889,6 +3180,7 @@ pub struct LocationFix {
     pub color: *const Color,
 }
 
+#[cfg(not(target_family = "wasm"))]
 impl LocationFix {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -1955,6 +3247,7 @@ impl BorrowToNative for LocationFix {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_location_fix.
+#[cfg(not(target_family = "wasm"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_location_fix(
     channel: Option<&FoxgloveChannel>,
@@ -1977,6 +3270,79 @@ pub extern "C" fn foxglove_channel_log_location_fix(
     }
 }
 
+/// Get the LocationFix schema.
+///
+/// All buffers in the returned schema are statically allocated.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_location_fix_schema() -> FoxgloveSchema {
+    let native = foxglove::schemas::LocationFix::get_schema().expect("LocationFix schema is Some");
+    let name: &'static str = "foxglove.LocationFix";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("LocationFix schema data is static");
+    };
+    FoxgloveSchema {
+        name: name.into(),
+        encoding: encoding.into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
+/// Encode a LocationFix message as protobuf to the buffer provided.
+///
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+/// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+/// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+///
+/// # Safety
+/// ptr must be a valid pointer to a memory region at least len bytes long.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_location_fix_encode(
+    msg: Option<&LocationFix>,
+    ptr: *mut u8,
+    len: usize,
+    encoded_len: Option<&mut usize>,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { LocationFix::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            if len == 0 || ptr.is_null() {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = msg
+                        .encoded_len()
+                        .expect("foxglove schemas return Some(len)");
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
+            if let Err(encode_error) = msg.encode(&mut buf) {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
+            }
+            FoxgloveError::Ok
+        }
+        Err(e) => {
+            tracing::error!("LocationFix: {}", e);
+            FoxgloveError::EncodeError
+        }
+    }
+}
+
 /// A group of LocationFix messages
 #[repr(C)]
 pub struct LocationFixes {
@@ -1985,6 +3351,7 @@ pub struct LocationFixes {
     pub fixes_count: usize,
 }
 
+#[cfg(not(target_family = "wasm"))]
 impl LocationFixes {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -2027,6 +3394,7 @@ impl BorrowToNative for LocationFixes {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_location_fixes.
+#[cfg(not(target_family = "wasm"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_location_fixes(
     channel: Option<&FoxgloveChannel>,
@@ -2045,6 +3413,80 @@ pub extern "C" fn foxglove_channel_log_location_fixes(
         Err(e) => {
             tracing::error!("LocationFixes: {}", e);
             e.into()
+        }
+    }
+}
+
+/// Get the LocationFixes schema.
+///
+/// All buffers in the returned schema are statically allocated.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_location_fixes_schema() -> FoxgloveSchema {
+    let native =
+        foxglove::schemas::LocationFixes::get_schema().expect("LocationFixes schema is Some");
+    let name: &'static str = "foxglove.LocationFixes";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("LocationFixes schema data is static");
+    };
+    FoxgloveSchema {
+        name: name.into(),
+        encoding: encoding.into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
+/// Encode a LocationFixes message as protobuf to the buffer provided.
+///
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+/// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+/// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+///
+/// # Safety
+/// ptr must be a valid pointer to a memory region at least len bytes long.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_location_fixes_encode(
+    msg: Option<&LocationFixes>,
+    ptr: *mut u8,
+    len: usize,
+    encoded_len: Option<&mut usize>,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { LocationFixes::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            if len == 0 || ptr.is_null() {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = msg
+                        .encoded_len()
+                        .expect("foxglove schemas return Some(len)");
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
+            if let Err(encode_error) = msg.encode(&mut buf) {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
+            }
+            FoxgloveError::Ok
+        }
+        Err(e) => {
+            tracing::error!("LocationFixes: {}", e);
+            FoxgloveError::EncodeError
         }
     }
 }
@@ -2071,6 +3513,7 @@ pub struct Log {
     pub line: u32,
 }
 
+#[cfg(not(target_family = "wasm"))]
 impl Log {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -2127,6 +3570,7 @@ impl BorrowToNative for Log {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_log.
+#[cfg(not(target_family = "wasm"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_log(
     channel: Option<&FoxgloveChannel>,
@@ -2149,6 +3593,79 @@ pub extern "C" fn foxglove_channel_log_log(
     }
 }
 
+/// Get the Log schema.
+///
+/// All buffers in the returned schema are statically allocated.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_log_schema() -> FoxgloveSchema {
+    let native = foxglove::schemas::Log::get_schema().expect("Log schema is Some");
+    let name: &'static str = "foxglove.Log";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("Log schema data is static");
+    };
+    FoxgloveSchema {
+        name: name.into(),
+        encoding: encoding.into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
+/// Encode a Log message as protobuf to the buffer provided.
+///
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+/// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+/// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+///
+/// # Safety
+/// ptr must be a valid pointer to a memory region at least len bytes long.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_log_encode(
+    msg: Option<&Log>,
+    ptr: *mut u8,
+    len: usize,
+    encoded_len: Option<&mut usize>,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { Log::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            if len == 0 || ptr.is_null() {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = msg
+                        .encoded_len()
+                        .expect("foxglove schemas return Some(len)");
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
+            if let Err(encode_error) = msg.encode(&mut buf) {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
+            }
+            FoxgloveError::Ok
+        }
+        Err(e) => {
+            tracing::error!("Log: {}", e);
+            FoxgloveError::EncodeError
+        }
+    }
+}
+
 /// Command to remove previously published entities
 #[repr(C)]
 pub struct SceneEntityDeletion {
@@ -2162,6 +3679,7 @@ pub struct SceneEntityDeletion {
     pub id: FoxgloveString,
 }
 
+#[cfg(not(target_family = "wasm"))]
 impl SceneEntityDeletion {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -2207,6 +3725,7 @@ impl BorrowToNative for SceneEntityDeletion {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_scene_entity_deletion.
+#[cfg(not(target_family = "wasm"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_scene_entity_deletion(
     channel: Option<&FoxgloveChannel>,
@@ -2225,6 +3744,80 @@ pub extern "C" fn foxglove_channel_log_scene_entity_deletion(
         Err(e) => {
             tracing::error!("SceneEntityDeletion: {}", e);
             e.into()
+        }
+    }
+}
+
+/// Get the SceneEntityDeletion schema.
+///
+/// All buffers in the returned schema are statically allocated.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_scene_entity_deletion_schema() -> FoxgloveSchema {
+    let native = foxglove::schemas::SceneEntityDeletion::get_schema()
+        .expect("SceneEntityDeletion schema is Some");
+    let name: &'static str = "foxglove.SceneEntityDeletion";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("SceneEntityDeletion schema data is static");
+    };
+    FoxgloveSchema {
+        name: name.into(),
+        encoding: encoding.into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
+/// Encode a SceneEntityDeletion message as protobuf to the buffer provided.
+///
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+/// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+/// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+///
+/// # Safety
+/// ptr must be a valid pointer to a memory region at least len bytes long.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_scene_entity_deletion_encode(
+    msg: Option<&SceneEntityDeletion>,
+    ptr: *mut u8,
+    len: usize,
+    encoded_len: Option<&mut usize>,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { SceneEntityDeletion::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            if len == 0 || ptr.is_null() {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = msg
+                        .encoded_len()
+                        .expect("foxglove schemas return Some(len)");
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
+            if let Err(encode_error) = msg.encode(&mut buf) {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
+            }
+            FoxgloveError::Ok
+        }
+        Err(e) => {
+            tracing::error!("SceneEntityDeletion: {}", e);
+            FoxgloveError::EncodeError
         }
     }
 }
@@ -2284,6 +3877,7 @@ pub struct SceneEntity {
     pub models_count: usize,
 }
 
+#[cfg(not(target_family = "wasm"))]
 impl SceneEntity {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -2355,6 +3949,7 @@ impl BorrowToNative for SceneEntity {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_scene_entity.
+#[cfg(not(target_family = "wasm"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_scene_entity(
     channel: Option<&FoxgloveChannel>,
@@ -2377,6 +3972,79 @@ pub extern "C" fn foxglove_channel_log_scene_entity(
     }
 }
 
+/// Get the SceneEntity schema.
+///
+/// All buffers in the returned schema are statically allocated.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_scene_entity_schema() -> FoxgloveSchema {
+    let native = foxglove::schemas::SceneEntity::get_schema().expect("SceneEntity schema is Some");
+    let name: &'static str = "foxglove.SceneEntity";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("SceneEntity schema data is static");
+    };
+    FoxgloveSchema {
+        name: name.into(),
+        encoding: encoding.into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
+/// Encode a SceneEntity message as protobuf to the buffer provided.
+///
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+/// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+/// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+///
+/// # Safety
+/// ptr must be a valid pointer to a memory region at least len bytes long.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_scene_entity_encode(
+    msg: Option<&SceneEntity>,
+    ptr: *mut u8,
+    len: usize,
+    encoded_len: Option<&mut usize>,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { SceneEntity::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            if len == 0 || ptr.is_null() {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = msg
+                        .encoded_len()
+                        .expect("foxglove schemas return Some(len)");
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
+            if let Err(encode_error) = msg.encode(&mut buf) {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
+            }
+            FoxgloveError::Ok
+        }
+        Err(e) => {
+            tracing::error!("SceneEntity: {}", e);
+            FoxgloveError::EncodeError
+        }
+    }
+}
+
 /// An update to the entities displayed in a 3D scene
 #[repr(C)]
 pub struct SceneUpdate {
@@ -2389,6 +4057,7 @@ pub struct SceneUpdate {
     pub entities_count: usize,
 }
 
+#[cfg(not(target_family = "wasm"))]
 impl SceneUpdate {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -2433,6 +4102,7 @@ impl BorrowToNative for SceneUpdate {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_scene_update.
+#[cfg(not(target_family = "wasm"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_scene_update(
     channel: Option<&FoxgloveChannel>,
@@ -2451,6 +4121,79 @@ pub extern "C" fn foxglove_channel_log_scene_update(
         Err(e) => {
             tracing::error!("SceneUpdate: {}", e);
             e.into()
+        }
+    }
+}
+
+/// Get the SceneUpdate schema.
+///
+/// All buffers in the returned schema are statically allocated.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_scene_update_schema() -> FoxgloveSchema {
+    let native = foxglove::schemas::SceneUpdate::get_schema().expect("SceneUpdate schema is Some");
+    let name: &'static str = "foxglove.SceneUpdate";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("SceneUpdate schema data is static");
+    };
+    FoxgloveSchema {
+        name: name.into(),
+        encoding: encoding.into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
+/// Encode a SceneUpdate message as protobuf to the buffer provided.
+///
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+/// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+/// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+///
+/// # Safety
+/// ptr must be a valid pointer to a memory region at least len bytes long.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_scene_update_encode(
+    msg: Option<&SceneUpdate>,
+    ptr: *mut u8,
+    len: usize,
+    encoded_len: Option<&mut usize>,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { SceneUpdate::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            if len == 0 || ptr.is_null() {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = msg
+                        .encoded_len()
+                        .expect("foxglove schemas return Some(len)");
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
+            if let Err(encode_error) = msg.encode(&mut buf) {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
+            }
+            FoxgloveError::Ok
+        }
+        Err(e) => {
+            tracing::error!("SceneUpdate: {}", e);
+            FoxgloveError::EncodeError
         }
     }
 }
@@ -2481,6 +4224,7 @@ pub struct ModelPrimitive {
     pub data_len: usize,
 }
 
+#[cfg(not(target_family = "wasm"))]
 impl ModelPrimitive {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -2554,6 +4298,7 @@ impl BorrowToNative for ModelPrimitive {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_model_primitive.
+#[cfg(not(target_family = "wasm"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_model_primitive(
     channel: Option<&FoxgloveChannel>,
@@ -2576,6 +4321,80 @@ pub extern "C" fn foxglove_channel_log_model_primitive(
     }
 }
 
+/// Get the ModelPrimitive schema.
+///
+/// All buffers in the returned schema are statically allocated.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_model_primitive_schema() -> FoxgloveSchema {
+    let native =
+        foxglove::schemas::ModelPrimitive::get_schema().expect("ModelPrimitive schema is Some");
+    let name: &'static str = "foxglove.ModelPrimitive";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("ModelPrimitive schema data is static");
+    };
+    FoxgloveSchema {
+        name: name.into(),
+        encoding: encoding.into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
+/// Encode a ModelPrimitive message as protobuf to the buffer provided.
+///
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+/// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+/// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+///
+/// # Safety
+/// ptr must be a valid pointer to a memory region at least len bytes long.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_model_primitive_encode(
+    msg: Option<&ModelPrimitive>,
+    ptr: *mut u8,
+    len: usize,
+    encoded_len: Option<&mut usize>,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { ModelPrimitive::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            if len == 0 || ptr.is_null() {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = msg
+                        .encoded_len()
+                        .expect("foxglove schemas return Some(len)");
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
+            if let Err(encode_error) = msg.encode(&mut buf) {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
+            }
+            FoxgloveError::Ok
+        }
+        Err(e) => {
+            tracing::error!("ModelPrimitive: {}", e);
+            FoxgloveError::EncodeError
+        }
+    }
+}
+
 /// A field present within each element in a byte array of packed elements.
 #[repr(C)]
 pub struct PackedElementField {
@@ -2589,6 +4408,7 @@ pub struct PackedElementField {
     pub r#type: FoxgloveNumericType,
 }
 
+#[cfg(not(target_family = "wasm"))]
 impl PackedElementField {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -2634,6 +4454,7 @@ impl BorrowToNative for PackedElementField {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_packed_element_field.
+#[cfg(not(target_family = "wasm"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_packed_element_field(
     channel: Option<&FoxgloveChannel>,
@@ -2656,6 +4477,80 @@ pub extern "C" fn foxglove_channel_log_packed_element_field(
     }
 }
 
+/// Get the PackedElementField schema.
+///
+/// All buffers in the returned schema are statically allocated.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_packed_element_field_schema() -> FoxgloveSchema {
+    let native = foxglove::schemas::PackedElementField::get_schema()
+        .expect("PackedElementField schema is Some");
+    let name: &'static str = "foxglove.PackedElementField";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("PackedElementField schema data is static");
+    };
+    FoxgloveSchema {
+        name: name.into(),
+        encoding: encoding.into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
+/// Encode a PackedElementField message as protobuf to the buffer provided.
+///
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+/// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+/// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+///
+/// # Safety
+/// ptr must be a valid pointer to a memory region at least len bytes long.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_packed_element_field_encode(
+    msg: Option<&PackedElementField>,
+    ptr: *mut u8,
+    len: usize,
+    encoded_len: Option<&mut usize>,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { PackedElementField::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            if len == 0 || ptr.is_null() {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = msg
+                        .encoded_len()
+                        .expect("foxglove schemas return Some(len)");
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
+            if let Err(encode_error) = msg.encode(&mut buf) {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
+            }
+            FoxgloveError::Ok
+        }
+        Err(e) => {
+            tracing::error!("PackedElementField: {}", e);
+            FoxgloveError::EncodeError
+        }
+    }
+}
+
 /// A point representing a position in 2D space
 #[repr(C)]
 pub struct Point2 {
@@ -2666,6 +4561,7 @@ pub struct Point2 {
     pub y: f64,
 }
 
+#[cfg(not(target_family = "wasm"))]
 impl Point2 {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -2706,6 +4602,7 @@ impl BorrowToNative for Point2 {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_point2.
+#[cfg(not(target_family = "wasm"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_point2(
     channel: Option<&FoxgloveChannel>,
@@ -2728,6 +4625,79 @@ pub extern "C" fn foxglove_channel_log_point2(
     }
 }
 
+/// Get the Point2 schema.
+///
+/// All buffers in the returned schema are statically allocated.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_point2_schema() -> FoxgloveSchema {
+    let native = foxglove::schemas::Point2::get_schema().expect("Point2 schema is Some");
+    let name: &'static str = "foxglove.Point2";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("Point2 schema data is static");
+    };
+    FoxgloveSchema {
+        name: name.into(),
+        encoding: encoding.into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
+/// Encode a Point2 message as protobuf to the buffer provided.
+///
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+/// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+/// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+///
+/// # Safety
+/// ptr must be a valid pointer to a memory region at least len bytes long.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_point2_encode(
+    msg: Option<&Point2>,
+    ptr: *mut u8,
+    len: usize,
+    encoded_len: Option<&mut usize>,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { Point2::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            if len == 0 || ptr.is_null() {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = msg
+                        .encoded_len()
+                        .expect("foxglove schemas return Some(len)");
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
+            if let Err(encode_error) = msg.encode(&mut buf) {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
+            }
+            FoxgloveError::Ok
+        }
+        Err(e) => {
+            tracing::error!("Point2: {}", e);
+            FoxgloveError::EncodeError
+        }
+    }
+}
+
 /// A point representing a position in 3D space
 #[repr(C)]
 pub struct Point3 {
@@ -2741,6 +4711,7 @@ pub struct Point3 {
     pub z: f64,
 }
 
+#[cfg(not(target_family = "wasm"))]
 impl Point3 {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -2782,6 +4753,7 @@ impl BorrowToNative for Point3 {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_point3.
+#[cfg(not(target_family = "wasm"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_point3(
     channel: Option<&FoxgloveChannel>,
@@ -2800,6 +4772,79 @@ pub extern "C" fn foxglove_channel_log_point3(
         Err(e) => {
             tracing::error!("Point3: {}", e);
             e.into()
+        }
+    }
+}
+
+/// Get the Point3 schema.
+///
+/// All buffers in the returned schema are statically allocated.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_point3_schema() -> FoxgloveSchema {
+    let native = foxglove::schemas::Point3::get_schema().expect("Point3 schema is Some");
+    let name: &'static str = "foxglove.Point3";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("Point3 schema data is static");
+    };
+    FoxgloveSchema {
+        name: name.into(),
+        encoding: encoding.into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
+/// Encode a Point3 message as protobuf to the buffer provided.
+///
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+/// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+/// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+///
+/// # Safety
+/// ptr must be a valid pointer to a memory region at least len bytes long.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_point3_encode(
+    msg: Option<&Point3>,
+    ptr: *mut u8,
+    len: usize,
+    encoded_len: Option<&mut usize>,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { Point3::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            if len == 0 || ptr.is_null() {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = msg
+                        .encoded_len()
+                        .expect("foxglove schemas return Some(len)");
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
+            if let Err(encode_error) = msg.encode(&mut buf) {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
+            }
+            FoxgloveError::Ok
+        }
+        Err(e) => {
+            tracing::error!("Point3: {}", e);
+            FoxgloveError::EncodeError
         }
     }
 }
@@ -2828,6 +4873,7 @@ pub struct PointCloud {
     pub data_len: usize,
 }
 
+#[cfg(not(target_family = "wasm"))]
 impl PointCloud {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -2888,6 +4934,7 @@ impl BorrowToNative for PointCloud {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_point_cloud.
+#[cfg(not(target_family = "wasm"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_point_cloud(
     channel: Option<&FoxgloveChannel>,
@@ -2906,6 +4953,79 @@ pub extern "C" fn foxglove_channel_log_point_cloud(
         Err(e) => {
             tracing::error!("PointCloud: {}", e);
             e.into()
+        }
+    }
+}
+
+/// Get the PointCloud schema.
+///
+/// All buffers in the returned schema are statically allocated.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_point_cloud_schema() -> FoxgloveSchema {
+    let native = foxglove::schemas::PointCloud::get_schema().expect("PointCloud schema is Some");
+    let name: &'static str = "foxglove.PointCloud";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("PointCloud schema data is static");
+    };
+    FoxgloveSchema {
+        name: name.into(),
+        encoding: encoding.into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
+/// Encode a PointCloud message as protobuf to the buffer provided.
+///
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+/// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+/// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+///
+/// # Safety
+/// ptr must be a valid pointer to a memory region at least len bytes long.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_point_cloud_encode(
+    msg: Option<&PointCloud>,
+    ptr: *mut u8,
+    len: usize,
+    encoded_len: Option<&mut usize>,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { PointCloud::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            if len == 0 || ptr.is_null() {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = msg
+                        .encoded_len()
+                        .expect("foxglove schemas return Some(len)");
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
+            if let Err(encode_error) = msg.encode(&mut buf) {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
+            }
+            FoxgloveError::Ok
+        }
+        Err(e) => {
+            tracing::error!("PointCloud: {}", e);
+            FoxgloveError::EncodeError
         }
     }
 }
@@ -2938,6 +5058,7 @@ pub struct PointsAnnotation {
     pub thickness: f64,
 }
 
+#[cfg(not(target_family = "wasm"))]
 impl PointsAnnotation {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -3003,6 +5124,7 @@ impl BorrowToNative for PointsAnnotation {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_points_annotation.
+#[cfg(not(target_family = "wasm"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_points_annotation(
     channel: Option<&FoxgloveChannel>,
@@ -3025,6 +5147,80 @@ pub extern "C" fn foxglove_channel_log_points_annotation(
     }
 }
 
+/// Get the PointsAnnotation schema.
+///
+/// All buffers in the returned schema are statically allocated.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_points_annotation_schema() -> FoxgloveSchema {
+    let native =
+        foxglove::schemas::PointsAnnotation::get_schema().expect("PointsAnnotation schema is Some");
+    let name: &'static str = "foxglove.PointsAnnotation";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("PointsAnnotation schema data is static");
+    };
+    FoxgloveSchema {
+        name: name.into(),
+        encoding: encoding.into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
+/// Encode a PointsAnnotation message as protobuf to the buffer provided.
+///
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+/// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+/// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+///
+/// # Safety
+/// ptr must be a valid pointer to a memory region at least len bytes long.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_points_annotation_encode(
+    msg: Option<&PointsAnnotation>,
+    ptr: *mut u8,
+    len: usize,
+    encoded_len: Option<&mut usize>,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { PointsAnnotation::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            if len == 0 || ptr.is_null() {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = msg
+                        .encoded_len()
+                        .expect("foxglove schemas return Some(len)");
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
+            if let Err(encode_error) = msg.encode(&mut buf) {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
+            }
+            FoxgloveError::Ok
+        }
+        Err(e) => {
+            tracing::error!("PointsAnnotation: {}", e);
+            FoxgloveError::EncodeError
+        }
+    }
+}
+
 /// A position and orientation for an object or reference frame in 3D space
 #[repr(C)]
 pub struct Pose {
@@ -3035,6 +5231,7 @@ pub struct Pose {
     pub orientation: *const Quaternion,
 }
 
+#[cfg(not(target_family = "wasm"))]
 impl Pose {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -3088,6 +5285,7 @@ impl BorrowToNative for Pose {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_pose.
+#[cfg(not(target_family = "wasm"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_pose(
     channel: Option<&FoxgloveChannel>,
@@ -3110,6 +5308,79 @@ pub extern "C" fn foxglove_channel_log_pose(
     }
 }
 
+/// Get the Pose schema.
+///
+/// All buffers in the returned schema are statically allocated.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_pose_schema() -> FoxgloveSchema {
+    let native = foxglove::schemas::Pose::get_schema().expect("Pose schema is Some");
+    let name: &'static str = "foxglove.Pose";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("Pose schema data is static");
+    };
+    FoxgloveSchema {
+        name: name.into(),
+        encoding: encoding.into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
+/// Encode a Pose message as protobuf to the buffer provided.
+///
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+/// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+/// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+///
+/// # Safety
+/// ptr must be a valid pointer to a memory region at least len bytes long.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_pose_encode(
+    msg: Option<&Pose>,
+    ptr: *mut u8,
+    len: usize,
+    encoded_len: Option<&mut usize>,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { Pose::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            if len == 0 || ptr.is_null() {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = msg
+                        .encoded_len()
+                        .expect("foxglove schemas return Some(len)");
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
+            if let Err(encode_error) = msg.encode(&mut buf) {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
+            }
+            FoxgloveError::Ok
+        }
+        Err(e) => {
+            tracing::error!("Pose: {}", e);
+            FoxgloveError::EncodeError
+        }
+    }
+}
+
 /// A timestamped pose for an object or reference frame in 3D space
 #[repr(C)]
 pub struct PoseInFrame {
@@ -3123,6 +5394,7 @@ pub struct PoseInFrame {
     pub pose: *const Pose,
 }
 
+#[cfg(not(target_family = "wasm"))]
 impl PoseInFrame {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -3179,6 +5451,7 @@ impl BorrowToNative for PoseInFrame {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_pose_in_frame.
+#[cfg(not(target_family = "wasm"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_pose_in_frame(
     channel: Option<&FoxgloveChannel>,
@@ -3201,6 +5474,79 @@ pub extern "C" fn foxglove_channel_log_pose_in_frame(
     }
 }
 
+/// Get the PoseInFrame schema.
+///
+/// All buffers in the returned schema are statically allocated.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_pose_in_frame_schema() -> FoxgloveSchema {
+    let native = foxglove::schemas::PoseInFrame::get_schema().expect("PoseInFrame schema is Some");
+    let name: &'static str = "foxglove.PoseInFrame";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("PoseInFrame schema data is static");
+    };
+    FoxgloveSchema {
+        name: name.into(),
+        encoding: encoding.into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
+/// Encode a PoseInFrame message as protobuf to the buffer provided.
+///
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+/// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+/// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+///
+/// # Safety
+/// ptr must be a valid pointer to a memory region at least len bytes long.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_pose_in_frame_encode(
+    msg: Option<&PoseInFrame>,
+    ptr: *mut u8,
+    len: usize,
+    encoded_len: Option<&mut usize>,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { PoseInFrame::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            if len == 0 || ptr.is_null() {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = msg
+                        .encoded_len()
+                        .expect("foxglove schemas return Some(len)");
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
+            if let Err(encode_error) = msg.encode(&mut buf) {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
+            }
+            FoxgloveError::Ok
+        }
+        Err(e) => {
+            tracing::error!("PoseInFrame: {}", e);
+            FoxgloveError::EncodeError
+        }
+    }
+}
+
 /// An array of timestamped poses for an object or reference frame in 3D space
 #[repr(C)]
 pub struct PosesInFrame {
@@ -3215,6 +5561,7 @@ pub struct PosesInFrame {
     pub poses_count: usize,
 }
 
+#[cfg(not(target_family = "wasm"))]
 impl PosesInFrame {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -3266,6 +5613,7 @@ impl BorrowToNative for PosesInFrame {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_poses_in_frame.
+#[cfg(not(target_family = "wasm"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_poses_in_frame(
     channel: Option<&FoxgloveChannel>,
@@ -3288,6 +5636,80 @@ pub extern "C" fn foxglove_channel_log_poses_in_frame(
     }
 }
 
+/// Get the PosesInFrame schema.
+///
+/// All buffers in the returned schema are statically allocated.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_poses_in_frame_schema() -> FoxgloveSchema {
+    let native =
+        foxglove::schemas::PosesInFrame::get_schema().expect("PosesInFrame schema is Some");
+    let name: &'static str = "foxglove.PosesInFrame";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("PosesInFrame schema data is static");
+    };
+    FoxgloveSchema {
+        name: name.into(),
+        encoding: encoding.into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
+/// Encode a PosesInFrame message as protobuf to the buffer provided.
+///
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+/// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+/// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+///
+/// # Safety
+/// ptr must be a valid pointer to a memory region at least len bytes long.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_poses_in_frame_encode(
+    msg: Option<&PosesInFrame>,
+    ptr: *mut u8,
+    len: usize,
+    encoded_len: Option<&mut usize>,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { PosesInFrame::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            if len == 0 || ptr.is_null() {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = msg
+                        .encoded_len()
+                        .expect("foxglove schemas return Some(len)");
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
+            if let Err(encode_error) = msg.encode(&mut buf) {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
+            }
+            FoxgloveError::Ok
+        }
+        Err(e) => {
+            tracing::error!("PosesInFrame: {}", e);
+            FoxgloveError::EncodeError
+        }
+    }
+}
+
 /// A [quaternion](https://eater.net/quaternions) representing a rotation in 3D space
 #[repr(C)]
 pub struct Quaternion {
@@ -3304,6 +5726,7 @@ pub struct Quaternion {
     pub w: f64,
 }
 
+#[cfg(not(target_family = "wasm"))]
 impl Quaternion {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -3347,6 +5770,7 @@ impl BorrowToNative for Quaternion {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_quaternion.
+#[cfg(not(target_family = "wasm"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_quaternion(
     channel: Option<&FoxgloveChannel>,
@@ -3365,6 +5789,79 @@ pub extern "C" fn foxglove_channel_log_quaternion(
         Err(e) => {
             tracing::error!("Quaternion: {}", e);
             e.into()
+        }
+    }
+}
+
+/// Get the Quaternion schema.
+///
+/// All buffers in the returned schema are statically allocated.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_quaternion_schema() -> FoxgloveSchema {
+    let native = foxglove::schemas::Quaternion::get_schema().expect("Quaternion schema is Some");
+    let name: &'static str = "foxglove.Quaternion";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("Quaternion schema data is static");
+    };
+    FoxgloveSchema {
+        name: name.into(),
+        encoding: encoding.into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
+/// Encode a Quaternion message as protobuf to the buffer provided.
+///
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+/// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+/// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+///
+/// # Safety
+/// ptr must be a valid pointer to a memory region at least len bytes long.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_quaternion_encode(
+    msg: Option<&Quaternion>,
+    ptr: *mut u8,
+    len: usize,
+    encoded_len: Option<&mut usize>,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { Quaternion::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            if len == 0 || ptr.is_null() {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = msg
+                        .encoded_len()
+                        .expect("foxglove schemas return Some(len)");
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
+            if let Err(encode_error) = msg.encode(&mut buf) {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
+            }
+            FoxgloveError::Ok
+        }
+        Err(e) => {
+            tracing::error!("Quaternion: {}", e);
+            FoxgloveError::EncodeError
         }
     }
 }
@@ -3389,6 +5886,7 @@ pub struct RawAudio {
     pub number_of_channels: u32,
 }
 
+#[cfg(not(target_family = "wasm"))]
 impl RawAudio {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -3440,6 +5938,7 @@ impl BorrowToNative for RawAudio {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_raw_audio.
+#[cfg(not(target_family = "wasm"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_raw_audio(
     channel: Option<&FoxgloveChannel>,
@@ -3458,6 +5957,79 @@ pub extern "C" fn foxglove_channel_log_raw_audio(
         Err(e) => {
             tracing::error!("RawAudio: {}", e);
             e.into()
+        }
+    }
+}
+
+/// Get the RawAudio schema.
+///
+/// All buffers in the returned schema are statically allocated.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_raw_audio_schema() -> FoxgloveSchema {
+    let native = foxglove::schemas::RawAudio::get_schema().expect("RawAudio schema is Some");
+    let name: &'static str = "foxglove.RawAudio";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("RawAudio schema data is static");
+    };
+    FoxgloveSchema {
+        name: name.into(),
+        encoding: encoding.into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
+/// Encode a RawAudio message as protobuf to the buffer provided.
+///
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+/// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+/// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+///
+/// # Safety
+/// ptr must be a valid pointer to a memory region at least len bytes long.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_raw_audio_encode(
+    msg: Option<&RawAudio>,
+    ptr: *mut u8,
+    len: usize,
+    encoded_len: Option<&mut usize>,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { RawAudio::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            if len == 0 || ptr.is_null() {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = msg
+                        .encoded_len()
+                        .expect("foxglove schemas return Some(len)");
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
+            if let Err(encode_error) = msg.encode(&mut buf) {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
+            }
+            FoxgloveError::Ok
+        }
+        Err(e) => {
+            tracing::error!("RawAudio: {}", e);
+            FoxgloveError::EncodeError
         }
     }
 }
@@ -3508,7 +6080,7 @@ pub struct RawImage {
     ///   - Each output pixel is serialized as [R, G, B, Alpha].
     ///   - `step` must be greater than or equal to `width` * 4.
     /// - `bgr8` or `8UC3`:
-    ///   - Pixel colors are decomposed into Red, Blue, Green, and Alpha channels.
+    ///   - Pixel colors are decomposed into Blue, Green, and Red channels.
     ///   - Pixel channel values are represented as unsigned 8-bit integers.
     ///   - Each output pixel is serialized as [B, G, R].
     ///   - `step` must be greater than or equal to `width` * 3.
@@ -3520,7 +6092,7 @@ pub struct RawImage {
     /// - `32FC1`:
     ///   - Pixel brightness is represented as a single-channel, 32-bit little-endian IEEE 754 floating-point value, ranging from 0.0 (black) to 1.0 (white).
     ///   - `step` must be greater than or equal to `width` * 4.
-    /// - `bayer_rggb8`, `bayer_bggr8`, `bayer_rggb8`, `bayer_gbrg8`, or `bayer_grgb8`:
+    /// - `bayer_rggb8`, `bayer_bggr8`, `bayer_gbrg8`, or `bayer_grbg8`:
     ///   - Pixel colors are decomposed into Red, Blue and Green channels.
     ///   - Pixel channel values are represented as unsigned 8-bit integers, and serialized in a 2x2 bayer filter pattern.
     ///   - The order of the four letters after `bayer_` determine the layout, so for `bayer_wxyz8` the pattern is:
@@ -3541,6 +6113,7 @@ pub struct RawImage {
     pub data_len: usize,
 }
 
+#[cfg(not(target_family = "wasm"))]
 impl RawImage {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -3601,6 +6174,7 @@ impl BorrowToNative for RawImage {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_raw_image.
+#[cfg(not(target_family = "wasm"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_raw_image(
     channel: Option<&FoxgloveChannel>,
@@ -3623,6 +6197,79 @@ pub extern "C" fn foxglove_channel_log_raw_image(
     }
 }
 
+/// Get the RawImage schema.
+///
+/// All buffers in the returned schema are statically allocated.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_raw_image_schema() -> FoxgloveSchema {
+    let native = foxglove::schemas::RawImage::get_schema().expect("RawImage schema is Some");
+    let name: &'static str = "foxglove.RawImage";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("RawImage schema data is static");
+    };
+    FoxgloveSchema {
+        name: name.into(),
+        encoding: encoding.into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
+/// Encode a RawImage message as protobuf to the buffer provided.
+///
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+/// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+/// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+///
+/// # Safety
+/// ptr must be a valid pointer to a memory region at least len bytes long.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_raw_image_encode(
+    msg: Option<&RawImage>,
+    ptr: *mut u8,
+    len: usize,
+    encoded_len: Option<&mut usize>,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { RawImage::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            if len == 0 || ptr.is_null() {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = msg
+                        .encoded_len()
+                        .expect("foxglove schemas return Some(len)");
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
+            if let Err(encode_error) = msg.encode(&mut buf) {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
+            }
+            FoxgloveError::Ok
+        }
+        Err(e) => {
+            tracing::error!("RawImage: {}", e);
+            FoxgloveError::EncodeError
+        }
+    }
+}
+
 /// A primitive representing a sphere or ellipsoid
 #[repr(C)]
 pub struct SpherePrimitive {
@@ -3636,6 +6283,7 @@ pub struct SpherePrimitive {
     pub color: *const Color,
 }
 
+#[cfg(not(target_family = "wasm"))]
 impl SpherePrimitive {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -3697,6 +6345,7 @@ impl BorrowToNative for SpherePrimitive {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_sphere_primitive.
+#[cfg(not(target_family = "wasm"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_sphere_primitive(
     channel: Option<&FoxgloveChannel>,
@@ -3715,6 +6364,80 @@ pub extern "C" fn foxglove_channel_log_sphere_primitive(
         Err(e) => {
             tracing::error!("SpherePrimitive: {}", e);
             e.into()
+        }
+    }
+}
+
+/// Get the SpherePrimitive schema.
+///
+/// All buffers in the returned schema are statically allocated.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_sphere_primitive_schema() -> FoxgloveSchema {
+    let native =
+        foxglove::schemas::SpherePrimitive::get_schema().expect("SpherePrimitive schema is Some");
+    let name: &'static str = "foxglove.SpherePrimitive";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("SpherePrimitive schema data is static");
+    };
+    FoxgloveSchema {
+        name: name.into(),
+        encoding: encoding.into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
+/// Encode a SpherePrimitive message as protobuf to the buffer provided.
+///
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+/// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+/// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+///
+/// # Safety
+/// ptr must be a valid pointer to a memory region at least len bytes long.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_sphere_primitive_encode(
+    msg: Option<&SpherePrimitive>,
+    ptr: *mut u8,
+    len: usize,
+    encoded_len: Option<&mut usize>,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { SpherePrimitive::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            if len == 0 || ptr.is_null() {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = msg
+                        .encoded_len()
+                        .expect("foxglove schemas return Some(len)");
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
+            if let Err(encode_error) = msg.encode(&mut buf) {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
+            }
+            FoxgloveError::Ok
+        }
+        Err(e) => {
+            tracing::error!("SpherePrimitive: {}", e);
+            FoxgloveError::EncodeError
         }
     }
 }
@@ -3742,6 +6465,7 @@ pub struct TextAnnotation {
     pub background_color: *const Color,
 }
 
+#[cfg(not(target_family = "wasm"))]
 impl TextAnnotation {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -3808,6 +6532,7 @@ impl BorrowToNative for TextAnnotation {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_text_annotation.
+#[cfg(not(target_family = "wasm"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_text_annotation(
     channel: Option<&FoxgloveChannel>,
@@ -3826,6 +6551,80 @@ pub extern "C" fn foxglove_channel_log_text_annotation(
         Err(e) => {
             tracing::error!("TextAnnotation: {}", e);
             e.into()
+        }
+    }
+}
+
+/// Get the TextAnnotation schema.
+///
+/// All buffers in the returned schema are statically allocated.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_text_annotation_schema() -> FoxgloveSchema {
+    let native =
+        foxglove::schemas::TextAnnotation::get_schema().expect("TextAnnotation schema is Some");
+    let name: &'static str = "foxglove.TextAnnotation";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("TextAnnotation schema data is static");
+    };
+    FoxgloveSchema {
+        name: name.into(),
+        encoding: encoding.into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
+/// Encode a TextAnnotation message as protobuf to the buffer provided.
+///
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+/// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+/// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+///
+/// # Safety
+/// ptr must be a valid pointer to a memory region at least len bytes long.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_text_annotation_encode(
+    msg: Option<&TextAnnotation>,
+    ptr: *mut u8,
+    len: usize,
+    encoded_len: Option<&mut usize>,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { TextAnnotation::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            if len == 0 || ptr.is_null() {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = msg
+                        .encoded_len()
+                        .expect("foxglove schemas return Some(len)");
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
+            if let Err(encode_error) = msg.encode(&mut buf) {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
+            }
+            FoxgloveError::Ok
+        }
+        Err(e) => {
+            tracing::error!("TextAnnotation: {}", e);
+            FoxgloveError::EncodeError
         }
     }
 }
@@ -3852,6 +6651,7 @@ pub struct TextPrimitive {
     pub text: FoxgloveString,
 }
 
+#[cfg(not(target_family = "wasm"))]
 impl TextPrimitive {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -3912,6 +6712,7 @@ impl BorrowToNative for TextPrimitive {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_text_primitive.
+#[cfg(not(target_family = "wasm"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_text_primitive(
     channel: Option<&FoxgloveChannel>,
@@ -3930,6 +6731,80 @@ pub extern "C" fn foxglove_channel_log_text_primitive(
         Err(e) => {
             tracing::error!("TextPrimitive: {}", e);
             e.into()
+        }
+    }
+}
+
+/// Get the TextPrimitive schema.
+///
+/// All buffers in the returned schema are statically allocated.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_text_primitive_schema() -> FoxgloveSchema {
+    let native =
+        foxglove::schemas::TextPrimitive::get_schema().expect("TextPrimitive schema is Some");
+    let name: &'static str = "foxglove.TextPrimitive";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("TextPrimitive schema data is static");
+    };
+    FoxgloveSchema {
+        name: name.into(),
+        encoding: encoding.into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
+/// Encode a TextPrimitive message as protobuf to the buffer provided.
+///
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+/// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+/// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+///
+/// # Safety
+/// ptr must be a valid pointer to a memory region at least len bytes long.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_text_primitive_encode(
+    msg: Option<&TextPrimitive>,
+    ptr: *mut u8,
+    len: usize,
+    encoded_len: Option<&mut usize>,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { TextPrimitive::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            if len == 0 || ptr.is_null() {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = msg
+                        .encoded_len()
+                        .expect("foxglove schemas return Some(len)");
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
+            if let Err(encode_error) = msg.encode(&mut buf) {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
+            }
+            FoxgloveError::Ok
+        }
+        Err(e) => {
+            tracing::error!("TextPrimitive: {}", e);
+            FoxgloveError::EncodeError
         }
     }
 }
@@ -3958,6 +6833,7 @@ pub struct TriangleListPrimitive {
     pub indices_count: usize,
 }
 
+#[cfg(not(target_family = "wasm"))]
 impl TriangleListPrimitive {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -4022,6 +6898,7 @@ impl BorrowToNative for TriangleListPrimitive {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_triangle_list_primitive.
+#[cfg(not(target_family = "wasm"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_triangle_list_primitive(
     channel: Option<&FoxgloveChannel>,
@@ -4044,6 +6921,80 @@ pub extern "C" fn foxglove_channel_log_triangle_list_primitive(
     }
 }
 
+/// Get the TriangleListPrimitive schema.
+///
+/// All buffers in the returned schema are statically allocated.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_triangle_list_primitive_schema() -> FoxgloveSchema {
+    let native = foxglove::schemas::TriangleListPrimitive::get_schema()
+        .expect("TriangleListPrimitive schema is Some");
+    let name: &'static str = "foxglove.TriangleListPrimitive";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("TriangleListPrimitive schema data is static");
+    };
+    FoxgloveSchema {
+        name: name.into(),
+        encoding: encoding.into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
+/// Encode a TriangleListPrimitive message as protobuf to the buffer provided.
+///
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+/// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+/// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+///
+/// # Safety
+/// ptr must be a valid pointer to a memory region at least len bytes long.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_triangle_list_primitive_encode(
+    msg: Option<&TriangleListPrimitive>,
+    ptr: *mut u8,
+    len: usize,
+    encoded_len: Option<&mut usize>,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { TriangleListPrimitive::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            if len == 0 || ptr.is_null() {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = msg
+                        .encoded_len()
+                        .expect("foxglove schemas return Some(len)");
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
+            if let Err(encode_error) = msg.encode(&mut buf) {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
+            }
+            FoxgloveError::Ok
+        }
+        Err(e) => {
+            tracing::error!("TriangleListPrimitive: {}", e);
+            FoxgloveError::EncodeError
+        }
+    }
+}
+
 /// A vector in 2D space that represents a direction only
 #[repr(C)]
 pub struct Vector2 {
@@ -4054,6 +7005,7 @@ pub struct Vector2 {
     pub y: f64,
 }
 
+#[cfg(not(target_family = "wasm"))]
 impl Vector2 {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -4094,6 +7046,7 @@ impl BorrowToNative for Vector2 {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_vector2.
+#[cfg(not(target_family = "wasm"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_vector2(
     channel: Option<&FoxgloveChannel>,
@@ -4116,6 +7069,79 @@ pub extern "C" fn foxglove_channel_log_vector2(
     }
 }
 
+/// Get the Vector2 schema.
+///
+/// All buffers in the returned schema are statically allocated.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_vector2_schema() -> FoxgloveSchema {
+    let native = foxglove::schemas::Vector2::get_schema().expect("Vector2 schema is Some");
+    let name: &'static str = "foxglove.Vector2";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("Vector2 schema data is static");
+    };
+    FoxgloveSchema {
+        name: name.into(),
+        encoding: encoding.into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
+/// Encode a Vector2 message as protobuf to the buffer provided.
+///
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+/// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+/// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+///
+/// # Safety
+/// ptr must be a valid pointer to a memory region at least len bytes long.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_vector2_encode(
+    msg: Option<&Vector2>,
+    ptr: *mut u8,
+    len: usize,
+    encoded_len: Option<&mut usize>,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { Vector2::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            if len == 0 || ptr.is_null() {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = msg
+                        .encoded_len()
+                        .expect("foxglove schemas return Some(len)");
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
+            if let Err(encode_error) = msg.encode(&mut buf) {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
+            }
+            FoxgloveError::Ok
+        }
+        Err(e) => {
+            tracing::error!("Vector2: {}", e);
+            FoxgloveError::EncodeError
+        }
+    }
+}
+
 /// A vector in 3D space that represents a direction only
 #[repr(C)]
 pub struct Vector3 {
@@ -4129,6 +7155,7 @@ pub struct Vector3 {
     pub z: f64,
 }
 
+#[cfg(not(target_family = "wasm"))]
 impl Vector3 {
     /// Create a new typed channel, and return an owned raw channel pointer to it.
     ///
@@ -4170,6 +7197,7 @@ impl BorrowToNative for Vector3 {
 ///
 /// # Safety
 /// The channel must have been created for this type with foxglove_channel_create_vector3.
+#[cfg(not(target_family = "wasm"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn foxglove_channel_log_vector3(
     channel: Option<&FoxgloveChannel>,
@@ -4188,6 +7216,79 @@ pub extern "C" fn foxglove_channel_log_vector3(
         Err(e) => {
             tracing::error!("Vector3: {}", e);
             e.into()
+        }
+    }
+}
+
+/// Get the Vector3 schema.
+///
+/// All buffers in the returned schema are statically allocated.
+#[allow(
+    clippy::missing_safety_doc,
+    reason = "no preconditions and returned lifetime is static"
+)]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_vector3_schema() -> FoxgloveSchema {
+    let native = foxglove::schemas::Vector3::get_schema().expect("Vector3 schema is Some");
+    let name: &'static str = "foxglove.Vector3";
+    let encoding: &'static str = "protobuf";
+    assert_eq!(name, &native.name);
+    assert_eq!(encoding, &native.encoding);
+    let std::borrow::Cow::Borrowed(data) = native.data else {
+        unreachable!("Vector3 schema data is static");
+    };
+    FoxgloveSchema {
+        name: name.into(),
+        encoding: encoding.into(),
+        data: data.as_ptr(),
+        data_len: data.len(),
+    }
+}
+
+/// Encode a Vector3 message as protobuf to the buffer provided.
+///
+/// On success, writes the encoded length to *encoded_len.
+/// If the provided buffer has insufficient capacity, writes the required capacity to *encoded_len and
+/// returns FOXGLOVE_ERROR_BUFFER_TOO_SHORT.
+/// If the message cannot be encoded, logs the reason to stderr and returns FOXGLOVE_ERROR_ENCODE.
+///
+/// # Safety
+/// ptr must be a valid pointer to a memory region at least len bytes long.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_vector3_encode(
+    msg: Option<&Vector3>,
+    ptr: *mut u8,
+    len: usize,
+    encoded_len: Option<&mut usize>,
+) -> FoxgloveError {
+    let mut arena = pin!(Arena::new());
+    let arena_pin = arena.as_mut();
+    // Safety: we're borrowing from the msg, but discard the borrowed message before returning
+    match unsafe { Vector3::borrow_option_to_native(msg, arena_pin) } {
+        Ok(msg) => {
+            if len == 0 || ptr.is_null() {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = msg
+                        .encoded_len()
+                        .expect("foxglove schemas return Some(len)");
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            let mut buf = unsafe { core::slice::from_raw_parts_mut(ptr, len) };
+            if let Err(encode_error) = msg.encode(&mut buf) {
+                if let Some(encoded_len) = encoded_len {
+                    *encoded_len = encode_error.required_capacity();
+                }
+                return FoxgloveError::BufferTooShort;
+            }
+            if let Some(encoded_len) = encoded_len {
+                *encoded_len = len - buf.len();
+            }
+            FoxgloveError::Ok
+        }
+        Err(e) => {
+            tracing::error!("Vector3: {}", e);
+            FoxgloveError::EncodeError
         }
     }
 }

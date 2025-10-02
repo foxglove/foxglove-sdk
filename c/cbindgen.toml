@@ -20,6 +20,9 @@ rename_variants = "QUALIFIED_SCREAMING_SNAKE_CASE"
 enum_class = true
 prefix_with_name = false
 
+[defines]
+"target_family = wasm" = "__wasm__"
+
 [export]
 [export.rename]
 FoxgloveBytes = "foxglove_bytes"

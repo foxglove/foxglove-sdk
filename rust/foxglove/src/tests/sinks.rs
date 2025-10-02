@@ -7,19 +7,29 @@ use tempfile::NamedTempFile;
 use crate::{
     schemas::Log,
     testutil::{assert_eventually, read_summary},
-    websocket::{
-        testutil::{expect_recv, WebSocketClient},
-        ws_protocol::{
-            client::{subscribe::Subscription, Subscribe},
-            server::ServerMessage,
-        },
+    websocket::ws_protocol::{
+        client::{subscribe::Subscription, Subscribe},
+        server::ServerMessage,
     },
     Channel, ChannelBuilder, Context, McapWriter, WebSocketServer,
 };
 
 #[cfg(feature = "live_visualization")]
+macro_rules! expect_recv {
+    ($client:expr, $variant:path) => {{
+        let msg = $client.recv().await.expect("Failed to recv");
+        match msg {
+            $variant(m) => m,
+            _ => panic!("Received unexpected message: {msg:?}"),
+        }
+    }};
+}
+
+#[cfg(feature = "live_visualization")]
 #[tokio::test(flavor = "multi_thread")]
 async fn test_sink_channel_filtering_on_mcap_and_ws() {
+    use crate::WebSocketClient;
+
     let ctx = Context::new();
 
     // MCAP only sees topic /1
@@ -39,7 +49,9 @@ async fn test_sink_channel_filtering_on_mcap_and_ws() {
         .await
         .expect("Failed to start server");
 
-    let mut client = WebSocketClient::connect("127.0.0.1:11011").await;
+    let mut client = WebSocketClient::connect("127.0.0.1:11011")
+        .await
+        .expect("failed to connect");
     expect_recv!(client, ServerMessage::ServerInfo);
 
     let ch1: Channel<Log> = ChannelBuilder::new("/1").context(&ctx).build();

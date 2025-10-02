@@ -215,16 +215,39 @@ impl prost::Message for Duration {
 
     fn merge_field(
         &mut self,
-        _tag: u32,
-        _wire_type: prost::encoding::wire_type::WireType,
-        _buf: &mut impl bytes::Buf,
-        _ctx: prost::encoding::DecodeContext,
+        tag: u32,
+        wire_type: prost::encoding::wire_type::WireType,
+        buf: &mut impl bytes::Buf,
+        ctx: prost::encoding::DecodeContext,
     ) -> Result<(), prost::DecodeError>
     where
         Self: Sized,
     {
-        // We only support encoding for now.
-        unimplemented!("not implemented");
+        match tag {
+            1 => {
+                let mut seconds: i64 = i64::from(self.sec);
+                prost::encoding::int64::merge(wire_type, &mut seconds, buf, ctx)?;
+                self.sec = i32::try_from(seconds)
+                    .map_err(|_| prost::DecodeError::new("duration seconds overflow"))?;
+                Ok(())
+            }
+            2 => {
+                let mut nanos = i32::try_from(self.nsec)
+                    .map_err(|_| prost::DecodeError::new("duration nanos overflow"))?;
+                prost::encoding::int32::merge(wire_type, &mut nanos, buf, ctx)?;
+                let nanos = u32::try_from(nanos)
+                    .map_err(|_| prost::DecodeError::new("invalid duration nanos"))?;
+                match normalize_nsec(nanos).carry_i32(self.sec) {
+                    Some((sec, nsec)) => {
+                        self.sec = sec;
+                        self.nsec = nsec;
+                        Ok(())
+                    }
+                    None => Err(prost::DecodeError::new("duration overflow")),
+                }
+            }
+            _ => prost::encoding::skip_field(wire_type, tag, buf, ctx),
+        }
     }
 
     fn encoded_len(&self) -> usize {
@@ -411,16 +434,39 @@ impl prost::Message for Timestamp {
 
     fn merge_field(
         &mut self,
-        _tag: u32,
-        _wire_type: prost::encoding::wire_type::WireType,
-        _buf: &mut impl bytes::Buf,
-        _ctx: prost::encoding::DecodeContext,
+        tag: u32,
+        wire_type: prost::encoding::wire_type::WireType,
+        buf: &mut impl bytes::Buf,
+        ctx: prost::encoding::DecodeContext,
     ) -> Result<(), prost::DecodeError>
     where
         Self: Sized,
     {
-        // We only support encoding for now.
-        unimplemented!("not implemented");
+        match tag {
+            1 => {
+                let mut seconds: i64 = i64::from(self.sec);
+                prost::encoding::int64::merge(wire_type, &mut seconds, buf, ctx)?;
+                self.sec = u32::try_from(seconds)
+                    .map_err(|_| prost::DecodeError::new("timestamp seconds overflow"))?;
+                Ok(())
+            }
+            2 => {
+                let mut nanos: i32 = i32::try_from(self.nsec)
+                    .map_err(|_| prost::DecodeError::new("timestamp nanos overflow"))?;
+                prost::encoding::int32::merge(wire_type, &mut nanos, buf, ctx)?;
+                let nanos_u32 = u32::try_from(nanos)
+                    .map_err(|_| prost::DecodeError::new("invalid timestamp nanos"))?;
+                match normalize_nsec(nanos_u32).carry_u32(self.sec) {
+                    Some((sec, nsec)) => {
+                        self.sec = sec;
+                        self.nsec = nsec;
+                        Ok(())
+                    }
+                    None => Err(prost::DecodeError::new("timestamp normalization overflow")),
+                }
+            }
+            _ => prost::encoding::skip_field(wire_type, tag, buf, ctx),
+        }
     }
 
     fn encoded_len(&self) -> usize {
@@ -458,5 +504,41 @@ where
             Err(RangeError::LowerBound) => Timestamp::MIN,
             Err(RangeError::UpperBound) => Timestamp::MAX,
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use bytes::BytesMut;
+    use prost::Message;
+
+    use super::*;
+
+    #[test]
+    fn test_timestamp_decode() {
+        let timestamp = Timestamp {
+            sec: 1750000000,
+            nsec: 99999,
+        };
+
+        let mut buf = BytesMut::new();
+        timestamp.encode(&mut buf).unwrap();
+        let decoded = Timestamp::decode(buf).unwrap();
+
+        assert_eq!(timestamp, decoded);
+    }
+
+    #[test]
+    fn test_duration_decode() {
+        let duration = Duration {
+            sec: 1,
+            nsec: 99999,
+        };
+
+        let mut buf = BytesMut::new();
+        duration.encode(&mut buf).unwrap();
+        let decoded = Duration::decode(buf).unwrap();
+
+        assert_eq!(duration, decoded);
     }
 }

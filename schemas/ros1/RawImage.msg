@@ -46,7 +46,7 @@ uint32 step
 #   - Each output pixel is serialized as [R, G, B, Alpha].
 #   - `step` must be greater than or equal to `width` * 4.
 # - `bgr8` or `8UC3`:
-#   - Pixel colors are decomposed into Red, Blue, Green, and Alpha channels.
+#   - Pixel colors are decomposed into Blue, Green, and Red channels.
 #   - Pixel channel values are represented as unsigned 8-bit integers.
 #   - Each output pixel is serialized as [B, G, R].
 #   - `step` must be greater than or equal to `width` * 3.
@@ -58,7 +58,7 @@ uint32 step
 # - `32FC1`:
 #   - Pixel brightness is represented as a single-channel, 32-bit little-endian IEEE 754 floating-point value, ranging from 0.0 (black) to 1.0 (white).
 #   - `step` must be greater than or equal to `width` * 4.
-# - `bayer_rggb8`, `bayer_bggr8`, `bayer_rggb8`, `bayer_gbrg8`, or `bayer_grgb8`:
+# - `bayer_rggb8`, `bayer_bggr8`, `bayer_gbrg8`, or `bayer_grbg8`:
 #   - Pixel colors are decomposed into Red, Blue and Green channels.
 #   - Pixel channel values are represented as unsigned 8-bit integers, and serialized in a 2x2 bayer filter pattern.
 #   - The order of the four letters after `bayer_` determine the layout, so for `bayer_wxyz8` the pattern is:

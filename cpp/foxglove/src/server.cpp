@@ -259,6 +259,13 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
     };
   }
 
+  if (options.tls_identity) {
+    c_options.tls_cert = reinterpret_cast<const uint8_t*>(options.tls_identity->cert.data());
+    c_options.tls_cert_len = options.tls_identity->cert.size();
+    c_options.tls_key = reinterpret_cast<const uint8_t*>(options.tls_identity->key.data());
+    c_options.tls_key_len = options.tls_identity->key.size();
+  }
+
   if (options.sink_channel_filter) {
     sink_channel_filter = std::make_unique<SinkChannelFilterFn>(options.sink_channel_filter);
 
