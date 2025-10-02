@@ -193,6 +193,7 @@ foxglove::WebSocketServer startServer(
     capabilities,
     std::move(supported_encodings),
     {},
+    std::nullopt,
     {},
   });
 }
@@ -209,6 +210,7 @@ foxglove::WebSocketServer startServer(
     {},
     {},
     std::move(fetch_asset),
+    std::nullopt,
     {},
   });
 }
