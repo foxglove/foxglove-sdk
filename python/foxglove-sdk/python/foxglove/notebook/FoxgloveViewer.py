@@ -102,6 +102,7 @@ class FoxgloveViewer(anywidget.AnyWidget):
 
         # Use default context if no context is provided
         ctx = context or Context.default()
+        self._context: Optional[Context] = None
         self.reload_data(ctx)
 
     def reload_data(self, context: Optional[Context] = None) -> None:
