@@ -14,5 +14,9 @@
       "minimum": 0,
       "description": "The number of nanoseconds since the sec value"
     }
-  }
+  },
+  "required": [
+    "sec",
+    "nsec"
+  ]
 }

@@ -73,5 +73,13 @@
       "minimum": 0,
       "description": "Line number in the file"
     }
-  }
+  },
+  "required": [
+    "timestamp",
+    "level",
+    "message",
+    "name",
+    "file",
+    "line"
+  ]
 }

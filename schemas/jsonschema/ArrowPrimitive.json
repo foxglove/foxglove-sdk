@@ -26,7 +26,12 @@
               "type": "number",
               "description": "z coordinate length"
             }
-          }
+          },
+          "required": [
+            "x",
+            "y",
+            "z"
+          ]
         },
         "orientation": {
           "title": "foxglove.Quaternion",
@@ -49,9 +54,19 @@
               "type": "number",
               "description": "w value"
             }
-          }
+          },
+          "required": [
+            "x",
+            "y",
+            "z",
+            "w"
+          ]
         }
-      }
+      },
+      "required": [
+        "position",
+        "orientation"
+      ]
     },
     "shaft_length": {
       "type": "number",
@@ -90,7 +105,21 @@
           "type": "number",
           "description": "Alpha value between 0 and 1"
         }
-      }
+      },
+      "required": [
+        "r",
+        "g",
+        "b",
+        "a"
+      ]
     }
-  }
+  },
+  "required": [
+    "pose",
+    "shaft_length",
+    "shaft_diameter",
+    "head_length",
+    "head_diameter",
+    "color"
+  ]
 }
