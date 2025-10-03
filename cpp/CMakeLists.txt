@@ -14,6 +14,10 @@ if(CCACHE_PROGRAM)
   message(STATUS "Using ccache: ${CCACHE_PROGRAM}")
 endif()
 
+option(USE_PACKAGE_MANAGER_DEPENDENCIES
+  "Try to find dependencies provided by the local package manager, and if not found, fall back to building them from source"
+  ON)
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
