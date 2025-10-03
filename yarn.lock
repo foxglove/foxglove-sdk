@@ -15,6 +15,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@anywidget/types@npm:0.2.0":
+  version: 0.2.0
+  resolution: "@anywidget/types@npm:0.2.0"
+  checksum: 10c0/e2d442259d250c347971b40047c64a0f7a130290523ac546e162dd5c98a7cbd9d307f790aa6bb02e2672f154385a56dc9b9fb6daac01872cd76e11b6579bdd0f
+  languageName: node
+  linkType: hard
+
 "@babel/code-frame@npm:^7.0.0, @babel/code-frame@npm:^7.27.1":
   version: 7.27.1
   resolution: "@babel/code-frame@npm:7.27.1"
@@ -835,6 +842,18 @@ __metadata:
   checksum: 10c0/521fadfadcdb9bbde7d28908e429b93a387ded524f8abeb361f27ae5a6f36b8d5dc29cf23dbf0791cc366de59c48dc03aede861faa59df1c64d030b6c659981a
   languageName: node
   linkType: hard
+
+"@foxglove/notebook@workspace:python/foxglove-sdk":
+  version: 0.0.0-use.local
+  resolution: "@foxglove/notebook@workspace:python/foxglove-sdk"
+  dependencies:
+    "@anywidget/types": "npm:0.2.0"
+    "@foxglove/embed": "npm:0.1.2"
+    "@foxglove/tsconfig": "npm:2.0.0"
+    esbuild: "npm:0.25.10"
+    typescript: "npm:5.9.2"
+  languageName: unknown
+  linkType: soft
 
 "@foxglove/omgidl-parser@npm:^0.2.0":
   version: 0.2.0
@@ -4267,7 +4286,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"esbuild@npm:^0.25.10":
+"esbuild@npm:0.25.10, esbuild@npm:^0.25.10":
   version: 0.25.10
   resolution: "esbuild@npm:0.25.10"
   dependencies:
