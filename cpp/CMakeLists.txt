@@ -38,16 +38,21 @@ if(NOT TARGET Catch2::Catch2WithMain)
 endif()
 include(Catch)
 
-FetchContent_Declare(
-  Corrosion
-  GIT_REPOSITORY https://github.com/corrosion-rs/corrosion.git
-  GIT_TAG v0.5.1
-)
-# Clear CMAKE_CONFIGURATION_TYPES before making Corrosion available
-if(CMAKE_GENERATOR MATCHES "Unix Makefiles|Ninja")
-  unset(CMAKE_CONFIGURATION_TYPES CACHE)
+if(USE_PACKAGE_MANAGER_DEPENDENCIES)
+  find_package(Corrosion QUIET 0.5.1)
 endif()
-FetchContent_MakeAvailable(Corrosion)
+if(NOT Corrosion_FOUND)
+  FetchContent_Declare(
+    Corrosion
+    GIT_REPOSITORY https://github.com/corrosion-rs/corrosion.git
+    GIT_TAG v0.5.1
+  )
+  # Clear CMAKE_CONFIGURATION_TYPES before making Corrosion available
+  if(CMAKE_GENERATOR MATCHES "Unix Makefiles|Ninja")
+    unset(CMAKE_CONFIGURATION_TYPES CACHE)
+  endif()
+  FetchContent_MakeAvailable(Corrosion)
+endif()
 
 if(USE_PACKAGE_MANAGER_DEPENDENCIES)
   find_package(websocketpp QUIET)
