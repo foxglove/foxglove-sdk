@@ -6,7 +6,7 @@ import anywidget
 import traitlets
 
 from .._foxglove_py import Context
-from .NotebookBuffer import NotebookBuffer
+from .notebook_buffer import NotebookBuffer
 
 try:
     __version__ = importlib.metadata.version("foxglove")

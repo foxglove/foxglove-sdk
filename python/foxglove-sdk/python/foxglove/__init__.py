@@ -21,7 +21,7 @@ from .channel import Channel, log
 from .mcap import MCAPWriter
 
 if TYPE_CHECKING:
-    from .notebook.FoxgloveViewer import FoxgloveViewer
+    from .notebook.foxglove_viewer import FoxgloveViewer
 
 atexit.register(_foxglove.shutdown)
 
@@ -150,7 +150,7 @@ def create_notebook_buffer(context: Context | None = None) -> None:
         >>> foxglove.create_notebook_buffer(context=context)
     """
     try:
-        from .notebook.FoxgloveViewer import FoxgloveViewer
+        from .notebook.foxglove_viewer import FoxgloveViewer
 
     except ImportError:
         raise Exception(
@@ -231,7 +231,7 @@ def notebook_viewer(
         >>> viewer
     """
     try:
-        from .notebook.FoxgloveViewer import FoxgloveViewer
+        from .notebook.foxglove_viewer import FoxgloveViewer
 
     except ImportError:
         raise Exception(
