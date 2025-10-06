@@ -9,6 +9,7 @@ use crate::{
 /// A handle to the Agent Remote Connection.
 ///
 /// This handle can safely be dropped and the agent will run forever.
+#[doc(hidden)]
 pub struct AgentHandle(WebSocketServerHandle);
 
 impl AgentHandle {
@@ -32,6 +33,7 @@ impl AgentHandle {
 /// Must run Foxglove Agent on the same host for this to work.
 #[must_use]
 #[derive(Debug)]
+#[doc(hidden)]
 pub struct Agent {
     options: ServerOptions,
     context: Arc<Context>,
