@@ -212,10 +212,23 @@ export function generateHppSchemas(
         /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
         FoxgloveError log(const ${schema.name}& msg, std::optional<uint64_t> log_time = std::nullopt, std::optional<uint64_t> sink_id = std::nullopt) noexcept;
 
+        /// @brief Close the channel.
+        ///
+        /// You can use this to explicitly unadvertise the channel to sinks that subscribe to channels
+        /// dynamically, such as the WebSocketServer.
+        ///
+        /// Attempts to log on a closed channel will elicit a throttled warning message.
+        void close() noexcept;
+
         /// @brief Uniquely identifies a channel in the context of this program.
         ///
         /// @return The ID of the channel.
         [[nodiscard]] uint64_t id() const noexcept;
+
+        /// @brief Find out if any sinks have been added to the channel.
+        ///
+        /// @return True if sinks have been added to the channel, false otherwise.
+        [[nodiscard]] bool has_sinks() const noexcept;
 
         ${schema.name}Channel(const ${schema.name}Channel& other) noexcept = delete;
         ${schema.name}Channel& operator=(const ${schema.name}Channel& other) noexcept = delete;
@@ -377,9 +390,17 @@ export function generateCppSchemas(schemas: FoxgloveMessageSchema[]): string {
       `FoxgloveError ${schema.name}Channel::log(const ${schema.name}& msg, std::optional<uint64_t> log_time, std::optional<uint64_t> sink_id) noexcept {`,
       ...conversionCode,
       "}\n",
+      `void ${schema.name}Channel::close() noexcept {
+        foxglove_channel_close(impl_.get());
+      }
+      `,
       `uint64_t ${schema.name}Channel::id() const noexcept {`,
       "    return foxglove_channel_get_id(impl_.get());",
       "}\n\n",
+      `bool ${schema.name}Channel::has_sinks() const noexcept {
+        return foxglove_channel_has_sinks(impl_.get());
+      }
+      `,
     ];
   });
 
