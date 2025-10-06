@@ -60,6 +60,15 @@ impl WebSocketServer {
         Self::default()
     }
 
+    // JUST FOR TESTING THE BUILD
+    #[allow(unused)]
+    pub(crate) fn with_options(options: ServerOptions) -> Self {
+        Self {
+            options,
+            ..Self::default()
+        }
+    }
+
     /// Set the websocket server name to advertise to clients.
     ///
     /// By default, the server is not given a name.
