@@ -61,6 +61,7 @@ impl WebSocketServer {
     }
 
     /// Creates a new websocket server with the given options.
+    #[cfg(feature = "agent")]
     pub(crate) fn with_options(options: ServerOptions) -> Self {
         Self {
             options,
