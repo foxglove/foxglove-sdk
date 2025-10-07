@@ -8,7 +8,7 @@
 
 #include <rclcpp/rclcpp.hpp>
 #include <rosgraph_msgs/msg/clock.hpp>
-#include <std_msgs/msg/uint32.hpp>
+#include <std_msgs/msg/u_int32.hpp>
 #include <rosx_introspection/ros_parser.hpp>
 
 #include <foxglove/foxglove.hpp>
@@ -106,10 +106,10 @@ private:
   std::unordered_map<std::string, std::shared_ptr<RosMsgParser::Parser>> _jsonParsers;
   std::atomic<bool> _shuttingDown = false;
   foxglove::Context _serverContext;
-  
+
   // Client count tracking
   std::atomic<uint32_t> _clientCount = 0;
-  rclcpp::Publisher<std_msgs::msg::Int32>::SharedPtr _clientCountPublisher;
+  rclcpp::Publisher<std_msgs::msg::UInt32>::SharedPtr _clientCountPublisher;
 
   void subscribeConnectionGraph(bool subscribe);
 
