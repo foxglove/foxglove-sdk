@@ -262,11 +262,7 @@ struct CameraCalibration {
   /// @brief For monocular cameras, Tx = Ty = 0. Normally, monocular cameras will also have R = the
   /// identity and P[1:3,1:3] = K.
   /// @brief
-  /// @brief For a stereo pair, the fourth column [Tx Ty 0]' is related to the position of the
-  /// optical center of the second camera in the first camera's frame. We assume Tz = 0 so both
-  /// cameras are in the same stereo image plane. The first camera always has Tx = Ty = 0. For the
-  /// right (second) camera of a horizontal stereo pair, Ty = 0 and Tx = -fx' * B, where B is the
-  /// baseline between the cameras.
+  /// @brief Foxglove currently does not support displaying stereo images, so Tx and Ty are ignored.
   /// @brief
   /// @brief Given a 3D point [X Y Z]', the projection (x, y) of the point onto the rectified image
   /// is given by:
@@ -1755,7 +1751,7 @@ struct RawImage {
   /// @brief   - Pixel brightness is represented as a single-channel, 32-bit little-endian IEEE 754
   /// floating-point value, ranging from 0.0 (black) to 1.0 (white).
   /// @brief   - `step` must be greater than or equal to `width` * 4.
-  /// @brief - `bayer_rggb8`, `bayer_bggr8`, `bayer_rggb8`, `bayer_gbrg8`, or `bayer_grgb8`:
+  /// @brief - `bayer_rggb8`, `bayer_bggr8`, `bayer_gbrg8`, or `bayer_grbg8`:
   /// @brief   - Pixel colors are decomposed into Red, Blue and Green channels.
   /// @brief   - Pixel channel values are represented as unsigned 8-bit integers, and serialized in
   /// a 2x2 bayer filter pattern.
@@ -1826,17 +1822,31 @@ public:
   /// @brief Log a message to the channel.
   ///
   /// @param msg The ArrowPrimitive message to log.
-  /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  /// @param log_time The timestamp of the message, as nanoseconds since epoch. If omitted, the
+  /// current time is used.
   /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
   FoxgloveError log(
     const ArrowPrimitive& msg, std::optional<uint64_t> log_time = std::nullopt,
     std::optional<uint64_t> sink_id = std::nullopt
   ) noexcept;
 
+  /// @brief Close the channel.
+  ///
+  /// You can use this to explicitly unadvertise the channel to sinks that subscribe to channels
+  /// dynamically, such as the WebSocketServer.
+  ///
+  /// Attempts to log on a closed channel will elicit a throttled warning message.
+  void close() noexcept;
+
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.
   [[nodiscard]] uint64_t id() const noexcept;
+
+  /// @brief Find out if any sinks have been added to the channel.
+  ///
+  /// @return True if sinks have been added to the channel, false otherwise.
+  [[nodiscard]] bool has_sinks() const noexcept;
 
   ArrowPrimitiveChannel(const ArrowPrimitiveChannel& other) noexcept = delete;
   ArrowPrimitiveChannel& operator=(const ArrowPrimitiveChannel& other) noexcept = delete;
@@ -1873,17 +1883,31 @@ public:
   /// @brief Log a message to the channel.
   ///
   /// @param msg The CameraCalibration message to log.
-  /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  /// @param log_time The timestamp of the message, as nanoseconds since epoch. If omitted, the
+  /// current time is used.
   /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
   FoxgloveError log(
     const CameraCalibration& msg, std::optional<uint64_t> log_time = std::nullopt,
     std::optional<uint64_t> sink_id = std::nullopt
   ) noexcept;
 
+  /// @brief Close the channel.
+  ///
+  /// You can use this to explicitly unadvertise the channel to sinks that subscribe to channels
+  /// dynamically, such as the WebSocketServer.
+  ///
+  /// Attempts to log on a closed channel will elicit a throttled warning message.
+  void close() noexcept;
+
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.
   [[nodiscard]] uint64_t id() const noexcept;
+
+  /// @brief Find out if any sinks have been added to the channel.
+  ///
+  /// @return True if sinks have been added to the channel, false otherwise.
+  [[nodiscard]] bool has_sinks() const noexcept;
 
   CameraCalibrationChannel(const CameraCalibrationChannel& other) noexcept = delete;
   CameraCalibrationChannel& operator=(const CameraCalibrationChannel& other) noexcept = delete;
@@ -1920,17 +1944,31 @@ public:
   /// @brief Log a message to the channel.
   ///
   /// @param msg The CircleAnnotation message to log.
-  /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  /// @param log_time The timestamp of the message, as nanoseconds since epoch. If omitted, the
+  /// current time is used.
   /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
   FoxgloveError log(
     const CircleAnnotation& msg, std::optional<uint64_t> log_time = std::nullopt,
     std::optional<uint64_t> sink_id = std::nullopt
   ) noexcept;
 
+  /// @brief Close the channel.
+  ///
+  /// You can use this to explicitly unadvertise the channel to sinks that subscribe to channels
+  /// dynamically, such as the WebSocketServer.
+  ///
+  /// Attempts to log on a closed channel will elicit a throttled warning message.
+  void close() noexcept;
+
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.
   [[nodiscard]] uint64_t id() const noexcept;
+
+  /// @brief Find out if any sinks have been added to the channel.
+  ///
+  /// @return True if sinks have been added to the channel, false otherwise.
+  [[nodiscard]] bool has_sinks() const noexcept;
 
   CircleAnnotationChannel(const CircleAnnotationChannel& other) noexcept = delete;
   CircleAnnotationChannel& operator=(const CircleAnnotationChannel& other) noexcept = delete;
@@ -1967,17 +2005,31 @@ public:
   /// @brief Log a message to the channel.
   ///
   /// @param msg The Color message to log.
-  /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  /// @param log_time The timestamp of the message, as nanoseconds since epoch. If omitted, the
+  /// current time is used.
   /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
   FoxgloveError log(
     const Color& msg, std::optional<uint64_t> log_time = std::nullopt,
     std::optional<uint64_t> sink_id = std::nullopt
   ) noexcept;
 
+  /// @brief Close the channel.
+  ///
+  /// You can use this to explicitly unadvertise the channel to sinks that subscribe to channels
+  /// dynamically, such as the WebSocketServer.
+  ///
+  /// Attempts to log on a closed channel will elicit a throttled warning message.
+  void close() noexcept;
+
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.
   [[nodiscard]] uint64_t id() const noexcept;
+
+  /// @brief Find out if any sinks have been added to the channel.
+  ///
+  /// @return True if sinks have been added to the channel, false otherwise.
+  [[nodiscard]] bool has_sinks() const noexcept;
 
   ColorChannel(const ColorChannel& other) noexcept = delete;
   ColorChannel& operator=(const ColorChannel& other) noexcept = delete;
@@ -2014,17 +2066,31 @@ public:
   /// @brief Log a message to the channel.
   ///
   /// @param msg The CompressedImage message to log.
-  /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  /// @param log_time The timestamp of the message, as nanoseconds since epoch. If omitted, the
+  /// current time is used.
   /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
   FoxgloveError log(
     const CompressedImage& msg, std::optional<uint64_t> log_time = std::nullopt,
     std::optional<uint64_t> sink_id = std::nullopt
   ) noexcept;
 
+  /// @brief Close the channel.
+  ///
+  /// You can use this to explicitly unadvertise the channel to sinks that subscribe to channels
+  /// dynamically, such as the WebSocketServer.
+  ///
+  /// Attempts to log on a closed channel will elicit a throttled warning message.
+  void close() noexcept;
+
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.
   [[nodiscard]] uint64_t id() const noexcept;
+
+  /// @brief Find out if any sinks have been added to the channel.
+  ///
+  /// @return True if sinks have been added to the channel, false otherwise.
+  [[nodiscard]] bool has_sinks() const noexcept;
 
   CompressedImageChannel(const CompressedImageChannel& other) noexcept = delete;
   CompressedImageChannel& operator=(const CompressedImageChannel& other) noexcept = delete;
@@ -2061,17 +2127,31 @@ public:
   /// @brief Log a message to the channel.
   ///
   /// @param msg The CompressedVideo message to log.
-  /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  /// @param log_time The timestamp of the message, as nanoseconds since epoch. If omitted, the
+  /// current time is used.
   /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
   FoxgloveError log(
     const CompressedVideo& msg, std::optional<uint64_t> log_time = std::nullopt,
     std::optional<uint64_t> sink_id = std::nullopt
   ) noexcept;
 
+  /// @brief Close the channel.
+  ///
+  /// You can use this to explicitly unadvertise the channel to sinks that subscribe to channels
+  /// dynamically, such as the WebSocketServer.
+  ///
+  /// Attempts to log on a closed channel will elicit a throttled warning message.
+  void close() noexcept;
+
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.
   [[nodiscard]] uint64_t id() const noexcept;
+
+  /// @brief Find out if any sinks have been added to the channel.
+  ///
+  /// @return True if sinks have been added to the channel, false otherwise.
+  [[nodiscard]] bool has_sinks() const noexcept;
 
   CompressedVideoChannel(const CompressedVideoChannel& other) noexcept = delete;
   CompressedVideoChannel& operator=(const CompressedVideoChannel& other) noexcept = delete;
@@ -2108,17 +2188,31 @@ public:
   /// @brief Log a message to the channel.
   ///
   /// @param msg The CylinderPrimitive message to log.
-  /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  /// @param log_time The timestamp of the message, as nanoseconds since epoch. If omitted, the
+  /// current time is used.
   /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
   FoxgloveError log(
     const CylinderPrimitive& msg, std::optional<uint64_t> log_time = std::nullopt,
     std::optional<uint64_t> sink_id = std::nullopt
   ) noexcept;
 
+  /// @brief Close the channel.
+  ///
+  /// You can use this to explicitly unadvertise the channel to sinks that subscribe to channels
+  /// dynamically, such as the WebSocketServer.
+  ///
+  /// Attempts to log on a closed channel will elicit a throttled warning message.
+  void close() noexcept;
+
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.
   [[nodiscard]] uint64_t id() const noexcept;
+
+  /// @brief Find out if any sinks have been added to the channel.
+  ///
+  /// @return True if sinks have been added to the channel, false otherwise.
+  [[nodiscard]] bool has_sinks() const noexcept;
 
   CylinderPrimitiveChannel(const CylinderPrimitiveChannel& other) noexcept = delete;
   CylinderPrimitiveChannel& operator=(const CylinderPrimitiveChannel& other) noexcept = delete;
@@ -2155,17 +2249,31 @@ public:
   /// @brief Log a message to the channel.
   ///
   /// @param msg The CubePrimitive message to log.
-  /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  /// @param log_time The timestamp of the message, as nanoseconds since epoch. If omitted, the
+  /// current time is used.
   /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
   FoxgloveError log(
     const CubePrimitive& msg, std::optional<uint64_t> log_time = std::nullopt,
     std::optional<uint64_t> sink_id = std::nullopt
   ) noexcept;
 
+  /// @brief Close the channel.
+  ///
+  /// You can use this to explicitly unadvertise the channel to sinks that subscribe to channels
+  /// dynamically, such as the WebSocketServer.
+  ///
+  /// Attempts to log on a closed channel will elicit a throttled warning message.
+  void close() noexcept;
+
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.
   [[nodiscard]] uint64_t id() const noexcept;
+
+  /// @brief Find out if any sinks have been added to the channel.
+  ///
+  /// @return True if sinks have been added to the channel, false otherwise.
+  [[nodiscard]] bool has_sinks() const noexcept;
 
   CubePrimitiveChannel(const CubePrimitiveChannel& other) noexcept = delete;
   CubePrimitiveChannel& operator=(const CubePrimitiveChannel& other) noexcept = delete;
@@ -2202,17 +2310,31 @@ public:
   /// @brief Log a message to the channel.
   ///
   /// @param msg The FrameTransform message to log.
-  /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  /// @param log_time The timestamp of the message, as nanoseconds since epoch. If omitted, the
+  /// current time is used.
   /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
   FoxgloveError log(
     const FrameTransform& msg, std::optional<uint64_t> log_time = std::nullopt,
     std::optional<uint64_t> sink_id = std::nullopt
   ) noexcept;
 
+  /// @brief Close the channel.
+  ///
+  /// You can use this to explicitly unadvertise the channel to sinks that subscribe to channels
+  /// dynamically, such as the WebSocketServer.
+  ///
+  /// Attempts to log on a closed channel will elicit a throttled warning message.
+  void close() noexcept;
+
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.
   [[nodiscard]] uint64_t id() const noexcept;
+
+  /// @brief Find out if any sinks have been added to the channel.
+  ///
+  /// @return True if sinks have been added to the channel, false otherwise.
+  [[nodiscard]] bool has_sinks() const noexcept;
 
   FrameTransformChannel(const FrameTransformChannel& other) noexcept = delete;
   FrameTransformChannel& operator=(const FrameTransformChannel& other) noexcept = delete;
@@ -2249,17 +2371,31 @@ public:
   /// @brief Log a message to the channel.
   ///
   /// @param msg The FrameTransforms message to log.
-  /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  /// @param log_time The timestamp of the message, as nanoseconds since epoch. If omitted, the
+  /// current time is used.
   /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
   FoxgloveError log(
     const FrameTransforms& msg, std::optional<uint64_t> log_time = std::nullopt,
     std::optional<uint64_t> sink_id = std::nullopt
   ) noexcept;
 
+  /// @brief Close the channel.
+  ///
+  /// You can use this to explicitly unadvertise the channel to sinks that subscribe to channels
+  /// dynamically, such as the WebSocketServer.
+  ///
+  /// Attempts to log on a closed channel will elicit a throttled warning message.
+  void close() noexcept;
+
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.
   [[nodiscard]] uint64_t id() const noexcept;
+
+  /// @brief Find out if any sinks have been added to the channel.
+  ///
+  /// @return True if sinks have been added to the channel, false otherwise.
+  [[nodiscard]] bool has_sinks() const noexcept;
 
   FrameTransformsChannel(const FrameTransformsChannel& other) noexcept = delete;
   FrameTransformsChannel& operator=(const FrameTransformsChannel& other) noexcept = delete;
@@ -2296,17 +2432,31 @@ public:
   /// @brief Log a message to the channel.
   ///
   /// @param msg The GeoJSON message to log.
-  /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  /// @param log_time The timestamp of the message, as nanoseconds since epoch. If omitted, the
+  /// current time is used.
   /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
   FoxgloveError log(
     const GeoJSON& msg, std::optional<uint64_t> log_time = std::nullopt,
     std::optional<uint64_t> sink_id = std::nullopt
   ) noexcept;
 
+  /// @brief Close the channel.
+  ///
+  /// You can use this to explicitly unadvertise the channel to sinks that subscribe to channels
+  /// dynamically, such as the WebSocketServer.
+  ///
+  /// Attempts to log on a closed channel will elicit a throttled warning message.
+  void close() noexcept;
+
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.
   [[nodiscard]] uint64_t id() const noexcept;
+
+  /// @brief Find out if any sinks have been added to the channel.
+  ///
+  /// @return True if sinks have been added to the channel, false otherwise.
+  [[nodiscard]] bool has_sinks() const noexcept;
 
   GeoJSONChannel(const GeoJSONChannel& other) noexcept = delete;
   GeoJSONChannel& operator=(const GeoJSONChannel& other) noexcept = delete;
@@ -2343,17 +2493,31 @@ public:
   /// @brief Log a message to the channel.
   ///
   /// @param msg The Grid message to log.
-  /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  /// @param log_time The timestamp of the message, as nanoseconds since epoch. If omitted, the
+  /// current time is used.
   /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
   FoxgloveError log(
     const Grid& msg, std::optional<uint64_t> log_time = std::nullopt,
     std::optional<uint64_t> sink_id = std::nullopt
   ) noexcept;
 
+  /// @brief Close the channel.
+  ///
+  /// You can use this to explicitly unadvertise the channel to sinks that subscribe to channels
+  /// dynamically, such as the WebSocketServer.
+  ///
+  /// Attempts to log on a closed channel will elicit a throttled warning message.
+  void close() noexcept;
+
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.
   [[nodiscard]] uint64_t id() const noexcept;
+
+  /// @brief Find out if any sinks have been added to the channel.
+  ///
+  /// @return True if sinks have been added to the channel, false otherwise.
+  [[nodiscard]] bool has_sinks() const noexcept;
 
   GridChannel(const GridChannel& other) noexcept = delete;
   GridChannel& operator=(const GridChannel& other) noexcept = delete;
@@ -2390,17 +2554,31 @@ public:
   /// @brief Log a message to the channel.
   ///
   /// @param msg The VoxelGrid message to log.
-  /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  /// @param log_time The timestamp of the message, as nanoseconds since epoch. If omitted, the
+  /// current time is used.
   /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
   FoxgloveError log(
     const VoxelGrid& msg, std::optional<uint64_t> log_time = std::nullopt,
     std::optional<uint64_t> sink_id = std::nullopt
   ) noexcept;
 
+  /// @brief Close the channel.
+  ///
+  /// You can use this to explicitly unadvertise the channel to sinks that subscribe to channels
+  /// dynamically, such as the WebSocketServer.
+  ///
+  /// Attempts to log on a closed channel will elicit a throttled warning message.
+  void close() noexcept;
+
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.
   [[nodiscard]] uint64_t id() const noexcept;
+
+  /// @brief Find out if any sinks have been added to the channel.
+  ///
+  /// @return True if sinks have been added to the channel, false otherwise.
+  [[nodiscard]] bool has_sinks() const noexcept;
 
   VoxelGridChannel(const VoxelGridChannel& other) noexcept = delete;
   VoxelGridChannel& operator=(const VoxelGridChannel& other) noexcept = delete;
@@ -2437,17 +2615,31 @@ public:
   /// @brief Log a message to the channel.
   ///
   /// @param msg The ImageAnnotations message to log.
-  /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  /// @param log_time The timestamp of the message, as nanoseconds since epoch. If omitted, the
+  /// current time is used.
   /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
   FoxgloveError log(
     const ImageAnnotations& msg, std::optional<uint64_t> log_time = std::nullopt,
     std::optional<uint64_t> sink_id = std::nullopt
   ) noexcept;
 
+  /// @brief Close the channel.
+  ///
+  /// You can use this to explicitly unadvertise the channel to sinks that subscribe to channels
+  /// dynamically, such as the WebSocketServer.
+  ///
+  /// Attempts to log on a closed channel will elicit a throttled warning message.
+  void close() noexcept;
+
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.
   [[nodiscard]] uint64_t id() const noexcept;
+
+  /// @brief Find out if any sinks have been added to the channel.
+  ///
+  /// @return True if sinks have been added to the channel, false otherwise.
+  [[nodiscard]] bool has_sinks() const noexcept;
 
   ImageAnnotationsChannel(const ImageAnnotationsChannel& other) noexcept = delete;
   ImageAnnotationsChannel& operator=(const ImageAnnotationsChannel& other) noexcept = delete;
@@ -2484,17 +2676,31 @@ public:
   /// @brief Log a message to the channel.
   ///
   /// @param msg The KeyValuePair message to log.
-  /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  /// @param log_time The timestamp of the message, as nanoseconds since epoch. If omitted, the
+  /// current time is used.
   /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
   FoxgloveError log(
     const KeyValuePair& msg, std::optional<uint64_t> log_time = std::nullopt,
     std::optional<uint64_t> sink_id = std::nullopt
   ) noexcept;
 
+  /// @brief Close the channel.
+  ///
+  /// You can use this to explicitly unadvertise the channel to sinks that subscribe to channels
+  /// dynamically, such as the WebSocketServer.
+  ///
+  /// Attempts to log on a closed channel will elicit a throttled warning message.
+  void close() noexcept;
+
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.
   [[nodiscard]] uint64_t id() const noexcept;
+
+  /// @brief Find out if any sinks have been added to the channel.
+  ///
+  /// @return True if sinks have been added to the channel, false otherwise.
+  [[nodiscard]] bool has_sinks() const noexcept;
 
   KeyValuePairChannel(const KeyValuePairChannel& other) noexcept = delete;
   KeyValuePairChannel& operator=(const KeyValuePairChannel& other) noexcept = delete;
@@ -2531,17 +2737,31 @@ public:
   /// @brief Log a message to the channel.
   ///
   /// @param msg The LaserScan message to log.
-  /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  /// @param log_time The timestamp of the message, as nanoseconds since epoch. If omitted, the
+  /// current time is used.
   /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
   FoxgloveError log(
     const LaserScan& msg, std::optional<uint64_t> log_time = std::nullopt,
     std::optional<uint64_t> sink_id = std::nullopt
   ) noexcept;
 
+  /// @brief Close the channel.
+  ///
+  /// You can use this to explicitly unadvertise the channel to sinks that subscribe to channels
+  /// dynamically, such as the WebSocketServer.
+  ///
+  /// Attempts to log on a closed channel will elicit a throttled warning message.
+  void close() noexcept;
+
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.
   [[nodiscard]] uint64_t id() const noexcept;
+
+  /// @brief Find out if any sinks have been added to the channel.
+  ///
+  /// @return True if sinks have been added to the channel, false otherwise.
+  [[nodiscard]] bool has_sinks() const noexcept;
 
   LaserScanChannel(const LaserScanChannel& other) noexcept = delete;
   LaserScanChannel& operator=(const LaserScanChannel& other) noexcept = delete;
@@ -2578,17 +2798,31 @@ public:
   /// @brief Log a message to the channel.
   ///
   /// @param msg The LinePrimitive message to log.
-  /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  /// @param log_time The timestamp of the message, as nanoseconds since epoch. If omitted, the
+  /// current time is used.
   /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
   FoxgloveError log(
     const LinePrimitive& msg, std::optional<uint64_t> log_time = std::nullopt,
     std::optional<uint64_t> sink_id = std::nullopt
   ) noexcept;
 
+  /// @brief Close the channel.
+  ///
+  /// You can use this to explicitly unadvertise the channel to sinks that subscribe to channels
+  /// dynamically, such as the WebSocketServer.
+  ///
+  /// Attempts to log on a closed channel will elicit a throttled warning message.
+  void close() noexcept;
+
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.
   [[nodiscard]] uint64_t id() const noexcept;
+
+  /// @brief Find out if any sinks have been added to the channel.
+  ///
+  /// @return True if sinks have been added to the channel, false otherwise.
+  [[nodiscard]] bool has_sinks() const noexcept;
 
   LinePrimitiveChannel(const LinePrimitiveChannel& other) noexcept = delete;
   LinePrimitiveChannel& operator=(const LinePrimitiveChannel& other) noexcept = delete;
@@ -2625,17 +2859,31 @@ public:
   /// @brief Log a message to the channel.
   ///
   /// @param msg The LocationFix message to log.
-  /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  /// @param log_time The timestamp of the message, as nanoseconds since epoch. If omitted, the
+  /// current time is used.
   /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
   FoxgloveError log(
     const LocationFix& msg, std::optional<uint64_t> log_time = std::nullopt,
     std::optional<uint64_t> sink_id = std::nullopt
   ) noexcept;
 
+  /// @brief Close the channel.
+  ///
+  /// You can use this to explicitly unadvertise the channel to sinks that subscribe to channels
+  /// dynamically, such as the WebSocketServer.
+  ///
+  /// Attempts to log on a closed channel will elicit a throttled warning message.
+  void close() noexcept;
+
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.
   [[nodiscard]] uint64_t id() const noexcept;
+
+  /// @brief Find out if any sinks have been added to the channel.
+  ///
+  /// @return True if sinks have been added to the channel, false otherwise.
+  [[nodiscard]] bool has_sinks() const noexcept;
 
   LocationFixChannel(const LocationFixChannel& other) noexcept = delete;
   LocationFixChannel& operator=(const LocationFixChannel& other) noexcept = delete;
@@ -2672,17 +2920,31 @@ public:
   /// @brief Log a message to the channel.
   ///
   /// @param msg The LocationFixes message to log.
-  /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  /// @param log_time The timestamp of the message, as nanoseconds since epoch. If omitted, the
+  /// current time is used.
   /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
   FoxgloveError log(
     const LocationFixes& msg, std::optional<uint64_t> log_time = std::nullopt,
     std::optional<uint64_t> sink_id = std::nullopt
   ) noexcept;
 
+  /// @brief Close the channel.
+  ///
+  /// You can use this to explicitly unadvertise the channel to sinks that subscribe to channels
+  /// dynamically, such as the WebSocketServer.
+  ///
+  /// Attempts to log on a closed channel will elicit a throttled warning message.
+  void close() noexcept;
+
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.
   [[nodiscard]] uint64_t id() const noexcept;
+
+  /// @brief Find out if any sinks have been added to the channel.
+  ///
+  /// @return True if sinks have been added to the channel, false otherwise.
+  [[nodiscard]] bool has_sinks() const noexcept;
 
   LocationFixesChannel(const LocationFixesChannel& other) noexcept = delete;
   LocationFixesChannel& operator=(const LocationFixesChannel& other) noexcept = delete;
@@ -2719,17 +2981,31 @@ public:
   /// @brief Log a message to the channel.
   ///
   /// @param msg The Log message to log.
-  /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  /// @param log_time The timestamp of the message, as nanoseconds since epoch. If omitted, the
+  /// current time is used.
   /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
   FoxgloveError log(
     const Log& msg, std::optional<uint64_t> log_time = std::nullopt,
     std::optional<uint64_t> sink_id = std::nullopt
   ) noexcept;
 
+  /// @brief Close the channel.
+  ///
+  /// You can use this to explicitly unadvertise the channel to sinks that subscribe to channels
+  /// dynamically, such as the WebSocketServer.
+  ///
+  /// Attempts to log on a closed channel will elicit a throttled warning message.
+  void close() noexcept;
+
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.
   [[nodiscard]] uint64_t id() const noexcept;
+
+  /// @brief Find out if any sinks have been added to the channel.
+  ///
+  /// @return True if sinks have been added to the channel, false otherwise.
+  [[nodiscard]] bool has_sinks() const noexcept;
 
   LogChannel(const LogChannel& other) noexcept = delete;
   LogChannel& operator=(const LogChannel& other) noexcept = delete;
@@ -2766,17 +3042,31 @@ public:
   /// @brief Log a message to the channel.
   ///
   /// @param msg The SceneEntityDeletion message to log.
-  /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  /// @param log_time The timestamp of the message, as nanoseconds since epoch. If omitted, the
+  /// current time is used.
   /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
   FoxgloveError log(
     const SceneEntityDeletion& msg, std::optional<uint64_t> log_time = std::nullopt,
     std::optional<uint64_t> sink_id = std::nullopt
   ) noexcept;
 
+  /// @brief Close the channel.
+  ///
+  /// You can use this to explicitly unadvertise the channel to sinks that subscribe to channels
+  /// dynamically, such as the WebSocketServer.
+  ///
+  /// Attempts to log on a closed channel will elicit a throttled warning message.
+  void close() noexcept;
+
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.
   [[nodiscard]] uint64_t id() const noexcept;
+
+  /// @brief Find out if any sinks have been added to the channel.
+  ///
+  /// @return True if sinks have been added to the channel, false otherwise.
+  [[nodiscard]] bool has_sinks() const noexcept;
 
   SceneEntityDeletionChannel(const SceneEntityDeletionChannel& other) noexcept = delete;
   SceneEntityDeletionChannel& operator=(const SceneEntityDeletionChannel& other) noexcept = delete;
@@ -2813,17 +3103,31 @@ public:
   /// @brief Log a message to the channel.
   ///
   /// @param msg The SceneEntity message to log.
-  /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  /// @param log_time The timestamp of the message, as nanoseconds since epoch. If omitted, the
+  /// current time is used.
   /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
   FoxgloveError log(
     const SceneEntity& msg, std::optional<uint64_t> log_time = std::nullopt,
     std::optional<uint64_t> sink_id = std::nullopt
   ) noexcept;
 
+  /// @brief Close the channel.
+  ///
+  /// You can use this to explicitly unadvertise the channel to sinks that subscribe to channels
+  /// dynamically, such as the WebSocketServer.
+  ///
+  /// Attempts to log on a closed channel will elicit a throttled warning message.
+  void close() noexcept;
+
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.
   [[nodiscard]] uint64_t id() const noexcept;
+
+  /// @brief Find out if any sinks have been added to the channel.
+  ///
+  /// @return True if sinks have been added to the channel, false otherwise.
+  [[nodiscard]] bool has_sinks() const noexcept;
 
   SceneEntityChannel(const SceneEntityChannel& other) noexcept = delete;
   SceneEntityChannel& operator=(const SceneEntityChannel& other) noexcept = delete;
@@ -2860,17 +3164,31 @@ public:
   /// @brief Log a message to the channel.
   ///
   /// @param msg The SceneUpdate message to log.
-  /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  /// @param log_time The timestamp of the message, as nanoseconds since epoch. If omitted, the
+  /// current time is used.
   /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
   FoxgloveError log(
     const SceneUpdate& msg, std::optional<uint64_t> log_time = std::nullopt,
     std::optional<uint64_t> sink_id = std::nullopt
   ) noexcept;
 
+  /// @brief Close the channel.
+  ///
+  /// You can use this to explicitly unadvertise the channel to sinks that subscribe to channels
+  /// dynamically, such as the WebSocketServer.
+  ///
+  /// Attempts to log on a closed channel will elicit a throttled warning message.
+  void close() noexcept;
+
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.
   [[nodiscard]] uint64_t id() const noexcept;
+
+  /// @brief Find out if any sinks have been added to the channel.
+  ///
+  /// @return True if sinks have been added to the channel, false otherwise.
+  [[nodiscard]] bool has_sinks() const noexcept;
 
   SceneUpdateChannel(const SceneUpdateChannel& other) noexcept = delete;
   SceneUpdateChannel& operator=(const SceneUpdateChannel& other) noexcept = delete;
@@ -2907,17 +3225,31 @@ public:
   /// @brief Log a message to the channel.
   ///
   /// @param msg The ModelPrimitive message to log.
-  /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  /// @param log_time The timestamp of the message, as nanoseconds since epoch. If omitted, the
+  /// current time is used.
   /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
   FoxgloveError log(
     const ModelPrimitive& msg, std::optional<uint64_t> log_time = std::nullopt,
     std::optional<uint64_t> sink_id = std::nullopt
   ) noexcept;
 
+  /// @brief Close the channel.
+  ///
+  /// You can use this to explicitly unadvertise the channel to sinks that subscribe to channels
+  /// dynamically, such as the WebSocketServer.
+  ///
+  /// Attempts to log on a closed channel will elicit a throttled warning message.
+  void close() noexcept;
+
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.
   [[nodiscard]] uint64_t id() const noexcept;
+
+  /// @brief Find out if any sinks have been added to the channel.
+  ///
+  /// @return True if sinks have been added to the channel, false otherwise.
+  [[nodiscard]] bool has_sinks() const noexcept;
 
   ModelPrimitiveChannel(const ModelPrimitiveChannel& other) noexcept = delete;
   ModelPrimitiveChannel& operator=(const ModelPrimitiveChannel& other) noexcept = delete;
@@ -2954,17 +3286,31 @@ public:
   /// @brief Log a message to the channel.
   ///
   /// @param msg The PackedElementField message to log.
-  /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  /// @param log_time The timestamp of the message, as nanoseconds since epoch. If omitted, the
+  /// current time is used.
   /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
   FoxgloveError log(
     const PackedElementField& msg, std::optional<uint64_t> log_time = std::nullopt,
     std::optional<uint64_t> sink_id = std::nullopt
   ) noexcept;
 
+  /// @brief Close the channel.
+  ///
+  /// You can use this to explicitly unadvertise the channel to sinks that subscribe to channels
+  /// dynamically, such as the WebSocketServer.
+  ///
+  /// Attempts to log on a closed channel will elicit a throttled warning message.
+  void close() noexcept;
+
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.
   [[nodiscard]] uint64_t id() const noexcept;
+
+  /// @brief Find out if any sinks have been added to the channel.
+  ///
+  /// @return True if sinks have been added to the channel, false otherwise.
+  [[nodiscard]] bool has_sinks() const noexcept;
 
   PackedElementFieldChannel(const PackedElementFieldChannel& other) noexcept = delete;
   PackedElementFieldChannel& operator=(const PackedElementFieldChannel& other) noexcept = delete;
@@ -3001,17 +3347,31 @@ public:
   /// @brief Log a message to the channel.
   ///
   /// @param msg The Point2 message to log.
-  /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  /// @param log_time The timestamp of the message, as nanoseconds since epoch. If omitted, the
+  /// current time is used.
   /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
   FoxgloveError log(
     const Point2& msg, std::optional<uint64_t> log_time = std::nullopt,
     std::optional<uint64_t> sink_id = std::nullopt
   ) noexcept;
 
+  /// @brief Close the channel.
+  ///
+  /// You can use this to explicitly unadvertise the channel to sinks that subscribe to channels
+  /// dynamically, such as the WebSocketServer.
+  ///
+  /// Attempts to log on a closed channel will elicit a throttled warning message.
+  void close() noexcept;
+
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.
   [[nodiscard]] uint64_t id() const noexcept;
+
+  /// @brief Find out if any sinks have been added to the channel.
+  ///
+  /// @return True if sinks have been added to the channel, false otherwise.
+  [[nodiscard]] bool has_sinks() const noexcept;
 
   Point2Channel(const Point2Channel& other) noexcept = delete;
   Point2Channel& operator=(const Point2Channel& other) noexcept = delete;
@@ -3048,17 +3408,31 @@ public:
   /// @brief Log a message to the channel.
   ///
   /// @param msg The Point3 message to log.
-  /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  /// @param log_time The timestamp of the message, as nanoseconds since epoch. If omitted, the
+  /// current time is used.
   /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
   FoxgloveError log(
     const Point3& msg, std::optional<uint64_t> log_time = std::nullopt,
     std::optional<uint64_t> sink_id = std::nullopt
   ) noexcept;
 
+  /// @brief Close the channel.
+  ///
+  /// You can use this to explicitly unadvertise the channel to sinks that subscribe to channels
+  /// dynamically, such as the WebSocketServer.
+  ///
+  /// Attempts to log on a closed channel will elicit a throttled warning message.
+  void close() noexcept;
+
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.
   [[nodiscard]] uint64_t id() const noexcept;
+
+  /// @brief Find out if any sinks have been added to the channel.
+  ///
+  /// @return True if sinks have been added to the channel, false otherwise.
+  [[nodiscard]] bool has_sinks() const noexcept;
 
   Point3Channel(const Point3Channel& other) noexcept = delete;
   Point3Channel& operator=(const Point3Channel& other) noexcept = delete;
@@ -3095,17 +3469,31 @@ public:
   /// @brief Log a message to the channel.
   ///
   /// @param msg The PointCloud message to log.
-  /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  /// @param log_time The timestamp of the message, as nanoseconds since epoch. If omitted, the
+  /// current time is used.
   /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
   FoxgloveError log(
     const PointCloud& msg, std::optional<uint64_t> log_time = std::nullopt,
     std::optional<uint64_t> sink_id = std::nullopt
   ) noexcept;
 
+  /// @brief Close the channel.
+  ///
+  /// You can use this to explicitly unadvertise the channel to sinks that subscribe to channels
+  /// dynamically, such as the WebSocketServer.
+  ///
+  /// Attempts to log on a closed channel will elicit a throttled warning message.
+  void close() noexcept;
+
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.
   [[nodiscard]] uint64_t id() const noexcept;
+
+  /// @brief Find out if any sinks have been added to the channel.
+  ///
+  /// @return True if sinks have been added to the channel, false otherwise.
+  [[nodiscard]] bool has_sinks() const noexcept;
 
   PointCloudChannel(const PointCloudChannel& other) noexcept = delete;
   PointCloudChannel& operator=(const PointCloudChannel& other) noexcept = delete;
@@ -3142,17 +3530,31 @@ public:
   /// @brief Log a message to the channel.
   ///
   /// @param msg The PointsAnnotation message to log.
-  /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  /// @param log_time The timestamp of the message, as nanoseconds since epoch. If omitted, the
+  /// current time is used.
   /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
   FoxgloveError log(
     const PointsAnnotation& msg, std::optional<uint64_t> log_time = std::nullopt,
     std::optional<uint64_t> sink_id = std::nullopt
   ) noexcept;
 
+  /// @brief Close the channel.
+  ///
+  /// You can use this to explicitly unadvertise the channel to sinks that subscribe to channels
+  /// dynamically, such as the WebSocketServer.
+  ///
+  /// Attempts to log on a closed channel will elicit a throttled warning message.
+  void close() noexcept;
+
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.
   [[nodiscard]] uint64_t id() const noexcept;
+
+  /// @brief Find out if any sinks have been added to the channel.
+  ///
+  /// @return True if sinks have been added to the channel, false otherwise.
+  [[nodiscard]] bool has_sinks() const noexcept;
 
   PointsAnnotationChannel(const PointsAnnotationChannel& other) noexcept = delete;
   PointsAnnotationChannel& operator=(const PointsAnnotationChannel& other) noexcept = delete;
@@ -3189,17 +3591,31 @@ public:
   /// @brief Log a message to the channel.
   ///
   /// @param msg The Pose message to log.
-  /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  /// @param log_time The timestamp of the message, as nanoseconds since epoch. If omitted, the
+  /// current time is used.
   /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
   FoxgloveError log(
     const Pose& msg, std::optional<uint64_t> log_time = std::nullopt,
     std::optional<uint64_t> sink_id = std::nullopt
   ) noexcept;
 
+  /// @brief Close the channel.
+  ///
+  /// You can use this to explicitly unadvertise the channel to sinks that subscribe to channels
+  /// dynamically, such as the WebSocketServer.
+  ///
+  /// Attempts to log on a closed channel will elicit a throttled warning message.
+  void close() noexcept;
+
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.
   [[nodiscard]] uint64_t id() const noexcept;
+
+  /// @brief Find out if any sinks have been added to the channel.
+  ///
+  /// @return True if sinks have been added to the channel, false otherwise.
+  [[nodiscard]] bool has_sinks() const noexcept;
 
   PoseChannel(const PoseChannel& other) noexcept = delete;
   PoseChannel& operator=(const PoseChannel& other) noexcept = delete;
@@ -3236,17 +3652,31 @@ public:
   /// @brief Log a message to the channel.
   ///
   /// @param msg The PoseInFrame message to log.
-  /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  /// @param log_time The timestamp of the message, as nanoseconds since epoch. If omitted, the
+  /// current time is used.
   /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
   FoxgloveError log(
     const PoseInFrame& msg, std::optional<uint64_t> log_time = std::nullopt,
     std::optional<uint64_t> sink_id = std::nullopt
   ) noexcept;
 
+  /// @brief Close the channel.
+  ///
+  /// You can use this to explicitly unadvertise the channel to sinks that subscribe to channels
+  /// dynamically, such as the WebSocketServer.
+  ///
+  /// Attempts to log on a closed channel will elicit a throttled warning message.
+  void close() noexcept;
+
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.
   [[nodiscard]] uint64_t id() const noexcept;
+
+  /// @brief Find out if any sinks have been added to the channel.
+  ///
+  /// @return True if sinks have been added to the channel, false otherwise.
+  [[nodiscard]] bool has_sinks() const noexcept;
 
   PoseInFrameChannel(const PoseInFrameChannel& other) noexcept = delete;
   PoseInFrameChannel& operator=(const PoseInFrameChannel& other) noexcept = delete;
@@ -3283,17 +3713,31 @@ public:
   /// @brief Log a message to the channel.
   ///
   /// @param msg The PosesInFrame message to log.
-  /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  /// @param log_time The timestamp of the message, as nanoseconds since epoch. If omitted, the
+  /// current time is used.
   /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
   FoxgloveError log(
     const PosesInFrame& msg, std::optional<uint64_t> log_time = std::nullopt,
     std::optional<uint64_t> sink_id = std::nullopt
   ) noexcept;
 
+  /// @brief Close the channel.
+  ///
+  /// You can use this to explicitly unadvertise the channel to sinks that subscribe to channels
+  /// dynamically, such as the WebSocketServer.
+  ///
+  /// Attempts to log on a closed channel will elicit a throttled warning message.
+  void close() noexcept;
+
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.
   [[nodiscard]] uint64_t id() const noexcept;
+
+  /// @brief Find out if any sinks have been added to the channel.
+  ///
+  /// @return True if sinks have been added to the channel, false otherwise.
+  [[nodiscard]] bool has_sinks() const noexcept;
 
   PosesInFrameChannel(const PosesInFrameChannel& other) noexcept = delete;
   PosesInFrameChannel& operator=(const PosesInFrameChannel& other) noexcept = delete;
@@ -3330,17 +3774,31 @@ public:
   /// @brief Log a message to the channel.
   ///
   /// @param msg The Quaternion message to log.
-  /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  /// @param log_time The timestamp of the message, as nanoseconds since epoch. If omitted, the
+  /// current time is used.
   /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
   FoxgloveError log(
     const Quaternion& msg, std::optional<uint64_t> log_time = std::nullopt,
     std::optional<uint64_t> sink_id = std::nullopt
   ) noexcept;
 
+  /// @brief Close the channel.
+  ///
+  /// You can use this to explicitly unadvertise the channel to sinks that subscribe to channels
+  /// dynamically, such as the WebSocketServer.
+  ///
+  /// Attempts to log on a closed channel will elicit a throttled warning message.
+  void close() noexcept;
+
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.
   [[nodiscard]] uint64_t id() const noexcept;
+
+  /// @brief Find out if any sinks have been added to the channel.
+  ///
+  /// @return True if sinks have been added to the channel, false otherwise.
+  [[nodiscard]] bool has_sinks() const noexcept;
 
   QuaternionChannel(const QuaternionChannel& other) noexcept = delete;
   QuaternionChannel& operator=(const QuaternionChannel& other) noexcept = delete;
@@ -3377,17 +3835,31 @@ public:
   /// @brief Log a message to the channel.
   ///
   /// @param msg The RawAudio message to log.
-  /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  /// @param log_time The timestamp of the message, as nanoseconds since epoch. If omitted, the
+  /// current time is used.
   /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
   FoxgloveError log(
     const RawAudio& msg, std::optional<uint64_t> log_time = std::nullopt,
     std::optional<uint64_t> sink_id = std::nullopt
   ) noexcept;
 
+  /// @brief Close the channel.
+  ///
+  /// You can use this to explicitly unadvertise the channel to sinks that subscribe to channels
+  /// dynamically, such as the WebSocketServer.
+  ///
+  /// Attempts to log on a closed channel will elicit a throttled warning message.
+  void close() noexcept;
+
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.
   [[nodiscard]] uint64_t id() const noexcept;
+
+  /// @brief Find out if any sinks have been added to the channel.
+  ///
+  /// @return True if sinks have been added to the channel, false otherwise.
+  [[nodiscard]] bool has_sinks() const noexcept;
 
   RawAudioChannel(const RawAudioChannel& other) noexcept = delete;
   RawAudioChannel& operator=(const RawAudioChannel& other) noexcept = delete;
@@ -3424,17 +3896,31 @@ public:
   /// @brief Log a message to the channel.
   ///
   /// @param msg The RawImage message to log.
-  /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  /// @param log_time The timestamp of the message, as nanoseconds since epoch. If omitted, the
+  /// current time is used.
   /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
   FoxgloveError log(
     const RawImage& msg, std::optional<uint64_t> log_time = std::nullopt,
     std::optional<uint64_t> sink_id = std::nullopt
   ) noexcept;
 
+  /// @brief Close the channel.
+  ///
+  /// You can use this to explicitly unadvertise the channel to sinks that subscribe to channels
+  /// dynamically, such as the WebSocketServer.
+  ///
+  /// Attempts to log on a closed channel will elicit a throttled warning message.
+  void close() noexcept;
+
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.
   [[nodiscard]] uint64_t id() const noexcept;
+
+  /// @brief Find out if any sinks have been added to the channel.
+  ///
+  /// @return True if sinks have been added to the channel, false otherwise.
+  [[nodiscard]] bool has_sinks() const noexcept;
 
   RawImageChannel(const RawImageChannel& other) noexcept = delete;
   RawImageChannel& operator=(const RawImageChannel& other) noexcept = delete;
@@ -3471,17 +3957,31 @@ public:
   /// @brief Log a message to the channel.
   ///
   /// @param msg The SpherePrimitive message to log.
-  /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  /// @param log_time The timestamp of the message, as nanoseconds since epoch. If omitted, the
+  /// current time is used.
   /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
   FoxgloveError log(
     const SpherePrimitive& msg, std::optional<uint64_t> log_time = std::nullopt,
     std::optional<uint64_t> sink_id = std::nullopt
   ) noexcept;
 
+  /// @brief Close the channel.
+  ///
+  /// You can use this to explicitly unadvertise the channel to sinks that subscribe to channels
+  /// dynamically, such as the WebSocketServer.
+  ///
+  /// Attempts to log on a closed channel will elicit a throttled warning message.
+  void close() noexcept;
+
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.
   [[nodiscard]] uint64_t id() const noexcept;
+
+  /// @brief Find out if any sinks have been added to the channel.
+  ///
+  /// @return True if sinks have been added to the channel, false otherwise.
+  [[nodiscard]] bool has_sinks() const noexcept;
 
   SpherePrimitiveChannel(const SpherePrimitiveChannel& other) noexcept = delete;
   SpherePrimitiveChannel& operator=(const SpherePrimitiveChannel& other) noexcept = delete;
@@ -3518,17 +4018,31 @@ public:
   /// @brief Log a message to the channel.
   ///
   /// @param msg The TextAnnotation message to log.
-  /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  /// @param log_time The timestamp of the message, as nanoseconds since epoch. If omitted, the
+  /// current time is used.
   /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
   FoxgloveError log(
     const TextAnnotation& msg, std::optional<uint64_t> log_time = std::nullopt,
     std::optional<uint64_t> sink_id = std::nullopt
   ) noexcept;
 
+  /// @brief Close the channel.
+  ///
+  /// You can use this to explicitly unadvertise the channel to sinks that subscribe to channels
+  /// dynamically, such as the WebSocketServer.
+  ///
+  /// Attempts to log on a closed channel will elicit a throttled warning message.
+  void close() noexcept;
+
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.
   [[nodiscard]] uint64_t id() const noexcept;
+
+  /// @brief Find out if any sinks have been added to the channel.
+  ///
+  /// @return True if sinks have been added to the channel, false otherwise.
+  [[nodiscard]] bool has_sinks() const noexcept;
 
   TextAnnotationChannel(const TextAnnotationChannel& other) noexcept = delete;
   TextAnnotationChannel& operator=(const TextAnnotationChannel& other) noexcept = delete;
@@ -3565,17 +4079,31 @@ public:
   /// @brief Log a message to the channel.
   ///
   /// @param msg The TextPrimitive message to log.
-  /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  /// @param log_time The timestamp of the message, as nanoseconds since epoch. If omitted, the
+  /// current time is used.
   /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
   FoxgloveError log(
     const TextPrimitive& msg, std::optional<uint64_t> log_time = std::nullopt,
     std::optional<uint64_t> sink_id = std::nullopt
   ) noexcept;
 
+  /// @brief Close the channel.
+  ///
+  /// You can use this to explicitly unadvertise the channel to sinks that subscribe to channels
+  /// dynamically, such as the WebSocketServer.
+  ///
+  /// Attempts to log on a closed channel will elicit a throttled warning message.
+  void close() noexcept;
+
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.
   [[nodiscard]] uint64_t id() const noexcept;
+
+  /// @brief Find out if any sinks have been added to the channel.
+  ///
+  /// @return True if sinks have been added to the channel, false otherwise.
+  [[nodiscard]] bool has_sinks() const noexcept;
 
   TextPrimitiveChannel(const TextPrimitiveChannel& other) noexcept = delete;
   TextPrimitiveChannel& operator=(const TextPrimitiveChannel& other) noexcept = delete;
@@ -3612,17 +4140,31 @@ public:
   /// @brief Log a message to the channel.
   ///
   /// @param msg The TriangleListPrimitive message to log.
-  /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  /// @param log_time The timestamp of the message, as nanoseconds since epoch. If omitted, the
+  /// current time is used.
   /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
   FoxgloveError log(
     const TriangleListPrimitive& msg, std::optional<uint64_t> log_time = std::nullopt,
     std::optional<uint64_t> sink_id = std::nullopt
   ) noexcept;
 
+  /// @brief Close the channel.
+  ///
+  /// You can use this to explicitly unadvertise the channel to sinks that subscribe to channels
+  /// dynamically, such as the WebSocketServer.
+  ///
+  /// Attempts to log on a closed channel will elicit a throttled warning message.
+  void close() noexcept;
+
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.
   [[nodiscard]] uint64_t id() const noexcept;
+
+  /// @brief Find out if any sinks have been added to the channel.
+  ///
+  /// @return True if sinks have been added to the channel, false otherwise.
+  [[nodiscard]] bool has_sinks() const noexcept;
 
   TriangleListPrimitiveChannel(const TriangleListPrimitiveChannel& other) noexcept = delete;
   TriangleListPrimitiveChannel& operator=(const TriangleListPrimitiveChannel& other
@@ -3660,17 +4202,31 @@ public:
   /// @brief Log a message to the channel.
   ///
   /// @param msg The Vector2 message to log.
-  /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  /// @param log_time The timestamp of the message, as nanoseconds since epoch. If omitted, the
+  /// current time is used.
   /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
   FoxgloveError log(
     const Vector2& msg, std::optional<uint64_t> log_time = std::nullopt,
     std::optional<uint64_t> sink_id = std::nullopt
   ) noexcept;
 
+  /// @brief Close the channel.
+  ///
+  /// You can use this to explicitly unadvertise the channel to sinks that subscribe to channels
+  /// dynamically, such as the WebSocketServer.
+  ///
+  /// Attempts to log on a closed channel will elicit a throttled warning message.
+  void close() noexcept;
+
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.
   [[nodiscard]] uint64_t id() const noexcept;
+
+  /// @brief Find out if any sinks have been added to the channel.
+  ///
+  /// @return True if sinks have been added to the channel, false otherwise.
+  [[nodiscard]] bool has_sinks() const noexcept;
 
   Vector2Channel(const Vector2Channel& other) noexcept = delete;
   Vector2Channel& operator=(const Vector2Channel& other) noexcept = delete;
@@ -3707,17 +4263,31 @@ public:
   /// @brief Log a message to the channel.
   ///
   /// @param msg The Vector3 message to log.
-  /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  /// @param log_time The timestamp of the message, as nanoseconds since epoch. If omitted, the
+  /// current time is used.
   /// @param sink_id The ID of the sink to log to. If omitted, the message is logged to all sinks.
   FoxgloveError log(
     const Vector3& msg, std::optional<uint64_t> log_time = std::nullopt,
     std::optional<uint64_t> sink_id = std::nullopt
   ) noexcept;
 
+  /// @brief Close the channel.
+  ///
+  /// You can use this to explicitly unadvertise the channel to sinks that subscribe to channels
+  /// dynamically, such as the WebSocketServer.
+  ///
+  /// Attempts to log on a closed channel will elicit a throttled warning message.
+  void close() noexcept;
+
   /// @brief Uniquely identifies a channel in the context of this program.
   ///
   /// @return The ID of the channel.
   [[nodiscard]] uint64_t id() const noexcept;
+
+  /// @brief Find out if any sinks have been added to the channel.
+  ///
+  /// @return True if sinks have been added to the channel, false otherwise.
+  [[nodiscard]] bool has_sinks() const noexcept;
 
   Vector3Channel(const Vector3Channel& other) noexcept = delete;
   Vector3Channel& operator=(const Vector3Channel& other) noexcept = delete;

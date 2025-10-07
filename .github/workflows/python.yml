@@ -87,6 +87,7 @@ jobs:
       - run: yarn build
         working-directory: playground
       - uses: cloudflare/pages-action@v1.5.0
+        if: github.repository == github.event.pull_request.head.repo.full_name # Only run if not a fork
         id: deploy
         with:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -232,7 +233,7 @@ jobs:
         with:
           target: ${{ matrix.platform.target }}
           working-directory: python/foxglove-sdk
-          args: --release --out dist --find-interpreter
+          args: --release --out dist --interpreter python
           sccache: "false"
       - name: Upload wheels
         uses: actions/upload-artifact@v4

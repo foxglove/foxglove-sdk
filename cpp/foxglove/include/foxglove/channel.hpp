@@ -45,7 +45,8 @@ public:
   ///
   /// @param data The message data.
   /// @param data_len The length of the message data, in bytes.
-  /// @param log_time The timestamp of the message. If omitted, the current time is used.
+  /// @param log_time The timestamp of the message, as nanoseconds since epoch. If omitted, the
+  /// current time is used.
   /// @param sink_id The sink ID associated with the message. Can be used to target logging messages
   /// to a specific client or mcap file. If omitted, the message is logged to all sinks. Note that
   /// providing a sink_id is not yet part of the public API. To partition logs among specific sinks,

@@ -12,7 +12,7 @@ use std::fs::File;
 use std::io::BufWriter;
 use std::num::NonZeroU64;
 use std::path::PathBuf;
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 #[cfg(not(target_family = "wasm"))]
 use websocket::start_server;
 
@@ -154,9 +154,16 @@ impl PyContext {
         Self(foxglove::Context::new())
     }
 
+    /// Returns the default context.
     #[staticmethod]
-    fn default() -> Self {
-        Self(foxglove::Context::get_default())
+    fn default(py: Python) -> Py<Self> {
+        static DEFAULT_CONTEXT: OnceLock<Py<PyContext>> = OnceLock::new();
+        DEFAULT_CONTEXT
+            .get_or_init(|| {
+                let inner = foxglove::Context::get_default();
+                Py::new(py, PyContext(inner)).unwrap()
+            })
+            .clone_ref(py)
     }
 
     /// Create a new channel for logging messages on a topic.
