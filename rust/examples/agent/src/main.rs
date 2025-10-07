@@ -101,8 +101,13 @@ async fn main() {
     let args = Cli::parse();
 
     // Foxglove Agent needs to be running on the same machine for this to work
-    let server = foxglove::Agent::new()
+    let mut handle = foxglove::Agent::new()
         .create()
+        .expect("Could not create agent");
+
+    // This is optional, only if you need to wait for the agent to be connected before continuing
+    handle
+        .ensure_connected()
         .await
         .expect("Could not connect to agent");
 
@@ -111,8 +116,10 @@ async fn main() {
     println!("you have to create a device token first and configure Foxglove Agent to use it.");
 
     tokio::task::spawn(log_forever(args.fps));
-    tokio::signal::ctrl_c().await.ok();
-    server.stop().wait().await;
+    _ = tokio::signal::ctrl_c().await;
+    if let Some(shutdown) = handle.stop() {
+        shutdown.wait().await;
+    }
 }
 
 fn euler_to_quaternion(roll: f64, pitch: f64, yaw: f64) -> Quaternion {
