@@ -117,6 +117,7 @@ find_package(rclcpp REQUIRED)
 find_package(rclcpp_components REQUIRED)
 find_package(resource_retriever REQUIRED)
 find_package(rosx_introspection REQUIRED)
+find_package(std_msgs REQUIRED)
 
 # Generate version.hpp
 configure_file(include/foxglove_bridge/version.hpp.in include/foxglove_bridge/version.hpp @ONLY)
@@ -169,6 +170,7 @@ target_compile_definitions(foxglove_bridge_component
 
 target_link_libraries(foxglove_bridge_component
   ${rosgraph_msgs_TARGETS}
+  ${std_msgs_TARGETS}
   ament_index_cpp::ament_index_cpp
   foxglove_cpp_static
   rclcpp::rclcpp
