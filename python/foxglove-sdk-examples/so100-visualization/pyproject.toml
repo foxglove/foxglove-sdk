@@ -9,7 +9,8 @@ python = "^3.10"
 foxglove-sdk = "^0.4.0"
 scipy = "^1.0"
 yourdfpy = "*"
-lerobot = {version = "*", extras = ["feetech"]}
+lerobot = { version = "*", extras = ["feetech"] }
+av = "15.1.0"
 
 [build-system]
 requires = ["poetry-core"]
