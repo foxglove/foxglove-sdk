@@ -127,40 +127,6 @@ def _level_names() -> dict[str, int]:
     }
 
 
-def create_notebook_buffer(context: Context | None = None) -> None:
-    """
-    Create a data buffer for collecting messages in Jupyter notebooks. The buffer
-    will be associated with the provided context, so every message logged to the context
-    will be collected by the buffer.
-
-    Args:
-        context: Optional Foxglove context to use for logging. If not provided,
-            the global context will be used. This allows you to isolate the
-            buffer's data collection from other parts of your application.
-
-    Example:
-        >>> import foxglove
-        >>> from foxglove.schemas import SceneUpdate
-        >>>
-        >>> # Create a buffer with the global context
-        >>> foxglove.create_notebook_buffer()
-        >>>
-        >>> # Or create a buffer with a specific context
-        >>> context = foxglove.Context()
-        >>> foxglove.create_notebook_buffer(context=context)
-    """
-    try:
-        from .notebook.foxglove_viewer import FoxgloveViewer
-
-    except ImportError:
-        raise Exception(
-            "FoxgloveViewer is not installed. "
-            "Please install it with `pip install foxglove-sdk[notebook]`"
-        )
-
-    FoxgloveViewer.create_notebook_buffer(context=context)
-
-
 def notebook_viewer(
     context: Context | None = None,
     width: Optional[str] = None,
@@ -169,19 +135,18 @@ def notebook_viewer(
     layout_data: Optional[dict] = None,
 ) -> FoxgloveViewer:
     """
-    Create a FoxgloveViewer widget for interactive data visualization in Jupyter notebooks.
+    Create a FoxgloveViewer object to manage data buffering and visualization in Jupyter
+    notebooks.
 
-    This function creates an embedded Foxglove visualization widget that displays
-    the data collected in the NotebookBuffer associated with the provided context.
-    The widget provides a fully-featured Foxglove interface directly within
-    your Jupyter notebook, allowing you to explore multi-modal robotics data
+    The FoxgloveViewer object will buffer all data logged to the provided context. When you
+    are ready to visualize the data, you can call the :meth:`show` method to display an embedded
+    Foxglove visualization widget. The widget provides a fully-featured Foxglove interface
+    directly within your Jupyter notebook, allowing you to explore multi-modal robotics data
     including 3D scenes, plots, images, and more.
 
     Args:
         context: The Context used to log the messages. If no Context is provided, the global
-            context will be used. The visualization data will be retrieved from the NotebookBuffer
-            associated with the provided context. This buffer should have been populated with
-            logged messages before creating the viewer.
+            context will be used. Logged messages will be buffered.
         width: Optional width for the widget. Can be specified as CSS values like
             "800px", "100%", "50vw", etc. If not provided, defaults to "100%".
         height: Optional height for the widget. Can be specified as CSS values like
@@ -193,8 +158,8 @@ def notebook_viewer(
             default layout.
 
     Returns:
-        FoxgloveViewer: A Jupyter widget that displays the embedded Foxglove
-            visualization interface with the provided data.
+        FoxgloveViewer: A FoxgloveViewer object that can be used to manage the data buffering
+            and visualization.
 
     Raises:
         Exception: If the notebook extra package is not installed. Install it
@@ -203,32 +168,20 @@ def notebook_viewer(
     Note:
         This function is only available when the `notebook` extra package
         is installed. Install it with `pip install foxglove-sdk[notebook]`.
-        The widget will automatically load the data from the provided datasource
-        and display it in the embedded Foxglove viewer.
 
     Example:
         >>> import foxglove
-        >>> from foxglove.schemas import SceneUpdate
-        >>>
-        >>> # Create a buffer and log some data
-        >>> foxglove.create_notebook_buffer()
-        >>> # ... your application logs data to the buffer ...
         >>>
         >>> # Create a basic viewer using the default context
         >>> viewer = foxglove.notebook_viewer()
         >>>
-        >>> # Create a custom-sized viewer
-        >>> viewer = foxglove.notebook_viewer(
-        ...     width="800px",
-        ...     height="600px",
-        ...     orgSlug="my-org"
-        ... )
-        >>>
-        >>> # Create a viewer using a specific context
+        >>> # Or use a specific context
         >>> viewer = foxglove.notebook_viewer(context=my_ctx)
         >>>
+        >>> # ... log data as usual ...
+        >>>
         >>> # Display the widget in the notebook
-        >>> viewer
+        >>> viewer.show()
     """
     try:
         from .notebook.foxglove_viewer import FoxgloveViewer
@@ -253,7 +206,6 @@ __all__ = [
     "Context",
     "MCAPWriter",
     "Schema",
-    "create_notebook_buffer",
     "log",
     "open_mcap",
     "set_log_level",

@@ -7,17 +7,18 @@ interface WidgetModel {
   height: string;
   src: string;
   layout_data: OpaqueLayoutData;
-  _data: DataView<ArrayBuffer>;
+  data: DataView<ArrayBuffer>;
 }
 
 function render({ model, el }: RenderProps<WidgetModel>): void {
   function getDataSource(): DataSource {
     // Read data from the model and convert it to a DataSource
-    const data = model.get("_data");
+    const data = model.get("data");
+    const files = splitMergedData(data.buffer);
 
     return {
       type: "file",
-      file: new File([data.buffer], "data.mcap"),
+      file: files,
     };
   }
 
@@ -49,7 +50,7 @@ function render({ model, el }: RenderProps<WidgetModel>): void {
     parent.style.height = model.get("height");
   });
 
-  model.on("change:_data", () => {
+  model.on("change:data", () => {
     const dataSource = getDataSource();
 
     viewer.setDataSource(dataSource);
@@ -62,6 +63,62 @@ function render({ model, el }: RenderProps<WidgetModel>): void {
   });
 
   el.appendChild(parent);
+}
+
+function splitMergedData(buffer: ArrayBuffer): File[] {
+  if (buffer.byteLength === 0) {
+    return [];
+  }
+
+  const view = new DataView(buffer);
+  let offset = 0;
+
+  // Read the file count (4 bytes, big-endian)
+  const fileCount = view.getUint32(offset);
+  offset += 4;
+
+  const files: File[] = [];
+  const separator = new Uint8Array([0x00, 0xff, 0x00, 0xff]);
+
+  for (let i = 0; i < fileCount; i++) {
+    // Check separator (8 bytes: magic + file index)
+    const expectedSeparator = new Uint8Array(buffer, offset, 4);
+    const fileIndex = view.getUint32(offset + 4);
+
+    if (!arraysEqual(expectedSeparator, separator) || fileIndex !== i) {
+      throw new Error(`Invalid separator at position ${offset}`);
+    }
+
+    offset += 8;
+
+    // Read file size (8 bytes, big-endian)
+    const fileSize = Number(view.getBigUint64(offset));
+    offset += 8;
+
+    // Extract file data
+    const fileData = buffer.slice(offset, offset + fileSize);
+    if (fileData.byteLength !== fileSize) {
+      throw new Error(`Expected ${fileSize} bytes but got ${fileData.byteLength}`);
+    }
+
+    // Create File object
+    files.push(new File([fileData], `data-${i}.mcap`));
+    offset += fileSize;
+  }
+
+  return files;
+}
+
+function arraysEqual(a: Uint8Array, b: Uint8Array): boolean {
+  if (a.length !== b.length) {
+    return false;
+  }
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) {
+      return false;
+    }
+  }
+  return true;
 }
 
 export default { render };

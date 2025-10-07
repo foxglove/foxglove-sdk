@@ -19,34 +19,19 @@ Notebook Integration
 
 Functions and classes for integrating with Jupyter notebooks and creating interactive visualizations.
 
-.. py:function:: create_notebook_buffer(context: Context | None = None) -> None
-
-   Create a data buffer for collecting messages in Jupyter notebooks. The buffer
-   will be associated with the provided context, so every message logged to the context
-   will be collected by the buffer.
-
-   :param context: Optional Foxglove context to use for logging. If not provided,
-       the global context will be used. This allows you to isolate the
-       buffer's data collection from other parts of your application.
-
-   .. note::
-      This function is only available when the `notebook` extra package
-      is installed.
-
 .. py:function:: notebook_viewer(context: Optional[Context] = None, width: Optional[str] = None, height: Optional[str] = None, src: Optional[str] = None, layout_data: Optional[dict] = None) -> FoxgloveViewer
 
-   Create a FoxgloveViewer widget for interactive data visualization in Jupyter notebooks.
+   Create a FoxgloveViewer object to manage data buffering and visualization in Jupyter
+   notebooks.
 
-   This function creates an embedded Foxglove visualization widget that displays
-   the data collected in a buffer associated with the provided context.
-   The widget provides a fully-featured Foxglove interface directly within
-   your Jupyter notebook, allowing you to explore multi-modal robotics data
+   The FoxgloveViewer object will buffer all data logged to the provided context. When you
+   are ready to visualize the data, you can call the :meth:`show` method to display an embedded
+   Foxglove visualization widget. The widget provides a fully-featured Foxglove interface
+   directly within your Jupyter notebook, allowing you to explore multi-modal robotics data
    including 3D scenes, plots, images, and more.
 
    :param context: The Context used to log the messages. If no Context is provided, the global
-       context will be used. The visualization data will be retrieved from a buffer
-       associated with the provided context. This buffer should have been populated with
-       logged messages before creating the viewer.
+       context will be used. Logged messages will be buffered.
    :param width: Optional width for the widget. Can be specified as CSS values like
        "800px", "100%", "50vw", etc. If not provided, defaults to "100%".
    :param height: Optional height for the widget. Can be specified as CSS values like
@@ -72,39 +57,20 @@ Notebook Classes
 
 .. py:class:: FoxgloveViewer
 
-   A Jupyter notebook widget that embeds the Foxglove visualization app for interactive data exploration.
+   A FoxgloveViewer object to manage data buffering and visualization in Jupyter notebooks.
 
-   This widget provides a fully-featured Foxglove interface directly within Jupyter notebooks,
-   allowing you to visualize multi-modal robotics data including 3D scenes, plots, images,
-   and more.
-
-   .. py:attribute:: width
-
-      The width of the widget. Defaults to "100%". Can be specified as CSS values like
-      "800px", "100%", "50vw", etc.
-
-   .. py:attribute:: height
-
-      The height of the widget. Defaults to "500px". Can be specified as CSS values like
-      "600px", "80vh", "400px", etc.
-
-   .. py:attribute:: src
-
-      The URL of the Foxglove app instance to use. If empty, uses the default embed server
-      (https://embed.foxglove.dev/).
-
-   .. py:attribute:: layout_data
-
-      Optional layout data to be used by the Foxglove viewer.
+   The FoxgloveViewer object will buffer all data logged to the provided context. When you
+   are ready to visualize the data, you can call the :meth:`show` method to display an embedded
+   Foxglove visualization widget. The widget provides a fully-featured Foxglove interface
+   directly within your Jupyter notebook, allowing you to explore multi-modal robotics data
+   including 3D scenes, plots, images, and more.
 
    .. py:method:: __init__(context: Optional[Context], width: Optional[str] = None, height: Optional[str] = None, src: Optional[str] = None, layout_data: Optional[dict] = None, **kwargs: Any)
 
       Initialize the FoxgloveViewer widget with the specified data source and configuration.
 
       :param context: The Context used to log the messages. If no Context is provided, the global
-          context will be used. The visualization data will be retrieved from a buffer
-          associated with the provided context. This buffer should have been populated with
-          logged messages before creating the viewer.
+          context will be used. Logged messages will be buffered.
       :param width: Optional width for the widget. Can be specified as CSS values like
           "800px", "100%", "50vw", etc. If not provided, defaults to "100%".
       :param height: Optional height for the widget. Can be specified as CSS values like
@@ -116,23 +82,30 @@ Notebook Classes
           default layout.
       :param kwargs: Additional keyword arguments passed to the parent AnyWidget class.
 
-      .. note::
-         The widget will automatically load the data from the buffer associated with the provided
-         context and display it in the embedded Foxglove viewer. The data is loaded once
-         during initialization - to update the data, use the :meth:`reload_data` method.
+   .. py:method:: show() -> Widget
 
-   .. py:method:: reload_data(context: Optional[Context]) -> None
+      Show the Foxglove viewer. Call this method as the last step of a notebook cell
+      to display the viewer.
 
-      Update the data visualized using the provided context.
+   .. py:method:: set_width(width: str) -> None
 
-      This method allows you to dynamically change the data being visualized
-      without recreating the widget. The new data will be loaded from the
-      bugger associated with the provided context and the viewer will update to
-      display it.
+      Set the width of the Foxglove viewer.
 
-      :param context: The Context used to log the messages. The visualization data will be retrieved
-         from the buffer associated with the provided context. This buffer should
-         have been populated with logged messages before creating the viewer.
+   .. py:method:: set_height(height: str) -> None
+
+      Set the height of the Foxglove viewer.
+
+   .. py:method:: set_layout_data(layout_data: dict) -> None
+
+      Set the layout data of the Foxglove viewer.
+
+   .. py:method:: reload_data() -> None
+
+      Read the buffered data and set it to the Foxglove viewer to update the visualization.
+
+   .. py:method:: clear_buffer() -> None
+
+      Clear the buffered data.
 
 Schemas
 ^^^^^^^
