@@ -60,15 +60,6 @@ impl WebSocketServer {
         Self::default()
     }
 
-    /// Creates a new websocket server with the given options.
-    #[cfg(feature = "agent")]
-    pub(crate) fn with_options(options: ServerOptions) -> Self {
-        Self {
-            options,
-            ..Self::default()
-        }
-    }
-
     /// Set the websocket server name to advertise to clients.
     ///
     /// By default, the server is not given a name.

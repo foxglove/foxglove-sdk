@@ -102,7 +102,7 @@ async fn main() {
 
     // Foxglove Agent needs to be running on the same machine for this to work
     let server = foxglove::Agent::new()
-        .start()
+        .create()
         .await
         .expect("Could not connect to agent");
 
