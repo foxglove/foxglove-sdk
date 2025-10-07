@@ -130,6 +130,19 @@ Parameters are provided to configure the behavior of the bridge. These parameter
 - **tls**: Enable TLS/WebSocket Secure (WSS). Defaults to `false`.
 - **certfile**: Path to an X.509 certificate used for WSS. **Must be supplied if `tls` is set to `true`.**
 - **keyfile**: Path to the PEM-encoded PKCS#8 private key used to generate `certfile`. **Must be supplied if `tls` is set to `true`.**
+- **use_sim_time**: Use the `/clock` topic as a time source. Defaults to `false`.
+
+#### Capabilities
+
+The `capabilities` parameter can accept one or more of the following values.
+
+- `clientPublish`: Allow clients to advertise channels to send data messages to the server
+- `parameters`: Allow clients to get & set parameters
+- `parametersSubscribe`: Allow clients to subscribe to parameter changes
+- `services`: Allow clients to call services
+- `connectionGraph`: Allow clients to subscribe to updates to the connection graph
+- `assets`: Allow clients to fetch assets
+- `time`: The server may publish time messages using `broadcastTime`. This can be used to sync frame state in panels like the 3D panel if the server's time disagrees with wall time.
 
 ## For developers
 
