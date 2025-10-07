@@ -1005,36 +1005,43 @@ impl<'py> IntoPyObject<'py> for ParameterValueConverter {
 
 impl<'py> FromPyObject<'py> for ParameterValueConverter {
     fn extract_bound(obj: &Bound<'py, PyAny>) -> PyResult<Self> {
-        if let Ok(val) = obj.extract::<PyParameterValue>() {
-            Ok(Self(val))
-        } else if let Ok(val) = obj.extract::<bool>() {
-            Ok(Self(PyParameterValue::Bool(val)))
-        } else if let Ok(val) = obj.extract::<i64>() {
-            Ok(Self(PyParameterValue::Integer(val)))
-        } else if let Ok(val) = obj.extract::<f64>() {
-            Ok(Self(PyParameterValue::Float64(val)))
-        } else if let Ok(val) = obj.extract::<String>() {
-            Ok(Self(PyParameterValue::String(val)))
-        } else if let Ok(list) = obj.downcast::<PyList>() {
-            let mut values = Vec::with_capacity(list.len());
-            for item in list.iter() {
-                let value: ParameterValueConverter = item.extract()?;
-                values.push(value.0);
-            }
-            Ok(Self(PyParameterValue::Array(values)))
-        } else if let Ok(dict) = obj.downcast::<PyDict>() {
-            let mut values = HashMap::new();
-            for (key, value) in dict {
-                let key: String = key.extract()?;
-                let value: ParameterValueConverter = value.extract()?;
-                values.insert(key, value.0);
-            }
-            Ok(Self(PyParameterValue::Dict(values)))
-        } else {
-            Err(PyErr::new::<PyTypeError, _>(format!(
-                "Unsupported type for ParameterValue: {}",
-                obj.get_type().name()?
-            )))
+        match obj.extract::<PyParameterValue>() {
+            Ok(val) => Ok(Self(val)),
+            _ => match obj.extract::<bool>() {
+                Ok(val) => Ok(Self(PyParameterValue::Bool(val))),
+                _ => match obj.extract::<i64>() {
+                    Ok(val) => Ok(Self(PyParameterValue::Integer(val))),
+                    _ => match obj.extract::<f64>() {
+                        Ok(val) => Ok(Self(PyParameterValue::Float64(val))),
+                        _ => match obj.extract::<String>() {
+                            Ok(val) => Ok(Self(PyParameterValue::String(val))),
+                            _ => {
+                                if let Ok(list) = obj.downcast::<PyList>() {
+                                    let mut values = Vec::with_capacity(list.len());
+                                    for item in list.iter() {
+                                        let value: ParameterValueConverter = item.extract()?;
+                                        values.push(value.0);
+                                    }
+                                    Ok(Self(PyParameterValue::Array(values)))
+                                } else if let Ok(dict) = obj.downcast::<PyDict>() {
+                                    let mut values = HashMap::new();
+                                    for (key, value) in dict {
+                                        let key: String = key.extract()?;
+                                        let value: ParameterValueConverter = value.extract()?;
+                                        values.insert(key, value.0);
+                                    }
+                                    Ok(Self(PyParameterValue::Dict(values)))
+                                } else {
+                                    Err(PyErr::new::<PyTypeError, _>(format!(
+                                        "Unsupported type for ParameterValue: {}",
+                                        obj.get_type().name()?
+                                    )))
+                                }
+                            }
+                        },
+                    },
+                },
+            },
         }
     }
 }
@@ -1062,33 +1069,37 @@ impl<'py> IntoPyObject<'py> for ParameterTypeValueConverter {
 
 impl<'py> FromPyObject<'py> for ParameterTypeValueConverter {
     fn extract_bound(obj: &Bound<'py, PyAny>) -> PyResult<Self> {
-        if let Ok(val) = obj.extract::<ParameterValueConverter>() {
-            let val = val.0;
-            let (typ, val) = match val {
-                // If the value is a float, the type is float64.
-                PyParameterValue::Float64(_) => (Some(PyParameterType::Float64), val),
-                // If the value is an array of numbers, then the type is float64 array.
-                PyParameterValue::Array(ref vec)
-                    if vec
-                        .iter()
-                        .all(|v| matches!(v, PyParameterValue::Float64(_))) =>
-                {
-                    (Some(PyParameterType::Float64Array), val)
+        match obj.extract::<ParameterValueConverter>() {
+            Ok(val) => {
+                let val = val.0;
+                let (typ, val) = match val {
+                    // If the value is a float, the type is float64.
+                    PyParameterValue::Float64(_) => (Some(PyParameterType::Float64), val),
+                    // If the value is an array of numbers, then the type is float64 array.
+                    PyParameterValue::Array(ref vec)
+                        if vec
+                            .iter()
+                            .all(|v| matches!(v, PyParameterValue::Float64(_))) =>
+                    {
+                        (Some(PyParameterType::Float64Array), val)
+                    }
+                    _ => (None, val),
+                };
+                Ok(Self(typ, val))
+            }
+            _ => match obj.extract::<Vec<u8>>() {
+                Ok(val) => {
+                    let b64 = BASE64_STANDARD.encode(val);
+                    Ok(Self(
+                        Some(PyParameterType::ByteArray),
+                        PyParameterValue::String(b64),
+                    ))
                 }
-                _ => (None, val),
-            };
-            Ok(Self(typ, val))
-        } else if let Ok(val) = obj.extract::<Vec<u8>>() {
-            let b64 = BASE64_STANDARD.encode(val);
-            Ok(Self(
-                Some(PyParameterType::ByteArray),
-                PyParameterValue::String(b64),
-            ))
-        } else {
-            Err(PyErr::new::<PyTypeError, _>(format!(
-                "Unsupported type for ParameterValue: {}",
-                obj.get_type().name()?
-            )))
+                _ => Err(PyErr::new::<PyTypeError, _>(format!(
+                    "Unsupported type for ParameterValue: {}",
+                    obj.get_type().name()?
+                ))),
+            },
         }
     }
 }

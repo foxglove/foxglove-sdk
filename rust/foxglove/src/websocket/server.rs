@@ -282,10 +282,13 @@ impl Server {
     /// Accept handler which spawns a new task for each incoming connection.
     async fn accept_connections(self: Arc<Self>, listener: TcpListener) {
         while let Ok((stream, addr)) = listener.accept().await {
-            if let Some(tasks) = self.tasks.lock().as_mut() {
-                tasks.spawn(self.clone().handle_connection(stream, addr));
-            } else {
-                break;
+            match self.tasks.lock().as_mut() {
+                Some(tasks) => {
+                    tasks.spawn(self.clone().handle_connection(stream, addr));
+                }
+                _ => {
+                    break;
+                }
             }
         }
     }
@@ -296,12 +299,15 @@ impl Server {
         interval.set_missed_tick_behavior(MissedTickBehavior::Skip);
         loop {
             interval.tick().await;
-            if let Some(tasks) = self.tasks.lock().as_mut() {
-                while let Some(result) = tasks.try_join_next() {
-                    process_task_result(result);
+            match self.tasks.lock().as_mut() {
+                Some(tasks) => {
+                    while let Some(result) = tasks.try_join_next() {
+                        process_task_result(result);
+                    }
                 }
-            } else {
-                break;
+                _ => {
+                    break;
+                }
             }
         }
     }

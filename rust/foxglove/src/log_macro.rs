@@ -12,11 +12,13 @@ impl ChannelPlaceholder {
     }
 
     pub unsafe fn log<T: Encode>(channel_ptr: *mut Self, msg: &T, metadata: PartialMetadata) {
-        // Safety: we're restoring the Arc<RawChannel> we leaked into_raw in new()
-        let channel_arc = Arc::from_raw(channel_ptr as *mut RawChannel);
-        // We can safely create a Channel from any Arc<RawChannel>
-        let channel = ManuallyDrop::new(Channel::<T>::from_raw_channel(channel_arc));
-        channel.log_with_meta(msg, metadata);
+        unsafe {
+            // Safety: we're restoring the Arc<RawChannel> we leaked into_raw in new()
+            let channel_arc = Arc::from_raw(channel_ptr as *mut RawChannel);
+            // We can safely create a Channel from any Arc<RawChannel>
+            let channel = ManuallyDrop::new(Channel::<T>::from_raw_channel(channel_arc));
+            channel.log_with_meta(msg, metadata);
+        }
     }
 }
 
@@ -64,11 +66,11 @@ pub fn create_channel<T: Encode>(
 /// Panics if a channel can't be created for `$msg`.
 #[macro_export]
 macro_rules! log {
-    ($topic:literal, $msg:expr $(,)? ) => {{
+    ($topic:literal, $msg:expr_2021 $(,)? ) => {{
         $crate::log_with_meta!($topic, $msg, $crate::PartialMetadata::default())
     }};
 
-    ($topic:literal, $msg:expr, log_time = $log_time:expr $(,)? ) => {{
+    ($topic:literal, $msg:expr_2021, log_time = $log_time:expr_2021 $(,)? ) => {{
         $crate::log_with_meta!(
             $topic,
             $msg,
@@ -85,7 +87,7 @@ macro_rules! log {
 #[doc(hidden)]
 #[macro_export]
 macro_rules! log_with_meta {
-    ($topic:literal, $msg:expr, $metadata:expr) => {{
+    ($topic:literal, $msg:expr_2021, $metadata:expr_2021) => {{
         static CHANNEL: std::sync::atomic::AtomicPtr<$crate::log_macro::ChannelPlaceholder> =
             std::sync::atomic::AtomicPtr::new(std::ptr::null_mut());
         let mut channel_ptr = CHANNEL.load(std::sync::atomic::Ordering::Acquire);

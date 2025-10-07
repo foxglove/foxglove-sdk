@@ -217,10 +217,9 @@ fn open_mcap(
 
     let options = writer_options.map_or_else(McapWriteOptions::default, |opts| opts.into());
     let writer = BufWriter::new(file);
-    let handle = if let Some(context) = context {
-        McapWriter::with_options(options).context(&context.0)
-    } else {
-        McapWriter::with_options(options)
+    let handle = match context {
+        Some(context) => McapWriter::with_options(options).context(&context.0),
+        _ => McapWriter::with_options(options),
     };
     let handle = handle.create(writer).map_err(PyFoxgloveError::from)?;
     Ok(PyMcapWriter(Some(handle)))
