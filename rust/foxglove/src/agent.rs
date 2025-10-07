@@ -79,9 +79,9 @@ impl AgentHandle {
             .connect_rx
             .recv_async()
             .await
-            .map_err(|e| FoxgloveError::Unspecified(Box::new(e)))?;
+            .map_err(|e| FoxgloveError::Unspecified(Box::new(e)));
         self.connecting = false;
-        self.server = Some(result?);
+        self.server = Some(result??);
         Ok(())
     }
 
@@ -97,9 +97,9 @@ impl AgentHandle {
         let result = self
             .connect_rx
             .recv()
-            .map_err(|e| FoxgloveError::Unspecified(Box::new(e)))?;
+            .map_err(|e| FoxgloveError::Unspecified(Box::new(e)));
         self.connecting = false;
-        self.server = Some(result?);
+        self.server = Some(result??);
         Ok(())
     }
 
