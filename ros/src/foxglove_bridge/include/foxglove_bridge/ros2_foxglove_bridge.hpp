@@ -9,6 +9,7 @@
 #include <rclcpp/rclcpp.hpp>
 #include <rosgraph_msgs/msg/clock.hpp>
 #include <rosx_introspection/ros_parser.hpp>
+#include <std_msgs/msg/u_int32.hpp>
 
 #include <foxglove/foxglove.hpp>
 #include <foxglove/server.hpp>
@@ -106,6 +107,10 @@ private:
   std::atomic<bool> _shuttingDown = false;
   foxglove::Context _serverContext;
 
+  // Client count tracking
+  std::atomic<uint32_t> _clientCount = 0;
+  rclcpp::Publisher<std_msgs::msg::UInt32>::SharedPtr _clientCountPublisher;
+
   void subscribeConnectionGraph(bool subscribe);
 
   void subscribe(ChannelId channelId, const foxglove::ClientMetadata& client);
@@ -140,6 +145,12 @@ private:
                             foxglove::ServiceResponder&& responder);
 
   void fetchAsset(const std::string_view uri, foxglove::FetchAssetResponder&& responder);
+
+  void onClientConnect();
+
+  void onClientDisconnect();
+
+  void publishClientCount();
 
   rclcpp::QoS determineQoS(const std::string& topic);
 };

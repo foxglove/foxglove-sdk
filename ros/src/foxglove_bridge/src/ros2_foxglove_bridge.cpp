@@ -171,6 +171,11 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
     _paramInterface->setParamUpdateCallback(std::bind(&FoxgloveBridge::parameterUpdates, this, _1));
   }
 
+  // Setup client connection callbacks
+  sdkServerOptions.callbacks.onClientConnect = std::bind(&FoxgloveBridge::onClientConnect, this);
+  sdkServerOptions.callbacks.onClientDisconnect =
+    std::bind(&FoxgloveBridge::onClientDisconnect, this);
+
   auto maybeSdkServer = foxglove::WebSocketServer::create(std::move(sdkServerOptions));
 
   if (!maybeSdkServer.has_value()) {
@@ -191,6 +196,13 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
   _clientPublishCallbackGroup =
     this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
   _servicesCallbackGroup = this->create_callback_group(rclcpp::CallbackGroupType::Reentrant);
+
+  // Create publisher for client count
+  _clientCountPublisher = this->create_publisher<std_msgs::msg::UInt32>(
+    "/foxglove_bridge/client_count", rclcpp::QoS{rclcpp::KeepLast(1)}.transient_local());
+  auto init_msg = std_msgs::msg::UInt32();
+  init_msg.data = 0;
+  _clientCountPublisher->publish(init_msg);  // Initalize transient local topic to 0
 
   if (_useSimTime) {
     _clockSubscription = this->create_subscription<rosgraph_msgs::msg::Clock>(
@@ -1070,6 +1082,24 @@ rclcpp::QoS FoxgloveBridge::determineQoS(const std::string& topic) {
   }
 
   return qos;
+}
+
+void FoxgloveBridge::onClientConnect() {
+  const auto newCount = ++_clientCount;
+  RCLCPP_DEBUG(this->get_logger(), "Client connected. Total clients: %u", newCount);
+  publishClientCount();
+}
+
+void FoxgloveBridge::onClientDisconnect() {
+  const auto newCount = --_clientCount;
+  RCLCPP_DEBUG(this->get_logger(), "Client disconnected. Total clients: %u", newCount);
+  publishClientCount();
+}
+
+void FoxgloveBridge::publishClientCount() {
+  auto msg = std_msgs::msg::UInt32{};
+  msg.data = _clientCount.load();
+  _clientCountPublisher->publish(msg);
 }
 
 }  // namespace foxglove_bridge

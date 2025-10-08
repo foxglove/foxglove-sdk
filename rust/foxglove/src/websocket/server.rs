@@ -44,6 +44,8 @@ pub(crate) struct ServerOptions {
     pub runtime: Option<Handle>,
     pub fetch_asset_handler: Option<Box<dyn AssetHandler>>,
     pub tls_identity: Option<TlsIdentity>,
+    pub on_client_connect: Option<Box<dyn Fn() + Send + Sync>>,
+    pub on_client_disconnect: Option<Box<dyn Fn() + Send + Sync>>,
 }
 
 impl std::fmt::Debug for ServerOptions {
@@ -155,6 +157,10 @@ pub(crate) struct Server {
     tasks: parking_lot::Mutex<Option<JoinSet<()>>>,
     /// Configuration to support TLS streams when enabled.
     stream_config: StreamConfiguration,
+    /// Callback for when a client connects
+    on_client_connect: Option<Box<dyn Fn() + Send + Sync>>,
+    /// Callback for when a client disconnects
+    on_client_disconnect: Option<Box<dyn Fn() + Send + Sync>>,
 }
 
 impl Server {
@@ -214,6 +220,8 @@ impl Server {
             fetch_asset_handler: opts.fetch_asset_handler,
             tasks: parking_lot::Mutex::default(),
             stream_config,
+            on_client_connect: opts.on_client_connect,
+            on_client_disconnect: opts.on_client_disconnect,
         }
     }
 
@@ -323,6 +331,11 @@ impl Server {
             client.shutdown(ShutdownReason::ServerStopped);
         }
         Some(ShutdownHandle::new(self.runtime.clone(), tasks))
+    }
+
+    /// Returns the number of currently connected clients.
+    pub fn client_count(&self) -> usize {
+        self.clients.get().len()
     }
 
     /// Publish the current timestamp to all clients.
@@ -580,6 +593,11 @@ impl Server {
 
         tracing::info!("Registered client {}", client.addr());
 
+        // Call the client connect callback if provided
+        if let Some(ref callback) = self.on_client_connect {
+            callback();
+        }
+
         // Add the client as a sink. This synchronously triggers advertisements for all channels
         // via the `Sink::add_channel` callback.
         if let Some(context) = self.context.upgrade() {
@@ -612,6 +630,12 @@ impl Server {
         }
 
         self.clients.retain(|c| c.id() != client.id());
+
+        // Call the client disconnect callback if provided
+        if let Some(ref callback) = self.on_client_disconnect {
+            callback();
+        }
+
         if self.has_capability(Capability::Parameters) {
             self.unsubscribe_all_parameters(client.id());
         }

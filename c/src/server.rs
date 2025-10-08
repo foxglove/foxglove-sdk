@@ -260,6 +260,8 @@ pub struct FoxgloveServerCallbacks {
     >,
     pub on_connection_graph_subscribe: Option<unsafe extern "C" fn(context: *const c_void)>,
     pub on_connection_graph_unsubscribe: Option<unsafe extern "C" fn(context: *const c_void)>,
+    pub on_client_connect: Option<unsafe extern "C" fn(context: *const c_void)>,
+    pub on_client_disconnect: Option<unsafe extern "C" fn(context: *const c_void)>,
 }
 unsafe impl Send for FoxgloveServerCallbacks {}
 unsafe impl Sync for FoxgloveServerCallbacks {}
@@ -346,7 +348,21 @@ unsafe fn do_foxglove_server_start(
         );
     }
     if let Some(callbacks) = options.callbacks {
-        server = server.listener(Arc::new(callbacks.clone()))
+        server = server.listener(Arc::new(callbacks.clone()));
+
+        if let Some(on_client_connect) = callbacks.on_client_connect {
+            let context = callbacks.context as usize;
+            server = server.on_client_connect(move || {
+                unsafe { on_client_connect(context as *const c_void) };
+            });
+        }
+
+        if let Some(on_client_disconnect) = callbacks.on_client_disconnect {
+            let context = callbacks.context as usize;
+            server = server.on_client_disconnect(move || {
+                unsafe { on_client_disconnect(context as *const c_void) };
+            });
+        }
     }
     if let Some(fetch_asset) = options.fetch_asset {
         server = server.fetch_asset_handler(Box::new(FetchAssetHandler::new(
@@ -492,6 +508,22 @@ pub extern "C" fn foxglove_server_get_port(server: Option<&mut FoxgloveWebSocket
         return 0;
     };
     server.port()
+}
+
+/// Get the number of currently connected clients.
+#[unsafe(no_mangle)]
+pub extern "C" fn foxglove_server_get_client_count(
+    server: Option<&mut FoxgloveWebSocketServer>,
+) -> usize {
+    let Some(server) = server else {
+        tracing::error!("foxglove_server_get_client_count called with null server");
+        return 0;
+    };
+    let Some(server) = server.as_ref() else {
+        tracing::error!("foxglove_server_get_client_count called with closed server");
+        return 0;
+    };
+    server.client_count()
 }
 
 /// Stop and shut down `server` and free the resources associated with it.
