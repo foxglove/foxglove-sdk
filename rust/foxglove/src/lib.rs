@@ -336,7 +336,6 @@ pub use app_url::AppUrl;
 // Re-export bytes crate for convenience when implementing the `Encode` trait
 pub use bytes;
 pub use channel::{Channel, ChannelId, LazyChannel, LazyRawChannel, RawChannel};
-// Re-export BTreeMap for metadata API convenience
 pub use std::collections::BTreeMap;
 pub use channel_builder::ChannelBuilder;
 pub use context::{Context, LazyContext};

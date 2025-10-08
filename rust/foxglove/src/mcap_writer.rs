@@ -135,14 +135,6 @@ impl<W: Write + Seek + Send + 'static> McapWriterHandle<W> {
     /// # Arguments
     /// * `name` - Name identifier for this metadata record
     /// * `metadata` - Key-value pairs to store (empty map will be skipped)
-    ///
-    /// # Example
-    /// ```
-    /// use std::collections::BTreeMap;
-    /// let mut metadata = BTreeMap::new();
-    /// metadata.insert("location".to_string(), "lab".to_string());
-    /// metadata.insert("operator".to_string(), "Alice".to_string());
-    /// writer.write_metadata("recording_info", &metadata)?;
     /// ```
     pub fn write_metadata(
         &self,
