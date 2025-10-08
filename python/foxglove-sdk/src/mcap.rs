@@ -172,11 +172,6 @@ impl PyMcapWriter {
     ///
     /// Metadata consists of key-value string pairs associated with a name.
     /// If the metadata dictionary is empty, this method does nothing.
-    ///
-    /// :param name: Name identifier for this metadata record
-    /// :type name: str
-    /// :param metadata: Dictionary of key-value pairs to store
-    /// :type metadata: dict[str, str]
     fn write_metadata(&self, name: &str, metadata: std::collections::BTreeMap<String, String>) -> PyResult<()> {
         if let Some(writer) = &self.0 {
             writer.write_metadata(name, &metadata).map_err(PyFoxgloveError::from)?;
