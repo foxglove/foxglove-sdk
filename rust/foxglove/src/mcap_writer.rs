@@ -135,7 +135,7 @@ impl<W: Write + Seek + Send + 'static> McapWriterHandle<W> {
     /// # Arguments
     /// * `name` - Name identifier for this metadata record
     /// * `metadata` - Key-value pairs to store (empty map will be skipped)
-    /// ```
+    ///
     pub fn write_metadata(
         &self,
         name: &str,
