@@ -336,7 +336,6 @@ pub use app_url::AppUrl;
 // Re-export bytes crate for convenience when implementing the `Encode` trait
 pub use bytes;
 pub use channel::{Channel, ChannelId, LazyChannel, LazyRawChannel, RawChannel};
-pub use std::collections::BTreeMap;
 pub use channel_builder::ChannelBuilder;
 pub use context::{Context, LazyContext};
 #[doc(hidden)]
@@ -346,6 +345,7 @@ pub use mcap_writer::{McapCompression, McapWriteOptions, McapWriter, McapWriterH
 pub use metadata::{Metadata, PartialMetadata, ToUnixNanos};
 pub use schema::Schema;
 pub use sink::{Sink, SinkId};
+pub use std::collections::BTreeMap;
 pub(crate) use time::nanoseconds_since_epoch;
 
 #[cfg(feature = "live_visualization")]

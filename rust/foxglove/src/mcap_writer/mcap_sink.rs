@@ -147,10 +147,13 @@ impl<W: Write + Seek> McapSink<W> {
         let mut guard = self.inner.lock();
         let writer = guard.as_mut().ok_or(FoxgloveError::SinkClosed)?;
 
-        writer.writer.write_metadata(&mcap::records::Metadata {
-            name: name.into(),
-            metadata: metadata.clone(),
-        }).map_err(FoxgloveError::from)
+        writer
+            .writer
+            .write_metadata(&mcap::records::Metadata {
+                name: name.into(),
+                metadata: metadata.clone(),
+            })
+            .map_err(FoxgloveError::from)
     }
 }
 
@@ -376,8 +379,8 @@ mod tests {
         let temp_file = NamedTempFile::new().expect("create tempfile");
         let temp_path = temp_file.path().to_owned();
 
-        let writer = McapSink::new(&temp_file, WriteOptions::default())
-            .expect("failed to create writer");
+        let writer =
+            McapSink::new(&temp_file, WriteOptions::default()).expect("failed to create writer");
 
         let mut metadata = BTreeMap::new();
         metadata.insert("key1".to_string(), "value1".to_string());
@@ -394,14 +397,24 @@ mod tests {
         foreach_mcap_metadata(&temp_path, |meta| {
             metadata_count += 1;
             if meta.name == "test_metadata" {
-                assert_eq!(meta.metadata.get("key1").map(|s| s.as_str()), Some("value1"));
-                assert_eq!(meta.metadata.get("key2").map(|s| s.as_str()), Some("value2"));
+                assert_eq!(
+                    meta.metadata.get("key1").map(|s| s.as_str()),
+                    Some("value1")
+                );
+                assert_eq!(
+                    meta.metadata.get("key2").map(|s| s.as_str()),
+                    Some("value2")
+                );
                 metadata_found = true;
             }
         })
         .expect("failed to read MCAP metadata");
 
-        assert_eq!(metadata_count, 1, "Expected exactly 1 metadata record, found {}", metadata_count);
+        assert_eq!(
+            metadata_count, 1,
+            "Expected exactly 1 metadata record, found {}",
+            metadata_count
+        );
         assert!(metadata_found, "Metadata not found in MCAP file");
     }
 
@@ -410,8 +423,8 @@ mod tests {
         let temp_file = NamedTempFile::new().expect("create tempfile");
         let temp_path = temp_file.path().to_owned();
 
-        let writer = McapSink::new(&temp_file, WriteOptions::default())
-            .expect("failed to create writer");
+        let writer =
+            McapSink::new(&temp_file, WriteOptions::default()).expect("failed to create writer");
 
         let empty_metadata = BTreeMap::new();
 
@@ -436,8 +449,8 @@ mod tests {
         let temp_file = NamedTempFile::new().expect("create tempfile");
         let temp_path = temp_file.path().to_owned();
 
-        let writer = McapSink::new(&temp_file, WriteOptions::default())
-            .expect("failed to create writer");
+        let writer =
+            McapSink::new(&temp_file, WriteOptions::default()).expect("failed to create writer");
 
         let mut metadata1 = BTreeMap::new();
         metadata1.insert("session".to_string(), "test_session".to_string());
@@ -469,16 +482,23 @@ mod tests {
         })
         .expect("failed to read MCAP metadata");
 
-        assert_eq!(metadata_count, 2, "Expected exactly 2 metadata records, found {}", metadata_count);
-        assert!(found_session && found_operator, "Not all metadata records found");
+        assert_eq!(
+            metadata_count, 2,
+            "Expected exactly 2 metadata records, found {}",
+            metadata_count
+        );
+        assert!(
+            found_session && found_operator,
+            "Not all metadata records found"
+        );
     }
 
     #[test]
     fn test_write_metadata_after_close() {
         let temp_file = NamedTempFile::new().expect("create tempfile");
 
-        let writer = McapSink::new(&temp_file, WriteOptions::default())
-            .expect("failed to create writer");
+        let writer =
+            McapSink::new(&temp_file, WriteOptions::default()).expect("failed to create writer");
 
         // Close the writer
         writer.finish().expect("failed to finish recording");

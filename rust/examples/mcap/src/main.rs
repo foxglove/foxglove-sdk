@@ -3,7 +3,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
 use clap::{Parser, ValueEnum};
-use foxglove::{LazyChannel, McapCompression, McapWriteOptions, McapWriter, BTreeMap};
+use foxglove::{BTreeMap, LazyChannel, McapCompression, McapWriteOptions, McapWriter};
 use std::time::Duration;
 
 #[derive(Debug, Parser)]
@@ -91,8 +91,11 @@ fn verify_metadata(path: &PathBuf) {
                     for record in reader {
                         if let Ok(mcap::records::Record::Metadata(metadata)) = record {
                             metadata_count += 1;
-                            println!("Found metadata: '{}' with {} key-value pairs",
-                                metadata.name, metadata.metadata.len());
+                            println!(
+                                "Found metadata: '{}' with {} key-value pairs",
+                                metadata.name,
+                                metadata.metadata.len()
+                            );
 
                             // Show all key-value pairs
                             for (key, value) in &metadata.metadata {
@@ -103,21 +106,36 @@ fn verify_metadata(path: &PathBuf) {
                             match metadata.name.as_str() {
                                 "test1" => {
                                     found_test1 = true;
-                                    let has_key1 = metadata.metadata.get("key1") == Some(&"value1".to_string());
-                                    let has_key2 = metadata.metadata.get("key2") == Some(&"value2".to_string());
-                                    println!("Test 1: {}", if has_key1 && has_key2 { "PASS" } else { "FAIL" });
+                                    let has_key1 = metadata.metadata.get("key1")
+                                        == Some(&"value1".to_string());
+                                    let has_key2 = metadata.metadata.get("key2")
+                                        == Some(&"value2".to_string());
+                                    println!(
+                                        "Test 1: {}",
+                                        if has_key1 && has_key2 { "PASS" } else { "FAIL" }
+                                    );
                                 }
                                 "test2" => {
                                     found_test2 = true;
-                                    let has_a = metadata.metadata.get("a") == Some(&"1".to_string());
-                                    let has_b = metadata.metadata.get("b") == Some(&"2".to_string());
-                                    println!("Test 2: {}", if has_a && has_b { "PASS" } else { "FAIL" });
+                                    let has_a =
+                                        metadata.metadata.get("a") == Some(&"1".to_string());
+                                    let has_b =
+                                        metadata.metadata.get("b") == Some(&"2".to_string());
+                                    println!(
+                                        "Test 2: {}",
+                                        if has_a && has_b { "PASS" } else { "FAIL" }
+                                    );
                                 }
                                 "test3" => {
                                     found_test3 = true;
-                                    let has_x = metadata.metadata.get("x") == Some(&"y".to_string());
-                                    let has_z = metadata.metadata.get("z") == Some(&"w".to_string());
-                                    println!("Test 3: {}", if has_x && has_z { "PASS" } else { "FAIL" });
+                                    let has_x =
+                                        metadata.metadata.get("x") == Some(&"y".to_string());
+                                    let has_z =
+                                        metadata.metadata.get("z") == Some(&"w".to_string());
+                                    println!(
+                                        "Test 3: {}",
+                                        if has_x && has_z { "PASS" } else { "FAIL" }
+                                    );
                                 }
                                 "empty_test" => {
                                     found_empty_test = true;
@@ -133,13 +151,33 @@ fn verify_metadata(path: &PathBuf) {
                     println!("\n=== METADATA TEST RESULTS ===");
                     println!("Total metadata records found: {}", metadata_count);
                     println!("Expected: 3 metadata records");
-                    println!("Test 1 (test1): {}", if found_test1 { "PASS" } else { "FAIL" });
-                    println!("Test 2 (test2): {}", if found_test2 { "PASS" } else { "FAIL" });
-                    println!("Test 3 (test3): {}", if found_test3 { "PASS" } else { "FAIL" });
-                    println!("Empty metadata test: {}",
-                        if !found_empty_test { "PASS (correctly skipped)" } else { "FAIL (should not exist)" });
+                    println!(
+                        "Test 1 (test1): {}",
+                        if found_test1 { "PASS" } else { "FAIL" }
+                    );
+                    println!(
+                        "Test 2 (test2): {}",
+                        if found_test2 { "PASS" } else { "FAIL" }
+                    );
+                    println!(
+                        "Test 3 (test3): {}",
+                        if found_test3 { "PASS" } else { "FAIL" }
+                    );
+                    println!(
+                        "Empty metadata test: {}",
+                        if !found_empty_test {
+                            "PASS (correctly skipped)"
+                        } else {
+                            "FAIL (should not exist)"
+                        }
+                    );
 
-                    if metadata_count == 3 && found_test1 && found_test2 && found_test3 && !found_empty_test {
+                    if metadata_count == 3
+                        && found_test1
+                        && found_test2
+                        && found_test3
+                        && !found_empty_test
+                    {
                         println!("\n ALL METADATA TESTS PASSED!");
                     } else {
                         println!("\n Some metadata tests failed");
@@ -184,7 +222,8 @@ fn main() {
     metadata1.insert("key1".to_string(), "value1".to_string());
     metadata1.insert("key2".to_string(), "value2".to_string());
 
-    writer.write_metadata("test1", &metadata1)
+    writer
+        .write_metadata("test1", &metadata1)
         .expect("Failed to write metadata");
 
     // Test 2: Write multiple metadata records
@@ -192,19 +231,22 @@ fn main() {
     metadata2.insert("a".to_string(), "1".to_string());
     metadata2.insert("b".to_string(), "2".to_string());
 
-    writer.write_metadata("test2", &metadata2)
+    writer
+        .write_metadata("test2", &metadata2)
         .expect("Failed to write metadata2");
 
     let mut metadata3 = BTreeMap::new();
     metadata3.insert("x".to_string(), "y".to_string());
     metadata3.insert("z".to_string(), "w".to_string());
 
-    writer.write_metadata("test3", &metadata3)
+    writer
+        .write_metadata("test3", &metadata3)
         .expect("Failed to write metadata3");
 
     // Test 3: Write empty metadata (should be skipped)
     let empty_metadata = BTreeMap::new();
-    writer.write_metadata("empty_test", &empty_metadata)
+    writer
+        .write_metadata("empty_test", &empty_metadata)
         .expect("Failed to write empty metadata");
 
     log_until(args.fps, done);
