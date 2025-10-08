@@ -26,7 +26,6 @@ class FoxgloveViewer:
     ):
         self._buffer = NotebookBuffer(context=context)
         self._widget = Widget(
-            context=context,
             width=width,
             height=height,
             src=src,
@@ -64,7 +63,7 @@ class FoxgloveViewer:
         """
         Read the buffered data and set it to the Foxglove viewer to update the visualization.
         """
-        self._widget.data = self._buffer.get_data()
+        self._widget.send_data(self._buffer.get_data())
 
     def clear_buffer(self) -> None:
         """

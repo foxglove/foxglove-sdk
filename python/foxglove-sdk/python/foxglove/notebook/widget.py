@@ -13,7 +13,6 @@ except importlib.metadata.PackageNotFoundError:
 
 class Widget(anywidget.AnyWidget):
     _esm = pathlib.Path(__file__).parent / "static" / "widget.js"
-    data = traitlets.Bytes(b"").tag(sync=True)
     width = traitlets.Unicode("100%").tag(sync=True)
     height = traitlets.Unicode("500px").tag(sync=True)
     src = traitlets.Unicode("").tag(sync=True)
@@ -21,7 +20,6 @@ class Widget(anywidget.AnyWidget):
 
     def __init__(
         self,
-        data: Optional[bytes] = None,
         width: Optional[str] = None,
         height: Optional[str] = None,
         src: Optional[str] = None,
@@ -38,5 +36,24 @@ class Widget(anywidget.AnyWidget):
             self.src = src
         if layout_data is not None:
             self.layout_data = layout_data
-        if data is not None:
-            self.data = data
+
+        # Keep track of when the widget is ready to receive data
+        self._ready = False
+        # Pending data to be sent when the widget is ready
+        self._pending_data: list[bytes] = []
+        self.on_msg(self._handle_custom_msg)
+
+    def send_data(self, data: list[bytes]):
+        if not self._ready:
+            self._pending_data = data
+        else:
+            self.send({ "type": "update-data" }, data)
+
+
+    def _handle_custom_msg(self, data: dict, buffers: list[bytes]):
+        if data["type"] == "ready":
+            self._ready = True
+
+            if len(self._pending_data) > 0:
+                self.send({ "type": "update-data" }, self._pending_data)
+                self._pending_data = []

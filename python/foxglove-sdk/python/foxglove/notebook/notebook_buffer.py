@@ -20,7 +20,7 @@ class NotebookBuffer:
         self._files: list[str] = []
         self._create_writer()
 
-    def get_data(self) -> bytes:
+    def get_data(self) -> list[bytes]:
         """
         Retrieve all collected data and reset the buffer for new data collection.
         """
@@ -35,29 +35,7 @@ class NotebookBuffer:
 
         self._create_writer()
 
-        bytes_contents: bytes = b""
-        # merge the contents into a single bytes object
-        if contents:
-            # Use a unique separator that's unlikely to appear in the data
-            # We'll use a 4-byte magic number followed by the file index
-            separator = b"\x00\xFF\x00\xFF"  # Magic bytes for separator
-
-            # First, add the number of files as a 4-byte integer
-            file_count = len(contents).to_bytes(4, byteorder="big")
-            bytes_contents = file_count
-
-            # Then add each file with its separator
-            for i, file_data in enumerate(contents):
-                # Add separator with file index
-                file_separator = separator + i.to_bytes(4, byteorder="big")
-                bytes_contents += file_separator
-                # Add the file size as 8-byte integer
-                file_size = len(file_data).to_bytes(8, byteorder="big")
-                bytes_contents += file_size
-                # Add the actual file data
-                bytes_contents += file_data
-
-        return bytes_contents
+        return contents
 
     def clear(self) -> None:
         """
