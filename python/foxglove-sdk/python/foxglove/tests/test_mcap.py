@@ -114,3 +114,52 @@ def test_write_to_different_contexts(make_tmp_mcap: Callable[[], Path]) -> None:
     contents2 = tmp_2.read_bytes()
 
     assert len(contents1) < len(contents2)
+
+
+def test_write_metadata(tmp_mcap: Path) -> None:
+    """Test writing metadata to MCAP file."""
+    with open_mcap(tmp_mcap) as writer:
+        # Write basic metadata
+        writer.write_metadata("test1", {"key1": "value1", "key2": "value2"})
+
+        # Write multiple metadata records
+        writer.write_metadata("test2", {"a": "1", "b": "2"})
+        writer.write_metadata("test3", {"x": "y", "z": "w"})
+
+        # Write empty metadata (should be skipped)
+        writer.write_metadata("empty_test", {})
+
+        # Log some messages
+        for ii in range(5):
+            chan.log({"foo": ii})
+
+
+def test_write_metadata_empty_dict(tmp_mcap: Path) -> None:
+    """Test that empty metadata dictionaries are handled gracefully."""
+    with open_mcap(tmp_mcap) as writer:
+        # This should not raise an error
+        writer.write_metadata("empty", {})
+
+        # Log some messages
+        chan.log({"test": "data"})
+
+    # Verify file was created and has some content
+    assert tmp_mcap.exists()
+    assert tmp_mcap.stat().st_size > 0
+
+
+def test_write_metadata_multiple_records(tmp_mcap: Path) -> None:
+    """Test writing multiple metadata records with different names."""
+    with open_mcap(tmp_mcap) as writer:
+        # Write several metadata records
+        writer.write_metadata("session_info", {"app": "test", "version": "1.0"})
+        writer.write_metadata("environment", {"os": "linux", "arch": "x64"})
+        writer.write_metadata("config", {"debug": "true", "level": "info"})
+
+        # Log some messages
+        for ii in range(3):
+            chan.log({"message": f"test_{ii}"})
+
+    # Verify file was created
+    assert tmp_mcap.exists()
+    assert tmp_mcap.stat().st_size > 0
