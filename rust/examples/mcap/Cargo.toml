@@ -11,5 +11,6 @@ foxglove = { path = "../../foxglove", default-features = false, features = ["der
 clap = { version = "4.5", features = ["derive"] }
 ctrlc = "3.4.5"
 env_logger = "0.11.5"
+mcap = "0.23"
 schemars = "1.0.4"
 serde = { version = "1.0", features = ["derive"] }

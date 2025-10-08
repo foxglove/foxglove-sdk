@@ -3,7 +3,7 @@ use crate::{ChannelId, FoxgloveError, Metadata, RawChannel, Sink, SinkId};
 use mcap::WriteOptions;
 use parking_lot::Mutex;
 use std::collections::hash_map::Entry;
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::fmt::Debug;
 use std::io::{Seek, Write};
 use std::sync::Arc;
@@ -120,6 +120,37 @@ impl<W: Write + Seek> McapSink<W> {
         };
         writer.writer.finish()?;
         Ok(Some(writer.writer.into_inner()))
+    }
+
+    /// Writes MCAP metadata to the file.
+    ///
+    /// If the metadata map is empty, this method returns early without writing anything.
+    ///
+    /// # Arguments
+    /// * `name` - Name identifier for this metadata record
+    /// * `metadata` - Key-value pairs to store (empty map will be skipped)
+    ///
+    /// # Returns
+    /// * `Ok(())` if metadata was written successfully or skipped (empty metadata)
+    /// * `Err(FoxgloveError::SinkClosed)` if the writer has been closed
+    /// * `Err(FoxgloveError)` if there was an error writing to the file
+    pub fn write_metadata(
+        &self,
+        name: &str,
+        metadata: &BTreeMap<String, String>,
+    ) -> Result<(), FoxgloveError> {
+        // Skip writing if metadata is empty (backwards compatibility)
+        if metadata.is_empty() {
+            return Ok(());
+        }
+
+        let mut guard = self.inner.lock();
+        let writer = guard.as_mut().ok_or(FoxgloveError::SinkClosed)?;
+
+        writer.writer.write_metadata(&mcap::records::Metadata {
+            name: name.into(),
+            metadata: metadata.clone(),
+        }).map_err(FoxgloveError::from)
     }
 }
 
@@ -324,5 +355,140 @@ mod tests {
         assert_eq!(messages[2].sequence, 2);
         assert_eq!(messages[4].sequence, 3);
         assert_eq!(messages[5].sequence, 4);
+    }
+
+    fn foreach_mcap_metadata<F>(path: &Path, mut f: F) -> Result<(), McapError>
+    where
+        F: FnMut(&mcap::records::Metadata),
+    {
+        use mcap::read::LinearReader;
+        let contents = std::fs::read(path).map_err(McapError::Io)?;
+        for record in LinearReader::new(&contents)? {
+            if let mcap::records::Record::Metadata(metadata) = record? {
+                f(&metadata);
+            }
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn test_write_metadata_basic() {
+        let temp_file = NamedTempFile::new().expect("create tempfile");
+        let temp_path = temp_file.path().to_owned();
+
+        let writer = McapSink::new(&temp_file, WriteOptions::default())
+            .expect("failed to create writer");
+
+        let mut metadata = BTreeMap::new();
+        metadata.insert("key1".to_string(), "value1".to_string());
+        metadata.insert("key2".to_string(), "value2".to_string());
+
+        writer
+            .write_metadata("test_metadata", &metadata)
+            .expect("failed to write metadata");
+
+        writer.finish().expect("failed to finish recording");
+
+        let mut metadata_count = 0;
+        let mut metadata_found = false;
+        foreach_mcap_metadata(&temp_path, |meta| {
+            metadata_count += 1;
+            if meta.name == "test_metadata" {
+                assert_eq!(meta.metadata.get("key1").map(|s| s.as_str()), Some("value1"));
+                assert_eq!(meta.metadata.get("key2").map(|s| s.as_str()), Some("value2"));
+                metadata_found = true;
+            }
+        })
+        .expect("failed to read MCAP metadata");
+
+        assert_eq!(metadata_count, 1, "Expected exactly 1 metadata record, found {}", metadata_count);
+        assert!(metadata_found, "Metadata not found in MCAP file");
+    }
+
+    #[test]
+    fn test_write_metadata_empty_skipped() {
+        let temp_file = NamedTempFile::new().expect("create tempfile");
+        let temp_path = temp_file.path().to_owned();
+
+        let writer = McapSink::new(&temp_file, WriteOptions::default())
+            .expect("failed to create writer");
+
+        let empty_metadata = BTreeMap::new();
+
+        // This should return Ok(()) but not write anything
+        writer
+            .write_metadata("empty_metadata", &empty_metadata)
+            .expect("failed to write metadata");
+
+        writer.finish().expect("failed to finish recording");
+
+        let mut metadata_count = 0;
+        foreach_mcap_metadata(&temp_path, |_meta| {
+            metadata_count += 1;
+        })
+        .expect("failed to read MCAP metadata");
+
+        assert_eq!(metadata_count, 0, "Empty metadata should not be written");
+    }
+
+    #[test]
+    fn test_write_multiple_metadata_records() {
+        let temp_file = NamedTempFile::new().expect("create tempfile");
+        let temp_path = temp_file.path().to_owned();
+
+        let writer = McapSink::new(&temp_file, WriteOptions::default())
+            .expect("failed to create writer");
+
+        let mut metadata1 = BTreeMap::new();
+        metadata1.insert("session".to_string(), "test_session".to_string());
+
+        let mut metadata2 = BTreeMap::new();
+        metadata2.insert("operator".to_string(), "Alice".to_string());
+
+        writer
+            .write_metadata("session_info", &metadata1)
+            .expect("failed to write metadata 1");
+
+        writer
+            .write_metadata("operator_info", &metadata2)
+            .expect("failed to write metadata 2");
+
+        writer.finish().expect("failed to finish recording");
+
+        let mut metadata_count = 0;
+        let mut found_session = false;
+        let mut found_operator = false;
+
+        foreach_mcap_metadata(&temp_path, |meta| {
+            metadata_count += 1;
+            if meta.name == "session_info" {
+                found_session = true;
+            } else if meta.name == "operator_info" {
+                found_operator = true;
+            }
+        })
+        .expect("failed to read MCAP metadata");
+
+        assert_eq!(metadata_count, 2, "Expected exactly 2 metadata records, found {}", metadata_count);
+        assert!(found_session && found_operator, "Not all metadata records found");
+    }
+
+    #[test]
+    fn test_write_metadata_after_close() {
+        let temp_file = NamedTempFile::new().expect("create tempfile");
+
+        let writer = McapSink::new(&temp_file, WriteOptions::default())
+            .expect("failed to create writer");
+
+        // Close the writer
+        writer.finish().expect("failed to finish recording");
+
+        let mut metadata = BTreeMap::new();
+        metadata.insert("key".to_string(), "value".to_string());
+
+        // This should fail because the writer is closed
+        let result = writer.write_metadata("test", &metadata);
+        assert!(result.is_err(), "Should fail to write metadata after close");
+        assert!(matches!(result.unwrap_err(), FoxgloveError::SinkClosed));
     }
 }
