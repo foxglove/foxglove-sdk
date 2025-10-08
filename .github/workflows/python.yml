@@ -271,7 +271,7 @@ jobs:
         with:
           target: ${{ matrix.platform.target }}
           working-directory: python/foxglove-sdk
-          args: --release --out dist --find-interpreter
+          args: --release --out dist --interpreter python
           sccache: "false"
       - name: Upload wheels
         uses: actions/upload-artifact@v4
