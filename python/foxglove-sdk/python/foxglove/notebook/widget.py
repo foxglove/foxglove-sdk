@@ -43,17 +43,16 @@ class Widget(anywidget.AnyWidget):
         self._pending_data: list[bytes] = []
         self.on_msg(self._handle_custom_msg)
 
-    def send_data(self, data: list[bytes]):
+    def send_data(self, data: list[bytes]) -> None:
         if not self._ready:
             self._pending_data = data
         else:
-            self.send({ "type": "update-data" }, data)
+            self.send({"type": "update-data"}, data)
 
-
-    def _handle_custom_msg(self, data: dict, buffers: list[bytes]):
+    def _handle_custom_msg(self, data: dict, buffers: list[bytes]) -> None:
         if data["type"] == "ready":
             self._ready = True
 
             if len(self._pending_data) > 0:
-                self.send({ "type": "update-data" }, self._pending_data)
+                self.send({"type": "update-data"}, self._pending_data)
                 self._pending_data = []
