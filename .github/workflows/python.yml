@@ -41,7 +41,7 @@ jobs:
         with:
           node-version: 22
           cache: yarn
-      - run: yarn workspaces focus @foxglove/notebook
+      - run: yarn install
 
       - run: pipx install poetry
       - run: poetry check --strict
@@ -70,6 +70,7 @@ jobs:
         with:
           node-version: 22
           cache: yarn
+      - run: yarn install
 
       - name: Install common dependencies
         uses: ./.github/actions/common-deps
@@ -179,7 +180,7 @@ jobs:
         with:
           node-version: 22
           cache: yarn
-      - run: yarn workspaces focus @foxglove/notebook
+      - run: yarn install
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
@@ -217,7 +218,7 @@ jobs:
         with:
           node-version: 22
           cache: yarn
-      - run: yarn workspaces focus @foxglove/notebook
+      - run: yarn install
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
@@ -252,7 +253,7 @@ jobs:
         with:
           node-version: 22
           cache: yarn
-      - run: yarn workspaces focus @foxglove/notebook
+      - run: yarn install
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
@@ -285,7 +286,7 @@ jobs:
         with:
           node-version: 22
           cache: yarn
-      - run: yarn workspaces focus @foxglove/notebook
+      - run: yarn install
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
@@ -308,7 +309,7 @@ jobs:
         with:
           node-version: 22
           cache: yarn
-      - run: yarn workspaces focus @foxglove/notebook
+      - run: yarn install
       - name: Build sdist
         uses: PyO3/maturin-action@v1
         with:
@@ -367,6 +368,7 @@ jobs:
         with:
           node-version: 22
           cache: yarn
+      - run: yarn install
 
       - run: pipx install poetry
       - run: pipx ensurepath
@@ -374,5 +376,4 @@ jobs:
       - run: poetry install
       - run: poetry run maturin develop
 
-      - run: yarn install
       - run: yarn run-python-sdk-examples
