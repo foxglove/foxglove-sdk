@@ -1,6 +1,8 @@
+use crate::channel_descriptor::FoxgloveChannelDescriptor;
 use crate::connection_graph::FoxgloveConnectionGraph;
 use crate::fetch_asset::{FetchAssetHandler, FoxgloveFetchAssetResponder};
 use crate::service::FoxgloveService;
+use crate::sink_channel_filter::ChannelFilter;
 use bitflags::bitflags;
 use std::ffi::{c_char, c_void, CString};
 use std::mem::ManuallyDrop;
@@ -126,6 +128,26 @@ pub struct FoxgloveServerOptions<'a> {
     pub tls_key: *const u8,
     /// TLS configuration: Length of key bytes
     pub tls_key_len: usize,
+
+    /// Context provided to the `sink_channel_filter` callback.
+    pub sink_channel_filter_context: *const c_void,
+
+    /// A filter for channels that can be used to subscribe to or unsubscribe from channels.
+    ///
+    /// This can be used to omit one or more channels from a sink, but still log all channels to another
+    /// sink in the same context. Return false to disable logging of this channel.
+    ///
+    /// This method is invoked from the client's main poll loop and must not block.
+    ///
+    /// # Safety
+    /// - If provided, the handler callback must be a pointer to the filter callback function,
+    ///   and must remain valid until the server is stopped.
+    pub sink_channel_filter: Option<
+        unsafe extern "C" fn(
+            context: *const c_void,
+            channel: *const FoxgloveChannelDescriptor,
+        ) -> bool,
+    >,
 }
 
 #[repr(C)]
@@ -352,6 +374,12 @@ unsafe fn do_foxglove_server_start(
         server = server.fetch_asset_handler(Box::new(FetchAssetHandler::new(
             options.fetch_asset_context,
             fetch_asset,
+        )));
+    }
+    if let Some(sink_channel_filter) = options.sink_channel_filter {
+        server = server.channel_filter(Arc::new(ChannelFilter::new(
+            options.sink_channel_filter_context,
+            sink_channel_filter,
         )));
     }
     if !options.context.is_null() {
