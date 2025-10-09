@@ -17,7 +17,9 @@ def test_server_interface() -> None:
     """
     Exercise the server interface; will also be checked with mypy.
     """
-    server = start_server(port=0, session_id="test-session")
+    server = start_server(
+        port=0, session_id="test-session", channel_filter=lambda _: True
+    )
     assert isinstance(server.port, int)
     assert server.port != 0
 

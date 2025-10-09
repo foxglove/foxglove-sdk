@@ -13,6 +13,7 @@ use tokio_tungstenite::tungstenite::Message;
 use tokio_util::sync::CancellationToken;
 
 use crate::library_version::get_library_version;
+use crate::sink_channel_filter::SinkChannelFilter;
 use crate::websocket::connected_client::ShutdownReason;
 use crate::websocket::streams::{Acceptor, StreamConfiguration, TlsIdentity};
 use crate::{Context, FoxgloveError};
@@ -44,6 +45,7 @@ pub(crate) struct ServerOptions {
     pub runtime: Option<Handle>,
     pub fetch_asset_handler: Option<Box<dyn AssetHandler>>,
     pub tls_identity: Option<TlsIdentity>,
+    pub channel_filter: Option<Arc<dyn SinkChannelFilter>>,
 }
 
 impl std::fmt::Debug for ServerOptions {
@@ -135,6 +137,8 @@ pub(crate) struct Server {
     session_id: parking_lot::RwLock<String>,
     name: String,
     clients: CowVec<Arc<ConnectedClient>>,
+    /// Channel subscription filter
+    channel_filter: Option<Arc<dyn SinkChannelFilter>>,
     /// Callbacks for handling client messages, etc.
     listener: Option<Arc<dyn ServerListener>>,
     /// Capabilities advertised to clients
@@ -199,6 +203,7 @@ impl Server {
                 .message_backlog_size
                 .unwrap_or(DEFAULT_MESSAGE_BACKLOG_SIZE) as u32,
             runtime: opts.runtime.unwrap_or_else(crate::get_runtime_handle),
+            channel_filter: opts.channel_filter.clone(),
             listener: opts.listener,
             session_id: parking_lot::RwLock::new(
                 opts.session_id.unwrap_or_else(Self::generate_session_id),
@@ -563,6 +568,7 @@ impl Server {
             ws_stream,
             addr,
             self.message_backlog_size as usize,
+            self.channel_filter.clone(),
         );
         self.register_client_and_advertise(&client);
         client.run().await;
