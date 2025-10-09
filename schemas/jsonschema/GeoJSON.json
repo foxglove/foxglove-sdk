@@ -8,5 +8,8 @@
       "type": "string",
       "description": "GeoJSON data encoded as a UTF-8 string"
     }
-  }
+  },
+  "required": [
+    "geojson"
+  ]
 }

@@ -12,5 +12,9 @@
       "type": "string",
       "description": "Value"
     }
-  }
+  },
+  "required": [
+    "key",
+    "value"
+  ]
 }

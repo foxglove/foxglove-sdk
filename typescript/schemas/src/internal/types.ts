@@ -20,7 +20,6 @@ export type FoxgloveMessageField = {
     | { type: "nested"; schema: FoxgloveMessageSchema }
     | { type: "enum"; enum: FoxgloveEnumSchema };
   array?: true | number;
-  required?: true;
   description: string;
   protobufFieldNumber?: number;
   defaultValue?: string | number | boolean;

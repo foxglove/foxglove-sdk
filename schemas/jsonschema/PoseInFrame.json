@@ -46,7 +46,12 @@
               "type": "number",
               "description": "z coordinate length"
             }
-          }
+          },
+          "required": [
+            "x",
+            "y",
+            "z"
+          ]
         },
         "orientation": {
           "title": "foxglove.Quaternion",
@@ -69,9 +74,24 @@
               "type": "number",
               "description": "w value"
             }
-          }
+          },
+          "required": [
+            "x",
+            "y",
+            "z",
+            "w"
+          ]
         }
-      }
+      },
+      "required": [
+        "position",
+        "orientation"
+      ]
     }
-  }
+  },
+  "required": [
+    "timestamp",
+    "frame_id",
+    "pose"
+  ]
 }

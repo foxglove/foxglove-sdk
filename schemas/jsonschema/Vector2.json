@@ -12,5 +12,9 @@
       "type": "number",
       "description": "y coordinate length"
     }
-  }
+  },
+  "required": [
+    "x",
+    "y"
+  ]
 }
