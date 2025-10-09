@@ -346,8 +346,8 @@ pub use mcap_writer::{McapCompression, McapWriteOptions, McapWriter, McapWriterH
 pub use metadata::{Metadata, PartialMetadata, ToUnixNanos};
 pub use schema::Schema;
 pub use sink::{Sink, SinkId};
-pub use std::collections::BTreeMap;
 pub use sink_channel_filter::SinkChannelFilter;
+pub use std::collections::BTreeMap;
 pub(crate) use time::nanoseconds_since_epoch;
 
 #[cfg(feature = "live_visualization")]

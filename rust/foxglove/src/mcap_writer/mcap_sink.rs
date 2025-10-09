@@ -533,6 +533,8 @@ mod tests {
         let result = writer.write_metadata("test", &metadata);
         assert!(result.is_err(), "Should fail to write metadata after close");
         assert!(matches!(result.unwrap_err(), FoxgloveError::SinkClosed));
+    }
+
     #[test]
     fn test_channel_filter() {
         // Write messages to two topics, but filter out the first.
