@@ -25,7 +25,7 @@ Functions and classes for integrating with Jupyter notebooks and creating intera
    notebooks.
 
    The FoxgloveViewer object will buffer all data logged to the provided context. When you
-   are ready to visualize the data, you can call the :meth:`show` method to display an embedded
+   are ready to visualize the data, you can call the :meth:`FoxgloveViewer.show` method to display an embedded
    Foxglove visualization widget. The widget provides a fully-featured Foxglove interface
    directly within your Jupyter notebook, allowing you to explore multi-modal robotics data
    including 3D scenes, plots, images, and more.
@@ -60,7 +60,7 @@ Notebook Classes
    A FoxgloveViewer object to manage data buffering and visualization in Jupyter notebooks.
 
    The FoxgloveViewer object will buffer all data logged to the provided context. When you
-   are ready to visualize the data, you can call the :meth:`show` method to display an embedded
+   are ready to visualize the data, you can call the :meth:`FoxgloveViewer.show` method to display an embedded
    Foxglove visualization widget. The widget provides a fully-featured Foxglove interface
    directly within your Jupyter notebook, allowing you to explore multi-modal robotics data
    including 3D scenes, plots, images, and more.

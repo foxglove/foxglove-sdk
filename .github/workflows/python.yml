@@ -36,6 +36,13 @@ jobs:
       - name: Install common dependencies
         uses: ./.github/actions/common-deps
 
+      - run: corepack enable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+      - run: yarn workspaces focus @foxglove/notebook
+
       - run: pipx install poetry
       - run: poetry check --strict
       - run: poetry install --all-extras
