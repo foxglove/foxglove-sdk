@@ -1,9 +1,10 @@
+use std::collections::BTreeMap;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
 use clap::{Parser, ValueEnum};
-use foxglove::{BTreeMap, LazyChannel, McapCompression, McapWriteOptions, McapWriter};
+use foxglove::{LazyChannel, McapCompression, McapWriteOptions, McapWriter};
 use std::time::Duration;
 
 #[derive(Debug, Parser)]
@@ -73,61 +74,6 @@ fn log_until(fps: u8, stop: Arc<AtomicBool>) {
     }
 }
 
-fn verify_metadata(path: &PathBuf) {
-    use std::fs;
-    use std::collections::HashMap;
-
-    match fs::read(path) {
-        Ok(contents) => {
-            use mcap::read::LinearReader;
-
-            // Simple table of expected metadata - easy to modify
-            let expected: &[(&str, &[(&str, &str)])] = &[
-                ("test1", &[("key1", "value1"), ("key2", "value2")]),
-                ("test2", &[("a", "1"), ("b", "2")]),
-                ("test3", &[("x", "y"), ("z", "w")]),
-            ];
-
-            let mut found_metadata: HashMap<String, std::collections::BTreeMap<String, String>> = HashMap::new();
-            let mut metadata_count = 0;
-            let mut found_empty_test = false;
-
-            // Read all metadata from file
-            for record in LinearReader::new(&contents).unwrap() {
-                if let Ok(mcap::records::Record::Metadata(metadata)) = record {
-                    metadata_count += 1;
-                    found_metadata.insert(metadata.name.clone(), metadata.metadata.clone());
-
-                    if metadata.name == "empty_test" {
-                        found_empty_test = true;
-                    }
-                }
-            }
-
-            // Verify count
-            assert_eq!(metadata_count, expected.len(), "Wrong number of metadata records");
-
-            // Verify each expected metadata exists with correct key-value pairs
-            for (name, expected_kv) in expected {
-                let actual = found_metadata.get(*name)
-                    .unwrap_or_else(|| panic!("Metadata '{}' not found", name));
-
-                let expected_map: std::collections::BTreeMap<String, String> = expected_kv.iter()
-                    .map(|(k, v)| (k.to_string(), v.to_string()))
-                    .collect();
-
-                assert_eq!(actual, &expected_map, "Metadata '{}' has wrong key-value pairs", name);
-            }
-
-            // Verify empty metadata was skipped
-            assert!(!found_empty_test, "Empty metadata should not have been written");
-
-            println!("All metadata tests passed!");
-        }
-        Err(e) => panic!("Failed to read file: {}", e),
-    }
-}
-
 fn main() {
     let env = env_logger::Env::default().default_filter_or("debug");
     env_logger::init_from_env(env);
@@ -155,42 +101,14 @@ fn main() {
         .create_new_buffered_file(&args.path)
         .expect("Failed to start mcap writer");
 
-    // Test 1: Write basic metadata
-    let mut metadata1 = BTreeMap::new();
-    metadata1.insert("key1".to_string(), "value1".to_string());
-    metadata1.insert("key2".to_string(), "value2".to_string());
-
+    // Example: Write metadata to the MCAP file
+    let mut metadata = BTreeMap::new();
+    metadata.insert("os".to_string(), "linux".to_string());
+    metadata.insert("arch".to_string(), "x64".to_string());
     writer
-        .write_metadata("test1", metadata1)
+        .write_metadata("environment", metadata)
         .expect("Failed to write metadata");
-
-    // Test 2: Write multiple metadata records
-    let mut metadata2 = BTreeMap::new();
-    metadata2.insert("a".to_string(), "1".to_string());
-    metadata2.insert("b".to_string(), "2".to_string());
-
-    writer
-        .write_metadata("test2", metadata2)
-        .expect("Failed to write metadata2");
-
-    let mut metadata3 = BTreeMap::new();
-    metadata3.insert("x".to_string(), "y".to_string());
-    metadata3.insert("z".to_string(), "w".to_string());
-
-    writer
-        .write_metadata("test3", metadata3)
-        .expect("Failed to write metadata3");
-
-    // Test 3: Write empty metadata (should be skipped)
-    let empty_metadata = BTreeMap::new();
-    writer
-        .write_metadata("empty_test", empty_metadata)
-        .expect("Failed to write empty metadata");
 
     log_until(args.fps, done);
     writer.close().expect("Failed to flush mcap file");
-
-    // Verify metadata was written
-    println!("Verifying metadata in output file...");
-    verify_metadata(&args.path);
 }

@@ -116,15 +116,52 @@ def test_write_to_different_contexts(make_tmp_mcap: Callable[[], Path]) -> None:
     assert len(contents1) < len(contents2)
 
 
+def _verify_metadata_in_file(file_path: Path, expected_metadata: dict) -> None:
+    """Helper function to verify metadata in MCAP file matches expected."""
+    import mcap.reader
+
+    with open(file_path, "rb") as f:
+        reader = mcap.reader.make_reader(f)
+
+        found_metadata = {}
+        metadata_count = 0
+
+        for record in reader.iter_metadata():
+            metadata_count += 1
+            found_metadata[record.name] = dict(record.metadata)
+
+        # Verify count
+        assert metadata_count == len(
+            expected_metadata
+        ), f"Expected {len(expected_metadata)} metadata records, found {metadata_count}"
+
+        # Verify metadata names and content
+        assert set(found_metadata.keys()) == set(
+            expected_metadata.keys()
+        ), "Metadata names don't match"
+
+        for name, expected_kv in expected_metadata.items():
+            assert (
+                found_metadata[name] == expected_kv
+            ), f"Metadata '{name}' has wrong key-value pairs"
+
+
 def test_write_metadata(tmp_mcap: Path) -> None:
     """Test writing metadata to MCAP file."""
+    # Define expected metadata
+    expected_metadata = {
+        "test1": {"key1": "value1", "key2": "value2"},
+        "test2": {"a": "1", "b": "2"},
+        "test3": {"x": "y", "z": "w"},
+    }
+
     with open_mcap(tmp_mcap) as writer:
         # Write basic metadata
-        writer.write_metadata("test1", {"key1": "value1", "key2": "value2"})
+        writer.write_metadata("test1", expected_metadata["test1"])
 
         # Write multiple metadata records
-        writer.write_metadata("test2", {"a": "1", "b": "2"})
-        writer.write_metadata("test3", {"x": "y", "z": "w"})
+        writer.write_metadata("test2", expected_metadata["test2"])
+        writer.write_metadata("test3", expected_metadata["test3"])
 
         # Write empty metadata (should be skipped)
         writer.write_metadata("empty_test", {})
@@ -132,6 +169,9 @@ def test_write_metadata(tmp_mcap: Path) -> None:
         # Log some messages
         for ii in range(5):
             chan.log({"foo": ii})
+
+    # Verify metadata was written correctly
+    _verify_metadata_in_file(tmp_mcap, expected_metadata)
 
 
 def test_write_metadata_empty_dict(tmp_mcap: Path) -> None:
@@ -147,14 +187,24 @@ def test_write_metadata_empty_dict(tmp_mcap: Path) -> None:
     assert tmp_mcap.exists()
     assert tmp_mcap.stat().st_size > 0
 
+    # Verify no metadata was written (empty metadata should be skipped)
+    _verify_metadata_in_file(tmp_mcap, {})
+
 
 def test_write_metadata_multiple_records(tmp_mcap: Path) -> None:
     """Test writing multiple metadata records with different names."""
+    # Define expected metadata
+    expected_metadata = {
+        "metadata1": {"md1_key1": "md1_value1", "md1_key2": "md1_value2"},
+        "metadata2": {"md2_key1": "md2_value1", "md2_key2": "md2_value2"},
+        "metadata3": {"md3_key1": "md3_value1", "md3_key2": "md3_value2"},
+    }
+
     with open_mcap(tmp_mcap) as writer:
         # Write several metadata records
-        writer.write_metadata("session_info", {"app": "test", "version": "1.0"})
-        writer.write_metadata("environment", {"os": "linux", "arch": "x64"})
-        writer.write_metadata("config", {"debug": "true", "level": "info"})
+        writer.write_metadata("metadata1", expected_metadata["metadata1"])
+        writer.write_metadata("metadata2", expected_metadata["metadata2"])
+        writer.write_metadata("metadata3", expected_metadata["metadata3"])
 
         # Log some messages
         for ii in range(3):
@@ -163,6 +213,9 @@ def test_write_metadata_multiple_records(tmp_mcap: Path) -> None:
     # Verify file was created
     assert tmp_mcap.exists()
     assert tmp_mcap.stat().st_size > 0
+
+    # Verify metadata was written correctly
+    _verify_metadata_in_file(tmp_mcap, expected_metadata)
 
 
 def test_channel_filter(make_tmp_mcap: Callable[[], Path]) -> None:

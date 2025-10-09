@@ -383,132 +383,133 @@ mod tests {
         assert_eq!(messages[5].sequence, 4);
     }
 
-    fn foreach_mcap_metadata<F>(path: &Path, mut f: F) -> Result<(), McapError>
-    where
-        F: FnMut(&mcap::records::Metadata),
-    {
-        use mcap::read::LinearReader;
-        let contents = std::fs::read(path).map_err(McapError::Io)?;
-        for record in LinearReader::new(&contents)? {
-            if let mcap::records::Record::Metadata(metadata) = record? {
-                f(&metadata);
-            }
-        }
-        Ok(())
-    }
-
-    /// Helper function to verify metadata in MCAP file using HashMap comparison
-    fn verify_metadata_in_file(
+    /// Single verification function that reads MCAP file and verifies metadata matches expected
+    fn verify_metadata(
         path: &Path,
         expected: &std::collections::HashMap<String, std::collections::BTreeMap<String, String>>,
+        should_skip_empty: bool,
     ) {
-        let mut found_metadata: std::collections::HashMap<String, std::collections::BTreeMap<String, String>> = std::collections::HashMap::new();
-        let mut metadata_count = 0;
+        use std::collections::{HashMap, HashSet};
+        use std::fs;
 
-        foreach_mcap_metadata(path, |meta| {
-            metadata_count += 1;
-            found_metadata.insert(meta.name.clone(), meta.metadata.clone());
-        })
-        .expect("failed to read MCAP metadata");
+        let contents = fs::read(path).expect("Failed to read file");
+        use mcap::read::LinearReader;
+
+        let mut found_metadata: HashMap<String, std::collections::BTreeMap<String, String>> =
+            HashMap::new();
+        let mut metadata_count = 0;
+        let mut found_empty_test = false;
+
+        // Read all metadata from file
+        for record in LinearReader::new(&contents).unwrap() {
+            if let Ok(mcap::records::Record::Metadata(metadata)) = record {
+                metadata_count += 1;
+                found_metadata.insert(metadata.name.clone(), metadata.metadata.clone());
+
+                if metadata.name == "empty_test" {
+                    found_empty_test = true;
+                }
+            }
+        }
 
         // Verify count
-        assert_eq!(metadata_count, expected.len(), "Wrong number of metadata records");
+        assert_eq!(
+            metadata_count,
+            expected.len(),
+            "Wrong number of metadata records"
+        );
 
-        // Verify each expected metadata exists with correct key-value pairs
+        // Verify metadata names using set operations
+        let expected_names: HashSet<&String> = expected.keys().collect();
+        let found_names: HashSet<&String> = found_metadata.keys().collect();
+        assert_eq!(expected_names, found_names, "Metadata names don't match");
+
+        // Verify each expected metadata exists with correct key-value pairs using map equality
         for (name, expected_kv) in expected {
-            let actual = found_metadata.get(name)
+            let actual = found_metadata
+                .get(name)
                 .unwrap_or_else(|| panic!("Metadata '{}' not found", name));
 
-            assert_eq!(actual, expected_kv, "Metadata '{}' has wrong key-value pairs", name);
+            // Use map equality for key-value pairs
+            assert_eq!(
+                actual, expected_kv,
+                "Metadata '{}' has wrong key-value pairs",
+                name
+            );
+        }
+
+        // Verify empty metadata was skipped if expected
+        if should_skip_empty {
+            assert!(
+                !found_empty_test,
+                "Empty metadata should not have been written"
+            );
         }
     }
 
     #[test]
-    fn test_write_metadata_basic() {
+    fn test_write_metadata_comprehensive() {
         let temp_file = NamedTempFile::new().expect("create tempfile");
         let temp_path = temp_file.path().to_owned();
 
         let writer = McapSink::new(&temp_file, WriteOptions::default(), None)
             .expect("failed to create writer");
 
-        let mut metadata = BTreeMap::new();
-        metadata.insert("key1".to_string(), "value1".to_string());
-        metadata.insert("key2".to_string(), "value2".to_string());
-
+        // Test Case 1: Basic metadata write
+        let mut basic_metadata = BTreeMap::new();
+        basic_metadata.insert("key1".to_string(), "value1".to_string());
+        basic_metadata.insert("key2".to_string(), "value2".to_string());
         writer
-            .write_metadata("test_metadata", metadata)
-            .expect("failed to write metadata");
+            .write_metadata("basic_test", basic_metadata)
+            .expect("Failed to write basic metadata");
 
-        writer.finish().expect("failed to finish recording");
-
-        // Define expected metadata and verify
-        let mut expected = std::collections::HashMap::new();
-        let mut expected_metadata = BTreeMap::new();
-        expected_metadata.insert("key1".to_string(), "value1".to_string());
-        expected_metadata.insert("key2".to_string(), "value2".to_string());
-        expected.insert("test_metadata".to_string(), expected_metadata);
-
-        verify_metadata_in_file(&temp_path, &expected);
-    }
-
-    #[test]
-    fn test_write_metadata_empty_skipped() {
-        let temp_file = NamedTempFile::new().expect("create tempfile");
-        let temp_path = temp_file.path().to_owned();
-
-        let writer = McapSink::new(&temp_file, WriteOptions::default(), None)
-            .expect("failed to create writer");
-
-        let empty_metadata = BTreeMap::new();
-
-        // This should return Ok(()) but not write anything
-        writer
-            .write_metadata("empty_metadata", empty_metadata)
-            .expect("failed to write metadata");
-
-        writer.finish().expect("failed to finish recording");
-
-        // Verify no metadata was written
-        let expected = std::collections::HashMap::new();
-        verify_metadata_in_file(&temp_path, &expected);
-    }
-
-    #[test]
-    fn test_write_multiple_metadata_records() {
-        let temp_file = NamedTempFile::new().expect("create tempfile");
-        let temp_path = temp_file.path().to_owned();
-
-        let writer = McapSink::new(&temp_file, WriteOptions::default(), None)
-            .expect("failed to create writer");
-
-        let mut metadata1 = BTreeMap::new();
-        metadata1.insert("session".to_string(), "test_session".to_string());
-
+        // Test Case 2: Multiple metadata records
         let mut metadata2 = BTreeMap::new();
-        metadata2.insert("operator".to_string(), "Alice".to_string());
-
+        metadata2.insert("key1".to_string(), "value1".to_string());
+        metadata2.insert("key2".to_string(), "value2".to_string());
         writer
-            .write_metadata("session_info", metadata1)
-            .expect("failed to write metadata 1");
+            .write_metadata("test2", metadata2)
+            .expect("Failed to write metadata2");
 
+        let mut metadata3 = BTreeMap::new();
+        metadata3.insert("key1".to_string(), "value1".to_string());
+        metadata3.insert("key2".to_string(), "value2".to_string());
         writer
-            .write_metadata("operator_info", metadata2)
-            .expect("failed to write metadata 2");
+            .write_metadata("test3", metadata3)
+            .expect("Failed to write metadata3");
+
+        // Test Case 3: Empty metadata (should be skipped)
+        let empty_metadata = BTreeMap::new();
+        writer
+            .write_metadata("empty_test", empty_metadata)
+            .expect("Failed to write empty metadata");
 
         writer.finish().expect("failed to finish recording");
 
-        // Define expected metadata and verify
+        // Verify Tests Above
+        // Define expected metadata using flexible HashMap approach
         let mut expected = std::collections::HashMap::new();
 
-        let mut expected_session = BTreeMap::new();
-        expected_session.insert("session".to_string(), "test_session".to_string());
-        expected.insert("session_info".to_string(), expected_session);
+        // Expected basic metadata
+        let mut expected_basic = BTreeMap::new();
+        expected_basic.insert("key1".to_string(), "value1".to_string());
+        expected_basic.insert("key2".to_string(), "value2".to_string());
+        expected.insert("basic_test".to_string(), expected_basic);
 
-        let mut expected_operator = BTreeMap::new();
-        expected_operator.insert("operator".to_string(), "Alice".to_string());
-        expected.insert("operator_info".to_string(), expected_operator);
+        // Expected metadata2
+        let mut expected_metadata2 = BTreeMap::new();
+        expected_metadata2.insert("key1".to_string(), "value1".to_string());
+        expected_metadata2.insert("key2".to_string(), "value2".to_string());
+        expected.insert("test2".to_string(), expected_metadata2);
 
-        verify_metadata_in_file(&temp_path, &expected);
+        // Expected metadata3
+        let mut expected_metadata3 = BTreeMap::new();
+        expected_metadata3.insert("key1".to_string(), "value1".to_string());
+        expected_metadata3.insert("key2".to_string(), "value2".to_string());
+        expected.insert("test3".to_string(), expected_metadata3);
+
+        // Verify all metadata using single verification function
+        verify_metadata(&temp_path, &expected, true);
     }
 
     #[test]
