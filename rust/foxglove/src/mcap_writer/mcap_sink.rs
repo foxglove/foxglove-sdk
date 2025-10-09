@@ -446,8 +446,8 @@ mod tests {
         let temp_file = NamedTempFile::new().expect("create tempfile");
         let temp_path = temp_file.path().to_owned();
 
-        let writer =
-            McapSink::new(&temp_file, WriteOptions::default()).expect("failed to create writer");
+        let writer = McapSink::new(&temp_file, WriteOptions::default(), None)
+            .expect("failed to create writer");
 
         let empty_metadata = BTreeMap::new();
 
