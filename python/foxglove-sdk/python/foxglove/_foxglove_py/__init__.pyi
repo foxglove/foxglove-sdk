@@ -185,6 +185,8 @@ def open_mcap(
 
     If a context is provided, the MCAP file will be associated with that context. Otherwise, the
     global context will be used.
+
+    You must close the writer with close() or the with statement to ensure the file is correctly finished.
     """
     ...
 
