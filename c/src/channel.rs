@@ -182,6 +182,61 @@ pub unsafe extern "C" fn foxglove_mcap_close(
     unsafe { result_to_c(result, std::ptr::null_mut()) }
 }
 
+/// Write metadata to an MCAP file.
+///
+/// Metadata consists of key-value string pairs associated with a name.
+/// If the metadata has no key-value pairs, this method does nothing.
+///
+/// Returns 0 on success, or returns a FoxgloveError code on error.
+///
+/// # Safety
+/// `writer` must be a valid pointer to a `FoxgloveMcapWriter` created via `foxglove_mcap_open`.
+/// `name` must be a valid UTF-8 string.
+/// `metadata` must be a valid pointer to an array of `foxglove_key_value` with length `metadata_len`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_mcap_write_metadata(
+    writer: Option<&mut FoxgloveMcapWriter>,
+    name: &FoxgloveString,
+    metadata: *const FoxgloveKeyValue,
+    metadata_len: usize,
+) -> FoxgloveError {
+    let Some(writer) = writer else {
+        tracing::error!("foxglove_mcap_write_metadata called with null writer");
+        return FoxgloveError::ValueError;
+    };
+
+    match unsafe { do_foxglove_mcap_write_metadata(writer, name, metadata, metadata_len) } {
+        Ok(()) => FoxgloveError::Ok,
+        Err(e) => e.into(),
+    }
+}
+
+unsafe fn do_foxglove_mcap_write_metadata(
+    writer: &mut FoxgloveMcapWriter,
+    name: &FoxgloveString,
+    metadata: *const FoxgloveKeyValue,
+    metadata_len: usize,
+) -> Result<(), foxglove::FoxgloveError> {
+    let name = unsafe { name.as_utf8_str() }
+        .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("metadata name is invalid: {e}")))?;
+
+    // Convert C key-value array to BTreeMap
+    let mut metadata_map = std::collections::BTreeMap::new();
+    for i in 0..metadata_len {
+        let kv = unsafe { &*metadata.add(i) };
+        let key = unsafe { kv.key.as_utf8_str() }?;
+        let value = unsafe { kv.value.as_utf8_str() }?;
+        metadata_map.insert(key.to_string(), value.to_string());
+    }
+
+    let Some(writer_handle) = writer.0.as_ref() else {
+        return Err(foxglove::FoxgloveError::SinkClosed);
+    };
+
+    writer_handle.write_metadata(name, metadata_map)?;
+    Ok(())
+}
+
 pub struct FoxgloveChannel(foxglove::RawChannel);
 
 /// Create a new channel. The channel must later be freed with `foxglove_channel_free`.

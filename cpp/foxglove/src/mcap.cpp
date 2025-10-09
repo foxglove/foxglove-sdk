@@ -61,6 +61,32 @@ FoxgloveResult<McapWriter> McapWriter::create(const McapWriterOptions& options) 
   return McapWriter(writer, std::move(sink_channel_filter));
 }
 
+FoxgloveError McapWriter::writeMetadata(
+  std::string_view name,
+  const std::unordered_map<std::string, std::string>& metadata) {
+  // Convert C++ map to C array of key-value pairs
+  std::vector<foxglove_key_value> c_metadata;
+  c_metadata.reserve(metadata.size());
+
+  for (const auto& [key, value] : metadata) {
+    foxglove_key_value kv;
+    // data and length for both are necessary because foxglove_string is a C struct
+    kv.key = {key.data(), key.length()};
+    kv.value = {value.data(), value.length()};
+    c_metadata.push_back(kv);
+  }
+
+  foxglove_string c_name = {name.data(), name.length()};
+
+  foxglove_error error = foxglove_mcap_write_metadata(
+      impl_.get(),
+      &c_name,
+      c_metadata.data(),
+      c_metadata.size());
+
+  return FoxgloveError(error);
+}
+
 McapWriter::McapWriter(
   foxglove_mcap_writer* writer, std::unique_ptr<SinkChannelFilterFn> sink_channel_filter
 )
@@ -71,5 +97,6 @@ FoxgloveError McapWriter::close() {
   foxglove_error error = foxglove_mcap_close(impl_.release());
   return FoxgloveError(error);
 }
+
 
 }  // namespace foxglove

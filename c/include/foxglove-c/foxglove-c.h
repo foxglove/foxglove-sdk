@@ -4093,6 +4093,26 @@ foxglove_error foxglove_mcap_close(struct foxglove_mcap_writer *writer);
 
 #if !defined(__wasm__)
 /**
+ * Write metadata to an MCAP file.
+ *
+ * Metadata consists of key-value string pairs associated with a name.
+ * If the metadata has no key-value pairs, this method does nothing.
+ *
+ * Returns 0 on success, or returns a FoxgloveError code on error.
+ *
+ * # Safety
+ * `writer` must be a valid pointer to a `FoxgloveMcapWriter` created via `foxglove_mcap_open`.
+ * `name` must be a valid UTF-8 string.
+ * `metadata` must be a valid pointer to an array of `foxglove_key_value` with length `metadata_len`.
+ */
+foxglove_error foxglove_mcap_write_metadata(struct foxglove_mcap_writer *writer,
+                                            const struct foxglove_string *FOXGLOVE_NONNULL name,
+                                            const struct foxglove_key_value *metadata,
+                                            size_t metadata_len);
+#endif
+
+#if !defined(__wasm__)
+/**
  * Create a new channel. The channel must later be freed with `foxglove_channel_free`.
  *
  * Returns 0 on success, or returns a FoxgloveError code on error.

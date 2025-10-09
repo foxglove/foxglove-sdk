@@ -6,6 +6,9 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <string_view>
+#include <unordered_map>
+#include <vector>
 
 #include "channel.hpp"
 
@@ -81,6 +84,19 @@ public:
   /// @param options The options for the MCAP writer.
   /// @return A new MCAP writer.
   static FoxgloveResult<McapWriter> create(const McapWriterOptions& options);
+
+  /// @brief Write metadata to the MCAP file.
+  ///
+  /// Metadata consists of key-value string pairs associated with a name.
+  /// If the metadata map is empty, this method does nothing.
+  ///
+  /// @param name Name identifier for this metadata record
+  /// @param metadata Map of key-value pairs to store
+  /// @return FoxgloveError::Ok on success, or an error code on failure
+  FoxgloveError writeMetadata(
+      std::string_view name,
+      const std::unordered_map<std::string, std::string>& metadata);
+
 
   /// @brief Stops logging events and flushes buffered data.
   FoxgloveError close();
