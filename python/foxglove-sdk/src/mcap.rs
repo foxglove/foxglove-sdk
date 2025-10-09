@@ -172,15 +172,20 @@ impl PyMcapWriter {
     ///
     /// Metadata consists of key-value string pairs associated with a name.
     /// If the metadata dictionary is empty, this method does nothing.
-    fn write_metadata(&self, name: &str, metadata: std::collections::BTreeMap<String, String>) -> PyResult<()> {
+    fn write_metadata(
+        &self,
+        name: &str,
+        metadata: std::collections::BTreeMap<String, String>,
+    ) -> PyResult<()> {
         if let Some(writer) = &self.0 {
-            writer.write_metadata(name, &metadata).map_err(PyFoxgloveError::from)?;
+            writer
+                .write_metadata(name, &metadata)
+                .map_err(PyFoxgloveError::from)?;
         } else {
             return Err(PyFoxgloveError::from(foxglove::FoxgloveError::SinkClosed).into());
         }
         Ok(())
     }
-
 }
 
 pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
