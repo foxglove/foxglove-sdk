@@ -179,7 +179,7 @@ impl PyMcapWriter {
     ) -> PyResult<()> {
         if let Some(writer) = &self.0 {
             writer
-                .write_metadata(name, &metadata)
+                .write_metadata(name, metadata)
                 .map_err(PyFoxgloveError::from)?;
         } else {
             return Err(PyFoxgloveError::from(foxglove::FoxgloveError::SinkClosed).into());

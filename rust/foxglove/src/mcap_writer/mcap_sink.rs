@@ -159,7 +159,7 @@ impl<W: Write + Seek> McapSink<W> {
     pub fn write_metadata(
         &self,
         name: &str,
-        metadata: &BTreeMap<String, String>,
+        metadata: BTreeMap<String, String>,
     ) -> Result<(), FoxgloveError> {
         // Skip writing if metadata is empty (backwards compatibility)
         if metadata.is_empty() {
@@ -173,7 +173,7 @@ impl<W: Write + Seek> McapSink<W> {
             .writer
             .write_metadata(&mcap::records::Metadata {
                 name: name.into(),
-                metadata: metadata.clone(),
+                metadata,
             })
             .map_err(FoxgloveError::from)
     }
@@ -397,6 +397,32 @@ mod tests {
         Ok(())
     }
 
+    /// Helper function to verify metadata in MCAP file using HashMap comparison
+    fn verify_metadata_in_file(
+        path: &Path,
+        expected: &std::collections::HashMap<String, std::collections::BTreeMap<String, String>>,
+    ) {
+        let mut found_metadata: std::collections::HashMap<String, std::collections::BTreeMap<String, String>> = std::collections::HashMap::new();
+        let mut metadata_count = 0;
+
+        foreach_mcap_metadata(path, |meta| {
+            metadata_count += 1;
+            found_metadata.insert(meta.name.clone(), meta.metadata.clone());
+        })
+        .expect("failed to read MCAP metadata");
+
+        // Verify count
+        assert_eq!(metadata_count, expected.len(), "Wrong number of metadata records");
+
+        // Verify each expected metadata exists with correct key-value pairs
+        for (name, expected_kv) in expected {
+            let actual = found_metadata.get(name)
+                .unwrap_or_else(|| panic!("Metadata '{}' not found", name));
+
+            assert_eq!(actual, expected_kv, "Metadata '{}' has wrong key-value pairs", name);
+        }
+    }
+
     #[test]
     fn test_write_metadata_basic() {
         let temp_file = NamedTempFile::new().expect("create tempfile");
@@ -410,35 +436,19 @@ mod tests {
         metadata.insert("key2".to_string(), "value2".to_string());
 
         writer
-            .write_metadata("test_metadata", &metadata)
+            .write_metadata("test_metadata", metadata)
             .expect("failed to write metadata");
 
         writer.finish().expect("failed to finish recording");
 
-        let mut metadata_count = 0;
-        let mut metadata_found = false;
-        foreach_mcap_metadata(&temp_path, |meta| {
-            metadata_count += 1;
-            if meta.name == "test_metadata" {
-                assert_eq!(
-                    meta.metadata.get("key1").map(|s| s.as_str()),
-                    Some("value1")
-                );
-                assert_eq!(
-                    meta.metadata.get("key2").map(|s| s.as_str()),
-                    Some("value2")
-                );
-                metadata_found = true;
-            }
-        })
-        .expect("failed to read MCAP metadata");
+        // Define expected metadata and verify
+        let mut expected = std::collections::HashMap::new();
+        let mut expected_metadata = BTreeMap::new();
+        expected_metadata.insert("key1".to_string(), "value1".to_string());
+        expected_metadata.insert("key2".to_string(), "value2".to_string());
+        expected.insert("test_metadata".to_string(), expected_metadata);
 
-        assert_eq!(
-            metadata_count, 1,
-            "Expected exactly 1 metadata record, found {}",
-            metadata_count
-        );
-        assert!(metadata_found, "Metadata not found in MCAP file");
+        verify_metadata_in_file(&temp_path, &expected);
     }
 
     #[test]
@@ -453,18 +463,14 @@ mod tests {
 
         // This should return Ok(()) but not write anything
         writer
-            .write_metadata("empty_metadata", &empty_metadata)
+            .write_metadata("empty_metadata", empty_metadata)
             .expect("failed to write metadata");
 
         writer.finish().expect("failed to finish recording");
 
-        let mut metadata_count = 0;
-        foreach_mcap_metadata(&temp_path, |_meta| {
-            metadata_count += 1;
-        })
-        .expect("failed to read MCAP metadata");
-
-        assert_eq!(metadata_count, 0, "Empty metadata should not be written");
+        // Verify no metadata was written
+        let expected = std::collections::HashMap::new();
+        verify_metadata_in_file(&temp_path, &expected);
     }
 
     #[test]
@@ -482,38 +488,27 @@ mod tests {
         metadata2.insert("operator".to_string(), "Alice".to_string());
 
         writer
-            .write_metadata("session_info", &metadata1)
+            .write_metadata("session_info", metadata1)
             .expect("failed to write metadata 1");
 
         writer
-            .write_metadata("operator_info", &metadata2)
+            .write_metadata("operator_info", metadata2)
             .expect("failed to write metadata 2");
 
         writer.finish().expect("failed to finish recording");
 
-        let mut metadata_count = 0;
-        let mut found_session = false;
-        let mut found_operator = false;
+        // Define expected metadata and verify
+        let mut expected = std::collections::HashMap::new();
 
-        foreach_mcap_metadata(&temp_path, |meta| {
-            metadata_count += 1;
-            if meta.name == "session_info" {
-                found_session = true;
-            } else if meta.name == "operator_info" {
-                found_operator = true;
-            }
-        })
-        .expect("failed to read MCAP metadata");
+        let mut expected_session = BTreeMap::new();
+        expected_session.insert("session".to_string(), "test_session".to_string());
+        expected.insert("session_info".to_string(), expected_session);
 
-        assert_eq!(
-            metadata_count, 2,
-            "Expected exactly 2 metadata records, found {}",
-            metadata_count
-        );
-        assert!(
-            found_session && found_operator,
-            "Not all metadata records found"
-        );
+        let mut expected_operator = BTreeMap::new();
+        expected_operator.insert("operator".to_string(), "Alice".to_string());
+        expected.insert("operator_info".to_string(), expected_operator);
+
+        verify_metadata_in_file(&temp_path, &expected);
     }
 
     #[test]
@@ -530,7 +525,7 @@ mod tests {
         metadata.insert("key".to_string(), "value".to_string());
 
         // This should fail because the writer is closed
-        let result = writer.write_metadata("test", &metadata);
+        let result = writer.write_metadata("test", metadata);
         assert!(result.is_err(), "Should fail to write metadata after close");
         assert!(matches!(result.unwrap_err(), FoxgloveError::SinkClosed));
     }

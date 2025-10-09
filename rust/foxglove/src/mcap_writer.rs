@@ -166,7 +166,7 @@ impl<W: Write + Seek + Send + 'static> McapWriterHandle<W> {
     pub fn write_metadata(
         &self,
         name: &str,
-        metadata: &std::collections::BTreeMap<String, String>,
+        metadata: std::collections::BTreeMap<String, String>,
     ) -> Result<(), FoxgloveError> {
         self.sink.write_metadata(name, metadata)
     }

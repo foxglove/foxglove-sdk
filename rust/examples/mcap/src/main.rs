@@ -75,118 +75,56 @@ fn log_until(fps: u8, stop: Arc<AtomicBool>) {
 
 fn verify_metadata(path: &PathBuf) {
     use std::fs;
+    use std::collections::HashMap;
 
     match fs::read(path) {
         Ok(contents) => {
             use mcap::read::LinearReader;
 
+            // Simple table of expected metadata - easy to modify
+            let expected: &[(&str, &[(&str, &str)])] = &[
+                ("test1", &[("key1", "value1"), ("key2", "value2")]),
+                ("test2", &[("a", "1"), ("b", "2")]),
+                ("test3", &[("x", "y"), ("z", "w")]),
+            ];
+
+            let mut found_metadata: HashMap<String, std::collections::BTreeMap<String, String>> = HashMap::new();
             let mut metadata_count = 0;
-            let mut found_test1 = false;
-            let mut found_test2 = false;
-            let mut found_test3 = false;
             let mut found_empty_test = false;
 
-            match LinearReader::new(&contents) {
-                Ok(reader) => {
-                    for record in reader {
-                        if let Ok(mcap::records::Record::Metadata(metadata)) = record {
-                            metadata_count += 1;
-                            println!(
-                                "Found metadata: '{}' with {} key-value pairs",
-                                metadata.name,
-                                metadata.metadata.len()
-                            );
+            // Read all metadata from file
+            for record in LinearReader::new(&contents).unwrap() {
+                if let Ok(mcap::records::Record::Metadata(metadata)) = record {
+                    metadata_count += 1;
+                    found_metadata.insert(metadata.name.clone(), metadata.metadata.clone());
 
-                            // Show all key-value pairs
-                            for (key, value) in &metadata.metadata {
-                                println!("  {}: {}", key, value);
-                            }
-
-                            // Check specific tests
-                            match metadata.name.as_str() {
-                                "test1" => {
-                                    found_test1 = true;
-                                    let has_key1 = metadata.metadata.get("key1")
-                                        == Some(&"value1".to_string());
-                                    let has_key2 = metadata.metadata.get("key2")
-                                        == Some(&"value2".to_string());
-                                    println!(
-                                        "Test 1: {}",
-                                        if has_key1 && has_key2 { "PASS" } else { "FAIL" }
-                                    );
-                                }
-                                "test2" => {
-                                    found_test2 = true;
-                                    let has_a =
-                                        metadata.metadata.get("a") == Some(&"1".to_string());
-                                    let has_b =
-                                        metadata.metadata.get("b") == Some(&"2".to_string());
-                                    println!(
-                                        "Test 2: {}",
-                                        if has_a && has_b { "PASS" } else { "FAIL" }
-                                    );
-                                }
-                                "test3" => {
-                                    found_test3 = true;
-                                    let has_x =
-                                        metadata.metadata.get("x") == Some(&"y".to_string());
-                                    let has_z =
-                                        metadata.metadata.get("z") == Some(&"w".to_string());
-                                    println!(
-                                        "Test 3: {}",
-                                        if has_x && has_z { "PASS" } else { "FAIL" }
-                                    );
-                                }
-                                "empty_test" => {
-                                    found_empty_test = true;
-                                    println!("ERROR: Empty metadata should not have been written!");
-                                }
-                                _ => {
-                                    println!("  Unknown metadata: {}", metadata.name);
-                                }
-                            }
-                        }
-                    }
-
-                    println!("\n=== METADATA TEST RESULTS ===");
-                    println!("Total metadata records found: {}", metadata_count);
-                    println!("Expected: 3 metadata records");
-                    println!(
-                        "Test 1 (test1): {}",
-                        if found_test1 { "PASS" } else { "FAIL" }
-                    );
-                    println!(
-                        "Test 2 (test2): {}",
-                        if found_test2 { "PASS" } else { "FAIL" }
-                    );
-                    println!(
-                        "Test 3 (test3): {}",
-                        if found_test3 { "PASS" } else { "FAIL" }
-                    );
-                    println!(
-                        "Empty metadata test: {}",
-                        if !found_empty_test {
-                            "PASS (correctly skipped)"
-                        } else {
-                            "FAIL (should not exist)"
-                        }
-                    );
-
-                    if metadata_count == 3
-                        && found_test1
-                        && found_test2
-                        && found_test3
-                        && !found_empty_test
-                    {
-                        println!("\n ALL METADATA TESTS PASSED!");
-                    } else {
-                        println!("\n Some metadata tests failed");
+                    if metadata.name == "empty_test" {
+                        found_empty_test = true;
                     }
                 }
-                Err(e) => println!("Failed to read MCAP file: {}", e),
             }
+
+            // Verify count
+            assert_eq!(metadata_count, expected.len(), "Wrong number of metadata records");
+
+            // Verify each expected metadata exists with correct key-value pairs
+            for (name, expected_kv) in expected {
+                let actual = found_metadata.get(*name)
+                    .unwrap_or_else(|| panic!("Metadata '{}' not found", name));
+
+                let expected_map: std::collections::BTreeMap<String, String> = expected_kv.iter()
+                    .map(|(k, v)| (k.to_string(), v.to_string()))
+                    .collect();
+
+                assert_eq!(actual, &expected_map, "Metadata '{}' has wrong key-value pairs", name);
+            }
+
+            // Verify empty metadata was skipped
+            assert!(!found_empty_test, "Empty metadata should not have been written");
+
+            println!("All metadata tests passed!");
         }
-        Err(e) => println!("Failed to read file: {}", e),
+        Err(e) => panic!("Failed to read file: {}", e),
     }
 }
 
@@ -223,7 +161,7 @@ fn main() {
     metadata1.insert("key2".to_string(), "value2".to_string());
 
     writer
-        .write_metadata("test1", &metadata1)
+        .write_metadata("test1", metadata1)
         .expect("Failed to write metadata");
 
     // Test 2: Write multiple metadata records
@@ -232,7 +170,7 @@ fn main() {
     metadata2.insert("b".to_string(), "2".to_string());
 
     writer
-        .write_metadata("test2", &metadata2)
+        .write_metadata("test2", metadata2)
         .expect("Failed to write metadata2");
 
     let mut metadata3 = BTreeMap::new();
@@ -240,13 +178,13 @@ fn main() {
     metadata3.insert("z".to_string(), "w".to_string());
 
     writer
-        .write_metadata("test3", &metadata3)
+        .write_metadata("test3", metadata3)
         .expect("Failed to write metadata3");
 
     // Test 3: Write empty metadata (should be skipped)
     let empty_metadata = BTreeMap::new();
     writer
-        .write_metadata("empty_test", &empty_metadata)
+        .write_metadata("empty_test", empty_metadata)
         .expect("Failed to write empty metadata");
 
     log_until(args.fps, done);
