@@ -728,6 +728,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "example_message_filtering"
+version = "0.0.0"
+dependencies = [
+ "ctrlc",
+ "env_logger",
+ "foxglove 0.14.3",
+]
+
+[[package]]
 name = "example_param_server"
 version = "0.0.0"
 dependencies = [

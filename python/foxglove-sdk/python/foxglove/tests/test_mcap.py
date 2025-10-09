@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Callable, Generator, Optional
 
 import pytest
-from foxglove import Channel, Context, open_mcap
+from foxglove import Channel, ChannelDescriptor, Context, open_mcap
 from foxglove.mcap import MCAPWriteOptions
 
 chan = Channel("test", schema={"type": "object"})
@@ -163,3 +163,23 @@ def test_write_metadata_multiple_records(tmp_mcap: Path) -> None:
     # Verify file was created
     assert tmp_mcap.exists()
     assert tmp_mcap.stat().st_size > 0
+def test_channel_filter(make_tmp_mcap: Callable[[], Path]) -> None:
+    tmp_1 = make_tmp_mcap()
+    tmp_2 = make_tmp_mcap()
+
+    ch1 = Channel("/1", schema={"type": "object"})
+    ch2 = Channel("/2", schema={"type": "object"})
+
+    def filter(ch: ChannelDescriptor) -> bool:
+        return ch.topic.startswith("/1")
+
+    mcap1 = open_mcap(tmp_1, channel_filter=filter)
+    mcap2 = open_mcap(tmp_2, channel_filter=None)
+
+    ch1.log({})
+    ch2.log({})
+
+    mcap1.close()
+    mcap2.close()
+
+    assert tmp_1.stat().st_size < tmp_2.stat().st_size
