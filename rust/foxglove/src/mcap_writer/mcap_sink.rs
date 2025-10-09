@@ -402,8 +402,8 @@ mod tests {
         let temp_file = NamedTempFile::new().expect("create tempfile");
         let temp_path = temp_file.path().to_owned();
 
-        let writer =
-            McapSink::new(&temp_file, WriteOptions::default()).expect("failed to create writer");
+        let writer = McapSink::new(&temp_file, WriteOptions::default(), None)
+            .expect("failed to create writer");
 
         let mut metadata = BTreeMap::new();
         metadata.insert("key1".to_string(), "value1".to_string());
@@ -472,8 +472,8 @@ mod tests {
         let temp_file = NamedTempFile::new().expect("create tempfile");
         let temp_path = temp_file.path().to_owned();
 
-        let writer =
-            McapSink::new(&temp_file, WriteOptions::default()).expect("failed to create writer");
+        let writer = McapSink::new(&temp_file, WriteOptions::default(), None)
+            .expect("failed to create writer");
 
         let mut metadata1 = BTreeMap::new();
         metadata1.insert("session".to_string(), "test_session".to_string());
@@ -520,8 +520,8 @@ mod tests {
     fn test_write_metadata_after_close() {
         let temp_file = NamedTempFile::new().expect("create tempfile");
 
-        let writer =
-            McapSink::new(&temp_file, WriteOptions::default()).expect("failed to create writer");
+        let writer = McapSink::new(&temp_file, WriteOptions::default(), None)
+            .expect("failed to create writer");
 
         // Close the writer
         writer.finish().expect("failed to finish recording");
