@@ -7,7 +7,9 @@ readme = "README.md"
 dynamic = ["version"]
 classifiers = ["Programming Language :: Python :: 3", "Programming Language :: Rust"]
 requires-python = ">=3.9"
-dependencies = []
+dependencies = [
+    "mcap>=1.0.0",
+]
 
 [project.urls]
 repository = "https://github.com/foxglove/foxglove-sdk"
