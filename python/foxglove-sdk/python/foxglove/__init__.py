@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import atexit
 import logging
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from . import _foxglove_py as _foxglove
 
@@ -129,10 +129,10 @@ def _level_names() -> dict[str, int]:
 
 def notebook_viewer(
     context: Context | None = None,
-    width: Optional[str] = None,
-    height: Optional[str] = None,
-    src: Optional[str] = None,
-    layout_data: Optional[dict] = None,
+    width: str | None = None,
+    height: str | None = None,
+    src: str | None = None,
+    layout_data: dict | None = None,
 ) -> FoxgloveViewer:
     """
     Create a FoxgloveViewer object to manage data buffering and visualization in Jupyter

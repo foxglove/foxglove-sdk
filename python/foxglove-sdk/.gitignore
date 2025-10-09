@@ -2,6 +2,7 @@ node_modules
 .venv
 dist
 .DS_Store
+python/foxglove/notebook/static/
 
 # Python
 __pycache__
