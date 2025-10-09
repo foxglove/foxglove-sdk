@@ -67,7 +67,7 @@ impl AgentHandle {
     /// Note: currently this starts a server for Agent to connect to, and blocks until it's started.
     /// There isn't a way to wait until the Agent has connected to that server.
     /// This behavior will change soon.
-    pub async fn ensure_connected(&mut self) -> Result<(), FoxgloveError> {
+    pub(crate) async fn ensure_connected(&mut self) -> Result<(), FoxgloveError> {
         // This code is a copy of the code in ensure_connected_blocking, if you change one, change both.
         if self.server.is_some() {
             // Connected
@@ -86,7 +86,7 @@ impl AgentHandle {
     }
 
     /// Blocking version of [`AgentHandle::ensure_connected`].
-    pub fn ensure_connected_blocking(&mut self) -> Result<(), FoxgloveError> {
+    pub(crate) fn ensure_connected_blocking(&mut self) -> Result<(), FoxgloveError> {
         // This code is a copy of the code in ensure_connected, if you change one, change both.
         if self.server.is_some() {
             // Connected
@@ -103,11 +103,10 @@ impl AgentHandle {
         Ok(())
     }
 
-    /// Gracefully shut down the agent, if connected. Otherwise returns None.
+    /// Gracefully disconnect from the agent, if connected. Otherwise returns None.
     ///
-    /// Returns a handle that can be used to wait for the graceful shutdown to complete. If the
-    /// handle is dropped, all client tasks will be immediately aborted.
-    pub fn stop(self) -> Option<ShutdownHandle> {
+    /// Returns a handle that can be used to wait for the graceful shutdown to complete.
+    pub fn disconnect(self) -> Option<ShutdownHandle> {
         if let Some(handle) = self.server {
             return Some(handle.stop());
         }
@@ -218,8 +217,9 @@ impl Agent {
     /// Starts the Agent Remote Connection.
     ///
     /// Returns a handle that can optionally be used to manage the connection.
-    /// The caller can safely drop the handle, and the agent will reconnect automatically, forever.
-    pub fn create(self) -> Result<AgentHandle, FoxgloveError> {
+    /// The caller can safely drop the handle and the connection will continue in the background.
+    /// Use disconnect() on the returned handle to end the session.
+    pub fn connect(self) -> Result<AgentHandle, FoxgloveError> {
         let mut handle = AgentHandle::new(self);
         handle.start_connection();
         Ok(handle)
@@ -242,7 +242,7 @@ mod tests {
             .capabilities([Capability::ClientPublish])
             .context(&ctx);
 
-        let mut handle = agent.create().expect("Failed to create agent");
+        let mut handle = agent.connect().expect("Failed to create agent");
         handle.ensure_connected().await.expect("Failed to connect");
         let addr = "127.0.0.1:8765";
 
@@ -264,6 +264,6 @@ mod tests {
             _ => panic!("Expected ServerInfo message, got: {msg:?}"),
         }
 
-        let _ = handle.stop();
+        let _ = handle.disconnect();
     }
 }
