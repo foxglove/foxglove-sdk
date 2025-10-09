@@ -163,6 +163,8 @@ def test_write_metadata_multiple_records(tmp_mcap: Path) -> None:
     # Verify file was created
     assert tmp_mcap.exists()
     assert tmp_mcap.stat().st_size > 0
+
+
 def test_channel_filter(make_tmp_mcap: Callable[[], Path]) -> None:
     tmp_1 = make_tmp_mcap()
     tmp_2 = make_tmp_mcap()
