@@ -4,8 +4,8 @@ import time
 from math import cos, sin
 
 import foxglove
-from foxglove import ChannelDescriptor
 import foxglove.channels
+from foxglove import ChannelDescriptor
 from foxglove.schemas import (
     FrameTransform,
     FrameTransforms,
