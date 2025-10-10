@@ -16,7 +16,6 @@ pub struct AgentHandle {
     options: Agent,
     server: Option<WebSocketServerHandle>,
     connecting: bool,
-    #[allow(dead_code)]
     connect_rx: Receiver<Result<WebSocketServerHandle, FoxgloveError>>,
     connect_tx: Sender<Result<WebSocketServerHandle, FoxgloveError>>,
 }
@@ -68,8 +67,7 @@ impl AgentHandle {
     /// Note: currently this starts a server for Agent to connect to, and blocks until it's started.
     /// There isn't a way to wait until the Agent has connected to that server.
     /// This behavior will change soon.
-    #[allow(dead_code)]
-    pub(crate) async fn ensure_connected(&mut self) -> Result<(), FoxgloveError> {
+    pub async fn ensure_connected(&mut self) -> Result<(), FoxgloveError> {
         // This code is a copy of the code in ensure_connected_blocking, if you change one, change both.
         if self.server.is_some() {
             // Connected
@@ -88,8 +86,7 @@ impl AgentHandle {
     }
 
     /// Blocking version of [`AgentHandle::ensure_connected`].
-    #[allow(dead_code)]
-    pub(crate) fn ensure_connected_blocking(&mut self) -> Result<(), FoxgloveError> {
+    pub fn ensure_connected_blocking(&mut self) -> Result<(), FoxgloveError> {
         // This code is a copy of the code in ensure_connected, if you change one, change both.
         if self.server.is_some() {
             // Connected
@@ -222,10 +219,19 @@ impl Agent {
     /// Returns a handle that can optionally be used to manage the connection.
     /// The caller can safely drop the handle and the connection will continue in the background.
     /// Use disconnect() on the returned handle to end the session.
-    pub fn connect(self) -> Result<AgentHandle, FoxgloveError> {
+    pub async fn connect(self) -> AgentHandle {
         let mut handle = AgentHandle::new(self);
-        handle.start_connection();
-        Ok(handle)
+        // Don't return the error here, we want to return the handle either way.
+        // The user can call ensure_connected() again on the handle if they want the error.
+        _ = handle.ensure_connected().await;
+        handle
+    }
+
+    /// Blocking version of [`Agent::connect`].
+    pub fn connect_blocking(self) -> AgentHandle {
+        let mut handle = AgentHandle::new(self);
+        _ = handle.ensure_connected_blocking();
+        handle
     }
 }
 
@@ -245,7 +251,7 @@ mod tests {
             .capabilities([Capability::ClientPublish])
             .context(&ctx);
 
-        let mut handle = agent.connect().expect("Failed to create agent");
+        let mut handle = agent.connect().await;
         handle.ensure_connected().await.expect("Failed to connect");
         let addr = "127.0.0.1:8765";
 
