@@ -2,8 +2,7 @@
 
 An example from the Foxglove SDK.
 
-Log messages to an MCAP file. By default, this example creates a new file named "output.mcap" and
-errors if the file already exists.
+Connect to Foxglove Agent and pog messages for live visualization to be viewed in the Foxglove app.
 
 ## Usage
 
@@ -11,5 +10,5 @@ This example uses Poetry: https://python-poetry.org/
 
 ```bash
 poetry install
-poetry run python main.py [--path file.mcap]
+poetry run python main.py
 ```
