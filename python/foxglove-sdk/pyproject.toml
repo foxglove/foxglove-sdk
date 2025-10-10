@@ -24,6 +24,8 @@ build-backend = "maturin"
 python-source = "python"
 module-name = "foxglove._foxglove_py"
 features = ["pyo3/extension-module"]
+# Include Jupyter widget static assets
+include = ["foxglove/notebook/static/*"]
 
 [tool.poetry]
 package-mode = false

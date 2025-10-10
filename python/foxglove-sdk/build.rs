@@ -1,14 +1,6 @@
-use std::process::Command;
-
 fn main() {
-    for subcmd in ["typecheck", "build:prod"] {
-        let status = Command::new("yarn")
-            .arg(subcmd)
-            .status()
-            .expect("failed to run yarn");
-        if !status.success() {
-            panic!("yarn {subcmd} failed: {status}");
-        }
+    let widget_js = "python/foxglove/notebook/static/widget.js";
+    if !std::path::Path::new(widget_js).exists() {
+        panic!("error: {widget_js} not found, run `yarn build`");
     }
-    println!("cargo:rerun-if-changed=ts/");
 }
