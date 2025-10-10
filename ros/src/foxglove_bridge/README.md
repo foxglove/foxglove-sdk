@@ -17,7 +17,9 @@ Live debugging of ROS systems has traditionally relied on running ROS tooling su
 The `foxglove_bridge` uses the **Foxglove SDK** (this repo!), a similar protocol to rosbridge but with the ability to support additional schema formats such as ROS 2 `.msg` and ROS 2 `.idl`, parameters, graph introspection, and non-ROS systems. The bridge is written in C++ and designed for high performance with low overhead to minimize the impact to your robot stack.
 
 ## Install
+
 ### Install using apt
+
 You can install `foxglove_bridge` using `apt` from the official ROS package channels for any currently supported ROS 2 distribution, as well as ROS Rolling.
 
 ```bash
@@ -27,6 +29,7 @@ sudo apt install ros-$ROS_DISTRO-foxglove-bridge
 Note that packages coming from the ROS channels are updated less frequently than this repository. For the latest set of features, consider [building from source](#build-from-source) or [installing using Docker](#install-using-docker).
 
 ### Install using Docker
+
 Docker images are built and published to our public Docker image registry for your convenience.
 
 > [!NOTE]
@@ -39,17 +42,19 @@ docker pull us-central1-docker.pkg.dev/foxglove-images/images/foxglove_bridge:<t
 ```
 
 where `<tag>` takes the form of:
+
 ```
-ros-<ROS distro>-<foxglove SDK version>
+ros-<ROS distro>-<package version>
 ```
 
-For example, if you wanted to pull an image based on ROS Kilted and Foxglove SDK v0.11.0:
+For example, if you wanted to pull an image based on ROS Kilted and package version v3.2.1:
+
 ```bash
-docker pull us-central1-docker.pkg.dev/foxglove-images/images/foxglove_bridge:ros-kilted-v0.11.0
+docker pull us-central1-docker.pkg.dev/foxglove-images/images/foxglove_bridge:ros-kilted-v3.2.1
 ```
-
 
 ### Build from source
+
 #### Getting the sources
 
 Clone this repo from GitHub and `cd` to the local ROS workspace:
