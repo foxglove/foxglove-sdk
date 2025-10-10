@@ -24,8 +24,29 @@ jobs:
       - run: poetry run isort . --check
       - run: poetry run flake8 .
 
+  notebook-frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: python/foxglove-sdk
+    steps:
+      - uses: actions/checkout@v5
+      - run: corepack enable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+      - run: yarn workspaces focus @foxglove/notebook
+      - run: yarn build:prod
+      - name: Upload notebook FrontEnd assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: notebook-frontend
+          path: python/foxglove-sdk/python/foxglove/notebook/static/
+
   lint-and-test-sdk:
     runs-on: ubuntu-latest
+    needs: [notebook-frontend]
     defaults:
       run:
         working-directory: python/foxglove-sdk
@@ -36,12 +57,11 @@ jobs:
       - name: Install common dependencies
         uses: ./.github/actions/common-deps
 
-      - run: corepack enable
-      - uses: actions/setup-node@v4
+      - name: Download notebook FrontEnd assets
+        uses: actions/download-artifact@v5
         with:
-          node-version: 22
-          cache: yarn
-      - run: yarn install
+          name: notebook-frontend
+          path: python/foxglove-sdk/python/foxglove/notebook/static/
 
       - run: pipx install poetry
       - run: poetry check --strict
@@ -70,7 +90,6 @@ jobs:
         with:
           node-version: 22
           cache: yarn
-      - run: yarn install
 
       - name: Install common dependencies
         uses: ./.github/actions/common-deps
@@ -87,10 +106,11 @@ jobs:
       - run: pipx install poetry
       - run: poetry check --strict
       - run: poetry install
+      - run: yarn install
+      - run: yarn workspace @foxglove/notebook build:prod
       - run: CFLAGS=-fPIC RUSTC_BOOTSTRAP=1 poetry run maturin build --release --out dist --target wasm32-unknown-emscripten -i python3.12
       - run: mkdir -p ../../playground/public
       - run: cp dist/*.whl ../../playground/public
-      - run: yarn install
         working-directory: playground
       - run: yarn build
         working-directory: playground
@@ -152,26 +172,6 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: python/foxglove-schemas-protobuf/dist
-
-  notebook-frontend:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: python/foxglove-sdk
-    steps:
-      - uses: actions/checkout@v5
-      - run: corepack enable
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: yarn
-      - run: yarn workspaces focus @foxglove/notebook
-      - run: yarn build:prod
-      - name: Upload notebook FrontEnd assets
-        uses: actions/upload-artifact@v4
-        with:
-          name: notebook-frontend
-          path: python/foxglove-sdk/python/foxglove/notebook/static/
 
   linux:
     runs-on: ${{ matrix.platform.runner }}
