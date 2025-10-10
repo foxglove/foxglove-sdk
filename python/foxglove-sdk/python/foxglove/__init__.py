@@ -29,6 +29,7 @@ atexit.register(_foxglove.shutdown)
 
 
 try:
+    from ._foxglove_py.agent import Agent, connect_agent as _connect_agent
     from .websocket import (
         AssetHandler,
         Capability,
@@ -86,6 +87,36 @@ try:
             channel_filter=channel_filter,
         )
 
+    def connect_agent(
+        *,
+        capabilities: list[Capability] | None = None,
+        server_listener: ServerListener | None = None,
+        supported_encodings: list[str] | None = None,
+        context: Context | None = None,
+        session_id: str | None = None,
+    ) -> Agent:
+        """
+        Connect to Foxglove Agent for live visualization and teleop.
+
+        Foxglove Agent must be running on the same host for this to work.
+
+        :param capabilities: A list of capabilities to advertise to the agent.
+        :param server_listener: A Python object that implements the
+            :py:class:`websocket.ServerListener` protocol.
+        :param supported_encodings: A list of encodings to advertise to the agent.
+        :param context: The context to use for logging. If None, the global context is used.
+        :param session_id: An ID which allows the agent to understand if the connection is a
+            re-connection or a new connection instance. If None, then an ID is generated based on
+            the current time.
+        """
+        return _connect_agent(
+            capabilities=capabilities,
+            server_listener=server_listener,
+            supported_encodings=supported_encodings,
+            context=context,
+            session_id=session_id,
+        )
+
 except ImportError:
     pass
 
@@ -141,6 +172,7 @@ __all__ = [
     "MCAPWriter",
     "Schema",
     "SinkChannelFilter",
+    "connect_agent",
     "log",
     "open_mcap",
     "set_log_level",

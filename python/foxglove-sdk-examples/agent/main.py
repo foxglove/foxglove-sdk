@@ -1,24 +1,25 @@
-import argparse
 import inspect
+import time
 
 import foxglove
 from foxglove.channels import LogChannel
 from foxglove.schemas import Log, LogLevel
-
-parser = argparse.ArgumentParser()
-parser.add_argument("--path", type=str, default="output.mcap")
-args = parser.parse_args()
 
 
 log_chan = LogChannel(topic="/log1")
 
 
 def main() -> None:
-    # Create a new mcap file at the given path for recording
-    with foxglove.connect_agent(args.path):
-        for i in range(10):
+    # Connect to Foxglove Agent for live visualization
+    agent = foxglove.connect_agent()
+
+    try:
+        i = 0
+        while True:
             frame = inspect.currentframe()
             frameinfo = inspect.getframeinfo(frame) if frame else None
+
+            print(f"Logging message {i}")
 
             foxglove.log(
                 "/log2",
@@ -41,6 +42,13 @@ def main() -> None:
                     message=f"message {i}",
                 ),
             )
+
+            i += 1
+            time.sleep(1)
+    except KeyboardInterrupt:
+        print("\nShutting down...")
+    finally:
+        agent.disconnect()
 
 
 if __name__ == "__main__":
