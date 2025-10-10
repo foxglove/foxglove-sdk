@@ -11,9 +11,6 @@ package-mode = false
 flake8 = "^7.1.1"
 black = "^25.1.0"
 isort = "^6.0.0"
-mcap = "^1.3.0"
 
-
-[tool.poetry.dependencies]
 [tool.isort]
 profile = "black"
