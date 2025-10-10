@@ -12,14 +12,14 @@ foxglove
 
 .. automodule:: foxglove
    :members:
-   :exclude-members: MCAPWriter, create_notebook_buffer, notebook_viewer
+   :exclude-members: MCAPWriter, notebook_viewer
 
 Notebook Integration
 ^^^^^^^^^^^^^^^^^^^^
 
 Functions and classes for integrating with Jupyter notebooks and creating interactive visualizations.
 
-.. py:function:: notebook_viewer(context: Optional[Context] = None, width: Optional[str] = None, height: Optional[str] = None, src: Optional[str] = None, layout_data: Optional[dict] = None) -> FoxgloveViewer
+.. py:function:: notebook_viewer(context: Context | None = None, width: str | None = None, height: str | None = None, src: str | None = None, layout_data: dict | None = None) -> FoxgloveViewer
 
    Create a FoxgloveViewer object to manage data buffering and visualization in Jupyter
    notebooks.

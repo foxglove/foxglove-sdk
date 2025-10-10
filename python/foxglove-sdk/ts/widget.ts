@@ -1,7 +1,7 @@
 import type { RenderProps } from "@anywidget/types";
 import { FoxgloveViewer, type OpaqueLayoutData } from "@foxglove/embed";
 
-/* Specifies attributes defined with traitlets in ../src/foxglove_notebook/__init__.py */
+// Specifies attributes defined with traitlets in ../python/foxglove/notebook/widget.py
 interface WidgetModel {
   width: string;
   height: string;
@@ -44,7 +44,6 @@ function render({ model, el }: RenderProps<WidgetModel>): void {
       const files = buffers.map((buffer, i) => new File([buffer.buffer], `data-${i}.mcap`));
       viewer.setDataSource({
         type: "file",
-        // @ts-expect-error this will be fixed once embed supports multiple files
         file: files,
       });
     }
