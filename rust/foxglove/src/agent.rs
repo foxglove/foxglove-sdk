@@ -16,6 +16,7 @@ pub struct AgentHandle {
     options: Agent,
     server: Option<WebSocketServerHandle>,
     connecting: bool,
+    #[allow(dead_code)]
     connect_rx: Receiver<Result<WebSocketServerHandle, FoxgloveError>>,
     connect_tx: Sender<Result<WebSocketServerHandle, FoxgloveError>>,
 }
@@ -67,6 +68,7 @@ impl AgentHandle {
     /// Note: currently this starts a server for Agent to connect to, and blocks until it's started.
     /// There isn't a way to wait until the Agent has connected to that server.
     /// This behavior will change soon.
+    #[allow(dead_code)]
     pub(crate) async fn ensure_connected(&mut self) -> Result<(), FoxgloveError> {
         // This code is a copy of the code in ensure_connected_blocking, if you change one, change both.
         if self.server.is_some() {
@@ -86,6 +88,7 @@ impl AgentHandle {
     }
 
     /// Blocking version of [`AgentHandle::ensure_connected`].
+    #[allow(dead_code)]
     pub(crate) fn ensure_connected_blocking(&mut self) -> Result<(), FoxgloveError> {
         // This code is a copy of the code in ensure_connected, if you change one, change both.
         if self.server.is_some() {
