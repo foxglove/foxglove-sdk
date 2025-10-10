@@ -1,0 +1,12 @@
+node_modules
+.venv
+dist
+.DS_Store
+python/foxglove/notebook/static/
+
+# Python
+__pycache__
+.ipynb_checkpoints
+example*.ipynb
+example*.json
+SO100
