@@ -3,7 +3,7 @@ name: Publish ROS Bridge Docker image
 on:
   workflow_dispatch: {}
   push:
-    tags: ['sdk/v*']
+    tags: ['ros-v*']
 
 permissions:
   contents: read
@@ -42,10 +42,10 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Check if this is a release tag (sdk/v*)
-          if [[ "${GITHUB_REF}" == refs/tags/sdk/v* ]]; then
-            # Extract version from release tag (remove sdk/ prefix)
-            VERSION=${GITHUB_REF#refs/tags/sdk/}
+          # Check if this is a release tag (ros-v*)
+          if [[ "${GITHUB_REF}" == refs/tags/ros-v* ]]; then
+            # Extract version from release tag (remove ros- prefix)
+            VERSION=${GITHUB_REF#refs/tags/ros-}
             echo "Using release version: ${VERSION}"
           else
             # Use git SHA for non-release builds
