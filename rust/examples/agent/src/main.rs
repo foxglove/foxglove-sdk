@@ -101,7 +101,10 @@ async fn main() {
     let args = Cli::parse();
 
     // Foxglove Agent needs to be running on the same machine for this to work
-    let handle = foxglove::Agent::new().connect().await;
+    let handle = foxglove::CloudSink::new()
+        .start()
+        .await
+        .expect("Failed to start cloud sink");
 
     println!("Go to the device tab for this device in the Foxglove App and click connect.");
     println!("If you don't see the connect button for a device,");
@@ -109,7 +112,7 @@ async fn main() {
 
     tokio::task::spawn(log_forever(args.fps));
     _ = tokio::signal::ctrl_c().await;
-    if let Some(shutdown) = handle.disconnect() {
+    if let Some(shutdown) = handle.stop() {
         shutdown.wait().await;
     }
 }

@@ -350,7 +350,7 @@ pub use sink_channel_filter::SinkChannelFilter;
 pub(crate) use time::nanoseconds_since_epoch;
 
 #[cfg(feature = "agent")]
-mod agent;
+mod cloud_sink;
 #[cfg(feature = "live_visualization")]
 mod runtime;
 #[cfg(feature = "live_visualization")]
@@ -360,7 +360,7 @@ mod websocket_client;
 #[cfg(feature = "live_visualization")]
 mod websocket_server;
 #[cfg(feature = "agent")]
-pub use agent::Agent;
+pub use cloud_sink::CloudSink;
 #[cfg(feature = "live_visualization")]
 pub(crate) use runtime::get_runtime_handle;
 #[cfg(feature = "live_visualization")]
