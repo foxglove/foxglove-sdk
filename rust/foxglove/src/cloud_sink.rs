@@ -210,7 +210,7 @@ impl CloudSink {
         Ok(CloudSinkHandle::new(handle))
     }
 
-    /// Blocking version of [`CloudSink::connect`].
+    /// Blocking version of [`CloudSink::start`].
     pub fn start_blocking(mut self) -> Result<CloudSinkHandle, FoxgloveError> {
         let runtime = self.runtime.get_or_insert_with(get_runtime_handle).clone();
         let handle = runtime.block_on(self.start())?;
