@@ -88,12 +88,6 @@ fn log(counter: u32) {
 
 #[derive(Debug, Parser)]
 struct Cli {
-    /// Server TCP port.
-    #[arg(short, long, default_value_t = 8765)]
-    port: u16,
-    /// Server IP address.
-    #[arg(long, default_value = "127.0.0.1")]
-    host: String,
     /// Frames per second.
     #[arg(long, default_value_t = 60)]
     fps: u8,
@@ -106,20 +100,21 @@ async fn main() {
 
     let args = Cli::parse();
 
-    let server = foxglove::WebSocketServer::new()
-        .name(env!("CARGO_PKG_NAME"))
-        .bind(&args.host, args.port)
+    // Foxglove Agent needs to be running on the same machine for this to work
+    let handle = foxglove::CloudSink::new()
         .start()
         .await
-        .expect("Server failed to start");
+        .expect("Failed to start cloud sink");
 
-    let app_url = server.app_url();
-    println!("View in browser: {app_url}");
-    println!("View in desktop: {}", app_url.with_open_in_desktop());
+    println!("Go to the device tab for this device in the Foxglove App and click connect.");
+    println!("If you don't see the connect button for a device,");
+    println!("you have to create a device token first and configure Foxglove Agent to use it.");
 
     tokio::task::spawn(log_forever(args.fps));
     _ = tokio::signal::ctrl_c().await;
-    server.stop().wait().await;
+    if let Some(shutdown) = handle.stop() {
+        shutdown.wait().await;
+    }
 }
 
 fn euler_to_quaternion(roll: f64, pitch: f64, yaw: f64) -> Quaternion {

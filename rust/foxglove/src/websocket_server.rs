@@ -211,7 +211,6 @@ impl WebSocketServer {
     /// [`WebSocketServer::start`]), or spawn its own internal runtime (if started with
     /// [`WebSocketServer::start_blocking`]).
     #[doc(hidden)]
-    #[cfg(feature = "unstable")]
     pub fn tokio_runtime(mut self, handle: &tokio::runtime::Handle) -> Self {
         self.options.runtime = Some(handle.clone());
         self
