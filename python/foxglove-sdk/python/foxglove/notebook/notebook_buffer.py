@@ -1,6 +1,9 @@
+import os
 import uuid
 from tempfile import TemporaryDirectory
 from typing import Optional
+
+from mcap.reader import make_reader
 
 from .._foxglove_py import Context, open_mcap
 
@@ -26,6 +29,12 @@ class NotebookBuffer:
         """
         # close the current writer
         self._writer.close()
+
+        if len(self._files) > 1 and is_mcap_empty(self._files[-1]):
+            # If the last file is empty and there are more than one file, remove the last file
+            # since it won't add any new data to the buffer
+            os.remove(self._files[-1])
+            self._files.pop()
 
         # read the content of the files
         contents: list[bytes] = []
@@ -55,3 +64,8 @@ class NotebookBuffer:
         file_name = f"{self._temp_directory.name}/log-{random_id}.mcap"
         self._files.append(file_name)
         self._writer = open_mcap(path=file_name, context=self._context)
+
+
+def is_mcap_empty(file_name: str) -> bool:
+    iter = make_reader(open(file_name, "rb")).iter_messages()
+    return next(iter, None) is None

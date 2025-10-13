@@ -4,9 +4,12 @@ dist
 .DS_Store
 python/foxglove/notebook/static/
 
+# MCAP
+*.mcap
+
 # Python
 __pycache__
 .ipynb_checkpoints
-example*.ipynb
+*.ipynb
 example*.json
 SO100

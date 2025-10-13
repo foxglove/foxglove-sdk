@@ -11,7 +11,7 @@ except importlib.metadata.PackageNotFoundError:
     __version__ = "unknown"
 
 
-class Widget(anywidget.AnyWidget):
+class FoxgloveWidget(anywidget.AnyWidget):
     _esm = pathlib.Path(__file__).parent / "static" / "widget.js"
     width = traitlets.Unicode("100%").tag(sync=True)
     height = traitlets.Unicode("500px").tag(sync=True)
