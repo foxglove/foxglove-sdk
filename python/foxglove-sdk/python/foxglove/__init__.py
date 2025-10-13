@@ -27,7 +27,7 @@ from .channel import Channel, log
 from .mcap import MCAPWriter
 
 if TYPE_CHECKING:
-    from .notebook.foxglove_viewer import FoxgloveViewer
+    from .notebook.notebook_sink import NotebookSink
 
 atexit.register(_foxglove.shutdown)
 
@@ -138,18 +138,12 @@ def _level_names() -> dict[str, int]:
     }
 
 
-def notebook_viewer(
-    context: Context | None = None,
-    width: str | None = None,
-    height: str | None = None,
-    src: str | None = None,
-    layout_data: dict | None = None,
-) -> FoxgloveViewer:
+def notebook_sink(context: Context | None = None) -> NotebookSink:
     """
-    Create a FoxgloveViewer object to manage data buffering and visualization in Jupyter
+    Create a NotebookSink object to manage data buffering and visualization in Jupyter
     notebooks.
 
-    The FoxgloveViewer object will buffer all data logged to the provided context. When you
+    The NotebookSink object will buffer all data logged to the provided context. When you
     are ready to visualize the data, you can call the :meth:`show` method to display an embedded
     Foxglove visualization widget. The widget provides a fully-featured Foxglove interface
     directly within your Jupyter notebook, allowing you to explore multi-modal robotics data
@@ -158,18 +152,9 @@ def notebook_viewer(
     Args:
         context: The Context used to log the messages. If no Context is provided, the global
             context will be used. Logged messages will be buffered.
-        width: Optional width for the widget. Can be specified as CSS values like
-            "800px", "100%", "50vw", etc. If not provided, defaults to "100%".
-        height: Optional height for the widget. Can be specified as CSS values like
-            "600px", "80vh", "400px", etc. If not provided, defaults to "500px".
-        src: Optional URL of the Foxglove app instance to use. If not provided or empty,
-            uses the default Foxglove embed server (https://embed.foxglove.dev/).
-        layout_data: Optional layout data to be used by the Foxglove viewer. Should be a
-            dictionary that was exported from the Foxglove app. If not provided, uses the
-            default layout.
 
     Returns:
-        FoxgloveViewer: A FoxgloveViewer object that can be used to manage the data buffering
+        NotebookSink: A NotebookSink object that can be used to manage the data buffering
             and visualization.
 
     Raises:
@@ -184,32 +169,26 @@ def notebook_viewer(
         >>> import foxglove
         >>>
         >>> # Create a basic viewer using the default context
-        >>> viewer = foxglove.notebook_viewer()
+        >>> nb_sink = foxglove.notebook_sink()
         >>>
         >>> # Or use a specific context
-        >>> viewer = foxglove.notebook_viewer(context=my_ctx)
+        >>> nb_sink = foxglove.notebook_sink(context=my_ctx)
         >>>
         >>> # ... log data as usual ...
         >>>
         >>> # Display the widget in the notebook
-        >>> viewer.show()
+        >>> nb_sink.show()
     """
     try:
-        from .notebook.foxglove_viewer import FoxgloveViewer
+        from .notebook.notebook_sink import NotebookSink
 
     except ImportError:
         raise Exception(
-            "FoxgloveViewer is not installed. "
+            "NotebookSink is not installed. "
             "Please install it with `pip install foxglove-sdk[notebook]`"
         )
 
-    return FoxgloveViewer(
-        context=context,
-        width=width,
-        height=height,
-        src=src,
-        layout_data=layout_data,
-    )
+    return NotebookSink(context=context)
 
 
 __all__ = [
@@ -223,5 +202,5 @@ __all__ = [
     "open_mcap",
     "set_log_level",
     "start_server",
-    "notebook_viewer",
+    "notebook_sink",
 ]

@@ -12,35 +12,26 @@ foxglove
 
 .. automodule:: foxglove
    :members:
-   :exclude-members: MCAPWriter, notebook_viewer
+   :exclude-members: MCAPWriter, notebook_sink
 
 Notebook Integration
 ^^^^^^^^^^^^^^^^^^^^
 
 Functions and classes for integrating with Jupyter notebooks and creating interactive visualizations.
 
-.. py:function:: notebook_viewer(context: Context | None = None, width: str | None = None, height: str | None = None, src: str | None = None, layout_data: dict | None = None) -> FoxgloveViewer
+.. py:function:: notebook_sink(context: Context | None = None) -> NotebookSink
 
-   Create a FoxgloveViewer object to manage data buffering and visualization in Jupyter
+   Create a NotebookSink object to manage data buffering and visualization in Jupyter
    notebooks.
 
-   The FoxgloveViewer object will buffer all data logged to the provided context. When you
-   are ready to visualize the data, you can call the :meth:`FoxgloveViewer.show` method to display an embedded
+   The NotebookSink object will buffer all data logged to the provided context. When you
+   are ready to visualize the data, you can call the :meth:`NotebookSink.show` method to display an embedded
    Foxglove visualization widget. The widget provides a fully-featured Foxglove interface
    directly within your Jupyter notebook, allowing you to explore multi-modal robotics data
    including 3D scenes, plots, images, and more.
 
    :param context: The Context used to log the messages. If no Context is provided, the global
        context will be used. Logged messages will be buffered.
-   :param width: Optional width for the widget. Can be specified as CSS values like
-       "800px", "100%", "50vw", etc. If not provided, defaults to "100%".
-   :param height: Optional height for the widget. Can be specified as CSS values like
-       "600px", "80vh", "400px", etc. If not provided, defaults to "500px".
-   :param src: Optional URL of the Foxglove app instance to use. If not provided or empty,
-       uses the default Foxglove embed server (https://embed.foxglove.dev/).
-   :param layout_data: Optional layout data to be used by the Foxglove viewer. Should be a
-       dictionary that was exported from the Foxglove app. If not provided, uses the
-       default layout.
    :return: A Jupyter widget that displays the embedded Foxglove
        visualization interface with the provided data.
    :raises Exception: If the notebook extra package is not installed. Install it
@@ -55,55 +46,33 @@ Functions and classes for integrating with Jupyter notebooks and creating intera
 Notebook Classes
 ^^^^^^^^^^^^^^^^
 
-.. py:class:: FoxgloveViewer
+.. py:class:: NotebookSink
 
-   A FoxgloveViewer object to manage data buffering and visualization in Jupyter notebooks.
+   A NotebookSink object to manage data buffering and visualization in Jupyter notebooks.
 
-   The FoxgloveViewer object will buffer all data logged to the provided context. When you
-   are ready to visualize the data, you can call the :meth:`FoxgloveViewer.show` method to display an embedded
+   The NotebookSink object will buffer all data logged to the provided context. When you
+   are ready to visualize the data, you can call the :meth:`NotebookSink.show` method to display an embedded
    Foxglove visualization widget. The widget provides a fully-featured Foxglove interface
    directly within your Jupyter notebook, allowing you to explore multi-modal robotics data
    including 3D scenes, plots, images, and more.
 
-   .. py:method:: __init__(context: Optional[Context], width: Optional[str] = None, height: Optional[str] = None, src: Optional[str] = None, layout_data: Optional[dict] = None, **kwargs: Any)
+   .. py:method:: __init__(context: Optional[Context])
 
-      Initialize the FoxgloveViewer widget with the specified data source and configuration.
+      Initialize the NotebookSink with the specified context.
 
       :param context: The Context used to log the messages. If no Context is provided, the global
           context will be used. Logged messages will be buffered.
-      :param width: Optional width for the widget. Can be specified as CSS values like
-          "800px", "100%", "50vw", etc. If not provided, defaults to "100%".
-      :param height: Optional height for the widget. Can be specified as CSS values like
-          "600px", "80vh", "400px", etc. If not provided, defaults to "500px".
-      :param src: Optional URL of the Foxglove app instance to use. If not provided or empty,
-          uses the default Foxglove embed server (https://embed.foxglove.dev/).
-      :param layout_data: Optional layout data to be used by the Foxglove viewer. Should be a
-          dictionary that was exported from the Foxglove app. If not provided, uses the
-          default layout.
-      :param kwargs: Additional keyword arguments passed to the parent AnyWidget class.
 
-   .. py:method:: show() -> Widget
+   .. py:method:: show(width: Optional[str] = None, height: Optional[str] = None, src: Optional[str] = None, layout_data: Optional[dict] = None) -> FoxgloveWidget
 
       Show the Foxglove viewer. Call this method as the last step of a notebook cell
       to display the viewer.
 
-   .. py:method:: set_width(width: str) -> None
+   .. py:method:: get_data() -> list[bytes]
 
-      Set the width of the Foxglove viewer.
+      Get the buffered data.
 
-   .. py:method:: set_height(height: str) -> None
-
-      Set the height of the Foxglove viewer.
-
-   .. py:method:: set_layout_data(layout_data: dict) -> None
-
-      Set the layout data of the Foxglove viewer.
-
-   .. py:method:: reload_data() -> None
-
-      Read the buffered data and set it to the Foxglove viewer to update the visualization.
-
-   .. py:method:: clear_buffer() -> None
+   .. py:method:: clear() -> None
 
       Clear the buffered data.
 
