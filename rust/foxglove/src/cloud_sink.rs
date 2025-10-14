@@ -8,21 +8,6 @@ use crate::{
 
 pub use websocket::{ChannelView, Client, ClientChannel};
 
-/// A capability that a websocket server can support.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum Capability {
-    /// Allow clients to advertise channels to send data messages to the server.
-    ClientPublish,
-}
-
-impl From<Capability> for websocket::Capability {
-    fn from(cap: Capability) -> Self {
-        match cap {
-            Capability::ClientPublish => websocket::Capability::ClientPublish,
-        }
-    }
-}
-
 /// Provides a mechanism for registering callbacks for handling client message events.
 ///
 /// These methods are invoked from the client's main poll loop and must not block. If blocking or
@@ -100,7 +85,7 @@ impl CloudSinkHandle {
 #[doc(hidden)]
 pub struct CloudSink {
     session_id: String,
-    capabilities: Vec<Capability>,
+    capabilities: Vec<websocket::Capability>,
     listener: Option<Arc<dyn CloudSinkListener>>,
     supported_encodings: Vec<String>,
     context: Arc<Context>,
@@ -138,16 +123,9 @@ impl CloudSink {
         Self::default()
     }
 
-    /// Sets the server capabilities to advertise to the client.
-    ///
-    /// By default, the server does not advertise any capabilities.
-    pub fn capabilities(mut self, capabilities: impl IntoIterator<Item = Capability>) -> Self {
-        self.capabilities = capabilities.into_iter().collect();
-        self
-    }
-
     /// Configure an event listener to receive client message events.
     pub fn listener(mut self, listener: Arc<dyn CloudSinkListener>) -> Self {
+        self.capabilities = vec![websocket::Capability::ClientPublish];
         self.listener = Some(listener);
         self
     }
@@ -199,7 +177,7 @@ impl CloudSink {
     pub async fn start(self) -> Result<CloudSinkHandle, FoxgloveError> {
         let mut server = WebSocketServer::new()
             .session_id(self.session_id)
-            .capabilities(self.capabilities.into_iter().map(Into::into))
+            .capabilities(self.capabilities)
             .supported_encodings(self.supported_encodings)
             .context(&self.context)
             .tokio_runtime(&self.runtime.unwrap_or_else(get_runtime_handle));
@@ -221,17 +199,37 @@ impl CloudSink {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::websocket::ws_protocol::server::server_info::Capability as ProtocolCapability;
+    use crate::websocket::ws_protocol::server::server_info::Capability;
     use crate::websocket::ws_protocol::server::ServerMessage;
     use crate::websocket_client::WebSocketClient;
     use tracing_test::traced_test;
+
+    struct TestListener {}
+
+    impl CloudSinkListener for TestListener {
+        fn on_message_data(
+            &self,
+            _client: Client,
+            _client_channel: &ClientChannel,
+            _payload: &[u8],
+        ) {
+        }
+
+        fn on_subscribe(&self, _client: Client, _channel: ChannelView) {}
+
+        fn on_unsubscribe(&self, _client: Client, _channel: ChannelView) {}
+
+        fn on_client_advertise(&self, _client: Client, _channel: &ClientChannel) {}
+
+        fn on_client_unadvertise(&self, _client: Client, _channel: &ClientChannel) {}
+    }
 
     #[traced_test]
     #[tokio::test]
     async fn test_agent_with_client_publish() {
         let ctx = Context::new();
         let cloud_sink = CloudSink::new()
-            .capabilities([Capability::ClientPublish])
+            .listener(Arc::new(TestListener {}))
             .context(&ctx);
 
         let handle = cloud_sink
@@ -250,8 +248,7 @@ mod tests {
             ServerMessage::ServerInfo(info) => {
                 // Verify the server info contains the ClientPublish capability
                 assert!(
-                    info.capabilities
-                        .contains(&ProtocolCapability::ClientPublish),
+                    info.capabilities.contains(&Capability::ClientPublish),
                     "Expected ClientPublish capability"
                 );
             }

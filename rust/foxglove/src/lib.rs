@@ -360,7 +360,7 @@ mod websocket_client;
 #[cfg(feature = "live_visualization")]
 mod websocket_server;
 #[cfg(feature = "agent")]
-pub use cloud_sink::CloudSink;
+pub use cloud_sink::{CloudSink, CloudSinkHandle, CloudSinkListener};
 #[cfg(feature = "live_visualization")]
 pub(crate) use runtime::get_runtime_handle;
 #[cfg(feature = "live_visualization")]
