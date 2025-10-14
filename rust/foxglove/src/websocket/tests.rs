@@ -41,7 +41,7 @@ use crate::{
 };
 
 macro_rules! expect_recv {
-    ($client:expr, $variant:path) => {{
+    ($client:expr_2021, $variant:path) => {{
         let msg = $client.recv().await.expect("Failed to recv");
         match msg {
             $variant(m) => m,
@@ -51,7 +51,7 @@ macro_rules! expect_recv {
 }
 
 macro_rules! expect_recv_close {
-    ($client:expr) => {{
+    ($client:expr_2021) => {{
         let msg = $client.recv_msg().await.expect("Failed to recv");
         match msg {
             Message::Close(_) => (),

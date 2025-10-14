@@ -50,10 +50,13 @@ fn test_single_enum_field_serialization() {
         let field_value = deserialized_message.get_field(&field_descriptor);
 
         // Try to access the value as an enum number
-        if let Some(value) = field_value.as_enum_number() {
-            assert_eq!(value, expected_value);
-        } else {
-            panic!("Couldn't access field value as enum number");
+        match field_value.as_enum_number() {
+            Some(value) => {
+                assert_eq!(value, expected_value);
+            }
+            _ => {
+                panic!("Couldn't access field value as enum number");
+            }
         }
     }
 }
