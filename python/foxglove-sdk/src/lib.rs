@@ -18,7 +18,7 @@ use std::sync::{Arc, OnceLock};
 use websocket::start_server;
 
 #[cfg(not(target_family = "wasm"))]
-mod agent;
+mod cloud_sink;
 mod errors;
 mod generated;
 mod mcap;
@@ -302,6 +302,6 @@ fn _foxglove_py(m: &Bound<'_, PyModule>) -> PyResult<()> {
     #[cfg(not(target_family = "wasm"))]
     websocket::register_submodule(m)?;
     #[cfg(not(target_family = "wasm"))]
-    agent::register_submodule(m)?;
+    cloud_sink::register_submodule(m)?;
     Ok(())
 }

@@ -8,10 +8,10 @@ repository.workspace = true
 license.workspace = true
 
 [features]
-default = ["derive", "live_visualization", "lz4", "zstd"]
+default = ["derive", "live_visualization", "lz4", "zstd", "cloud"]
 chrono = ["dep:chrono"]
 derive = ["dep:foxglove_derive"]
-agent = ["live_visualization"]
+cloud = ["live_visualization"]
 live_visualization = [
   "dep:base64",
   "dep:flume",
