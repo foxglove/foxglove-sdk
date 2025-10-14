@@ -22,11 +22,9 @@ pub trait CloudSinkListener: Send + Sync {
     /// Callback invoked when a client unsubscribes from a channel or disconnects.
     /// Only invoked for channels that had an active subscription from the client.
     fn on_unsubscribe(&self, _client: Client, _channel: ChannelView) {}
-    /// Callback invoked when a client advertises a client channel. Requires
-    /// [`Capability::ClientPublish`][super::Capability::ClientPublish].
+    /// Callback invoked when a client advertises a client channel.
     fn on_client_advertise(&self, _client: Client, _channel: &ClientChannel) {}
-    /// Callback invoked when a client unadvertises a client channel. Requires
-    /// [`Capability::ClientPublish`][super::Capability::ClientPublish].
+    /// Callback invoked when a client unadvertises a client channel.
     fn on_client_unadvertise(&self, _client: Client, _channel: &ClientChannel) {}
 }
 
