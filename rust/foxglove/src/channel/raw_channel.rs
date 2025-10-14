@@ -38,6 +38,7 @@ pub struct RawChannel {
     context: Weak<Context>,
     sinks: LogSinkSet,
     closed: AtomicBool,
+    unreliable: bool,
     warn_throttler: Mutex<Throttler>,
 }
 
@@ -49,6 +50,9 @@ impl RawChannel {
         schema: Option<Schema>,
         metadata: BTreeMap<String, String>,
     ) -> Arc<Self> {
+        let unreliable = metadata
+            .get("foxglove_unreliable")
+            .is_some_and(|v| v == "1");
         Arc::new(Self {
             descriptor: ChannelDescriptor::new(
                 ChannelId::next(),
@@ -60,6 +64,7 @@ impl RawChannel {
             context: Arc::downgrade(context),
             sinks: LogSinkSet::new(),
             closed: AtomicBool::new(false),
+            unreliable,
             warn_throttler: Mutex::new(Throttler::new(WARN_THROTTLER_INTERVAL)),
         })
     }
@@ -91,6 +96,11 @@ impl RawChannel {
     /// Returns the metadata for this channel.
     pub fn metadata(&self) -> &BTreeMap<String, String> {
         self.descriptor.metadata()
+    }
+
+    /// Returns true if the channel is marked as unreliable/lossy.
+    pub fn unreliable(&self) -> bool {
+        self.unreliable
     }
 
     /// Returns true if one channel is substantially the same as the other.
