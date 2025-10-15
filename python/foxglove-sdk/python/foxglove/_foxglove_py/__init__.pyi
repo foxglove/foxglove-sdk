@@ -3,6 +3,7 @@ from typing import Any, Callable
 
 from foxglove.websocket import AssetHandler
 
+from .cloud import CloudSink
 from .mcap import MCAPWriteOptions, MCAPWriter
 from .websocket import Capability, Service, WebSocketServer
 
@@ -151,6 +152,18 @@ def start_server(
 ) -> WebSocketServer:
     """
     Start a websocket server for live visualization.
+    """
+    ...
+
+def start_cloud_sink(
+    *,
+    listener: Any = None,
+    supported_encodings: list[str] | None = None,
+    context: Context | None = None,
+    session_id: str | None = None,
+) -> CloudSink:
+    """
+    Connect to Foxglove Agent for remote visualization and teleop.
     """
     ...
 

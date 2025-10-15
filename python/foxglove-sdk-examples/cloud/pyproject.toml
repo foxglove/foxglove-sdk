@@ -1,5 +1,5 @@
 [project]
-dependencies = ["foxglove-sdk @ file:///home/eloff/foxglove/sdk/python/foxglove-sdk", "mcap>=1.2"]
+dependencies = []
 name = "cloud"
 version = "0.0.0"
 description = "Example of logging to Foxglove cloud remote connection"
@@ -16,3 +16,6 @@ package-mode = false
 
 [tool.poetry.group.dev.dependencies]
 mypy = "^1"
+
+[tool.poetry.dependencies]
+foxglove-sdk = { path = "../../foxglove-sdk" }

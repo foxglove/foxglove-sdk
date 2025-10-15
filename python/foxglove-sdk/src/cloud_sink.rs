@@ -60,11 +60,11 @@ impl CloudSinkListener for PyCloudSinkListener {
 ///
 /// Must run Foxglove Agent on the same host for this to work.
 #[pyfunction]
-#[pyo3(signature = (*, server_listener=None, supported_encodings=None, context=None, session_id=None))]
+#[pyo3(signature = (*, listener=None, supported_encodings=None, context=None, session_id=None))]
 #[allow(clippy::too_many_arguments)]
 pub fn start_cloud_sink(
     py: Python<'_>,
-    server_listener: Option<Py<PyAny>>,
+    listener: Option<Py<PyAny>>,
     supported_encodings: Option<Vec<String>>,
     context: Option<PyRef<PyContext>>,
     session_id: Option<String>,
@@ -75,7 +75,7 @@ pub fn start_cloud_sink(
         cloud = cloud.session_id(session_id);
     }
 
-    if let Some(py_obj) = server_listener {
+    if let Some(py_obj) = listener {
         let listener = PyCloudSinkListener::new(py_obj);
         cloud = cloud.listener(Arc::new(listener));
     }
@@ -120,7 +120,6 @@ pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
 
     module.add_class::<PyCloudSink>()?;
     module.add_class::<PyCloudSinkListener>()?;
-    module.add_function(wrap_pyfunction!(start_cloud_sink, &module)?)?;
 
     // Define as a package
     // https://github.com/PyO3/pyo3/issues/759
