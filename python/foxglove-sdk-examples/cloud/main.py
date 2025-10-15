@@ -11,7 +11,7 @@ log_chan = LogChannel(topic="/log1")
 
 def main() -> None:
     # Connect to Foxglove Agent for live visualization
-    agent = foxglove.connect_agent()
+    cloud = foxglove.start_cloud_sink()
 
     try:
         i = 0
@@ -48,7 +48,7 @@ def main() -> None:
     except KeyboardInterrupt:
         print("\nShutting down...")
     finally:
-        agent.disconnect()
+        cloud.stop()
 
 
 if __name__ == "__main__":

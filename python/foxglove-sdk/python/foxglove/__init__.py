@@ -29,7 +29,7 @@ atexit.register(_foxglove.shutdown)
 
 
 try:
-    from ._foxglove_py.agent import Agent, connect_agent as _connect_agent
+    from ._foxglove_py.cloud import CloudSink, start_cloud_sink as _start_cloud_sink
     from .websocket import (
         AssetHandler,
         Capability,
@@ -87,14 +87,13 @@ try:
             channel_filter=channel_filter,
         )
 
-    def connect_agent(
+    def start_cloud_sink(
         *,
-        capabilities: list[Capability] | None = None,
         server_listener: ServerListener | None = None,
         supported_encodings: list[str] | None = None,
         context: Context | None = None,
         session_id: str | None = None,
-    ) -> Agent:
+    ) -> CloudSink:
         """
         Connect to Foxglove Agent for live visualization and teleop.
 
@@ -109,8 +108,7 @@ try:
             re-connection or a new connection instance. If None, then an ID is generated based on
             the current time.
         """
-        return _connect_agent(
-            capabilities=capabilities,
+        return _start_cloud_sink(
             server_listener=server_listener,
             supported_encodings=supported_encodings,
             context=context,

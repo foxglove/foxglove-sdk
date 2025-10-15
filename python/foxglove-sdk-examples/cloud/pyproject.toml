@@ -1,8 +1,8 @@
 [project]
 dependencies = ["foxglove-sdk @ file:///home/eloff/foxglove/sdk/python/foxglove-sdk", "mcap>=1.2"]
-name = "agent"
+name = "cloud"
 version = "0.0.0"
-description = "Example of logging to Foxglove Agent remote connection"
+description = "Example of logging to Foxglove cloud remote connection"
 authors = [{ name = "Foxglove", email = "support@foxglove.dev" }]
 readme = "README.md"
 requires-python = ">=3.9"
