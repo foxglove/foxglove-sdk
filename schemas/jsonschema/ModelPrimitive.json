@@ -127,7 +127,7 @@
     },
     "url": {
       "type": "string",
-      "description": "URL pointing to model file. One of `url` or `data` should be provided."
+      "description": "URL pointing to model file. One of `url` or `data` should be non-empty."
     },
     "media_type": {
       "type": "string",
@@ -136,7 +136,7 @@
     "data": {
       "type": "string",
       "contentEncoding": "base64",
-      "description": "Embedded model. One of `url` or `data` should be provided. If `data` is provided, `media_type` must be set to indicate the type of the data."
+      "description": "Embedded model. One of `url` or `data` should be non-empty. If `data` is non-empty, `media_type` must be set to indicate the type of the data."
     }
   },
   "required": [
