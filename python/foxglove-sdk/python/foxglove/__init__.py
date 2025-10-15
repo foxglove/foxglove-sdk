@@ -29,7 +29,11 @@ atexit.register(_foxglove.shutdown)
 
 
 try:
-    from ._foxglove_py.cloud import CloudSink, start_cloud_sink as _start_cloud_sink
+    from ._foxglove_py.cloud import (
+        CloudSink,
+        CloudSinkListener,
+        start_cloud_sink as _start_cloud_sink,
+    )
     from .websocket import (
         AssetHandler,
         Capability,
@@ -170,7 +174,9 @@ __all__ = [
     "MCAPWriter",
     "Schema",
     "SinkChannelFilter",
-    "connect_agent",
+    "CloudSink",
+    "CloudSinkListener",
+    "start_cloud_sink",
     "log",
     "open_mcap",
     "set_log_level",

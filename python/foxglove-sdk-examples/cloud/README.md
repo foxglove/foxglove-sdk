@@ -1,8 +1,10 @@
-# Write an MCAP file
+# Log to cloud live visualization
 
 An example from the Foxglove SDK.
 
-Connect to Foxglove Agent and pog messages for live visualization to be viewed in the Foxglove app.
+Connect to the cloud with Foxglove agent and log messages for live visualization to be viewed in the Foxglove app.
+
+This example will soon be replaced with something better.
 
 ## Usage
 
