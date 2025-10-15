@@ -10,8 +10,10 @@ try:
 except importlib.metadata.PackageNotFoundError:
     __version__ = "unknown"
 
+
 class DataSource(Protocol):
     def __call__(self) -> list[bytes]: ...
+
 
 class FoxgloveWidget(anywidget.AnyWidget):
     _esm = pathlib.Path(__file__).parent / "static" / "widget.js"
