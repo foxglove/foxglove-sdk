@@ -5,7 +5,6 @@ import foxglove
 from foxglove.channels import LogChannel
 from foxglove.schemas import Log, LogLevel
 
-
 log_chan = LogChannel(topic="/log1")
 
 

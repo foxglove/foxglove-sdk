@@ -32,8 +32,8 @@ try:
     from ._foxglove_py.cloud import (
         CloudSink,
         CloudSinkListener,
-        start_cloud_sink as _start_cloud_sink,
     )
+    from ._foxglove_py.cloud import start_cloud_sink as _start_cloud_sink
     from .websocket import (
         AssetHandler,
         Capability,
