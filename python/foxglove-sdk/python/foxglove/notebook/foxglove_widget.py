@@ -1,6 +1,6 @@
 import importlib.metadata
 import pathlib
-from typing import Any, Optional
+from typing import Any, Optional, Protocol
 
 import anywidget
 import traitlets
@@ -10,6 +10,8 @@ try:
 except importlib.metadata.PackageNotFoundError:
     __version__ = "unknown"
 
+class DataSource(Protocol):
+    def __call__(self) -> list[bytes]: ...
 
 class FoxgloveWidget(anywidget.AnyWidget):
     _esm = pathlib.Path(__file__).parent / "static" / "widget.js"
@@ -20,6 +22,7 @@ class FoxgloveWidget(anywidget.AnyWidget):
 
     def __init__(
         self,
+        get_data: DataSource,
         width: Optional[str] = None,
         height: Optional[str] = None,
         src: Optional[str] = None,
@@ -27,7 +30,6 @@ class FoxgloveWidget(anywidget.AnyWidget):
         **kwargs: Any,
     ):
         super().__init__(**kwargs)
-
         if width is not None:
             self.width = width
         if height is not None:
@@ -37,13 +39,17 @@ class FoxgloveWidget(anywidget.AnyWidget):
         if layout_data is not None:
             self.layout_data = layout_data
 
+        # Callback to get the data to display in the widget
+        self._get_data = get_data
         # Keep track of when the widget is ready to receive data
         self._ready = False
         # Pending data to be sent when the widget is ready
         self._pending_data: list[bytes] = []
         self.on_msg(self._handle_custom_msg)
+        self.refresh()
 
-    def send_data(self, data: list[bytes]) -> None:
+    def refresh(self) -> None:
+        data = self._get_data()
         if not self._ready:
             self._pending_data = data
         else:

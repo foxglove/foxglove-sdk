@@ -12,14 +12,14 @@ foxglove
 
 .. automodule:: foxglove
    :members:
-   :exclude-members: MCAPWriter, notebook_sink
+   :exclude-members: MCAPWriter, open_notebook_sink
 
 Notebook Integration
 ^^^^^^^^^^^^^^^^^^^^
 
 Functions and classes for integrating with Jupyter notebooks and creating interactive visualizations.
 
-.. py:function:: notebook_sink(context: Context | None = None) -> NotebookSink
+.. py:function:: open_notebook_sink(context: Context | None = None) -> NotebookSink
 
    Create a NotebookSink object to manage data buffering and visualization in Jupyter
    notebooks.
@@ -67,10 +67,6 @@ Notebook Classes
 
       Show the Foxglove viewer. Call this method as the last step of a notebook cell
       to display the viewer.
-
-   .. py:method:: get_data() -> list[bytes]
-
-      Get the buffered data.
 
    .. py:method:: clear() -> None
 

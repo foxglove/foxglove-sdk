@@ -33,24 +33,20 @@ class NotebookSink:
         Show the Foxglove viewer. Call this method as the last step of a notebook cell
         to display the viewer.
         """
-        data = self.get_data()
         widget = FoxgloveWidget(
+            get_data=self._get_data,
             width=width,
             height=height,
             src=src,
             layout_data=layout_data,
         )
-        widget.send_data(data)
         return widget
-
-    def get_data(self) -> list[bytes]:
-        """
-        Get the buffered data.
-        """
-        return self._buffer.get_data()
 
     def clear(self) -> None:
         """
         Clear the buffered data.
         """
         self._buffer.clear()
+
+    def _get_data(self) -> list[bytes]:
+        return self._buffer.get_data()

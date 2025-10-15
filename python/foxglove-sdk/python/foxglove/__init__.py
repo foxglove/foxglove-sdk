@@ -138,7 +138,7 @@ def _level_names() -> dict[str, int]:
     }
 
 
-def notebook_sink(context: Context | None = None) -> NotebookSink:
+def open_notebook_sink(context: Context | None = None) -> NotebookSink:
     """
     Create a NotebookSink object to manage data buffering and visualization in Jupyter
     notebooks.
@@ -169,10 +169,10 @@ def notebook_sink(context: Context | None = None) -> NotebookSink:
         >>> import foxglove
         >>>
         >>> # Create a basic viewer using the default context
-        >>> nb_sink = foxglove.notebook_sink()
+        >>> nb_sink = foxglove.open_notebook_sink()
         >>>
         >>> # Or use a specific context
-        >>> nb_sink = foxglove.notebook_sink(context=my_ctx)
+        >>> nb_sink = foxglove.open_notebook_sink(context=my_ctx)
         >>>
         >>> # ... log data as usual ...
         >>>
@@ -202,5 +202,5 @@ __all__ = [
     "open_mcap",
     "set_log_level",
     "start_server",
-    "notebook_sink",
+    "open_notebook_sink",
 ]
