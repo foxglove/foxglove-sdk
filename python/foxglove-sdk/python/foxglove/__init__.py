@@ -29,6 +29,11 @@ atexit.register(_foxglove.shutdown)
 
 
 try:
+    from ._foxglove_py.cloud import (
+        CloudSink,
+        CloudSinkListener,
+    )
+    from ._foxglove_py.cloud import start_cloud_sink as _start_cloud_sink
     from .websocket import (
         AssetHandler,
         Capability,
@@ -86,6 +91,34 @@ try:
             channel_filter=channel_filter,
         )
 
+    def start_cloud_sink(
+        *,
+        server_listener: ServerListener | None = None,
+        supported_encodings: list[str] | None = None,
+        context: Context | None = None,
+        session_id: str | None = None,
+    ) -> CloudSink:
+        """
+        Connect to Foxglove Agent for live visualization and teleop.
+
+        Foxglove Agent must be running on the same host for this to work.
+
+        :param capabilities: A list of capabilities to advertise to the agent.
+        :param server_listener: A Python object that implements the
+            :py:class:`websocket.ServerListener` protocol.
+        :param supported_encodings: A list of encodings to advertise to the agent.
+        :param context: The context to use for logging. If None, the global context is used.
+        :param session_id: An ID which allows the agent to understand if the connection is a
+            re-connection or a new connection instance. If None, then an ID is generated based on
+            the current time.
+        """
+        return _start_cloud_sink(
+            server_listener=server_listener,
+            supported_encodings=supported_encodings,
+            context=context,
+            session_id=session_id,
+        )
+
 except ImportError:
     pass
 
@@ -141,6 +174,9 @@ __all__ = [
     "MCAPWriter",
     "Schema",
     "SinkChannelFilter",
+    "CloudSink",
+    "CloudSinkListener",
+    "start_cloud_sink",
     "log",
     "open_mcap",
     "set_log_level",
