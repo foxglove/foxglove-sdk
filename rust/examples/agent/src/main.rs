@@ -71,7 +71,7 @@ fn gradient_data(width: usize, height: usize, offset: usize) -> Vec<u8> {
     for y in 0..height {
         for x in 0..width {
             let idx = (y * width + x) * 3;
-            let shifted_x = x + offset % width;
+            let shifted_x = (x + offset) % width;
             let gradient = (shifted_x * 255 / width) as u8;
 
             // B, G, R
