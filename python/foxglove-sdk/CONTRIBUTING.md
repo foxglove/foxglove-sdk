@@ -20,6 +20,18 @@ Install dependencies
 poetry install
 ```
 
+Install front-end dependencies
+
+```sh
+yarn install
+```
+
+Build front-end
+
+```sh
+yarn workspace @foxglove/notebook build
+```
+
 ### Developing
 
 To make use of installed dependencies, prefix python commands with `poetry run`. For more details, refer to the [Poetry docs](https://python-poetry.org/docs/basic-usage/).
