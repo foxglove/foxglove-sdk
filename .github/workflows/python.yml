@@ -17,18 +17,11 @@ jobs:
         with:
           python-version: "3.9"
 
-      - run: pipx install poetry
-      - run: poetry check --strict
-      - run: poetry install
-      - run: poetry run black . --check
-      - run: poetry run isort . --check
-      - run: poetry run flake8 .
+      - uses: astral-sh/setup-uv@v6
+      - run: make -f Container.mk lint-python
 
   lint-and-test-sdk:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: python/foxglove-sdk
     steps:
       - uses: actions/checkout@v5
       - uses: actions-rust-lang/setup-rust-toolchain@v1
@@ -36,12 +29,7 @@ jobs:
       - name: Install common dependencies
         uses: ./.github/actions/common-deps
 
-      - run: pipx install poetry
-      - run: poetry check --strict
-      - run: poetry install
-      - run: poetry run maturin develop
-      - run: poetry run mypy .
-      - run: poetry run pytest --with-benchmarks
+      - run: make -f Container.mk test-python
 
   playground:
     runs-on: ubuntu-latest
@@ -76,10 +64,8 @@ jobs:
           echo "$(pwd)/emsdk" >> $GITHUB_PATH
           echo "$(pwd)/emsdk/upstream/emscripten" >> $GITHUB_PATH
 
-      - run: pipx install poetry
-      - run: poetry check --strict
-      - run: poetry install
-      - run: CFLAGS=-fPIC RUSTC_BOOTSTRAP=1 poetry run maturin build --release --out dist --target wasm32-unknown-emscripten -i python3.12
+      - run: uv lock --check
+      - run: CFLAGS=-fPIC RUSTC_BOOTSTRAP=1 uv run maturin build --release --out dist --target wasm32-unknown-emscripten -i python3.12
       - run: mkdir -p ../../playground/public
       - run: cp dist/*.whl ../../playground/public
       - run: yarn install
@@ -121,8 +107,7 @@ jobs:
           rm Linux.flatc.binary.clang++-12.zip
           sudo mv flatc /usr/local/bin
 
-      - run: pipx install poetry
-      - run: poetry install
+      - uses: astral-sh/setup-uv@v6
 
       - run: make install
         working-directory: python
@@ -316,26 +301,19 @@ jobs:
     needs: [lint-and-test-sdk]
     permissions:
       contents: write
-    defaults:
-      run:
-        working-directory: python/foxglove-sdk
     steps:
       - uses: actions/checkout@v5
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - uses: actions/setup-python@v5
         with:
           python-version: "3.9"
+      - uses: astral-sh/setup-uv@v6
       - run: corepack enable
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: yarn
 
-      - run: pipx install poetry
-      - run: pipx ensurepath
-      - run: poetry check --strict
-      - run: poetry install
-      - run: poetry run maturin develop
-
+      - run: make -f Container.mk build-python
       - run: yarn install
       - run: yarn run-python-sdk-examples
