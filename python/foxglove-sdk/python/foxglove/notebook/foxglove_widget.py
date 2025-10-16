@@ -16,6 +16,15 @@ class DataSource(Protocol):
 
 
 class FoxgloveWidget(anywidget.AnyWidget):
+    """
+    A widget that displays a Foxglove viewer in a notebook.
+
+    :param get_data: A callback function that returns the data to display in the widget.
+    :param width: The width of the widget. Defaults to "100%".
+    :param height: The height of the widget. Defaults to "500px".
+    :param src: The source URL of the Foxglove viewer. Defaults to "https://embed.foxglove.dev/".
+    :param layout_data: The layout data to use for the widget.
+    """
     _esm = pathlib.Path(__file__).parent / "static" / "widget.js"
     width = traitlets.Unicode("100%").tag(sync=True)
     height = traitlets.Unicode("500px").tag(sync=True)
@@ -51,6 +60,9 @@ class FoxgloveWidget(anywidget.AnyWidget):
         self.refresh()
 
     def refresh(self) -> None:
+        """
+        Refresh the widget by getting the data from the callback function and sending it to the widget.
+        """
         data = self._get_data()
         if not self._ready:
             self._pending_data = data

@@ -12,14 +12,14 @@ foxglove
 
 .. automodule:: foxglove
    :members:
-   :exclude-members: MCAPWriter, open_notebook_sink
+   :exclude-members: MCAPWriter, init_notebook_sink
 
 Notebook Integration
 ^^^^^^^^^^^^^^^^^^^^
 
 Functions and classes for integrating with Jupyter notebooks and creating interactive visualizations.
 
-.. py:function:: open_notebook_sink(context: Context | None = None) -> NotebookSink
+.. py:function:: init_notebook_sink(context: Context | None = None) -> NotebookSink
 
    Create a NotebookSink object to manage data buffering and visualization in Jupyter
    notebooks.
@@ -71,6 +71,22 @@ Notebook Classes
    .. py:method:: clear() -> None
 
       Clear the buffered data.
+
+.. py:class:: FoxgloveWidget
+
+   A widget that displays a Foxglove viewer in a notebook.
+
+   .. py:method:: __init__(get_data: DataSource, width: Optional[str] = None, height: Optional[str] = None, src: Optional[str] = None, layout_data: Optional[dict] = None)
+      Initialize the FoxgloveWidget with the specified data source, width, height, source URL, and layout data.
+
+      :param get_data: A callback function that returns the data to display in the widget.
+      :param width: The width of the widget. Defaults to "100%".
+      :param height: The height of the widget. Defaults to "500px".
+      :param src: The source URL of the Foxglove viewer. Defaults to "https://embed.foxglove.dev/".
+      :param layout_data: The layout data to use for the widget.
+
+   .. py:method:: refresh() -> None
+      Refresh the widget by getting the data from the callback function and sending it to the widget.
 
 Schemas
 ^^^^^^^

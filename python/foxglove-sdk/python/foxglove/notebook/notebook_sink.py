@@ -14,6 +14,9 @@ class NotebookSink:
     Foxglove visualization widget. The widget provides a fully-featured Foxglove interface
     directly within your Jupyter notebook, allowing you to explore multi-modal robotics data
     including 3D scenes, plots, images, and more.
+
+    :param context: The Context used to log the messages. If no Context is provided, the global
+        context will be used. Logged messages will be buffered.
     """
 
     def __init__(
