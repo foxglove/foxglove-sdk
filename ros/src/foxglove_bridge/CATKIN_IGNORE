@@ -1,0 +1,1 @@
+The version of foxglove_bridge in this repo does not support ROS 1. If you are a ROS 1 user, you can find the source code for the legacy version of foxglove_bridge in the ROS 1 foxglove_bridge repo at https://github.com/foxglove/ros-foxglove-bridge
