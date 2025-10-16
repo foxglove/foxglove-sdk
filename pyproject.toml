@@ -10,8 +10,21 @@ dev = [
     "isort>=6.0.0,<7",
 ]
 
+[tool.isort]
+profile = "black"
+
 [tool.uv]
 package = false
 
-[tool.isort]
-profile = "black"
+[tool.uv.sources]
+foxglove-sdk = { workspace = true }
+
+[tool.uv.workspace]
+members = [
+  "python/foxglove-sdk",
+  "python/foxglove-sdk-examples/*",
+]
+
+[build-system]
+requires = ["uv_build>=0.9.3,<0.10.0"]
+build-backend = "uv_build"

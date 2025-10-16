@@ -18,7 +18,7 @@ documentation = "https://docs.foxglove.dev/"
 
 [dependency-groups]
 dev = [
-    "black>=24.2.0,<25",
+    "black>=25.1.0,<26",
     "enum-tools[sphinx]>=0.12.0,<0.13",
     "flake8>=7.0.0,<8",
     "isort>=6.0.0,<7",

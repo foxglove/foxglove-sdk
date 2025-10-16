@@ -13,7 +13,7 @@
     "generate": "ts-node ./scripts/generate.ts",
     "lint:ci": "eslint .",
     "lint": "eslint --fix .",
-    "run-python-sdk-examples": "ts-node ./scripts/runPythonSdkExamples.ts --install-sdk-from-path",
+    "run-python-sdk-examples": "ts-node ./scripts/runPythonSdkExamples.ts",
     "test": "jest"
   },
   "devDependencies": {
