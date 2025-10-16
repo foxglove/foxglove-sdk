@@ -22,6 +22,8 @@ foxglove-sdk = { workspace = true }
 [tool.uv.workspace]
 members = [
   "python/foxglove-sdk",
+  "python/foxglove-schemas-flatbuffer",
+  "python/foxglove-schemas-protobuf",
   "python/foxglove-sdk-examples/*",
 ]
 
