@@ -14,61 +14,95 @@ if(CCACHE_PROGRAM)
   message(STATUS "Using ccache: ${CCACHE_PROGRAM}")
 endif()
 
+option(USE_PACKAGE_MANAGER_DEPENDENCIES
+  "Try to find dependencies provided by the local package manager, and if not found, fall back to building them from source"
+  ON)
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 include(CTest)
 include(FetchContent)
 
-FetchContent_Declare(
-  Catch2
-  GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-  GIT_TAG        v3.8.0
-)
-FetchContent_MakeAvailable(Catch2)
-list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)
+if(USE_PACKAGE_MANAGER_DEPENDENCIES)
+  find_package(Catch2 QUIET 3)
+endif()
+if(NOT TARGET Catch2::Catch2WithMain)
+  FetchContent_Declare(
+    Catch2
+    GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+    GIT_TAG        v3.8.0
+  )
+  FetchContent_MakeAvailable(Catch2)
+  list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)
+endif()
 include(Catch)
 
-FetchContent_Declare(
-  Corrosion
-  GIT_REPOSITORY https://github.com/corrosion-rs/corrosion.git
-  GIT_TAG v0.5.1
-)
-# Clear CMAKE_CONFIGURATION_TYPES before making Corrosion available
-if(CMAKE_GENERATOR MATCHES "Unix Makefiles|Ninja")
-  unset(CMAKE_CONFIGURATION_TYPES CACHE)
+if(USE_PACKAGE_MANAGER_DEPENDENCIES)
+  find_package(Corrosion QUIET 0.5.1)
 endif()
-FetchContent_MakeAvailable(Corrosion)
-
-FetchContent_Declare(
-  websocketpp
-  GIT_REPOSITORY https://github.com/zaphoyd/websocketpp.git
-  GIT_TAG 0.8.2
-  OVERRIDE_FIND_PACKAGE
-)
-# Set WebSocketPP CMake policy to suppress the warning
-set(FETCHCONTENT_TRY_FIND_PACKAGE_MODE NEVER)
-FetchContent_GetProperties(websocketpp)
-if(NOT websocketpp_POPULATED)
-  FetchContent_Populate(websocketpp)
-  # Don't call add_subdirectory to avoid running the original CMakeLists.txt
-  # Just set up the include directory
-  add_library(websocketpp INTERFACE)
-  target_include_directories(websocketpp INTERFACE ${websocketpp_SOURCE_DIR})
+if(NOT Corrosion_FOUND)
+  FetchContent_Declare(
+    Corrosion
+    GIT_REPOSITORY https://github.com/corrosion-rs/corrosion.git
+    GIT_TAG v0.5.1
+  )
+  # Clear CMAKE_CONFIGURATION_TYPES before making Corrosion available
+  if(CMAKE_GENERATOR MATCHES "Unix Makefiles|Ninja")
+    unset(CMAKE_CONFIGURATION_TYPES CACHE)
+  endif()
+  FetchContent_MakeAvailable(Corrosion)
 endif()
-FetchContent_MakeAvailable(websocketpp)
 
-FetchContent_Declare(asio
-  GIT_REPOSITORY https://github.com/chriskohlhoff/asio.git
-  GIT_TAG asio-1-31-0
-)
-FetchContent_MakeAvailable(asio)
+if(USE_PACKAGE_MANAGER_DEPENDENCIES)
+  find_package(websocketpp QUIET)
+endif()
+if(NOT TARGET websocketpp::websocketpp)
+  FetchContent_Declare(
+    websocketpp
+    GIT_REPOSITORY https://github.com/zaphoyd/websocketpp.git
+    GIT_TAG 0.8.2
+  )
+  # Set WebSocketPP CMake policy to suppress the warning
+  FetchContent_GetProperties(websocketpp)
+  if(NOT websocketpp_POPULATED)
+    FetchContent_Populate(websocketpp)
+    # Don't call add_subdirectory to avoid running the original CMakeLists.txt
+    # Just set up the include directory
+    add_library(websocketpp::websocketpp INTERFACE IMPORTED)
+    target_include_directories(websocketpp::websocketpp INTERFACE ${websocketpp_SOURCE_DIR})
+  endif()
+  FetchContent_MakeAvailable(websocketpp)
+endif()
 
-FetchContent_Declare(json
-  GIT_REPOSITORY https://github.com/nlohmann/json.git
-  GIT_TAG v3.12.0
-)
-FetchContent_MakeAvailable(json)
+if(USE_PACKAGE_MANAGER_DEPENDENCIES)
+  list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+  find_package(asio QUIET)
+endif()
+if(NOT TARGET asio::asio)
+  FetchContent_Declare(asio
+    GIT_REPOSITORY https://github.com/chriskohlhoff/asio.git
+    GIT_TAG asio-1-31-0
+  )
+  FetchContent_MakeAvailable(asio)
+  add_library(asio::asio IMPORTED INTERFACE)
+  target_include_directories(asio::asio INTERFACE ${asio_SOURCE_DIR}/asio/include)
+  target_compile_definitions(asio::asio
+    INTERFACE
+      ASIO_STANDALONE
+  )
+endif()
+
+if(USE_PACKAGE_MANAGER_DEPENDENCIES)
+  find_package(nlohmann_json QUIET)
+endif()
+if(NOT TARGET nlohmann_json::nlohmann_json)
+  FetchContent_Declare(nlohmann_json
+    GIT_REPOSITORY https://github.com/nlohmann/json.git
+    GIT_TAG v3.12.0
+  )
+  FetchContent_MakeAvailable(nlohmann_json)
+endif()
 
 if(DEFINED SANITIZE)
   if(NOT CMAKE_CXX_COMPILER_ID MATCHES ".*Clang")
@@ -148,13 +182,9 @@ file(GLOB_RECURSE foxglove_test_srcs CONFIGURE_DEPENDS
 add_executable(tests "${foxglove_test_srcs}")
 set_property(TARGET tests PROPERTY CXX_STANDARD 17)
 set_property(TARGET tests PROPERTY CXX_STANDARD_REQUIRED True)
-target_compile_definitions(tests PRIVATE ASIO_STANDALONE)
 target_compile_options(tests PUBLIC ${SANITIZER_COMPILE_OPTIONS})
 target_link_options(tests PUBLIC ${SANITIZER_LINK_OPTIONS})
-target_include_directories(tests SYSTEM PRIVATE ${asio_SOURCE_DIR}/asio/include)
-target_include_directories(tests SYSTEM PRIVATE ${json_SOURCE_DIR}/include)
-target_include_directories(tests SYSTEM PRIVATE ${websocketpp_SOURCE_DIR})
-target_link_libraries(tests PRIVATE foxglove_cpp_static Catch2::Catch2WithMain)
+target_link_libraries(tests PRIVATE foxglove_cpp_static asio::asio Catch2::Catch2WithMain nlohmann_json::nlohmann_json websocketpp::websocketpp)
 catch_discover_tests(tests)
 if(MSVC)
   # Auto-detection of C++11 support is not working on the windows-2025 runner with default settings
@@ -186,9 +216,8 @@ add_executable(example_services examples/ws-services/src/main.cpp)
 set_property(TARGET example_services PROPERTY CXX_STANDARD 17)
 set_property(TARGET example_services PROPERTY CXX_STANDARD_REQUIRED True)
 target_compile_options(example_services PUBLIC ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
-target_include_directories(example_services SYSTEM PRIVATE ${json_SOURCE_DIR}/include)
 target_link_options(example_services PUBLIC ${SANITIZER_LINK_OPTIONS})
-target_link_libraries(example_services foxglove_cpp_static)
+target_link_libraries(example_services foxglove_cpp_static nlohmann_json::nlohmann_json)
 
 add_executable(example_mcap examples/mcap/src/main.cpp)
 set_property(TARGET example_mcap PROPERTY CXX_STANDARD 17)
@@ -229,23 +258,19 @@ add_executable(example_auto_serialize examples/auto-serialize/src/main.cpp)
 set_property(TARGET example_auto_serialize PROPERTY CXX_STANDARD 17)
 set_property(TARGET example_auto_serialize PROPERTY CXX_STANDARD_REQUIRED True)
 target_compile_options(example_auto_serialize PUBLIC ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
-target_include_directories(example_auto_serialize SYSTEM PRIVATE ${json_SOURCE_DIR}/include)
 target_link_options(example_auto_serialize PUBLIC ${SANITIZER_LINK_OPTIONS})
-target_link_libraries(example_auto_serialize foxglove_cpp_static)
+target_link_libraries(example_auto_serialize foxglove_cpp_static nlohmann_json::nlohmann_json)
 
 option(BUILD_OPENCV_EXAMPLE "Build the RGB camera visualization example (requires OpenCV)" OFF)
 
 if(BUILD_OPENCV_EXAMPLE)
-  find_package(OpenCV REQUIRED)
-  include_directories(${OpenCV_INCLUDE_DIRS})
+  find_package(OpenCV REQUIRED COMPONENTS core videoio)
   add_executable(example_rgb_camera_visualization examples/rgb-camera-visualization/main.cpp)
-  set_property(TARGET example_rgb_camera_visualization PROPERTY EXCLUDE_FROM_ALL TRUE)
   set_property(TARGET example_rgb_camera_visualization PROPERTY CXX_STANDARD 17)
   set_property(TARGET example_rgb_camera_visualization PROPERTY CXX_STANDARD_REQUIRED True)
   target_compile_options(example_rgb_camera_visualization PUBLIC ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
   target_link_options(example_rgb_camera_visualization PUBLIC ${SANITIZER_LINK_OPTIONS})
-  target_include_directories(example_rgb_camera_visualization PRIVATE ${OpenCV_INCLUDE_DIRS})
-  target_link_libraries(example_rgb_camera_visualization foxglove_cpp_static ${OpenCV_LIBS})
+  target_link_libraries(example_rgb_camera_visualization foxglove_cpp_static opencv_core opencv_videoio)
 endif()
 
 add_executable(example_message_filtering examples/message-filtering/src/main.cpp)
