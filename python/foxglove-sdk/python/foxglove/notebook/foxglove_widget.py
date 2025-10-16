@@ -25,6 +25,7 @@ class FoxgloveWidget(anywidget.AnyWidget):
     :param src: The source URL of the Foxglove viewer. Defaults to "https://embed.foxglove.dev/".
     :param layout_data: The layout data to use for the widget.
     """
+
     _esm = pathlib.Path(__file__).parent / "static" / "widget.js"
     width = traitlets.Unicode("100%").tag(sync=True)
     height = traitlets.Unicode("500px").tag(sync=True)
@@ -61,7 +62,8 @@ class FoxgloveWidget(anywidget.AnyWidget):
 
     def refresh(self) -> None:
         """
-        Refresh the widget by getting the data from the callback function and sending it to the widget.
+        Refresh the widget by getting the data from the callback function and sending it
+        to the widget.
         """
         data = self._get_data()
         if not self._ready:
