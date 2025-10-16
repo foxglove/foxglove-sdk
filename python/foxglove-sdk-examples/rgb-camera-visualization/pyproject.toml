@@ -9,12 +9,11 @@ dependencies = [
     "numpy>=1.20.0",
 ]
 
+[dependency-groups]
+dev = ["mypy>=1,<2"]
+
 [project.scripts]
 rgb-camera-visualization = "main:main"
-
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
 
 [tool.uv]
 package = false

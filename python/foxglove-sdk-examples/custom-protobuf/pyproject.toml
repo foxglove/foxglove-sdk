@@ -11,10 +11,6 @@ dependencies = [
     "protobuf (>=6.30.2,<7.0.0)",
 ]
 
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-
 [dependency-groups]
 dev = ["mypy>=1,<2"]
 

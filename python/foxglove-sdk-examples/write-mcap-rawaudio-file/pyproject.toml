@@ -10,10 +10,6 @@ dependencies = [
     "mcap>=1.2",
 ]
 
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-
 [dependency-groups]
 dev = ["mypy>=1,<2"]
 
