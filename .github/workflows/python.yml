@@ -109,9 +109,6 @@ jobs:
 
       - uses: astral-sh/setup-uv@v6
 
-      - run: make install
-        working-directory: python
-
       - run: make build
         working-directory: python
 
