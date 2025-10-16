@@ -3,35 +3,35 @@ name = "foxglove-schemas-flatbuffer"
 version = "0.3.0"
 description = "Precompiled flatbuffer schemas for Foxglove"
 authors = [{ name = "Foxglove", email = "support@foxglove.dev" }]
-license = { text = "MIT" }
-readme = "README.md"
-dynamic = ["classifiers"]
 requires-python = ">=3.9"
+readme = "README.md"
+license = { text = "MIT" }
 dependencies = ["flatbuffers (>=23.0)"]
+dynamic = ["classifiers"]
 
 [project.urls]
 repository = "https://github.com/foxglove/foxglove-sdk"
 documentation = "https://docs.foxglove.dev/"
 
 [build-system]
-requires = ["poetry-core>=2.0.0,<3.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
-[tool.poetry]
+[dependency-groups]
+dev = ["pytest>=8.3.4,<9"]
+
+[tool.hatch.build.targets.sdist]
 include = [
-  { path = "tests", format = "sdist" },
-  { path = "foxglove_schemas_flatbuffer/*.py", format = [
-    "sdist",
-    "wheel",
-  ] },
-  { path = "foxglove_schemas_flatbuffer/*.bfbs", format = [
-    "sdist",
-    "wheel",
-  ] },
+    "tests",
+    "foxglove_schemas_flatbuffer/*.py",
+    "foxglove_schemas_flatbuffer/*.bfbs",
 ]
 
-[tool.poetry.group.dev.dependencies]
-pytest = "^8.3.4"
+[tool.hatch.build.targets.wheel]
+include = [
+    "foxglove_schemas_flatbuffer/*.py",
+    "foxglove_schemas_flatbuffer/*.bfbs",
+]
 
 [tool.pytest.ini_options]
 addopts = "-vv --color=yes"
