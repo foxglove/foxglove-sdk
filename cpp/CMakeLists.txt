@@ -169,7 +169,7 @@ add_custom_target(doxygen
 )
 
 add_custom_target(html-docs
-  COMMAND poetry run sphinx-build --fail-on-warning . ${CMAKE_CURRENT_BINARY_DIR}/docs/html
+  COMMAND uv run sphinx-build --fail-on-warning . ${CMAKE_CURRENT_BINARY_DIR}/docs/html
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/foxglove/docs
 )
 
