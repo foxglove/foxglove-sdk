@@ -25,7 +25,7 @@ RUN apt-get update \
 
 RUN corepack enable yarn
 
-ENV PATH=/usr/lib/llvm-19/bin:$PATH \
+ENV PATH=/usr/lib/llvm-19/bin:/root/.local/bin:$PATH \
     UV_CACHE_DIR='/var/cache/uv' \
     COREPACK_ENABLE_DOWNLOAD_PROMPT=0
 

@@ -17,7 +17,7 @@ lint-python:
 
 .PHONY: test-python
 test-python:
-	uv --directory python/foxglove-sdk check --check
+	uv --directory python/foxglove-sdk lock --check
 	uv --directory python/foxglove-sdk run maturin develop
 	uv --directory python/foxglove-sdk run mypy .
 	uv --directory python/foxglove-sdk run pytest
