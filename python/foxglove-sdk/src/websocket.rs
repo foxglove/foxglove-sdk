@@ -20,7 +20,7 @@ use std::sync::Arc;
 #[pyclass(name = "ChannelView", module = "foxglove")]
 pub struct PyChannelView {
     #[pyo3(get)]
-    id: u64,
+    id: u32,
     #[pyo3(get)]
     topic: Py<PyString>,
 }
@@ -300,7 +300,7 @@ impl PyServerListener {
         &self,
         method_name: &str,
         client: Client,
-        channel_id: u64,
+        channel_id: u32,
         topic: &str,
     ) {
         let client_info = PyClient {
