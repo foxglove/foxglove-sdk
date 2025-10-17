@@ -20,11 +20,13 @@ package = false
 foxglove-sdk = { workspace = true }
 
 [tool.uv.workspace]
+# python/foxglove-sdk-examples is deliberately omitted so that, by default,
+# examples will run against released versions of the SDK from pypi.
 members = [
+  "cpp/foxglove/docs",
   "python/foxglove-sdk",
   "python/foxglove-schemas-flatbuffer",
   "python/foxglove-schemas-protobuf",
-  "python/foxglove-sdk-examples/*",
 ]
 
 [build-system]

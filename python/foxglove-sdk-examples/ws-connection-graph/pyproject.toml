@@ -5,11 +5,7 @@ description = "Visualize a connection graph in Foxglove"
 authors = [{ name = "Foxglove", email = "support@foxglove.dev" }]
 requires-python = ">=3.9"
 readme = "README.md"
-dependencies = ["foxglove-sdk>=0.4.0"]
-
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+dependencies = ["foxglove-sdk"]
 
 [dependency-groups]
 dev = ["mypy>=1,<2"]

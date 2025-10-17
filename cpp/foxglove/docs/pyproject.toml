@@ -1,11 +1,7 @@
 [project]
 name = "cpp-sdk-documentation"
 version = "0.0.0"
-description = "Documentation for the Foxglove C++ SDK"
-authors = [{ name = "Foxglove", email = "support@foxglove.dev" }]
 requires-python = ">=3.9"
-readme = "README.md"
-dependencies = []
 
 [dependency-groups]
 dev = [
@@ -18,7 +14,3 @@ dev = [
 
 [tool.uv]
 package = false
-
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"

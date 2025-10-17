@@ -1,12 +1,17 @@
 import { program } from "commander";
 import { spawn } from "node:child_process";
 import { SIGTERM } from "node:constants";
+import { lstatSync } from "node:fs";
 import { mkdtemp, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
 /**
  * Run each example in the Python SDK, after installing dependencies.
+ *
+ * If `--install-sdk-from-path` is passed, then the project dependencies will be updated to refer
+ * to the SDK at a local path, relative to the example directory. CI uses this to test with the
+ * latest SDK; by default, examples specify the published version in their pyproject.toml.
  *
  * Many of the examples start a live server which is run until interrupted; all examples are run
  * with a timeout (default 5s). These are run serially since they use the default Foxglove port
@@ -18,17 +23,25 @@ const pyExamplesDir = path.resolve(__dirname, "../python/foxglove-sdk-examples")
 const tempFiles: string[] = [];
 
 async function main(opts: { timeout: string; installSdkFromPath: boolean }) {
-  for (const example of await readdir(pyExamplesDir)) {
-    console.debug(`Install & run example ${example}`);
-    await runExample(example, parseInt(opts.timeout));
+  const timeoutMillis = parseInt(opts.timeout);
+  for (const name of await readdir(pyExamplesDir)) {
+    const dir = path.join(pyExamplesDir, name);
+    if (lstatSync(dir).isDirectory() && name !== ".venv") {
+      console.debug(`Install & run example ${name}`);
+      await runExample(name, { timeoutMillis, installSdkFromPath: opts.installSdkFromPath });
+    }
   }
 }
 
-async function runExample(name: string, timeoutMillis = 5000) {
+async function runExample(
+  name: string,
+  opts: { timeoutMillis: number; installSdkFromPath: boolean },
+) {
   const dir = path.join(pyExamplesDir, name);
-  const args = await extraArgs(name);
+  const uvArgs = opts.installSdkFromPath ? ["--with", "../../foxglove-sdk"] : [];
+  const exampleArgs = await getExampleArgs(name);
   return await new Promise((resolve, reject) => {
-    const child = spawn("uv", ["run", "python", "main.py", ...args], {
+    const child = spawn("uv", ["run", ...uvArgs, "main.py", ...exampleArgs], {
       cwd: dir,
     });
     child.stderr.on("data", (data: Buffer | string) => {
@@ -44,7 +57,7 @@ async function runExample(name: string, timeoutMillis = 5000) {
     });
     setTimeout(() => {
       child.kill(SIGTERM);
-    }, timeoutMillis);
+    }, opts.timeoutMillis);
   });
 }
 
@@ -69,7 +82,7 @@ async function removeTempFiles() {
   }
 }
 
-async function extraArgs(example: string) {
+async function getExampleArgs(example: string) {
   switch (example) {
     case "ws-stream-mcap":
       return ["--file", path.resolve(__dirname, "fixtures/empty.mcap")];
