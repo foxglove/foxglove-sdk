@@ -5,22 +5,17 @@ SED_ARGS = -i
 endif
 
 .PHONY: all
-all: clean install generate build test
-
-.PHONY: install
-install:
-	cd foxglove-schemas-flatbuffer && poetry install
-	cd foxglove-schemas-protobuf && poetry install
+all: clean generate build test
 
 .PHONY: generate-flatbuffer
 generate-flatbuffer:
 	find foxglove-schemas-flatbuffer/foxglove_schemas_flatbuffer ! -name '__init__.py' -type f -exec rm -f {} +
-	cd foxglove-schemas-flatbuffer && poetry run flatc \
+	cd foxglove-schemas-flatbuffer && uv run flatc \
 		--require-explicit-ids \
 		--python \
 		-o foxglove_schemas_flatbuffer \
 		../../schemas/flatbuffer/*.fbs
-	cd foxglove-schemas-flatbuffer && poetry run flatc \
+	cd foxglove-schemas-flatbuffer && uv run flatc \
 		-b \
 		--schema \
 		-o foxglove_schemas_flatbuffer \
@@ -33,7 +28,7 @@ generate-flatbuffer:
 .PHONY: generate-protobuf
 generate-protobuf:
 	rm -rf foxglove-schemas-protobuf/foxglove_schemas_protobuf/*_pb2*
-	cd foxglove-schemas-protobuf && poetry run protoc \
+	cd foxglove-schemas-protobuf && uv run protoc \
 		--python_out=foxglove_schemas_protobuf \
 		--mypy_out=foxglove_schemas_protobuf \
 		--proto_path ../../schemas/proto \
@@ -49,13 +44,13 @@ generate: generate-flatbuffer generate-protobuf
 
 .PHONY: build
 build: generate
-	cd foxglove-schemas-flatbuffer && poetry build
-	cd foxglove-schemas-protobuf && poetry build
+	cd foxglove-schemas-flatbuffer && uv build
+	cd foxglove-schemas-protobuf && uv build
 
 .PHONY: test
 test:
-	cd foxglove-schemas-flatbuffer && poetry run pytest
-	cd foxglove-schemas-protobuf && poetry run pytest
+	cd foxglove-schemas-flatbuffer && uv run pytest
+	cd foxglove-schemas-protobuf && uv run pytest
 
 .PHONY: clean
 clean:

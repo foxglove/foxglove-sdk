@@ -1,6 +1,7 @@
 import { program } from "commander";
 import { spawn } from "node:child_process";
 import { SIGTERM } from "node:constants";
+import { lstatSync } from "node:fs";
 import { mkdtemp, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -22,25 +23,32 @@ const pyExamplesDir = path.resolve(__dirname, "../python/foxglove-sdk-examples")
 const tempFiles: string[] = [];
 
 async function main(opts: { timeout: string; installSdkFromPath: boolean }) {
-  for (const example of await readdir(pyExamplesDir)) {
-    console.debug(`Install & run example ${example}`);
-    await installDependencies(example, { installSdkFromPath: opts.installSdkFromPath });
-    await runExample(example, parseInt(opts.timeout));
+  const timeoutMillis = parseInt(opts.timeout);
+  for (const name of await readdir(pyExamplesDir)) {
+    const dir = path.join(pyExamplesDir, name);
+    if (lstatSync(dir).isDirectory() && name !== ".venv") {
+      console.debug(`Install & run example ${name}`);
+      await runExample(name, { timeoutMillis, installSdkFromPath: opts.installSdkFromPath });
+    }
   }
 }
 
-async function runExample(name: string, timeoutMillis = 5000) {
+async function runExample(
+  name: string,
+  opts: { timeoutMillis: number; installSdkFromPath: boolean },
+) {
   const dir = path.join(pyExamplesDir, name);
-  const args = await extraArgs(name);
+  const uvArgs = opts.installSdkFromPath ? ["--with", "../../foxglove-sdk"] : [];
+  const exampleArgs = await getExampleArgs(name);
   return await new Promise((resolve, reject) => {
-    const child = spawn("poetry", ["run", "python", "main.py", ...args], {
+    const child = spawn("uv", ["run", ...uvArgs, "main.py", ...exampleArgs], {
       cwd: dir,
     });
     child.stderr.on("data", (data: Buffer | string) => {
       console.debug(data.toString());
     });
     child.on("exit", (code, signal) => {
-      if (code === 0 || signal === "SIGTERM") {
+      if (code === 0 || code === 143 || signal === "SIGTERM") {
         resolve(undefined);
       } else {
         const signalOrCode = code != undefined ? `code ${code}` : (signal ?? "unknown");
@@ -49,30 +57,7 @@ async function runExample(name: string, timeoutMillis = 5000) {
     });
     setTimeout(() => {
       child.kill(SIGTERM);
-    }, timeoutMillis);
-  });
-}
-
-async function installDependencies(name: string, opts: { installSdkFromPath: boolean }) {
-  const dir = path.join(pyExamplesDir, name);
-  return await new Promise((resolve, reject) => {
-    const args = opts.installSdkFromPath ? ["add", "foxglove-sdk@../../foxglove-sdk"] : ["install"];
-    const child = spawn("poetry", args, {
-      cwd: dir,
-    });
-    child.stdout.on("data", (data: Buffer | string) => {
-      console.debug(data.toString());
-    });
-    child.stderr.on("data", (data: Buffer | string) => {
-      console.error(data.toString());
-    });
-    child.on("close", (code) => {
-      if (code === 0) {
-        resolve(undefined);
-      } else {
-        reject(new Error(`Failed to install dependencies for ${name}`));
-      }
-    });
+    }, opts.timeoutMillis);
   });
 }
 
@@ -97,7 +82,7 @@ async function removeTempFiles() {
   }
 }
 
-async function extraArgs(example: string) {
+async function getExampleArgs(example: string) {
   switch (example) {
     case "ws-stream-mcap":
       return ["--file", path.resolve(__dirname, "fixtures/empty.mcap")];

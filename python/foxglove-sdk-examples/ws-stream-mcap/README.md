@@ -7,9 +7,8 @@ This example reads the given MCAP file and streams the data to a Foxglove WebSoc
 
 ## Usage
 
-This example uses Poetry: https://python-poetry.org/
+This example uses [uv](https://docs.astral.sh/uv/).
 
 ```bash
-poetry install
-poetry run python main.py --file <path-to-mcap-file>
+uv run python main.py
 ```

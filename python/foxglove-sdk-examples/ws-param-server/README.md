@@ -9,9 +9,8 @@ https://docs.foxglove.dev/docs/visualization/panels/parameters
 
 ## Usage
 
-This example uses Poetry: https://python-poetry.org/
+This example uses [uv](https://docs.astral.sh/uv/).
 
 ```bash
-poetry install
-poetry run python main.py --file <path-to-mcap-file>
+uv run python main.py
 ```

@@ -4,64 +4,50 @@
 
 ### Installation
 
-We use [Poetry](https://python-poetry.org/) to manage dependencies.
-
-Install Poetry:
-
-```sh
-brew install pipx
-pipx ensurepath
-pipx install poetry
-```
-
-Install dependencies
-
-```sh
-poetry install
-```
+We use [uv](https://docs.astral.sh/uv/getting-started/installation/) to manage dependencies.
 
 ### Developing
 
-To make use of installed dependencies, prefix python commands with `poetry run`. For more details, refer to the [Poetry docs](https://python-poetry.org/docs/basic-usage/).
+Prefix python commands with `uv run`. For more details, refer to the [uv docs](https://docs.astral.sh/uv/).
 
 After making changes to rust code, rebuild with:
 
 ```sh
-poetry run maturin develop
+uv run maturin develop
 ```
 
 To check types, run:
 
 ```sh
-poetry run mypy .
+uv run mypy .
 ```
 
 Format code:
 
 ```sh
-poetry run black .
+uv run black .
 ```
 
 PEP8 check:
 
 ```sh
-poetry run flake8 .
+uv run flake8 .
 ```
 
 Run unit tests:
 
 ```sh
-poetry run pytest
+uv run pytest
 ```
 
 Benchmark tests should be marked with `@pytest.mark.benchmark`. These are not run by default.
 
 ```sh
 # to run with benchmarks
-poetry run pytest --with-benchmarks
+uv run pytest --with-benchmarks
 
 # to run only benchmarks
-poetry run pytest -m benchmark
+uv run pytest -m benchmark
 ```
 
 ### Examples
@@ -73,5 +59,5 @@ Examples exist in the `foxglove-sdk-examples` directotry. See each example's rea
 Sphinx documentation can be generated from this directory with:
 
 ```sh
-poetry run sphinx-build ./python/docs ./python/docs/_build
+uv run sphinx-build ./python/docs ./python/docs/_build
 ```

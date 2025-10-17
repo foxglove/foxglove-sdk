@@ -10,6 +10,12 @@ Install via [Poetry](https://python-poetry.org/):
 poetry add foxglove-schemas-protobuf
 ```
 
+Or install via [uv](https://docs.astral.sh/uv/):
+
+```sh
+uv add foxglove-schemas-protobuf
+```
+
 ## Usage
 
 Import types from the `foxglove_schemas_protobuf` module as follows:

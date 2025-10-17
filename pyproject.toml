@@ -1,16 +1,34 @@
-# This pyproject.toml installs repo-wide dev dependencies
 [project]
 name = "foxglove-sdk-monorepo"
 version = "0.0.0"
 requires-python = ">=3.9"
 
-[tool.poetry]
-package-mode = false
-
-[tool.poetry.group.dev.dependencies]
-flake8 = "^7.1.1"
-black = "^25.1.0"
-isort = "^6.0.0"
+[dependency-groups]
+dev = [
+    "flake8>=7.1.1,<8",
+    "black>=25.1.0,<26",
+    "isort>=6.0.0,<7",
+]
 
 [tool.isort]
 profile = "black"
+
+[tool.uv]
+package = false
+
+[tool.uv.sources]
+foxglove-sdk = { workspace = true }
+
+[tool.uv.workspace]
+# python/foxglove-sdk-examples is deliberately omitted so that, by default,
+# examples will run against released versions of the SDK from pypi.
+members = [
+  "cpp/foxglove/docs",
+  "python/foxglove-sdk",
+  "python/foxglove-schemas-flatbuffer",
+  "python/foxglove-schemas-protobuf",
+]
+
+[build-system]
+requires = ["uv_build>=0.9.3,<0.10.0"]
+build-backend = "uv_build"

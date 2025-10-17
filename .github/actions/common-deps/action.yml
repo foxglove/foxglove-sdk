@@ -7,8 +7,7 @@ runs:
       with:
         python-version: "3.9"
 
-    - shell: bash
-      run: python -m pip install poetry
+    - uses: astral-sh/setup-uv@v6
 
     # disable man-db to speed up apt install
     - shell: bash
