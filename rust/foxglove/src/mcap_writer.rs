@@ -154,6 +154,22 @@ impl<W: Write + Seek + Send + 'static> McapWriterHandle<W> {
         }
         self.sink.finish()
     }
+
+    /// Writes MCAP metadata to the file.
+    ///
+    /// If the metadata map is empty, this method returns early without writing anything.
+    ///
+    /// # Arguments
+    /// * `name` - Name identifier for this metadata record
+    /// * `metadata` - Key-value pairs to store (empty map will be skipped)
+    ///
+    pub fn write_metadata(
+        &self,
+        name: &str,
+        metadata: std::collections::BTreeMap<String, String>,
+    ) -> Result<(), FoxgloveError> {
+        self.sink.write_metadata(name, metadata)
+    }
 }
 
 impl<W: Write + Seek + Send + 'static> Drop for McapWriterHandle<W> {
