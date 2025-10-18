@@ -15,11 +15,11 @@ foxglove_msgs/Color color
 # Whether to use the color specified in `color` instead of any materials embedded in the original model.
 bool override_color
 
-# URL pointing to model file. One of `url` or `data` should be provided.
+# URL pointing to model file. One of `url` or `data` should be non-empty.
 string url
 
 # [Media type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types) of embedded model (e.g. `model/gltf-binary`). Required if `data` is provided instead of `url`. Overrides the inferred media type if `url` is provided.
 string media_type
 
-# Embedded model. One of `url` or `data` should be provided. If `data` is provided, `media_type` must be set to indicate the type of the data.
+# Embedded model. One of `url` or `data` should be non-empty. If `data` is non-empty, `media_type` must be set to indicate the type of the data.
 uint8[] data

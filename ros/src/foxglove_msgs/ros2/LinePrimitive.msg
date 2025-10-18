@@ -27,10 +27,10 @@ bool scale_invariant
 # Points along the line
 geometry_msgs/Point[] points
 
-# Solid color to use for the whole line. One of `color` or `colors` must be provided.
+# Solid color to use for the whole line. Ignored if `colors` is non-empty.
 foxglove_msgs/Color color
 
-# Per-point colors (if specified, must have the same length as `points`). One of `color` or `colors` must be provided.
+# Per-point colors (if non-empty, must have the same length as `points`).
 foxglove_msgs/Color[] colors
 
 # Indices into the `points` and `colors` attribute arrays, which can be used to avoid duplicating attribute data.

@@ -28,10 +28,14 @@ mod parameter;
 #[cfg(not(target_family = "wasm"))]
 mod server;
 #[cfg(not(target_family = "wasm"))]
+mod cloud_sink;
+#[cfg(not(target_family = "wasm"))]
 mod service;
 #[cfg(not(target_family = "wasm"))]
 mod sink_channel_filter;
 
+#[cfg(not(target_family = "wasm"))]
+pub use cloud_sink::*;
 #[cfg(not(target_family = "wasm"))]
 pub use server::*;
 

@@ -486,15 +486,13 @@ const LinePrimitive: FoxgloveMessageSchema = {
     {
       name: "color",
       type: { type: "nested", schema: Color },
-      description:
-        "Solid color to use for the whole line. One of `color` or `colors` must be provided.",
+      description: "Solid color to use for the whole line. Ignored if `colors` is non-empty.",
     },
     {
       name: "colors",
       type: { type: "nested", schema: Color },
       array: true,
-      description:
-        "Per-point colors (if specified, must have the same length as `points`). One of `color` or `colors` must be provided.",
+      description: "Per-point colors (if non-empty, must have the same length as `points`).",
     },
     {
       name: "indices",
@@ -567,15 +565,13 @@ const TriangleListPrimitive: FoxgloveMessageSchema = {
     {
       name: "color",
       type: { type: "nested", schema: Color },
-      description:
-        "Solid color to use for the whole shape. One of `color` or `colors` must be provided.",
+      description: "Solid color to use for the whole shape. Ignored if `colors` is non-empty.",
     },
     {
       name: "colors",
       type: { type: "nested", schema: Color },
       array: true,
-      description:
-        "Per-vertex colors (if specified, must have the same length as `points`). One of `color` or `colors` must be provided.",
+      description: "Per-vertex colors (if specified, must have the same length as `points`).",
     },
     {
       name: "indices",
@@ -617,7 +613,7 @@ const ModelPrimitive: FoxgloveMessageSchema = {
     {
       name: "url",
       type: { type: "primitive", name: "string" },
-      description: "URL pointing to model file. One of `url` or `data` should be provided.",
+      description: "URL pointing to model file. One of `url` or `data` should be non-empty.",
     },
     {
       name: "media_type",
@@ -629,7 +625,7 @@ const ModelPrimitive: FoxgloveMessageSchema = {
       name: "data",
       type: { type: "primitive", name: "bytes" },
       description:
-        "Embedded model. One of `url` or `data` should be provided. If `data` is provided, `media_type` must be set to indicate the type of the data.",
+        "Embedded model. One of `url` or `data` should be non-empty. If `data` is non-empty, `media_type` must be set to indicate the type of the data.",
     },
   ],
 };
