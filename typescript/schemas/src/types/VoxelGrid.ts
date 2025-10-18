@@ -35,7 +35,7 @@ export type VoxelGrid = {
   /** Number of bytes between cells within a row in `data` */
   cell_stride: number;
 
-  /** Fields in `data`. `red`, `green`, `blue`, and `alpha` are optional for customizing the grid's color. */
+  /** Fields in `data`. See [Color fields](#color-fields) below for RGB visualization. */
   fields: PackedElementField[];
 
   /**

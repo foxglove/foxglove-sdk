@@ -36,7 +36,7 @@ table VoxelGrid {
   /// Number of bytes between cells within a row in `data`
   cell_stride:uint32 (id: 8);
 
-  /// Fields in `data`. `red`, `green`, `blue`, and `alpha` are optional for customizing the grid's color.
+  /// Fields in `data`. See [Color fields](#color-fields) below for RGB visualization.
   fields:[foxglove.PackedElementField] (id: 9);
 
   /// Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order.
