@@ -164,7 +164,7 @@ jobs:
           git add --all
           changes=$(git status --porcelain)
           if [ -n "$changes" ]; then
-            echo "::error::The following generated files need to be updated. Run 'make generate' to update them."
+            echo "::error::The following generated files need to be updated. Run 'yarn generate' to update them."
             echo "$changes"
             echo ""
             git diff --cached
