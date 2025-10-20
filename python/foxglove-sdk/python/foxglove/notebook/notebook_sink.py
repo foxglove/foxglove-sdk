@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Union, Literal
 
 from .._foxglove_py import Context
 from .foxglove_widget import FoxgloveWidget
@@ -27,8 +27,8 @@ class NotebookSink:
 
     def show(
         self,
-        width: Optional[str] = None,
-        height: Optional[str] = None,
+        width: Optional[Union[int, Literal["full"]]] = None,
+        height: Optional[int] = None,
         src: Optional[str] = None,
         layout_data: Optional[dict] = None,
     ) -> FoxgloveWidget:

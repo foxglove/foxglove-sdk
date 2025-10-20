@@ -3,8 +3,8 @@ import { FoxgloveViewer, type OpaqueLayoutData } from "@foxglove/embed";
 
 // Specifies attributes defined with traitlets in ../python/foxglove/notebook/widget.py
 interface WidgetModel {
-  width: string;
-  height: string;
+  width: number | "full";
+  height: number;
   src: string;
   layout_data: OpaqueLayoutData;
 }
@@ -49,15 +49,15 @@ function render({ model, el }: RenderProps<WidgetModel>): void {
     }
   });
 
-  parent.style.width = model.get("width");
-  parent.style.height = model.get("height");
+  parent.style.width = model.get("width") === "full" ? "100%" : `${model.get("width")}px`;
+  parent.style.height = `${model.get("height")}px`;
 
   model.on("change:width", () => {
-    parent.style.width = model.get("width");
+    parent.style.width = model.get("width") === "full" ? "100%" : `${model.get("width")}px`;
   });
 
   model.on("change:height", () => {
-    parent.style.height = model.get("height");
+    parent.style.height = `${model.get("height")}px`;
   });
 
   model.on("change:layout", () => {

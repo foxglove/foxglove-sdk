@@ -1,6 +1,6 @@
 import importlib.metadata
 import pathlib
-from typing import Any, Optional, Protocol
+from typing import Any, Optional, Protocol, Literal, Union
 
 import anywidget
 import traitlets
@@ -27,16 +27,16 @@ class FoxgloveWidget(anywidget.AnyWidget):
     """
 
     _esm = pathlib.Path(__file__).parent / "static" / "widget.js"
-    width = traitlets.Unicode("100%").tag(sync=True)
-    height = traitlets.Unicode("500px").tag(sync=True)
+    width = traitlets.Union([traitlets.Int(), traitlets.Enum(values=["full"])]).tag(sync=True)
+    height = traitlets.Int(500).tag(sync=True)
     src = traitlets.Unicode("").tag(sync=True)
     layout_data = traitlets.Dict({}).tag(sync=True)
 
     def __init__(
         self,
         get_data: DataSource,
-        width: Optional[str] = None,
-        height: Optional[str] = None,
+        width: Optional[Union[int, Literal["full"]]] = None,
+        height: Optional[int] = None,
         src: Optional[str] = None,
         layout_data: Optional[dict] = None,
         **kwargs: Any,
@@ -44,6 +44,8 @@ class FoxgloveWidget(anywidget.AnyWidget):
         super().__init__(**kwargs)
         if width is not None:
             self.width = width
+        else:
+            self.width = "full"
         if height is not None:
             self.height = height
         if src is not None:
