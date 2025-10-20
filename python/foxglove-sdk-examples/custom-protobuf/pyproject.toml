@@ -12,7 +12,14 @@ dependencies = [
 ]
 
 [dependency-groups]
-dev = ["mypy>=1,<2"]
+dev = [
+  "black>=25.1.0,<26",
+  "isort>=6.0.0,<7",
+  "mypy>=1,<2",
+]
+
+[tool.isort]
+profile = "black"
 
 [tool.uv]
 package = false

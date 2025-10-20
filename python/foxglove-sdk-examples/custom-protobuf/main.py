@@ -3,11 +3,12 @@ import base64
 import json
 
 import foxglove
-import fruit_pb2
 from foxglove import Channel, Schema
 from foxglove.channels import CompressedImageChannel
 from foxglove.schemas import CompressedImage
 from google.protobuf import descriptor_pb2
+
+import fruit_pb2
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--path", type=str, default="output.mcap")
