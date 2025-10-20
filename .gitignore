@@ -5,6 +5,7 @@
 .mypy_cache/
 .pytest_cache/
 .virtualenvs/
+.uv_cache/
 .venv/
 .yarn/*
 !.yarn/patches
