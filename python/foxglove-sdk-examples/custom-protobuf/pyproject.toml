@@ -18,8 +18,5 @@ dev = [
   "mypy>=1,<2",
 ]
 
-[tool.isort]
-profile = "black"
-
 [tool.uv]
 package = false

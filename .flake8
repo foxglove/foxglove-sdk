@@ -4,11 +4,14 @@ extend-ignore = E203
 exclude =
     __pycache__,
     .git,
+    .uv_cache,
+    .venv,
     dist,
     node_modules,
     python/foxglove-schemas-flatbuffer/foxglove_schemas_flatbuffer/*.py,
     python/foxglove-schemas-protobuf/foxglove_schemas_protobuf/*.py,
     python/foxglove-sdk/python/foxglove/_protobuf/*,
+    python/foxglove-sdk/.venv,
     *_pb2.py,
     target,
 count = true
