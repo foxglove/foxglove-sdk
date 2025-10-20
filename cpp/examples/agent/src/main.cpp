@@ -35,8 +35,8 @@ std::vector<std::byte> gradient_data(size_t width, size_t height, size_t offset)
 
 void camera_loop(std::atomic_bool& done, foxglove::schemas::RawImageChannel& channel) {
   size_t offset = 0;
-  size_t width = 960;
-  size_t height = 540;
+  uint32_t width = 960;
+  uint32_t height = 540;
 
   while (!done) {
     foxglove::schemas::RawImage image;
