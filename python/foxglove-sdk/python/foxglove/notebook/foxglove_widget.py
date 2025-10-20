@@ -27,7 +27,9 @@ class FoxgloveWidget(anywidget.AnyWidget):
     """
 
     _esm = pathlib.Path(__file__).parent / "static" / "widget.js"
-    width = traitlets.Union([traitlets.Int(), traitlets.Enum(values=["full"])]).tag(sync=True)
+    width = traitlets.Union([traitlets.Int(), traitlets.Enum(values=["full"])]).tag(
+        sync=True
+    )
     height = traitlets.Int(500).tag(sync=True)
     src = traitlets.Unicode("").tag(sync=True)
     layout_data = traitlets.Dict({}).tag(sync=True)
