@@ -50,6 +50,8 @@ struct CloudSinkOptions {
   CloudSinkCallbacks callbacks;
   /// @brief The supported encodings of the cloud sink.
   std::vector<std::string> supported_encodings;
+  /// @brief A sink channel filter callback.
+  SinkChannelFilterFn sink_channel_filter;
 };
 
 /// @brief A Cloud Sink for visualization in Foxglove.
@@ -67,9 +69,13 @@ public:
   FoxgloveError stop();
 
 private:
-  CloudSink(foxglove_cloud_sink* sink, std::unique_ptr<CloudSinkCallbacks> callbacks);
+  CloudSink(
+    foxglove_cloud_sink* sink, std::unique_ptr<CloudSinkCallbacks> callbacks,
+    std::unique_ptr<SinkChannelFilterFn> sink_channel_filter
+  );
 
   std::unique_ptr<CloudSinkCallbacks> callbacks_;
+  std::unique_ptr<SinkChannelFilterFn> sink_channel_filter_;
   std::unique_ptr<foxglove_cloud_sink, foxglove_error (*)(foxglove_cloud_sink*)> impl_;
 };
 

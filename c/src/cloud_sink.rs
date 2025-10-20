@@ -2,7 +2,9 @@ use std::ffi::{c_void, CString};
 use std::mem::ManuallyDrop;
 use std::sync::Arc;
 
+use crate::channel_descriptor::FoxgloveChannelDescriptor;
 use crate::server::{FoxgloveClientChannel, FoxgloveClientMetadata};
+use crate::sink_channel_filter::ChannelFilter;
 use crate::{result_to_c, FoxgloveContext, FoxgloveError, FoxgloveString};
 
 #[repr(C)]
@@ -13,6 +15,26 @@ pub struct FoxgloveCloudSinkOptions<'a> {
     pub callbacks: Option<&'a FoxgloveCloudSinkCallbacks>,
     pub supported_encodings: *const FoxgloveString,
     pub supported_encodings_count: usize,
+
+    /// Context provided to the `sink_channel_filter` callback.
+    pub sink_channel_filter_context: *const c_void,
+
+    /// A filter for channels that can be used to subscribe to or unsubscribe from channels.
+    ///
+    /// This can be used to omit one or more channels from a sink, but still log all channels to another
+    /// sink in the same context. Return false to disable logging of this channel.
+    ///
+    /// This method is invoked from the client's main poll loop and must not block.
+    ///
+    /// # Safety
+    /// - If provided, the handler callback must be a pointer to the filter callback function,
+    ///   and must remain valid until the server is stopped.
+    pub sink_channel_filter: Option<
+        unsafe extern "C" fn(
+            context: *const c_void,
+            channel: *const FoxgloveChannelDescriptor,
+        ) -> bool,
+    >,
 }
 
 #[repr(C)]
@@ -65,17 +87,13 @@ impl FoxgloveCloudSink {
     }
 }
 
-/// Create and start a server.
+/// Create and start a cloud sink.
 ///
-/// Resources must later be freed by calling `foxglove_server_stop`.
-///
-/// `port` may be 0, in which case an available port will be automatically selected.
+/// Resources must later be freed by calling `foxglove_cloud_sink_stop`.
 ///
 /// Returns 0 on success, or returns a FoxgloveError code on error.
 ///
 /// # Safety
-/// If `name` is supplied in options, it must contain valid UTF8.
-/// If `host` is supplied in options, it must contain valid UTF8.
 /// If `supported_encodings` is supplied in options, all `supported_encodings` must contain valid
 /// UTF8, and `supported_encodings` must have length equal to `supported_encodings_count`.
 #[unsafe(no_mangle)]
@@ -93,14 +111,14 @@ pub unsafe extern "C" fn foxglove_cloud_sink_start(
 unsafe fn do_foxglove_cloud_sink_start(
     options: &FoxgloveCloudSinkOptions,
 ) -> Result<*mut FoxgloveCloudSink, foxglove::FoxgloveError> {
-    let mut server = foxglove::CloudSink::new();
+    let mut sink = foxglove::CloudSink::new();
     if options.supported_encodings_count > 0 {
         if options.supported_encodings.is_null() {
             return Err(foxglove::FoxgloveError::ValueError(
                 "supported_encodings is null".to_string(),
             ));
         }
-        server = server.supported_encodings(
+        sink = sink.supported_encodings(
             unsafe {
                 std::slice::from_raw_parts(
                     options.supported_encodings,
@@ -124,34 +142,38 @@ unsafe fn do_foxglove_cloud_sink_start(
         );
     }
     if let Some(callbacks) = options.callbacks {
-        server = server.listener(Arc::new(callbacks.clone()))
+        sink = sink.listener(Arc::new(callbacks.clone()))
+    }
+    if let Some(sink_channel_filter) = options.sink_channel_filter {
+        sink = sink.channel_filter(Arc::new(ChannelFilter::new(
+            options.sink_channel_filter_context,
+            sink_channel_filter,
+        )));
     }
     if !options.context.is_null() {
         let context = ManuallyDrop::new(unsafe { Arc::from_raw(options.context) });
-        server = server.context(&context);
+        sink = sink.context(&context);
     }
 
-    let server = server.start_blocking()?;
+    let server = sink.start_blocking()?;
     Ok(Box::into_raw(Box::new(FoxgloveCloudSink(Some(server)))))
 }
 
-/// Stop and shut down `server` and free the resources associated with it.
+/// Stop and shut down cloud `sink` and free the resources associated with it.
 #[unsafe(no_mangle)]
-pub extern "C" fn foxglove_cloud_sink_stop(
-    server: Option<&mut FoxgloveCloudSink>,
-) -> FoxgloveError {
-    let Some(server) = server else {
-        tracing::error!("foxglove_server_stop called with null server");
+pub extern "C" fn foxglove_cloud_sink_stop(sink: Option<&mut FoxgloveCloudSink>) -> FoxgloveError {
+    let Some(sink) = sink else {
+        tracing::error!("foxglove_sink_stop called with null sink");
         return FoxgloveError::ValueError;
     };
 
-    // Safety: undo the Box::into_raw in foxglove_server_start, safe if this was created by that method
-    let mut server = unsafe { Box::from_raw(server) };
-    let Some(server) = server.take() else {
-        tracing::error!("foxglove_server_stop called with closed server");
+    // Safety: undo the Box::into_raw in foxglove_cloud_sink_start, safe if this was created by that method
+    let mut sink = unsafe { Box::from_raw(sink) };
+    let Some(sink) = sink.take() else {
+        tracing::error!("foxglove_sink_stop called with closed sink");
         return FoxgloveError::SinkClosed;
     };
-    if let Some(waiter) = server.stop() {
+    if let Some(waiter) = sink.stop() {
         waiter.wait_blocking();
     }
     FoxgloveError::Ok

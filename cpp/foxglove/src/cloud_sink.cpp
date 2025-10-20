@@ -19,6 +19,7 @@ FoxgloveResult<CloudSink> CloudSink::create(
                            options.callbacks.onClientUnadvertise;
 
   std::unique_ptr<CloudSinkCallbacks> callbacks;
+  std::unique_ptr<SinkChannelFilterFn> sink_channel_filter;
   foxglove_cloud_sink_callbacks c_callbacks = {};
 
   if (has_any_callbacks) {
@@ -124,17 +125,38 @@ FoxgloveResult<CloudSink> CloudSink::create(
   c_options.supported_encodings = supported_encodings.data();
   c_options.supported_encodings_count = supported_encodings.size();
 
+  if (options.sink_channel_filter) {
+    sink_channel_filter = std::make_unique<SinkChannelFilterFn>(options.sink_channel_filter);
+
+    c_options.sink_channel_filter_context = sink_channel_filter.get();
+    c_options.sink_channel_filter =
+      [](const void* context, const struct foxglove_channel_descriptor* channel) -> bool {
+      try {
+        if (!context) {
+          return true;  // Default to allowing if no filter
+        }
+        auto* filter_func = static_cast<const SinkChannelFilterFn*>(context);
+        auto cpp_channel = ChannelDescriptor(channel);
+        return (*filter_func)(std::move(cpp_channel));
+      } catch (const std::exception& exc) {
+        warn() << "Sink channel filter failed: " << exc.what();
+        return false;
+      }
+    };
+  }
+
   foxglove_cloud_sink* sink = nullptr;
   foxglove_error error = foxglove_cloud_sink_start(&c_options, &sink);
   if (error != foxglove_error::FOXGLOVE_ERROR_OK || sink == nullptr) {
     return tl::unexpected(static_cast<FoxgloveError>(error));
   }
 
-  return CloudSink(sink, std::move(callbacks));
+  return CloudSink(sink, std::move(callbacks), std::move(sink_channel_filter));
 }
 
-CloudSink::CloudSink(foxglove_cloud_sink* sink, std::unique_ptr<CloudSinkCallbacks> callbacks)
+CloudSink::CloudSink(foxglove_cloud_sink* sink, std::unique_ptr<CloudSinkCallbacks> callbacks, std::unique_ptr<SinkChannelFilterFn> sink_channel_filter)
     : callbacks_(std::move(callbacks))
+    , sink_channel_filter_(std::move(sink_channel_filter))
     , impl_(sink, foxglove_cloud_sink_stop) {}
 
 FoxgloveError CloudSink::stop() {

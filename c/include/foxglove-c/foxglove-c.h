@@ -1808,6 +1808,23 @@ typedef struct foxglove_cloud_sink_options {
   const struct foxglove_cloud_sink_callbacks *callbacks;
   const struct foxglove_string *supported_encodings;
   size_t supported_encodings_count;
+  /**
+   * Context provided to the `sink_channel_filter` callback.
+   */
+  const void *sink_channel_filter_context;
+  /**
+   * A filter for channels that can be used to subscribe to or unsubscribe from channels.
+   *
+   * This can be used to omit one or more channels from a sink, but still log all channels to another
+   * sink in the same context. Return false to disable logging of this channel.
+   *
+   * This method is invoked from the client's main poll loop and must not block.
+   *
+   * # Safety
+   * - If provided, the handler callback must be a pointer to the filter callback function,
+   *   and must remain valid until the server is stopped.
+   */
+  bool (*sink_channel_filter)(const void *context, const struct foxglove_channel_descriptor *channel);
 } foxglove_cloud_sink_options;
 #endif
 
@@ -4421,17 +4438,13 @@ void foxglove_channel_descriptor_metadata_iter_free(struct foxglove_channel_desc
 
 #if !defined(__wasm__)
 /**
- * Create and start a server.
+ * Create and start a cloud sink.
  *
- * Resources must later be freed by calling `foxglove_server_stop`.
- *
- * `port` may be 0, in which case an available port will be automatically selected.
+ * Resources must later be freed by calling `foxglove_cloud_sink_stop`.
  *
  * Returns 0 on success, or returns a FoxgloveError code on error.
  *
  * # Safety
- * If `name` is supplied in options, it must contain valid UTF8.
- * If `host` is supplied in options, it must contain valid UTF8.
  * If `supported_encodings` is supplied in options, all `supported_encodings` must contain valid
  * UTF8, and `supported_encodings` must have length equal to `supported_encodings_count`.
  */
@@ -4441,9 +4454,9 @@ foxglove_error foxglove_cloud_sink_start(const struct foxglove_cloud_sink_option
 
 #if !defined(__wasm__)
 /**
- * Stop and shut down `server` and free the resources associated with it.
+ * Stop and shut down cloud `sink` and free the resources associated with it.
  */
-foxglove_error foxglove_cloud_sink_stop(struct foxglove_cloud_sink *server);
+foxglove_error foxglove_cloud_sink_stop(struct foxglove_cloud_sink *sink);
 #endif
 
 #if !defined(__wasm__)

@@ -39,7 +39,6 @@ prefix_with_name = false
 "target_family = wasm" = "__wasm__"
 
 [export.rename]
-FoxgloveServerStatusLevel = "foxglove_server_status_level"
 FoxgloveBytes = "foxglove_bytes"
 FoxgloveChannel = "foxglove_channel"
 FoxgloveChannelDescriptor = "foxglove_channel_descriptor"
@@ -72,6 +71,7 @@ FoxgloveParameterValueTag = "foxglove_parameter_value_tag"
 FoxgloveServerCallbacks = "foxglove_server_callbacks"
 FoxgloveServerCapability = "foxglove_server_capability"
 FoxgloveServerOptions = "foxglove_server_options"
+FoxgloveServerStatusLevel = "foxglove_server_status_level"
 FoxgloveService = "foxglove_service"
 FoxgloveServiceCallbackFn = "foxglove_service_callback_fn"
 FoxgloveServiceMessageSchema = "foxglove_service_message_schema"
