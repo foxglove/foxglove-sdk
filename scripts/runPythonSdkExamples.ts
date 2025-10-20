@@ -1,7 +1,6 @@
 import { program } from "commander";
 import { spawn } from "node:child_process";
 import { SIGTERM } from "node:constants";
-import { lstatSync } from "node:fs";
 import { mkdtemp, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -23,12 +22,14 @@ const pyExamplesDir = path.resolve(__dirname, "../python/foxglove-sdk-examples")
 const tempFiles: string[] = [];
 
 async function main(opts: { timeout: string; installSdkFromPath: boolean }) {
-  const timeoutMillis = parseInt(opts.timeout);
-  for (const name of await readdir(pyExamplesDir)) {
-    const dir = path.join(pyExamplesDir, name);
-    if (lstatSync(dir).isDirectory() && name !== ".venv") {
-      console.debug(`Install & run example ${name}`);
-      await runExample(name, { timeoutMillis, installSdkFromPath: opts.installSdkFromPath });
+  const { timeout, installSdkFromPath } = opts;
+  const timeoutMillis = parseInt(timeout);
+
+  const entries = await readdir(pyExamplesDir, { withFileTypes: true });
+  for (const entry of entries) {
+    if (entry.isDirectory() && entry.name !== ".venv") {
+      console.debug(`Install & run example ${entry.name}`);
+      await runExample(entry.name, { timeoutMillis, installSdkFromPath });
     }
   }
 }
