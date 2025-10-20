@@ -16,17 +16,6 @@ profile = "black"
 [tool.uv]
 package = false
 
-[tool.uv.sources]
-foxglove-sdk = { workspace = true }
-
-[tool.uv.workspace]
-# python/foxglove-sdk-examples is deliberately omitted so that, by default,
-# examples will run against released versions of the SDK from pypi.
-members = [
-  "cpp/foxglove/docs",
-  "python/foxglove-sdk",
-]
-
 [build-system]
 requires = ["uv_build>=0.9.3,<0.10.0"]
 build-backend = "uv_build"
