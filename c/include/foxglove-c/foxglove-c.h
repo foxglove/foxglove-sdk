@@ -1136,11 +1136,11 @@ typedef struct foxglove_line_primitive {
   const struct foxglove_point3 *points;
   size_t points_count;
   /**
-   * Solid color to use for the whole line. One of `color` or `colors` must be provided.
+   * Solid color to use for the whole line. Ignored if `colors` is non-empty.
    */
   const struct foxglove_color *color;
   /**
-   * Per-point colors (if specified, must have the same length as `points`). One of `color` or `colors` must be provided.
+   * Per-point colors (if non-empty, must have the same length as `points`).
    */
   const struct foxglove_color *colors;
   size_t colors_count;
@@ -1299,11 +1299,11 @@ typedef struct foxglove_triangle_list_primitive {
   const struct foxglove_point3 *points;
   size_t points_count;
   /**
-   * Solid color to use for the whole shape. One of `color` or `colors` must be provided.
+   * Solid color to use for the whole shape. Ignored if `colors` is non-empty.
    */
   const struct foxglove_color *color;
   /**
-   * Per-vertex colors (if specified, must have the same length as `points`). One of `color` or `colors` must be provided.
+   * Per-vertex colors (if specified, must have the same length as `points`).
    */
   const struct foxglove_color *colors;
   size_t colors_count;
@@ -1367,7 +1367,7 @@ typedef struct foxglove_model_primitive {
    */
   bool override_color;
   /**
-   * URL pointing to model file. One of `url` or `data` should be provided.
+   * URL pointing to model file. One of `url` or `data` should be non-empty.
    */
   struct foxglove_string url;
   /**
@@ -1375,7 +1375,7 @@ typedef struct foxglove_model_primitive {
    */
   struct foxglove_string media_type;
   /**
-   * Embedded model. One of `url` or `data` should be provided. If `data` is provided, `media_type` must be set to indicate the type of the data.
+   * Embedded model. One of `url` or `data` should be non-empty. If `data` is non-empty, `media_type` must be set to indicate the type of the data.
    */
   const unsigned char *data;
   size_t data_len;

@@ -2129,7 +2129,7 @@ export const LinePrimitive = {
     },
     "color": {
       "title": "foxglove.Color",
-      "description": "Solid color to use for the whole line. One of `color` or `colors` must be provided.",
+      "description": "Solid color to use for the whole line. Ignored if `colors` is non-empty.",
       "type": "object",
       "properties": {
         "r": {
@@ -2187,7 +2187,7 @@ export const LinePrimitive = {
           "a"
         ]
       },
-      "description": "Per-point colors (if specified, must have the same length as `points`). One of `color` or `colors` must be provided."
+      "description": "Per-point colors (if non-empty, must have the same length as `points`)."
     },
     "indices": {
       "type": "array",
@@ -3329,7 +3329,7 @@ export const SceneEntity = {
           },
           "color": {
             "title": "foxglove.Color",
-            "description": "Solid color to use for the whole line. One of `color` or `colors` must be provided.",
+            "description": "Solid color to use for the whole line. Ignored if `colors` is non-empty.",
             "type": "object",
             "properties": {
               "r": {
@@ -3387,7 +3387,7 @@ export const SceneEntity = {
                 "a"
               ]
             },
-            "description": "Per-point colors (if specified, must have the same length as `points`). One of `color` or `colors` must be provided."
+            "description": "Per-point colors (if non-empty, must have the same length as `points`)."
           },
           "indices": {
             "type": "array",
@@ -3512,7 +3512,7 @@ export const SceneEntity = {
           },
           "color": {
             "title": "foxglove.Color",
-            "description": "Solid color to use for the whole shape. One of `color` or `colors` must be provided.",
+            "description": "Solid color to use for the whole shape. Ignored if `colors` is non-empty.",
             "type": "object",
             "properties": {
               "r": {
@@ -3570,7 +3570,7 @@ export const SceneEntity = {
                 "a"
               ]
             },
-            "description": "Per-vertex colors (if specified, must have the same length as `points`). One of `color` or `colors` must be provided."
+            "description": "Per-vertex colors (if specified, must have the same length as `points`)."
           },
           "indices": {
             "type": "array",
@@ -3849,7 +3849,7 @@ export const SceneEntity = {
           },
           "url": {
             "type": "string",
-            "description": "URL pointing to model file. One of `url` or `data` should be provided."
+            "description": "URL pointing to model file. One of `url` or `data` should be non-empty."
           },
           "media_type": {
             "type": "string",
@@ -3858,7 +3858,7 @@ export const SceneEntity = {
           "data": {
             "type": "string",
             "contentEncoding": "base64",
-            "description": "Embedded model. One of `url` or `data` should be provided. If `data` is provided, `media_type` must be set to indicate the type of the data."
+            "description": "Embedded model. One of `url` or `data` should be non-empty. If `data` is non-empty, `media_type` must be set to indicate the type of the data."
           }
         },
         "required": [
@@ -4690,7 +4690,7 @@ export const SceneUpdate = {
                 },
                 "color": {
                   "title": "foxglove.Color",
-                  "description": "Solid color to use for the whole line. One of `color` or `colors` must be provided.",
+                  "description": "Solid color to use for the whole line. Ignored if `colors` is non-empty.",
                   "type": "object",
                   "properties": {
                     "r": {
@@ -4748,7 +4748,7 @@ export const SceneUpdate = {
                       "a"
                     ]
                   },
-                  "description": "Per-point colors (if specified, must have the same length as `points`). One of `color` or `colors` must be provided."
+                  "description": "Per-point colors (if non-empty, must have the same length as `points`)."
                 },
                 "indices": {
                   "type": "array",
@@ -4873,7 +4873,7 @@ export const SceneUpdate = {
                 },
                 "color": {
                   "title": "foxglove.Color",
-                  "description": "Solid color to use for the whole shape. One of `color` or `colors` must be provided.",
+                  "description": "Solid color to use for the whole shape. Ignored if `colors` is non-empty.",
                   "type": "object",
                   "properties": {
                     "r": {
@@ -4931,7 +4931,7 @@ export const SceneUpdate = {
                       "a"
                     ]
                   },
-                  "description": "Per-vertex colors (if specified, must have the same length as `points`). One of `color` or `colors` must be provided."
+                  "description": "Per-vertex colors (if specified, must have the same length as `points`)."
                 },
                 "indices": {
                   "type": "array",
@@ -5210,7 +5210,7 @@ export const SceneUpdate = {
                 },
                 "url": {
                   "type": "string",
-                  "description": "URL pointing to model file. One of `url` or `data` should be provided."
+                  "description": "URL pointing to model file. One of `url` or `data` should be non-empty."
                 },
                 "media_type": {
                   "type": "string",
@@ -5219,7 +5219,7 @@ export const SceneUpdate = {
                 "data": {
                   "type": "string",
                   "contentEncoding": "base64",
-                  "description": "Embedded model. One of `url` or `data` should be provided. If `data` is provided, `media_type` must be set to indicate the type of the data."
+                  "description": "Embedded model. One of `url` or `data` should be non-empty. If `data` is non-empty, `media_type` must be set to indicate the type of the data."
                 }
               },
               "required": [
@@ -5390,7 +5390,7 @@ export const ModelPrimitive = {
     },
     "url": {
       "type": "string",
-      "description": "URL pointing to model file. One of `url` or `data` should be provided."
+      "description": "URL pointing to model file. One of `url` or `data` should be non-empty."
     },
     "media_type": {
       "type": "string",
@@ -5399,7 +5399,7 @@ export const ModelPrimitive = {
     "data": {
       "type": "string",
       "contentEncoding": "base64",
-      "description": "Embedded model. One of `url` or `data` should be provided. If `data` is provided, `media_type` must be set to indicate the type of the data."
+      "description": "Embedded model. One of `url` or `data` should be non-empty. If `data` is non-empty, `media_type` must be set to indicate the type of the data."
     }
   },
   "required": [
@@ -6812,7 +6812,7 @@ export const TriangleListPrimitive = {
     },
     "color": {
       "title": "foxglove.Color",
-      "description": "Solid color to use for the whole shape. One of `color` or `colors` must be provided.",
+      "description": "Solid color to use for the whole shape. Ignored if `colors` is non-empty.",
       "type": "object",
       "properties": {
         "r": {
@@ -6870,7 +6870,7 @@ export const TriangleListPrimitive = {
           "a"
         ]
       },
-      "description": "Per-vertex colors (if specified, must have the same length as `points`). One of `color` or `colors` must be provided."
+      "description": "Per-vertex colors (if specified, must have the same length as `points`)."
     },
     "indices": {
       "type": "array",
