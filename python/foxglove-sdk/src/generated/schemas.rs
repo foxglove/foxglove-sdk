@@ -1261,8 +1261,8 @@ impl From<LaserScan> for foxglove::schemas::LaserScan {
 /// :param thickness: Line thickness
 /// :param scale_invariant: Indicates whether `thickness` is a fixed size in screen pixels (true), or specified in world coordinates and scales with distance from the camera (false)
 /// :param points: Points along the line
-/// :param color: Solid color to use for the whole line. One of `color` or `colors` must be provided.
-/// :param colors: Per-point colors (if specified, must have the same length as `points`). One of `color` or `colors` must be provided.
+/// :param color: Solid color to use for the whole line. Ignored if `colors` is non-empty.
+/// :param colors: Per-point colors (if non-empty, must have the same length as `points`).
 /// :param indices: Indices into the `points` and `colors` attribute arrays, which can be used to avoid duplicating attribute data.
 ///     
 ///     If omitted or empty, indexing will not be used. This default behavior is equivalent to specifying [0, 1, ..., N-1] for the indices (where N is the number of `points` provided).
@@ -1811,9 +1811,9 @@ impl From<SceneUpdate> for foxglove::schemas::SceneUpdate {
 /// :param scale: Scale factor to apply to the model along each axis
 /// :param color: Solid color to use for the whole model if `override_color` is true.
 /// :param override_color: Whether to use the color specified in `color` instead of any materials embedded in the original model.
-/// :param url: URL pointing to model file. One of `url` or `data` should be provided.
+/// :param url: URL pointing to model file. One of `url` or `data` should be non-empty.
 /// :param media_type: [Media type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types) of embedded model (e.g. `model/gltf-binary`). Required if `data` is provided instead of `url`. Overrides the inferred media type if `url` is provided.
-/// :param data: Embedded model. One of `url` or `data` should be provided. If `data` is provided, `media_type` must be set to indicate the type of the data.
+/// :param data: Embedded model. One of `url` or `data` should be non-empty. If `data` is non-empty, `media_type` must be set to indicate the type of the data.
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/model-primitive
 #[pyclass(module = "foxglove.schemas")]
@@ -2829,8 +2829,8 @@ impl From<TextPrimitive> for foxglove::schemas::TextPrimitive {
 ///
 /// :param pose: Origin of triangles relative to reference frame
 /// :param points: Vertices to use for triangles, interpreted as a list of triples (0-1-2, 3-4-5, ...)
-/// :param color: Solid color to use for the whole shape. One of `color` or `colors` must be provided.
-/// :param colors: Per-vertex colors (if specified, must have the same length as `points`). One of `color` or `colors` must be provided.
+/// :param color: Solid color to use for the whole shape. Ignored if `colors` is non-empty.
+/// :param colors: Per-vertex colors (if specified, must have the same length as `points`).
 /// :param indices: Indices into the `points` and `colors` attribute arrays, which can be used to avoid duplicating attribute data.
 ///     
 ///     If omitted or empty, indexing will not be used. This default behavior is equivalent to specifying [0, 1, ..., N-1] for the indices (where N is the number of `points` provided).
