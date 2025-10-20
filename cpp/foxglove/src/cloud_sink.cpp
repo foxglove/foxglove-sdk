@@ -154,7 +154,10 @@ FoxgloveResult<CloudSink> CloudSink::create(
   return CloudSink(sink, std::move(callbacks), std::move(sink_channel_filter));
 }
 
-CloudSink::CloudSink(foxglove_cloud_sink* sink, std::unique_ptr<CloudSinkCallbacks> callbacks, std::unique_ptr<SinkChannelFilterFn> sink_channel_filter)
+CloudSink::CloudSink(
+  foxglove_cloud_sink* sink, std::unique_ptr<CloudSinkCallbacks> callbacks,
+  std::unique_ptr<SinkChannelFilterFn> sink_channel_filter
+)
     : callbacks_(std::move(callbacks))
     , sink_channel_filter_(std::move(sink_channel_filter))
     , impl_(sink, foxglove_cloud_sink_stop) {}
