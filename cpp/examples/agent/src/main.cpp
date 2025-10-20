@@ -97,17 +97,6 @@ int main() {
     done = true;
   };
 
-  foxglove::Schema schema;
-  schema.name = "Test";
-  schema.encoding = "jsonschema";
-  std::string schema_data = R"({
-    "type": "object",
-    "properties": {
-      "val": { "type": "number" }
-    }
-  })";
-  schema.data = reinterpret_cast<const std::byte*>(schema_data.data());
-  schema.data_len = schema_data.size();
   auto channel_result = foxglove::schemas::RawImageChannel::create("/camera");
   if (!channel_result.has_value()) {
     std::cerr << "Failed to create channel: " << foxglove::strerror(channel_result.error()) << '\n';
