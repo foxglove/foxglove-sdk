@@ -1,6 +1,6 @@
 import importlib.metadata
 import pathlib
-from typing import Any, Optional, Protocol, Literal, Union
+from typing import Any, Literal, Optional, Protocol, Union
 
 import anywidget
 import traitlets

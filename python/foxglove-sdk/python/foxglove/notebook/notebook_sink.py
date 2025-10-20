@@ -1,4 +1,4 @@
-from typing import Optional, Union, Literal
+from typing import Literal, Optional, Union
 
 from .._foxglove_py import Context
 from .foxglove_widget import FoxgloveWidget
