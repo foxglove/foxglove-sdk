@@ -2,19 +2,18 @@ from __future__ import annotations
 
 import importlib.metadata
 import pathlib
-from typing import Any, Literal, Protocol, TypedDict
+from typing import TYPE_CHECKING, Any, Literal, TypedDict
 
 import anywidget
 import traitlets
+
+if TYPE_CHECKING:
+    from .notebook_buffer import NotebookBuffer
 
 try:
     __version__ = importlib.metadata.version("foxglove")
 except importlib.metadata.PackageNotFoundError:
     __version__ = "unknown"
-
-
-class DataSource(Protocol):
-    def __call__(self) -> list[bytes]: ...
 
 
 class SelectLayoutParams(TypedDict):
@@ -50,7 +49,7 @@ class FoxgloveWidget(anywidget.AnyWidget):
 
     def __init__(
         self,
-        get_data: DataSource,
+        buffer: NotebookBuffer,
         width: int | Literal["full"] | None = None,
         height: int | None = None,
         src: str | None = None,
@@ -70,7 +69,7 @@ class FoxgloveWidget(anywidget.AnyWidget):
             self.layout = layout  # type: ignore[assignment]
 
         # Callback to get the data to display in the widget
-        self._get_data = get_data
+        self._buffer = buffer
         # Keep track of when the widget is ready to receive data
         self._ready = False
         # Pending data to be sent when the widget is ready
@@ -83,7 +82,7 @@ class FoxgloveWidget(anywidget.AnyWidget):
         Refresh the widget by getting the data from the callback function and sending it
         to the widget.
         """
-        data = self._get_data()
+        data = self._buffer.get_data()
         if not self._ready:
             self._pending_data = data
         else:

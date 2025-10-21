@@ -47,7 +47,7 @@ class NotebookBuffer:
         to display the viewer.
         """
         widget = FoxgloveWidget(
-            get_data=self._get_data,
+            buffer=self,
             width=width,
             height=height,
             src=src,
@@ -68,7 +68,7 @@ class NotebookBuffer:
         self._temp_directory = TemporaryDirectory()
         self._create_writer()
 
-    def _get_data(self) -> list[bytes]:
+    def get_data(self) -> list[bytes]:
         """
         Retrieve all collected data and reset the buffer for new data collection.
         """
