@@ -9,9 +9,8 @@ real-world usage.
 
 ## Usage
 
-This example uses Poetry: https://python-poetry.org/
+This example uses [uv](https://docs.astral.sh/uv/).
 
 ```bash
-poetry install
-poetry run python main.py [--path file.mcap]
+uv run python main.py
 ```
