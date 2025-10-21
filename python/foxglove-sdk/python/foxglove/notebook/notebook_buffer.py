@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 import os
 import uuid
 from tempfile import TemporaryDirectory
-from typing import Literal, Optional, Union
+from typing import Literal
 
 from mcap.reader import make_reader
 
@@ -23,7 +25,7 @@ class NotebookBuffer:
         context will be used. Logged messages will be buffered.
     """
 
-    def __init__(self, context: Optional[Context] = None):
+    def __init__(self, context: Context | None = None):
         """
         Initialize a new NotebookBuffer for collecting logged messages.
         """
@@ -35,10 +37,10 @@ class NotebookBuffer:
 
     def show(
         self,
-        width: Optional[Union[int, Literal["full"]]] = None,
-        height: Optional[int] = None,
-        src: Optional[str] = None,
-        layout: Optional[SelectLayoutParams] = None,
+        width: int | Literal["full"] | None = None,
+        height: int | None = None,
+        src: str | None = None,
+        layout: SelectLayoutParams | None = None,
     ) -> FoxgloveWidget:
         """
         Show the Foxglove viewer. Call this method as the last step of a notebook cell

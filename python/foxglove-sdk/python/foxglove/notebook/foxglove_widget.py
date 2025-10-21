@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 import importlib.metadata
 import pathlib
-from typing import Any, Literal, Optional, Protocol, TypedDict, Union
+from typing import Any, Literal, Protocol, TypedDict
 
 import anywidget
 import traitlets
@@ -18,7 +20,7 @@ class DataSource(Protocol):
 class SelectLayoutParams(TypedDict):
     storageKey: str
     opaqueLayout: dict
-    force: Optional[bool]
+    force: bool | None
 
 
 class FoxgloveWidget(anywidget.AnyWidget):
@@ -49,10 +51,10 @@ class FoxgloveWidget(anywidget.AnyWidget):
     def __init__(
         self,
         get_data: DataSource,
-        width: Optional[Union[int, Literal["full"]]] = None,
-        height: Optional[int] = None,
-        src: Optional[str] = None,
-        layout: Optional[SelectLayoutParams] = None,
+        width: int | Literal["full"] | None = None,
+        height: int | None = None,
+        src: str | None = None,
+        layout: SelectLayoutParams | None = None,
         **kwargs: Any,
     ):
         super().__init__(**kwargs)
