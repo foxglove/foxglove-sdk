@@ -27,7 +27,7 @@ from .channel import Channel, log
 from .mcap import MCAPWriter
 
 if TYPE_CHECKING:
-    from .notebook.notebook_sink import NotebookSink
+    from .notebook.notebook_buffer import NotebookBuffer
 
 atexit.register(_foxglove.shutdown)
 
@@ -138,12 +138,12 @@ def _level_names() -> dict[str, int]:
     }
 
 
-def init_notebook_sink(context: Context | None = None) -> NotebookSink:
+def init_notebook_buffer(context: Context | None = None) -> NotebookBuffer:
     """
-    Create a NotebookSink object to manage data buffering and visualization in Jupyter
+    Create a NotebookBuffer object to manage data buffering and visualization in Jupyter
     notebooks.
 
-    The NotebookSink object will buffer all data logged to the provided context. When you
+    The NotebookBuffer object will buffer all data logged to the provided context. When you
     are ready to visualize the data, you can call the :meth:`show` method to display an embedded
     Foxglove visualization widget. The widget provides a fully-featured Foxglove interface
     directly within your Jupyter notebook, allowing you to explore multi-modal robotics data
@@ -154,7 +154,7 @@ def init_notebook_sink(context: Context | None = None) -> NotebookSink:
             context will be used. Logged messages will be buffered.
 
     Returns:
-        NotebookSink: A NotebookSink object that can be used to manage the data buffering
+        NotebookBuffer: A NotebookBuffer object that can be used to manage the data buffering
             and visualization.
 
     Raises:
@@ -180,15 +180,15 @@ def init_notebook_sink(context: Context | None = None) -> NotebookSink:
         >>> nb_sink.show()
     """
     try:
-        from .notebook.notebook_sink import NotebookSink
+        from .notebook.notebook_buffer import NotebookBuffer
 
     except ImportError:
         raise Exception(
-            "NotebookSink is not installed. "
+            "NotebookBuffer is not installed. "
             "Please install it with `pip install foxglove-sdk[notebook]`"
         )
 
-    return NotebookSink(context=context)
+    return NotebookBuffer(context=context)
 
 
 __all__ = [
@@ -202,5 +202,5 @@ __all__ = [
     "open_mcap",
     "set_log_level",
     "start_server",
-    "init_notebook_sink",
+    "init_notebook_buffer",
 ]

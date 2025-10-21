@@ -1,16 +1,26 @@
 import os
 import uuid
 from tempfile import TemporaryDirectory
-from typing import Optional
+from typing import Literal, Optional, Union
 
 from mcap.reader import make_reader
 
 from .._foxglove_py import Context, open_mcap
+from .foxglove_widget import FoxgloveWidget, SelectLayoutParams
 
 
 class NotebookBuffer:
     """
-    A data buffer for collecting and managing messages in Jupyter notebooks.
+    A data buffer to collect and manage messages and visualization in Jupyter notebooks.
+
+    The NotebookBuffer object will buffer all data logged to the provided context. When you
+    are ready to visualize the data, you can call the :meth:`show` method to display an embedded
+    Foxglove visualization widget. The widget provides a fully-featured Foxglove interface
+    directly within your Jupyter notebook, allowing you to explore multi-modal robotics data
+    including 3D scenes, plots, images, and more.
+
+    :param context: The Context used to log the messages. If no Context is provided, the global
+        context will be used. Logged messages will be buffered.
     """
 
     def __init__(self, context: Optional[Context] = None):
@@ -23,7 +33,40 @@ class NotebookBuffer:
         self._files: list[str] = []
         self._create_writer()
 
-    def get_data(self) -> list[bytes]:
+    def show(
+        self,
+        width: Optional[Union[int, Literal["full"]]] = None,
+        height: Optional[int] = None,
+        src: Optional[str] = None,
+        layout: Optional[SelectLayoutParams] = None,
+    ) -> FoxgloveWidget:
+        """
+        Show the Foxglove viewer. Call this method as the last step of a notebook cell
+        to display the viewer.
+        """
+        widget = FoxgloveWidget(
+            get_data=self._get_data,
+            width=width,
+            height=height,
+            src=src,
+            layout=layout,
+        )
+        return widget
+
+    def clear(self) -> None:
+        """
+        Clear the buffered data.
+        """
+        self._writer.close()
+        # Delete the temporary directory and all its contents
+        self._temp_directory.cleanup()
+        # Reset files list
+        self._files = []
+        # Create a new temporary directory
+        self._temp_directory = TemporaryDirectory()
+        self._create_writer()
+
+    def _get_data(self) -> list[bytes]:
         """
         Retrieve all collected data and reset the buffer for new data collection.
         """
@@ -45,19 +88,6 @@ class NotebookBuffer:
         self._create_writer()
 
         return contents
-
-    def clear(self) -> None:
-        """
-        Clear the buffered data.
-        """
-        self._writer.close()
-        # Delete the temporary directory and all its contents
-        self._temp_directory.cleanup()
-        # Reset files list
-        self._files = []
-        # Create a new temporary directory
-        self._temp_directory = TemporaryDirectory()
-        self._create_writer()
 
     def _create_writer(self) -> None:
         random_id = uuid.uuid4().hex[:8]
