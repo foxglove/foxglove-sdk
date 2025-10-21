@@ -1,6 +1,6 @@
 import importlib.metadata
 import pathlib
-from typing import Any, Literal, Optional, Protocol, Union
+from typing import Any, Literal, Optional, Protocol, TypedDict, Union
 
 import anywidget
 import traitlets
@@ -13,6 +13,12 @@ except importlib.metadata.PackageNotFoundError:
 
 class DataSource(Protocol):
     def __call__(self) -> list[bytes]: ...
+
+
+class SelectLayoutParams(TypedDict):
+    storageKey: str
+    opaqueLayout: dict
+    force: Optional[bool]
 
 
 class FoxgloveWidget(anywidget.AnyWidget):
@@ -32,7 +38,13 @@ class FoxgloveWidget(anywidget.AnyWidget):
     )
     height = traitlets.Int(500).tag(sync=True)
     src = traitlets.Unicode("").tag(sync=True)
-    layout_data = traitlets.Dict({}).tag(sync=True)
+    layout = traitlets.Dict(
+        per_key_traits={
+            "storageKey": traitlets.Unicode(),
+            "opaqueLayout": traitlets.Dict(),
+            "force": traitlets.Bool(False),
+        }
+    ).tag(sync=True)
 
     def __init__(
         self,
@@ -40,7 +52,7 @@ class FoxgloveWidget(anywidget.AnyWidget):
         width: Optional[Union[int, Literal["full"]]] = None,
         height: Optional[int] = None,
         src: Optional[str] = None,
-        layout_data: Optional[dict] = None,
+        layout: Optional[SelectLayoutParams] = None,
         **kwargs: Any,
     ):
         super().__init__(**kwargs)
@@ -52,8 +64,8 @@ class FoxgloveWidget(anywidget.AnyWidget):
             self.height = height
         if src is not None:
             self.src = src
-        if layout_data is not None:
-            self.layout_data = layout_data
+        if layout is not None:
+            self.layout = layout  # type: ignore[assignment]
 
         # Callback to get the data to display in the widget
         self._get_data = get_data

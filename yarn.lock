@@ -813,12 +813,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@foxglove/embed@npm:0.1.4":
-  version: 0.1.4
-  resolution: "@foxglove/embed@npm:0.1.4"
+"@foxglove/embed@npm:0.1.5":
+  version: 0.1.5
+  resolution: "@foxglove/embed@npm:0.1.5"
   dependencies:
     tslib: "npm:2.8.1"
-  checksum: 10c0/b7d276098df3cefe47cf26fce0e9a38d70b2053aefdf3faae34cc1a2aa79345ca5472cac13ccfb1a1635fdbf284b5c4aed11703980008ed3c264c84d53df37aa
+  checksum: 10c0/747cd54ba057ec5fb5dc44ba54f0c3a4546b096c60935e48a59bfcefc3882e5e34ad6d1b456ccd1f7fe303f94838850f51dc97d2f4c8fe63ad7b86defef873f2
   languageName: node
   linkType: hard
 
@@ -857,7 +857,7 @@ __metadata:
   resolution: "@foxglove/notebook@workspace:python/foxglove-sdk"
   dependencies:
     "@anywidget/types": "npm:0.2.0"
-    "@foxglove/embed": "npm:0.1.4"
+    "@foxglove/embed": "npm:0.1.5"
     "@foxglove/tsconfig": "npm:2.0.0"
     esbuild: "npm:0.25.10"
     typescript: "npm:5.9.2"

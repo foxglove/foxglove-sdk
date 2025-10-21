@@ -1,7 +1,7 @@
 from typing import Literal, Optional, Union
 
 from .._foxglove_py import Context
-from .foxglove_widget import FoxgloveWidget
+from .foxglove_widget import FoxgloveWidget, SelectLayoutParams
 from .notebook_buffer import NotebookBuffer
 
 
@@ -30,7 +30,7 @@ class NotebookSink:
         width: Optional[Union[int, Literal["full"]]] = None,
         height: Optional[int] = None,
         src: Optional[str] = None,
-        layout_data: Optional[dict] = None,
+        layout: Optional[SelectLayoutParams] = None,
     ) -> FoxgloveWidget:
         """
         Show the Foxglove viewer. Call this method as the last step of a notebook cell
@@ -41,7 +41,7 @@ class NotebookSink:
             width=width,
             height=height,
             src=src,
-            layout_data=layout_data,
+            layout=layout,
         )
         return widget
 

@@ -1,12 +1,12 @@
 import type { RenderProps } from "@anywidget/types";
-import { FoxgloveViewer, type OpaqueLayoutData } from "@foxglove/embed";
+import { FoxgloveViewer, type SelectLayoutParams } from "@foxglove/embed";
 
 // Specifies attributes defined with traitlets in ../python/foxglove/notebook/widget.py
 interface WidgetModel {
   width: number | "full";
   height: number;
   src: string;
-  layout_data: OpaqueLayoutData;
+  layout?: SelectLayoutParams;
 }
 
 type Message = {
@@ -14,20 +14,13 @@ type Message = {
 };
 
 function render({ model, el }: RenderProps<WidgetModel>): void {
-  function getLayoutData(): OpaqueLayoutData {
-    // Read layout from the model and verify it is not empty
-    const layoutData = model.get("layout_data");
-
-    return JSON.stringify(layoutData) !== "{}" ? layoutData : undefined;
-  }
-
   const parent = document.createElement("div");
 
   const viewer = new FoxgloveViewer({
     parent,
     src: model.get("src") !== "" ? model.get("src") : undefined,
     orgSlug: undefined,
-    initialLayout: getLayoutData(),
+    initialLayoutParams: model.get("layout"),
   });
 
   viewer.addEventListener("ready", () => {
@@ -61,9 +54,11 @@ function render({ model, el }: RenderProps<WidgetModel>): void {
   });
 
   model.on("change:layout", () => {
-    const layoutData = getLayoutData();
+    const layout = model.get("layout");
 
-    viewer.setLayoutData(layoutData);
+    if (layout) {
+      viewer.selectLayout(layout);
+    }
   });
 
   el.appendChild(parent);
