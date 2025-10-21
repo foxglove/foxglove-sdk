@@ -1,0 +1,18 @@
+[project]
+name = "python-logging"
+version = "0.0.0"
+description = "Example of Python log filtering"
+authors = [{ name = "Foxglove", email = "support@foxglove.dev" }]
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = ["foxglove-sdk>=0.14.3"]
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+package-mode = false
+
+[tool.poetry.group.dev.dependencies]
+mypy = "^1"
