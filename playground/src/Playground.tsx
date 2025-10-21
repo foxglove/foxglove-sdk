@@ -1,4 +1,4 @@
-import { DataSource } from "@foxglove/embed";
+import { DataSource, SelectLayoutParams } from "@foxglove/embed";
 import { FoxgloveViewer } from "@foxglove/embed-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import toast, { Toaster } from "react-hot-toast";
@@ -30,7 +30,19 @@ export function Playground(): React.JSX.Element {
       return undefined;
     }
   });
-  const [selectedLayout, setSelectedLayout] = useState(initialState?.layout);
+  const [selectedLayout, setSelectedLayout] = useState<SelectLayoutParams>(
+    initialState?.layout != undefined
+      ? {
+          storageKey: LAYOUT_STORAGE_KEY,
+          opaqueLayout: initialState.layout,
+          force: true,
+        }
+      : {
+          storageKey: LAYOUT_STORAGE_KEY,
+          opaqueLayout: DEFAULT_LAYOUT_DATA,
+          force: false,
+        },
+  );
   const [ready, setReady] = useState(false);
   const [mcapFilename, setMcapFilename] = useState<string | undefined>();
   const [dataSource, setDataSource] = useState<DataSource | undefined>();
@@ -91,7 +103,11 @@ export function Playground(): React.JSX.Element {
       .then(JSON.parse)
       .then(
         (layout) => {
-          setSelectedLayout(layout);
+          setSelectedLayout({
+            storageKey: LAYOUT_STORAGE_KEY,
+            opaqueLayout: layout,
+            force: true,
+          });
           setAndCopyUrlState({ code: editorRef.current?.getValue() ?? "", layout });
         },
         (err: unknown) => {
@@ -192,7 +208,7 @@ export function Playground(): React.JSX.Element {
           style={{ flex: "1 1 0", overflow: "hidden" }}
           colorScheme="light"
           data={dataSource}
-          layoutData={selectedLayout ?? DEFAULT_LAYOUT}
+          layout={selectedLayout}
         />
       </div>
     </div>
@@ -211,11 +227,9 @@ from foxglove.schemas import (
   Vector3,
 )
 
-foxglove.set_log_level("DEBUG")
+scene_channel = SceneUpdateChannel("/scene")
 
-file_name = "quickstart-python.mcap"
-with foxglove.open_mcap(file_name) as writer:
-  scene_channel = SceneUpdateChannel("/scene")
+with foxglove.open_mcap("playground.mcap") as writer:
   for i in range(10):
     size = 1 + 0.2 * i
     scene_channel.log(
@@ -235,15 +249,10 @@ with foxglove.open_mcap(file_name) as writer:
     )
 `;
 
-const DEFAULT_LAYOUT = {
-  globalVariables: {},
-  userNodes: {},
-  playbackConfig: {
-    speed: 1,
-  },
-  layout: "3D!2xs2cbr",
+const LAYOUT_STORAGE_KEY = "playground-layout";
+const DEFAULT_LAYOUT_DATA = {
   configById: {
-    "3D!2xs2cbr": {
+    "3D!1ehnpb2": {
       cameraState: {
         distance: 20,
         perspective: true,
@@ -270,7 +279,7 @@ const DEFAULT_LAYOUT = {
           drawBehind: false,
           frameLocked: true,
           label: "Grid",
-          instanceId: "12bf7bad-7660-42b2-aec8-ac7f9ce200ba",
+          instanceId: "7cfdaa56-0cc3-4576-b763-5a8882575cd4",
           layerId: "foxglove.Grid",
           size: 10,
           divisions: 10,
@@ -291,5 +300,50 @@ const DEFAULT_LAYOUT = {
       },
       imageMode: {},
     },
+    "RawMessages!2zn7j4u": {
+      diffEnabled: false,
+      diffMethod: "custom",
+      diffTopicPath: "",
+      showFullMessageForDiff: false,
+      topicPath: "/scene",
+      fontSize: 12,
+    },
+    "Plot!30ea437": {
+      paths: [
+        {
+          value: "/scene.entities[:].cubes[0].size.x",
+          enabled: true,
+          timestampMethod: "receiveTime",
+          label: "Cube size",
+        },
+      ],
+      showXAxisLabels: true,
+      showYAxisLabels: true,
+      showLegend: true,
+      legendDisplay: "floating",
+      showPlotValuesInLegend: false,
+      isSynced: true,
+      xAxisVal: "timestamp",
+      sidebarDimension: 240,
+    },
+  },
+  globalVariables: {},
+  userNodes: {},
+  playbackConfig: {
+    speed: 1,
+  },
+  drawerConfig: {
+    tracks: [],
+  },
+  layout: {
+    first: "3D!1ehnpb2",
+    second: {
+      direction: "column",
+      second: "Plot!30ea437",
+      first: "RawMessages!2zn7j4u",
+      splitPercentage: 67.0375521557719,
+    },
+    direction: "row",
+    splitPercentage: 60.57971014492753,
   },
 };
