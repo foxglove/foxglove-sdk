@@ -18,7 +18,7 @@
 /python/foxglove-schemas-protobuf/foxglove_schemas_protobuf/*.py
 /python/foxglove-schemas-protobuf/foxglove_schemas_protobuf/*.pyi
 /python/foxglove-sdk-examples/**/*.mcap
-/python/foxglove-sdk-examples/uv.lock
+/python/foxglove-sdk-examples/**/uv.lock
 /python/foxglove-sdk/python/docs/_build
 /ros/build/
 /ros/install/

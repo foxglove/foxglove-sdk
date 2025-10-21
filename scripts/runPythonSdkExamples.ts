@@ -1,7 +1,7 @@
 import { program } from "commander";
 import { spawn } from "node:child_process";
-import { SIGTERM } from "node:constants";
-import { mkdtemp, readdir, rm } from "node:fs/promises";
+import { SIGTERM, F_OK } from "node:constants";
+import { mkdtemp, readdir, rm, access } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -27,10 +27,20 @@ async function main(opts: { timeout: string; installSdkFromPath: boolean }) {
 
   const entries = await readdir(pyExamplesDir, { withFileTypes: true });
   for (const entry of entries) {
-    if (entry.isDirectory() && entry.name !== ".venv") {
-      console.debug(`Install & run example ${entry.name}`);
-      await runExample(entry.name, { timeoutMillis, installSdkFromPath });
+    if (!entry.isDirectory()) {
+      continue;
     }
+
+    // Ignore directories that do not contain a main.py script.
+    const script = path.join(pyExamplesDir, entry.name, "main.py");
+    try {
+      await access(script, F_OK);
+    } catch {
+      continue;
+    }
+
+    console.debug(`Install & run example ${entry.name}`);
+    await runExample(entry.name, { timeoutMillis, installSdkFromPath });
   }
 }
 
