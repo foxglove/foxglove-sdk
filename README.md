@@ -73,7 +73,7 @@ Visit [Foxglove SDK Docs](https://docs.foxglove.dev/sdk) to get started.
 </td>
 <td>
 
-[![ROS Humble version](https://img.shields.io/ros/v/humble/foxglove_msgs)](https://index.ros.org/p/foxglove_msgs#humble)<br/>
+[![ROS Humble version](https://img.shields.io/ros/v/humble/foxglove-sdk)](https://index.ros.org/p/foxglove_msgs#humble)<br/>
 [![ROS Jazzy version](https://img.shields.io/ros/v/jazzy/foxglove-sdk)](https://index.ros.org/p/foxglove_msgs#jazzy)<br/>
 [![ROS Kilted version](https://img.shields.io/ros/v/kilted/foxglove-sdk)](https://index.ros.org/p/foxglove_msgs#kilted)<br/>
 [![ROS Rolling version](https://img.shields.io/ros/v/rolling/foxglove-sdk)](https://index.ros.org/p/foxglove_msgs#rolling)
@@ -89,7 +89,7 @@ Visit [Foxglove SDK Docs](https://docs.foxglove.dev/sdk) to get started.
 </td>
 <td>
 
-[![ROS Humble version](https://img.shields.io/ros/v/humble/foxglove_bridge)](https://index.ros.org/p/foxglove_bridge#humble)<br/>
+[![ROS Humble version](https://img.shields.io/ros/v/humble/foxglove-sdk)](https://index.ros.org/p/foxglove_bridge#humble)<br/>
 [![ROS Jazzy version](https://img.shields.io/ros/v/jazzy/foxglove-sdk)](https://index.ros.org/p/foxglove_bridge#jazzy)<br/>
 [![ROS Kilted version](https://img.shields.io/ros/v/kilted/foxglove-sdk)](https://index.ros.org/p/foxglove_bridge#kilted)<br/>
 [![ROS Rolling version](https://img.shields.io/ros/v/rolling/foxglove-sdk)](https://index.ros.org/p/foxglove_bridge#rolling)
