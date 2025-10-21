@@ -744,8 +744,8 @@ struct Grid {
   /// @brief Grid cell data, interpreted using `fields`, in row-major (y-major) order.
   /// @brief  For the data element starting at byte offset i, the coordinates of its corner closest
   /// to the origin will be:
-  /// @brief  y = (i / cell_stride) % row_stride * cell_size.y
-  /// @brief  x = i % cell_stride * cell_size.x
+  /// @brief  y = i / row_stride * cell_size.y
+  /// @brief  x = (i % row_stride) / cell_stride * cell_size.x
   std::vector<std::byte> data;
 
   /// @brief Encoded the Grid as protobuf to the provided buffer.

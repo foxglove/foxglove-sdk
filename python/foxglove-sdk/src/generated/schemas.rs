@@ -156,50 +156,50 @@ impl From<ArrowPrimitive> for foxglove::schemas::ArrowPrimitive {
 /// :param width: Image width
 /// :param height: Image height
 /// :param distortion_model: Name of distortion model
-///     
+///
 ///     Supported parameters: `plumb_bob` (k1, k2, p1, p2, k3), `rational_polynomial` (k1, k2, p1, p2, k3, k4, k5, k6), and `kannala_brandt` (k1, k2, k3, k4). `plumb_bob` and `rational_polynomial` models are based on the pinhole model `OpenCV's <https://docs.opencv.org/4.11.0/d9/d0c/group__calib3d.html>`__ `pinhole camera model <https://en.wikipedia.org/wiki/Distortion_%28optics%29#Software_correction>`__. The `kannala_brandt` model matches the `OpenvCV fisheye <https://docs.opencv.org/4.11.0/db/d58/group__calib3d__fisheye.html>`__ model.
 /// :param D: Distortion parameters
 /// :param K: Intrinsic camera matrix (3x3 row-major matrix)
-///     
+///
 ///     A 3x3 row-major matrix for the raw (distorted) image.
-///     
+///
 ///     Projects 3D points in the camera coordinate frame to 2D pixel coordinates using the focal lengths (fx, fy) and principal point (cx, cy).
-///     
+///
 ///     ::
 ///
 ///             [fx  0 cx]
 ///         K = [ 0 fy cy]
 ///             [ 0  0  1]
-///     
+///
 /// :param R: Rectification matrix (stereo cameras only, 3x3 row-major matrix)
-///     
+///
 ///     A rotation matrix aligning the camera coordinate system to the ideal stereo image plane so that epipolar lines in both stereo images are parallel.
 /// :param P: Projection/camera matrix (3x4 row-major matrix)
-///     
+///
 ///     ::
 ///
 ///             [fx'  0  cx' Tx]
 ///         P = [ 0  fy' cy' Ty]
 ///             [ 0   0   1   0]
-///     
+///
 ///     By convention, this matrix specifies the intrinsic (camera) matrix of the processed (rectified) image. That is, the left 3x3 portion is the normal camera intrinsic matrix for the rectified image.
-///     
+///
 ///     It projects 3D points in the camera coordinate frame to 2D pixel coordinates using the focal lengths (fx', fy') and principal point (cx', cy') - these may differ from the values in K.
-///     
+///
 ///     For monocular cameras, Tx = Ty = 0. Normally, monocular cameras will also have R = the identity and P[1:3,1:3] = K.
-///     
+///
 ///     Foxglove currently does not support displaying stereo images, so Tx and Ty are ignored.
-///     
+///
 ///     Given a 3D point [X Y Z]', the projection (x, y) of the point onto the rectified image is given by:
-///     
+///
 ///     ::
 ///
 ///         [u v w]' = P * [X Y Z 1]'
 ///                x = u / w
 ///                y = v / w
-///     
+///
 ///     This holds for both images of a stereo pair.
-///     
+///
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/camera-calibration
 #[pyclass(module = "foxglove.schemas")]
@@ -407,7 +407,7 @@ impl From<Color> for foxglove::schemas::Color {
 /// :param frame_id: Frame of reference for the image. The origin of the frame is the optical center of the camera. +x points to the right in the image, +y points down, and +z points into the plane of the image.
 /// :param data: Compressed image data
 /// :param format: Image format
-///     
+///
 ///     Supported values: `jpeg`, `png`, `webp`, `avif`
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/compressed-image
@@ -472,35 +472,35 @@ impl From<CompressedImage> for foxglove::schemas::CompressedImage {
 ///
 /// :param timestamp: Timestamp of video frame
 /// :param frame_id: Frame of reference for the video.
-///     
+///
 ///     The origin of the frame is the optical center of the camera. +x points to the right in the video, +y points down, and +z points into the plane of the video.
 /// :param data: Compressed video frame data.
-///     
+///
 ///     For packet-based video codecs this data must begin and end on packet boundaries (no partial packets), and must contain enough video packets to decode exactly one image (either a keyframe or delta frame). Note: Foxglove does not support video streams that include B frames because they require lookahead.
-///     
+///
 ///     Specifically, the requirements for different `format` values are:
-///     
+///
 ///     - `h264`
 ///       - Use Annex B formatted data
 ///       - Each CompressedVideo message should contain enough NAL units to decode exactly one video frame
 ///       - Each message containing a key frame (IDR) must also include a SPS NAL unit
-///     
+///
 ///     - `h265` (HEVC)
 ///       - Use Annex B formatted data
 ///       - Each CompressedVideo message should contain enough NAL units to decode exactly one video frame
 ///       - Each message containing a key frame (IRAP) must also include relevant VPS/SPS/PPS NAL units
-///     
+///
 ///     - `vp9`
 ///       - Each CompressedVideo message should contain exactly one video frame
-///     
+///
 ///     - `av1`
 ///       - Use the "Low overhead bitstream format" (section 5.2)
 ///       - Each CompressedVideo message should contain enough OBUs to decode exactly one video frame
 ///       - Each message containing a key frame must also include a Sequence Header OBU
 /// :param format: Video format.
-///     
+///
 ///     Supported values: `h264`, `h265`, `vp9`, `av1`.
-///     
+///
 ///     Note: compressed video support is subject to hardware limitations and patent licensing, so not all encodings may be supported on all platforms. See more about `H.265 support <https://caniuse.com/hevc>`__, `VP9 support <https://caniuse.com/webm>`__, and `AV1 support <https://caniuse.com/av1>`__.
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/compressed-video
@@ -869,8 +869,8 @@ impl From<GeoJson> for foxglove::schemas::GeoJson {
 /// :param fields: Fields in `data`. `red`, `green`, `blue`, and `alpha` are optional for customizing the grid's color.
 /// :param data: Grid cell data, interpreted using `fields`, in row-major (y-major) order.
 ///      For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
-///      y = (i / cell_stride) % row_stride * cell_size.y
-///      x = i % cell_stride * cell_size.x
+///      y = i / row_stride * cell_size.y
+///      x = (i % row_stride) / cell_stride * cell_size.x
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/grid
 #[pyclass(module = "foxglove.schemas")]
@@ -1264,7 +1264,7 @@ impl From<LaserScan> for foxglove::schemas::LaserScan {
 /// :param color: Solid color to use for the whole line. Ignored if `colors` is non-empty.
 /// :param colors: Per-point colors (if non-empty, must have the same length as `points`).
 /// :param indices: Indices into the `points` and `colors` attribute arrays, which can be used to avoid duplicating attribute data.
-///     
+///
 ///     If omitted or empty, indexing will not be used. This default behavior is equivalent to specifying [0, 1, ..., N-1] for the indices (where N is the number of `points` provided).
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/line-primitive
@@ -2498,9 +2498,9 @@ impl From<RawAudio> for foxglove::schemas::RawAudio {
 /// :param encoding: Encoding of the raw image data. See the `data` field description for supported values.
 /// :param step: Byte length of a single row. This is usually some multiple of `width` depending on the encoding, but can be greater to incorporate padding.
 /// :param data: Raw image data.
-///     
+///
 ///     For each `encoding` value, the `data` field contains image pixel data serialized as follows:
-///     
+///
 ///     - `yuv422` or `uyvy`:
 ///       - Pixel colors are decomposed into `Y'UV <https://en.wikipedia.org/wiki/Y%E2%80%B2UV>`__ channels.
 ///       - Pixel channel values are represented as unsigned 8-bit integers.
@@ -2550,7 +2550,7 @@ impl From<RawAudio> for foxglove::schemas::RawAudio {
 ///     - `mono16` or `16UC1`:
 ///       - Pixel brightness is represented as 16-bit unsigned little-endian integers. Rendering of these values is controlled in `Image panel color mode settings <https://docs.foxglove.dev/docs/visualization/panels/image#general>`__.
 ///       - `step` must be greater than or equal to `width` * 2.
-///     
+///
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/raw-image
 #[pyclass(module = "foxglove.schemas")]
@@ -2832,7 +2832,7 @@ impl From<TextPrimitive> for foxglove::schemas::TextPrimitive {
 /// :param color: Solid color to use for the whole shape. Ignored if `colors` is non-empty.
 /// :param colors: Per-vertex colors (if specified, must have the same length as `points`).
 /// :param indices: Indices into the `points` and `colors` attribute arrays, which can be used to avoid duplicating attribute data.
-///     
+///
 ///     If omitted or empty, indexing will not be used. This default behavior is equivalent to specifying [0, 1, ..., N-1] for the indices (where N is the number of `points` provided).
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/triangle-list-primitive
