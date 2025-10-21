@@ -15,14 +15,17 @@ from foxglove.schemas import (
 )
 from lerobot.cameras import ColorMode, Cv2Rotation
 from lerobot.cameras.opencv import OpenCVCamera, OpenCVCameraConfig
-from lerobot.robots.so100_follower import SO100Follower, SO100FollowerConfig
+#TODO: Uncomment below for SO100
+# from lerobot.robots.so100_follower import SO100Follower, SO100FollowerConfig
+from lerobot.robots.so101_follower import SO101Follower, SO101FollowerConfig
 from scipy.spatial.transform import Rotation as R
 from yourdfpy import URDF
 
 WORLD_FRAME_ID = "world"
-BASE_FRAME_ID = "base"
+BASE_FRAME_ID = "base_link"
 RATE_HZ = 30.0
-URDF_FILE = "SO100/so100.urdf"
+#URDF_FILE = "SO100/so100.urdf" #TODO: Uncomment if using SO100
+URDF_FILE = "SO101/so101_new_calib.urdf"
 
 
 def parse_args():
@@ -155,16 +158,16 @@ def main():
         except Exception as e:
             print(f"Failed to setup environment camera: {e}")
 
-    # Connect to SO-100 arm
-    config = SO100FollowerConfig(
+    # Connect to SO-101 arm
+    config = SO101FollowerConfig(
         port=args.robot_port, id=args.robot_id, use_degrees=True
     )
-    follower = SO100Follower(config)
+    follower = SO101Follower(config)
     follower.connect(calibrate=False)
     if not follower.is_connected:
-        print("Failed to connect to SO-100 Follower arm. Please check the connection.")
+        print("Failed to connect to SO-101 Follower arm. Please check the connection.")
         return
-    print("SO-100 Follower arm connected successfully.")
+    print("SO-101 Follower arm connected successfully.")
     follower.bus.disable_torque()  # Disable torque to be able to move the arm freely
 
     # Define initial joint positions (all zeros for now)
@@ -193,13 +196,13 @@ def main():
             # Read actual joint angles from follower (in degrees)
             obs = follower.get_observation()
 
-            joint_positions["1"] = math.radians(obs.get("shoulder_pan.pos", 0.0)) * -1.0
-            joint_positions["2"] = math.radians(obs.get("shoulder_lift.pos", 0.0))
-            joint_positions["3"] = math.radians(obs.get("elbow_flex.pos", 0.0))
-            joint_positions["4"] = math.radians(obs.get("wrist_flex.pos", 0.0))
-            joint_positions["5"] = math.radians(obs.get("wrist_roll.pos", 0.0))
+            joint_positions["shoulder_pan"] = math.radians(obs.get("shoulder_pan.pos", 0.0))
+            joint_positions["shoulder_lift"] = math.radians(obs.get("shoulder_lift.pos", 0.0))
+            joint_positions["elbow_flex"] = math.radians(obs.get("elbow_flex.pos", 0.0))
+            joint_positions["wrist_flex"] = math.radians(obs.get("wrist_flex.pos", 0.0))
+            joint_positions["wrist_roll"] = math.radians(obs.get("wrist_roll.pos", 0.0))
             # Convert gripper percent (0-100) to radians (0 to pi)
-            joint_positions["6"] = (
+            joint_positions["gripper"] = (
                 (obs.get("gripper.pos", 0.0) - 10) / 100.0
             ) * math.pi
 
