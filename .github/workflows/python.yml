@@ -36,7 +36,7 @@ jobs:
         with:
           node-version: 22
           cache: yarn
-      - run: yarn workspaces focus @foxglove/notebook
+      - run: yarn workspaces focus @foxglove/notebook-frontend
       - run: yarn build:prod
       - name: Upload notebook FrontEnd assets
         uses: actions/upload-artifact@v4

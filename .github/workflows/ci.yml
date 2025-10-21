@@ -32,7 +32,7 @@ jobs:
         with:
           node-version: 22
           cache: yarn
-      - run: yarn workspaces focus @foxglove/notebook
+      - run: yarn workspaces focus @foxglove/notebook-frontend
       - run: yarn build:prod
 
       - name: Ensure generated protobuf schemas are up to date

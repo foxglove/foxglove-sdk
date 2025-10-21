@@ -29,7 +29,7 @@ yarn install
 Build front-end
 
 ```sh
-yarn workspace @foxglove/notebook build
+yarn workspace @foxglove/notebook-frontend build
 ```
 
 ### Developing

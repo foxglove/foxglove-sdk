@@ -7,8 +7,8 @@ generate:
 .PHONY: build-python
 build-python:
 	yarn install
-	yarn workspace @foxglove/notebook typecheck
-	yarn workspace @foxglove/notebook build
+	yarn workspace @foxglove/notebook-frontend typecheck
+	yarn workspace @foxglove/notebook-frontend build:prod
 	poetry -C python/foxglove-sdk check --strict
 	poetry -C python/foxglove-sdk install
 	poetry -C python/foxglove-sdk run maturin develop
@@ -24,8 +24,8 @@ lint-python:
 .PHONY: test-python
 test-python:
 	yarn install
-	yarn workspace @foxglove/notebook typecheck
-	yarn workspace @foxglove/notebook build
+	yarn workspace @foxglove/notebook-frontend typecheck
+	yarn workspace @foxglove/notebook-frontend build:prod
 	poetry -C python/foxglove-sdk check --strict
 	poetry -C python/foxglove-sdk install --all-extras
 	poetry -C python/foxglove-sdk run maturin develop
