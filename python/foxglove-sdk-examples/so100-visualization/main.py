@@ -15,7 +15,8 @@ from foxglove.schemas import (
 )
 from lerobot.cameras import ColorMode, Cv2Rotation
 from lerobot.cameras.opencv import OpenCVCamera, OpenCVCameraConfig
-#TODO: Uncomment below for SO100
+
+# TODO: Uncomment below for SO100
 # from lerobot.robots.so100_follower import SO100Follower, SO100FollowerConfig
 from lerobot.robots.so101_follower import SO101Follower, SO101FollowerConfig
 from scipy.spatial.transform import Rotation as R
@@ -24,7 +25,7 @@ from yourdfpy import URDF
 WORLD_FRAME_ID = "world"
 BASE_FRAME_ID = "base_link"
 RATE_HZ = 30.0
-#URDF_FILE = "SO100/so100.urdf" #TODO: Uncomment if using SO100
+# URDF_FILE = "SO100/so100.urdf" #TODO: Uncomment if using SO100
 URDF_FILE = "SO101/so101_new_calib.urdf"
 
 
@@ -196,8 +197,12 @@ def main():
             # Read actual joint angles from follower (in degrees)
             obs = follower.get_observation()
 
-            joint_positions["shoulder_pan"] = math.radians(obs.get("shoulder_pan.pos", 0.0))
-            joint_positions["shoulder_lift"] = math.radians(obs.get("shoulder_lift.pos", 0.0))
+            joint_positions["shoulder_pan"] = math.radians(
+                obs.get("shoulder_pan.pos", 0.0)
+            )
+            joint_positions["shoulder_lift"] = math.radians(
+                obs.get("shoulder_lift.pos", 0.0)
+            )
             joint_positions["elbow_flex"] = math.radians(obs.get("elbow_flex.pos", 0.0))
             joint_positions["wrist_flex"] = math.radians(obs.get("wrist_flex.pos", 0.0))
             joint_positions["wrist_roll"] = math.radians(obs.get("wrist_roll.pos", 0.0))
