@@ -17,8 +17,11 @@ use std::sync::{Arc, OnceLock};
 #[cfg(not(target_family = "wasm"))]
 use websocket::start_server;
 
+use logging::init_logging;
+
 mod errors;
 mod generated;
+mod logging;
 mod mcap;
 mod schemas_wkt;
 mod sink_channel_filter;
@@ -280,7 +283,7 @@ fn shutdown(#[allow(unused_variables)] py: Python<'_>) {
 #[pymodule]
 fn _foxglove_py(m: &Bound<'_, PyModule>) -> PyResult<()> {
     foxglove::library_version::set_sdk_language("python");
-    pyo3_log::init();
+    init_logging();
     m.add_function(wrap_pyfunction!(enable_logging, m)?)?;
     m.add_function(wrap_pyfunction!(disable_logging, m)?)?;
     m.add_function(wrap_pyfunction!(shutdown, m)?)?;

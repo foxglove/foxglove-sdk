@@ -10,10 +10,12 @@ crate-type = ["cdylib"]
 
 [lints]
 workspace = true
+
 [dependencies]
 base64 = "0.22.1"
 bytes.workspace = true
 log.workspace = true
+maplit = "1.0.2"
 prost-types = "0.13"
 pyo3 = "0.25.1"
 pyo3-log = "0.12.3"
