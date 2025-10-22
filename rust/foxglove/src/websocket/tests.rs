@@ -1,10 +1,12 @@
 use assert_matches::assert_matches;
 use bytes::{BufMut, Bytes, BytesMut};
 use futures_util::FutureExt;
+use maplit::hashmap;
 #[cfg(feature = "tls")]
 use rcgen::{CertificateParams, Issuer, KeyPair};
 use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
+use std::env;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio_tungstenite::tungstenite::{self, http::HeaderValue, Message};
@@ -1655,4 +1657,44 @@ async fn test_channel_filter() {
     ch2.log(b"{}");
     let result = client.recv().await;
     assert!(matches!(result, Err(WebSocketClientError::Timeout(_))));
+}
+
+#[tokio::test]
+async fn test_ros_distro_sent_to_client() {
+    let ctx = Context::new();
+    let existing_env_var = env::var("ROS_DISTRO");
+    env::set_var("ROS_DISTRO", "kilted");
+
+    let server = create_server(
+        &ctx,
+        ServerOptions {
+            ..Default::default()
+        },
+    );
+    let addr = server
+        .start("127.0.0.1", 0)
+        .await
+        .expect("Failed to start server");
+
+    let mut client = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("Failed to connect");
+
+    let msg = expect_recv!(client, ServerMessage::ServerInfo);
+
+    assert_eq!(
+        msg.metadata,
+        hashmap! {
+            "fg-library".into() => get_library_version(),
+            "ROS_DISTRO".into() => "kilted".into()
+        }
+    );
+
+    if let Ok(existing_env_var) = existing_env_var {
+        env::set_var("ROS_DISTRO", existing_env_var);
+    } else {
+        env::remove_var("ROS_DISTRO");
+    }
+
+    let _ = server.stop();
 }
