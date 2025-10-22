@@ -15,10 +15,10 @@
 enum foxglove_error : uint8_t;
 struct foxglove_mcap_writer;
 
-foxglove_error foxglove_mcap_write_metadata(struct foxglove_mcap_writer *writer,
-  const struct foxglove_string *FOXGLOVE_NONNULL name,
-  const struct foxglove_key_value *metadata,
-  size_t metadata_len);
+foxglove_error foxglove_mcap_write_metadata(
+  struct foxglove_mcap_writer* writer, const struct foxglove_string* FOXGLOVE_NONNULL name,
+  const struct foxglove_key_value* metadata, size_t metadata_len
+);
 
 /// The foxglove namespace.
 namespace foxglove {
