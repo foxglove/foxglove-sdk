@@ -47,7 +47,7 @@ jobs:
           toolchain: 1.86.0
           target: wasm32-unknown-emscripten
       - run: corepack enable
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: yarn
@@ -306,7 +306,7 @@ jobs:
           python-version: "3.9"
       - uses: astral-sh/setup-uv@v6
       - run: corepack enable
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: yarn
