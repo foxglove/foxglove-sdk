@@ -995,15 +995,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@foxglove/embed@npm:0.1.5":
-  version: 0.1.5
-  resolution: "@foxglove/embed@npm:0.1.5"
-  dependencies:
-    tslib: "npm:2.8.1"
-  checksum: 10c0/747cd54ba057ec5fb5dc44ba54f0c3a4546b096c60935e48a59bfcefc3882e5e34ad6d1b456ccd1f7fe303f94838850f51dc97d2f4c8fe63ad7b86defef873f2
-  languageName: node
-  linkType: hard
-
 "@foxglove/eslint-plugin@npm:2.1.0":
   version: 2.1.0
   resolution: "@foxglove/eslint-plugin@npm:2.1.0"
