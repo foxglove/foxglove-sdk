@@ -31,7 +31,7 @@ foxglove = { path = "../../rust/foxglove", default-features = false, features = 
   "live_visualization",
   "lz4",
   "zstd",
-  "cloud",
+  "agent",
 ] }
 
 [build-dependencies]
