@@ -2076,8 +2076,8 @@ pub struct Grid {
 
     /// Grid cell data, interpreted using `fields`, in row-major (y-major) order.
     ///  For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
-    ///  y = (i / cell_stride) % row_stride * cell_size.y
-    ///  x = i % cell_stride * cell_size.x
+    ///  y = i / row_stride * cell_size.y
+    ///  x = (i % row_stride) / cell_stride * cell_size.x
     pub data: *const c_uchar,
     pub data_len: usize,
 }
@@ -2976,10 +2976,10 @@ pub struct LinePrimitive {
     pub points: *const Point3,
     pub points_count: usize,
 
-    /// Solid color to use for the whole line. One of `color` or `colors` must be provided.
+    /// Solid color to use for the whole line. Ignored if `colors` is non-empty.
     pub color: *const Color,
 
-    /// Per-point colors (if specified, must have the same length as `points`). One of `color` or `colors` must be provided.
+    /// Per-point colors (if non-empty, must have the same length as `points`).
     pub colors: *const Color,
     pub colors_count: usize,
 
@@ -4213,13 +4213,13 @@ pub struct ModelPrimitive {
     /// Whether to use the color specified in `color` instead of any materials embedded in the original model.
     pub override_color: bool,
 
-    /// URL pointing to model file. One of `url` or `data` should be provided.
+    /// URL pointing to model file. One of `url` or `data` should be non-empty.
     pub url: FoxgloveString,
 
     /// [Media type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types) of embedded model (e.g. `model/gltf-binary`). Required if `data` is provided instead of `url`. Overrides the inferred media type if `url` is provided.
     pub media_type: FoxgloveString,
 
-    /// Embedded model. One of `url` or `data` should be provided. If `data` is provided, `media_type` must be set to indicate the type of the data.
+    /// Embedded model. One of `url` or `data` should be non-empty. If `data` is non-empty, `media_type` must be set to indicate the type of the data.
     pub data: *const c_uchar,
     pub data_len: usize,
 }
@@ -6819,10 +6819,10 @@ pub struct TriangleListPrimitive {
     pub points: *const Point3,
     pub points_count: usize,
 
-    /// Solid color to use for the whole shape. One of `color` or `colors` must be provided.
+    /// Solid color to use for the whole shape. Ignored if `colors` is non-empty.
     pub color: *const Color,
 
-    /// Per-vertex colors (if specified, must have the same length as `points`). One of `color` or `colors` must be provided.
+    /// Per-vertex colors (if specified, must have the same length as `points`).
     pub colors: *const Color,
     pub colors_count: usize,
 

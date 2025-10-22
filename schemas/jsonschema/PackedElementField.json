@@ -64,5 +64,10 @@
         }
       ]
     }
-  }
+  },
+  "required": [
+    "name",
+    "offset",
+    "type"
+  ]
 }

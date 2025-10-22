@@ -66,7 +66,11 @@
             "type": "number",
             "description": "y coordinate position"
           }
-        }
+        },
+        "required": [
+          "x",
+          "y"
+        ]
       },
       "description": "Points in 2D image coordinates (pixels).\nThese coordinates use the top-left corner of the top-left pixel of the image as the origin."
     },
@@ -91,7 +95,13 @@
           "type": "number",
           "description": "Alpha value between 0 and 1"
         }
-      }
+      },
+      "required": [
+        "r",
+        "g",
+        "b",
+        "a"
+      ]
     },
     "outline_colors": {
       "type": "array",
@@ -116,7 +126,13 @@
             "type": "number",
             "description": "Alpha value between 0 and 1"
           }
-        }
+        },
+        "required": [
+          "r",
+          "g",
+          "b",
+          "a"
+        ]
       },
       "description": "Per-point colors, if `type` is `POINTS`, or per-segment stroke colors, if `type` is `LINE_LIST`, `LINE_STRIP` or `LINE_LOOP`."
     },
@@ -141,11 +157,26 @@
           "type": "number",
           "description": "Alpha value between 0 and 1"
         }
-      }
+      },
+      "required": [
+        "r",
+        "g",
+        "b",
+        "a"
+      ]
     },
     "thickness": {
       "type": "number",
       "description": "Stroke thickness in pixels"
     }
-  }
+  },
+  "required": [
+    "timestamp",
+    "type",
+    "points",
+    "outline_color",
+    "outline_colors",
+    "fill_color",
+    "thickness"
+  ]
 }

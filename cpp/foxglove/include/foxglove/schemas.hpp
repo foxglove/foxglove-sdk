@@ -744,8 +744,8 @@ struct Grid {
   /// @brief Grid cell data, interpreted using `fields`, in row-major (y-major) order.
   /// @brief  For the data element starting at byte offset i, the coordinates of its corner closest
   /// to the origin will be:
-  /// @brief  y = (i / cell_stride) % row_stride * cell_size.y
-  /// @brief  x = i % cell_stride * cell_size.x
+  /// @brief  y = i / row_stride * cell_size.y
+  /// @brief  x = (i % row_stride) / cell_stride * cell_size.x
   std::vector<std::byte> data;
 
   /// @brief Encoded the Grid as protobuf to the provided buffer.
@@ -1085,11 +1085,10 @@ struct LinePrimitive {
   /// @brief Points along the line
   std::vector<Point3> points;
 
-  /// @brief Solid color to use for the whole line. One of `color` or `colors` must be provided.
+  /// @brief Solid color to use for the whole line. Ignored if `colors` is non-empty.
   std::optional<Color> color;
 
-  /// @brief Per-point colors (if specified, must have the same length as `points`). One of `color`
-  /// or `colors` must be provided.
+  /// @brief Per-point colors (if non-empty, must have the same length as `points`).
   std::vector<Color> colors;
 
   /// @brief Indices into the `points` and `colors` attribute arrays, which can be used to avoid
@@ -1330,11 +1329,10 @@ struct TriangleListPrimitive {
   /// @brief Vertices to use for triangles, interpreted as a list of triples (0-1-2, 3-4-5, ...)
   std::vector<Point3> points;
 
-  /// @brief Solid color to use for the whole shape. One of `color` or `colors` must be provided.
+  /// @brief Solid color to use for the whole shape. Ignored if `colors` is non-empty.
   std::optional<Color> color;
 
-  /// @brief Per-vertex colors (if specified, must have the same length as `points`). One of `color`
-  /// or `colors` must be provided.
+  /// @brief Per-vertex colors (if specified, must have the same length as `points`).
   std::vector<Color> colors;
 
   /// @brief Indices into the `points` and `colors` attribute arrays, which can be used to avoid
@@ -1420,7 +1418,7 @@ struct ModelPrimitive {
   /// original model.
   bool override_color = false;
 
-  /// @brief URL pointing to model file. One of `url` or `data` should be provided.
+  /// @brief URL pointing to model file. One of `url` or `data` should be non-empty.
   std::string url;
 
   /// @brief [Media
@@ -1429,7 +1427,7 @@ struct ModelPrimitive {
   /// the inferred media type if `url` is provided.
   std::string media_type;
 
-  /// @brief Embedded model. One of `url` or `data` should be provided. If `data` is provided,
+  /// @brief Embedded model. One of `url` or `data` should be non-empty. If `data` is non-empty,
   /// `media_type` must be set to indicate the type of the data.
   std::vector<std::byte> data;
 
