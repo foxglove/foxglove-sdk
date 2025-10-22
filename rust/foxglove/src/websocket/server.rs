@@ -46,6 +46,7 @@ pub(crate) struct ServerOptions {
     pub fetch_asset_handler: Option<Box<dyn AssetHandler>>,
     pub tls_identity: Option<TlsIdentity>,
     pub channel_filter: Option<Arc<dyn SinkChannelFilter>>,
+    pub server_info: Option<HashMap<String, String>>,
 }
 
 impl std::fmt::Debug for ServerOptions {
@@ -57,6 +58,7 @@ impl std::fmt::Debug for ServerOptions {
             .field("services", &self.services)
             .field("capabilities", &self.capabilities)
             .field("supported_encodings", &self.supported_encodings)
+            .field("server_info", &self.server_info)
             .finish()
     }
 }
@@ -159,6 +161,8 @@ pub(crate) struct Server {
     tasks: parking_lot::Mutex<Option<JoinSet<()>>>,
     /// Configuration to support TLS streams when enabled.
     stream_config: StreamConfiguration,
+    /// Info about the server, which is shared with clients.
+    server_info: HashMap<String, String>,
 }
 
 impl Server {
@@ -218,6 +222,7 @@ impl Server {
             services: parking_lot::RwLock::new(ServiceMap::from_iter(opts.services.into_values())),
             fetch_asset_handler: opts.fetch_asset_handler,
             tasks: parking_lot::Mutex::default(),
+            server_info: opts.server_info.unwrap_or_default(),
             stream_config,
         }
     }
@@ -507,6 +512,9 @@ impl Server {
 
     /// Builds a server info message.
     fn server_info(&self) -> ServerInfo {
+        let mut metadata = self.server_info.clone();
+        metadata.insert("fg-library".into(), get_library_version());
+
         ServerInfo::new(&self.name)
             .with_capabilities(
                 self.capabilities
@@ -514,10 +522,7 @@ impl Server {
                     .flat_map(Capability::as_protocol_capabilities)
                     .copied(),
             )
-            .with_metadata(HashMap::from([(
-                "fg-library".into(),
-                get_library_version(),
-            )]))
+            .with_metadata(metadata)
             .with_supported_encodings(&self.supported_encodings)
             .with_session_id(self.session_id.read().clone())
     }
