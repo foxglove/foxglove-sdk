@@ -37,12 +37,14 @@ yarn build
 To test the notebook integration:
 
 ```sh
-# activate poetry environment
-eval $(poetry env activate)
-# install extra dependencies
-pip install -e ".[notebook]"
+# Install Jupyter
+uv pip install jupyterlab
+
+# Build SDK with notebook extra
+uv run maturin develop -E notebook
+
 # launch jupyter lab
-jupyter lab
+uv run jupyter lab
 ```
 
 To check types, run:
