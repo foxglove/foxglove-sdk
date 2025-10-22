@@ -287,8 +287,8 @@ async function main({ clean }: { clean: boolean }) {
       path.resolve(schemasStubModule),
       path.resolve(channelStubModule),
     ];
-    await exec("poetry", ["run", "black", ...pythonFiles], { cwd: repoRoot });
-    await exec("poetry", ["run", "isort", ...pythonFiles], { cwd: repoRoot });
+    await exec("uv", ["run", "black", ...pythonFiles], { cwd: repoRoot });
+    await exec("uv", ["run", "isort", ...pythonFiles], { cwd: repoRoot });
   });
 
   await logProgress("Generating C library types", async () => {
