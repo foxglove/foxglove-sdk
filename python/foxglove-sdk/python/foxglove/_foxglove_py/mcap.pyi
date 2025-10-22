@@ -81,6 +81,7 @@ class MCAPWriter:
         will be automatically closed when it is garbage-collected, or when
         exiting the context manager.
         """
+        ...
 
     def write_metadata(self, name: str, metadata: dict[str, str]) -> None:
         """
