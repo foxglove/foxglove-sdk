@@ -402,7 +402,10 @@ mod tests {
         path: &Path,
         expected: &std::collections::HashMap<String, std::collections::BTreeMap<String, String>>,
     ) {
-        let mut found_metadata: std::collections::HashMap<String, std::collections::BTreeMap<String, String>> = std::collections::HashMap::new();
+        let mut found_metadata: std::collections::HashMap<
+            String,
+            std::collections::BTreeMap<String, String>,
+        > = std::collections::HashMap::new();
         let mut metadata_count = 0;
 
         foreach_mcap_metadata(path, |meta| {
@@ -412,14 +415,23 @@ mod tests {
         .expect("failed to read MCAP metadata");
 
         // Verify count
-        assert_eq!(metadata_count, expected.len(), "Wrong number of metadata records");
+        assert_eq!(
+            metadata_count,
+            expected.len(),
+            "Wrong number of metadata records"
+        );
 
         // Verify each expected metadata exists with correct key-value pairs
         for (name, expected_kv) in expected {
-            let actual = found_metadata.get(name)
+            let actual = found_metadata
+                .get(name)
                 .unwrap_or_else(|| panic!("Metadata '{}' not found", name));
 
-            assert_eq!(actual, expected_kv, "Metadata '{}' has wrong key-value pairs", name);
+            assert_eq!(
+                actual, expected_kv,
+                "Metadata '{}' has wrong key-value pairs",
+                name
+            );
         }
     }
 

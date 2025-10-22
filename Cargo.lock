@@ -722,7 +722,6 @@ dependencies = [
  "ctrlc",
  "env_logger",
  "foxglove 0.14.3",
- "mcap",
  "schemars 1.0.4",
  "serde",
 ]

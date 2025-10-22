@@ -217,8 +217,9 @@ unsafe fn do_foxglove_mcap_write_metadata(
     metadata: *const FoxgloveKeyValue,
     metadata_len: usize,
 ) -> Result<(), foxglove::FoxgloveError> {
-    let name = unsafe { name.as_utf8_str() }
-        .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("metadata name is invalid: {e}")))?;
+    let name = unsafe { name.as_utf8_str() }.map_err(|e| {
+        foxglove::FoxgloveError::Utf8Error(format!("metadata name is invalid: {e}"))
+    })?;
 
     // Convert C key-value array to BTreeMap
     let mut metadata_map = std::collections::BTreeMap::new();
