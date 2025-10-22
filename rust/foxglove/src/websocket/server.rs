@@ -1,6 +1,5 @@
 use std::collections::hash_map::Entry;
 use std::collections::HashSet;
-use std::env;
 use std::sync::Weak;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use std::{collections::HashMap, net::SocketAddr, sync::Arc};
@@ -508,16 +507,6 @@ impl Server {
 
     /// Builds a server info message.
     fn server_info(&self) -> ServerInfo {
-        let mut metadata = HashMap::from([("fg-library".into(), get_library_version())]);
-        // Include the ROS version if set. This is communicated to the app to help identify
-        // available schemas and publishing support.
-        match env::var("ROS_DISTRO") {
-            Ok(ros_distro) if !ros_distro.is_empty() => {
-                metadata.insert("ROS_DISTRO".into(), ros_distro);
-            }
-            _ => {}
-        }
-
         ServerInfo::new(&self.name)
             .with_capabilities(
                 self.capabilities
@@ -525,7 +514,10 @@ impl Server {
                     .flat_map(Capability::as_protocol_capabilities)
                     .copied(),
             )
-            .with_metadata(metadata)
+            .with_metadata(HashMap::from([(
+                "fg-library".into(),
+                get_library_version(),
+            )]))
             .with_supported_encodings(&self.supported_encodings)
             .with_session_id(self.session_id.read().clone())
     }
