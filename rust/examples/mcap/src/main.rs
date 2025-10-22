@@ -103,8 +103,8 @@ fn main() {
 
     // If you want to add some MCAP metadata: https://mcap.dev/spec#metadata-op0x0c
     let mut metadata = BTreeMap::new();
-    metadata.insert("os".to_string(), "linux".to_string());
-    metadata.insert("arch".to_string(), "x64".to_string());
+    metadata.insert("os".to_string(), std::env::consts::OS.to_string());
+    metadata.insert("arch".to_string(), std::env::consts::ARCH.to_string());
     writer
         .write_metadata("platform", metadata)
         .expect("Failed to write metadata");

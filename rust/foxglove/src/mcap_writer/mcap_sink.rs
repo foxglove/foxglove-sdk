@@ -425,12 +425,11 @@ mod tests {
         for (name, expected_kv) in expected {
             let actual = found_metadata
                 .get(name)
-                .unwrap_or_else(|| panic!("Metadata '{}' not found", name));
+                .unwrap_or_else(|| panic!("Metadata '{name}' not found"));
 
             assert_eq!(
                 actual, expected_kv,
-                "Metadata '{}' has wrong key-value pairs",
-                name
+                "Metadata '{name}' has wrong key-value pairs",
             );
         }
     }
@@ -448,17 +447,14 @@ mod tests {
         metadata.insert("key2".to_string(), "value2".to_string());
 
         writer
-            .write_metadata("test_metadata", metadata)
+            .write_metadata("test_metadata", metadata.clone())
             .expect("failed to write metadata");
 
         writer.finish().expect("failed to finish recording");
 
         // Define expected metadata and verify
         let mut expected = std::collections::HashMap::new();
-        let mut expected_metadata = BTreeMap::new();
-        expected_metadata.insert("key1".to_string(), "value1".to_string());
-        expected_metadata.insert("key2".to_string(), "value2".to_string());
-        expected.insert("test_metadata".to_string(), expected_metadata);
+        expected.insert("test_metadata".to_string(), metadata);
 
         verify_metadata_in_file(&temp_path, &expected);
     }
@@ -493,32 +489,26 @@ mod tests {
         let writer = McapSink::new(&temp_file, WriteOptions::default(), None)
             .expect("failed to create writer");
 
-        let mut metadata1 = BTreeMap::new();
-        metadata1.insert("session".to_string(), "test_session".to_string());
+        let mut session = BTreeMap::new();
+        session.insert("session".to_string(), "test_session".to_string());
 
-        let mut metadata2 = BTreeMap::new();
-        metadata2.insert("operator".to_string(), "Alice".to_string());
+        let mut operator = BTreeMap::new();
+        operator.insert("operator".to_string(), "Alice".to_string());
 
         writer
-            .write_metadata("session_info", metadata1)
+            .write_metadata("session_info", session.clone())
             .expect("failed to write metadata 1");
 
         writer
-            .write_metadata("operator_info", metadata2)
+            .write_metadata("operator_info", operator.clone())
             .expect("failed to write metadata 2");
 
         writer.finish().expect("failed to finish recording");
 
         // Define expected metadata and verify
         let mut expected = std::collections::HashMap::new();
-
-        let mut expected_session = BTreeMap::new();
-        expected_session.insert("session".to_string(), "test_session".to_string());
-        expected.insert("session_info".to_string(), expected_session);
-
-        let mut expected_operator = BTreeMap::new();
-        expected_operator.insert("operator".to_string(), "Alice".to_string());
-        expected.insert("operator_info".to_string(), expected_operator);
+        expected.insert("session_info".to_string(), session);
+        expected.insert("operator_info".to_string(), operator);
 
         verify_metadata_in_file(&temp_path, &expected);
     }
