@@ -511,8 +511,11 @@ impl Server {
         let mut metadata = HashMap::from([("fg-library".into(), get_library_version())]);
         // Include the ROS version if set. This is communicated to the app to help identify
         // available schemas and publishing support.
-        if let Ok(ros_distro) = env::var("ROS_DISTRO") {
-            metadata.insert("ROS_DISTRO".into(), ros_distro);
+        match env::var("ROS_DISTRO") {
+            Ok(ros_distro) if !ros_distro.is_empty() => {
+                metadata.insert("ROS_DISTRO".into(), ros_distro);
+            }
+            _ => {}
         }
 
         ServerInfo::new(&self.name)
