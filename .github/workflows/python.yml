@@ -4,8 +4,7 @@ on:
   push:
     branches: [main]
     tags: ["**"]
-  pull_request:
-    branches: ["*"]
+  pull_request: {}
 
 jobs:
   lint:
@@ -20,26 +19,8 @@ jobs:
       - uses: astral-sh/setup-uv@v6
       - run: make -f Container.mk lint-python
 
-  notebook-frontend:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-      - run: corepack enable
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: yarn
-      - run: yarn workspaces focus @foxglove/notebook-frontend
-      - run: yarn build:prod
-      - name: Upload notebook FrontEnd assets
-        uses: actions/upload-artifact@v4
-        with:
-          name: notebook-frontend
-          path: python/foxglove-sdk/python/foxglove/notebook/static/
-
   lint-and-test-sdk:
     runs-on: ubuntu-latest
-    needs: [notebook-frontend]
     steps:
       - uses: actions/checkout@v5
       - uses: actions-rust-lang/setup-rust-toolchain@v1
@@ -53,17 +34,10 @@ jobs:
           node-version: 22
           cache: yarn
 
-      - name: Download notebook FrontEnd assets
-        uses: actions/download-artifact@v5
-        with:
-          name: notebook-frontend
-          path: python/foxglove-sdk/python/foxglove/notebook/static/
-
       - run: make -f Container.mk test-python
 
   playground:
     runs-on: ubuntu-latest
-    needs: [notebook-frontend]
     defaults:
       run:
         working-directory: python/foxglove-sdk
@@ -95,11 +69,6 @@ jobs:
           echo "$(pwd)/emsdk" >> $GITHUB_PATH
           echo "$(pwd)/emsdk/upstream/emscripten" >> $GITHUB_PATH
 
-      - name: Download notebook FrontEnd assets
-        uses: actions/download-artifact@v5
-        with:
-          name: notebook-frontend
-          path: python/foxglove-sdk/python/foxglove/notebook/static/
       - run: uv lock --check
       - run: CFLAGS=-fPIC RUSTC_BOOTSTRAP=1 uv run maturin build --release --out dist --target wasm32-unknown-emscripten -i python3.12
       - run: mkdir -p ../../playground/public
@@ -165,7 +134,7 @@ jobs:
 
   linux:
     runs-on: ${{ matrix.platform.runner }}
-    needs: [notebook-frontend]
+    needs: [sdist]
     strategy:
       matrix:
         platform:
@@ -182,20 +151,19 @@ jobs:
           - runner: ubuntu-22.04
             target: ppc64le
     steps:
-      - uses: actions/checkout@v5
       - uses: actions/setup-python@v5
         with:
           python-version: "3.9"
-      - name: Download notebook FrontEnd assets
+      - name: Download sdist
         uses: actions/download-artifact@v5
         with:
-          name: notebook-frontend
-          path: python/foxglove-sdk/python/foxglove/notebook/static/
+          name: wheels-sdist
+      - name: Unpack sdist
+        run: tar xzf foxglove_sdk-*.tar.gz --strip-components 1
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.platform.target }}
-          working-directory: python/foxglove-sdk
           args: --release --out dist --find-interpreter
           sccache: "false"
           manylinux: auto
@@ -203,11 +171,11 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: wheels-linux-${{ matrix.platform.target }}
-          path: python/foxglove-sdk/dist
+          path: dist
 
   musllinux:
     runs-on: ${{ matrix.platform.runner }}
-    needs: [notebook-frontend]
+    needs: [sdist]
     strategy:
       matrix:
         platform:
@@ -220,20 +188,19 @@ jobs:
           - runner: ubuntu-22.04
             target: armv7
     steps:
-      - uses: actions/checkout@v5
       - uses: actions/setup-python@v5
         with:
           python-version: "3.9"
-      - name: Download notebook FrontEnd assets
+      - name: Download sdist
         uses: actions/download-artifact@v5
         with:
-          name: notebook-frontend
-          path: python/foxglove-sdk/python/foxglove/notebook/static/
+          name: wheels-sdist
+      - name: Unpack sdist
+        run: tar xzf foxglove_sdk-*.tar.gz --strip-components 1
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.platform.target }}
-          working-directory: python/foxglove-sdk
           args: --release --out dist --find-interpreter
           sccache: "false"
           manylinux: musllinux_1_2
@@ -241,11 +208,11 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: wheels-musllinux-${{ matrix.platform.target }}
-          path: python/foxglove-sdk/dist
+          path: dist
 
   windows:
     runs-on: ${{ matrix.platform.runner }}
-    needs: [notebook-frontend]
+    needs: [sdist]
     strategy:
       matrix:
         platform:
@@ -254,32 +221,32 @@ jobs:
           - runner: windows-latest
             target: x86
     steps:
-      - uses: actions/checkout@v5
       - uses: actions/setup-python@v5
         with:
           python-version: "3.9"
           architecture: ${{ matrix.platform.target }}
-      - name: Download notebook FrontEnd assets
+      - name: Download sdist
         uses: actions/download-artifact@v5
         with:
-          name: notebook-frontend
-          path: python/foxglove-sdk/python/foxglove/notebook/static/
+          name: wheels-sdist
+      - name: Unpack sdist
+        shell: bash
+        run: tar xzf foxglove_sdk-*.tar.gz --strip-components 1
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.platform.target }}
-          working-directory: python/foxglove-sdk
           args: --release --out dist --interpreter python
           sccache: "false"
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
           name: wheels-windows-${{ matrix.platform.target }}
-          path: python/foxglove-sdk/dist
+          path: dist
 
   macos:
     runs-on: ${{ matrix.platform.runner }}
-    needs: [notebook-frontend]
+    needs: [sdist]
     strategy:
       matrix:
         platform:
@@ -288,44 +255,40 @@ jobs:
           - runner: macos-14
             target: aarch64
     steps:
-      - uses: actions/checkout@v5
       - uses: actions/setup-python@v5
         with:
           python-version: "3.9"
-      - name: Download notebook FrontEnd assets
+      - name: Download sdist
         uses: actions/download-artifact@v5
         with:
-          name: notebook-frontend
-          path: python/foxglove-sdk/python/foxglove/notebook/static/
+          name: wheels-sdist
+      - name: Unpack sdist
+        run: tar xzf foxglove_sdk-*.tar.gz --strip-components 1
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.platform.target }}
-          working-directory: python/foxglove-sdk
           args: --release --out dist --find-interpreter
           sccache: "false"
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
           name: wheels-macos-${{ matrix.platform.target }}
-          path: python/foxglove-sdk/dist
+          path: dist
 
   sdist:
     runs-on: ubuntu-latest
-    needs: [notebook-frontend]
     steps:
       - uses: actions/checkout@v5
-      - name: Download notebook FrontEnd assets
-        uses: actions/download-artifact@v5
+      - uses: astral-sh/setup-uv@v6
+      - run: corepack enable
+      - uses: actions/setup-node@v4
         with:
-          name: notebook-frontend
-          path: python/foxglove-sdk/python/foxglove/notebook/static/
+          node-version: 22
+          cache: yarn
       - name: Build sdist
-        uses: PyO3/maturin-action@v1
-        with:
-          command: sdist
-          args: --out dist
-          working-directory: python/foxglove-sdk
+        run: uv build --sdist
+        working-directory: python/foxglove-sdk
       - name: Upload sdist
         uses: actions/upload-artifact@v4
         with:
@@ -347,7 +310,7 @@ jobs:
       - uses: actions/download-artifact@v5
         with:
           path: python/foxglove-sdk
-      - run: find python/foxglove-sdk/wheels*
+      - run: find python/foxglove-sdk/wheels-*
       - name: Generate artifact attestation
         uses: actions/attest-build-provenance@v2
         with:
@@ -361,7 +324,7 @@ jobs:
 
   test-sdk-examples:
     runs-on: ubuntu-latest
-    needs: [notebook-frontend, lint-and-test-sdk]
+    needs: [lint-and-test-sdk]
     permissions:
       contents: write
     steps:
@@ -376,11 +339,5 @@ jobs:
         with:
           node-version: 22
           cache: yarn
-      - name: Download notebook FrontEnd assets
-        uses: actions/download-artifact@v5
-        with:
-          name: notebook-frontend
-          path: python/foxglove-sdk/python/foxglove/notebook/static/
-      - run: make -f Container.mk build-python
       - run: yarn install
       - run: yarn run-python-sdk-examples
