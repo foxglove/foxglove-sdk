@@ -47,7 +47,12 @@
             "type": "string",
             "description": "Identifier which must match if `type` is `MATCHING_ID`."
           }
-        }
+        },
+        "required": [
+          "timestamp",
+          "type",
+          "id"
+        ]
       },
       "description": "Scene entities to delete"
     },
@@ -116,7 +121,11 @@
                   "type": "string",
                   "description": "Value"
                 }
-              }
+              },
+              "required": [
+                "key",
+                "value"
+              ]
             },
             "description": "Additional user-provided metadata associated with the entity. Keys must be unique."
           },
@@ -149,7 +158,12 @@
                           "type": "number",
                           "description": "z coordinate length"
                         }
-                      }
+                      },
+                      "required": [
+                        "x",
+                        "y",
+                        "z"
+                      ]
                     },
                     "orientation": {
                       "title": "foxglove.Quaternion",
@@ -172,9 +186,19 @@
                           "type": "number",
                           "description": "w value"
                         }
-                      }
+                      },
+                      "required": [
+                        "x",
+                        "y",
+                        "z",
+                        "w"
+                      ]
                     }
-                  }
+                  },
+                  "required": [
+                    "position",
+                    "orientation"
+                  ]
                 },
                 "shaft_length": {
                   "type": "number",
@@ -213,9 +237,23 @@
                       "type": "number",
                       "description": "Alpha value between 0 and 1"
                     }
-                  }
+                  },
+                  "required": [
+                    "r",
+                    "g",
+                    "b",
+                    "a"
+                  ]
                 }
-              }
+              },
+              "required": [
+                "pose",
+                "shaft_length",
+                "shaft_diameter",
+                "head_length",
+                "head_diameter",
+                "color"
+              ]
             },
             "description": "Arrow primitives"
           },
@@ -248,7 +286,12 @@
                           "type": "number",
                           "description": "z coordinate length"
                         }
-                      }
+                      },
+                      "required": [
+                        "x",
+                        "y",
+                        "z"
+                      ]
                     },
                     "orientation": {
                       "title": "foxglove.Quaternion",
@@ -271,9 +314,19 @@
                           "type": "number",
                           "description": "w value"
                         }
-                      }
+                      },
+                      "required": [
+                        "x",
+                        "y",
+                        "z",
+                        "w"
+                      ]
                     }
-                  }
+                  },
+                  "required": [
+                    "position",
+                    "orientation"
+                  ]
                 },
                 "size": {
                   "title": "foxglove.Vector3",
@@ -292,7 +345,12 @@
                       "type": "number",
                       "description": "z coordinate length"
                     }
-                  }
+                  },
+                  "required": [
+                    "x",
+                    "y",
+                    "z"
+                  ]
                 },
                 "color": {
                   "title": "foxglove.Color",
@@ -315,9 +373,20 @@
                       "type": "number",
                       "description": "Alpha value between 0 and 1"
                     }
-                  }
+                  },
+                  "required": [
+                    "r",
+                    "g",
+                    "b",
+                    "a"
+                  ]
                 }
-              }
+              },
+              "required": [
+                "pose",
+                "size",
+                "color"
+              ]
             },
             "description": "Cube primitives"
           },
@@ -350,7 +419,12 @@
                           "type": "number",
                           "description": "z coordinate length"
                         }
-                      }
+                      },
+                      "required": [
+                        "x",
+                        "y",
+                        "z"
+                      ]
                     },
                     "orientation": {
                       "title": "foxglove.Quaternion",
@@ -373,9 +447,19 @@
                           "type": "number",
                           "description": "w value"
                         }
-                      }
+                      },
+                      "required": [
+                        "x",
+                        "y",
+                        "z",
+                        "w"
+                      ]
                     }
-                  }
+                  },
+                  "required": [
+                    "position",
+                    "orientation"
+                  ]
                 },
                 "size": {
                   "title": "foxglove.Vector3",
@@ -394,7 +478,12 @@
                       "type": "number",
                       "description": "z coordinate length"
                     }
-                  }
+                  },
+                  "required": [
+                    "x",
+                    "y",
+                    "z"
+                  ]
                 },
                 "color": {
                   "title": "foxglove.Color",
@@ -417,9 +506,20 @@
                       "type": "number",
                       "description": "Alpha value between 0 and 1"
                     }
-                  }
+                  },
+                  "required": [
+                    "r",
+                    "g",
+                    "b",
+                    "a"
+                  ]
                 }
-              }
+              },
+              "required": [
+                "pose",
+                "size",
+                "color"
+              ]
             },
             "description": "Sphere primitives"
           },
@@ -452,7 +552,12 @@
                           "type": "number",
                           "description": "z coordinate length"
                         }
-                      }
+                      },
+                      "required": [
+                        "x",
+                        "y",
+                        "z"
+                      ]
                     },
                     "orientation": {
                       "title": "foxglove.Quaternion",
@@ -475,9 +580,19 @@
                           "type": "number",
                           "description": "w value"
                         }
-                      }
+                      },
+                      "required": [
+                        "x",
+                        "y",
+                        "z",
+                        "w"
+                      ]
                     }
-                  }
+                  },
+                  "required": [
+                    "position",
+                    "orientation"
+                  ]
                 },
                 "size": {
                   "title": "foxglove.Vector3",
@@ -496,7 +611,12 @@
                       "type": "number",
                       "description": "z coordinate length"
                     }
-                  }
+                  },
+                  "required": [
+                    "x",
+                    "y",
+                    "z"
+                  ]
                 },
                 "bottom_scale": {
                   "type": "number",
@@ -527,9 +647,22 @@
                       "type": "number",
                       "description": "Alpha value between 0 and 1"
                     }
-                  }
+                  },
+                  "required": [
+                    "r",
+                    "g",
+                    "b",
+                    "a"
+                  ]
                 }
-              }
+              },
+              "required": [
+                "pose",
+                "size",
+                "bottom_scale",
+                "top_scale",
+                "color"
+              ]
             },
             "description": "Cylinder primitives"
           },
@@ -583,7 +716,12 @@
                           "type": "number",
                           "description": "z coordinate length"
                         }
-                      }
+                      },
+                      "required": [
+                        "x",
+                        "y",
+                        "z"
+                      ]
                     },
                     "orientation": {
                       "title": "foxglove.Quaternion",
@@ -606,9 +744,19 @@
                           "type": "number",
                           "description": "w value"
                         }
-                      }
+                      },
+                      "required": [
+                        "x",
+                        "y",
+                        "z",
+                        "w"
+                      ]
                     }
-                  }
+                  },
+                  "required": [
+                    "position",
+                    "orientation"
+                  ]
                 },
                 "thickness": {
                   "type": "number",
@@ -637,13 +785,18 @@
                         "type": "number",
                         "description": "z coordinate position"
                       }
-                    }
+                    },
+                    "required": [
+                      "x",
+                      "y",
+                      "z"
+                    ]
                   },
                   "description": "Points along the line"
                 },
                 "color": {
                   "title": "foxglove.Color",
-                  "description": "Solid color to use for the whole line. One of `color` or `colors` must be provided.",
+                  "description": "Solid color to use for the whole line. Ignored if `colors` is non-empty.",
                   "type": "object",
                   "properties": {
                     "r": {
@@ -662,7 +815,13 @@
                       "type": "number",
                       "description": "Alpha value between 0 and 1"
                     }
-                  }
+                  },
+                  "required": [
+                    "r",
+                    "g",
+                    "b",
+                    "a"
+                  ]
                 },
                 "colors": {
                   "type": "array",
@@ -687,9 +846,15 @@
                         "type": "number",
                         "description": "Alpha value between 0 and 1"
                       }
-                    }
+                    },
+                    "required": [
+                      "r",
+                      "g",
+                      "b",
+                      "a"
+                    ]
                   },
-                  "description": "Per-point colors (if specified, must have the same length as `points`). One of `color` or `colors` must be provided."
+                  "description": "Per-point colors (if non-empty, must have the same length as `points`)."
                 },
                 "indices": {
                   "type": "array",
@@ -699,7 +864,17 @@
                   },
                   "description": "Indices into the `points` and `colors` attribute arrays, which can be used to avoid duplicating attribute data.\n\nIf omitted or empty, indexing will not be used. This default behavior is equivalent to specifying [0, 1, ..., N-1] for the indices (where N is the number of `points` provided)."
                 }
-              }
+              },
+              "required": [
+                "type",
+                "pose",
+                "thickness",
+                "scale_invariant",
+                "points",
+                "color",
+                "colors",
+                "indices"
+              ]
             },
             "description": "Line primitives"
           },
@@ -732,7 +907,12 @@
                           "type": "number",
                           "description": "z coordinate length"
                         }
-                      }
+                      },
+                      "required": [
+                        "x",
+                        "y",
+                        "z"
+                      ]
                     },
                     "orientation": {
                       "title": "foxglove.Quaternion",
@@ -755,9 +935,19 @@
                           "type": "number",
                           "description": "w value"
                         }
-                      }
+                      },
+                      "required": [
+                        "x",
+                        "y",
+                        "z",
+                        "w"
+                      ]
                     }
-                  }
+                  },
+                  "required": [
+                    "position",
+                    "orientation"
+                  ]
                 },
                 "points": {
                   "type": "array",
@@ -778,13 +968,18 @@
                         "type": "number",
                         "description": "z coordinate position"
                       }
-                    }
+                    },
+                    "required": [
+                      "x",
+                      "y",
+                      "z"
+                    ]
                   },
                   "description": "Vertices to use for triangles, interpreted as a list of triples (0-1-2, 3-4-5, ...)"
                 },
                 "color": {
                   "title": "foxglove.Color",
-                  "description": "Solid color to use for the whole shape. One of `color` or `colors` must be provided.",
+                  "description": "Solid color to use for the whole shape. Ignored if `colors` is non-empty.",
                   "type": "object",
                   "properties": {
                     "r": {
@@ -803,7 +998,13 @@
                       "type": "number",
                       "description": "Alpha value between 0 and 1"
                     }
-                  }
+                  },
+                  "required": [
+                    "r",
+                    "g",
+                    "b",
+                    "a"
+                  ]
                 },
                 "colors": {
                   "type": "array",
@@ -828,9 +1029,15 @@
                         "type": "number",
                         "description": "Alpha value between 0 and 1"
                       }
-                    }
+                    },
+                    "required": [
+                      "r",
+                      "g",
+                      "b",
+                      "a"
+                    ]
                   },
-                  "description": "Per-vertex colors (if specified, must have the same length as `points`). One of `color` or `colors` must be provided."
+                  "description": "Per-vertex colors (if specified, must have the same length as `points`)."
                 },
                 "indices": {
                   "type": "array",
@@ -840,7 +1047,14 @@
                   },
                   "description": "Indices into the `points` and `colors` attribute arrays, which can be used to avoid duplicating attribute data.\n\nIf omitted or empty, indexing will not be used. This default behavior is equivalent to specifying [0, 1, ..., N-1] for the indices (where N is the number of `points` provided)."
                 }
-              }
+              },
+              "required": [
+                "pose",
+                "points",
+                "color",
+                "colors",
+                "indices"
+              ]
             },
             "description": "Triangle list primitives"
           },
@@ -873,7 +1087,12 @@
                           "type": "number",
                           "description": "z coordinate length"
                         }
-                      }
+                      },
+                      "required": [
+                        "x",
+                        "y",
+                        "z"
+                      ]
                     },
                     "orientation": {
                       "title": "foxglove.Quaternion",
@@ -896,9 +1115,19 @@
                           "type": "number",
                           "description": "w value"
                         }
-                      }
+                      },
+                      "required": [
+                        "x",
+                        "y",
+                        "z",
+                        "w"
+                      ]
                     }
-                  }
+                  },
+                  "required": [
+                    "position",
+                    "orientation"
+                  ]
                 },
                 "billboard": {
                   "type": "boolean",
@@ -933,13 +1162,27 @@
                       "type": "number",
                       "description": "Alpha value between 0 and 1"
                     }
-                  }
+                  },
+                  "required": [
+                    "r",
+                    "g",
+                    "b",
+                    "a"
+                  ]
                 },
                 "text": {
                   "type": "string",
                   "description": "Text"
                 }
-              }
+              },
+              "required": [
+                "pose",
+                "billboard",
+                "font_size",
+                "scale_invariant",
+                "color",
+                "text"
+              ]
             },
             "description": "Text primitives"
           },
@@ -972,7 +1215,12 @@
                           "type": "number",
                           "description": "z coordinate length"
                         }
-                      }
+                      },
+                      "required": [
+                        "x",
+                        "y",
+                        "z"
+                      ]
                     },
                     "orientation": {
                       "title": "foxglove.Quaternion",
@@ -995,9 +1243,19 @@
                           "type": "number",
                           "description": "w value"
                         }
-                      }
+                      },
+                      "required": [
+                        "x",
+                        "y",
+                        "z",
+                        "w"
+                      ]
                     }
-                  }
+                  },
+                  "required": [
+                    "position",
+                    "orientation"
+                  ]
                 },
                 "scale": {
                   "title": "foxglove.Vector3",
@@ -1016,7 +1274,12 @@
                       "type": "number",
                       "description": "z coordinate length"
                     }
-                  }
+                  },
+                  "required": [
+                    "x",
+                    "y",
+                    "z"
+                  ]
                 },
                 "color": {
                   "title": "foxglove.Color",
@@ -1039,7 +1302,13 @@
                       "type": "number",
                       "description": "Alpha value between 0 and 1"
                     }
-                  }
+                  },
+                  "required": [
+                    "r",
+                    "g",
+                    "b",
+                    "a"
+                  ]
                 },
                 "override_color": {
                   "type": "boolean",
@@ -1047,7 +1316,7 @@
                 },
                 "url": {
                   "type": "string",
-                  "description": "URL pointing to model file. One of `url` or `data` should be provided."
+                  "description": "URL pointing to model file. One of `url` or `data` should be non-empty."
                 },
                 "media_type": {
                   "type": "string",
@@ -1056,15 +1325,44 @@
                 "data": {
                   "type": "string",
                   "contentEncoding": "base64",
-                  "description": "Embedded model. One of `url` or `data` should be provided. If `data` is provided, `media_type` must be set to indicate the type of the data."
+                  "description": "Embedded model. One of `url` or `data` should be non-empty. If `data` is non-empty, `media_type` must be set to indicate the type of the data."
                 }
-              }
+              },
+              "required": [
+                "pose",
+                "scale",
+                "color",
+                "override_color",
+                "url",
+                "media_type",
+                "data"
+              ]
             },
             "description": "Model primitives"
           }
-        }
+        },
+        "required": [
+          "timestamp",
+          "frame_id",
+          "id",
+          "lifetime",
+          "frame_locked",
+          "metadata",
+          "arrows",
+          "cubes",
+          "spheres",
+          "cylinders",
+          "lines",
+          "triangles",
+          "texts",
+          "models"
+        ]
       },
       "description": "Scene entities to add or replace"
     }
-  }
+  },
+  "required": [
+    "deletions",
+    "entities"
+  ]
 }

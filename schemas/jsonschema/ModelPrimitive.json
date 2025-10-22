@@ -26,7 +26,12 @@
               "type": "number",
               "description": "z coordinate length"
             }
-          }
+          },
+          "required": [
+            "x",
+            "y",
+            "z"
+          ]
         },
         "orientation": {
           "title": "foxglove.Quaternion",
@@ -49,9 +54,19 @@
               "type": "number",
               "description": "w value"
             }
-          }
+          },
+          "required": [
+            "x",
+            "y",
+            "z",
+            "w"
+          ]
         }
-      }
+      },
+      "required": [
+        "position",
+        "orientation"
+      ]
     },
     "scale": {
       "title": "foxglove.Vector3",
@@ -70,7 +85,12 @@
           "type": "number",
           "description": "z coordinate length"
         }
-      }
+      },
+      "required": [
+        "x",
+        "y",
+        "z"
+      ]
     },
     "color": {
       "title": "foxglove.Color",
@@ -93,7 +113,13 @@
           "type": "number",
           "description": "Alpha value between 0 and 1"
         }
-      }
+      },
+      "required": [
+        "r",
+        "g",
+        "b",
+        "a"
+      ]
     },
     "override_color": {
       "type": "boolean",
@@ -101,7 +127,7 @@
     },
     "url": {
       "type": "string",
-      "description": "URL pointing to model file. One of `url` or `data` should be provided."
+      "description": "URL pointing to model file. One of `url` or `data` should be non-empty."
     },
     "media_type": {
       "type": "string",
@@ -110,7 +136,16 @@
     "data": {
       "type": "string",
       "contentEncoding": "base64",
-      "description": "Embedded model. One of `url` or `data` should be provided. If `data` is provided, `media_type` must be set to indicate the type of the data."
+      "description": "Embedded model. One of `url` or `data` should be non-empty. If `data` is non-empty, `media_type` must be set to indicate the type of the data."
     }
-  }
+  },
+  "required": [
+    "pose",
+    "scale",
+    "color",
+    "override_color",
+    "url",
+    "media_type",
+    "data"
+  ]
 }

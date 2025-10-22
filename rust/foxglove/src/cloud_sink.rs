@@ -2,8 +2,9 @@ use std::sync::Arc;
 
 use crate::{
     get_runtime_handle,
+    sink_channel_filter::{SinkChannelFilter, SinkChannelFilterFn},
     websocket::{self, Server, ShutdownHandle},
-    Context, FoxgloveError, WebSocketServer, WebSocketServerHandle,
+    ChannelDescriptor, Context, FoxgloveError, WebSocketServer, WebSocketServerHandle,
 };
 
 pub use websocket::{ChannelView, Client, ClientChannel};
@@ -87,6 +88,7 @@ pub struct CloudSink {
     listener: Option<Arc<dyn CloudSinkListener>>,
     supported_encodings: Vec<String>,
     context: Arc<Context>,
+    channel_filter: Option<Arc<dyn SinkChannelFilter>>,
     runtime: Option<tokio::runtime::Handle>,
 }
 
@@ -110,6 +112,7 @@ impl Default for CloudSink {
             listener: None,
             supported_encodings: Vec::new(),
             context: Context::get_default(),
+            channel_filter: None,
             runtime: None,
         }
     }
@@ -164,6 +167,24 @@ impl CloudSink {
     #[doc(hidden)]
     pub fn tokio_runtime(mut self, handle: &tokio::runtime::Handle) -> Self {
         self.runtime = Some(handle.clone());
+        self
+    }
+
+    /// Sets a [`SinkChannelFilter`].
+    ///
+    /// The filter is a function that takes a channel and returns a boolean indicating whether the
+    /// channel should be logged.
+    pub fn channel_filter(mut self, filter: Arc<dyn SinkChannelFilter>) -> Self {
+        self.channel_filter = Some(filter);
+        self
+    }
+
+    /// Sets a channel filter. See [`SinkChannelFilter`] for more information.
+    pub fn channel_filter_fn(
+        mut self,
+        filter: impl Fn(&ChannelDescriptor) -> bool + Sync + Send + 'static,
+    ) -> Self {
+        self.channel_filter = Some(Arc::new(SinkChannelFilterFn(filter)));
         self
     }
 
