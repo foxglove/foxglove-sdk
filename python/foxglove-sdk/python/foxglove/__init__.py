@@ -169,15 +169,15 @@ def init_notebook_buffer(context: Context | None = None) -> NotebookBuffer:
         >>> import foxglove
         >>>
         >>> # Create a basic viewer using the default context
-        >>> nb_sink = foxglove.init_notebook_sink()
+        >>> nb_buffer = foxglove.init_notebook_buffer()
         >>>
         >>> # Or use a specific context
-        >>> nb_sink = foxglove.init_notebook_sink(context=my_ctx)
+        >>> nb_buffer = foxglove.init_notebook_buffer(context=my_ctx)
         >>>
         >>> # ... log data as usual ...
         >>>
         >>> # Display the widget in the notebook
-        >>> nb_sink.show()
+        >>> nb_buffer.show()
     """
     try:
         from .notebook.notebook_buffer import NotebookBuffer
