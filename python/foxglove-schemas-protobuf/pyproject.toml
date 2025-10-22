@@ -5,7 +5,10 @@ description = "Precompiled protocol buffer schemas for Foxglove"
 authors = [{ name = "Foxglove", email = "support@foxglove.dev" }]
 license = { text = "MIT" }
 readme = "README.md"
-dynamic = ["classifiers"]
+classifiers = [
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+]
 requires-python = ">=3.9"
 dependencies = ["protobuf (>=3.20)"]
 
@@ -13,26 +16,19 @@ dependencies = ["protobuf (>=3.20)"]
 repository = "https://github.com/foxglove/foxglove-sdk"
 documentation = "https://docs.foxglove.dev/"
 
-[build-system]
-requires = ["poetry-core>=2.0.0,<3.0.0"]
-build-backend = "poetry.core.masonry.api"
-
-[tool.poetry]
-include = [
-  { path = "tests", format = "sdist" },
-  { path = "foxglove_schemas_protobuf/*.py", format = [
-    "sdist",
-    "wheel",
-  ] },
-  { path = "foxglove_schemas_protobuf/*.pyi", format = [
-    "sdist",
-    "wheel",
-  ] },
+[dependency-groups]
+dev = [
+    "pytest>=8.3.4,<9",
+    "mypy-protobuf>=3.6.0,<4",
 ]
 
-[tool.poetry.group.dev.dependencies]
-pytest = "^8.3.4"
-mypy-protobuf = "^3.6.0"
+[build-system]
+requires = ["uv_build>=0.9.3,<0.10.0"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-root = ""
+source-include = ["tests/**"]
 
 [tool.pytest.ini_options]
 addopts = "-vv --color=yes"
