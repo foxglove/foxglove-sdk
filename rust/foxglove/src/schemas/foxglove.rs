@@ -378,10 +378,10 @@ pub struct LinePrimitive {
     /// Points along the line
     #[prost(message, repeated, tag = "5")]
     pub points: ::prost::alloc::vec::Vec<Point3>,
-    /// Solid color to use for the whole line. One of `color` or `colors` must be provided.
+    /// Solid color to use for the whole line. Ignored if `colors` is non-empty.
     #[prost(message, optional, tag = "6")]
     pub color: ::core::option::Option<Color>,
-    /// Per-point colors (if specified, must have the same length as `points`). One of `color` or `colors` must be provided.
+    /// Per-point colors (if non-empty, must have the same length as `points`).
     #[prost(message, repeated, tag = "7")]
     pub colors: ::prost::alloc::vec::Vec<Color>,
     /// Indices into the `points` and `colors` attribute arrays, which can be used to avoid duplicating attribute data.
@@ -622,13 +622,13 @@ pub struct ModelPrimitive {
     /// Whether to use the color specified in `color` instead of any materials embedded in the original model.
     #[prost(bool, tag = "4")]
     pub override_color: bool,
-    /// URL pointing to model file. One of `url` or `data` should be provided.
+    /// URL pointing to model file. One of `url` or `data` should be non-empty.
     #[prost(string, tag = "5")]
     pub url: ::prost::alloc::string::String,
     /// [Media type](<https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types>) of embedded model (e.g. `model/gltf-binary`). Required if `data` is provided instead of `url`. Overrides the inferred media type if `url` is provided.
     #[prost(string, tag = "6")]
     pub media_type: ::prost::alloc::string::String,
-    /// Embedded model. One of `url` or `data` should be provided. If `data` is provided, `media_type` must be set to indicate the type of the data.
+    /// Embedded model. One of `url` or `data` should be non-empty. If `data` is non-empty, `media_type` must be set to indicate the type of the data.
     #[prost(bytes = "bytes", tag = "7")]
     pub data: ::prost::bytes::Bytes,
 }
@@ -1184,10 +1184,10 @@ pub struct TriangleListPrimitive {
     /// Vertices to use for triangles, interpreted as a list of triples (0-1-2, 3-4-5, ...)
     #[prost(message, repeated, tag = "2")]
     pub points: ::prost::alloc::vec::Vec<Point3>,
-    /// Solid color to use for the whole shape. One of `color` or `colors` must be provided.
+    /// Solid color to use for the whole shape. Ignored if `colors` is non-empty.
     #[prost(message, optional, tag = "3")]
     pub color: ::core::option::Option<Color>,
-    /// Per-vertex colors (if specified, must have the same length as `points`). One of `color` or `colors` must be provided.
+    /// Per-vertex colors (if specified, must have the same length as `points`).
     #[prost(message, repeated, tag = "4")]
     pub colors: ::prost::alloc::vec::Vec<Color>,
     /// Indices into the `points` and `colors` attribute arrays, which can be used to avoid duplicating attribute data.
