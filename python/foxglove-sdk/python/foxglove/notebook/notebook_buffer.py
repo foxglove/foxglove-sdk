@@ -70,16 +70,23 @@ class NotebookBuffer:
 
     def get_data(self) -> list[bytes]:
         """
-        Retrieve all collected data and reset the buffer for new data collection.
+        Retrieve all collected data.
         """
         # close the current writer
         self._writer.close()
 
-        if len(self._files) > 1 and is_mcap_empty(self._files[-1]):
-            # If the last file is empty and there are more than one file, remove the last file
-            # since it won't add any new data to the buffer
-            os.remove(self._files[-1])
-            self._files.pop()
+        if len(self._files) > 1:
+            if is_mcap_empty(self._files[-1]):
+                # If the last file is empty, remove the last file since it won't add any new data
+                # to the buffer
+                os.remove(self._files[-1])
+                self._files.pop()
+            elif is_mcap_empty(self._files[0]):
+                # If the first file is empty, remove the first file since it won't add any new data
+                # to the buffer
+                os.remove(self._files[0])
+                self._files.pop(0)
+
 
         # read the content of the files
         contents: list[bytes] = []
