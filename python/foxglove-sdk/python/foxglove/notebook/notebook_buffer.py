@@ -87,7 +87,6 @@ class NotebookBuffer:
                 os.remove(self._files[0])
                 self._files.pop(0)
 
-
         # read the content of the files
         contents: list[bytes] = []
         for file_name in self._files:
