@@ -12,6 +12,7 @@
 
 #include "channel.hpp"
 
+/// @cond foxglove_internal
 enum foxglove_error : uint8_t;
 struct foxglove_mcap_writer;
 
@@ -19,6 +20,7 @@ foxglove_error foxglove_mcap_write_metadata(
   struct foxglove_mcap_writer* writer, const struct foxglove_string* FOXGLOVE_NONNULL name,
   const struct foxglove_key_value* metadata, size_t metadata_len
 );
+/// @endcond
 
 /// The foxglove namespace.
 namespace foxglove {
@@ -124,6 +126,7 @@ private:
   std::unique_ptr<foxglove_mcap_writer, foxglove_error (*)(foxglove_mcap_writer*)> impl_;
 };
 
+/// @copydoc McapWriter::writeMetadata
 template<typename Iter>
 FoxgloveError McapWriter::writeMetadata(std::string_view name, Iter begin, Iter end) {
   // Convert iterator range to C array of key-value pairs
