@@ -973,25 +973,25 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@foxglove/embed-react@npm:^0.1.2":
-  version: 0.1.2
-  resolution: "@foxglove/embed-react@npm:0.1.2"
+"@foxglove/embed-react@npm:^0.1.5":
+  version: 0.1.5
+  resolution: "@foxglove/embed-react@npm:0.1.5"
   dependencies:
-    "@foxglove/embed": "npm:0.1.2"
+    "@foxglove/embed": "npm:0.1.5"
     tslib: "npm:2.8.1"
   peerDependencies:
     react: ">=18"
     react-dom: ">=18"
-  checksum: 10c0/0d8b36bee8b60d4d5920d76824e921e3f83a5e1aebba1bba0c6e929754d9720c1b05d72837de6d6f7f9392deb4ecaea57ec58bbd096d12928c636ce463fdb078
+  checksum: 10c0/1bc8e76921e0059340ce6bd1a88b0e6a6b4fc4981f7f58c020d2bccb43bd1ea40a389c7fae39233fcbb348b57caa96a6a3673590b9a5720f03680ac05c437b56
   languageName: node
   linkType: hard
 
-"@foxglove/embed@npm:0.1.2, @foxglove/embed@npm:^0.1.2":
-  version: 0.1.2
-  resolution: "@foxglove/embed@npm:0.1.2"
+"@foxglove/embed@npm:0.1.5, @foxglove/embed@npm:^0.1.5":
+  version: 0.1.5
+  resolution: "@foxglove/embed@npm:0.1.5"
   dependencies:
     tslib: "npm:2.8.1"
-  checksum: 10c0/cc2496c2330b752858c265ca162f8a5e1f67250b85fcadce697a2dc88d0553047efc43dd68b9bd5e05faca3a08e42234ed6a74c6416953d07ef9e9fe268bf880
+  checksum: 10c0/747cd54ba057ec5fb5dc44ba54f0c3a4546b096c60935e48a59bfcefc3882e5e34ad6d1b456ccd1f7fe303f94838850f51dc97d2f4c8fe63ad7b86defef873f2
   languageName: node
   linkType: hard
 
@@ -8108,8 +8108,8 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "playground@workspace:playground"
   dependencies:
-    "@foxglove/embed": "npm:^0.1.2"
-    "@foxglove/embed-react": "npm:^0.1.2"
+    "@foxglove/embed": "npm:^0.1.5"
+    "@foxglove/embed-react": "npm:^0.1.5"
     "@foxglove/tsconfig": "npm:^2.0.0"
     "@foxglove/wasm-zstd": "npm:^1.0.1"
     "@pmmmwh/react-refresh-webpack-plugin": "npm:^0.6.1"

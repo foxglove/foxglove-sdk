@@ -8,8 +8,8 @@
     "lint": "eslint ."
   },
   "devDependencies": {
-    "@foxglove/embed": "^0.1.2",
-    "@foxglove/embed-react": "^0.1.2",
+    "@foxglove/embed": "^0.1.5",
+    "@foxglove/embed-react": "^0.1.5",
     "@foxglove/tsconfig": "^2.0.0",
     "@foxglove/wasm-zstd": "^1.0.1",
     "@pmmmwh/react-refresh-webpack-plugin": "^0.6.1",
