@@ -16,6 +16,9 @@ log_chan = LogChannel(topic="/log1")
 def main() -> None:
     # Create a new mcap file at the given path for recording
     with foxglove.open_mcap(args.path):
+        # If you want to add some MCAP metadata: https://mcap.dev/spec#metadata-op0x0c
+        foxglove.write_metadata("platform", {"os": "linux", "arch": "x64"})
+
         for i in range(10):
             frame = inspect.currentframe()
             frameinfo = inspect.getframeinfo(frame) if frame else None
