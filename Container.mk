@@ -1,6 +1,5 @@
 .PHONY: generate
 generate:
-	poetry install
 	yarn install
 	yarn generate
 
@@ -9,32 +8,30 @@ build-python:
 	yarn install
 	yarn workspace @foxglove/notebook-frontend typecheck
 	yarn workspace @foxglove/notebook-frontend build:prod
-	poetry -C python/foxglove-sdk check --strict
-	poetry -C python/foxglove-sdk install
-	poetry -C python/foxglove-sdk run maturin develop
+	uv --directory python/foxglove-sdk lock --check
+	uv --directory python/foxglove-sdk run maturin develop
 
 .PHONY: lint-python
 lint-python:
-	poetry check --strict
-	poetry install
-	poetry run black python --check
-	poetry run isort python --check
-	poetry run flake8 python
+	uv lock --check
+	uv run black python --check
+	uv run isort python --check
+	uv run flake8 python
 
 .PHONY: test-python
 test-python:
 	yarn install
 	yarn workspace @foxglove/notebook-frontend typecheck
 	yarn workspace @foxglove/notebook-frontend build:prod
-	poetry -C python/foxglove-sdk check --strict
-	poetry -C python/foxglove-sdk install --all-extras
-	poetry -C python/foxglove-sdk run maturin develop
-	poetry -C python/foxglove-sdk run mypy .
-	poetry -C python/foxglove-sdk run pytest
+	uv --directory python/foxglove-sdk lock --check
+	uv --directory python/foxglove-sdk sync --all-extras
+	uv --directory python/foxglove-sdk run maturin develop
+	uv --directory python/foxglove-sdk run mypy .
+	uv --directory python/foxglove-sdk run pytest
 
 .PHONY: benchmark-python
 benchmark-python:
-	poetry -C python/foxglove-sdk run pytest --with-benchmarks
+	uv --directory python/foxglove-sdk run pytest --with-benchmarks
 
 .PHONY: lint-rust
 lint-rust:
@@ -72,7 +69,6 @@ clean-docs-cpp:
 
 .PHONY: docs-cpp
 docs-cpp: clean-docs-cpp
-	poetry install -C cpp/foxglove/docs
 	make -C cpp docs
 
 .PHONY: build-cpp

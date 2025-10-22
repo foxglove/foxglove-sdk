@@ -2,12 +2,12 @@
 name = "foxglove-sdk"
 description = "Foxglove Python SDK"
 authors = [{ name = "Foxglove", email = "support@foxglove.dev" }]
-license = "MIT"
-readme = "README.md"
-dynamic = ["version"]
-classifiers = ["Programming Language :: Python :: 3", "Programming Language :: Rust"]
 requires-python = ">=3.9"
+readme = "README.md"
+license = "MIT"
+classifiers = ["Programming Language :: Python :: 3", "Programming Language :: Rust"]
 dependencies = []
+dynamic = ["version"]
 
 [project.urls]
 repository = "https://github.com/foxglove/foxglove-sdk"
@@ -16,8 +16,25 @@ documentation = "https://docs.foxglove.dev/"
 [project.optional-dependencies]
 notebook = ["anywidget", "mcap", "traitlets"]
 
+[dependency-groups]
+dev = [
+  "black>=25.1.0,<26",
+  "enum-tools[sphinx]>=0.12.0,<0.13",
+  "flake8>=7.0.0,<8",
+  "isort>=6.0.0,<7",
+  "maturin>=1.7.4,<2",
+  "mypy>=1.13.0,<2",
+  "pytest>=8.3.4,<9",
+  "pytest-benchmark>=5.1.0,<6",
+  "sphinx>=7.0.0,<8",
+  "sphinx-autodoc-typehints>=2.0.0,<3",
+]
+
+[tool.uv]
+package = false
+
 [build-system]
-requires = ["maturin>=1.7,<2.0", "poetry-core>=2.0"]
+requires = ["maturin>=1.7,<2.0"]
 build-backend = "maturin"
 
 [tool.maturin]
@@ -26,22 +43,6 @@ module-name = "foxglove._foxglove_py"
 features = ["pyo3/extension-module"]
 # Include Jupyter widget static assets
 include = ["foxglove/notebook/static/*"]
-
-[tool.poetry]
-package-mode = false
-requires-poetry = ">=2.0"
-
-[tool.poetry.group.dev.dependencies]
-black = "^24.2.0"
-enum-tools = { extras = ["sphinx"], version = "^0.12.0" }
-flake8 = "^7.0.0"
-isort = "^6.0.0"
-maturin = "^1.7.4"
-mypy = "^1.13.0"
-pytest = "^8.3.4"
-pytest-benchmark = "^5.1.0"
-sphinx = "^7.0.0"
-sphinx-autodoc-typehints = "^2.0.0"
 jupyterlab = "^4.4.7"
 
 [tool.mypy]

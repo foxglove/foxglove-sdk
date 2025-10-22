@@ -4,9 +4,8 @@ This example demonstrates writing a Foxglove MCAP file containing RawAudio messa
 
 ## Usage
 
-This example uses Poetry: https://python-poetry.org/
+This example uses [uv](https://docs.astral.sh/uv/).
 
 ```bash
-poetry install
-poetry run python main.py
+uv run python main.py
 ```

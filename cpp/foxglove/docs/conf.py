@@ -22,7 +22,7 @@ release = SDK_VERSION
 
 extensions = ["breathe", "exhale", "sphinxcontrib.jquery"]
 
-exclude_patterns = ["expected.hpp"]
+exclude_patterns = ["expected.hpp", ".venv"]
 
 primary_domain = "cpp"
 highlight_language = "cpp"
