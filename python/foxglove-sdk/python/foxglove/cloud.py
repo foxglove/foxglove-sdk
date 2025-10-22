@@ -52,7 +52,7 @@ class CloudSinkListener(Protocol):
         self, client: Client, client_channel_id: int, data: bytes
     ) -> None:
         """
-        Called by the server when a message is received from a client.
+        Called when a message is received from a client.
 
         :param client: The client (id) that sent the message.
         :param client_channel_id: The client channel id that the message was sent on.
