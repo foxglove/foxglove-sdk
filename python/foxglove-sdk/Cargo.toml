@@ -10,6 +10,7 @@ crate-type = ["cdylib"]
 
 [lints]
 workspace = true
+
 [dependencies]
 base64 = "0.22.1"
 bytes.workspace = true
@@ -36,3 +37,6 @@ foxglove = { path = "../../rust/foxglove", default-features = false, features = 
 
 [build-dependencies]
 walkdir = "2.5.0"
+
+[dev-dependencies]
+maplit = "1.0.2"
