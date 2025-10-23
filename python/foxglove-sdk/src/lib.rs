@@ -6,6 +6,7 @@ use foxglove::{ChannelBuilder, Context, McapWriter, PartialMetadata, RawChannel,
 use generated::channels;
 use generated::schemas;
 use log::LevelFilter;
+use logging::init_logging;
 use mcap::{PyMcapWriteOptions, PyMcapWriter};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
@@ -23,6 +24,7 @@ use websocket::start_server;
 mod cloud_sink;
 mod errors;
 mod generated;
+mod logging;
 mod mcap;
 mod schemas_wkt;
 mod sink_channel_filter;
@@ -284,7 +286,7 @@ fn shutdown(#[allow(unused_variables)] py: Python<'_>) {
 #[pymodule]
 fn _foxglove_py(m: &Bound<'_, PyModule>) -> PyResult<()> {
     foxglove::library_version::set_sdk_language("python");
-    pyo3_log::init();
+    init_logging();
     m.add_function(wrap_pyfunction!(enable_logging, m)?)?;
     m.add_function(wrap_pyfunction!(disable_logging, m)?)?;
     m.add_function(wrap_pyfunction!(shutdown, m)?)?;
