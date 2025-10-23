@@ -71,6 +71,7 @@ jobs:
         env:
           CFLAGS: "-fPIC"
           RUSTC_BOOTSTRAP: "1"
+          MATURIN_NO_MISSING_BUILD_BACKEND_WARNING: 1
 
       - name: Upload wheels
         uses: actions/upload-artifact@v4
@@ -190,6 +191,7 @@ jobs:
           args: --release --out dist --find-interpreter
           sccache: "false"
           manylinux: auto
+          docker-options: "--env MATURIN_NO_MISSING_BUILD_BACKEND_WARNING=1"
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
@@ -227,6 +229,7 @@ jobs:
           args: --release --out dist --find-interpreter
           sccache: "false"
           manylinux: musllinux_1_2
+          docker-options: "--env MATURIN_NO_MISSING_BUILD_BACKEND_WARNING=1"
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
@@ -261,6 +264,7 @@ jobs:
           target: ${{ matrix.platform.target }}
           args: --release --out dist --interpreter python
           sccache: "false"
+          docker-options: "--env MATURIN_NO_MISSING_BUILD_BACKEND_WARNING=1"
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
@@ -293,6 +297,7 @@ jobs:
           target: ${{ matrix.platform.target }}
           args: --release --out dist --find-interpreter
           sccache: "false"
+          docker-options: "--env MATURIN_NO_MISSING_BUILD_BACKEND_WARNING=1"
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:

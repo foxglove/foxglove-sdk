@@ -9,6 +9,7 @@ it uses PyO3/maturin-action to build against the sdist, and effectively bypasses
 this build backend.
 """
 
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -21,6 +22,10 @@ from maturin import prepare_metadata_for_build_wheel  # noqa: F401
 
 
 def _frontend_codegen(editable: bool = False) -> None:
+    # Suppress warning about `build-backend` not being set to `maturin` in
+    # pyproject.toml.
+    os.environ["MATURIN_NO_MISSING_BUILD_BACKEND_WARNING"] = "1"
+
     # If we're building from an sdist, there's nothing to do here. We packaged
     # the compiled frontend assets when packaging the sdist, and we omit the
     # sources.
