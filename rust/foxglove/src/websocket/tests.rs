@@ -1,6 +1,7 @@
 use assert_matches::assert_matches;
 use bytes::{BufMut, Bytes, BytesMut};
 use futures_util::FutureExt;
+use maplit::hashmap;
 #[cfg(feature = "tls")]
 use rcgen::{CertificateParams, Issuer, KeyPair};
 use std::borrow::Cow;
@@ -1655,4 +1656,41 @@ async fn test_channel_filter() {
     ch2.log(b"{}");
     let result = client.recv().await;
     assert!(matches!(result, Err(WebSocketClientError::Timeout(_))));
+}
+
+#[tokio::test]
+async fn test_server_info_metadata_sent_to_client() {
+    let ctx = Context::new();
+
+    let server = create_server(
+        &ctx,
+        ServerOptions {
+            server_info: Some(hashmap! {
+                "key1".into() => "val1".into(),
+                "key2".into() => "val2".into(),
+            }),
+            ..Default::default()
+        },
+    );
+    let addr = server
+        .start("127.0.0.1", 0)
+        .await
+        .expect("Failed to start server");
+
+    let mut client = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("Failed to connect");
+
+    let msg = expect_recv!(client, ServerMessage::ServerInfo);
+
+    assert_eq!(
+        msg.metadata,
+        hashmap! {
+            "fg-library".into() => get_library_version(),
+            "key1".into() => "val1".into(),
+            "key2".into() => "val2".into(),
+        }
+    );
+
+    let _ = server.stop();
 }

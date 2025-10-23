@@ -46,6 +46,7 @@ pub(crate) struct ServerOptions {
     pub fetch_asset_handler: Option<Box<dyn AssetHandler>>,
     pub tls_identity: Option<TlsIdentity>,
     pub channel_filter: Option<Arc<dyn SinkChannelFilter>>,
+    pub server_info: Option<HashMap<String, String>>,
 }
 
 impl std::fmt::Debug for ServerOptions {
@@ -57,6 +58,7 @@ impl std::fmt::Debug for ServerOptions {
             .field("services", &self.services)
             .field("capabilities", &self.capabilities)
             .field("supported_encodings", &self.supported_encodings)
+            .field("server_info", &self.server_info)
             .finish()
     }
 }
@@ -159,6 +161,9 @@ pub(crate) struct Server {
     tasks: parking_lot::Mutex<Option<JoinSet<()>>>,
     /// Configuration to support TLS streams when enabled.
     stream_config: StreamConfiguration,
+    /// Information about the server, which is shared with clients.
+    /// Keys prefixed with "fg-" are reserved for internal use.
+    server_info: HashMap<String, String>,
 }
 
 impl Server {
@@ -219,6 +224,7 @@ impl Server {
             fetch_asset_handler: opts.fetch_asset_handler,
             tasks: parking_lot::Mutex::default(),
             stream_config,
+            server_info: opts.server_info.unwrap_or_default(),
         }
     }
 
@@ -507,6 +513,12 @@ impl Server {
 
     /// Builds a server info message.
     fn server_info(&self) -> ServerInfo {
+        let mut metadata = self.server_info.clone();
+        if metadata.contains_key("fg-library") {
+            tracing::warn!("Overwriting reserved server_info key 'fg-library'");
+        }
+        metadata.insert("fg-library".into(), get_library_version());
+
         ServerInfo::new(&self.name)
             .with_capabilities(
                 self.capabilities
@@ -514,10 +526,7 @@ impl Server {
                     .flat_map(Capability::as_protocol_capabilities)
                     .copied(),
             )
-            .with_metadata(HashMap::from([(
-                "fg-library".into(),
-                get_library_version(),
-            )]))
+            .with_metadata(metadata)
             .with_supported_encodings(&self.supported_encodings)
             .with_session_id(self.session_id.read().clone())
     }
