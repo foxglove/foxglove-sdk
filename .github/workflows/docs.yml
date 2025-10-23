@@ -34,13 +34,6 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
-      - run: corepack enable
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: yarn
-      - run: yarn install
-      - run: yarn build:prod
       - uses: astral-sh/setup-uv@v6
       - run: uv sync --all-extras
       - run: uv run maturin develop

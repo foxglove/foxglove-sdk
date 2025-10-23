@@ -26,15 +26,6 @@ jobs:
           toolchain: 1.83.0,nightly,stable
           components: rustfmt, clippy
 
-      - uses: actions/checkout@v5
-      - run: corepack enable
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: yarn
-      - run: yarn workspaces focus @foxglove/notebook-frontend
-      - run: yarn build:prod
-
       - name: Ensure generated protobuf schemas are up to date
         run: cargo run --bin foxglove_proto_gen && git diff --exit-code
 
