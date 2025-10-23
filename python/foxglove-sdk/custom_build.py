@@ -9,7 +9,6 @@ it uses PyO3/maturin-action to build against the sdist, and effectively bypasses
 this build backend.
 """
 
-import os
 import subprocess
 import sys
 from pathlib import Path
