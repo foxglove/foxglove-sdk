@@ -35,6 +35,7 @@ package = false
 
 [build-system]
 requires = ["maturin>=1.7,<2.0"]
+# Custom build backend for building frontend assets. See custom_build.py.
 build-backend = "custom_build"
 backend-path = ["."]
 
@@ -43,7 +44,7 @@ python-source = "python"
 module-name = "foxglove._foxglove_py"
 features = ["pyo3/extension-module"]
 include = [
-  # Custom build backend, for generating Jupyter widget static assets.
+  # Custom build backend, required for building from sdist.
   { path = "custom_build.py", format = ["sdist"] },
   # Include Jupyter widget static assets
   "foxglove/notebook/static/*",

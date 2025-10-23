@@ -73,7 +73,7 @@ jobs:
           RUSTC_BOOTSTRAP: "1"
           MATURIN_NO_MISSING_BUILD_BACKEND_WARNING: 1
 
-      - name: Upload wheels
+      - name: Upload wheel
         uses: actions/upload-artifact@v4
         with:
           name: playground-wasm
