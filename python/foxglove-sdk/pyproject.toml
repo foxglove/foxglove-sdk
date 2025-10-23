@@ -5,10 +5,7 @@ authors = [{ name = "Foxglove", email = "support@foxglove.dev" }]
 requires-python = ">=3.9"
 readme = "README.md"
 license = "MIT"
-classifiers = [
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Rust",
-]
+classifiers = ["Programming Language :: Python :: 3", "Programming Language :: Rust"]
 dependencies = []
 dynamic = ["version"]
 
@@ -18,16 +15,17 @@ documentation = "https://docs.foxglove.dev/"
 
 [dependency-groups]
 dev = [
-    "black>=25.1.0,<26",
-    "enum-tools[sphinx]>=0.12.0,<0.13",
-    "flake8>=7.0.0,<8",
-    "isort>=6.0.0,<7",
-    "maturin>=1.7.4,<2",
-    "mypy>=1.13.0,<2",
-    "pytest>=8.3.4,<9",
-    "pytest-benchmark>=5.1.0,<6",
-    "sphinx>=7.0.0,<8",
-    "sphinx-autodoc-typehints>=2.0.0,<3",
+  "black>=25.1.0,<26",
+  "enum-tools[sphinx]>=0.12.0,<0.13",
+  "flake8>=7.0.0,<8",
+  "isort>=6.0.0,<7",
+  "maturin>=1.7.4,<2",
+  "mypy>=1.13.0,<2",
+  "pytest>=8.3.4,<9",
+  "pytest-benchmark>=5.1.0,<6",
+  "sphinx>=7.0.0,<8",
+  "sphinx-autodoc-typehints>=2.0.0,<3",
+  "mcap>=1.3.0,<2",
 ]
 
 [tool.uv]
