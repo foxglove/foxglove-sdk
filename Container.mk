@@ -5,11 +5,9 @@ generate:
 
 .PHONY: build-python
 build-python:
-	yarn install
-	yarn workspace @foxglove/notebook-frontend typecheck
-	yarn workspace @foxglove/notebook-frontend build:prod
 	uv --directory python/foxglove-sdk lock --check
-	uv --directory python/foxglove-sdk run maturin develop
+	uv --directory python/foxglove-sdk sync --all-extras
+	uv --directory python/foxglove-sdk pip install --editable '.[notebook]'
 
 .PHONY: lint-python
 lint-python:
@@ -20,17 +18,17 @@ lint-python:
 
 .PHONY: test-python
 test-python:
-	yarn install
-	yarn workspace @foxglove/notebook-frontend typecheck
-	yarn workspace @foxglove/notebook-frontend build:prod
 	uv --directory python/foxglove-sdk lock --check
 	uv --directory python/foxglove-sdk sync --all-extras
-	uv --directory python/foxglove-sdk run maturin develop
+	uv --directory python/foxglove-sdk pip install --editable '.[notebook]'
 	uv --directory python/foxglove-sdk run mypy .
 	uv --directory python/foxglove-sdk run pytest
 
 .PHONY: benchmark-python
 benchmark-python:
+	uv --directory python/foxglove-sdk lock --check
+	uv --directory python/foxglove-sdk sync --all-extras
+	uv --directory python/foxglove-sdk pip install --editable '.[notebook]'
 	uv --directory python/foxglove-sdk run pytest --with-benchmarks
 
 .PHONY: lint-rust

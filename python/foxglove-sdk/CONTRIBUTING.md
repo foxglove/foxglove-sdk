@@ -6,44 +6,38 @@
 
 We use [uv](https://docs.astral.sh/uv/getting-started/installation/) to manage dependencies.
 
-Install front-end dependencies
-
-```sh
-yarn install
-```
-
-Build front-end
-
-```sh
-yarn workspace @foxglove/notebook-frontend build
-```
-
 ### Developing
 
 Prefix python commands with `uv run`. For more details, refer to the [uv docs](https://docs.astral.sh/uv/).
 
-After making changes to rust code, rebuild with:
+Before running any of the following commands, you should ensure you have a local
+venv and install dev dependencies. There's no need to explicitly activate the
+venv; `uv` will use it automatically.
 
 ```sh
-uv run maturin develop
+uv sync --all-extras
 ```
 
-After making changes to the typescript code, rebuild with:
+After making changes, you can install the SDK into the local venv with the
+following command. this is an [editable
+install](https://setuptools.pypa.io/en/latest/userguide/development_mode.html),
+so you don't need to reinstall after making changes to python sources. If you
+make changes to rust sources, however, you do need to reinstall.
 
 ```sh
-yarn build
+uv pip install --editable .
 ```
 
-To test the notebook integration:
+To test the [Jupyter](https://jupyter.org) integration:
 
 ```sh
-# Install Jupyter
+# Install the SDK with the notebook extra.
+uv pip install --editable '.[notebook]'
+
+# Install Jupyter lab.
 uv pip install jupyterlab
 
-# Build SDK with notebook extra
-uv run maturin develop -E notebook
-
-# launch jupyter lab
+# Launch Jupyter lab.
 uv run jupyter lab
 ```
 
@@ -68,12 +62,15 @@ uv run flake8 .
 Run unit tests:
 
 ```sh
+uv pip install -e '.[notebook]'
 uv run pytest
 ```
 
 Benchmark tests should be marked with `@pytest.mark.benchmark`. These are not run by default.
 
 ```sh
+uv pip install -e '.[notebook]'
+
 # to run with benchmarks
 uv run pytest --with-benchmarks
 
