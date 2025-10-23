@@ -114,6 +114,11 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
   sdkServerOptions.supported_encodings = {"cdr", "json"};
   sdkServerOptions.capabilities = _capabilities;
   sdkServerOptions.context = _serverContext;
+
+  if (rosDistro && strlen(rosDistro) > 0) {
+    sdkServerOptions.server_info = {{"ROS_DISTRO", rosDistro}};
+  }
+
   if (_useSimTime) {
     sdkServerOptions.capabilities =
       sdkServerOptions.capabilities | foxglove::WebSocketServerCapabilities::Time;
