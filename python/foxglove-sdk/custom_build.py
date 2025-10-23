@@ -46,7 +46,7 @@ def _frontend_codegen(editable: bool = False) -> None:
     # For editable installs, don't minify.
     build_target = "build" if editable else "build:prod"
     cmds = [
-        ["yarn"],
+        ["yarn", "install"],
         ["yarn", build_target],
     ]
     for cmd in cmds:
