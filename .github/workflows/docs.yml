@@ -39,11 +39,9 @@ jobs:
         with:
           node-version: 22
           cache: yarn
-      - run: yarn install
-      - run: yarn build:prod
       - uses: astral-sh/setup-uv@v6
       - run: uv sync --all-extras
-      - run: uv run maturin develop
+      - run: uv pip install --editable '.[notebook]'
       - name: Sphinx build
         run: uv run sphinx-build --fail-on-warning ./python/docs ./python/docs/_build
       - name: Upload artifacts
