@@ -162,6 +162,7 @@ pub(crate) struct Server {
     /// Configuration to support TLS streams when enabled.
     stream_config: StreamConfiguration,
     /// Information about the server, which is shared with clients.
+    /// Keys prefixed with "fg-" are reserved for internal use.
     server_info: HashMap<String, String>,
 }
 
@@ -513,6 +514,9 @@ impl Server {
     /// Builds a server info message.
     fn server_info(&self) -> ServerInfo {
         let mut metadata = self.server_info.clone();
+        if metadata.contains_key("fg-library") {
+            tracing::warn!("Overwriting reserved server_info key 'fg-library'");
+        }
         metadata.insert("fg-library".into(), get_library_version());
 
         ServerInfo::new(&self.name)
