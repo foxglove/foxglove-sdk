@@ -2094,6 +2094,15 @@ typedef struct foxglove_server_options {
   const struct foxglove_string *supported_encodings;
   size_t supported_encodings_count;
   /**
+   * Optional information about the server, which is shared with clients.
+   *
+   * # Safety
+   * - If provided, the `server_info` must be a valid pointer to an array of valid
+   *   `FoxgloveKeyValue`s with `server_info_count` elements.
+   */
+  const struct foxglove_key_value *server_info;
+  size_t server_info_count;
+  /**
    * Context provided to the `fetch_asset` callback.
    */
   const void *fetch_asset_context;
@@ -5034,10 +5043,13 @@ void foxglove_parameter_value_dict_free(struct foxglove_parameter_value_dict *di
  * Returns 0 on success, or returns a FoxgloveError code on error.
  *
  * # Safety
- * If `name` is supplied in options, it must contain valid UTF8.
- * If `host` is supplied in options, it must contain valid UTF8.
- * If `supported_encodings` is supplied in options, all `supported_encodings` must contain valid
- * UTF8, and `supported_encodings` must have length equal to `supported_encodings_count`.
+ *
+ * - If `name` is supplied in options, it must contain valid UTF8.
+ * - If `host` is supplied in options, it must contain valid UTF8.
+ * - If `supported_encodings` is supplied in options, all `supported_encodings` must contain valid
+ *   UTF8, and `supported_encodings` must have length equal to `supported_encodings_count`.
+ * - If `server_info` is supplied in options, all `server_info` must contain valid UTF8, and
+ *   `server_info` must have length equal to `server_info_count`.
  */
 foxglove_error foxglove_server_start(const struct foxglove_server_options *FOXGLOVE_NONNULL options,
                                      struct foxglove_websocket_server **server);

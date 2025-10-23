@@ -1,0 +1,14 @@
+[project]
+name = "python-logging"
+version = "0.0.0"
+description = "Example of Python log configuration & filtering"
+authors = [{ name = "Foxglove", email = "support@foxglove.dev" }]
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = ["foxglove-sdk>=0.4.0"]
+
+[dependency-groups]
+dev = ["mypy>=1,<2"]
+
+[tool.uv]
+package = false
