@@ -116,7 +116,8 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
   sdkServerOptions.context = _serverContext;
 
   if (rosDistro && strlen(rosDistro) > 0) {
-    sdkServerOptions.server_info = {{"ROS_DISTRO", rosDistro}};
+    std::map<std::string, std::string> serverInfo = {{"ROS_DISTRO", rosDistro}};
+    sdkServerOptions.server_info = std::move(serverInfo);
   }
 
   if (_useSimTime) {
