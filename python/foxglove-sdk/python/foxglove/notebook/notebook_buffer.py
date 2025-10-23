@@ -105,5 +105,8 @@ class NotebookBuffer:
 
 
 def is_mcap_empty(file_name: str) -> bool:
-    iter = make_reader(open(file_name, "rb")).iter_messages()
-    return next(iter, None) is None
+    with open(file_name, "rb") as f_read:
+        iter = make_reader(f_read).iter_messages()
+        is_empty = next(iter, None) is None
+
+    return is_empty

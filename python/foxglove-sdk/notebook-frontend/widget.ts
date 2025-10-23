@@ -5,7 +5,7 @@ import { FoxgloveViewer, type SelectLayoutParams } from "@foxglove/embed";
 interface WidgetModel {
   width: number | "full";
   height: number;
-  src: string;
+  src?: string;
   layout?: SelectLayoutParams;
 }
 
@@ -18,7 +18,7 @@ function render({ model, el }: RenderProps<WidgetModel>): void {
 
   const viewer = new FoxgloveViewer({
     parent,
-    src: model.get("src") !== "" ? model.get("src") : undefined,
+    src: model.get("src"),
     orgSlug: undefined,
     initialLayoutParams: model.get("layout"),
   });

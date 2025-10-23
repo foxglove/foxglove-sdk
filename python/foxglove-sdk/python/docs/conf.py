@@ -32,7 +32,6 @@ nitpick_ignore_regex = [
     # autodoc_typehints also fails on Capability which is imported in websocket.py, but is
     # manually documented as an enum
     ("py:class", r"foxglove\.Capability"),
-    ("py:class", r"SelectLayoutParams"),
 ]
 
 templates_path = ["_templates"]

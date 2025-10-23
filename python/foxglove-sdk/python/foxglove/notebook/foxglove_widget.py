@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import importlib.metadata
 import pathlib
 from typing import TYPE_CHECKING, Any, Literal, TypedDict
 
@@ -10,13 +9,21 @@ import traitlets
 if TYPE_CHECKING:
     from .notebook_buffer import NotebookBuffer
 
-try:
-    __version__ = importlib.metadata.version("foxglove")
-except importlib.metadata.PackageNotFoundError:
-    __version__ = "unknown"
-
 
 class SelectLayoutParams(TypedDict):
+    """
+     A dictionary of parameters to select a layout in the Foxglove viewer.
+
+     :param storageKey: The storage key to identify the layout in local storage. When reusing
+        the same storage key, any modifications made by the user will be restored unless
+        `force` is true.
+    :param opaqueLayout: The layout data to load if this layout did not already exist,
+        or if `force` is true. This is an opaque JavaScript object, which should be parsed from
+        a JSON layout file that was exported from the Foxglove app.
+    :param force: If true, opaqueLayout will override the layout if it already exists.
+        Default: false
+    """
+
     storageKey: str
     opaqueLayout: dict
     force: bool | None
@@ -38,7 +45,7 @@ class FoxgloveWidget(anywidget.AnyWidget):
         sync=True
     )
     height = traitlets.Int(500).tag(sync=True)
-    src = traitlets.Unicode("").tag(sync=True)
+    src = traitlets.Unicode(None, allow_none=True).tag(sync=True)
     layout = traitlets.Dict(
         per_key_traits={
             "storageKey": traitlets.Unicode(),
@@ -88,8 +95,8 @@ class FoxgloveWidget(anywidget.AnyWidget):
         else:
             self.send({"type": "update-data"}, data)
 
-    def _handle_custom_msg(self, data: dict, buffers: list[bytes]) -> None:
-        if data["type"] == "ready":
+    def _handle_custom_msg(self, msg: dict, buffers: list[bytes]) -> None:
+        if msg["type"] == "ready":
             self._ready = True
 
             if len(self._pending_data) > 0:

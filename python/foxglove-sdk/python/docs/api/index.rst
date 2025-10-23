@@ -29,13 +29,11 @@ Functions and classes for integrating with Jupyter notebooks and creating intera
    :return: A NotebookBuffer object that can be used to manage the data buffering
        and visualization.
    :raises Exception: If the notebook extra package is not installed. Install it
-       with `pip install foxglove-sdk[notebook]`.
+       with `pip install "foxglove-sdk[notebook]""`.
 
    .. note::
       This function is only available when the `notebook` extra package
-      is installed. Install it with `pip install foxglove-sdk[notebook]`.
-      The widget will automatically load the data from the provided datasource
-      and display it in the embedded Foxglove viewer.
+      is installed. Install it with `pip install "foxglove-sdk[notebook]""`.
 
 Notebook Classes
 ^^^^^^^^^^^^^^^^
@@ -74,6 +72,18 @@ Notebook Classes
    .. py:method:: refresh() -> None
 
       Refresh the widget by reading the latest data from the buffer used to created the widget and sending it to the widget.
+
+.. py:class:: SelectLayoutParams
+
+   A dictionary of parameters to select a layout in the Foxglove viewer.
+
+   :param storageKey: The storage key to identify the layout in local storage. When reusing the same storage key,
+       any modifications made by the user will be restored unless `force` is true.
+   :param opaqueLayout: The layout data to load if this layout did not already exist, or if `force` is true.
+       This is an opaque JavaScript object, which should be parsed from a JSON layout file
+       that was exported from the Foxglove app.
+   :param force: If true, opaqueLayout will override the layout if it already exists. Default: false
+
 
 Schemas
 ^^^^^^^
