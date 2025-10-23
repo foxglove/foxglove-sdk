@@ -222,8 +222,8 @@ impl Server {
             services: parking_lot::RwLock::new(ServiceMap::from_iter(opts.services.into_values())),
             fetch_asset_handler: opts.fetch_asset_handler,
             tasks: parking_lot::Mutex::default(),
-            server_info: opts.server_info.unwrap_or_default(),
             stream_config,
+            server_info: opts.server_info.unwrap_or_default(),
         }
     }
 
