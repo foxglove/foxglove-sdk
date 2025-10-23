@@ -14,7 +14,7 @@ image:
 shell: image
 	docker run -v $(shell pwd):/app \
 		-e CARGO_HOME=/app/.cargo \
-		-e POETRY_VIRTUALENVS_PATH=/app/.virtualenvs \
+		-e UV_CACHE_DIR=/app/.uv_cache \
 		-it $(IMAGE_NAME) \
 		bash
 
@@ -24,7 +24,7 @@ TARGETS := $(shell awk '/^\.PHONY:/ {for(i=2;i<=NF;i++) print $$i}' $(CONTAINER_
 $(TARGETS): image
 	docker run -v $(shell pwd):/app \
 		-e CARGO_HOME=/app/.cargo \
-		-e POETRY_VIRTUALENVS_PATH=/app/.virtualenvs \
+		-e UV_CACHE_DIR=/app/.uv_cache \
 		-t $(IMAGE_NAME) \
 		make -f $(CONTAINER_MAKEFILE) \
 		MSRV_RUST_VERSION=$(MSRV_RUST_VERSION) \

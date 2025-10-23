@@ -1,16 +1,17 @@
-# This pyproject.toml installs repo-wide dev dependencies
 [project]
 name = "foxglove-sdk-monorepo"
 version = "0.0.0"
 requires-python = ">=3.9"
 
-[tool.poetry]
-package-mode = false
-
-[tool.poetry.group.dev.dependencies]
-flake8 = "^7.1.1"
-black = "^25.1.0"
-isort = "^6.0.0"
+[dependency-groups]
+dev = [
+    "flake8>=7.1.1,<8",
+    "black>=25.1.0,<26",
+    "isort>=6.0.0,<7",
+]
 
 [tool.isort]
 profile = "black"
+
+[tool.uv]
+package = false

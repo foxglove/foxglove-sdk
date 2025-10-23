@@ -3,9 +3,9 @@ all: protoc lint
 
 .PHONY: protoc
 protoc:
-	poetry run protoc --python_out=. --pyi_out=. fruit.proto
+	uv run protoc --python_out=. --pyi_out=. fruit.proto
 
 .PHONY: lint
 lint:
-	poetry run black .
-	poetry run isort .
+	uv run black .
+	uv run isort .
