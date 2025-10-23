@@ -221,20 +221,22 @@ unsafe fn do_foxglove_mcap_write_metadata(
         foxglove::FoxgloveError::Utf8Error(format!("metadata name is invalid: {e}"))
     })?;
 
-    // Convert C key-value array to BTreeMap
-    let mut metadata_map = std::collections::BTreeMap::new();
-    for i in 0..metadata_len {
-        let kv = unsafe { &*metadata.add(i) };
-        let key = unsafe { kv.key.as_utf8_str() }?;
-        let value = unsafe { kv.value.as_utf8_str() }?;
-        metadata_map.insert(key.to_string(), value.to_string());
-    }
-
     let Some(writer_handle) = writer.0.as_ref() else {
         return Err(foxglove::FoxgloveError::SinkClosed);
     };
 
-    writer_handle.write_metadata(name, metadata_map)?;
+    if !metadata.is_null() {
+        // Convert C key-value array to BTreeMap
+        let mut metadata_map = std::collections::BTreeMap::new();
+        for i in 0..metadata_len {
+            let kv = unsafe { &*metadata.add(i) };
+            let key = unsafe { kv.key.as_utf8_str() }?;
+            let value = unsafe { kv.value.as_utf8_str() }?;
+            metadata_map.insert(key.to_string(), value.to_string());
+        }
+        writer_handle.write_metadata(name, metadata_map)?;
+    }
+
     Ok(())
 }
 
