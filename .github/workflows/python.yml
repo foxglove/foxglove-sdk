@@ -69,8 +69,18 @@ jobs:
           echo "$(pwd)/emsdk" >> $GITHUB_PATH
           echo "$(pwd)/emsdk/upstream/emscripten" >> $GITHUB_PATH
 
+      # We can't use `uv build` to construct the wheel, because maturin's PEP
+      # 517 backend doesn't support cross-compilation. Build the sdist to ensure
+      # that we do codegen (even though it isn't currently used), and then run
+      # `maturin build` directly. This transgression is no worse than using
+      # `PyO3/maturin-action` for building wheels.
+      - uses: astral-sh/setup-uv@v6
       - run: uv lock --check
-      - run: CFLAGS=-fPIC RUSTC_BOOTSTRAP=1 uv run maturin build --release --out dist --target wasm32-unknown-emscripten -i python3.12
+      - run: uv build --sdist
+      - run: uv run maturin build --release --out dist --target wasm32-unknown-emscripten -i python3.12
+        env:
+          CFLAGS: "-fPIC"
+          RUSTC_BOOTSTRAP: "1"
       - run: mkdir -p ../../playground/public
       - run: cp dist/*.whl ../../playground/public
       - run: yarn install

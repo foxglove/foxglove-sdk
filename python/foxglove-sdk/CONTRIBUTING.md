@@ -10,26 +10,40 @@ We use [uv](https://docs.astral.sh/uv/getting-started/installation/) to manage d
 
 Prefix python commands with `uv run`. For more details, refer to the [uv docs](https://docs.astral.sh/uv/).
 
-After making changes to rust code, rebuild and install it with:
+Before running any of the following commands, you should ensure you have a local
+venv and install dev dependencies. There's no need to explicitly activate the
+venv; `uv` will use it automatically.
 
 ```sh
-uv pip install -e .
+uv sync --all-extras
 ```
 
-To test the notebook integration:
+After making changes, you can install the SDK into the local venv with the
+following command. this is an [editable
+install](https://setuptools.pypa.io/en/latest/userguide/development_mode.html),
+so you don't need to reinstall after making changes to python sources. If you
+make changes to rust sources, however, you do need to reinstall.
 
 ```sh
-# Install Jupyter and SDK with notebook extra
-uv pip install jupyterlab -e '.[notebook]'
+uv pip install --editable .
+```
 
-# Launch jupyter lab
+To test the [Jupyter](https://jupyter.org) integration:
+
+```sh
+# Install the SDK with the notebook extra.
+uv pip install --editable '.[notebook]'
+
+# Install Jupyter lab.
+uv pip install jupyterlab
+
+# Launch Jupyter lab.
 uv run jupyter lab
 ```
 
 To check types, run:
 
 ```sh
-uv sync --all-extras
 uv run mypy .
 ```
 

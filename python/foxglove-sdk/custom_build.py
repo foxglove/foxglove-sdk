@@ -1,6 +1,12 @@
 """
 A PEP 517 build backend that wraps maturin, in order to run codegen for the
 notebook frontend.
+
+This build backend MUST be a no-op when building from sdist. In other words,
+running `maturin build` against the sdist MUST yield exactly the same result as
+running `pip wheel`. The CI pipeline currently depends on this property, because
+it uses PyO3/maturin-action to build against the sdist, and effectively bypasses
+this build backend.
 """
 
 import os
@@ -16,22 +22,20 @@ from maturin import prepare_metadata_for_build_wheel  # noqa: F401
 
 
 def _frontend_codegen(editable: bool = False) -> None:
-    if os.environ.get("SKIP_FRONTEND_CODEGEN"):
-        print("[custom-build] SKIP_FRONTEND_CODEGEN set; skipping frontend codegen.")
-        return
-
-    # We package the compiled frontend assets in sdists, and omit the sources.
+    # If we're building from an sdist, there's nothing to do here. We packaged
+    # the compiled frontend assets when packaging the sdist, and we omit the
+    # sources.
     notebook_frontend = Path.cwd() / "notebook-frontend"
     if not notebook_frontend.exists():
         print("[custom-build] no frontend sources; skipping frontend codegen.")
         return
 
+    # For editable installs, don't minify.
     build_target = "build" if editable else "build:prod"
     cmds = [
         ["yarn"],
         ["yarn", build_target],
     ]
-
     for cmd in cmds:
         print(f"[custom-build] running {' '.join(cmd)}")
         sys.stdout.flush()

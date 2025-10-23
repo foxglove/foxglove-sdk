@@ -7,7 +7,7 @@ generate:
 build-python:
 	uv --directory python/foxglove-sdk lock --check
 	uv --directory python/foxglove-sdk sync --all-extras
-	uv --directory python/foxglove-sdk pip install -e '.[notebook]'
+	uv --directory python/foxglove-sdk pip install --editable '.[notebook]'
 
 .PHONY: lint-python
 lint-python:
@@ -20,7 +20,7 @@ lint-python:
 test-python:
 	uv --directory python/foxglove-sdk lock --check
 	uv --directory python/foxglove-sdk sync --all-extras
-	uv --directory python/foxglove-sdk pip install -e '.[notebook]'
+	uv --directory python/foxglove-sdk pip install --editable '.[notebook]'
 	uv --directory python/foxglove-sdk run mypy .
 	uv --directory python/foxglove-sdk run pytest
 
@@ -28,7 +28,7 @@ test-python:
 benchmark-python:
 	uv --directory python/foxglove-sdk lock --check
 	uv --directory python/foxglove-sdk sync --all-extras
-	uv --directory python/foxglove-sdk pip install -e '.[notebook]'
+	uv --directory python/foxglove-sdk pip install --editable '.[notebook]'
 	uv --directory python/foxglove-sdk run pytest --with-benchmarks
 
 .PHONY: lint-rust
