@@ -2,11 +2,11 @@
 A PEP 517 build backend that wraps maturin, in order to run codegen for the
 notebook frontend.
 
-This build backend MUST be a no-op when building from sdist. In other words,
-running `maturin build` against the sdist MUST yield exactly the same result as
-running `pip wheel`. The CI pipeline currently depends on this property, because
-it uses PyO3/maturin-action to build against the sdist, and effectively bypasses
-this build backend.
+This build backend MUST be a transparent wrapper around maturin when building
+from sdist. In other words, running `maturin build` against the sdist MUST yield
+exactly the same result as running `pip wheel`. The CI pipeline currently
+depends on this property, because it uses PyO3/maturin-action to build against
+the sdist, and effectively bypasses this build backend.
 """
 
 import os
