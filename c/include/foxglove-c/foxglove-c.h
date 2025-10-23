@@ -341,6 +341,14 @@ typedef struct foxglove_channel foxglove_channel;
 #endif
 
 #if !defined(__wasm__)
+typedef struct foxglove_channel_descriptor foxglove_channel_descriptor;
+#endif
+
+#if !defined(__wasm__)
+typedef struct foxglove_cloud_sink foxglove_cloud_sink;
+#endif
+
+#if !defined(__wasm__)
 typedef struct foxglove_connection_graph foxglove_connection_graph;
 #endif
 
@@ -886,8 +894,8 @@ typedef struct foxglove_grid {
   /**
    * Grid cell data, interpreted using `fields`, in row-major (y-major) order.
    *  For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
-   *  y = (i / cell_stride) % row_stride * cell_size.y
-   *  x = i % cell_stride * cell_size.x
+   *  y = i / row_stride * cell_size.y
+   *  x = (i % row_stride) / cell_stride * cell_size.x
    */
   const unsigned char *data;
   size_t data_len;
@@ -1132,11 +1140,11 @@ typedef struct foxglove_line_primitive {
   const struct foxglove_point3 *points;
   size_t points_count;
   /**
-   * Solid color to use for the whole line. One of `color` or `colors` must be provided.
+   * Solid color to use for the whole line. Ignored if `colors` is non-empty.
    */
   const struct foxglove_color *color;
   /**
-   * Per-point colors (if specified, must have the same length as `points`). One of `color` or `colors` must be provided.
+   * Per-point colors (if non-empty, must have the same length as `points`).
    */
   const struct foxglove_color *colors;
   size_t colors_count;
@@ -1295,11 +1303,11 @@ typedef struct foxglove_triangle_list_primitive {
   const struct foxglove_point3 *points;
   size_t points_count;
   /**
-   * Solid color to use for the whole shape. One of `color` or `colors` must be provided.
+   * Solid color to use for the whole shape. Ignored if `colors` is non-empty.
    */
   const struct foxglove_color *color;
   /**
-   * Per-vertex colors (if specified, must have the same length as `points`). One of `color` or `colors` must be provided.
+   * Per-vertex colors (if specified, must have the same length as `points`).
    */
   const struct foxglove_color *colors;
   size_t colors_count;
@@ -1363,7 +1371,7 @@ typedef struct foxglove_model_primitive {
    */
   bool override_color;
   /**
-   * URL pointing to model file. One of `url` or `data` should be provided.
+   * URL pointing to model file. One of `url` or `data` should be non-empty.
    */
   struct foxglove_string url;
   /**
@@ -1371,7 +1379,7 @@ typedef struct foxglove_model_primitive {
    */
   struct foxglove_string media_type;
   /**
-   * Embedded model. One of `url` or `data` should be provided. If `data` is provided, `media_type` must be set to indicate the type of the data.
+   * Embedded model. One of `url` or `data` should be non-empty. If `data` is non-empty, `media_type` must be set to indicate the type of the data.
    */
   const unsigned char *data;
   size_t data_len;
@@ -1673,6 +1681,23 @@ typedef struct foxglove_mcap_options {
   bool emit_metadata_indexes;
   bool repeat_channels;
   bool repeat_schemas;
+  /**
+   * Context provided to the `sink_channel_filter` callback.
+   */
+  const void *sink_channel_filter_context;
+  /**
+   * A filter for channels that can be used to subscribe to or unsubscribe from channels.
+   *
+   * This can be used to omit one or more channels from a sink, but still log all channels to another
+   * sink in the same context. Return false to disable logging of this channel.
+   *
+   * This method is invoked from the client's main poll loop and must not block.
+   *
+   * # Safety
+   * - If provided, the handler callback must be a pointer to the filter callback function,
+   *   and must remain valid until the MCAP sink is dropped.
+   */
+  bool (*sink_channel_filter)(const void *context, const struct foxglove_channel_descriptor *channel);
 } foxglove_mcap_options;
 #endif
 
@@ -1718,6 +1743,89 @@ typedef struct foxglove_channel_metadata_iterator {
    */
   size_t index;
 } foxglove_channel_metadata_iterator;
+#endif
+
+#if !defined(__wasm__)
+/**
+ * An iterator over a channel descriptor's metadata key-value pairs.
+ */
+typedef struct foxglove_channel_descriptor_metadata_iterator {
+  const struct foxglove_channel_descriptor *channel;
+  size_t index;
+} foxglove_channel_descriptor_metadata_iterator;
+#endif
+
+#if !defined(__wasm__)
+typedef struct foxglove_client_metadata {
+  uint32_t id;
+  FoxgloveSinkId sink_id;
+} foxglove_client_metadata;
+#endif
+
+#if !defined(__wasm__)
+typedef struct foxglove_client_channel {
+  uint32_t id;
+  const char *topic;
+  const char *encoding;
+  const char *schema_name;
+  const char *schema_encoding;
+  const void *schema;
+  size_t schema_len;
+} foxglove_client_channel;
+#endif
+
+#if !defined(__wasm__)
+typedef struct foxglove_cloud_sink_callbacks {
+  /**
+   * A user-defined value that will be passed to callback functions
+   */
+  const void *context;
+  void (*on_subscribe)(const void *context,
+                       uint64_t channel_id,
+                       struct foxglove_client_metadata client);
+  void (*on_unsubscribe)(const void *context,
+                         uint64_t channel_id,
+                         struct foxglove_client_metadata client);
+  void (*on_client_advertise)(const void *context,
+                              uint32_t client_id,
+                              const struct foxglove_client_channel *channel);
+  void (*on_message_data)(const void *context,
+                          uint32_t client_id,
+                          uint32_t client_channel_id,
+                          const uint8_t *payload,
+                          size_t payload_len);
+  void (*on_client_unadvertise)(uint32_t client_id, uint32_t client_channel_id, const void *context);
+} foxglove_cloud_sink_callbacks;
+#endif
+
+#if !defined(__wasm__)
+typedef struct foxglove_cloud_sink_options {
+  /**
+   * `context` can be null, or a valid pointer to a context created via `foxglove_context_new`.
+   * If it's null, the server will be created with the default context.
+   */
+  const struct foxglove_context *context;
+  const struct foxglove_cloud_sink_callbacks *callbacks;
+  const struct foxglove_string *supported_encodings;
+  size_t supported_encodings_count;
+  /**
+   * Context provided to the `sink_channel_filter` callback.
+   */
+  const void *sink_channel_filter_context;
+  /**
+   * A filter for channels that can be used to subscribe to or unsubscribe from channels.
+   *
+   * This can be used to omit one or more channels from a sink, but still log all channels to another
+   * sink in the same context. Return false to disable logging of this channel.
+   *
+   * This method is invoked from the client's main poll loop and must not block.
+   *
+   * # Safety
+   * - If provided, the handler callback must be a pointer to the filter callback function,
+   *   and must remain valid until the server is stopped.
+   */
+  bool (*sink_channel_filter)(const void *context, const struct foxglove_channel_descriptor *channel);
+} foxglove_cloud_sink_options;
 #endif
 
 #if !defined(__wasm__)
@@ -1875,25 +1983,6 @@ typedef struct foxglove_parameter_array {
 #endif
 
 #if !defined(__wasm__)
-typedef struct foxglove_client_metadata {
-  uint32_t id;
-  FoxgloveSinkId sink_id;
-} foxglove_client_metadata;
-#endif
-
-#if !defined(__wasm__)
-typedef struct foxglove_client_channel {
-  uint32_t id;
-  const char *topic;
-  const char *encoding;
-  const char *schema_name;
-  const char *schema_encoding;
-  const void *schema;
-  size_t schema_len;
-} foxglove_client_channel;
-#endif
-
-#if !defined(__wasm__)
 typedef struct foxglove_server_callbacks {
   /**
    * A user-defined value that will be passed to callback functions
@@ -2005,6 +2094,15 @@ typedef struct foxglove_server_options {
   const struct foxglove_string *supported_encodings;
   size_t supported_encodings_count;
   /**
+   * Optional information about the server, which is shared with clients.
+   *
+   * # Safety
+   * - If provided, the `server_info` must be a valid pointer to an array of valid
+   *   `FoxgloveKeyValue`s with `server_info_count` elements.
+   */
+  const struct foxglove_key_value *server_info;
+  size_t server_info_count;
+  /**
    * Context provided to the `fetch_asset` callback.
    */
   const void *fetch_asset_context;
@@ -2047,6 +2145,23 @@ typedef struct foxglove_server_options {
    * TLS configuration: Length of key bytes
    */
   size_t tls_key_len;
+  /**
+   * Context provided to the `sink_channel_filter` callback.
+   */
+  const void *sink_channel_filter_context;
+  /**
+   * A filter for channels that can be used to subscribe to or unsubscribe from channels.
+   *
+   * This can be used to omit one or more channels from a sink, but still log all channels to another
+   * sink in the same context. Return false to disable logging of this channel.
+   *
+   * This method is invoked from the client's main poll loop and must not block.
+   *
+   * # Safety
+   * - If provided, the handler callback must be a pointer to the filter callback function,
+   *   and must remain valid until the server is stopped.
+   */
+  bool (*sink_channel_filter)(const void *context, const struct foxglove_channel_descriptor *channel);
 } foxglove_server_options;
 #endif
 
@@ -4243,6 +4358,118 @@ void foxglove_context_free(const struct foxglove_context *context);
 
 #if !defined(__wasm__)
 /**
+ * Get the topic of a channel descriptor.
+ *
+ * # Safety
+ * `channel` must be a valid pointer to a `foxglove_channel_descriptor`.
+ *
+ * If the passed channel is null, an empty value is returned.
+ *
+ * The returned value is valid only for the lifetime of the channel, which is typically the
+ * duration of a callback where a descriptor is passed.
+ */
+struct foxglove_string foxglove_channel_descriptor_get_topic(const struct foxglove_channel_descriptor *channel);
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Get the message_encoding of a channel descriptor.
+ *
+ * # Safety
+ * `channel` must be a valid pointer to a `foxglove_channel_descriptor`.
+ *
+ * If the passed channel is null, an empty value is returned.
+ *
+ * The returned value is valid only for the lifetime of the channel, which is typically the
+ * duration of a callback where a descriptor is passed.
+ */
+struct foxglove_string foxglove_channel_descriptor_get_message_encoding(const struct foxglove_channel_descriptor *channel);
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Get the schema of a channel.
+ *
+ * If the passed channel is null or has no schema, returns `FoxgloveError::ValueError`.
+ *
+ * # Safety
+ * `channel` must be a valid pointer to a `foxglove_channel_descriptor`.
+ * `schema` must be a valid pointer to a `FoxgloveSchema` struct that will be filled in.
+ *
+ * The returned value is valid only for the lifetime of the channel, which is typically the
+ * duration of a callback where a descriptor is passed.
+ */
+foxglove_error foxglove_channel_descriptor_get_schema(const struct foxglove_channel_descriptor *channel,
+                                                      struct foxglove_schema *schema);
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Create an iterator over a channel descriptor's metadata.
+ *
+ * You must later free the iterator using foxglove_channel_descriptor_metadata_iter_free.
+ *
+ * Iterate items using foxglove_channel_descriptor_metadata_iter_next.
+ *
+ * # Safety
+ * `channel` must be a valid pointer to a `foxglove_channel_descriptor`.
+ * The channel descriptor must remain valid for the lifetime of the iterator.
+ */
+struct foxglove_channel_descriptor_metadata_iterator *foxglove_channel_descriptor_metadata_iter_create(const struct foxglove_channel_descriptor *channel);
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Get the next key-value pair from the metadata iterator.
+ *
+ * Returns true if a pair was found and stored in `key_value`, false if the iterator is exhausted.
+ *
+ * # Safety
+ * `iter` must be a valid pointer to a `foxglove_channel_descriptor_metadata_iterator` created via
+ * `foxglove_channel_descriptor_metadata_iter_create`.
+ * `key_value` must be a valid pointer to a `FoxgloveKeyValue` that will be filled in.
+ * The channel descriptor itself must still be valid.
+ */
+bool foxglove_channel_descriptor_metadata_iter_next(struct foxglove_channel_descriptor_metadata_iterator *iter,
+                                                    struct foxglove_key_value *key_value);
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Free a metadata iterator created via `foxglove_channel_descriptor_metadata_iter_create`.
+ *
+ * # Safety
+ * `iter` must be a valid pointer to a `foxglove_channel_descriptor_metadata_iterator` created via
+ * `foxglove_channel_descriptor_metadata_iter_create`.
+ */
+void foxglove_channel_descriptor_metadata_iter_free(struct foxglove_channel_descriptor_metadata_iterator *iter);
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Create and start a cloud sink.
+ *
+ * Resources must later be freed by calling `foxglove_cloud_sink_stop`.
+ *
+ * Returns 0 on success, or returns a FoxgloveError code on error.
+ *
+ * # Safety
+ * If `supported_encodings` is supplied in options, all `supported_encodings` must contain valid
+ * UTF8, and `supported_encodings` must have length equal to `supported_encodings_count`.
+ */
+foxglove_error foxglove_cloud_sink_start(const struct foxglove_cloud_sink_options *FOXGLOVE_NONNULL options,
+                                         struct foxglove_cloud_sink **server);
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Stop and shut down cloud `sink` and free the resources associated with it.
+ */
+foxglove_error foxglove_cloud_sink_stop(struct foxglove_cloud_sink *sink);
+#endif
+
+#if !defined(__wasm__)
+/**
  * Create a new connection graph.
  *
  * The graph must later be freed with `foxglove_connection_graph_free`.
@@ -4796,10 +5023,13 @@ void foxglove_parameter_value_dict_free(struct foxglove_parameter_value_dict *di
  * Returns 0 on success, or returns a FoxgloveError code on error.
  *
  * # Safety
- * If `name` is supplied in options, it must contain valid UTF8.
- * If `host` is supplied in options, it must contain valid UTF8.
- * If `supported_encodings` is supplied in options, all `supported_encodings` must contain valid
- * UTF8, and `supported_encodings` must have length equal to `supported_encodings_count`.
+ *
+ * - If `name` is supplied in options, it must contain valid UTF8.
+ * - If `host` is supplied in options, it must contain valid UTF8.
+ * - If `supported_encodings` is supplied in options, all `supported_encodings` must contain valid
+ *   UTF8, and `supported_encodings` must have length equal to `supported_encodings_count`.
+ * - If `server_info` is supplied in options, all `server_info` must contain valid UTF8, and
+ *   `server_info` must have length equal to `server_info_count`.
  */
 foxglove_error foxglove_server_start(const struct foxglove_server_options *FOXGLOVE_NONNULL options,
                                      struct foxglove_websocket_server **server);

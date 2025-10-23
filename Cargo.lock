@@ -674,9 +674,9 @@ dependencies = [
 
 [[package]]
 name = "env_filter"
-version = "0.1.3"
+version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "186e05a59d4c50738528153b83b0b0194d3a29507dfec16eccd4b342903397d0"
+checksum = "1bf3c259d255ca70051b30e2e95b5446cdb8949ac4cd22c0d7fd634d89f568e2"
 dependencies = [
  "log",
  "regex",
@@ -712,6 +712,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "example_agent"
+version = "0.0.0"
+dependencies = [
+ "clap",
+ "env_logger",
+ "foxglove 0.14.3",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
 name = "example_channelless"
 version = "0.0.0"
 dependencies = [
@@ -744,6 +755,15 @@ dependencies = [
  "foxglove 0.14.3",
  "schemars 1.0.4",
  "serde",
+]
+
+[[package]]
+name = "example_message_filtering"
+version = "0.0.0"
+dependencies = [
+ "ctrlc",
+ "env_logger",
+ "foxglove 0.14.3",
 ]
 
 [[package]]
@@ -961,6 +981,7 @@ dependencies = [
  "bytes",
  "foxglove 0.14.3",
  "log",
+ "maplit",
  "prost-types",
  "pyo3",
  "pyo3-log",

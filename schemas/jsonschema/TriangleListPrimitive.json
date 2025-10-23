@@ -26,7 +26,12 @@
               "type": "number",
               "description": "z coordinate length"
             }
-          }
+          },
+          "required": [
+            "x",
+            "y",
+            "z"
+          ]
         },
         "orientation": {
           "title": "foxglove.Quaternion",
@@ -49,9 +54,19 @@
               "type": "number",
               "description": "w value"
             }
-          }
+          },
+          "required": [
+            "x",
+            "y",
+            "z",
+            "w"
+          ]
         }
-      }
+      },
+      "required": [
+        "position",
+        "orientation"
+      ]
     },
     "points": {
       "type": "array",
@@ -72,13 +87,18 @@
             "type": "number",
             "description": "z coordinate position"
           }
-        }
+        },
+        "required": [
+          "x",
+          "y",
+          "z"
+        ]
       },
       "description": "Vertices to use for triangles, interpreted as a list of triples (0-1-2, 3-4-5, ...)"
     },
     "color": {
       "title": "foxglove.Color",
-      "description": "Solid color to use for the whole shape. One of `color` or `colors` must be provided.",
+      "description": "Solid color to use for the whole shape. Ignored if `colors` is non-empty.",
       "type": "object",
       "properties": {
         "r": {
@@ -97,7 +117,13 @@
           "type": "number",
           "description": "Alpha value between 0 and 1"
         }
-      }
+      },
+      "required": [
+        "r",
+        "g",
+        "b",
+        "a"
+      ]
     },
     "colors": {
       "type": "array",
@@ -122,9 +148,15 @@
             "type": "number",
             "description": "Alpha value between 0 and 1"
           }
-        }
+        },
+        "required": [
+          "r",
+          "g",
+          "b",
+          "a"
+        ]
       },
-      "description": "Per-vertex colors (if specified, must have the same length as `points`). One of `color` or `colors` must be provided."
+      "description": "Per-vertex colors (if specified, must have the same length as `points`)."
     },
     "indices": {
       "type": "array",
@@ -134,5 +166,12 @@
       },
       "description": "Indices into the `points` and `colors` attribute arrays, which can be used to avoid duplicating attribute data.\n\nIf omitted or empty, indexing will not be used. This default behavior is equivalent to specifying [0, 1, ..., N-1] for the indices (where N is the number of `points` provided)."
     }
-  }
+  },
+  "required": [
+    "pose",
+    "points",
+    "color",
+    "colors",
+    "indices"
+  ]
 }

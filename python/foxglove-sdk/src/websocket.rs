@@ -1,5 +1,5 @@
-use crate::PyContext;
 use crate::{errors::PyFoxgloveError, PySchema};
+use crate::{PyContext, PySinkChannelFilter};
 use base64::prelude::*;
 use foxglove::websocket::{
     AssetHandler, ChannelView, Client, ClientChannel, ServerListener, Status, StatusLevel,
@@ -72,6 +72,12 @@ impl From<Client> for PyClient {
 /// user has enabled logging.
 pub struct PyServerListener {
     listener: Py<PyAny>,
+}
+
+impl PyServerListener {
+    pub(crate) fn new(listener: Py<PyAny>) -> Self {
+        Self { listener }
+    }
 }
 
 impl ServerListener for PyServerListener {
@@ -353,19 +359,8 @@ impl foxglove::websocket::service::Handler for ServiceHandler {
 }
 
 /// Start a new Foxglove WebSocket server.
-///
-/// :param name: The name of the server.
-/// :param host: The host to bind to.
-/// :param port: The port to bind to.
-/// :param capabilities: A list of capabilities to advertise to clients.
-/// :param server_listener: A Python object that implements the :py:class:`foxglove.websocket.ServerListener` protocol.
-/// :param supported_encodings: A list of encodings to advertise to clients.
-///    Foxglove currently supports "json", "ros1", and "cdr" for client-side publishing.
-///
-/// To connect to this server: open Foxglove, choose "Open a new connection", and select Foxglove
-/// WebSocket. The default connection string matches the defaults used by the SDK.
 #[pyfunction]
-#[pyo3(signature = (*, name = None, host="127.0.0.1", port=8765, capabilities=None, server_listener=None, supported_encodings=None, services=None, asset_handler=None, context=None, session_id=None))]
+#[pyo3(signature = (*, name = None, host="127.0.0.1", port=8765, capabilities=None, server_listener=None, supported_encodings=None, services=None, asset_handler=None, context=None, session_id=None, channel_filter=None))]
 #[allow(clippy::too_many_arguments)]
 pub fn start_server(
     py: Python<'_>,
@@ -379,6 +374,7 @@ pub fn start_server(
     asset_handler: Option<Py<PyAny>>,
     context: Option<PyRef<PyContext>>,
     session_id: Option<String>,
+    channel_filter: Option<Py<PyAny>>,
 ) -> PyResult<PyWebSocketServer> {
     let mut server = WebSocketServer::new().bind(host, port);
 
@@ -409,6 +405,10 @@ pub fn start_server(
 
     if let Some(context) = context {
         server = server.context(&context.0);
+    }
+
+    if let Some(channel_filter) = channel_filter {
+        server = server.channel_filter(Arc::new(PySinkChannelFilter(channel_filter)));
     }
 
     if let Some(asset_handler) = asset_handler {

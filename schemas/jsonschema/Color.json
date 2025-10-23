@@ -20,5 +20,11 @@
       "type": "number",
       "description": "Alpha value between 0 and 1"
     }
-  }
+  },
+  "required": [
+    "r",
+    "g",
+    "b",
+    "a"
+  ]
 }

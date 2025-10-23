@@ -1,10 +1,12 @@
 //! Websocket server
 
+use std::collections::HashMap;
 use std::fmt::{Debug, Display};
 use std::future::Future;
 use std::net::SocketAddr;
 use std::sync::Arc;
 
+use crate::sink_channel_filter::{SinkChannelFilter, SinkChannelFilterFn};
 use crate::websocket::service::Service;
 #[cfg(feature = "tls")]
 use crate::websocket::TlsIdentity;
@@ -12,7 +14,7 @@ use crate::websocket::{
     create_server, AssetHandler, AsyncAssetHandlerFn, BlockingAssetHandlerFn, Capability, Client,
     ConnectionGraph, Parameter, Server, ServerOptions, ShutdownHandle, Status,
 };
-use crate::{get_runtime_handle, AppUrl, Context, FoxgloveError};
+use crate::{get_runtime_handle, AppUrl, ChannelDescriptor, Context, FoxgloveError};
 
 /// A WebSocket server for live visualization in Foxglove.
 ///
@@ -79,6 +81,24 @@ impl WebSocketServer {
         self
     }
 
+    /// Sets a [`SinkChannelFilter`] for connected clients.
+    ///
+    /// The filter is a function that takes a channel and returns a boolean indicating whether the
+    /// channel should be logged.
+    pub fn channel_filter(mut self, filter: Arc<dyn SinkChannelFilter>) -> Self {
+        self.options.channel_filter = Some(filter);
+        self
+    }
+
+    /// Sets a channel filter for connected clients. See [`SinkChannelFilter`] for more information.
+    pub fn channel_filter_fn(
+        mut self,
+        filter: impl Fn(&ChannelDescriptor) -> bool + Sync + Send + 'static,
+    ) -> Self {
+        self.options.channel_filter = Some(Arc::new(SinkChannelFilterFn(filter)));
+        self
+    }
+
     /// Configure TLS with a PEM-formatted x509 certificate chain and pkcs8 private key.
     /// If enabled, the server will only accept connections using wss://.
     /// If TLS configuration fails, starting the server will result in an error.
@@ -94,6 +114,13 @@ impl WebSocketServer {
     /// By default, the server does not advertise any capabilities.
     pub fn capabilities(mut self, capabilities: impl IntoIterator<Item = Capability>) -> Self {
         self.options.capabilities = Some(capabilities.into_iter().collect());
+        self
+    }
+
+    /// Sets server metadata.
+    #[doc(hidden)]
+    pub fn server_info(mut self, info: HashMap<String, String>) -> Self {
+        self.options.server_info = Some(info);
         self
     }
 
@@ -192,7 +219,6 @@ impl WebSocketServer {
     /// [`WebSocketServer::start`]), or spawn its own internal runtime (if started with
     /// [`WebSocketServer::start_blocking`]).
     #[doc(hidden)]
-    #[cfg(feature = "unstable")]
     pub fn tokio_runtime(mut self, handle: &tokio::runtime::Handle) -> Self {
         self.options.runtime = Some(handle.clone());
         self

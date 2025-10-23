@@ -1131,8 +1131,8 @@ bytes
 
 Grid cell data, interpreted using `fields`, in row-major (y-major) order.
  For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
- y = (i / cell_stride) % row_stride * cell_size.y
- x = i % cell_stride * cell_size.x
+ y = i / row_stride * cell_size.y
+ x = (i % row_stride) / cell_stride * cell_size.x
 
 </td>
 </tr>
@@ -1414,7 +1414,7 @@ Points along the line
 </td>
 <td>
 
-Solid color to use for the whole line. One of `color` or `colors` must be provided.
+Solid color to use for the whole line. Ignored if `colors` is non-empty.
 
 </td>
 </tr>
@@ -1427,7 +1427,7 @@ Solid color to use for the whole line. One of `color` or `colors` must be provid
 </td>
 <td>
 
-Per-point colors (if specified, must have the same length as `points`). One of `color` or `colors` must be provided.
+Per-point colors (if non-empty, must have the same length as `points`).
 
 </td>
 </tr>
@@ -1750,7 +1750,7 @@ string
 </td>
 <td>
 
-URL pointing to model file. One of `url` or `data` should be provided.
+URL pointing to model file. One of `url` or `data` should be non-empty.
 
 </td>
 </tr>
@@ -1776,7 +1776,7 @@ bytes
 </td>
 <td>
 
-Embedded model. One of `url` or `data` should be provided. If `data` is provided, `media_type` must be set to indicate the type of the data.
+Embedded model. One of `url` or `data` should be non-empty. If `data` is non-empty, `media_type` must be set to indicate the type of the data.
 
 </td>
 </tr>
@@ -3151,7 +3151,7 @@ Vertices to use for triangles, interpreted as a list of triples (0-1-2, 3-4-5, .
 </td>
 <td>
 
-Solid color to use for the whole shape. One of `color` or `colors` must be provided.
+Solid color to use for the whole shape. Ignored if `colors` is non-empty.
 
 </td>
 </tr>
@@ -3164,7 +3164,7 @@ Solid color to use for the whole shape. One of `color` or `colors` must be provi
 </td>
 <td>
 
-Per-vertex colors (if specified, must have the same length as `points`). One of `color` or `colors` must be provided.
+Per-vertex colors (if specified, must have the same length as `points`).
 
 </td>
 </tr>

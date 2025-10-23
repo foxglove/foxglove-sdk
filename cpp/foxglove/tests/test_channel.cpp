@@ -1,6 +1,8 @@
+#include <foxglove-c/foxglove-c.h>
 #include <foxglove/channel.hpp>
 #include <foxglove/error.hpp>
 #include <foxglove/mcap.hpp>
+#include <foxglove/schemas.hpp>
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
@@ -78,12 +80,19 @@ TEST_CASE("channel.close() disconnects sinks") {
   auto writer = foxglove::McapWriter::create(mcap_options);
   REQUIRE(writer.has_value());
 
-  auto channel = foxglove::RawChannel::create("test", "json", std::nullopt, context);
-  REQUIRE(channel.has_value());
-  REQUIRE(channel.value().has_sinks());
+  auto raw_channel = foxglove::RawChannel::create("raw_test", "json", std::nullopt, context);
+  REQUIRE(raw_channel.has_value());
+  REQUIRE(raw_channel.value().has_sinks());
 
-  channel.value().close();
-  REQUIRE(!channel.value().has_sinks());
+  raw_channel.value().close();
+  REQUIRE(!raw_channel.value().has_sinks());
+
+  auto typed_channel = foxglove::schemas::LogChannel::create("test", context);
+  REQUIRE(typed_channel.has_value());
+  REQUIRE(typed_channel.value().has_sinks());
+
+  typed_channel.value().close();
+  REQUIRE(!typed_channel.value().has_sinks());
 }
 
 TEST_CASE("channel.schema()") {
