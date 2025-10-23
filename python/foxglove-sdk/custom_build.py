@@ -20,6 +20,14 @@ from maturin import get_requires_for_build_sdist  # noqa: F401
 from maturin import get_requires_for_build_wheel  # noqa: F401
 from maturin import prepare_metadata_for_build_wheel  # noqa: F401
 
+FRONTEND_TARGETS = ["python/foxglove/notebook/static/widget.js"]
+
+
+def _assert_frontend_targets_exist() -> None:
+    for target in FRONTEND_TARGETS:
+        path = Path.cwd() / target
+        assert path.exists(), f"{target} not found"
+
 
 def _frontend_codegen(editable: bool = False) -> None:
     # Suppress warning about `build-backend` not being set to `maturin` in
@@ -32,6 +40,7 @@ def _frontend_codegen(editable: bool = False) -> None:
     notebook_frontend = Path.cwd() / "notebook-frontend"
     if not notebook_frontend.exists():
         print("[custom-build] no frontend sources; skipping frontend codegen.")
+        _assert_frontend_targets_exist()
         return
 
     # For editable installs, don't minify.
@@ -44,6 +53,8 @@ def _frontend_codegen(editable: bool = False) -> None:
         print(f"[custom-build] running {' '.join(cmd)}")
         sys.stdout.flush()
         subprocess.run(cmd, cwd=notebook_frontend, check=True)
+
+    _assert_frontend_targets_exist()
 
 
 def build_wheel(*args, **kwargs):  # type: ignore
