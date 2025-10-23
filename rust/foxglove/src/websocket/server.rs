@@ -161,7 +161,7 @@ pub(crate) struct Server {
     tasks: parking_lot::Mutex<Option<JoinSet<()>>>,
     /// Configuration to support TLS streams when enabled.
     stream_config: StreamConfiguration,
-    /// Info about the server, which is shared with clients.
+    /// Information about the server, which is shared with clients.
     server_info: HashMap<String, String>,
 }
 
