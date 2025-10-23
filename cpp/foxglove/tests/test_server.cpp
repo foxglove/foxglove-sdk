@@ -1461,3 +1461,30 @@ TEST_CASE("Server channel filtering") {
 
   REQUIRE(server.stop() == foxglove::FoxgloveError::Ok);
 }
+
+TEST_CASE("Server info") {
+  auto context = foxglove::Context::create();
+
+  std::map<std::string, std::string> server_info = {{"key1", "value1"}};
+
+  foxglove::WebSocketServerOptions ws_options;
+  ws_options.context = context;
+  ws_options.server_info = server_info;
+
+  auto server = startServer(std::move(ws_options));
+
+  WebSocketClient client;
+  client.start(server.port());
+  client.waitForConnection();
+
+  auto payload = client.recv();
+  auto parsed = Json::parse(payload);
+  REQUIRE(parsed.contains("op"));
+  REQUIRE(parsed["op"] == "serverInfo");
+  auto metadata = parsed["metadata"];
+  auto iterator = metadata.find("key1");
+  REQUIRE(iterator != metadata.end());
+  REQUIRE(*iterator == "value1");
+
+  REQUIRE(server.stop() == foxglove::FoxgloveError::Ok);
+}

@@ -216,12 +216,18 @@ struct WebSocketServerOptions {
   std::vector<std::string> supported_encodings;
   /// @brief A fetch asset handler callback.
   FetchAssetHandler fetch_asset;
+  /// @brief A sink channel filter callback.
+  SinkChannelFilterFn sink_channel_filter;
   /// @brief (internal) TLS configuration for the server.
   ///
   /// This option is under active development and may change.
   std::optional<TlsIdentity> tls_identity = std::nullopt;
-  /// @brief A sink channel filter callback.
-  SinkChannelFilterFn sink_channel_filter;
+  /// @cond foxglove_internal
+  /// @brief (internal) Information about the server, which is shared with clients.
+  ///
+  /// This option is for internal use only and may change.
+  std::optional<std::map<std::string, std::string>> server_info = std::nullopt;
+  /// @endcond
 };
 
 /// @brief A WebSocket server for visualization in Foxglove.

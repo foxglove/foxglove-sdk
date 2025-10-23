@@ -259,6 +259,16 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
     };
   }
 
+  std::vector<foxglove_key_value> server_info;
+  if (options.server_info) {
+    server_info.reserve(options.server_info->size());
+    for (auto const& [key, value] : *options.server_info) {
+      server_info.push_back({{key.data(), key.length()}, {value.data(), value.length()}});
+    }
+    c_options.server_info = server_info.data();
+    c_options.server_info_count = server_info.size();
+  }
+
   if (options.tls_identity) {
     c_options.tls_cert = reinterpret_cast<const uint8_t*>(options.tls_identity->cert.data());
     c_options.tls_cert_len = options.tls_identity->cert.size();
