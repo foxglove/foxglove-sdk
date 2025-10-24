@@ -1,0 +1,12 @@
+{
+  "extends": "@foxglove/tsconfig/base",
+  "include": ["widget.ts"],
+  "compilerOptions": {
+    "outDir": "../python/notebook/static",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "jsx": "react"
+  }
+}

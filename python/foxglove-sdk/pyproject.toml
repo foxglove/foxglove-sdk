@@ -13,6 +13,9 @@ dynamic = ["version"]
 repository = "https://github.com/foxglove/foxglove-sdk"
 documentation = "https://docs.foxglove.dev/"
 
+[project.optional-dependencies]
+notebook = ["anywidget", "mcap", "traitlets"]
+
 [dependency-groups]
 dev = [
   "black>=25.1.0,<26",
@@ -33,12 +36,21 @@ package = false
 
 [build-system]
 requires = ["maturin>=1.7,<2.0"]
-build-backend = "maturin"
+# Custom build backend for building frontend assets. See custom_build.py.
+build-backend = "custom_build"
+backend-path = ["."]
 
 [tool.maturin]
 python-source = "python"
 module-name = "foxglove._foxglove_py"
 features = ["pyo3/extension-module"]
+include = [
+  # Custom build backend, required for building from sdist.
+  { path = "custom_build.py", format = ["sdist"] },
+  # Include Jupyter widget static assets
+  "foxglove/notebook/static/*",
+]
+jupyterlab = "^4.4.7"
 
 [tool.mypy]
 python_version = "3.9"
