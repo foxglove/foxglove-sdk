@@ -211,7 +211,7 @@
           "type"
         ]
       },
-      "description": "Fields in `data`. `red`, `green`, `blue`, and `alpha` are optional for customizing the grid's color."
+      "description": "Fields in `data`. See [Color fields](#color-fields) below for RGB visualization."
     },
     "data": {
       "type": "string",
