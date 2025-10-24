@@ -911,8 +911,8 @@ impl From<GeoJson> for foxglove::schemas::GeoJson {
 /// :param data: Grid cell data, interpreted using `fields`, in row-major (y-major) order.
 ///     For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
 ///     
-///     - y = (i / cell_stride) % row_stride * cell_size.y
-///     - x = i % cell_stride * cell_size.x
+///     - y = i / row_stride * cell_size.y
+///     - x = (i % row_stride) / cell_stride * cell_size.x
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/grid
 #[pyclass(module = "foxglove.schemas")]
@@ -1005,10 +1005,11 @@ impl From<Grid> for foxglove::schemas::Grid {
 /// :param cell_stride: Number of bytes between cells within a row in `data`
 /// :param fields: Fields in `data`. See [Color fields](#color-fields) below for RGB visualization.
 /// :param data: Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order.
-///      For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
-///      z = i / slice_stride * cell_size.z
-///      y = (i % slice_stride) / row_stride * cell_size.y
-///      x = (i % row_stride) / cell_stride * cell_size.x
+///     For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
+///     
+///     - z = i / slice_stride * cell_size.z
+///     - y = (i % slice_stride) / row_stride * cell_size.y
+///     - x = (i % row_stride) / cell_stride * cell_size.x
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/voxel-grid
 #[pyclass(module = "foxglove.schemas")]

@@ -345,8 +345,8 @@ pub struct Grid {
     /// Grid cell data, interpreted using `fields`, in row-major (y-major) order.
     /// For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
     ///
-    /// - y = (i / cell_stride) % row_stride * cell_size.y
-    /// - x = i % cell_stride * cell_size.x
+    /// - y = i / row_stride * cell_size.y
+    /// - x = (i % row_stride) / cell_stride * cell_size.x
     #[prost(bytes = "bytes", tag = "9")]
     pub data: ::prost::bytes::Bytes,
 }
@@ -1298,10 +1298,11 @@ pub struct VoxelGrid {
     #[prost(message, repeated, tag = "10")]
     pub fields: ::prost::alloc::vec::Vec<PackedElementField>,
     /// Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order.
-    ///   For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
-    ///   z = i / slice_stride * cell_size.z
-    ///   y = (i % slice_stride) / row_stride * cell_size.y
-    ///   x = (i % row_stride) / cell_stride * cell_size.x
+    /// For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
+    ///
+    /// - z = i / slice_stride * cell_size.z
+    /// - y = (i % slice_stride) / row_stride * cell_size.y
+    /// - x = (i % row_stride) / cell_stride * cell_size.x
     #[prost(bytes = "bytes", tag = "11")]
     pub data: ::prost::bytes::Bytes,
 }

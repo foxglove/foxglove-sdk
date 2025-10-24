@@ -1223,7 +1223,7 @@ const Grid: FoxgloveMessageSchema = {
       name: "data",
       type: { type: "primitive", name: "bytes" },
       description:
-        "Grid cell data, interpreted using `fields`, in row-major (y-major) order.\nFor the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:\n\n- y = (i / cell_stride) % row_stride * cell_size.y\n- x = i % cell_stride * cell_size.x",
+        "Grid cell data, interpreted using `fields`, in row-major (y-major) order.\nFor the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:\n\n- y = i / row_stride * cell_size.y\n- x = (i % row_stride) / cell_stride * cell_size.x",
     },
   ],
 };
@@ -1289,7 +1289,7 @@ const VoxelGrid: FoxgloveMessageSchema = {
       name: "data",
       type: { type: "primitive", name: "bytes" },
       description:
-        "Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order.\n For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:\n z = i / slice_stride * cell_size.z\n y = (i % slice_stride) / row_stride * cell_size.y\n x = (i % row_stride) / cell_stride * cell_size.x",
+        "Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order.\nFor the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:\n\n- z = i / slice_stride * cell_size.z\n- y = (i % slice_stride) / row_stride * cell_size.y\n- x = (i % row_stride) / cell_stride * cell_size.x",
     },
   ],
 };

@@ -71,6 +71,6 @@ foxglove_msgs/PackedElementField[] fields
 # Grid cell data, interpreted using `fields`, in row-major (y-major) order.
 # For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
 # 
-# - y = (i / cell_stride) % row_stride * cell_size.y
-# - x = i % cell_stride * cell_size.x
+# - y = i / row_stride * cell_size.y
+# - x = (i % row_stride) / cell_stride * cell_size.x
 uint8[] data

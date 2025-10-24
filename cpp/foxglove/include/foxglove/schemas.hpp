@@ -790,8 +790,8 @@ struct Grid {
   /// @brief For the data element starting at byte offset i, the coordinates of its corner closest
   /// to the origin will be:
   /// @brief
-  /// @brief - y = (i / cell_stride) % row_stride * cell_size.y
-  /// @brief - x = i % cell_stride * cell_size.x
+  /// @brief - y = i / row_stride * cell_size.y
+  /// @brief - x = (i % row_stride) / cell_stride * cell_size.x
   std::vector<std::byte> data;
 
   /// @brief Encoded the Grid as protobuf to the provided buffer.
@@ -846,11 +846,12 @@ struct VoxelGrid {
   std::vector<PackedElementField> fields;
 
   /// @brief Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order.
-  /// @brief  For the data element starting at byte offset i, the coordinates of its corner closest
+  /// @brief For the data element starting at byte offset i, the coordinates of its corner closest
   /// to the origin will be:
-  /// @brief  z = i / slice_stride * cell_size.z
-  /// @brief  y = (i % slice_stride) / row_stride * cell_size.y
-  /// @brief  x = (i % row_stride) / cell_stride * cell_size.x
+  /// @brief
+  /// @brief - z = i / slice_stride * cell_size.z
+  /// @brief - y = (i % slice_stride) / row_stride * cell_size.y
+  /// @brief - x = (i % row_stride) / cell_stride * cell_size.x
   std::vector<std::byte> data;
 
   /// @brief Encoded the VoxelGrid as protobuf to the provided buffer.
