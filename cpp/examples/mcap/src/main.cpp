@@ -19,7 +19,7 @@ int main() {
   std::map<std::string, std::string> metadata = {{"os", "linux"}, {"arch", "x64"}};
   foxglove::FoxgloveError err = writer.writeMetadata("platform", metadata.begin(), metadata.end());
   if (err != foxglove::FoxgloveError::Ok) {
-    std::cerr << "Failed to write metadata: " << foxglove::strerror(err) << '\n';
+    std::cerr << "Failed to write metadata: " << foxglove::strerror(err) << std::endl;
     return 1;
   }
 
