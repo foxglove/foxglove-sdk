@@ -883,19 +883,15 @@ typedef struct foxglove_grid {
    */
   uint32_t cell_stride;
   /**
-   * Fields in `data`. See [Color fields](#color-fields) below for RGB visualization.
-   * To enable RGB color visualization in the [3D panel](/docs/visualization/panels/3d#rgba-separate-fields-color-mode), include **all four** of these fields in your `fields` array:
+   * Fields in `data`. S`red`, `green`, `blue`, and `alpha` are optional for customizing the grid's color.
+   * To enable RGB color visualization in the [3D panel](https://docs.foxglove.dev/docs/visualization/panels/3d#rgba-separate-fields-color-mode), include **all four** of these fields in your `fields` array:
    *
    * - `red` - Red channel value
    * - `green` - Green channel value
    * - `blue` - Blue channel value
    * - `alpha` - Alpha/transparency channel value
    *
-   * :::note
-   *
-   * All four fields must be present with these exact names for RGB visualization to work. The order of fields doesn't matter, but the names must match exactly.
-   *
-   * :::
+   * **note:** All four fields must be present with these exact names for RGB visualization to work. The order of fields doesn't matter, but the names must match exactly.
    *
    * Recommended type: `UINT8` (0-255 range) for standard 8-bit color channels.
    *
@@ -980,7 +976,7 @@ typedef struct foxglove_voxel_grid {
    */
   uint32_t cell_stride;
   /**
-   * Fields in `data`. See [Color fields](#color-fields) below for RGB visualization.
+   * Fields in `data`. `red`, `green`, `blue`, and `alpha` are optional for customizing the grid's color.
    */
   const struct foxglove_packed_element_field *fields;
   size_t fields_count;

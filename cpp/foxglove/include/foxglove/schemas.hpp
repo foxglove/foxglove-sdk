@@ -737,22 +737,19 @@ struct Grid {
   /// @brief Number of bytes between cells within a row in `data`
   uint32_t cell_stride = 0;
 
-  /// @brief Fields in `data`. See [Color fields](#color-fields) below for RGB visualization.
+  /// @brief Fields in `data`. S`red`, `green`, `blue`, and `alpha` are optional for customizing the
+  /// grid's color.
   /// @brief To enable RGB color visualization in the [3D
-  /// panel](/docs/visualization/panels/3d#rgba-separate-fields-color-mode), include **all four** of
-  /// these fields in your `fields` array:
+  /// panel](https://docs.foxglove.dev/docs/visualization/panels/3d#rgba-separate-fields-color-mode),
+  /// include **all four** of these fields in your `fields` array:
   /// @brief
   /// @brief - `red` - Red channel value
   /// @brief - `green` - Green channel value
   /// @brief - `blue` - Blue channel value
   /// @brief - `alpha` - Alpha/transparency channel value
   /// @brief
-  /// @brief :::note
-  /// @brief
-  /// @brief All four fields must be present with these exact names for RGB visualization to work.
-  /// The order of fields doesn't matter, but the names must match exactly.
-  /// @brief
-  /// @brief :::
+  /// @brief **note:** All four fields must be present with these exact names for RGB visualization
+  /// to work. The order of fields doesn't matter, but the names must match exactly.
   /// @brief
   /// @brief Recommended type: `UINT8` (0-255 range) for standard 8-bit color channels.
   /// @brief
@@ -842,7 +839,8 @@ struct VoxelGrid {
   /// @brief Number of bytes between cells within a row in `data`
   uint32_t cell_stride = 0;
 
-  /// @brief Fields in `data`. See [Color fields](#color-fields) below for RGB visualization.
+  /// @brief Fields in `data`. `red`, `green`, `blue`, and `alpha` are optional for customizing the
+  /// grid's color.
   std::vector<PackedElementField> fields;
 
   /// @brief Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order.

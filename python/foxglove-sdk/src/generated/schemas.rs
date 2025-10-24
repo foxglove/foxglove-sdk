@@ -866,19 +866,15 @@ impl From<GeoJson> for foxglove::schemas::GeoJson {
 /// :param cell_size: Size of single grid cell along x and y axes, relative to `pose`
 /// :param row_stride: Number of bytes between rows in `data`
 /// :param cell_stride: Number of bytes between cells within a row in `data`
-/// :param fields: Fields in `data`. See [Color fields](#color-fields) below for RGB visualization.
-///     To enable RGB color visualization in the `3D panel </docs/visualization/panels/3d#rgba-separate-fields-color-mode>`__, include **all four** of these fields in your `fields` array:
+/// :param fields: Fields in `data`. S`red`, `green`, `blue`, and `alpha` are optional for customizing the grid's color.
+///     To enable RGB color visualization in the `3D panel <https://docs.foxglove.dev/docs/visualization/panels/3d#rgba-separate-fields-color-mode>`__, include **all four** of these fields in your `fields` array:
 ///     
 ///     - `red` - Red channel value
 ///     - `green` - Green channel value
 ///     - `blue` - Blue channel value
 ///     - `alpha` - Alpha/transparency channel value
 ///     
-///     :::note
-///     
-///     All four fields must be present with these exact names for RGB visualization to work. The order of fields doesn't matter, but the names must match exactly.
-///     
-///     :::
+///     **note:** All four fields must be present with these exact names for RGB visualization to work. The order of fields doesn't matter, but the names must match exactly.
 ///     
 ///     Recommended type: `UINT8` (0-255 range) for standard 8-bit color channels.
 ///     
@@ -1003,7 +999,7 @@ impl From<Grid> for foxglove::schemas::Grid {
 /// :param slice_stride: Number of bytes between depth slices in `data`
 /// :param row_stride: Number of bytes between rows in `data`
 /// :param cell_stride: Number of bytes between cells within a row in `data`
-/// :param fields: Fields in `data`. See [Color fields](#color-fields) below for RGB visualization.
+/// :param fields: Fields in `data`. `red`, `green`, `blue`, and `alpha` are optional for customizing the grid's color.
 /// :param data: Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order.
 ///      For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
 ///      z = i / slice_stride * cell_size.z
