@@ -217,7 +217,7 @@ def init_notebook_buffer(context: Context | None = None) -> NotebookBuffer:
     except ImportError:
         raise Exception(
             "NotebookBuffer is not installed. "
-            "Please install it with `pip install foxglove-sdk[notebook]`"
+            'Please install it with `pip install "foxglove-sdk[notebook]"`'
         )
 
     return NotebookBuffer(context=context)

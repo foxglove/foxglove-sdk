@@ -3,12 +3,12 @@ from __future__ import annotations
 import os
 import uuid
 from tempfile import TemporaryDirectory
-from typing import Literal
+from typing import Any, Literal
 
 from mcap.reader import make_reader
 
 from .._foxglove_py import Context, open_mcap
-from .foxglove_widget import FoxgloveWidget, SelectLayoutParams
+from .foxglove_widget import FoxgloveWidget
 
 
 class NotebookBuffer:
@@ -37,10 +37,11 @@ class NotebookBuffer:
 
     def show(
         self,
+        layout_storage_key: str,
         width: int | Literal["full"] | None = None,
         height: int | None = None,
         src: str | None = None,
-        layout: SelectLayoutParams | None = None,
+        **kwargs: Any,
     ) -> FoxgloveWidget:
         """
         Show the Foxglove viewer. Call this method as the last step of a notebook cell
@@ -51,7 +52,8 @@ class NotebookBuffer:
             width=width,
             height=height,
             src=src,
-            layout=layout,
+            layout_storage_key=layout_storage_key,
+            **kwargs,
         )
         return widget
 

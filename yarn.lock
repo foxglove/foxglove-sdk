@@ -973,25 +973,25 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@foxglove/embed-react@npm:^0.1.5":
-  version: 0.1.5
-  resolution: "@foxglove/embed-react@npm:0.1.5"
+"@foxglove/embed-react@npm:^0.1.6":
+  version: 0.1.6
+  resolution: "@foxglove/embed-react@npm:0.1.6"
   dependencies:
-    "@foxglove/embed": "npm:0.1.5"
+    "@foxglove/embed": "npm:0.1.6"
     tslib: "npm:2.8.1"
   peerDependencies:
     react: ">=18"
     react-dom: ">=18"
-  checksum: 10c0/1bc8e76921e0059340ce6bd1a88b0e6a6b4fc4981f7f58c020d2bccb43bd1ea40a389c7fae39233fcbb348b57caa96a6a3673590b9a5720f03680ac05c437b56
+  checksum: 10c0/587d391d5f222cbba86d5593522f0d55bc82add48349a3971e9384b8949655ef6cbcce008030627f86325d8580b92a321488cbbfc626ec5a4736b3459b468993
   languageName: node
   linkType: hard
 
-"@foxglove/embed@npm:0.1.5, @foxglove/embed@npm:^0.1.5":
-  version: 0.1.5
-  resolution: "@foxglove/embed@npm:0.1.5"
+"@foxglove/embed@npm:0.1.6, @foxglove/embed@npm:^0.1.6":
+  version: 0.1.6
+  resolution: "@foxglove/embed@npm:0.1.6"
   dependencies:
     tslib: "npm:2.8.1"
-  checksum: 10c0/747cd54ba057ec5fb5dc44ba54f0c3a4546b096c60935e48a59bfcefc3882e5e34ad6d1b456ccd1f7fe303f94838850f51dc97d2f4c8fe63ad7b86defef873f2
+  checksum: 10c0/5e5ea0b15ba3171d2b1114089361c0e10176e7f982b053dc0ee479d50935bca99e6eaf19425a09f63b5fdd075c30d3f44f648715214c30329c683806d3ef7802
   languageName: node
   linkType: hard
 
@@ -1030,7 +1030,7 @@ __metadata:
   resolution: "@foxglove/notebook-frontend@workspace:python/foxglove-sdk/notebook-frontend"
   dependencies:
     "@anywidget/types": "npm:0.2.0"
-    "@foxglove/embed": "npm:0.1.5"
+    "@foxglove/embed": "npm:0.1.6"
     "@foxglove/tsconfig": "npm:2.0.0"
     esbuild: "npm:0.25.11"
     typescript: "npm:5.9.3"
@@ -8099,8 +8099,8 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "playground@workspace:playground"
   dependencies:
-    "@foxglove/embed": "npm:^0.1.5"
-    "@foxglove/embed-react": "npm:^0.1.5"
+    "@foxglove/embed": "npm:^0.1.6"
+    "@foxglove/embed-react": "npm:^0.1.6"
     "@foxglove/tsconfig": "npm:^2.0.0"
     "@foxglove/wasm-zstd": "npm:^1.0.1"
     "@pmmmwh/react-refresh-webpack-plugin": "npm:^0.6.1"

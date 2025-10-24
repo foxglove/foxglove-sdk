@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import pathlib
-from typing import TYPE_CHECKING, Any, Literal, TypedDict
+from typing import TYPE_CHECKING, Any, Literal
 
 import anywidget
 import traitlets
@@ -10,57 +10,40 @@ if TYPE_CHECKING:
     from .notebook_buffer import NotebookBuffer
 
 
-class SelectLayoutParams(TypedDict):
-    """
-     A dictionary of parameters to select a layout in the Foxglove viewer.
-
-     :param storageKey: The storage key to identify the layout in local storage. When reusing
-        the same storage key, any modifications made by the user will be restored unless
-        `force` is true.
-    :param opaqueLayout: The layout data to load if this layout did not already exist,
-        or if `force` is true. This is an opaque JavaScript object, which should be parsed from
-        a JSON layout file that was exported from the Foxglove app.
-    :param force: If true, opaqueLayout will override the layout if it already exists.
-        Default: false
-    """
-
-    storageKey: str
-    opaqueLayout: dict
-    force: bool | None
-
-
 class FoxgloveWidget(anywidget.AnyWidget):
     """
     A widget that displays a Foxglove viewer in a notebook.
 
-    :param get_data: A callback function that returns the data to display in the widget.
-    :param width: The width of the widget. Defaults to "100%".
-    :param height: The height of the widget. Defaults to "500px".
+    :param buffer: The NotebookBuffer object that contains the data to display in the widget.
+    :param layout_storage_key: The storage key of the layout to use for the widget.
+    :param width: The width of the widget. Defaults to "full".
+    :param height: The height of the widget in pixels. Defaults to 500.
     :param src: The source URL of the Foxglove viewer. Defaults to "https://embed.foxglove.dev/".
-    :param layout_data: The layout data to use for the widget.
     """
 
     _esm = pathlib.Path(__file__).parent / "static" / "widget.js"
-    width = traitlets.Union([traitlets.Int(), traitlets.Enum(values=["full"])]).tag(
-        sync=True
-    )
-    height = traitlets.Int(500).tag(sync=True)
-    src = traitlets.Unicode(None, allow_none=True).tag(sync=True)
-    layout = traitlets.Dict(
+    width = traitlets.Union(
+        [traitlets.Int(), traitlets.Enum(values=["full"])], default_value="full"
+    ).tag(sync=True)
+    height = traitlets.Int(default_value=500).tag(sync=True)
+    src = traitlets.Unicode(default_value=None, allow_none=True).tag(sync=True)
+    _layout_params = traitlets.Dict(
         per_key_traits={
-            "storageKey": traitlets.Unicode(),
-            "opaqueLayout": traitlets.Dict(),
+            "storage_key": traitlets.Unicode(),
+            "opaque_layout": traitlets.Dict(allow_none=True, default_value=None),
             "force": traitlets.Bool(False),
-        }
+        },
+        allow_none=True,
+        default_value=None,
     ).tag(sync=True)
 
     def __init__(
         self,
         buffer: NotebookBuffer,
+        layout_storage_key: str,
         width: int | Literal["full"] | None = None,
         height: int | None = None,
         src: str | None = None,
-        layout: SelectLayoutParams | None = None,
         **kwargs: Any,
     ):
         super().__init__(**kwargs)
@@ -72,8 +55,8 @@ class FoxgloveWidget(anywidget.AnyWidget):
             self.height = height
         if src is not None:
             self.src = src
-        if layout is not None:
-            self.layout = layout  # type: ignore[assignment]
+
+        self.select_layout(layout_storage_key, **kwargs)
 
         # Callback to get the data to display in the widget
         self._buffer = buffer
@@ -83,6 +66,19 @@ class FoxgloveWidget(anywidget.AnyWidget):
         self._pending_data: list[bytes] = []
         self.on_msg(self._handle_custom_msg)
         self.refresh()
+
+    def select_layout(self, storage_key: str, **kwargs: Any) -> None:
+        """
+        Select a layout in the Foxglove viewer.
+        """
+        opaque_layout = kwargs.get("opaque_layout", None)
+        force_layout = kwargs.get("force_layout", False)
+
+        self._layout_params = {
+            "storage_key": storage_key,
+            "opaque_layout": opaque_layout if isinstance(opaque_layout, dict) else None,
+            "force": force_layout,
+        }
 
     def refresh(self) -> None:
         """

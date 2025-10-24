@@ -50,7 +50,7 @@ Notebook Classes
    directly within your Jupyter notebook, allowing you to explore multi-modal robotics data
    including 3D scenes, plots, images, and more.
 
-   .. py:method:: show(width: int | Literal["full"] | None = None, height: int | None = None, src: str | None = None, layout: SelectLayoutParams | None = None) -> FoxgloveWidget
+   .. py:method:: show(layout_storage_key: str, width: int | Literal["full"] | None = None, height: int | None = None) -> FoxgloveWidget
 
       Show the Foxglove viewer. Call this method as the last step of a notebook cell
       to display the viewer.
@@ -58,10 +58,6 @@ Notebook Classes
    .. py:method:: clear() -> None
 
       Clear the buffered data.
-
-   .. py:method:: get_data() -> list[bytes]
-
-      Retrieve all collected data.
 
 .. py:class:: FoxgloveWidget
 
@@ -72,17 +68,6 @@ Notebook Classes
    .. py:method:: refresh() -> None
 
       Refresh the widget by reading the latest data from the buffer used to created the widget and sending it to the widget.
-
-.. py:class:: SelectLayoutParams
-
-   A dictionary of parameters to select a layout in the Foxglove viewer.
-
-   :param storageKey: The storage key to identify the layout in local storage. When reusing the same storage key,
-       any modifications made by the user will be restored unless `force` is true.
-   :param opaqueLayout: The layout data to load if this layout did not already exist, or if `force` is true.
-       This is an opaque JavaScript object, which should be parsed from a JSON layout file
-       that was exported from the Foxglove app.
-   :param force: If true, opaqueLayout will override the layout if it already exists. Default: false
 
 
 Schemas
