@@ -9,7 +9,7 @@ fn main() {
 
     // Tell cargo to tell rustc to link the system bzip2
     // shared library.
-    println!("cargo:rustc-link-lib=static=foxglove_enterprise");
+    println!("cargo:rustc-link-lib=static=agent_sdk");
 
     // The bindgen::Builder is the main entry point
     // to bindgen, and lets you build up options for

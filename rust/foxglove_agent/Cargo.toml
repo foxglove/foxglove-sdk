@@ -1,5 +1,5 @@
 [package]
-name = "foxglove_enterprise"
+name = "foxglove_agent"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
