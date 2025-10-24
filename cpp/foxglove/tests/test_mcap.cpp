@@ -500,3 +500,64 @@ TEST_CASE("MCAP Channel filtering") {
   REQUIRE_THAT(content, !ContainsSubstring("Topic 1 msg"));
   REQUIRE_THAT(content, ContainsSubstring("Topic 2 msg"));
 }
+
+TEST_CASE("Write metadata records to MCAP") {
+  FileCleanup cleanup("test.mcap");
+  auto context = foxglove::Context::create();
+
+  foxglove::McapWriterOptions options;
+  options.context = context;
+  options.path = "test.mcap";
+  auto writer = foxglove::McapWriter::create(options);
+  REQUIRE(writer.has_value());
+
+  // Write first metadata record
+  std::map<std::string, std::string> metadata1 = {{"key1", "value1"}, {"key2", "value2"}};
+  auto error1 = writer->writeMetadata("metadata_record_1", metadata1.begin(), metadata1.end());
+  REQUIRE(error1 == foxglove::FoxgloveError::Ok);
+
+  // Write second metadata record
+  std::map<std::string, std::string> metadata2 = {{"key3", "value3"}, {"key4", "value4"}};
+  auto error2 = writer->writeMetadata("metadata_record_2", metadata2.begin(), metadata2.end());
+  REQUIRE(error2 == foxglove::FoxgloveError::Ok);
+
+  writer->close();
+
+  REQUIRE(std::filesystem::exists("test.mcap"));
+
+  // Verify both metadata records were written
+  std::string content = readFile("test.mcap");
+  REQUIRE_THAT(content, ContainsSubstring("metadata_record_1"));
+  REQUIRE_THAT(content, ContainsSubstring("key1"));
+  REQUIRE_THAT(content, ContainsSubstring("value1"));
+  REQUIRE_THAT(content, ContainsSubstring("key2"));
+  REQUIRE_THAT(content, ContainsSubstring("value2"));
+  REQUIRE_THAT(content, ContainsSubstring("metadata_record_2"));
+  REQUIRE_THAT(content, ContainsSubstring("key3"));
+  REQUIRE_THAT(content, ContainsSubstring("value3"));
+  REQUIRE_THAT(content, ContainsSubstring("key4"));
+  REQUIRE_THAT(content, ContainsSubstring("value4"));
+}
+
+TEST_CASE("Write empty metadata") {
+  FileCleanup cleanup("test.mcap");
+  auto context = foxglove::Context::create();
+
+  foxglove::McapWriterOptions options;
+  options.context = context;
+  options.path = "test.mcap";
+  auto writer = foxglove::McapWriter::create(options);
+  REQUIRE(writer.has_value());
+
+  // Write empty metadata (should do nothing according to documentation)
+  std::map<std::string, std::string> metadata;
+  auto error = writer->writeMetadata("empty_metadata", metadata.begin(), metadata.end());
+  REQUIRE(error == foxglove::FoxgloveError::Ok);
+
+  writer->close();
+
+  REQUIRE(std::filesystem::exists("test.mcap"));
+
+  std::string content = readFile("test.mcap");
+  REQUIRE_THAT(content, !ContainsSubstring("empty_metadata"));
+}
