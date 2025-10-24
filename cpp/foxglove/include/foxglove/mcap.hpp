@@ -17,8 +17,8 @@ enum foxglove_error : uint8_t;
 struct foxglove_mcap_writer;
 
 foxglove_error foxglove_mcap_write_metadata(
-  foxglove_mcap_writer* writer, const foxglove_string* name,
-  const foxglove_key_value* metadata, size_t metadata_len
+  foxglove_mcap_writer* writer, const foxglove_string* name, const foxglove_key_value* metadata,
+  size_t metadata_len
 );
 /// @endcond
 
