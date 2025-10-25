@@ -737,15 +737,58 @@ struct Grid {
   /// @brief Number of bytes between cells within a row in `data`
   uint32_t cell_stride = 0;
 
-  /// @brief Fields in `data`. `red`, `green`, `blue`, and `alpha` are optional for customizing the
+  /// @brief Fields in `data`. S`red`, `green`, `blue`, and `alpha` are optional for customizing the
   /// grid's color.
+  /// @brief To enable RGB color visualization in the [3D
+  /// panel](https://docs.foxglove.dev/docs/visualization/panels/3d#rgba-separate-fields-color-mode),
+  /// include **all four** of these fields in your `fields` array:
+  /// @brief
+  /// @brief - `red` - Red channel value
+  /// @brief - `green` - Green channel value
+  /// @brief - `blue` - Blue channel value
+  /// @brief - `alpha` - Alpha/transparency channel value
+  /// @brief
+  /// @brief **note:** All four fields must be present with these exact names for RGB visualization
+  /// to work. The order of fields doesn't matter, but the names must match exactly.
+  /// @brief
+  /// @brief Recommended type: `UINT8` (0-255 range) for standard 8-bit color channels.
+  /// @brief
+  /// @brief Example field definitions:
+  /// @brief
+  /// @brief **RGB color only:**
+  /// @brief
+  /// @brief ```javascript
+  /// @brief fields: [
+  /// @brief  { name: "red", offset: 0, type: NumericType.UINT8 },
+  /// @brief  { name: "green", offset: 1, type: NumericType.UINT8 },
+  /// @brief  { name: "blue", offset: 2, type: NumericType.UINT8 },
+  /// @brief  { name: "alpha", offset: 3, type: NumericType.UINT8 },
+  /// @brief ];
+  /// @brief ```
+  /// @brief
+  /// @brief **RGB color with elevation (for 3D terrain visualization):**
+  /// @brief
+  /// @brief ```javascript
+  /// @brief fields: [
+  /// @brief  { name: "red", offset: 0, type: NumericType.UINT8 },
+  /// @brief  { name: "green", offset: 1, type: NumericType.UINT8 },
+  /// @brief  { name: "blue", offset: 2, type: NumericType.UINT8 },
+  /// @brief  { name: "alpha", offset: 3, type: NumericType.UINT8 },
+  /// @brief  { name: "elevation", offset: 4, type: NumericType.FLOAT32 },
+  /// @brief ];
+  /// @brief ```
+  /// @brief
+  /// @brief When these fields are present, the 3D panel will offer additional "Color Mode" options
+  /// including "RGBA (separate fields)" to visualize the RGB data directly. For elevation
+  /// visualization, set the "Elevation field" to your elevation layer name.
   std::vector<PackedElementField> fields;
 
   /// @brief Grid cell data, interpreted using `fields`, in row-major (y-major) order.
-  /// @brief  For the data element starting at byte offset i, the coordinates of its corner closest
+  /// @brief For the data element starting at byte offset i, the coordinates of its corner closest
   /// to the origin will be:
-  /// @brief  y = i / row_stride * cell_size.y
-  /// @brief  x = (i % row_stride) / cell_stride * cell_size.x
+  /// @brief
+  /// @brief - y = i / row_stride * cell_size.y
+  /// @brief - x = (i % row_stride) / cell_stride * cell_size.x
   std::vector<std::byte> data;
 
   /// @brief Encoded the Grid as protobuf to the provided buffer.
@@ -801,11 +844,12 @@ struct VoxelGrid {
   std::vector<PackedElementField> fields;
 
   /// @brief Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order.
-  /// @brief  For the data element starting at byte offset i, the coordinates of its corner closest
+  /// @brief For the data element starting at byte offset i, the coordinates of its corner closest
   /// to the origin will be:
-  /// @brief  z = i / slice_stride * cell_size.z
-  /// @brief  y = (i % slice_stride) / row_stride * cell_size.y
-  /// @brief  x = (i % row_stride) / cell_stride * cell_size.x
+  /// @brief
+  /// @brief - z = i / slice_stride * cell_size.z
+  /// @brief - y = (i % slice_stride) / row_stride * cell_size.y
+  /// @brief - x = (i % row_stride) / cell_stride * cell_size.x
   std::vector<std::byte> data;
 
   /// @brief Encoded the VoxelGrid as protobuf to the provided buffer.
