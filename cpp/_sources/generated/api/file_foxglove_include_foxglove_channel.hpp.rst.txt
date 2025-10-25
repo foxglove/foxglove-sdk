@@ -1,0 +1,92 @@
+
+.. _file_foxglove_include_foxglove_channel.hpp:
+
+File channel.hpp
+================
+
+|exhale_lsh| :ref:`Parent directory <dir_foxglove_include_foxglove>` (``foxglove/include/foxglove``)
+
+.. |exhale_lsh| unicode:: U+021B0 .. UPWARDS ARROW WITH TIP LEFTWARDS
+
+Definition (``foxglove/include/foxglove/channel.hpp``)
+------------------------------------------------------
+
+
+.. toctree::
+   :maxdepth: 1
+
+   program_listing_file_foxglove_include_foxglove_channel.hpp.rst
+
+
+
+
+
+Includes
+--------
+
+
+- ``cstdint``
+
+- ``foxglove-c/foxglove-c.h``
+
+- ``foxglove/context.hpp`` (:ref:`file_foxglove_include_foxglove_context.hpp`)
+
+- ``foxglove/error.hpp`` (:ref:`file_foxglove_include_foxglove_error.hpp`)
+
+- ``foxglove/schema.hpp`` (:ref:`file_foxglove_include_foxglove_schema.hpp`)
+
+- ``foxglove/schemas.hpp`` (:ref:`file_foxglove_include_foxglove_schemas.hpp`)
+
+- ``map``
+
+- ``memory``
+
+- ``optional``
+
+- ``string``
+
+
+
+Included By
+-----------
+
+
+- :ref:`file_foxglove_include_foxglove_cloud_sink.hpp`
+
+- :ref:`file_foxglove_include_foxglove_mcap.hpp`
+
+- :ref:`file_foxglove_include_foxglove_server.hpp`
+
+- :ref:`file_foxglove_include_foxglove_server_service.hpp`
+
+- :ref:`file_foxglove_src_channel.cpp`
+
+- :ref:`file_foxglove_src_mcap.cpp`
+
+- :ref:`file_foxglove_src_server.cpp`
+
+
+
+
+Namespaces
+----------
+
+
+- :ref:`namespace_foxglove`
+
+
+Classes
+-------
+
+
+- :ref:`exhale_class_classfoxglove_1_1ChannelDescriptor`
+
+- :ref:`exhale_class_classfoxglove_1_1RawChannel`
+
+
+Typedefs
+--------
+
+
+- :ref:`exhale_typedef_namespacefoxglove_1ad1440d6165e48edbd295e9ac627583d6`
+

@@ -1,0 +1,52 @@
+
+.. _file_foxglove_src_cloud_sink.cpp:
+
+File cloud_sink.cpp
+===================
+
+|exhale_lsh| :ref:`Parent directory <dir_foxglove_src>` (``foxglove/src``)
+
+.. |exhale_lsh| unicode:: U+021B0 .. UPWARDS ARROW WITH TIP LEFTWARDS
+
+Definition (``foxglove/src/cloud_sink.cpp``)
+--------------------------------------------
+
+
+.. toctree::
+   :maxdepth: 1
+
+   program_listing_file_foxglove_src_cloud_sink.cpp.rst
+
+
+
+
+
+Includes
+--------
+
+
+- ``cstdint``
+
+- ``foxglove-c/foxglove-c.h``
+
+- ``foxglove/cloud_sink.hpp`` (:ref:`file_foxglove_include_foxglove_cloud_sink.hpp`)
+
+- ``foxglove/error.hpp`` (:ref:`file_foxglove_include_foxglove_error.hpp`)
+
+- ``foxglove/server.hpp`` (:ref:`file_foxglove_include_foxglove_server.hpp`)
+
+- ``optional``
+
+- ``string``
+
+
+
+
+
+
+Namespaces
+----------
+
+
+- :ref:`namespace_foxglove`
+

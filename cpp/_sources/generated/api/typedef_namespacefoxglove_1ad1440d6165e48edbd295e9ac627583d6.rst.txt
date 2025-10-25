@@ -1,0 +1,14 @@
+.. _exhale_typedef_namespacefoxglove_1ad1440d6165e48edbd295e9ac627583d6:
+
+Typedef foxglove::SinkChannelFilterFn
+=====================================
+
+- Defined in :ref:`file_foxglove_include_foxglove_channel.hpp`
+
+
+Typedef Documentation
+---------------------
+
+
+.. doxygentypedef:: foxglove::SinkChannelFilterFn
+   :project: Foxglove SDK

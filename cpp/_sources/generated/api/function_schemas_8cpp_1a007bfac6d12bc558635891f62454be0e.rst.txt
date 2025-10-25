@@ -1,0 +1,14 @@
+.. _exhale_function_schemas_8cpp_1a007bfac6d12bc558635891f62454be0e:
+
+Function foxglove::schemas::modelPrimitiveToC
+=============================================
+
+- Defined in :ref:`file_foxglove_src_schemas.cpp`
+
+
+Function Documentation
+----------------------
+
+
+.. doxygenfunction:: foxglove::schemas::modelPrimitiveToC(foxglove_model_primitive&, const ModelPrimitive&, Arena&)
+   :project: Foxglove SDK

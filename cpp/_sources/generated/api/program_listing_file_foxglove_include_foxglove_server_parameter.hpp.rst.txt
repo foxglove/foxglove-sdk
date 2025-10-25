@@ -1,0 +1,466 @@
+
+.. _program_listing_file_foxglove_include_foxglove_server_parameter.hpp:
+
+Program Listing for File parameter.hpp
+======================================
+
+|exhale_lsh| :ref:`Return to documentation for file <file_foxglove_include_foxglove_server_parameter.hpp>` (``foxglove/include/foxglove/server/parameter.hpp``)
+
+.. |exhale_lsh| unicode:: U+021B0 .. UPWARDS ARROW WITH TIP LEFTWARDS
+
+.. code-block:: cpp
+
+   #pragma once
+   
+   #include <foxglove/error.hpp>
+   
+   #include <algorithm>
+   #include <cstdint>
+   #include <map>
+   #include <memory>
+   #include <optional>
+   #include <stdexcept>
+   #include <string>
+   #include <variant>
+   #include <vector>
+   
+   struct foxglove_parameter_value;
+   struct foxglove_parameter;
+   struct foxglove_parameter_array;
+   
+   namespace foxglove {
+   
+   enum class ParameterType : uint8_t {
+     None,
+     ByteArray,
+     Float64,
+     Float64Array,
+   };
+   
+   class ParameterValueView final {
+   public:
+     using Array = std::vector<ParameterValueView>;
+     using Dict = std::map<std::string, ParameterValueView>;
+     using Value = std::variant<double, bool, int64_t, std::string_view, Array, Dict>;
+   
+     [[nodiscard]] class ParameterValue clone() const;
+   
+     [[nodiscard]] Value value() const;
+   
+     template<typename T>
+     [[nodiscard]] bool is() const noexcept {
+       try {
+         auto value = this->value();
+         return std::holds_alternative<T>(value);
+       } catch (...) {
+         // Unknown value tag.
+         return false;
+       }
+     }
+   
+     template<typename T>
+     [[nodiscard]] T get() const {
+       return std::get<T>(this->value());
+     }
+   
+   private:
+     friend class ParameterView;
+     friend class ParameterValue;
+   
+     const foxglove_parameter_value* impl_;
+   
+     explicit ParameterValueView(const foxglove_parameter_value* ptr)
+         : impl_(ptr) {}
+   };
+   
+   // Template specializations for ParameterValueView
+   //
+   // Documented manually as tparams because specializations are merged:
+   // https://github.com/doxygen/doxygen/issues/9468
+   
+   
+   
+   
+   template<>
+   [[nodiscard]] inline bool ParameterValueView::is<std::string>() const noexcept {
+     return this->is<std::string_view>();
+   }
+   template<>
+   [[nodiscard]] inline ParameterValueView ParameterValueView::get<ParameterValueView>() const {
+     return *this;
+   }
+   template<>
+   [[nodiscard]] inline std::string ParameterValueView::get<std::string>() const {
+     auto sv = this->get<std::string_view>();
+     return std::string(sv);
+   }
+   
+   class ParameterValue final {
+   public:
+     explicit ParameterValue(double value);
+     explicit ParameterValue(int64_t value);
+     explicit ParameterValue(bool value);
+     explicit ParameterValue(std::string_view value);
+     explicit ParameterValue(const char* value)
+         : ParameterValue(std::string_view(value)) {}
+     explicit ParameterValue(std::vector<ParameterValue> values);
+     explicit ParameterValue(std::map<std::string, ParameterValue> values);
+   
+     ~ParameterValue() = default;
+     ParameterValue(ParameterValue&& other) noexcept = default;
+     ParameterValue& operator=(ParameterValue&& other) noexcept = default;
+     ParameterValue(const ParameterValue&) = delete;
+     ParameterValue& operator=(const ParameterValue&) = delete;
+   
+     [[nodiscard]] ParameterValue clone() const {
+       return this->view().clone();
+     }
+   
+     [[nodiscard]] ParameterValueView view() const noexcept;
+   
+     template<typename T>
+     [[nodiscard]] bool is() const {
+       return this->view().is<T>();
+     }
+   
+     template<typename T>
+     [[nodiscard]] T get() const {
+       return this->view().get<T>();
+     }
+   
+   private:
+     friend class ParameterValueView;
+     friend class Parameter;
+   
+     struct Deleter {
+       void operator()(foxglove_parameter_value* ptr) const noexcept;
+     };
+   
+     std::unique_ptr<foxglove_parameter_value, Deleter> impl_;
+   
+     explicit ParameterValue(foxglove_parameter_value* ptr);
+   
+     [[nodiscard]] foxglove_parameter_value* release() noexcept;
+   };
+   
+   class ParameterView final {
+   public:
+     [[nodiscard]] class Parameter clone() const;
+   
+     [[nodiscard]] std::string_view name() const noexcept;
+     [[nodiscard]] ParameterType type() const noexcept;
+     [[nodiscard]] std::optional<ParameterValueView> value() const noexcept;
+     [[nodiscard]] bool hasValue() const noexcept {
+       return this->value().has_value();
+     };
+   
+     template<typename T>
+     [[nodiscard]] bool is() const noexcept {
+       auto value = this->value();
+       return value.has_value() && value->is<T>();
+     }
+   
+     template<typename T>
+     [[nodiscard]] bool isArray() const noexcept {
+       if (!this->isArray<ParameterValueView>()) {
+         return false;
+       }
+       try {
+         const auto& arr = this->get<ParameterValueView::Array>();
+         return std::all_of(arr.begin(), arr.end(), [](const ParameterValueView& elem) noexcept {
+           return elem.is<T>();
+         });
+       } catch (...) {
+         return false;
+       }
+     }
+   
+     template<typename T>
+     [[nodiscard]] bool isDict() const noexcept {
+       if (!this->isDict<ParameterValueView>()) {
+         return false;
+       }
+       try {
+         const auto& dict = this->get<ParameterValueView::Dict>();
+         return std::all_of(
+           dict.begin(),
+           dict.end(),
+           [](const std::pair<std::string, ParameterValueView>& elem) noexcept {
+             return elem.second.is<T>();
+           }
+         );
+       } catch (...) {
+         return false;
+       }
+     }
+   
+     [[nodiscard]] bool isByteArray() const noexcept;
+   
+     template<typename T>
+     [[nodiscard]] T get() const {
+       auto value = this->value();
+       if (!value) {
+         throw std::bad_optional_access();
+       }
+       return value->template get<T>();
+     }
+   
+     template<typename T>
+     [[nodiscard]] std::vector<T> getArray() const {
+       auto value = this->value();
+       if (!value) {
+         throw std::bad_optional_access();
+       }
+       const auto& arr = value->get<ParameterValueView::Array>();
+       std::vector<T> result;
+       result.reserve(arr.size());
+       for (const auto& elem : arr) {
+         result.push_back(elem.get<T>());
+       }
+       return result;
+     }
+   
+     template<typename T>
+     [[nodiscard]] std::map<std::string, T> getDict() const {
+       auto value = this->value();
+       if (!value) {
+         throw std::bad_optional_access();
+       }
+       const auto& dict = value->get<ParameterValueView::Dict>();
+       std::map<std::string, T> result;
+       for (const auto& [dictKey, dictValue] : dict) {
+         result.emplace(dictKey, dictValue.template get<T>());
+       }
+       return result;
+     }
+   
+     [[nodiscard]] FoxgloveResult<std::vector<std::byte>> getByteArray() const;
+   
+   private:
+     friend class Parameter;
+     friend class ParameterArrayView;
+   
+     const foxglove_parameter* impl_;
+   
+     explicit ParameterView(const foxglove_parameter* ptr)
+         : impl_(ptr) {}
+   };
+   
+   template<>
+   [[nodiscard]] inline bool ParameterView::isArray<ParameterValueView>() const noexcept {
+     auto value = this->value();
+     return value.has_value() && value->is<ParameterValueView::Array>();
+   }
+   
+   template<>
+   [[nodiscard]] inline bool ParameterView::isDict<ParameterValueView>() const noexcept {
+     auto value = this->value();
+     return value.has_value() && value->is<ParameterValueView::Dict>();
+   }
+   
+   // Template specializations for ParameterView
+   //
+   // Documented manually as tparams because specializations are merged:
+   // https://github.com/doxygen/doxygen/issues/9468
+   
+   
+   
+   
+   
+   
+   template<>
+   [[nodiscard]] inline bool ParameterView::is<std::string_view>() const noexcept {
+     auto value = this->value();
+     return value.has_value() && value->is<std::string_view>() &&
+            this->type() != ParameterType::ByteArray;
+   }
+   
+   template<>
+   [[nodiscard]] inline bool ParameterView::is<std::string>() const noexcept {
+     return this->is<std::string_view>();
+   }
+   
+   template<>
+   [[nodiscard]] inline bool ParameterView::is<std::vector<std::byte>>() const noexcept {
+     auto value = this->value();
+     return value.has_value() && value->is<std::string_view>() &&
+            this->type() == ParameterType::ByteArray;
+   }
+   
+   template<>
+   [[nodiscard]] inline bool ParameterView::is<std::vector<double>>() const noexcept {
+     return this->isArray<double>();
+   }
+   
+   template<>
+   [[nodiscard]] inline bool ParameterView::is<std::vector<int64_t>>() const noexcept {
+     return this->isArray<int64_t>();
+   }
+   
+   
+   [[nodiscard]] inline bool ParameterView::isByteArray() const noexcept {
+     return this->is<std::vector<std::byte>>();
+   }
+   
+   template<>
+   [[nodiscard]] inline std::vector<std::byte> ParameterView::get() const {
+     auto result = this->getByteArray();
+     if (!result.has_value()) {
+       throw std::runtime_error(strerror(result.error()));
+     }
+     return result.value();
+   }
+   
+   template<>
+   [[nodiscard]] inline std::vector<double> ParameterView::get() const {
+     return this->getArray<double>();
+   }
+   
+   template<>
+   [[nodiscard]] inline std::vector<int64_t> ParameterView::get() const {
+     return this->getArray<int64_t>();
+   }
+   
+   template<>
+   [[nodiscard]] inline std::vector<ParameterValueView> ParameterView::get() const {
+     return this->getArray<ParameterValueView>();
+   }
+   
+   template<>
+   [[nodiscard]] inline std::map<std::string, ParameterValueView> ParameterView::get() const {
+     return this->getDict<ParameterValueView>();
+   }
+   
+   class Parameter final {
+   public:
+     explicit Parameter(std::string_view name);
+     explicit Parameter(std::string_view name, double value);
+     explicit Parameter(std::string_view name, int64_t value);
+     explicit Parameter(std::string_view name, bool value);
+     explicit Parameter(std::string_view name, std::string_view value);
+     explicit Parameter(std::string_view name, const char* value)
+         : Parameter(name, std::string_view(value)) {}
+     explicit Parameter(std::string_view name, const uint8_t* data, size_t data_length);
+     explicit Parameter(std::string_view name, const std::vector<std::byte>& bytes)
+         : Parameter(name, reinterpret_cast<const uint8_t*>(bytes.data()), bytes.size()) {}
+     explicit Parameter(std::string_view name, const std::vector<double>& values);
+     explicit Parameter(std::string_view name, const std::vector<int64_t>& values);
+     explicit Parameter(std::string_view name, std::map<std::string, ParameterValue> values);
+     explicit Parameter(std::string_view name, ParameterType type, ParameterValue&& value);
+   
+     ~Parameter() = default;
+     Parameter(Parameter&& other) noexcept = default;
+     Parameter& operator=(Parameter&& other) noexcept = default;
+     Parameter(const Parameter&) = delete;
+     Parameter& operator=(const Parameter&) = delete;
+   
+     [[nodiscard]] Parameter clone() const {
+       return this->view().clone();
+     }
+   
+     [[nodiscard]] ParameterView view() const noexcept;
+   
+     [[nodiscard]] std::string_view name() const noexcept {
+       return this->view().name();
+     }
+     [[nodiscard]] ParameterType type() const noexcept {
+       return this->view().type();
+     }
+     [[nodiscard]] std::optional<ParameterValueView> value() const noexcept {
+       return this->view().value();
+     }
+     [[nodiscard]] bool hasValue() const noexcept {
+       return this->view().hasValue();
+     };
+   
+     template<typename T>
+     [[nodiscard]] bool is() const {
+       return this->view().is<T>();
+     }
+   
+     template<typename T>
+     [[nodiscard]] bool isArray() const noexcept {
+       return this->view().isArray<T>();
+     }
+   
+     template<typename T>
+     [[nodiscard]] bool isDict() const noexcept {
+       return this->view().isDict<T>();
+     }
+   
+     [[nodiscard]] bool isByteArray() const noexcept {
+       return this->view().isByteArray();
+     }
+   
+     template<typename T>
+     [[nodiscard]] T get() const {
+       return this->view().get<T>();
+     }
+   
+     template<typename T>
+     [[nodiscard]] std::vector<T> getArray() const {
+       return this->view().getArray<T>();
+     }
+   
+     template<typename T>
+     [[nodiscard]] std::map<std::string, T> getDict() const {
+       return this->view().getDict<T>();
+     }
+   
+     [[nodiscard]] FoxgloveResult<std::vector<std::byte>> getByteArray() const {
+       return this->view().getByteArray();
+     }
+   
+   private:
+     friend class ParameterView;
+     friend class ParameterArray;
+   
+     struct Deleter {
+       void operator()(foxglove_parameter* ptr) const noexcept;
+     };
+   
+     std::unique_ptr<foxglove_parameter, Deleter> impl_;
+   
+     explicit Parameter(foxglove_parameter* param);
+   
+     [[nodiscard]] foxglove_parameter* release() noexcept;
+   };
+   
+   class ParameterArrayView final {
+   public:
+     explicit ParameterArrayView(const foxglove_parameter_array* ptr);
+   
+     [[nodiscard]] std::vector<ParameterView> parameters() const;
+   
+   private:
+     const foxglove_parameter_array* impl_;
+   };
+   
+   class ParameterArray final {
+   public:
+     explicit ParameterArray(std::vector<Parameter>&& params);
+   
+     ~ParameterArray() = default;
+     ParameterArray(ParameterArray&& other) noexcept = default;
+     ParameterArray& operator=(ParameterArray&& other) noexcept = default;
+     ParameterArray(const ParameterArray&) = delete;
+     ParameterArray& operator=(const ParameterArray&) = delete;
+   
+     [[nodiscard]] ParameterArrayView view() const noexcept;
+     [[nodiscard]] std::vector<ParameterView> parameters() const {
+       return this->view().parameters();
+     }
+   
+   private:
+     friend class WebSocketServer;
+   
+     struct Deleter {
+       void operator()(foxglove_parameter_array* ptr) const noexcept;
+     };
+   
+     std::unique_ptr<foxglove_parameter_array, Deleter> impl_;
+   
+     [[nodiscard]] foxglove_parameter_array* release() noexcept;
+   };
+   
+   }  // namespace foxglove

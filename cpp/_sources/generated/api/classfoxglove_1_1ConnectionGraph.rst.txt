@@ -1,0 +1,17 @@
+.. _exhale_class_classfoxglove_1_1ConnectionGraph:
+
+Class ConnectionGraph
+=====================
+
+- Defined in :ref:`file_foxglove_include_foxglove_server_connection_graph.hpp`
+
+
+Class Documentation
+-------------------
+
+
+.. doxygenclass:: foxglove::ConnectionGraph
+   :project: Foxglove SDK
+   :members:
+   :protected-members:
+   :undoc-members:

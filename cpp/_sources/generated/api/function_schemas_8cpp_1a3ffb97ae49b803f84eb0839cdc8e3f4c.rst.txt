@@ -1,0 +1,14 @@
+.. _exhale_function_schemas_8cpp_1a3ffb97ae49b803f84eb0839cdc8e3f4c:
+
+Function foxglove::schemas::locationFixToC
+==========================================
+
+- Defined in :ref:`file_foxglove_src_schemas.cpp`
+
+
+Function Documentation
+----------------------
+
+
+.. doxygenfunction:: foxglove::schemas::locationFixToC(foxglove_location_fix&, const LocationFix&, Arena&)
+   :project: Foxglove SDK

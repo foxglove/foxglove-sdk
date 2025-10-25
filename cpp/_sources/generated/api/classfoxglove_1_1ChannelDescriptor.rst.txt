@@ -1,0 +1,17 @@
+.. _exhale_class_classfoxglove_1_1ChannelDescriptor:
+
+Class ChannelDescriptor
+=======================
+
+- Defined in :ref:`file_foxglove_include_foxglove_channel.hpp`
+
+
+Class Documentation
+-------------------
+
+
+.. doxygenclass:: foxglove::ChannelDescriptor
+   :project: Foxglove SDK
+   :members:
+   :protected-members:
+   :undoc-members:

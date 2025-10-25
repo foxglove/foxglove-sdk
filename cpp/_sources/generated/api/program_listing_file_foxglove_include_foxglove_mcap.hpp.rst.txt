@@ -1,0 +1,116 @@
+
+.. _program_listing_file_foxglove_include_foxglove_mcap.hpp:
+
+Program Listing for File mcap.hpp
+=================================
+
+|exhale_lsh| :ref:`Return to documentation for file <file_foxglove_include_foxglove_mcap.hpp>` (``foxglove/include/foxglove/mcap.hpp``)
+
+.. |exhale_lsh| unicode:: U+021B0 .. UPWARDS ARROW WITH TIP LEFTWARDS
+
+.. code-block:: cpp
+
+   #pragma once
+   
+   #include <foxglove/context.hpp>
+   #include <foxglove/error.hpp>
+   
+   #include <memory>
+   #include <optional>
+   #include <string>
+   #include <string_view>
+   #include <unordered_map>
+   #include <vector>
+   
+   #include "channel.hpp"
+   
+   enum foxglove_error : uint8_t;
+   struct foxglove_mcap_writer;
+   
+   foxglove_error foxglove_mcap_write_metadata(
+     foxglove_mcap_writer* writer, const foxglove_string* name, const foxglove_key_value* metadata,
+     size_t metadata_len
+   );
+   
+   namespace foxglove {
+   
+   class Context;
+   
+   enum class McapCompression : uint8_t {
+     None,
+     Zstd,
+     Lz4,
+   };
+   
+   struct McapWriterOptions {
+     friend class McapWriter;
+   
+     Context context;
+     std::string_view path;
+     std::string_view profile;
+     uint64_t chunk_size = static_cast<uint64_t>(1024 * 768);
+     McapCompression compression = McapCompression::Zstd;
+     bool use_chunks = true;
+     bool disable_seeking = false;
+     bool emit_statistics = true;
+     bool emit_summary_offsets = true;
+     bool emit_message_indexes = true;
+     bool emit_chunk_indexes = true;
+     bool emit_attachment_indexes = true;
+     bool emit_metadata_indexes = true;
+     bool repeat_channels = true;
+     bool repeat_schemas = true;
+     bool truncate = false;
+     SinkChannelFilterFn sink_channel_filter = {};
+   
+     McapWriterOptions() = default;
+   };
+   
+   class McapWriter final {
+   public:
+     static FoxgloveResult<McapWriter> create(const McapWriterOptions& options);
+   
+     template<typename Iterator>
+     FoxgloveError writeMetadata(std::string_view name, Iterator begin, Iterator end);
+   
+     FoxgloveError close();
+   
+     McapWriter(McapWriter&&) = default;
+     McapWriter& operator=(McapWriter&&) = default;
+     ~McapWriter() = default;
+   
+     McapWriter(const McapWriter&) = delete;
+     McapWriter& operator=(const McapWriter&) = delete;
+   
+   private:
+     explicit McapWriter(
+       foxglove_mcap_writer* writer, std::unique_ptr<SinkChannelFilterFn> sink_channel_filter = nullptr
+     );
+   
+     std::unique_ptr<SinkChannelFilterFn> sink_channel_filter_;
+     std::unique_ptr<foxglove_mcap_writer, foxglove_error (*)(foxglove_mcap_writer*)> impl_;
+   };
+   
+   template<typename Iter>
+   FoxgloveError McapWriter::writeMetadata(std::string_view name, Iter begin, Iter end) {
+     // Convert iterator range to C array of key-value pairs
+     std::vector<foxglove_key_value> c_metadata;
+   
+     for (auto it = begin; it != end; ++it) {
+       const auto& [key, value] = *it;
+       foxglove_key_value kv;
+       // data and length for both are necessary because foxglove_string is a C struct
+       kv.key = {key.data(), key.length()};
+       kv.value = {value.data(), value.length()};
+       c_metadata.push_back(kv);
+     }
+   
+     foxglove_string c_name = {name.data(), name.length()};
+   
+     foxglove_error error =
+       foxglove_mcap_write_metadata(impl_.get(), &c_name, c_metadata.data(), c_metadata.size());
+   
+     return FoxgloveError(error);
+   }
+   
+   }  // namespace foxglove

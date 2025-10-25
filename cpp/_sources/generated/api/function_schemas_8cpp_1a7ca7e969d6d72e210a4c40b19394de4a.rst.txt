@@ -1,0 +1,14 @@
+.. _exhale_function_schemas_8cpp_1a7ca7e969d6d72e210a4c40b19394de4a:
+
+Function foxglove::schemas::rawImageToC
+=======================================
+
+- Defined in :ref:`file_foxglove_src_schemas.cpp`
+
+
+Function Documentation
+----------------------
+
+
+.. doxygenfunction:: foxglove::schemas::rawImageToC(foxglove_raw_image&, const RawImage&, Arena&)
+   :project: Foxglove SDK

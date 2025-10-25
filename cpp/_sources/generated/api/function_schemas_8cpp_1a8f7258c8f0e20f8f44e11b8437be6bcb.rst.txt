@@ -1,0 +1,14 @@
+.. _exhale_function_schemas_8cpp_1a8f7258c8f0e20f8f44e11b8437be6bcb:
+
+Function foxglove::schemas::spherePrimitiveToC
+==============================================
+
+- Defined in :ref:`file_foxglove_src_schemas.cpp`
+
+
+Function Documentation
+----------------------
+
+
+.. doxygenfunction:: foxglove::schemas::spherePrimitiveToC(foxglove_sphere_primitive&, const SpherePrimitive&, Arena&)
+   :project: Foxglove SDK

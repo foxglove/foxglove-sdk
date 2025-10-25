@@ -1,0 +1,27 @@
+
+.. _program_listing_file_foxglove_include_foxglove_schema.hpp:
+
+Program Listing for File schema.hpp
+===================================
+
+|exhale_lsh| :ref:`Return to documentation for file <file_foxglove_include_foxglove_schema.hpp>` (``foxglove/include/foxglove/schema.hpp``)
+
+.. |exhale_lsh| unicode:: U+021B0 .. UPWARDS ARROW WITH TIP LEFTWARDS
+
+.. code-block:: cpp
+
+   #pragma once
+   
+   #include <memory>
+   #include <string>
+   
+   namespace foxglove {
+   
+   struct Schema {
+     std::string name;
+     std::string encoding;
+     const std::byte* data = nullptr;
+     size_t data_len = 0;
+   };
+   
+   }  // namespace foxglove

@@ -1,0 +1,17 @@
+.. _exhale_class_classfoxglove_1_1ParameterView:
+
+Class ParameterView
+===================
+
+- Defined in :ref:`file_foxglove_include_foxglove_server_parameter.hpp`
+
+
+Class Documentation
+-------------------
+
+
+.. doxygenclass:: foxglove::ParameterView
+   :project: Foxglove SDK
+   :members:
+   :protected-members:
+   :undoc-members:
