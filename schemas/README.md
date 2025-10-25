@@ -1116,19 +1116,15 @@ Number of bytes between cells within a row in `data`
 </td>
 <td>
 
-Fields in `data`. See [Color fields](#color-fields) below for RGB visualization.
-To enable RGB color visualization in the [3D panel](/docs/visualization/panels/3d#rgba-separate-fields-color-mode), include **all four** of these fields in your `fields` array:
+Fields in `data`. S`red`, `green`, `blue`, and `alpha` are optional for customizing the grid's color.
+To enable RGB color visualization in the [3D panel](https://docs.foxglove.dev/docs/visualization/panels/3d#rgba-separate-fields-color-mode), include **all four** of these fields in your `fields` array:
 
 - `red` - Red channel value
 - `green` - Green channel value
 - `blue` - Blue channel value
 - `alpha` - Alpha/transparency channel value
 
-:::note
-
-All four fields must be present with these exact names for RGB visualization to work. The order of fields doesn't matter, but the names must match exactly.
-
-:::
+**note:** All four fields must be present with these exact names for RGB visualization to work. The order of fields doesn't matter, but the names must match exactly.
 
 Recommended type: `UINT8` (0-255 range) for standard 8-bit color channels.
 
@@ -1138,10 +1134,10 @@ Example field definitions:
 
 ```javascript
 fields: [
-  { name: "red", offset: 0, type: NumericType.UINT8 },
-  { name: "green", offset: 1, type: NumericType.UINT8 },
-  { name: "blue", offset: 2, type: NumericType.UINT8 },
-  { name: "alpha", offset: 3, type: NumericType.UINT8 },
+ { name: "red", offset: 0, type: NumericType.UINT8 },
+ { name: "green", offset: 1, type: NumericType.UINT8 },
+ { name: "blue", offset: 2, type: NumericType.UINT8 },
+ { name: "alpha", offset: 3, type: NumericType.UINT8 },
 ];
 ```
 
@@ -1149,11 +1145,11 @@ fields: [
 
 ```javascript
 fields: [
-  { name: "red", offset: 0, type: NumericType.UINT8 },
-  { name: "green", offset: 1, type: NumericType.UINT8 },
-  { name: "blue", offset: 2, type: NumericType.UINT8 },
-  { name: "alpha", offset: 3, type: NumericType.UINT8 },
-  { name: "elevation", offset: 4, type: NumericType.FLOAT32 },
+ { name: "red", offset: 0, type: NumericType.UINT8 },
+ { name: "green", offset: 1, type: NumericType.UINT8 },
+ { name: "blue", offset: 2, type: NumericType.UINT8 },
+ { name: "alpha", offset: 3, type: NumericType.UINT8 },
+ { name: "elevation", offset: 4, type: NumericType.FLOAT32 },
 ];
 ```
 
@@ -3452,7 +3448,7 @@ Number of bytes between cells within a row in `data`
 </td>
 <td>
 
-Fields in `data`. See [Color fields](#color-fields) below for RGB visualization.
+Fields in `data`. `red`, `green`, `blue`, and `alpha` are optional for customizing the grid's color.
 
 </td>
 </tr>
