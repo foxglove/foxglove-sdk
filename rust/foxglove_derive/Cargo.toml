@@ -20,6 +20,6 @@ prost-types.workspace = true
 bytes = "1.4"
 foxglove = { path = "../foxglove" }
 prost.workspace = true
-prost-reflect = "0.15.3"
+prost-reflect = "0.16.2"
 tracing.workspace = true
 tracing-test = { workspace = true, features = ["no-env-filter"] }
