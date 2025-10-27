@@ -254,7 +254,7 @@
           "label": "URDF",
           "layerId": "foxglove.Urdf",
           "sourceType": "url",
-          "url": "https://raw.githubusercontent.com/TheRobotStudio/SO-ARM100/refs/heads/main/Simulation/SO101/so101_new_calib.urdf",
+          "url": "https://raw.githubusercontent.com/TheRobotStudio/SO-ARM100/a75d8a51236da69510fc70e68fee12ef04a125b7/Simulation/SO101/so101_new_calib.urdf",
           "filePath": "",
           "parameter": "",
           "topic": "",
