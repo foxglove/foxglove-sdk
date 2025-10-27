@@ -1,3 +1,7 @@
+# Important Notice
+
+This directory has been copied from [TheRobotStudio SO-ARM100 Repository](https://github.com/TheRobotStudio/SO-ARM100) under Apache License 2.0.
+
 # SO101 Robot - URDF and MuJoCo Description
 
 This repository contains the URDF and MuJoCo (MJCF) files for the SO101 robot.
@@ -12,7 +16,7 @@ This repository contains the URDF and MuJoCo (MJCF) files for the SO101 robot.
 
 The MuJoCo file `scene.xml` supports two differenly calibrated SO101 robot files:
 
-- **New Calibration (Default)**: Each joint's virtual zero is set to the **middle** of its joint range. Use -> `so101_new_calib.xml`. 
+- **New Calibration (Default)**: Each joint's virtual zero is set to the **middle** of its joint range. Use -> `so101_new_calib.xml`.
 - **Old Calibration**: Each joint's virtual zero is set to the configuration where the robot is **fully extended horizontally**. Use -> `so101_old_calib.xml`.
 
 To switch between calibration methods, modify the included robot file in `scene.xml`.
@@ -28,7 +32,7 @@ In LeRobot, the gripper is represented as a **linear joint**, where:
 * `0` = fully closed
 * `100` = fully open
 
-This mapping is **not yet reflected** in the current URDF and MuJoCo files. 
+This mapping is **not yet reflected** in the current URDF and MuJoCo files.
 
 ---
 

@@ -1,7 +1,7 @@
 [tool.poetry]
-name = "so100-visualization"
+name = "so101-visualization"
 version = "0.1.0"
-description = "SO-100 robot arm visualization with Foxglove"
+description = "SO-101 robot arm visualization with Foxglove"
 authors = ["Foxglove <contact@foxglove.dev>"]
 
 [tool.poetry.dependencies]

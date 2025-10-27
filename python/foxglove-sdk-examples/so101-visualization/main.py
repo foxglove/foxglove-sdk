@@ -16,8 +16,6 @@ from foxglove.schemas import (
 from lerobot.cameras import ColorMode, Cv2Rotation
 from lerobot.cameras.opencv import OpenCVCamera, OpenCVCameraConfig
 
-# TODO: Uncomment below for SO100
-# from lerobot.robots.so100_follower import SO100Follower, SO100FollowerConfig
 from lerobot.robots.so101_follower import SO101Follower, SO101FollowerConfig
 from scipy.spatial.transform import Rotation as R
 from yourdfpy import URDF
@@ -25,13 +23,12 @@ from yourdfpy import URDF
 WORLD_FRAME_ID = "world"
 BASE_FRAME_ID = "base_link"
 RATE_HZ = 30.0
-# URDF_FILE = "SO100/so100.urdf" #TODO: Uncomment if using SO100
 URDF_FILE = "SO101/so101_new_calib.urdf"
 
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="SO-100 robot arm visualization with Foxglove",
+        description="SO-101 robot arm visualization with Foxglove",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
 
@@ -42,7 +39,7 @@ def parse_args():
         type=str,
         required=True,
         dest="robot_port",
-        help="USB port to connect to the SO-100 arm (e.g., /dev/ttyUSB0)",
+        help="USB port to connect to the SO-101 arm (e.g., /dev/ttyUSB0)",
     )
     robot_group.add_argument(
         "--robot.id",
@@ -126,7 +123,7 @@ def main():
             file_name = args.output_mcap_path
         else:
             now_str = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-            file_name = f"so_arm_100_{args.robot_id}_{now_str}.mcap"
+            file_name = f"so_arm_101_{args.robot_id}_{now_str}.mcap"
         print(f"Writing data to MCAP file: {file_name}")
         writer = foxglove.open_mcap(file_name)
 
@@ -256,7 +253,7 @@ def main():
             time.sleep(1.0 / RATE_HZ)
 
     except KeyboardInterrupt:
-        print("\nShutting down SO-100 visualization...")
+        print("\nShutting down SO-101 visualization...")
     finally:
         server.stop()
         follower.disconnect()
