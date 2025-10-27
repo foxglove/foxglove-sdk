@@ -30,13 +30,51 @@ struct Grid {
   // Number of bytes between cells within a row in `data`
   uint32 cell_stride;
 
-  // Fields in `data`. `red`, `green`, `blue`, and `alpha` are optional for customizing the grid's color.
+  // Fields in `data`. S`red`, `green`, `blue`, and `alpha` are optional for customizing the grid's color.
+  // To enable RGB color visualization in the [3D panel](https://docs.foxglove.dev/docs/visualization/panels/3d#rgba-separate-fields-color-mode), include **all four** of these fields in your `fields` array:
+  // 
+  // - `red` - Red channel value
+  // - `green` - Green channel value
+  // - `blue` - Blue channel value
+  // - `alpha` - Alpha/transparency channel value
+  // 
+  // **note:** All four fields must be present with these exact names for RGB visualization to work. The order of fields doesn't matter, but the names must match exactly.
+  // 
+  // Recommended type: `UINT8` (0-255 range) for standard 8-bit color channels.
+  // 
+  // Example field definitions:
+  // 
+  // **RGB color only:**
+  // 
+  // ```javascript
+  // fields: [
+  //  { name: "red", offset: 0, type: NumericType.UINT8 },
+  //  { name: "green", offset: 1, type: NumericType.UINT8 },
+  //  { name: "blue", offset: 2, type: NumericType.UINT8 },
+  //  { name: "alpha", offset: 3, type: NumericType.UINT8 },
+  // ];
+  // ```
+  // 
+  // **RGB color with elevation (for 3D terrain visualization):**
+  // 
+  // ```javascript
+  // fields: [
+  //  { name: "red", offset: 0, type: NumericType.UINT8 },
+  //  { name: "green", offset: 1, type: NumericType.UINT8 },
+  //  { name: "blue", offset: 2, type: NumericType.UINT8 },
+  //  { name: "alpha", offset: 3, type: NumericType.UINT8 },
+  //  { name: "elevation", offset: 4, type: NumericType.FLOAT32 },
+  // ];
+  // ```
+  // 
+  // When these fields are present, the 3D panel will offer additional "Color Mode" options including "RGBA (separate fields)" to visualize the RGB data directly. For elevation visualization, set the "Elevation field" to your elevation layer name.
   sequence<PackedElementField> fields;
 
   // Grid cell data, interpreted using `fields`, in row-major (y-major) order.
-  //  For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
-  //  y = (i / cell_stride) % row_stride * cell_size.y
-  //  x = i % cell_stride * cell_size.x
+  // For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
+  // 
+  // - y = i / row_stride * cell_size.y
+  // - x = (i % row_stride) / cell_stride * cell_size.x
   sequence<uint8> data;
 };
 

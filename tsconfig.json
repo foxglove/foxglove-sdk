@@ -1,7 +1,7 @@
 {
   "extends": "@foxglove/tsconfig/base",
   "include": ["./**/*"],
-  "exclude": ["target", "cpp/build", "cpp/build-*", "playground"],
+  "exclude": ["target", "cpp/build", "cpp/build-*", "playground", "python/foxglove-sdk"],
   "compilerOptions": {
     "rootDir": ".",
     "module": "commonjs",

@@ -4,13 +4,16 @@ use crate::fetch_asset::{FetchAssetHandler, FoxgloveFetchAssetResponder};
 use crate::service::FoxgloveService;
 use crate::sink_channel_filter::ChannelFilter;
 use bitflags::bitflags;
+use std::collections::HashMap;
 use std::ffi::{c_char, c_void, CString};
 use std::mem::ManuallyDrop;
 use std::sync::Arc;
 
 use crate::parameter::FoxgloveParameterArray;
 
-use crate::{result_to_c, FoxgloveContext, FoxgloveError, FoxgloveSinkId, FoxgloveString};
+use crate::{
+    result_to_c, FoxgloveContext, FoxgloveError, FoxgloveKeyValue, FoxgloveSinkId, FoxgloveString,
+};
 
 // Easier to get reasonable C output from cbindgen with constants rather than directly exporting the bitflags macro
 #[derive(Clone, Copy)]
@@ -90,6 +93,14 @@ pub struct FoxgloveServerOptions<'a> {
     pub capabilities: FoxgloveServerCapability,
     pub supported_encodings: *const FoxgloveString,
     pub supported_encodings_count: usize,
+
+    /// Optional information about the server, which is shared with clients.
+    ///
+    /// # Safety
+    /// - If provided, the `server_info` must be a valid pointer to an array of valid
+    ///   `FoxgloveKeyValue`s with `server_info_count` elements.
+    pub server_info: *const FoxgloveKeyValue,
+    pub server_info_count: usize,
 
     /// Context provided to the `fetch_asset` callback.
     pub fetch_asset_context: *const c_void,
@@ -307,10 +318,13 @@ impl FoxgloveWebSocketServer {
 /// Returns 0 on success, or returns a FoxgloveError code on error.
 ///
 /// # Safety
-/// If `name` is supplied in options, it must contain valid UTF8.
-/// If `host` is supplied in options, it must contain valid UTF8.
-/// If `supported_encodings` is supplied in options, all `supported_encodings` must contain valid
-/// UTF8, and `supported_encodings` must have length equal to `supported_encodings_count`.
+///
+/// - If `name` is supplied in options, it must contain valid UTF8.
+/// - If `host` is supplied in options, it must contain valid UTF8.
+/// - If `supported_encodings` is supplied in options, all `supported_encodings` must contain valid
+///   UTF8, and `supported_encodings` must have length equal to `supported_encodings_count`.
+/// - If `server_info` is supplied in options, all `server_info` must contain valid UTF8, and
+///   `server_info` must have length equal to `server_info_count`.
 #[unsafe(no_mangle)]
 #[must_use]
 pub unsafe extern "C" fn foxglove_server_start(
@@ -404,6 +418,27 @@ unsafe fn do_foxglove_server_start(
             key: key.to_vec(),
         };
         server = server.tls(tls_identity);
+    }
+    if options.server_info_count > 0 {
+        if options.server_info.is_null() {
+            return Err(foxglove::FoxgloveError::ValueError(
+                "server_info is null".to_string(),
+            ));
+        }
+        let opts_info = options.server_info;
+        let mut server_info = HashMap::new();
+        for i in 0..options.server_info_count {
+            let kv = unsafe { &*opts_info.add(i) };
+            if kv.key.data.is_null() || kv.value.data.is_null() {
+                return Err(foxglove::FoxgloveError::ValueError(
+                    "null key or value in server_info".to_string(),
+                ));
+            }
+            let key = unsafe { kv.key.as_utf8_str() }?;
+            let value = unsafe { kv.value.as_utf8_str() }?;
+            server_info.insert(key.to_string(), value.to_string());
+        }
+        server = server.server_info(server_info);
     }
     let server = server.start_blocking()?;
     Ok(Box::into_raw(Box::new(FoxgloveWebSocketServer(Some(

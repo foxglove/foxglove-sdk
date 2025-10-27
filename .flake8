@@ -4,6 +4,8 @@ extend-ignore = E203
 exclude =
     __pycache__,
     .git,
+    .uv_cache,
+    .venv,
     dist,
     node_modules,
     python/foxglove-schemas-flatbuffer/foxglove_schemas_flatbuffer/*.py,

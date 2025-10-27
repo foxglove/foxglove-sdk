@@ -1,22 +1,16 @@
 [project]
 name = "cpp-sdk-documentation"
 version = "0.0.0"
-description = "Documentation for the Foxglove C++ SDK"
-authors = [{ name = "Foxglove", email = "support@foxglove.dev" }]
-readme = "README.md"
 requires-python = ">=3.9"
-dependencies = []
 
-[tool.poetry]
-package-mode = false
+[dependency-groups]
+dev = [
+    "breathe>=4.36.0,<5",
+    "exhale>=0.3.7,<0.4",
+    "furo>=2024.8.6,<2025",
+    "sphinx>=7.2.0,<8",
+    "sphinxcontrib-jquery>=4.1.0,<5",
+]
 
-[build-system]
-requires = ["poetry-core>=2.0.0,<3.0.0"]
-build-backend = "poetry.core.masonry.api"
-
-[tool.poetry.group.dev.dependencies]
-breathe = "^4.36.0"
-exhale = "^0.3.7"
-furo = "^2024.8.6"
-sphinx = "^7.2.0"
-sphinxcontrib-jquery = "^4.1.0"
+[tool.uv]
+package = false

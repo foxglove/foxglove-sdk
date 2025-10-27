@@ -11,6 +11,7 @@ export default defineConfig(
       "cpp/build-*",
       "cpp/build",
       "python/foxglove-sdk/**/_build",
+      "python/foxglove-sdk/python/foxglove/notebook/static",
       "target",
     ],
   },
