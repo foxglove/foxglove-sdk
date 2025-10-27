@@ -1,0 +1,14 @@
+.. _exhale_function_schemas_8cpp_1af36d32a99cc1ea005067b1abb4cbe6dc:
+
+Function foxglove::schemas::logToC
+==================================
+
+- Defined in :ref:`file_foxglove_src_schemas.cpp`
+
+
+Function Documentation
+----------------------
+
+
+.. doxygenfunction:: foxglove::schemas::logToC(foxglove_log&, const Log&, Arena&)
+   :project: Foxglove SDK

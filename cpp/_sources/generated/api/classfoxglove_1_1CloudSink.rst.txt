@@ -1,0 +1,17 @@
+.. _exhale_class_classfoxglove_1_1CloudSink:
+
+Class CloudSink
+===============
+
+- Defined in :ref:`file_foxglove_include_foxglove_cloud_sink.hpp`
+
+
+Class Documentation
+-------------------
+
+
+.. doxygenclass:: foxglove::CloudSink
+   :project: Foxglove SDK
+   :members:
+   :protected-members:
+   :undoc-members:

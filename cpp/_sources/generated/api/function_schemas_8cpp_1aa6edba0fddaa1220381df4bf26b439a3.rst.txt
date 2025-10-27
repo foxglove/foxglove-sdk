@@ -1,0 +1,14 @@
+.. _exhale_function_schemas_8cpp_1aa6edba0fddaa1220381df4bf26b439a3:
+
+Function foxglove::schemas::voxelGridToC
+========================================
+
+- Defined in :ref:`file_foxglove_src_schemas.cpp`
+
+
+Function Documentation
+----------------------
+
+
+.. doxygenfunction:: foxglove::schemas::voxelGridToC(foxglove_voxel_grid&, const VoxelGrid&, Arena&)
+   :project: Foxglove SDK

@@ -1,0 +1,46 @@
+
+.. _program_listing_file_foxglove_include_foxglove_server_connection_graph.hpp:
+
+Program Listing for File connection_graph.hpp
+=============================================
+
+|exhale_lsh| :ref:`Return to documentation for file <file_foxglove_include_foxglove_server_connection_graph.hpp>` (``foxglove/include/foxglove/server/connection_graph.hpp``)
+
+.. |exhale_lsh| unicode:: U+021B0 .. UPWARDS ARROW WITH TIP LEFTWARDS
+
+.. code-block:: cpp
+
+   #pragma once
+   
+   #include <foxglove/error.hpp>
+   
+   #include <cstdint>
+   #include <memory>
+   #include <string>
+   #include <vector>
+   
+   struct foxglove_connection_graph;
+   
+   namespace foxglove {
+   
+   class ConnectionGraph final {
+     friend class WebSocketServer;
+   
+   public:
+     ConnectionGraph();
+   
+     FoxgloveError setPublishedTopic(
+       std::string_view topic, const std::vector<std::string>& publisher_ids
+     );
+     FoxgloveError setSubscribedTopic(
+       std::string_view topic, const std::vector<std::string>& subscriber_ids
+     );
+     FoxgloveError setAdvertisedService(
+       std::string_view service, const std::vector<std::string>& provider_ids
+     );
+   
+   private:
+     std::unique_ptr<foxglove_connection_graph, void (*)(foxglove_connection_graph*)> impl_;
+   };
+   
+   }  // namespace foxglove

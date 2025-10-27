@@ -1,0 +1,64 @@
+
+.. _program_listing_file_foxglove_include_foxglove_cloud_sink.hpp:
+
+Program Listing for File cloud_sink.hpp
+=======================================
+
+|exhale_lsh| :ref:`Return to documentation for file <file_foxglove_include_foxglove_cloud_sink.hpp>` (``foxglove/include/foxglove/cloud_sink.hpp``)
+
+.. |exhale_lsh| unicode:: U+021B0 .. UPWARDS ARROW WITH TIP LEFTWARDS
+
+.. code-block:: cpp
+
+   #pragma once
+   
+   #include <foxglove/channel.hpp>
+   #include <foxglove/context.hpp>
+   #include <foxglove/error.hpp>
+   #include <foxglove/server.hpp>
+   
+   struct foxglove_cloud_sink;
+   
+   namespace foxglove {
+   
+   struct CloudSinkCallbacks {
+     std::function<void(uint64_t channel_id, const ClientMetadata& client_metadata)> onSubscribe;
+   
+     std::function<void(uint64_t channel_id, const ClientMetadata& client_metadata)> onUnsubscribe;
+   
+     std::function<void(uint32_t client_id, const ClientChannel& channel)> onClientAdvertise;
+   
+     std::function<
+       void(uint32_t client_id, uint32_t client_channel_id, const std::byte* data, size_t data_len)>
+       onMessageData;
+   
+     std::function<void(uint32_t client_id, uint32_t client_channel_id)> onClientUnadvertise;
+   };
+   
+   struct CloudSinkOptions {
+     friend class CloudSink;
+   
+     Context context;
+     CloudSinkCallbacks callbacks;
+     std::vector<std::string> supported_encodings;
+     SinkChannelFilterFn sink_channel_filter;
+   };
+   
+   class CloudSink final {
+   public:
+     static FoxgloveResult<CloudSink> create(CloudSinkOptions&& options);
+   
+     FoxgloveError stop();
+   
+   private:
+     CloudSink(
+       foxglove_cloud_sink* sink, std::unique_ptr<CloudSinkCallbacks> callbacks,
+       std::unique_ptr<SinkChannelFilterFn> sink_channel_filter
+     );
+   
+     std::unique_ptr<CloudSinkCallbacks> callbacks_;
+     std::unique_ptr<SinkChannelFilterFn> sink_channel_filter_;
+     std::unique_ptr<foxglove_cloud_sink, foxglove_error (*)(foxglove_cloud_sink*)> impl_;
+   };
+   
+   }  // namespace foxglove

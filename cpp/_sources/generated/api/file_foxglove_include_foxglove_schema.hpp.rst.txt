@@ -1,0 +1,59 @@
+
+.. _file_foxglove_include_foxglove_schema.hpp:
+
+File schema.hpp
+===============
+
+|exhale_lsh| :ref:`Parent directory <dir_foxglove_include_foxglove>` (``foxglove/include/foxglove``)
+
+.. |exhale_lsh| unicode:: U+021B0 .. UPWARDS ARROW WITH TIP LEFTWARDS
+
+Definition (``foxglove/include/foxglove/schema.hpp``)
+-----------------------------------------------------
+
+
+.. toctree::
+   :maxdepth: 1
+
+   program_listing_file_foxglove_include_foxglove_schema.hpp.rst
+
+
+
+
+
+Includes
+--------
+
+
+- ``memory``
+
+- ``string``
+
+
+
+Included By
+-----------
+
+
+- :ref:`file_foxglove_include_foxglove_channel.hpp`
+
+- :ref:`file_foxglove_include_foxglove_schemas.hpp`
+
+- :ref:`file_foxglove_src_schemas.cpp`
+
+
+
+
+Namespaces
+----------
+
+
+- :ref:`namespace_foxglove`
+
+
+Classes
+-------
+
+
+- :ref:`exhale_struct_structfoxglove_1_1Schema`
+

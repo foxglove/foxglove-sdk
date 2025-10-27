@@ -1,0 +1,14 @@
+.. _exhale_function_schemas_8cpp_1a08ec2af74d58bfe4e455c842a8b90764:
+
+Function foxglove::schemas::imageAnnotationsToC
+===============================================
+
+- Defined in :ref:`file_foxglove_src_schemas.cpp`
+
+
+Function Documentation
+----------------------
+
+
+.. doxygenfunction:: foxglove::schemas::imageAnnotationsToC(foxglove_image_annotations&, const ImageAnnotations&, Arena&)
+   :project: Foxglove SDK
