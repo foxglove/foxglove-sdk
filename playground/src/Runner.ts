@@ -12,21 +12,14 @@ type EventMap = {
 export class Runner extends EventEmitter<EventMap> {
   #worker: Worker;
   #remote: Comlink.Remote<RunnerWorker>;
-  #output: HTMLElement;
 
-  constructor({ output }: { output: HTMLElement }) {
+  constructor() {
     super();
-    this.#output = output;
     this.#worker = new Worker(new URL("./RunnerWorker", import.meta.url));
     this.#remote = Comlink.wrap(this.#worker);
     void this.#remote.onReady(
       Comlink.proxy(() => {
         this.emit("ready");
-      }),
-    );
-    void this.#remote.onStdout(
-      Comlink.proxy((str) => {
-        this.#output.appendChild(document.createTextNode(str + "\n"));
       }),
     );
   }
