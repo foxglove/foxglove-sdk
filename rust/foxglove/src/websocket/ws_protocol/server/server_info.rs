@@ -4,6 +4,7 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
+use crate::websocket::ws_protocol::client::PlayerTime;
 use crate::websocket::ws_protocol::JsonMessage;
 
 /// Server info message.
@@ -26,6 +27,12 @@ pub struct ServerInfo {
     /// Optional string.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub session_id: Option<String>,
+    /// Optional timestamp indicating the start of the data range.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub data_start_time: Option<PlayerTime>,
+    /// Optional timestamp indicating the end of the data range.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub data_end_time: Option<PlayerTime>,
 }
 impl ServerInfo {
     /// Creates a new server info message.
@@ -36,6 +43,8 @@ impl ServerInfo {
             supported_encodings: vec![],
             metadata: HashMap::default(),
             session_id: None,
+            data_start_time: None,
+            data_end_time: None,
         }
     }
 
@@ -67,6 +76,16 @@ impl ServerInfo {
     #[must_use]
     pub fn with_session_id(mut self, session_id: impl Into<String>) -> Self {
         self.session_id = Some(session_id.into());
+        self
+    }
+
+    #[must_use]
+    pub fn with_data_time_range(mut self, time_range: Option<(PlayerTime, PlayerTime)>) -> Self {
+        if let Some((start_time, end_time)) = time_range {
+            self.data_start_time = Some(start_time);
+            self.data_end_time = Some(end_time);
+            self.capabilities.push(Capability::RangedPlayback);
+        }
         self
     }
 }
@@ -108,12 +127,20 @@ mod tests {
 
     fn message_full() -> ServerInfo {
         message()
-            .with_capabilities([Capability::ClientPublish, Capability::Time])
+            .with_capabilities([
+                Capability::ClientPublish,
+                Capability::Time,
+                Capability::RangedPlayback,
+            ])
             .with_supported_encodings(["json"])
             .with_metadata(maplit::hashmap! {
                 "key".into() => "value".into(),
             })
             .with_session_id("1675789422160")
+            .with_data_time_range(Some((
+                PlayerTime::new(1000000, 0),
+                PlayerTime::new(1000005, 0),
+            )))
     }
 
     #[test]

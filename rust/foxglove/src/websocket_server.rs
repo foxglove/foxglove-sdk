@@ -1,6 +1,6 @@
 //! Websocket server
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fmt::{Debug, Display};
 use std::future::Future;
 use std::net::SocketAddr;
@@ -8,6 +8,7 @@ use std::sync::Arc;
 
 use crate::sink_channel_filter::{SinkChannelFilter, SinkChannelFilterFn};
 use crate::websocket::service::Service;
+use crate::websocket::ws_protocol::client::PlayerTime;
 #[cfg(feature = "tls")]
 use crate::websocket::TlsIdentity;
 use crate::websocket::{
@@ -113,7 +114,11 @@ impl WebSocketServer {
     ///
     /// By default, the server does not advertise any capabilities.
     pub fn capabilities(mut self, capabilities: impl IntoIterator<Item = Capability>) -> Self {
-        self.options.capabilities = Some(capabilities.into_iter().collect());
+        if let Some(capabilities_inner) = self.options.capabilities.as_mut() {
+            capabilities_inner.extend(capabilities);
+        } else {
+            self.options.capabilities = Some(capabilities.into_iter().collect());
+        }
         self
     }
 
@@ -121,6 +126,22 @@ impl WebSocketServer {
     #[doc(hidden)]
     pub fn server_info(mut self, info: HashMap<String, String>) -> Self {
         self.options.server_info = Some(info);
+        self
+    }
+
+    /// Declare the time range for playback. This applies if the server is playing back a fixed time range of data.
+    /// This will add the RangedPlayback capability to the server.
+    pub fn playback_time_range(
+        mut self,
+        start_time: impl Into<PlayerTime>,
+        end_time: impl Into<PlayerTime>,
+    ) -> Self {
+        self.options.playback_time_range = Some((start_time.into(), end_time.into()));
+        if let Some(capabilities) = self.options.capabilities.as_mut() {
+            capabilities.insert(Capability::RangedPlayback);
+        } else {
+            self.options.capabilities = Some(HashSet::from([Capability::RangedPlayback]));
+        }
         self
     }
 

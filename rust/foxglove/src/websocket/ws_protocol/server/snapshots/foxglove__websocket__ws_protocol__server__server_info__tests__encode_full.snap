@@ -1,5 +1,6 @@
 ---
 source: rust/foxglove/src/websocket/ws_protocol/server/server_info.rs
+assertion_line: 152
 expression: message_full()
 ---
 {
@@ -7,7 +8,8 @@ expression: message_full()
   "name": "example server",
   "capabilities": [
     "clientPublish",
-    "time"
+    "time",
+    "rangedPlayback"
   ],
   "supportedEncodings": [
     "json"
@@ -15,5 +17,13 @@ expression: message_full()
   "metadata": {
     "key": "value"
   },
-  "sessionId": "1675789422160"
+  "sessionId": "1675789422160",
+  "dataStartTime": {
+    "sec": 1000000,
+    "nsec": 0
+  },
+  "dataEndTime": {
+    "sec": 1000005,
+    "nsec": 0
+  }
 }
