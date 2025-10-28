@@ -1116,7 +1116,44 @@ Number of bytes between cells within a row in `data`
 </td>
 <td>
 
-Fields in `data`. `red`, `green`, `blue`, and `alpha` are optional for customizing the grid's color.
+Fields in `data`. S`red`, `green`, `blue`, and `alpha` are optional for customizing the grid's color.
+To enable RGB color visualization in the [3D panel](https://docs.foxglove.dev/docs/visualization/panels/3d#rgba-separate-fields-color-mode), include **all four** of these fields in your `fields` array:
+
+- `red` - Red channel value
+- `green` - Green channel value
+- `blue` - Blue channel value
+- `alpha` - Alpha/transparency channel value
+
+**note:** All four fields must be present with these exact names for RGB visualization to work. The order of fields doesn't matter, but the names must match exactly.
+
+Recommended type: `UINT8` (0-255 range) for standard 8-bit color channels.
+
+Example field definitions:
+
+**RGB color only:**
+
+```javascript
+fields: [
+ { name: "red", offset: 0, type: NumericType.UINT8 },
+ { name: "green", offset: 1, type: NumericType.UINT8 },
+ { name: "blue", offset: 2, type: NumericType.UINT8 },
+ { name: "alpha", offset: 3, type: NumericType.UINT8 },
+];
+```
+
+**RGB color with elevation (for 3D terrain visualization):**
+
+```javascript
+fields: [
+ { name: "red", offset: 0, type: NumericType.UINT8 },
+ { name: "green", offset: 1, type: NumericType.UINT8 },
+ { name: "blue", offset: 2, type: NumericType.UINT8 },
+ { name: "alpha", offset: 3, type: NumericType.UINT8 },
+ { name: "elevation", offset: 4, type: NumericType.FLOAT32 },
+];
+```
+
+When these fields are present, the 3D panel will offer additional "Color Mode" options including "RGBA (separate fields)" to visualize the RGB data directly. For elevation visualization, set the "Elevation field" to your elevation layer name.
 
 </td>
 </tr>
@@ -1130,9 +1167,10 @@ bytes
 <td>
 
 Grid cell data, interpreted using `fields`, in row-major (y-major) order.
- For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
- y = (i / cell_stride) % row_stride * cell_size.y
- x = i % cell_stride * cell_size.x
+For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
+
+- y = i / row_stride * cell_size.y
+- x = (i % row_stride) / cell_stride * cell_size.x
 
 </td>
 </tr>
@@ -1414,7 +1452,7 @@ Points along the line
 </td>
 <td>
 
-Solid color to use for the whole line. One of `color` or `colors` must be provided.
+Solid color to use for the whole line. Ignored if `colors` is non-empty.
 
 </td>
 </tr>
@@ -1427,7 +1465,7 @@ Solid color to use for the whole line. One of `color` or `colors` must be provid
 </td>
 <td>
 
-Per-point colors (if specified, must have the same length as `points`). One of `color` or `colors` must be provided.
+Per-point colors (if non-empty, must have the same length as `points`).
 
 </td>
 </tr>
@@ -1750,7 +1788,7 @@ string
 </td>
 <td>
 
-URL pointing to model file. One of `url` or `data` should be provided.
+URL pointing to model file. One of `url` or `data` should be non-empty.
 
 </td>
 </tr>
@@ -1776,7 +1814,7 @@ bytes
 </td>
 <td>
 
-Embedded model. One of `url` or `data` should be provided. If `data` is provided, `media_type` must be set to indicate the type of the data.
+Embedded model. One of `url` or `data` should be non-empty. If `data` is non-empty, `media_type` must be set to indicate the type of the data.
 
 </td>
 </tr>
@@ -3151,7 +3189,7 @@ Vertices to use for triangles, interpreted as a list of triples (0-1-2, 3-4-5, .
 </td>
 <td>
 
-Solid color to use for the whole shape. One of `color` or `colors` must be provided.
+Solid color to use for the whole shape. Ignored if `colors` is non-empty.
 
 </td>
 </tr>
@@ -3164,7 +3202,7 @@ Solid color to use for the whole shape. One of `color` or `colors` must be provi
 </td>
 <td>
 
-Per-vertex colors (if specified, must have the same length as `points`). One of `color` or `colors` must be provided.
+Per-vertex colors (if specified, must have the same length as `points`).
 
 </td>
 </tr>
@@ -3424,10 +3462,11 @@ bytes
 <td>
 
 Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order.
- For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
- z = i / slice_stride * cell_size.z
- y = (i % slice_stride) / row_stride * cell_size.y
- x = (i % row_stride) / cell_stride * cell_size.x
+For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
+
+- z = i / slice_stride * cell_size.z
+- y = (i % slice_stride) / row_stride * cell_size.y
+- x = (i % row_stride) / cell_stride * cell_size.x
 
 </td>
 </tr>

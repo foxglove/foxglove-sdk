@@ -1,12 +1,16 @@
+#[cfg(not(target_family = "wasm"))]
+use cloud_sink::start_cloud_sink;
 use errors::PyFoxgloveError;
 use foxglove::McapWriteOptions;
 use foxglove::{ChannelBuilder, Context, McapWriter, PartialMetadata, RawChannel, Schema};
 use generated::channels;
 use generated::schemas;
 use log::LevelFilter;
+use logging::init_logging;
 use mcap::{PyMcapWriteOptions, PyMcapWriter};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
+use sink_channel_filter::{PyChannelDescriptor, PySinkChannelFilter};
 use std::collections::BTreeMap;
 use std::fs::File;
 use std::io::BufWriter;
@@ -16,10 +20,14 @@ use std::sync::{Arc, OnceLock};
 #[cfg(not(target_family = "wasm"))]
 use websocket::start_server;
 
+#[cfg(not(target_family = "wasm"))]
+mod cloud_sink;
 mod errors;
 mod generated;
+mod logging;
 mod mcap;
 mod schemas_wkt;
+mod sink_channel_filter;
 #[cfg(not(target_family = "wasm"))]
 mod websocket;
 
@@ -198,15 +206,19 @@ impl PyContext {
 /// :type allow_overwrite: Optional[bool]
 /// :param context: The context to use for logging. If None, the global context is used.
 /// :type context: :py:class:`Context`
+/// :param channel_filter: A `Callable` that determines whether a channel should be logged to. Return
+///     `True` to log the channel, or `False` to skip it. By default, all channels will be logged.
+/// :type channel_filter: Optional[Callable[[ChannelDescriptor], bool]]
 /// :param writer_options: Options for the MCAP writer.
 /// :type writer_options: :py:class:`mcap.MCAPWriteOptions`
 /// :rtype: :py:class:`mcap.MCAPWriter`
 #[pyfunction]
-#[pyo3(signature = (path, *, allow_overwrite = false, context = None, writer_options = None))]
+#[pyo3(signature = (path, *, allow_overwrite = false, context = None, channel_filter = None, writer_options = None))]
 fn open_mcap(
     path: PathBuf,
     allow_overwrite: bool,
     context: Option<PyRef<PyContext>>,
+    channel_filter: Option<Py<PyAny>>,
     writer_options: Option<PyMcapWriteOptions>,
 ) -> PyResult<PyMcapWriter> {
     let file = if allow_overwrite {
@@ -221,6 +233,12 @@ fn open_mcap(
         Some(context) => McapWriter::with_options(options).context(&context.0),
         _ => McapWriter::with_options(options),
     };
+    let handle = if let Some(channel_filter) = channel_filter {
+        handle.channel_filter(Arc::new(PySinkChannelFilter(channel_filter)))
+    } else {
+        handle
+    };
+
     let handle = handle.create(writer).map_err(PyFoxgloveError::from)?;
     Ok(PyMcapWriter(Some(handle)))
 }
@@ -267,22 +285,28 @@ fn shutdown(#[allow(unused_variables)] py: Python<'_>) {
 #[pymodule]
 fn _foxglove_py(m: &Bound<'_, PyModule>) -> PyResult<()> {
     foxglove::library_version::set_sdk_language("python");
-    pyo3_log::init();
+    init_logging();
     m.add_function(wrap_pyfunction!(enable_logging, m)?)?;
     m.add_function(wrap_pyfunction!(disable_logging, m)?)?;
     m.add_function(wrap_pyfunction!(shutdown, m)?)?;
     m.add_function(wrap_pyfunction!(open_mcap, m)?)?;
     #[cfg(not(target_family = "wasm"))]
     m.add_function(wrap_pyfunction!(start_server, m)?)?;
+    #[cfg(not(target_family = "wasm"))]
+    m.add_function(wrap_pyfunction!(start_cloud_sink, m)?)?;
     m.add_function(wrap_pyfunction!(get_channel_for_topic, m)?)?;
     m.add_class::<BaseChannel>()?;
     m.add_class::<PySchema>()?;
     m.add_class::<PyContext>()?;
+    m.add_class::<PySinkChannelFilter>()?;
+    m.add_class::<PyChannelDescriptor>()?;
     // Register nested modules.
     schemas::register_submodule(m)?;
     channels::register_submodule(m)?;
     mcap::register_submodule(m)?;
     #[cfg(not(target_family = "wasm"))]
     websocket::register_submodule(m)?;
+    #[cfg(not(target_family = "wasm"))]
+    cloud_sink::register_submodule(m)?;
     Ok(())
 }

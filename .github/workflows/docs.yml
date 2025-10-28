@@ -14,10 +14,7 @@ jobs:
       - uses: ssciwr/doxygen-install@v1
         with:
           version: "1.13.2"
-      - run: pipx install poetry
-        working-directory: cpp/foxglove/docs
-      - run: poetry install
-        working-directory: cpp/foxglove/docs
+      - uses: astral-sh/setup-uv@v7
       - run: make docs
         working-directory: cpp
       - name: Upload artifact
@@ -37,12 +34,16 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
-      - run: pipx install poetry
-      - run: poetry install
-      - run: poetry run maturin develop
+      - run: corepack enable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+      - uses: astral-sh/setup-uv@v7
+      - run: uv sync --all-extras
+      - run: uv pip install --editable '.[notebook]'
       - name: Sphinx build
-        run: |
-          poetry run sphinx-build --fail-on-warning ./python/docs ./python/docs/_build
+        run: uv run sphinx-build --fail-on-warning ./python/docs ./python/docs/_build
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:

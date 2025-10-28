@@ -1,5 +1,6 @@
 #pragma once
 
+#include <foxglove/channel.hpp>
 #include <foxglove/context.hpp>
 #include <foxglove/error.hpp>
 #include <foxglove/server/connection_graph.hpp>
@@ -215,10 +216,18 @@ struct WebSocketServerOptions {
   std::vector<std::string> supported_encodings;
   /// @brief A fetch asset handler callback.
   FetchAssetHandler fetch_asset;
+  /// @brief A sink channel filter callback.
+  SinkChannelFilterFn sink_channel_filter;
   /// @brief (internal) TLS configuration for the server.
   ///
   /// This option is under active development and may change.
   std::optional<TlsIdentity> tls_identity = std::nullopt;
+  /// @cond foxglove_internal
+  /// @brief (internal) Information about the server, which is shared with clients.
+  ///
+  /// This option is for internal use only and may change.
+  std::optional<std::map<std::string, std::string>> server_info = std::nullopt;
+  /// @endcond
 };
 
 /// @brief A WebSocket server for visualization in Foxglove.
@@ -324,11 +333,13 @@ public:
 private:
   WebSocketServer(
     foxglove_websocket_server* server, std::unique_ptr<WebSocketServerCallbacks> callbacks,
-    std::unique_ptr<FetchAssetHandler> fetch_asset
+    std::unique_ptr<FetchAssetHandler> fetch_asset,
+    std::unique_ptr<SinkChannelFilterFn> sink_channel_filter
   );
 
   std::unique_ptr<WebSocketServerCallbacks> callbacks_;
   std::unique_ptr<FetchAssetHandler> fetch_asset_;
+  std::unique_ptr<SinkChannelFilterFn> sink_channel_filter_;
   std::unique_ptr<foxglove_websocket_server, foxglove_error (*)(foxglove_websocket_server*)> impl_;
 };
 

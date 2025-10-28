@@ -96,8 +96,16 @@ FoxgloveError ArrowPrimitiveChannel::log(
   ));
 }
 
+void ArrowPrimitiveChannel::close() noexcept {
+  foxglove_channel_close(impl_.get());
+}
+
 uint64_t ArrowPrimitiveChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
+}
+
+bool ArrowPrimitiveChannel::has_sinks() const noexcept {
+  return foxglove_channel_has_sinks(impl_.get());
 }
 
 FoxgloveResult<CameraCalibrationChannel> CameraCalibrationChannel::create(
@@ -124,8 +132,16 @@ FoxgloveError CameraCalibrationChannel::log(
   ));
 }
 
+void CameraCalibrationChannel::close() noexcept {
+  foxglove_channel_close(impl_.get());
+}
+
 uint64_t CameraCalibrationChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
+}
+
+bool CameraCalibrationChannel::has_sinks() const noexcept {
+  return foxglove_channel_has_sinks(impl_.get());
 }
 
 FoxgloveResult<CircleAnnotationChannel> CircleAnnotationChannel::create(
@@ -152,8 +168,16 @@ FoxgloveError CircleAnnotationChannel::log(
   ));
 }
 
+void CircleAnnotationChannel::close() noexcept {
+  foxglove_channel_close(impl_.get());
+}
+
 uint64_t CircleAnnotationChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
+}
+
+bool CircleAnnotationChannel::has_sinks() const noexcept {
+  return foxglove_channel_has_sinks(impl_.get());
 }
 
 FoxgloveResult<ColorChannel> ColorChannel::create(
@@ -179,8 +203,16 @@ FoxgloveError ColorChannel::log(
   ));
 }
 
+void ColorChannel::close() noexcept {
+  foxglove_channel_close(impl_.get());
+}
+
 uint64_t ColorChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
+}
+
+bool ColorChannel::has_sinks() const noexcept {
+  return foxglove_channel_has_sinks(impl_.get());
 }
 
 FoxgloveResult<CompressedImageChannel> CompressedImageChannel::create(
@@ -207,8 +239,16 @@ FoxgloveError CompressedImageChannel::log(
   ));
 }
 
+void CompressedImageChannel::close() noexcept {
+  foxglove_channel_close(impl_.get());
+}
+
 uint64_t CompressedImageChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
+}
+
+bool CompressedImageChannel::has_sinks() const noexcept {
+  return foxglove_channel_has_sinks(impl_.get());
 }
 
 FoxgloveResult<CompressedVideoChannel> CompressedVideoChannel::create(
@@ -235,8 +275,16 @@ FoxgloveError CompressedVideoChannel::log(
   ));
 }
 
+void CompressedVideoChannel::close() noexcept {
+  foxglove_channel_close(impl_.get());
+}
+
 uint64_t CompressedVideoChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
+}
+
+bool CompressedVideoChannel::has_sinks() const noexcept {
+  return foxglove_channel_has_sinks(impl_.get());
 }
 
 FoxgloveResult<CubePrimitiveChannel> CubePrimitiveChannel::create(
@@ -263,8 +311,16 @@ FoxgloveError CubePrimitiveChannel::log(
   ));
 }
 
+void CubePrimitiveChannel::close() noexcept {
+  foxglove_channel_close(impl_.get());
+}
+
 uint64_t CubePrimitiveChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
+}
+
+bool CubePrimitiveChannel::has_sinks() const noexcept {
+  return foxglove_channel_has_sinks(impl_.get());
 }
 
 FoxgloveResult<CylinderPrimitiveChannel> CylinderPrimitiveChannel::create(
@@ -291,8 +347,16 @@ FoxgloveError CylinderPrimitiveChannel::log(
   ));
 }
 
+void CylinderPrimitiveChannel::close() noexcept {
+  foxglove_channel_close(impl_.get());
+}
+
 uint64_t CylinderPrimitiveChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
+}
+
+bool CylinderPrimitiveChannel::has_sinks() const noexcept {
+  return foxglove_channel_has_sinks(impl_.get());
 }
 
 FoxgloveResult<FrameTransformChannel> FrameTransformChannel::create(
@@ -319,8 +383,16 @@ FoxgloveError FrameTransformChannel::log(
   ));
 }
 
+void FrameTransformChannel::close() noexcept {
+  foxglove_channel_close(impl_.get());
+}
+
 uint64_t FrameTransformChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
+}
+
+bool FrameTransformChannel::has_sinks() const noexcept {
+  return foxglove_channel_has_sinks(impl_.get());
 }
 
 FoxgloveResult<FrameTransformsChannel> FrameTransformsChannel::create(
@@ -347,8 +419,16 @@ FoxgloveError FrameTransformsChannel::log(
   ));
 }
 
+void FrameTransformsChannel::close() noexcept {
+  foxglove_channel_close(impl_.get());
+}
+
 uint64_t FrameTransformsChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
+}
+
+bool FrameTransformsChannel::has_sinks() const noexcept {
+  return foxglove_channel_has_sinks(impl_.get());
 }
 
 FoxgloveResult<GeoJSONChannel> GeoJSONChannel::create(
@@ -374,8 +454,16 @@ FoxgloveError GeoJSONChannel::log(
   ));
 }
 
+void GeoJSONChannel::close() noexcept {
+  foxglove_channel_close(impl_.get());
+}
+
 uint64_t GeoJSONChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
+}
+
+bool GeoJSONChannel::has_sinks() const noexcept {
+  return foxglove_channel_has_sinks(impl_.get());
 }
 
 FoxgloveResult<GridChannel> GridChannel::create(
@@ -401,8 +489,16 @@ FoxgloveError GridChannel::log(
   ));
 }
 
+void GridChannel::close() noexcept {
+  foxglove_channel_close(impl_.get());
+}
+
 uint64_t GridChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
+}
+
+bool GridChannel::has_sinks() const noexcept {
+  return foxglove_channel_has_sinks(impl_.get());
 }
 
 FoxgloveResult<ImageAnnotationsChannel> ImageAnnotationsChannel::create(
@@ -429,8 +525,16 @@ FoxgloveError ImageAnnotationsChannel::log(
   ));
 }
 
+void ImageAnnotationsChannel::close() noexcept {
+  foxglove_channel_close(impl_.get());
+}
+
 uint64_t ImageAnnotationsChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
+}
+
+bool ImageAnnotationsChannel::has_sinks() const noexcept {
+  return foxglove_channel_has_sinks(impl_.get());
 }
 
 FoxgloveResult<KeyValuePairChannel> KeyValuePairChannel::create(
@@ -457,8 +561,16 @@ FoxgloveError KeyValuePairChannel::log(
   ));
 }
 
+void KeyValuePairChannel::close() noexcept {
+  foxglove_channel_close(impl_.get());
+}
+
 uint64_t KeyValuePairChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
+}
+
+bool KeyValuePairChannel::has_sinks() const noexcept {
+  return foxglove_channel_has_sinks(impl_.get());
 }
 
 FoxgloveResult<LaserScanChannel> LaserScanChannel::create(
@@ -484,8 +596,16 @@ FoxgloveError LaserScanChannel::log(
   ));
 }
 
+void LaserScanChannel::close() noexcept {
+  foxglove_channel_close(impl_.get());
+}
+
 uint64_t LaserScanChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
+}
+
+bool LaserScanChannel::has_sinks() const noexcept {
+  return foxglove_channel_has_sinks(impl_.get());
 }
 
 FoxgloveResult<LinePrimitiveChannel> LinePrimitiveChannel::create(
@@ -512,8 +632,16 @@ FoxgloveError LinePrimitiveChannel::log(
   ));
 }
 
+void LinePrimitiveChannel::close() noexcept {
+  foxglove_channel_close(impl_.get());
+}
+
 uint64_t LinePrimitiveChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
+}
+
+bool LinePrimitiveChannel::has_sinks() const noexcept {
+  return foxglove_channel_has_sinks(impl_.get());
 }
 
 FoxgloveResult<LocationFixChannel> LocationFixChannel::create(
@@ -540,8 +668,16 @@ FoxgloveError LocationFixChannel::log(
   ));
 }
 
+void LocationFixChannel::close() noexcept {
+  foxglove_channel_close(impl_.get());
+}
+
 uint64_t LocationFixChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
+}
+
+bool LocationFixChannel::has_sinks() const noexcept {
+  return foxglove_channel_has_sinks(impl_.get());
 }
 
 FoxgloveResult<LocationFixesChannel> LocationFixesChannel::create(
@@ -568,8 +704,16 @@ FoxgloveError LocationFixesChannel::log(
   ));
 }
 
+void LocationFixesChannel::close() noexcept {
+  foxglove_channel_close(impl_.get());
+}
+
 uint64_t LocationFixesChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
+}
+
+bool LocationFixesChannel::has_sinks() const noexcept {
+  return foxglove_channel_has_sinks(impl_.get());
 }
 
 FoxgloveResult<LogChannel> LogChannel::create(
@@ -595,8 +739,16 @@ FoxgloveError LogChannel::log(
   ));
 }
 
+void LogChannel::close() noexcept {
+  foxglove_channel_close(impl_.get());
+}
+
 uint64_t LogChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
+}
+
+bool LogChannel::has_sinks() const noexcept {
+  return foxglove_channel_has_sinks(impl_.get());
 }
 
 FoxgloveResult<ModelPrimitiveChannel> ModelPrimitiveChannel::create(
@@ -623,8 +775,16 @@ FoxgloveError ModelPrimitiveChannel::log(
   ));
 }
 
+void ModelPrimitiveChannel::close() noexcept {
+  foxglove_channel_close(impl_.get());
+}
+
 uint64_t ModelPrimitiveChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
+}
+
+bool ModelPrimitiveChannel::has_sinks() const noexcept {
+  return foxglove_channel_has_sinks(impl_.get());
 }
 
 FoxgloveResult<PackedElementFieldChannel> PackedElementFieldChannel::create(
@@ -651,8 +811,16 @@ FoxgloveError PackedElementFieldChannel::log(
   ));
 }
 
+void PackedElementFieldChannel::close() noexcept {
+  foxglove_channel_close(impl_.get());
+}
+
 uint64_t PackedElementFieldChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
+}
+
+bool PackedElementFieldChannel::has_sinks() const noexcept {
+  return foxglove_channel_has_sinks(impl_.get());
 }
 
 FoxgloveResult<Point2Channel> Point2Channel::create(
@@ -678,8 +846,16 @@ FoxgloveError Point2Channel::log(
   ));
 }
 
+void Point2Channel::close() noexcept {
+  foxglove_channel_close(impl_.get());
+}
+
 uint64_t Point2Channel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
+}
+
+bool Point2Channel::has_sinks() const noexcept {
+  return foxglove_channel_has_sinks(impl_.get());
 }
 
 FoxgloveResult<Point3Channel> Point3Channel::create(
@@ -705,8 +881,16 @@ FoxgloveError Point3Channel::log(
   ));
 }
 
+void Point3Channel::close() noexcept {
+  foxglove_channel_close(impl_.get());
+}
+
 uint64_t Point3Channel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
+}
+
+bool Point3Channel::has_sinks() const noexcept {
+  return foxglove_channel_has_sinks(impl_.get());
 }
 
 FoxgloveResult<PointCloudChannel> PointCloudChannel::create(
@@ -732,8 +916,16 @@ FoxgloveError PointCloudChannel::log(
   ));
 }
 
+void PointCloudChannel::close() noexcept {
+  foxglove_channel_close(impl_.get());
+}
+
 uint64_t PointCloudChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
+}
+
+bool PointCloudChannel::has_sinks() const noexcept {
+  return foxglove_channel_has_sinks(impl_.get());
 }
 
 FoxgloveResult<PointsAnnotationChannel> PointsAnnotationChannel::create(
@@ -760,8 +952,16 @@ FoxgloveError PointsAnnotationChannel::log(
   ));
 }
 
+void PointsAnnotationChannel::close() noexcept {
+  foxglove_channel_close(impl_.get());
+}
+
 uint64_t PointsAnnotationChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
+}
+
+bool PointsAnnotationChannel::has_sinks() const noexcept {
+  return foxglove_channel_has_sinks(impl_.get());
 }
 
 FoxgloveResult<PoseChannel> PoseChannel::create(
@@ -787,8 +987,16 @@ FoxgloveError PoseChannel::log(
   ));
 }
 
+void PoseChannel::close() noexcept {
+  foxglove_channel_close(impl_.get());
+}
+
 uint64_t PoseChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
+}
+
+bool PoseChannel::has_sinks() const noexcept {
+  return foxglove_channel_has_sinks(impl_.get());
 }
 
 FoxgloveResult<PoseInFrameChannel> PoseInFrameChannel::create(
@@ -815,8 +1023,16 @@ FoxgloveError PoseInFrameChannel::log(
   ));
 }
 
+void PoseInFrameChannel::close() noexcept {
+  foxglove_channel_close(impl_.get());
+}
+
 uint64_t PoseInFrameChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
+}
+
+bool PoseInFrameChannel::has_sinks() const noexcept {
+  return foxglove_channel_has_sinks(impl_.get());
 }
 
 FoxgloveResult<PosesInFrameChannel> PosesInFrameChannel::create(
@@ -843,8 +1059,16 @@ FoxgloveError PosesInFrameChannel::log(
   ));
 }
 
+void PosesInFrameChannel::close() noexcept {
+  foxglove_channel_close(impl_.get());
+}
+
 uint64_t PosesInFrameChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
+}
+
+bool PosesInFrameChannel::has_sinks() const noexcept {
+  return foxglove_channel_has_sinks(impl_.get());
 }
 
 FoxgloveResult<QuaternionChannel> QuaternionChannel::create(
@@ -870,8 +1094,16 @@ FoxgloveError QuaternionChannel::log(
   ));
 }
 
+void QuaternionChannel::close() noexcept {
+  foxglove_channel_close(impl_.get());
+}
+
 uint64_t QuaternionChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
+}
+
+bool QuaternionChannel::has_sinks() const noexcept {
+  return foxglove_channel_has_sinks(impl_.get());
 }
 
 FoxgloveResult<RawAudioChannel> RawAudioChannel::create(
@@ -897,8 +1129,16 @@ FoxgloveError RawAudioChannel::log(
   ));
 }
 
+void RawAudioChannel::close() noexcept {
+  foxglove_channel_close(impl_.get());
+}
+
 uint64_t RawAudioChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
+}
+
+bool RawAudioChannel::has_sinks() const noexcept {
+  return foxglove_channel_has_sinks(impl_.get());
 }
 
 FoxgloveResult<RawImageChannel> RawImageChannel::create(
@@ -924,8 +1164,16 @@ FoxgloveError RawImageChannel::log(
   ));
 }
 
+void RawImageChannel::close() noexcept {
+  foxglove_channel_close(impl_.get());
+}
+
 uint64_t RawImageChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
+}
+
+bool RawImageChannel::has_sinks() const noexcept {
+  return foxglove_channel_has_sinks(impl_.get());
 }
 
 FoxgloveResult<SceneEntityChannel> SceneEntityChannel::create(
@@ -952,8 +1200,16 @@ FoxgloveError SceneEntityChannel::log(
   ));
 }
 
+void SceneEntityChannel::close() noexcept {
+  foxglove_channel_close(impl_.get());
+}
+
 uint64_t SceneEntityChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
+}
+
+bool SceneEntityChannel::has_sinks() const noexcept {
+  return foxglove_channel_has_sinks(impl_.get());
 }
 
 FoxgloveResult<SceneEntityDeletionChannel> SceneEntityDeletionChannel::create(
@@ -980,8 +1236,16 @@ FoxgloveError SceneEntityDeletionChannel::log(
   ));
 }
 
+void SceneEntityDeletionChannel::close() noexcept {
+  foxglove_channel_close(impl_.get());
+}
+
 uint64_t SceneEntityDeletionChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
+}
+
+bool SceneEntityDeletionChannel::has_sinks() const noexcept {
+  return foxglove_channel_has_sinks(impl_.get());
 }
 
 FoxgloveResult<SceneUpdateChannel> SceneUpdateChannel::create(
@@ -1008,8 +1272,16 @@ FoxgloveError SceneUpdateChannel::log(
   ));
 }
 
+void SceneUpdateChannel::close() noexcept {
+  foxglove_channel_close(impl_.get());
+}
+
 uint64_t SceneUpdateChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
+}
+
+bool SceneUpdateChannel::has_sinks() const noexcept {
+  return foxglove_channel_has_sinks(impl_.get());
 }
 
 FoxgloveResult<SpherePrimitiveChannel> SpherePrimitiveChannel::create(
@@ -1036,8 +1308,16 @@ FoxgloveError SpherePrimitiveChannel::log(
   ));
 }
 
+void SpherePrimitiveChannel::close() noexcept {
+  foxglove_channel_close(impl_.get());
+}
+
 uint64_t SpherePrimitiveChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
+}
+
+bool SpherePrimitiveChannel::has_sinks() const noexcept {
+  return foxglove_channel_has_sinks(impl_.get());
 }
 
 FoxgloveResult<TextAnnotationChannel> TextAnnotationChannel::create(
@@ -1064,8 +1344,16 @@ FoxgloveError TextAnnotationChannel::log(
   ));
 }
 
+void TextAnnotationChannel::close() noexcept {
+  foxglove_channel_close(impl_.get());
+}
+
 uint64_t TextAnnotationChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
+}
+
+bool TextAnnotationChannel::has_sinks() const noexcept {
+  return foxglove_channel_has_sinks(impl_.get());
 }
 
 FoxgloveResult<TextPrimitiveChannel> TextPrimitiveChannel::create(
@@ -1092,8 +1380,16 @@ FoxgloveError TextPrimitiveChannel::log(
   ));
 }
 
+void TextPrimitiveChannel::close() noexcept {
+  foxglove_channel_close(impl_.get());
+}
+
 uint64_t TextPrimitiveChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
+}
+
+bool TextPrimitiveChannel::has_sinks() const noexcept {
+  return foxglove_channel_has_sinks(impl_.get());
 }
 
 FoxgloveResult<TriangleListPrimitiveChannel> TriangleListPrimitiveChannel::create(
@@ -1121,8 +1417,16 @@ FoxgloveError TriangleListPrimitiveChannel::log(
   ));
 }
 
+void TriangleListPrimitiveChannel::close() noexcept {
+  foxglove_channel_close(impl_.get());
+}
+
 uint64_t TriangleListPrimitiveChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
+}
+
+bool TriangleListPrimitiveChannel::has_sinks() const noexcept {
+  return foxglove_channel_has_sinks(impl_.get());
 }
 
 FoxgloveResult<Vector2Channel> Vector2Channel::create(
@@ -1148,8 +1452,16 @@ FoxgloveError Vector2Channel::log(
   ));
 }
 
+void Vector2Channel::close() noexcept {
+  foxglove_channel_close(impl_.get());
+}
+
 uint64_t Vector2Channel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
+}
+
+bool Vector2Channel::has_sinks() const noexcept {
+  return foxglove_channel_has_sinks(impl_.get());
 }
 
 FoxgloveResult<Vector3Channel> Vector3Channel::create(
@@ -1175,8 +1487,16 @@ FoxgloveError Vector3Channel::log(
   ));
 }
 
+void Vector3Channel::close() noexcept {
+  foxglove_channel_close(impl_.get());
+}
+
 uint64_t Vector3Channel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
+}
+
+bool Vector3Channel::has_sinks() const noexcept {
+  return foxglove_channel_has_sinks(impl_.get());
 }
 
 FoxgloveResult<VoxelGridChannel> VoxelGridChannel::create(
@@ -1202,8 +1522,16 @@ FoxgloveError VoxelGridChannel::log(
   ));
 }
 
+void VoxelGridChannel::close() noexcept {
+  foxglove_channel_close(impl_.get());
+}
+
 uint64_t VoxelGridChannel::id() const noexcept {
   return foxglove_channel_get_id(impl_.get());
+}
+
+bool VoxelGridChannel::has_sinks() const noexcept {
+  return foxglove_channel_has_sinks(impl_.get());
 }
 
 #endif

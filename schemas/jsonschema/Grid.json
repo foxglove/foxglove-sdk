@@ -46,7 +46,12 @@
               "type": "number",
               "description": "z coordinate length"
             }
-          }
+          },
+          "required": [
+            "x",
+            "y",
+            "z"
+          ]
         },
         "orientation": {
           "title": "foxglove.Quaternion",
@@ -69,9 +74,19 @@
               "type": "number",
               "description": "w value"
             }
-          }
+          },
+          "required": [
+            "x",
+            "y",
+            "z",
+            "w"
+          ]
         }
-      }
+      },
+      "required": [
+        "position",
+        "orientation"
+      ]
     },
     "column_count": {
       "type": "integer",
@@ -91,7 +106,11 @@
           "type": "number",
           "description": "y coordinate length"
         }
-      }
+      },
+      "required": [
+        "x",
+        "y"
+      ]
     },
     "row_stride": {
       "type": "integer",
@@ -170,14 +189,30 @@
               }
             ]
           }
-        }
+        },
+        "required": [
+          "name",
+          "offset",
+          "type"
+        ]
       },
-      "description": "Fields in `data`. `red`, `green`, `blue`, and `alpha` are optional for customizing the grid's color."
+      "description": "Fields in `data`. S`red`, `green`, `blue`, and `alpha` are optional for customizing the grid's color.\nTo enable RGB color visualization in the [3D panel](https://docs.foxglove.dev/docs/visualization/panels/3d#rgba-separate-fields-color-mode), include **all four** of these fields in your `fields` array:\n\n- `red` - Red channel value\n- `green` - Green channel value\n- `blue` - Blue channel value\n- `alpha` - Alpha/transparency channel value\n\n**note:** All four fields must be present with these exact names for RGB visualization to work. The order of fields doesn't matter, but the names must match exactly.\n\nRecommended type: `UINT8` (0-255 range) for standard 8-bit color channels.\n\nExample field definitions:\n\n**RGB color only:**\n\n```javascript\nfields: [\n { name: \"red\", offset: 0, type: NumericType.UINT8 },\n { name: \"green\", offset: 1, type: NumericType.UINT8 },\n { name: \"blue\", offset: 2, type: NumericType.UINT8 },\n { name: \"alpha\", offset: 3, type: NumericType.UINT8 },\n];\n```\n\n**RGB color with elevation (for 3D terrain visualization):**\n\n```javascript\nfields: [\n { name: \"red\", offset: 0, type: NumericType.UINT8 },\n { name: \"green\", offset: 1, type: NumericType.UINT8 },\n { name: \"blue\", offset: 2, type: NumericType.UINT8 },\n { name: \"alpha\", offset: 3, type: NumericType.UINT8 },\n { name: \"elevation\", offset: 4, type: NumericType.FLOAT32 },\n];\n```\n\nWhen these fields are present, the 3D panel will offer additional \"Color Mode\" options including \"RGBA (separate fields)\" to visualize the RGB data directly. For elevation visualization, set the \"Elevation field\" to your elevation layer name."
     },
     "data": {
       "type": "string",
       "contentEncoding": "base64",
-      "description": "Grid cell data, interpreted using `fields`, in row-major (y-major) order.\n For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:\n y = (i / cell_stride) % row_stride * cell_size.y\n x = i % cell_stride * cell_size.x"
+      "description": "Grid cell data, interpreted using `fields`, in row-major (y-major) order.\nFor the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:\n\n- y = i / row_stride * cell_size.y\n- x = (i % row_stride) / cell_stride * cell_size.x"
     }
-  }
+  },
+  "required": [
+    "timestamp",
+    "frame_id",
+    "pose",
+    "column_count",
+    "cell_size",
+    "row_stride",
+    "cell_stride",
+    "fields",
+    "data"
+  ]
 }

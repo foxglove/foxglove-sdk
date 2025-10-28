@@ -33,7 +33,11 @@
           "type": "number",
           "description": "y coordinate position"
         }
-      }
+      },
+      "required": [
+        "x",
+        "y"
+      ]
     },
     "text": {
       "type": "string",
@@ -64,7 +68,13 @@
           "type": "number",
           "description": "Alpha value between 0 and 1"
         }
-      }
+      },
+      "required": [
+        "r",
+        "g",
+        "b",
+        "a"
+      ]
     },
     "background_color": {
       "title": "foxglove.Color",
@@ -87,7 +97,21 @@
           "type": "number",
           "description": "Alpha value between 0 and 1"
         }
-      }
+      },
+      "required": [
+        "r",
+        "g",
+        "b",
+        "a"
+      ]
     }
-  }
+  },
+  "required": [
+    "timestamp",
+    "position",
+    "text",
+    "font_size",
+    "text_color",
+    "background_color"
+  ]
 }

@@ -486,15 +486,13 @@ const LinePrimitive: FoxgloveMessageSchema = {
     {
       name: "color",
       type: { type: "nested", schema: Color },
-      description:
-        "Solid color to use for the whole line. One of `color` or `colors` must be provided.",
+      description: "Solid color to use for the whole line. Ignored if `colors` is non-empty.",
     },
     {
       name: "colors",
       type: { type: "nested", schema: Color },
       array: true,
-      description:
-        "Per-point colors (if specified, must have the same length as `points`). One of `color` or `colors` must be provided.",
+      description: "Per-point colors (if non-empty, must have the same length as `points`).",
     },
     {
       name: "indices",
@@ -567,15 +565,13 @@ const TriangleListPrimitive: FoxgloveMessageSchema = {
     {
       name: "color",
       type: { type: "nested", schema: Color },
-      description:
-        "Solid color to use for the whole shape. One of `color` or `colors` must be provided.",
+      description: "Solid color to use for the whole shape. Ignored if `colors` is non-empty.",
     },
     {
       name: "colors",
       type: { type: "nested", schema: Color },
       array: true,
-      description:
-        "Per-vertex colors (if specified, must have the same length as `points`). One of `color` or `colors` must be provided.",
+      description: "Per-vertex colors (if specified, must have the same length as `points`).",
     },
     {
       name: "indices",
@@ -617,7 +613,7 @@ const ModelPrimitive: FoxgloveMessageSchema = {
     {
       name: "url",
       type: { type: "primitive", name: "string" },
-      description: "URL pointing to model file. One of `url` or `data` should be provided.",
+      description: "URL pointing to model file. One of `url` or `data` should be non-empty.",
     },
     {
       name: "media_type",
@@ -629,7 +625,7 @@ const ModelPrimitive: FoxgloveMessageSchema = {
       name: "data",
       type: { type: "primitive", name: "bytes" },
       description:
-        "Embedded model. One of `url` or `data` should be provided. If `data` is provided, `media_type` must be set to indicate the type of the data.",
+        "Embedded model. One of `url` or `data` should be non-empty. If `data` is non-empty, `media_type` must be set to indicate the type of the data.",
     },
   ],
 };
@@ -1221,13 +1217,13 @@ const Grid: FoxgloveMessageSchema = {
       type: { type: "nested", schema: PackedElementField },
       array: true,
       description:
-        "Fields in `data`. `red`, `green`, `blue`, and `alpha` are optional for customizing the grid's color.",
+        'Fields in `data`. S`red`, `green`, `blue`, and `alpha` are optional for customizing the grid\'s color.\nTo enable RGB color visualization in the [3D panel](https://docs.foxglove.dev/docs/visualization/panels/3d#rgba-separate-fields-color-mode), include **all four** of these fields in your `fields` array:\n\n- `red` - Red channel value\n- `green` - Green channel value\n- `blue` - Blue channel value\n- `alpha` - Alpha/transparency channel value\n\n**note:** All four fields must be present with these exact names for RGB visualization to work. The order of fields doesn\'t matter, but the names must match exactly.\n\nRecommended type: `UINT8` (0-255 range) for standard 8-bit color channels.\n\nExample field definitions:\n\n**RGB color only:**\n\n```javascript\nfields: [\n { name: "red", offset: 0, type: NumericType.UINT8 },\n { name: "green", offset: 1, type: NumericType.UINT8 },\n { name: "blue", offset: 2, type: NumericType.UINT8 },\n { name: "alpha", offset: 3, type: NumericType.UINT8 },\n];\n```\n\n**RGB color with elevation (for 3D terrain visualization):**\n\n```javascript\nfields: [\n { name: "red", offset: 0, type: NumericType.UINT8 },\n { name: "green", offset: 1, type: NumericType.UINT8 },\n { name: "blue", offset: 2, type: NumericType.UINT8 },\n { name: "alpha", offset: 3, type: NumericType.UINT8 },\n { name: "elevation", offset: 4, type: NumericType.FLOAT32 },\n];\n```\n\nWhen these fields are present, the 3D panel will offer additional "Color Mode" options including "RGBA (separate fields)" to visualize the RGB data directly. For elevation visualization, set the "Elevation field" to your elevation layer name.',
     },
     {
       name: "data",
       type: { type: "primitive", name: "bytes" },
       description:
-        "Grid cell data, interpreted using `fields`, in row-major (y-major) order.\n For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:\n y = (i / cell_stride) % row_stride * cell_size.y\n x = i % cell_stride * cell_size.x",
+        "Grid cell data, interpreted using `fields`, in row-major (y-major) order.\nFor the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:\n\n- y = i / row_stride * cell_size.y\n- x = (i % row_stride) / cell_stride * cell_size.x",
     },
   ],
 };
@@ -1293,7 +1289,7 @@ const VoxelGrid: FoxgloveMessageSchema = {
       name: "data",
       type: { type: "primitive", name: "bytes" },
       description:
-        "Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order.\n For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:\n z = i / slice_stride * cell_size.z\n y = (i % slice_stride) / row_stride * cell_size.y\n x = (i % row_stride) / cell_stride * cell_size.x",
+        "Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order.\nFor the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:\n\n- z = i / slice_stride * cell_size.z\n- y = (i % slice_stride) / row_stride * cell_size.y\n- x = (i % row_stride) / cell_stride * cell_size.x",
     },
   ],
 };

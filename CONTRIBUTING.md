@@ -22,12 +22,7 @@ This package generates source and interface files for the Foxglove SDK, and reli
 - Rust, installed via [rustup](https://rustup.rs/)
   - Documentation generation requires a recent `nightly` build
 - [Protobuf compiler](https://grpc.io/docs/protoc-installation/)
-- Python dependencies installed via [Poetry](https://python-poetry.org/)
-
-```sh
-pipx install poetry
-poetry install
-```
+- [uv](https://docs.astral.sh/uv/getting-started/installation/)
 
 For more details, refer to the [Python SDK contributing guide](python/foxglove-sdk/CONTRIBUTING.md).
 

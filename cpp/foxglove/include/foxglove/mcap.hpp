@@ -6,9 +6,21 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <string_view>
+#include <unordered_map>
+#include <vector>
 
+#include "channel.hpp"
+
+/// @cond foxglove_internal
 enum foxglove_error : uint8_t;
 struct foxglove_mcap_writer;
+
+foxglove_error foxglove_mcap_write_metadata(
+  foxglove_mcap_writer* writer, const foxglove_string* name, const foxglove_key_value* metadata,
+  size_t metadata_len
+);
+/// @endcond
 
 /// The foxglove namespace.
 namespace foxglove {
@@ -61,6 +73,8 @@ struct McapWriterOptions {
   bool repeat_schemas = true;
   /// @brief Whether to truncate the MCAP file.
   bool truncate = false;
+  /// @brief Optional channel filter to use for the MCAP file.
+  SinkChannelFilterFn sink_channel_filter = {};
 
   McapWriterOptions() = default;
 };
@@ -78,6 +92,19 @@ public:
   /// @return A new MCAP writer.
   static FoxgloveResult<McapWriter> create(const McapWriterOptions& options);
 
+  /// @brief Write metadata to the MCAP file.
+  ///
+  /// Metadata consists of key-value string pairs associated with a name.
+  /// If the range is empty, this method does nothing.
+  ///
+  /// @tparam Iterator An iterator type that dereferences to std::pair<std::string, std::string>
+  /// @param name Name identifier for this metadata record
+  /// @param begin Iterator to the beginning of the key-value pairs
+  /// @param end Iterator to the end of the key-value pairs
+  /// @return FoxgloveError::Ok on success, or an error code on failure
+  template<typename Iterator>
+  FoxgloveError writeMetadata(std::string_view name, Iterator begin, Iterator end);
+
   /// @brief Stops logging events and flushes buffered data.
   FoxgloveError close();
 
@@ -91,9 +118,35 @@ public:
   McapWriter& operator=(const McapWriter&) = delete;
 
 private:
-  explicit McapWriter(foxglove_mcap_writer* writer);
+  explicit McapWriter(
+    foxglove_mcap_writer* writer, std::unique_ptr<SinkChannelFilterFn> sink_channel_filter = nullptr
+  );
 
+  std::unique_ptr<SinkChannelFilterFn> sink_channel_filter_;
   std::unique_ptr<foxglove_mcap_writer, foxglove_error (*)(foxglove_mcap_writer*)> impl_;
 };
+
+/// @copydoc McapWriter::writeMetadata
+template<typename Iter>
+FoxgloveError McapWriter::writeMetadata(std::string_view name, Iter begin, Iter end) {
+  // Convert iterator range to C array of key-value pairs
+  std::vector<foxglove_key_value> c_metadata;
+
+  for (auto it = begin; it != end; ++it) {
+    const auto& [key, value] = *it;
+    foxglove_key_value kv;
+    // data and length for both are necessary because foxglove_string is a C struct
+    kv.key = {key.data(), key.length()};
+    kv.value = {value.data(), value.length()};
+    c_metadata.push_back(kv);
+  }
+
+  foxglove_string c_name = {name.data(), name.length()};
+
+  foxglove_error error =
+    foxglove_mcap_write_metadata(impl_.get(), &c_name, c_metadata.data(), c_metadata.size());
+
+  return FoxgloveError(error);
+}
 
 }  // namespace foxglove

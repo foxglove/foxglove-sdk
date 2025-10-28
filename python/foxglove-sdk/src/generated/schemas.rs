@@ -866,11 +866,49 @@ impl From<GeoJson> for foxglove::schemas::GeoJson {
 /// :param cell_size: Size of single grid cell along x and y axes, relative to `pose`
 /// :param row_stride: Number of bytes between rows in `data`
 /// :param cell_stride: Number of bytes between cells within a row in `data`
-/// :param fields: Fields in `data`. `red`, `green`, `blue`, and `alpha` are optional for customizing the grid's color.
+/// :param fields: Fields in `data`. S`red`, `green`, `blue`, and `alpha` are optional for customizing the grid's color.
+///     To enable RGB color visualization in the `3D panel <https://docs.foxglove.dev/docs/visualization/panels/3d#rgba-separate-fields-color-mode>`__, include **all four** of these fields in your `fields` array:
+///     
+///     - `red` - Red channel value
+///     - `green` - Green channel value
+///     - `blue` - Blue channel value
+///     - `alpha` - Alpha/transparency channel value
+///     
+///     **note:** All four fields must be present with these exact names for RGB visualization to work. The order of fields doesn't matter, but the names must match exactly.
+///     
+///     Recommended type: `UINT8` (0-255 range) for standard 8-bit color channels.
+///     
+///     Example field definitions:
+///     
+///     **RGB color only:**
+///     
+///     ::
+///
+///         fields: [
+///          { name: "red", offset: 0, type: NumericType.UINT8 },
+///          { name: "green", offset: 1, type: NumericType.UINT8 },
+///          { name: "blue", offset: 2, type: NumericType.UINT8 },
+///          { name: "alpha", offset: 3, type: NumericType.UINT8 },
+///         ];
+///     
+///     **RGB color with elevation (for 3D terrain visualization):**
+///     
+///     ::
+///
+///         fields: [
+///          { name: "red", offset: 0, type: NumericType.UINT8 },
+///          { name: "green", offset: 1, type: NumericType.UINT8 },
+///          { name: "blue", offset: 2, type: NumericType.UINT8 },
+///          { name: "alpha", offset: 3, type: NumericType.UINT8 },
+///          { name: "elevation", offset: 4, type: NumericType.FLOAT32 },
+///         ];
+///     
+///     When these fields are present, the 3D panel will offer additional "Color Mode" options including "RGBA (separate fields)" to visualize the RGB data directly. For elevation visualization, set the "Elevation field" to your elevation layer name.
 /// :param data: Grid cell data, interpreted using `fields`, in row-major (y-major) order.
-///      For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
-///      y = (i / cell_stride) % row_stride * cell_size.y
-///      x = i % cell_stride * cell_size.x
+///     For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
+///     
+///     - y = i / row_stride * cell_size.y
+///     - x = (i % row_stride) / cell_stride * cell_size.x
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/grid
 #[pyclass(module = "foxglove.schemas")]
@@ -963,10 +1001,11 @@ impl From<Grid> for foxglove::schemas::Grid {
 /// :param cell_stride: Number of bytes between cells within a row in `data`
 /// :param fields: Fields in `data`. `red`, `green`, `blue`, and `alpha` are optional for customizing the grid's color.
 /// :param data: Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order.
-///      For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
-///      z = i / slice_stride * cell_size.z
-///      y = (i % slice_stride) / row_stride * cell_size.y
-///      x = (i % row_stride) / cell_stride * cell_size.x
+///     For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
+///     
+///     - z = i / slice_stride * cell_size.z
+///     - y = (i % slice_stride) / row_stride * cell_size.y
+///     - x = (i % row_stride) / cell_stride * cell_size.x
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/voxel-grid
 #[pyclass(module = "foxglove.schemas")]
@@ -1261,8 +1300,8 @@ impl From<LaserScan> for foxglove::schemas::LaserScan {
 /// :param thickness: Line thickness
 /// :param scale_invariant: Indicates whether `thickness` is a fixed size in screen pixels (true), or specified in world coordinates and scales with distance from the camera (false)
 /// :param points: Points along the line
-/// :param color: Solid color to use for the whole line. One of `color` or `colors` must be provided.
-/// :param colors: Per-point colors (if specified, must have the same length as `points`). One of `color` or `colors` must be provided.
+/// :param color: Solid color to use for the whole line. Ignored if `colors` is non-empty.
+/// :param colors: Per-point colors (if non-empty, must have the same length as `points`).
 /// :param indices: Indices into the `points` and `colors` attribute arrays, which can be used to avoid duplicating attribute data.
 ///     
 ///     If omitted or empty, indexing will not be used. This default behavior is equivalent to specifying [0, 1, ..., N-1] for the indices (where N is the number of `points` provided).
@@ -1811,9 +1850,9 @@ impl From<SceneUpdate> for foxglove::schemas::SceneUpdate {
 /// :param scale: Scale factor to apply to the model along each axis
 /// :param color: Solid color to use for the whole model if `override_color` is true.
 /// :param override_color: Whether to use the color specified in `color` instead of any materials embedded in the original model.
-/// :param url: URL pointing to model file. One of `url` or `data` should be provided.
+/// :param url: URL pointing to model file. One of `url` or `data` should be non-empty.
 /// :param media_type: [Media type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types) of embedded model (e.g. `model/gltf-binary`). Required if `data` is provided instead of `url`. Overrides the inferred media type if `url` is provided.
-/// :param data: Embedded model. One of `url` or `data` should be provided. If `data` is provided, `media_type` must be set to indicate the type of the data.
+/// :param data: Embedded model. One of `url` or `data` should be non-empty. If `data` is non-empty, `media_type` must be set to indicate the type of the data.
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/model-primitive
 #[pyclass(module = "foxglove.schemas")]
@@ -2829,8 +2868,8 @@ impl From<TextPrimitive> for foxglove::schemas::TextPrimitive {
 ///
 /// :param pose: Origin of triangles relative to reference frame
 /// :param points: Vertices to use for triangles, interpreted as a list of triples (0-1-2, 3-4-5, ...)
-/// :param color: Solid color to use for the whole shape. One of `color` or `colors` must be provided.
-/// :param colors: Per-vertex colors (if specified, must have the same length as `points`). One of `color` or `colors` must be provided.
+/// :param color: Solid color to use for the whole shape. Ignored if `colors` is non-empty.
+/// :param colors: Per-vertex colors (if specified, must have the same length as `points`).
 /// :param indices: Indices into the `points` and `colors` attribute arrays, which can be used to avoid duplicating attribute data.
 ///     
 ///     If omitted or empty, indexing will not be used. This default behavior is equivalent to specifying [0, 1, ..., N-1] for the indices (where N is the number of `points` provided).

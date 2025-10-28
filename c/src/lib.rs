@@ -16,6 +16,10 @@ mod bytes;
 #[cfg(not(target_family = "wasm"))]
 mod channel;
 #[cfg(not(target_family = "wasm"))]
+mod channel_descriptor;
+#[cfg(not(target_family = "wasm"))]
+mod cloud_sink;
+#[cfg(not(target_family = "wasm"))]
 mod connection_graph;
 #[cfg(not(target_family = "wasm"))]
 mod fetch_asset;
@@ -27,7 +31,11 @@ mod parameter;
 mod server;
 #[cfg(not(target_family = "wasm"))]
 mod service;
+#[cfg(not(target_family = "wasm"))]
+mod sink_channel_filter;
 
+#[cfg(not(target_family = "wasm"))]
+pub use cloud_sink::*;
 #[cfg(not(target_family = "wasm"))]
 pub use server::*;
 
@@ -202,7 +210,6 @@ pub struct FoxgloveSchema {
     pub data: *const u8,
     pub data_len: usize,
 }
-
 #[cfg(not(target_family = "wasm"))]
 impl FoxgloveSchema {
     /// Converts a schema to the native type.
