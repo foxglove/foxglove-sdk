@@ -21,6 +21,7 @@ use crate::{Context, FoxgloveError};
 use super::connected_client::ConnectedClient;
 use super::cow_vec::CowVec;
 use super::service::{Service, ServiceId, ServiceMap};
+use super::ws_protocol::client::PlayerTime;
 use super::ws_protocol::server::{
     AdvertiseServices, RemoveStatus, ServerInfo, UnadvertiseServices,
 };
@@ -47,6 +48,7 @@ pub(crate) struct ServerOptions {
     pub tls_identity: Option<TlsIdentity>,
     pub channel_filter: Option<Arc<dyn SinkChannelFilter>>,
     pub server_info: Option<HashMap<String, String>>,
+    pub playback_time_range: Option<(PlayerTime, PlayerTime)>,
 }
 
 impl std::fmt::Debug for ServerOptions {
@@ -164,6 +166,8 @@ pub(crate) struct Server {
     /// Information about the server, which is shared with clients.
     /// Keys prefixed with "fg-" are reserved for internal use.
     server_info: HashMap<String, String>,
+    /// Playback time range
+    playback_time_range: Option<(PlayerTime, PlayerTime)>,
 }
 
 impl Server {
@@ -225,6 +229,7 @@ impl Server {
             tasks: parking_lot::Mutex::default(),
             stream_config,
             server_info: opts.server_info.unwrap_or_default(),
+            playback_time_range: opts.playback_time_range,
         }
     }
 
@@ -529,6 +534,7 @@ impl Server {
             .with_metadata(metadata)
             .with_supported_encodings(&self.supported_encodings)
             .with_session_id(self.session_id.read().clone())
+            .with_data_time_range(self.playback_time_range.clone())
     }
 
     /// Sets a new session ID and notifies all clients, causing them to reset their state.
