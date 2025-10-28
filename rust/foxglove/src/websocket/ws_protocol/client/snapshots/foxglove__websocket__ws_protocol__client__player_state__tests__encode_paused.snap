@@ -1,0 +1,14 @@
+---
+source: rust/foxglove/src/websocket/ws_protocol/client/player_state.rs
+assertion_line: 60
+expression: message_paused
+---
+{
+  "op": "playerState",
+  "playing": "paused",
+  "playbackSpeed": 0.5,
+  "seekPlaybackTime": {
+    "sec": 123,
+    "nsec": 456
+  }
+}

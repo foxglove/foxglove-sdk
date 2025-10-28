@@ -9,6 +9,7 @@ pub mod advertise;
 mod fetch_asset;
 mod get_parameters;
 mod message_data;
+mod player_state;
 mod service_call_request;
 mod set_parameters;
 pub mod subscribe;
@@ -23,6 +24,7 @@ pub use advertise::Advertise;
 pub use fetch_asset::FetchAsset;
 pub use get_parameters::GetParameters;
 pub use message_data::MessageData;
+pub use player_state::{PlayerState, PlayerTime, Playing};
 pub use service_call_request::ServiceCallRequest;
 pub use set_parameters::SetParameters;
 pub use subscribe::{Subscribe, Subscription};
@@ -50,6 +52,7 @@ pub enum ClientMessage<'a> {
     SubscribeConnectionGraph,
     UnsubscribeConnectionGraph,
     FetchAsset(FetchAsset),
+    PlayerState(PlayerState),
 }
 
 impl<'a> ClientMessage<'a> {
@@ -100,6 +103,7 @@ impl<'a> ClientMessage<'a> {
             ClientMessage::SubscribeConnectionGraph => ClientMessage::SubscribeConnectionGraph,
             ClientMessage::UnsubscribeConnectionGraph => ClientMessage::UnsubscribeConnectionGraph,
             ClientMessage::FetchAsset(m) => ClientMessage::FetchAsset(m),
+            ClientMessage::PlayerState(m) => ClientMessage::PlayerState(m),
         }
     }
 }
@@ -119,6 +123,7 @@ enum JsonMessage<'a> {
     SubscribeConnectionGraph,
     UnsubscribeConnectionGraph,
     FetchAsset(FetchAsset),
+    PlayerState(PlayerState),
 }
 
 impl<'a> From<JsonMessage<'a>> for ClientMessage<'a> {
@@ -135,6 +140,7 @@ impl<'a> From<JsonMessage<'a>> for ClientMessage<'a> {
             JsonMessage::SubscribeConnectionGraph => Self::SubscribeConnectionGraph,
             JsonMessage::UnsubscribeConnectionGraph => Self::UnsubscribeConnectionGraph,
             JsonMessage::FetchAsset(m) => Self::FetchAsset(m),
+            JsonMessage::PlayerState(m) => Self::PlayerState(m),
         }
     }
 }

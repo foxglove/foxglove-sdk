@@ -1,0 +1,14 @@
+---
+source: rust/foxglove/src/websocket/ws_protocol/client/player_state.rs
+assertion_line: 96
+expression: message()
+---
+{
+  "op": "playerState",
+  "playing": "playing",
+  "playbackSpeed": 1.0,
+  "currentPlaybackTime": {
+    "secs": 1234567,
+    "nsecs": 890123456
+  }
+}
