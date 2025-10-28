@@ -1,6 +1,6 @@
 //! Websocket server
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fmt::{Debug, Display};
 use std::future::Future;
 use std::net::SocketAddr;
@@ -115,7 +115,11 @@ impl WebSocketServer {
     ///
     /// By default, the server does not advertise any capabilities.
     pub fn capabilities(mut self, capabilities: impl IntoIterator<Item = Capability>) -> Self {
-        self.options.capabilities = Some(capabilities.into_iter().collect());
+        if let Some(capabilities_inner) = self.options.capabilities.as_mut() {
+            capabilities_inner.extend(capabilities);
+        } else {
+            self.options.capabilities = Some(capabilities.into_iter().collect());
+        }
         self
     }
 

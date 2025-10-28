@@ -4,6 +4,7 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
+use crate::websocket::ws_protocol::client::PlayerTime;
 use crate::websocket::ws_protocol::JsonMessage;
 
 /// Type for serializing timestamps in the server info message.

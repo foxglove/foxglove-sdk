@@ -1,5 +1,6 @@
 ---
 source: rust/foxglove/src/websocket/ws_protocol/server/server_info.rs
+assertion_line: 152
 expression: message_full()
 ---
 {
