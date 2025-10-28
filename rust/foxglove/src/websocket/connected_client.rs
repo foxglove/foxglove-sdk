@@ -673,6 +673,17 @@ impl ConnectedClient {
         }
     }
 
+    fn on_player_state(&self, server: Arc<Server>, msg: ws_protocol::client::PlayerState) {
+        if !server.has_capability(Capability::RangedPlayback) {
+            self.send_error("Server does not support ranged playback capability".to_string());
+            return;
+        }
+
+        if let Some(handler) = server.listener() {
+            handler.on_player_state(Client::new(self), msg);
+        }
+    }
+
     /// Send an ad hoc error status message to the client, with the given message.
     fn send_error(&self, message: String) {
         tracing::debug!("Sending error to client {}: {}", self.addr, message);
