@@ -1,44 +1,82 @@
-use serde::{Deserialize, Serialize};
+use bytes::{Buf, BufMut};
 
-use crate::websocket::ws_protocol::JsonMessage;
+use crate::websocket::ws_protocol::{BinaryMessage, ParseError};
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum Playing {
-    Playing,
-    Paused,
+use super::BinaryOpcode;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(u8)]
+pub enum PlaybackState {
+    Playing = 0,
+    Paused = 1,
+    Buffering = 2,
+    Ended = 3,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct PlayerTime {
-    pub sec: u64,
-    pub nsec: u64,
-}
+impl TryFrom<u8> for PlaybackState {
+    type Error = u8;
 
-impl PlayerTime {
-    pub fn new(sec: u64, nsec: u64) -> Self {
-        Self { sec, nsec }
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0 => Ok(Self::Playing),
+            1 => Ok(Self::Paused),
+            2 => Ok(Self::Buffering),
+            3 => Ok(Self::Ended),
+            _ => Err(value),
+        }
     }
 }
 
 /// Player state message.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(tag = "op", rename = "playerState", rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq)]
 pub struct PlayerState {
-    /// Playing state
-    pub playing: Playing,
+    /// Playback state
+    pub playback_state: PlaybackState,
     /// Playback speed
     pub playback_speed: f32,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    /// Seek playback time
-    pub seek_playback_time: Option<PlayerTime>,
-    /// Previous playback time (will be defined if a seek has occurred)
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub seek_previous_playback_time: Option<PlayerTime>,
+    /// Seek playback time in nanoseconds (only set if a seek has been performed)
+    pub seek_time: Option<u64>,
 }
 
-impl JsonMessage for PlayerState {}
+impl<'a> BinaryMessage<'a> for PlayerState {
+    fn parse_binary(mut data: &'a [u8]) -> Result<Self, ParseError> {
+        // Message size: playback_state (1 byte) + playback_speed (4 bytes) + had_seek (1 byte) + seek_time (8 bytes)
+        if data.len() < 1 + 4 + 1 + 8 {
+            return Err(ParseError::BufferTooShort);
+        }
+
+        let state_byte = data.get_u8();
+        let playback_state = PlaybackState::try_from(state_byte)
+            .map_err(|_| ParseError::InvalidPlaybackState(state_byte))?;
+
+        let playback_speed = data.get_f32_le();
+        let had_seek = data.get_u8() != 0;
+        let seek_time = if had_seek && data.len() >= 8 {
+            Some(data.get_u64_le())
+        } else {
+            None
+        };
+
+        Ok(Self {
+            playback_state,
+            playback_speed,
+            seek_time,
+        })
+    }
+
+    fn to_bytes(&self) -> Vec<u8> {
+        // Message size: opcode (1) + playback_state (1) + playback_speed (4) + had_seek (1) + seek_time (8)
+        let mut buf = Vec::with_capacity(1 + 4 + 1 + 8);
+
+        buf.put_u8(BinaryOpcode::PlayerState as u8);
+        buf.put_u8(self.playback_state as u8);
+        buf.put_f32_le(self.playback_speed);
+        buf.put_u8(if self.seek_time.is_some() { 1 } else { 0 });
+        // To keep the message size constant, write the seek time even if it's None.
+        buf.put_u64_le(self.seek_time.unwrap_or(0));
+        buf
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -47,96 +85,106 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_encode_paused() {
-        let message_paused = PlayerState {
-            playing: Playing::Paused,
-            playback_speed: 0.5,
-            seek_previous_playback_time: None,
-            seek_playback_time: Some(PlayerTime {
-                sec: 123,
-                nsec: 456,
-            }),
-        };
-        insta::assert_json_snapshot!(message_paused);
-    }
-
-    #[test]
-    fn test_encode_with_previous_time() {
-        let message_with_previous_time = PlayerState {
-            playing: Playing::Playing,
-            playback_speed: 1.0,
-            seek_previous_playback_time: Some(PlayerTime {
-                sec: 1000000,
-                nsec: 500000000,
-            }),
-            seek_playback_time: Some(PlayerTime {
-                sec: 1000005,
-                nsec: 0,
-            }),
-        };
-        insta::assert_json_snapshot!(message_with_previous_time);
-    }
-
-    #[test]
-    fn test_roundtrip() {
+    fn test_encode_playing() {
         let message = PlayerState {
-            playing: Playing::Playing,
+            playback_state: PlaybackState::Playing,
             playback_speed: 1.0,
-            seek_previous_playback_time: None,
-            seek_playback_time: Some(PlayerTime {
-                sec: 1234567,
-                nsec: 890123456,
-            }),
+            seek_time: None,
         };
-
-        let buf = message.to_string();
-        let parsed = ClientMessage::parse_json(&buf).unwrap();
-        assert_eq!(parsed, ClientMessage::PlayerState(message));
+        insta::assert_snapshot!(format!("{:#04x?}", message.to_bytes()));
     }
 
     #[test]
-    fn test_parse_json() {
-        let json = r#"{"op":"playerState","playing":"playing","playbackSpeed":1.5,"seekPlaybackTime":{"sec":100,"nsec":500000000}}"#;
-        let msg = ClientMessage::parse_json(json).unwrap();
+    fn test_encode_paused() {
+        let message = PlayerState {
+            playback_state: PlaybackState::Paused,
+            playback_speed: 1.0,
+            seek_time: None,
+        };
+        insta::assert_snapshot!(format!("{:#04x?}", message.to_bytes()));
+    }
+
+    #[test]
+    fn test_encode_buffering() {
+        let message = PlayerState {
+            playback_state: PlaybackState::Buffering,
+            playback_speed: 1.0,
+            seek_time: None,
+        };
+        insta::assert_snapshot!(format!("{:#04x?}", message.to_bytes()));
+    }
+
+    #[test]
+    fn test_encode_ended() {
+        let message = PlayerState {
+            playback_state: PlaybackState::Ended,
+            playback_speed: 1.0,
+            seek_time: None,
+        };
+        insta::assert_snapshot!(format!("{:#04x?}", message.to_bytes()));
+    }
+
+    #[test]
+    fn test_roundtrip_playing_with_seek_time() {
+        let orig = PlayerState {
+            playback_state: PlaybackState::Playing,
+            playback_speed: 1.0,
+            seek_time: Some(100_500_000_000),
+        };
+        let buf = orig.to_bytes();
+        let msg = ClientMessage::parse_binary(&buf).unwrap();
+        assert_eq!(msg, ClientMessage::PlayerState(orig));
+    }
+
+    #[test]
+    fn test_roundtrip_playing_without_seek_time() {
+        let orig = PlayerState {
+            playback_state: PlaybackState::Playing,
+            playback_speed: 1.0,
+            seek_time: None,
+        };
+        let buf = orig.to_bytes();
+        let msg = ClientMessage::parse_binary(&buf).unwrap();
+        assert_eq!(msg, ClientMessage::PlayerState(orig));
+    }
+
+    #[test]
+    fn test_parse_binary_with_seek_time() {
+        // Manually construct binary data: opcode + state + speed + had_seek + seek_time
+        let mut data = Vec::new();
+        data.put_u8(BinaryOpcode::PlayerState as u8); // opcode
+        data.put_u8(PlaybackState::Playing as u8); // state
+        data.put_f32_le(1.5); // speed
+        data.put_u8(1); // had_seek = true
+        data.put_u64_le(100_500_000_000); // seek_time
+
+        let msg = ClientMessage::parse_binary(&data).unwrap();
         match msg {
             ClientMessage::PlayerState(state) => {
-                assert_eq!(state.playing, Playing::Playing);
+                assert_eq!(state.playback_state, PlaybackState::Playing);
                 assert_eq!(state.playback_speed, 1.5);
-                assert_eq!(
-                    state.seek_playback_time,
-                    Some(PlayerTime {
-                        sec: 100,
-                        nsec: 500000000,
-                    })
-                );
-                assert_eq!(state.seek_previous_playback_time, None);
+                assert_eq!(state.seek_time, Some(100_500_000_000));
             }
             _ => panic!("Expected PlayerState message"),
         }
     }
 
     #[test]
-    fn test_parse_json_with_previous_time() {
-        let json = r#"{"op":"playerState","playing":"paused","playbackSpeed":2.0,"seekPreviousPlaybackTime":{"sec":50,"nsec":250000000},"seekPlaybackTime":{"sec":100,"nsec":500000000}}"#;
-        let msg = ClientMessage::parse_json(json).unwrap();
+    fn test_parse_binary_without_seek_time() {
+        // Manually construct binary data with had_seek = false (seek_time bytes still present but zeroed)
+        let mut data = Vec::new();
+        data.put_u8(BinaryOpcode::PlayerState as u8); // opcode
+        data.put_u8(PlaybackState::Buffering as u8); // state
+        data.put_f32_le(2.0); // speed
+        data.put_u8(0); // had_seek = false
+        data.put_u64_le(0); // seek_time (zeroed out, ignored since had_seek = false)
+
+        let msg = ClientMessage::parse_binary(&data).unwrap();
         match msg {
             ClientMessage::PlayerState(state) => {
-                assert_eq!(state.playing, Playing::Paused);
+                assert_eq!(state.playback_state, PlaybackState::Buffering);
                 assert_eq!(state.playback_speed, 2.0);
-                assert_eq!(
-                    state.seek_playback_time,
-                    Some(PlayerTime {
-                        sec: 100,
-                        nsec: 500000000,
-                    })
-                );
-                assert_eq!(
-                    state.seek_previous_playback_time,
-                    Some(PlayerTime {
-                        sec: 50,
-                        nsec: 250000000,
-                    })
-                );
+                assert_eq!(state.seek_time, None);
             }
             _ => panic!("Expected PlayerState message"),
         }

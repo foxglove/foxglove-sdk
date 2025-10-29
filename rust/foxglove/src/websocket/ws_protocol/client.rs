@@ -24,7 +24,7 @@ pub use advertise::Advertise;
 pub use fetch_asset::FetchAsset;
 pub use get_parameters::GetParameters;
 pub use message_data::MessageData;
-pub use player_state::{PlayerState, PlayerTime, Playing};
+pub use player_state::{PlaybackState, PlayerState};
 pub use service_call_request::ServiceCallRequest;
 pub use set_parameters::SetParameters;
 pub use subscribe::{Subscribe, Subscription};
@@ -75,6 +75,9 @@ impl<'a> ClientMessage<'a> {
                 Some(BinaryOpcode::ServiceCallRequest) => {
                     ServiceCallRequest::parse_binary(data).map(ClientMessage::ServiceCallRequest)
                 }
+                Some(BinaryOpcode::PlayerState) => {
+                    PlayerState::parse_binary(data).map(ClientMessage::PlayerState)
+                }
                 None => Err(ParseError::InvalidOpcode(opcode)),
             }
         }
@@ -123,7 +126,6 @@ enum JsonMessage<'a> {
     SubscribeConnectionGraph,
     UnsubscribeConnectionGraph,
     FetchAsset(FetchAsset),
-    PlayerState(PlayerState),
 }
 
 impl<'a> From<JsonMessage<'a>> for ClientMessage<'a> {
@@ -140,7 +142,6 @@ impl<'a> From<JsonMessage<'a>> for ClientMessage<'a> {
             JsonMessage::SubscribeConnectionGraph => Self::SubscribeConnectionGraph,
             JsonMessage::UnsubscribeConnectionGraph => Self::UnsubscribeConnectionGraph,
             JsonMessage::FetchAsset(m) => Self::FetchAsset(m),
-            JsonMessage::PlayerState(m) => Self::PlayerState(m),
         }
     }
 }
@@ -149,12 +150,14 @@ impl<'a> From<JsonMessage<'a>> for ClientMessage<'a> {
 enum BinaryOpcode {
     MessageData = 1,
     ServiceCallRequest = 2,
+    PlayerState = 3,
 }
 impl BinaryOpcode {
     fn from_repr(value: u8) -> Option<Self> {
         match value {
             1 => Some(Self::MessageData),
             2 => Some(Self::ServiceCallRequest),
+            3 => Some(Self::PlayerState),
             _ => None,
         }
     }
