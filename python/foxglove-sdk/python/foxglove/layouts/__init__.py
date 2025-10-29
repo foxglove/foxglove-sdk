@@ -12,16 +12,9 @@ import random
 import string
 from typing import Any, Literal
 
+from typing_extensions import TypeAlias
 
-class Variables:
-    def __init__(self, **variables: Any) -> None:
-        self.variables = variables
-
-    def to_json(self) -> str:
-        return json.dumps(self.to_dict(), indent=4)
-
-    def to_dict(self) -> dict[str, Any]:
-        return self.variables
+Variables: TypeAlias = dict[str, Any]
 
 
 def random_id() -> str:
@@ -185,7 +178,7 @@ class Layout:
     def to_dict(self) -> dict[str, Any]:
         return {
             "version": self.version,
-            "variables": self.variables.to_dict(),
+            "variables": self.variables,
             "items": self.items.to_dict(),
         }
 
