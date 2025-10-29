@@ -738,6 +738,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "example_memory_player"
+version = "0.15.3"
+dependencies = [
+ "env_logger",
+ "foxglove 0.15.3",
+ "log",
+ "rand",
+ "tokio",
+]
+
+[[package]]
 name = "example_message_filtering"
 version = "0.0.0"
 dependencies = [

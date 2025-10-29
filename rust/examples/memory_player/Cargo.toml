@@ -1,0 +1,17 @@
+[package]
+name = "example_memory_player"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+license.workspace = true
+
+[dependencies]
+env_logger = "0.11.8"
+foxglove = { path = "../../foxglove", features = ["unstable"] }
+log.workspace = true
+rand = "0.9.2"
+tokio = { workspace = true, features = ["macros", "signal"] }
+
+[lints]
+workspace = true
