@@ -102,7 +102,7 @@ jobs:
       - run: yarn install
       - run: yarn build
       - uses: cloudflare/pages-action@v1.5.0
-        if: github.repository == github.event.pull_request.head.repo.full_name # Only run if not a fork
+        if: ${{ !github.event.pull_request.head.repo.fork }} # Only run if not a fork
         id: deploy
         with:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
