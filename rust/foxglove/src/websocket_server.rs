@@ -8,7 +8,6 @@ use std::sync::Arc;
 
 use crate::sink_channel_filter::{SinkChannelFilter, SinkChannelFilterFn};
 use crate::websocket::service::Service;
-use crate::websocket::ws_protocol::client::PlayerTime;
 #[cfg(feature = "tls")]
 use crate::websocket::TlsIdentity;
 use crate::websocket::{
@@ -131,12 +130,8 @@ impl WebSocketServer {
 
     /// Declare the time range for playback. This applies if the server is playing back a fixed time range of data.
     /// This will add the RangedPlayback capability to the server.
-    pub fn playback_time_range(
-        mut self,
-        start_time: impl Into<PlayerTime>,
-        end_time: impl Into<PlayerTime>,
-    ) -> Self {
-        self.options.playback_time_range = Some((start_time.into(), end_time.into()));
+    pub fn playback_time_range(mut self, start_time: u64, end_time: u64) -> Self {
+        self.options.playback_time_range = Some((start_time, end_time));
         if let Some(capabilities) = self.options.capabilities.as_mut() {
             capabilities.insert(Capability::RangedPlayback);
         } else {
