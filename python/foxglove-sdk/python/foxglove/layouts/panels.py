@@ -152,6 +152,34 @@ class IndicatorPanel(Panel):
         return config
 
 
+class GaugePanel(Panel):
+    def __init__(
+        self,
+        *,
+        path: str = "",
+        min_value: float = 0,
+        max_value: float = 1,
+        color_mode: Literal["colormap", "gradient"] = "colormap",
+        color_map: Literal["red-yellow-green", "rainbow", "turbo"] = "red-yellow-green",
+        gradient: tuple[str, str] = ("#0000ff", "#ff00ff"),
+        reverse: bool = False,
+        reverse_direction: bool = False,
+        foxglove_panel_title: str | None = None,
+    ):
+        super().__init__(
+            "Gauge",
+            path=path,
+            minValue=min_value,
+            maxValue=max_value,
+            colorMode=color_mode,
+            colorMap=color_map,
+            gradient=gradient,
+            reverse=reverse,
+            reverseDirection=reverse_direction,
+            foxglovePanelTitle=foxglove_panel_title,
+        )
+
+
 __all__ = [
     "MarkdownPanel",
     "RawMessagesPanel",
@@ -160,4 +188,5 @@ __all__ = [
     "ROSDiagnosticSummaryPanel",
     "IndicatorPanel",
     "IndicatorPanelRule",
+    "GaugePanel",
 ]
