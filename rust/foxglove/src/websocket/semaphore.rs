@@ -90,13 +90,16 @@ mod tests {
             tasks.spawn(async move {
                 for round in 0..ROUNDS {
                     let sleep_time = Duration::from_micros((id + round) % 13 + 1);
-                    if let Some(_guard) = sem.try_acquire() {
-                        let prev = flags.fetch_sub(1, Ordering::Relaxed);
-                        assert_ne!(prev, 0);
-                        tokio::time::sleep(sleep_time).await;
-                        flags.fetch_add(1, Ordering::Relaxed);
-                    } else {
-                        tokio::time::sleep(sleep_time).await;
+                    match sem.try_acquire() {
+                        Some(_guard) => {
+                            let prev = flags.fetch_sub(1, Ordering::Relaxed);
+                            assert_ne!(prev, 0);
+                            tokio::time::sleep(sleep_time).await;
+                            flags.fetch_add(1, Ordering::Relaxed);
+                        }
+                        _ => {
+                            tokio::time::sleep(sleep_time).await;
+                        }
                     }
                 }
             });

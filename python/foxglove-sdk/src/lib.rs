@@ -229,10 +229,9 @@ fn open_mcap(
 
     let options = writer_options.map_or_else(McapWriteOptions::default, |opts| opts.into());
     let writer = BufWriter::new(file);
-    let handle = if let Some(context) = context {
-        McapWriter::with_options(options).context(&context.0)
-    } else {
-        McapWriter::with_options(options)
+    let handle = match context {
+        Some(context) => McapWriter::with_options(options).context(&context.0),
+        _ => McapWriter::with_options(options),
     };
     let handle = if let Some(channel_filter) = channel_filter {
         handle.channel_filter(Arc::new(PySinkChannelFilter(channel_filter)))
