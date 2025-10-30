@@ -1,10 +1,10 @@
 import { PlayFilledAlt, DocumentDownload } from "@carbon/icons-react";
 import { DataSource, SelectLayoutParams } from "@foxglove/embed";
 import { FoxgloveViewer } from "@foxglove/embed-react";
-import { Button, IconButton, Tooltip } from "@mui/material";
+import { Button, GlobalStyles, IconButton, Tooltip, Typography } from "@mui/material";
+import { Allotment } from "allotment";
 import { useCallback, useEffect, useRef, useState } from "react";
 import toast, { Toaster } from "react-hot-toast";
-import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { tss } from "tss-react/mui";
 
 import { Editor, EditorInterface } from "./Editor";
@@ -12,8 +12,13 @@ import { Runner } from "./Runner";
 import { getUrlState, setUrlState, UrlState } from "./urlState";
 
 import "./Playground.css";
+import "allotment/dist/style.css";
 
 const useStyles = tss.create(({ theme }) => ({
+  leftPane: {
+    display: "flex",
+    flexDirection: "column",
+  },
   topBar: {
     flex: "0 0 auto",
     display: "flex",
@@ -24,6 +29,18 @@ const useStyles = tss.create(({ theme }) => ({
     borderBottom: `1px solid ${theme.palette.divider}`,
     backgroundColor: theme.palette.background.paper,
     color: theme.palette.text.primary,
+    container: "topBar / inline-size",
+  },
+  title: {
+    "@container topBar (width < 480px)": {
+      display: "none",
+    },
+  },
+  controls: {
+    display: "flex",
+    flexGrow: 1,
+    justifyContent: "flex-end",
+    gap: 8,
   },
   toast: {
     fontSize: theme.typography.body1.fontSize,
@@ -34,15 +51,6 @@ const useStyles = tss.create(({ theme }) => ({
     overflow: "hidden",
     div: {
       whiteSpace: "pre-wrap",
-    },
-  },
-  resizeHandle: {
-    backgroundColor: theme.palette.divider,
-    width: 4,
-    display: "flex",
-    alignItems: "center",
-    "&:hover": {
-      backgroundColor: theme.palette.primary.main,
     },
   },
 }));
@@ -190,18 +198,24 @@ export function Playground(): React.JSX.Element {
   }, [run]);
 
   return (
-    <PanelGroup direction="horizontal" style={{ width: "100%", height: "100%" }}>
-      <Toaster position="top-right" toastOptions={{ className: classes.toast }} />
-      <Panel
-        minSize={25}
-        style={{
-          display: "flex",
-          flexDirection: "column",
-        }}
-      >
+    <Allotment>
+      <Allotment.Pane minSize={400} className={classes.leftPane}>
+        <Toaster position="top-right" toastOptions={{ className: classes.toast }} />
+        <GlobalStyles
+          styles={(theme) => ({
+            ":root": {
+              // https://allotment.mulberryhousesoftware.com/docs/styling
+              "--separator-border": theme.palette.divider,
+              "--focus-border": theme.palette.divider,
+              "--sash-hover-transition-duration": "0s",
+            },
+          })}
+        />
         <div className={classes.topBar}>
-          <div>Foxglove SDK Playground</div>
-          <div style={{ display: "flex", gap: 8 }}>
+          <Typography className={classes.title} variant="body1">
+            Foxglove SDK Playground
+          </Typography>
+          <div className={classes.controls}>
             {mcapFilename && (
               <Tooltip title={`Download ${mcapFilename}`}>
                 <IconButton onClick={() => void download()}>
@@ -237,17 +251,16 @@ export function Playground(): React.JSX.Element {
           onSave={share}
           runner={runnerRef}
         />
-      </Panel>
-      <PanelResizeHandle className={classes.resizeHandle} />
-      <Panel minSize={25}>
+      </Allotment.Pane>
+      <Allotment.Pane minSize={200}>
         <FoxgloveViewer
           style={{ width: "100%", height: "100%", overflow: "hidden" }}
           colorScheme="light"
           data={dataSource}
           layout={selectedLayout}
         />
-      </Panel>
-    </PanelGroup>
+      </Allotment.Pane>
+    </Allotment>
   );
 }
 
