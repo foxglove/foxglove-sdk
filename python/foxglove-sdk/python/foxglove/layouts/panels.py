@@ -180,6 +180,87 @@ class GaugePanel(Panel):
         )
 
 
+@dataclass
+class BasePlotPath:
+    value: str
+    enabled: bool = True
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass
+class PlotPath(BasePlotPath):
+    id: str | None = None
+    color: str | None = None
+    label: str | None = None
+    timestamp_method: Literal[
+        "receiveTime", "publishTime", "headerStamp", "customField"
+    ] = "receiveTime"
+    timestamp_path: str | None = None
+    show_line: bool = True
+    line_size: int | None = None
+    x_value_path: str | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+class PlotPanel(Panel):
+    def __init__(
+        self,
+        *paths: PlotPath,
+        min_x_value: float | None = None,
+        max_x_value: float | None = None,
+        min_y_value: float | None = None,
+        max_y_value: float | None = None,
+        show_legend: bool = True,
+        legend_display: Literal["floating", "top", "left"] = "floating",
+        show_plot_values_in_legend: bool = False,
+        show_x_axis_labels: bool = True,
+        show_y_axis_labels: bool = True,
+        is_synced: bool = True,
+        x_axis_val: Literal[
+            "custom", "timestamp", "index", "currentCustom"
+        ] = "timestamp",
+        time_range: Literal["all", "latest"] = "all",
+        x_axis_path: BasePlotPath | None = None,
+        x_axis_label: str | None = None,
+        time_window_mode: Literal["automatic", "sliding", "fixed"] = "automatic",
+        playback_bar_position: Literal["center", "right"] = "center",
+        y_axis_label: str | None = None,
+        following_view_width: float | None = None,
+        sidebar_dimension: int = 200,
+        axis_scales_mode: Literal["independent", "lockedScales"] = "independent",
+        foxglove_panel_title: str | None = None,
+    ):
+        super().__init__(
+            "Plot",
+            paths=list(paths),
+            minXValue=min_x_value,
+            maxXValue=max_x_value,
+            minYValue=min_y_value,
+            maxYValue=max_y_value,
+            showLegend=show_legend,
+            legendDisplay=legend_display,
+            showPlotValuesInLegend=show_plot_values_in_legend,
+            showXAxisLabels=show_x_axis_labels,
+            showYAxisLabels=show_y_axis_labels,
+            isSynced=is_synced,
+            xAxisVal=x_axis_val,
+            timeRange=time_range,
+            xAxisPath=x_axis_path,
+            xAxisLabel=x_axis_label,
+            timeWindowMode=time_window_mode,
+            playbackBarPosition=playback_bar_position,
+            yAxisLabel=y_axis_label,
+            followingViewWidth=following_view_width,
+            sidebarDimension=sidebar_dimension,
+            axisScalesMode=axis_scales_mode,
+            foxglovePanelTitle=foxglove_panel_title,
+        )
+
+
 __all__ = [
     "MarkdownPanel",
     "RawMessagesPanel",
