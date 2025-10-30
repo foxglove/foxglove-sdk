@@ -18,7 +18,7 @@ impl From<&ClientChannel> for ClientChannelInfo {
     fn from(channel: &ClientChannel) -> Self {
         Self {
             id: channel.id,
-            topic: channel.topic.to_string(),
+            topic: channel.topic.clone(),
         }
     }
 }
