@@ -13,6 +13,8 @@ use tokio_tungstenite::WebSocketStream;
 
 use crate::sink_channel_filter::SinkChannelFilter;
 use crate::websocket::streams::ServerStream;
+#[cfg(feature = "unstable")]
+use crate::websocket::PlayerState;
 use crate::{ChannelId, Context, FoxgloveError, Metadata, RawChannel, Sink, SinkId};
 
 use self::ws_protocol::server::{
@@ -264,7 +266,7 @@ impl ConnectedClient {
                 self.on_connection_graph_unsubscribe(server)
             }
             #[cfg(feature = "unstable")]
-            ClientMessage::PlayerState(_msg) => todo!(),
+            ClientMessage::PlayerState(msg) => self.on_player_state(server, msg),
         }
     }
 
@@ -670,6 +672,18 @@ impl ConnectedClient {
                 "Client {} is already unsubscribed from connection graph updates",
                 self.addr
             );
+        }
+    }
+
+    #[cfg(feature = "unstable")]
+    fn on_player_state(&self, server: Arc<Server>, msg: PlayerState) {
+        if !server.has_capability(Capability::RangedPlayback) {
+            self.send_error("Server does not support ranged playback capability".to_string());
+            return;
+        }
+
+        if let Some(handler) = server.listener() {
+            handler.on_player_state(Client::new(self), msg);
         }
     }
 

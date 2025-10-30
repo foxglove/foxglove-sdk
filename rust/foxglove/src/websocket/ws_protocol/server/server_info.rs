@@ -26,6 +26,12 @@ pub struct ServerInfo {
     /// Optional string.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub session_id: Option<String>,
+    /// Optional timestamp indicating the start of the data range.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub data_start_time: Option<u64>,
+    /// Optional timestamp indicating the end of the data range.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub data_end_time: Option<u64>,
 }
 impl ServerInfo {
     /// Creates a new server info message.
@@ -36,6 +42,8 @@ impl ServerInfo {
             supported_encodings: vec![],
             metadata: HashMap::default(),
             session_id: None,
+            data_start_time: None,
+            data_end_time: None,
         }
     }
 
@@ -69,6 +77,16 @@ impl ServerInfo {
         self.session_id = Some(session_id.into());
         self
     }
+
+    #[must_use]
+    pub fn with_data_time_range(mut self, time_range: Option<(u64, u64)>) -> Self {
+        if let Some((start_time, end_time)) = time_range {
+            self.data_start_time = Some(start_time);
+            self.data_end_time = Some(end_time);
+            self.capabilities.push(Capability::RangedPlayback);
+        }
+        self
+    }
 }
 
 impl JsonMessage for ServerInfo {}
@@ -91,6 +109,9 @@ pub enum Capability {
     ConnectionGraph,
     /// Allow clients to fetch assets.
     Assets,
+    /// Indicates that the server is sending data within a fixed time range. This requires the
+    /// server to specify the `data_start_time` and `data_end_time` fields in its `ServerInfo` message.
+    RangedPlayback,
 }
 
 #[cfg(test)]
@@ -105,12 +126,17 @@ mod tests {
 
     fn message_full() -> ServerInfo {
         message()
-            .with_capabilities([Capability::ClientPublish, Capability::Time])
+            .with_capabilities([
+                Capability::ClientPublish,
+                Capability::Time,
+                Capability::RangedPlayback,
+            ])
             .with_supported_encodings(["json"])
             .with_metadata(maplit::hashmap! {
                 "key".into() => "value".into(),
             })
             .with_session_id("1675789422160")
+            .with_data_time_range(Some((1000000, 1000005)))
     }
 
     #[test]
