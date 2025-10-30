@@ -23,4 +23,9 @@ pub enum ParseError {
     /// Invalid JSON.
     #[error(transparent)]
     Json(#[from] serde_json::Error),
+    /// Invalid playback state.
+    #[cfg(feature = "unstable")]
+    #[doc(hidden)]
+    #[error("Invalid playback state {0}")]
+    InvalidPlaybackState(u8),
 }

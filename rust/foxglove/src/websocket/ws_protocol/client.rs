@@ -9,6 +9,7 @@ pub mod advertise;
 mod fetch_asset;
 mod get_parameters;
 mod message_data;
+mod player_state;
 mod service_call_request;
 mod set_parameters;
 pub mod subscribe;
@@ -23,6 +24,8 @@ pub use advertise::Advertise;
 pub use fetch_asset::FetchAsset;
 pub use get_parameters::GetParameters;
 pub use message_data::MessageData;
+#[cfg(feature = "unstable")]
+pub use player_state::{PlaybackState, PlayerState};
 pub use service_call_request::ServiceCallRequest;
 pub use set_parameters::SetParameters;
 pub use subscribe::{Subscribe, Subscription};
@@ -50,6 +53,8 @@ pub enum ClientMessage<'a> {
     SubscribeConnectionGraph,
     UnsubscribeConnectionGraph,
     FetchAsset(FetchAsset),
+    #[cfg(feature = "unstable")]
+    PlayerState(PlayerState),
 }
 
 impl<'a> ClientMessage<'a> {
@@ -71,6 +76,10 @@ impl<'a> ClientMessage<'a> {
                 }
                 Some(BinaryOpcode::ServiceCallRequest) => {
                     ServiceCallRequest::parse_binary(data).map(ClientMessage::ServiceCallRequest)
+                }
+                #[cfg(feature = "unstable")]
+                Some(BinaryOpcode::PlayerState) => {
+                    PlayerState::parse_binary(data).map(ClientMessage::PlayerState)
                 }
                 None => Err(ParseError::InvalidOpcode(opcode)),
             }
@@ -100,6 +109,8 @@ impl<'a> ClientMessage<'a> {
             ClientMessage::SubscribeConnectionGraph => ClientMessage::SubscribeConnectionGraph,
             ClientMessage::UnsubscribeConnectionGraph => ClientMessage::UnsubscribeConnectionGraph,
             ClientMessage::FetchAsset(m) => ClientMessage::FetchAsset(m),
+            #[cfg(feature = "unstable")]
+            ClientMessage::PlayerState(m) => ClientMessage::PlayerState(m),
         }
     }
 }
@@ -143,12 +154,16 @@ impl<'a> From<JsonMessage<'a>> for ClientMessage<'a> {
 enum BinaryOpcode {
     MessageData = 1,
     ServiceCallRequest = 2,
+    #[cfg(feature = "unstable")]
+    PlayerState = 3,
 }
 impl BinaryOpcode {
     fn from_repr(value: u8) -> Option<Self> {
         match value {
             1 => Some(Self::MessageData),
             2 => Some(Self::ServiceCallRequest),
+            #[cfg(feature = "unstable")]
+            3 => Some(Self::PlayerState),
             _ => None,
         }
     }

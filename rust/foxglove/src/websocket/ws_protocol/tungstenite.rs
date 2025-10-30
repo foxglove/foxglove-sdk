@@ -58,6 +58,13 @@ impl From<&client::ServiceCallRequest<'_>> for Message {
     }
 }
 
+#[cfg(feature = "unstable")]
+impl From<&client::PlayerState> for Message {
+    fn from(value: &client::PlayerState) -> Self {
+        Message::Binary(value.to_bytes().into())
+    }
+}
+
 impl From<&client::SetParameters> for Message {
     fn from(value: &client::SetParameters) -> Self {
         Message::Text(value.to_string().into())
