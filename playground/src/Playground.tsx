@@ -1,7 +1,7 @@
 import { PlayFilledAlt, DocumentDownload } from "@carbon/icons-react";
 import { DataSource, SelectLayoutParams } from "@foxglove/embed";
 import { FoxgloveViewer } from "@foxglove/embed-react";
-import { Button, GlobalStyles, IconButton, Tooltip } from "@mui/material";
+import { Button, GlobalStyles, IconButton, Tooltip, Typography } from "@mui/material";
 import { Allotment } from "allotment";
 import { useCallback, useEffect, useRef, useState } from "react";
 import toast, { Toaster } from "react-hot-toast";
@@ -32,7 +32,7 @@ const useStyles = tss.create(({ theme }) => ({
     container: "topBar / inline-size",
   },
   title: {
-    "@container topBar (width < 500px)": {
+    "@container topBar (width < 480px)": {
       display: "none",
     },
   },
@@ -212,7 +212,9 @@ export function Playground(): React.JSX.Element {
           })}
         />
         <div className={classes.topBar}>
-          <div className={classes.title}>Foxglove SDK Playground</div>
+          <Typography className={classes.title} variant="body1">
+            Foxglove SDK Playground
+          </Typography>
           <div className={classes.controls}>
             {mcapFilename && (
               <Tooltip title={`Download ${mcapFilename}`}>
