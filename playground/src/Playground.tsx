@@ -32,7 +32,7 @@ const useStyles = tss.create(({ theme }) => ({
     container: "topBar / inline-size",
   },
   title: {
-    "@container topBar (width < 550px)": {
+    "@container topBar (width < 500px)": {
       display: "none",
     },
   },
