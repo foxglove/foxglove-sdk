@@ -1,5 +1,6 @@
 use super::{ChannelView, Client, ClientChannel, Parameter};
-use crate::ws_protocol::client::PlayerState;
+#[cfg(feature = "unstable")]
+use crate::websocket::PlayerState;
 
 /// Provides a mechanism for registering callbacks for handling client message events.
 ///
@@ -62,6 +63,8 @@ pub trait ServerListener: Send + Sync {
     /// Callback invoked when the last client unsubscribes from the connection graph. Requires
     /// [`Capability::ConnectionGraph`][super::Capability::ConnectionGraph].
     fn on_connection_graph_unsubscribe(&self) {}
+    #[cfg(feature = "unstable")]
+    #[doc(hidden)]
     /// Callback invoked when a client sends a player state message.
     /// Requires [`Capability::RangedPlayback`][super::Capability::RangedPlayback].
     fn on_player_state(&self, _client: Client, _player_state: PlayerState) {}
