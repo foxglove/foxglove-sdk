@@ -35,16 +35,19 @@ class Panel:
         self.type = type
         self.config = panel_config
 
-    def to_json(self) -> str:
-        return json.dumps(self.to_dict(), indent=4)
+    def config_to_dict(self) -> dict[str, Any]:
+        return self.config
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.id,
             "type": self.type,
             # filter out None values from the config
-            "config": {k: v for k, v in self.config.items() if v is not None},
+            "config": {k: v for k, v in self.config_to_dict().items() if v is not None},
         }
+
+    def to_json(self) -> str:
+        return json.dumps(self.to_dict(), indent=4)
 
 
 class Tab:

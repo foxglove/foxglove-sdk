@@ -1,13 +1,25 @@
 from __future__ import annotations
 
-from typing import Literal
+from dataclasses import asdict, dataclass
+from typing import Any, Literal
 
 from . import Panel
 
 
 class MarkdownPanel(Panel):
-    def __init__(self, *, markdown: str | None = None, font_size: int | None = None):
-        super().__init__("Markdown", markdown=markdown, fontSize=font_size)
+    def __init__(
+        self,
+        *,
+        markdown: str | None = None,
+        font_size: int | None = None,
+        foxglove_panel_title: str | None = None,
+    ):
+        super().__init__(
+            "Markdown",
+            markdown=markdown,
+            fontSize=font_size,
+            foxglovePanelTitle=foxglove_panel_title,
+        )
 
 
 class RawMessagesPanel(Panel):
@@ -34,7 +46,118 @@ class RawMessagesPanel(Panel):
         )
 
 
+class AudioPanel(Panel):
+    def __init__(
+        self,
+        *,
+        color: str | None = None,
+        muted: bool | None = False,
+        topic: str | None = None,
+        volume: float | None = None,
+        sliding_view_width: float | None,
+        foxglove_panel_title: str | None = None,
+    ):
+        super().__init__(
+            "Audio",
+            color=color,
+            muted=muted,
+            topic=topic,
+            volume=volume,
+            slidingViewWidth=sliding_view_width,
+            foxglovePanelTitle=foxglove_panel_title,
+        )
+
+
+class ROSDiagnosticDetailPanel(Panel):
+    def __init__(
+        self,
+        *,
+        selected_hardware_id: str | None = None,
+        selected_name: str | None = None,
+        split_fraction: float | None = None,
+        topic_to_render: str = "",
+        numeric_precision: int | None = None,
+        seconds_until_stale: int | None = None,
+    ):
+        super().__init__(
+            "ROSDiagnosticDetailPanel",
+            selectedHardwareId=selected_hardware_id,
+            selectedName=selected_name,
+            splitFraction=split_fraction,
+            topicToRender=topic_to_render,
+            numericPrecision=numeric_precision,
+            secondsUntilStale=seconds_until_stale,
+        )
+
+
+class ROSDiagnosticSummaryPanel(Panel):
+    def __init__(
+        self,
+        *,
+        min_level: int = 0,
+        pinned_ids: list[str] = [],
+        topic_to_render: str = "",
+        hardware_id_filter: str = "",
+        sort_by_level: bool | None = None,
+        seconds_until_stale: int | None = None,
+    ):
+        super().__init__(
+            "ROSDiagnosticSummaryPanel",
+            minLevel=min_level,
+            pinnedIds=pinned_ids,
+            topicToRender=topic_to_render,
+            hardwareIdFilter=hardware_id_filter,
+            sortByLevel=sort_by_level,
+            secondsUntilStale=seconds_until_stale,
+        )
+
+
+@dataclass
+class IndicatorPanelRule:
+    raw_value: str
+    operator: Literal["=", "<", "<=", ">", ">="]
+    color: str
+    label: str
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+class IndicatorPanel(Panel):
+    def __init__(
+        self,
+        *rules: IndicatorPanelRule,
+        path: str = "",
+        style: Literal["bulb", "background"] = "bulb",
+        font_size: int | None = None,
+        fallback_color: str | None = None,
+        fallback_label: str | None = None,
+        foxglove_panel_title: str | None = None,
+    ):
+        super().__init__(
+            "Indicator",
+            path=path,
+            style=style,
+            fontSize=font_size,
+            fallbackColor=fallback_color,
+            fallbackLabel=fallback_label,
+            rules=list(rules),
+            foxglovePanelTitle=foxglove_panel_title,
+        )
+
+    def config_to_dict(self) -> dict[str, Any]:
+        # copy the config and convert rules to dict
+        config = super().config_to_dict().copy()
+        config["rules"] = [rule.to_dict() for rule in config.get("rules", [])]
+        return config
+
+
 __all__ = [
     "MarkdownPanel",
     "RawMessagesPanel",
+    "AudioPanel",
+    "ROSDiagnosticDetailPanel",
+    "ROSDiagnosticSummaryPanel",
+    "IndicatorPanel",
+    "IndicatorPanelRule",
 ]
