@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import inspect
 import json
 from dataclasses import asdict, dataclass
-from typing import Any, Literal
+from typing import Any, Callable, Literal
 
 from . import random_id
 
@@ -18,6 +19,55 @@ def to_lower_camel_case(snake_str: str) -> str:
     return snake_str[0].lower() + camel_string[1:]
 
 
+def panel_type(panel_type_name: str) -> Callable[[type[Panel]], type[Panel]]:
+    """
+    Decorator for Panel subclasses that automatically handles the common __init__ pattern.
+
+    The decorator extracts `id` from kwargs and collects all other parameters (including
+    positional variadic args like *rules, *paths) into a panel_config dictionary that
+    is passed to the base Panel.__init__.
+
+    :param panel_type_name: The type name string to pass to Panel.__init__
+    """
+
+    def decorator(cls: type[Panel]) -> type[Panel]:
+        original_init = cls.__init__
+
+        def new_init(
+            self: Panel, *args: Any, id: str | None = None, **kwargs: Any
+        ) -> None:
+            # Get the original function signature to handle variadic positional args
+            sig = inspect.signature(original_init)
+            bound = sig.bind(self, *args, **kwargs)
+            bound.apply_defaults()
+
+            # Identify variadic positional parameters (like *rules, *paths)
+            variadic_params = {
+                name
+                for name, param in sig.parameters.items()
+                if param.kind == inspect.Parameter.VAR_POSITIONAL
+            }
+
+            # Extract the panel config: all kwargs except 'id' and 'self'
+            panel_config: dict[str, Any] = {}
+            for param_name, param_value in bound.arguments.items():
+                if param_name in ("self", "id"):
+                    continue
+                # Convert variadic positional args (tuples) to lists to match original behavior
+                if param_name in variadic_params and isinstance(param_value, tuple):
+                    panel_config[param_name] = list(param_value)
+                else:
+                    panel_config[param_name] = param_value
+
+            # Call the base Panel.__init__ with the panel type and config
+            Panel.__init__(self, panel_type_name, id=id, **panel_config)
+
+        cls.__init__ = new_init  # type: ignore[method-assign]
+        return cls
+
+    return decorator
+
+
 class Panel:
     """
     A panel in a layout.
@@ -28,9 +78,6 @@ class Panel:
     """
 
     def __init__(self, type: str, id: str | None = None, **panel_config: Any) -> None:
-
-        print(f"hello: {type}, {id}, {panel_config}")
-
         self.id = id if id is not None else f"{type}!{random_id()}"
         self.type = type
         self.config = panel_config
@@ -55,6 +102,7 @@ class Panel:
         return json.dumps(self.to_dict(), indent=4)
 
 
+@panel_type("Markdown")
 class MarkdownPanel(Panel):
     def __init__(
         self,
@@ -63,20 +111,11 @@ class MarkdownPanel(Panel):
         markdown: str | None = None,
         font_size: int | None = None,
         foxglove_panel_title: str | None = None,
-    ):
-        panel_config = {
-            "markdown": markdown,
-            "font_size": font_size,
-            "foxglove_panel_title": foxglove_panel_title,
-        }
-
-        super().__init__(
-            "Markdown",
-            id,
-            **panel_config,
-        )
+    ) -> None:
+        pass
 
 
+@panel_type("RawMessages")
 class RawMessagesPanel(Panel):
     def __init__(
         self,
@@ -89,24 +128,11 @@ class RawMessagesPanel(Panel):
         show_full_message_for_diff: bool = False,
         topic_path: str = "",
         font_size: int | None = None,
-    ):
-        panel_config = {
-            "diff_enabled": diff_enabled,
-            "diff_method": diff_method,
-            "diff_topic_path": diff_topic_path,
-            "expansion": expansion,
-            "show_full_message_for_diff": show_full_message_for_diff,
-            "topic_path": topic_path,
-            "font_size": font_size,
-        }
-
-        super().__init__(
-            "RawMessages",
-            id,
-            **panel_config,
-        )
+    ) -> None:
+        pass
 
 
+@panel_type("Audio")
 class AudioPanel(Panel):
     def __init__(
         self,
@@ -116,25 +142,13 @@ class AudioPanel(Panel):
         muted: bool | None = False,
         topic: str | None = None,
         volume: float | None = None,
-        sliding_view_width: float | None,
+        sliding_view_width: float | None = None,
         foxglove_panel_title: str | None = None,
-    ):
-        panel_config = {
-            "color": color,
-            "muted": muted,
-            "topic": topic,
-            "volume": volume,
-            "sliding_view_width": sliding_view_width,
-            "foxglove_panel_title": foxglove_panel_title,
-        }
-
-        super().__init__(
-            "Audio",
-            id,
-            **panel_config,
-        )
+    ) -> None:
+        pass
 
 
+@panel_type("ROSDiagnosticDetailPanel")
 class ROSDiagnosticDetailPanel(Panel):
     def __init__(
         self,
@@ -146,49 +160,24 @@ class ROSDiagnosticDetailPanel(Panel):
         topic_to_render: str = "",
         numeric_precision: int | None = None,
         seconds_until_stale: int | None = None,
-    ):
-        panel_config = {
-            "selected_hardware_id": selected_hardware_id,
-            "selected_name": selected_name,
-            "split_fraction": split_fraction,
-            "topic_to_render": topic_to_render,
-            "numeric_precision": numeric_precision,
-            "seconds_until_stale": seconds_until_stale,
-        }
-
-        super().__init__(
-            "ROSDiagnosticDetailPanel",
-            id,
-            **panel_config,
-        )
+    ) -> None:
+        pass
 
 
+@panel_type("ROSDiagnosticSummaryPanel")
 class ROSDiagnosticSummaryPanel(Panel):
     def __init__(
         self,
         *,
         id: str | None = None,
         min_level: int = 0,
-        pinned_ids: list[str] = [],
+        pinned_ids: list[str] = [],  # noqa: B006
         topic_to_render: str = "",
         hardware_id_filter: str = "",
         sort_by_level: bool | None = None,
         seconds_until_stale: int | None = None,
-    ):
-        panel_config = {
-            "min_level": min_level,
-            "pinned_ids": pinned_ids,
-            "topic_to_render": topic_to_render,
-            "hardware_id_filter": hardware_id_filter,
-            "sort_by_level": sort_by_level,
-            "seconds_until_stale": seconds_until_stale,
-        }
-
-        super().__init__(
-            "ROSDiagnosticSummaryPanel",
-            id,
-            **panel_config,
-        )
+    ) -> None:
+        pass
 
 
 @dataclass
@@ -203,6 +192,7 @@ class IndicatorPanelRule:
         return {to_lower_camel_case(k): v for k, v in rule_dict.items()}
 
 
+@panel_type("Indicator")
 class IndicatorPanel(Panel):
     def __init__(
         self,
@@ -214,30 +204,19 @@ class IndicatorPanel(Panel):
         fallback_color: str | None = None,
         fallback_label: str | None = None,
         foxglove_panel_title: str | None = None,
-    ):
-        panel_config = {
-            "path": path,
-            "style": style,
-            "font_size": font_size,
-            "fallback_color": fallback_color,
-            "fallback_label": fallback_label,
-            "foxglove_panel_title": foxglove_panel_title,
-            "rules": list(rules),
-        }
-
-        super().__init__(
-            "Indicator",
-            id,
-            **panel_config,
-        )
+    ) -> None:
+        pass
 
     def config_to_dict(self) -> dict[str, Any]:
         # copy the config and convert rules to dict
         config = super().config_to_dict().copy()
-        config["rules"] = [rule.to_dict() for rule in config.get("rules", [])]
+        # Convert rules list to list of dicts
+        if "rules" in config:
+            config["rules"] = [rule.to_dict() for rule in config["rules"]]
         return config
 
 
+@panel_type("Gauge")
 class GaugePanel(Panel):
     def __init__(
         self,
@@ -252,24 +231,8 @@ class GaugePanel(Panel):
         reverse: bool = False,
         reverse_direction: bool = False,
         foxglove_panel_title: str | None = None,
-    ):
-        panel_config = {
-            "path": path,
-            "min_value": min_value,
-            "max_value": max_value,
-            "color_mode": color_mode,
-            "color_map": color_map,
-            "gradient": gradient,
-            "reverse": reverse,
-            "reverse_direction": reverse_direction,
-            "foxglove_panel_title": foxglove_panel_title,
-        }
-
-        super().__init__(
-            "Gauge",
-            id,
-            **panel_config,
-        )
+    ) -> None:
+        pass
 
 
 @dataclass
@@ -299,6 +262,7 @@ class PlotPath(BasePlotPath):
         return {to_lower_camel_case(k): v for k, v in rule_dict.items()}
 
 
+@panel_type("Plot")
 class PlotPanel(Panel):
     def __init__(
         self,
@@ -327,37 +291,8 @@ class PlotPanel(Panel):
         sidebar_dimension: int = 200,
         axis_scales_mode: Literal["independent", "lockedScales"] = "independent",
         foxglove_panel_title: str | None = None,
-    ):
-        panel_config = {
-            "paths": paths,
-            "min_x_value": min_x_value,
-            "max_x_value": max_x_value,
-            "min_y_value": min_y_value,
-            "max_y_value": max_y_value,
-            "show_legend": show_legend,
-            "legend_display": legend_display,
-            "show_plot_values_in_legend": show_plot_values_in_legend,
-            "show_x_axis_labels": show_x_axis_labels,
-            "show_y_axis_labels": show_y_axis_labels,
-            "is_synced": is_synced,
-            "x_axis_val": x_axis_val,
-            "time_range": time_range,
-            "x_axis_path": x_axis_path,
-            "x_axis_label": x_axis_label,
-            "time_window_mode": time_window_mode,
-            "playback_bar_position": playback_bar_position,
-            "y_axis_label": y_axis_label,
-            "following_view_width": following_view_width,
-            "sidebar_dimension": sidebar_dimension,
-            "axis_scales_mode": axis_scales_mode,
-            "foxglove_panel_title": foxglove_panel_title,
-        }
-
-        super().__init__(
-            "Plot",
-            id,
-            **panel_config,
-        )
+    ) -> None:
+        pass
 
 
 __all__ = [
