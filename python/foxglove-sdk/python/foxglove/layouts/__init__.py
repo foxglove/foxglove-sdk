@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 import random
 import string
-from typing import Any, Literal
+from typing import Any, Literal, Protocol
 
 from typing_extensions import TypeAlias
 
@@ -21,33 +21,9 @@ def random_id() -> str:
     return "".join(random.choices(string.ascii_lowercase + string.digits, k=7))
 
 
-class Panel:
-    """
-    A panel in a layout.
-
-    :param id: Unique identifier for the panel
-    :param type: Type of the panel (e.g., "Plot", "3D", "Raw Messages")
-    :param config: Configuration dictionary for the panel
-    """
-
-    def __init__(self, type: str, id: str | None = None, **panel_config: Any) -> None:
-        self.id = id if id is not None else f"{type}!{random_id()}"
-        self.type = type
-        self.config = panel_config
-
-    def config_to_dict(self) -> dict[str, Any]:
-        return self.config
-
+class SupportToDict(Protocol):
     def to_dict(self) -> dict[str, Any]:
-        return {
-            "id": self.id,
-            "type": self.type,
-            # filter out None values from the config
-            "config": {k: v for k, v in self.config_to_dict().items() if v is not None},
-        }
-
-    def to_json(self) -> str:
-        return json.dumps(self.to_dict(), indent=4)
+        pass
 
 
 class Tab:
@@ -120,7 +96,7 @@ class Item:
     :param content: Content of the item (panel, tabs, or item list)
     """
 
-    def __init__(self, ratio: float, content: Panel | Tabs | ItemList) -> None:
+    def __init__(self, ratio: float, content: SupportToDict | Tabs | ItemList) -> None:
         self.ratio = ratio
         self.content = content
 
