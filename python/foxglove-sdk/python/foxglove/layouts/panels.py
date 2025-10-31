@@ -294,6 +294,17 @@ class PlotPanel(Panel):
     ) -> None:
         pass
 
+    def config_to_dict(self) -> dict[str, Any]:
+        # copy the config and convert paths and x_axis_path to dict
+        config = super().config_to_dict().copy()
+        # Convert paths list to list of dicts
+        if "paths" in config:
+            config["paths"] = [path.to_dict() for path in config["paths"]]
+        # Convert x_axis_path to dict if present
+        if "x_axis_path" in config and config["x_axis_path"] is not None:
+            config["x_axis_path"] = config["x_axis_path"].to_dict()
+        return config
+
 
 __all__ = [
     "MarkdownPanel",
