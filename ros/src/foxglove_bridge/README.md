@@ -131,7 +131,7 @@ Parameters are provided to configure the behavior of the bridge. These parameter
 - **certfile**: Path to an X.509 certificate used for WSS. **Must be supplied if `tls` is set to `true`.**
 - **keyfile**: Path to the PEM-encoded PKCS#8 private key used to generate `certfile`. **Must be supplied if `tls` is set to `true`.**
 
-### DiagnosticTopics
+### Diagnostic topics
 Foxglove Bridge publishes the number of currently connected clients to the topic `/foxglove_bridge/client_count`.
 ## For developers
 
