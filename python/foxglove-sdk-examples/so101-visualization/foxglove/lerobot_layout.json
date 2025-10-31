@@ -89,19 +89,18 @@
     },
     "3D!30jhgcb": {
       "cameraState": {
+        "distance": 0.9698905049867494,
         "perspective": true,
-        "distance": 0.921395979737452,
-        "phi": 66.78866688273126,
-        "thetaOffset": 66.14554173247187,
-        "targetOffset": [
-          -0.1211741330548618,
-          -0.2077195385745552,
-          -2.4079789797198944e-17
-        ],
+        "phi": 68.77761715897492,
         "target": [
           0,
           0,
           0
+        ],
+        "targetOffset": [
+          -0.1272997295644295,
+          0.004991553928976405,
+          -2.340213054666053e-17
         ],
         "targetOrientation": [
           0,
@@ -109,12 +108,13 @@
           0,
           1
         ],
+        "thetaOffset": 135.26156383192006,
         "fovy": 45,
         "near": 0.5,
         "far": 5000
       },
       "followMode": "follow-none",
-      "followTf": "base",
+      "followTf": "base_link",
       "scene": {
         "syncCamera": false,
         "transforms": {
@@ -254,7 +254,7 @@
           "label": "URDF",
           "layerId": "foxglove.Urdf",
           "sourceType": "url",
-          "url": "https://storage.googleapis.com/assets.foxglove.dev/demo-datasets/SO100/so100.urdf",
+          "url": "https://raw.githubusercontent.com/TheRobotStudio/SO-ARM100/a75d8a51236da69510fc70e68fee12ef04a125b7/Simulation/SO101/so101_new_calib.urdf",
           "filePath": "",
           "parameter": "",
           "topic": "",

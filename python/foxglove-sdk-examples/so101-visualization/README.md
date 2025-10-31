@@ -1,9 +1,10 @@
-# SO-100 Visualization
+# SO-101 Visualization
 
-An example from the Foxglove SDK demonstrating real-time visualization of the SO-100 robot arm.
+An example from the Foxglove SDK demonstrating real-time visualization of the SO-101 robot arm.
 
-This example connects to a SO-100 Follower arm, reads joint positions, and publishes the robot's
-configuration and camera feeds to Foxglove for real-time visualization.
+This example connects to a SO-101 Follower arm, reads joint positions, and publishes the robot's
+configuration and camera feeds to Foxglove for real-time visualization. The example is based on
+SO-101 arm, but you should be able to modify the exapmle to use SO-100 example, quite easily.
 
 ## Prepare Dependencies
 
@@ -31,11 +32,11 @@ pip install -r requirements.txt
 
 ## Configure the robot and run the code
 
-Configure and [calibrate your SO-100](https://huggingface.co/docs/lerobot/en/so100#calibrate) using LeRobot. Make sure to identify the configuration name, robot port, and camera IDs. Now you are ready to run the code.
+Configure and [calibrate your SO-101](https://huggingface.co/docs/lerobot/en/so101#calibrate) using LeRobot. Make sure to identify the configuration name, robot port, and camera IDs. Now you are ready to run the code.
 
 ### Parameters
 
-- `--robot.port`: The USB port to connect to the SO-100 arm (e.g., `/dev/ttyUSB0`)
+- `--robot.port`: The USB port to connect to the SO-101 arm (e.g., `/dev/ttyUSB0`)
 - `--robot.id`: Unique identifier for the robot arm
 - `--robot.wrist_cam_id`: Camera ID for wrist camera (optional, default: 0)
 - `--robot.env_cam_id`: Camera ID for environment camera (optional, default: 4)
@@ -46,14 +47,14 @@ Configure and [calibrate your SO-100](https://huggingface.co/docs/lerobot/en/so1
 
 Basic usage:
 ```bash
-python main.py --robot.port=/dev/ttyUSB0 --robot.id=my_so100_arm
+python main.py --robot.port=/dev/ttyUSB0 --robot.id=my_so101_arm
 ```
 
 With cameras:
 ```bash
 python main.py \
     --robot.port=/dev/ttyUSB0 \
-    --robot.id=my_so100_arm \
+    --robot.id=my_so101_arm \
     --robot.wrist_cam_id=0 \
     --robot.env_cam_id=4
 ```
@@ -62,7 +63,7 @@ With MCAP logging:
 ```bash
 python main.py \
     --robot.port=/dev/ttyUSB0 \
-    --robot.id=my_so100_arm \
+    --robot.id=my_so101_arm \
     --output.write_mcap \
     --output.mcap_path=robot_session.mcap
 ```
@@ -71,6 +72,6 @@ python main.py \
 
 1. In Foxglove, select _Open connection_ from the dashboard or left-hand menu.
 2. Select _Foxglove WebSocket_ in the _Open a new connection_ dialog, then enter the URL of your SDK server (`ws://localhost:8765` by default).
-3. Open the layout included with the example. In the layout dropdown in the application toolbar, select _Import from file..._, and select `foxglove-sdk/python/foxglove-sdk-examples/so100-visualization/foxglove/lerobot_layout.json`.
+3. Open the layout included with the example. In the layout dropdown in the application toolbar, select _Import from file..._, and select `foxglove-sdk/python/foxglove-sdk-examples/so101-visualization/foxglove/lerobot_layout.json`.
 
 You should now see your robot's data streaming live!
