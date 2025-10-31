@@ -3,6 +3,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
 import { Playground } from "./Playground";
+import { ThemeProvider } from "./ThemeProvider";
 
 import "./index.css";
 
@@ -14,7 +15,9 @@ zstd.isLoaded.then(
   () => {
     createRoot(document.getElementById("root")!).render(
       <StrictMode>
-        <Playground />
+        <ThemeProvider>
+          <Playground />
+        </ThemeProvider>
       </StrictMode>,
     );
   },
