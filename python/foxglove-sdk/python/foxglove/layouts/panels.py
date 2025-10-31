@@ -63,11 +63,12 @@ class MarkdownPanel(Panel):
         markdown: str | None = None,
         font_size: int | None = None,
         foxglove_panel_title: str | None = None,
-        **panel_config: Any,
     ):
-        panel_config["markdown"] = markdown
-        panel_config["font_size"] = font_size
-        panel_config["foxglove_panel_title"] = foxglove_panel_title
+        panel_config = {
+            "markdown": markdown,
+            "font_size": font_size,
+            "foxglove_panel_title": foxglove_panel_title,
+        }
 
         super().__init__(
             "Markdown",
@@ -88,15 +89,16 @@ class RawMessagesPanel(Panel):
         show_full_message_for_diff: bool = False,
         topic_path: str = "",
         font_size: int | None = None,
-        **panel_config: Any,
     ):
-        panel_config["diff_enabled"] = diff_enabled
-        panel_config["diff_method"] = diff_method
-        panel_config["diff_topic_path"] = diff_topic_path
-        panel_config["expansion"] = expansion
-        panel_config["show_full_message_for_diff"] = show_full_message_for_diff
-        panel_config["topic_path"] = topic_path
-        panel_config["font_size"] = font_size
+        panel_config = {
+            "diff_enabled": diff_enabled,
+            "diff_method": diff_method,
+            "diff_topic_path": diff_topic_path,
+            "expansion": expansion,
+            "show_full_message_for_diff": show_full_message_for_diff,
+            "topic_path": topic_path,
+            "font_size": font_size,
+        }
 
         super().__init__(
             "RawMessages",
@@ -116,14 +118,15 @@ class AudioPanel(Panel):
         volume: float | None = None,
         sliding_view_width: float | None,
         foxglove_panel_title: str | None = None,
-        **panel_config: Any,
     ):
-        panel_config["color"] = color
-        panel_config["muted"] = muted
-        panel_config["topic"] = topic
-        panel_config["volume"] = volume
-        panel_config["sliding_view_width"] = sliding_view_width
-        panel_config["foxglove_panel_title"] = foxglove_panel_title
+        panel_config = {
+            "color": color,
+            "muted": muted,
+            "topic": topic,
+            "volume": volume,
+            "sliding_view_width": sliding_view_width,
+            "foxglove_panel_title": foxglove_panel_title,
+        }
 
         super().__init__(
             "Audio",
@@ -143,14 +146,15 @@ class ROSDiagnosticDetailPanel(Panel):
         topic_to_render: str = "",
         numeric_precision: int | None = None,
         seconds_until_stale: int | None = None,
-        **panel_config: Any,
     ):
-        panel_config["selected_hardware_id"] = selected_hardware_id
-        panel_config["selected_name"] = selected_name
-        panel_config["split_fraction"] = split_fraction
-        panel_config["topic_to_render"] = topic_to_render
-        panel_config["numeric_precision"] = numeric_precision
-        panel_config["seconds_until_stale"] = seconds_until_stale
+        panel_config = {
+            "selected_hardware_id": selected_hardware_id,
+            "selected_name": selected_name,
+            "split_fraction": split_fraction,
+            "topic_to_render": topic_to_render,
+            "numeric_precision": numeric_precision,
+            "seconds_until_stale": seconds_until_stale,
+        }
 
         super().__init__(
             "ROSDiagnosticDetailPanel",
@@ -170,14 +174,15 @@ class ROSDiagnosticSummaryPanel(Panel):
         hardware_id_filter: str = "",
         sort_by_level: bool | None = None,
         seconds_until_stale: int | None = None,
-        **panel_config: Any,
     ):
-        panel_config["min_level"] = min_level
-        panel_config["pinned_ids"] = pinned_ids
-        panel_config["topic_to_render"] = topic_to_render
-        panel_config["hardware_id_filter"] = hardware_id_filter
-        panel_config["sort_by_level"] = sort_by_level
-        panel_config["seconds_until_stale"] = seconds_until_stale
+        panel_config = {
+            "min_level": min_level,
+            "pinned_ids": pinned_ids,
+            "topic_to_render": topic_to_render,
+            "hardware_id_filter": hardware_id_filter,
+            "sort_by_level": sort_by_level,
+            "seconds_until_stale": seconds_until_stale,
+        }
 
         super().__init__(
             "ROSDiagnosticSummaryPanel",
@@ -209,15 +214,16 @@ class IndicatorPanel(Panel):
         fallback_color: str | None = None,
         fallback_label: str | None = None,
         foxglove_panel_title: str | None = None,
-        **panel_config: Any,
     ):
-        panel_config["path"] = path
-        panel_config["style"] = style
-        panel_config["font_size"] = font_size
-        panel_config["fallback_color"] = fallback_color
-        panel_config["fallback_label"] = fallback_label
-        panel_config["foxglove_panel_title"] = foxglove_panel_title
-        panel_config["rules"] = list(rules)
+        panel_config = {
+            "path": path,
+            "style": style,
+            "font_size": font_size,
+            "fallback_color": fallback_color,
+            "fallback_label": fallback_label,
+            "foxglove_panel_title": foxglove_panel_title,
+            "rules": list(rules),
+        }
 
         super().__init__(
             "Indicator",
@@ -246,17 +252,18 @@ class GaugePanel(Panel):
         reverse: bool = False,
         reverse_direction: bool = False,
         foxglove_panel_title: str | None = None,
-        **panel_config: Any,
     ):
-        panel_config["path"] = path
-        panel_config["min_value"] = min_value
-        panel_config["max_value"] = max_value
-        panel_config["color_mode"] = color_mode
-        panel_config["color_map"] = color_map
-        panel_config["gradient"] = gradient
-        panel_config["reverse"] = reverse
-        panel_config["reverse_direction"] = reverse_direction
-        panel_config["foxglove_panel_title"] = foxglove_panel_title
+        panel_config = {
+            "path": path,
+            "min_value": min_value,
+            "max_value": max_value,
+            "color_mode": color_mode,
+            "color_map": color_map,
+            "gradient": gradient,
+            "reverse": reverse,
+            "reverse_direction": reverse_direction,
+            "foxglove_panel_title": foxglove_panel_title,
+        }
 
         super().__init__(
             "Gauge",
@@ -320,30 +327,31 @@ class PlotPanel(Panel):
         sidebar_dimension: int = 200,
         axis_scales_mode: Literal["independent", "lockedScales"] = "independent",
         foxglove_panel_title: str | None = None,
-        **panel_config: Any,
     ):
-        panel_config["paths"] = paths
-        panel_config["min_x_value"] = min_x_value
-        panel_config["max_x_value"] = max_x_value
-        panel_config["min_y_value"] = min_y_value
-        panel_config["max_y_value"] = max_y_value
-        panel_config["show_legend"] = show_legend
-        panel_config["legend_display"] = legend_display
-        panel_config["show_plot_values_in_legend"] = show_plot_values_in_legend
-        panel_config["show_x_axis_labels"] = show_x_axis_labels
-        panel_config["show_y_axis_labels"] = show_y_axis_labels
-        panel_config["is_synced"] = is_synced
-        panel_config["x_axis_val"] = x_axis_val
-        panel_config["time_range"] = time_range
-        panel_config["x_axis_path"] = x_axis_path
-        panel_config["x_axis_label"] = x_axis_label
-        panel_config["time_window_mode"] = time_window_mode
-        panel_config["playback_bar_position"] = playback_bar_position
-        panel_config["y_axis_label"] = y_axis_label
-        panel_config["following_view_width"] = following_view_width
-        panel_config["sidebar_dimension"] = sidebar_dimension
-        panel_config["axis_scales_mode"] = axis_scales_mode
-        panel_config["foxglove_panel_title"] = foxglove_panel_title
+        panel_config = {
+            "paths": paths,
+            "min_x_value": min_x_value,
+            "max_x_value": max_x_value,
+            "min_y_value": min_y_value,
+            "max_y_value": max_y_value,
+            "show_legend": show_legend,
+            "legend_display": legend_display,
+            "show_plot_values_in_legend": show_plot_values_in_legend,
+            "show_x_axis_labels": show_x_axis_labels,
+            "show_y_axis_labels": show_y_axis_labels,
+            "is_synced": is_synced,
+            "x_axis_val": x_axis_val,
+            "time_range": time_range,
+            "x_axis_path": x_axis_path,
+            "x_axis_label": x_axis_label,
+            "time_window_mode": time_window_mode,
+            "playback_bar_position": playback_bar_position,
+            "y_axis_label": y_axis_label,
+            "following_view_width": following_view_width,
+            "sidebar_dimension": sidebar_dimension,
+            "axis_scales_mode": axis_scales_mode,
+            "foxglove_panel_title": foxglove_panel_title,
+        }
 
         super().__init__(
             "Plot",
