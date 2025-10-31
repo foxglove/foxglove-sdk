@@ -887,25 +887,25 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@foxglove/embed-react@npm:^0.1.6":
-  version: 0.1.6
-  resolution: "@foxglove/embed-react@npm:0.1.6"
+"@foxglove/embed-react@npm:^0.1.8":
+  version: 0.1.8
+  resolution: "@foxglove/embed-react@npm:0.1.8"
   dependencies:
-    "@foxglove/embed": "npm:0.1.6"
+    "@foxglove/embed": "npm:0.1.8"
     tslib: "npm:2.8.1"
   peerDependencies:
     react: ">=18"
     react-dom: ">=18"
-  checksum: 10c0/587d391d5f222cbba86d5593522f0d55bc82add48349a3971e9384b8949655ef6cbcce008030627f86325d8580b92a321488cbbfc626ec5a4736b3459b468993
+  checksum: 10c0/e947842c184730c84b59f76755e34abb16ff7c14511cc6fe39f5e788d29f346959a6591e94b9b7f4d75e564d03ee6214d3fbea84afd31dd4bff6ca557569bc0f
   languageName: node
   linkType: hard
 
-"@foxglove/embed@npm:0.1.6, @foxglove/embed@npm:^0.1.6":
-  version: 0.1.6
-  resolution: "@foxglove/embed@npm:0.1.6"
+"@foxglove/embed@npm:0.1.8, @foxglove/embed@npm:^0.1.8":
+  version: 0.1.8
+  resolution: "@foxglove/embed@npm:0.1.8"
   dependencies:
     tslib: "npm:2.8.1"
-  checksum: 10c0/5e5ea0b15ba3171d2b1114089361c0e10176e7f982b053dc0ee479d50935bca99e6eaf19425a09f63b5fdd075c30d3f44f648715214c30329c683806d3ef7802
+  checksum: 10c0/5353aaf1cea185c74d3dff82aad8393458f2a565e08d932e37aaf7b999e75ec3ed45b47c60e167825362a431e04e5e2ff957b522e944636b4b9d09ece56a6f7e
   languageName: node
   linkType: hard
 
@@ -944,7 +944,7 @@ __metadata:
   resolution: "@foxglove/notebook-frontend@workspace:python/foxglove-sdk/notebook-frontend"
   dependencies:
     "@anywidget/types": "npm:0.2.0"
-    "@foxglove/embed": "npm:0.1.6"
+    "@foxglove/embed": "npm:0.1.8"
     "@foxglove/tsconfig": "npm:2.0.0"
     esbuild: "npm:0.25.11"
     typescript: "npm:5.9.3"
@@ -8188,8 +8188,8 @@ __metadata:
     "@carbon/icons-react": "npm:^11.70.0"
     "@emotion/react": "npm:^11.14.0"
     "@emotion/styled": "npm:^11.14.1"
-    "@foxglove/embed": "npm:^0.1.6"
-    "@foxglove/embed-react": "npm:^0.1.6"
+    "@foxglove/embed": "npm:^0.1.8"
+    "@foxglove/embed-react": "npm:^0.1.8"
     "@foxglove/tsconfig": "npm:^2.0.0"
     "@foxglove/wasm-zstd": "npm:^1.0.1"
     "@mui/material": "npm:^7.3.4"
