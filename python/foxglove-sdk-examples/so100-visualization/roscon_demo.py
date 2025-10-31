@@ -3,16 +3,22 @@ import datetime
 import logging
 import math
 import time
+from collections import deque
 
 import foxglove
+import qrcode
 from foxglove.channels import RawImageChannel
 from foxglove.schemas import (
     FrameTransform,
     FrameTransforms,
+    Pose,
+    PosesInFrame,
     Quaternion,
     RawImage,
+    Timestamp,
     Vector3,
 )
+from PIL import Image
 from lerobot.cameras import ColorMode, Cv2Rotation
 from lerobot.cameras.opencv import OpenCVCamera, OpenCVCameraConfig
 
@@ -129,6 +135,45 @@ def publish_camera_frame(camera: OpenCVCamera, image_channel: RawImageChannel) -
     image_channel.log(img_msg)
 
 
+def generate_qr_code(url: str) -> Image.Image:
+    """Generate a QR code image for the given URL."""
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_L,
+        box_size=10,
+        border=4,
+    )
+    qr.add_data(url)
+    qr.make(fit=True)
+
+    # Create QR code image
+    qr_img = qr.make_image(fill_color="black", back_color="white")
+    return qr_img
+
+
+def publish_qr_code(image_channel: RawImageChannel, url: str) -> None:
+    """Generate and publish a QR code image to the specified channel."""
+    qr_img = generate_qr_code(url)
+
+    # Convert PIL image to RGB if it's not already
+    if qr_img.mode != 'RGB':
+        qr_img = qr_img.convert('RGB')
+
+    # Convert PIL image to bytes
+    img_bytes = qr_img.tobytes()
+
+    # Create RawImage message
+    img_msg = RawImage(
+        data=img_bytes,
+        width=qr_img.width,
+        height=qr_img.height,
+        step=qr_img.width * 3,  # 3 bytes per pixel for RGB
+        encoding="rgb8",
+    )
+
+    image_channel.log(img_msg)
+
+
 def create_so101_leader(port: str, robot_id: str):
     """Create and connect an SO101 leader robot."""
     config = SO101LeaderConfig(port=port, id=robot_id)
@@ -169,6 +214,80 @@ def update_follower_position(leader, follower):
         print(f"Error updating follower position: {e}")
 
 
+def find_end_effector_link(robot):
+    """Find the end effector link (leaf node in the kinematic chain)."""
+    # Get all links that are children
+    child_links = set()
+    for joint in robot.robot.joints:
+        child_links.add(joint.child)
+
+    # Get all links that are parents
+    parent_links = set()
+    for joint in robot.robot.joints:
+        parent_links.add(joint.parent)
+
+    # End effector is a child that is not a parent (leaf node)
+    end_effector_candidates = child_links - parent_links
+
+    # If we have multiple candidates, try to find one with "gripper" or "end_effector" in the name
+    if len(end_effector_candidates) > 1:
+        for link in end_effector_candidates:
+            if "gripper" in link.lower() or "end" in link.lower() or "tool" in link.lower():
+                return link
+
+    # Return the first candidate if available, otherwise return the last child link
+    return list(end_effector_candidates)[0] if end_effector_candidates else list(child_links)[-1]
+
+
+def update_pose_history(pose_deque, robot, end_effector_link, base_frame_id):
+    """Update the pose history deque with the current end effector pose."""
+    try:
+        # Get transform from base_link to end effector
+        T_end = robot.get_transform(frame_to=end_effector_link, frame_from=base_frame_id)
+
+        # Extract translation and rotation
+        trans = T_end[:3, 3]
+        quat = R.from_matrix(T_end[:3, :3]).as_quat()  # Returns [x, y, z, w]
+
+        # Create pose
+        pose = Pose(
+            position=Vector3(x=float(trans[0]), y=float(trans[1]), z=float(trans[2])),
+            orientation=Quaternion(x=float(quat[0]), y=float(quat[1]), z=float(quat[2]), w=float(quat[3]))
+        )
+
+        # Add to deque (automatically removes oldest if at max length)
+        pose_deque.append(pose)
+
+    except Exception as e:
+        print(f"Error updating pose history: {e}")
+
+
+def publish_pose_history(pose_deque, base_frame_id):
+    """Publish the pose history as PosesInFrame."""
+    if not pose_deque:
+        return
+
+    try:
+        # Create timestamp
+        current_time = time.time()
+        timestamp = Timestamp(
+            sec=int(current_time),
+            nsec=int((current_time - int(current_time)) * 1e9)
+        )
+
+        # Create PosesInFrame message
+        poses_msg = PosesInFrame(
+            timestamp=timestamp,
+            frame_id=base_frame_id,
+            poses=list(pose_deque)
+        )
+
+        foxglove.log("/end_effector_poses", poses_msg)
+
+    except Exception as e:
+        print(f"Error publishing pose history: {e}")
+
+
 def main():
     args = parse_args()
 
@@ -192,6 +311,9 @@ def main():
     # Start the Foxglove server
     server = foxglove.start_server()
     print(f"Foxglove server started at {server.app_url()}")
+
+    # Setup QR code channel
+    qr_image_channel = RawImageChannel(topic="hiring_image")
 
     # Setup cameras if requested
     wrist_camera = None
@@ -245,8 +367,29 @@ def main():
 
     print(f"Available joints: {list(joint_positions.keys())}")
 
+    # Find end effector link for pose tracking
+    end_effector_link = find_end_effector_link(robot)
+    print(f"End effector link: {end_effector_link}")
+
+    # Initialize pose history deque with max length of 100
+    pose_history = deque(maxlen=100)
+
+    # QR code publishing timer
+    qr_last_publish_time = 0
+    qr_publish_interval = 5.0  # 5 seconds
+
     try:
         while True:
+            current_time = time.time()
+
+            # Publish QR code every 5 seconds
+            if current_time - qr_last_publish_time >= qr_publish_interval:
+                try:
+                    publish_qr_code(qr_image_channel, "https://foxglove.dev/careers")
+                    qr_last_publish_time = current_time
+                except Exception as e:
+                    print(f"Error publishing QR code: {e}")
+
             # Read and publish leader wrist camera frame if available
             if wrist_camera and wrist_image_channel:
                 try:
@@ -291,6 +434,10 @@ def main():
 
             # Update robot configuration for forward kinematics
             robot.update_cfg(joint_positions)
+
+            # Update and publish end effector pose history
+            update_pose_history(pose_history, robot, end_effector_link, BASE_FRAME_ID)
+            publish_pose_history(pose_history, BASE_FRAME_ID)
 
             transforms = []
             # World -> Base

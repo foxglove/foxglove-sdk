@@ -1,10 +1,12 @@
 import argparse
 import datetime
+import io
 import logging
 import math
 import time
 
 import foxglove
+import qrcode
 from foxglove.channels import RawImageChannel
 from foxglove.schemas import (
     FrameTransform,
@@ -13,6 +15,7 @@ from foxglove.schemas import (
     RawImage,
     Vector3,
 )
+from PIL import Image
 from lerobot.cameras import ColorMode, Cv2Rotation
 from lerobot.cameras.opencv import OpenCVCamera, OpenCVCameraConfig
 
@@ -111,6 +114,46 @@ def publish_camera_frame(camera: OpenCVCamera, image_channel: RawImageChannel) -
     image_channel.log(img_msg)
 
 
+def generate_qr_code(url: str) -> Image.Image:
+    """Generate a QR code image for the given URL."""
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_L,
+        box_size=10,
+        border=4,
+    )
+    qr.add_data(url)
+    qr.make(fit=True)
+
+    # Create QR code image
+    qr_img = qr.make_image(fill_color="black", back_color="white")
+    return qr_img
+
+
+def publish_qr_code(image_channel: RawImageChannel, url: str) -> None:
+    """Generate and publish a QR code image to the specified channel."""
+    qr_img = generate_qr_code(url)
+
+    # Convert PIL image to RGB if it's not already
+    if qr_img.mode != 'RGB':
+        qr_img = qr_img.convert('RGB')
+
+    # Convert PIL image to bytes
+    img_bytes = qr_img.tobytes()
+
+    print(f"Generated QR code for URL: {url}")
+    # Create RawImage message
+    img_msg = RawImage(
+        data=img_bytes,
+        width=qr_img.width,
+        height=qr_img.height,
+        step=qr_img.width * 3,  # 3 bytes per pixel for RGB
+        encoding="rgb8",
+    )
+
+    image_channel.log(img_msg)
+
+
 def main():
     args = parse_args()
 
@@ -133,6 +176,10 @@ def main():
     # Start the Foxglove server
     server = foxglove.start_server()
     print(f"Foxglove server started at {server.app_url()}")
+
+    # Setup QR code channel
+    qr_image_channel = RawImageChannel(topic="hiring_image")
+
     # Setup cameras if requested
     wrist_camera = None
     wrist_image_channel = None
@@ -178,8 +225,19 @@ def main():
 
     print(f"Available joints: {list(joint_positions.keys())}")
 
+    # QR code publishing timer
+    qr_last_publish_time = 0
+    qr_publish_interval = 5.0  # 5 seconds
+
     try:
         while True:
+            print("HERE")
+            try:
+                publish_qr_code(qr_image_channel, "https://foxglove.dev/careers")
+                print("Published QR code to hiring_image topic")
+            except Exception as e:
+                print(f"Error publishing QR code: {e}")
+
             # Read and publish wrist camera frame if available
             if wrist_camera and wrist_image_channel:
                 try:
