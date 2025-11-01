@@ -306,6 +306,49 @@ class PlotPanel(Panel):
         return config
 
 
+@dataclass
+class ImageAnnotationSettings:
+    visible: bool
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass
+class ImageModeConfig:
+    image_topic: str | None = None
+    image_schema_name: str | None = None
+    calibration_topic: str | None = None
+    annotations: dict[str, ImageAnnotationSettings | None] | None = None
+    synchronize: bool | None = None
+    rotation: Literal[0, 90, 180, 270] | None = None
+    flip_horizontal: bool | None = None
+    flip_vertical: bool | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        # asdict will also convert annotations to dict
+        config = asdict(self)
+        return {to_lower_camel_case(k): v for k, v in config.items() if v is not None}
+
+
+@panel_type("Image")
+class ImagePanel(Panel):
+    def __init__(
+        self,
+        *,
+        id: str | None = None,
+        image_mode: ImageModeConfig | None = None,
+        foxglove_panel_title: str | None = None,
+    ) -> None:
+        pass
+
+    def config_to_dict(self) -> dict[str, Any]:
+        config = super().config_to_dict().copy()
+        if "image_mode" in config:
+            config["image_mode"] = config["image_mode"].to_dict()
+        return config
+
+
 __all__ = [
     "MarkdownPanel",
     "RawMessagesPanel",
@@ -316,4 +359,7 @@ __all__ = [
     "IndicatorPanelRule",
     "GaugePanel",
     "PlotPanel",
+    "ImagePanel",
+    "ImageModeConfig",
+    "ImageAnnotationSettings",
 ]

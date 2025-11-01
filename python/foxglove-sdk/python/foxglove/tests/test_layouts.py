@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 import json
+from typing import Literal
 
 from foxglove.layouts.panels import (
     AudioPanel,
     BasePlotPath,
     GaugePanel,
+    ImageAnnotationSettings,
+    ImageModeConfig,
+    ImagePanel,
     IndicatorPanel,
     IndicatorPanelRule,
     MarkdownPanel,
@@ -381,6 +385,148 @@ class TestPlotPanel:
         assert result["config"]["paths"][0]["label"] == "Field"
 
 
+class TestImageAnnotationSettings:
+    def test_to_dict(self) -> None:
+        settings = ImageAnnotationSettings(visible=True)
+        result = settings.to_dict()
+        assert result["visible"] is True
+
+    def test_to_dict_with_false(self) -> None:
+        settings = ImageAnnotationSettings(visible=False)
+        result = settings.to_dict()
+        assert result["visible"] is False
+
+
+class TestImageModeConfig:
+    def test_creation_with_defaults(self) -> None:
+        config = ImageModeConfig()
+        result = config.to_dict()
+        assert result == {}
+
+    def test_creation_with_all_params(self) -> None:
+        annotations: dict[str, ImageAnnotationSettings | None] = {
+            "keypoint": ImageAnnotationSettings(visible=True),
+            "polygon": ImageAnnotationSettings(visible=False),
+        }
+        config = ImageModeConfig(
+            image_topic="/camera/image",
+            image_schema_name="foxglove.CompressedImage",
+            calibration_topic="/camera/calibration",
+            annotations=annotations,
+            synchronize=True,
+            rotation=90,
+            flip_horizontal=True,
+            flip_vertical=False,
+        )
+        result = config.to_dict()
+        assert result["imageTopic"] == "/camera/image"
+        assert result["imageSchemaName"] == "foxglove.CompressedImage"
+        assert result["calibrationTopic"] == "/camera/calibration"
+        assert result["synchronize"] is True
+        assert result["rotation"] == 90
+        assert result["flipHorizontal"] is True
+        assert result["flipVertical"] is False
+        assert isinstance(result["annotations"], dict)
+        assert result["annotations"]["keypoint"]["visible"] is True
+        assert result["annotations"]["polygon"]["visible"] is False
+
+    def test_to_dict_filters_none_values(self) -> None:
+        config = ImageModeConfig(image_topic="/camera/image", rotation=None)
+        result = config.to_dict()
+        assert result["imageTopic"] == "/camera/image"
+        assert "rotation" not in result
+
+    def test_to_dict_filters_none_annotations(self) -> None:
+        annotations = {
+            "keypoint": ImageAnnotationSettings(visible=True),
+            "polygon": None,
+        }
+        config = ImageModeConfig(annotations=annotations)
+        result = config.to_dict()
+        assert "keypoint" in result["annotations"]
+        assert "polygon" in result["annotations"]
+        assert result["annotations"]["polygon"] is None
+
+
+class TestImagePanel:
+    def test_creation_with_minimal_config(self) -> None:
+        image_mode = ImageModeConfig(image_topic="/camera/image")
+        panel = ImagePanel(image_mode=image_mode)
+        result = panel.to_dict()
+        assert result["type"] == "Image"
+        assert result["id"].startswith("Image!")
+        assert result["config"]["imageMode"]["imageTopic"] == "/camera/image"
+
+    def test_creation_with_id(self) -> None:
+        image_mode = ImageModeConfig(image_topic="/camera/image")
+        panel = ImagePanel(id="custom-id", image_mode=image_mode)
+        result = panel.to_dict()
+        assert result["type"] == "Image"
+        assert result["id"] == "custom-id"
+        assert result["config"]["imageMode"]["imageTopic"] == "/camera/image"
+
+    def test_creation_with_full_config(self) -> None:
+        annotations: dict[str, ImageAnnotationSettings | None] = {
+            "keypoint": ImageAnnotationSettings(visible=True),
+            "polygon": ImageAnnotationSettings(visible=False),
+        }
+        image_mode = ImageModeConfig(
+            image_topic="/camera/image",
+            image_schema_name="foxglove.CompressedImage",
+            calibration_topic="/camera/calibration",
+            annotations=annotations,
+            synchronize=True,
+            rotation=180,
+            flip_horizontal=True,
+            flip_vertical=True,
+        )
+        panel = ImagePanel(id="image-1", image_mode=image_mode)
+        result = panel.to_dict()
+        assert result["type"] == "Image"
+        assert result["id"] == "image-1"
+        config = result["config"]["imageMode"]
+        assert config["imageTopic"] == "/camera/image"
+        assert config["imageSchemaName"] == "foxglove.CompressedImage"
+        assert config["calibrationTopic"] == "/camera/calibration"
+        assert config["synchronize"] is True
+        assert config["rotation"] == 180
+        assert config["flipHorizontal"] is True
+        assert config["flipVertical"] is True
+        assert config["annotations"]["keypoint"]["visible"] is True
+        assert config["annotations"]["polygon"]["visible"] is False
+
+    def test_to_dict_converts_to_camel_case(self) -> None:
+        image_mode = ImageModeConfig(
+            image_topic="/camera/image",
+            rotation=90,
+            flip_horizontal=False,
+        )
+        panel = ImagePanel(id="test", image_mode=image_mode)
+        result = panel.to_dict()
+        config = result["config"]["imageMode"]
+        assert config["imageTopic"] == "/camera/image"
+        assert config["rotation"] == 90
+        assert config["flipHorizontal"] is False
+
+    def test_to_json(self) -> None:
+        image_mode = ImageModeConfig(image_topic="/camera/image", rotation=270)
+        panel = ImagePanel(id="test", image_mode=image_mode)
+        json_str = panel.to_json()
+        parsed = json.loads(json_str)
+        assert parsed["id"] == "test"
+        assert parsed["type"] == "Image"
+        assert parsed["config"]["imageMode"]["imageTopic"] == "/camera/image"
+        assert parsed["config"]["imageMode"]["rotation"] == 270
+
+    def test_to_dict_with_all_rotation_values(self) -> None:
+        rotations: list[Literal[0, 90, 180, 270]] = [0, 90, 180, 270]
+        for rotation in rotations:
+            image_mode = ImageModeConfig(image_topic="/camera/image", rotation=rotation)
+            panel = ImagePanel(image_mode=image_mode)
+            result = panel.to_dict()
+            assert result["config"]["imageMode"]["rotation"] == rotation
+
+
 class TestPanelSerialization:
     def test_all_panels_serialize_to_json(self) -> None:
         panels = [
@@ -392,6 +538,10 @@ class TestPanelSerialization:
             IndicatorPanel(id="ind", path="/value"),
             GaugePanel(id="gauge", path="/value"),
             PlotPanel(id="plot"),
+            ImagePanel(
+                id="image",
+                image_mode=ImageModeConfig(image_topic="/camera/image"),
+            ),
         ]
         for panel in panels:
             json_str = panel.to_json()
