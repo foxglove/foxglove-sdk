@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import inspect
 import json
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from typing import Any, Callable, Literal
 
 from . import random_id
@@ -307,6 +307,104 @@ class PlotPanel(Panel):
 
 
 @dataclass
+class BaseCustomState:
+    label: str | None = None
+    color: str | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        config = asdict(self)
+        return {to_lower_camel_case(k): v for k, v in config.items() if v is not None}
+
+
+@dataclass
+class StateTransitionsDiscreteCustomState(BaseCustomState):
+    value: str = ""
+
+
+@dataclass
+class StateTransitionsRangeCustomState(BaseCustomState):
+    value: float | None = None
+    operator: Literal["=", "<", "<=", ">", ">="] = "<"
+
+
+@dataclass
+class StateTransitionsRangeCustomStates:
+    type: Literal["range"] = "range"
+    states: list[StateTransitionsRangeCustomState] = field(default_factory=list)
+    otherwise: BaseCustomState | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        states_list = [state.to_dict() for state in self.states]
+        otherwise_state = self.otherwise.to_dict() if self.otherwise is not None else {}
+        config = asdict(self)
+        config["states"] = states_list
+        config["otherwise"] = otherwise_state
+
+        return config
+
+
+@dataclass
+class StateTransitionsDiscreteCustomStates:
+    type: Literal["discrete"] = "discrete"
+    states: list[StateTransitionsDiscreteCustomState] = field(default_factory=list)
+
+    def to_dict(self) -> dict[str, Any]:
+        states_list = [state.to_dict() for state in self.states]
+        config = asdict(self)
+        config["states"] = states_list
+        return config
+
+
+@dataclass
+class StateTransitionsPath:
+    value: str
+    label: str | None = None
+    enabled: bool = True
+    timestamp_method: Literal[
+        "receiveTime", "publishTime", "headerStamp", "customField"
+    ] = "receiveTime"
+    timestamp_path: str | None = None
+    custom_states: (
+        StateTransitionsDiscreteCustomStates | StateTransitionsRangeCustomStates | None
+    ) = None
+
+    def to_dict(self) -> dict[str, Any]:
+        custom_states = self.custom_states
+        config = asdict(self)
+
+        if custom_states is not None:
+            config["custom_states"] = custom_states.to_dict()
+
+        return {to_lower_camel_case(k): v for k, v in config.items() if v is not None}
+
+
+@panel_type("StateTransitions")
+class StateTransitionsPanel(Panel):
+    def __init__(
+        self,
+        *paths: StateTransitionsPath,
+        id: str | None = None,
+        is_synced: bool = True,
+        x_axis_max_value: float | None = None,
+        x_axis_min_value: float | None = None,
+        x_axis_range: float | None = None,
+        x_axis_label: str | None = None,
+        time_window_mode: Literal["automatic", "sliding", "fixed"] = "automatic",
+        playback_bar_position: Literal["center", "right"] = "center",
+        show_points: bool = False,
+        foxglove_panel_title: str | None = None,
+    ) -> None:
+        pass
+
+    def config_to_dict(self) -> dict[str, Any]:
+        config = super().config_to_dict().copy()
+        if "paths" in config:
+            config["paths"] = [path.to_dict() for path in config["paths"]]
+
+        return config
+
+
+@dataclass
 class ImageAnnotationSettings:
     visible: bool
 
@@ -592,4 +690,11 @@ __all__ = [
     "TiledMapLayerConfig",
     "UrdfLayerConfig",
     "LinkSettings",
+    "StateTransitionsPanel",
+    "StateTransitionsPath",
+    "StateTransitionsDiscreteCustomStates",
+    "StateTransitionsRangeCustomStates",
+    "StateTransitionsRangeCustomState",
+    "StateTransitionsDiscreteCustomState",
+    "BaseCustomState",
 ]

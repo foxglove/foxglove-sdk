@@ -5,6 +5,7 @@ from typing import Literal
 
 from foxglove.layouts.panels import (
     AudioPanel,
+    BaseCustomState,
     BasePlotPath,
     CameraState,
     GaugePanel,
@@ -23,6 +24,12 @@ from foxglove.layouts.panels import (
     ROSDiagnosticDetailPanel,
     ROSDiagnosticSummaryPanel,
     SceneConfig,
+    StateTransitionsDiscreteCustomState,
+    StateTransitionsDiscreteCustomStates,
+    StateTransitionsPanel,
+    StateTransitionsPath,
+    StateTransitionsRangeCustomState,
+    StateTransitionsRangeCustomStates,
     ThreeDeePanel,
     TiledMapLayerConfig,
     TopicsConfig,
@@ -1234,6 +1241,358 @@ class TestThreeDeePanel:
             assert result["config"]["followMode"] == mode
 
 
+class TestBaseCustomState:
+    def test_creation_with_defaults(self) -> None:
+        state = BaseCustomState()
+        result = state.to_dict()
+        assert result == {}
+
+    def test_creation_with_all_params(self) -> None:
+        state = BaseCustomState(label="Active", color="#00ff00")
+        result = state.to_dict()
+        assert result["label"] == "Active"
+        assert result["color"] == "#00ff00"
+
+    def test_to_dict_filters_none_values(self) -> None:
+        state = BaseCustomState(label="Test", color=None)
+        result = state.to_dict()
+        assert result["label"] == "Test"
+        assert "color" not in result
+
+
+class TestStateTransitionsDiscreteCustomState:
+    def test_creation_with_defaults(self) -> None:
+        state = StateTransitionsDiscreteCustomState()
+        result = state.to_dict()
+        assert result["value"] == ""
+
+    def test_creation_with_all_params(self) -> None:
+        state = StateTransitionsDiscreteCustomState(
+            value="active",
+            label="Active State",
+            color="#00ff00",
+        )
+        result = state.to_dict()
+        assert result["value"] == "active"
+        assert result["label"] == "Active State"
+        assert result["color"] == "#00ff00"
+
+    def test_to_dict_filters_none_values(self) -> None:
+        state = StateTransitionsDiscreteCustomState(
+            value="test", label="Test", color=None
+        )
+        result = state.to_dict()
+        assert result["value"] == "test"
+        assert result["label"] == "Test"
+        assert "color" not in result
+
+
+class TestStateTransitionsRangeCustomState:
+    def test_creation_with_defaults(self) -> None:
+        state = StateTransitionsRangeCustomState()
+        result = state.to_dict()
+        assert "value" not in result
+        assert result["operator"] == "<"
+
+    def test_creation_with_all_params(self) -> None:
+        state = StateTransitionsRangeCustomState(
+            value=10.5,
+            operator=">=",
+            label="Threshold",
+            color="#ff0000",
+        )
+        result = state.to_dict()
+        assert result["value"] == 10.5
+        assert result["operator"] == ">="
+        assert result["label"] == "Threshold"
+        assert result["color"] == "#ff0000"
+
+    def test_all_operators(self) -> None:
+        operators: list[Literal["=", "<", "<=", ">", ">="]] = [
+            "=",
+            "<",
+            "<=",
+            ">",
+            ">=",
+        ]
+        for op in operators:
+            state = StateTransitionsRangeCustomState(value=5.0, operator=op)
+            result = state.to_dict()
+            assert result["operator"] == op
+
+
+class TestStateTransitionsRangeCustomStates:
+    def test_creation_with_defaults(self) -> None:
+        config = StateTransitionsRangeCustomStates()
+        result = config.to_dict()
+        assert result["type"] == "range"
+        assert result["states"] == []
+
+    def test_creation_with_states(self) -> None:
+        states = [
+            StateTransitionsRangeCustomState(
+                value=0.0, operator="<", label="Low", color="#ff0000"
+            ),
+            StateTransitionsRangeCustomState(
+                value=10.0, operator=">=", label="High", color="#00ff00"
+            ),
+        ]
+        otherwise = BaseCustomState(label="Normal", color="#0000ff")
+        config = StateTransitionsRangeCustomStates(states=states, otherwise=otherwise)
+        result = config.to_dict()
+        assert result["type"] == "range"
+        assert len(result["states"]) == 2
+        assert result["states"][0]["value"] == 0.0
+        assert result["states"][0]["operator"] == "<"
+        assert result["states"][1]["value"] == 10.0
+        assert result["states"][1]["operator"] == ">="
+        assert result["otherwise"]["label"] == "Normal"
+        assert result["otherwise"]["color"] == "#0000ff"
+
+    def test_creation_without_otherwise(self) -> None:
+        states = [
+            StateTransitionsRangeCustomState(value=5.0, operator=">", label="High")
+        ]
+        config = StateTransitionsRangeCustomStates(states=states, otherwise=None)
+        result = config.to_dict()
+        assert result["type"] == "range"
+        assert len(result["states"]) == 1
+        assert "otherwise" not in result or result["otherwise"] == {}
+
+
+class TestStateTransitionsDiscreteCustomStates:
+    def test_creation_with_defaults(self) -> None:
+        config = StateTransitionsDiscreteCustomStates()
+        result = config.to_dict()
+        assert result["type"] == "discrete"
+        assert result["states"] == []
+
+    def test_creation_with_states(self) -> None:
+        states = [
+            StateTransitionsDiscreteCustomState(
+                value="idle", label="Idle", color="#ffff00"
+            ),
+            StateTransitionsDiscreteCustomState(
+                value="running", label="Running", color="#00ff00"
+            ),
+            StateTransitionsDiscreteCustomState(
+                value="error", label="Error", color="#ff0000"
+            ),
+        ]
+        config = StateTransitionsDiscreteCustomStates(states=states)
+        result = config.to_dict()
+        assert result["type"] == "discrete"
+        assert len(result["states"]) == 3
+        assert result["states"][0]["value"] == "idle"
+        assert result["states"][0]["label"] == "Idle"
+        assert result["states"][1]["value"] == "running"
+        assert result["states"][2]["value"] == "error"
+
+
+class TestStateTransitionsPath:
+    def test_creation_with_required_params(self) -> None:
+        path = StateTransitionsPath(value="/topic/state")
+        result = path.to_dict()
+        assert result["value"] == "/topic/state"
+        assert result["enabled"] is True
+        assert result["timestampMethod"] == "receiveTime"
+
+    def test_creation_with_all_params(self) -> None:
+        discrete_states = StateTransitionsDiscreteCustomStates(
+            states=[
+                StateTransitionsDiscreteCustomState(value="on", label="On"),
+                StateTransitionsDiscreteCustomState(value="off", label="Off"),
+            ]
+        )
+        path = StateTransitionsPath(
+            value="/topic/state",
+            label="Device State",
+            enabled=True,
+            timestamp_method="headerStamp",
+            timestamp_path="/header/stamp",
+            custom_states=discrete_states,
+        )
+        result = path.to_dict()
+        assert result["value"] == "/topic/state"
+        assert result["label"] == "Device State"
+        assert result["enabled"] is True
+        assert result["timestampMethod"] == "headerStamp"
+        assert result["timestampPath"] == "/header/stamp"
+        assert result["customStates"]["type"] == "discrete"
+        assert len(result["customStates"]["states"]) == 2
+
+    def test_creation_with_range_custom_states(self) -> None:
+        range_states = StateTransitionsRangeCustomStates(
+            states=[
+                StateTransitionsRangeCustomState(value=0.0, operator="<", label="Low"),
+                StateTransitionsRangeCustomState(
+                    value=10.0, operator=">=", label="High"
+                ),
+            ],
+            otherwise=BaseCustomState(label="Normal", color="#00ff00"),
+        )
+        path = StateTransitionsPath(
+            value="/topic/value",
+            custom_states=range_states,
+        )
+        result = path.to_dict()
+        assert result["customStates"]["type"] == "range"
+        assert len(result["customStates"]["states"]) == 2
+        assert result["customStates"]["otherwise"]["label"] == "Normal"
+
+    def test_all_timestamp_methods(self) -> None:
+        methods: list[
+            Literal["receiveTime", "publishTime", "headerStamp", "customField"]
+        ] = [
+            "receiveTime",
+            "publishTime",
+            "headerStamp",
+            "customField",
+        ]
+        for method in methods:
+            path = StateTransitionsPath(value="/topic/state", timestamp_method=method)
+            result = path.to_dict()
+            assert result["timestampMethod"] == method
+
+    def test_to_dict_filters_none_values(self) -> None:
+        path = StateTransitionsPath(
+            value="/topic/state", label=None, timestamp_path=None
+        )
+        result = path.to_dict()
+        assert "label" not in result
+        assert "timestampPath" not in result
+
+
+class TestStateTransitionsPanel:
+    def test_creation_with_defaults(self) -> None:
+        panel = StateTransitionsPanel()
+        result = panel.to_dict()
+        assert result["type"] == "StateTransitions"
+        assert result["id"].startswith("StateTransitions!")
+        assert result["config"]["paths"] == []
+        assert result["config"]["isSynced"] is True
+
+    def test_creation_with_id(self) -> None:
+        panel = StateTransitionsPanel(id="custom-id")
+        result = panel.to_dict()
+        assert result["type"] == "StateTransitions"
+        assert result["id"] == "custom-id"
+
+    def test_creation_with_paths(self) -> None:
+        path1 = StateTransitionsPath(value="/topic/state1", label="State 1")
+        path2 = StateTransitionsPath(value="/topic/state2", label="State 2")
+        panel = StateTransitionsPanel(path1, path2, id="state-1")
+        result = panel.to_dict()
+        assert len(result["config"]["paths"]) == 2
+        assert result["config"]["paths"][0]["value"] == "/topic/state1"
+        assert result["config"]["paths"][0]["label"] == "State 1"
+        assert result["config"]["paths"][1]["value"] == "/topic/state2"
+        assert result["config"]["paths"][1]["label"] == "State 2"
+
+    def test_creation_with_config(self) -> None:
+        path = StateTransitionsPath(value="/topic/state")
+        panel = StateTransitionsPanel(
+            path,
+            id="state-1",
+            is_synced=False,
+            x_axis_max_value=100.0,
+            x_axis_min_value=0.0,
+            x_axis_range=50.0,
+            x_axis_label="Time (s)",
+            time_window_mode="sliding",
+            playback_bar_position="right",
+            show_points=True,
+            foxglove_panel_title="State Panel",
+        )
+        result = panel.to_dict()
+        assert result["config"]["isSynced"] is False
+        assert result["config"]["xAxisMaxValue"] == 100.0
+        assert result["config"]["xAxisMinValue"] == 0.0
+        assert result["config"]["xAxisRange"] == 50.0
+        assert result["config"]["xAxisLabel"] == "Time (s)"
+        assert result["config"]["timeWindowMode"] == "sliding"
+        assert result["config"]["playbackBarPosition"] == "right"
+        assert result["config"]["showPoints"] is True
+        assert result["config"]["foxglovePanelTitle"] == "State Panel"
+
+    def test_creation_with_path_with_custom_states(self) -> None:
+        discrete_states = StateTransitionsDiscreteCustomStates(
+            states=[
+                StateTransitionsDiscreteCustomState(value="idle", label="Idle"),
+                StateTransitionsDiscreteCustomState(value="running", label="Running"),
+            ]
+        )
+        path = StateTransitionsPath(
+            value="/topic/state",
+            label="Device State",
+            custom_states=discrete_states,
+        )
+        panel = StateTransitionsPanel(path, id="state-1")
+        result = panel.to_dict()
+        assert len(result["config"]["paths"]) == 1
+        assert result["config"]["paths"][0]["customStates"]["type"] == "discrete"
+        assert len(result["config"]["paths"][0]["customStates"]["states"]) == 2
+
+    def test_creation_with_range_custom_states(self) -> None:
+        range_states = StateTransitionsRangeCustomStates(
+            states=[
+                StateTransitionsRangeCustomState(value=0.0, operator="<", label="Low"),
+            ],
+            otherwise=BaseCustomState(label="Normal"),
+        )
+        path = StateTransitionsPath(value="/topic/value", custom_states=range_states)
+        panel = StateTransitionsPanel(path, id="state-1")
+        result = panel.to_dict()
+        assert result["config"]["paths"][0]["customStates"]["type"] == "range"
+        assert len(result["config"]["paths"][0]["customStates"]["states"]) == 1
+        assert "otherwise" in result["config"]["paths"][0]["customStates"]
+
+    def test_all_time_window_modes(self) -> None:
+        modes: list[Literal["automatic", "sliding", "fixed"]] = [
+            "automatic",
+            "sliding",
+            "fixed",
+        ]
+        for mode in modes:
+            panel = StateTransitionsPanel(id=f"state-{mode}", time_window_mode=mode)
+            result = panel.to_dict()
+            assert result["config"]["timeWindowMode"] == mode
+
+    def test_all_playback_bar_positions(self) -> None:
+        positions: list[Literal["center", "right"]] = ["center", "right"]
+        for position in positions:
+            panel = StateTransitionsPanel(
+                id=f"state-{position}", playback_bar_position=position
+            )
+            result = panel.to_dict()
+            assert result["config"]["playbackBarPosition"] == position
+
+    def test_to_dict_filters_none_values(self) -> None:
+        path = StateTransitionsPath(value="/topic/state")
+        panel = StateTransitionsPanel(
+            path,
+            id="state-1",
+            x_axis_max_value=None,
+            x_axis_min_value=0.0,
+            x_axis_label=None,
+        )
+        result = panel.to_dict()
+        assert "xAxisMaxValue" not in result["config"]
+        assert result["config"]["xAxisMinValue"] == 0.0
+        assert "xAxisLabel" not in result["config"]
+
+    def test_to_json(self) -> None:
+        path = StateTransitionsPath(value="/topic/state", label="State")
+        panel = StateTransitionsPanel(path, id="state-json", show_points=True)
+        json_str = panel.to_json()
+        parsed = json.loads(json_str)
+        assert parsed["id"] == "state-json"
+        assert parsed["type"] == "StateTransitions"
+        assert parsed["config"]["paths"][0]["value"] == "/topic/state"
+        assert parsed["config"]["paths"][0]["label"] == "State"
+        assert parsed["config"]["showPoints"] is True
+
+
 class TestPanelSerialization:
     def test_all_panels_serialize_to_json(self) -> None:
         panels = [
@@ -1250,6 +1609,7 @@ class TestPanelSerialization:
                 image_mode=ImageModeConfig(image_topic="/camera/image"),
             ),
             ThreeDeePanel(id="3d"),
+            StateTransitionsPanel(id="state"),
         ]
         for panel in panels:
             json_str = panel.to_json()
