@@ -779,6 +779,24 @@ class ParametersPanel(Panel):
         pass
 
 
+@panel_type("Publish")
+class PublishPanel(Panel):
+    def __init__(
+        self,
+        *,
+        id: str | None = None,
+        topic_name: str | None = None,
+        datatype: str | None = None,
+        button_text: str | None = None,
+        button_tooltip: str | None = None,
+        button_color: str | None = None,
+        advanced_view: bool = True,
+        value: str | None = "{}",
+        foxglove_panel_title: str | None = None,
+    ) -> None:
+        pass
+
+
 __all__ = [
     "MarkdownPanel",
     "RawMessagesPanel",
@@ -816,4 +834,5 @@ __all__ = [
     "MapCoordinates",
     "MapTopicConfig",
     "ParametersPanel",
+    "PublishPanel",
 ]

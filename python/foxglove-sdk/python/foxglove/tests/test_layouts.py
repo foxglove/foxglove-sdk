@@ -25,6 +25,7 @@ from foxglove.layouts.panels import (
     ParametersPanel,
     PlotPanel,
     PlotPath,
+    PublishPanel,
     RawMessagesPanel,
     ROSDiagnosticDetailPanel,
     ROSDiagnosticSummaryPanel,
@@ -2047,6 +2048,49 @@ class TestParametersPanel:
         assert parsed["config"]["title"] == "Parameters"
 
 
+class TestPublishPanel:
+    def test_creation_with_defaults(self) -> None:
+        panel = PublishPanel()
+        json_str = panel.to_json()
+        parsed = json.loads(json_str)
+        assert parsed["type"] == "Publish"
+        assert parsed["id"].startswith("Publish!")
+        assert parsed["config"]["advancedView"] is True
+        assert parsed["config"]["value"] == "{}"
+
+    def test_creation_with_id(self) -> None:
+        panel = PublishPanel(id="custom-id")
+        json_str = panel.to_json()
+        parsed = json.loads(json_str)
+        assert parsed["type"] == "Publish"
+        assert parsed["id"] == "custom-id"
+        assert parsed["config"]["advancedView"] is True
+
+    def test_creation_with_all_params(self) -> None:
+        panel = PublishPanel(
+            id="publish-1",
+            topic_name="/cmd",
+            datatype="std_msgs/String",
+            button_text="Send",
+            button_tooltip="Click to publish",
+            button_color="#ff0000",
+            advanced_view=False,
+            value='{"data": "test"}',
+            foxglove_panel_title="Publish Panel",
+        )
+        json_str = panel.to_json()
+        parsed = json.loads(json_str)
+        assert parsed["id"] == "publish-1"
+        assert parsed["config"]["topicName"] == "/cmd"
+        assert parsed["config"]["datatype"] == "std_msgs/String"
+        assert parsed["config"]["buttonText"] == "Send"
+        assert parsed["config"]["buttonTooltip"] == "Click to publish"
+        assert parsed["config"]["buttonColor"] == "#ff0000"
+        assert parsed["config"]["advancedView"] is False
+        assert parsed["config"]["value"] == '{"data": "test"}'
+        assert parsed["config"]["foxglovePanelTitle"] == "Publish Panel"
+
+
 class TestPanelSerialization:
     def test_all_panels_serialize_to_json(self) -> None:
         panels = [
@@ -2070,6 +2114,7 @@ class TestPanelSerialization:
                 center=MapCoordinates(lat=37.7749, lon=-122.4194),
             ),
             ParametersPanel(id="params"),
+            PublishPanel(id="publish", topic_name="/topic"),
         ]
         for panel in panels:
             json_str = panel.to_json()
