@@ -22,6 +22,7 @@ from foxglove.layouts.panels import (
     MapPanel,
     MapTopicConfig,
     MarkdownPanel,
+    ParametersPanel,
     PlotPanel,
     PlotPath,
     RawMessagesPanel,
@@ -2028,6 +2029,24 @@ class TestMapPanel:
         assert result["config"]["topicColors"]["/location"] == "#0000ff"
 
 
+class TestParametersPanel:
+    def test_creation_with_defaults(self) -> None:
+        panel = ParametersPanel()
+        json_str = panel.to_json()
+        parsed = json.loads(json_str)
+        assert parsed["type"] == "Parameters"
+        assert parsed["id"].startswith("Parameters!")
+        assert parsed["config"]["title"] == "Parameters"
+
+    def test_creation_with_id(self) -> None:
+        panel = ParametersPanel(id="custom-id")
+        json_str = panel.to_json()
+        parsed = json.loads(json_str)
+        assert parsed["type"] == "Parameters"
+        assert parsed["id"] == "custom-id"
+        assert parsed["config"]["title"] == "Parameters"
+
+
 class TestPanelSerialization:
     def test_all_panels_serialize_to_json(self) -> None:
         panels = [
@@ -2050,6 +2069,7 @@ class TestPanelSerialization:
                 id="map",
                 center=MapCoordinates(lat=37.7749, lon=-122.4194),
             ),
+            ParametersPanel(id="params"),
         ]
         for panel in panels:
             json_str = panel.to_json()

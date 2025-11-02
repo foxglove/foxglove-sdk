@@ -768,6 +768,17 @@ class MapPanel(Panel):
         return config
 
 
+@panel_type("Parameters")
+class ParametersPanel(Panel):
+    def __init__(
+        self,
+        *,
+        id: str | None = None,
+        title: Literal["Parameters"] = "Parameters",
+    ) -> None:
+        pass
+
+
 __all__ = [
     "MarkdownPanel",
     "RawMessagesPanel",
@@ -804,4 +815,5 @@ __all__ = [
     "MapPanel",
     "MapCoordinates",
     "MapTopicConfig",
+    "ParametersPanel",
 ]
