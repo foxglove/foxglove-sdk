@@ -30,6 +30,7 @@ from foxglove.layouts.panels import (
     ROSDiagnosticDetailPanel,
     ROSDiagnosticSummaryPanel,
     SceneConfig,
+    ServiceCallPanel,
     StateTransitionsDiscreteCustomState,
     StateTransitionsDiscreteCustomStates,
     StateTransitionsPanel,
@@ -2091,6 +2092,53 @@ class TestPublishPanel:
         assert parsed["config"]["foxglovePanelTitle"] == "Publish Panel"
 
 
+class TestServiceCallPanel:
+    def test_creation_with_defaults(self) -> None:
+        panel = ServiceCallPanel()
+        json_str = panel.to_json()
+        parsed = json.loads(json_str)
+        assert parsed["type"] == "CallService"
+        assert parsed["id"].startswith("CallService!")
+        assert parsed["config"]["requestPayload"] == "{}"
+        assert parsed["config"]["layout"] == "vertical"
+        assert parsed["config"]["editingMode"] is True
+        assert parsed["config"]["timeoutSeconds"] == 10
+
+    def test_creation_with_id(self) -> None:
+        panel = ServiceCallPanel(id="custom-id")
+        json_str = panel.to_json()
+        parsed = json.loads(json_str)
+        assert parsed["type"] == "CallService"
+        assert parsed["id"] == "custom-id"
+        assert parsed["config"]["layout"] == "vertical"
+
+    def test_creation_with_all_params(self) -> None:
+        panel = ServiceCallPanel(
+            id="service-1",
+            service_name="/service/example",
+            request_payload='{"key": "value"}',
+            layout="horizontal",
+            button_text="Call Service",
+            button_tooltip="Click to call service",
+            button_color="#00ff00",
+            editing_mode=False,
+            timeout_seconds=30,
+            foxglove_panel_title="Service Call Panel",
+        )
+        json_str = panel.to_json()
+        parsed = json.loads(json_str)
+        assert parsed["id"] == "service-1"
+        assert parsed["config"]["serviceName"] == "/service/example"
+        assert parsed["config"]["requestPayload"] == '{"key": "value"}'
+        assert parsed["config"]["layout"] == "horizontal"
+        assert parsed["config"]["buttonText"] == "Call Service"
+        assert parsed["config"]["buttonTooltip"] == "Click to call service"
+        assert parsed["config"]["buttonColor"] == "#00ff00"
+        assert parsed["config"]["editingMode"] is False
+        assert parsed["config"]["timeoutSeconds"] == 30
+        assert parsed["config"]["foxglovePanelTitle"] == "Service Call Panel"
+
+
 class TestPanelSerialization:
     def test_all_panels_serialize_to_json(self) -> None:
         panels = [
@@ -2115,6 +2163,7 @@ class TestPanelSerialization:
             ),
             ParametersPanel(id="params"),
             PublishPanel(id="publish", topic_name="/topic"),
+            ServiceCallPanel(id="service", service_name="/service"),
         ]
         for panel in panels:
             json_str = panel.to_json()

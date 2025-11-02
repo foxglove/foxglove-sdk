@@ -797,6 +797,25 @@ class PublishPanel(Panel):
         pass
 
 
+@panel_type("CallService")
+class ServiceCallPanel(Panel):
+    def __init__(
+        self,
+        *,
+        id: str | None = None,
+        service_name: str | None = None,
+        request_payload: str | None = "{}",
+        layout: Literal["vertical", "horizontal"] = "vertical",
+        button_text: str | None = None,
+        button_tooltip: str | None = None,
+        button_color: str | None = None,
+        editing_mode: bool = True,
+        timeout_seconds: int = 10,
+        foxglove_panel_title: str | None = None,
+    ) -> None:
+        pass
+
+
 __all__ = [
     "MarkdownPanel",
     "RawMessagesPanel",
@@ -835,4 +854,5 @@ __all__ = [
     "MapTopicConfig",
     "ParametersPanel",
     "PublishPanel",
+    "ServiceCallPanel",
 ]
