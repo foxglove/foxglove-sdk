@@ -7,6 +7,7 @@ from foxglove.layouts.panels import (
     AudioPanel,
     BaseCustomState,
     BasePlotPath,
+    ButtonConfig,
     CameraState,
     GaugePanel,
     GridLayerConfig,
@@ -30,6 +31,7 @@ from foxglove.layouts.panels import (
     StateTransitionsPath,
     StateTransitionsRangeCustomState,
     StateTransitionsRangeCustomStates,
+    TeleopPanel,
     ThreeDeePanel,
     TiledMapLayerConfig,
     TopicsConfig,
@@ -1593,6 +1595,176 @@ class TestStateTransitionsPanel:
         assert parsed["config"]["showPoints"] is True
 
 
+class TestButtonConfig:
+    def test_creation_with_all_params(self) -> None:
+        config = ButtonConfig(field="linear-x", value=1.5)
+        result = config.to_dict()
+        assert result["field"] == "linear-x"
+        assert result["value"] == 1.5
+
+    def test_all_field_values(self) -> None:
+        fields: list[
+            Literal[
+                "linear-x",
+                "linear-y",
+                "linear-z",
+                "angular-x",
+                "angular-y",
+                "angular-z",
+            ]
+        ] = [
+            "linear-x",
+            "linear-y",
+            "linear-z",
+            "angular-x",
+            "angular-y",
+            "angular-z",
+        ]
+        for field in fields:
+            config = ButtonConfig(field=field, value=1.0)
+            result = config.to_dict()
+            assert result["field"] == field
+            assert result["value"] == 1.0
+
+
+class TestTeleopPanel:
+    def test_creation_with_defaults(self) -> None:
+        panel = TeleopPanel()
+        result = panel.to_dict()
+        assert result["type"] == "Teleop"
+        assert result["id"].startswith("Teleop!")
+        assert result["config"]["publishRate"] == 1
+        assert result["config"]["upButton"]["field"] == "linear-x"
+        assert result["config"]["upButton"]["value"] == 1
+        assert result["config"]["downButton"]["field"] == "linear-x"
+        assert result["config"]["downButton"]["value"] == -1
+        assert result["config"]["leftButton"]["field"] == "angular-z"
+        assert result["config"]["leftButton"]["value"] == 1
+        assert result["config"]["rightButton"]["field"] == "angular-z"
+        assert result["config"]["rightButton"]["value"] == -1
+
+    def test_creation_with_id(self) -> None:
+        panel = TeleopPanel(id="custom-id")
+        result = panel.to_dict()
+        assert result["type"] == "Teleop"
+        assert result["id"] == "custom-id"
+
+    def test_creation_with_config(self) -> None:
+        up_button = ButtonConfig(field="linear-y", value=2.0)
+        down_button = ButtonConfig(field="linear-y", value=-2.0)
+        left_button = ButtonConfig(field="angular-x", value=1.5)
+        right_button = ButtonConfig(field="angular-x", value=-1.5)
+        panel = TeleopPanel(
+            id="teleop-1",
+            topic="/cmd_vel",
+            publish_rate=5.0,
+            up_button=up_button,
+            down_button=down_button,
+            left_button=left_button,
+            right_button=right_button,
+            foxglove_panel_title="Robot Control",
+        )
+        result = panel.to_dict()
+        assert result["id"] == "teleop-1"
+        assert result["config"]["topic"] == "/cmd_vel"
+        assert result["config"]["publishRate"] == 5.0
+        assert result["config"]["foxglovePanelTitle"] == "Robot Control"
+        assert result["config"]["upButton"]["field"] == "linear-y"
+        assert result["config"]["upButton"]["value"] == 2.0
+        assert result["config"]["downButton"]["field"] == "linear-y"
+        assert result["config"]["downButton"]["value"] == -2.0
+        assert result["config"]["leftButton"]["field"] == "angular-x"
+        assert result["config"]["leftButton"]["value"] == 1.5
+        assert result["config"]["rightButton"]["field"] == "angular-x"
+        assert result["config"]["rightButton"]["value"] == -1.5
+
+    def test_to_dict_converts_to_camel_case(self) -> None:
+        panel = TeleopPanel(
+            id="test",
+            topic="/test",
+            publish_rate=10.0,
+            foxglove_panel_title="Test Panel",
+        )
+        result = panel.to_dict()
+        assert result["config"]["topic"] == "/test"
+        assert result["config"]["publishRate"] == 10.0
+        assert result["config"]["foxglovePanelTitle"] == "Test Panel"
+        assert result["config"]["upButton"]["field"] == "linear-x"
+        assert result["config"]["downButton"]["field"] == "linear-x"
+
+    def test_to_dict_filters_none_values(self) -> None:
+        panel = TeleopPanel(
+            id="test", topic="/test", publish_rate=1.0, foxglove_panel_title=None
+        )
+        result = panel.to_dict()
+        assert result["config"]["topic"] == "/test"
+        assert result["config"]["publishRate"] == 1.0
+        assert "foxglovePanelTitle" not in result["config"]
+
+    def test_to_dict_with_none_topic(self) -> None:
+        panel = TeleopPanel(id="test", topic=None, publish_rate=1.0)
+        result = panel.to_dict()
+        assert "topic" not in result["config"]
+        assert result["config"]["publishRate"] == 1.0
+
+    def test_to_json(self) -> None:
+        panel = TeleopPanel(id="teleop-json", topic="/cmd_vel", publish_rate=2.0)
+        json_str = panel.to_json()
+        parsed = json.loads(json_str)
+        assert parsed["id"] == "teleop-json"
+        assert parsed["type"] == "Teleop"
+        assert parsed["config"]["topic"] == "/cmd_vel"
+        assert parsed["config"]["publishRate"] == 2.0
+        assert parsed["config"]["upButton"]["field"] == "linear-x"
+        assert parsed["config"]["upButton"]["value"] == 1
+
+    def test_all_button_field_values(self) -> None:
+        fields: list[
+            Literal[
+                "linear-x",
+                "linear-y",
+                "linear-z",
+                "angular-x",
+                "angular-y",
+                "angular-z",
+            ]
+        ] = [
+            "linear-x",
+            "linear-y",
+            "linear-z",
+            "angular-x",
+            "angular-y",
+            "angular-z",
+        ]
+        for field in fields:
+            button = ButtonConfig(field=field, value=1.0)
+            panel = TeleopPanel(id=f"teleop-{field}", up_button=button)
+            result = panel.to_dict()
+            assert result["config"]["upButton"]["field"] == field
+            assert result["config"]["upButton"]["value"] == 1.0
+
+    def test_custom_button_configs(self) -> None:
+        up_button = ButtonConfig(field="linear-z", value=0.5)
+        down_button = ButtonConfig(field="linear-z", value=-0.5)
+        left_button = ButtonConfig(field="angular-y", value=2.0)
+        right_button = ButtonConfig(field="angular-y", value=-2.0)
+        panel = TeleopPanel(
+            up_button=up_button,
+            down_button=down_button,
+            left_button=left_button,
+            right_button=right_button,
+        )
+        result = panel.to_dict()
+        assert result["config"]["upButton"]["field"] == "linear-z"
+        assert result["config"]["upButton"]["value"] == 0.5
+        assert result["config"]["downButton"]["field"] == "linear-z"
+        assert result["config"]["downButton"]["value"] == -0.5
+        assert result["config"]["leftButton"]["field"] == "angular-y"
+        assert result["config"]["leftButton"]["value"] == 2.0
+        assert result["config"]["rightButton"]["field"] == "angular-y"
+        assert result["config"]["rightButton"]["value"] == -2.0
+
+
 class TestPanelSerialization:
     def test_all_panels_serialize_to_json(self) -> None:
         panels = [
@@ -1610,6 +1782,7 @@ class TestPanelSerialization:
             ),
             ThreeDeePanel(id="3d"),
             StateTransitionsPanel(id="state"),
+            TeleopPanel(id="teleop", topic="/cmd_vel"),
         ]
         for panel in panels:
             json_str = panel.to_json()

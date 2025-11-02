@@ -666,6 +666,55 @@ class ThreeDeePanel(Panel):
         return config
 
 
+@dataclass
+class ButtonConfig:
+    field: Literal[
+        "linear-x", "linear-y", "linear-z", "angular-x", "angular-y", "angular-z"
+    ]
+    value: float
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@panel_type("Teleop")
+class TeleopPanel(Panel):
+    def __init__(
+        self,
+        *,
+        id: str | None = None,
+        topic: str | None = None,
+        publish_rate: float = 1,
+        up_button: ButtonConfig = ButtonConfig(
+            field="linear-x",
+            value=1,
+        ),
+        down_button: ButtonConfig = ButtonConfig(
+            field="linear-x",
+            value=-1,
+        ),
+        left_button: ButtonConfig = ButtonConfig(
+            field="angular-z",
+            value=1,
+        ),
+        right_button: ButtonConfig = ButtonConfig(
+            field="angular-z",
+            value=-1,
+        ),
+        foxglove_panel_title: str | None = None,
+    ) -> None:
+        pass
+
+    def config_to_dict(self) -> dict[str, Any]:
+        config = super().config_to_dict().copy()
+        config["up_button"] = self.config["up_button"].to_dict()
+        config["down_button"] = self.config["down_button"].to_dict()
+        config["left_button"] = self.config["left_button"].to_dict()
+        config["right_button"] = self.config["right_button"].to_dict()
+
+        return config
+
+
 __all__ = [
     "MarkdownPanel",
     "RawMessagesPanel",
@@ -697,4 +746,6 @@ __all__ = [
     "StateTransitionsRangeCustomState",
     "StateTransitionsDiscreteCustomState",
     "BaseCustomState",
+    "TeleopPanel",
+    "ButtonConfig",
 ]
