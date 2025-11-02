@@ -18,6 +18,9 @@ from foxglove.layouts.panels import (
     IndicatorPanelRule,
     LayersConfig,
     LinkSettings,
+    MapCoordinates,
+    MapPanel,
+    MapTopicConfig,
     MarkdownPanel,
     PlotPanel,
     PlotPath,
@@ -1765,6 +1768,266 @@ class TestTeleopPanel:
         assert result["config"]["rightButton"]["value"] == -2.0
 
 
+class TestMapCoordinates:
+    def test_creation_with_all_params(self) -> None:
+        coords = MapCoordinates(lat=37.7749, lon=-122.4194)
+        result = coords.to_dict()
+        assert result["lat"] == 37.7749
+        assert result["lon"] == -122.4194
+
+
+class TestMapTopicConfig:
+    def test_creation_with_defaults(self) -> None:
+        config = MapTopicConfig()
+        result = config.to_dict()
+        assert result["historyMode"] == "all"
+        assert result["pointDisplayMode"] == "dot"
+        assert result["pointSize"] == 6
+        assert "color" not in result
+
+    def test_creation_with_all_params(self) -> None:
+        config = MapTopicConfig(
+            history_mode="previous",
+            point_display_mode="pin",
+            point_size=10.0,
+            color="#ff0000",
+        )
+        result = config.to_dict()
+        assert result["historyMode"] == "previous"
+        assert result["pointDisplayMode"] == "pin"
+        assert result["pointSize"] == 10.0
+        assert result["color"] == "#ff0000"
+
+    def test_all_history_modes(self) -> None:
+        modes: list[Literal["all", "previous", "none"]] = ["all", "previous", "none"]
+        for mode in modes:
+            config = MapTopicConfig(history_mode=mode)
+            result = config.to_dict()
+            assert result["historyMode"] == mode
+
+    def test_all_point_display_modes(self) -> None:
+        modes: list[Literal["dot", "pin"]] = ["dot", "pin"]
+        for mode in modes:
+            config = MapTopicConfig(point_display_mode=mode)
+            result = config.to_dict()
+            assert result["pointDisplayMode"] == mode
+
+    def test_to_dict_filters_none_color(self) -> None:
+        config = MapTopicConfig(color=None, point_size=8.0)
+        result = config.to_dict()
+        assert "color" not in result
+        assert result["pointSize"] == 8.0
+
+
+class TestMapPanel:
+    def test_creation_with_defaults(self) -> None:
+        panel = MapPanel()
+        result = panel.to_dict()
+        assert result["type"] == "Map"
+        assert result["id"].startswith("Map!")
+        assert result["config"]["layer"] == "map"
+        assert result["config"]["zoomLevel"] == 10
+        assert result["config"]["maxNativeZoom"] == 18
+        assert result["config"]["disabledTopics"] == []
+        assert "center" not in result["config"] or result["config"]["center"] is None
+
+    def test_creation_with_id(self) -> None:
+        panel = MapPanel(id="custom-id")
+        result = panel.to_dict()
+        assert result["type"] == "Map"
+        assert result["id"] == "custom-id"
+
+    def test_creation_with_center(self) -> None:
+        center = MapCoordinates(lat=40.7128, lon=-74.0060)
+        panel = MapPanel(id="map-1", center=center)
+        result = panel.to_dict()
+        assert result["id"] == "map-1"
+        assert result["config"]["center"]["lat"] == 40.7128
+        assert result["config"]["center"]["lon"] == -74.0060
+
+    def test_creation_with_all_params(self) -> None:
+        center = MapCoordinates(lat=37.7749, lon=-122.4194)
+        topic_config = {
+            "/gps": MapTopicConfig(
+                history_mode="all",
+                point_display_mode="pin",
+                point_size=8.0,
+                color="#00ff00",
+            ),
+            "/navsat": MapTopicConfig(
+                history_mode="previous",
+                point_display_mode="dot",
+                point_size=6.0,
+            ),
+        }
+        panel = MapPanel(
+            id="map-full",
+            center=center,
+            custom_tile_url="https://example.com/{z}/{x}/{y}.png",
+            disabled_topics=["/old_topic"],
+            follow_topic="/gps",
+            follow_frame="base_link",
+            layer="satellite",
+            zoom_level=15.0,
+            max_native_zoom=20,
+            topic_config=topic_config,
+            topic_colors={"/gps": "#ff0000", "/navsat": "#0000ff"},
+            foxglove_panel_title="Map View",
+        )
+        result = panel.to_dict()
+        assert result["id"] == "map-full"
+        assert result["config"]["center"]["lat"] == 37.7749
+        assert result["config"]["center"]["lon"] == -122.4194
+        assert (
+            result["config"]["customTileUrl"] == "https://example.com/{z}/{x}/{y}.png"
+        )
+        assert result["config"]["disabledTopics"] == ["/old_topic"]
+        assert result["config"]["followTopic"] == "/gps"
+        assert result["config"]["followFrame"] == "base_link"
+        assert result["config"]["layer"] == "satellite"
+        assert result["config"]["zoomLevel"] == 15.0
+        assert result["config"]["maxNativeZoom"] == 20
+        assert result["config"]["foxglovePanelTitle"] == "Map View"
+        assert "/gps" in result["config"]["topicConfig"]
+        assert result["config"]["topicConfig"]["/gps"]["historyMode"] == "all"
+        assert result["config"]["topicConfig"]["/gps"]["pointDisplayMode"] == "pin"
+        assert result["config"]["topicConfig"]["/gps"]["pointSize"] == 8.0
+        assert result["config"]["topicConfig"]["/gps"]["color"] == "#00ff00"
+        assert result["config"]["topicConfig"]["/navsat"]["historyMode"] == "previous"
+        assert result["config"]["topicConfig"]["/navsat"]["pointDisplayMode"] == "dot"
+        assert result["config"]["topicColors"]["/gps"] == "#ff0000"
+        assert result["config"]["topicColors"]["/navsat"] == "#0000ff"
+
+    def test_creation_without_center(self) -> None:
+        panel = MapPanel(
+            id="map-no-center",
+            layer="custom",
+            custom_tile_url="https://tiles.example.com/{z}/{x}/{y}",
+        )
+        result = panel.to_dict()
+        assert result["id"] == "map-no-center"
+        assert result["config"]["layer"] == "custom"
+        assert (
+            result["config"]["customTileUrl"] == "https://tiles.example.com/{z}/{x}/{y}"
+        )
+        # center should not be in config when None
+        assert "center" not in result["config"]
+
+    def test_to_dict_converts_to_camel_case(self) -> None:
+        center = MapCoordinates(lat=0.0, lon=0.0)
+        panel = MapPanel(
+            id="test",
+            center=center,
+            custom_tile_url="/tiles",
+            follow_topic="/topic",
+            follow_frame="frame",
+            zoom_level=12.0,
+            max_native_zoom=19,
+            foxglove_panel_title="Test Map",
+        )
+        result = panel.to_dict()
+        assert result["config"]["customTileUrl"] == "/tiles"
+        assert result["config"]["followTopic"] == "/topic"
+        assert result["config"]["followFrame"] == "frame"
+        assert result["config"]["zoomLevel"] == 12.0
+        assert result["config"]["maxNativeZoom"] == 19
+        assert result["config"]["foxglovePanelTitle"] == "Test Map"
+
+    def test_to_dict_filters_none_values(self) -> None:
+        panel = MapPanel(
+            id="test",
+            follow_topic="/gps",
+            custom_tile_url=None,
+            follow_frame=None,
+            foxglove_panel_title=None,
+        )
+        result = panel.to_dict()
+        assert result["config"]["followTopic"] == "/gps"
+        assert "customTileUrl" not in result["config"]
+        assert "followFrame" not in result["config"]
+        assert "foxglovePanelTitle" not in result["config"]
+
+    def test_all_layer_values(self) -> None:
+        layers: list[Literal["map", "satellite", "custom"]] = [
+            "map",
+            "satellite",
+            "custom",
+        ]
+        for layer in layers:
+            panel = MapPanel(id=f"map-{layer}", layer=layer)
+            result = panel.to_dict()
+            assert result["config"]["layer"] == layer
+
+    def test_all_max_native_zoom_values(self) -> None:
+        zoom_levels: list[Literal[18, 19, 20, 21, 22, 23, 24]] = [
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+        ]
+        for zoom in zoom_levels:
+            panel = MapPanel(id=f"map-zoom-{zoom}", max_native_zoom=zoom)
+            result = panel.to_dict()
+            assert result["config"]["maxNativeZoom"] == zoom
+
+    def test_topic_config_conversion(self) -> None:
+        topic_config = {
+            "/topic1": MapTopicConfig(history_mode="none", point_display_mode="pin"),
+            "/topic2": MapTopicConfig(point_size=12.0, color="#ff00ff"),
+        }
+        panel = MapPanel(id="map-topics", topic_config=topic_config)
+        result = panel.to_dict()
+        assert len(result["config"]["topicConfig"]) == 2
+        assert result["config"]["topicConfig"]["/topic1"]["historyMode"] == "none"
+        assert result["config"]["topicConfig"]["/topic1"]["pointDisplayMode"] == "pin"
+        assert result["config"]["topicConfig"]["/topic2"]["pointSize"] == 12.0
+        assert result["config"]["topicConfig"]["/topic2"]["color"] == "#ff00ff"
+
+    def test_empty_topic_config(self) -> None:
+        panel = MapPanel(id="map-empty", topic_config={})
+        result = panel.to_dict()
+        assert result["config"]["topicConfig"] == {}
+
+    def test_to_json(self) -> None:
+        center = MapCoordinates(lat=45.0, lon=-93.0)
+        panel = MapPanel(
+            id="map-json", center=center, zoom_level=14.0, layer="satellite"
+        )
+        json_str = panel.to_json()
+        parsed = json.loads(json_str)
+        assert parsed["id"] == "map-json"
+        assert parsed["type"] == "Map"
+        assert parsed["config"]["center"]["lat"] == 45.0
+        assert parsed["config"]["center"]["lon"] == -93.0
+        assert parsed["config"]["zoomLevel"] == 14.0
+        assert parsed["config"]["layer"] == "satellite"
+
+    def test_disabled_topics(self) -> None:
+        panel = MapPanel(
+            id="map-disabled",
+            disabled_topics=["/topic1", "/topic2", "/topic3"],
+        )
+        result = panel.to_dict()
+        assert result["config"]["disabledTopics"] == ["/topic1", "/topic2", "/topic3"]
+
+    def test_topic_colors(self) -> None:
+        panel = MapPanel(
+            id="map-colors",
+            topic_colors={
+                "/gps": "#ff0000",
+                "/navsat": "#00ff00",
+                "/location": "#0000ff",
+            },
+        )
+        result = panel.to_dict()
+        assert result["config"]["topicColors"]["/gps"] == "#ff0000"
+        assert result["config"]["topicColors"]["/navsat"] == "#00ff00"
+        assert result["config"]["topicColors"]["/location"] == "#0000ff"
+
+
 class TestPanelSerialization:
     def test_all_panels_serialize_to_json(self) -> None:
         panels = [
@@ -1783,6 +2046,10 @@ class TestPanelSerialization:
             ThreeDeePanel(id="3d"),
             StateTransitionsPanel(id="state"),
             TeleopPanel(id="teleop", topic="/cmd_vel"),
+            MapPanel(
+                id="map",
+                center=MapCoordinates(lat=37.7749, lon=-122.4194),
+            ),
         ]
         for panel in panels:
             json_str = panel.to_json()

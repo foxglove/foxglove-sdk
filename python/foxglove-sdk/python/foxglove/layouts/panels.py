@@ -715,6 +715,59 @@ class TeleopPanel(Panel):
         return config
 
 
+@dataclass
+class MapCoordinates:
+    lat: float
+    lon: float
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass
+class MapTopicConfig:
+    history_mode: Literal["all", "previous", "none"] = "all"
+    point_display_mode: Literal["dot", "pin"] = "dot"
+    point_size: float = 6
+    color: str | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        config = asdict(self)
+        return {to_lower_camel_case(k): v for k, v in config.items() if v is not None}
+
+
+@panel_type("Map")
+class MapPanel(Panel):
+    def __init__(
+        self,
+        *,
+        id: str | None = None,
+        center: MapCoordinates | None = None,
+        custom_tile_url: str | None = None,
+        disabled_topics: list[str] = [],
+        follow_topic: str | None = None,
+        follow_frame: str | None = None,
+        layer: Literal["map", "satellite", "custom"] = "map",
+        zoom_level: float = 10,
+        max_native_zoom: Literal[18, 19, 20, 21, 22, 23, 24] = 18,
+        topic_config: dict[str, MapTopicConfig] = {},
+        topic_colors: dict[str, str] = {},
+        foxglove_panel_title: str | None = None,
+    ) -> None:
+        pass
+
+    def config_to_dict(self) -> dict[str, Any]:
+        config = super().config_to_dict().copy()
+        if "center" in config and config["center"] is not None:
+            config["center"] = config["center"].to_dict()
+        if "topic_config" in config:
+            config["topic_config"] = {
+                k: v.to_dict() for k, v in config["topic_config"].items()
+            }
+
+        return config
+
+
 __all__ = [
     "MarkdownPanel",
     "RawMessagesPanel",
@@ -748,4 +801,7 @@ __all__ = [
     "BaseCustomState",
     "TeleopPanel",
     "ButtonConfig",
+    "MapPanel",
+    "MapCoordinates",
+    "MapTopicConfig",
 ]
