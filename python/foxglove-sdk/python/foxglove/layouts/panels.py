@@ -349,6 +349,225 @@ class ImagePanel(Panel):
         return config
 
 
+@dataclass
+class TransformsConfig:
+    visible: bool = True
+    editable: bool = True
+    show_label: bool = True
+    label_size: float | None = None
+    axis_size: float | None = None
+    line_width: float | None = None
+    line_color: str | None = None
+    enable_preloading: bool = False
+    draw_behind: bool = False
+
+    def to_dict(self) -> dict[str, Any]:
+        config = asdict(self)
+        return {to_lower_camel_case(k): v for k, v in config.items() if v is not None}
+
+
+@dataclass
+class SceneConfig:
+    enable_stats: bool = False
+    background_color: str | None = None
+    label_scale_factor: float | None = None
+    ignore_collada_up_axis: bool = False
+    mesh_up_axis: Literal["y_up", "z_up"] = "z_up"
+    transforms: TransformsConfig | None = None
+    sync_camera: bool = False
+
+    def to_dict(self) -> dict[str, Any]:
+        # Keep a backup of the transforms config
+        transforms_bkp = self.transforms
+        # Convert the config to a dict
+        config = asdict(self)
+
+        # If the transforms config is not None, convert it to a dict
+        # using the to_dict method because it converts from snake_case to camelCase
+        # filters out None values
+        if transforms_bkp is not None:
+            config["transforms"] = transforms_bkp.to_dict()
+
+        return {to_lower_camel_case(k): v for k, v in config.items() if v is not None}
+
+
+@dataclass
+class CameraState:
+    distance: float = 20
+    perspective: bool = True
+    phi: float = 60
+    target: tuple[float, float, float] = (0, 0, 0)
+    target_offset: tuple[float, float, float] = (0, 0, 0)
+    target_orientation: tuple[float, float, float, float] = (0, 0, 0, 1)
+    theta_offset: float = 45
+    fovy: float = 45
+    near: float = 0.5
+    far: float = 5000
+    log_depth: bool = False
+
+    def to_dict(self) -> dict[str, Any]:
+        config = asdict(self)
+        return {to_lower_camel_case(k): v for k, v in config.items() if v is not None}
+
+
+@dataclass
+class TransformConfig:
+    visible: bool = False
+    draw_behind: bool | None = None
+    frame_locked: bool | None = None
+    xyz_offset: tuple[float | None, float | None, float | None] | None = None
+    rpy_coefficient: tuple[float | None, float | None, float | None] | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        config = asdict(self)
+        return {to_lower_camel_case(k): v for k, v in config.items() if v is not None}
+
+
+@dataclass
+class TopicsConfig:
+    visible: bool = False
+    draw_behind: bool | None = None
+    frame_locked: bool | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        config = asdict(self)
+        return {to_lower_camel_case(k): v for k, v in config.items() if v is not None}
+
+
+@dataclass
+class LayersConfig:
+    instance_id: str
+    layer_id: str
+    label: str
+    visible: bool = False
+    draw_behind: bool | None = None
+    frame_locked: bool | None = None
+    order: int | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        config = asdict(self)
+        return {to_lower_camel_case(k): v for k, v in config.items() if v is not None}
+
+
+@dataclass
+class GridLayerConfig(LayersConfig):
+    layer_id: Literal["foxglove.Grid"] = "foxglove.Grid"
+    label: str = "Grid"
+    visible: bool = True
+    frame_id: str | None = None
+    size: float = 10
+    divisions: int = 10
+    line_width: float = 1
+    color: str = "#248eff"
+    position: tuple[float, float, float] = (0, 0, 0)
+    rotation: tuple[float, float, float] = (0, 0, 0)
+
+
+@dataclass
+class TiledMapLayerConfig(LayersConfig):
+    layer_id: Literal["foxglove.TiledMap"] = "foxglove.TiledMap"
+    label: str = "Map"
+    visible: bool = True
+    server_config: Literal["map", "satellite", "custom"] = "map"
+    custom_map_tile_server: str | None = None
+    map_size_m: float | None = 500
+    opacity: float | None = 1
+    z_position: float | None = 0
+
+
+@dataclass
+class LinkSettings:
+    visible: bool | None = True
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass
+class UrdfLayerConfig(LayersConfig):
+    layer_id: Literal["foxglove.Urdf"] = "foxglove.Urdf"
+    label: str = "URDF"
+    display_mode: Literal["auto", "visual", "collision"] = "auto"
+    fallback_color: str | None = "#ffffff"
+    show_axis: bool | None = False
+    axis_scale: float | None = 1.0
+    show_outlines: bool | None = True
+    opacity: float | None = 1.0
+    source_type: Literal["url", "filePath", "param", "topic"] = "url"
+    url: str | None = ""
+    file_path: str | None = ""
+    parameter: str | None = ""
+    topic: str | None = ""
+    frame_prefix: str = ""
+    links: dict[str, LinkSettings] | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        # Keep a backup of the links config before call asdict
+        link_settings = self.links
+        config = asdict(self)
+        if link_settings is not None:
+            config["links"] = {
+                k: v.to_dict() for k, v in link_settings.items() if v is not None
+            }
+
+        return {to_lower_camel_case(k): v for k, v in config.items() if v is not None}
+
+
+@panel_type("3D")
+class ThreeDeePanel(Panel):
+    def __init__(
+        self,
+        *,
+        id: str | None = None,
+        follow_tf: str | None = None,
+        follow_mode: Literal[
+            "follow-none" | "follow-pose" | "follow-position"
+        ] = "follow-pose",
+        location_fix_topic: str | None = None,
+        enu_frame_id: str | None = None,
+        scene: SceneConfig | None = None,
+        camera_state: CameraState | None = None,
+        transforms: dict[str, TransformConfig | None] = {},
+        topics: dict[str, TopicsConfig | None] = {},
+        layers: dict[
+            str,
+            LayersConfig
+            | GridLayerConfig
+            | TiledMapLayerConfig
+            | UrdfLayerConfig
+            | None,
+        ] = {},
+        foxglove_panel_title: str | None = None,
+    ) -> None:
+        pass
+
+    def config_to_dict(self) -> dict[str, Any]:
+        config = super().config_to_dict().copy()
+
+        if "scene" in config and config["scene"] is not None:
+            config["scene"] = config["scene"].to_dict()
+
+        if "camera_state" in config and config["camera_state"] is not None:
+            config["camera_state"] = config["camera_state"].to_dict()
+
+        if "transforms" in config:
+            config["transforms"] = {
+                k: v.to_dict() for k, v in config["transforms"].items() if v is not None
+            }
+
+        if "topics" in config:
+            config["topics"] = {
+                k: v.to_dict() for k, v in config["topics"].items() if v is not None
+            }
+
+        if "layers" in config:
+            config["layers"] = {
+                k: v.to_dict() for k, v in config["layers"].items() if v is not None
+            }
+
+        return config
+
+
 __all__ = [
     "MarkdownPanel",
     "RawMessagesPanel",
@@ -362,4 +581,15 @@ __all__ = [
     "ImagePanel",
     "ImageModeConfig",
     "ImageAnnotationSettings",
+    "ThreeDeePanel",
+    "SceneConfig",
+    "TransformsConfig",
+    "CameraState",
+    "TransformConfig",
+    "TopicsConfig",
+    "LayersConfig",
+    "GridLayerConfig",
+    "TiledMapLayerConfig",
+    "UrdfLayerConfig",
+    "LinkSettings",
 ]

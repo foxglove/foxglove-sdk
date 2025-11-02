@@ -6,18 +6,29 @@ from typing import Literal
 from foxglove.layouts.panels import (
     AudioPanel,
     BasePlotPath,
+    CameraState,
     GaugePanel,
+    GridLayerConfig,
     ImageAnnotationSettings,
     ImageModeConfig,
     ImagePanel,
     IndicatorPanel,
     IndicatorPanelRule,
+    LayersConfig,
+    LinkSettings,
     MarkdownPanel,
     PlotPanel,
     PlotPath,
     RawMessagesPanel,
     ROSDiagnosticDetailPanel,
     ROSDiagnosticSummaryPanel,
+    SceneConfig,
+    ThreeDeePanel,
+    TiledMapLayerConfig,
+    TopicsConfig,
+    TransformConfig,
+    TransformsConfig,
+    UrdfLayerConfig,
 )
 
 
@@ -527,6 +538,702 @@ class TestImagePanel:
             assert result["config"]["imageMode"]["rotation"] == rotation
 
 
+class TestTransformsConfig:
+    def test_creation_with_defaults(self) -> None:
+        config = TransformsConfig()
+        result = config.to_dict()
+        assert result["visible"] is True
+        assert result["editable"] is True
+        assert result["showLabel"] is True
+        assert result["enablePreloading"] is False
+        assert result["drawBehind"] is False
+
+    def test_creation_with_all_params(self) -> None:
+        config = TransformsConfig(
+            visible=False,
+            editable=False,
+            show_label=False,
+            label_size=12.0,
+            axis_size=10.0,
+            line_width=2.0,
+            line_color="#ff0000",
+            enable_preloading=True,
+            draw_behind=True,
+        )
+        result = config.to_dict()
+        assert result["visible"] is False
+        assert result["editable"] is False
+        assert result["showLabel"] is False
+        assert result["labelSize"] == 12.0
+        assert result["axisSize"] == 10.0
+        assert result["lineWidth"] == 2.0
+        assert result["lineColor"] == "#ff0000"
+        assert result["enablePreloading"] is True
+        assert result["drawBehind"] is True
+
+    def test_to_dict_filters_none_values(self) -> None:
+        config = TransformsConfig(label_size=None, axis_size=10.0)
+        result = config.to_dict()
+        assert "labelSize" not in result
+        assert result["axisSize"] == 10.0
+
+
+class TestSceneConfig:
+    def test_creation_with_defaults(self) -> None:
+        config = SceneConfig()
+        result = config.to_dict()
+        assert result["enableStats"] is False
+        assert result["ignoreColladaUpAxis"] is False
+        assert result["meshUpAxis"] == "z_up"
+        assert result["syncCamera"] is False
+
+    def test_creation_with_all_params(self) -> None:
+        transforms = TransformsConfig(visible=True, label_size=15.0)
+        config = SceneConfig(
+            enable_stats=True,
+            background_color="#000000",
+            label_scale_factor=1.5,
+            ignore_collada_up_axis=True,
+            mesh_up_axis="y_up",
+            transforms=transforms,
+            sync_camera=True,
+        )
+        result = config.to_dict()
+        assert result["enableStats"] is True
+        assert result["backgroundColor"] == "#000000"
+        assert result["labelScaleFactor"] == 1.5
+        assert result["ignoreColladaUpAxis"] is True
+        assert result["meshUpAxis"] == "y_up"
+        assert result["syncCamera"] is True
+        assert isinstance(result["transforms"], dict)
+        assert result["transforms"]["visible"] is True
+        assert result["transforms"]["labelSize"] == 15.0
+
+    def test_to_dict_filters_none_values(self) -> None:
+        config = SceneConfig(background_color=None, label_scale_factor=2.0)
+        result = config.to_dict()
+        assert "backgroundColor" not in result
+        assert result["labelScaleFactor"] == 2.0
+
+
+class TestCameraState:
+    def test_creation_with_defaults(self) -> None:
+        config = CameraState()
+        result = config.to_dict()
+        assert result["distance"] == 20
+        assert result["perspective"] is True
+        assert result["phi"] == 60
+        assert result["target"] == (0, 0, 0)
+        assert result["targetOffset"] == (0, 0, 0)
+        assert result["targetOrientation"] == (0, 0, 0, 1)
+        assert result["thetaOffset"] == 45
+        assert result["fovy"] == 45
+        assert result["near"] == 0.5
+        assert result["far"] == 5000
+        assert result["logDepth"] is False
+
+    def test_creation_with_custom_values(self) -> None:
+        config = CameraState(
+            distance=50.0,
+            perspective=False,
+            phi=90.0,
+            target=(1.0, 2.0, 3.0),
+            target_offset=(0.5, 0.5, 0.5),
+            target_orientation=(1.0, 0.0, 0.0, 0.0),
+            theta_offset=90.0,
+            fovy=60.0,
+            near=1.0,
+            far=10000.0,
+            log_depth=True,
+        )
+        result = config.to_dict()
+        assert result["distance"] == 50.0
+        assert result["perspective"] is False
+        assert result["phi"] == 90.0
+        assert result["target"] == (1.0, 2.0, 3.0)
+        assert result["targetOffset"] == (0.5, 0.5, 0.5)
+        assert result["targetOrientation"] == (1.0, 0.0, 0.0, 0.0)
+        assert result["thetaOffset"] == 90.0
+        assert result["fovy"] == 60.0
+        assert result["near"] == 1.0
+        assert result["far"] == 10000.0
+        assert result["logDepth"] is True
+
+
+class TestTransformConfig:
+    def test_creation_with_defaults(self) -> None:
+        config = TransformConfig()
+        result = config.to_dict()
+        assert result["visible"] is False
+
+    def test_creation_with_all_params(self) -> None:
+        config = TransformConfig(
+            visible=True,
+            draw_behind=True,
+            frame_locked=False,
+            xyz_offset=(1.0, 2.0, 3.0),
+            rpy_coefficient=(0.1, 0.2, 0.3),
+        )
+        result = config.to_dict()
+        assert result["visible"] is True
+        assert result["drawBehind"] is True
+        assert result["frameLocked"] is False
+        assert result["xyzOffset"] == (1.0, 2.0, 3.0)
+        assert result["rpyCoefficient"] == (0.1, 0.2, 0.3)
+
+    def test_to_dict_filters_none_values(self) -> None:
+        config = TransformConfig(visible=True, draw_behind=None)
+        result = config.to_dict()
+        assert result["visible"] is True
+        assert "drawBehind" not in result
+
+
+class TestTopicsConfig:
+    def test_creation_with_defaults(self) -> None:
+        config = TopicsConfig()
+        result = config.to_dict()
+        assert result["visible"] is False
+
+    def test_creation_with_all_params(self) -> None:
+        config = TopicsConfig(
+            visible=True,
+            draw_behind=True,
+            frame_locked=False,
+        )
+        result = config.to_dict()
+        assert result["visible"] is True
+        assert result["drawBehind"] is True
+        assert result["frameLocked"] is False
+
+    def test_to_dict_filters_none_values(self) -> None:
+        config = TopicsConfig(visible=True, draw_behind=None)
+        result = config.to_dict()
+        assert result["visible"] is True
+        assert "drawBehind" not in result
+
+
+class TestLayersConfig:
+    def test_creation_with_required_params(self) -> None:
+        config = LayersConfig(
+            instance_id="instance1",
+            layer_id="layer1",
+            label="Test Layer",
+        )
+        result = config.to_dict()
+        assert result["instanceId"] == "instance1"
+        assert result["layerId"] == "layer1"
+        assert result["label"] == "Test Layer"
+        assert result["visible"] is False
+
+    def test_creation_with_all_params(self) -> None:
+        config = LayersConfig(
+            instance_id="instance1",
+            layer_id="layer1",
+            label="Test Layer",
+            visible=True,
+            draw_behind=True,
+            frame_locked=False,
+            order=5,
+        )
+        result = config.to_dict()
+        assert result["instanceId"] == "instance1"
+        assert result["layerId"] == "layer1"
+        assert result["label"] == "Test Layer"
+        assert result["visible"] is True
+        assert result["drawBehind"] is True
+        assert result["frameLocked"] is False
+        assert result["order"] == 5
+
+    def test_to_dict_filters_none_values(self) -> None:
+        config = LayersConfig(
+            instance_id="instance1",
+            layer_id="layer1",
+            label="Test",
+            order=None,
+        )
+        result = config.to_dict()
+        assert "order" not in result
+
+
+class TestGridLayerConfig:
+    def test_creation_with_defaults(self) -> None:
+        config = GridLayerConfig(instance_id="grid1")
+        result = config.to_dict()
+        assert result["instanceId"] == "grid1"
+        assert result["layerId"] == "foxglove.Grid"
+        assert result["label"] == "Grid"
+        assert result["visible"] is True
+        assert result["size"] == 10
+        assert result["divisions"] == 10
+        assert result["lineWidth"] == 1
+        assert result["color"] == "#248eff"
+        assert result["position"] == (0, 0, 0)
+        assert result["rotation"] == (0, 0, 0)
+
+    def test_creation_with_all_params(self) -> None:
+        config = GridLayerConfig(
+            instance_id="grid1",
+            visible=False,
+            draw_behind=True,
+            frame_locked=True,
+            order=1,
+            frame_id="map",
+            size=20.0,
+            divisions=20,
+            line_width=2.0,
+            color="#ff0000",
+            position=(1.0, 2.0, 3.0),
+            rotation=(90.0, 0.0, 0.0),
+        )
+        result = config.to_dict()
+        assert result["instanceId"] == "grid1"
+        assert result["layerId"] == "foxglove.Grid"
+        assert result["visible"] is False
+        assert result["drawBehind"] is True
+        assert result["frameLocked"] is True
+        assert result["order"] == 1
+        assert result["frameId"] == "map"
+        assert result["size"] == 20.0
+        assert result["divisions"] == 20
+        assert result["lineWidth"] == 2.0
+        assert result["color"] == "#ff0000"
+        assert result["position"] == (1.0, 2.0, 3.0)
+        assert result["rotation"] == (90.0, 0.0, 0.0)
+
+    def test_to_dict_filters_none_values(self) -> None:
+        config = GridLayerConfig(instance_id="grid1", frame_id=None)
+        result = config.to_dict()
+        assert "frameId" not in result
+
+
+class TestTiledMapLayerConfig:
+    def test_creation_with_defaults(self) -> None:
+        config = TiledMapLayerConfig(instance_id="map1")
+        result = config.to_dict()
+        assert result["instanceId"] == "map1"
+        assert result["layerId"] == "foxglove.TiledMap"
+        assert result["label"] == "Map"
+        assert result["visible"] is True
+        assert result["serverConfig"] == "map"
+        assert result["mapSizeM"] == 500
+        assert result["opacity"] == 1
+        assert result["zPosition"] == 0
+
+    def test_creation_with_all_params(self) -> None:
+        config = TiledMapLayerConfig(
+            instance_id="map1",
+            visible=False,
+            draw_behind=True,
+            frame_locked=False,
+            order=2,
+            server_config="satellite",
+            custom_map_tile_server="https://example.com/{z}/{x}/{y}",
+            map_size_m=1000.0,
+            opacity=0.8,
+            z_position=-1.0,
+        )
+        result = config.to_dict()
+        assert result["instanceId"] == "map1"
+        assert result["layerId"] == "foxglove.TiledMap"
+        assert result["visible"] is False
+        assert result["drawBehind"] is True
+        assert result["frameLocked"] is False
+        assert result["order"] == 2
+        assert result["serverConfig"] == "satellite"
+        assert result["customMapTileServer"] == "https://example.com/{z}/{x}/{y}"
+        assert result["mapSizeM"] == 1000.0
+        assert result["opacity"] == 0.8
+        assert result["zPosition"] == -1.0
+
+    def test_to_dict_filters_none_values(self) -> None:
+        config = TiledMapLayerConfig(
+            instance_id="map1",
+            custom_map_tile_server=None,
+            map_size_m=None,
+        )
+        result = config.to_dict()
+        assert "customMapTileServer" not in result
+        assert "mapSizeM" not in result
+
+
+class TestLinkSettings:
+    def test_creation_with_defaults(self) -> None:
+        settings = LinkSettings()
+        result = settings.to_dict()
+        assert result["visible"] is True
+
+    def test_creation_with_false(self) -> None:
+        settings = LinkSettings(visible=False)
+        result = settings.to_dict()
+        assert result["visible"] is False
+
+    def test_to_dict_with_none(self) -> None:
+        settings = LinkSettings(visible=None)
+        result = settings.to_dict()
+        assert result["visible"] is None
+
+
+class TestUrdfLayerConfig:
+    def test_creation_with_defaults(self) -> None:
+        config = UrdfLayerConfig(instance_id="urdf1")
+        result = config.to_dict()
+        assert result["instanceId"] == "urdf1"
+        assert result["layerId"] == "foxglove.Urdf"
+        assert result["label"] == "URDF"
+        assert result["visible"] is False
+        assert result["displayMode"] == "auto"
+        assert result["showAxis"] is False
+        assert result["axisScale"] == 1.0
+        assert result["showOutlines"] is True
+        assert result["opacity"] == 1.0
+        assert result["sourceType"] == "url"
+        assert result["framePrefix"] == ""
+
+    def test_creation_with_all_params(self) -> None:
+        links = {
+            "link1": LinkSettings(visible=True),
+            "link2": LinkSettings(visible=False),
+        }
+        config = UrdfLayerConfig(
+            instance_id="urdf1",
+            visible=True,
+            draw_behind=False,
+            frame_locked=True,
+            order=3,
+            display_mode="visual",
+            fallback_color="#00ff00",
+            show_axis=True,
+            axis_scale=2.0,
+            show_outlines=False,
+            opacity=0.9,
+            source_type="topic",
+            url="https://example.com/robot.urdf",
+            file_path="/path/to/robot.urdf",
+            parameter="/robot_description",
+            topic="/urdf",
+            frame_prefix="robot_",
+            links=links,
+        )
+        result = config.to_dict()
+        assert result["instanceId"] == "urdf1"
+        assert result["layerId"] == "foxglove.Urdf"
+        assert result["visible"] is True
+        assert result["drawBehind"] is False
+        assert result["frameLocked"] is True
+        assert result["order"] == 3
+        assert result["displayMode"] == "visual"
+        assert result["fallbackColor"] == "#00ff00"
+        assert result["showAxis"] is True
+        assert result["axisScale"] == 2.0
+        assert result["showOutlines"] is False
+        assert result["opacity"] == 0.9
+        assert result["sourceType"] == "topic"
+        assert result["url"] == "https://example.com/robot.urdf"
+        assert result["filePath"] == "/path/to/robot.urdf"
+        assert result["parameter"] == "/robot_description"
+        assert result["topic"] == "/urdf"
+        assert result["framePrefix"] == "robot_"
+        assert isinstance(result["links"], dict)
+        assert result["links"]["link1"]["visible"] is True
+        assert result["links"]["link2"]["visible"] is False
+
+    def test_to_dict_filters_none_values(self) -> None:
+        config = UrdfLayerConfig(
+            instance_id="urdf1",
+            fallback_color=None,
+            show_axis=None,
+            url=None,
+        )
+        result = config.to_dict()
+        assert "fallbackColor" not in result
+        assert "showAxis" not in result
+        assert "url" not in result
+
+
+class TestThreeDeePanel:
+    def test_creation_with_defaults(self) -> None:
+        panel = ThreeDeePanel()
+        result = panel.to_dict()
+        assert result["type"] == "3D"
+        assert result["id"].startswith("3D!")
+        assert result["config"]["followMode"] == "follow-pose"
+
+    def test_creation_with_id(self) -> None:
+        panel = ThreeDeePanel(id="custom-id")
+        result = panel.to_dict()
+        assert result["type"] == "3D"
+        assert result["id"] == "custom-id"
+
+    def test_creation_with_follow_config(self) -> None:
+        panel = ThreeDeePanel(
+            id="3d-1",
+            follow_tf="base_link",
+            follow_mode="follow-none",
+        )
+        result = panel.to_dict()
+        assert result["id"] == "3d-1"
+        assert result["config"]["followTf"] == "base_link"
+        assert result["config"]["followMode"] == "follow-none"
+
+    def test_creation_with_location_fix_topic(self) -> None:
+        panel = ThreeDeePanel(
+            id="3d-1",
+            location_fix_topic="/gps/fix",
+        )
+        result = panel.to_dict()
+        assert result["id"] == "3d-1"
+        assert result["config"]["locationFixTopic"] == "/gps/fix"
+
+    def test_creation_with_enu_frame_id(self) -> None:
+        panel = ThreeDeePanel(
+            id="3d-1",
+            enu_frame_id="enu",
+        )
+        result = panel.to_dict()
+        assert result["id"] == "3d-1"
+        assert result["config"]["enuFrameId"] == "enu"
+
+    def test_creation_with_location_and_enu_config(self) -> None:
+        panel = ThreeDeePanel(
+            id="3d-1",
+            location_fix_topic="/gps/fix",
+            enu_frame_id="enu",
+        )
+        result = panel.to_dict()
+        assert result["id"] == "3d-1"
+        assert result["config"]["locationFixTopic"] == "/gps/fix"
+        assert result["config"]["enuFrameId"] == "enu"
+
+    def test_creation_with_scene_config(self) -> None:
+        scene = SceneConfig(
+            enable_stats=True,
+            background_color="#ffffff",
+            mesh_up_axis="y_up",
+        )
+        panel = ThreeDeePanel(id="3d-1", scene=scene)
+        result = panel.to_dict()
+        assert result["config"]["scene"]["enableStats"] is True
+        assert result["config"]["scene"]["backgroundColor"] == "#ffffff"
+        assert result["config"]["scene"]["meshUpAxis"] == "y_up"
+
+    def test_creation_with_camera_state(self) -> None:
+        camera_state = CameraState(
+            distance=100.0,
+            perspective=False,
+            target=(10.0, 20.0, 30.0),
+        )
+        panel = ThreeDeePanel(id="3d-1", camera_state=camera_state)
+        result = panel.to_dict()
+        assert result["config"]["cameraState"]["distance"] == 100.0
+        assert result["config"]["cameraState"]["perspective"] is False
+        assert result["config"]["cameraState"]["target"] == (10.0, 20.0, 30.0)
+
+    def test_creation_with_transforms(self) -> None:
+        transforms: dict[str, TransformConfig | None] = {
+            "frame1": TransformConfig(visible=True, draw_behind=True),
+            "frame2": TransformConfig(visible=False),
+        }
+        panel = ThreeDeePanel(id="3d-1", transforms=transforms)
+        result = panel.to_dict()
+        assert "frame1" in result["config"]["transforms"]
+        assert "frame2" in result["config"]["transforms"]
+        assert result["config"]["transforms"]["frame1"]["visible"] is True
+        assert result["config"]["transforms"]["frame1"]["drawBehind"] is True
+        assert result["config"]["transforms"]["frame2"]["visible"] is False
+
+    def test_creation_with_topics(self) -> None:
+        topics: dict[str, TopicsConfig | None] = {
+            "/topic1": TopicsConfig(visible=True),
+            "/topic2": TopicsConfig(visible=False, frame_locked=True),
+        }
+        panel = ThreeDeePanel(id="3d-1", topics=topics)
+        result = panel.to_dict()
+        assert "/topic1" in result["config"]["topics"]
+        assert "/topic2" in result["config"]["topics"]
+        assert result["config"]["topics"]["/topic1"]["visible"] is True
+        assert result["config"]["topics"]["/topic2"]["frameLocked"] is True
+
+    def test_creation_with_layers(self) -> None:
+        layers: dict[
+            str,
+            LayersConfig
+            | GridLayerConfig
+            | TiledMapLayerConfig
+            | UrdfLayerConfig
+            | None,
+        ] = {
+            "grid": GridLayerConfig(
+                instance_id="grid1",
+                visible=True,
+                size=15.0,
+                color="#00ff00",
+            ),
+            "map": TiledMapLayerConfig(
+                instance_id="map1",
+                visible=True,
+                server_config="satellite",
+                opacity=0.8,
+            ),
+            "urdf": UrdfLayerConfig(
+                instance_id="urdf1",
+                visible=True,
+                display_mode="visual",
+                source_type="url",
+                url="https://example.com/robot.urdf",
+            ),
+            "generic": LayersConfig(
+                instance_id="inst1",
+                layer_id="layer1",
+                label="Generic Layer",
+                visible=True,
+                order=1,
+            ),
+        }
+        panel = ThreeDeePanel(id="3d-1", layers=layers)
+        result = panel.to_dict()
+        assert "grid" in result["config"]["layers"]
+        assert "map" in result["config"]["layers"]
+        assert "urdf" in result["config"]["layers"]
+        assert "generic" in result["config"]["layers"]
+        assert result["config"]["layers"]["grid"]["layerId"] == "foxglove.Grid"
+        assert result["config"]["layers"]["grid"]["size"] == 15.0
+        assert result["config"]["layers"]["map"]["layerId"] == "foxglove.TiledMap"
+        assert result["config"]["layers"]["map"]["serverConfig"] == "satellite"
+        assert result["config"]["layers"]["urdf"]["layerId"] == "foxglove.Urdf"
+        assert result["config"]["layers"]["urdf"]["displayMode"] == "visual"
+        assert result["config"]["layers"]["generic"]["label"] == "Generic Layer"
+
+    def test_creation_with_full_config(self) -> None:
+        scene = SceneConfig(
+            enable_stats=True,
+            background_color="#000000",
+            transforms=TransformsConfig(visible=True, label_size=12.0),
+        )
+        camera_state = CameraState(distance=50.0, target=(1.0, 2.0, 3.0))
+        transforms: dict[str, TransformConfig | None] = {
+            "base_link": TransformConfig(visible=True),
+        }
+        topics: dict[str, TopicsConfig | None] = {
+            "/points": TopicsConfig(visible=True),
+        }
+        layers: dict[
+            str,
+            LayersConfig
+            | GridLayerConfig
+            | TiledMapLayerConfig
+            | UrdfLayerConfig
+            | None,
+        ] = {
+            "grid": GridLayerConfig(
+                instance_id="grid1",
+                size=20.0,
+                divisions=20,
+                color="#248eff",
+            ),
+            "map": TiledMapLayerConfig(
+                instance_id="map1",
+                server_config="map",
+                map_size_m=500.0,
+            ),
+            "urdf": UrdfLayerConfig(
+                instance_id="urdf1",
+                display_mode="auto",
+                source_type="topic",
+                topic="/robot_description",
+            ),
+        }
+        panel = ThreeDeePanel(
+            id="3d-full",
+            follow_tf="base_link",
+            follow_mode="follow-position",
+            location_fix_topic="/gps/fix",
+            enu_frame_id="enu",
+            scene=scene,
+            camera_state=camera_state,
+            transforms=transforms,
+            topics=topics,
+            layers=layers,
+            foxglove_panel_title="3D View",
+        )
+        result = panel.to_dict()
+        assert result["id"] == "3d-full"
+        assert result["config"]["followTf"] == "base_link"
+        assert result["config"]["followMode"] == "follow-position"
+        assert result["config"]["locationFixTopic"] == "/gps/fix"
+        assert result["config"]["enuFrameId"] == "enu"
+        assert result["config"]["foxglovePanelTitle"] == "3D View"
+        assert result["config"]["scene"]["enableStats"] is True
+        assert result["config"]["scene"]["transforms"]["labelSize"] == 12.0
+        assert result["config"]["cameraState"]["distance"] == 50.0
+        assert "base_link" in result["config"]["transforms"]
+        assert "/points" in result["config"]["topics"]
+        assert "grid" in result["config"]["layers"]
+        assert "map" in result["config"]["layers"]
+        assert "urdf" in result["config"]["layers"]
+        assert result["config"]["layers"]["grid"]["layerId"] == "foxglove.Grid"
+        assert result["config"]["layers"]["map"]["layerId"] == "foxglove.TiledMap"
+        assert result["config"]["layers"]["urdf"]["layerId"] == "foxglove.Urdf"
+
+    def test_to_dict_filters_none_transforms_topics_layers(self) -> None:
+        transforms: dict[str, TransformConfig | None] = {
+            "frame1": TransformConfig(visible=True),
+            "frame2": None,
+        }
+        topics: dict[str, TopicsConfig | None] = {
+            "/topic1": TopicsConfig(visible=True),
+            "/topic2": None,
+        }
+        layers: dict[
+            str,
+            LayersConfig
+            | GridLayerConfig
+            | TiledMapLayerConfig
+            | UrdfLayerConfig
+            | None,
+        ] = {
+            "layer1": LayersConfig(
+                instance_id="inst1",
+                layer_id="layer1",
+                label="Layer 1",
+            ),
+            "layer2": None,
+        }
+        panel = ThreeDeePanel(
+            id="3d-1",
+            transforms=transforms,
+            topics=topics,
+            layers=layers,
+        )
+        result = panel.to_dict()
+        assert "frame1" in result["config"]["transforms"]
+        assert "frame2" not in result["config"]["transforms"]
+        assert "/topic1" in result["config"]["topics"]
+        assert "/topic2" not in result["config"]["topics"]
+        assert "layer1" in result["config"]["layers"]
+        assert "layer2" not in result["config"]["layers"]
+
+    def test_to_json(self) -> None:
+        scene = SceneConfig(enable_stats=True, background_color="#ffffff")
+        panel = ThreeDeePanel(id="3d-json", scene=scene)
+        json_str = panel.to_json()
+        parsed = json.loads(json_str)
+        assert parsed["id"] == "3d-json"
+        assert parsed["type"] == "3D"
+        assert parsed["config"]["scene"]["enableStats"] is True
+        assert parsed["config"]["scene"]["backgroundColor"] == "#ffffff"
+
+    def test_all_follow_modes(self) -> None:
+        modes: list[Literal["follow-none", "follow-pose", "follow-position"]] = [
+            "follow-none",
+            "follow-pose",
+            "follow-position",
+        ]
+        for mode in modes:
+            panel = ThreeDeePanel(id=f"3d-{mode}", follow_mode=mode)
+            result = panel.to_dict()
+            assert result["config"]["followMode"] == mode
+
+
 class TestPanelSerialization:
     def test_all_panels_serialize_to_json(self) -> None:
         panels = [
@@ -542,6 +1249,7 @@ class TestPanelSerialization:
                 id="image",
                 image_mode=ImageModeConfig(image_topic="/camera/image"),
             ),
+            ThreeDeePanel(id="3d"),
         ]
         for panel in panels:
             json_str = panel.to_json()
