@@ -157,7 +157,7 @@ impl From<ArrowPrimitive> for foxglove::schemas::ArrowPrimitive {
 /// :param height: Image height
 /// :param distortion_model: Name of distortion model
 ///     
-///     Supported parameters: `plumb_bob` (k1, k2, p1, p2, k3), `rational_polynomial` (k1, k2, p1, p2, k3, k4, k5, k6), and `kannala_brandt` (k1, k2, k3, k4). `plumb_bob` and `rational_polynomial` models are based on the pinhole model `OpenCV's <https://docs.opencv.org/4.11.0/d9/d0c/group__calib3d.html>`__ `pinhole camera model <https://en.wikipedia.org/wiki/Distortion_%28optics%29#Software_correction>`__. The `kannala_brandt` model matches the `OpenvCV fisheye <https://docs.opencv.org/4.11.0/db/d58/group__calib3d__fisheye.html>`__ model.
+///     Supported parameters: `plumb_bob` (k1, k2, p1, p2, k3), `rational_polynomial` (k1, k2, p1, p2, k3, k4, k5, k6), and `kannala_brandt` (k1, k2, k3, k4), and `fisheye62` (k0, k1, k2, k3, p0, p1, crit_theta [optional]). `plumb_bob` and `rational_polynomial` models are based on the pinhole model `OpenCV's <https://docs.opencv.org/4.11.0/d9/d0c/group__calib3d.html>`__ `pinhole camera model <https://en.wikipedia.org/wiki/Distortion_%28optics%29#Software_correction>`__. The `kannala_brandt` model matches the `OpenvCV fisheye <https://docs.opencv.org/4.11.0/db/d58/group__calib3d__fisheye.html>`__ model. The `fisheye62` model matches the `Project Aria's Fisheye62 Model <https://facebookresearch.github.io/projectaria_tools/docs/tech_insights/camera_intrinsic_models>`__.
 /// :param D: Distortion parameters
 /// :param K: Intrinsic camera matrix (3x3 row-major matrix)
 ///     
