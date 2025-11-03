@@ -851,6 +851,17 @@ class LogPanel(Panel):
         return config
 
 
+@panel_type("Table")
+class TablePanel(Panel):
+    def __init__(
+        self,
+        *,
+        id: str | None = None,
+        topic_path: str | None = None,
+    ) -> None:
+        pass
+
+
 __all__ = [
     "MarkdownPanel",
     "RawMessagesPanel",
@@ -892,4 +903,5 @@ __all__ = [
     "ServiceCallPanel",
     "LogPanel",
     "NameFilter",
+    "TablePanel",
 ]

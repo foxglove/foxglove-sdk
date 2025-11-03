@@ -39,6 +39,7 @@ from foxglove.layouts.panels import (
     StateTransitionsPath,
     StateTransitionsRangeCustomState,
     StateTransitionsRangeCustomStates,
+    TablePanel,
     TeleopPanel,
     ThreeDeePanel,
     TiledMapLayerConfig,
@@ -2204,6 +2205,33 @@ class TestLogPanel:
         assert parsed["config"]["nameFilter"]["node2"]["visible"] is False
 
 
+class TestTablePanel:
+    def test_creation_with_defaults(self) -> None:
+        panel = TablePanel()
+        json_str = panel.to_json()
+        parsed = json.loads(json_str)
+        assert parsed["type"] == "Table"
+        assert parsed["id"].startswith("Table!")
+        assert "topicPath" not in parsed["config"]
+
+    def test_creation_with_id(self) -> None:
+        panel = TablePanel(id="custom-id")
+        json_str = panel.to_json()
+        parsed = json.loads(json_str)
+        assert parsed["type"] == "Table"
+        assert parsed["id"] == "custom-id"
+        assert "topicPath" not in parsed["config"]
+
+    def test_creation_with_all_params(self) -> None:
+        panel = TablePanel(
+            id="table-1",
+            topic_path="/camera/ring_front_center/camera_info",
+        )
+        json_str = panel.to_json()
+        parsed = json.loads(json_str)
+        assert parsed["id"] == "table-1"
+
+
 class TestPanelSerialization:
     def test_all_panels_serialize_to_json(self) -> None:
         panels = [
@@ -2230,6 +2258,7 @@ class TestPanelSerialization:
             PublishPanel(id="publish", topic_name="/topic"),
             ServiceCallPanel(id="service", service_name="/service"),
             LogPanel(id="log", topic_to_render="/rosout"),
+            TablePanel(id="table", topic_path="/camera/ring_front_center/camera_info"),
         ]
         for panel in panels:
             json_str = panel.to_json()
