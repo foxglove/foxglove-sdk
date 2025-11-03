@@ -148,7 +148,7 @@ class AudioPanel(Panel):
         pass
 
 
-@panel_type("ROSDiagnosticDetailPanel")
+@panel_type("DiagnosticStatusPanel")
 class ROSDiagnosticDetailPanel(Panel):
     def __init__(
         self,
@@ -164,7 +164,7 @@ class ROSDiagnosticDetailPanel(Panel):
         pass
 
 
-@panel_type("ROSDiagnosticSummaryPanel")
+@panel_type("DiagnosticSummary")
 class ROSDiagnosticSummaryPanel(Panel):
     def __init__(
         self,
@@ -736,7 +736,7 @@ class MapTopicConfig:
         return {to_lower_camel_case(k): v for k, v in config.items() if v is not None}
 
 
-@panel_type("Map")
+@panel_type("map")
 class MapPanel(Panel):
     def __init__(
         self,
@@ -816,6 +816,41 @@ class ServiceCallPanel(Panel):
         pass
 
 
+@dataclass
+class NameFilter:
+    visible: bool | None = True
+
+    def to_dict(self) -> dict[str, Any]:
+        config = asdict(self)
+        return {to_lower_camel_case(k): v for k, v in config.items() if v is not None}
+
+
+@panel_type("RosOut")
+class LogPanel(Panel):
+    def __init__(
+        self,
+        *,
+        id: str | None = None,
+        search_terms: list[str] = [],
+        min_log_level: Literal[1, 2, 3, 4, 5] = 1,
+        topic_to_render: str | None = None,
+        name_filter: dict[str, NameFilter] = {},
+        font_size: (
+            Literal[8, 9, 10, 11, 12, 14, 16, 18, 24, 30, 36, 48, 60, 72] | None
+        ) = 12,
+        foxglove_panel_title: str | None = None,
+    ) -> None:
+        pass
+
+    def config_to_dict(self) -> dict[str, Any]:
+        config = super().config_to_dict().copy()
+        if "name_filter" in config:
+            config["name_filter"] = {
+                k: v.to_dict() for k, v in config["name_filter"].items()
+            }
+        return config
+
+
 __all__ = [
     "MarkdownPanel",
     "RawMessagesPanel",
@@ -855,4 +890,6 @@ __all__ = [
     "ParametersPanel",
     "PublishPanel",
     "ServiceCallPanel",
+    "LogPanel",
+    "NameFilter",
 ]

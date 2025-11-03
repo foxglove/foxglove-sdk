@@ -18,10 +18,12 @@ from foxglove.layouts.panels import (
     IndicatorPanelRule,
     LayersConfig,
     LinkSettings,
+    LogPanel,
     MapCoordinates,
     MapPanel,
     MapTopicConfig,
     MarkdownPanel,
+    NameFilter,
     ParametersPanel,
     PlotPanel,
     PlotPath,
@@ -155,7 +157,7 @@ class TestROSDiagnosticDetailPanel:
     def test_creation_with_defaults(self) -> None:
         panel = ROSDiagnosticDetailPanel()
         result = panel.to_dict()
-        assert result["type"] == "ROSDiagnosticDetailPanel"
+        assert result["type"] == "DiagnosticStatusPanel"
         assert result["config"]["topicToRender"] == ""
 
     def test_creation_with_config(self) -> None:
@@ -181,7 +183,7 @@ class TestROSDiagnosticSummaryPanel:
     def test_creation_with_defaults(self) -> None:
         panel = ROSDiagnosticSummaryPanel()
         result = panel.to_dict()
-        assert result["type"] == "ROSDiagnosticSummaryPanel"
+        assert result["type"] == "DiagnosticSummary"
         assert result["config"]["minLevel"] == 0
         assert result["config"]["pinnedIds"] == []
 
@@ -1826,8 +1828,8 @@ class TestMapPanel:
     def test_creation_with_defaults(self) -> None:
         panel = MapPanel()
         result = panel.to_dict()
-        assert result["type"] == "Map"
-        assert result["id"].startswith("Map!")
+        assert result["type"] == "map"
+        assert result["id"].startswith("map!")
         assert result["config"]["layer"] == "map"
         assert result["config"]["zoomLevel"] == 10
         assert result["config"]["maxNativeZoom"] == 18
@@ -1837,7 +1839,7 @@ class TestMapPanel:
     def test_creation_with_id(self) -> None:
         panel = MapPanel(id="custom-id")
         result = panel.to_dict()
-        assert result["type"] == "Map"
+        assert result["type"] == "map"
         assert result["id"] == "custom-id"
 
     def test_creation_with_center(self) -> None:
@@ -2002,7 +2004,7 @@ class TestMapPanel:
         json_str = panel.to_json()
         parsed = json.loads(json_str)
         assert parsed["id"] == "map-json"
-        assert parsed["type"] == "Map"
+        assert parsed["type"] == "map"
         assert parsed["config"]["center"]["lat"] == 45.0
         assert parsed["config"]["center"]["lon"] == -93.0
         assert parsed["config"]["zoomLevel"] == 14.0
@@ -2139,6 +2141,69 @@ class TestServiceCallPanel:
         assert parsed["config"]["foxglovePanelTitle"] == "Service Call Panel"
 
 
+class TestNameFilter:
+    def test_creation_with_defaults(self) -> None:
+        filter_obj = NameFilter()
+        result = filter_obj.to_dict()
+        assert result["visible"] is True
+
+    def test_creation_with_false(self) -> None:
+        filter_obj = NameFilter(visible=False)
+        result = filter_obj.to_dict()
+        assert result["visible"] is False
+
+    def test_to_dict_filters_none_values(self) -> None:
+        filter_obj = NameFilter(visible=None)
+        result = filter_obj.to_dict()
+        assert "visible" not in result
+
+
+class TestLogPanel:
+    def test_creation_with_defaults(self) -> None:
+        panel = LogPanel()
+        json_str = panel.to_json()
+        parsed = json.loads(json_str)
+        assert parsed["type"] == "RosOut"
+        assert parsed["id"].startswith("RosOut!")
+        assert parsed["config"]["searchTerms"] == []
+        assert parsed["config"]["minLogLevel"] == 1
+        assert parsed["config"]["fontSize"] == 12
+
+    def test_creation_with_id(self) -> None:
+        panel = LogPanel(id="custom-id")
+        json_str = panel.to_json()
+        parsed = json.loads(json_str)
+        assert parsed["type"] == "RosOut"
+        assert parsed["id"] == "custom-id"
+        assert parsed["config"]["minLogLevel"] == 1
+
+    def test_creation_with_all_params(self) -> None:
+        name_filter = {
+            "node1": NameFilter(visible=True),
+            "node2": NameFilter(visible=False),
+        }
+        panel = LogPanel(
+            id="log-1",
+            search_terms=["error", "warning"],
+            min_log_level=3,
+            topic_to_render="/rosout",
+            name_filter=name_filter,
+            font_size=16,
+            foxglove_panel_title="Log Panel",
+        )
+        json_str = panel.to_json()
+        parsed = json.loads(json_str)
+        assert parsed["id"] == "log-1"
+        assert parsed["config"]["searchTerms"] == ["error", "warning"]
+        assert parsed["config"]["minLogLevel"] == 3
+        assert parsed["config"]["topicToRender"] == "/rosout"
+        assert parsed["config"]["fontSize"] == 16
+        assert parsed["config"]["foxglovePanelTitle"] == "Log Panel"
+        assert "nameFilter" in parsed["config"]
+        assert parsed["config"]["nameFilter"]["node1"]["visible"] is True
+        assert parsed["config"]["nameFilter"]["node2"]["visible"] is False
+
+
 class TestPanelSerialization:
     def test_all_panels_serialize_to_json(self) -> None:
         panels = [
@@ -2164,6 +2229,7 @@ class TestPanelSerialization:
             ParametersPanel(id="params"),
             PublishPanel(id="publish", topic_name="/topic"),
             ServiceCallPanel(id="service", service_name="/service"),
+            LogPanel(id="log", topic_to_render="/rosout"),
         ]
         for panel in panels:
             json_str = panel.to_json()
