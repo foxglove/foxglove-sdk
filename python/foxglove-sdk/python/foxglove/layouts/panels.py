@@ -882,6 +882,16 @@ class TransformTreePanel(Panel):
         pass
 
 
+@panel_type("SourceInfo")
+class DataSourceInfoPanel(Panel):
+    def __init__(
+        self,
+        *,
+        id: str | None = None,
+    ) -> None:
+        pass
+
+
 __all__ = [
     "MarkdownPanel",
     "RawMessagesPanel",
@@ -926,4 +936,5 @@ __all__ = [
     "TablePanel",
     "TopicGraphPanel",
     "TransformTreePanel",
+    "DataSourceInfoPanel",
 ]

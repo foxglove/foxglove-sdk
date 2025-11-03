@@ -9,6 +9,7 @@ from foxglove.layouts.panels import (
     BasePlotPath,
     ButtonConfig,
     CameraState,
+    DataSourceInfoPanel,
     GaugePanel,
     GridLayerConfig,
     ImageAnnotationSettings,
@@ -2266,6 +2267,22 @@ class TestTransformTreePanel:
         assert parsed["id"] == "custom-id"
 
 
+class TestDataSourceInfoPanel:
+    def test_creation_with_defaults(self) -> None:
+        panel = DataSourceInfoPanel()
+        json_str = panel.to_json()
+        parsed = json.loads(json_str)
+        assert parsed["type"] == "SourceInfo"
+        assert parsed["id"].startswith("SourceInfo!")
+
+    def test_creation_with_id(self) -> None:
+        panel = DataSourceInfoPanel(id="custom-id")
+        json_str = panel.to_json()
+        parsed = json.loads(json_str)
+        assert parsed["type"] == "SourceInfo"
+        assert parsed["id"] == "custom-id"
+
+
 class TestPanelSerialization:
     def test_all_panels_serialize_to_json(self) -> None:
         panels = [
@@ -2295,6 +2312,7 @@ class TestPanelSerialization:
             TablePanel(id="table", topic_path="/camera/ring_front_center/camera_info"),
             TopicGraphPanel(id="table"),
             TransformTreePanel(id="transform-tree"),
+            DataSourceInfoPanel(id="source-info"),
         ]
         for panel in panels:
             json_str = panel.to_json()
