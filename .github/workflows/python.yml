@@ -245,16 +245,16 @@ jobs:
           - runner: windows-latest
             target: x86_64
           - runner: windows-latest
-            target: i686
+            target: x86
     steps:
       - uses: actions/setup-python@v6
         if: ${{ matrix.platform.target == 'x86_64' }}
         with:
           python-version: "3.9"
 
-      # The 64-bit windows-latest image doesn't have 32-bit pythons.
+      # The windows-latest image doesn't have 32-bit pythons.
       - uses: actions/setup-python@v6
-        if: ${{ matrix.platform.target == 'i686' }}
+        if: ${{ matrix.platform.target == 'x86' }}
         with:
           architecture: x86
           python-version: |
