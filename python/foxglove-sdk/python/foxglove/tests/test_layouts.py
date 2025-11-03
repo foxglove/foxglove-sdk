@@ -46,12 +46,13 @@ from foxglove.layouts.panels import (
     TiledMapLayerConfig,
     TopicGraphPanel,
     TopicsConfig,
-    VariableSliderPanel,
-    VariableSliderConfig,
     TransformConfig,
     TransformsConfig,
     TransformTreePanel,
     UrdfLayerConfig,
+    UserScriptEditorPanel,
+    VariableSliderConfig,
+    VariableSliderPanel,
 )
 
 
@@ -2315,6 +2316,38 @@ class TestVariableSliderPanel:
         assert parsed["config"]["sliderProps"]["step"] == 1
 
 
+class TestUserScriptEditorPanel:
+    def test_creation_with_defaults(self) -> None:
+        panel = UserScriptEditorPanel()
+        json_str = panel.to_json()
+        parsed = json.loads(json_str)
+        assert parsed["type"] == "NodePlayground"
+        assert parsed["id"].startswith("NodePlayground!")
+        assert parsed["config"]["autoFormatOnSave"] is True
+
+    def test_creation_with_id(self) -> None:
+        panel = UserScriptEditorPanel(id="custom-id")
+        json_str = panel.to_json()
+        parsed = json.loads(json_str)
+        assert parsed["type"] == "NodePlayground"
+        assert parsed["id"] == "custom-id"
+        assert parsed["config"]["autoFormatOnSave"] is True
+
+    def test_creation_with_all_params(self) -> None:
+        panel = UserScriptEditorPanel(
+            id="script-editor-1",
+            selected_node_id="node-123",
+            auto_format_on_save=False,
+            foxglove_panel_title="Script Editor",
+        )
+        json_str = panel.to_json()
+        parsed = json.loads(json_str)
+        assert parsed["id"] == "script-editor-1"
+        assert parsed["config"]["selectedNodeId"] == "node-123"
+        assert parsed["config"]["autoFormatOnSave"] is False
+        assert parsed["config"]["foxglovePanelTitle"] == "Script Editor"
+
+
 class TestPanelSerialization:
     def test_all_panels_serialize_to_json(self) -> None:
         panels = [
@@ -2346,6 +2379,7 @@ class TestPanelSerialization:
             TransformTreePanel(id="transform-tree"),
             DataSourceInfoPanel(id="source-info"),
             VariableSliderPanel(id="variable-slider"),
+            UserScriptEditorPanel(id="script-editor"),
         ]
         for panel in panels:
             json_str = panel.to_json()

@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import random
 import string
+from dataclasses import asdict, dataclass
 from typing import Any, Literal, Protocol
 
 from typing_extensions import TypeAlias
@@ -137,6 +138,15 @@ class ItemList:
         }
 
 
+@dataclass
+class UserScript:
+    name: str
+    source_code: str
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
 class Layout:
     """
     A complete layout containing panels, tabs, and item lists.
@@ -146,10 +156,16 @@ class Layout:
     :param items: Root item list containing the layout structure
     """
 
-    def __init__(self, variables: Variables, items: ItemList) -> None:
+    def __init__(
+        self,
+        variables: Variables,
+        items: ItemList,
+        user_nodes: dict[str, UserScript] = {},
+    ) -> None:
         self.version = "0.1.0"
         self.variables = variables
         self.items = items
+        self.user_nodes = user_nodes
 
     def to_json(self) -> str:
         return json.dumps(self.to_dict(), indent=4)
@@ -159,6 +175,7 @@ class Layout:
             "version": self.version,
             "variables": self.variables,
             "items": self.items.to_dict(),
+            "user_nodes": {k: v.to_dict() for k, v in self.user_nodes.items()},
         }
 
 
@@ -170,4 +187,5 @@ __all__ = [
     "Item",
     "ItemList",
     "Layout",
+    "UserScript",
 ]

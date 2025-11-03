@@ -921,6 +921,19 @@ class VariableSliderPanel(Panel):
         return config
 
 
+@panel_type("NodePlayground")
+class UserScriptEditorPanel(Panel):
+    def __init__(
+        self,
+        *,
+        id: str | None = None,
+        selected_node_id: str | None = None,
+        auto_format_on_save: bool = True,
+        foxglove_panel_title: str | None = None,
+    ) -> None:
+        pass
+
+
 __all__ = [
     "MarkdownPanel",
     "RawMessagesPanel",
@@ -968,4 +981,5 @@ __all__ = [
     "DataSourceInfoPanel",
     "VariableSliderPanel",
     "VariableSliderConfig",
+    "UserScriptEditorPanel",
 ]
