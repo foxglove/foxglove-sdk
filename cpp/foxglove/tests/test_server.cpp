@@ -1567,3 +1567,37 @@ TEST_CASE("Player state callback") {
   REQUIRE(server.stop() == foxglove::FoxgloveError::Ok);
 }
 
+TEST_CASE("RangedPlayback capability") {
+  auto context = foxglove::Context::create();
+
+  const uint64_t start_time = 100e9;
+  const uint64_t end_time = 105e9;
+
+  foxglove::WebSocketServerOptions opt;
+  opt.context = std::move(context);
+  opt.playback_time_range = std::make_optional<std::pair<uint64_t, uint64_t>>(start_time, end_time);
+  auto server = startServer(std::move(opt));
+
+  WebSocketClient client;
+  client.start(server.port());
+  client.waitForConnection();
+
+  auto payload = client.recv();
+  auto parsed = Json::parse(payload);
+  REQUIRE(parsed.contains("op"));
+  REQUIRE(parsed["op"] == "serverInfo");
+
+  // Ensure that the rangedPlayback capability is enabled, since opt.playback_time_range is
+  // specified
+  REQUIRE(parsed.contains("capabilities"));
+  const auto& capabilities = parsed["capabilities"];
+  // TODO: Left off here: Why is the capability being added twice??
+  REQUIRE(std::count_if(capabilities.begin(), capabilities.end(), [](const auto& capability) {
+            return capability == "rangedPlayback";
+          }) == 1);
+
+  REQUIRE(parsed.contains("dataStartTime"));
+  REQUIRE(parsed["dataStartTime"] == start_time);
+  REQUIRE(parsed.contains("dataEndTime"));
+  REQUIRE(parsed["dataEndTime"] == end_time);
+}

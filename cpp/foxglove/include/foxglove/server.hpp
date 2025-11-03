@@ -70,6 +70,9 @@ enum class WebSocketServerCapabilities : uint8_t {
   /// Allow clients to request assets. If you supply an asset handler to the
   /// server, this capability will be advertised automatically.
   Assets = 1 << 5,
+  /// Indicates that the server is sending data within a fixed time range. This requires the
+  /// server to specify the `data_start_time` and `data_end_time` fields in its `ServerInfo` message.
+  RangedPlayback = 1 << 6,
 };
 
 /// @brief Level indicator for a server status message.
@@ -234,6 +237,9 @@ struct WebSocketServerOptions {
   /// This option is for internal use only and may change.
   std::optional<std::map<std::string, std::string>> server_info = std::nullopt;
   /// @endcond
+
+  /// @brief The time range for playback. This applies if the server is playing back a fixed time range of data.
+  std::optional<std::pair<uint64_t, uint64_t>> playback_time_range = std::nullopt;
 };
 
 /// @brief A WebSocket server for visualization in Foxglove.
@@ -340,12 +346,14 @@ private:
   WebSocketServer(
     foxglove_websocket_server* server, std::unique_ptr<WebSocketServerCallbacks> callbacks,
     std::unique_ptr<FetchAssetHandler> fetch_asset,
-    std::unique_ptr<SinkChannelFilterFn> sink_channel_filter
+    std::unique_ptr<SinkChannelFilterFn> sink_channel_filter,
+    std::unique_ptr<std::pair<uint64_t, uint64_t>> playback_time_range
   );
 
   std::unique_ptr<WebSocketServerCallbacks> callbacks_;
   std::unique_ptr<FetchAssetHandler> fetch_asset_;
   std::unique_ptr<SinkChannelFilterFn> sink_channel_filter_;
+  std::unique_ptr<std::pair<uint64_t, uint64_t>> playback_time_range_;
   std::unique_ptr<foxglove_websocket_server, foxglove_error (*)(foxglove_websocket_server*)> impl_;
 };
 

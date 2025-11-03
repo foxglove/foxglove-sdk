@@ -39,6 +39,9 @@ pub const FOXGLOVE_SERVER_CAPABILITY_SERVICES: u8 = 1 << 4;
 /// Allow clients to request assets. If you supply an asset handler to the server, this capability
 /// will be advertised automatically.
 pub const FOXGLOVE_SERVER_CAPABILITY_ASSETS: u8 = 1 << 5;
+/// Indicates that the server is sending data within a fixed time range. This requires the
+/// server to specify the `data_start_time` and `data_end_time` fields in its `ServerInfo` message.
+pub const FOXGLOVE_SERVER_CAPABILITY_RANGED_PLAYBACK: u8 = 1 << 6;
 
 bitflags! {
     #[derive(Clone, Copy, PartialEq, Eq)]
@@ -49,6 +52,7 @@ bitflags! {
         const Time = FOXGLOVE_SERVER_CAPABILITY_TIME;
         const Services = FOXGLOVE_SERVER_CAPABILITY_SERVICES;
         const Assets = FOXGLOVE_SERVER_CAPABILITY_ASSETS;
+        const RangedPlayback = FOXGLOVE_SERVER_CAPABILITY_RANGED_PLAYBACK;
     }
 }
 
@@ -70,6 +74,9 @@ impl FoxgloveServerCapabilityBitFlags {
             }
             FoxgloveServerCapabilityBitFlags::Assets => {
                 Some(foxglove::websocket::Capability::Assets)
+            }
+            FoxgloveServerCapabilityBitFlags::RangedPlayback => {
+                Some(foxglove::websocket::Capability::RangedPlayback)
             }
             _ => None,
         })
@@ -160,6 +167,13 @@ pub struct FoxgloveServerOptions<'a> {
             channel: *const FoxgloveChannelDescriptor,
         ) -> bool,
     >,
+
+    /// If the server is sending data from a fixed time range, and has the RangedPlayback capability,
+    /// the start time of the data range.
+    pub data_start_time: *const u64,
+    /// If the server is sending data from a fixed time range, and has the RangedPlayback capability,
+    /// the end time of the data range.
+    pub data_end_time: *const u64,
 }
 
 #[repr(C)]
@@ -444,6 +458,13 @@ unsafe fn do_foxglove_server_start(
         }
         server = server.server_info(server_info);
     }
+
+    if !options.data_start_time.is_null() && !options.data_end_time.is_null() {
+        let data_start_time = unsafe { *options.data_start_time };
+        let data_end_time = unsafe { *options.data_end_time };
+        server = server.playback_time_range(data_start_time, data_end_time);
+    }
+
     let server = server.start_blocking()?;
     Ok(Box::into_raw(Box::new(FoxgloveWebSocketServer(Some(
         server,

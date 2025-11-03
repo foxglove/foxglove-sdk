@@ -24,6 +24,7 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
   std::unique_ptr<WebSocketServerCallbacks> callbacks;
   std::unique_ptr<FetchAssetHandler> fetch_asset;
   std::unique_ptr<SinkChannelFilterFn> sink_channel_filter;
+  std::unique_ptr<std::pair<uint64_t, uint64_t>> playback_time_range;
 
   foxglove_server_callbacks c_callbacks = {};
 
@@ -270,6 +271,13 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
     };
   }
 
+  if (options.playback_time_range) {
+    playback_time_range =
+      std::make_unique<std::pair<uint64_t, uint64_t>>(*options.playback_time_range);
+    c_options.data_start_time = &playback_time_range->first;
+    c_options.data_end_time = &playback_time_range->second;
+  }
+
   std::vector<foxglove_key_value> server_info;
   if (options.server_info) {
     server_info.reserve(options.server_info->size());
@@ -306,7 +314,6 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
       }
     };
   }
-
   foxglove_websocket_server* server = nullptr;
   foxglove_error error = foxglove_server_start(&c_options, &server);
   if (error != foxglove_error::FOXGLOVE_ERROR_OK || server == nullptr) {
@@ -314,18 +321,24 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
   }
 
   return WebSocketServer(
-    server, std::move(callbacks), std::move(fetch_asset), std::move(sink_channel_filter)
+    server,
+    std::move(callbacks),
+    std::move(fetch_asset),
+    std::move(sink_channel_filter),
+    std::move(playback_time_range)
   );
 }
 
 WebSocketServer::WebSocketServer(
   foxglove_websocket_server* server, std::unique_ptr<WebSocketServerCallbacks> callbacks,
   std::unique_ptr<FetchAssetHandler> fetch_asset,
-  std::unique_ptr<SinkChannelFilterFn> sink_channel_filter
+  std::unique_ptr<SinkChannelFilterFn> sink_channel_filter,
+  std::unique_ptr<std::pair<uint64_t, uint64_t>> playback_time_range
 )
     : callbacks_(std::move(callbacks))
     , fetch_asset_(std::move(fetch_asset))
     , sink_channel_filter_(std::move(sink_channel_filter))
+    , playback_time_range_(std::move(playback_time_range))
     , impl_(server, foxglove_server_stop) {}
 
 FoxgloveError WebSocketServer::stop() {
