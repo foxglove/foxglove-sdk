@@ -2,7 +2,7 @@
 Changelog for package foxglove_bridge
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-3.2.2 (2025-10-24)
+3.2.3 (2025-11-03)
 ------------------
 * Fix publishing from Foxglove 3D panel (`#716 <https://github.com/foxglove/foxglove-sdk/pull/716>`_)
 * Contributors: Bryan Fox

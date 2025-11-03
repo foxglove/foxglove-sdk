@@ -2,7 +2,7 @@
 Changelog for package foxglove_msgs
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-3.2.2 (2025-10-24)
+3.2.3 (2025-11-03)
 ------------------
 * Update documentation for various schemas
 * Contributors: James Smith, Jeff Rouleau
