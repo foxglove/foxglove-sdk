@@ -46,6 +46,8 @@ from foxglove.layouts.panels import (
     TiledMapLayerConfig,
     TopicGraphPanel,
     TopicsConfig,
+    VariableSliderPanel,
+    VariableSliderConfig,
     TransformConfig,
     TransformsConfig,
     TransformTreePanel,
@@ -2283,6 +2285,36 @@ class TestDataSourceInfoPanel:
         assert parsed["id"] == "custom-id"
 
 
+class TestVariableSliderPanel:
+    def test_creation_with_defaults(self) -> None:
+        panel = VariableSliderPanel()
+        json_str = panel.to_json()
+        parsed = json.loads(json_str)
+        assert parsed["type"] == "GlobalVariableSliderPanel"
+        assert parsed["id"].startswith("GlobalVariableSliderPanel!")
+
+    def test_creation_with_id(self) -> None:
+        panel = VariableSliderPanel(id="custom-id")
+        json_str = panel.to_json()
+        parsed = json.loads(json_str)
+        assert parsed["type"] == "GlobalVariableSliderPanel"
+        assert parsed["id"] == "custom-id"
+
+    def test_creation_with_all_params(self) -> None:
+        panel = VariableSliderPanel(
+            id="variable-slider",
+            global_variable_name="globalVariable1",
+            slider_props=VariableSliderConfig(min=1, max=15, step=1),
+        )
+        json_str = panel.to_json()
+        parsed = json.loads(json_str)
+        assert parsed["id"] == "variable-slider"
+        assert parsed["config"]["globalVariableName"] == "globalVariable1"
+        assert parsed["config"]["sliderProps"]["min"] == 1
+        assert parsed["config"]["sliderProps"]["max"] == 15
+        assert parsed["config"]["sliderProps"]["step"] == 1
+
+
 class TestPanelSerialization:
     def test_all_panels_serialize_to_json(self) -> None:
         panels = [
@@ -2313,6 +2345,7 @@ class TestPanelSerialization:
             TopicGraphPanel(id="table"),
             TransformTreePanel(id="transform-tree"),
             DataSourceInfoPanel(id="source-info"),
+            VariableSliderPanel(id="variable-slider"),
         ]
         for panel in panels:
             json_str = panel.to_json()

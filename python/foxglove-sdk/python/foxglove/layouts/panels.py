@@ -892,6 +892,35 @@ class DataSourceInfoPanel(Panel):
         pass
 
 
+@dataclass
+class VariableSliderConfig:
+    min: float = 0
+    max: float = 10
+    step: int = 1
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@panel_type("GlobalVariableSliderPanel")
+class VariableSliderPanel(Panel):
+    def __init__(
+        self,
+        *,
+        id: str | None = None,
+        global_variable_name: str = "globalVariable",
+        slider_props: VariableSliderConfig = VariableSliderConfig(),
+        foxglove_panel_title: str | None = None,
+    ) -> None:
+        pass
+
+    def config_to_dict(self) -> dict[str, Any]:
+        config = super().config_to_dict().copy()
+        config["slider_props"] = self.config["slider_props"].to_dict()
+
+        return config
+
+
 __all__ = [
     "MarkdownPanel",
     "RawMessagesPanel",
@@ -937,4 +966,6 @@ __all__ = [
     "TopicGraphPanel",
     "TransformTreePanel",
     "DataSourceInfoPanel",
+    "VariableSliderPanel",
+    "VariableSliderConfig",
 ]
