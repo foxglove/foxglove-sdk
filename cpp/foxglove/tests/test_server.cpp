@@ -2,6 +2,7 @@
 #include <foxglove/channel.hpp>
 #include <foxglove/context.hpp>
 #include <foxglove/error.hpp>
+#include <foxglove/player_state.hpp>
 #include <foxglove/server.hpp>
 
 #include <catch2/catch_test_macros.hpp>
@@ -746,11 +747,19 @@ foxglove::ServiceSchema makeServiceSchema(std::string_view name) {
   };
 }
 
-void writeUint32LE(std::vector<std::byte>& buffer, uint32_t value) {
-  buffer.push_back(static_cast<std::byte>(value & 0xffU));
-  buffer.push_back(static_cast<std::byte>((value >> 8) & 0xffU));
-  buffer.push_back(static_cast<std::byte>((value >> 16) & 0xffU));
-  buffer.push_back(static_cast<std::byte>((value >> 24) & 0xffU));
+template<typename T>
+void writeIntLE(std::vector<std::byte>& buffer, T value) {
+  static_assert(std::is_integral<T>());
+  for (size_t shift = 0; shift < 8 * sizeof(T); shift += 8) {
+    buffer.push_back(static_cast<std::byte>((value >> shift) & 0xffU));
+  }
+}
+
+void writeFloatLE(std::vector<std::byte>& buffer, float value) {
+  // Put the bits into a temporary uint32_t
+  uint32_t tmp = 0;
+  memcpy(&tmp, &value, sizeof(tmp));
+  writeIntLE(buffer, tmp);
 }
 
 uint32_t readUint32LE(const std::vector<std::byte>& buffer, size_t offset) {
@@ -768,9 +777,9 @@ std::vector<std::byte> makeServiceRequest(
   std::vector<std::byte> buffer;
   buffer.reserve(1 + 4 + 4 + 4 + encoding.size() + payload.size());
   buffer.emplace_back(static_cast<std::byte>(2));  // Service call request opcode
-  writeUint32LE(buffer, service_id);
-  writeUint32LE(buffer, call_id);
-  writeUint32LE(buffer, static_cast<uint32_t>(encoding.size()));
+  writeIntLE(buffer, service_id);
+  writeIntLE(buffer, call_id);
+  writeIntLE(buffer, static_cast<uint32_t>(encoding.size()));
   for (char c : encoding) {
     buffer.emplace_back(static_cast<std::byte>(c));
   }
@@ -1488,3 +1497,73 @@ TEST_CASE("Server info") {
 
   REQUIRE(server.stop() == foxglove::FoxgloveError::Ok);
 }
+
+std::vector<std::byte> playerStateToBinary(const foxglove::PlayerState& player_state) {
+  constexpr size_t MESSAGE_SIZE = 14;
+  std::vector<std::byte> msg;
+  msg.reserve(MESSAGE_SIZE);
+
+  msg.push_back(std::byte{0x03});
+  msg.emplace_back(std::byte{
+    static_cast<std::underlying_type_t<foxglove::PlaybackState>>(player_state.playback_state)
+  });
+
+  writeFloatLE(msg, player_state.playback_speed);
+
+  msg.emplace_back(player_state.seek_time.has_value() ? std::byte{0x1} : std::byte{0x0});
+  writeIntLE(msg, player_state.seek_time.has_value() ? *player_state.seek_time : 0x0);
+
+  return msg;
+}
+
+TEST_CASE("Player state callback") {
+  auto context = foxglove::Context::create();
+
+  std::optional<foxglove::PlayerState> received_player_state = std::nullopt;
+  std::mutex mutex;
+  std::condition_variable cv;
+
+  foxglove::WebSocketServerCallbacks callbacks;
+  callbacks.onPlayerState = [&]([[maybe_unused]] const foxglove::PlayerState& player_state) {
+    {
+      std::unique_lock lock(mutex);
+      received_player_state = std::make_optional<foxglove::PlayerState>(player_state);
+    }
+    cv.notify_one();
+  };
+
+  auto server = startServer(
+    context, foxglove::WebSocketServerCapabilities::RangedPlayback, std::move(callbacks)
+  );
+
+  WebSocketClient client;
+  client.start(server.port());
+  client.waitForConnection();
+
+  auto payload = client.recv();
+  auto parsed = Json::parse(payload);
+  REQUIRE(parsed.contains("op"));
+  REQUIRE(parsed["op"] == "serverInfo");
+
+  foxglove::PlayerState player_state{
+    .playback_state = foxglove::PlaybackState::Paused,
+    .playback_speed = 1.0,
+    .seek_time = 42,
+  };
+  std::vector<std::byte> msg = playerStateToBinary(player_state);
+  client.send(msg);
+
+  {
+    std::unique_lock lock{mutex};
+    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1));
+    REQUIRE(wait_result != std::cv_status::timeout);
+    REQUIRE(received_player_state.has_value());
+    REQUIRE(received_player_state->playback_state == foxglove::PlaybackState::Paused);
+    REQUIRE(received_player_state->playback_speed == 1.0);
+    REQUIRE(received_player_state->seek_time.has_value());
+    REQUIRE(received_player_state->seek_time.value() == 42);
+  }
+
+  REQUIRE(server.stop() == foxglove::FoxgloveError::Ok);
+}
+

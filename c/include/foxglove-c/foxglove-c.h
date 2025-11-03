@@ -2021,6 +2021,32 @@ typedef struct foxglove_parameter_array {
 } foxglove_parameter_array;
 #endif
 
+typedef struct FoxgloveOptionalU64 {
+  /**
+   * True when `value` contains a valid timestamp.
+   */
+  bool has_value;
+  /**
+   * Seek playback time in nanoseconds.
+   */
+  uint64_t value;
+} FoxgloveOptionalU64;
+
+typedef struct foxglove_player_state {
+  /**
+   * Playback state
+   */
+  uint8_t playback_state;
+  /**
+   * Playback speed
+   */
+  float playback_speed;
+  /**
+   * Seek playback time in nanoseconds (only set if a seek has been performed)
+   */
+  struct FoxgloveOptionalU64 seek_time;
+} foxglove_player_state;
+
 #if !defined(__wasm__)
 typedef struct foxglove_server_callbacks {
   /**
@@ -2111,6 +2137,7 @@ typedef struct foxglove_server_callbacks {
                                     size_t param_names_len);
   void (*on_connection_graph_subscribe)(const void *context);
   void (*on_connection_graph_unsubscribe)(const void *context);
+  void (*on_player_state)(const void *context, const struct foxglove_player_state *player_state);
 } foxglove_server_callbacks;
 #endif
 

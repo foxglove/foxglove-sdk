@@ -12,7 +12,8 @@ use std::sync::Arc;
 use crate::parameter::FoxgloveParameterArray;
 
 use crate::{
-    result_to_c, FoxgloveContext, FoxgloveError, FoxgloveKeyValue, FoxgloveSinkId, FoxgloveString,
+    result_to_c, FoxgloveContext, FoxgloveError, FoxgloveKeyValue, FoxglovePlayerState,
+    FoxgloveSinkId, FoxgloveString,
 };
 
 // Easier to get reasonable C output from cbindgen with constants rather than directly exporting the bitflags macro
@@ -293,6 +294,9 @@ pub struct FoxgloveServerCallbacks {
     >,
     pub on_connection_graph_subscribe: Option<unsafe extern "C" fn(context: *const c_void)>,
     pub on_connection_graph_unsubscribe: Option<unsafe extern "C" fn(context: *const c_void)>,
+    pub on_player_state: Option<
+        unsafe extern "C" fn(context: *const c_void, player_state: *const FoxglovePlayerState),
+    >,
 }
 unsafe impl Send for FoxgloveServerCallbacks {}
 unsafe impl Sync for FoxgloveServerCallbacks {}
@@ -914,6 +918,17 @@ impl foxglove::websocket::ServerListener for FoxgloveServerCallbacks {
     fn on_connection_graph_unsubscribe(&self) {
         if let Some(on_connection_graph_unsubscribe) = self.on_connection_graph_unsubscribe {
             unsafe { on_connection_graph_unsubscribe(self.context) };
+        }
+    }
+
+    fn on_player_state(&self, player_state: foxglove::websocket::PlayerState) {
+        if let Some(on_player_state) = self.on_player_state {
+            let c_player_state = FoxglovePlayerState {
+                playback_state: player_state.playback_state as u8,
+                playback_speed: player_state.playback_speed,
+                seek_time: player_state.seek_time.into(),
+            };
+            unsafe { on_player_state(self.context, &raw const c_player_state) };
         }
     }
 }

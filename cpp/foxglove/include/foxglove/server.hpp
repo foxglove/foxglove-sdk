@@ -3,6 +3,7 @@
 #include <foxglove/channel.hpp>
 #include <foxglove/context.hpp>
 #include <foxglove/error.hpp>
+#include <foxglove/player_state.hpp>
 #include <foxglove/server/connection_graph.hpp>
 #include <foxglove/server/fetch_asset.hpp>
 #include <foxglove/server/parameter.hpp>
@@ -184,6 +185,11 @@ struct WebSocketServerCallbacks {
   ///
   /// Requires the capability WebSocketServerCapabilities::ConnectionGraph
   std::function<void()> onConnectionGraphUnsubscribe;
+
+  /// @brief Callback invoked when the player state changes.
+  ///
+  /// Requires the capability WebSocketServerCapabilities::RangedPlayback
+  std::function<void(const PlayerState& player_state)> onPlayerState;
 };
 
 /// @cond foxglove_internal

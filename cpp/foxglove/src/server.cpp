@@ -19,7 +19,7 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
     options.callbacks.onClientUnadvertise || options.callbacks.onGetParameters ||
     options.callbacks.onSetParameters || options.callbacks.onParametersSubscribe ||
     options.callbacks.onParametersUnsubscribe || options.callbacks.onConnectionGraphSubscribe ||
-    options.callbacks.onConnectionGraphUnsubscribe;
+    options.callbacks.onConnectionGraphUnsubscribe || options.callbacks.onPlayerState;
 
   std::unique_ptr<WebSocketServerCallbacks> callbacks;
   std::unique_ptr<FetchAssetHandler> fetch_asset;
@@ -220,6 +220,17 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
           (static_cast<const WebSocketServerCallbacks*>(context))->onConnectionGraphUnsubscribe();
         } catch (const std::exception& exc) {
           warn() << "onConnectionGraphUnsubscribe callback failed: " << exc.what();
+        }
+      };
+    }
+    if (callbacks->onPlayerState) {
+      c_callbacks.on_player_state =
+        [](const void* context, const foxglove_player_state* c_player_state) {
+          try {
+            (static_cast<const WebSocketServerCallbacks*>(context))
+              ->onPlayerState(PlayerState::from(*c_player_state));
+          } catch (const std::exception& exc) {
+            warn() << "onPlayerState callback failed: " << exc.what();
         }
       };
     }
