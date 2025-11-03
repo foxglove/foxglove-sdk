@@ -44,6 +44,7 @@ from foxglove.layouts.panels import (
     ThreeDeePanel,
     TiledMapLayerConfig,
     TopicsConfig,
+    TopicGraphPanel,
     TransformConfig,
     TransformsConfig,
     UrdfLayerConfig,
@@ -2232,6 +2233,24 @@ class TestTablePanel:
         assert parsed["id"] == "table-1"
 
 
+class TestTopicGraphPanel:
+    def test_creation_with_defaults(self) -> None:
+        panel = TopicGraphPanel()
+        json_str = panel.to_json()
+        parsed = json.loads(json_str)
+        assert parsed["type"] == "TopicGraph"
+        assert parsed["id"].startswith("TopicGraph!")
+        assert "topicGraph" not in parsed["config"]
+
+    def test_creation_with_id(self) -> None:
+        panel = TopicGraphPanel(id="custom-id")
+        json_str = panel.to_json()
+        parsed = json.loads(json_str)
+        assert parsed["type"] == "TopicGraph"
+        assert parsed["id"] == "custom-id"
+        assert "topicGraph" not in parsed["config"]
+
+
 class TestPanelSerialization:
     def test_all_panels_serialize_to_json(self) -> None:
         panels = [
@@ -2259,6 +2278,7 @@ class TestPanelSerialization:
             ServiceCallPanel(id="service", service_name="/service"),
             LogPanel(id="log", topic_to_render="/rosout"),
             TablePanel(id="table", topic_path="/camera/ring_front_center/camera_info"),
+            TopicGraphPanel(id="table"),
         ]
         for panel in panels:
             json_str = panel.to_json()
