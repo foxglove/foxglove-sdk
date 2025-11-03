@@ -243,14 +243,13 @@ jobs:
       matrix:
         platform:
           - runner: windows-latest
-            target: x64
+            target: x86_64
           - runner: windows-latest
-            target: x86
+            target: i686
     steps:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.9"
-          architecture: ${{ matrix.platform.target }}
       - name: Download sdist
         uses: actions/download-artifact@v5
         with:
