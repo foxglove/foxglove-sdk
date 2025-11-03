@@ -1,6 +1,6 @@
 import { PlayFilledAlt, DocumentDownload } from "@carbon/icons-react";
 import { DataSource, SelectLayoutParams } from "@foxglove/embed";
-import { FoxgloveViewer } from "@foxglove/embed-react";
+import { FoxgloveViewer, FoxgloveViewerInterface } from "@foxglove/embed-react";
 import { Button, GlobalStyles, IconButton, Tooltip, Typography } from "@mui/material";
 import { Allotment } from "allotment";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -66,6 +66,7 @@ function setAndCopyUrlState(state: UrlState) {
 export function Playground(): React.JSX.Element {
   const runnerRef = useRef<Runner>(undefined);
   const editorRef = useRef<EditorInterface>(null);
+  const viewerRef = useRef<FoxgloveViewerInterface>(null);
   const { cx, classes } = useStyles();
 
   const [initialState] = useState(() => {
@@ -134,7 +135,21 @@ export function Playground(): React.JSX.Element {
     if (!editor) {
       return;
     }
-    setAndCopyUrlState({ code: editor.getValue(), layout: selectedLayout });
+    const viewer = viewerRef.current;
+    if (!viewer) {
+      return;
+    }
+    viewer
+      .getLayout()
+      .then((layout) => {
+        setAndCopyUrlState({
+          code: editor.getValue(),
+          layout: layout ?? selectedLayout.opaqueLayout,
+        });
+      })
+      .catch((err: unknown) => {
+        toast.error(`Sharing failed: ${String(err)}`);
+      });
   }, [selectedLayout]);
 
   const chooseLayout = useCallback(() => {
@@ -254,6 +269,7 @@ export function Playground(): React.JSX.Element {
       </Allotment.Pane>
       <Allotment.Pane minSize={200}>
         <FoxgloveViewer
+          ref={viewerRef}
           style={{ width: "100%", height: "100%", overflow: "hidden" }}
           colorScheme="light"
           data={dataSource}
