@@ -22,7 +22,9 @@ const useStyles = tss.create(({ theme }) => ({
   topBar: {
     flex: "0 0 auto",
     display: "flex",
-    padding: "8px 8px 8px 16px",
+    // Match the height of the app bar in the Foxglove app
+    height: "44px",
+    padding: "0 8px 0 16px",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
