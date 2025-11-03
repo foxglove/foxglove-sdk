@@ -872,6 +872,16 @@ class TopicGraphPanel(Panel):
         pass
 
 
+@panel_type("TransformTree")
+class TransformTreePanel(Panel):
+    def __init__(
+        self,
+        *,
+        id: str | None = None,
+    ) -> None:
+        pass
+
+
 __all__ = [
     "MarkdownPanel",
     "RawMessagesPanel",
@@ -915,4 +925,5 @@ __all__ = [
     "NameFilter",
     "TablePanel",
     "TopicGraphPanel",
+    "TransformTreePanel",
 ]

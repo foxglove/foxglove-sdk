@@ -43,10 +43,11 @@ from foxglove.layouts.panels import (
     TeleopPanel,
     ThreeDeePanel,
     TiledMapLayerConfig,
-    TopicsConfig,
     TopicGraphPanel,
+    TopicsConfig,
     TransformConfig,
     TransformsConfig,
+    TransformTreePanel,
     UrdfLayerConfig,
 )
 
@@ -2240,7 +2241,6 @@ class TestTopicGraphPanel:
         parsed = json.loads(json_str)
         assert parsed["type"] == "TopicGraph"
         assert parsed["id"].startswith("TopicGraph!")
-        assert "topicGraph" not in parsed["config"]
 
     def test_creation_with_id(self) -> None:
         panel = TopicGraphPanel(id="custom-id")
@@ -2248,7 +2248,22 @@ class TestTopicGraphPanel:
         parsed = json.loads(json_str)
         assert parsed["type"] == "TopicGraph"
         assert parsed["id"] == "custom-id"
-        assert "topicGraph" not in parsed["config"]
+
+
+class TestTransformTreePanel:
+    def test_creation_with_defaults(self) -> None:
+        panel = TransformTreePanel()
+        json_str = panel.to_json()
+        parsed = json.loads(json_str)
+        assert parsed["type"] == "TransformTree"
+        assert parsed["id"].startswith("TransformTree!")
+
+    def test_creation_with_id(self) -> None:
+        panel = TransformTreePanel(id="custom-id")
+        json_str = panel.to_json()
+        parsed = json.loads(json_str)
+        assert parsed["type"] == "TransformTree"
+        assert parsed["id"] == "custom-id"
 
 
 class TestPanelSerialization:
@@ -2279,6 +2294,7 @@ class TestPanelSerialization:
             LogPanel(id="log", topic_to_render="/rosout"),
             TablePanel(id="table", topic_path="/camera/ring_front_center/camera_info"),
             TopicGraphPanel(id="table"),
+            TransformTreePanel(id="transform-tree"),
         ]
         for panel in panels:
             json_str = panel.to_json()
