@@ -12,7 +12,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.9"
 
@@ -119,7 +119,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.9"
 
@@ -175,7 +175,7 @@ jobs:
           - runner: ubuntu-22.04
             target: ppc64le
     steps:
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.9"
       - name: Download sdist
@@ -213,7 +213,7 @@ jobs:
           - runner: ubuntu-22.04
             target: armv7
     steps:
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.9"
       - name: Download sdist
@@ -247,6 +247,11 @@ jobs:
           - runner: windows-latest
             target: i686
     steps:
+      - uses: actions/setup-python@v6
+        if: ${{ matrix.platform.target == 'x86_64' }}
+        with:
+          python-version: "3.9"
+
       # The 64-bit windows-latest image doesn't have 32-bit pythons.
       - uses: actions/setup-python@v6
         if: ${{ matrix.platform.target == 'i686' }}
@@ -291,7 +296,7 @@ jobs:
           - runner: macos-14
             target: aarch64
     steps:
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.9"
       - name: Download sdist
@@ -368,7 +373,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - uses: actions-rust-lang/setup-rust-toolchain@v1
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.9"
       - uses: astral-sh/setup-uv@v7
