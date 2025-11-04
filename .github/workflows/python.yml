@@ -102,7 +102,9 @@ jobs:
       - run: yarn install
       - run: yarn build
       - uses: cloudflare/pages-action@v1.5.0
-        if: ${{ !github.event.pull_request.head.repo.fork }} # Only run if not a fork
+        # Only run if not a fork, and not a dependabot PR, since we do not have
+        # access to secrets in these environments.
+        if: ${{ !github.event.pull_request.head.repo.fork && github.actor != 'dependabot[bot]' }}
         id: deploy
         with:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
