@@ -60,7 +60,7 @@ impl<'a> BinaryMessage<'a> for PlayerState {
 
         let playback_speed = data.get_f32_le();
         let had_seek = data.get_u8() != 0;
-        let seek_time = if had_seek && data.len() >= 8 {
+        let seek_time = if had_seek {
             Some(data.get_u64_le())
         } else {
             None
