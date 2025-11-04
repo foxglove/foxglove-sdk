@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import uuid
 import inspect
 import json
 from dataclasses import asdict, dataclass, field
@@ -109,7 +110,7 @@ class MarkdownPanel(Panel):
         *,
         id: str | None = None,
         markdown: str | None = None,
-        font_size: int | None = None,
+        font_size: Literal[8, 9, 10, 11, 12, 14, 16, 18, 24, 30, 36, 48, 60, 72] = 12,
         foxglove_panel_title: str | None = None,
     ) -> None:
         pass
@@ -127,7 +128,7 @@ class RawMessagesPanel(Panel):
         expansion: Literal["all", "none"] | dict[str, Literal["c", "e"]] | None = None,
         show_full_message_for_diff: bool = False,
         topic_path: str = "",
-        font_size: int | None = None,
+        font_size: Literal[8, 9, 10, 11, 12, 14, 16, 18, 24, 30, 36, 48, 60, 72] = 12,
     ) -> None:
         pass
 
@@ -141,8 +142,8 @@ class AudioPanel(Panel):
         color: str | None = None,
         muted: bool | None = False,
         topic: str | None = None,
-        volume: float | None = None,
-        sliding_view_width: float | None = None,
+        volume: float | None = 1,
+        sliding_view_width: float | None = 10,
         foxglove_panel_title: str | None = None,
     ) -> None:
         pass
@@ -182,10 +183,10 @@ class ROSDiagnosticSummaryPanel(Panel):
 
 @dataclass
 class IndicatorPanelRule:
-    raw_value: str
-    operator: Literal["=", "<", "<=", ">", ">="]
-    color: str
-    label: str
+    raw_value: str = "true"
+    operator: Literal["=", "<", "<=", ">", ">="] = "="
+    color: str = "#68e24a"
+    label: str = "Label"
 
     def to_dict(self) -> dict[str, Any]:
         rule_dict = asdict(self)
@@ -200,9 +201,9 @@ class IndicatorPanel(Panel):
         id: str | None = None,
         path: str = "",
         style: Literal["bulb", "background"] = "bulb",
-        font_size: int | None = None,
-        fallback_color: str | None = None,
-        fallback_label: str | None = None,
+        font_size: Literal[8, 9, 10, 11, 12, 14, 16, 18, 24, 30, 36, 48, 60, 72] = 12,
+        fallback_color: str | None = "#a0a0a0",
+        fallback_label: str | None = "False",
         foxglove_panel_title: str | None = None,
     ) -> None:
         pass
@@ -246,12 +247,13 @@ class BasePlotPath:
 
 @dataclass
 class PlotPath(BasePlotPath):
-    id: str | None = None
+    id: str = str(uuid.uuid4())
     color: str | None = None
     label: str | None = None
     timestamp_method: Literal[
         "receiveTime", "publishTime", "headerStamp", "customField"
     ] = "receiveTime"
+    value: str = ""
     timestamp_path: str | None = None
     show_line: bool = True
     line_size: int | None = None
@@ -357,7 +359,7 @@ class StateTransitionsDiscreteCustomStates:
 
 @dataclass
 class StateTransitionsPath:
-    value: str
+    value: str = ""
     label: str | None = None
     enabled: bool = True
     timestamp_method: Literal[
@@ -366,7 +368,7 @@ class StateTransitionsPath:
     timestamp_path: str | None = None
     custom_states: (
         StateTransitionsDiscreteCustomStates | StateTransitionsRangeCustomStates | None
-    ) = None
+    ) = field(default_factory=lambda: StateTransitionsDiscreteCustomStates(type="discrete", states=[]))
 
     def to_dict(self) -> dict[str, Any]:
         custom_states = self.custom_states

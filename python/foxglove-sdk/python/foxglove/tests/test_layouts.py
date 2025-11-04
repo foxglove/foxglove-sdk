@@ -62,14 +62,14 @@ class TestMarkdownPanel:
         result = panel.to_dict()
         assert result["type"] == "Markdown"
         assert result["id"].startswith("Markdown!")
-        assert result["config"] == {}
+        assert result["config"]["fontSize"] == 12
 
     def test_creation_with_id(self) -> None:
         panel = MarkdownPanel(id="custom-id")
         result = panel.to_dict()
         assert result["type"] == "Markdown"
         assert result["id"] == "custom-id"
-        assert result["config"] == {}
+        assert result["config"]["fontSize"] == 12
 
     def test_creation_with_config(self) -> None:
         panel = MarkdownPanel(
@@ -86,17 +86,18 @@ class TestMarkdownPanel:
         assert result["config"]["foxglovePanelTitle"] == "Test Panel"
 
     def test_to_dict_filters_none_values(self) -> None:
-        panel = MarkdownPanel(id="test", markdown="# Hello", font_size=None)
+        panel = MarkdownPanel(id="test", markdown="# Hello")
         result = panel.to_dict()
         assert result["id"] == "test"
         assert result["type"] == "Markdown"
         assert result["config"]["markdown"] == "# Hello"
-        assert "fontSize" not in result["config"]
+        assert result["config"]["fontSize"] == 12
 
     def test_to_dict_converts_to_camel_case(self) -> None:
         panel = MarkdownPanel(id="test", foxglove_panel_title="Title")
         result = panel.to_dict()
         assert result["config"]["foxglovePanelTitle"] == "Title"
+        assert result["config"]["fontSize"] == 12
 
     def test_to_json(self) -> None:
         panel = MarkdownPanel(id="test", markdown="# Hello")
@@ -105,6 +106,7 @@ class TestMarkdownPanel:
         assert parsed["id"] == "test"
         assert parsed["type"] == "Markdown"
         assert parsed["config"]["markdown"] == "# Hello"
+        assert parsed["config"]["fontSize"] == 12
 
 
 class TestRawMessagesPanel:
@@ -263,12 +265,11 @@ class TestIndicatorPanel:
             rule,
             id="ind-1",
             path="/topic/value",
-            font_size=None,
             fallback_color="#ffffff",
         )
         result = panel.to_dict()
-        assert "fontSize" not in result["config"]
         assert result["config"]["fallbackColor"] == "#ffffff"
+        assert result["config"]["fontSize"] == 12
         assert len(result["config"]["rules"]) == 1
         assert result["config"]["rules"][0]["rawValue"] == "10"
         assert result["config"]["rules"][0]["operator"] == ">="
