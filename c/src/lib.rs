@@ -385,37 +385,11 @@ impl From<FoxgloveDuration> for foxglove::schemas::Duration {
 }
 
 #[repr(C)]
-#[derive(Copy, Clone)]
-pub struct FoxglovePlayerState {
+pub struct FoxglovePlayerState<'a> {
     /// Playback state
     pub playback_state: u8,
     /// Playback speed
     pub playback_speed: f32,
     /// Seek playback time in nanoseconds (only set if a seek has been performed)
-    pub seek_time: FoxgloveOptionalU64,
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct FoxgloveOptionalU64 {
-    /// True when `value` contains a valid timestamp.
-    pub has_value: bool,
-    /// Seek playback time in nanoseconds.
-    pub value: u64,
-}
-
-impl From<Option<u64>> for FoxgloveOptionalU64 {
-    fn from(maybe_value: Option<u64>) -> FoxgloveOptionalU64 {
-        if let Some(value) = maybe_value {
-            return FoxgloveOptionalU64 {
-                has_value: true,
-                value,
-            };
-        } else {
-            return FoxgloveOptionalU64 {
-                has_value: false,
-                value: 0,
-            };
-        }
-    }
+    pub seek_time: Option<&'a u64>,
 }

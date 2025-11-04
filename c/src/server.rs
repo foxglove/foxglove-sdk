@@ -170,10 +170,10 @@ pub struct FoxgloveServerOptions<'a> {
 
     /// If the server is sending data from a fixed time range, and has the RangedPlayback capability,
     /// the start time of the data range.
-    pub data_start_time: *const u64,
+    pub data_start_time: Option<&'a u64>,
     /// If the server is sending data from a fixed time range, and has the RangedPlayback capability,
     /// the end time of the data range.
-    pub data_end_time: *const u64,
+    pub data_end_time: Option<&'a u64>,
 }
 
 #[repr(C)]
@@ -459,9 +459,9 @@ unsafe fn do_foxglove_server_start(
         server = server.server_info(server_info);
     }
 
-    if !options.data_start_time.is_null() && !options.data_end_time.is_null() {
-        let data_start_time = unsafe { *options.data_start_time };
-        let data_end_time = unsafe { *options.data_end_time };
+    if let (Some(&data_start_time), Some(&data_end_time)) =
+        (options.data_start_time, options.data_end_time)
+    {
         server = server.playback_time_range(data_start_time, data_end_time);
     }
 
@@ -947,7 +947,7 @@ impl foxglove::websocket::ServerListener for FoxgloveServerCallbacks {
             let c_player_state = FoxglovePlayerState {
                 playback_state: player_state.playback_state as u8,
                 playback_speed: player_state.playback_speed,
-                seek_time: player_state.seek_time.into(),
+                seek_time: player_state.seek_time.as_ref(),
             };
             unsafe { on_player_state(self.context, &raw const c_player_state) };
         }

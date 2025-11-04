@@ -346,14 +346,12 @@ private:
   WebSocketServer(
     foxglove_websocket_server* server, std::unique_ptr<WebSocketServerCallbacks> callbacks,
     std::unique_ptr<FetchAssetHandler> fetch_asset,
-    std::unique_ptr<SinkChannelFilterFn> sink_channel_filter,
-    std::unique_ptr<std::pair<uint64_t, uint64_t>> playback_time_range
+    std::unique_ptr<SinkChannelFilterFn> sink_channel_filter
   );
 
   std::unique_ptr<WebSocketServerCallbacks> callbacks_;
   std::unique_ptr<FetchAssetHandler> fetch_asset_;
   std::unique_ptr<SinkChannelFilterFn> sink_channel_filter_;
-  std::unique_ptr<std::pair<uint64_t, uint64_t>> playback_time_range_;
   std::unique_ptr<foxglove_websocket_server, foxglove_error (*)(foxglove_websocket_server*)> impl_;
 };
 

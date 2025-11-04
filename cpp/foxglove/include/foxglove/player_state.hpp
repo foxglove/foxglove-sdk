@@ -27,8 +27,8 @@ public:
     return {
         .playback_state = static_cast<PlaybackState>(c_player_state.playback_state),
         .playback_speed =  c_player_state.playback_speed,
-        .seek_time = c_player_state.seek_time.has_value
-                         ? std::optional<uint64_t>(c_player_state.seek_time.value)
+        .seek_time = c_player_state.seek_time
+                         ? std::optional<uint64_t>(*c_player_state.seek_time)
                          : std::nullopt
     };
   }

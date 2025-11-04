@@ -2029,17 +2029,6 @@ typedef struct foxglove_parameter_array {
 } foxglove_parameter_array;
 #endif
 
-typedef struct FoxgloveOptionalU64 {
-  /**
-   * True when `value` contains a valid timestamp.
-   */
-  bool has_value;
-  /**
-   * Seek playback time in nanoseconds.
-   */
-  uint64_t value;
-} FoxgloveOptionalU64;
-
 typedef struct foxglove_player_state {
   /**
    * Playback state
@@ -2052,7 +2041,7 @@ typedef struct foxglove_player_state {
   /**
    * Seek playback time in nanoseconds (only set if a seek has been performed)
    */
-  struct FoxgloveOptionalU64 seek_time;
+  const uint64_t *seek_time;
 } foxglove_player_state;
 
 #if !defined(__wasm__)
