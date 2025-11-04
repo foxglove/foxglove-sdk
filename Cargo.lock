@@ -762,7 +762,7 @@ name = "example_prost"
 version = "0.0.0"
 dependencies = [
  "foxglove 0.15.3",
- "prost",
+ "prost 0.13.5",
  "prost-build",
 ]
 
@@ -901,8 +901,8 @@ dependencies = [
  "foxglove_derive 0.9.1",
  "mcap",
  "parking_lot",
- "prost",
- "prost-types",
+ "prost 0.13.5",
+ "prost-types 0.13.5",
  "serde",
  "serde_json",
  "smallbytes",
@@ -931,8 +931,8 @@ dependencies = [
  "maplit",
  "mcap",
  "parking_lot",
- "prost",
- "prost-types",
+ "prost 0.13.5",
+ "prost-types 0.13.5",
  "rcgen",
  "schemars 1.0.4",
  "serde",
@@ -961,7 +961,7 @@ dependencies = [
  "foxglove 0.15.3",
  "log",
  "maplit",
- "prost-types",
+ "prost-types 0.13.5",
  "pyo3",
  "pyo3-log",
  "thiserror 2.0.14",
@@ -993,7 +993,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "foxglove 0.9.1",
- "prost",
+ "prost 0.13.5",
  "serde",
  "serde_json",
  "wit-bindgen",
@@ -1006,7 +1006,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f0ece3f941204fde237b3c5fd4a72456089b15fcd5b891865dcbf2bf2b27b71b"
 dependencies = [
  "proc-macro2",
- "prost-types",
+ "prost-types 0.13.5",
  "quote",
  "syn 2.0.104",
 ]
@@ -1018,9 +1018,9 @@ dependencies = [
  "bytes",
  "foxglove 0.15.3",
  "proc-macro2",
- "prost",
+ "prost 0.13.5",
  "prost-reflect",
- "prost-types",
+ "prost-types 0.13.5",
  "quote",
  "syn 2.0.104",
  "tracing",
@@ -1033,9 +1033,9 @@ version = "0.0.0"
 dependencies = [
  "anyhow",
  "itertools 0.14.0",
- "prost",
+ "prost 0.13.5",
  "prost-build",
- "prost-types",
+ "prost-types 0.13.5",
  "regex",
  "tempfile",
  "walkdir",
@@ -1821,7 +1821,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2796faa41db3ec313a31f7624d9286acf277b52de526150b7e69f3debf891ee5"
 dependencies = [
  "bytes",
- "prost-derive",
+ "prost-derive 0.13.5",
+]
+
+[[package]]
+name = "prost"
+version = "0.14.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7231bd9b3d3d33c86b58adbac74b5ec0ad9f496b19d22801d773636feaa95f3d"
+dependencies = [
+ "bytes",
+ "prost-derive 0.14.1",
 ]
 
 [[package]]
@@ -1837,8 +1847,8 @@ dependencies = [
  "once_cell",
  "petgraph",
  "prettyplease",
- "prost",
- "prost-types",
+ "prost 0.13.5",
+ "prost-types 0.13.5",
  "regex",
  "syn 2.0.104",
  "tempfile",
@@ -1858,13 +1868,26 @@ dependencies = [
 ]
 
 [[package]]
-name = "prost-reflect"
-version = "0.15.3"
+name = "prost-derive"
+version = "0.14.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "37587d5a8a1b3dc9863403d084fc2254b91ab75a702207098837950767e2260b"
+checksum = "9120690fafc389a67ba3803df527d0ec9cbbc9cc45e4cc20b332996dfb672425"
 dependencies = [
- "prost",
- "prost-types",
+ "anyhow",
+ "itertools 0.14.0",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.104",
+]
+
+[[package]]
+name = "prost-reflect"
+version = "0.16.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "89a3ac73ec9a9118131a4594c9d336631a07852220a1d0ae03ee36b04503a063"
+dependencies = [
+ "prost 0.14.1",
+ "prost-types 0.14.1",
 ]
 
 [[package]]
@@ -1873,7 +1896,16 @@ version = "0.13.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "52c2c1bf36ddb1a1c396b3601a3cec27c2462e45f07c386894ec3ccf5332bd16"
 dependencies = [
- "prost",
+ "prost 0.13.5",
+]
+
+[[package]]
+name = "prost-types"
+version = "0.14.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b9b4db3d6da204ed77bb26ba83b6122a73aeb2e87e25fbf7ad2e84c4ccbf8f72"
+dependencies = [
+ "prost 0.14.1",
 ]
 
 [[package]]
