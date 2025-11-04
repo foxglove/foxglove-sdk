@@ -100,9 +100,10 @@ export default (_env: unknown, argv: WebpackArgv): Configuration => {
           overlay: false,
         }),
       new PyodideCdnDownloadPlugin([
+        "protobuf-5.29.2-cp312-cp312-pyodide_2024_0_wasm32.whl",
+        "jedi-0.19.1-py2.py3-none-any.whl",
         "micropip-0.9.0-py3-none-any.whl",
         "packaging-24.2-py3-none-any.whl",
-        "jedi-0.19.1-py2.py3-none-any.whl",
         "parso-0.8.4-py2.py3-none-any.whl",
       ]),
     ],

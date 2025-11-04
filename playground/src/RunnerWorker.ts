@@ -120,8 +120,7 @@ export class RunnerWorker {
       },
     });
     this.#abortController.signal.throwIfAborted();
-    await pyodide.loadPackage("micropip");
-    await pyodide.loadPackage("jedi");
+    await pyodide.loadPackage(["jedi", "micropip", "protobuf"]);
     this.#abortController.signal.throwIfAborted();
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const micropip = pyodide.pyimport("micropip");
