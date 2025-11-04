@@ -100,6 +100,9 @@ export default (_env: unknown, argv: WebpackArgv): Configuration => {
           overlay: false,
         }),
       new PyodideCdnDownloadPlugin([
+        // Pyodide is distributed with a list of packages that it knows about. These filenames match
+        // the ones it will try to download at runtime when calling pyodide.loadPackage(). See the
+        // list at: https://pyodide.org/en/stable/usage/packages-in-pyodide.html
         "protobuf-5.29.2-cp312-cp312-pyodide_2024_0_wasm32.whl",
         "jedi-0.19.1-py2.py3-none-any.whl",
         "micropip-0.9.0-py3-none-any.whl",
@@ -110,7 +113,11 @@ export default (_env: unknown, argv: WebpackArgv): Configuration => {
   };
 };
 
-/** Download python wheel files from Pyodide's CDN at build time */
+/**
+ * Download python wheel files from Pyodide's CDN at build time
+ *
+ * See available packages at: https://pyodide.org/en/stable/usage/packages-in-pyodide.html
+ */
 class PyodideCdnDownloadPlugin {
   #packages: string[];
   #assets: Promise<Array<{ name: string; data: Buffer }>>;
