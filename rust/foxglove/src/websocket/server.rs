@@ -533,7 +533,7 @@ impl Server {
             .with_metadata(metadata)
             .with_supported_encodings(&self.supported_encodings)
             .with_session_id(self.session_id.read().clone())
-            .with_data_time_range(self.playback_time_range)
+            .with_playback_time_range(self.playback_time_range)
     }
 
     /// Sets a new session ID and notifies all clients, causing them to reset their state.

@@ -79,7 +79,7 @@ impl ServerInfo {
     }
 
     #[must_use]
-    pub fn with_data_time_range(mut self, time_range: Option<(u64, u64)>) -> Self {
+    pub fn with_playback_time_range(mut self, time_range: Option<(u64, u64)>) -> Self {
         if let Some((start_time, end_time)) = time_range {
             self.data_start_time = Some(start_time);
             self.data_end_time = Some(end_time);
@@ -136,7 +136,7 @@ mod tests {
                 "key".into() => "value".into(),
             })
             .with_session_id("1675789422160")
-            .with_data_time_range(Some((1000000, 1000005)))
+            .with_playback_time_range(Some((1000000, 1000005)))
     }
 
     #[test]
