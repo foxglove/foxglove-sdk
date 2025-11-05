@@ -12,7 +12,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.9"
 
@@ -88,7 +88,7 @@ jobs:
     permissions:
       deployments: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - run: corepack enable
       - uses: actions/setup-node@v4
         with:
@@ -102,7 +102,9 @@ jobs:
       - run: yarn install
       - run: yarn build
       - uses: cloudflare/pages-action@v1.5.0
-        if: ${{ !github.event.pull_request.head.repo.fork }} # Only run if not a fork
+        # Only run if not a fork, and not a dependabot PR, since we do not have
+        # access to secrets in these environments.
+        if: ${{ !github.event.pull_request.head.repo.fork && github.actor != 'dependabot[bot]' }}
         id: deploy
         with:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -119,7 +121,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.9"
 
@@ -175,7 +177,7 @@ jobs:
           - runner: ubuntu-22.04
             target: ppc64le
     steps:
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.9"
       - name: Download sdist
@@ -213,7 +215,7 @@ jobs:
           - runner: ubuntu-22.04
             target: armv7
     steps:
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.9"
       - name: Download sdist
@@ -243,14 +245,28 @@ jobs:
       matrix:
         platform:
           - runner: windows-latest
-            target: x64
+            target: x86_64
           - runner: windows-latest
             target: x86
     steps:
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
+        if: ${{ matrix.platform.target == 'x86_64' }}
         with:
           python-version: "3.9"
-          architecture: ${{ matrix.platform.target }}
+
+      # The windows-latest image doesn't have 32-bit pythons.
+      - uses: actions/setup-python@v6
+        if: ${{ matrix.platform.target == 'x86' }}
+        with:
+          architecture: x86
+          python-version: |
+            3.14
+            3.13
+            3.12
+            3.11
+            3.10
+            3.9
+
       - name: Download sdist
         uses: actions/download-artifact@v5
         with:
@@ -262,7 +278,7 @@ jobs:
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.platform.target }}
-          args: --release --out dist --interpreter python
+          args: --release --out dist --find-interpreter
           sccache: "false"
           docker-options: "--env MATURIN_NO_MISSING_BUILD_BACKEND_WARNING=1"
       - name: Upload wheels
@@ -277,12 +293,12 @@ jobs:
     strategy:
       matrix:
         platform:
-          - runner: macos-13
-            target: x86_64
           - runner: macos-14
             target: aarch64
+          - runner: macos-15-intel
+            target: x86_64
     steps:
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.9"
       - name: Download sdist
@@ -341,7 +357,7 @@ jobs:
           path: python/foxglove-sdk
       - run: find python/foxglove-sdk/wheels-*
       - name: Generate artifact attestation
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@v3
         with:
           subject-path: "python/foxglove-sdk/wheels-*/*"
       - name: Publish to PyPI
@@ -359,7 +375,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - uses: actions-rust-lang/setup-rust-toolchain@v1
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.9"
       - uses: astral-sh/setup-uv@v7

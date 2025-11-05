@@ -409,7 +409,7 @@ impl Server {
         let mut old_names = vec![];
         for (name, entry) in subs.iter_mut() {
             if entry.remove(&client_id) && entry.is_empty() {
-                old_names.push(name.to_string());
+                old_names.push(name.clone());
             }
         }
         for name in &old_names {

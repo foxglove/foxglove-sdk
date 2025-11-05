@@ -1,3 +1,4 @@
+import { useTheme } from "@mui/material";
 import * as monaco from "monaco-editor";
 import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 
@@ -80,6 +81,11 @@ export const Editor = forwardRef<EditorInterface, EditorProps>(
         editorRef.current = null;
       };
     }, [initialValue, runner]);
+
+    const isDark = useTheme().palette.mode === "dark";
+    useEffect(() => {
+      monaco.editor.setTheme(isDark ? "vs-dark" : "vs");
+    }, [isDark]);
 
     useImperativeHandle(
       ref,
