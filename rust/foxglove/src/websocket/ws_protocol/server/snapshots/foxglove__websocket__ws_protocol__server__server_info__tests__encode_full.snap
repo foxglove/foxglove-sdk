@@ -9,7 +9,6 @@ expression: message_full()
   "capabilities": [
     "clientPublish",
     "time",
-    "rangedPlayback",
     "rangedPlayback"
   ],
   "supportedEncodings": [
