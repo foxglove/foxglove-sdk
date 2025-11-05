@@ -683,7 +683,7 @@ impl ConnectedClient {
         }
 
         if let Some(handler) = server.listener() {
-            handler.on_player_state(Client::new(self), msg);
+            handler.on_player_state(msg);
         }
     }
 

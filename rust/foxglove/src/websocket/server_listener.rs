@@ -67,5 +67,5 @@ pub trait ServerListener: Send + Sync {
     #[doc(hidden)]
     /// Callback invoked when a client sends a player state message.
     /// Requires [`Capability::RangedPlayback`][super::Capability::RangedPlayback].
-    fn on_player_state(&self, _client: Client, _player_state: PlayerState) {}
+    fn on_player_state(&self, _player_state: PlayerState) {}
 }
