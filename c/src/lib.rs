@@ -385,7 +385,7 @@ impl From<FoxgloveDuration> for foxglove::schemas::Duration {
 }
 
 #[repr(C)]
-pub struct FoxglovePlayerState<'a> {
+pub struct FoxglovePlaybackControlRequest<'a> {
     /// Playback state
     pub playback_state: u8,
     /// Playback speed

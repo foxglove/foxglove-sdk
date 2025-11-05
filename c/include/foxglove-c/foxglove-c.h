@@ -2029,7 +2029,7 @@ typedef struct foxglove_parameter_array {
 } foxglove_parameter_array;
 #endif
 
-typedef struct foxglove_player_state {
+typedef struct foxglove_playback_control_request {
   /**
    * Playback state
    */
@@ -2042,7 +2042,7 @@ typedef struct foxglove_player_state {
    * Seek playback time in nanoseconds (only set if a seek has been performed)
    */
   const uint64_t *seek_time;
-} foxglove_player_state;
+} foxglove_playback_control_request;
 
 #if !defined(__wasm__)
 typedef struct foxglove_server_callbacks {
@@ -2134,7 +2134,8 @@ typedef struct foxglove_server_callbacks {
                                     size_t param_names_len);
   void (*on_connection_graph_subscribe)(const void *context);
   void (*on_connection_graph_unsubscribe)(const void *context);
-  void (*on_player_state)(const void *context, const struct foxglove_player_state *player_state);
+  void (*on_playback_control_request)(const void *context,
+                                      const struct foxglove_playback_control_request *playback_control_request);
 } foxglove_server_callbacks;
 #endif
 

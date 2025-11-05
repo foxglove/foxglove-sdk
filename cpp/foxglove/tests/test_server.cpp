@@ -2,7 +2,7 @@
 #include <foxglove/channel.hpp>
 #include <foxglove/context.hpp>
 #include <foxglove/error.hpp>
-#include <foxglove/player_state.hpp>
+#include <foxglove/playback_control_request.hpp>
 #include <foxglove/server.hpp>
 
 #include <catch2/catch_test_macros.hpp>
@@ -1498,20 +1498,26 @@ TEST_CASE("Server info") {
   REQUIRE(server.stop() == foxglove::FoxgloveError::Ok);
 }
 
-std::vector<std::byte> playerStateToBinary(const foxglove::PlayerState& player_state) {
-  constexpr size_t MESSAGE_SIZE = 14;
+std::vector<std::byte> playbackControlRequestToBinary(
+  const foxglove::PlaybackControlRequest& playback_control_request
+) {
+  constexpr size_t MESSAGE_SIZE = 15;
   std::vector<std::byte> msg;
   msg.reserve(MESSAGE_SIZE);
 
   msg.push_back(std::byte{0x03});
-  msg.emplace_back(std::byte{
-    static_cast<std::underlying_type_t<foxglove::PlaybackState>>(player_state.playback_state)
-  });
+  msg.emplace_back(std::byte{static_cast<std::underlying_type_t<foxglove::PlaybackState>>(
+    playback_control_request.playback_state
+  )});
 
-  writeFloatLE(msg, player_state.playback_speed);
+  writeFloatLE(msg, playback_control_request.playback_speed);
 
-  msg.emplace_back(player_state.seek_time.has_value() ? std::byte{0x1} : std::byte{0x0});
-  writeIntLE(msg, player_state.seek_time.has_value() ? *player_state.seek_time : 0x0);
+  msg.emplace_back(
+    playback_control_request.seek_time.has_value() ? std::byte{0x1} : std::byte{0x0}
+  );
+  writeIntLE(
+    msg, playback_control_request.seek_time.has_value() ? *playback_control_request.seek_time : 0x0
+  );
 
   return msg;
 }
@@ -1519,18 +1525,20 @@ std::vector<std::byte> playerStateToBinary(const foxglove::PlayerState& player_s
 TEST_CASE("Player state callback") {
   auto context = foxglove::Context::create();
 
-  std::optional<foxglove::PlayerState> received_player_state = std::nullopt;
+  std::optional<foxglove::PlaybackControlRequest> received_playback_control_request = std::nullopt;
   std::mutex mutex;
   std::condition_variable cv;
 
   foxglove::WebSocketServerCallbacks callbacks;
-  callbacks.onPlayerState = [&]([[maybe_unused]] const foxglove::PlayerState& player_state) {
-    {
-      std::unique_lock lock(mutex);
-      received_player_state = std::make_optional<foxglove::PlayerState>(player_state);
-    }
-    cv.notify_one();
-  };
+  callbacks.onPlaybackControlRequest =
+    [&]([[maybe_unused]] const foxglove::PlaybackControlRequest& playback_control_request) {
+      {
+        std::unique_lock lock(mutex);
+        received_playback_control_request =
+          std::make_optional<foxglove::PlaybackControlRequest>(playback_control_request);
+      }
+      cv.notify_one();
+    };
 
   auto server = startServer(
     context, foxglove::WebSocketServerCapabilities::RangedPlayback, std::move(callbacks)
@@ -1545,23 +1553,23 @@ TEST_CASE("Player state callback") {
   REQUIRE(parsed.contains("op"));
   REQUIRE(parsed["op"] == "serverInfo");
 
-  foxglove::PlayerState player_state{
+  foxglove::PlaybackControlRequest playback_control_request{
     .playback_state = foxglove::PlaybackState::Paused,
     .playback_speed = 1.0,
     .seek_time = 42,
   };
-  std::vector<std::byte> msg = playerStateToBinary(player_state);
+  std::vector<std::byte> msg = playbackControlRequestToBinary(playback_control_request);
   client.send(msg);
 
   {
     std::unique_lock lock{mutex};
     auto wait_result = cv.wait_for(lock, std::chrono::seconds(1));
     REQUIRE(wait_result != std::cv_status::timeout);
-    REQUIRE(received_player_state.has_value());
-    REQUIRE(received_player_state->playback_state == foxglove::PlaybackState::Paused);
-    REQUIRE(received_player_state->playback_speed == 1.0);
-    REQUIRE(received_player_state->seek_time.has_value());
-    REQUIRE(received_player_state->seek_time.value() == 42);
+    REQUIRE(received_playback_control_request.has_value());
+    REQUIRE(received_playback_control_request->playback_state == foxglove::PlaybackState::Paused);
+    REQUIRE(received_playback_control_request->playback_speed == 1.0);
+    REQUIRE(received_playback_control_request->seek_time.has_value());
+    REQUIRE(received_playback_control_request->seek_time.value() == 42);
   }
 
   REQUIRE(server.stop() == foxglove::FoxgloveError::Ok);

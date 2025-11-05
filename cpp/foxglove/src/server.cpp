@@ -19,7 +19,7 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
     options.callbacks.onClientUnadvertise || options.callbacks.onGetParameters ||
     options.callbacks.onSetParameters || options.callbacks.onParametersSubscribe ||
     options.callbacks.onParametersUnsubscribe || options.callbacks.onConnectionGraphSubscribe ||
-    options.callbacks.onConnectionGraphUnsubscribe || options.callbacks.onPlayerState;
+    options.callbacks.onConnectionGraphUnsubscribe || options.callbacks.onPlaybackControlRequest;
 
   std::unique_ptr<WebSocketServerCallbacks> callbacks;
   std::unique_ptr<FetchAssetHandler> fetch_asset;
@@ -223,16 +223,18 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
         }
       };
     }
-    if (callbacks->onPlayerState) {
-      c_callbacks.on_player_state =
-        [](const void* context, const foxglove_player_state* c_player_state) {
+    if (callbacks->onPlaybackControlRequest) {
+      c_callbacks.on_playback_control_request =
+        [](
+          const void* context, const foxglove_playback_control_request* c_playback_control_request
+        ) {
           try {
             (static_cast<const WebSocketServerCallbacks*>(context))
-              ->onPlayerState(PlayerState::from(*c_player_state));
+              ->onPlaybackControlRequest(PlaybackControlRequest::from(*c_playback_control_request));
           } catch (const std::exception& exc) {
-            warn() << "onPlayerState callback failed: " << exc.what();
-        }
-      };
+            warn() << "onPlaybackControlRequest callback failed: " << exc.what();
+          }
+        };
     }
   }
 
@@ -318,10 +320,7 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
   }
 
   return WebSocketServer(
-    server,
-    std::move(callbacks),
-    std::move(fetch_asset),
-    std::move(sink_channel_filter)
+    server, std::move(callbacks), std::move(fetch_asset), std::move(sink_channel_filter)
   );
 }
 

@@ -12,7 +12,7 @@ use std::sync::Arc;
 use crate::parameter::FoxgloveParameterArray;
 
 use crate::{
-    result_to_c, FoxgloveContext, FoxgloveError, FoxgloveKeyValue, FoxglovePlayerState,
+    result_to_c, FoxgloveContext, FoxgloveError, FoxgloveKeyValue, FoxglovePlaybackControlRequest,
     FoxgloveSinkId, FoxgloveString,
 };
 
@@ -308,8 +308,11 @@ pub struct FoxgloveServerCallbacks {
     >,
     pub on_connection_graph_subscribe: Option<unsafe extern "C" fn(context: *const c_void)>,
     pub on_connection_graph_unsubscribe: Option<unsafe extern "C" fn(context: *const c_void)>,
-    pub on_player_state: Option<
-        unsafe extern "C" fn(context: *const c_void, player_state: *const FoxglovePlayerState),
+    pub on_playback_control_request: Option<
+        unsafe extern "C" fn(
+            context: *const c_void,
+            playback_control_request: *const FoxglovePlaybackControlRequest,
+        ),
     >,
 }
 unsafe impl Send for FoxgloveServerCallbacks {}
@@ -942,14 +945,19 @@ impl foxglove::websocket::ServerListener for FoxgloveServerCallbacks {
         }
     }
 
-    fn on_player_state(&self, player_state: foxglove::websocket::PlayerState) {
-        if let Some(on_player_state) = self.on_player_state {
-            let c_player_state = FoxglovePlayerState {
-                playback_state: player_state.playback_state as u8,
-                playback_speed: player_state.playback_speed,
-                seek_time: player_state.seek_time.as_ref(),
+    fn on_playback_control_request(
+        &self,
+        playback_control_request: foxglove::websocket::PlaybackControlRequest,
+    ) {
+        if let Some(on_playback_control_request) = self.on_playback_control_request {
+            let c_playback_control_request = FoxglovePlaybackControlRequest {
+                playback_state: playback_control_request.playback_state as u8,
+                playback_speed: playback_control_request.playback_speed,
+                seek_time: playback_control_request.seek_time.as_ref(),
             };
-            unsafe { on_player_state(self.context, &raw const c_player_state) };
+            unsafe {
+                on_playback_control_request(self.context, &raw const c_playback_control_request)
+            };
         }
     }
 }
