@@ -34,7 +34,7 @@ pub use server_listener::ServerListener;
 pub use streams::TlsIdentity;
 #[cfg(feature = "unstable")]
 #[doc(hidden)]
-pub use ws_protocol::client::{PlaybackState, PlaybackControlRequest};
+pub use ws_protocol::client::{PlaybackControlRequest, PlaybackState};
 pub use ws_protocol::parameter::{
     DecodeError as ParameterDecodeError, Parameter, ParameterType, ParameterValue,
 };
