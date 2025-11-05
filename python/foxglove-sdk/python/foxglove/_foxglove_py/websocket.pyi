@@ -187,7 +187,6 @@ class ParameterValue:
 
         def __init__(self, value: dict[str, AnyParameterValue]) -> None: ...
 
-
 class PlaybackControlRequest:
     """
     The state of the client player, used for controlling playback of fixed data ranges over WebSocket
@@ -203,7 +202,6 @@ class PlaybackControlRequest:
     playback_state: PlaybackState
     playback_speed: float
     seek_time: int | None
-
 
 class PlaybackState(Enum):
     """The state of the playback requested by the client player (e.g. `Playing`, `Paused`, ...)"""
