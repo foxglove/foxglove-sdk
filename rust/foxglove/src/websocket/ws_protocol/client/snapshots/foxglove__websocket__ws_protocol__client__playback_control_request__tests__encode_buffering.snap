@@ -1,11 +1,11 @@
 ---
-source: rust/foxglove/src/websocket/ws_protocol/client/player_state.rs
-assertion_line: 104
+source: rust/foxglove/src/websocket/ws_protocol/client/playback_control_request.rs
+assertion_line: 123
 expression: "format!(\"{:#04x?}\", message.to_bytes())"
 ---
 [
     0x03,
-    0x01,
+    0x02,
     0x00,
     0x00,
     0x80,
