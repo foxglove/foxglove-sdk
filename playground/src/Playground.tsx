@@ -46,6 +46,9 @@ const useStyles = tss.create(({ theme }) => ({
   },
   toast: {
     fontSize: theme.typography.body1.fontSize,
+    backgroundColor: theme.palette.background.paper,
+    color: theme.palette.text.primary,
+    boxShadow: theme.shadows[4],
   },
   toastMonospace: {
     maxWidth: "none",
@@ -273,7 +276,6 @@ export function Playground(): React.JSX.Element {
         <FoxgloveViewer
           ref={viewerRef}
           style={{ width: "100%", height: "100%", overflow: "hidden" }}
-          colorScheme="light"
           data={dataSource}
           layout={selectedLayout}
         />
