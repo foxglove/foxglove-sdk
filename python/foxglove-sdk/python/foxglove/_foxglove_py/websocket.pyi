@@ -188,7 +188,7 @@ class ParameterValue:
         def __init__(self, value: dict[str, AnyParameterValue]) -> None: ...
 
 
-class PlayerState:
+class PlaybackControlRequest:
     """
     The state of the client player, used for controlling playback of fixed data ranges over WebSocket
 

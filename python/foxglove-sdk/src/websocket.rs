@@ -2,7 +2,7 @@ use crate::{errors::PyFoxgloveError, PySchema};
 use crate::{PyContext, PySinkChannelFilter};
 use base64::prelude::*;
 use foxglove::websocket::{
-    AssetHandler, ChannelView, Client, ClientChannel, PlaybackState, PlayerState, ServerListener,
+    AssetHandler, ChannelView, Client, ClientChannel, PlaybackState, PlaybackControlRequest, ServerListener,
     Status, StatusLevel,
 };
 use foxglove::{WebSocketServer, WebSocketServerHandle};
@@ -80,15 +80,15 @@ impl From<PlaybackState> for PyPlaybackState {
     }
 }
 
-#[pyclass(name = "PlayerState", module = "foxglove", get_all)]
-pub struct PyPlayerState {
+#[pyclass(name = "PlaybackControlRequest", module = "foxglove", get_all)]
+pub struct PyPlaybackControlRequest {
     playback_state: PyPlaybackState,
     playback_speed: f32,
     seek_time: Option<u64>,
 }
-impl From<PlayerState> for PyPlayerState {
-    fn from(value: PlayerState) -> PyPlayerState {
-        PyPlayerState {
+impl From<PlaybackControlRequest> for PyPlaybackControlRequest {
+    fn from(value: PlaybackControlRequest) -> PyPlaybackControlRequest {
+        PyPlaybackControlRequest {
             playback_state: value.playback_state.into(),
             playback_speed: value.playback_speed,
             seek_time: value.seek_time,
@@ -335,12 +335,12 @@ impl ServerListener for PyServerListener {
         }
     }
 
-    fn on_player_state(&self, player_state: PlayerState) {
-        let py_player_state: PyPlayerState = player_state.into();
+    fn on_playback_control_request(&self, playback_control_request: PlaybackControlRequest) {
+        let py_playback_control_request: PyPlaybackControlRequest = playback_control_request.into();
         let result: PyResult<()> = Python::with_gil(|py| {
             self.listener
                 .bind(py)
-                .call_method("on_player_state", (py_player_state,), None)?;
+                .call_method("on_playback_control_request", (py_playback_control_request,), None)?;
 
             Ok(())
         });
@@ -1208,7 +1208,7 @@ pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<PyParameterType>()?;
     module.add_class::<PyParameterValue>()?;
     module.add_class::<PyPlaybackState>()?;
-    module.add_class::<PyPlayerState>()?;
+    module.add_class::<PyPlaybackControlRequest>()?;
     module.add_class::<PyStatusLevel>()?;
     module.add_class::<PyConnectionGraph>()?;
     // Services
