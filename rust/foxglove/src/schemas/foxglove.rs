@@ -141,7 +141,7 @@ pub struct Color {
 }
 /// A compressed image
 /// <https://docs.foxglove.dev/docs/visualization/message-schemas/compressed-image>
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct CompressedImage {
     /// Timestamp of image
     #[prost(message, optional, tag = "1")]
@@ -160,7 +160,7 @@ pub struct CompressedImage {
 }
 /// A single frame of a compressed video bitstream
 /// <https://docs.foxglove.dev/docs/visualization/message-schemas/compressed-video>
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct CompressedVideo {
     /// Timestamp of video frame
     #[prost(message, optional, tag = "1")]
@@ -267,7 +267,7 @@ pub struct FrameTransforms {
 }
 /// GeoJSON data for annotating maps
 /// <https://docs.foxglove.dev/docs/visualization/message-schemas/geo-json>
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GeoJson {
     /// GeoJSON data encoded as a UTF-8 string
     #[prost(string, tag = "1")]
@@ -362,7 +362,7 @@ pub struct ImageAnnotations {
 }
 /// A key with its associated value
 /// <https://docs.foxglove.dev/docs/visualization/message-schemas/key-value-pair>
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct KeyValuePair {
     /// Key
     #[prost(string, tag = "1")]
@@ -565,7 +565,7 @@ pub struct LocationFixes {
 }
 /// A log message
 /// <https://docs.foxglove.dev/docs/visualization/message-schemas/log>
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct Log {
     /// Timestamp of log message
     #[prost(message, optional, tag = "1")]
@@ -672,7 +672,7 @@ pub struct ModelPrimitive {
 }
 /// A field present within each element in a byte array of packed elements.
 /// <https://docs.foxglove.dev/docs/visualization/message-schemas/packed-element-field>
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct PackedElementField {
     /// Name of the field
     #[prost(string, tag = "1")]
@@ -941,7 +941,7 @@ pub struct Quaternion {
 }
 /// A single block of an audio bitstream
 /// <https://docs.foxglove.dev/docs/visualization/message-schemas/raw-audio>
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct RawAudio {
     /// Timestamp of the start of the audio block
     #[prost(message, optional, tag = "1")]
@@ -961,7 +961,7 @@ pub struct RawAudio {
 }
 /// A raw image
 /// <https://docs.foxglove.dev/docs/visualization/message-schemas/raw-image>
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct RawImage {
     /// Timestamp of image
     #[prost(message, optional, tag = "1")]
@@ -1086,7 +1086,7 @@ pub struct SceneEntity {
 }
 /// Command to remove previously published entities
 /// <https://docs.foxglove.dev/docs/visualization/message-schemas/scene-entity-deletion>
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct SceneEntityDeletion {
     /// Timestamp of the deletion. Only matching entities earlier than this timestamp will be deleted.
     #[prost(message, optional, tag = "1")]

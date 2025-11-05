@@ -107,7 +107,7 @@ impl NormalizeResult {
 /// let duration: Duration = std::time::Duration::from_secs(u64::MAX).saturating_into();
 /// assert_eq!(duration, Duration::MAX);
 /// ```
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Duration {
     /// Seconds offset.
     sec: i32,
@@ -326,7 +326,7 @@ where
 ///     .saturating_into();
 /// assert_eq!(timestamp, Timestamp::MIN);
 /// ```
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Timestamp {
     /// Seconds since epoch.
     sec: u32,
