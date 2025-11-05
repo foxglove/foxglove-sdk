@@ -13,6 +13,7 @@ from ._foxglove_py.websocket import (
     Parameter,
     ParameterType,
     ParameterValue,
+    PlayerState,
     Service,
     ServiceRequest,
     ServiceSchema,
@@ -174,6 +175,16 @@ class ServerListener(Protocol):
         """
         return None
 
+    def on_player_state(self, player_state: PlayerState) -> None:
+        """
+        Called by the server when it receives an updated player state from the client.
+
+        Requires :py:data:`Capability.RangedPlayback`.
+
+        :param: player_state: The player state provided by the client.
+        """
+        return None
+
 
 __all__ = [
     "AnyInnerParameterValue",
@@ -189,6 +200,8 @@ __all__ = [
     "Parameter",
     "ParameterType",
     "ParameterValue",
+    "PlaybackState",
+    "PlayerState",
     "ServerListener",
     "Service",
     "ServiceHandler",

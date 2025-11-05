@@ -187,6 +187,32 @@ class ParameterValue:
 
         def __init__(self, value: dict[str, AnyParameterValue]) -> None: ...
 
+
+class PlayerState:
+    """
+    The state of the client player, used for controlling playback of fixed data ranges over WebSocket
+
+    :param playback_state: The state of the playback requested by the client player (e.g. `Playing`, `Paused`, ...)
+    :type playback_state: PlaybackState
+    :param playback_speed: The speed of playback requested by the client player
+    :type playback_speed: float
+    :param seek_time: The time the client player is requesting to seek to, in nanoseconds. None if no seek is requested.
+    :type seek_time: int | None
+    """
+
+    playback_state: PlaybackState
+    playback_speed: float
+    seek_time: int | None
+
+
+class PlaybackState(Enum):
+    """The state of the playback requested by the client player (e.g. `Playing`, `Paused`, ...)"""
+
+    Playing = ...
+    Paused = ...
+    Buffering = ...
+    Ended = ...
+
 class ServiceRequest:
     """
     A websocket service request.
