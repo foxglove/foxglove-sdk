@@ -37,7 +37,7 @@ impl TryFrom<u8> for PlaybackState {
 #[doc(hidden)]
 /// Player state message.
 #[derive(Debug, Clone, PartialEq)]
-pub struct PlayerState {
+pub struct PlaybackControlRequest {
     /// Playback state
     pub playback_state: PlaybackState,
     /// Playback speed
@@ -47,7 +47,7 @@ pub struct PlayerState {
 }
 
 #[cfg(feature = "unstable")]
-impl<'a> BinaryMessage<'a> for PlayerState {
+impl<'a> BinaryMessage<'a> for PlaybackControlRequest {
     fn parse_binary(mut data: &'a [u8]) -> Result<Self, ParseError> {
         // Message size: playback_state (1 byte) + playback_speed (4 bytes) + had_seek (1 byte) + seek_time (8 bytes)
         if data.len() < 1 + 4 + 1 + 8 {
@@ -77,7 +77,7 @@ impl<'a> BinaryMessage<'a> for PlayerState {
         // Message size: opcode (1) + playback_state (1) + playback_speed (4) + had_seek (1) + seek_time (8)
         let mut buf = Vec::with_capacity(1 + 4 + 1 + 8);
 
-        buf.put_u8(BinaryOpcode::PlayerState as u8);
+        buf.put_u8(BinaryOpcode::PlaybackControlRequest as u8);
         buf.put_u8(self.playback_state as u8);
         buf.put_f32_le(self.playback_speed);
         buf.put_u8(if self.seek_time.is_some() { 1 } else { 0 });
@@ -95,7 +95,7 @@ mod tests {
 
     #[test]
     fn test_encode_playing() {
-        let message = PlayerState {
+        let message = PlaybackControlRequest {
             playback_state: PlaybackState::Playing,
             playback_speed: 1.0,
             seek_time: None,
@@ -105,7 +105,7 @@ mod tests {
 
     #[test]
     fn test_encode_paused() {
-        let message = PlayerState {
+        let message = PlaybackControlRequest {
             playback_state: PlaybackState::Paused,
             playback_speed: 1.0,
             seek_time: None,
@@ -115,7 +115,7 @@ mod tests {
 
     #[test]
     fn test_encode_buffering() {
-        let message = PlayerState {
+        let message = PlaybackControlRequest {
             playback_state: PlaybackState::Buffering,
             playback_speed: 1.0,
             seek_time: None,
@@ -125,7 +125,7 @@ mod tests {
 
     #[test]
     fn test_encode_ended() {
-        let message = PlayerState {
+        let message = PlaybackControlRequest {
             playback_state: PlaybackState::Ended,
             playback_speed: 1.0,
             seek_time: None,
@@ -135,33 +135,33 @@ mod tests {
 
     #[test]
     fn test_roundtrip_playing_with_seek_time() {
-        let orig = PlayerState {
+        let orig = PlaybackControlRequest {
             playback_state: PlaybackState::Playing,
             playback_speed: 1.0,
             seek_time: Some(100_500_000_000),
         };
         let buf = orig.to_bytes();
         let msg = ClientMessage::parse_binary(&buf).unwrap();
-        assert_eq!(msg, ClientMessage::PlayerState(orig));
+        assert_eq!(msg, ClientMessage::PlaybackControlRequest(orig));
     }
 
     #[test]
     fn test_roundtrip_playing_without_seek_time() {
-        let orig = PlayerState {
+        let orig = PlaybackControlRequest {
             playback_state: PlaybackState::Playing,
             playback_speed: 1.0,
             seek_time: None,
         };
         let buf = orig.to_bytes();
         let msg = ClientMessage::parse_binary(&buf).unwrap();
-        assert_eq!(msg, ClientMessage::PlayerState(orig));
+        assert_eq!(msg, ClientMessage::PlaybackControlRequest(orig));
     }
 
     #[test]
     fn test_parse_binary_with_seek_time() {
         // Manually construct binary data: opcode + state + speed + had_seek + seek_time
         let mut data = Vec::new();
-        data.put_u8(BinaryOpcode::PlayerState as u8); // opcode
+        data.put_u8(BinaryOpcode::PlaybackControlRequest as u8); // opcode
         data.put_u8(PlaybackState::Playing as u8); // state
         data.put_f32_le(1.5); // speed
         data.put_u8(1); // had_seek = true
@@ -169,12 +169,12 @@ mod tests {
 
         let msg = ClientMessage::parse_binary(&data).unwrap();
         match msg {
-            ClientMessage::PlayerState(state) => {
+            ClientMessage::PlaybackControlRequest(state) => {
                 assert_eq!(state.playback_state, PlaybackState::Playing);
                 assert_eq!(state.playback_speed, 1.5);
                 assert_eq!(state.seek_time, Some(100_500_000_000));
             }
-            _ => panic!("Expected PlayerState message"),
+            _ => panic!("Expected PlaybackControlRequest message"),
         }
     }
 
@@ -182,7 +182,7 @@ mod tests {
     fn test_parse_binary_without_seek_time() {
         // Manually construct binary data with had_seek = false (seek_time bytes still present but zeroed)
         let mut data = Vec::new();
-        data.put_u8(BinaryOpcode::PlayerState as u8); // opcode
+        data.put_u8(BinaryOpcode::PlaybackControlRequest as u8); // opcode
         data.put_u8(PlaybackState::Buffering as u8); // state
         data.put_f32_le(2.0); // speed
         data.put_u8(0); // had_seek = false
@@ -190,12 +190,12 @@ mod tests {
 
         let msg = ClientMessage::parse_binary(&data).unwrap();
         match msg {
-            ClientMessage::PlayerState(state) => {
+            ClientMessage::PlaybackControlRequest(state) => {
                 assert_eq!(state.playback_state, PlaybackState::Buffering);
                 assert_eq!(state.playback_speed, 2.0);
                 assert_eq!(state.seek_time, None);
             }
-            _ => panic!("Expected PlayerState message"),
+            _ => panic!("Expected PlaybackControlRequest message"),
         }
     }
 }

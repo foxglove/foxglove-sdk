@@ -25,7 +25,7 @@ pub use fetch_asset::FetchAsset;
 pub use get_parameters::GetParameters;
 pub use message_data::MessageData;
 #[cfg(feature = "unstable")]
-pub use player_state::{PlaybackState, PlayerState};
+pub use player_state::{PlaybackState, PlaybackControlRequest};
 pub use service_call_request::ServiceCallRequest;
 pub use set_parameters::SetParameters;
 pub use subscribe::{Subscribe, Subscription};
@@ -54,7 +54,7 @@ pub enum ClientMessage<'a> {
     UnsubscribeConnectionGraph,
     FetchAsset(FetchAsset),
     #[cfg(feature = "unstable")]
-    PlayerState(PlayerState),
+    PlaybackControlRequest(PlaybackControlRequest),
 }
 
 impl<'a> ClientMessage<'a> {
@@ -78,8 +78,8 @@ impl<'a> ClientMessage<'a> {
                     ServiceCallRequest::parse_binary(data).map(ClientMessage::ServiceCallRequest)
                 }
                 #[cfg(feature = "unstable")]
-                Some(BinaryOpcode::PlayerState) => {
-                    PlayerState::parse_binary(data).map(ClientMessage::PlayerState)
+                Some(BinaryOpcode::PlaybackControlRequest) => {
+                    PlaybackControlRequest::parse_binary(data).map(ClientMessage::PlaybackControlRequest)
                 }
                 None => Err(ParseError::InvalidOpcode(opcode)),
             }
@@ -110,7 +110,7 @@ impl<'a> ClientMessage<'a> {
             ClientMessage::UnsubscribeConnectionGraph => ClientMessage::UnsubscribeConnectionGraph,
             ClientMessage::FetchAsset(m) => ClientMessage::FetchAsset(m),
             #[cfg(feature = "unstable")]
-            ClientMessage::PlayerState(m) => ClientMessage::PlayerState(m),
+            ClientMessage::PlaybackControlRequest(m) => ClientMessage::PlaybackControlRequest(m),
         }
     }
 }
@@ -155,7 +155,7 @@ enum BinaryOpcode {
     MessageData = 1,
     ServiceCallRequest = 2,
     #[cfg(feature = "unstable")]
-    PlayerState = 3,
+    PlaybackControlRequest = 3,
 }
 impl BinaryOpcode {
     fn from_repr(value: u8) -> Option<Self> {
@@ -163,7 +163,7 @@ impl BinaryOpcode {
             1 => Some(Self::MessageData),
             2 => Some(Self::ServiceCallRequest),
             #[cfg(feature = "unstable")]
-            3 => Some(Self::PlayerState),
+            3 => Some(Self::PlaybackControlRequest),
             _ => None,
         }
     }
