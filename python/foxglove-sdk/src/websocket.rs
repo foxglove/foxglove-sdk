@@ -2,8 +2,8 @@ use crate::{errors::PyFoxgloveError, PySchema};
 use crate::{PyContext, PySinkChannelFilter};
 use base64::prelude::*;
 use foxglove::websocket::{
-    AssetHandler, ChannelView, Client, ClientChannel, PlaybackState, PlaybackControlRequest, ServerListener,
-    Status, StatusLevel,
+    AssetHandler, ChannelView, Client, ClientChannel, PlaybackControlRequest, PlaybackState,
+    ServerListener, Status, StatusLevel,
 };
 use foxglove::{WebSocketServer, WebSocketServerHandle};
 use pyo3::exceptions::{PyTypeError, PyValueError};
@@ -338,9 +338,11 @@ impl ServerListener for PyServerListener {
     fn on_playback_control_request(&self, playback_control_request: PlaybackControlRequest) {
         let py_playback_control_request: PyPlaybackControlRequest = playback_control_request.into();
         let result: PyResult<()> = Python::with_gil(|py| {
-            self.listener
-                .bind(py)
-                .call_method("on_playback_control_request", (py_playback_control_request,), None)?;
+            self.listener.bind(py).call_method(
+                "on_playback_control_request",
+                (py_playback_control_request,),
+                None,
+            )?;
 
             Ok(())
         });
