@@ -175,7 +175,7 @@ class Layout:
             "version": self.version,
             "variables": self.variables,
             "items": self.items.to_dict(),
-            "user_nodes": {k: v.to_dict() for k, v in self.user_nodes.items()},
+            "userNodes": {k: v.to_dict() for k, v in self.user_nodes.items()},
         }
 
 
