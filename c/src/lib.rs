@@ -383,3 +383,13 @@ impl From<FoxgloveDuration> for foxglove::schemas::Duration {
         Self::new(other.sec, other.nsec)
     }
 }
+
+#[repr(C)]
+pub struct FoxglovePlaybackControlRequest<'a> {
+    /// Playback state
+    pub playback_state: u8,
+    /// Playback speed
+    pub playback_speed: f32,
+    /// Seek playback time in nanoseconds (only set if a seek has been performed)
+    pub seek_time: Option<&'a u64>,
+}

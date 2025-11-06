@@ -32,7 +32,6 @@ pub use server::ShutdownHandle;
 pub(crate) use server::{create_server, Server, ServerOptions};
 pub use server_listener::ServerListener;
 pub use streams::TlsIdentity;
-#[cfg(feature = "unstable")]
 #[doc(hidden)]
 pub use ws_protocol::client::{PlaybackControlRequest, PlaybackState};
 pub use ws_protocol::parameter::{

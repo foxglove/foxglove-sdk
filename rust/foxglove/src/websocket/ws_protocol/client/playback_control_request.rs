@@ -1,13 +1,9 @@
-#[cfg(feature = "unstable")]
 use bytes::{Buf, BufMut};
 
-#[cfg(feature = "unstable")]
 use crate::websocket::ws_protocol::{BinaryMessage, ParseError};
 
-#[cfg(feature = "unstable")]
 use super::BinaryOpcode;
 
-#[cfg(feature = "unstable")]
 #[doc(hidden)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
@@ -18,7 +14,6 @@ pub enum PlaybackState {
     Ended = 3,
 }
 
-#[cfg(feature = "unstable")]
 impl TryFrom<u8> for PlaybackState {
     type Error = u8;
 
@@ -33,7 +28,6 @@ impl TryFrom<u8> for PlaybackState {
     }
 }
 
-#[cfg(feature = "unstable")]
 #[doc(hidden)]
 /// Player state message.
 #[derive(Debug, Clone, PartialEq)]
@@ -46,7 +40,6 @@ pub struct PlaybackControlRequest {
     pub seek_time: Option<u64>,
 }
 
-#[cfg(feature = "unstable")]
 impl<'a> BinaryMessage<'a> for PlaybackControlRequest {
     fn parse_binary(mut data: &'a [u8]) -> Result<Self, ParseError> {
         // Message size: playback_state (1 byte) + playback_speed (4 bytes) + had_seek (1 byte) + seek_time (8 bytes)
@@ -87,7 +80,7 @@ impl<'a> BinaryMessage<'a> for PlaybackControlRequest {
     }
 }
 
-#[cfg(all(test, feature = "unstable"))]
+#[cfg(test)]
 mod tests {
     use crate::websocket::ws_protocol::client::ClientMessage;
 

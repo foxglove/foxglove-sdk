@@ -67,6 +67,14 @@
 #define FOXGLOVE_SERVER_CAPABILITY_ASSETS (1 << 5)
 #endif
 
+#if !defined(__wasm__)
+/**
+ * Indicates that the server is sending data within a fixed time range. This requires the
+ * server to specify the `data_start_time` and `data_end_time` fields in its `ServerInfo` message.
+ */
+#define FOXGLOVE_SERVER_CAPABILITY_RANGED_PLAYBACK (1 << 6)
+#endif
+
 enum foxglove_error
 #ifdef __cplusplus
   : uint8_t
@@ -2021,6 +2029,21 @@ typedef struct foxglove_parameter_array {
 } foxglove_parameter_array;
 #endif
 
+typedef struct foxglove_playback_control_request {
+  /**
+   * Playback state
+   */
+  uint8_t playback_state;
+  /**
+   * Playback speed
+   */
+  float playback_speed;
+  /**
+   * Seek playback time in nanoseconds (only set if a seek has been performed)
+   */
+  const uint64_t *seek_time;
+} foxglove_playback_control_request;
+
 #if !defined(__wasm__)
 typedef struct foxglove_server_callbacks {
   /**
@@ -2111,6 +2134,8 @@ typedef struct foxglove_server_callbacks {
                                     size_t param_names_len);
   void (*on_connection_graph_subscribe)(const void *context);
   void (*on_connection_graph_unsubscribe)(const void *context);
+  void (*on_playback_control_request)(const void *context,
+                                      const struct foxglove_playback_control_request *playback_control_request);
 } foxglove_server_callbacks;
 #endif
 
@@ -2201,6 +2226,16 @@ typedef struct foxglove_server_options {
    *   and must remain valid until the server is stopped.
    */
   bool (*sink_channel_filter)(const void *context, const struct foxglove_channel_descriptor *channel);
+  /**
+   * If the server is sending data from a fixed time range, and has the RangedPlayback capability,
+   * the start time of the data range.
+   */
+  const uint64_t *data_start_time;
+  /**
+   * If the server is sending data from a fixed time range, and has the RangedPlayback capability,
+   * the end time of the data range.
+   */
+  const uint64_t *data_end_time;
 } foxglove_server_options;
 #endif
 

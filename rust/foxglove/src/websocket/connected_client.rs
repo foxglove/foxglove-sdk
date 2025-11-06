@@ -13,7 +13,6 @@ use tokio_tungstenite::WebSocketStream;
 
 use crate::sink_channel_filter::SinkChannelFilter;
 use crate::websocket::streams::ServerStream;
-#[cfg(feature = "unstable")]
 use crate::websocket::PlaybackControlRequest;
 use crate::{ChannelId, Context, FoxgloveError, Metadata, RawChannel, Sink, SinkId};
 
@@ -265,7 +264,6 @@ impl ConnectedClient {
             ClientMessage::UnsubscribeConnectionGraph => {
                 self.on_connection_graph_unsubscribe(server)
             }
-            #[cfg(feature = "unstable")]
             ClientMessage::PlaybackControlRequest(msg) => {
                 self.on_playback_control_request(server, msg)
             }
@@ -677,7 +675,6 @@ impl ConnectedClient {
         }
     }
 
-    #[cfg(feature = "unstable")]
     fn on_playback_control_request(&self, server: Arc<Server>, msg: PlaybackControlRequest) {
         if !server.has_capability(Capability::RangedPlayback) {
             self.send_error("Server does not support ranged playback capability".to_string());

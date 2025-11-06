@@ -3,6 +3,7 @@
 #include <foxglove/channel.hpp>
 #include <foxglove/context.hpp>
 #include <foxglove/error.hpp>
+#include <foxglove/playback_control_request.hpp>
 #include <foxglove/server/connection_graph.hpp>
 #include <foxglove/server/fetch_asset.hpp>
 #include <foxglove/server/parameter.hpp>
@@ -69,6 +70,10 @@ enum class WebSocketServerCapabilities : uint8_t {
   /// Allow clients to request assets. If you supply an asset handler to the
   /// server, this capability will be advertised automatically.
   Assets = 1 << 5,
+  /// Indicates that the server is sending data within a fixed time range. This requires the
+  /// server to specify the `data_start_time` and `data_end_time` fields in its `ServerInfo`
+  /// message.
+  RangedPlayback = 1 << 6,
 };
 
 /// @brief Level indicator for a server status message.
@@ -184,6 +189,12 @@ struct WebSocketServerCallbacks {
   ///
   /// Requires the capability WebSocketServerCapabilities::ConnectionGraph
   std::function<void()> onConnectionGraphUnsubscribe;
+
+  /// @brief Callback invoked when the player state changes.
+  ///
+  /// Requires the capability WebSocketServerCapabilities::RangedPlayback
+  std::function<void(const PlaybackControlRequest& playback_control_request)>
+    onPlaybackControlRequest;
 };
 
 /// @cond foxglove_internal
@@ -228,6 +239,10 @@ struct WebSocketServerOptions {
   /// This option is for internal use only and may change.
   std::optional<std::map<std::string, std::string>> server_info = std::nullopt;
   /// @endcond
+
+  /// @brief The time range for playback. This applies if the server is playing back a fixed time
+  /// range of data.
+  std::optional<std::pair<uint64_t, uint64_t>> playback_time_range = std::nullopt;
 };
 
 /// @brief A WebSocket server for visualization in Foxglove.

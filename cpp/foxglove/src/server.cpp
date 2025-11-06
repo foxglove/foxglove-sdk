@@ -19,7 +19,7 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
     options.callbacks.onClientUnadvertise || options.callbacks.onGetParameters ||
     options.callbacks.onSetParameters || options.callbacks.onParametersSubscribe ||
     options.callbacks.onParametersUnsubscribe || options.callbacks.onConnectionGraphSubscribe ||
-    options.callbacks.onConnectionGraphUnsubscribe;
+    options.callbacks.onConnectionGraphUnsubscribe || options.callbacks.onPlaybackControlRequest;
 
   std::unique_ptr<WebSocketServerCallbacks> callbacks;
   std::unique_ptr<FetchAssetHandler> fetch_asset;
@@ -223,6 +223,19 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
         }
       };
     }
+    if (callbacks->onPlaybackControlRequest) {
+      c_callbacks.on_playback_control_request =
+        [](
+          const void* context, const foxglove_playback_control_request* c_playback_control_request
+        ) {
+          try {
+            (static_cast<const WebSocketServerCallbacks*>(context))
+              ->onPlaybackControlRequest(PlaybackControlRequest::from(*c_playback_control_request));
+          } catch (const std::exception& exc) {
+            warn() << "onPlaybackControlRequest callback failed: " << exc.what();
+          }
+        };
+    }
   }
 
   foxglove_server_options c_options = {};
@@ -257,6 +270,11 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
         warn() << "Fetch asset callback failed: " << exc.what();
       }
     };
+  }
+
+  if (options.playback_time_range) {
+    c_options.data_start_time = &options.playback_time_range->first;
+    c_options.data_end_time = &options.playback_time_range->second;
   }
 
   std::vector<foxglove_key_value> server_info;
@@ -295,7 +313,6 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
       }
     };
   }
-
   foxglove_websocket_server* server = nullptr;
   foxglove_error error = foxglove_server_start(&c_options, &server);
   if (error != foxglove_error::FOXGLOVE_ERROR_OK || server == nullptr) {

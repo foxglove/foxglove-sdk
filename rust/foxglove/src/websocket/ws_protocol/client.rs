@@ -24,7 +24,7 @@ pub use advertise::Advertise;
 pub use fetch_asset::FetchAsset;
 pub use get_parameters::GetParameters;
 pub use message_data::MessageData;
-#[cfg(feature = "unstable")]
+#[doc(hidden)]
 pub use playback_control_request::{PlaybackControlRequest, PlaybackState};
 pub use service_call_request::ServiceCallRequest;
 pub use set_parameters::SetParameters;
@@ -53,7 +53,7 @@ pub enum ClientMessage<'a> {
     SubscribeConnectionGraph,
     UnsubscribeConnectionGraph,
     FetchAsset(FetchAsset),
-    #[cfg(feature = "unstable")]
+    #[doc(hidden)]
     PlaybackControlRequest(PlaybackControlRequest),
 }
 
@@ -77,7 +77,6 @@ impl<'a> ClientMessage<'a> {
                 Some(BinaryOpcode::ServiceCallRequest) => {
                     ServiceCallRequest::parse_binary(data).map(ClientMessage::ServiceCallRequest)
                 }
-                #[cfg(feature = "unstable")]
                 Some(BinaryOpcode::PlaybackControlRequest) => {
                     PlaybackControlRequest::parse_binary(data)
                         .map(ClientMessage::PlaybackControlRequest)
@@ -110,7 +109,6 @@ impl<'a> ClientMessage<'a> {
             ClientMessage::SubscribeConnectionGraph => ClientMessage::SubscribeConnectionGraph,
             ClientMessage::UnsubscribeConnectionGraph => ClientMessage::UnsubscribeConnectionGraph,
             ClientMessage::FetchAsset(m) => ClientMessage::FetchAsset(m),
-            #[cfg(feature = "unstable")]
             ClientMessage::PlaybackControlRequest(m) => ClientMessage::PlaybackControlRequest(m),
         }
     }
@@ -155,7 +153,7 @@ impl<'a> From<JsonMessage<'a>> for ClientMessage<'a> {
 enum BinaryOpcode {
     MessageData = 1,
     ServiceCallRequest = 2,
-    #[cfg(feature = "unstable")]
+    #[doc(hidden)]
     PlaybackControlRequest = 3,
 }
 impl BinaryOpcode {
@@ -163,7 +161,6 @@ impl BinaryOpcode {
         match value {
             1 => Some(Self::MessageData),
             2 => Some(Self::ServiceCallRequest),
-            #[cfg(feature = "unstable")]
             3 => Some(Self::PlaybackControlRequest),
             _ => None,
         }
