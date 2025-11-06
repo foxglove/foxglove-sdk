@@ -120,15 +120,7 @@ export class RunnerWorker {
       },
     });
     this.#abortController.signal.throwIfAborted();
-    await pyodide.loadPackage([
-      "jedi",
-      "micropip",
-      "numpy",
-      "opencv-python",
-      "pandas",
-      "protobuf",
-      "scipy",
-    ]);
+    await pyodide.loadPackage(["jedi", "micropip"]);
     this.#abortController.signal.throwIfAborted();
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const micropip = pyodide.pyimport("micropip");
@@ -140,6 +132,7 @@ export class RunnerWorker {
 
   async run(code: string): Promise<string | undefined> {
     const pyodide = await this.#pyodide;
+    await pyodide.loadPackagesFromImports(code);
     pyodide.runPython(
       `
         import os, pathlib, shutil
