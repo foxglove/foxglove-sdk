@@ -1554,9 +1554,9 @@ TEST_CASE("Player state callback") {
   REQUIRE(parsed["op"] == "serverInfo");
 
   foxglove::PlaybackControlRequest playback_control_request{
-    .playback_state = foxglove::PlaybackState::Paused,
-    .playback_speed = 1.0,
-    .seek_time = 42,
+    foxglove::PlaybackState::Paused,
+    1.0,
+    42,
   };
   std::vector<std::byte> msg = playbackControlRequestToBinary(playback_control_request);
   client.send(msg);
