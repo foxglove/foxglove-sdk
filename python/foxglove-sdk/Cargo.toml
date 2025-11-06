@@ -29,6 +29,7 @@ tokio-tungstenite.workspace = true
 tokio-util.workspace = true
 tokio.workspace = true
 foxglove = { path = "../../rust/foxglove", default-features = false, features = [
+  "unstable",
   "live_visualization",
   "lz4",
   "zstd",

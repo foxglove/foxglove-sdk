@@ -2,7 +2,8 @@ use crate::{errors::PyFoxgloveError, PySchema};
 use crate::{PyContext, PySinkChannelFilter};
 use base64::prelude::*;
 use foxglove::websocket::{
-    AssetHandler, ChannelView, Client, ClientChannel, ServerListener, Status, StatusLevel,
+    AssetHandler, ChannelView, Client, ClientChannel, PlaybackControlRequest, PlaybackState,
+    ServerListener, Status, StatusLevel,
 };
 use foxglove::{WebSocketServer, WebSocketServerHandle};
 use pyo3::exceptions::{PyTypeError, PyValueError};
@@ -55,6 +56,42 @@ impl From<Client> for PyClient {
     fn from(value: Client) -> Self {
         Self {
             id: value.id().into(),
+        }
+    }
+}
+#[pyclass(name = "PlaybackState", module = "foxglove", eq, eq_int)]
+#[derive(Clone, PartialEq)]
+#[repr(u8)]
+pub enum PyPlaybackState {
+    Playing = 0,
+    Paused = 1,
+    Buffering = 2,
+    Ended = 3,
+}
+
+impl From<PlaybackState> for PyPlaybackState {
+    fn from(value: PlaybackState) -> PyPlaybackState {
+        match value {
+            PlaybackState::Playing => PyPlaybackState::Playing,
+            PlaybackState::Paused => PyPlaybackState::Paused,
+            PlaybackState::Buffering => PyPlaybackState::Buffering,
+            PlaybackState::Ended => PyPlaybackState::Ended,
+        }
+    }
+}
+
+#[pyclass(name = "PlaybackControlRequest", module = "foxglove", get_all)]
+pub struct PyPlaybackControlRequest {
+    playback_state: PyPlaybackState,
+    playback_speed: f32,
+    seek_time: Option<u64>,
+}
+impl From<PlaybackControlRequest> for PyPlaybackControlRequest {
+    fn from(value: PlaybackControlRequest) -> PyPlaybackControlRequest {
+        PyPlaybackControlRequest {
+            playback_state: value.playback_state.into(),
+            playback_speed: value.playback_speed,
+            seek_time: value.seek_time,
         }
     }
 }
@@ -289,6 +326,23 @@ impl ServerListener for PyServerListener {
             self.listener
                 .bind(py)
                 .call_method("on_connection_graph_unsubscribe", (), None)?;
+
+            Ok(())
+        });
+
+        if let Err(err) = result {
+            tracing::error!("Callback failed: {}", err.to_string());
+        }
+    }
+
+    fn on_playback_control_request(&self, playback_control_request: PlaybackControlRequest) {
+        let py_playback_control_request: PyPlaybackControlRequest = playback_control_request.into();
+        let result: PyResult<()> = Python::with_gil(|py| {
+            self.listener.bind(py).call_method(
+                "on_playback_control_request",
+                (py_playback_control_request,),
+                None,
+            )?;
 
             Ok(())
         });
@@ -1155,6 +1209,8 @@ pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<PyParameter>()?;
     module.add_class::<PyParameterType>()?;
     module.add_class::<PyParameterValue>()?;
+    module.add_class::<PyPlaybackState>()?;
+    module.add_class::<PyPlaybackControlRequest>()?;
     module.add_class::<PyStatusLevel>()?;
     module.add_class::<PyConnectionGraph>()?;
     // Services
