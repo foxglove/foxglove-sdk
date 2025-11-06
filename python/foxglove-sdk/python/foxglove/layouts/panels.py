@@ -937,6 +937,8 @@ class UserScriptEditorPanel(Panel):
 
 
 __all__ = [
+    "panel_type",
+    "to_lower_camel_case",
     "MarkdownPanel",
     "RawMessagesPanel",
     "AudioPanel",
