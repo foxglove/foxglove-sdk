@@ -25,11 +25,11 @@ public:
     const foxglove_playback_control_request& c_playback_control_request
   ) {
     return {
-      .playback_state = static_cast<PlaybackState>(c_playback_control_request.playback_state),
-      .playback_speed = c_playback_control_request.playback_speed,
-      .seek_time = c_playback_control_request.seek_time
-                     ? std::optional<uint64_t>(*c_playback_control_request.seek_time)
-                     : std::nullopt
+      static_cast<PlaybackState>(c_playback_control_request.playback_state),
+      c_playback_control_request.playback_speed,
+      c_playback_control_request.seek_time
+        ? std::optional<uint64_t>(*c_playback_control_request.seek_time)
+        : std::nullopt
     };
   }
 };
