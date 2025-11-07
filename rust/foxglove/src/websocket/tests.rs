@@ -1633,15 +1633,9 @@ impl RecordingPlaybackControlListener {
             PlaybackCommand::Pause => PlaybackStatus::Paused,
         };
 
-        let current_time = if let Some(seek_time) = request.seek_time {
-            seek_time
-        } else {
-            0
-        };
-
         PlaybackState {
             status,
-            current_time,
+            current_time: request.seek_time.unwrap_or(0),
             playback_speed: request.playback_speed,
             request_id: Some(request.request_id.clone()),
         }
