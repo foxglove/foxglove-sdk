@@ -39,7 +39,7 @@ use crate::websocket::{
     BlockingAssetHandlerFn, Capability, ClientChannelId, ConnectionGraph, Parameter, Server,
 };
 #[cfg(feature = "unstable")]
-use crate::websocket::{PlaybackControlRequest, PlaybackState, ServerListener};
+use crate::websocket::{PlaybackCommand, PlaybackControlRequest, ServerListener};
 use crate::websocket_client::WebSocketClient;
 use crate::{
     ChannelBuilder, ChannelDescriptor, Context, FoxgloveError, PartialMetadata, RawChannel, Schema,
@@ -1657,9 +1657,10 @@ async fn test_on_playback_control_request() {
     expect_recv!(client, ServerMessage::ServerInfo);
 
     let playback_request = PlaybackControlRequest {
-        playback_state: PlaybackState::Playing,
+        playback_command: PlaybackCommand::Play,
         playback_speed: 1.5,
         seek_time: Some(123_456_789),
+        request_id: "some-id".to_string(),
     };
 
     client
