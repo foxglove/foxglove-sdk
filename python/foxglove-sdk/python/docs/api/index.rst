@@ -12,7 +12,7 @@ foxglove
 
 .. automodule:: foxglove
    :members:
-   :exclude-members: MCAPWriter, init_notebook_buffer
+   :exclude-members: CloudSink, CloudSinkListener, MCAPWriter, init_notebook_buffer, start_cloud_sink
 
 Notebook Integration
 ^^^^^^^^^^^^^^^^^^^^
