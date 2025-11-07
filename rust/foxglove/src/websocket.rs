@@ -39,3 +39,7 @@ pub use ws_protocol::parameter::{
     DecodeError as ParameterDecodeError, Parameter, ParameterType, ParameterValue,
 };
 pub use ws_protocol::server::status::{Level as StatusLevel, Status};
+
+#[cfg(feature = "unstable")]
+#[doc(hidden)]
+pub use ws_protocol::server::playback_state::PlaybackState;
