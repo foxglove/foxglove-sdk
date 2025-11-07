@@ -9,6 +9,7 @@ pub mod advertise;
 mod fetch_asset;
 mod get_parameters;
 mod message_data;
+#[cfg(feature = "unstable")]
 mod playback_control_request;
 mod service_call_request;
 mod set_parameters;
@@ -25,7 +26,7 @@ pub use fetch_asset::FetchAsset;
 pub use get_parameters::GetParameters;
 pub use message_data::MessageData;
 #[cfg(feature = "unstable")]
-pub use playback_control_request::{PlaybackControlRequest, PlaybackState};
+pub use playback_control_request::{PlaybackCommand, PlaybackControlRequest};
 pub use service_call_request::ServiceCallRequest;
 pub use set_parameters::SetParameters;
 pub use subscribe::{Subscribe, Subscription};
