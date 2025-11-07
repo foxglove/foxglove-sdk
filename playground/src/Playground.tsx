@@ -407,12 +407,12 @@ const DEFAULT_LAYOUT_DATA = {
   layout: {
     first: "3D!1ehnpb2",
     second: {
-      direction: "column",
+      direction: "row",
       second: "Plot!30ea437",
       first: "RawMessages!2zn7j4u",
-      splitPercentage: 67.0375521557719,
+      splitPercentage: 33,
     },
-    direction: "row",
+    direction: "column",
     splitPercentage: 60.57971014492753,
   },
 };
