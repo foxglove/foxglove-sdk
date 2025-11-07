@@ -26,9 +26,6 @@ jobs:
 
   build-python-docs:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: python/foxglove-sdk
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
@@ -40,10 +37,7 @@ jobs:
           node-version: 22
           cache: yarn
       - uses: astral-sh/setup-uv@v7
-      - run: uv sync --all-extras
-      - run: uv pip install --editable '.[notebook]'
-      - name: Sphinx build
-        run: uv run sphinx-build --fail-on-warning ./python/docs ./python/docs/_build
+      - run: make -f Container.mk docs-python
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
