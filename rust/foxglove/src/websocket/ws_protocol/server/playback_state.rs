@@ -1,13 +1,21 @@
-use crate::websocket::ws_protocol::{BinaryMessage, ParseError};
+use crate::{
+    websocket::ws_protocol::{BinaryMessage, ParseError},
+    ws_protocol::server::BinaryOpcode,
+};
 use bytes::{Buf, BufMut};
 
 #[doc(hidden)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
+/// The status playback of data that the server is providing
 pub enum PlaybackStatus {
+    /// Playing at the requested playback speed
     Playing = 0,
+    /// Playback paused
     Paused = 1,
+    /// Server is not yet playing back data because it is performing a prerequisite required operation
     Buffering = 2,
+    /// The end of the available data has been reached
     Ended = 3,
 }
 
@@ -25,21 +33,36 @@ impl TryFrom<u8> for PlaybackStatus {
     }
 }
 
+#[doc(hidden)]
 #[derive(Debug, Clone, PartialEq)]
+/// The state of the server playing back data.
+///
+/// Should be sent in response to a PlaybackControlRequest, or any time the
+/// state of playback has changed; for example, reaching the end of data, or an external mechanism
+/// causes playback to pause.
+///
+/// Only relevant if the `RangedPlayback` capability is enabled.
 pub struct PlaybackState {
+    /// The status of server data playback
     pub status: PlaybackStatus,
+    /// The current time of playback, in absolute nanoseconds
     pub current_time: u64,
+    /// The speed of playback, as a factor of realtime
     pub playback_speed: f32,
+    /// If this message is being emitted in response to a PlaybackControlRequest message, the
+    /// request_id from that message. Set this to None if the state of playback has been changed
+    /// by any other condition.
     pub request_id: Option<String>,
 }
 
 impl<'a> BinaryMessage<'a> for PlaybackState {
-    // Message binary layout
-    // 1: status
-    // 8: current time
-    // 4: playback speed
-    // 4: request_id length (0 if no request id sent)
-    // rest: request_id
+    // Message layout:
+    //   opcode (1 byte)
+    // + status (1 byte)
+    // + current_time (8 bytes)
+    // + playback_speed (4 bytes)
+    // + request_id_len (4 bytes)
+    // + request_id
     fn parse_binary(mut data: &'a [u8]) -> Result<Self, ParseError> {
         const HEADER_LEN: usize = 1 + 8 + 4 + 4;
         if data.len() < HEADER_LEN {
@@ -78,7 +101,8 @@ impl<'a> BinaryMessage<'a> for PlaybackState {
             None => 0,
         };
 
-        let mut buf = Vec::with_capacity(1 + 8 + 4 + 4 + (request_id_len as usize));
+        let mut buf = Vec::with_capacity(1 + 1 + 8 + 4 + 4 + (request_id_len as usize));
+        buf.put_u8(BinaryOpcode::PlaybackState as u8);
         buf.put_u8(self.status as u8);
         buf.put_u64_le(self.current_time);
         buf.put_f32_le(self.playback_speed);
@@ -96,6 +120,7 @@ mod tests {
     use assert_matches::assert_matches;
 
     use super::*;
+    use crate::ws_protocol::server::ServerMessage;
 
     // TODO: Add opcode here
 
@@ -130,8 +155,9 @@ mod tests {
             request_id: Some("i-am-a-request".to_string()),
         };
 
-        let parse_result = PlaybackState::parse_binary(&message.to_bytes());
-        assert_matches!(parse_result, Ok(parse_result) => {
+        let bytes = message.to_bytes();
+        let parse_result = ServerMessage::parse_binary(&bytes);
+        assert_matches!(parse_result, Ok(ServerMessage::PlaybackState(parse_result)) => {
             assert_eq!(parse_result, message);
         });
     }
@@ -145,8 +171,9 @@ mod tests {
             request_id: None,
         };
 
-        let parse_result = PlaybackState::parse_binary(&message.to_bytes());
-        assert_matches!(parse_result, Ok(parse_result) => {
+        let bytes = message.to_bytes();
+        let parse_result = ServerMessage::parse_binary(&bytes);
+        assert_matches!(parse_result, Ok(ServerMessage::PlaybackState(parse_result)) => {
             assert_eq!(parse_result, message);
         });
     }

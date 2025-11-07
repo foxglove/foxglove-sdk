@@ -1,9 +1,9 @@
 ---
 source: rust/foxglove/src/websocket/ws_protocol/server/playback_state.rs
-assertion_line: 113
 expression: "format!(\"{:#04x?}\", message.to_bytes())"
 ---
 [
+    0x05,
     0x00,
     0x39,
     0x30,
