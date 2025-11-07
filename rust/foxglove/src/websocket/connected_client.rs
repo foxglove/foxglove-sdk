@@ -685,7 +685,8 @@ impl ConnectedClient {
         }
 
         if let Some(handler) = server.listener() {
-            handler.on_playback_control_request(msg);
+            let playback_state = handler.on_playback_control_request(msg);
+            self.send_control_msg(&playback_state);
         }
     }
 

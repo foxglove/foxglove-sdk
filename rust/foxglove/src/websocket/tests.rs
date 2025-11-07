@@ -39,7 +39,9 @@ use crate::websocket::{
     BlockingAssetHandlerFn, Capability, ClientChannelId, ConnectionGraph, Parameter, Server,
 };
 #[cfg(feature = "unstable")]
-use crate::websocket::{PlaybackCommand, PlaybackControlRequest, ServerListener};
+use crate::websocket::{
+    PlaybackCommand, PlaybackControlRequest, PlaybackState, PlaybackStatus, ServerListener,
+};
 use crate::websocket_client::WebSocketClient;
 use crate::{
     ChannelBuilder, ChannelDescriptor, Context, FoxgloveError, PartialMetadata, RawChannel, Schema,
@@ -1624,10 +1626,34 @@ impl RecordingPlaybackControlListener {
     }
 }
 
+impl RecordingPlaybackControlListener {
+    fn handle_request(&self, request: &PlaybackControlRequest) -> PlaybackState {
+        let status = match request.playback_command {
+            PlaybackCommand::Play => PlaybackStatus::Playing,
+            PlaybackCommand::Pause => PlaybackStatus::Paused,
+        };
+
+        let current_time = if let Some(seek_time) = request.seek_time {
+            seek_time
+        } else {
+            0
+        };
+
+        PlaybackState {
+            status,
+            current_time,
+            playback_speed: request.playback_speed,
+            request_id: Some(request.request_id.clone()),
+        }
+    }
+}
+
 #[cfg(feature = "unstable")]
 impl ServerListener for RecordingPlaybackControlListener {
-    fn on_playback_control_request(&self, request: PlaybackControlRequest) {
+    fn on_playback_control_request(&self, request: PlaybackControlRequest) -> PlaybackState {
+        let response = self.handle_request(&request);
         self.set_request(request);
+        response
     }
 }
 
@@ -1656,11 +1682,13 @@ async fn test_on_playback_control_request() {
         .expect("Failed to connect");
     expect_recv!(client, ServerMessage::ServerInfo);
 
+    let request_id = "some-id".to_string();
+
     let playback_request = PlaybackControlRequest {
         playback_command: PlaybackCommand::Play,
         playback_speed: 1.5,
         seek_time: Some(123_456_789),
-        request_id: "some-id".to_string(),
+        request_id: request_id.clone(),
     };
 
     client
@@ -1674,6 +1702,13 @@ async fn test_on_playback_control_request() {
         .get_request()
         .expect("Playback control request was not recorded");
     assert_eq!(stored_request, playback_request);
+
+    // Assert that the client receives a message
+    let playback_state = expect_recv!(client, ServerMessage::PlaybackState);
+    assert_eq!(playback_state.status, PlaybackStatus::Playing);
+    assert_eq!(playback_state.playback_speed, 1.5);
+    assert_eq!(playback_state.current_time, 123_456_789);
+    assert_eq!(playback_state.request_id, Some(request_id));
 
     let _ = server.stop();
 }

@@ -115,6 +115,17 @@ impl<'a> BinaryMessage<'a> for PlaybackState {
     }
 }
 
+impl Default for PlaybackState {
+    fn default() -> PlaybackState {
+        PlaybackState {
+            status: PlaybackStatus::Paused,
+            playback_speed: 1.0,
+            current_time: 0,
+            request_id: None,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use assert_matches::assert_matches;

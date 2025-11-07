@@ -42,4 +42,4 @@ pub use ws_protocol::server::status::{Level as StatusLevel, Status};
 
 #[cfg(feature = "unstable")]
 #[doc(hidden)]
-pub use ws_protocol::server::playback_state::PlaybackState;
+pub use ws_protocol::server::playback_state::{PlaybackState, PlaybackStatus};
