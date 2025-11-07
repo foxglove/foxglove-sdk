@@ -97,6 +97,8 @@ mod tests {
 
     use super::*;
 
+    // TODO: Add opcode here
+
     #[test]
     fn test_encode_playing() {
         let message = PlaybackState {
