@@ -39,7 +39,8 @@ pub struct PlaybackControlRequest {
 
 impl<'a> BinaryMessage<'a> for PlaybackControlRequest {
     // Message layout:
-    //   playback_command (1 byte)
+    //   opcode (1 byte)
+    // + playback_command (1 byte)
     // + playback_speed (4 bytes)
     // + had_seek (1 byte)
     // + seek_time (8 bytes)
