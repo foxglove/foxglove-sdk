@@ -1,16 +1,15 @@
 ---
 source: rust/foxglove/src/websocket/ws_protocol/client/subscribe.rs
+assertion_line: 51
 expression: message()
 ---
 {
   "op": "subscribe",
   "subscriptions": [
     {
-      "id": 1,
       "channelId": 10
     },
     {
-      "id": 2,
       "channelId": 20
     }
   ]
