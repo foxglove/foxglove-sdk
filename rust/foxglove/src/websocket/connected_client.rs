@@ -263,6 +263,8 @@ impl ConnectedClient {
             ClientMessage::UnsubscribeConnectionGraph => {
                 self.on_connection_graph_unsubscribe(server)
             }
+            #[cfg(feature = "unstable")]
+            ClientMessage::PlaybackControlRequest(_msg) => todo!(),
         }
     }
 
