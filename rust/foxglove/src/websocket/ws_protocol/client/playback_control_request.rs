@@ -33,7 +33,8 @@ pub struct PlaybackControlRequest {
     pub playback_speed: f32,
     /// Seek playback time in nanoseconds (only set if a seek has been performed)
     pub seek_time: Option<u64>,
-    /// Unique string identifier, used to indicate that a PlaybackState is in response to a particular request from the client
+    /// Unique string identifier, used to indicate that a PlaybackState is in response to a particular request from the client.
+    /// Should not be an empty string.
     pub request_id: String,
 }
 
@@ -47,7 +48,7 @@ impl<'a> BinaryMessage<'a> for PlaybackControlRequest {
     // + request_id_len (4 bytes)
     // + request_id
     fn parse_binary(mut data: &'a [u8]) -> Result<Self, ParseError> {
-        if data.len() < 1 + 4 + 1 + 8 {
+        if data.len() < 1 + 4 + 1 + 8 + 4 {
             return Err(ParseError::BufferTooShort);
         }
 
