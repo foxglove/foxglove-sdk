@@ -112,6 +112,17 @@ mod tests {
     }
 
     #[test]
+    fn test_encode_play_with_seek() {
+        let message = PlaybackControlRequest {
+            playback_command: PlaybackCommand::Play,
+            playback_speed: 1.0,
+            seek_time: Some(123_456_789),
+            request_id: "some-id".to_string(),
+        };
+        insta::assert_snapshot!(format!("{:#04x?}", message.to_bytes()));
+    }
+
+    #[test]
     fn test_encode_pause() {
         let message = PlaybackControlRequest {
             playback_command: PlaybackCommand::Pause,
