@@ -46,6 +46,9 @@ const useStyles = tss.create(({ theme }) => ({
   },
   toast: {
     fontSize: theme.typography.body1.fontSize,
+    backgroundColor: theme.palette.background.paper,
+    color: theme.palette.text.primary,
+    boxShadow: theme.shadows[4],
   },
   toastMonospace: {
     maxWidth: "none",
@@ -273,7 +276,6 @@ export function Playground(): React.JSX.Element {
         <FoxgloveViewer
           ref={viewerRef}
           style={{ width: "100%", height: "100%", overflow: "hidden" }}
-          colorScheme="light"
           data={dataSource}
           layout={selectedLayout}
         />
@@ -405,12 +407,12 @@ const DEFAULT_LAYOUT_DATA = {
   layout: {
     first: "3D!1ehnpb2",
     second: {
-      direction: "column",
+      direction: "row",
       second: "Plot!30ea437",
       first: "RawMessages!2zn7j4u",
-      splitPercentage: 67.0375521557719,
+      splitPercentage: 33,
     },
-    direction: "row",
+    direction: "column",
     splitPercentage: 60.57971014492753,
   },
 };
