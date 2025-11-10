@@ -167,7 +167,8 @@ pub(crate) struct Server {
     /// Information about the server, which is shared with clients.
     /// Keys prefixed with "fg-" are reserved for internal use.
     server_info: HashMap<String, String>,
-    /// Playback time range
+    /// Time range of data being played back, in absolute nanoseconds.
+    /// Implies the [`RangedPlayback`](crate::websocket::Capability::Time) capability if set.
     playback_time_range: Option<(u64, u64)>,
 }
 

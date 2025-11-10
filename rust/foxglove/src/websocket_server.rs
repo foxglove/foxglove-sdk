@@ -130,7 +130,7 @@ impl WebSocketServer {
         self
     }
 
-    /// Declare the time range for playback. This applies if the server is playing back a fixed time range of data.
+    /// Declare the time range for playback, in absolute nanoseconds. This applies if the server is playing back a fixed time range of data.
     /// This will add the RangedPlayback capability to the server.
     pub fn playback_time_range(mut self, start_time: u64, end_time: u64) -> Self {
         self.options.playback_time_range = Some((start_time, end_time));

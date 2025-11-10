@@ -26,10 +26,10 @@ pub struct ServerInfo {
     /// Optional string.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub session_id: Option<String>,
-    /// Optional timestamp indicating the start of the data range.
+    /// Optional timestamp, in absolute nanoseconds, indicating the start of the data range.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub data_start_time: Option<u64>,
-    /// Optional timestamp indicating the end of the data range.
+    /// Optional timestamp, in absolute nanoseconds, indicating the end of the data range.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub data_end_time: Option<u64>,
 }
