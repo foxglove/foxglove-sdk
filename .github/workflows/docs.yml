@@ -18,7 +18,7 @@ jobs:
       - run: make docs
         working-directory: cpp
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: cpp
           path: ./cpp/build/docs/html
@@ -39,7 +39,7 @@ jobs:
       - uses: astral-sh/setup-uv@v7
       - run: make -f Container.mk docs-python
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: python
           path: python/foxglove-sdk/python/docs/_build

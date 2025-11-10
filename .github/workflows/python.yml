@@ -74,7 +74,7 @@ jobs:
           MATURIN_NO_MISSING_BUILD_BACKEND_WARNING: 1
 
       - name: Upload wheel
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: playground-wasm
           path: dist
@@ -195,7 +195,7 @@ jobs:
           manylinux: auto
           docker-options: "--env MATURIN_NO_MISSING_BUILD_BACKEND_WARNING=1"
       - name: Upload wheels
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: wheels-linux-${{ matrix.platform.target }}
           path: dist
@@ -233,7 +233,7 @@ jobs:
           manylinux: musllinux_1_2
           docker-options: "--env MATURIN_NO_MISSING_BUILD_BACKEND_WARNING=1"
       - name: Upload wheels
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: wheels-musllinux-${{ matrix.platform.target }}
           path: dist
@@ -282,7 +282,7 @@ jobs:
           sccache: "false"
           docker-options: "--env MATURIN_NO_MISSING_BUILD_BACKEND_WARNING=1"
       - name: Upload wheels
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: wheels-windows-${{ matrix.platform.target }}
           path: dist
@@ -315,7 +315,7 @@ jobs:
           sccache: "false"
           docker-options: "--env MATURIN_NO_MISSING_BUILD_BACKEND_WARNING=1"
       - name: Upload wheels
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: wheels-macos-${{ matrix.platform.target }}
           path: dist
@@ -335,7 +335,7 @@ jobs:
         run: uv build --sdist
         working-directory: python/foxglove-sdk
       - name: Upload sdist
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: wheels-sdist
           path: python/foxglove-sdk/dist
