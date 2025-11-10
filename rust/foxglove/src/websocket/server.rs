@@ -21,6 +21,8 @@ use crate::{Context, FoxgloveError};
 use super::connected_client::ConnectedClient;
 use super::cow_vec::CowVec;
 use super::service::{Service, ServiceId, ServiceMap};
+#[cfg(feature = "unstable")]
+use super::ws_protocol::server::PlaybackState;
 use super::ws_protocol::server::{
     AdvertiseServices, RemoveStatus, ServerInfo, UnadvertiseServices,
 };
@@ -199,6 +201,10 @@ impl Server {
             );
         }
 
+        if opts.playback_time_range.is_some() {
+            capabilities.insert(Capability::RangedPlayback);
+        }
+
         // If the server was declared with fetch asset handler, automatically add the "assets" capability
         if opts.fetch_asset_handler.is_some() {
             capabilities.insert(Capability::Assets);
@@ -353,6 +359,20 @@ impl Server {
         let clients = self.clients.get();
         for client in clients.iter() {
             client.send_control_msg(&message);
+        }
+    }
+
+    /// Publish the current playback state to all clients.
+    #[cfg(feature = "unstable")]
+    #[doc(hidden)]
+    pub fn broadcast_playback_state(&self, playback_state: PlaybackState) {
+        if !self.has_capability(Capability::RangedPlayback) {
+            tracing::error!("Server does not support the RangedPlayback capability");
+            return;
+        }
+
+        for client in self.clients.get().iter() {
+            client.send_control_msg(&playback_state);
         }
     }
 

@@ -1842,3 +1842,39 @@ async fn test_server_info_with_ranged_playback() {
 
     let _ = server.stop();
 }
+
+#[tokio::test]
+async fn test_broadcast_playback_state() {
+    let ctx = Context::new();
+    let options = ServerOptions {
+        playback_time_range: Some((123, 456)),
+        ..Default::default()
+    };
+
+    let server = create_server(&ctx, options);
+    let addr = server
+        .start("127.0.0.1", 0)
+        .await
+        .expect("Failed to start server");
+
+    let mut client = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("Failed to connect");
+
+    expect_recv!(client, ServerMessage::ServerInfo);
+
+    let msg = PlaybackState {
+        status: PlaybackStatus::Playing,
+        current_time: 250,
+        playback_speed: 1.0,
+        request_id: None,
+    };
+
+    server.broadcast_playback_state(msg);
+
+    let received = expect_recv!(client, ServerMessage::PlaybackState);
+    assert_eq!(received.status, PlaybackStatus::Playing);
+    assert_eq!(received.current_time, 250);
+    assert_eq!(received.playback_speed, 1.0);
+    assert_eq!(received.request_id, None);
+}

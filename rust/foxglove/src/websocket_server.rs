@@ -8,6 +8,8 @@ use std::sync::Arc;
 
 use crate::sink_channel_filter::{SinkChannelFilter, SinkChannelFilterFn};
 use crate::websocket::service::Service;
+#[cfg(feature = "unstable")]
+use crate::websocket::PlaybackState;
 #[cfg(feature = "tls")]
 use crate::websocket::TlsIdentity;
 use crate::websocket::{
@@ -329,6 +331,15 @@ impl WebSocketServerHandle {
     /// Requires the [`Time`](crate::websocket::Capability::Time) capability.
     pub fn broadcast_time(&self, timestamp_nanos: u64) {
         self.0.broadcast_time(timestamp_nanos);
+    }
+
+    /// Publish the current playback state to all clients.
+    ///
+    /// Requires the [`RangedPlayback`](crate::websocket::Capability::Time) capability.
+    #[cfg(feature = "unstable")]
+    #[doc(hidden)]
+    pub fn broadcast_playback_state(&self, playback_state: PlaybackState) {
+        self.0.broadcast_playback_state(playback_state);
     }
 
     /// Sets a new session ID and notifies all clients, causing them to reset their state.
