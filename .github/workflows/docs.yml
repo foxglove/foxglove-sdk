@@ -53,7 +53,7 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/sdk/v')
     steps:
       - name: Download artifacts
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v6
         with:
           path: artifacts
       - run: test -d artifacts/python
