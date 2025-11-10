@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Base Panel",
+  "description": "A base panel in Foxglove",
+  "properties": {
+    "type": {
+      "type": "string",
+      "description": "The type of the panel"
+    }
+  },
+  "required": ["type"]
+}

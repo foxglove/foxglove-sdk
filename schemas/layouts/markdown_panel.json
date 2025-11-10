@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MarkdownPanel",
+  "description": "A Markdown panel in Foxglove",
+  "allOf": [{ "$ref": "./base_panel.json" }],
+  "$defs": {
+    "MarkdownConfig": {
+      "type": "object",
+      "properties": {
+        "markdown": {
+          "type": "string",
+          "description": "The Markdown content to display"
+        },
+        "fontSize": {
+          "description": "The font size to use for the Markdown content",
+          "enum": [8, 9, 10, 11, 12, 14, 16, 18, 24, 30, 36, 48, 60, 72],
+          "default": 12
+        },
+        "foxglovePanelTitle": {
+          "type": "string",
+          "description": "The title of the panel in Foxglove"
+        }
+      }
+    }
+  },
+  "properties": {
+    "type": {
+      "const": "Markdown",
+      "default": "Markdown"
+    },
+    "config": {
+      "$ref": "#/$defs/MarkdownConfig"
+    }
+  },
+  "required": ["config"]
+}

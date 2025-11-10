@@ -4,6 +4,9 @@ dist
 .DS_Store
 python/foxglove/notebook/static/
 
+# Layout models
+python/foxglove/layouts/models/
+
 # MCAP
 *.mcap
 

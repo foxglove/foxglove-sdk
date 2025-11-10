@@ -1,0 +1,165 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "StateTransitionsPanel",
+  "description": "A state transitions panel in Foxglove",
+  "allOf": [{ "$ref": "./base_panel.json" }],
+  "$defs": {
+    "BaseCustomState": {
+      "type": "object",
+      "properties": {
+        "label": {
+          "type": "string",
+          "description": "The label of the custom state"
+        },
+        "color": {
+          "type": "string",
+          "description": "The color of the custom state"
+        }
+      }
+    },
+    "StateTransitionsDiscreteCustomState": {
+      "type": "object",
+      "allOf": [{ "$ref": "#/$defs/BaseCustomState" }],
+      "properties": {
+        "value": {
+          "type": "string",
+          "description": "The value of the custom state",
+          "default": ""
+        }
+      }
+    },
+    "StateTransitionsRangeCustomState": {
+      "type": "object",
+      "allOf": [{ "$ref": "#/$defs/BaseCustomState" }],
+      "properties": {
+        "value": {
+          "type": "number",
+          "description": "The value of the custom state"
+        },
+        "operator": {
+          "enum": ["=", "<", "<=", ">", ">="],
+          "default": "<"
+        }
+      }
+    },
+    "StateTransitionsRangeCustomStates": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "range",
+          "default": "range"
+        },
+        "states": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/StateTransitionsRangeCustomState" }
+        },
+        "otherwise": {
+          "$ref": "#/$defs/BaseCustomState"
+        }
+      }
+    },
+    "StateTransitionsDiscreteCustomStates": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "discrete",
+          "default": "discrete"
+        },
+        "states": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/StateTransitionsDiscreteCustomState" }
+        }
+      }
+    },
+    "StateTransitionsPath": {
+      "type": "object",
+      "properties": {
+        "value": {
+          "type": "string",
+          "description": "The value of the path",
+          "default": ""
+        },
+        "label": {
+          "type": "string",
+          "description": "The label of the path"
+        },
+        "enabled": {
+          "type": "boolean",
+          "default": true
+        },
+        "timestampMethod": {
+          "enum": ["receiveTime", "publishTime", "headerStamp", "customField"],
+          "default": "receiveTime"
+        },
+        "timestampPath": {
+          "type": "string",
+          "description": "The path of the timestamp"
+        },
+        "customStates": {
+          "anyOf": [
+            { "$ref": "#/$defs/StateTransitionsRangeCustomStates" },
+            { "$ref": "#/$defs/StateTransitionsDiscreteCustomStates" }
+          ]
+        }
+      },
+      "required": ["value", "enabled"]
+    },
+    "StateTransitionsConfig": {
+      "type": "object",
+      "properties": {
+        "paths": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/StateTransitionsPath" }
+        },
+        "isSynced": {
+          "type": "boolean",
+          "default": true
+        },
+        "xAxisMaxValue": {
+          "type": "number",
+          "description": "The maximum value of the x-axis"
+        },
+        "xAxisMinValue": {
+          "type": "number",
+          "description": "The minimum value of the x-axis"
+        },
+        "xAxisRange": {
+          "type": "number",
+          "description": "The range of the x-axis"
+        },
+        "xAxisLabel": {
+          "type": "string",
+          "description": "The label of the x-axis"
+        },
+        "timeWindowMode": {
+          "enum": ["automatic", "sliding", "fixed"],
+          "default": "automatic",
+          "description": "The mode of the time window"
+        },
+        "playbackBarPosition": {
+          "enum": ["center", "right"],
+          "default": "center",
+          "description": "The position of the playback bar"
+        },
+        "showPoints": {
+          "type": "boolean",
+          "default": false
+        },
+        "foxglovePanelTitle": {
+          "type": "string",
+          "description": "The title of the panel in Foxglove"
+        }
+      }
+    }
+  },
+  "properties": {
+    "type": {
+      "const": "StateTransitions",
+      "default": "StateTransitions"
+    },
+    "config": {
+      "$ref": "#/$defs/StateTransitionsConfig"
+    }
+  },
+  "required": ["config"]
+}

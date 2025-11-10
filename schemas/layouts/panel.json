@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Panel",
+  "description": "A generic panel in Foxglove",
+  "allOf": [{ "$ref": "./base_panel.json" }],
+  "properties": {
+    "config": {
+      "type": "object",
+      "description": "The config of the panel. This can be an arbitrary JSON serializable object.",
+      "additionalProperties": true
+    }
+  },
+  "required": ["config"]
+}

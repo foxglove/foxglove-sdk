@@ -1,0 +1,106 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Layout",
+  "description": "A layout in Foxglove",
+  "$defs": {
+    "Variables": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "Tab": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "The unique identifier for the tab"
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the tab"
+        },
+        "items": {
+          "$ref": "#/$defs/ItemList"
+        }
+      },
+      "required": ["id", "name", "items"]
+    },
+    "Tabs": {
+      "type": "object",
+      "properties": {
+        "selectedTabId": {
+          "type": "string",
+          "description": "The unique identifier for the selected tab"
+        },
+        "tabs": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/Tab" }
+        }
+      },
+      "required": ["tabs"]
+    },
+    "Item": {
+      "type": "object",
+      "properties": {
+        "ratio": {
+          "type": "number",
+          "description": "The ratio of the item"
+        },
+        "content": {
+          "anyOf": [
+            { "$ref": "./base_panel.json" },
+            { "$ref": "#/$defs/Tabs" },
+            { "$ref": "#/$defs/ItemList" }
+          ]
+        }
+      },
+      "required": ["ratio", "content"]
+    },
+    "ItemList": {
+      "type": "object",
+      "properties": {
+        "direction": {
+          "enum": ["vertical", "horizontal"],
+          "default": "horizontal"
+        },
+        "items": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/Item" },
+          "minItems": 1
+        }
+      },
+      "required": ["direction", "items"]
+    },
+    "UserScript": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the user script"
+        },
+        "sourceCode": {
+          "type": "string",
+          "description": "The source code of the user script"
+        }
+      },
+      "required": ["name", "sourceCode"]
+    }
+  },
+  "type": "object",
+  "properties": {
+    "version": {
+      "type": "string",
+      "description": "The version of the layout format"
+    },
+    "variables": {
+      "$ref": "#/$defs/Variables"
+    },
+    "items": {
+      "$ref": "#/$defs/ItemList"
+    },
+    "userNodes": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/UserScript" }
+    }
+  },
+  "required": ["version", "variables", "items", "userNodes"]
+}
