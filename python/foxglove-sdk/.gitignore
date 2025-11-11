@@ -5,7 +5,8 @@ dist
 python/foxglove/notebook/static/
 
 # Layout models
-python/foxglove/layouts/models/
+# Temporaly ignore to allow reviewing generated code
+# python/foxglove/layouts/models/
 
 # MCAP
 *.mcap
