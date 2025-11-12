@@ -1,8 +1,18 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "StateTransitionsPanel",
-  "description": "A state transitions panel in Foxglove",
+  "description": "The State Transitions panel visualizes changes in discrete values from your topic message paths. Check out [the documentation](https://docs.foxglove.dev/docs/visualization/panels/state-transitions) for more information.",
   "allOf": [{ "$ref": "./base_panel.json" }],
+  "properties": {
+    "type": {
+      "const": "StateTransitions",
+      "default": "StateTransitions"
+    },
+    "config": {
+      "$ref": "#/$defs/StateTransitionsConfig"
+    }
+  },
+  "required": ["config"],
   "$defs": {
     "BaseCustomState": {
       "type": "object",
@@ -151,15 +161,5 @@
         }
       }
     }
-  },
-  "properties": {
-    "type": {
-      "const": "StateTransitions",
-      "default": "StateTransitions"
-    },
-    "config": {
-      "$ref": "#/$defs/StateTransitionsConfig"
-    }
-  },
-  "required": ["config"]
+  }
 }

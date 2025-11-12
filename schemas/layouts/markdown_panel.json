@@ -1,8 +1,18 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "MarkdownPanel",
-  "description": "A Markdown panel in Foxglove",
+  "description": "Displays Github flavored Markdown within a layout. Check out [the documentation](https://docs.foxglove.dev/docs/visualization/panels/markdown) for more information.",
   "allOf": [{ "$ref": "./base_panel.json" }],
+  "properties": {
+    "type": {
+      "const": "Markdown",
+      "default": "Markdown"
+    },
+    "config": {
+      "$ref": "#/$defs/MarkdownConfig"
+    }
+  },
+  "required": ["config"],
   "$defs": {
     "MarkdownConfig": {
       "type": "object",
@@ -22,15 +32,5 @@
         }
       }
     }
-  },
-  "properties": {
-    "type": {
-      "const": "Markdown",
-      "default": "Markdown"
-    },
-    "config": {
-      "$ref": "#/$defs/MarkdownConfig"
-    }
-  },
-  "required": ["config"]
+  }
 }

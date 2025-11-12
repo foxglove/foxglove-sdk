@@ -2,6 +2,21 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Layout",
   "description": "A layout in Foxglove",
+  "type": "object",
+  "properties": {
+    "version": {
+      "enum": ["0.0.1"],
+      "default": "0.0.1",
+      "description": "The version of the layout format"
+    },
+    "variables": {
+      "$ref": "#/$defs/Variables"
+    },
+    "items": {
+      "$ref": "#/$defs/ItemList"
+    }
+  },
+  "required": ["version", "variables", "items", "userNodes"],
   "$defs": {
     "Variables": {
       "type": "object",
@@ -40,12 +55,14 @@
     },
     "Item": {
       "type": "object",
+      "description": "An item in a layout with a ratio for space allocation.\n\nThe ratio determines the proportion of space this item takes up, similar to CSS flex ratio.\nFor example, if a list has 3 items with ratios 1, 2, and 3, the first item takes 1/6 of the\nspace, the second item takes 2/6, and the third item takes 3/6.",
       "properties": {
         "ratio": {
           "type": "number",
-          "description": "The ratio of the item"
+          "description": "Proportion of space this item occupies"
         },
         "content": {
+          "description": "Content of the item (panel, tabs, or item list)",
           "anyOf": [
             { "$ref": "./base_panel.json" },
             { "$ref": "#/$defs/Tabs" },
@@ -69,38 +86,6 @@
         }
       },
       "required": ["direction", "items"]
-    },
-    "UserScript": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "type": "string",
-          "description": "The name of the user script"
-        },
-        "sourceCode": {
-          "type": "string",
-          "description": "The source code of the user script"
-        }
-      },
-      "required": ["name", "sourceCode"]
     }
-  },
-  "type": "object",
-  "properties": {
-    "version": {
-      "type": "string",
-      "description": "The version of the layout format"
-    },
-    "variables": {
-      "$ref": "#/$defs/Variables"
-    },
-    "items": {
-      "$ref": "#/$defs/ItemList"
-    },
-    "userNodes": {
-      "type": "object",
-      "additionalProperties": { "$ref": "#/$defs/UserScript" }
-    }
-  },
-  "required": ["version", "variables", "items", "userNodes"]
+  }
 }

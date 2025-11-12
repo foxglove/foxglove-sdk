@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Base Panel",
-  "description": "A base panel in Foxglove",
+  "description": "Base panel for all panels in a Foxglove layout. All panels must inherit from this base panel.",
   "properties": {
     "type": {
       "type": "string",
