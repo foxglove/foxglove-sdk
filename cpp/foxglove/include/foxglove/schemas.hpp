@@ -740,7 +740,7 @@ struct Grid {
   /// @brief Number of bytes between cells within a row in `data`
   uint32_t cell_stride = 0;
 
-  /// @brief Fields in `data`. S`red`, `green`, `blue`, and `alpha` are optional for customizing the
+  /// @brief Fields in `data`. `red`, `green`, `blue`, and `alpha` are optional for customizing the
   /// grid's color.
   /// @brief To enable RGB color visualization in the [3D
   /// panel](https://docs.foxglove.dev/docs/visualization/panels/3d#rgba-separate-fields-color-mode),
