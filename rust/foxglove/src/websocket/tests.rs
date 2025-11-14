@@ -1667,6 +1667,7 @@ async fn test_on_playback_control_request() {
         &ctx,
         ServerOptions {
             capabilities: Some(HashSet::from([Capability::RangedPlayback])),
+            playback_time_range: Some((123_456_789, 234_567_890)),
             listener: Some(listener.clone()),
             ..Default::default()
         },
@@ -1888,4 +1889,17 @@ async fn test_broadcast_playback_state() {
     assert_eq!(received.current_time, 250);
     assert_eq!(received.playback_speed, 1.0);
     assert_eq!(received.request_id, None);
+}
+
+#[tokio::test]
+#[should_panic]
+async fn test_ranged_playback_without_time_range() {
+    let ctx = Context::new();
+    let options = ServerOptions {
+        capabilities: Some(HashSet::from([Capability::RangedPlayback])),
+        playback_time_range: None,
+        ..Default::default()
+    };
+
+    create_server(&ctx, options);
 }

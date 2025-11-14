@@ -204,6 +204,10 @@ impl Server {
 
         if opts.playback_time_range.is_some() {
             capabilities.insert(Capability::RangedPlayback);
+        } else if capabilities.contains(&Capability::RangedPlayback) {
+            // The RangedPlayback capability requires a time range to be set using
+            // ServerOptions::playback_time_range
+            panic!("Server declared the RangedPlayback capability but did not provide a playback time range");
         }
 
         // If the server was declared with fetch asset handler, automatically add the "assets" capability
