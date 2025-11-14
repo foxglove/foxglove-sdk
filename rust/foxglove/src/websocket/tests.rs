@@ -23,7 +23,9 @@ use super::ws_protocol::client::{
 use super::ws_protocol::server::connection_graph_update::{
     AdvertisedService, PublishedTopic, SubscribedTopic,
 };
-use super::ws_protocol::server::server_info::Capability as ServerInfoCapability;
+use super::ws_protocol::server::server_info::{
+    Capability as ServerInfoCapability, SerializedTimestamp,
+};
 use super::ws_protocol::server::{
     advertise_services, ConnectionGraphUpdate, FetchAssetResponse, ParameterValues, ServerInfo,
     ServerMessage, ServiceCallFailure, ServiceCallResponse, Status,
@@ -1834,8 +1836,14 @@ async fn test_server_info_with_ranged_playback() {
 
     let msg = expect_recv!(client, ServerMessage::ServerInfo);
 
-    assert_eq!(msg.data_start_time, Some(123));
-    assert_eq!(msg.data_end_time, Some(456));
+    assert_eq!(
+        msg.data_start_time,
+        Some(SerializedTimestamp { sec: 0, nsec: 123 })
+    );
+    assert_eq!(
+        msg.data_end_time,
+        Some(SerializedTimestamp { sec: 0, nsec: 456 })
+    );
 
     // By starting the server with a set playback_time_range, it should enable the RangedPlayback
     // capability

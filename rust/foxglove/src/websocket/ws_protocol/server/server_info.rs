@@ -6,6 +6,25 @@ use serde::{Deserialize, Serialize};
 
 use crate::websocket::ws_protocol::JsonMessage;
 
+/// Type for serializing timestamps in the server info message.
+///
+/// This exists to allow for sending timestamps that are represented as
+/// u64 in memory over JSON without loss of precision.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SerializedTimestamp {
+    pub sec: u32,
+    pub nsec: u32,
+}
+
+impl SerializedTimestamp {
+    fn from_nsecs(timestamp: u64) -> Self {
+        SerializedTimestamp {
+            sec: (timestamp / 1e9 as u64) as u32,
+            nsec: (timestamp % 1e9 as u64) as u32,
+        }
+    }
+}
+
 /// Server info message.
 ///
 /// Spec: <https://github.com/foxglove/ws-protocol/blob/main/docs/spec.md#server-info>
@@ -28,10 +47,10 @@ pub struct ServerInfo {
     pub session_id: Option<String>,
     /// Optional timestamp, in absolute nanoseconds, indicating the start of the data range.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub data_start_time: Option<u64>,
+    pub data_start_time: Option<SerializedTimestamp>,
     /// Optional timestamp, in absolute nanoseconds, indicating the end of the data range.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub data_end_time: Option<u64>,
+    pub data_end_time: Option<SerializedTimestamp>,
 }
 impl ServerInfo {
     /// Creates a new server info message.
@@ -81,8 +100,8 @@ impl ServerInfo {
     #[must_use]
     pub fn with_playback_time_range(mut self, time_range: Option<(u64, u64)>) -> Self {
         if let Some((start_time, end_time)) = time_range {
-            self.data_start_time = Some(start_time);
-            self.data_end_time = Some(end_time);
+            self.data_start_time = Some(SerializedTimestamp::from_nsecs(start_time));
+            self.data_end_time = Some(SerializedTimestamp::from_nsecs(end_time));
         }
         self
     }

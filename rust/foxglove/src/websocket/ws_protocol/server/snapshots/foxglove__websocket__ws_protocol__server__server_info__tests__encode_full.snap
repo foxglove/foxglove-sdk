@@ -1,6 +1,5 @@
 ---
 source: rust/foxglove/src/websocket/ws_protocol/server/server_info.rs
-assertion_line: 149
 expression: message_full()
 ---
 {
@@ -18,6 +17,12 @@ expression: message_full()
     "key": "value"
   },
   "sessionId": "1675789422160",
-  "dataStartTime": 1000000,
-  "dataEndTime": 1000005
+  "dataStartTime": {
+    "sec": 0,
+    "nsec": 1000000
+  },
+  "dataEndTime": {
+    "sec": 0,
+    "nsec": 1000005
+  }
 }
