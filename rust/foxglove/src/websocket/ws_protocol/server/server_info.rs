@@ -83,10 +83,6 @@ impl ServerInfo {
         if let Some((start_time, end_time)) = time_range {
             self.data_start_time = Some(start_time);
             self.data_end_time = Some(end_time);
-
-            if !self.capabilities.contains(&Capability::RangedPlayback) {
-                self.capabilities.push(Capability::RangedPlayback);
-            }
         }
         self
     }

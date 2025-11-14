@@ -1,6 +1,6 @@
 //! Websocket server
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::fmt::{Debug, Display};
 use std::future::Future;
 use std::net::SocketAddr;
@@ -134,11 +134,6 @@ impl WebSocketServer {
     /// This will add the RangedPlayback capability to the server.
     pub fn playback_time_range(mut self, start_time: u64, end_time: u64) -> Self {
         self.options.playback_time_range = Some((start_time, end_time));
-        if let Some(capabilities) = self.options.capabilities.as_mut() {
-            capabilities.insert(Capability::RangedPlayback);
-        } else {
-            self.options.capabilities = Some(HashSet::from([Capability::RangedPlayback]));
-        }
         self
     }
 
