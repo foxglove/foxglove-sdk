@@ -1644,10 +1644,13 @@ impl RecordingPlaybackControlListener {
 
 #[cfg(feature = "unstable")]
 impl ServerListener for RecordingPlaybackControlListener {
-    fn on_playback_control_request(&self, request: PlaybackControlRequest) -> PlaybackState {
+    fn on_playback_control_request(
+        &self,
+        request: PlaybackControlRequest,
+    ) -> Option<PlaybackState> {
         let response = self.handle_request(&request);
         self.set_request(request);
-        response
+        Some(response)
     }
 }
 
