@@ -40,7 +40,6 @@ use crate::websocket::TlsIdentity;
 use crate::websocket::{
     BlockingAssetHandlerFn, Capability, ClientChannelId, ConnectionGraph, Parameter, Server,
 };
-#[cfg(feature = "unstable")]
 use crate::websocket::{
     PlaybackCommand, PlaybackControlRequest, PlaybackState, PlaybackStatus, ServerListener,
 };
@@ -1600,12 +1599,10 @@ async fn test_broadcast_time() {
     assert_eq!(msg.timestamp, 42);
 }
 
-#[cfg(feature = "unstable")]
 struct RecordingPlaybackControlListener {
     playback_request: Mutex<Option<PlaybackControlRequest>>,
 }
 
-#[cfg(feature = "unstable")]
 impl RecordingPlaybackControlListener {
     fn new() -> Self {
         Self {
@@ -1644,7 +1641,6 @@ impl RecordingPlaybackControlListener {
     }
 }
 
-#[cfg(feature = "unstable")]
 impl ServerListener for RecordingPlaybackControlListener {
     fn on_playback_control_request(
         &self,
@@ -1656,7 +1652,6 @@ impl ServerListener for RecordingPlaybackControlListener {
     }
 }
 
-#[cfg(feature = "unstable")]
 #[traced_test]
 #[tokio::test]
 async fn test_on_playback_control_request() {

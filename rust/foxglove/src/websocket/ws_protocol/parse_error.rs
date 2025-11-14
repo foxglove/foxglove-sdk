@@ -28,7 +28,6 @@ pub enum ParseError {
     #[error("Invalid playback command {0}")]
     InvalidPlaybackCommand(u8),
     /// Invalid playback status
-    #[cfg(feature = "unstable")]
     #[doc(hidden)]
     #[error("Invalid playback status {0}")]
     InvalidPlaybackStatus(u8),

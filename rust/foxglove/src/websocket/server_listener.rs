@@ -1,6 +1,5 @@
 use super::{ChannelView, Client, ClientChannel, Parameter};
 use crate::websocket::PlaybackControlRequest;
-#[cfg(feature = "unstable")]
 use crate::websocket::PlaybackState;
 
 /// Provides a mechanism for registering callbacks for handling client message events.

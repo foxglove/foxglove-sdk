@@ -21,7 +21,6 @@ use crate::{Context, FoxgloveError};
 use super::connected_client::ConnectedClient;
 use super::cow_vec::CowVec;
 use super::service::{Service, ServiceId, ServiceMap};
-#[cfg(feature = "unstable")]
 use super::ws_protocol::server::PlaybackState;
 use super::ws_protocol::server::{
     AdvertiseServices, RemoveStatus, ServerInfo, UnadvertiseServices,
@@ -368,7 +367,6 @@ impl Server {
     }
 
     /// Publish the current playback state to all clients.
-    #[cfg(feature = "unstable")]
     #[doc(hidden)]
     pub fn broadcast_playback_state(&self, playback_state: PlaybackState) {
         if !self.has_capability(Capability::RangedPlayback) {
