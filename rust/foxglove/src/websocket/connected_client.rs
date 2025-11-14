@@ -686,16 +686,16 @@ impl ConnectedClient {
 
         if let Some(handler) = server.listener() {
             let request_id = msg.request_id.clone();
-            let playback_state = match handler.on_playback_control_request(msg) {
-                Some(state) => state,
-                None => {
-                    tracing::error!(
-                        "No playback state sent in response to playback control request ID {}",
-                        request_id
-                    );
-                    self.send_error("Server did not send playback state in response to playback control request".to_string());
-                    return;
-                }
+            let Some(playback_state) = handler.on_playback_control_request(msg) else {
+                tracing::error!(
+                    "No playback state sent in response to playback control request ID {}",
+                    request_id
+                );
+                self.send_error(
+                    "Server did not send playback state in response to playback control request"
+                        .to_string(),
+                );
+                return;
             };
             if playback_state.request_id.as_deref() != Some(request_id.as_str()) {
                 tracing::error!(
