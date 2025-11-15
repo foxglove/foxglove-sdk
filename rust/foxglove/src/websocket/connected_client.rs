@@ -686,7 +686,7 @@ impl ConnectedClient {
 
         if let Some(handler) = server.listener() {
             let request_id = msg.request_id.clone();
-            let Some(playback_state) = handler.on_playback_control_request(msg) else {
+            let Some(mut playback_state) = handler.on_playback_control_request(msg) else {
                 tracing::error!(
                     "No playback state sent in response to playback control request ID {}",
                     request_id
@@ -697,18 +697,18 @@ impl ConnectedClient {
                 );
                 return;
             };
-            if playback_state.request_id.as_deref() != Some(request_id.as_str()) {
-                tracing::error!(
-                        "Request id in playback state returned in response to playback control request id {} didn't match",
-                        request_id,
-                    );
-                self.send_error(
-                    "Server sent non-matching request id in response to playback control request"
-                        .to_string(),
-                );
-                return;
-            }
+
+            // Force the request id in the playback state to match that of the request. Since this
+            // playback state is being instantiated in the request listener, it's the only valid
+            // value for this field, and it eases the burden on server implementors to not have to
+            // worry about explicitly setting this.
+            playback_state.request_id = Some(request_id);
             server.broadcast_playback_state(playback_state);
+        } else {
+            self.send_error(
+                "Server advertised ranged playback capability but didn't provide a listener"
+                    .to_string(),
+            );
         }
     }
 

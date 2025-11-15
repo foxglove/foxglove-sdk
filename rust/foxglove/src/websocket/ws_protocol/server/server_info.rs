@@ -19,7 +19,7 @@ pub struct SerializedTimestamp {
 impl SerializedTimestamp {
     fn from_nsecs(timestamp: u64) -> Self {
         SerializedTimestamp {
-            sec: (timestamp / 1e9 as u64) as u32,
+            sec: u32::try_from(timestamp / 1e9 as u64).unwrap_or(u32::MAX),
             nsec: (timestamp % 1e9 as u64) as u32,
         }
     }
@@ -102,6 +102,9 @@ impl ServerInfo {
         if let Some((start_time, end_time)) = time_range {
             self.data_start_time = Some(SerializedTimestamp::from_nsecs(start_time));
             self.data_end_time = Some(SerializedTimestamp::from_nsecs(end_time));
+        } else {
+            self.data_start_time = None;
+            self.data_end_time = None;
         }
         self
     }

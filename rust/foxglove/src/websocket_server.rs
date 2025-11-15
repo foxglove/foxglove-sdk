@@ -115,11 +115,7 @@ impl WebSocketServer {
     ///
     /// By default, the server does not advertise any capabilities.
     pub fn capabilities(mut self, capabilities: impl IntoIterator<Item = Capability>) -> Self {
-        if let Some(capabilities_inner) = self.options.capabilities.as_mut() {
-            capabilities_inner.extend(capabilities);
-        } else {
-            self.options.capabilities = Some(capabilities.into_iter().collect());
-        }
+        self.options.capabilities = Some(capabilities.into_iter().collect());
         self
     }
 
