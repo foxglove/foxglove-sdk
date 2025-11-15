@@ -122,8 +122,6 @@ mod tests {
     use super::*;
     use crate::ws_protocol::server::ServerMessage;
 
-    // TODO: Add opcode here
-
     #[test]
     fn test_encode_playing() {
         let message = PlaybackState {
