@@ -12,7 +12,7 @@ See https://foxglove.github.io/foxglove-sdk/python/
 
 ## Requirements
 
-- Python 3.9+
+- Python 3.10+
 
 ## Examples
 

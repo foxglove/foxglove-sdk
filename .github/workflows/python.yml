@@ -14,7 +14,7 @@ jobs:
 
       - uses: actions/setup-python@v6
         with:
-          python-version: "3.9"
+          python-version: "3.10"
 
       - uses: astral-sh/setup-uv@v7
       - run: make -f Container.mk lint-python
@@ -123,7 +123,7 @@ jobs:
 
       - uses: actions/setup-python@v6
         with:
-          python-version: "3.9"
+          python-version: "3.10"
 
       - uses: arduino/setup-protoc@v3
         with:
@@ -179,7 +179,7 @@ jobs:
     steps:
       - uses: actions/setup-python@v6
         with:
-          python-version: "3.9"
+          python-version: "3.10"
       - name: Download sdist
         uses: actions/download-artifact@v6
         with:
@@ -217,7 +217,7 @@ jobs:
     steps:
       - uses: actions/setup-python@v6
         with:
-          python-version: "3.9"
+          python-version: "3.10"
       - name: Download sdist
         uses: actions/download-artifact@v6
         with:
@@ -252,7 +252,7 @@ jobs:
       - uses: actions/setup-python@v6
         if: ${{ matrix.platform.target == 'x86_64' }}
         with:
-          python-version: "3.9"
+          python-version: "3.10"
 
       # The windows-latest image doesn't have 32-bit pythons.
       - uses: actions/setup-python@v6
@@ -265,7 +265,6 @@ jobs:
             3.12
             3.11
             3.10
-            3.9
 
       - name: Download sdist
         uses: actions/download-artifact@v6
@@ -300,7 +299,7 @@ jobs:
     steps:
       - uses: actions/setup-python@v6
         with:
-          python-version: "3.9"
+          python-version: "3.10"
       - name: Download sdist
         uses: actions/download-artifact@v6
         with:
@@ -377,7 +376,7 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - uses: actions/setup-python@v6
         with:
-          python-version: "3.9"
+          python-version: "3.10"
       - uses: astral-sh/setup-uv@v7
       - run: corepack enable
       - uses: actions/setup-node@v6
