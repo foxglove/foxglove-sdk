@@ -13,7 +13,7 @@ use crate::parameter::FoxgloveParameterArray;
 
 use crate::{
     result_to_c, FoxgloveContext, FoxgloveError, FoxgloveKeyValue, FoxglovePlaybackControlRequest,
-    FoxgloveSinkId, FoxgloveString,
+    FoxglovePlaybackState, FoxgloveSinkId, FoxgloveString,
 };
 
 // Easier to get reasonable C output from cbindgen with constants rather than directly exporting the bitflags macro
@@ -312,7 +312,7 @@ pub struct FoxgloveServerCallbacks {
         unsafe extern "C" fn(
             context: *const c_void,
             playback_control_request: *const FoxglovePlaybackControlRequest,
-        ),
+        ) -> *mut FoxglovePlaybackState,
     >,
 }
 unsafe impl Send for FoxgloveServerCallbacks {}
@@ -948,16 +948,28 @@ impl foxglove::websocket::ServerListener for FoxgloveServerCallbacks {
     fn on_playback_control_request(
         &self,
         playback_control_request: foxglove::websocket::PlaybackControlRequest,
-    ) {
-        if let Some(on_playback_control_request) = self.on_playback_control_request {
-            let c_playback_control_request = FoxglovePlaybackControlRequest {
-                playback_state: playback_control_request.playback_state as u8,
-                playback_speed: playback_control_request.playback_speed,
-                seek_time: playback_control_request.seek_time.as_ref(),
-            };
-            unsafe {
-                on_playback_control_request(self.context, &raw const c_playback_control_request)
-            };
-        }
+    ) -> Option<foxglove::websocket::PlaybackState> {
+        let Some(on_playback_control_request) = self.on_playback_control_request else {
+            return None;
+        };
+
+        let c_playback_control_request = FoxglovePlaybackControlRequest {
+            playback_command: playback_control_request.playback_command as u8,
+            playback_speed: playback_control_request.playback_speed,
+            seek_time: playback_control_request.seek_time.as_ref(),
+            request_id: (&playback_control_request.request_id).into(),
+        };
+        let raw = unsafe {
+            on_playback_control_request(self.context, &raw const c_playback_control_request)
+        };
+
+        // LEFT OFF HERE!! Doing the conversion from a raw pointer to a FoxglovePlaybackState
+        let Ok(c_playback_state) = FoxglovePlaybackState::from_raw(raw) else {
+            return None;
+        };
+
+        c_playback_state
+            .into_native()
+            .map_or(None, |state| Some(state))
     }
 }

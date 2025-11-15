@@ -2029,11 +2029,32 @@ typedef struct foxglove_parameter_array {
 } foxglove_parameter_array;
 #endif
 
+typedef struct FoxglovePlaybackState {
+  /**
+   * The status of server data playback
+   */
+  uint8_t status;
+  /**
+   * The current time of playback, in absolute nanoseconds
+   */
+  uint64_t current_time;
+  /**
+   * The speed of playback, as a factor of realtime
+   */
+  float playback_speed;
+  /**
+   * If this message is being emitted in response to a PlaybackControlRequest message, the
+   * request_id from that message. Set this to an empty string if the state of playback has been changed
+   * by any other condition.
+   */
+  const struct foxglove_string *request_id;
+} FoxglovePlaybackState;
+
 typedef struct foxglove_playback_control_request {
   /**
-   * Playback state
+   * Playback command
    */
-  uint8_t playback_state;
+  uint8_t playback_command;
   /**
    * Playback speed
    */
@@ -2042,6 +2063,11 @@ typedef struct foxglove_playback_control_request {
    * Seek playback time in nanoseconds (only set if a seek has been performed)
    */
   const uint64_t *seek_time;
+  /**
+   * Unique string identifier, used to indicate that a PlaybackState is in response to a particular request from the client.
+   * Should not be an empty string.
+   */
+  struct foxglove_string request_id;
 } foxglove_playback_control_request;
 
 #if !defined(__wasm__)
@@ -2134,8 +2160,8 @@ typedef struct foxglove_server_callbacks {
                                     size_t param_names_len);
   void (*on_connection_graph_subscribe)(const void *context);
   void (*on_connection_graph_unsubscribe)(const void *context);
-  void (*on_playback_control_request)(const void *context,
-                                      const struct foxglove_playback_control_request *playback_control_request);
+  struct FoxglovePlaybackState *(*on_playback_control_request)(const void *context,
+                                                               const struct foxglove_playback_control_request *playback_control_request);
 } foxglove_server_callbacks;
 #endif
 
