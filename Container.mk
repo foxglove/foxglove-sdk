@@ -6,7 +6,8 @@ generate:
 .PHONY: build-python
 build-python:
 	uv --directory python/foxglove-sdk lock --check
-	uv --directory python/foxglove-sdk run maturin develop
+	uv --directory python/foxglove-sdk sync --all-extras
+	uv --directory python/foxglove-sdk pip install --editable '.[notebook]'
 
 .PHONY: lint-python
 lint-python:
@@ -18,13 +19,28 @@ lint-python:
 .PHONY: test-python
 test-python:
 	uv --directory python/foxglove-sdk lock --check
-	uv --directory python/foxglove-sdk run maturin develop
+	uv --directory python/foxglove-sdk sync --all-extras
+	uv --directory python/foxglove-sdk pip install --editable '.[notebook]'
 	uv --directory python/foxglove-sdk run mypy .
 	uv --directory python/foxglove-sdk run pytest
 
 .PHONY: benchmark-python
 benchmark-python:
+	uv --directory python/foxglove-sdk lock --check
+	uv --directory python/foxglove-sdk sync --all-extras
+	uv --directory python/foxglove-sdk pip install --editable '.[notebook]'
 	uv --directory python/foxglove-sdk run pytest --with-benchmarks
+
+.PHONY: docs-python
+docs-python:
+	uv --directory python/foxglove-sdk lock --check
+	uv --directory python/foxglove-sdk sync --all-extras
+	uv --directory python/foxglove-sdk pip install --editable '.[notebook]'
+	uv --directory python/foxglove-sdk run sphinx-build --fail-on-warning ./python/docs ./python/docs/_build
+
+.PHONY: clean-docs-python
+clean-docs-python:
+	rm -rf python/foxglove-sdk/python/docs/_build
 
 .PHONY: lint-rust
 lint-rust:

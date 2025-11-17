@@ -550,7 +550,7 @@ typedef struct foxglove_camera_calibration {
   /**
    * Name of distortion model
    *
-   * Supported parameters: `plumb_bob` (k1, k2, p1, p2, k3), `rational_polynomial` (k1, k2, p1, p2, k3, k4, k5, k6), and `kannala_brandt` (k1, k2, k3, k4). `plumb_bob` and `rational_polynomial` models are based on the pinhole model [OpenCV's](https://docs.opencv.org/4.11.0/d9/d0c/group__calib3d.html) [pinhole camera model](https://en.wikipedia.org/wiki/Distortion_%28optics%29#Software_correction). The `kannala_brandt` model matches the [OpenvCV fisheye](https://docs.opencv.org/4.11.0/db/d58/group__calib3d__fisheye.html) model.
+   * Supported parameters: `plumb_bob` (k1, k2, p1, p2, k3), `rational_polynomial` (k1, k2, p1, p2, k3, k4, k5, k6), and `kannala_brandt` (k1, k2, k3, k4), and `fisheye62` (k0, k1, k2, k3, p0, p1, crit_theta [optional]). `plumb_bob` and `rational_polynomial` models are based on the pinhole model [OpenCV's](https://docs.opencv.org/4.11.0/d9/d0c/group__calib3d.html) [pinhole camera model](https://en.wikipedia.org/wiki/Distortion_%28optics%29#Software_correction). The `kannala_brandt` model matches the [OpenvCV fisheye](https://docs.opencv.org/4.11.0/db/d58/group__calib3d__fisheye.html) model. The `fisheye62` model matches the [Project Aria's Fisheye62 Model](https://facebookresearch.github.io/projectaria_tools/docs/tech_insights/camera_intrinsic_models).
    */
   struct foxglove_string distortion_model;
   /**
@@ -888,14 +888,52 @@ typedef struct foxglove_grid {
   uint32_t cell_stride;
   /**
    * Fields in `data`. `red`, `green`, `blue`, and `alpha` are optional for customizing the grid's color.
+   * To enable RGB color visualization in the [3D panel](https://docs.foxglove.dev/docs/visualization/panels/3d#rgba-separate-fields-color-mode), include **all four** of these fields in your `fields` array:
+   *
+   * - `red` - Red channel value
+   * - `green` - Green channel value
+   * - `blue` - Blue channel value
+   * - `alpha` - Alpha/transparency channel value
+   *
+   * **note:** All four fields must be present with these exact names for RGB visualization to work. The order of fields doesn't matter, but the names must match exactly.
+   *
+   * Recommended type: `UINT8` (0-255 range) for standard 8-bit color channels.
+   *
+   * Example field definitions:
+   *
+   * **RGB color only:**
+   *
+   * ```javascript
+   * fields: [
+   *  { name: "red", offset: 0, type: NumericType.UINT8 },
+   *  { name: "green", offset: 1, type: NumericType.UINT8 },
+   *  { name: "blue", offset: 2, type: NumericType.UINT8 },
+   *  { name: "alpha", offset: 3, type: NumericType.UINT8 },
+   * ];
+   * ```
+   *
+   * **RGB color with elevation (for 3D terrain visualization):**
+   *
+   * ```javascript
+   * fields: [
+   *  { name: "red", offset: 0, type: NumericType.UINT8 },
+   *  { name: "green", offset: 1, type: NumericType.UINT8 },
+   *  { name: "blue", offset: 2, type: NumericType.UINT8 },
+   *  { name: "alpha", offset: 3, type: NumericType.UINT8 },
+   *  { name: "elevation", offset: 4, type: NumericType.FLOAT32 },
+   * ];
+   * ```
+   *
+   * When these fields are present, the 3D panel will offer additional "Color Mode" options including "RGBA (separate fields)" to visualize the RGB data directly. For elevation visualization, set the "Elevation field" to your elevation layer name.
    */
   const struct foxglove_packed_element_field *fields;
   size_t fields_count;
   /**
    * Grid cell data, interpreted using `fields`, in row-major (y-major) order.
-   *  For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
-   *  y = i / row_stride * cell_size.y
-   *  x = (i % row_stride) / cell_stride * cell_size.x
+   * For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
+   *
+   * - y = i / row_stride * cell_size.y
+   * - x = (i % row_stride) / cell_stride * cell_size.x
    */
   const unsigned char *data;
   size_t data_len;
@@ -948,10 +986,11 @@ typedef struct foxglove_voxel_grid {
   size_t fields_count;
   /**
    * Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order.
-   *  For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
-   *  z = i / slice_stride * cell_size.z
-   *  y = (i % slice_stride) / row_stride * cell_size.y
-   *  x = (i % row_stride) / cell_stride * cell_size.x
+   * For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
+   *
+   * - z = i / slice_stride * cell_size.z
+   * - y = (i % slice_stride) / row_stride * cell_size.y
+   * - x = (i % row_stride) / cell_stride * cell_size.x
    */
   const unsigned char *data;
   size_t data_len;
@@ -4156,6 +4195,26 @@ foxglove_error foxglove_mcap_open(const struct foxglove_mcap_options *FOXGLOVE_N
  * `writer` must be a valid pointer to a `FoxgloveMcapWriter` created via `foxglove_mcap_open`.
  */
 foxglove_error foxglove_mcap_close(struct foxglove_mcap_writer *writer);
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Write metadata to an MCAP file.
+ *
+ * Metadata consists of key-value string pairs associated with a name.
+ * If the metadata has no key-value pairs, this method does nothing.
+ *
+ * Returns 0 on success, or returns a FoxgloveError code on error.
+ *
+ * # Safety
+ * `writer` must be a valid pointer to a `FoxgloveMcapWriter` created via `foxglove_mcap_open`.
+ * `name` must be a valid UTF-8 string.
+ * `metadata` must be a valid pointer to an array of `foxglove_key_value` with length `metadata_len`.
+ */
+foxglove_error foxglove_mcap_write_metadata(struct foxglove_mcap_writer *writer,
+                                            const struct foxglove_string *FOXGLOVE_NONNULL name,
+                                            const struct foxglove_key_value *metadata,
+                                            size_t metadata_len);
 #endif
 
 #if !defined(__wasm__)

@@ -82,3 +82,15 @@ class MCAPWriter:
         exiting the context manager.
         """
         ...
+
+    def write_metadata(self, name: str, metadata: dict[str, str]) -> None:
+        """
+        Write metadata to the MCAP file.
+
+        Metadata consists of key-value string pairs associated with a name.
+        If the metadata dictionary is empty, this method does nothing.
+
+        :param name: Name identifier for this metadata record
+        :param metadata: Dictionary of key-value pairs to store
+        """
+        ...

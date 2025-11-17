@@ -1,0 +1,24 @@
+{
+  "name": "@foxglove/notebook-frontend",
+  "version": "0.0.0",
+  "license": "MIT",
+  "author": {
+    "name": "Foxglove Technologies",
+    "email": "support@foxglove.dev"
+  },
+  "homepage": "https://foxglove.dev/",
+  "private": true,
+  "scripts": {
+    "dev": "yarn run build --sourcemap=inline --watch",
+    "build": "esbuild widget.ts --format=esm --bundle --outdir='../python/foxglove/notebook/static'",
+    "build:prod": "yarn build --minify",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@anywidget/types": "0.2.0",
+    "@foxglove/embed": "0.1.8",
+    "@foxglove/tsconfig": "2.0.0",
+    "esbuild": "0.25.11",
+    "typescript": "5.9.3"
+  }
+}

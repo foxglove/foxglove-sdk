@@ -1,3 +1,4 @@
+use std::collections::BTreeMap;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -101,6 +102,14 @@ fn main() {
     //     .expect("Failed to start mcap writer");
 
     let sink = StdoutSink::new();
+
+    // If you want to add some MCAP metadata: https://mcap.dev/spec#metadata-op0x0c
+    let mut metadata = BTreeMap::new();
+    metadata.insert("os".to_string(), std::env::consts::OS.to_string());
+    metadata.insert("arch".to_string(), std::env::consts::ARCH.to_string());
+    writer
+        .write_metadata("platform", metadata)
+        .expect("Failed to write metadata");
 
     log_until(args.fps, done);
     // writer.close().expect("Failed to flush mcap file");

@@ -21,6 +21,8 @@ use crate::{Context, FoxgloveError};
 use super::connected_client::ConnectedClient;
 use super::cow_vec::CowVec;
 use super::service::{Service, ServiceId, ServiceMap};
+#[cfg(feature = "unstable")]
+use super::ws_protocol::server::PlaybackState;
 use super::ws_protocol::server::{
     AdvertiseServices, RemoveStatus, ServerInfo, UnadvertiseServices,
 };
@@ -47,6 +49,7 @@ pub(crate) struct ServerOptions {
     pub tls_identity: Option<TlsIdentity>,
     pub channel_filter: Option<Arc<dyn SinkChannelFilter>>,
     pub server_info: Option<HashMap<String, String>>,
+    pub playback_time_range: Option<(u64, u64)>,
 }
 
 impl std::fmt::Debug for ServerOptions {
@@ -164,6 +167,9 @@ pub(crate) struct Server {
     /// Information about the server, which is shared with clients.
     /// Keys prefixed with "fg-" are reserved for internal use.
     server_info: HashMap<String, String>,
+    /// Time range of data being played back, in absolute nanoseconds.
+    /// Implies the [`RangedPlayback`](crate::websocket::Capability::RangedPlayback) capability if set.
+    playback_time_range: Option<(u64, u64)>,
 }
 
 impl Server {
@@ -196,6 +202,14 @@ impl Server {
             );
         }
 
+        if opts.playback_time_range.is_some() {
+            capabilities.insert(Capability::RangedPlayback);
+        } else if capabilities.contains(&Capability::RangedPlayback) {
+            // The RangedPlayback capability requires a time range to be set using
+            // ServerOptions::playback_time_range
+            panic!("Server declared the RangedPlayback capability but did not provide a playback time range");
+        }
+
         // If the server was declared with fetch asset handler, automatically add the "assets" capability
         if opts.fetch_asset_handler.is_some() {
             capabilities.insert(Capability::Assets);
@@ -225,6 +239,7 @@ impl Server {
             tasks: parking_lot::Mutex::default(),
             stream_config,
             server_info: opts.server_info.unwrap_or_default(),
+            playback_time_range: opts.playback_time_range,
         }
     }
 
@@ -352,6 +367,20 @@ impl Server {
         }
     }
 
+    /// Publish the current playback state to all clients.
+    #[cfg(feature = "unstable")]
+    #[doc(hidden)]
+    pub fn broadcast_playback_state(&self, playback_state: PlaybackState) {
+        if !self.has_capability(Capability::RangedPlayback) {
+            tracing::error!("Server does not support the RangedPlayback capability");
+            return;
+        }
+
+        for client in self.clients.get().iter() {
+            client.send_control_msg(&playback_state);
+        }
+    }
+
     /// Adds client parameter subscriptions by parameter name.
     pub(super) fn subscribe_parameters(&self, client_id: ClientId, names: Vec<String>) {
         let mut subs = self.subscribed_parameters.write();
@@ -409,7 +438,7 @@ impl Server {
         let mut old_names = vec![];
         for (name, entry) in subs.iter_mut() {
             if entry.remove(&client_id) && entry.is_empty() {
-                old_names.push(name.to_string());
+                old_names.push(name.clone());
             }
         }
         for name in &old_names {
@@ -529,6 +558,7 @@ impl Server {
             .with_metadata(metadata)
             .with_supported_encodings(&self.supported_encodings)
             .with_session_id(self.session_id.read().clone())
+            .with_playback_time_range(self.playback_time_range)
     }
 
     /// Sets a new session ID and notifies all clients, causing them to reset their state.
