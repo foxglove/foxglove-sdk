@@ -7,7 +7,8 @@ expression: message_full()
   "name": "example server",
   "capabilities": [
     "clientPublish",
-    "time"
+    "time",
+    "rangedPlayback"
   ],
   "supportedEncodings": [
     "json"
@@ -15,5 +16,13 @@ expression: message_full()
   "metadata": {
     "key": "value"
   },
-  "sessionId": "1675789422160"
+  "sessionId": "1675789422160",
+  "dataStartTime": {
+    "sec": 0,
+    "nsec": 1000000
+  },
+  "dataEndTime": {
+    "sec": 0,
+    "nsec": 1000005
+  }
 }
