@@ -9,21 +9,21 @@ namespace foxglove {
 // C-style wrapper functions for custom writer callbacks
 // These adapt the C++ std::function calls to C function pointers
 namespace {
-  size_t custom_write_wrapper(void* user_data, const uint8_t* data, size_t len, int32_t* error) {
-    auto* writer = static_cast<CustomWriter*>(user_data);
-    return writer->write_fn(writer->user_data, data, len, error);
-  }
-
-  int32_t custom_flush_wrapper(void* user_data) {
-    auto* writer = static_cast<CustomWriter*>(user_data);
-    return writer->flush_fn(writer->user_data);
-  }
-
-  int32_t custom_seek_wrapper(void* user_data, int64_t pos, int32_t whence, uint64_t* new_pos) {
-    auto* writer = static_cast<CustomWriter*>(user_data);
-    return writer->seek_fn(writer->user_data, pos, whence, new_pos);
-  }
+size_t custom_write_wrapper(void* user_data, const uint8_t* data, size_t len, int32_t* error) {
+  auto* writer = static_cast<CustomWriter*>(user_data);
+  return writer->write_fn(writer->user_data, data, len, error);
 }
+
+int32_t custom_flush_wrapper(void* user_data) {
+  auto* writer = static_cast<CustomWriter*>(user_data);
+  return writer->flush_fn(writer->user_data);
+}
+
+int32_t custom_seek_wrapper(void* user_data, int64_t pos, int32_t whence, uint64_t* new_pos) {
+  auto* writer = static_cast<CustomWriter*>(user_data);
+  return writer->seek_fn(writer->user_data, pos, whence, new_pos);
+}
+}  // namespace
 
 FoxgloveResult<McapWriter> McapWriter::create(const McapWriterOptions& options) {
   foxglove_internal_register_cpp_wrapper();
@@ -37,7 +37,8 @@ FoxgloveResult<McapWriter> McapWriter::create(const McapWriterOptions& options) 
   FoxgloveCustomWriter c_custom_writer = {};
   if (options.custom_writer.has_value()) {
     const auto& custom_writer = options.custom_writer.value();
-    c_custom_writer.user_data = const_cast<CustomWriter*>(&custom_writer);  // Safe: we control the lifetime
+    c_custom_writer.user_data =
+      const_cast<CustomWriter*>(&custom_writer);  // Safe: we control the lifetime
     c_custom_writer.write_fn = custom_write_wrapper;
     c_custom_writer.flush_fn = custom_flush_wrapper;
     c_custom_writer.seek_fn = custom_seek_wrapper;
