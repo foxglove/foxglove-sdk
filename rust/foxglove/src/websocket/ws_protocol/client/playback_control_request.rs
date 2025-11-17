@@ -40,7 +40,7 @@ pub struct PlaybackControlRequest {
 
 impl<'a> BinaryMessage<'a> for PlaybackControlRequest {
     // Message layout:
-    //   opcode (1 byte)
+    //   opcode (1 byte, already stripped by ClientMessage::parse_binary())
     // + playback_command (1 byte)
     // + playback_speed (4 bytes)
     // + had_seek (1 byte)
@@ -82,7 +82,7 @@ impl<'a> BinaryMessage<'a> for PlaybackControlRequest {
     }
 
     fn to_bytes(&self) -> Vec<u8> {
-        let mut buf = Vec::with_capacity(1 + 4 + 1 + 8 + 4 + self.request_id.len());
+        let mut buf = Vec::with_capacity(1 + 1 + 4 + 1 + 8 + 4 + self.request_id.len());
 
         buf.put_u8(BinaryOpcode::PlaybackControlRequest as u8);
         buf.put_u8(self.playback_command as u8);
