@@ -132,6 +132,7 @@ pub enum Capability {
     Assets,
     /// Indicates that the server is sending data within a fixed time range. This requires the
     /// server to specify the `data_start_time` and `data_end_time` fields in its `ServerInfo` message.
+    /// Playback control requests are only accepted when this capability is enabled.
     RangedPlayback,
 }
 
