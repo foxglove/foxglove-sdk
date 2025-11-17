@@ -15,7 +15,9 @@ pub enum FoxgloveMcapCompression {
 }
 
 /// Custom writer function pointers for MCAP writing.
-/// write_fn and flush_fn must be provided. Seek_fn may be null iff `disable_seeking` is set to true.
+/// write_fn and flush_fn must be non-null. Seek_fn may be null iff `disable_seeking` is set to true.
+/// These function pointers may be called from multiple threads.
+/// They will not be called concurrently with themselves or each-other.
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct FoxgloveCustomWriter {
@@ -45,7 +47,6 @@ pub struct FoxgloveCustomWriter {
     >,
 }
 
-/// Rust wrapper that implements Write + Seek by calling the C function pointers
 struct CustomWriter {
     callbacks: FoxgloveCustomWriter,
 }
@@ -178,7 +179,7 @@ impl FoxgloveMcapOptions {
 }
 
 // Safety: The user is responsible for ensuring the function pointers and user_data
-// are safe to use across threads. This is documented in the API contract.
+// are safe to use across threads.
 unsafe impl Send for CustomWriter {}
 
 enum McapWriterVariant {
@@ -279,6 +280,9 @@ unsafe fn do_foxglove_mcap_open(
         McapWriterVariant::File(writer)
     };
 
+    // We can avoid this double indirection if we refactor McapWriterHandle to move the context into the Arc
+    // and then add into_raw and from_raw methods to convert the Arc to and from a pointer.
+    // This is the simplest solution, and we don't call methods on this, so the double indirection doesn't matter much.
     Ok(Box::into_raw(Box::new(FoxgloveMcapWriter(Some(
         writer_variant,
     )))))

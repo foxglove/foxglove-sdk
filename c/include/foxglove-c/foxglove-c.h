@@ -1651,7 +1651,9 @@ typedef struct foxglove_raw_image {
 #if !defined(__wasm__)
 /**
  * Custom writer function pointers for MCAP writing.
- * write_fn and flush_fn must be provided. Seek_fn may be null iff `disable_seeking` is set to true.
+ * write_fn and flush_fn must be non-null. Seek_fn may be null iff `disable_seeking` is set to true.
+ * These function pointers may be called from multiple threads.
+ * They will not be called concurrently with themselves or each-other.
  */
 typedef struct FoxgloveCustomWriter {
   /**

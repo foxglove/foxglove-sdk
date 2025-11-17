@@ -30,13 +30,13 @@ struct CustomWriter {
   /// @param user_data User-provided context pointer
   /// @param data Pointer to data to write
   /// @param len Number of bytes to write
-  /// @param error Pointer to error code (set to non-zero if write fails)
+  /// @param error Pointer to error code (set to an error number defined in errno.h if write fails)
   /// @return Number of bytes actually written
   std::function<size_t(void* user_data, const uint8_t* data, size_t len, int32_t* error)> write_fn;
 
   /// @brief Flush function: ensure all buffered data is written
   /// @param user_data User-provided context pointer
-  /// @return 0 on success, non-zero error code on failure
+  /// @return 0 on success, an error number defined in errno.h if flush fails
   std::function<int32_t(void* user_data)> flush_fn;
 
   /// @brief Seek function: change the current position in the stream
@@ -44,7 +44,7 @@ struct CustomWriter {
   /// @param pos Position offset
   /// @param whence Seek origin (0=SEEK_SET, 1=SEEK_CUR, 2=SEEK_END)
   /// @param new_pos Pointer to store the new absolute position
-  /// @return 0 on success, non-zero error code on failure
+  /// @return 0 on success, an error number defined in errno.h if seek fails
   std::function<int32_t(void* user_data, int64_t pos, int32_t whence, uint64_t* new_pos)> seek_fn;
 };
 
