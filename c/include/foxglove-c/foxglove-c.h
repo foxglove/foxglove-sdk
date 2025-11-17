@@ -1649,6 +1649,33 @@ typedef struct foxglove_raw_image {
 } foxglove_raw_image;
 
 #if !defined(__wasm__)
+/**
+ * Custom writer function pointers for MCAP writing.
+ * All function pointers are optional - if any are null, the operation will fail.
+ */
+typedef struct FoxgloveCustomWriter {
+  /**
+   * User-provided context pointer, passed to all callback functions
+   */
+  void *user_data;
+  /**
+   * Write function: write data to the custom destination
+   * Returns number of bytes written, or sets error on failure
+   */
+  size_t (*write_fn)(void *user_data, const uint8_t *data, size_t len, int32_t *error);
+  /**
+   * Flush function: ensure all buffered data is written
+   */
+  int32_t (*flush_fn)(void *user_data);
+  /**
+   * Seek function: change the current position in the stream
+   * whence: 0=SEEK_SET, 1=SEEK_CUR, 2=SEEK_END
+   */
+  int32_t (*seek_fn)(void *user_data, int64_t pos, int32_t whence, uint64_t *new_pos);
+} FoxgloveCustomWriter;
+#endif
+
+#if !defined(__wasm__)
 typedef struct foxglove_mcap_options {
   /**
    * `context` can be null, or a valid pointer to a context created via `foxglove_context_new`.
@@ -1657,6 +1684,11 @@ typedef struct foxglove_mcap_options {
   const struct foxglove_context *context;
   struct foxglove_string path;
   bool truncate;
+  /**
+   * Custom writer for arbitrary destinations. If non-null, `path` is ignored.
+   * Either `path` must be non-empty OR `custom_writer` must be non-null, but not both.
+   */
+  const struct FoxgloveCustomWriter *custom_writer;
   foxglove_mcap_compression compression;
   struct foxglove_string profile;
   /**
@@ -4018,14 +4050,20 @@ foxglove_error foxglove_vector3_encode(const struct foxglove_vector3 *msg,
 
 #if !defined(__wasm__)
 /**
- * Create or open an MCAP file for writing.
+ * Create or open an MCAP writer for writing to a file or custom destination.
  * Resources must later be freed with `foxglove_mcap_close`.
+ *
+ * Either `path` must be non-empty OR `custom_writer` must be non-null, but not both.
+ * If `custom_writer` is provided, the MCAP data will be written using the provided
+ * function pointers instead of to a file.
  *
  * Returns 0 on success, or returns a FoxgloveError code on error.
  *
  * # Safety
  * `path` and `profile` must contain valid UTF8. If `context` is non-null,
  * it must have been created by `foxglove_context_new`.
+ * If `custom_writer` is non-null, its function pointers must be valid and
+ * the `user_data` pointer must remain valid for the lifetime of the writer.
  */
 foxglove_error foxglove_mcap_open(const struct foxglove_mcap_options *FOXGLOVE_NONNULL options,
                                   struct foxglove_mcap_writer **writer);

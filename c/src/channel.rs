@@ -5,12 +5,124 @@ use crate::{
     FoxgloveSinkId, FoxgloveString,
 };
 use mcap::{Compression, WriteOptions};
+use std::io::{Seek, SeekFrom, Write};
 
 #[repr(u8)]
 pub enum FoxgloveMcapCompression {
     None,
     Zstd,
     Lz4,
+}
+
+/// Custom writer function pointers for MCAP writing.
+/// All function pointers are optional - if any are null, the operation will fail.
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct FoxgloveCustomWriter {
+    /// User-provided context pointer, passed to all callback functions
+    pub user_data: *mut std::ffi::c_void,
+    /// Write function: write data to the custom destination
+    /// Returns number of bytes written, or sets error on failure
+    pub write_fn: Option<
+        unsafe extern "C" fn(
+            user_data: *mut std::ffi::c_void,
+            data: *const u8,
+            len: usize,
+            error: *mut i32,
+        ) -> usize,
+    >,
+    /// Flush function: ensure all buffered data is written
+    pub flush_fn: Option<unsafe extern "C" fn(user_data: *mut std::ffi::c_void) -> i32>,
+    /// Seek function: change the current position in the stream
+    /// whence: 0=SEEK_SET, 1=SEEK_CUR, 2=SEEK_END
+    pub seek_fn: Option<
+        unsafe extern "C" fn(
+            user_data: *mut std::ffi::c_void,
+            pos: i64,
+            whence: i32,
+            new_pos: *mut u64,
+        ) -> i32,
+    >,
+}
+
+/// Rust wrapper that implements Write + Seek by calling the C function pointers
+struct CustomWriter {
+    callbacks: FoxgloveCustomWriter,
+}
+
+impl CustomWriter {
+    unsafe fn new(callbacks: FoxgloveCustomWriter) -> Self {
+        Self { callbacks }
+    }
+}
+
+impl Write for CustomWriter {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        let Some(write_fn) = self.callbacks.write_fn else {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::Unsupported,
+                "write_fn is null",
+            ));
+        };
+
+        let mut error = 0;
+        let written = unsafe {
+            write_fn(
+                self.callbacks.user_data,
+                buf.as_ptr(),
+                buf.len(),
+                &raw mut error,
+            )
+        };
+
+        if error != 0 {
+            return Err(std::io::Error::from_raw_os_error(error));
+        }
+
+        Ok(written)
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        let Some(flush_fn) = self.callbacks.flush_fn else {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::Unsupported,
+                "flush_fn is null",
+            ));
+        };
+
+        let error = unsafe { flush_fn(self.callbacks.user_data) };
+        if error != 0 {
+            return Err(std::io::Error::from_raw_os_error(error));
+        }
+
+        Ok(())
+    }
+}
+
+impl Seek for CustomWriter {
+    fn seek(&mut self, pos: SeekFrom) -> std::io::Result<u64> {
+        let Some(seek_fn) = self.callbacks.seek_fn else {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::Unsupported,
+                "seek_fn is null",
+            ));
+        };
+
+        let (offset, whence) = match pos {
+            SeekFrom::Start(n) => (n as i64, 0), // SEEK_SET
+            SeekFrom::End(n) => (n, 2),          // SEEK_END
+            SeekFrom::Current(n) => (n, 1),      // SEEK_CUR
+        };
+
+        let mut new_pos = 0u64;
+        let error = unsafe { seek_fn(self.callbacks.user_data, offset, whence, &raw mut new_pos) };
+
+        if error != 0 {
+            return Err(std::io::Error::from_raw_os_error(error));
+        }
+
+        Ok(new_pos)
+    }
 }
 
 #[repr(C)]
@@ -20,6 +132,9 @@ pub struct FoxgloveMcapOptions {
     pub context: *const FoxgloveContext,
     pub path: FoxgloveString,
     pub truncate: bool,
+    /// Custom writer for arbitrary destinations. If non-null, `path` is ignored.
+    /// Either `path` must be non-empty OR `custom_writer` must be non-null, but not both.
+    pub custom_writer: *const FoxgloveCustomWriter,
     pub compression: FoxgloveMcapCompression,
     pub profile: FoxgloveString,
     // The library option is not provided here, because it is ignored by our Rust SDK
@@ -69,22 +184,38 @@ impl FoxgloveMcapOptions {
     }
 }
 
-pub struct FoxgloveMcapWriter(Option<foxglove::McapWriterHandle<BufWriter<File>>>);
+// Safety: The user is responsible for ensuring the function pointers and user_data
+// are safe to use across threads. This is documented in the API contract.
+unsafe impl Send for CustomWriter {}
+
+/// Enum to support both file-based and custom writers
+enum McapWriterVariant {
+    File(foxglove::McapWriterHandle<BufWriter<File>>),
+    Custom(foxglove::McapWriterHandle<CustomWriter>),
+}
+
+pub struct FoxgloveMcapWriter(Option<McapWriterVariant>);
 
 impl FoxgloveMcapWriter {
-    fn take(&mut self) -> Option<foxglove::McapWriterHandle<BufWriter<File>>> {
+    fn take(&mut self) -> Option<McapWriterVariant> {
         self.0.take()
     }
 }
 
-/// Create or open an MCAP file for writing.
+/// Create or open an MCAP writer for writing to a file or custom destination.
 /// Resources must later be freed with `foxglove_mcap_close`.
+///
+/// Either `path` must be non-empty OR `custom_writer` must be non-null, but not both.
+/// If `custom_writer` is provided, the MCAP data will be written using the provided
+/// function pointers instead of to a file.
 ///
 /// Returns 0 on success, or returns a FoxgloveError code on error.
 ///
 /// # Safety
 /// `path` and `profile` must contain valid UTF8. If `context` is non-null,
 /// it must have been created by `foxglove_context_new`.
+/// If `custom_writer` is non-null, its function pointers must be valid and
+/// the `user_data` pointer must remain valid for the lifetime of the writer.
 #[unsafe(no_mangle)]
 #[must_use]
 pub unsafe extern "C" fn foxglove_mcap_open(
@@ -100,36 +231,55 @@ pub unsafe extern "C" fn foxglove_mcap_open(
 unsafe fn do_foxglove_mcap_open(
     options: &FoxgloveMcapOptions,
 ) -> Result<*mut FoxgloveMcapWriter, foxglove::FoxgloveError> {
-    let path = unsafe { options.path.as_utf8_str() }
-        .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("path is invalid: {e}")))?;
     let context = options.context;
 
     // Safety: this is safe if the options struct contains valid strings
     let mcap_options = unsafe { options.to_write_options() }?;
-
-    let mut file_options = File::options();
-    if options.truncate {
-        file_options.create(true).truncate(true);
-    } else {
-        file_options.create_new(true);
-    }
-    let file = file_options
-        .write(true)
-        .open(path)
-        .map_err(foxglove::FoxgloveError::IoError)?;
 
     let mut builder = foxglove::McapWriter::with_options(mcap_options);
     if !context.is_null() {
         let context = ManuallyDrop::new(unsafe { Arc::from_raw(context) });
         builder = builder.context(&context);
     }
-    let writer = builder
-        .create(BufWriter::new(file))
-        .expect("Failed to create writer");
-    // We can avoid this double indirection if we refactor McapWriterHandle to move the context into the Arc
-    // and then add into_raw and from_raw methods to convert the Arc to and from a pointer.
-    // This is the simplest solution, and we don't call methods on this, so the double indirection doesn't matter much.
-    Ok(Box::into_raw(Box::new(FoxgloveMcapWriter(Some(writer)))))
+
+    let writer_variant = if !options.custom_writer.is_null() {
+        // Use custom writer
+        let custom_writer_callbacks = unsafe { *options.custom_writer };
+        let custom_writer = unsafe { CustomWriter::new(custom_writer_callbacks) };
+
+        let writer = builder.create(custom_writer)?;
+
+        McapWriterVariant::Custom(writer)
+    } else {
+        // Use file path (existing behavior)
+        let path = unsafe { options.path.as_utf8_str() }
+            .map_err(|e| foxglove::FoxgloveError::Utf8Error(format!("path is invalid: {e}")))?;
+
+        if path.is_empty() {
+            return Err(foxglove::FoxgloveError::ValueError(
+                "Either path must be non-empty or custom_writer must be provided".to_string(),
+            ));
+        }
+
+        let mut file_options = File::options();
+        if options.truncate {
+            file_options.create(true).truncate(true);
+        } else {
+            file_options.create_new(true);
+        }
+        let file = file_options
+            .write(true)
+            .open(path)
+            .map_err(foxglove::FoxgloveError::IoError)?;
+
+        let writer = builder.create(BufWriter::new(file))?;
+
+        McapWriterVariant::File(writer)
+    };
+
+    Ok(Box::into_raw(Box::new(FoxgloveMcapWriter(Some(
+        writer_variant,
+    )))))
 }
 
 /// Close an MCAP file writer created via `foxglove_mcap_open`.
@@ -148,11 +298,16 @@ pub unsafe extern "C" fn foxglove_mcap_close(
     };
     // Safety: undo the Box::into_raw in foxglove_mcap_open, safe if this was created by that method
     let mut writer = unsafe { Box::from_raw(writer) };
-    let Some(writer) = writer.take() else {
+    let Some(writer_variant) = writer.take() else {
         tracing::error!("foxglove_mcap_close called with writer already closed");
         return FoxgloveError::SinkClosed;
     };
-    let result = writer.close();
+
+    let result = match writer_variant {
+        McapWriterVariant::File(writer) => writer.close().map(|_| ()),
+        McapWriterVariant::Custom(writer) => writer.close().map(|_| ()),
+    };
+
     // We don't care about the return value
     unsafe { result_to_c(result, std::ptr::null_mut()) }
 }
