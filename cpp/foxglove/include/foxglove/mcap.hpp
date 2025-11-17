@@ -67,7 +67,6 @@ struct McapWriterOptions {
   /// @brief The path to the MCAP file. Ignored if custom_writer is set.
   std::string_view path;
   /// @brief Custom writer for arbitrary destinations. If set, path is ignored.
-  /// Either path must be non-empty OR custom_writer must be set, but not both.
   std::optional<CustomWriter> custom_writer;
   /// @brief The profile to use for the MCAP file.
   std::string_view profile;

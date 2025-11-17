@@ -133,7 +133,6 @@ pub struct FoxgloveMcapOptions {
     pub path: FoxgloveString,
     pub truncate: bool,
     /// Custom writer for arbitrary destinations. If non-null, `path` is ignored.
-    /// Either `path` must be non-empty OR `custom_writer` must be non-null, but not both.
     pub custom_writer: *const FoxgloveCustomWriter,
     pub compression: FoxgloveMcapCompression,
     pub profile: FoxgloveString,

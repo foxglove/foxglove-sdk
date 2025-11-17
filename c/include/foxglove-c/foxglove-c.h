@@ -1686,7 +1686,6 @@ typedef struct foxglove_mcap_options {
   bool truncate;
   /**
    * Custom writer for arbitrary destinations. If non-null, `path` is ignored.
-   * Either `path` must be non-empty OR `custom_writer` must be non-null, but not both.
    */
   const struct FoxgloveCustomWriter *custom_writer;
   foxglove_mcap_compression compression;
