@@ -5,8 +5,6 @@ See :py:mod:`foxglove.schemas` and :py:mod:`foxglove.channels` for working with 
 schemas.
 """
 
-from __future__ import annotations
-
 import atexit
 import logging
 from typing import TYPE_CHECKING
