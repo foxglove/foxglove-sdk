@@ -15,7 +15,7 @@ pub enum FoxgloveMcapCompression {
 }
 
 /// Custom writer function pointers for MCAP writing.
-/// All function pointers are optional - if any are null, the operation will fail.
+/// write_fn and flush_fn must be provided. Seek_fn may be null iff `disable_seeking` is set to true.
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct FoxgloveCustomWriter {
@@ -39,7 +39,7 @@ pub struct FoxgloveCustomWriter {
         unsafe extern "C" fn(
             user_data: *mut std::ffi::c_void,
             pos: i64,
-            whence: i32,
+            whence: std::ffi::c_int,
             new_pos: *mut u64,
         ) -> i32,
     >,
@@ -58,12 +58,10 @@ impl CustomWriter {
 
 impl Write for CustomWriter {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-        let Some(write_fn) = self.callbacks.write_fn else {
-            return Err(std::io::Error::new(
-                std::io::ErrorKind::Unsupported,
-                "write_fn is null",
-            ));
-        };
+        let write_fn = self
+            .callbacks
+            .write_fn
+            .expect("write_fn checked in do_foxglove_mcap_open");
 
         let mut error = 0;
         let written = unsafe {
@@ -83,12 +81,10 @@ impl Write for CustomWriter {
     }
 
     fn flush(&mut self) -> std::io::Result<()> {
-        let Some(flush_fn) = self.callbacks.flush_fn else {
-            return Err(std::io::Error::new(
-                std::io::ErrorKind::Unsupported,
-                "flush_fn is null",
-            ));
-        };
+        let flush_fn = self
+            .callbacks
+            .flush_fn
+            .expect("flush_fn checked in do_foxglove_mcap_open");
 
         let error = unsafe { flush_fn(self.callbacks.user_data) };
         if error != 0 {
@@ -101,12 +97,10 @@ impl Write for CustomWriter {
 
 impl Seek for CustomWriter {
     fn seek(&mut self, pos: SeekFrom) -> std::io::Result<u64> {
-        let Some(seek_fn) = self.callbacks.seek_fn else {
-            return Err(std::io::Error::new(
-                std::io::ErrorKind::Unsupported,
-                "seek_fn is null",
-            ));
-        };
+        let seek_fn = self
+            .callbacks
+            .seek_fn
+            .expect("seek_fn checked in do_foxglove_mcap_open");
 
         let (offset, whence) = match pos {
             SeekFrom::Start(n) => (n as i64, 0), // SEEK_SET
@@ -187,7 +181,6 @@ impl FoxgloveMcapOptions {
 // are safe to use across threads. This is documented in the API contract.
 unsafe impl Send for CustomWriter {}
 
-/// Enum to support both file-based and custom writers
 enum McapWriterVariant {
     File(foxglove::McapWriterHandle<BufWriter<File>>),
     Custom(foxglove::McapWriterHandle<CustomWriter>),
@@ -204,7 +197,6 @@ impl FoxgloveMcapWriter {
 /// Create or open an MCAP writer for writing to a file or custom destination.
 /// Resources must later be freed with `foxglove_mcap_close`.
 ///
-/// Either `path` must be non-empty OR `custom_writer` must be non-null, but not both.
 /// If `custom_writer` is provided, the MCAP data will be written using the provided
 /// function pointers instead of to a file.
 ///
@@ -244,6 +236,17 @@ unsafe fn do_foxglove_mcap_open(
     let writer_variant = if !options.custom_writer.is_null() {
         // Use custom writer
         let custom_writer_callbacks = unsafe { *options.custom_writer };
+        if (custom_writer_callbacks.seek_fn.is_none() && !options.disable_seeking) {
+            return Err(foxglove::FoxgloveError::ValueError(
+                "seek_fn is null but disable_seeking is false".to_string(),
+            ));
+        }
+        if custom_writer_callbacks.write_fn.is_none() || custom_writer_callbacks.flush_fn.is_none()
+        {
+            return Err(foxglove::FoxgloveError::ValueError(
+                "write_fn and flush_fn must be provided".to_string(),
+            ));
+        }
         let custom_writer = unsafe { CustomWriter::new(custom_writer_callbacks) };
 
         let writer = builder.create(custom_writer)?;

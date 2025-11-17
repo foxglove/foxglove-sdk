@@ -1651,7 +1651,7 @@ typedef struct foxglove_raw_image {
 #if !defined(__wasm__)
 /**
  * Custom writer function pointers for MCAP writing.
- * All function pointers are optional - if any are null, the operation will fail.
+ * write_fn and flush_fn must be provided. Seek_fn may be null iff `disable_seeking` is set to true.
  */
 typedef struct FoxgloveCustomWriter {
   /**
@@ -1671,7 +1671,7 @@ typedef struct FoxgloveCustomWriter {
    * Seek function: change the current position in the stream
    * whence: 0=SEEK_SET, 1=SEEK_CUR, 2=SEEK_END
    */
-  int32_t (*seek_fn)(void *user_data, int64_t pos, int32_t whence, uint64_t *new_pos);
+  int32_t (*seek_fn)(void *user_data, int64_t pos, int whence, uint64_t *new_pos);
 } FoxgloveCustomWriter;
 #endif
 
@@ -4052,7 +4052,6 @@ foxglove_error foxglove_vector3_encode(const struct foxglove_vector3 *msg,
  * Create or open an MCAP writer for writing to a file or custom destination.
  * Resources must later be freed with `foxglove_mcap_close`.
  *
- * Either `path` must be non-empty OR `custom_writer` must be non-null, but not both.
  * If `custom_writer` is provided, the MCAP data will be written using the provided
  * function pointers instead of to a file.
  *
