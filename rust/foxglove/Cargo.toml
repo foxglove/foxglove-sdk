@@ -12,7 +12,7 @@ default = ["derive", "live_visualization", "lz4", "zstd"]
 chrono = ["dep:chrono"]
 derive = ["dep:foxglove_derive"]
 agent = ["live_visualization"]
-agent_next = ["agent", "dep:foxglove_agent"]
+agent_unstable = ["agent", "dep:foxglove_agent"]
 live_visualization = [
   "dep:base64",
   "dep:flume",
