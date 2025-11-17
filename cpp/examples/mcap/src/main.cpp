@@ -15,6 +15,14 @@ int main() {
   }
   auto writer = std::move(writer_result.value());
 
+  // If you want to add some MCAP metadata: https://mcap.dev/spec#metadata-op0x0c
+  std::map<std::string, std::string> metadata = {{"os", "linux"}, {"arch", "x64"}};
+  foxglove::FoxgloveError err = writer.writeMetadata("platform", metadata.begin(), metadata.end());
+  if (err != foxglove::FoxgloveError::Ok) {
+    std::cerr << "Failed to write metadata: " << foxglove::strerror(err) << std::endl;
+    return 1;
+  }
+
   foxglove::Schema schema;
   schema.name = "Test";
   schema.encoding = "jsonschema";
@@ -39,7 +47,7 @@ int main() {
   }
 
   // Optional, if you want to check for or handle errors
-  foxglove::FoxgloveError err = writer.close();
+  err = writer.close();
   if (err != foxglove::FoxgloveError::Ok) {
     std::cerr << "Failed to close writer: " << foxglove::strerror(err) << '\n';
     return 1;

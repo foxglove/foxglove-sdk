@@ -269,7 +269,7 @@ pub struct CameraCalibration {
 
     /// Name of distortion model
     ///
-    /// Supported parameters: `plumb_bob` (k1, k2, p1, p2, k3), `rational_polynomial` (k1, k2, p1, p2, k3, k4, k5, k6), and `kannala_brandt` (k1, k2, k3, k4). `plumb_bob` and `rational_polynomial` models are based on the pinhole model [OpenCV's](https://docs.opencv.org/4.11.0/d9/d0c/group__calib3d.html) [pinhole camera model](https://en.wikipedia.org/wiki/Distortion_%28optics%29#Software_correction). The `kannala_brandt` model matches the [OpenvCV fisheye](https://docs.opencv.org/4.11.0/db/d58/group__calib3d__fisheye.html) model.
+    /// Supported parameters: `plumb_bob` (k1, k2, p1, p2, k3), `rational_polynomial` (k1, k2, p1, p2, k3, k4, k5, k6), and `kannala_brandt` (k1, k2, k3, k4), and `fisheye62` (k0, k1, k2, k3, p0, p1, crit_theta [optional]). `plumb_bob` and `rational_polynomial` models are based on the pinhole model [OpenCV's](https://docs.opencv.org/4.11.0/d9/d0c/group__calib3d.html) [pinhole camera model](https://en.wikipedia.org/wiki/Distortion_%28optics%29#Software_correction). The `kannala_brandt` model matches the [OpenvCV fisheye](https://docs.opencv.org/4.11.0/db/d58/group__calib3d__fisheye.html) model. The `fisheye62` model matches the [Project Aria's Fisheye62 Model](https://facebookresearch.github.io/projectaria_tools/docs/tech_insights/camera_intrinsic_models).
     pub distortion_model: FoxgloveString,
 
     /// Distortion parameters
@@ -309,7 +309,7 @@ pub struct CameraCalibration {
     ///
     /// For monocular cameras, Tx = Ty = 0. Normally, monocular cameras will also have R = the identity and P[1:3,1:3] = K.
     ///
-    /// For a stereo pair, the fourth column [Tx Ty 0]' is related to the position of the optical center of the second camera in the first camera's frame. We assume Tz = 0 so both cameras are in the same stereo image plane. The first camera always has Tx = Ty = 0. For the right (second) camera of a horizontal stereo pair, Ty = 0 and Tx = -fx' * B, where B is the baseline between the cameras.
+    /// Foxglove currently does not support displaying stereo images, so Tx and Ty are ignored.
     ///
     /// Given a 3D point [X Y Z]', the projection (x, y) of the point onto the rectified image is given by:
     ///
@@ -2071,13 +2071,51 @@ pub struct Grid {
     pub cell_stride: u32,
 
     /// Fields in `data`. `red`, `green`, `blue`, and `alpha` are optional for customizing the grid's color.
+    /// To enable RGB color visualization in the [3D panel](https://docs.foxglove.dev/docs/visualization/panels/3d#rgba-separate-fields-color-mode), include **all four** of these fields in your `fields` array:
+    ///
+    /// - `red` - Red channel value
+    /// - `green` - Green channel value
+    /// - `blue` - Blue channel value
+    /// - `alpha` - Alpha/transparency channel value
+    ///
+    /// **note:** All four fields must be present with these exact names for RGB visualization to work. The order of fields doesn't matter, but the names must match exactly.
+    ///
+    /// Recommended type: `UINT8` (0-255 range) for standard 8-bit color channels.
+    ///
+    /// Example field definitions:
+    ///
+    /// **RGB color only:**
+    ///
+    /// ```javascript
+    /// fields: [
+    ///  { name: "red", offset: 0, type: NumericType.UINT8 },
+    ///  { name: "green", offset: 1, type: NumericType.UINT8 },
+    ///  { name: "blue", offset: 2, type: NumericType.UINT8 },
+    ///  { name: "alpha", offset: 3, type: NumericType.UINT8 },
+    /// ];
+    /// ```
+    ///
+    /// **RGB color with elevation (for 3D terrain visualization):**
+    ///
+    /// ```javascript
+    /// fields: [
+    ///  { name: "red", offset: 0, type: NumericType.UINT8 },
+    ///  { name: "green", offset: 1, type: NumericType.UINT8 },
+    ///  { name: "blue", offset: 2, type: NumericType.UINT8 },
+    ///  { name: "alpha", offset: 3, type: NumericType.UINT8 },
+    ///  { name: "elevation", offset: 4, type: NumericType.FLOAT32 },
+    /// ];
+    /// ```
+    ///
+    /// When these fields are present, the 3D panel will offer additional "Color Mode" options including "RGBA (separate fields)" to visualize the RGB data directly. For elevation visualization, set the "Elevation field" to your elevation layer name.
     pub fields: *const PackedElementField,
     pub fields_count: usize,
 
     /// Grid cell data, interpreted using `fields`, in row-major (y-major) order.
-    ///  For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
-    ///  y = (i / cell_stride) % row_stride * cell_size.y
-    ///  x = i % cell_stride * cell_size.x
+    /// For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
+    ///
+    /// - y = i / row_stride * cell_size.y
+    /// - x = (i % row_stride) / cell_stride * cell_size.x
     pub data: *const c_uchar,
     pub data_len: usize,
 }
@@ -2282,10 +2320,11 @@ pub struct VoxelGrid {
     pub fields_count: usize,
 
     /// Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order.
-    ///  For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
-    ///  z = i / slice_stride * cell_size.z
-    ///  y = (i % slice_stride) / row_stride * cell_size.y
-    ///  x = (i % row_stride) / cell_stride * cell_size.x
+    /// For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
+    ///
+    /// - z = i / slice_stride * cell_size.z
+    /// - y = (i % slice_stride) / row_stride * cell_size.y
+    /// - x = (i % row_stride) / cell_stride * cell_size.x
     pub data: *const c_uchar,
     pub data_len: usize,
 }
@@ -2976,10 +3015,10 @@ pub struct LinePrimitive {
     pub points: *const Point3,
     pub points_count: usize,
 
-    /// Solid color to use for the whole line. One of `color` or `colors` must be provided.
+    /// Solid color to use for the whole line. Ignored if `colors` is non-empty.
     pub color: *const Color,
 
-    /// Per-point colors (if specified, must have the same length as `points`). One of `color` or `colors` must be provided.
+    /// Per-point colors (if non-empty, must have the same length as `points`).
     pub colors: *const Color,
     pub colors_count: usize,
 
@@ -4213,13 +4252,13 @@ pub struct ModelPrimitive {
     /// Whether to use the color specified in `color` instead of any materials embedded in the original model.
     pub override_color: bool,
 
-    /// URL pointing to model file. One of `url` or `data` should be provided.
+    /// URL pointing to model file. One of `url` or `data` should be non-empty.
     pub url: FoxgloveString,
 
     /// [Media type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types) of embedded model (e.g. `model/gltf-binary`). Required if `data` is provided instead of `url`. Overrides the inferred media type if `url` is provided.
     pub media_type: FoxgloveString,
 
-    /// Embedded model. One of `url` or `data` should be provided. If `data` is provided, `media_type` must be set to indicate the type of the data.
+    /// Embedded model. One of `url` or `data` should be non-empty. If `data` is non-empty, `media_type` must be set to indicate the type of the data.
     pub data: *const c_uchar,
     pub data_len: usize,
 }
@@ -6092,7 +6131,7 @@ pub struct RawImage {
     /// - `32FC1`:
     ///   - Pixel brightness is represented as a single-channel, 32-bit little-endian IEEE 754 floating-point value, ranging from 0.0 (black) to 1.0 (white).
     ///   - `step` must be greater than or equal to `width` * 4.
-    /// - `bayer_rggb8`, `bayer_bggr8`, `bayer_rggb8`, `bayer_gbrg8`, or `bayer_grgb8`:
+    /// - `bayer_rggb8`, `bayer_bggr8`, `bayer_gbrg8`, or `bayer_grbg8`:
     ///   - Pixel colors are decomposed into Red, Blue and Green channels.
     ///   - Pixel channel values are represented as unsigned 8-bit integers, and serialized in a 2x2 bayer filter pattern.
     ///   - The order of the four letters after `bayer_` determine the layout, so for `bayer_wxyz8` the pattern is:
@@ -6819,10 +6858,10 @@ pub struct TriangleListPrimitive {
     pub points: *const Point3,
     pub points_count: usize,
 
-    /// Solid color to use for the whole shape. One of `color` or `colors` must be provided.
+    /// Solid color to use for the whole shape. Ignored if `colors` is non-empty.
     pub color: *const Color,
 
-    /// Per-vertex colors (if specified, must have the same length as `points`). One of `color` or `colors` must be provided.
+    /// Per-vertex colors (if specified, must have the same length as `points`).
     pub colors: *const Color,
     pub colors_count: usize,
 

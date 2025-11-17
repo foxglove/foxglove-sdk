@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 
 class MCAPCompression(Enum):
     """
@@ -34,12 +34,12 @@ class MCAPWriteOptions:
         CRC into the Footer record.
     """
 
-    def __new__(
-        cls,
+    def __init__(
+        self,
         *,
-        compression: Optional[MCAPCompression] = MCAPCompression.Zstd,
-        profile: Optional[str] = None,
-        chunk_size: Optional[int] = None,
+        compression: MCAPCompression | None = MCAPCompression.Zstd,
+        profile: str | None = None,
+        chunk_size: int | None = None,
         use_chunks: bool = False,
         emit_statistics: bool = True,
         emit_summary_offsets: bool = True,
@@ -50,7 +50,7 @@ class MCAPWriteOptions:
         calculate_chunk_crcs: bool = True,
         calculate_data_section_crc: bool = True,
         calculate_summary_section_crc: bool = True,
-    ) -> "MCAPWriteOptions": ...
+    ) -> None: ...
 
 class MCAPWriter:
     """
@@ -65,12 +65,12 @@ class MCAPWriter:
     closed automatically, and any errors will be logged.
     """
 
-    def __new__(
-        cls,
+    def __init__(
+        self,
         *,
-        allow_overwrite: Optional[bool] = False,
-        writer_options: Optional[MCAPWriteOptions] = None,
-    ) -> "MCAPWriter": ...
+        allow_overwrite: bool | None = False,
+        writer_options: MCAPWriteOptions | None = None,
+    ) -> None: ...
     def __enter__(self) -> "MCAPWriter": ...
     def __exit__(self, exc_type: Any, exc_value: Any, traceback: Any) -> None: ...
     def close(self) -> None:
@@ -80,5 +80,17 @@ class MCAPWriter:
         You may call this to explicitly close the writer. Note that the writer
         will be automatically closed when it is garbage-collected, or when
         exiting the context manager.
+        """
+        ...
+
+    def write_metadata(self, name: str, metadata: dict[str, str]) -> None:
+        """
+        Write metadata to the MCAP file.
+
+        Metadata consists of key-value string pairs associated with a name.
+        If the metadata dictionary is empty, this method does nothing.
+
+        :param name: Name identifier for this metadata record
+        :param metadata: Dictionary of key-value pairs to store
         """
         ...

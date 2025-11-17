@@ -13,7 +13,7 @@ impl ChannelPlaceholder {
 
     pub unsafe fn log<T: Encode>(channel_ptr: *mut Self, msg: &T, metadata: PartialMetadata) {
         // Safety: we're restoring the Arc<RawChannel> we leaked into_raw in new()
-        let channel_arc = Arc::from_raw(channel_ptr as *mut RawChannel);
+        let channel_arc = unsafe { Arc::from_raw(channel_ptr as *mut RawChannel) };
         // We can safely create a Channel from any Arc<RawChannel>
         let channel = ManuallyDrop::new(Channel::<T>::from_raw_channel(channel_arc));
         channel.log_with_meta(msg, metadata);

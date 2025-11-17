@@ -1,3 +1,8 @@
+/// This file is the source of truth for all generated Foxglove schemas.
+/// It is used to generate the JSON schema, FlatBuffer, Protobuf,and TypeScript definitions.
+///
+/// Edit this file and run `make generate` to regenerate all the various schema files.
+
 import { FoxgloveEnumSchema, FoxgloveMessageSchema } from "./types";
 
 const Duration: FoxgloveMessageSchema = {
@@ -481,15 +486,13 @@ const LinePrimitive: FoxgloveMessageSchema = {
     {
       name: "color",
       type: { type: "nested", schema: Color },
-      description:
-        "Solid color to use for the whole line. One of `color` or `colors` must be provided.",
+      description: "Solid color to use for the whole line. Ignored if `colors` is non-empty.",
     },
     {
       name: "colors",
       type: { type: "nested", schema: Color },
       array: true,
-      description:
-        "Per-point colors (if specified, must have the same length as `points`). One of `color` or `colors` must be provided.",
+      description: "Per-point colors (if non-empty, must have the same length as `points`).",
     },
     {
       name: "indices",
@@ -562,15 +565,13 @@ const TriangleListPrimitive: FoxgloveMessageSchema = {
     {
       name: "color",
       type: { type: "nested", schema: Color },
-      description:
-        "Solid color to use for the whole shape. One of `color` or `colors` must be provided.",
+      description: "Solid color to use for the whole shape. Ignored if `colors` is non-empty.",
     },
     {
       name: "colors",
       type: { type: "nested", schema: Color },
       array: true,
-      description:
-        "Per-vertex colors (if specified, must have the same length as `points`). One of `color` or `colors` must be provided.",
+      description: "Per-vertex colors (if specified, must have the same length as `points`).",
     },
     {
       name: "indices",
@@ -612,7 +613,7 @@ const ModelPrimitive: FoxgloveMessageSchema = {
     {
       name: "url",
       type: { type: "primitive", name: "string" },
-      description: "URL pointing to model file. One of `url` or `data` should be provided.",
+      description: "URL pointing to model file. One of `url` or `data` should be non-empty.",
     },
     {
       name: "media_type",
@@ -624,7 +625,7 @@ const ModelPrimitive: FoxgloveMessageSchema = {
       name: "data",
       type: { type: "primitive", name: "bytes" },
       description:
-        "Embedded model. One of `url` or `data` should be provided. If `data` is provided, `media_type` must be set to indicate the type of the data.",
+        "Embedded model. One of `url` or `data` should be non-empty. If `data` is non-empty, `media_type` must be set to indicate the type of the data.",
     },
   ],
 };
@@ -772,7 +773,7 @@ const CameraCalibration: FoxgloveMessageSchema = {
       name: "distortion_model",
       type: { type: "primitive", name: "string" },
       description:
-        "Name of distortion model\n\nSupported parameters: `plumb_bob` (k1, k2, p1, p2, k3), `rational_polynomial` (k1, k2, p1, p2, k3, k4, k5, k6), and `kannala_brandt` (k1, k2, k3, k4). `plumb_bob` and `rational_polynomial` models are based on the pinhole model [OpenCV's](https://docs.opencv.org/4.11.0/d9/d0c/group__calib3d.html) [pinhole camera model](https://en.wikipedia.org/wiki/Distortion_%28optics%29#Software_correction). The `kannala_brandt` model matches the [OpenvCV fisheye](https://docs.opencv.org/4.11.0/db/d58/group__calib3d__fisheye.html) model.",
+        "Name of distortion model\n\nSupported parameters: `plumb_bob` (k1, k2, p1, p2, k3), `rational_polynomial` (k1, k2, p1, p2, k3, k4, k5, k6), and `kannala_brandt` (k1, k2, k3, k4), and `fisheye62` (k0, k1, k2, k3, p0, p1, crit_theta [optional]). `plumb_bob` and `rational_polynomial` models are based on the pinhole model [OpenCV's](https://docs.opencv.org/4.11.0/d9/d0c/group__calib3d.html) [pinhole camera model](https://en.wikipedia.org/wiki/Distortion_%28optics%29#Software_correction). The `kannala_brandt` model matches the [OpenvCV fisheye](https://docs.opencv.org/4.11.0/db/d58/group__calib3d__fisheye.html) model. The `fisheye62` model matches the [Project Aria's Fisheye62 Model](https://facebookresearch.github.io/projectaria_tools/docs/tech_insights/camera_intrinsic_models).",
     },
     {
       name: "D",
@@ -823,7 +824,7 @@ It projects 3D points in the camera coordinate frame to 2D pixel coordinates usi
 
 For monocular cameras, Tx = Ty = 0. Normally, monocular cameras will also have R = the identity and P[1:3,1:3] = K.
 
-For a stereo pair, the fourth column [Tx Ty 0]' is related to the position of the optical center of the second camera in the first camera's frame. We assume Tz = 0 so both cameras are in the same stereo image plane. The first camera always has Tx = Ty = 0. For the right (second) camera of a horizontal stereo pair, Ty = 0 and Tx = -fx' * B, where B is the baseline between the cameras.
+Foxglove currently does not support displaying stereo images, so Tx and Ty are ignored.
 
 Given a 3D point [X Y Z]', the projection (x, y) of the point onto the rectified image is given by:
 
@@ -1000,7 +1001,7 @@ For each \`encoding\` value, the \`data\` field contains image pixel data serial
 - \`32FC1\`:
   - Pixel brightness is represented as a single-channel, 32-bit little-endian IEEE 754 floating-point value, ranging from 0.0 (black) to 1.0 (white).
   - \`step\` must be greater than or equal to \`width\` * 4.
-- \`bayer_rggb8\`, \`bayer_bggr8\`, \`bayer_rggb8\`, \`bayer_gbrg8\`, or \`bayer_grgb8\`:
+- \`bayer_rggb8\`, \`bayer_bggr8\`, \`bayer_gbrg8\`, or \`bayer_grbg8\`:
   - Pixel colors are decomposed into Red, Blue and Green channels.
   - Pixel channel values are represented as unsigned 8-bit integers, and serialized in a 2x2 bayer filter pattern.
   - The order of the four letters after \`bayer_\` determine the layout, so for \`bayer_wxyz8\` the pattern is:
@@ -1216,13 +1217,13 @@ const Grid: FoxgloveMessageSchema = {
       type: { type: "nested", schema: PackedElementField },
       array: true,
       description:
-        "Fields in `data`. `red`, `green`, `blue`, and `alpha` are optional for customizing the grid's color.",
+        'Fields in `data`. `red`, `green`, `blue`, and `alpha` are optional for customizing the grid\'s color.\nTo enable RGB color visualization in the [3D panel](https://docs.foxglove.dev/docs/visualization/panels/3d#rgba-separate-fields-color-mode), include **all four** of these fields in your `fields` array:\n\n- `red` - Red channel value\n- `green` - Green channel value\n- `blue` - Blue channel value\n- `alpha` - Alpha/transparency channel value\n\n**note:** All four fields must be present with these exact names for RGB visualization to work. The order of fields doesn\'t matter, but the names must match exactly.\n\nRecommended type: `UINT8` (0-255 range) for standard 8-bit color channels.\n\nExample field definitions:\n\n**RGB color only:**\n\n```javascript\nfields: [\n { name: "red", offset: 0, type: NumericType.UINT8 },\n { name: "green", offset: 1, type: NumericType.UINT8 },\n { name: "blue", offset: 2, type: NumericType.UINT8 },\n { name: "alpha", offset: 3, type: NumericType.UINT8 },\n];\n```\n\n**RGB color with elevation (for 3D terrain visualization):**\n\n```javascript\nfields: [\n { name: "red", offset: 0, type: NumericType.UINT8 },\n { name: "green", offset: 1, type: NumericType.UINT8 },\n { name: "blue", offset: 2, type: NumericType.UINT8 },\n { name: "alpha", offset: 3, type: NumericType.UINT8 },\n { name: "elevation", offset: 4, type: NumericType.FLOAT32 },\n];\n```\n\nWhen these fields are present, the 3D panel will offer additional "Color Mode" options including "RGBA (separate fields)" to visualize the RGB data directly. For elevation visualization, set the "Elevation field" to your elevation layer name.',
     },
     {
       name: "data",
       type: { type: "primitive", name: "bytes" },
       description:
-        "Grid cell data, interpreted using `fields`, in row-major (y-major) order.\n For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:\n y = (i / cell_stride) % row_stride * cell_size.y\n x = i % cell_stride * cell_size.x",
+        "Grid cell data, interpreted using `fields`, in row-major (y-major) order.\nFor the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:\n\n- y = i / row_stride * cell_size.y\n- x = (i % row_stride) / cell_stride * cell_size.x",
     },
   ],
 };
@@ -1288,7 +1289,7 @@ const VoxelGrid: FoxgloveMessageSchema = {
       name: "data",
       type: { type: "primitive", name: "bytes" },
       description:
-        "Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order.\n For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:\n z = i / slice_stride * cell_size.z\n y = (i % slice_stride) / row_stride * cell_size.y\n x = (i % row_stride) / cell_stride * cell_size.x",
+        "Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order.\nFor the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:\n\n- z = i / slice_stride * cell_size.z\n- y = (i % slice_stride) / row_stride * cell_size.y\n- x = (i % row_stride) / cell_stride * cell_size.x",
     },
   ],
 };

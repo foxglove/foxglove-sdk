@@ -2,41 +2,55 @@
 name = "foxglove-sdk"
 description = "Foxglove Python SDK"
 authors = [{ name = "Foxglove", email = "support@foxglove.dev" }]
-license = "MIT"
-readme = "README.md"
-dynamic = ["version"]
-classifiers = ["Programming Language :: Python :: 3", "Programming Language :: Rust"]
 requires-python = ">=3.9"
+readme = "README.md"
+license = "MIT"
+classifiers = ["Programming Language :: Python :: 3", "Programming Language :: Rust"]
 dependencies = []
+dynamic = ["version"]
 
 [project.urls]
 repository = "https://github.com/foxglove/foxglove-sdk"
 documentation = "https://docs.foxglove.dev/"
 
+[project.optional-dependencies]
+notebook = ["anywidget", "mcap", "traitlets"]
+
+[dependency-groups]
+dev = [
+  "black>=25.1.0,<26",
+  "enum-tools[sphinx]>=0.12.0,<0.13",
+  "flake8>=7.0.0,<8",
+  "isort>=6.0.0,<7",
+  "maturin>=1.7.4,<2",
+  "mypy>=1.13.0,<2",
+  "pytest>=8.3.4,<9",
+  "pytest-benchmark>=5.1.0,<6",
+  "sphinx>=7.0.0,<8",
+  "sphinx-autodoc-typehints>=2.0.0,<3",
+  "mcap>=1.3.0,<2",
+]
+
+[tool.uv]
+package = false
+
 [build-system]
-requires = ["maturin>=1.7,<2.0", "poetry-core>=2.0"]
-build-backend = "maturin"
+requires = ["maturin>=1.7,<2.0"]
+# Custom build backend for building frontend assets. See custom_build.py.
+build-backend = "custom_build"
+backend-path = ["."]
 
 [tool.maturin]
 python-source = "python"
 module-name = "foxglove._foxglove_py"
 features = ["pyo3/extension-module"]
-
-[tool.poetry]
-package-mode = false
-requires-poetry = ">=2.0"
-
-[tool.poetry.group.dev.dependencies]
-black = "^24.2.0"
-enum-tools = { extras = ["sphinx"], version = "^0.12.0" }
-flake8 = "^7.0.0"
-isort = "^6.0.0"
-maturin = "^1.7.4"
-mypy = "^1.13.0"
-pytest = "^8.3.4"
-pytest-benchmark = "^5.1.0"
-sphinx = "^7.0.0"
-sphinx-autodoc-typehints = "^2.0.0"
+include = [
+  # Custom build backend, required for building from sdist.
+  { path = "custom_build.py", format = ["sdist"] },
+  # Include Jupyter widget static assets
+  "foxglove/notebook/static/*",
+]
+jupyterlab = "^4.4.7"
 
 [tool.mypy]
 python_version = "3.9"

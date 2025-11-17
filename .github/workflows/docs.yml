@@ -14,14 +14,11 @@ jobs:
       - uses: ssciwr/doxygen-install@v1
         with:
           version: "1.13.2"
-      - run: pipx install poetry
-        working-directory: cpp/foxglove/docs
-      - run: poetry install
-        working-directory: cpp/foxglove/docs
+      - uses: astral-sh/setup-uv@v7
       - run: make docs
         working-directory: cpp
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: cpp
           path: ./cpp/build/docs/html
@@ -29,22 +26,20 @@ jobs:
 
   build-python-docs:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: python/foxglove-sdk
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
-          python-version: "3.9"
-      - run: pipx install poetry
-      - run: poetry install
-      - run: poetry run maturin develop
-      - name: Sphinx build
-        run: |
-          poetry run sphinx-build --fail-on-warning ./python/docs ./python/docs/_build
+          python-version: "3.13"
+      - run: corepack enable
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: yarn
+      - uses: astral-sh/setup-uv@v7
+      - run: make -f Container.mk docs-python
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: python
           path: python/foxglove-sdk/python/docs/_build
@@ -58,7 +53,7 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/sdk/v')
     steps:
       - name: Download artifacts
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v6
         with:
           path: artifacts
       - run: test -d artifacts/python

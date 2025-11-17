@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Callable, Generator, Optional
 
 import pytest
-from foxglove import Channel, Context, open_mcap
+from foxglove import Channel, ChannelDescriptor, Context, open_mcap
 from foxglove.mcap import MCAPWriteOptions
 
 chan = Channel("test", schema={"type": "object"})
@@ -114,3 +114,86 @@ def test_write_to_different_contexts(make_tmp_mcap: Callable[[], Path]) -> None:
     contents2 = tmp_2.read_bytes()
 
     assert len(contents1) < len(contents2)
+
+
+def _verify_metadata_in_file(file_path: Path, expected_metadata: dict) -> None:
+    """Helper function to verify metadata in MCAP file matches expected."""
+    import mcap.reader
+
+    with open(file_path, "rb") as f:
+        reader = mcap.reader.make_reader(f)
+
+        found_metadata = {}
+        metadata_count = 0
+
+        for record in reader.iter_metadata():
+            metadata_count += 1
+            found_metadata[record.name] = dict(record.metadata)
+
+        # Verify count
+        assert metadata_count == len(
+            expected_metadata
+        ), f"Expected {len(expected_metadata)} metadata records, found {metadata_count}"
+
+        # Verify metadata names and content
+        assert set(found_metadata.keys()) == set(
+            expected_metadata.keys()
+        ), "Metadata names don't match"
+
+        for name, expected_kv in expected_metadata.items():
+            assert (
+                found_metadata[name] == expected_kv
+            ), f"Metadata '{name}' has wrong key-value pairs"
+
+
+def test_write_metadata(tmp_mcap: Path) -> None:
+    """Test writing metadata to MCAP file."""
+    # Define expected metadata
+    expected_metadata = {
+        "test1": {"key1": "value1", "key2": "value2"},
+        "test2": {"a": "1", "b": "2"},
+        "test3": {"x": "y", "z": "w"},
+    }
+
+    with open_mcap(tmp_mcap) as writer:
+        # This should not raise an error
+        writer.write_metadata("empty", {})
+
+        # Write basic metadata
+        writer.write_metadata("test1", expected_metadata["test1"])
+
+        # Write multiple metadata records
+        writer.write_metadata("test2", expected_metadata["test2"])
+        writer.write_metadata("test3", expected_metadata["test3"])
+
+        # Write empty metadata (should be skipped)
+        writer.write_metadata("empty_test", {})
+
+        # Log some messages
+        for ii in range(5):
+            chan.log({"foo": ii})
+
+    # Verify metadata was written correctly
+    _verify_metadata_in_file(tmp_mcap, expected_metadata)
+
+
+def test_channel_filter(make_tmp_mcap: Callable[[], Path]) -> None:
+    tmp_1 = make_tmp_mcap()
+    tmp_2 = make_tmp_mcap()
+
+    ch1 = Channel("/1", schema={"type": "object"})
+    ch2 = Channel("/2", schema={"type": "object"})
+
+    def filter(ch: ChannelDescriptor) -> bool:
+        return ch.topic.startswith("/1")
+
+    mcap1 = open_mcap(tmp_1, channel_filter=filter)
+    mcap2 = open_mcap(tmp_2, channel_filter=None)
+
+    ch1.log({})
+    ch2.log({})
+
+    mcap1.close()
+    mcap2.close()
+
+    assert tmp_1.stat().st_size < tmp_2.stat().st_size

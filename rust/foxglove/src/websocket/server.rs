@@ -13,6 +13,7 @@ use tokio_tungstenite::tungstenite::Message;
 use tokio_util::sync::CancellationToken;
 
 use crate::library_version::get_library_version;
+use crate::sink_channel_filter::SinkChannelFilter;
 use crate::websocket::connected_client::ShutdownReason;
 use crate::websocket::streams::{Acceptor, StreamConfiguration, TlsIdentity};
 use crate::{Context, FoxgloveError};
@@ -44,6 +45,8 @@ pub(crate) struct ServerOptions {
     pub runtime: Option<Handle>,
     pub fetch_asset_handler: Option<Box<dyn AssetHandler>>,
     pub tls_identity: Option<TlsIdentity>,
+    pub channel_filter: Option<Arc<dyn SinkChannelFilter>>,
+    pub server_info: Option<HashMap<String, String>>,
 }
 
 impl std::fmt::Debug for ServerOptions {
@@ -55,6 +58,7 @@ impl std::fmt::Debug for ServerOptions {
             .field("services", &self.services)
             .field("capabilities", &self.capabilities)
             .field("supported_encodings", &self.supported_encodings)
+            .field("server_info", &self.server_info)
             .finish()
     }
 }
@@ -135,6 +139,8 @@ pub(crate) struct Server {
     session_id: parking_lot::RwLock<String>,
     name: String,
     clients: CowVec<Arc<ConnectedClient>>,
+    /// Channel subscription filter
+    channel_filter: Option<Arc<dyn SinkChannelFilter>>,
     /// Callbacks for handling client messages, etc.
     listener: Option<Arc<dyn ServerListener>>,
     /// Capabilities advertised to clients
@@ -155,6 +161,9 @@ pub(crate) struct Server {
     tasks: parking_lot::Mutex<Option<JoinSet<()>>>,
     /// Configuration to support TLS streams when enabled.
     stream_config: StreamConfiguration,
+    /// Information about the server, which is shared with clients.
+    /// Keys prefixed with "fg-" are reserved for internal use.
+    server_info: HashMap<String, String>,
 }
 
 impl Server {
@@ -199,6 +208,7 @@ impl Server {
                 .message_backlog_size
                 .unwrap_or(DEFAULT_MESSAGE_BACKLOG_SIZE) as u32,
             runtime: opts.runtime.unwrap_or_else(crate::get_runtime_handle),
+            channel_filter: opts.channel_filter.clone(),
             listener: opts.listener,
             session_id: parking_lot::RwLock::new(
                 opts.session_id.unwrap_or_else(Self::generate_session_id),
@@ -214,6 +224,7 @@ impl Server {
             fetch_asset_handler: opts.fetch_asset_handler,
             tasks: parking_lot::Mutex::default(),
             stream_config,
+            server_info: opts.server_info.unwrap_or_default(),
         }
     }
 
@@ -398,7 +409,7 @@ impl Server {
         let mut old_names = vec![];
         for (name, entry) in subs.iter_mut() {
             if entry.remove(&client_id) && entry.is_empty() {
-                old_names.push(name.to_string());
+                old_names.push(name.clone());
             }
         }
         for name in &old_names {
@@ -502,6 +513,12 @@ impl Server {
 
     /// Builds a server info message.
     fn server_info(&self) -> ServerInfo {
+        let mut metadata = self.server_info.clone();
+        if metadata.contains_key("fg-library") {
+            tracing::warn!("Overwriting reserved server_info key 'fg-library'");
+        }
+        metadata.insert("fg-library".into(), get_library_version());
+
         ServerInfo::new(&self.name)
             .with_capabilities(
                 self.capabilities
@@ -509,10 +526,7 @@ impl Server {
                     .flat_map(Capability::as_protocol_capabilities)
                     .copied(),
             )
-            .with_metadata(HashMap::from([(
-                "fg-library".into(),
-                get_library_version(),
-            )]))
+            .with_metadata(metadata)
             .with_supported_encodings(&self.supported_encodings)
             .with_session_id(self.session_id.read().clone())
     }
@@ -563,6 +577,7 @@ impl Server {
             ws_stream,
             addr,
             self.message_backlog_size as usize,
+            self.channel_filter.clone(),
         );
         self.register_client_and_advertise(&client);
         client.run().await;

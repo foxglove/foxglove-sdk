@@ -1,16 +1,9 @@
 # foxglove_bridge
 
-> [!IMPORTANT]
-> This upcoming version of `foxglove_bridge` is built using the Foxglove SDK and is in **public beta**. There may be some remaining bugs or unexpected behavior. We encourage users to take it for a spin and submit feedback and bug reports.
->
-> Older versions of `foxglove_bridge`, including those targeting ROS 1, still are available from the [foxglove/ros-foxglove-bridge](https://github.com/foxglove/ros-foxglove-bridge) repository or via the ROS package index for your ROS distro.
-
-[![ROS Humble version](https://img.shields.io/ros/v/humble/foxglove_bridge)](https://index.ros.org/p/foxglove_bridge/github-foxglove-ros-foxglove-bridge/#humble)
-[![ROS Jazzy version](https://img.shields.io/ros/v/jazzy/foxglove_bridge)](https://index.ros.org/p/foxglove_bridge/github-foxglove-ros-foxglove-bridge/#jazzy)
-[![ROS Kilted version](https://img.shields.io/ros/v/kilted/foxglove_bridge)](https://index.ros.org/p/foxglove_bridge/github-foxglove-ros-foxglove-bridge/#kilted)
-[![ROS Rolling version](https://img.shields.io/ros/v/rolling/foxglove_bridge)](https://index.ros.org/p/foxglove_bridge/github-foxglove-ros-foxglove-bridge/#rolling)
-
 High performance ROS 2 WebSocket bridge using the Foxglove SDK, written in C++.
+
+> [!NOTE]
+> The version of `foxglove_bridge` in this repo does not support ROS 1. If you are a ROS 1 user, you can find the source code for the legacy version of `foxglove_bridge` in the [ROS 1 foxglove_bridge repo](https://github.com/foxglove/ros-foxglove-bridge).
 
 ## Motivation
 
@@ -18,8 +11,20 @@ Live debugging of ROS systems has traditionally relied on running ROS tooling su
 
 The `foxglove_bridge` uses the **Foxglove SDK** (this repo!), a similar protocol to rosbridge but with the ability to support additional schema formats such as ROS 2 `.msg` and ROS 2 `.idl`, parameters, graph introspection, and non-ROS systems. The bridge is written in C++ and designed for high performance with low overhead to minimize the impact to your robot stack.
 
-## Build and install
+## Install
+
+### Install using apt
+
+You can install `foxglove_bridge` using `apt` from the official ROS package channels for any currently supported ROS 2 distribution, as well as ROS Rolling.
+
+```bash
+sudo apt install ros-$ROS_DISTRO-foxglove-bridge
+```
+
+Note that packages coming from the ROS channels are updated less frequently than this repository. For the latest set of features, consider [building from source](#build-from-source) or [installing using Docker](#install-using-docker).
+
 ### Install using Docker
+
 Docker images are built and published to our public Docker image registry for your convenience.
 
 > [!NOTE]
@@ -32,17 +37,19 @@ docker pull us-central1-docker.pkg.dev/foxglove-images/images/foxglove_bridge:<t
 ```
 
 where `<tag>` takes the form of:
+
 ```
-ros-<ROS distro>-<foxglove SDK version>
+ros-<ROS distro>-<package version>
 ```
 
-For example, if you wanted to pull an image based on ROS Kilted and Foxglove SDK v0.11.0:
+For example, if you wanted to pull an image based on ROS Kilted and package version v3.2.1:
+
 ```bash
-docker pull us-central1-docker.pkg.dev/foxglove-images/images/foxglove_bridge:ros-kilted-v0.11.0
+docker pull us-central1-docker.pkg.dev/foxglove-images/images/foxglove_bridge:ros-kilted-v3.2.1
 ```
-
 
 ### Build from source
+
 #### Getting the sources
 
 Clone this repo from GitHub and `cd` to the local ROS workspace:
@@ -123,6 +130,19 @@ Parameters are provided to configure the behavior of the bridge. These parameter
 - **tls**: Enable TLS/WebSocket Secure (WSS). Defaults to `false`.
 - **certfile**: Path to an X.509 certificate used for WSS. **Must be supplied if `tls` is set to `true`.**
 - **keyfile**: Path to the PEM-encoded PKCS#8 private key used to generate `certfile`. **Must be supplied if `tls` is set to `true`.**
+- **use_sim_time**: Use the `/clock` topic as a time source. Defaults to `false`.
+
+#### Capabilities
+
+The `capabilities` parameter can accept one or more of the following values.
+
+- `clientPublish`: Allow clients to advertise channels to send data messages to the server
+- `parameters`: Allow clients to get & set parameters
+- `parametersSubscribe`: Allow clients to subscribe to parameter changes
+- `services`: Allow clients to call services
+- `connectionGraph`: Allow clients to subscribe to updates to the connection graph
+- `assets`: Allow clients to fetch assets
+- `time`: The server may publish time messages using `broadcastTime`. This can be used to sync frame state in panels like the 3D panel if the server's time disagrees with wall time.
 
 ## For developers
 

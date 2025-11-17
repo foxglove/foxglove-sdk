@@ -1,8 +1,11 @@
-from collections.abc import Callable
 from enum import Enum
-from typing import Dict, List, Optional, Union
 
-import foxglove
+from foxglove import Schema
+from foxglove.websocket import (
+    AnyNativeParameterValue,
+    AnyParameterValue,
+    ServiceHandler,
+)
 
 class Capability(Enum):
     """
@@ -12,7 +15,7 @@ class Capability(Enum):
     ClientPublish = ...
     """Allow clients to advertise channels to send data messages to the server."""
 
-    Connectiongraph = ...
+    ConnectionGraph = ...
     """Allow clients to subscribe and make connection graph updates"""
 
     Parameters = ...
@@ -48,16 +51,16 @@ class ClientChannel:
     topic: str = ...
     encoding: str = ...
     schema_name: str = ...
-    schema_encoding: Optional[str] = ...
-    schema: Optional[bytes] = ...
+    schema_encoding: str | None = ...
+    schema: bytes | None = ...
 
 class ConnectionGraph:
     """
     A graph of connections between clients.
     """
 
-    def __new__(cls) -> "ConnectionGraph": ...
-    def set_published_topic(self, topic: str, publisher_ids: List[str]) -> None:
+    def __init__(self) -> None: ...
+    def set_published_topic(self, topic: str, publisher_ids: list[str]) -> None:
         """
         Set a published topic and its associated publisher ids. Overwrites any existing topic with
         the same name.
@@ -67,7 +70,7 @@ class ConnectionGraph:
         """
         ...
 
-    def set_subscribed_topic(self, topic: str, subscriber_ids: List[str]) -> None:
+    def set_subscribed_topic(self, topic: str, subscriber_ids: list[str]) -> None:
         """
         Set a subscribed topic and its associated subscriber ids. Overwrites any existing topic with
         the same name.
@@ -77,7 +80,7 @@ class ConnectionGraph:
         """
         ...
 
-    def set_advertised_service(self, service: str, provider_ids: List[str]) -> None:
+    def set_advertised_service(self, service: str, provider_ids: list[str]) -> None:
         """
         Set an advertised service and its associated provider ids Overwrites any existing service
         with the same name.
@@ -93,14 +96,14 @@ class MessageSchema:
     """
 
     encoding: str
-    schema: "foxglove.Schema"
+    schema: Schema
 
-    def __new__(
-        cls,
+    def __init__(
+        self,
         *,
         encoding: str,
-        schema: "foxglove.Schema",
-    ) -> "MessageSchema": ...
+        schema: Schema,
+    ) -> None: ...
 
 class Parameter:
     """
@@ -116,17 +119,17 @@ class Parameter:
     """
 
     name: str
-    type: Optional["ParameterType"]
-    value: Optional["AnyParameterValue"]
+    type: ParameterType | None
+    value: AnyParameterValue | None
 
     def __init__(
         self,
         name: str,
         *,
-        value: Optional["AnyNativeParameterValue"] = None,
-        type: Optional["ParameterType"] = None,
+        value: AnyNativeParameterValue | None = None,
+        type: ParameterType | None = None,
     ) -> None: ...
-    def get_value(self) -> Optional["AnyNativeParameterValue"]:
+    def get_value(self) -> AnyNativeParameterValue | None:
         """Returns the parameter value as a native python object."""
         ...
 
@@ -152,17 +155,17 @@ class ParameterValue:
     class Integer:
         """An integer value."""
 
-        def __new__(cls, value: int) -> "ParameterValue.Integer": ...
+        def __init__(self, value: int) -> None: ...
 
     class Bool:
         """A boolean value."""
 
-        def __new__(cls, value: bool) -> "ParameterValue.Bool": ...
+        def __init__(self, value: bool) -> None: ...
 
     class Float64:
         """A floating-point value."""
 
-        def __new__(cls, value: float) -> "ParameterValue.Float64": ...
+        def __init__(self, value: float) -> None: ...
 
     class String:
         """
@@ -172,47 +175,17 @@ class ParameterValue:
         base64 encoding of the byte array.
         """
 
-        def __new__(cls, value: str) -> "ParameterValue.String": ...
+        def __init__(self, value: str) -> None: ...
 
     class Array:
         """An array of parameter values."""
 
-        def __new__(
-            cls, value: List["AnyParameterValue"]
-        ) -> "ParameterValue.Array": ...
+        def __init__(self, value: list[AnyParameterValue]) -> None: ...
 
     class Dict:
         """An associative map of parameter values."""
 
-        def __new__(
-            cls, value: dict[str, "AnyParameterValue"]
-        ) -> "ParameterValue.Dict": ...
-
-AnyParameterValue = Union[
-    ParameterValue.Integer,
-    ParameterValue.Bool,
-    ParameterValue.Float64,
-    ParameterValue.String,
-    ParameterValue.Array,
-    ParameterValue.Dict,
-]
-
-AnyInnerParameterValue = Union[
-    AnyParameterValue,
-    bool,
-    int,
-    float,
-    str,
-    List["AnyInnerParameterValue"],
-    Dict[str, "AnyInnerParameterValue"],
-]
-
-AnyNativeParameterValue = Union[
-    AnyInnerParameterValue,
-    bytes,
-]
-
-AssetHandler = Callable[[str], Optional[bytes]]
+        def __init__(self, value: dict[str, AnyParameterValue]) -> None: ...
 
 class ServiceRequest:
     """
@@ -225,24 +198,22 @@ class ServiceRequest:
     encoding: str
     payload: bytes
 
-ServiceHandler = Callable[["ServiceRequest"], bytes]
-
 class Service:
     """
     A websocket service.
     """
 
     name: str
-    schema: "ServiceSchema"
-    handler: "ServiceHandler"
+    schema: ServiceSchema
+    handler: ServiceHandler
 
-    def __new__(
-        cls,
+    def __init__(
+        self,
         *,
         name: str,
-        schema: "ServiceSchema",
-        handler: "ServiceHandler",
-    ) -> "Service": ...
+        schema: ServiceSchema,
+        handler: ServiceHandler,
+    ): ...
 
 class ServiceSchema:
     """
@@ -250,16 +221,16 @@ class ServiceSchema:
     """
 
     name: str
-    request: Optional["MessageSchema"]
-    response: Optional["MessageSchema"]
+    request: MessageSchema | None
+    response: MessageSchema | None
 
-    def __new__(
-        cls,
+    def __init__(
+        self,
         *,
         name: str,
-        request: Optional["MessageSchema"] = None,
-        response: Optional["MessageSchema"] = None,
-    ) -> "ServiceSchema": ...
+        request: MessageSchema | None = None,
+        response: MessageSchema | None = None,
+    ): ...
 
 class StatusLevel(Enum):
     """A level for `WebSocketServer.publish_status`"""
@@ -273,7 +244,7 @@ class WebSocketServer:
     A websocket server for live visualization.
     """
 
-    def __new__(cls) -> "WebSocketServer": ...
+    def __init__(self) -> None: ...
     @property
     def port(self) -> int:
         """Get the port on which the server is listening."""
@@ -282,9 +253,9 @@ class WebSocketServer:
     def app_url(
         self,
         *,
-        layout_id: Optional[str] = None,
+        layout_id: str | None = None,
         open_in_desktop: bool = False,
-    ) -> Optional[str]:
+    ) -> str | None:
         """
         Returns a web app URL to open the websocket as a data source.
 
@@ -299,7 +270,7 @@ class WebSocketServer:
         """Explicitly stop the server."""
         ...
 
-    def clear_session(self, session_id: Optional[str] = None) -> None:
+    def clear_session(self, session_id: str | None = None) -> None:
         """
         Sets a new session ID and notifies all clients, causing them to reset their state.
         If no session ID is provided, generates a new one based on the current timestamp.
@@ -314,12 +285,12 @@ class WebSocketServer:
         """
         ...
 
-    def publish_parameter_values(self, parameters: List["Parameter"]) -> None:
+    def publish_parameter_values(self, parameters: list[Parameter]) -> None:
         """Publishes parameter values to all subscribed clients."""
         ...
 
     def publish_status(
-        self, message: str, level: "StatusLevel", id: Optional[str] = None
+        self, message: str, level: StatusLevel, id: str | None = None
     ) -> None:
         """
         Send a status message to all clients. If the server has been stopped, this has no effect.
@@ -333,7 +304,7 @@ class WebSocketServer:
         """
         ...
 
-    def add_services(self, services: list["Service"]) -> None:
+    def add_services(self, services: list[Service]) -> None:
         """Add services to the server."""
         ...
 
@@ -341,7 +312,7 @@ class WebSocketServer:
         """Removes services that were previously advertised."""
         ...
 
-    def publish_connection_graph(self, graph: "ConnectionGraph") -> None:
+    def publish_connection_graph(self, graph: ConnectionGraph) -> None:
         """
         Publishes a connection graph update to all subscribed clients. An update is published to
         clients as a difference from the current graph to the replacement graph. When a client first

@@ -46,7 +46,12 @@
               "type": "number",
               "description": "z coordinate length"
             }
-          }
+          },
+          "required": [
+            "x",
+            "y",
+            "z"
+          ]
         },
         "orientation": {
           "title": "foxglove.Quaternion",
@@ -69,9 +74,19 @@
               "type": "number",
               "description": "w value"
             }
-          }
+          },
+          "required": [
+            "x",
+            "y",
+            "z",
+            "w"
+          ]
         }
-      }
+      },
+      "required": [
+        "position",
+        "orientation"
+      ]
     },
     "row_count": {
       "type": "integer",
@@ -100,7 +115,12 @@
           "type": "number",
           "description": "z coordinate length"
         }
-      }
+      },
+      "required": [
+        "x",
+        "y",
+        "z"
+      ]
     },
     "slice_stride": {
       "type": "integer",
@@ -184,14 +204,32 @@
               }
             ]
           }
-        }
+        },
+        "required": [
+          "name",
+          "offset",
+          "type"
+        ]
       },
       "description": "Fields in `data`. `red`, `green`, `blue`, and `alpha` are optional for customizing the grid's color."
     },
     "data": {
       "type": "string",
       "contentEncoding": "base64",
-      "description": "Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order.\n For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:\n z = i / slice_stride * cell_size.z\n y = (i % slice_stride) / row_stride * cell_size.y\n x = (i % row_stride) / cell_stride * cell_size.x"
+      "description": "Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order.\nFor the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:\n\n- z = i / slice_stride * cell_size.z\n- y = (i % slice_stride) / row_stride * cell_size.y\n- x = (i % row_stride) / cell_stride * cell_size.x"
     }
-  }
+  },
+  "required": [
+    "timestamp",
+    "frame_id",
+    "pose",
+    "row_count",
+    "column_count",
+    "cell_size",
+    "slice_stride",
+    "row_stride",
+    "cell_stride",
+    "fields",
+    "data"
+  ]
 }

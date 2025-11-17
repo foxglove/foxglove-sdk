@@ -11,6 +11,7 @@ export default defineConfig(
       "cpp/build-*",
       "cpp/build",
       "python/foxglove-sdk/**/_build",
+      "python/foxglove-sdk/python/foxglove/notebook/static",
       "target",
     ],
   },
@@ -23,16 +24,29 @@ export default defineConfig(
       },
     },
   },
+  ...foxglove.configs.react,
   ...foxglove.configs.typescript.map((config) => ({
     ...config,
-    files: ["**/*.ts"],
+    files: ["**/*.@(ts|tsx)"],
   })),
   {
-    files: ["**/*.ts"],
+    files: ["**/*.@(ts|tsx)"],
     languageOptions: {
       parserOptions: {
-        project: "tsconfig.json",
+        project: true,
       },
+    },
+    rules: {
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        {
+          vars: "all",
+          args: "after-used",
+          varsIgnorePattern: "^_",
+          argsIgnorePattern: "^_",
+          caughtErrors: "none",
+        },
+      ],
     },
   },
 );

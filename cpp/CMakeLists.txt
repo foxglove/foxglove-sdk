@@ -169,7 +169,7 @@ add_custom_target(doxygen
 )
 
 add_custom_target(html-docs
-  COMMAND poetry run sphinx-build --fail-on-warning . ${CMAKE_CURRENT_BINARY_DIR}/docs/html
+  COMMAND uv run sphinx-build --fail-on-warning . ${CMAKE_CURRENT_BINARY_DIR}/docs/html
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/foxglove/docs
 )
 
@@ -181,6 +181,13 @@ set_property(TARGET example_server PROPERTY CXX_STANDARD_REQUIRED True)
 target_compile_options(example_server PUBLIC ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
 target_link_options(example_server PUBLIC ${SANITIZER_LINK_OPTIONS})
 target_link_libraries(example_server foxglove_cpp_static)
+
+add_executable(example_agent examples/agent/src/main.cpp)
+set_property(TARGET example_agent PROPERTY CXX_STANDARD 17)
+set_property(TARGET example_agent PROPERTY CXX_STANDARD_REQUIRED True)
+target_compile_options(example_agent PUBLIC ${SANITIZER_COMPILE_OPTIONS} ${STRICT_COMPILE_OPTIONS})
+target_link_options(example_agent PUBLIC ${SANITIZER_LINK_OPTIONS})
+target_link_libraries(example_agent foxglove_cpp_static)
 
 add_executable(example_services examples/ws-services/src/main.cpp)
 set_property(TARGET example_services PROPERTY CXX_STANDARD 17)
@@ -247,3 +254,10 @@ if(BUILD_OPENCV_EXAMPLE)
   target_include_directories(example_rgb_camera_visualization PRIVATE ${OpenCV_INCLUDE_DIRS})
   target_link_libraries(example_rgb_camera_visualization foxglove_cpp_static ${OpenCV_LIBS})
 endif()
+
+add_executable(example_message_filtering examples/message-filtering/src/main.cpp)
+set_property(TARGET example_message_filtering PROPERTY CXX_STANDARD 17)
+set_property(TARGET example_message_filtering PROPERTY CXX_STANDARD_REQUIRED True)
+target_compile_options(example_message_filtering PUBLIC ${SANITIZER_COMPILE_OPTIONS})
+target_link_options(example_message_filtering PUBLIC ${SANITIZER_LINK_OPTIONS})
+target_link_libraries(example_message_filtering foxglove_cpp_static)

@@ -171,6 +171,8 @@ private:
 };
 
 foxglove::WebSocketServer startServer(foxglove::WebSocketServerOptions&& options) {
+  // always select an available port
+  options.port = 0;
   auto result = foxglove::WebSocketServer::create(std::move(options));
   REQUIRE(result.has_value());
   auto server = std::move(result.value());
@@ -184,31 +186,23 @@ foxglove::WebSocketServer startServer(
   foxglove::WebSocketServerCallbacks&& callbacks = {},
   std::vector<std::string> supported_encodings = {}
 ) {
-  return startServer({
-    std::move(context),
-    "unit-test",
-    "127.0.0.1",
-    0,
-    std::move(callbacks),
-    capabilities,
-    std::move(supported_encodings),
-    {},
-  });
+  foxglove::WebSocketServerOptions options;
+  options.context = std::move(context);
+  options.name = "unit-test";
+  options.callbacks = std::move(callbacks);
+  options.capabilities = capabilities;
+  options.supported_encodings = std::move(supported_encodings);
+  return startServer(std::move(options));
 }
 
 foxglove::WebSocketServer startServer(
   foxglove::Context context, foxglove::FetchAssetHandler&& fetch_asset
 ) {
-  return startServer({
-    std::move(context),
-    "unit-test",
-    "127.0.0.1",
-    0,
-    {},
-    {},
-    {},
-    std::move(fetch_asset),
-  });
+  foxglove::WebSocketServerOptions options;
+  options.context = std::move(context);
+  options.name = "unit-test";
+  options.fetch_asset = std::move(fetch_asset);
+  return startServer(std::move(options));
 }
 
 }  // namespace
@@ -1378,4 +1372,119 @@ TEST_CASE("Log message to websocket sinks") {
 
     REQUIRE(clients_received_message == num_clients);
   }
+}
+
+TEST_CASE("Server channel filtering") {
+  auto context = foxglove::Context::create();
+  std::mutex mutex;
+  std::condition_variable cv;
+  // the following variable is protected by the mutex:
+  std::vector<uint64_t> subscribe_calls;
+  std::unique_lock lock{mutex};
+
+  foxglove::WebSocketServerCallbacks callbacks;
+  callbacks.onSubscribe =
+    [&](uint64_t channel_id, const foxglove::ClientMetadata& _ [[maybe_unused]]) {
+      std::scoped_lock lock{mutex};
+      std::cerr << "onSubscribe: " << channel_id << std::endl;
+      subscribe_calls.push_back(channel_id);
+      cv.notify_all();
+    };
+
+  foxglove::WebSocketServerOptions ws_options;
+  ws_options.context = context;
+  ws_options.callbacks = std::move(callbacks);
+  ws_options.sink_channel_filter = [](foxglove::ChannelDescriptor&& channel) -> bool {
+    return channel.topic() == "/1";
+  };
+
+  auto server = startServer(std::move(ws_options));
+
+  auto channel_result_1 = foxglove::RawChannel::create("/1", "json", std::nullopt, context);
+  REQUIRE(channel_result_1.has_value());
+  auto channel_1 = std::move(channel_result_1.value());
+
+  auto channel_result_2 = foxglove::RawChannel::create("/2", "json", std::nullopt, context);
+  REQUIRE(channel_result_2.has_value());
+  auto channel_2 = std::move(channel_result_2.value());
+
+  WebSocketClient client;
+  client.start(server.port());
+  client.waitForConnection();
+
+  auto payload = client.recv();
+  auto parsed = Json::parse(payload);
+  REQUIRE(parsed.contains("op"));
+  REQUIRE(parsed["op"] == "serverInfo");
+
+  payload = client.recv();
+  std::cerr << "payload: " << payload << std::endl;
+  parsed = Json::parse(payload);
+  REQUIRE(parsed.contains("op"));
+  REQUIRE(parsed["op"] == "advertise");
+  REQUIRE(parsed["channels"].size() == 1);
+  REQUIRE(parsed["channels"][0]["id"] == channel_1.id());
+
+  client.send(
+    R"({
+      "op": "subscribe",
+      "subscriptions": [
+        {
+          "id": 100, "channelId": )" +
+    std::to_string(channel_1.id()) + R"( }
+      ]
+    })"
+  );
+
+  // Channel 2 is filtered, unadvertised, and can't be subscribed to.
+  client.send(
+    R"({
+      "op": "subscribe",
+      "subscriptions": [
+        {
+          "id": 101, "channelId": )" +
+    std::to_string(channel_2.id()) + R"( }
+      ]
+    })"
+  );
+
+  cv.wait_for(lock, std::chrono::seconds(1), [&] {
+    return !subscribe_calls.empty();
+  });
+  REQUIRE_THAT(subscribe_calls, Equals(std::vector<uint64_t>{1}));
+
+  payload = client.recv();
+  parsed = Json::parse(payload);
+  REQUIRE(parsed.contains("op"));
+  REQUIRE(parsed["op"] == "status");
+  REQUIRE(parsed["message"] == "Unknown channel ID: " + std::to_string(channel_2.id()));
+
+  REQUIRE(server.stop() == foxglove::FoxgloveError::Ok);
+}
+
+TEST_CASE("Server info") {
+  auto context = foxglove::Context::create();
+
+  std::map<std::string, std::string> server_info = {{"key1", "value1"}};
+
+  foxglove::WebSocketServerOptions ws_options;
+  ws_options.context = context;
+  ws_options.server_info = server_info;
+
+  auto server = startServer(std::move(ws_options));
+
+  WebSocketClient client;
+  client.start(server.port());
+  client.waitForConnection();
+
+  auto payload = client.recv();
+  auto parsed = Json::parse(payload);
+  REQUIRE(parsed.contains("op"));
+  REQUIRE(parsed["op"] == "serverInfo");
+  auto metadata = parsed["metadata"];
+  auto iterator = metadata.find("key1");
+  REQUIRE(iterator != metadata.end());
+  REQUIRE(*iterator == "value1");
+
+  REQUIRE(server.stop() == foxglove::FoxgloveError::Ok);
 }

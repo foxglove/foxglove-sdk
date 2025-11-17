@@ -9,10 +9,10 @@ geometry_msgs/Pose pose
 # Vertices to use for triangles, interpreted as a list of triples (0-1-2, 3-4-5, ...)
 geometry_msgs/Point[] points
 
-# Solid color to use for the whole shape. One of `color` or `colors` must be provided.
+# Solid color to use for the whole shape. Ignored if `colors` is non-empty.
 foxglove_msgs/Color color
 
-# Per-vertex colors (if specified, must have the same length as `points`). One of `color` or `colors` must be provided.
+# Per-vertex colors (if specified, must have the same length as `points`).
 foxglove_msgs/Color[] colors
 
 # Indices into the `points` and `colors` attribute arrays, which can be used to avoid duplicating attribute data.

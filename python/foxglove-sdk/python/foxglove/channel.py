@@ -1,15 +1,17 @@
+from __future__ import annotations
+
 import hashlib
 import json
 from base64 import b64encode
-from typing import Any, Dict, Optional, Union, cast
+from typing import Any, cast
 
 from . import Context
 from . import _foxglove_py as _foxglove
 from . import channels as _channels
 from . import schemas as _schemas
 
-JsonSchema = Dict[str, Any]
-JsonMessage = Dict[str, Any]
+JsonSchema = dict[str, Any]
+JsonMessage = dict[str, Any]
 
 
 class Channel:
@@ -24,11 +26,11 @@ class Channel:
         self,
         topic: str,
         *,
-        schema: Union[JsonSchema, _foxglove.Schema, None] = None,
-        message_encoding: Optional[str] = None,
-        context: Optional[Context] = None,
-        metadata: Optional[Dict[str, str]] = None,
-    ):
+        schema: JsonSchema | _foxglove.Schema | None = None,
+        message_encoding: str | None = None,
+        context: Context | None = None,
+        metadata: dict[str, str] | None = None,
+    ) -> None:
         """
         Create a new channel for logging messages on a topic.
 
@@ -75,7 +77,7 @@ class Channel:
         """The message encoding for the channel"""
         return self.base.message_encoding
 
-    def metadata(self) -> Dict[str, str]:
+    def metadata(self) -> dict[str, str]:
         """
         Returns a copy of the channel's metadata.
 
@@ -84,7 +86,7 @@ class Channel:
         """
         return self.base.metadata()
 
-    def schema(self) -> Optional[_foxglove.Schema]:
+    def schema(self) -> _foxglove.Schema | None:
         """
         Returns a copy of the channel's metadata.
 
@@ -93,7 +95,7 @@ class Channel:
         """
         return self.base.schema()
 
-    def schema_name(self) -> Optional[str]:
+    def schema_name(self) -> str | None:
         """The name of the schema for the channel"""
         return self.base.schema_name()
 
@@ -103,10 +105,10 @@ class Channel:
 
     def log(
         self,
-        msg: Union[JsonMessage, list[Any], bytes, str],
+        msg: JsonMessage | list[Any] | bytes | str,
         *,
-        log_time: Optional[int] = None,
-        sink_id: Optional[int] = None,
+        log_time: int | None = None,
+        sink_id: int | None = None,
     ) -> None:
         """
         Log a message on the channel.
@@ -138,15 +140,15 @@ class Channel:
         self.base.close()
 
 
-_channels_by_id: Dict[int, Channel] = {}
+_channels_by_id: dict[int, Channel] = {}
 
 
 def log(
     topic: str,
-    message: Union[JsonMessage, list[Any], bytes, str, _schemas.FoxgloveSchema],
+    message: JsonMessage | list[Any] | bytes | str | _schemas.FoxgloveSchema,
     *,
-    log_time: Optional[int] = None,
-    sink_id: Optional[int] = None,
+    log_time: int | None = None,
+    sink_id: int | None = None,
 ) -> None:
     """Log a message on a topic.
 
@@ -197,9 +199,9 @@ def log(
 
 
 def _normalize_schema(
-    message_encoding: Optional[str],
-    schema: Union[JsonSchema, _foxglove.Schema, None] = None,
-) -> tuple[str, Optional[_foxglove.Schema]]:
+    message_encoding: str | None,
+    schema: JsonSchema | _foxglove.Schema | None = None,
+) -> tuple[str, _foxglove.Schema | None]:
     if isinstance(schema, _foxglove.Schema):
         if message_encoding is None:
             raise ValueError("message encoding is required")

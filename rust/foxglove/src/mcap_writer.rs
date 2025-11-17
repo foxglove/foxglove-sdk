@@ -7,7 +7,8 @@ use std::sync::{Arc, Weak};
 use std::{fmt::Debug, io::Write};
 
 use crate::library_version::get_library_version;
-use crate::{Context, FoxgloveError, Sink};
+use crate::sink_channel_filter::SinkChannelFilterFn;
+use crate::{ChannelDescriptor, Context, FoxgloveError, Sink, SinkChannelFilter};
 
 /// Compression options for content in an MCAP file
 pub use mcap::Compression as McapCompression;
@@ -24,10 +25,20 @@ use mcap_sink::McapSink;
 /// Logged messages are buffered in a [`BufWriter`]. When the writer is dropped, the buffered
 /// messages are flushed to the writer and the writer is closed.
 #[must_use]
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct McapWriter {
     options: McapWriteOptions,
     context: Arc<Context>,
+    channel_filter: Option<Arc<dyn SinkChannelFilter>>,
+}
+
+impl Debug for McapWriter {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("McapWriter")
+            .field("options", &self.options)
+            .field("context", &self.context)
+            .finish_non_exhaustive()
+    }
 }
 
 impl From<McapWriteOptions> for McapWriter {
@@ -36,6 +47,7 @@ impl From<McapWriteOptions> for McapWriter {
         Self {
             options,
             context: Context::get_default(),
+            channel_filter: None,
         }
     }
 }
@@ -65,6 +77,21 @@ impl McapWriter {
         self
     }
 
+    /// Sets a [`SinkChannelFilter`] for this file.
+    pub fn channel_filter(mut self, filter: Arc<dyn SinkChannelFilter>) -> Self {
+        self.channel_filter = Some(filter);
+        self
+    }
+
+    /// Sets a channel filter for this file. See [`SinkChannelFilter`] for more information.
+    pub fn channel_filter_fn(
+        mut self,
+        filter: impl Fn(&ChannelDescriptor) -> bool + Sync + Send + 'static,
+    ) -> Self {
+        self.channel_filter = Some(Arc::new(SinkChannelFilterFn(filter)));
+        self
+    }
+
     /// Begins logging events to the specified writer.
     ///
     /// Returns a handle. When the handle is dropped, the recording will be flushed to the writer
@@ -74,7 +101,7 @@ impl McapWriter {
     where
         W: Write + Seek + Send + 'static,
     {
-        let sink = McapSink::new(writer, self.options)?;
+        let sink = McapSink::new(writer, self.options, self.channel_filter)?;
         self.context.add_sink(sink.clone());
         Ok(McapWriterHandle {
             sink,
@@ -126,6 +153,22 @@ impl<W: Write + Seek + Send + 'static> McapWriterHandle<W> {
             context.remove_sink(self.sink.id());
         }
         self.sink.finish()
+    }
+
+    /// Writes MCAP metadata to the file.
+    ///
+    /// If the metadata map is empty, this method returns early without writing anything.
+    ///
+    /// # Arguments
+    /// * `name` - Name identifier for this metadata record
+    /// * `metadata` - Key-value pairs to store (empty map will be skipped)
+    ///
+    pub fn write_metadata(
+        &self,
+        name: &str,
+        metadata: std::collections::BTreeMap<String, String>,
+    ) -> Result<(), FoxgloveError> {
+        self.sink.write_metadata(name, metadata)
     }
 }
 

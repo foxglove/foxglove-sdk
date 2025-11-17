@@ -157,7 +157,7 @@ impl From<ArrowPrimitive> for foxglove::schemas::ArrowPrimitive {
 /// :param height: Image height
 /// :param distortion_model: Name of distortion model
 ///     
-///     Supported parameters: `plumb_bob` (k1, k2, p1, p2, k3), `rational_polynomial` (k1, k2, p1, p2, k3, k4, k5, k6), and `kannala_brandt` (k1, k2, k3, k4). `plumb_bob` and `rational_polynomial` models are based on the pinhole model `OpenCV's <https://docs.opencv.org/4.11.0/d9/d0c/group__calib3d.html>`__ `pinhole camera model <https://en.wikipedia.org/wiki/Distortion_%28optics%29#Software_correction>`__. The `kannala_brandt` model matches the `OpenvCV fisheye <https://docs.opencv.org/4.11.0/db/d58/group__calib3d__fisheye.html>`__ model.
+///     Supported parameters: `plumb_bob` (k1, k2, p1, p2, k3), `rational_polynomial` (k1, k2, p1, p2, k3, k4, k5, k6), and `kannala_brandt` (k1, k2, k3, k4), and `fisheye62` (k0, k1, k2, k3, p0, p1, crit_theta [optional]). `plumb_bob` and `rational_polynomial` models are based on the pinhole model `OpenCV's <https://docs.opencv.org/4.11.0/d9/d0c/group__calib3d.html>`__ `pinhole camera model <https://en.wikipedia.org/wiki/Distortion_%28optics%29#Software_correction>`__. The `kannala_brandt` model matches the `OpenvCV fisheye <https://docs.opencv.org/4.11.0/db/d58/group__calib3d__fisheye.html>`__ model. The `fisheye62` model matches the `Project Aria's Fisheye62 Model <https://facebookresearch.github.io/projectaria_tools/docs/tech_insights/camera_intrinsic_models>`__.
 /// :param D: Distortion parameters
 /// :param K: Intrinsic camera matrix (3x3 row-major matrix)
 ///     
@@ -188,7 +188,7 @@ impl From<ArrowPrimitive> for foxglove::schemas::ArrowPrimitive {
 ///     
 ///     For monocular cameras, Tx = Ty = 0. Normally, monocular cameras will also have R = the identity and P[1:3,1:3] = K.
 ///     
-///     For a stereo pair, the fourth column [Tx Ty 0]' is related to the position of the optical center of the second camera in the first camera's frame. We assume Tz = 0 so both cameras are in the same stereo image plane. The first camera always has Tx = Ty = 0. For the right (second) camera of a horizontal stereo pair, Ty = 0 and Tx = -fx' * B, where B is the baseline between the cameras.
+///     Foxglove currently does not support displaying stereo images, so Tx and Ty are ignored.
 ///     
 ///     Given a 3D point [X Y Z]', the projection (x, y) of the point onto the rectified image is given by:
 ///     
@@ -208,28 +208,28 @@ pub(crate) struct CameraCalibration(pub(crate) foxglove::schemas::CameraCalibrat
 #[pymethods]
 impl CameraCalibration {
     #[new]
-    #[pyo3(signature = (*, timestamp=None, frame_id="".to_string(), width=0, height=0, distortion_model="".to_string(), D=vec![], K=vec![], R=vec![], P=vec![]) )]
+    #[pyo3(signature = (*, timestamp=None, frame_id="", width=0, height=0, distortion_model="", D=None, K=None, R=None, P=None) )]
     fn new(
         timestamp: Option<Timestamp>,
-        frame_id: String,
+        frame_id: &str,
         width: u32,
         height: u32,
-        distortion_model: String,
-        D: Vec<f64>,
-        K: Vec<f64>,
-        R: Vec<f64>,
-        P: Vec<f64>,
+        distortion_model: &str,
+        D: Option<Vec<f64>>,
+        K: Option<Vec<f64>>,
+        R: Option<Vec<f64>>,
+        P: Option<Vec<f64>>,
     ) -> Self {
         Self(foxglove::schemas::CameraCalibration {
             timestamp: timestamp.map(Into::into),
-            frame_id,
+            frame_id: frame_id.to_string(),
             width,
             height,
-            distortion_model,
-            d: D,
-            k: K,
-            r: R,
-            p: P,
+            distortion_model: distortion_model.to_string(),
+            d: D.unwrap_or_default(),
+            k: K.unwrap_or_default(),
+            r: R.unwrap_or_default(),
+            p: P.unwrap_or_default(),
         })
     }
     fn __repr__(&self) -> String {
@@ -417,20 +417,20 @@ pub(crate) struct CompressedImage(pub(crate) foxglove::schemas::CompressedImage)
 #[pymethods]
 impl CompressedImage {
     #[new]
-    #[pyo3(signature = (*, timestamp=None, frame_id="".to_string(), data=None, format="".to_string()) )]
+    #[pyo3(signature = (*, timestamp=None, frame_id="", data=None, format="") )]
     fn new(
         timestamp: Option<Timestamp>,
-        frame_id: String,
+        frame_id: &str,
         data: Option<Bound<'_, PyBytes>>,
-        format: String,
+        format: &str,
     ) -> Self {
         Self(foxglove::schemas::CompressedImage {
             timestamp: timestamp.map(Into::into),
-            frame_id,
+            frame_id: frame_id.to_string(),
             data: data
                 .map(|x| Bytes::copy_from_slice(x.as_bytes()))
                 .unwrap_or_default(),
-            format,
+            format: format.to_string(),
         })
     }
     fn __repr__(&self) -> String {
@@ -510,20 +510,20 @@ pub(crate) struct CompressedVideo(pub(crate) foxglove::schemas::CompressedVideo)
 #[pymethods]
 impl CompressedVideo {
     #[new]
-    #[pyo3(signature = (*, timestamp=None, frame_id="".to_string(), data=None, format="".to_string()) )]
+    #[pyo3(signature = (*, timestamp=None, frame_id="", data=None, format="") )]
     fn new(
         timestamp: Option<Timestamp>,
-        frame_id: String,
+        frame_id: &str,
         data: Option<Bound<'_, PyBytes>>,
-        format: String,
+        format: &str,
     ) -> Self {
         Self(foxglove::schemas::CompressedVideo {
             timestamp: timestamp.map(Into::into),
-            frame_id,
+            frame_id: frame_id.to_string(),
             data: data
                 .map(|x| Bytes::copy_from_slice(x.as_bytes()))
                 .unwrap_or_default(),
-            format,
+            format: format.to_string(),
         })
     }
     fn __repr__(&self) -> String {
@@ -702,18 +702,18 @@ pub(crate) struct FrameTransform(pub(crate) foxglove::schemas::FrameTransform);
 #[pymethods]
 impl FrameTransform {
     #[new]
-    #[pyo3(signature = (*, timestamp=None, parent_frame_id="".to_string(), child_frame_id="".to_string(), translation=None, rotation=None) )]
+    #[pyo3(signature = (*, timestamp=None, parent_frame_id="", child_frame_id="", translation=None, rotation=None) )]
     fn new(
         timestamp: Option<Timestamp>,
-        parent_frame_id: String,
-        child_frame_id: String,
+        parent_frame_id: &str,
+        child_frame_id: &str,
         translation: Option<Vector3>,
         rotation: Option<Quaternion>,
     ) -> Self {
         Self(foxglove::schemas::FrameTransform {
             timestamp: timestamp.map(Into::into),
-            parent_frame_id,
-            child_frame_id,
+            parent_frame_id: parent_frame_id.to_string(),
+            child_frame_id: child_frame_id.to_string(),
             translation: translation.map(Into::into),
             rotation: rotation.map(Into::into),
         })
@@ -768,10 +768,14 @@ pub(crate) struct FrameTransforms(pub(crate) foxglove::schemas::FrameTransforms)
 #[pymethods]
 impl FrameTransforms {
     #[new]
-    #[pyo3(signature = (*, transforms=vec![]) )]
-    fn new(transforms: Vec<FrameTransform>) -> Self {
+    #[pyo3(signature = (*, transforms=None) )]
+    fn new(transforms: Option<Vec<FrameTransform>>) -> Self {
         Self(foxglove::schemas::FrameTransforms {
-            transforms: transforms.into_iter().map(|x| x.into()).collect(),
+            transforms: transforms
+                .unwrap_or_default()
+                .into_iter()
+                .map(|x| x.into())
+                .collect(),
         })
     }
     fn __repr__(&self) -> String {
@@ -817,9 +821,11 @@ pub(crate) struct GeoJson(pub(crate) foxglove::schemas::GeoJson);
 #[pymethods]
 impl GeoJson {
     #[new]
-    #[pyo3(signature = (*, geojson="".to_string()) )]
-    fn new(geojson: String) -> Self {
-        Self(foxglove::schemas::GeoJson { geojson })
+    #[pyo3(signature = (*, geojson="") )]
+    fn new(geojson: &str) -> Self {
+        Self(foxglove::schemas::GeoJson {
+            geojson: geojson.to_string(),
+        })
     }
     fn __repr__(&self) -> String {
         format!("GeoJson(geojson={:?})", self.0.geojson,)
@@ -861,10 +867,48 @@ impl From<GeoJson> for foxglove::schemas::GeoJson {
 /// :param row_stride: Number of bytes between rows in `data`
 /// :param cell_stride: Number of bytes between cells within a row in `data`
 /// :param fields: Fields in `data`. `red`, `green`, `blue`, and `alpha` are optional for customizing the grid's color.
+///     To enable RGB color visualization in the `3D panel <https://docs.foxglove.dev/docs/visualization/panels/3d#rgba-separate-fields-color-mode>`__, include **all four** of these fields in your `fields` array:
+///     
+///     - `red` - Red channel value
+///     - `green` - Green channel value
+///     - `blue` - Blue channel value
+///     - `alpha` - Alpha/transparency channel value
+///     
+///     **note:** All four fields must be present with these exact names for RGB visualization to work. The order of fields doesn't matter, but the names must match exactly.
+///     
+///     Recommended type: `UINT8` (0-255 range) for standard 8-bit color channels.
+///     
+///     Example field definitions:
+///     
+///     **RGB color only:**
+///     
+///     ::
+///
+///         fields: [
+///          { name: "red", offset: 0, type: NumericType.UINT8 },
+///          { name: "green", offset: 1, type: NumericType.UINT8 },
+///          { name: "blue", offset: 2, type: NumericType.UINT8 },
+///          { name: "alpha", offset: 3, type: NumericType.UINT8 },
+///         ];
+///     
+///     **RGB color with elevation (for 3D terrain visualization):**
+///     
+///     ::
+///
+///         fields: [
+///          { name: "red", offset: 0, type: NumericType.UINT8 },
+///          { name: "green", offset: 1, type: NumericType.UINT8 },
+///          { name: "blue", offset: 2, type: NumericType.UINT8 },
+///          { name: "alpha", offset: 3, type: NumericType.UINT8 },
+///          { name: "elevation", offset: 4, type: NumericType.FLOAT32 },
+///         ];
+///     
+///     When these fields are present, the 3D panel will offer additional "Color Mode" options including "RGBA (separate fields)" to visualize the RGB data directly. For elevation visualization, set the "Elevation field" to your elevation layer name.
 /// :param data: Grid cell data, interpreted using `fields`, in row-major (y-major) order.
-///      For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
-///      y = (i / cell_stride) % row_stride * cell_size.y
-///      x = i % cell_stride * cell_size.x
+///     For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
+///     
+///     - y = i / row_stride * cell_size.y
+///     - x = (i % row_stride) / cell_stride * cell_size.x
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/grid
 #[pyclass(module = "foxglove.schemas")]
@@ -873,27 +917,31 @@ pub(crate) struct Grid(pub(crate) foxglove::schemas::Grid);
 #[pymethods]
 impl Grid {
     #[new]
-    #[pyo3(signature = (*, timestamp=None, frame_id="".to_string(), pose=None, column_count=0, cell_size=None, row_stride=0, cell_stride=0, fields=vec![], data=None) )]
+    #[pyo3(signature = (*, timestamp=None, frame_id="", pose=None, column_count=0, cell_size=None, row_stride=0, cell_stride=0, fields=None, data=None) )]
     fn new(
         timestamp: Option<Timestamp>,
-        frame_id: String,
+        frame_id: &str,
         pose: Option<Pose>,
         column_count: u32,
         cell_size: Option<Vector2>,
         row_stride: u32,
         cell_stride: u32,
-        fields: Vec<PackedElementField>,
+        fields: Option<Vec<PackedElementField>>,
         data: Option<Bound<'_, PyBytes>>,
     ) -> Self {
         Self(foxglove::schemas::Grid {
             timestamp: timestamp.map(Into::into),
-            frame_id,
+            frame_id: frame_id.to_string(),
             pose: pose.map(Into::into),
             column_count,
             cell_size: cell_size.map(Into::into),
             row_stride,
             cell_stride,
-            fields: fields.into_iter().map(|x| x.into()).collect(),
+            fields: fields
+                .unwrap_or_default()
+                .into_iter()
+                .map(|x| x.into())
+                .collect(),
             data: data
                 .map(|x| Bytes::copy_from_slice(x.as_bytes()))
                 .unwrap_or_default(),
@@ -953,10 +1001,11 @@ impl From<Grid> for foxglove::schemas::Grid {
 /// :param cell_stride: Number of bytes between cells within a row in `data`
 /// :param fields: Fields in `data`. `red`, `green`, `blue`, and `alpha` are optional for customizing the grid's color.
 /// :param data: Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order.
-///      For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
-///      z = i / slice_stride * cell_size.z
-///      y = (i % slice_stride) / row_stride * cell_size.y
-///      x = (i % row_stride) / cell_stride * cell_size.x
+///     For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
+///     
+///     - z = i / slice_stride * cell_size.z
+///     - y = (i % slice_stride) / row_stride * cell_size.y
+///     - x = (i % row_stride) / cell_stride * cell_size.x
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/voxel-grid
 #[pyclass(module = "foxglove.schemas")]
@@ -965,10 +1014,10 @@ pub(crate) struct VoxelGrid(pub(crate) foxglove::schemas::VoxelGrid);
 #[pymethods]
 impl VoxelGrid {
     #[new]
-    #[pyo3(signature = (*, timestamp=None, frame_id="".to_string(), pose=None, row_count=0, column_count=0, cell_size=None, slice_stride=0, row_stride=0, cell_stride=0, fields=vec![], data=None) )]
+    #[pyo3(signature = (*, timestamp=None, frame_id="", pose=None, row_count=0, column_count=0, cell_size=None, slice_stride=0, row_stride=0, cell_stride=0, fields=None, data=None) )]
     fn new(
         timestamp: Option<Timestamp>,
-        frame_id: String,
+        frame_id: &str,
         pose: Option<Pose>,
         row_count: u32,
         column_count: u32,
@@ -976,12 +1025,12 @@ impl VoxelGrid {
         slice_stride: u32,
         row_stride: u32,
         cell_stride: u32,
-        fields: Vec<PackedElementField>,
+        fields: Option<Vec<PackedElementField>>,
         data: Option<Bound<'_, PyBytes>>,
     ) -> Self {
         Self(foxglove::schemas::VoxelGrid {
             timestamp: timestamp.map(Into::into),
-            frame_id,
+            frame_id: frame_id.to_string(),
             pose: pose.map(Into::into),
             row_count,
             column_count,
@@ -989,7 +1038,11 @@ impl VoxelGrid {
             slice_stride,
             row_stride,
             cell_stride,
-            fields: fields.into_iter().map(|x| x.into()).collect(),
+            fields: fields
+                .unwrap_or_default()
+                .into_iter()
+                .map(|x| x.into())
+                .collect(),
             data: data
                 .map(|x| Bytes::copy_from_slice(x.as_bytes()))
                 .unwrap_or_default(),
@@ -1051,16 +1104,28 @@ pub(crate) struct ImageAnnotations(pub(crate) foxglove::schemas::ImageAnnotation
 #[pymethods]
 impl ImageAnnotations {
     #[new]
-    #[pyo3(signature = (*, circles=vec![], points=vec![], texts=vec![]) )]
+    #[pyo3(signature = (*, circles=None, points=None, texts=None) )]
     fn new(
-        circles: Vec<CircleAnnotation>,
-        points: Vec<PointsAnnotation>,
-        texts: Vec<TextAnnotation>,
+        circles: Option<Vec<CircleAnnotation>>,
+        points: Option<Vec<PointsAnnotation>>,
+        texts: Option<Vec<TextAnnotation>>,
     ) -> Self {
         Self(foxglove::schemas::ImageAnnotations {
-            circles: circles.into_iter().map(|x| x.into()).collect(),
-            points: points.into_iter().map(|x| x.into()).collect(),
-            texts: texts.into_iter().map(|x| x.into()).collect(),
+            circles: circles
+                .unwrap_or_default()
+                .into_iter()
+                .map(|x| x.into())
+                .collect(),
+            points: points
+                .unwrap_or_default()
+                .into_iter()
+                .map(|x| x.into())
+                .collect(),
+            texts: texts
+                .unwrap_or_default()
+                .into_iter()
+                .map(|x| x.into())
+                .collect(),
         })
     }
     fn __repr__(&self) -> String {
@@ -1110,9 +1175,12 @@ pub(crate) struct KeyValuePair(pub(crate) foxglove::schemas::KeyValuePair);
 #[pymethods]
 impl KeyValuePair {
     #[new]
-    #[pyo3(signature = (*, key="".to_string(), value="".to_string()) )]
-    fn new(key: String, value: String) -> Self {
-        Self(foxglove::schemas::KeyValuePair { key, value })
+    #[pyo3(signature = (*, key="", value="") )]
+    fn new(key: &str, value: &str) -> Self {
+        Self(foxglove::schemas::KeyValuePair {
+            key: key.to_string(),
+            value: value.to_string(),
+        })
     }
     fn __repr__(&self) -> String {
         format!(
@@ -1166,24 +1234,24 @@ pub(crate) struct LaserScan(pub(crate) foxglove::schemas::LaserScan);
 #[pymethods]
 impl LaserScan {
     #[new]
-    #[pyo3(signature = (*, timestamp=None, frame_id="".to_string(), pose=None, start_angle=0.0, end_angle=0.0, ranges=vec![], intensities=vec![]) )]
+    #[pyo3(signature = (*, timestamp=None, frame_id="", pose=None, start_angle=0.0, end_angle=0.0, ranges=None, intensities=None) )]
     fn new(
         timestamp: Option<Timestamp>,
-        frame_id: String,
+        frame_id: &str,
         pose: Option<Pose>,
         start_angle: f64,
         end_angle: f64,
-        ranges: Vec<f64>,
-        intensities: Vec<f64>,
+        ranges: Option<Vec<f64>>,
+        intensities: Option<Vec<f64>>,
     ) -> Self {
         Self(foxglove::schemas::LaserScan {
             timestamp: timestamp.map(Into::into),
-            frame_id,
+            frame_id: frame_id.to_string(),
             pose: pose.map(Into::into),
             start_angle,
             end_angle,
-            ranges,
-            intensities,
+            ranges: ranges.unwrap_or_default(),
+            intensities: intensities.unwrap_or_default(),
         })
     }
     fn __repr__(&self) -> String {
@@ -1232,8 +1300,8 @@ impl From<LaserScan> for foxglove::schemas::LaserScan {
 /// :param thickness: Line thickness
 /// :param scale_invariant: Indicates whether `thickness` is a fixed size in screen pixels (true), or specified in world coordinates and scales with distance from the camera (false)
 /// :param points: Points along the line
-/// :param color: Solid color to use for the whole line. One of `color` or `colors` must be provided.
-/// :param colors: Per-point colors (if specified, must have the same length as `points`). One of `color` or `colors` must be provided.
+/// :param color: Solid color to use for the whole line. Ignored if `colors` is non-empty.
+/// :param colors: Per-point colors (if non-empty, must have the same length as `points`).
 /// :param indices: Indices into the `points` and `colors` attribute arrays, which can be used to avoid duplicating attribute data.
 ///     
 ///     If omitted or empty, indexing will not be used. This default behavior is equivalent to specifying [0, 1, ..., N-1] for the indices (where N is the number of `points` provided).
@@ -1245,26 +1313,34 @@ pub(crate) struct LinePrimitive(pub(crate) foxglove::schemas::LinePrimitive);
 #[pymethods]
 impl LinePrimitive {
     #[new]
-    #[pyo3(signature = (*, r#type=LinePrimitiveLineType::LineStrip, pose=None, thickness=0.0, scale_invariant=false, points=vec![], color=None, colors=vec![], indices=vec![]) )]
+    #[pyo3(signature = (*, r#type=LinePrimitiveLineType::LineStrip, pose=None, thickness=0.0, scale_invariant=false, points=None, color=None, colors=None, indices=None) )]
     fn new(
         r#type: LinePrimitiveLineType,
         pose: Option<Pose>,
         thickness: f64,
         scale_invariant: bool,
-        points: Vec<Point3>,
+        points: Option<Vec<Point3>>,
         color: Option<Color>,
-        colors: Vec<Color>,
-        indices: Vec<u32>,
+        colors: Option<Vec<Color>>,
+        indices: Option<Vec<u32>>,
     ) -> Self {
         Self(foxglove::schemas::LinePrimitive {
             r#type: r#type as i32,
             pose: pose.map(Into::into),
             thickness,
             scale_invariant,
-            points: points.into_iter().map(|x| x.into()).collect(),
+            points: points
+                .unwrap_or_default()
+                .into_iter()
+                .map(|x| x.into())
+                .collect(),
             color: color.map(Into::into),
-            colors: colors.into_iter().map(|x| x.into()).collect(),
-            indices,
+            colors: colors
+                .unwrap_or_default()
+                .into_iter()
+                .map(|x| x.into())
+                .collect(),
+            indices: indices.unwrap_or_default(),
         })
     }
     fn __repr__(&self) -> String {
@@ -1327,24 +1403,24 @@ pub(crate) struct LocationFix(pub(crate) foxglove::schemas::LocationFix);
 #[pymethods]
 impl LocationFix {
     #[new]
-    #[pyo3(signature = (*, timestamp=None, frame_id="".to_string(), latitude=0.0, longitude=0.0, altitude=0.0, position_covariance=vec![], position_covariance_type=LocationFixPositionCovarianceType::Unknown, color=None) )]
+    #[pyo3(signature = (*, timestamp=None, frame_id="", latitude=0.0, longitude=0.0, altitude=0.0, position_covariance=None, position_covariance_type=LocationFixPositionCovarianceType::Unknown, color=None) )]
     fn new(
         timestamp: Option<Timestamp>,
-        frame_id: String,
+        frame_id: &str,
         latitude: f64,
         longitude: f64,
         altitude: f64,
-        position_covariance: Vec<f64>,
+        position_covariance: Option<Vec<f64>>,
         position_covariance_type: LocationFixPositionCovarianceType,
         color: Option<Color>,
     ) -> Self {
         Self(foxglove::schemas::LocationFix {
             timestamp: timestamp.map(Into::into),
-            frame_id,
+            frame_id: frame_id.to_string(),
             latitude,
             longitude,
             altitude,
-            position_covariance,
+            position_covariance: position_covariance.unwrap_or_default(),
             position_covariance_type: position_covariance_type as i32,
             color: color.map(Into::into),
         })
@@ -1400,10 +1476,14 @@ pub(crate) struct LocationFixes(pub(crate) foxglove::schemas::LocationFixes);
 #[pymethods]
 impl LocationFixes {
     #[new]
-    #[pyo3(signature = (*, fixes=vec![]) )]
-    fn new(fixes: Vec<LocationFix>) -> Self {
+    #[pyo3(signature = (*, fixes=None) )]
+    fn new(fixes: Option<Vec<LocationFix>>) -> Self {
         Self(foxglove::schemas::LocationFixes {
-            fixes: fixes.into_iter().map(|x| x.into()).collect(),
+            fixes: fixes
+                .unwrap_or_default()
+                .into_iter()
+                .map(|x| x.into())
+                .collect(),
         })
     }
     fn __repr__(&self) -> String {
@@ -1454,21 +1534,21 @@ pub(crate) struct Log(pub(crate) foxglove::schemas::Log);
 #[pymethods]
 impl Log {
     #[new]
-    #[pyo3(signature = (*, timestamp=None, level=LogLevel::Unknown, message="".to_string(), name="".to_string(), file="".to_string(), line=0) )]
+    #[pyo3(signature = (*, timestamp=None, level=LogLevel::Unknown, message="", name="", file="", line=0) )]
     fn new(
         timestamp: Option<Timestamp>,
         level: LogLevel,
-        message: String,
-        name: String,
-        file: String,
+        message: &str,
+        name: &str,
+        file: &str,
         line: u32,
     ) -> Self {
         Self(foxglove::schemas::Log {
             timestamp: timestamp.map(Into::into),
             level: level as i32,
-            message,
-            name,
-            file,
+            message: message.to_string(),
+            name: name.to_string(),
+            file: file.to_string(),
             line,
         })
     }
@@ -1518,12 +1598,12 @@ pub(crate) struct SceneEntityDeletion(pub(crate) foxglove::schemas::SceneEntityD
 #[pymethods]
 impl SceneEntityDeletion {
     #[new]
-    #[pyo3(signature = (*, timestamp=None, r#type=SceneEntityDeletionType::MatchingId, id="".to_string()) )]
-    fn new(timestamp: Option<Timestamp>, r#type: SceneEntityDeletionType, id: String) -> Self {
+    #[pyo3(signature = (*, timestamp=None, r#type=SceneEntityDeletionType::MatchingId, id="") )]
+    fn new(timestamp: Option<Timestamp>, r#type: SceneEntityDeletionType, id: &str) -> Self {
         Self(foxglove::schemas::SceneEntityDeletion {
             timestamp: timestamp.map(Into::into),
             r#type: r#type as i32,
-            id,
+            id: id.to_string(),
         })
     }
     fn __repr__(&self) -> String {
@@ -1585,38 +1665,74 @@ pub(crate) struct SceneEntity(pub(crate) foxglove::schemas::SceneEntity);
 #[pymethods]
 impl SceneEntity {
     #[new]
-    #[pyo3(signature = (*, timestamp=None, frame_id="".to_string(), id="".to_string(), lifetime=None, frame_locked=false, metadata=vec![], arrows=vec![], cubes=vec![], spheres=vec![], cylinders=vec![], lines=vec![], triangles=vec![], texts=vec![], models=vec![]) )]
+    #[pyo3(signature = (*, timestamp=None, frame_id="", id="", lifetime=None, frame_locked=false, metadata=None, arrows=None, cubes=None, spheres=None, cylinders=None, lines=None, triangles=None, texts=None, models=None) )]
     fn new(
         timestamp: Option<Timestamp>,
-        frame_id: String,
-        id: String,
+        frame_id: &str,
+        id: &str,
         lifetime: Option<Duration>,
         frame_locked: bool,
-        metadata: Vec<KeyValuePair>,
-        arrows: Vec<ArrowPrimitive>,
-        cubes: Vec<CubePrimitive>,
-        spheres: Vec<SpherePrimitive>,
-        cylinders: Vec<CylinderPrimitive>,
-        lines: Vec<LinePrimitive>,
-        triangles: Vec<TriangleListPrimitive>,
-        texts: Vec<TextPrimitive>,
-        models: Vec<ModelPrimitive>,
+        metadata: Option<Vec<KeyValuePair>>,
+        arrows: Option<Vec<ArrowPrimitive>>,
+        cubes: Option<Vec<CubePrimitive>>,
+        spheres: Option<Vec<SpherePrimitive>>,
+        cylinders: Option<Vec<CylinderPrimitive>>,
+        lines: Option<Vec<LinePrimitive>>,
+        triangles: Option<Vec<TriangleListPrimitive>>,
+        texts: Option<Vec<TextPrimitive>>,
+        models: Option<Vec<ModelPrimitive>>,
     ) -> Self {
         Self(foxglove::schemas::SceneEntity {
             timestamp: timestamp.map(Into::into),
-            frame_id,
-            id,
+            frame_id: frame_id.to_string(),
+            id: id.to_string(),
             lifetime: lifetime.map(Into::into),
             frame_locked,
-            metadata: metadata.into_iter().map(|x| x.into()).collect(),
-            arrows: arrows.into_iter().map(|x| x.into()).collect(),
-            cubes: cubes.into_iter().map(|x| x.into()).collect(),
-            spheres: spheres.into_iter().map(|x| x.into()).collect(),
-            cylinders: cylinders.into_iter().map(|x| x.into()).collect(),
-            lines: lines.into_iter().map(|x| x.into()).collect(),
-            triangles: triangles.into_iter().map(|x| x.into()).collect(),
-            texts: texts.into_iter().map(|x| x.into()).collect(),
-            models: models.into_iter().map(|x| x.into()).collect(),
+            metadata: metadata
+                .unwrap_or_default()
+                .into_iter()
+                .map(|x| x.into())
+                .collect(),
+            arrows: arrows
+                .unwrap_or_default()
+                .into_iter()
+                .map(|x| x.into())
+                .collect(),
+            cubes: cubes
+                .unwrap_or_default()
+                .into_iter()
+                .map(|x| x.into())
+                .collect(),
+            spheres: spheres
+                .unwrap_or_default()
+                .into_iter()
+                .map(|x| x.into())
+                .collect(),
+            cylinders: cylinders
+                .unwrap_or_default()
+                .into_iter()
+                .map(|x| x.into())
+                .collect(),
+            lines: lines
+                .unwrap_or_default()
+                .into_iter()
+                .map(|x| x.into())
+                .collect(),
+            triangles: triangles
+                .unwrap_or_default()
+                .into_iter()
+                .map(|x| x.into())
+                .collect(),
+            texts: texts
+                .unwrap_or_default()
+                .into_iter()
+                .map(|x| x.into())
+                .collect(),
+            models: models
+                .unwrap_or_default()
+                .into_iter()
+                .map(|x| x.into())
+                .collect(),
         })
     }
     fn __repr__(&self) -> String {
@@ -1677,11 +1793,22 @@ pub(crate) struct SceneUpdate(pub(crate) foxglove::schemas::SceneUpdate);
 #[pymethods]
 impl SceneUpdate {
     #[new]
-    #[pyo3(signature = (*, deletions=vec![], entities=vec![]) )]
-    fn new(deletions: Vec<SceneEntityDeletion>, entities: Vec<SceneEntity>) -> Self {
+    #[pyo3(signature = (*, deletions=None, entities=None) )]
+    fn new(
+        deletions: Option<Vec<SceneEntityDeletion>>,
+        entities: Option<Vec<SceneEntity>>,
+    ) -> Self {
         Self(foxglove::schemas::SceneUpdate {
-            deletions: deletions.into_iter().map(|x| x.into()).collect(),
-            entities: entities.into_iter().map(|x| x.into()).collect(),
+            deletions: deletions
+                .unwrap_or_default()
+                .into_iter()
+                .map(|x| x.into())
+                .collect(),
+            entities: entities
+                .unwrap_or_default()
+                .into_iter()
+                .map(|x| x.into())
+                .collect(),
         })
     }
     fn __repr__(&self) -> String {
@@ -1723,9 +1850,9 @@ impl From<SceneUpdate> for foxglove::schemas::SceneUpdate {
 /// :param scale: Scale factor to apply to the model along each axis
 /// :param color: Solid color to use for the whole model if `override_color` is true.
 /// :param override_color: Whether to use the color specified in `color` instead of any materials embedded in the original model.
-/// :param url: URL pointing to model file. One of `url` or `data` should be provided.
+/// :param url: URL pointing to model file. One of `url` or `data` should be non-empty.
 /// :param media_type: [Media type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types) of embedded model (e.g. `model/gltf-binary`). Required if `data` is provided instead of `url`. Overrides the inferred media type if `url` is provided.
-/// :param data: Embedded model. One of `url` or `data` should be provided. If `data` is provided, `media_type` must be set to indicate the type of the data.
+/// :param data: Embedded model. One of `url` or `data` should be non-empty. If `data` is non-empty, `media_type` must be set to indicate the type of the data.
 ///
 /// See https://docs.foxglove.dev/docs/visualization/message-schemas/model-primitive
 #[pyclass(module = "foxglove.schemas")]
@@ -1734,14 +1861,14 @@ pub(crate) struct ModelPrimitive(pub(crate) foxglove::schemas::ModelPrimitive);
 #[pymethods]
 impl ModelPrimitive {
     #[new]
-    #[pyo3(signature = (*, pose=None, scale=None, color=None, override_color=false, url="".to_string(), media_type="".to_string(), data=None) )]
+    #[pyo3(signature = (*, pose=None, scale=None, color=None, override_color=false, url="", media_type="", data=None) )]
     fn new(
         pose: Option<Pose>,
         scale: Option<Vector3>,
         color: Option<Color>,
         override_color: bool,
-        url: String,
-        media_type: String,
+        url: &str,
+        media_type: &str,
         data: Option<Bound<'_, PyBytes>>,
     ) -> Self {
         Self(foxglove::schemas::ModelPrimitive {
@@ -1749,8 +1876,8 @@ impl ModelPrimitive {
             scale: scale.map(Into::into),
             color: color.map(Into::into),
             override_color,
-            url,
-            media_type,
+            url: url.to_string(),
+            media_type: media_type.to_string(),
             data: data
                 .map(|x| Bytes::copy_from_slice(x.as_bytes()))
                 .unwrap_or_default(),
@@ -1810,10 +1937,10 @@ pub(crate) struct PackedElementField(pub(crate) foxglove::schemas::PackedElement
 #[pymethods]
 impl PackedElementField {
     #[new]
-    #[pyo3(signature = (*, name="".to_string(), offset=0, r#type=PackedElementFieldNumericType::Unknown) )]
-    fn new(name: String, offset: u32, r#type: PackedElementFieldNumericType) -> Self {
+    #[pyo3(signature = (*, name="", offset=0, r#type=PackedElementFieldNumericType::Unknown) )]
+    fn new(name: &str, offset: u32, r#type: PackedElementFieldNumericType) -> Self {
         Self(foxglove::schemas::PackedElementField {
-            name,
+            name: name.to_string(),
             offset,
             r#type: r#type as i32,
         })
@@ -1965,21 +2092,25 @@ pub(crate) struct PointCloud(pub(crate) foxglove::schemas::PointCloud);
 #[pymethods]
 impl PointCloud {
     #[new]
-    #[pyo3(signature = (*, timestamp=None, frame_id="".to_string(), pose=None, point_stride=0, fields=vec![], data=None) )]
+    #[pyo3(signature = (*, timestamp=None, frame_id="", pose=None, point_stride=0, fields=None, data=None) )]
     fn new(
         timestamp: Option<Timestamp>,
-        frame_id: String,
+        frame_id: &str,
         pose: Option<Pose>,
         point_stride: u32,
-        fields: Vec<PackedElementField>,
+        fields: Option<Vec<PackedElementField>>,
         data: Option<Bound<'_, PyBytes>>,
     ) -> Self {
         Self(foxglove::schemas::PointCloud {
             timestamp: timestamp.map(Into::into),
-            frame_id,
+            frame_id: frame_id.to_string(),
             pose: pose.map(Into::into),
             point_stride,
-            fields: fields.into_iter().map(|x| x.into()).collect(),
+            fields: fields
+                .unwrap_or_default()
+                .into_iter()
+                .map(|x| x.into())
+                .collect(),
             data: data
                 .map(|x| Bytes::copy_from_slice(x.as_bytes()))
                 .unwrap_or_default(),
@@ -2041,22 +2172,30 @@ pub(crate) struct PointsAnnotation(pub(crate) foxglove::schemas::PointsAnnotatio
 #[pymethods]
 impl PointsAnnotation {
     #[new]
-    #[pyo3(signature = (*, timestamp=None, r#type=PointsAnnotationType::Unknown, points=vec![], outline_color=None, outline_colors=vec![], fill_color=None, thickness=0.0) )]
+    #[pyo3(signature = (*, timestamp=None, r#type=PointsAnnotationType::Unknown, points=None, outline_color=None, outline_colors=None, fill_color=None, thickness=0.0) )]
     fn new(
         timestamp: Option<Timestamp>,
         r#type: PointsAnnotationType,
-        points: Vec<Point2>,
+        points: Option<Vec<Point2>>,
         outline_color: Option<Color>,
-        outline_colors: Vec<Color>,
+        outline_colors: Option<Vec<Color>>,
         fill_color: Option<Color>,
         thickness: f64,
     ) -> Self {
         Self(foxglove::schemas::PointsAnnotation {
             timestamp: timestamp.map(Into::into),
             r#type: r#type as i32,
-            points: points.into_iter().map(|x| x.into()).collect(),
+            points: points
+                .unwrap_or_default()
+                .into_iter()
+                .map(|x| x.into())
+                .collect(),
             outline_color: outline_color.map(Into::into),
-            outline_colors: outline_colors.into_iter().map(|x| x.into()).collect(),
+            outline_colors: outline_colors
+                .unwrap_or_default()
+                .into_iter()
+                .map(|x| x.into())
+                .collect(),
             fill_color: fill_color.map(Into::into),
             thickness,
         })
@@ -2167,11 +2306,11 @@ pub(crate) struct PoseInFrame(pub(crate) foxglove::schemas::PoseInFrame);
 #[pymethods]
 impl PoseInFrame {
     #[new]
-    #[pyo3(signature = (*, timestamp=None, frame_id="".to_string(), pose=None) )]
-    fn new(timestamp: Option<Timestamp>, frame_id: String, pose: Option<Pose>) -> Self {
+    #[pyo3(signature = (*, timestamp=None, frame_id="", pose=None) )]
+    fn new(timestamp: Option<Timestamp>, frame_id: &str, pose: Option<Pose>) -> Self {
         Self(foxglove::schemas::PoseInFrame {
             timestamp: timestamp.map(Into::into),
-            frame_id,
+            frame_id: frame_id.to_string(),
             pose: pose.map(Into::into),
         })
     }
@@ -2221,12 +2360,16 @@ pub(crate) struct PosesInFrame(pub(crate) foxglove::schemas::PosesInFrame);
 #[pymethods]
 impl PosesInFrame {
     #[new]
-    #[pyo3(signature = (*, timestamp=None, frame_id="".to_string(), poses=vec![]) )]
-    fn new(timestamp: Option<Timestamp>, frame_id: String, poses: Vec<Pose>) -> Self {
+    #[pyo3(signature = (*, timestamp=None, frame_id="", poses=None) )]
+    fn new(timestamp: Option<Timestamp>, frame_id: &str, poses: Option<Vec<Pose>>) -> Self {
         Self(foxglove::schemas::PosesInFrame {
             timestamp: timestamp.map(Into::into),
-            frame_id,
-            poses: poses.into_iter().map(|x| x.into()).collect(),
+            frame_id: frame_id.to_string(),
+            poses: poses
+                .unwrap_or_default()
+                .into_iter()
+                .map(|x| x.into())
+                .collect(),
         })
     }
     fn __repr__(&self) -> String {
@@ -2330,11 +2473,11 @@ pub(crate) struct RawAudio(pub(crate) foxglove::schemas::RawAudio);
 #[pymethods]
 impl RawAudio {
     #[new]
-    #[pyo3(signature = (*, timestamp=None, data=None, format="".to_string(), sample_rate=0, number_of_channels=0) )]
+    #[pyo3(signature = (*, timestamp=None, data=None, format="", sample_rate=0, number_of_channels=0) )]
     fn new(
         timestamp: Option<Timestamp>,
         data: Option<Bound<'_, PyBytes>>,
-        format: String,
+        format: &str,
         sample_rate: u32,
         number_of_channels: u32,
     ) -> Self {
@@ -2343,7 +2486,7 @@ impl RawAudio {
             data: data
                 .map(|x| Bytes::copy_from_slice(x.as_bytes()))
                 .unwrap_or_default(),
-            format,
+            format: format.to_string(),
             sample_rate,
             number_of_channels,
         })
@@ -2430,7 +2573,7 @@ impl From<RawAudio> for foxglove::schemas::RawAudio {
 ///     - `32FC1`:
 ///       - Pixel brightness is represented as a single-channel, 32-bit little-endian IEEE 754 floating-point value, ranging from 0.0 (black) to 1.0 (white).
 ///       - `step` must be greater than or equal to `width` * 4.
-///     - `bayer_rggb8`, `bayer_bggr8`, `bayer_rggb8`, `bayer_gbrg8`, or `bayer_grgb8`:
+///     - `bayer_rggb8`, `bayer_bggr8`, `bayer_gbrg8`, or `bayer_grbg8`:
 ///       - Pixel colors are decomposed into Red, Blue and Green channels.
 ///       - Pixel channel values are represented as unsigned 8-bit integers, and serialized in a 2x2 bayer filter pattern.
 ///       - The order of the four letters after `bayer_` determine the layout, so for `bayer_wxyz8` the pattern is:
@@ -2455,22 +2598,22 @@ pub(crate) struct RawImage(pub(crate) foxglove::schemas::RawImage);
 #[pymethods]
 impl RawImage {
     #[new]
-    #[pyo3(signature = (*, timestamp=None, frame_id="".to_string(), width=0, height=0, encoding="".to_string(), step=0, data=None) )]
+    #[pyo3(signature = (*, timestamp=None, frame_id="", width=0, height=0, encoding="", step=0, data=None) )]
     fn new(
         timestamp: Option<Timestamp>,
-        frame_id: String,
+        frame_id: &str,
         width: u32,
         height: u32,
-        encoding: String,
+        encoding: &str,
         step: u32,
         data: Option<Bound<'_, PyBytes>>,
     ) -> Self {
         Self(foxglove::schemas::RawImage {
             timestamp: timestamp.map(Into::into),
-            frame_id,
+            frame_id: frame_id.to_string(),
             width,
             height,
-            encoding,
+            encoding: encoding.to_string(),
             step,
             data: data
                 .map(|x| Bytes::copy_from_slice(x.as_bytes()))
@@ -2589,11 +2732,11 @@ pub(crate) struct TextAnnotation(pub(crate) foxglove::schemas::TextAnnotation);
 #[pymethods]
 impl TextAnnotation {
     #[new]
-    #[pyo3(signature = (*, timestamp=None, position=None, text="".to_string(), font_size=0.0, text_color=None, background_color=None) )]
+    #[pyo3(signature = (*, timestamp=None, position=None, text="", font_size=0.0, text_color=None, background_color=None) )]
     fn new(
         timestamp: Option<Timestamp>,
         position: Option<Point2>,
-        text: String,
+        text: &str,
         font_size: f64,
         text_color: Option<Color>,
         background_color: Option<Color>,
@@ -2601,7 +2744,7 @@ impl TextAnnotation {
         Self(foxglove::schemas::TextAnnotation {
             timestamp: timestamp.map(Into::into),
             position: position.map(Into::into),
-            text,
+            text: text.to_string(),
             font_size,
             text_color: text_color.map(Into::into),
             background_color: background_color.map(Into::into),
@@ -2663,14 +2806,14 @@ pub(crate) struct TextPrimitive(pub(crate) foxglove::schemas::TextPrimitive);
 #[pymethods]
 impl TextPrimitive {
     #[new]
-    #[pyo3(signature = (*, pose=None, billboard=false, font_size=0.0, scale_invariant=false, color=None, text="".to_string()) )]
+    #[pyo3(signature = (*, pose=None, billboard=false, font_size=0.0, scale_invariant=false, color=None, text="") )]
     fn new(
         pose: Option<Pose>,
         billboard: bool,
         font_size: f64,
         scale_invariant: bool,
         color: Option<Color>,
-        text: String,
+        text: &str,
     ) -> Self {
         Self(foxglove::schemas::TextPrimitive {
             pose: pose.map(Into::into),
@@ -2678,7 +2821,7 @@ impl TextPrimitive {
             font_size,
             scale_invariant,
             color: color.map(Into::into),
-            text,
+            text: text.to_string(),
         })
     }
     fn __repr__(&self) -> String {
@@ -2725,8 +2868,8 @@ impl From<TextPrimitive> for foxglove::schemas::TextPrimitive {
 ///
 /// :param pose: Origin of triangles relative to reference frame
 /// :param points: Vertices to use for triangles, interpreted as a list of triples (0-1-2, 3-4-5, ...)
-/// :param color: Solid color to use for the whole shape. One of `color` or `colors` must be provided.
-/// :param colors: Per-vertex colors (if specified, must have the same length as `points`). One of `color` or `colors` must be provided.
+/// :param color: Solid color to use for the whole shape. Ignored if `colors` is non-empty.
+/// :param colors: Per-vertex colors (if specified, must have the same length as `points`).
 /// :param indices: Indices into the `points` and `colors` attribute arrays, which can be used to avoid duplicating attribute data.
 ///     
 ///     If omitted or empty, indexing will not be used. This default behavior is equivalent to specifying [0, 1, ..., N-1] for the indices (where N is the number of `points` provided).
@@ -2738,20 +2881,28 @@ pub(crate) struct TriangleListPrimitive(pub(crate) foxglove::schemas::TriangleLi
 #[pymethods]
 impl TriangleListPrimitive {
     #[new]
-    #[pyo3(signature = (*, pose=None, points=vec![], color=None, colors=vec![], indices=vec![]) )]
+    #[pyo3(signature = (*, pose=None, points=None, color=None, colors=None, indices=None) )]
     fn new(
         pose: Option<Pose>,
-        points: Vec<Point3>,
+        points: Option<Vec<Point3>>,
         color: Option<Color>,
-        colors: Vec<Color>,
-        indices: Vec<u32>,
+        colors: Option<Vec<Color>>,
+        indices: Option<Vec<u32>>,
     ) -> Self {
         Self(foxglove::schemas::TriangleListPrimitive {
             pose: pose.map(Into::into),
-            points: points.into_iter().map(|x| x.into()).collect(),
+            points: points
+                .unwrap_or_default()
+                .into_iter()
+                .map(|x| x.into())
+                .collect(),
             color: color.map(Into::into),
-            colors: colors.into_iter().map(|x| x.into()).collect(),
-            indices,
+            colors: colors
+                .unwrap_or_default()
+                .into_iter()
+                .map(|x| x.into())
+                .collect(),
+            indices: indices.unwrap_or_default(),
         })
     }
     fn __repr__(&self) -> String {

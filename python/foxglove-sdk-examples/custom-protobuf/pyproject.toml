@@ -3,16 +3,20 @@ name = "custom-protobuf"
 version = "0.0.0"
 description = "Example of logging custom protobuf messages in Foxglove"
 authors = [{ name = "Foxglove", email = "support@foxglove.dev" }]
-readme = "README.md"
 requires-python = ">=3.9"
-dependencies = ["foxglove-sdk>=0.4.0", "numpy>=2.0", "protobuf (>=6.30.2,<7.0.0)"]
+readme = "README.md"
+dependencies = [
+    "foxglove-sdk>=0.4.0",
+    "numpy>=2.0",
+    "protobuf (>=6.30.2,<7.0.0)",
+]
 
-[build-system]
-requires = ["poetry-core>=2.0.0,<3.0.0"]
-build-backend = "poetry.core.masonry.api"
+[dependency-groups]
+dev = [
+  "black>=25.1.0,<26",
+  "isort>=6.0.0,<7",
+  "mypy>=1,<2",
+]
 
-[tool.poetry]
-package-mode = false
-
-[tool.poetry.group.dev.dependencies]
-mypy = "^1"
+[tool.uv]
+package = false

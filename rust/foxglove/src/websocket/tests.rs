@@ -1,6 +1,7 @@
 use assert_matches::assert_matches;
 use bytes::{BufMut, Bytes, BytesMut};
 use futures_util::FutureExt;
+use maplit::hashmap;
 #[cfg(feature = "tls")]
 use rcgen::{CertificateParams, Issuer, KeyPair};
 use std::borrow::Cow;
@@ -35,7 +36,10 @@ use crate::websocket::{
     BlockingAssetHandlerFn, Capability, ClientChannelId, ConnectionGraph, Parameter, Server,
 };
 use crate::websocket_client::WebSocketClient;
-use crate::{ChannelBuilder, Context, FoxgloveError, PartialMetadata, RawChannel, Schema};
+use crate::{
+    ChannelBuilder, ChannelDescriptor, Context, FoxgloveError, PartialMetadata, RawChannel, Schema,
+    SinkChannelFilter, WebSocketClientError,
+};
 
 macro_rules! expect_recv {
     ($client:expr, $variant:path) => {{
@@ -1585,4 +1589,108 @@ async fn test_broadcast_time() {
     server.broadcast_time(42);
     let msg = expect_recv!(client, ServerMessage::Time);
     assert_eq!(msg.timestamp, 42);
+}
+
+#[tokio::test]
+async fn test_channel_filter() {
+    struct Filter;
+    impl SinkChannelFilter for Filter {
+        fn should_subscribe(&self, channel: &ChannelDescriptor) -> bool {
+            channel.topic() == "/1"
+        }
+    }
+
+    let ctx = Context::new();
+    let server = create_server(
+        &ctx,
+        ServerOptions {
+            channel_filter: Some(Arc::new(Filter)),
+            ..Default::default()
+        },
+    );
+    let addr = server
+        .start("127.0.0.1", 0)
+        .await
+        .expect("Failed to start server");
+
+    let mut client = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("failed to connect");
+    expect_recv!(client, ServerMessage::ServerInfo);
+
+    let ch1 = new_channel("/1", &ctx);
+    let ch2 = new_channel("/2", &ctx);
+
+    let msg = expect_recv!(client, ServerMessage::Advertise);
+    let len = msg.channels.len();
+    assert_eq!(len, 1);
+
+    client
+        .send(&Subscribe::new([Subscription {
+            id: 1,
+            channel_id: ch1.id().into(),
+        }]))
+        .await
+        .expect("Failed to subscribe");
+
+    // Allow the server to process the subscriptions
+    assert_eventually(|| dbg!(ch1.num_sinks()) == 1).await;
+
+    // Channel 2 is filtered, unadvertised, and can't be subscribed to.
+    client
+        .send(&Subscribe::new([Subscription {
+            id: 2,
+            channel_id: ch2.id().into(),
+        }]))
+        .await
+        .expect("Failed to subscribe");
+    assert_eq!(
+        expect_recv!(client, ServerMessage::Status),
+        Status::error(format!("Unknown channel ID: {}", ch2.id()))
+    );
+
+    // Client receives message from channel 1, but not 2.
+    ch1.log(b"{}");
+    expect_recv!(client, ServerMessage::MessageData);
+
+    ch2.log(b"{}");
+    let result = client.recv().await;
+    assert!(matches!(result, Err(WebSocketClientError::Timeout(_))));
+}
+
+#[tokio::test]
+async fn test_server_info_metadata_sent_to_client() {
+    let ctx = Context::new();
+
+    let server = create_server(
+        &ctx,
+        ServerOptions {
+            server_info: Some(hashmap! {
+                "key1".into() => "val1".into(),
+                "key2".into() => "val2".into(),
+            }),
+            ..Default::default()
+        },
+    );
+    let addr = server
+        .start("127.0.0.1", 0)
+        .await
+        .expect("Failed to start server");
+
+    let mut client = WebSocketClient::connect(format!("{addr}"))
+        .await
+        .expect("Failed to connect");
+
+    let msg = expect_recv!(client, ServerMessage::ServerInfo);
+
+    assert_eq!(
+        msg.metadata,
+        hashmap! {
+            "fg-library".into() => get_library_version(),
+            "key1".into() => "val1".into(),
+            "key2".into() => "val2".into(),
+        }
+    );
+
+    let _ = server.stop();
 }

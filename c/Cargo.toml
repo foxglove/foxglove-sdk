@@ -23,6 +23,7 @@ foxglove = { path = "../rust/foxglove", default-features = false, features = [
   "lz4",
   "tls",
   "zstd",
+  "agent",
 ] }
 base64 = "0.22.1"
 bitflags = "2.9.0"

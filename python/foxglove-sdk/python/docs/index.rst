@@ -19,8 +19,8 @@ Getting started
 Install the ``foxglove-sdk`` package from `PyPI <https://pypi.org/project/foxglove-sdk/>`_.
 
 This will depend on your package manager. Our `examples
-<https://github.com/foxglove/foxglove-sdk/tree/main/python/foxglove-sdk-examples>`_ use `poetry
-<https://python-poetry.org/>`_.
+<https://github.com/foxglove/foxglove-sdk/tree/main/python/foxglove-sdk-examples>`_ use `uv
+<https://docs.astral.sh/uv/>`_.
 
 To record messages, you need to initialize either an MCAP file writer or a WebSocket server for
 live visualization.

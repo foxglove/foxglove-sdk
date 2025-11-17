@@ -24,6 +24,7 @@ jobs:
         with:
           # The last-specified toolchain is the default.
           toolchain: 1.83.0,nightly,stable
+          components: rustfmt, clippy
 
       - name: Ensure generated protobuf schemas are up to date
         run: cargo run --bin foxglove_proto_gen && git diff --exit-code
@@ -119,7 +120,7 @@ jobs:
 
       - run: corepack enable
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: yarn
@@ -150,12 +151,11 @@ jobs:
       - run: yarn test
 
       # Install python dependencies required to prettify generated SDK files
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.9"
-      - run: pipx install poetry
-      - run: poetry check --strict
-      - run: poetry install
+
+      - uses: astral-sh/setup-uv@v7
 
       - name: Ensure generated files are up to date
         run: |
@@ -163,7 +163,7 @@ jobs:
           git add --all
           changes=$(git status --porcelain)
           if [ -n "$changes" ]; then
-            echo "::error::The following generated files need to be updated. Run 'yarn generate' to update them."
+            echo "::error::The following generated files need to be updated. Run 'make generate' to update them."
             echo "$changes"
             echo ""
             git diff --cached

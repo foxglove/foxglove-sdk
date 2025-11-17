@@ -13,9 +13,9 @@ RUN bash nodesource_setup.sh
 
 RUN apt-get update \
     && apt-get install -y \
-        clang-19=1:19.1.4-1~deb12u1 \
-        clang-format-19=1:19.1.4-1~deb12u1 \
-        clang-tidy-19=1:19.1.4-1~deb12u1 \
+        clang-19=1:19.1.7-3~deb12u1 \
+        clang-format-19=1:19.1.7-3~deb12u1 \
+        clang-tidy-19=1:19.1.7-3~deb12u1 \
         cmake=3.25.1-1 \
         doxygen=1.9.4-4 \
         nodejs=23.11.1-1nodesource1 \
@@ -25,10 +25,7 @@ RUN apt-get update \
 
 RUN corepack enable yarn
 
-ENV PATH=/usr/lib/llvm-19/bin:$PATH \
-    POETRY_NO_INTERACTION=1 \
-    POETRY_CACHE_DIR='/var/cache/pypoetry' \
-    POETRY_HOME='/usr/local' \
+ENV PATH=/usr/lib/llvm-19/bin:/root/.local/bin:$PATH \
     COREPACK_ENABLE_DOWNLOAD_PROMPT=0
 
-RUN curl -sSL https://install.python-poetry.org | python3 -
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh

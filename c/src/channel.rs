@@ -1,8 +1,9 @@
-use std::{fs::File, io::BufWriter, mem::ManuallyDrop, sync::Arc};
+use std::{ffi::c_void, fs::File, io::BufWriter, mem::ManuallyDrop, sync::Arc};
 
 use crate::{
-    result_to_c, FoxgloveChannelMetadata, FoxgloveError, FoxgloveKeyValue, FoxgloveSchema,
-    FoxgloveSinkId, FoxgloveString,
+    channel_descriptor::FoxgloveChannelDescriptor, result_to_c, sink_channel_filter::ChannelFilter,
+    FoxgloveChannelMetadata, FoxgloveError, FoxgloveKeyValue, FoxgloveSchema, FoxgloveSinkId,
+    FoxgloveString,
 };
 use mcap::{Compression, WriteOptions};
 use std::io::{Seek, SeekFrom, Write};
@@ -144,6 +145,24 @@ pub struct FoxgloveMcapOptions {
     pub emit_metadata_indexes: bool,
     pub repeat_channels: bool,
     pub repeat_schemas: bool,
+    /// Context provided to the `sink_channel_filter` callback.
+    pub sink_channel_filter_context: *const c_void,
+    /// A filter for channels that can be used to subscribe to or unsubscribe from channels.
+    ///
+    /// This can be used to omit one or more channels from a sink, but still log all channels to another
+    /// sink in the same context. Return false to disable logging of this channel.
+    ///
+    /// This method is invoked from the client's main poll loop and must not block.
+    ///
+    /// # Safety
+    /// - If provided, the handler callback must be a pointer to the filter callback function,
+    ///   and must remain valid until the MCAP sink is dropped.
+    pub sink_channel_filter: Option<
+        unsafe extern "C" fn(
+            context: *const c_void,
+            channel: *const FoxgloveChannelDescriptor,
+        ) -> bool,
+    >,
 }
 
 impl FoxgloveMcapOptions {
@@ -195,6 +214,19 @@ impl FoxgloveMcapWriter {
     }
 }
 
+impl McapWriterVariant {
+    fn write_metadata(
+        &self,
+        name: &str,
+        metadata: std::collections::BTreeMap<String, String>,
+    ) -> Result<(), foxglove::FoxgloveError> {
+        match self {
+            McapWriterVariant::File(writer) => writer.write_metadata(name, metadata),
+            McapWriterVariant::Custom(writer) => writer.write_metadata(name, metadata),
+        }
+    }
+}
+
 /// Create or open an MCAP writer for writing to a file or custom destination.
 /// Resources must later be freed with `foxglove_mcap_close`.
 ///
@@ -237,7 +269,7 @@ unsafe fn do_foxglove_mcap_open(
     let writer_variant = if !options.custom_writer.is_null() {
         // Use custom writer
         let custom_writer_callbacks = unsafe { *options.custom_writer };
-        if (custom_writer_callbacks.seek_fn.is_none() && !options.disable_seeking) {
+        if custom_writer_callbacks.seek_fn.is_none() && !options.disable_seeking {
             return Err(foxglove::FoxgloveError::ValueError(
                 "seek_fn is null but disable_seeking is false".to_string(),
             ));
@@ -274,8 +306,15 @@ unsafe fn do_foxglove_mcap_open(
             .write(true)
             .open(path)
             .map_err(foxglove::FoxgloveError::IoError)?;
-
-        let writer = builder.create(BufWriter::new(file))?;
+        if let Some(sink_channel_filter) = options.sink_channel_filter {
+            builder = builder.channel_filter(Arc::new(ChannelFilter::new(
+                options.sink_channel_filter_context,
+                sink_channel_filter,
+            )));
+        }
+        let writer = builder
+            .create(BufWriter::new(file))
+            .expect("Failed to create writer");
 
         McapWriterVariant::File(writer)
     };
@@ -316,6 +355,64 @@ pub unsafe extern "C" fn foxglove_mcap_close(
 
     // We don't care about the return value
     unsafe { result_to_c(result, std::ptr::null_mut()) }
+}
+
+/// Write metadata to an MCAP file.
+///
+/// Metadata consists of key-value string pairs associated with a name.
+/// If the metadata has no key-value pairs, this method does nothing.
+///
+/// Returns 0 on success, or returns a FoxgloveError code on error.
+///
+/// # Safety
+/// `writer` must be a valid pointer to a `FoxgloveMcapWriter` created via `foxglove_mcap_open`.
+/// `name` must be a valid UTF-8 string.
+/// `metadata` must be a valid pointer to an array of `foxglove_key_value` with length `metadata_len`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_mcap_write_metadata(
+    writer: Option<&mut FoxgloveMcapWriter>,
+    name: &FoxgloveString,
+    metadata: *const FoxgloveKeyValue,
+    metadata_len: usize,
+) -> FoxgloveError {
+    let Some(writer) = writer else {
+        tracing::error!("foxglove_mcap_write_metadata called with null writer");
+        return FoxgloveError::ValueError;
+    };
+
+    match unsafe { do_foxglove_mcap_write_metadata(writer, name, metadata, metadata_len) } {
+        Ok(()) => FoxgloveError::Ok,
+        Err(e) => e.into(),
+    }
+}
+
+unsafe fn do_foxglove_mcap_write_metadata(
+    writer: &mut FoxgloveMcapWriter,
+    name: &FoxgloveString,
+    metadata: *const FoxgloveKeyValue,
+    metadata_len: usize,
+) -> Result<(), foxglove::FoxgloveError> {
+    let name = unsafe { name.as_utf8_str() }.map_err(|e| {
+        foxglove::FoxgloveError::Utf8Error(format!("metadata name is invalid: {e}"))
+    })?;
+
+    let Some(writer_handle) = writer.0.as_ref() else {
+        return Err(foxglove::FoxgloveError::SinkClosed);
+    };
+
+    if !metadata.is_null() {
+        // Convert C key-value array to BTreeMap
+        let mut metadata_map = std::collections::BTreeMap::new();
+        for i in 0..metadata_len {
+            let kv = unsafe { &*metadata.add(i) };
+            let key = unsafe { kv.key.as_utf8_str() }?;
+            let value = unsafe { kv.value.as_utf8_str() }?;
+            metadata_map.insert(key.to_string(), value.to_string());
+        }
+        writer_handle.write_metadata(name, metadata_map)?;
+    }
+
+    Ok(())
 }
 
 pub struct FoxgloveChannel(foxglove::RawChannel);
