@@ -28,6 +28,10 @@ mod logging;
 #[cfg(not(target_family = "wasm"))]
 mod parameter;
 #[cfg(not(target_family = "wasm"))]
+mod playback_control_request;
+#[cfg(not(target_family = "wasm"))]
+mod playback_state;
+#[cfg(not(target_family = "wasm"))]
 mod server;
 #[cfg(not(target_family = "wasm"))]
 mod service;
@@ -76,7 +80,6 @@ pub struct FoxgloveString {
 
 #[cfg(not(target_family = "wasm"))]
 pub(crate) type FoxgloveSinkId = u64;
-
 impl Default for FoxgloveString {
     fn default() -> Self {
         Self {
@@ -381,65 +384,5 @@ pub struct FoxgloveDuration {
 impl From<FoxgloveDuration> for foxglove::schemas::Duration {
     fn from(other: FoxgloveDuration) -> Self {
         Self::new(other.sec, other.nsec)
-    }
-}
-
-#[repr(C)]
-pub struct FoxglovePlaybackControlRequest<'a> {
-    /// Playback command
-    pub playback_command: u8,
-    /// Playback speed
-    pub playback_speed: f32,
-    /// Seek playback time in nanoseconds (only set if a seek has been performed)
-    pub seek_time: Option<&'a u64>,
-    /// Unique string identifier, used to indicate that a PlaybackState is in response to a particular request from the client.
-    /// Should not be an empty string.
-    pub request_id: FoxgloveString,
-}
-
-#[repr(C)]
-pub struct FoxglovePlaybackState<'a> {
-    /// The status of server data playback
-    pub status: u8,
-    /// The current time of playback, in absolute nanoseconds
-    pub current_time: u64,
-    /// The speed of playback, as a factor of realtime
-    pub playback_speed: f32,
-    /// If this message is being emitted in response to a PlaybackControlRequest message, the
-    /// request_id from that message. Set this to an empty string if the state of playback has been changed
-    /// by any other condition.
-    pub request_id: Option<&'a FoxgloveString>,
-}
-
-impl FoxglovePlaybackState<'_> {
-    // LEFT OFF HERE!! Doing the conversion from a raw pointer to a FoxglovePlaybackState
-    fn from_raw(_raw: *const FoxglovePlaybackState) -> Result<Self, FoxgloveError> {
-        todo!();
-    }
-
-    fn into_native(self) -> Result<foxglove::websocket::PlaybackState, foxglove::FoxgloveError> {
-        let status = foxglove::websocket::PlaybackStatus::try_from(self.status).map_err(|e| {
-            foxglove::FoxgloveError::ValueError(format!("invalid playback status {e}"))
-        })?;
-
-        // If the request ID is None, leave it alone. Otherwise, convert it to a String, bubbling
-        // up a Utf8Error if it couldn't be decoded
-        let request_id = match self.request_id {
-            Some(c_request_id) => Some(
-                unsafe { c_request_id.as_utf8_str() }
-                    .map_err(|e| {
-                        foxglove::FoxgloveError::Utf8Error(format!("Request id invalid {e}"))
-                    })?
-                    .to_string(),
-            ),
-            None => None,
-        };
-
-        Ok(foxglove::websocket::PlaybackState {
-            status,
-            playback_speed: self.playback_speed,
-            current_time: self.current_time,
-            request_id,
-        })
     }
 }

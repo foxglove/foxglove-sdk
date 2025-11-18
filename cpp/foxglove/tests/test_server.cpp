@@ -14,6 +14,8 @@
 
 #include <type_traits>
 
+#include "foxglove/playback_state.hpp"
+
 using Catch::Matchers::ContainsSubstring;
 using Catch::Matchers::Equals;
 
@@ -1501,48 +1503,62 @@ TEST_CASE("Server info") {
 std::vector<std::byte> playbackControlRequestToBinary(
   const foxglove::PlaybackControlRequest& playback_control_request
 ) {
-  constexpr size_t MESSAGE_SIZE = 15;
+  size_t message_size = 1 + 4 + 1 + 8 + 4 + playback_control_request.request_id.size();
   std::vector<std::byte> msg;
-  msg.reserve(MESSAGE_SIZE);
+  msg.reserve(message_size);
 
-  msg.push_back(std::byte{0x03});
-  msg.emplace_back(std::byte{static_cast<std::underlying_type_t<foxglove::PlaybackState>>(
-    playback_control_request.playback_state
+  msg.emplace_back(std::byte{0x03});
+  msg.emplace_back(std::byte{static_cast<std::underlying_type_t<foxglove::PlaybackCommand>>(
+    playback_control_request.playback_command
   )});
 
   writeFloatLE(msg, playback_control_request.playback_speed);
-
   msg.emplace_back(
     playback_control_request.seek_time.has_value() ? std::byte{0x1} : std::byte{0x0}
   );
   writeIntLE(
     msg, playback_control_request.seek_time.has_value() ? *playback_control_request.seek_time : 0x0
   );
+  writeIntLE<uint32_t>(msg, playback_control_request.request_id.size());
+  for (char c : playback_control_request.request_id) {
+    msg.emplace_back(std::byte{static_cast<std::byte>(c)});
+  }
 
   return msg;
 }
 
-TEST_CASE("Player state callback") {
+TEST_CASE("Playback control request callback") {
   auto context = foxglove::Context::create();
 
   std::optional<foxglove::PlaybackControlRequest> received_playback_control_request = std::nullopt;
   std::mutex mutex;
   std::condition_variable cv;
 
-  foxglove::WebSocketServerCallbacks callbacks;
-  callbacks.onPlaybackControlRequest =
-    [&]([[maybe_unused]] const foxglove::PlaybackControlRequest& playback_control_request) {
-      {
-        std::unique_lock lock(mutex);
-        received_playback_control_request =
-          std::make_optional<foxglove::PlaybackControlRequest>(playback_control_request);
-      }
-      cv.notify_one();
-    };
+  foxglove::WebSocketServerOptions ws_options;
+  ws_options.context = context;
+  ws_options.capabilities = foxglove::WebSocketServerCapabilities::RangedPlayback;
+  ws_options.playback_time_range = std::make_pair(0, 1000);
+  ws_options.callbacks.onPlaybackControlRequest =
+    [&]([[maybe_unused]] const foxglove::PlaybackControlRequest& playback_control_request
+    ) -> foxglove::PlaybackState {
+    {
+      std::unique_lock lock(mutex);
+      received_playback_control_request =
+        std::make_optional<foxglove::PlaybackControlRequest>(playback_control_request);
+    }
+    cv.notify_one();
 
-  auto server = startServer(
-    context, foxglove::WebSocketServerCapabilities::RangedPlayback, std::move(callbacks)
-  );
+    // For the purposes of testing, the only field that matters here is the request_id. All other
+    // fields are set to dummy values since we're not playing back any actual data.
+    return foxglove::PlaybackState{
+      foxglove::PlaybackStatus::Paused,
+      0,
+      1.0,
+      std::make_optional<std::string>(playback_control_request.request_id)
+    };
+  };
+
+  auto server = startServer(std::move(ws_options));
 
   WebSocketClient client;
   client.start(server.port());
@@ -1554,9 +1570,10 @@ TEST_CASE("Player state callback") {
   REQUIRE(parsed["op"] == "serverInfo");
 
   foxglove::PlaybackControlRequest playback_control_request{
-    foxglove::PlaybackState::Paused,
+    foxglove::PlaybackCommand::Pause,
     1.0,
     42,
+    "a_request_id",
   };
   std::vector<std::byte> msg = playbackControlRequestToBinary(playback_control_request);
   client.send(msg);
@@ -1566,12 +1583,54 @@ TEST_CASE("Player state callback") {
     auto wait_result = cv.wait_for(lock, std::chrono::seconds(1));
     REQUIRE(wait_result != std::cv_status::timeout);
     REQUIRE(received_playback_control_request.has_value());
-    REQUIRE(received_playback_control_request->playback_state == foxglove::PlaybackState::Paused);
+    REQUIRE(
+      received_playback_control_request->playback_command == foxglove::PlaybackCommand::Pause
+    );
     REQUIRE(received_playback_control_request->playback_speed == 1.0);
     REQUIRE(received_playback_control_request->seek_time.has_value());
     REQUIRE(received_playback_control_request->seek_time.value() == 42);
+    REQUIRE(received_playback_control_request->request_id == "a_request_id");
   }
 
+  auto received_binary_playback_state = client.filterRecv([](const std::string& payload) {
+    return payload[0] == '\x05';  // PlaybackState binary opcode
+  });
+
+  REQUIRE(received_binary_playback_state.has_value());
+  REQUIRE(server.stop() == foxglove::FoxgloveError::Ok);
+}
+
+TEST_CASE("Broadcast playback state") {
+  auto context = foxglove::Context::create();
+  foxglove::WebSocketServerOptions ws_options;
+  ws_options.context = context;
+  ws_options.capabilities = foxglove::WebSocketServerCapabilities::RangedPlayback;
+  ws_options.playback_time_range = std::make_pair(0, 1000);
+  auto server = startServer(std::move(ws_options));
+
+  WebSocketClient client;
+  client.start(server.port());
+  client.waitForConnection();
+
+  auto payload = client.recv();
+  auto parsed = Json::parse(payload);
+  REQUIRE(parsed.contains("op"));
+  REQUIRE(parsed["op"] == "serverInfo");
+
+  foxglove::PlaybackState playback_state{
+    foxglove::PlaybackStatus::Paused,
+    0,
+    1.0,
+    std::make_optional<std::string>("some random stuff"),
+  };
+
+  server.broadcastPlaybackState(playback_state);
+
+  auto received_binary_playback_state = client.filterRecv([](const std::string& payload) {
+    return payload[0] == '\x05';  // PlaybackState binary opcode
+  });
+
+  REQUIRE(received_binary_playback_state.has_value());
   REQUIRE(server.stop() == foxglove::FoxgloveError::Ok);
 }
 
@@ -1599,13 +1658,18 @@ TEST_CASE("RangedPlayback capability") {
   // specified
   REQUIRE(parsed.contains("capabilities"));
   const auto& capabilities = parsed["capabilities"];
-  // TODO: Left off here: Why is the capability being added twice??
   REQUIRE(std::count_if(capabilities.begin(), capabilities.end(), [](const auto& capability) {
             return capability == "rangedPlayback";
           }) == 1);
 
   REQUIRE(parsed.contains("dataStartTime"));
-  REQUIRE(parsed["dataStartTime"] == start_time);
+  REQUIRE(parsed["dataStartTime"].contains("sec"));
+  REQUIRE(parsed["dataStartTime"].contains("nsec"));
+  REQUIRE(parsed["dataStartTime"]["sec"] == 100);
+  REQUIRE(parsed["dataStartTime"]["nsec"] == 0);
   REQUIRE(parsed.contains("dataEndTime"));
-  REQUIRE(parsed["dataEndTime"] == end_time);
+  REQUIRE(parsed["dataEndTime"].contains("sec"));
+  REQUIRE(parsed["dataEndTime"].contains("nsec"));
+  REQUIRE(parsed["dataEndTime"]["sec"] == 105);
+  REQUIRE(parsed["dataEndTime"]["nsec"] == 0);
 }

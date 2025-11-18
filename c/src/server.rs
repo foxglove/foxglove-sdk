@@ -10,10 +10,12 @@ use std::mem::ManuallyDrop;
 use std::sync::Arc;
 
 use crate::parameter::FoxgloveParameterArray;
+use crate::playback_control_request::FoxglovePlaybackControlRequest;
+use crate::playback_state::FoxglovePlaybackState;
 
 use crate::{
-    result_to_c, FoxgloveContext, FoxgloveError, FoxgloveKeyValue, FoxglovePlaybackControlRequest,
-    FoxglovePlaybackState, FoxgloveSinkId, FoxgloveString,
+    result_to_c, FoxgloveContext, FoxgloveError, FoxgloveKeyValue, FoxgloveSinkId, FoxgloveString,
+    FoxgloveStringBuf,
 };
 
 // Easier to get reasonable C output from cbindgen with constants rather than directly exporting the bitflags macro
@@ -312,7 +314,8 @@ pub struct FoxgloveServerCallbacks {
         unsafe extern "C" fn(
             context: *const c_void,
             playback_control_request: *const FoxglovePlaybackControlRequest,
-        ) -> *mut FoxglovePlaybackState,
+            playback_state: *mut FoxglovePlaybackState,
+        ),
     >,
 }
 unsafe impl Send for FoxgloveServerCallbacks {}
@@ -490,6 +493,36 @@ pub extern "C" fn foxglove_server_broadcast_time(
     };
     server.broadcast_time(timestamp_nanos);
     FoxgloveError::Ok
+}
+
+/// Publishes the current playback state to all clients.
+///
+/// Requires the `FOXGLOVE_CAPABILITY_RANGED_PLAYBACK` capability.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_server_broadcast_playback_state(
+    server: Option<&FoxgloveWebSocketServer>,
+    playback_state: *const FoxglovePlaybackState,
+) -> FoxgloveError {
+    let Some(server) = server else {
+        return FoxgloveError::ValueError;
+    };
+    let Some(server) = server.as_ref() else {
+        return FoxgloveError::SinkClosed;
+    };
+
+    if playback_state.is_null() {
+        return FoxgloveError::ValueError;
+    }
+
+    let playback_state = unsafe { (*playback_state).clone() };
+
+    match playback_state.into_native() {
+        Ok(playback_state) => {
+            server.broadcast_playback_state(playback_state);
+            FoxgloveError::Ok
+        }
+        Err(e) => FoxgloveError::from(e),
+    }
 }
 
 /// Sets a new session ID and notifies all clients, causing them to reset their state.
@@ -949,9 +982,7 @@ impl foxglove::websocket::ServerListener for FoxgloveServerCallbacks {
         &self,
         playback_control_request: foxglove::websocket::PlaybackControlRequest,
     ) -> Option<foxglove::websocket::PlaybackState> {
-        let Some(on_playback_control_request) = self.on_playback_control_request else {
-            return None;
-        };
+        let on_playback_control_request = self.on_playback_control_request?;
 
         let c_playback_control_request = FoxglovePlaybackControlRequest {
             playback_command: playback_control_request.playback_command as u8,
@@ -959,17 +990,24 @@ impl foxglove::websocket::ServerListener for FoxgloveServerCallbacks {
             seek_time: playback_control_request.seek_time.as_ref(),
             request_id: (&playback_control_request.request_id).into(),
         };
-        let raw = unsafe {
-            on_playback_control_request(self.context, &raw const c_playback_control_request)
+
+        // Allocate a new PlaybackState struct for the caller to fill in
+        let c_request_id = FoxgloveStringBuf::new(playback_control_request.request_id.clone());
+        let mut c_playback_state = FoxglovePlaybackState {
+            status: 0,
+            current_time: 0,
+            playback_speed: 0.0,
+            request_id: c_request_id,
         };
 
-        // LEFT OFF HERE!! Doing the conversion from a raw pointer to a FoxglovePlaybackState
-        let Ok(c_playback_state) = FoxglovePlaybackState::from_raw(raw) else {
-            return None;
+        unsafe {
+            on_playback_control_request(
+                self.context,
+                &raw const c_playback_control_request,
+                &raw mut c_playback_state,
+            );
         };
 
-        c_playback_state
-            .into_native()
-            .map_or(None, |state| Some(state))
+        c_playback_state.into_native().ok()
     }
 }

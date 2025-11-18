@@ -2029,7 +2029,8 @@ typedef struct foxglove_parameter_array {
 } foxglove_parameter_array;
 #endif
 
-typedef struct FoxglovePlaybackState {
+#if !defined(__wasm__)
+typedef struct foxglove_playback_state {
   /**
    * The status of server data playback
    */
@@ -2047,9 +2048,11 @@ typedef struct FoxglovePlaybackState {
    * request_id from that message. Set this to an empty string if the state of playback has been changed
    * by any other condition.
    */
-  const struct foxglove_string *request_id;
-} FoxglovePlaybackState;
+  struct foxglove_string request_id;
+} foxglove_playback_state;
+#endif
 
+#if !defined(__wasm__)
 typedef struct foxglove_playback_control_request {
   /**
    * Playback command
@@ -2069,6 +2072,7 @@ typedef struct foxglove_playback_control_request {
    */
   struct foxglove_string request_id;
 } foxglove_playback_control_request;
+#endif
 
 #if !defined(__wasm__)
 typedef struct foxglove_server_callbacks {
@@ -2160,8 +2164,9 @@ typedef struct foxglove_server_callbacks {
                                     size_t param_names_len);
   void (*on_connection_graph_subscribe)(const void *context);
   void (*on_connection_graph_unsubscribe)(const void *context);
-  struct FoxglovePlaybackState *(*on_playback_control_request)(const void *context,
-                                                               const struct foxglove_playback_control_request *playback_control_request);
+  void (*on_playback_control_request)(const void *context,
+                                      const struct foxglove_playback_control_request *playback_control_request,
+                                      struct foxglove_playback_state *playback_state);
 } foxglove_server_callbacks;
 #endif
 
@@ -5133,6 +5138,23 @@ void foxglove_parameter_value_dict_free(struct foxglove_parameter_value_dict *di
 #endif
 
 #if !defined(__wasm__)
+foxglove_error foxglove_playback_state_create(struct foxglove_playback_state **playback_state);
+#endif
+
+#if !defined(__wasm__)
+void foxglove_playback_state_free(struct foxglove_playback_state *playback_state);
+#endif
+
+#if !defined(__wasm__)
+foxglove_error foxglove_playback_state_set_request_id(struct foxglove_playback_state *playback_state,
+                                                      struct foxglove_string request_id);
+#endif
+
+#if !defined(__wasm__)
+foxglove_error foxglove_playback_state_clear_request_id(struct foxglove_playback_state *playback_state);
+#endif
+
+#if !defined(__wasm__)
 /**
  * Create and start a server.
  *
@@ -5163,6 +5185,16 @@ foxglove_error foxglove_server_start(const struct foxglove_server_options *FOXGL
  */
 foxglove_error foxglove_server_broadcast_time(const struct foxglove_websocket_server *server,
                                               uint64_t timestamp_nanos);
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Publishes the current playback state to all clients.
+ *
+ * Requires the `FOXGLOVE_CAPABILITY_RANGED_PLAYBACK` capability.
+ */
+foxglove_error foxglove_server_broadcast_playback_state(const struct foxglove_websocket_server *server,
+                                                        const struct foxglove_playback_state *playback_state);
 #endif
 
 #if !defined(__wasm__)

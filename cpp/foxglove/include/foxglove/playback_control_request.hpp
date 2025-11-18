@@ -2,33 +2,32 @@
 #include <foxglove-c/foxglove-c.h>
 
 #include <optional>
+#include <string>
 
 namespace foxglove {
 
-/// @brief Playback state in the Foxglove app
-enum class PlaybackState : uint8_t {
-  /// Actively playing back
-  Playing = 0,
-  /// Playback paused
-  Paused = 1,
-  /// Player is buffering data
-  Buffering = 2,
-  /// Playback has ended
-  Ended = 3,
+/// @brief Playback command coming from the Foxglove app
+enum class PlaybackCommand : uint8_t {
+  /// Start or continue playback
+  Play = 0,
+  /// Pause playback
+  Pause = 1,
 };
 
-/// @brief A request from the Foxglove app to change how the server is playing back data.
+/// @brief A request to control playback from the Foxglove app
 ///
 /// Only relevant if the `RangedPlayback` capability is enabled.
 struct PlaybackControlRequest {
 public:
-  /// @brief The playback state.
-  PlaybackState playback_state;
+  /// @brief The playback command.
+  PlaybackCommand playback_command;
   /// @brief The playback speed.
   float playback_speed;
   /// @brief The requested seek time, in absolute nanoseconds. Will be std::nullopt if no seek
   /// requested.
   std::optional<uint64_t> seek_time;
+  /// @brief The request ID.
+  std::string request_id;
 
   /// @brief Construct a PlaybackControlRequest from the corresponding C struct
   ///
@@ -37,11 +36,14 @@ public:
     const foxglove_playback_control_request& c_playback_control_request
   ) {
     return {
-      static_cast<PlaybackState>(c_playback_control_request.playback_state),
+      static_cast<PlaybackCommand>(c_playback_control_request.playback_command),
       c_playback_control_request.playback_speed,
-      c_playback_control_request.seek_time
+      c_playback_control_request.seek_time != nullptr
         ? std::optional<uint64_t>(*c_playback_control_request.seek_time)
-        : std::nullopt
+        : std::nullopt,
+      std::string(
+        c_playback_control_request.request_id.data, c_playback_control_request.request_id.len
+      )
     };
   }
 };

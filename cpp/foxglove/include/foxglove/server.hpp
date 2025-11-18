@@ -4,6 +4,7 @@
 #include <foxglove/context.hpp>
 #include <foxglove/error.hpp>
 #include <foxglove/playback_control_request.hpp>
+#include <foxglove/playback_state.hpp>
 #include <foxglove/server/connection_graph.hpp>
 #include <foxglove/server/fetch_asset.hpp>
 #include <foxglove/server/parameter.hpp>
@@ -193,7 +194,8 @@ struct WebSocketServerCallbacks {
   /// @brief Callback invoked when the player state changes.
   ///
   /// Requires the capability WebSocketServerCapabilities::RangedPlayback
-  std::function<void(const PlaybackControlRequest& playback_control_request)>
+  std::function<std::optional<PlaybackState>(const PlaybackControlRequest& playback_control_request
+  )>
     onPlaybackControlRequest;
 };
 
@@ -271,6 +273,13 @@ public:
   ///
   /// @param timestamp_nanos An epoch offset in nanoseconds.
   void broadcastTime(uint64_t timestamp_nanos) const noexcept;
+
+  /// @brief Publishes the current playback state to all clients.
+  ///
+  /// Requires the capability WebSocketServerCapabilities::RangedPlayback.
+  ///
+  /// @param playback_state The playback state to publish.
+  void broadcastPlaybackState(const PlaybackState& playback_state) const noexcept;
 
   /// @brief Sets a new session ID and notifies all clients, causing them to
   /// reset their state.
