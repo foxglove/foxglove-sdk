@@ -341,8 +341,8 @@ const MessageSpec& MessageDefinitionCache::load_message_spec(
 
 std::pair<MessageDefinitionFormat, const std::string&> MessageDefinitionCache::get_full_text(
   const std::string& root_package_resource_name) {
-  if (full_text_cache_.find(root_package_resource_name) != full_text_cache_.end()) {
-    return {MessageDefinitionFormat::MSG, full_text_cache_[root_package_resource_name]};
+  if (auto it = full_text_cache_.find(root_package_resource_name); it != full_text_cache_.end()) {
+    return it->second;
   }
 
   std::unordered_set<DefinitionIdentifier, DefinitionIdentifierHash> seen_deps;
@@ -376,8 +376,9 @@ std::pair<MessageDefinitionFormat, const std::string&> MessageDefinitionCache::g
     result = delimiter(root_definition_identifier) + append_recursive(root_definition_identifier);
   }
 
-  auto [it, _] = full_text_cache_.emplace(root_package_resource_name, result);
-  return {format, it->second};
+  auto [it, _] =
+    full_text_cache_.emplace(root_package_resource_name, std::make_pair(format, result));
+  return it->second;
 }
 
 }  // namespace foxglove_bridge
