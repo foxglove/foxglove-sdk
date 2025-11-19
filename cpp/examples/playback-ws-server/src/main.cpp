@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <cmath>
 #include <csignal>
 #include <cstdint>
 #include <functional>
