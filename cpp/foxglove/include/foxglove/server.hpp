@@ -71,10 +71,12 @@ enum class WebSocketServerCapabilities : uint8_t {
   /// Allow clients to request assets. If you supply an asset handler to the
   /// server, this capability will be advertised automatically.
   Assets = 1 << 5,
+  /// @cond foxglove_internal
   /// Indicates that the server is sending data within a fixed time range. This requires the
   /// server to specify the `data_start_time` and `data_end_time` fields in its `ServerInfo`
   /// message.
   RangedPlayback = 1 << 6,
+  /// @endcond
 };
 
 /// @brief Level indicator for a server status message.
@@ -191,6 +193,7 @@ struct WebSocketServerCallbacks {
   /// Requires the capability WebSocketServerCapabilities::ConnectionGraph
   std::function<void()> onConnectionGraphUnsubscribe;
 
+  /// @cond foxglove_internal
   /// @brief Callback invoked when a playback control request is sent from the client.
   ///
   /// Requires the capability WebSocketServerCapabilities::RangedPlayback
@@ -204,6 +207,7 @@ struct WebSocketServerCallbacks {
   std::function<std::optional<PlaybackState>(const PlaybackControlRequest& playback_control_request
   )>
     onPlaybackControlRequest;
+  /// @endcond
 };
 
 /// @cond foxglove_internal
@@ -249,9 +253,11 @@ struct WebSocketServerOptions {
   std::optional<std::map<std::string, std::string>> server_info = std::nullopt;
   /// @endcond
 
+  /// @cond foxglove_internal
   /// @brief The time range for playback. This applies if the server is playing back a fixed time
   /// range of data.
   std::optional<std::pair<uint64_t, uint64_t>> playback_time_range = std::nullopt;
+  /// @endcond
 };
 
 /// @brief A WebSocket server for visualization in Foxglove.
@@ -281,12 +287,14 @@ public:
   /// @param timestamp_nanos An epoch offset in nanoseconds.
   void broadcastTime(uint64_t timestamp_nanos) const noexcept;
 
+  /// @cond foxglove_internal
   /// @brief Publishes the current playback state to all clients.
   ///
   /// Requires the capability WebSocketServerCapabilities::RangedPlayback.
   ///
   /// @param playback_state The playback state to publish.
   void broadcastPlaybackState(const PlaybackState& playback_state) const noexcept;
+  /// @endcond
 
   /// @brief Sets a new session ID and notifies all clients, causing them to
   /// reset their state.
