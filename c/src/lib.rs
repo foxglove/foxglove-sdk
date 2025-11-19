@@ -196,9 +196,10 @@ impl Clone for FoxgloveStringBuf {
 impl Drop for FoxgloveStringBuf {
     fn drop(&mut self) {
         let FoxgloveString { data, len } = self.0;
-        assert!(!data.is_null());
-        // SAFETY: This was constructed from valid `String`.
-        drop(unsafe { String::from_raw_parts(data as *mut u8, len, len) })
+        if !data.is_null() {
+            // SAFETY: This was constructed from valid `String`.
+            drop(unsafe { String::from_raw_parts(data as *mut u8, len, len) })
+        }
     }
 }
 

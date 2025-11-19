@@ -992,6 +992,7 @@ impl foxglove::websocket::ServerListener for FoxgloveServerCallbacks {
         };
 
         // Allocate a new PlaybackState struct for the caller to fill in
+        // TODO: Use into()
         let c_request_id = FoxgloveStringBuf::new(playback_control_request.request_id.clone());
         let mut c_playback_state = FoxglovePlaybackState {
             status: 0,
