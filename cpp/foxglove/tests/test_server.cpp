@@ -1519,7 +1519,11 @@ std::vector<std::byte> playbackControlRequestToBinary(
   writeIntLE(
     msg, playback_control_request.seek_time.has_value() ? *playback_control_request.seek_time : 0x0
   );
-  writeIntLE<uint32_t>(msg, playback_control_request.request_id.size());
+  uint32_t request_id_size =
+    playback_control_request.request_id.size() > std::numeric_limits<uint32_t>::max()
+      ? std::numeric_limits<uint32_t>::max()
+      : static_cast<uint32_t>(playback_control_request.request_id.size());
+  writeIntLE(msg, request_id_size);
   for (char c : playback_control_request.request_id) {
     msg.emplace_back(std::byte{static_cast<std::byte>(c)});
   }
@@ -1637,8 +1641,8 @@ TEST_CASE("Broadcast playback state") {
 TEST_CASE("RangedPlayback capability") {
   auto context = foxglove::Context::create();
 
-  const uint64_t start_time = 100e9;
-  const uint64_t end_time = 105e9;
+  const uint64_t start_time = 100000000000ULL;
+  const uint64_t end_time = 105000000000ULL;
 
   foxglove::WebSocketServerOptions opt;
   opt.context = std::move(context);
