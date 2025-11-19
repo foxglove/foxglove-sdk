@@ -1,4 +1,4 @@
-use crate::{FoxgloveError, FoxgloveString, FoxgloveStringBuf};
+use crate::FoxgloveString;
 
 #[repr(C)]
 pub struct FoxglovePlaybackState {
@@ -11,21 +11,26 @@ pub struct FoxglovePlaybackState {
     /// If this message is being emitted in response to a PlaybackControlRequest message, the
     /// request_id from that message. Set this to an empty string if the state of playback has been changed
     /// by any other condition.
-    pub request_id: FoxgloveStringBuf,
+    pub request_id: FoxgloveString,
 }
 
 impl FoxglovePlaybackState {
-    pub(crate) fn into_native(
-        self,
+    /// Create a native playback state from a FoxglovePlaybackState.
+    ///
+    /// # Safety
+    /// - `self.request_id` must wrap a valid UTF-8 string that lives for the duration of the call.
+    ///   This function copies request_id into a separately allocated Rust string in the output native PlaybackState.
+    pub(crate) fn as_native(
+        &self,
     ) -> Result<foxglove::websocket::PlaybackState, foxglove::FoxgloveError> {
         let status = foxglove::websocket::PlaybackStatus::try_from(self.status).map_err(|e| {
             foxglove::FoxgloveError::ValueError(format!("invalid playback status {e}"))
         })?;
 
-        let request_id = if self.request_id.as_str().is_empty() {
+        let request_id = if self.request_id.is_empty() {
             None
         } else {
-            Some(self.request_id.into_string())
+            Some(unsafe { self.request_id.as_utf8_str()? }.to_string())
         };
 
         Ok(foxglove::websocket::PlaybackState {
@@ -35,70 +40,4 @@ impl FoxglovePlaybackState {
             request_id,
         })
     }
-}
-
-impl Clone for FoxglovePlaybackState {
-    fn clone(&self) -> Self {
-        Self {
-            status: self.status,
-            current_time: self.current_time,
-            playback_speed: self.playback_speed,
-            request_id: self.request_id.clone(),
-        }
-    }
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn foxglove_playback_state_create(
-    playback_state: *mut *mut FoxglovePlaybackState,
-) -> FoxgloveError {
-    if playback_state.is_null() {
-        return FoxgloveError::ValueError;
-    }
-    let this = Box::into_raw(Box::new(FoxglovePlaybackState {
-        status: 0,
-        current_time: 0,
-        playback_speed: 0.0,
-        request_id: FoxgloveStringBuf::new(String::new()),
-    }));
-
-    unsafe { *playback_state = this };
-    FoxgloveError::Ok
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn foxglove_playback_state_free(playback_state: *mut FoxglovePlaybackState) {
-    if playback_state.is_null() {
-        return;
-    }
-    drop(unsafe { Box::from_raw(playback_state) });
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn foxglove_playback_state_set_request_id(
-    playback_state: *mut FoxglovePlaybackState,
-    request_id: FoxgloveString,
-) -> FoxgloveError {
-    if playback_state.is_null() {
-        return FoxgloveError::ValueError;
-    }
-
-    let request_id = unsafe { request_id.as_utf8_str() };
-    let Ok(request_id) = request_id else {
-        return FoxgloveError::Utf8Error;
-    };
-    unsafe { (*playback_state).request_id = FoxgloveStringBuf::new(request_id.to_string()) };
-    FoxgloveError::Ok
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn foxglove_playback_state_clear_request_id(
-    playback_state: *mut FoxglovePlaybackState,
-) -> FoxgloveError {
-    if playback_state.is_null() {
-        return FoxgloveError::ValueError;
-    }
-
-    unsafe { (*playback_state).request_id = FoxgloveStringBuf::new(String::new()) };
-    FoxgloveError::Ok
 }

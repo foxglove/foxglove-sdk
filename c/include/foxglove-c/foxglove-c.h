@@ -2030,6 +2030,28 @@ typedef struct foxglove_parameter_array {
 #endif
 
 #if !defined(__wasm__)
+typedef struct foxglove_playback_control_request {
+  /**
+   * Playback command
+   */
+  uint8_t playback_command;
+  /**
+   * Playback speed
+   */
+  float playback_speed;
+  /**
+   * Seek playback time in nanoseconds (only set if a seek has been performed)
+   */
+  const uint64_t *seek_time;
+  /**
+   * Unique string identifier, used to indicate that a PlaybackState is in response to a particular request from the client.
+   * Should not be an empty string.
+   */
+  struct foxglove_string request_id;
+} foxglove_playback_control_request;
+#endif
+
+#if !defined(__wasm__)
 typedef struct foxglove_playback_state {
   /**
    * The status of server data playback
@@ -2050,28 +2072,6 @@ typedef struct foxglove_playback_state {
    */
   struct foxglove_string request_id;
 } foxglove_playback_state;
-#endif
-
-#if !defined(__wasm__)
-typedef struct foxglove_playback_control_request {
-  /**
-   * Playback command
-   */
-  uint8_t playback_command;
-  /**
-   * Playback speed
-   */
-  float playback_speed;
-  /**
-   * Seek playback time in nanoseconds (only set if a seek has been performed)
-   */
-  const uint64_t *seek_time;
-  /**
-   * Unique string identifier, used to indicate that a PlaybackState is in response to a particular request from the client.
-   * Should not be an empty string.
-   */
-  struct foxglove_string request_id;
-} foxglove_playback_control_request;
 #endif
 
 #if !defined(__wasm__)
@@ -5138,23 +5138,6 @@ void foxglove_parameter_value_dict_free(struct foxglove_parameter_value_dict *di
 #endif
 
 #if !defined(__wasm__)
-foxglove_error foxglove_playback_state_create(struct foxglove_playback_state **playback_state);
-#endif
-
-#if !defined(__wasm__)
-void foxglove_playback_state_free(struct foxglove_playback_state *playback_state);
-#endif
-
-#if !defined(__wasm__)
-foxglove_error foxglove_playback_state_set_request_id(struct foxglove_playback_state *playback_state,
-                                                      struct foxglove_string request_id);
-#endif
-
-#if !defined(__wasm__)
-foxglove_error foxglove_playback_state_clear_request_id(struct foxglove_playback_state *playback_state);
-#endif
-
-#if !defined(__wasm__)
 /**
  * Create and start a server.
  *
@@ -5192,6 +5175,9 @@ foxglove_error foxglove_server_broadcast_time(const struct foxglove_websocket_se
  * Publishes the current playback state to all clients.
  *
  * Requires the `FOXGLOVE_CAPABILITY_RANGED_PLAYBACK` capability.
+ *
+ * # Safety
+ * - `playback_state` must be a valid pointer to a playback state that lives for the duration of the call.
  */
 foxglove_error foxglove_server_broadcast_playback_state(const struct foxglove_websocket_server *server,
                                                         const struct foxglove_playback_state *playback_state);

@@ -248,14 +248,6 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
             c_playback_state->status = static_cast<uint8_t>(playback_state.status);
             c_playback_state->current_time = playback_state.current_time;
             c_playback_state->playback_speed = playback_state.playback_speed;
-            playback_state.request_id.has_value()
-              ? foxglove_playback_state_set_request_id(
-                  c_playback_state,
-                  foxglove_string{
-                    playback_state.request_id->c_str(), playback_state.request_id->length()
-                  }
-                )
-              : foxglove_playback_state_clear_request_id(c_playback_state);
           } catch (const std::exception& exc) {
             warn() << "onPlaybackControlRequest callback failed: " << exc.what();
           }
@@ -373,20 +365,18 @@ void WebSocketServer::broadcastTime(uint64_t timestamp_nanos) const noexcept {
 }
 
 void WebSocketServer::broadcastPlaybackState(const PlaybackState& playback_state) const noexcept {
-  foxglove_playback_state* c_playback_state_ptr = nullptr;
-  foxglove_playback_state_create(&c_playback_state_ptr);
-  c_playback_state_ptr->status = static_cast<uint8_t>(playback_state.status);
-  c_playback_state_ptr->current_time = playback_state.current_time;
-  c_playback_state_ptr->playback_speed = playback_state.playback_speed;
-  if (playback_state.request_id.has_value()) {
-    foxglove_playback_state_set_request_id(
-      c_playback_state_ptr, {playback_state.request_id->data(), playback_state.request_id->length()}
-    );
+  foxglove_playback_state c_playback_state_ptr;
+  c_playback_state_ptr.status = static_cast<uint8_t>(playback_state.status);
+  c_playback_state_ptr.current_time = playback_state.current_time;
+  c_playback_state_ptr.playback_speed = playback_state.playback_speed;
+  if (!playback_state.request_id.has_value() || playback_state.request_id->empty()) {
+    c_playback_state_ptr.request_id = {nullptr, 0};
   } else {
-    foxglove_playback_state_clear_request_id(c_playback_state_ptr);
+    c_playback_state_ptr.request_id = {
+      playback_state.request_id->data(), playback_state.request_id->length()
+    };
   }
-  foxglove_server_broadcast_playback_state(impl_.get(), c_playback_state_ptr);
-  foxglove_playback_state_free(c_playback_state_ptr);
+  foxglove_server_broadcast_playback_state(impl_.get(), &c_playback_state_ptr);
 }
 
 FoxgloveError WebSocketServer::clearSession(std::optional<std::string_view> session_id

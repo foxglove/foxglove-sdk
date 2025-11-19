@@ -1554,7 +1554,7 @@ TEST_CASE("Playback control request callback") {
       foxglove::PlaybackStatus::Paused,
       0,
       1.0,
-      std::make_optional<std::string>(playback_control_request.request_id)
+      std::make_optional<std::string>("i have my own pls don't change it")
     };
   };
 
@@ -1621,7 +1621,7 @@ TEST_CASE("Broadcast playback state") {
     foxglove::PlaybackStatus::Paused,
     0,
     1.0,
-    std::make_optional<std::string>("some random stuff"),
+    std::nullopt,
   };
 
   server.broadcastPlaybackState(playback_state);

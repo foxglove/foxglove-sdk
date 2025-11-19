@@ -191,9 +191,16 @@ struct WebSocketServerCallbacks {
   /// Requires the capability WebSocketServerCapabilities::ConnectionGraph
   std::function<void()> onConnectionGraphUnsubscribe;
 
-  /// @brief Callback invoked when the player state changes.
+  /// @brief Callback invoked when a playback control request is sent from the client.
   ///
   /// Requires the capability WebSocketServerCapabilities::RangedPlayback
+  ///
+  /// @param playback_control_request The playback control request.
+  /// @return The playback state to send back to the client.
+  ///
+  /// @note Since this playback state is in response to a specific request from the client, the
+  /// `request_id` field in the returned `PlaybackState` will be overwritten to match the request_id
+  /// in `playback_control_request`.
   std::function<std::optional<PlaybackState>(const PlaybackControlRequest& playback_control_request
   )>
     onPlaybackControlRequest;

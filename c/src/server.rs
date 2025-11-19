@@ -15,7 +15,6 @@ use crate::playback_state::FoxglovePlaybackState;
 
 use crate::{
     result_to_c, FoxgloveContext, FoxgloveError, FoxgloveKeyValue, FoxgloveSinkId, FoxgloveString,
-    FoxgloveStringBuf,
 };
 
 // Easier to get reasonable C output from cbindgen with constants rather than directly exporting the bitflags macro
@@ -498,6 +497,9 @@ pub extern "C" fn foxglove_server_broadcast_time(
 /// Publishes the current playback state to all clients.
 ///
 /// Requires the `FOXGLOVE_CAPABILITY_RANGED_PLAYBACK` capability.
+///
+/// # Safety
+/// - `playback_state` must be a valid pointer to a playback state that lives for the duration of the call.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn foxglove_server_broadcast_playback_state(
     server: Option<&FoxgloveWebSocketServer>,
@@ -514,9 +516,7 @@ pub unsafe extern "C" fn foxglove_server_broadcast_playback_state(
         return FoxgloveError::ValueError;
     }
 
-    let playback_state = unsafe { (*playback_state).clone() };
-
-    match playback_state.into_native() {
+    match unsafe { (*playback_state).as_native() } {
         Ok(playback_state) => {
             server.broadcast_playback_state(playback_state);
             FoxgloveError::Ok
@@ -992,8 +992,7 @@ impl foxglove::websocket::ServerListener for FoxgloveServerCallbacks {
         };
 
         // Allocate a new PlaybackState struct for the caller to fill in
-        // TODO: Use into()
-        let c_request_id = FoxgloveStringBuf::new(playback_control_request.request_id.clone());
+        let c_request_id = FoxgloveString::from(&playback_control_request.request_id);
         let mut c_playback_state = FoxglovePlaybackState {
             status: 0,
             current_time: 0,
@@ -1009,6 +1008,6 @@ impl foxglove::websocket::ServerListener for FoxgloveServerCallbacks {
             );
         };
 
-        c_playback_state.into_native().ok()
+        c_playback_state.as_native().ok()
     }
 }
