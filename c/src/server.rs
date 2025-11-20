@@ -1001,13 +1001,11 @@ impl foxglove::websocket::ServerListener for FoxgloveServerCallbacks {
             request_id: (&playback_control_request.request_id).into(),
         };
 
-        // Allocate a new PlaybackState struct for the caller to fill in
-        let c_request_id = FoxgloveString::from(&playback_control_request.request_id);
         let mut c_playback_state = FoxglovePlaybackState {
             status: 0,
             current_time: 0,
             playback_speed: 0.0,
-            request_id: c_request_id,
+            request_id: (&playback_control_request.request_id).into(),
         };
 
         unsafe {
@@ -1018,7 +1016,7 @@ impl foxglove::websocket::ServerListener for FoxgloveServerCallbacks {
             );
         };
 
-        // SAFETY: c_request_id stays valid for the duration of this call
+        // SAFETY: playback_control_request stays valid for the duration of this call
         unsafe { c_playback_state.to_native().ok() }
     }
 }

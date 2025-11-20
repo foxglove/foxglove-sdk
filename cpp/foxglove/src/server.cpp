@@ -230,27 +230,28 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
           const foxglove_playback_control_request* c_playback_control_request,
           foxglove_playback_state* c_playback_state
         ) {
+          if (c_playback_control_request == nullptr) {
+            return;
+          }
+
+          std::optional<PlaybackState> maybe_playback_state = std::nullopt;
           try {
-            if (c_playback_control_request == nullptr) {
-              return;
-            }
-
-            std::optional<PlaybackState> maybe_playback_state =
-              (static_cast<const WebSocketServerCallbacks*>(context))
-                ->onPlaybackControlRequest(PlaybackControlRequest::from(*c_playback_control_request)
-                );
-
-            if (!maybe_playback_state.has_value()) {
-              return;
-            }
-
-            const PlaybackState& playback_state = maybe_playback_state.value();
-            c_playback_state->status = static_cast<uint8_t>(playback_state.status);
-            c_playback_state->current_time = playback_state.current_time;
-            c_playback_state->playback_speed = playback_state.playback_speed;
+            const auto* ctx = (static_cast<const WebSocketServerCallbacks*>(context));
+            maybe_playback_state =
+              ctx->onPlaybackControlRequest(PlaybackControlRequest::from(*c_playback_control_request
+              ));
           } catch (const std::exception& exc) {
             warn() << "onPlaybackControlRequest callback failed: " << exc.what();
           }
+
+          if (!maybe_playback_state.has_value()) {
+            return;
+          }
+
+          const PlaybackState& playback_state = maybe_playback_state.value();
+          c_playback_state->status = static_cast<uint8_t>(playback_state.status);
+          c_playback_state->current_time = playback_state.current_time;
+          c_playback_state->playback_speed = playback_state.playback_speed;
         };
     }
   }
