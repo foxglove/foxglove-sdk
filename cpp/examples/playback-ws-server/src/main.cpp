@@ -11,6 +11,7 @@
 #include <cstdint>
 #include <functional>
 #include <iostream>
+#include <mutex>
 #include <thread>
 
 using namespace std::chrono_literals;
@@ -21,7 +22,7 @@ using namespace std::chrono_literals;
 // illustration, this example generates a fixed buffer of example data in-memory.
 class DataPlayer {
 public:
-  explicit DataPlayer(size_t num_timesteps, foxglove::RawChannel&& channel)
+  DataPlayer(size_t num_timesteps, foxglove::RawChannel&& channel)
       : channel_(std::move(channel)) {
     // Generate a buffer of example data, in this case a sine wave sampled at 1Hz. The first
     // element of the pair is the timestamp in absoute nanoseconds, and the second is the data
@@ -90,42 +91,54 @@ public:
     return "{\"val\": " + std::to_string(data.second) + "}";
   }
 
-  void process() {
+  void tick() {
     if (!server_) {
-      throw std::runtime_error("Tried to spin with uninitialized server");
+      throw std::runtime_error("Tried to tick with uninitialized server");
     }
 
-    if (!playing_) {
+    if (data_.empty()) {
+      throw std::runtime_error("Tried to tick with empty data");
+    }
+
+    if (currentPlaybackState().status == foxglove::PlaybackStatus::Paused) {
       std::this_thread::sleep_for(50ms);
       return;
     }
 
-    // Playback requires the server to broadcast its understanding of the current time to advance
-    // time forward in the Foxglove player
-    current_time_ = data_[current_playback_index_].first;
-    server_->broadcastTime(current_time_);
+    float playback_speed = 1.0;
+    {
+      std::lock_guard<std::mutex> lock(playback_mutex_);
+      playback_speed = playback_speed_;
 
-    // Create a JSON payload containing the data message and log to the channel. This will cause the
-    // data to be sent to Foxglove over the WebSocket.
-    std::string msg = toMessage(data_[current_playback_index_]);
-    channel_.log(reinterpret_cast<const std::byte*>(msg.data()), msg.size(), current_time_);
+      // Playback requires the server to broadcast its understanding of the current time to advance
+      // time forward in the Foxglove player
+      server_->broadcastTime(current_time_);
 
-    // If playback is over, communicate that to the Foxglove player, by emitting a PlaybackState
-    // with its status set to PlaybackStatus::Ended. For our own convenience, we then reset the
-    // current time and playback index to the start of the data buffer, and enter a Paused state.
-    if (++current_playback_index_ == data_.size()) {
-      current_playback_index_ = 0;
-      current_time_ = data_.front().first;
-      playing_ = false;
+      // Create a JSON payload containing the data message and log to the channel. This will cause
+      // the data to be sent to Foxglove over the WebSocket.
+      std::string msg = toMessage(data_[current_playback_index_]);
+      channel_.log(reinterpret_cast<const std::byte*>(msg.data()), msg.size(), current_time_);
 
-      server_->broadcastPlaybackState(
-        {foxglove::PlaybackStatus::Ended, current_time_, playback_speed_, std::nullopt}
-      );
+      // After publishing the message, update time and playback state
+      ++current_playback_index_;
+      if (current_playback_index_ == data_.size()) {
+        current_playback_index_ = 0;
+        current_time_ = data_.front().first;
+        playing_ = false;
 
-      return;
+        // If playback is over, communicate that to the Foxglove player, by emitting a PlaybackState
+        // with its status set to PlaybackStatus::Ended. For our own convenience, we then reset the
+        // current time and playback index to the start of the data buffer, and enter a Paused
+        // state.
+        server_->broadcastPlaybackState(
+          {foxglove::PlaybackStatus::Ended, current_time_, playback_speed_, std::nullopt}
+        );
+        return;
+      }
+      current_time_ = data_[current_playback_index_].first;
     }
 
-    std::this_thread::sleep_for(1000ms / std::max<double>(playback_speed_, 0.1));
+    std::this_thread::sleep_for(1000ms / std::max<double>(playback_speed, 0.1));
   }
 
   // Handler for PlaybackControlRequest messages sent from the Foxglove player. This requires
@@ -137,6 +150,8 @@ public:
   std::optional<foxglove::PlaybackState> onPlaybackControlRequest(
     const foxglove::PlaybackControlRequest& request
   ) {
+    std::lock_guard<std::mutex> lock(playback_mutex_);
+
     switch (request.playback_command) {
       case foxglove::PlaybackCommand::Play:
         playing_ = true;
@@ -149,14 +164,34 @@ public:
     playback_speed_ = request.playback_speed;
 
     if (request.seek_time.has_value()) {
-      seek(*request.seek_time);
+      seekInternal(*request.seek_time);
     }
 
-    return currentPlaybackState();
+    return currentPlaybackStateInternal();
   }
 
   void seek(uint64_t seek_time) {
+    std::lock_guard<std::mutex> lock(playback_mutex_);
+    seekInternal(seek_time);
+  }
+
+  foxglove::PlaybackState currentPlaybackState() {
+    std::lock_guard<std::mutex> lock(playback_mutex_);
+    return currentPlaybackStateInternal();
+  };
+
+  DataPlayer(const DataPlayer&) = delete;
+  DataPlayer(const DataPlayer&&) = delete;
+  DataPlayer& operator=(const DataPlayer&) = delete;
+  DataPlayer&& operator=(const DataPlayer&&) = delete;
+
+private:
+  // Sets the current playback state to the given seek_time; assumes that the playback_mutex_ is
+  // locked.
+  void seekInternal(uint64_t seek_time) {
     if (data_.empty()) {
+      current_playback_index_ = 0;
+      current_time_ = 0;
       return;
     }
 
@@ -177,21 +212,16 @@ public:
     current_time_ = it->first;
   }
 
-  foxglove::PlaybackState currentPlaybackState() {
+  // Gets the current playback state; assumes that the playback_mutex_ is locked.
+  [[nodiscard]] foxglove::PlaybackState currentPlaybackStateInternal() const {
     return {
       playing_ ? foxglove::PlaybackStatus::Playing : foxglove::PlaybackStatus::Paused,
       current_time_,
       playback_speed_,
       std::nullopt,
     };
-  };
+  }
 
-  DataPlayer(const DataPlayer&) = delete;
-  DataPlayer(const DataPlayer&&) = delete;
-  DataPlayer& operator=(const DataPlayer&) = delete;
-  DataPlayer&& operator=(const DataPlayer&&) = delete;
-
-private:
   std::vector<std::pair<uint64_t, double>> data_;
 
   foxglove::RawChannel channel_;
@@ -199,10 +229,12 @@ private:
 
   // Internal variables for orchestrating playback. In addition to accessing data_, these are are
   // used to generate a foxglove::PlaybackState to send to the Foxglove player.
-  std::atomic<size_t> current_playback_index_ = 0;
-  std::atomic<bool> playing_ = false;
-  std::atomic<uint64_t> current_time_ = 0;
-  std::atomic<float> playback_speed_ = 1.0;
+  // Access to these variables is protected by playback_mutex_.
+  size_t current_playback_index_ = 0;
+  bool playing_ = false;
+  uint64_t current_time_ = 0;
+  float playback_speed_ = 1.0F;
+  std::mutex playback_mutex_;
 };
 
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
@@ -237,8 +269,8 @@ int main() {
   }
   auto channel = std::move(channel_result.value());
 
-  static size_t NUM_TIMESTEPS = 100;
-  DataPlayer player(NUM_TIMESTEPS, std::move(channel));
+  constexpr size_t num_time_steps = 100;
+  DataPlayer player(num_time_steps, std::move(channel));
 
   std::atomic_bool done = false;
   sigint_handler = [&] {
@@ -249,7 +281,7 @@ int main() {
   player.startServer();
 
   while (!done) {
-    player.process();
+    player.tick();
   }
 
   std::cerr << "Done\n";
