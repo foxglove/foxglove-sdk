@@ -2,6 +2,7 @@ use std::sync::{Arc, Weak};
 
 use crate::{Context, FoxgloveError, Metadata, RawChannel, Sink, SinkId};
 
+#[doc(hidden)]
 pub struct StdoutSink {
     id: SinkId,
     context: Weak<Context>,
@@ -30,7 +31,7 @@ impl Sink for StdoutSink {
         msg: &[u8],
         _metadata: &Metadata,
     ) -> Result<(), FoxgloveError> {
-        unsafe { foxglove_enterprise::foxglove_log_to_stdout(msg.as_ptr(), msg.len()) };
+        unsafe { foxglove_agent::foxglove_log_to_stdout(msg.as_ptr(), msg.len()) };
         Ok(())
     }
 }
