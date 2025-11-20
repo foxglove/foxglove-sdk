@@ -1519,7 +1519,9 @@ std::vector<std::byte> playbackControlRequestToBinary(
   writeIntLE(
     msg, playback_control_request.seek_time.has_value() ? *playback_control_request.seek_time : 0x0
   );
-  uint32_t request_id_size = playback_control_request.request_id.size();
+  auto request_id_size = std::min<uint32_t>(
+    playback_control_request.request_id.size(), (std::numeric_limits<uint32_t>::max)()
+  );
   writeIntLE(msg, request_id_size);
   for (char c : playback_control_request.request_id) {
     msg.emplace_back(std::byte{static_cast<std::byte>(c)});
