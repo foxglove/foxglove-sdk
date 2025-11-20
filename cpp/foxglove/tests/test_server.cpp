@@ -1531,6 +1531,42 @@ std::vector<std::byte> playbackControlRequestToBinary(
   return msg;
 }
 
+std::optional<foxglove::PlaybackState> parseBinaryPlaybackState(const std::vector<std::byte>& msg) {
+  if (msg.size() < 1 + 1 + 8 + 4 + 4) {
+    return std::nullopt;
+  }
+
+  uint32_t offset = 0;
+
+  auto opcode = static_cast<uint8_t>(msg.at(offset));
+  offset += 1;
+  if (opcode != 0x05) {
+    return std::nullopt;
+  }
+
+  foxglove::PlaybackState playback_state;
+  playback_state.status = static_cast<foxglove::PlaybackStatus>(msg.at(offset));
+  offset += 1;
+  playback_state.playback_speed = static_cast<float>(readUint32LE(msg, offset));
+  offset += 4;
+  playback_state.current_time = readUint64LE(msg, offset);
+  offset += 8;
+
+  uint32_t request_id_length = readUint32LE(msg, offset);
+  offset += 4;
+
+  if (request_id_length == 0) {
+    playback_state.request_id = std::nullopt;
+  } else {
+    std::string request_id;
+    for (uint32_t i = 0; i < request_id_length; ++i) {
+      request_id += static_cast<char>(msg.at(offset + i));
+    }
+    playback_state.request_id = std::make_optional<std::string>(std::move(request_id));
+  }
+  return playback_state;
+}
+
 TEST_CASE("Playback control request callback") {
   auto context = foxglove::Context::create();
 
@@ -1596,11 +1632,15 @@ TEST_CASE("Playback control request callback") {
     REQUIRE(received_playback_control_request->request_id == "a_request_id");
   }
 
-  auto received_binary_playback_state = client.filterRecv([](const std::string& payload) {
-    return payload[0] == '\x05';  // PlaybackState binary opcode
-  });
+  std::vector<std::byte> received_binary_playback_state;
+  for (const unsigned char c : client.recv()) {
+    received_binary_playback_state.emplace_back(static_cast<std::byte>(c));
+  }
+  auto received_playback_state = parseBinaryPlaybackState(received_binary_playback_state);
 
-  REQUIRE(received_binary_playback_state.has_value());
+  REQUIRE(received_playback_state.has_value());
+  REQUIRE(received_playback_state->request_id.has_value());
+  REQUIRE(received_playback_state->request_id.value() == "a_request_id");
   REQUIRE(server.stop() == foxglove::FoxgloveError::Ok);
 }
 
@@ -1630,11 +1670,14 @@ TEST_CASE("Broadcast playback state") {
 
   server.broadcastPlaybackState(playback_state);
 
-  auto received_binary_playback_state = client.filterRecv([](const std::string& payload) {
-    return payload[0] == '\x05';  // PlaybackState binary opcode
-  });
+  std::vector<std::byte> received_binary_playback_state;
+  for (const unsigned char c : client.recv()) {
+    received_binary_playback_state.emplace_back(static_cast<std::byte>(c));
+  }
+  auto received_playback_state = parseBinaryPlaybackState(received_binary_playback_state);
 
-  REQUIRE(received_binary_playback_state.has_value());
+  REQUIRE(received_playback_state.has_value());
+  REQUIRE(received_playback_state->request_id == std::nullopt);
   REQUIRE(server.stop() == foxglove::FoxgloveError::Ok);
 }
 

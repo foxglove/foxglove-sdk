@@ -113,7 +113,7 @@ impl FoxgloveString {
     }
 
     pub fn is_empty(&self) -> bool {
-        self.len == 0
+        self.data.is_null() || self.len == 0
     }
 }
 

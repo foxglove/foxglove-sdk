@@ -73,8 +73,7 @@ enum class WebSocketServerCapabilities : uint8_t {
   Assets = 1 << 5,
   /// @cond foxglove_internal
   /// Indicates that the server is sending data within a fixed time range. This requires the
-  /// server to specify the `data_start_time` and `data_end_time` fields in its `ServerInfo`
-  /// message.
+  /// server to specify the `playback_time_range` field in its `WebSocketServerOptions`.
   RangedPlayback = 1 << 6,
   /// @endcond
 };
@@ -256,6 +255,8 @@ struct WebSocketServerOptions {
   /// @cond foxglove_internal
   /// @brief The time range for playback. This applies if the server is playing back a fixed time
   /// range of data.
+  ///
+  /// @note Setting this option imples the RangedPlayback capability
   std::optional<std::pair<uint64_t, uint64_t>> playback_time_range = std::nullopt;
   /// @endcond
 };
