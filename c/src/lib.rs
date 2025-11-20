@@ -97,7 +97,7 @@ impl FoxgloveString {
     /// The [`data`] field must be valid UTF-8, correctly aligned, and have a length equal to
     /// [`FoxgloveString.len`].
     unsafe fn as_utf8_str(&self) -> Result<&str, std::str::Utf8Error> {
-        if self.data.is_null() {
+        if self.data.is_null() || self.len == 0 {
             Ok("")
         } else {
             std::str::from_utf8(unsafe { std::slice::from_raw_parts(self.data.cast(), self.len) })
@@ -196,10 +196,9 @@ impl Clone for FoxgloveStringBuf {
 impl Drop for FoxgloveStringBuf {
     fn drop(&mut self) {
         let FoxgloveString { data, len } = self.0;
-        if !data.is_null() {
-            // SAFETY: This was constructed from valid `String`.
-            drop(unsafe { String::from_raw_parts(data as *mut u8, len, len) })
-        }
+        assert!(!data.is_null());
+        // SAFETY: This was constructed from valid `String`.
+        drop(unsafe { String::from_raw_parts(data as *mut u8, len, len) })
     }
 }
 

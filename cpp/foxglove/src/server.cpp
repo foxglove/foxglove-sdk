@@ -290,8 +290,8 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
   }
 
   if (options.playback_time_range) {
-    c_options.data_start_time = &options.playback_time_range->first;
-    c_options.data_end_time = &options.playback_time_range->second;
+    c_options.playback_start_time = &options.playback_time_range->first;
+    c_options.playback_end_time = &options.playback_time_range->second;
   }
 
   std::vector<foxglove_key_value> server_info;

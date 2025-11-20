@@ -70,7 +70,8 @@
 #if !defined(__wasm__)
 /**
  * Indicates that the server is sending data within a fixed time range. This requires the
- * server to specify the `data_start_time` and `data_end_time` fields in its `ServerInfo` message.
+ * server to specify the `data_start_time` and `data_end_time` fields in
+ * `foxglove_server_options`.
  */
 #define FOXGLOVE_SERVER_CAPABILITY_RANGED_PLAYBACK (1 << 6)
 #endif
@@ -2164,6 +2165,16 @@ typedef struct foxglove_server_callbacks {
                                     size_t param_names_len);
   void (*on_connection_graph_subscribe)(const void *context);
   void (*on_connection_graph_unsubscribe)(const void *context);
+  /**
+   * Callback invoked when a client sends a playback control request message.
+   *
+   * Requires `FOXGLOVE_CAPABILITY_RANGED_PLAYBACK`.
+   *
+   * `playback_control_request` is an input parameter and guaranteed to be non-NULL.
+   * `playback_state` is a non-NULL output pointer to a struct that has already been allocated.
+   * The caller should fill its fields with the appropriate state of playback, in response to
+   * the input playback control request.
+   */
   void (*on_playback_control_request)(const void *context,
                                       const struct foxglove_playback_control_request *playback_control_request,
                                       struct foxglove_playback_state *playback_state);
@@ -2261,12 +2272,12 @@ typedef struct foxglove_server_options {
    * If the server is sending data from a fixed time range, and has the RangedPlayback capability,
    * the start time of the data range.
    */
-  const uint64_t *data_start_time;
+  const uint64_t *playback_start_time;
   /**
    * If the server is sending data from a fixed time range, and has the RangedPlayback capability,
    * the end time of the data range.
    */
-  const uint64_t *data_end_time;
+  const uint64_t *playback_end_time;
 } foxglove_server_options;
 #endif
 

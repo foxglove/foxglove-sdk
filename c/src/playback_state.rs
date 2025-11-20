@@ -20,7 +20,7 @@ impl FoxglovePlaybackState {
     /// # Safety
     /// - `self.request_id` must wrap a valid UTF-8 string that lives for the duration of the call.
     ///   This function copies request_id into a separately allocated Rust string in the output native PlaybackState.
-    pub(crate) fn as_native(
+    pub(crate) unsafe fn to_native(
         &self,
     ) -> Result<foxglove::websocket::PlaybackState, foxglove::FoxgloveError> {
         let status = foxglove::websocket::PlaybackStatus::try_from(self.status).map_err(|e| {
