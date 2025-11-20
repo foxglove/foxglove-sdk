@@ -28,6 +28,10 @@ mod logging;
 #[cfg(not(target_family = "wasm"))]
 mod parameter;
 #[cfg(not(target_family = "wasm"))]
+mod playback_control_request;
+#[cfg(not(target_family = "wasm"))]
+mod playback_state;
+#[cfg(not(target_family = "wasm"))]
 mod server;
 #[cfg(not(target_family = "wasm"))]
 mod service;
@@ -76,7 +80,6 @@ pub struct FoxgloveString {
 
 #[cfg(not(target_family = "wasm"))]
 pub(crate) type FoxgloveSinkId = u64;
-
 impl Default for FoxgloveString {
     fn default() -> Self {
         Self {
@@ -94,7 +97,7 @@ impl FoxgloveString {
     /// The [`data`] field must be valid UTF-8, correctly aligned, and have a length equal to
     /// [`FoxgloveString.len`].
     unsafe fn as_utf8_str(&self) -> Result<&str, std::str::Utf8Error> {
-        if self.data.is_null() {
+        if self.data.is_null() || self.len == 0 {
             Ok("")
         } else {
             std::str::from_utf8(unsafe { std::slice::from_raw_parts(self.data.cast(), self.len) })
@@ -110,7 +113,7 @@ impl FoxgloveString {
     }
 
     pub fn is_empty(&self) -> bool {
-        self.len == 0
+        self.data.is_null() || self.len == 0
     }
 }
 

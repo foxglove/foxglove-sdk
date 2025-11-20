@@ -67,6 +67,15 @@
 #define FOXGLOVE_SERVER_CAPABILITY_ASSETS (1 << 5)
 #endif
 
+#if !defined(__wasm__)
+/**
+ * Indicates that the server is sending data within a fixed time range. This requires the
+ * server to specify the `data_start_time` and `data_end_time` fields in
+ * `foxglove_server_options`.
+ */
+#define FOXGLOVE_SERVER_CAPABILITY_RANGED_PLAYBACK (1 << 6)
+#endif
+
 enum foxglove_error
 #ifdef __cplusplus
   : uint8_t
@@ -2022,6 +2031,51 @@ typedef struct foxglove_parameter_array {
 #endif
 
 #if !defined(__wasm__)
+typedef struct foxglove_playback_control_request {
+  /**
+   * Playback command
+   */
+  uint8_t playback_command;
+  /**
+   * Playback speed
+   */
+  float playback_speed;
+  /**
+   * Seek playback time in nanoseconds (only set if a seek has been performed)
+   */
+  const uint64_t *seek_time;
+  /**
+   * Unique string identifier, used to indicate that a PlaybackState is in response to a particular request from the client.
+   * Should not be an empty string.
+   */
+  struct foxglove_string request_id;
+} foxglove_playback_control_request;
+#endif
+
+#if !defined(__wasm__)
+typedef struct foxglove_playback_state {
+  /**
+   * The status of server data playback
+   */
+  uint8_t status;
+  /**
+   * The current time of playback, in absolute nanoseconds
+   */
+  uint64_t current_time;
+  /**
+   * The speed of playback, as a factor of realtime
+   */
+  float playback_speed;
+  /**
+   * If this message is being emitted in response to a PlaybackControlRequest message, the
+   * request_id from that message. Set this to an empty string if the state of playback has been changed
+   * by any other condition.
+   */
+  struct foxglove_string request_id;
+} foxglove_playback_state;
+#endif
+
+#if !defined(__wasm__)
 typedef struct foxglove_server_callbacks {
   /**
    * A user-defined value that will be passed to callback functions
@@ -2111,6 +2165,19 @@ typedef struct foxglove_server_callbacks {
                                     size_t param_names_len);
   void (*on_connection_graph_subscribe)(const void *context);
   void (*on_connection_graph_unsubscribe)(const void *context);
+  /**
+   * Callback invoked when a client sends a playback control request message.
+   *
+   * Requires `FOXGLOVE_CAPABILITY_RANGED_PLAYBACK`.
+   *
+   * `playback_control_request` is an input parameter and guaranteed to be non-NULL.
+   * `playback_state` is a non-NULL output pointer to a struct that has already been allocated.
+   * The caller should fill its fields with the appropriate state of playback, in response to
+   * the input playback control request.
+   */
+  void (*on_playback_control_request)(const void *context,
+                                      const struct foxglove_playback_control_request *playback_control_request,
+                                      struct foxglove_playback_state *playback_state);
 } foxglove_server_callbacks;
 #endif
 
@@ -2201,6 +2268,16 @@ typedef struct foxglove_server_options {
    *   and must remain valid until the server is stopped.
    */
   bool (*sink_channel_filter)(const void *context, const struct foxglove_channel_descriptor *channel);
+  /**
+   * If the server is sending data from a fixed time range, and has the RangedPlayback capability,
+   * the start time of the data range.
+   */
+  const uint64_t *playback_start_time;
+  /**
+   * If the server is sending data from a fixed time range, and has the RangedPlayback capability,
+   * the end time of the data range.
+   */
+  const uint64_t *playback_end_time;
 } foxglove_server_options;
 #endif
 
@@ -5102,6 +5179,19 @@ foxglove_error foxglove_server_start(const struct foxglove_server_options *FOXGL
  */
 foxglove_error foxglove_server_broadcast_time(const struct foxglove_websocket_server *server,
                                               uint64_t timestamp_nanos);
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Publishes the current playback state to all clients.
+ *
+ * Requires the `FOXGLOVE_CAPABILITY_RANGED_PLAYBACK` capability.
+ *
+ * # Safety
+ * - `playback_state` must be a valid pointer to a playback state that lives for the duration of the call.
+ */
+foxglove_error foxglove_server_broadcast_playback_state(const struct foxglove_websocket_server *server,
+                                                        const struct foxglove_playback_state *playback_state);
 #endif
 
 #if !defined(__wasm__)

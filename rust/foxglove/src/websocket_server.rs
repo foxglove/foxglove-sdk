@@ -8,7 +8,6 @@ use std::sync::Arc;
 
 use crate::sink_channel_filter::{SinkChannelFilter, SinkChannelFilterFn};
 use crate::websocket::service::Service;
-#[cfg(feature = "unstable")]
 use crate::websocket::PlaybackState;
 #[cfg(feature = "tls")]
 use crate::websocket::TlsIdentity;
@@ -327,7 +326,6 @@ impl WebSocketServerHandle {
     /// Publish the current playback state to all clients.
     ///
     /// Requires the [`RangedPlayback`](crate::websocket::Capability::Time) capability.
-    #[cfg(feature = "unstable")]
     #[doc(hidden)]
     pub fn broadcast_playback_state(&self, playback_state: PlaybackState) {
         self.0.broadcast_playback_state(playback_state);

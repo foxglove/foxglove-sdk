@@ -10,6 +10,8 @@ use std::mem::ManuallyDrop;
 use std::sync::Arc;
 
 use crate::parameter::FoxgloveParameterArray;
+use crate::playback_control_request::FoxglovePlaybackControlRequest;
+use crate::playback_state::FoxglovePlaybackState;
 
 use crate::{
     result_to_c, FoxgloveContext, FoxgloveError, FoxgloveKeyValue, FoxgloveSinkId, FoxgloveString,
@@ -38,6 +40,10 @@ pub const FOXGLOVE_SERVER_CAPABILITY_SERVICES: u8 = 1 << 4;
 /// Allow clients to request assets. If you supply an asset handler to the server, this capability
 /// will be advertised automatically.
 pub const FOXGLOVE_SERVER_CAPABILITY_ASSETS: u8 = 1 << 5;
+/// Indicates that the server is sending data within a fixed time range. This requires the
+/// server to specify the `data_start_time` and `data_end_time` fields in
+/// `foxglove_server_options`.
+pub const FOXGLOVE_SERVER_CAPABILITY_RANGED_PLAYBACK: u8 = 1 << 6;
 
 bitflags! {
     #[derive(Clone, Copy, PartialEq, Eq)]
@@ -48,6 +54,7 @@ bitflags! {
         const Time = FOXGLOVE_SERVER_CAPABILITY_TIME;
         const Services = FOXGLOVE_SERVER_CAPABILITY_SERVICES;
         const Assets = FOXGLOVE_SERVER_CAPABILITY_ASSETS;
+        const RangedPlayback = FOXGLOVE_SERVER_CAPABILITY_RANGED_PLAYBACK;
     }
 }
 
@@ -69,6 +76,9 @@ impl FoxgloveServerCapabilityBitFlags {
             }
             FoxgloveServerCapabilityBitFlags::Assets => {
                 Some(foxglove::websocket::Capability::Assets)
+            }
+            FoxgloveServerCapabilityBitFlags::RangedPlayback => {
+                Some(foxglove::websocket::Capability::RangedPlayback)
             }
             _ => None,
         })
@@ -159,6 +169,13 @@ pub struct FoxgloveServerOptions<'a> {
             channel: *const FoxgloveChannelDescriptor,
         ) -> bool,
     >,
+
+    /// If the server is sending data from a fixed time range, and has the RangedPlayback capability,
+    /// the start time of the data range.
+    pub playback_start_time: Option<&'a u64>,
+    /// If the server is sending data from a fixed time range, and has the RangedPlayback capability,
+    /// the end time of the data range.
+    pub playback_end_time: Option<&'a u64>,
 }
 
 #[repr(C)]
@@ -293,6 +310,22 @@ pub struct FoxgloveServerCallbacks {
     >,
     pub on_connection_graph_subscribe: Option<unsafe extern "C" fn(context: *const c_void)>,
     pub on_connection_graph_unsubscribe: Option<unsafe extern "C" fn(context: *const c_void)>,
+
+    /// Callback invoked when a client sends a playback control request message.
+    ///
+    /// Requires `FOXGLOVE_CAPABILITY_RANGED_PLAYBACK`.
+    ///
+    /// `playback_control_request` is an input parameter and guaranteed to be non-NULL.
+    /// `playback_state` is a non-NULL output pointer to a struct that has already been allocated.
+    /// The caller should fill its fields with the appropriate state of playback, in response to
+    /// the input playback control request.
+    pub on_playback_control_request: Option<
+        unsafe extern "C" fn(
+            context: *const c_void,
+            playback_control_request: *const FoxglovePlaybackControlRequest,
+            playback_state: *mut FoxglovePlaybackState,
+        ),
+    >,
 }
 unsafe impl Send for FoxgloveServerCallbacks {}
 unsafe impl Sync for FoxgloveServerCallbacks {}
@@ -440,6 +473,13 @@ unsafe fn do_foxglove_server_start(
         }
         server = server.server_info(server_info);
     }
+
+    if let (Some(&playback_start_time), Some(&playback_end_time)) =
+        (options.playback_start_time, options.playback_end_time)
+    {
+        server = server.playback_time_range(playback_start_time, playback_end_time);
+    }
+
     let server = server.start_blocking()?;
     Ok(Box::into_raw(Box::new(FoxgloveWebSocketServer(Some(
         server,
@@ -462,6 +502,37 @@ pub extern "C" fn foxglove_server_broadcast_time(
     };
     server.broadcast_time(timestamp_nanos);
     FoxgloveError::Ok
+}
+
+/// Publishes the current playback state to all clients.
+///
+/// Requires the `FOXGLOVE_CAPABILITY_RANGED_PLAYBACK` capability.
+///
+/// # Safety
+/// - `playback_state` must be a valid pointer to a playback state that lives for the duration of the call.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_server_broadcast_playback_state(
+    server: Option<&FoxgloveWebSocketServer>,
+    playback_state: Option<&FoxglovePlaybackState>,
+) -> FoxgloveError {
+    let Some(server) = server else {
+        return FoxgloveError::ValueError;
+    };
+    let Some(server) = server.as_ref() else {
+        return FoxgloveError::SinkClosed;
+    };
+
+    let Some(playback_state) = playback_state else {
+        return FoxgloveError::ValueError;
+    };
+
+    match unsafe { playback_state.to_native() } {
+        Ok(playback_state) => {
+            server.broadcast_playback_state(playback_state);
+            FoxgloveError::Ok
+        }
+        Err(e) => FoxgloveError::from(e),
+    }
 }
 
 /// Sets a new session ID and notifies all clients, causing them to reset their state.
@@ -915,5 +986,37 @@ impl foxglove::websocket::ServerListener for FoxgloveServerCallbacks {
         if let Some(on_connection_graph_unsubscribe) = self.on_connection_graph_unsubscribe {
             unsafe { on_connection_graph_unsubscribe(self.context) };
         }
+    }
+
+    fn on_playback_control_request(
+        &self,
+        playback_control_request: foxglove::websocket::PlaybackControlRequest,
+    ) -> Option<foxglove::websocket::PlaybackState> {
+        let on_playback_control_request = self.on_playback_control_request?;
+
+        let c_playback_control_request = FoxglovePlaybackControlRequest {
+            playback_command: playback_control_request.playback_command as u8,
+            playback_speed: playback_control_request.playback_speed,
+            seek_time: playback_control_request.seek_time.as_ref(),
+            request_id: (&playback_control_request.request_id).into(),
+        };
+
+        let mut c_playback_state = FoxglovePlaybackState {
+            status: 0,
+            current_time: 0,
+            playback_speed: 0.0,
+            request_id: (&playback_control_request.request_id).into(),
+        };
+
+        unsafe {
+            on_playback_control_request(
+                self.context,
+                &raw const c_playback_control_request,
+                &raw mut c_playback_state,
+            );
+        };
+
+        // SAFETY: playback_control_request stays valid for the duration of this call
+        unsafe { c_playback_state.to_native().ok() }
     }
 }
