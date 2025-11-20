@@ -8,7 +8,7 @@ repository.workspace = true
 license.workspace = true
 
 [dependencies]
-wit-bindgen = "0.43.0"
+wit-bindgen = "0.48.0"
 anyhow = "1.0.98"
 
 [dependencies.foxglove]
