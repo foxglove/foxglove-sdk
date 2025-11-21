@@ -26,7 +26,7 @@ use super::ws_protocol::server::{
     AdvertiseServices, RemoveStatus, ServerInfo, UnadvertiseServices,
 };
 use super::{
-    advertise, handshake, AssetHandler, Capability, Client, ClientId, ConnectionGraph, Parameter,
+    advertise, handshake, AssetHandler, Capability, ClientId, ConnectionGraph, Parameter,
     ServerListener, Status,
 };
 
@@ -652,7 +652,8 @@ impl Server {
         }
         // Notify listener
         if let Some(listener) = self.listener() {
-            listener.on_client_connect(Client::new(client));
+            tracing::debug!("Notifying listener of client connection");
+            listener.on_client_connect();
         }
     }
 
@@ -675,7 +676,7 @@ impl Server {
 
         // Notify listener
         if let Some(listener) = self.listener() {
-            listener.on_client_disconnect(Client::new(client));
+            listener.on_client_disconnect();
         }
 
         tracing::info!("Unregistered client {}", client.addr());

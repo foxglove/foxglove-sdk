@@ -241,6 +241,7 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
           warn() << "onClientDisconnect callback failed: " << exc.what();
         }
       };
+    }
     if (callbacks->onPlaybackControlRequest) {
       c_callbacks.on_playback_control_request =
         [](

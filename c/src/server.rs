@@ -1006,16 +1006,18 @@ impl foxglove::websocket::ServerListener for FoxgloveServerCallbacks {
         }
     }
 
-    fn on_client_connect(&self, _client: foxglove::websocket::Client) {
+    fn on_client_connect(&self) {
         if let Some(on_client_connect) = self.on_client_connect {
             unsafe { on_client_connect(self.context) };
         }
     }
 
-    fn on_client_disconnect(&self, _client: foxglove::websocket::Client) {
+    fn on_client_disconnect(&self) {
         if let Some(on_client_disconnect) = self.on_client_disconnect {
             unsafe { on_client_disconnect(self.context) };
         }
+    }
+
     fn on_playback_control_request(
         &self,
         playback_control_request: foxglove::websocket::PlaybackControlRequest,

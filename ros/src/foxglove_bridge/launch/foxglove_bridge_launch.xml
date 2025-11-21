@@ -16,7 +16,7 @@
   <arg name="use_sim_time"                    default="false" />
   <arg name="capabilities"                    default="[clientPublish,parameters,parametersSubscribe,services,connectionGraph,assets]" />
   <arg name="include_hidden"                  default="false" />
-  <arg name="publish_client_count"            default="true" />
+  <arg name="publish_client_count"            default="false" />
   <arg name="asset_uri_allowlist"             default="['^package://(?:[-\\w%]+/)*[-\\w%.]+\\.(?:dae|fbx|glb|gltf|jpeg|jpg|mtl|obj|png|stl|tif|tiff|urdf|webp|xacro)$']" />  <!-- Needs double-escape -->
   <arg name="ignore_unresponsive_param_nodes" default="true" />
 

@@ -64,9 +64,10 @@ pub trait ServerListener: Send + Sync {
     /// [`Capability::ConnectionGraph`][super::Capability::ConnectionGraph].
     fn on_connection_graph_unsubscribe(&self) {}
     /// Callback invoked when a client connects to the server.
-    fn on_client_connect(&self, _client: Client) {}
+    fn on_client_connect(&self) {}
     /// Callback invoked when a client disconnects from the server.
-    fn on_client_disconnect(&self, _client: Client) {}
+    fn on_client_disconnect(&self) {}
+
     #[doc(hidden)]
     /// Callback invoked when a client sends a player state message.
     /// Requires [`Capability::RangedPlayback`][super::Capability::RangedPlayback].
