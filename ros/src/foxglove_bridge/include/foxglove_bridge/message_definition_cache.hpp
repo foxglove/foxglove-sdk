@@ -79,7 +79,7 @@ private:
 
   std::unordered_map<DefinitionIdentifier, MessageSpec, DefinitionIdentifierHash>
     msg_specs_by_definition_identifier_;
-  std::unordered_map<std::string, std::string> full_text_cache_;
+  std::unordered_map<std::string, std::pair<MessageDefinitionFormat, std::string>> full_text_cache_;
 };
 
 std::set<std::string> parse_dependencies(MessageDefinitionFormat format, const std::string& text,
