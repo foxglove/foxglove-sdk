@@ -44,8 +44,6 @@ pub(crate) struct ServerOptions {
     pub runtime: Option<Handle>,
     pub fetch_asset_handler: Option<Box<dyn AssetHandler>>,
     pub tls_identity: Option<TlsIdentity>,
-    pub on_client_connect: Option<Box<dyn Fn() + Send + Sync>>,
-    pub on_client_disconnect: Option<Box<dyn Fn() + Send + Sync>>,
 }
 
 impl std::fmt::Debug for ServerOptions {
@@ -157,10 +155,6 @@ pub(crate) struct Server {
     tasks: parking_lot::Mutex<Option<JoinSet<()>>>,
     /// Configuration to support TLS streams when enabled.
     stream_config: StreamConfiguration,
-    /// Callback for when a client connects
-    on_client_connect: Option<Box<dyn Fn() + Send + Sync>>,
-    /// Callback for when a client disconnects
-    on_client_disconnect: Option<Box<dyn Fn() + Send + Sync>>,
 }
 
 impl Server {
