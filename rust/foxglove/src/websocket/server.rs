@@ -214,8 +214,6 @@ impl Server {
             fetch_asset_handler: opts.fetch_asset_handler,
             tasks: parking_lot::Mutex::default(),
             stream_config,
-            on_client_connect: opts.on_client_connect,
-            on_client_disconnect: opts.on_client_disconnect,
         }
     }
 
@@ -609,6 +607,10 @@ impl Server {
                 );
             }
         }
+        // Notify listener
+        if let Some(listener) = self.listener() {
+            listener.on_client_connect(Client::new(client));
+        }
     }
 
     /// Unregisters a client after the connection is closed.
@@ -627,6 +629,12 @@ impl Server {
             self.unsubscribe_connection_graph(client.id());
         }
         client.on_disconnect();
+
+        // Notify listener
+        if let Some(listener) = self.listener() {
+            listener.on_client_disconnect(Client::new(client));
+        }
+
         tracing::info!("Unregistered client {}", client.addr());
     }
 
