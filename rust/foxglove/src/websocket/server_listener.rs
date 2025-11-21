@@ -62,7 +62,7 @@ pub trait ServerListener: Send + Sync {
     /// [`Capability::ConnectionGraph`][super::Capability::ConnectionGraph].
     fn on_connection_graph_unsubscribe(&self) {}
     /// Callback invoked when a client connects to the server.
-    fn on_client_connect(&self) {}
+    fn on_client_connect(&self, _client: Client) {}
     /// Callback invoked when a client disconnects from the server.
-    fn on_client_disconnect(&self) {}
+    fn on_client_disconnect(&self, _client: Client) {}
 }

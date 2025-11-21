@@ -122,19 +122,6 @@ impl WebSocketServer {
             Some(Box::new(BlockingAssetHandlerFn(Arc::new(handler))));
         self
     }
-
-    /// Configure a callback to be invoked when a client connects to the server.
-    pub fn on_client_connect(mut self, callback: impl Fn() + Send + Sync + 'static) -> Self {
-        self.options.on_client_connect = Some(Box::new(callback));
-        self
-    }
-
-    /// Configure a callback to be invoked when a client disconnects from the server.
-    pub fn on_client_disconnect(mut self, callback: impl Fn() + Send + Sync + 'static) -> Self {
-        self.options.on_client_disconnect = Some(Box::new(callback));
-        self
-    }
-
     /// Configure an asynchronous function as a fetch asset handler.
     /// There can only be one asset handler, exclusive with the other fetch_asset_handler methods.
     pub fn fetch_asset_handler_async_fn<F, Fut, T, Err>(mut self, handler: F) -> Self
