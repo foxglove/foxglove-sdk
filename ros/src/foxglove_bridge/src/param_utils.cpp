@@ -193,6 +193,13 @@ void declareParameters(rclcpp::Node* node) {
     "Avoid requesting parameters from previously unresponsive nodes";
   ignUnresponsiveParamNodes.read_only = true;
   node->declare_parameter(PARAM_IGN_UNRESPONSIVE_PARAM_NODES, true, ignUnresponsiveParamNodes);
+
+  auto publishClientCountDescription = rcl_interfaces::msg::ParameterDescriptor{};
+  publishClientCountDescription.name = PARAM_PUBLISH_CLIENT_COUNT;
+  publishClientCountDescription.type = rcl_interfaces::msg::ParameterType::PARAMETER_BOOL;
+  publishClientCountDescription.description = "Publish the number of connected clients";
+  publishClientCountDescription.read_only = true;
+  node->declare_parameter(PARAM_PUBLISH_CLIENT_COUNT, true, publishClientCountDescription);
 }
 
 std::vector<std::regex> parseRegexStrings(rclcpp::Node* node,
