@@ -3,6 +3,7 @@
 #include <foxglove/context.hpp>
 #include <foxglove/error.hpp>
 
+#include <functional>
 #include <memory>
 #include <optional>
 #include <string>
@@ -15,6 +16,7 @@
 /// @cond foxglove_internal
 enum foxglove_error : uint8_t;
 struct foxglove_mcap_writer;
+struct FoxgloveCustomWriter;
 
 foxglove_error foxglove_mcap_write_metadata(
   foxglove_mcap_writer* writer, const foxglove_string* name, const foxglove_key_value* metadata,
@@ -26,6 +28,37 @@ foxglove_error foxglove_mcap_write_metadata(
 namespace foxglove {
 
 class Context;
+
+/// @brief Custom writer for writing MCAP data to arbitrary destinations.
+///
+/// This provides a simple function pointer interface that matches the C API.
+/// Users are responsible for managing the lifetime of user_data and ensuring
+/// thread safety if needed.
+struct CustomWriter {
+  /// @brief User-provided context pointer, passed to all callback functions
+  void* user_data = nullptr;
+
+  /// @brief Write function: write data to the custom destination
+  /// @param user_data User-provided context pointer
+  /// @param data Pointer to data to write
+  /// @param len Number of bytes to write
+  /// @param error Pointer to error code (set to an error number defined in errno.h if write fails)
+  /// @return Number of bytes actually written
+  std::function<size_t(void* user_data, const uint8_t* data, size_t len, int32_t* error)> write_fn;
+
+  /// @brief Flush function: ensure all buffered data is written
+  /// @param user_data User-provided context pointer
+  /// @return 0 on success, an error number defined in errno.h if flush fails
+  std::function<int32_t(void* user_data)> flush_fn;
+
+  /// @brief Seek function: change the current position in the stream
+  /// @param user_data User-provided context pointer
+  /// @param pos Position offset
+  /// @param whence Seek origin (0=SEEK_SET, 1=SEEK_CUR, 2=SEEK_END)
+  /// @param new_pos Pointer to store the new absolute position
+  /// @return 0 on success, an error number defined in errno.h if seek fails
+  std::function<int32_t(void* user_data, int64_t pos, int32_t whence, uint64_t* new_pos)> seek_fn;
+};
 
 /// @brief The compression algorithm to use for an MCAP file.
 enum class McapCompression : uint8_t {
@@ -43,8 +76,10 @@ struct McapWriterOptions {
 
   /// @brief The context to use for the MCAP writer.
   Context context;
-  /// @brief The path to the MCAP file.
+  /// @brief The path to the MCAP file. Ignored if custom_writer is set.
   std::string_view path;
+  /// @brief Custom writer for arbitrary destinations. If set, path is ignored.
+  std::optional<CustomWriter> custom_writer;
   /// @brief The profile to use for the MCAP file.
   std::string_view profile;
   /// @brief The size of each chunk in the MCAP file.
