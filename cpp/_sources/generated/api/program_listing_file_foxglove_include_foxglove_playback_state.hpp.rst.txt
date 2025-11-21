@@ -1,0 +1,37 @@
+
+.. _program_listing_file_foxglove_include_foxglove_playback_state.hpp:
+
+Program Listing for File playback_state.hpp
+===========================================
+
+|exhale_lsh| :ref:`Return to documentation for file <file_foxglove_include_foxglove_playback_state.hpp>` (``foxglove/include/foxglove/playback_state.hpp``)
+
+.. |exhale_lsh| unicode:: U+021B0 .. UPWARDS ARROW WITH TIP LEFTWARDS
+
+.. code-block:: cpp
+
+   #pragma once
+   
+   #include <foxglove-c/foxglove-c.h>
+   
+   #include <optional>
+   #include <string>
+   
+   namespace foxglove {
+   
+   enum class PlaybackStatus : uint8_t {
+     Playing = 0,
+     Paused = 1,
+     Buffering = 2,
+     Ended = 3,
+   };
+   
+   struct PlaybackState {
+   public:
+     PlaybackStatus status;
+     uint64_t current_time;
+     float playback_speed;
+     std::optional<std::string> request_id;
+   };
+   
+   }  // namespace foxglove

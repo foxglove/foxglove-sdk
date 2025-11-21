@@ -1,0 +1,17 @@
+.. _exhale_struct_structfoxglove_1_1ClientMetadata:
+
+Struct ClientMetadata
+=====================
+
+- Defined in :ref:`file_foxglove_include_foxglove_server.hpp`
+
+
+Struct Documentation
+--------------------
+
+
+.. doxygenstruct:: foxglove::ClientMetadata
+   :project: Foxglove SDK
+   :members:
+   :protected-members:
+   :undoc-members:

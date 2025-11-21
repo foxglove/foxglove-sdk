@@ -1,0 +1,250 @@
+
+.. _file_foxglove_include_foxglove_schemas.hpp:
+
+File schemas.hpp
+================
+
+|exhale_lsh| :ref:`Parent directory <dir_foxglove_include_foxglove>` (``foxglove/include/foxglove``)
+
+.. |exhale_lsh| unicode:: U+021B0 .. UPWARDS ARROW WITH TIP LEFTWARDS
+
+Definition (``foxglove/include/foxglove/schemas.hpp``)
+------------------------------------------------------
+
+
+.. toctree::
+   :maxdepth: 1
+
+   program_listing_file_foxglove_include_foxglove_schemas.hpp.rst
+
+
+
+
+
+Includes
+--------
+
+
+- ``array``
+
+- ``cstdint``
+
+- ``foxglove/context.hpp`` (:ref:`file_foxglove_include_foxglove_context.hpp`)
+
+- ``foxglove/error.hpp`` (:ref:`file_foxglove_include_foxglove_error.hpp`)
+
+- ``foxglove/schema.hpp`` (:ref:`file_foxglove_include_foxglove_schema.hpp`)
+
+- ``memory``
+
+- ``optional``
+
+- ``string``
+
+- ``type_traits``
+
+- ``vector``
+
+
+
+Included By
+-----------
+
+
+- :ref:`file_foxglove_include_foxglove_channel.hpp`
+
+- :ref:`file_foxglove_src_schemas.cpp`
+
+
+
+
+Namespaces
+----------
+
+
+- :ref:`namespace_foxglove`
+
+- :ref:`namespace_foxglove__schemas`
+
+
+Classes
+-------
+
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1ArrowPrimitive`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1CameraCalibration`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1ChannelDeleter`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1CircleAnnotation`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1Color`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1CompressedImage`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1CompressedVideo`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1CubePrimitive`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1CylinderPrimitive`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1Duration`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1FrameTransform`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1FrameTransforms`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1GeoJSON`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1Grid`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1ImageAnnotations`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1KeyValuePair`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1LaserScan`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1LinePrimitive`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1LocationFix`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1LocationFixes`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1Log`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1ModelPrimitive`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1PackedElementField`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1Point2`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1Point3`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1PointCloud`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1PointsAnnotation`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1Pose`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1PoseInFrame`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1PosesInFrame`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1Quaternion`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1RawAudio`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1RawImage`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1SceneEntity`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1SceneEntityDeletion`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1SceneUpdate`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1SpherePrimitive`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1TextAnnotation`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1TextPrimitive`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1Timestamp`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1TriangleListPrimitive`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1Vector2`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1Vector3`
+
+- :ref:`exhale_struct_structfoxglove_1_1schemas_1_1VoxelGrid`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1ArrowPrimitiveChannel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1CameraCalibrationChannel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1CircleAnnotationChannel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1ColorChannel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1CompressedImageChannel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1CompressedVideoChannel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1CubePrimitiveChannel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1CylinderPrimitiveChannel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1FrameTransformChannel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1FrameTransformsChannel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1GeoJSONChannel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1GridChannel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1ImageAnnotationsChannel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1KeyValuePairChannel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1LaserScanChannel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1LinePrimitiveChannel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1LocationFixChannel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1LocationFixesChannel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1LogChannel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1ModelPrimitiveChannel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1PackedElementFieldChannel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1Point2Channel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1Point3Channel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1PointCloudChannel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1PointsAnnotationChannel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1PoseChannel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1PoseInFrameChannel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1PosesInFrameChannel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1QuaternionChannel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1RawAudioChannel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1RawImageChannel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1SceneEntityChannel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1SceneEntityDeletionChannel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1SceneUpdateChannel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1SpherePrimitiveChannel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1TextAnnotationChannel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1TextPrimitiveChannel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1TriangleListPrimitiveChannel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1Vector2Channel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1Vector3Channel`
+
+- :ref:`exhale_class_classfoxglove_1_1schemas_1_1VoxelGridChannel`
+
+
+Typedefs
+--------
+
+
+- :ref:`exhale_typedef_schemas_8hpp_1ab547b1a1f1cbf46b90946047bab783fb`
+

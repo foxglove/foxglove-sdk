@@ -1,0 +1,14 @@
+.. _exhale_function_schemas_8cpp_1ae6a02af2638b4dca35b59ec2ae294d0e:
+
+Function foxglove::schemas::laserScanToC
+========================================
+
+- Defined in :ref:`file_foxglove_src_schemas.cpp`
+
+
+Function Documentation
+----------------------
+
+
+.. doxygenfunction:: foxglove::schemas::laserScanToC(foxglove_laser_scan&, const LaserScan&, Arena&)
+   :project: Foxglove SDK

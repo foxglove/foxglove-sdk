@@ -1,0 +1,1672 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>&lt;no title&gt; &#8212; Foxglove SDK 0.16.1 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=12dfc556" />
+    <script src="../_static/documentation_options.js?v=d9901acd"></script>
+    <script src="../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="&lt;no title&gt;" href="channels.html" />
+    <link rel="prev" title="API Reference" href="index.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <p id="module-foxglove.schemas">This module contains the definitions of the well-known Foxglove schemas for logging.</p>
+<p>Log messages to a corresponding channel type from <a class="reference internal" href="channels.html#module-foxglove.channels" title="foxglove.channels"><code class="xref py py-mod docutils literal notranslate"><span class="pre">foxglove.channels</span></code></a>.</p>
+<p>Note that the schema classes are currently immutable and do not expose
+getters and setters for their fields. This is a limitation we plan to address in the future.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.schemas.ArrowPrimitive">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.schemas.</span></span><span class="sig-name descname"><span class="pre">ArrowPrimitive</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shaft_length</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shaft_diameter</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">head_length</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">head_diameter</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">color</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.ArrowPrimitive" title="Link to this definition">¶</a></dt>
+<dd><p>A primitive representing an arrow</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>pose</strong> – Position of the arrow’s tail and orientation of the arrow. Identity orientation means the arrow points in the +x direction.</p></li>
+<li><p><strong>shaft_length</strong> – Length of the arrow shaft</p></li>
+<li><p><strong>shaft_diameter</strong> – Diameter of the arrow shaft</p></li>
+<li><p><strong>head_length</strong> – Length of the arrow head</p></li>
+<li><p><strong>head_diameter</strong> – Diameter of the arrow head</p></li>
+<li><p><strong>color</strong> – Color of the arrow</p></li>
+</ul>
+</dd>
+</dl>
+<p>See <a class="reference external" href="https://docs.foxglove.dev/docs/visualization/message-schemas/arrow-primitive">https://docs.foxglove.dev/docs/visualization/message-schemas/arrow-primitive</a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.ArrowPrimitive.encode">
+<span class="sig-name descname"><span class="pre">encode</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.ArrowPrimitive.encode" title="Link to this definition">¶</a></dt>
+<dd><p>Encodes the ArrowPrimitive as protobuf.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.ArrowPrimitive.get_schema">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_schema</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.ArrowPrimitive.get_schema" title="Link to this definition">¶</a></dt>
+<dd><p>Returns the ArrowPrimitive schema.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.schemas.CameraCalibration">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.schemas.</span></span><span class="sig-name descname"><span class="pre">CameraCalibration</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timestamp</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frame_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">width</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">height</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">distortion_model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">D</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">K</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">R</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">P</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.CameraCalibration" title="Link to this definition">¶</a></dt>
+<dd><p>Camera calibration parameters</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>timestamp</strong> – Timestamp of calibration data</p></li>
+<li><p><strong>frame_id</strong> – Frame of reference for the camera. The origin of the frame is the optical center of the camera. +x points to the right in the image, +y points down, and +z points into the plane of the image.</p></li>
+<li><p><strong>width</strong> – Image width</p></li>
+<li><p><strong>height</strong> – Image height</p></li>
+<li><p><strong>distortion_model</strong> – <p>Name of distortion model</p>
+<p>Supported parameters: <cite>plumb_bob</cite> (k1, k2, p1, p2, k3), <cite>rational_polynomial</cite> (k1, k2, p1, p2, k3, k4, k5, k6), and <cite>kannala_brandt</cite> (k1, k2, k3, k4), and <cite>fisheye62</cite> (k0, k1, k2, k3, p0, p1, crit_theta [optional]). <cite>plumb_bob</cite> and <cite>rational_polynomial</cite> models are based on the pinhole model <a class="reference external" href="https://docs.opencv.org/4.11.0/d9/d0c/group__calib3d.html">OpenCV’s</a> <a class="reference external" href="https://en.wikipedia.org/wiki/Distortion_%28optics%29#Software_correction">pinhole camera model</a>. The <cite>kannala_brandt</cite> model matches the <a class="reference external" href="https://docs.opencv.org/4.11.0/db/d58/group__calib3d__fisheye.html">OpenvCV fisheye</a> model. The <cite>fisheye62</cite> model matches the <a class="reference external" href="https://facebookresearch.github.io/projectaria_tools/docs/tech_insights/camera_intrinsic_models">Project Aria’s Fisheye62 Model</a>.</p>
+</p></li>
+<li><p><strong>D</strong> – Distortion parameters</p></li>
+<li><p><strong>K</strong> – <p>Intrinsic camera matrix (3x3 row-major matrix)</p>
+<p>A 3x3 row-major matrix for the raw (distorted) image.</p>
+<p>Projects 3D points in the camera coordinate frame to 2D pixel coordinates using the focal lengths (fx, fy) and principal point (cx, cy).</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>    <span class="p">[</span><span class="n">fx</span>  <span class="mi">0</span> <span class="n">cx</span><span class="p">]</span>
+<span class="n">K</span> <span class="o">=</span> <span class="p">[</span> <span class="mi">0</span> <span class="n">fy</span> <span class="n">cy</span><span class="p">]</span>
+    <span class="p">[</span> <span class="mi">0</span>  <span class="mi">0</span>  <span class="mi">1</span><span class="p">]</span>
+</pre></div>
+</div>
+</p></li>
+<li><p><strong>R</strong> – <p>Rectification matrix (stereo cameras only, 3x3 row-major matrix)</p>
+<p>A rotation matrix aligning the camera coordinate system to the ideal stereo image plane so that epipolar lines in both stereo images are parallel.</p>
+</p></li>
+<li><p><strong>P</strong> – <p>Projection/camera matrix (3x4 row-major matrix)</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>    <span class="p">[</span><span class="n">fx</span><span class="s1">&#39;  0  cx&#39;</span> <span class="n">Tx</span><span class="p">]</span>
+<span class="n">P</span> <span class="o">=</span> <span class="p">[</span> <span class="mi">0</span>  <span class="n">fy</span><span class="s1">&#39; cy&#39;</span> <span class="n">Ty</span><span class="p">]</span>
+    <span class="p">[</span> <span class="mi">0</span>   <span class="mi">0</span>   <span class="mi">1</span>   <span class="mi">0</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>By convention, this matrix specifies the intrinsic (camera) matrix of the processed (rectified) image. That is, the left 3x3 portion is the normal camera intrinsic matrix for the rectified image.</p>
+<p>It projects 3D points in the camera coordinate frame to 2D pixel coordinates using the focal lengths (fx’, fy’) and principal point (cx’, cy’) - these may differ from the values in K.</p>
+<p>For monocular cameras, Tx = Ty = 0. Normally, monocular cameras will also have R = the identity and P[1:3,1:3] = K.</p>
+<p>Foxglove currently does not support displaying stereo images, so Tx and Ty are ignored.</p>
+<p>Given a 3D point [X Y Z]’, the projection (x, y) of the point onto the rectified image is given by:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">[</span><span class="n">u</span> <span class="n">v</span> <span class="n">w</span><span class="p">]</span><span class="s1">&#39; = P * [X Y Z 1]&#39;</span>
+       <span class="n">x</span> <span class="o">=</span> <span class="n">u</span> <span class="o">/</span> <span class="n">w</span>
+       <span class="n">y</span> <span class="o">=</span> <span class="n">v</span> <span class="o">/</span> <span class="n">w</span>
+</pre></div>
+</div>
+<p>This holds for both images of a stereo pair.</p>
+</p></li>
+</ul>
+</dd>
+</dl>
+<p>See <a class="reference external" href="https://docs.foxglove.dev/docs/visualization/message-schemas/camera-calibration">https://docs.foxglove.dev/docs/visualization/message-schemas/camera-calibration</a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.CameraCalibration.encode">
+<span class="sig-name descname"><span class="pre">encode</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.CameraCalibration.encode" title="Link to this definition">¶</a></dt>
+<dd><p>Encodes the CameraCalibration as protobuf.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.CameraCalibration.get_schema">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_schema</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.CameraCalibration.get_schema" title="Link to this definition">¶</a></dt>
+<dd><p>Returns the CameraCalibration schema.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.schemas.CircleAnnotation">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.schemas.</span></span><span class="sig-name descname"><span class="pre">CircleAnnotation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timestamp</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">position</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">diameter</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">thickness</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fill_color</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">outline_color</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.CircleAnnotation" title="Link to this definition">¶</a></dt>
+<dd><p>A circle annotation on a 2D image</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>timestamp</strong> – Timestamp of circle</p></li>
+<li><p><strong>position</strong> – Center of the circle in 2D image coordinates (pixels).
+The coordinate uses the top-left corner of the top-left pixel of the image as the origin.</p></li>
+<li><p><strong>diameter</strong> – Circle diameter in pixels</p></li>
+<li><p><strong>thickness</strong> – Line thickness in pixels</p></li>
+<li><p><strong>fill_color</strong> – Fill color</p></li>
+<li><p><strong>outline_color</strong> – Outline color</p></li>
+</ul>
+</dd>
+</dl>
+<p>See <a class="reference external" href="https://docs.foxglove.dev/docs/visualization/message-schemas/circle-annotation">https://docs.foxglove.dev/docs/visualization/message-schemas/circle-annotation</a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.CircleAnnotation.encode">
+<span class="sig-name descname"><span class="pre">encode</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.CircleAnnotation.encode" title="Link to this definition">¶</a></dt>
+<dd><p>Encodes the CircleAnnotation as protobuf.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.CircleAnnotation.get_schema">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_schema</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.CircleAnnotation.get_schema" title="Link to this definition">¶</a></dt>
+<dd><p>Returns the CircleAnnotation schema.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.schemas.Color">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.schemas.</span></span><span class="sig-name descname"><span class="pre">Color</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">r</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">g</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">b</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">a</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.Color" title="Link to this definition">¶</a></dt>
+<dd><p>A color in RGBA format</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>r</strong> – Red value between 0 and 1</p></li>
+<li><p><strong>g</strong> – Green value between 0 and 1</p></li>
+<li><p><strong>b</strong> – Blue value between 0 and 1</p></li>
+<li><p><strong>a</strong> – Alpha value between 0 and 1</p></li>
+</ul>
+</dd>
+</dl>
+<p>See <a class="reference external" href="https://docs.foxglove.dev/docs/visualization/message-schemas/color">https://docs.foxglove.dev/docs/visualization/message-schemas/color</a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.Color.encode">
+<span class="sig-name descname"><span class="pre">encode</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.Color.encode" title="Link to this definition">¶</a></dt>
+<dd><p>Encodes the Color as protobuf.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.Color.get_schema">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_schema</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.Color.get_schema" title="Link to this definition">¶</a></dt>
+<dd><p>Returns the Color schema.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.schemas.CompressedImage">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.schemas.</span></span><span class="sig-name descname"><span class="pre">CompressedImage</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timestamp</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frame_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">format</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.CompressedImage" title="Link to this definition">¶</a></dt>
+<dd><p>A compressed image</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>timestamp</strong> – Timestamp of image</p></li>
+<li><p><strong>frame_id</strong> – Frame of reference for the image. The origin of the frame is the optical center of the camera. +x points to the right in the image, +y points down, and +z points into the plane of the image.</p></li>
+<li><p><strong>data</strong> – Compressed image data</p></li>
+<li><p><strong>format</strong> – <p>Image format</p>
+<p>Supported values: <cite>jpeg</cite>, <cite>png</cite>, <cite>webp</cite>, <cite>avif</cite></p>
+</p></li>
+</ul>
+</dd>
+</dl>
+<p>See <a class="reference external" href="https://docs.foxglove.dev/docs/visualization/message-schemas/compressed-image">https://docs.foxglove.dev/docs/visualization/message-schemas/compressed-image</a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.CompressedImage.encode">
+<span class="sig-name descname"><span class="pre">encode</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.CompressedImage.encode" title="Link to this definition">¶</a></dt>
+<dd><p>Encodes the CompressedImage as protobuf.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.CompressedImage.get_schema">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_schema</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.CompressedImage.get_schema" title="Link to this definition">¶</a></dt>
+<dd><p>Returns the CompressedImage schema.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.schemas.CompressedVideo">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.schemas.</span></span><span class="sig-name descname"><span class="pre">CompressedVideo</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timestamp</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frame_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">format</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.CompressedVideo" title="Link to this definition">¶</a></dt>
+<dd><p>A single frame of a compressed video bitstream</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>timestamp</strong> – Timestamp of video frame</p></li>
+<li><p><strong>frame_id</strong> – <p>Frame of reference for the video.</p>
+<p>The origin of the frame is the optical center of the camera. +x points to the right in the video, +y points down, and +z points into the plane of the video.</p>
+</p></li>
+<li><p><strong>data</strong> – <p>Compressed video frame data.</p>
+<p>For packet-based video codecs this data must begin and end on packet boundaries (no partial packets), and must contain enough video packets to decode exactly one image (either a keyframe or delta frame). Note: Foxglove does not support video streams that include B frames because they require lookahead.</p>
+<p>Specifically, the requirements for different <cite>format</cite> values are:</p>
+<ul>
+<li><p><cite>h264</cite>
+- Use Annex B formatted data
+- Each CompressedVideo message should contain enough NAL units to decode exactly one video frame
+- Each message containing a key frame (IDR) must also include a SPS NAL unit</p></li>
+<li><p><cite>h265</cite> (HEVC)
+- Use Annex B formatted data
+- Each CompressedVideo message should contain enough NAL units to decode exactly one video frame
+- Each message containing a key frame (IRAP) must also include relevant VPS/SPS/PPS NAL units</p></li>
+<li><p><cite>vp9</cite>
+- Each CompressedVideo message should contain exactly one video frame</p></li>
+<li><p><cite>av1</cite>
+- Use the “Low overhead bitstream format” (section 5.2)
+- Each CompressedVideo message should contain enough OBUs to decode exactly one video frame
+- Each message containing a key frame must also include a Sequence Header OBU</p></li>
+</ul>
+</p></li>
+<li><p><strong>format</strong> – <p>Video format.</p>
+<p>Supported values: <cite>h264</cite>, <cite>h265</cite>, <cite>vp9</cite>, <cite>av1</cite>.</p>
+<p>Note: compressed video support is subject to hardware limitations and patent licensing, so not all encodings may be supported on all platforms. See more about <a class="reference external" href="https://caniuse.com/hevc">H.265 support</a>, <a class="reference external" href="https://caniuse.com/webm">VP9 support</a>, and <a class="reference external" href="https://caniuse.com/av1">AV1 support</a>.</p>
+</p></li>
+</ul>
+</dd>
+</dl>
+<p>See <a class="reference external" href="https://docs.foxglove.dev/docs/visualization/message-schemas/compressed-video">https://docs.foxglove.dev/docs/visualization/message-schemas/compressed-video</a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.CompressedVideo.encode">
+<span class="sig-name descname"><span class="pre">encode</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.CompressedVideo.encode" title="Link to this definition">¶</a></dt>
+<dd><p>Encodes the CompressedVideo as protobuf.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.CompressedVideo.get_schema">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_schema</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.CompressedVideo.get_schema" title="Link to this definition">¶</a></dt>
+<dd><p>Returns the CompressedVideo schema.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.schemas.CubePrimitive">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.schemas.</span></span><span class="sig-name descname"><span class="pre">CubePrimitive</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">color</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.CubePrimitive" title="Link to this definition">¶</a></dt>
+<dd><p>A primitive representing a cube or rectangular prism</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>pose</strong> – Position of the center of the cube and orientation of the cube</p></li>
+<li><p><strong>size</strong> – Size of the cube along each axis</p></li>
+<li><p><strong>color</strong> – Color of the cube</p></li>
+</ul>
+</dd>
+</dl>
+<p>See <a class="reference external" href="https://docs.foxglove.dev/docs/visualization/message-schemas/cube-primitive">https://docs.foxglove.dev/docs/visualization/message-schemas/cube-primitive</a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.CubePrimitive.encode">
+<span class="sig-name descname"><span class="pre">encode</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.CubePrimitive.encode" title="Link to this definition">¶</a></dt>
+<dd><p>Encodes the CubePrimitive as protobuf.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.CubePrimitive.get_schema">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_schema</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.CubePrimitive.get_schema" title="Link to this definition">¶</a></dt>
+<dd><p>Returns the CubePrimitive schema.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.schemas.CylinderPrimitive">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.schemas.</span></span><span class="sig-name descname"><span class="pre">CylinderPrimitive</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bottom_scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">top_scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">color</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.CylinderPrimitive" title="Link to this definition">¶</a></dt>
+<dd><p>A primitive representing a cylinder, elliptic cylinder, or truncated cone</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>pose</strong> – Position of the center of the cylinder and orientation of the cylinder. The flat face(s) are perpendicular to the z-axis.</p></li>
+<li><p><strong>size</strong> – Size of the cylinder’s bounding box</p></li>
+<li><p><strong>bottom_scale</strong> – 0-1, ratio of the diameter of the cylinder’s bottom face (min z) to the bottom of the bounding box</p></li>
+<li><p><strong>top_scale</strong> – 0-1, ratio of the diameter of the cylinder’s top face (max z) to the top of the bounding box</p></li>
+<li><p><strong>color</strong> – Color of the cylinder</p></li>
+</ul>
+</dd>
+</dl>
+<p>See <a class="reference external" href="https://docs.foxglove.dev/docs/visualization/message-schemas/cylinder-primitive">https://docs.foxglove.dev/docs/visualization/message-schemas/cylinder-primitive</a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.CylinderPrimitive.encode">
+<span class="sig-name descname"><span class="pre">encode</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.CylinderPrimitive.encode" title="Link to this definition">¶</a></dt>
+<dd><p>Encodes the CylinderPrimitive as protobuf.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.CylinderPrimitive.get_schema">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_schema</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.CylinderPrimitive.get_schema" title="Link to this definition">¶</a></dt>
+<dd><p>Returns the CylinderPrimitive schema.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.schemas.Duration">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.schemas.</span></span><span class="sig-name descname"><span class="pre">Duration</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sec</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nsec</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.Duration" title="Link to this definition">¶</a></dt>
+<dd><p>A duration, composed of seconds and nanoseconds</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sec</strong> – The number of seconds in the duration.</p></li>
+<li><p><strong>nsec</strong> – The number of nanoseconds in the positive direction.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.Duration.from_secs">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">from_secs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">secs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.Duration.from_secs" title="Link to this definition">¶</a></dt>
+<dd><p>Creates a <a class="reference internal" href="#foxglove.schemas.Duration" title="foxglove.schemas.Duration"><code class="xref py py-class docutils literal notranslate"><span class="pre">Duration</span></code></a> from seconds.</p>
+<p>Raises <cite>OverflowError</cite> if the duration cannot be represented.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>secs</strong> – Seconds</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="#foxglove.schemas.Duration" title="foxglove.schemas.Duration"><code class="xref py py-class docutils literal notranslate"><span class="pre">Duration</span></code></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.Duration.from_timedelta">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">from_timedelta</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">td</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.Duration.from_timedelta" title="Link to this definition">¶</a></dt>
+<dd><p>Creates a <a class="reference internal" href="#foxglove.schemas.Duration" title="foxglove.schemas.Duration"><code class="xref py py-class docutils literal notranslate"><span class="pre">Duration</span></code></a> from a timedelta.</p>
+<p>Raises <cite>OverflowError</cite> if the duration cannot be represented.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>td</strong> – Timedelta</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="#foxglove.schemas.Duration" title="foxglove.schemas.Duration"><code class="xref py py-class docutils literal notranslate"><span class="pre">Duration</span></code></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="foxglove.schemas.Duration.nsec">
+<span class="sig-name descname"><span class="pre">nsec</span></span><a class="headerlink" href="#foxglove.schemas.Duration.nsec" title="Link to this definition">¶</a></dt>
+<dd><p>The number of fractional seconds in the duration, as nanoseconds.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="foxglove.schemas.Duration.sec">
+<span class="sig-name descname"><span class="pre">sec</span></span><a class="headerlink" href="#foxglove.schemas.Duration.sec" title="Link to this definition">¶</a></dt>
+<dd><p>The number of seconds in the duration.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.schemas.FrameTransform">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.schemas.</span></span><span class="sig-name descname"><span class="pre">FrameTransform</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timestamp</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parent_frame_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">child_frame_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">translation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rotation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.FrameTransform" title="Link to this definition">¶</a></dt>
+<dd><p>A transform between two reference frames in 3D space</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>timestamp</strong> – Timestamp of transform</p></li>
+<li><p><strong>parent_frame_id</strong> – Name of the parent frame</p></li>
+<li><p><strong>child_frame_id</strong> – Name of the child frame</p></li>
+<li><p><strong>translation</strong> – Translation component of the transform</p></li>
+<li><p><strong>rotation</strong> – Rotation component of the transform</p></li>
+</ul>
+</dd>
+</dl>
+<p>See <a class="reference external" href="https://docs.foxglove.dev/docs/visualization/message-schemas/frame-transform">https://docs.foxglove.dev/docs/visualization/message-schemas/frame-transform</a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.FrameTransform.encode">
+<span class="sig-name descname"><span class="pre">encode</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.FrameTransform.encode" title="Link to this definition">¶</a></dt>
+<dd><p>Encodes the FrameTransform as protobuf.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.FrameTransform.get_schema">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_schema</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.FrameTransform.get_schema" title="Link to this definition">¶</a></dt>
+<dd><p>Returns the FrameTransform schema.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.schemas.FrameTransforms">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.schemas.</span></span><span class="sig-name descname"><span class="pre">FrameTransforms</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">transforms</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.FrameTransforms" title="Link to this definition">¶</a></dt>
+<dd><p>An array of FrameTransform messages</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>transforms</strong> – Array of transforms</p>
+</dd>
+</dl>
+<p>See <a class="reference external" href="https://docs.foxglove.dev/docs/visualization/message-schemas/frame-transforms">https://docs.foxglove.dev/docs/visualization/message-schemas/frame-transforms</a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.FrameTransforms.encode">
+<span class="sig-name descname"><span class="pre">encode</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.FrameTransforms.encode" title="Link to this definition">¶</a></dt>
+<dd><p>Encodes the FrameTransforms as protobuf.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.FrameTransforms.get_schema">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_schema</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.FrameTransforms.get_schema" title="Link to this definition">¶</a></dt>
+<dd><p>Returns the FrameTransforms schema.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.schemas.GeoJson">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.schemas.</span></span><span class="sig-name descname"><span class="pre">GeoJson</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">geojson</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.GeoJson" title="Link to this definition">¶</a></dt>
+<dd><p>GeoJSON data for annotating maps</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>geojson</strong> – GeoJSON data encoded as a UTF-8 string</p>
+</dd>
+</dl>
+<p>See <a class="reference external" href="https://docs.foxglove.dev/docs/visualization/message-schemas/geo-json">https://docs.foxglove.dev/docs/visualization/message-schemas/geo-json</a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.GeoJson.encode">
+<span class="sig-name descname"><span class="pre">encode</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.GeoJson.encode" title="Link to this definition">¶</a></dt>
+<dd><p>Encodes the GeoJson as protobuf.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.GeoJson.get_schema">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_schema</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.GeoJson.get_schema" title="Link to this definition">¶</a></dt>
+<dd><p>Returns the GeoJson schema.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.schemas.Grid">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.schemas.</span></span><span class="sig-name descname"><span class="pre">Grid</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timestamp</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frame_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">column_count</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">row_stride</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_stride</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fields</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.Grid" title="Link to this definition">¶</a></dt>
+<dd><p>A 2D grid of data</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>timestamp</strong> – Timestamp of grid</p></li>
+<li><p><strong>frame_id</strong> – Frame of reference</p></li>
+<li><p><strong>pose</strong> – Origin of grid’s corner relative to frame of reference; grid is positioned in the x-y plane relative to this origin</p></li>
+<li><p><strong>column_count</strong> – Number of grid columns</p></li>
+<li><p><strong>cell_size</strong> – Size of single grid cell along x and y axes, relative to <cite>pose</cite></p></li>
+<li><p><strong>row_stride</strong> – Number of bytes between rows in <cite>data</cite></p></li>
+<li><p><strong>cell_stride</strong> – Number of bytes between cells within a row in <cite>data</cite></p></li>
+<li><p><strong>fields</strong> – <p>Fields in <cite>data</cite>. <cite>red</cite>, <cite>green</cite>, <cite>blue</cite>, and <cite>alpha</cite> are optional for customizing the grid’s color.
+To enable RGB color visualization in the <a class="reference external" href="https://docs.foxglove.dev/docs/visualization/panels/3d#rgba-separate-fields-color-mode">3D panel</a>, include <strong>all four</strong> of these fields in your <cite>fields</cite> array:</p>
+<ul>
+<li><p><cite>red</cite> - Red channel value</p></li>
+<li><p><cite>green</cite> - Green channel value</p></li>
+<li><p><cite>blue</cite> - Blue channel value</p></li>
+<li><p><cite>alpha</cite> - Alpha/transparency channel value</p></li>
+</ul>
+<p><strong>note:</strong> All four fields must be present with these exact names for RGB visualization to work. The order of fields doesn’t matter, but the names must match exactly.</p>
+<p>Recommended type: <cite>UINT8</cite> (0-255 range) for standard 8-bit color channels.</p>
+<p>Example field definitions:</p>
+<p><strong>RGB color only:</strong></p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">fields</span><span class="p">:</span> <span class="p">[</span>
+ <span class="p">{</span> <span class="n">name</span><span class="p">:</span> <span class="s2">&quot;red&quot;</span><span class="p">,</span> <span class="n">offset</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="nb">type</span><span class="p">:</span> <span class="n">NumericType</span><span class="o">.</span><span class="n">UINT8</span> <span class="p">},</span>
+ <span class="p">{</span> <span class="n">name</span><span class="p">:</span> <span class="s2">&quot;green&quot;</span><span class="p">,</span> <span class="n">offset</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="nb">type</span><span class="p">:</span> <span class="n">NumericType</span><span class="o">.</span><span class="n">UINT8</span> <span class="p">},</span>
+ <span class="p">{</span> <span class="n">name</span><span class="p">:</span> <span class="s2">&quot;blue&quot;</span><span class="p">,</span> <span class="n">offset</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="nb">type</span><span class="p">:</span> <span class="n">NumericType</span><span class="o">.</span><span class="n">UINT8</span> <span class="p">},</span>
+ <span class="p">{</span> <span class="n">name</span><span class="p">:</span> <span class="s2">&quot;alpha&quot;</span><span class="p">,</span> <span class="n">offset</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span> <span class="nb">type</span><span class="p">:</span> <span class="n">NumericType</span><span class="o">.</span><span class="n">UINT8</span> <span class="p">},</span>
+<span class="p">];</span>
+</pre></div>
+</div>
+<p><strong>RGB color with elevation (for 3D terrain visualization):</strong></p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">fields</span><span class="p">:</span> <span class="p">[</span>
+ <span class="p">{</span> <span class="n">name</span><span class="p">:</span> <span class="s2">&quot;red&quot;</span><span class="p">,</span> <span class="n">offset</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="nb">type</span><span class="p">:</span> <span class="n">NumericType</span><span class="o">.</span><span class="n">UINT8</span> <span class="p">},</span>
+ <span class="p">{</span> <span class="n">name</span><span class="p">:</span> <span class="s2">&quot;green&quot;</span><span class="p">,</span> <span class="n">offset</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="nb">type</span><span class="p">:</span> <span class="n">NumericType</span><span class="o">.</span><span class="n">UINT8</span> <span class="p">},</span>
+ <span class="p">{</span> <span class="n">name</span><span class="p">:</span> <span class="s2">&quot;blue&quot;</span><span class="p">,</span> <span class="n">offset</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="nb">type</span><span class="p">:</span> <span class="n">NumericType</span><span class="o">.</span><span class="n">UINT8</span> <span class="p">},</span>
+ <span class="p">{</span> <span class="n">name</span><span class="p">:</span> <span class="s2">&quot;alpha&quot;</span><span class="p">,</span> <span class="n">offset</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span> <span class="nb">type</span><span class="p">:</span> <span class="n">NumericType</span><span class="o">.</span><span class="n">UINT8</span> <span class="p">},</span>
+ <span class="p">{</span> <span class="n">name</span><span class="p">:</span> <span class="s2">&quot;elevation&quot;</span><span class="p">,</span> <span class="n">offset</span><span class="p">:</span> <span class="mi">4</span><span class="p">,</span> <span class="nb">type</span><span class="p">:</span> <span class="n">NumericType</span><span class="o">.</span><span class="n">FLOAT32</span> <span class="p">},</span>
+<span class="p">];</span>
+</pre></div>
+</div>
+<p>When these fields are present, the 3D panel will offer additional “Color Mode” options including “RGBA (separate fields)” to visualize the RGB data directly. For elevation visualization, set the “Elevation field” to your elevation layer name.</p>
+</p></li>
+<li><p><strong>data</strong> – <p>Grid cell data, interpreted using <cite>fields</cite>, in row-major (y-major) order.
+For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:</p>
+<ul>
+<li><p>y = i / row_stride * cell_size.y</p></li>
+<li><p>x = (i % row_stride) / cell_stride * cell_size.x</p></li>
+</ul>
+</p></li>
+</ul>
+</dd>
+</dl>
+<p>See <a class="reference external" href="https://docs.foxglove.dev/docs/visualization/message-schemas/grid">https://docs.foxglove.dev/docs/visualization/message-schemas/grid</a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.Grid.encode">
+<span class="sig-name descname"><span class="pre">encode</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.Grid.encode" title="Link to this definition">¶</a></dt>
+<dd><p>Encodes the Grid as protobuf.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.Grid.get_schema">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_schema</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.Grid.get_schema" title="Link to this definition">¶</a></dt>
+<dd><p>Returns the Grid schema.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.schemas.ImageAnnotations">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.schemas.</span></span><span class="sig-name descname"><span class="pre">ImageAnnotations</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">circles</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">points</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">texts</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.ImageAnnotations" title="Link to this definition">¶</a></dt>
+<dd><p>Array of annotations for a 2D image</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>circles</strong> – Circle annotations</p></li>
+<li><p><strong>points</strong> – Points annotations</p></li>
+<li><p><strong>texts</strong> – Text annotations</p></li>
+</ul>
+</dd>
+</dl>
+<p>See <a class="reference external" href="https://docs.foxglove.dev/docs/visualization/message-schemas/image-annotations">https://docs.foxglove.dev/docs/visualization/message-schemas/image-annotations</a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.ImageAnnotations.encode">
+<span class="sig-name descname"><span class="pre">encode</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.ImageAnnotations.encode" title="Link to this definition">¶</a></dt>
+<dd><p>Encodes the ImageAnnotations as protobuf.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.ImageAnnotations.get_schema">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_schema</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.ImageAnnotations.get_schema" title="Link to this definition">¶</a></dt>
+<dd><p>Returns the ImageAnnotations schema.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.schemas.KeyValuePair">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.schemas.</span></span><span class="sig-name descname"><span class="pre">KeyValuePair</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">key</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.KeyValuePair" title="Link to this definition">¶</a></dt>
+<dd><p>A key with its associated value</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>key</strong> – Key</p></li>
+<li><p><strong>value</strong> – Value</p></li>
+</ul>
+</dd>
+</dl>
+<p>See <a class="reference external" href="https://docs.foxglove.dev/docs/visualization/message-schemas/key-value-pair">https://docs.foxglove.dev/docs/visualization/message-schemas/key-value-pair</a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.KeyValuePair.encode">
+<span class="sig-name descname"><span class="pre">encode</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.KeyValuePair.encode" title="Link to this definition">¶</a></dt>
+<dd><p>Encodes the KeyValuePair as protobuf.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.KeyValuePair.get_schema">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_schema</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.KeyValuePair.get_schema" title="Link to this definition">¶</a></dt>
+<dd><p>Returns the KeyValuePair schema.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.schemas.LaserScan">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.schemas.</span></span><span class="sig-name descname"><span class="pre">LaserScan</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timestamp</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frame_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start_angle</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end_angle</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ranges</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">intensities</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.LaserScan" title="Link to this definition">¶</a></dt>
+<dd><p>A single scan from a planar laser range-finder</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>timestamp</strong> – Timestamp of scan</p></li>
+<li><p><strong>frame_id</strong> – Frame of reference</p></li>
+<li><p><strong>pose</strong> – Origin of scan relative to frame of reference; points are positioned in the x-y plane relative to this origin; angles are interpreted as counterclockwise rotations around the z axis with 0 rad being in the +x direction</p></li>
+<li><p><strong>start_angle</strong> – Bearing of first point, in radians</p></li>
+<li><p><strong>end_angle</strong> – Bearing of last point, in radians</p></li>
+<li><p><strong>ranges</strong> – Distance of detections from origin; assumed to be at equally-spaced angles between <cite>start_angle</cite> and <cite>end_angle</cite></p></li>
+<li><p><strong>intensities</strong> – Intensity of detections</p></li>
+</ul>
+</dd>
+</dl>
+<p>See <a class="reference external" href="https://docs.foxglove.dev/docs/visualization/message-schemas/laser-scan">https://docs.foxglove.dev/docs/visualization/message-schemas/laser-scan</a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.LaserScan.encode">
+<span class="sig-name descname"><span class="pre">encode</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.LaserScan.encode" title="Link to this definition">¶</a></dt>
+<dd><p>Encodes the LaserScan as protobuf.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.LaserScan.get_schema">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_schema</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.LaserScan.get_schema" title="Link to this definition">¶</a></dt>
+<dd><p>Returns the LaserScan schema.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.schemas.LinePrimitive">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.schemas.</span></span><span class="sig-name descname"><span class="pre">LinePrimitive</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">Ellipsis</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">thickness</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale_invariant</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">points</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">color</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">colors</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">indices</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.LinePrimitive" title="Link to this definition">¶</a></dt>
+<dd><p>A primitive representing a series of points connected by lines</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>type</strong> – Drawing primitive to use for lines</p></li>
+<li><p><strong>pose</strong> – Origin of lines relative to reference frame</p></li>
+<li><p><strong>thickness</strong> – Line thickness</p></li>
+<li><p><strong>scale_invariant</strong> – Indicates whether <cite>thickness</cite> is a fixed size in screen pixels (true), or specified in world coordinates and scales with distance from the camera (false)</p></li>
+<li><p><strong>points</strong> – Points along the line</p></li>
+<li><p><strong>color</strong> – Solid color to use for the whole line. Ignored if <cite>colors</cite> is non-empty.</p></li>
+<li><p><strong>colors</strong> – Per-point colors (if non-empty, must have the same length as <cite>points</cite>).</p></li>
+<li><p><strong>indices</strong> – <p>Indices into the <cite>points</cite> and <cite>colors</cite> attribute arrays, which can be used to avoid duplicating attribute data.</p>
+<p>If omitted or empty, indexing will not be used. This default behavior is equivalent to specifying [0, 1, …, N-1] for the indices (where N is the number of <cite>points</cite> provided).</p>
+</p></li>
+</ul>
+</dd>
+</dl>
+<p>See <a class="reference external" href="https://docs.foxglove.dev/docs/visualization/message-schemas/line-primitive">https://docs.foxglove.dev/docs/visualization/message-schemas/line-primitive</a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.LinePrimitive.encode">
+<span class="sig-name descname"><span class="pre">encode</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.LinePrimitive.encode" title="Link to this definition">¶</a></dt>
+<dd><p>Encodes the LinePrimitive as protobuf.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.LinePrimitive.get_schema">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_schema</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.LinePrimitive.get_schema" title="Link to this definition">¶</a></dt>
+<dd><p>Returns the LinePrimitive schema.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.schemas.LinePrimitiveLineType">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.schemas.</span></span><span class="sig-name descname"><span class="pre">LinePrimitiveLineType</span></span><a class="headerlink" href="#foxglove.schemas.LinePrimitiveLineType" title="Link to this definition">¶</a></dt>
+<dd><p>An enumeration indicating how input points should be interpreted to create lines</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.schemas.LocationFix">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.schemas.</span></span><span class="sig-name descname"><span class="pre">LocationFix</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timestamp</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frame_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">latitude</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">longitude</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">altitude</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">position_covariance</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">position_covariance_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">Ellipsis</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">color</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.LocationFix" title="Link to this definition">¶</a></dt>
+<dd><p>A navigation satellite fix for any Global Navigation Satellite System</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>timestamp</strong> – Timestamp of the message</p></li>
+<li><p><strong>frame_id</strong> – Frame for the sensor. Latitude and longitude readings are at the origin of the frame.</p></li>
+<li><p><strong>latitude</strong> – Latitude in degrees</p></li>
+<li><p><strong>longitude</strong> – Longitude in degrees</p></li>
+<li><p><strong>altitude</strong> – Altitude in meters</p></li>
+<li><p><strong>position_covariance</strong> – Position covariance (m^2) defined relative to a tangential plane through the reported position. The components are East, North, and Up (ENU), in row-major order.</p></li>
+<li><p><strong>position_covariance_type</strong> – If <cite>position_covariance</cite> is available, <cite>position_covariance_type</cite> must be set to indicate the type of covariance.</p></li>
+<li><p><strong>color</strong> – Color used to visualize the location</p></li>
+</ul>
+</dd>
+</dl>
+<p>See <a class="reference external" href="https://docs.foxglove.dev/docs/visualization/message-schemas/location-fix">https://docs.foxglove.dev/docs/visualization/message-schemas/location-fix</a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.LocationFix.encode">
+<span class="sig-name descname"><span class="pre">encode</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.LocationFix.encode" title="Link to this definition">¶</a></dt>
+<dd><p>Encodes the LocationFix as protobuf.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.LocationFix.get_schema">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_schema</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.LocationFix.get_schema" title="Link to this definition">¶</a></dt>
+<dd><p>Returns the LocationFix schema.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.schemas.LocationFixPositionCovarianceType">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.schemas.</span></span><span class="sig-name descname"><span class="pre">LocationFixPositionCovarianceType</span></span><a class="headerlink" href="#foxglove.schemas.LocationFixPositionCovarianceType" title="Link to this definition">¶</a></dt>
+<dd><p>Type of position covariance</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.schemas.LocationFixes">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.schemas.</span></span><span class="sig-name descname"><span class="pre">LocationFixes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fixes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.LocationFixes" title="Link to this definition">¶</a></dt>
+<dd><p>A group of LocationFix messages</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>fixes</strong> – An array of location fixes</p>
+</dd>
+</dl>
+<p>See <a class="reference external" href="https://docs.foxglove.dev/docs/visualization/message-schemas/location-fixes">https://docs.foxglove.dev/docs/visualization/message-schemas/location-fixes</a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.LocationFixes.encode">
+<span class="sig-name descname"><span class="pre">encode</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.LocationFixes.encode" title="Link to this definition">¶</a></dt>
+<dd><p>Encodes the LocationFixes as protobuf.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.LocationFixes.get_schema">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_schema</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.LocationFixes.get_schema" title="Link to this definition">¶</a></dt>
+<dd><p>Returns the LocationFixes schema.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.schemas.Log">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.schemas.</span></span><span class="sig-name descname"><span class="pre">Log</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timestamp</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">level</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">Ellipsis</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">message</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">file</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">line</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.Log" title="Link to this definition">¶</a></dt>
+<dd><p>A log message</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>timestamp</strong> – Timestamp of log message</p></li>
+<li><p><strong>level</strong> – Log level</p></li>
+<li><p><strong>message</strong> – Log message</p></li>
+<li><p><strong>name</strong> – Process or node name</p></li>
+<li><p><strong>file</strong> – Filename</p></li>
+<li><p><strong>line</strong> – Line number in the file</p></li>
+</ul>
+</dd>
+</dl>
+<p>See <a class="reference external" href="https://docs.foxglove.dev/docs/visualization/message-schemas/log">https://docs.foxglove.dev/docs/visualization/message-schemas/log</a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.Log.encode">
+<span class="sig-name descname"><span class="pre">encode</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.Log.encode" title="Link to this definition">¶</a></dt>
+<dd><p>Encodes the Log as protobuf.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.Log.get_schema">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_schema</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.Log.get_schema" title="Link to this definition">¶</a></dt>
+<dd><p>Returns the Log schema.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.schemas.LogLevel">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.schemas.</span></span><span class="sig-name descname"><span class="pre">LogLevel</span></span><a class="headerlink" href="#foxglove.schemas.LogLevel" title="Link to this definition">¶</a></dt>
+<dd><p>Log level</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.schemas.ModelPrimitive">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.schemas.</span></span><span class="sig-name descname"><span class="pre">ModelPrimitive</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">color</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">override_color</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">url</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">media_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.ModelPrimitive" title="Link to this definition">¶</a></dt>
+<dd><p>A primitive representing a 3D model file loaded from an external URL or embedded data</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>pose</strong> – Origin of model relative to reference frame</p></li>
+<li><p><strong>scale</strong> – Scale factor to apply to the model along each axis</p></li>
+<li><p><strong>color</strong> – Solid color to use for the whole model if <cite>override_color</cite> is true.</p></li>
+<li><p><strong>override_color</strong> – Whether to use the color specified in <cite>color</cite> instead of any materials embedded in the original model.</p></li>
+<li><p><strong>url</strong> – URL pointing to model file. One of <cite>url</cite> or <cite>data</cite> should be non-empty.</p></li>
+<li><p><strong>media_type</strong> – [Media type](<a class="reference external" href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types">https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types</a>) of embedded model (e.g. <cite>model/gltf-binary</cite>). Required if <cite>data</cite> is provided instead of <cite>url</cite>. Overrides the inferred media type if <cite>url</cite> is provided.</p></li>
+<li><p><strong>data</strong> – Embedded model. One of <cite>url</cite> or <cite>data</cite> should be non-empty. If <cite>data</cite> is non-empty, <cite>media_type</cite> must be set to indicate the type of the data.</p></li>
+</ul>
+</dd>
+</dl>
+<p>See <a class="reference external" href="https://docs.foxglove.dev/docs/visualization/message-schemas/model-primitive">https://docs.foxglove.dev/docs/visualization/message-schemas/model-primitive</a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.ModelPrimitive.encode">
+<span class="sig-name descname"><span class="pre">encode</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.ModelPrimitive.encode" title="Link to this definition">¶</a></dt>
+<dd><p>Encodes the ModelPrimitive as protobuf.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.ModelPrimitive.get_schema">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_schema</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.ModelPrimitive.get_schema" title="Link to this definition">¶</a></dt>
+<dd><p>Returns the ModelPrimitive schema.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.schemas.PackedElementField">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.schemas.</span></span><span class="sig-name descname"><span class="pre">PackedElementField</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">offset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">Ellipsis</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.PackedElementField" title="Link to this definition">¶</a></dt>
+<dd><p>A field present within each element in a byte array of packed elements.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>name</strong> – Name of the field</p></li>
+<li><p><strong>offset</strong> – Byte offset from start of data buffer</p></li>
+<li><p><strong>type</strong> – Type of data in the field. Integers are stored using little-endian byte order.</p></li>
+</ul>
+</dd>
+</dl>
+<p>See <a class="reference external" href="https://docs.foxglove.dev/docs/visualization/message-schemas/packed-element-field">https://docs.foxglove.dev/docs/visualization/message-schemas/packed-element-field</a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.PackedElementField.encode">
+<span class="sig-name descname"><span class="pre">encode</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.PackedElementField.encode" title="Link to this definition">¶</a></dt>
+<dd><p>Encodes the PackedElementField as protobuf.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.PackedElementField.get_schema">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_schema</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.PackedElementField.get_schema" title="Link to this definition">¶</a></dt>
+<dd><p>Returns the PackedElementField schema.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.schemas.PackedElementFieldNumericType">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.schemas.</span></span><span class="sig-name descname"><span class="pre">PackedElementFieldNumericType</span></span><a class="headerlink" href="#foxglove.schemas.PackedElementFieldNumericType" title="Link to this definition">¶</a></dt>
+<dd><p>Numeric type</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.schemas.Point2">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.schemas.</span></span><span class="sig-name descname"><span class="pre">Point2</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.Point2" title="Link to this definition">¶</a></dt>
+<dd><p>A point representing a position in 2D space</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> – x coordinate position</p></li>
+<li><p><strong>y</strong> – y coordinate position</p></li>
+</ul>
+</dd>
+</dl>
+<p>See <a class="reference external" href="https://docs.foxglove.dev/docs/visualization/message-schemas/point2">https://docs.foxglove.dev/docs/visualization/message-schemas/point2</a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.Point2.encode">
+<span class="sig-name descname"><span class="pre">encode</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.Point2.encode" title="Link to this definition">¶</a></dt>
+<dd><p>Encodes the Point2 as protobuf.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.Point2.get_schema">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_schema</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.Point2.get_schema" title="Link to this definition">¶</a></dt>
+<dd><p>Returns the Point2 schema.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.schemas.Point3">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.schemas.</span></span><span class="sig-name descname"><span class="pre">Point3</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">z</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.Point3" title="Link to this definition">¶</a></dt>
+<dd><p>A point representing a position in 3D space</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> – x coordinate position</p></li>
+<li><p><strong>y</strong> – y coordinate position</p></li>
+<li><p><strong>z</strong> – z coordinate position</p></li>
+</ul>
+</dd>
+</dl>
+<p>See <a class="reference external" href="https://docs.foxglove.dev/docs/visualization/message-schemas/point3">https://docs.foxglove.dev/docs/visualization/message-schemas/point3</a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.Point3.encode">
+<span class="sig-name descname"><span class="pre">encode</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.Point3.encode" title="Link to this definition">¶</a></dt>
+<dd><p>Encodes the Point3 as protobuf.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.Point3.get_schema">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_schema</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.Point3.get_schema" title="Link to this definition">¶</a></dt>
+<dd><p>Returns the Point3 schema.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.schemas.PointCloud">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.schemas.</span></span><span class="sig-name descname"><span class="pre">PointCloud</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timestamp</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frame_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">point_stride</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fields</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.PointCloud" title="Link to this definition">¶</a></dt>
+<dd><p>A collection of N-dimensional points, which may contain additional fields with information like normals, intensity, etc.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>timestamp</strong> – Timestamp of point cloud</p></li>
+<li><p><strong>frame_id</strong> – Frame of reference</p></li>
+<li><p><strong>pose</strong> – The origin of the point cloud relative to the frame of reference</p></li>
+<li><p><strong>point_stride</strong> – Number of bytes between points in the <cite>data</cite></p></li>
+<li><p><strong>fields</strong> – Fields in <cite>data</cite>. At least 2 coordinate fields from <cite>x</cite>, <cite>y</cite>, and <cite>z</cite> are required for each point’s position; <cite>red</cite>, <cite>green</cite>, <cite>blue</cite>, and <cite>alpha</cite> are optional for customizing each point’s color.</p></li>
+<li><p><strong>data</strong> – Point data, interpreted using <cite>fields</cite></p></li>
+</ul>
+</dd>
+</dl>
+<p>See <a class="reference external" href="https://docs.foxglove.dev/docs/visualization/message-schemas/point-cloud">https://docs.foxglove.dev/docs/visualization/message-schemas/point-cloud</a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.PointCloud.encode">
+<span class="sig-name descname"><span class="pre">encode</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.PointCloud.encode" title="Link to this definition">¶</a></dt>
+<dd><p>Encodes the PointCloud as protobuf.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.PointCloud.get_schema">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_schema</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.PointCloud.get_schema" title="Link to this definition">¶</a></dt>
+<dd><p>Returns the PointCloud schema.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.schemas.PointsAnnotation">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.schemas.</span></span><span class="sig-name descname"><span class="pre">PointsAnnotation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timestamp</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">Ellipsis</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">points</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">outline_color</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">outline_colors</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fill_color</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">thickness</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.PointsAnnotation" title="Link to this definition">¶</a></dt>
+<dd><p>An array of points on a 2D image</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>timestamp</strong> – Timestamp of annotation</p></li>
+<li><p><strong>type</strong> – Type of points annotation to draw</p></li>
+<li><p><strong>points</strong> – Points in 2D image coordinates (pixels).
+These coordinates use the top-left corner of the top-left pixel of the image as the origin.</p></li>
+<li><p><strong>outline_color</strong> – Outline color</p></li>
+<li><p><strong>outline_colors</strong> – Per-point colors, if <cite>type</cite> is <cite>POINTS</cite>, or per-segment stroke colors, if <cite>type</cite> is <cite>LINE_LIST</cite>, <cite>LINE_STRIP</cite> or <cite>LINE_LOOP</cite>.</p></li>
+<li><p><strong>fill_color</strong> – Fill color</p></li>
+<li><p><strong>thickness</strong> – Stroke thickness in pixels</p></li>
+</ul>
+</dd>
+</dl>
+<p>See <a class="reference external" href="https://docs.foxglove.dev/docs/visualization/message-schemas/points-annotation">https://docs.foxglove.dev/docs/visualization/message-schemas/points-annotation</a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.PointsAnnotation.encode">
+<span class="sig-name descname"><span class="pre">encode</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.PointsAnnotation.encode" title="Link to this definition">¶</a></dt>
+<dd><p>Encodes the PointsAnnotation as protobuf.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.PointsAnnotation.get_schema">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_schema</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.PointsAnnotation.get_schema" title="Link to this definition">¶</a></dt>
+<dd><p>Returns the PointsAnnotation schema.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.schemas.PointsAnnotationType">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.schemas.</span></span><span class="sig-name descname"><span class="pre">PointsAnnotationType</span></span><a class="headerlink" href="#foxglove.schemas.PointsAnnotationType" title="Link to this definition">¶</a></dt>
+<dd><p>Type of points annotation</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.schemas.Pose">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.schemas.</span></span><span class="sig-name descname"><span class="pre">Pose</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">position</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">orientation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.Pose" title="Link to this definition">¶</a></dt>
+<dd><p>A position and orientation for an object or reference frame in 3D space</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>position</strong> – Point denoting position in 3D space</p></li>
+<li><p><strong>orientation</strong> – Quaternion denoting orientation in 3D space</p></li>
+</ul>
+</dd>
+</dl>
+<p>See <a class="reference external" href="https://docs.foxglove.dev/docs/visualization/message-schemas/pose">https://docs.foxglove.dev/docs/visualization/message-schemas/pose</a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.Pose.encode">
+<span class="sig-name descname"><span class="pre">encode</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.Pose.encode" title="Link to this definition">¶</a></dt>
+<dd><p>Encodes the Pose as protobuf.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.Pose.get_schema">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_schema</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.Pose.get_schema" title="Link to this definition">¶</a></dt>
+<dd><p>Returns the Pose schema.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.schemas.PoseInFrame">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.schemas.</span></span><span class="sig-name descname"><span class="pre">PoseInFrame</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timestamp</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frame_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.PoseInFrame" title="Link to this definition">¶</a></dt>
+<dd><p>A timestamped pose for an object or reference frame in 3D space</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>timestamp</strong> – Timestamp of pose</p></li>
+<li><p><strong>frame_id</strong> – Frame of reference for pose position and orientation</p></li>
+<li><p><strong>pose</strong> – Pose in 3D space</p></li>
+</ul>
+</dd>
+</dl>
+<p>See <a class="reference external" href="https://docs.foxglove.dev/docs/visualization/message-schemas/pose-in-frame">https://docs.foxglove.dev/docs/visualization/message-schemas/pose-in-frame</a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.PoseInFrame.encode">
+<span class="sig-name descname"><span class="pre">encode</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.PoseInFrame.encode" title="Link to this definition">¶</a></dt>
+<dd><p>Encodes the PoseInFrame as protobuf.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.PoseInFrame.get_schema">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_schema</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.PoseInFrame.get_schema" title="Link to this definition">¶</a></dt>
+<dd><p>Returns the PoseInFrame schema.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.schemas.PosesInFrame">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.schemas.</span></span><span class="sig-name descname"><span class="pre">PosesInFrame</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timestamp</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frame_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">poses</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.PosesInFrame" title="Link to this definition">¶</a></dt>
+<dd><p>An array of timestamped poses for an object or reference frame in 3D space</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>timestamp</strong> – Timestamp of pose</p></li>
+<li><p><strong>frame_id</strong> – Frame of reference for pose position and orientation</p></li>
+<li><p><strong>poses</strong> – Poses in 3D space</p></li>
+</ul>
+</dd>
+</dl>
+<p>See <a class="reference external" href="https://docs.foxglove.dev/docs/visualization/message-schemas/poses-in-frame">https://docs.foxglove.dev/docs/visualization/message-schemas/poses-in-frame</a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.PosesInFrame.encode">
+<span class="sig-name descname"><span class="pre">encode</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.PosesInFrame.encode" title="Link to this definition">¶</a></dt>
+<dd><p>Encodes the PosesInFrame as protobuf.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.PosesInFrame.get_schema">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_schema</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.PosesInFrame.get_schema" title="Link to this definition">¶</a></dt>
+<dd><p>Returns the PosesInFrame schema.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.schemas.Quaternion">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.schemas.</span></span><span class="sig-name descname"><span class="pre">Quaternion</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">z</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">w</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.Quaternion" title="Link to this definition">¶</a></dt>
+<dd><p>A [quaternion](<a class="reference external" href="https://eater.net/quaternions">https://eater.net/quaternions</a>) representing a rotation in 3D space</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> – x value</p></li>
+<li><p><strong>y</strong> – y value</p></li>
+<li><p><strong>z</strong> – z value</p></li>
+<li><p><strong>w</strong> – w value</p></li>
+</ul>
+</dd>
+</dl>
+<p>See <a class="reference external" href="https://docs.foxglove.dev/docs/visualization/message-schemas/quaternion">https://docs.foxglove.dev/docs/visualization/message-schemas/quaternion</a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.Quaternion.encode">
+<span class="sig-name descname"><span class="pre">encode</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.Quaternion.encode" title="Link to this definition">¶</a></dt>
+<dd><p>Encodes the Quaternion as protobuf.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.Quaternion.get_schema">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_schema</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.Quaternion.get_schema" title="Link to this definition">¶</a></dt>
+<dd><p>Returns the Quaternion schema.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.schemas.RawAudio">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.schemas.</span></span><span class="sig-name descname"><span class="pre">RawAudio</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timestamp</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">format</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sample_rate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">number_of_channels</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.RawAudio" title="Link to this definition">¶</a></dt>
+<dd><p>A single block of an audio bitstream</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>timestamp</strong> – Timestamp of the start of the audio block</p></li>
+<li><p><strong>data</strong> – Audio data. The samples in the data must be interleaved and little-endian</p></li>
+<li><p><strong>format</strong> – Audio format. Only ‘pcm-s16’ is currently supported</p></li>
+<li><p><strong>sample_rate</strong> – Sample rate in Hz</p></li>
+<li><p><strong>number_of_channels</strong> – Number of channels in the audio block</p></li>
+</ul>
+</dd>
+</dl>
+<p>See <a class="reference external" href="https://docs.foxglove.dev/docs/visualization/message-schemas/raw-audio">https://docs.foxglove.dev/docs/visualization/message-schemas/raw-audio</a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.RawAudio.encode">
+<span class="sig-name descname"><span class="pre">encode</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.RawAudio.encode" title="Link to this definition">¶</a></dt>
+<dd><p>Encodes the RawAudio as protobuf.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.RawAudio.get_schema">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_schema</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.RawAudio.get_schema" title="Link to this definition">¶</a></dt>
+<dd><p>Returns the RawAudio schema.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.schemas.RawImage">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.schemas.</span></span><span class="sig-name descname"><span class="pre">RawImage</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timestamp</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frame_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">width</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">height</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">encoding</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">step</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.RawImage" title="Link to this definition">¶</a></dt>
+<dd><p>A raw image</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>timestamp</strong> – Timestamp of image</p></li>
+<li><p><strong>frame_id</strong> – Frame of reference for the image. The origin of the frame is the optical center of the camera. +x points to the right in the image, +y points down, and +z points into the plane of the image.</p></li>
+<li><p><strong>width</strong> – Image width in pixels</p></li>
+<li><p><strong>height</strong> – Image height in pixels</p></li>
+<li><p><strong>encoding</strong> – Encoding of the raw image data. See the <cite>data</cite> field description for supported values.</p></li>
+<li><p><strong>step</strong> – Byte length of a single row. This is usually some multiple of <cite>width</cite> depending on the encoding, but can be greater to incorporate padding.</p></li>
+<li><p><strong>data</strong> – <p>Raw image data.</p>
+<p>For each <cite>encoding</cite> value, the <cite>data</cite> field contains image pixel data serialized as follows:</p>
+<ul>
+<li><p><cite>yuv422</cite> or <cite>uyvy</cite>:
+- Pixel colors are decomposed into <a class="reference external" href="https://en.wikipedia.org/wiki/Y%E2%80%B2UV">Y’UV</a> channels.
+- Pixel channel values are represented as unsigned 8-bit integers.
+- U and V values are shared between horizontal pairs of pixels. Each pair of output pixels is serialized as [U, Y1, V, Y2].
+- <cite>step</cite> must be greater than or equal to <cite>width</cite> * 2.</p></li>
+<li><p><cite>yuv422_yuy2</cite> or  <cite>yuyv</cite>:
+- Pixel colors are decomposed into <a class="reference external" href="https://en.wikipedia.org/wiki/Y%E2%80%B2UV">Y’UV</a> channels.
+- Pixel channel values are represented as unsigned 8-bit integers.
+- U and V values are shared between horizontal pairs of pixels. Each pair of output pixels is encoded as [Y1, U, Y2, V].
+- <cite>step</cite> must be greater than or equal to <cite>width</cite> * 2.</p></li>
+<li><p><cite>rgb8</cite>:
+- Pixel colors are decomposed into Red, Green, and Blue channels.
+- Pixel channel values are represented as unsigned 8-bit integers.
+- Each output pixel is serialized as [R, G, B].
+- <cite>step</cite> must be greater than or equal to <cite>width</cite> * 3.</p></li>
+<li><p><cite>rgba8</cite>:
+- Pixel colors are decomposed into Red, Green, Blue, and Alpha channels.
+- Pixel channel values are represented as unsigned 8-bit integers.
+- Each output pixel is serialized as [R, G, B, Alpha].
+- <cite>step</cite> must be greater than or equal to <cite>width</cite> * 4.</p></li>
+<li><p><cite>bgr8</cite> or <cite>8UC3</cite>:
+- Pixel colors are decomposed into Blue, Green, and Red channels.
+- Pixel channel values are represented as unsigned 8-bit integers.
+- Each output pixel is serialized as [B, G, R].
+- <cite>step</cite> must be greater than or equal to <cite>width</cite> * 3.</p></li>
+<li><p><cite>bgra8</cite>:
+- Pixel colors are decomposed into Blue, Green, Red, and Alpha channels.
+- Pixel channel values are represented as unsigned 8-bit integers.
+- Each output pixel is encoded as [B, G, R, Alpha].
+- <cite>step</cite> must be greater than or equal to <cite>width</cite> * 4.</p></li>
+<li><p><cite>32FC1</cite>:
+- Pixel brightness is represented as a single-channel, 32-bit little-endian IEEE 754 floating-point value, ranging from 0.0 (black) to 1.0 (white).
+- <cite>step</cite> must be greater than or equal to <cite>width</cite> * 4.</p></li>
+<li><p><cite>bayer_rggb8</cite>, <cite>bayer_bggr8</cite>, <cite>bayer_gbrg8</cite>, or <cite>bayer_grbg8</cite>:
+- Pixel colors are decomposed into Red, Blue and Green channels.
+- Pixel channel values are represented as unsigned 8-bit integers, and serialized in a 2x2 bayer filter pattern.
+- The order of the four letters after <cite>bayer_</cite> determine the layout, so for <cite>bayer_wxyz8</cite> the pattern is:
+<code class="docutils literal notranslate"><span class="pre">`plaintext</span>
+<span class="pre">w</span> <span class="pre">|</span> <span class="pre">x</span>
+<span class="pre">-</span> <span class="pre">+</span> <span class="pre">-</span>
+<span class="pre">y</span> <span class="pre">|</span> <span class="pre">z</span>
+<span class="pre">`</span></code>
+- <cite>step</cite> must be greater than or equal to <cite>width</cite>.</p></li>
+<li><p><cite>mono8</cite> or <cite>8UC1</cite>:
+- Pixel brightness is represented as unsigned 8-bit integers.
+- <cite>step</cite> must be greater than or equal to <cite>width</cite>.</p></li>
+<li><p><cite>mono16</cite> or <cite>16UC1</cite>:
+- Pixel brightness is represented as 16-bit unsigned little-endian integers. Rendering of these values is controlled in <a class="reference external" href="https://docs.foxglove.dev/docs/visualization/panels/image#general">Image panel color mode settings</a>.
+- <cite>step</cite> must be greater than or equal to <cite>width</cite> * 2.</p></li>
+</ul>
+</p></li>
+</ul>
+</dd>
+</dl>
+<p>See <a class="reference external" href="https://docs.foxglove.dev/docs/visualization/message-schemas/raw-image">https://docs.foxglove.dev/docs/visualization/message-schemas/raw-image</a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.RawImage.encode">
+<span class="sig-name descname"><span class="pre">encode</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.RawImage.encode" title="Link to this definition">¶</a></dt>
+<dd><p>Encodes the RawImage as protobuf.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.RawImage.get_schema">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_schema</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.RawImage.get_schema" title="Link to this definition">¶</a></dt>
+<dd><p>Returns the RawImage schema.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.schemas.SceneEntity">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.schemas.</span></span><span class="sig-name descname"><span class="pre">SceneEntity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timestamp</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frame_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lifetime</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frame_locked</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metadata</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">arrows</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cubes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">spheres</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cylinders</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lines</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">triangles</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">texts</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">models</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.SceneEntity" title="Link to this definition">¶</a></dt>
+<dd><p>A visual element in a 3D scene. An entity may be composed of multiple primitives which all share the same frame of reference.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>timestamp</strong> – Timestamp of the entity</p></li>
+<li><p><strong>frame_id</strong> – Frame of reference</p></li>
+<li><p><strong>id</strong> – Identifier for the entity. A entity will replace any prior entity on the same topic with the same <cite>id</cite>.</p></li>
+<li><p><strong>lifetime</strong> – Length of time (relative to <cite>timestamp</cite>) after which the entity should be automatically removed. Zero value indicates the entity should remain visible until it is replaced or deleted.</p></li>
+<li><p><strong>frame_locked</strong> – Whether the entity should keep its location in the fixed frame (false) or follow the frame specified in <cite>frame_id</cite> as it moves relative to the fixed frame (true)</p></li>
+<li><p><strong>metadata</strong> – Additional user-provided metadata associated with the entity. Keys must be unique.</p></li>
+<li><p><strong>arrows</strong> – Arrow primitives</p></li>
+<li><p><strong>cubes</strong> – Cube primitives</p></li>
+<li><p><strong>spheres</strong> – Sphere primitives</p></li>
+<li><p><strong>cylinders</strong> – Cylinder primitives</p></li>
+<li><p><strong>lines</strong> – Line primitives</p></li>
+<li><p><strong>triangles</strong> – Triangle list primitives</p></li>
+<li><p><strong>texts</strong> – Text primitives</p></li>
+<li><p><strong>models</strong> – Model primitives</p></li>
+</ul>
+</dd>
+</dl>
+<p>See <a class="reference external" href="https://docs.foxglove.dev/docs/visualization/message-schemas/scene-entity">https://docs.foxglove.dev/docs/visualization/message-schemas/scene-entity</a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.SceneEntity.encode">
+<span class="sig-name descname"><span class="pre">encode</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.SceneEntity.encode" title="Link to this definition">¶</a></dt>
+<dd><p>Encodes the SceneEntity as protobuf.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.SceneEntity.get_schema">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_schema</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.SceneEntity.get_schema" title="Link to this definition">¶</a></dt>
+<dd><p>Returns the SceneEntity schema.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.schemas.SceneEntityDeletion">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.schemas.</span></span><span class="sig-name descname"><span class="pre">SceneEntityDeletion</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timestamp</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">Ellipsis</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.SceneEntityDeletion" title="Link to this definition">¶</a></dt>
+<dd><p>Command to remove previously published entities</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>timestamp</strong> – Timestamp of the deletion. Only matching entities earlier than this timestamp will be deleted.</p></li>
+<li><p><strong>type</strong> – Type of deletion action to perform</p></li>
+<li><p><strong>id</strong> – Identifier which must match if <cite>type</cite> is <cite>MATCHING_ID</cite>.</p></li>
+</ul>
+</dd>
+</dl>
+<p>See <a class="reference external" href="https://docs.foxglove.dev/docs/visualization/message-schemas/scene-entity-deletion">https://docs.foxglove.dev/docs/visualization/message-schemas/scene-entity-deletion</a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.SceneEntityDeletion.encode">
+<span class="sig-name descname"><span class="pre">encode</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.SceneEntityDeletion.encode" title="Link to this definition">¶</a></dt>
+<dd><p>Encodes the SceneEntityDeletion as protobuf.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.SceneEntityDeletion.get_schema">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_schema</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.SceneEntityDeletion.get_schema" title="Link to this definition">¶</a></dt>
+<dd><p>Returns the SceneEntityDeletion schema.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.schemas.SceneEntityDeletionType">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.schemas.</span></span><span class="sig-name descname"><span class="pre">SceneEntityDeletionType</span></span><a class="headerlink" href="#foxglove.schemas.SceneEntityDeletionType" title="Link to this definition">¶</a></dt>
+<dd><p>An enumeration indicating which entities should match a SceneEntityDeletion command</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.schemas.SceneUpdate">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.schemas.</span></span><span class="sig-name descname"><span class="pre">SceneUpdate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">deletions</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">entities</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.SceneUpdate" title="Link to this definition">¶</a></dt>
+<dd><p>An update to the entities displayed in a 3D scene</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>deletions</strong> – Scene entities to delete</p></li>
+<li><p><strong>entities</strong> – Scene entities to add or replace</p></li>
+</ul>
+</dd>
+</dl>
+<p>See <a class="reference external" href="https://docs.foxglove.dev/docs/visualization/message-schemas/scene-update">https://docs.foxglove.dev/docs/visualization/message-schemas/scene-update</a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.SceneUpdate.encode">
+<span class="sig-name descname"><span class="pre">encode</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.SceneUpdate.encode" title="Link to this definition">¶</a></dt>
+<dd><p>Encodes the SceneUpdate as protobuf.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.SceneUpdate.get_schema">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_schema</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.SceneUpdate.get_schema" title="Link to this definition">¶</a></dt>
+<dd><p>Returns the SceneUpdate schema.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.schemas.SpherePrimitive">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.schemas.</span></span><span class="sig-name descname"><span class="pre">SpherePrimitive</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">color</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.SpherePrimitive" title="Link to this definition">¶</a></dt>
+<dd><p>A primitive representing a sphere or ellipsoid</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>pose</strong> – Position of the center of the sphere and orientation of the sphere</p></li>
+<li><p><strong>size</strong> – Size (diameter) of the sphere along each axis</p></li>
+<li><p><strong>color</strong> – Color of the sphere</p></li>
+</ul>
+</dd>
+</dl>
+<p>See <a class="reference external" href="https://docs.foxglove.dev/docs/visualization/message-schemas/sphere-primitive">https://docs.foxglove.dev/docs/visualization/message-schemas/sphere-primitive</a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.SpherePrimitive.encode">
+<span class="sig-name descname"><span class="pre">encode</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.SpherePrimitive.encode" title="Link to this definition">¶</a></dt>
+<dd><p>Encodes the SpherePrimitive as protobuf.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.SpherePrimitive.get_schema">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_schema</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.SpherePrimitive.get_schema" title="Link to this definition">¶</a></dt>
+<dd><p>Returns the SpherePrimitive schema.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.schemas.TextAnnotation">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.schemas.</span></span><span class="sig-name descname"><span class="pre">TextAnnotation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timestamp</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">position</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">text</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">font_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">text_color</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">background_color</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.TextAnnotation" title="Link to this definition">¶</a></dt>
+<dd><p>A text label on a 2D image</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>timestamp</strong> – Timestamp of annotation</p></li>
+<li><p><strong>position</strong> – Bottom-left origin of the text label in 2D image coordinates (pixels).
+The coordinate uses the top-left corner of the top-left pixel of the image as the origin.</p></li>
+<li><p><strong>text</strong> – Text to display</p></li>
+<li><p><strong>font_size</strong> – Font size in pixels</p></li>
+<li><p><strong>text_color</strong> – Text color</p></li>
+<li><p><strong>background_color</strong> – Background fill color</p></li>
+</ul>
+</dd>
+</dl>
+<p>See <a class="reference external" href="https://docs.foxglove.dev/docs/visualization/message-schemas/text-annotation">https://docs.foxglove.dev/docs/visualization/message-schemas/text-annotation</a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.TextAnnotation.encode">
+<span class="sig-name descname"><span class="pre">encode</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.TextAnnotation.encode" title="Link to this definition">¶</a></dt>
+<dd><p>Encodes the TextAnnotation as protobuf.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.TextAnnotation.get_schema">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_schema</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.TextAnnotation.get_schema" title="Link to this definition">¶</a></dt>
+<dd><p>Returns the TextAnnotation schema.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.schemas.TextPrimitive">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.schemas.</span></span><span class="sig-name descname"><span class="pre">TextPrimitive</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">billboard</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">font_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale_invariant</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">color</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">text</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.TextPrimitive" title="Link to this definition">¶</a></dt>
+<dd><p>A primitive representing a text label</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>pose</strong> – Position of the center of the text box and orientation of the text. Identity orientation means the text is oriented in the xy-plane and flows from -x to +x.</p></li>
+<li><p><strong>billboard</strong> – Whether the text should respect <cite>pose.orientation</cite> (false) or always face the camera (true)</p></li>
+<li><p><strong>font_size</strong> – Font size (height of one line of text)</p></li>
+<li><p><strong>scale_invariant</strong> – Indicates whether <cite>font_size</cite> is a fixed size in screen pixels (true), or specified in world coordinates and scales with distance from the camera (false)</p></li>
+<li><p><strong>color</strong> – Color of the text</p></li>
+<li><p><strong>text</strong> – Text</p></li>
+</ul>
+</dd>
+</dl>
+<p>See <a class="reference external" href="https://docs.foxglove.dev/docs/visualization/message-schemas/text-primitive">https://docs.foxglove.dev/docs/visualization/message-schemas/text-primitive</a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.TextPrimitive.encode">
+<span class="sig-name descname"><span class="pre">encode</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.TextPrimitive.encode" title="Link to this definition">¶</a></dt>
+<dd><p>Encodes the TextPrimitive as protobuf.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.TextPrimitive.get_schema">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_schema</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.TextPrimitive.get_schema" title="Link to this definition">¶</a></dt>
+<dd><p>Returns the TextPrimitive schema.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.schemas.Timestamp">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.schemas.</span></span><span class="sig-name descname"><span class="pre">Timestamp</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sec</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nsec</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.Timestamp" title="Link to this definition">¶</a></dt>
+<dd><p>A timestamp in seconds and nanoseconds</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sec</strong> – The number of seconds since a user-defined epoch.</p></li>
+<li><p><strong>nsec</strong> – The number of nanoseconds since the sec value.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.Timestamp.from_datetime">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">from_datetime</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dt</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.Timestamp.from_datetime" title="Link to this definition">¶</a></dt>
+<dd><p>Creates a UNIX epoch <a class="reference internal" href="#foxglove.schemas.Timestamp" title="foxglove.schemas.Timestamp"><code class="xref py py-class docutils literal notranslate"><span class="pre">Timestamp</span></code></a> from a datetime object.</p>
+<p>Naive datetime objects are presumed to be in the local timezone.</p>
+<p>Raises <cite>OverflowError</cite> if the timestamp cannot be represented.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>dt</strong> – Datetime</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="#foxglove.schemas.Timestamp" title="foxglove.schemas.Timestamp"><code class="xref py py-class docutils literal notranslate"><span class="pre">Timestamp</span></code></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.Timestamp.from_epoch_secs">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">from_epoch_secs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">timestamp</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.Timestamp.from_epoch_secs" title="Link to this definition">¶</a></dt>
+<dd><p>Creates a <a class="reference internal" href="#foxglove.schemas.Timestamp" title="foxglove.schemas.Timestamp"><code class="xref py py-class docutils literal notranslate"><span class="pre">Timestamp</span></code></a> from an epoch timestamp, such as is returned by
+<code class="xref py py-func docutils literal notranslate"><span class="pre">time.time()</span></code> or <code class="xref py py-func docutils literal notranslate"><span class="pre">datetime.datetime.timestamp()</span></code>.</p>
+<p>Raises <cite>OverflowError</cite> if the timestamp cannot be represented.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>timestamp</strong> – Seconds since epoch</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="#foxglove.schemas.Timestamp" title="foxglove.schemas.Timestamp"><code class="xref py py-class docutils literal notranslate"><span class="pre">Timestamp</span></code></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.Timestamp.now">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">now</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.Timestamp.now" title="Link to this definition">¶</a></dt>
+<dd><p>Creates a <a class="reference internal" href="#foxglove.schemas.Timestamp" title="foxglove.schemas.Timestamp"><code class="xref py py-class docutils literal notranslate"><span class="pre">Timestamp</span></code></a> from the current system time.</p>
+<p>Raises <cite>OverflowError</cite> if the timestamp cannot be represented.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#foxglove.schemas.Timestamp" title="foxglove.schemas.Timestamp"><code class="xref py py-class docutils literal notranslate"><span class="pre">Timestamp</span></code></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="foxglove.schemas.Timestamp.nsec">
+<span class="sig-name descname"><span class="pre">nsec</span></span><a class="headerlink" href="#foxglove.schemas.Timestamp.nsec" title="Link to this definition">¶</a></dt>
+<dd><p>The number of fractional seconds in the timestamp, as nanoseconds.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="foxglove.schemas.Timestamp.sec">
+<span class="sig-name descname"><span class="pre">sec</span></span><a class="headerlink" href="#foxglove.schemas.Timestamp.sec" title="Link to this definition">¶</a></dt>
+<dd><p>The number of seconds in the timestamp.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.schemas.TriangleListPrimitive">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.schemas.</span></span><span class="sig-name descname"><span class="pre">TriangleListPrimitive</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">points</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">color</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">colors</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">indices</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.TriangleListPrimitive" title="Link to this definition">¶</a></dt>
+<dd><p>A primitive representing a set of triangles or a surface tiled by triangles</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>pose</strong> – Origin of triangles relative to reference frame</p></li>
+<li><p><strong>points</strong> – Vertices to use for triangles, interpreted as a list of triples (0-1-2, 3-4-5, …)</p></li>
+<li><p><strong>color</strong> – Solid color to use for the whole shape. Ignored if <cite>colors</cite> is non-empty.</p></li>
+<li><p><strong>colors</strong> – Per-vertex colors (if specified, must have the same length as <cite>points</cite>).</p></li>
+<li><p><strong>indices</strong> – <p>Indices into the <cite>points</cite> and <cite>colors</cite> attribute arrays, which can be used to avoid duplicating attribute data.</p>
+<p>If omitted or empty, indexing will not be used. This default behavior is equivalent to specifying [0, 1, …, N-1] for the indices (where N is the number of <cite>points</cite> provided).</p>
+</p></li>
+</ul>
+</dd>
+</dl>
+<p>See <a class="reference external" href="https://docs.foxglove.dev/docs/visualization/message-schemas/triangle-list-primitive">https://docs.foxglove.dev/docs/visualization/message-schemas/triangle-list-primitive</a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.TriangleListPrimitive.encode">
+<span class="sig-name descname"><span class="pre">encode</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.TriangleListPrimitive.encode" title="Link to this definition">¶</a></dt>
+<dd><p>Encodes the TriangleListPrimitive as protobuf.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.TriangleListPrimitive.get_schema">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_schema</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.TriangleListPrimitive.get_schema" title="Link to this definition">¶</a></dt>
+<dd><p>Returns the TriangleListPrimitive schema.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.schemas.Vector2">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.schemas.</span></span><span class="sig-name descname"><span class="pre">Vector2</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.Vector2" title="Link to this definition">¶</a></dt>
+<dd><p>A vector in 2D space that represents a direction only</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> – x coordinate length</p></li>
+<li><p><strong>y</strong> – y coordinate length</p></li>
+</ul>
+</dd>
+</dl>
+<p>See <a class="reference external" href="https://docs.foxglove.dev/docs/visualization/message-schemas/vector2">https://docs.foxglove.dev/docs/visualization/message-schemas/vector2</a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.Vector2.encode">
+<span class="sig-name descname"><span class="pre">encode</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.Vector2.encode" title="Link to this definition">¶</a></dt>
+<dd><p>Encodes the Vector2 as protobuf.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.Vector2.get_schema">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_schema</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.Vector2.get_schema" title="Link to this definition">¶</a></dt>
+<dd><p>Returns the Vector2 schema.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.schemas.Vector3">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.schemas.</span></span><span class="sig-name descname"><span class="pre">Vector3</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">z</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.Vector3" title="Link to this definition">¶</a></dt>
+<dd><p>A vector in 3D space that represents a direction only</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> – x coordinate length</p></li>
+<li><p><strong>y</strong> – y coordinate length</p></li>
+<li><p><strong>z</strong> – z coordinate length</p></li>
+</ul>
+</dd>
+</dl>
+<p>See <a class="reference external" href="https://docs.foxglove.dev/docs/visualization/message-schemas/vector3">https://docs.foxglove.dev/docs/visualization/message-schemas/vector3</a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.Vector3.encode">
+<span class="sig-name descname"><span class="pre">encode</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.Vector3.encode" title="Link to this definition">¶</a></dt>
+<dd><p>Encodes the Vector3 as protobuf.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.Vector3.get_schema">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_schema</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.Vector3.get_schema" title="Link to this definition">¶</a></dt>
+<dd><p>Returns the Vector3 schema.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="foxglove.schemas.VoxelGrid">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">foxglove.schemas.</span></span><span class="sig-name descname"><span class="pre">VoxelGrid</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timestamp</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frame_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">row_count</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">column_count</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">slice_stride</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">row_stride</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_stride</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fields</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.VoxelGrid" title="Link to this definition">¶</a></dt>
+<dd><p>A 3D grid of data</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>timestamp</strong> – Timestamp of grid</p></li>
+<li><p><strong>frame_id</strong> – Frame of reference</p></li>
+<li><p><strong>pose</strong> – Origin of grid’s corner relative to frame of reference</p></li>
+<li><p><strong>row_count</strong> – Number of grid rows</p></li>
+<li><p><strong>column_count</strong> – Number of grid columns</p></li>
+<li><p><strong>cell_size</strong> – Size of single grid cell along x, y, and z axes, relative to <cite>pose</cite></p></li>
+<li><p><strong>slice_stride</strong> – Number of bytes between depth slices in <cite>data</cite></p></li>
+<li><p><strong>row_stride</strong> – Number of bytes between rows in <cite>data</cite></p></li>
+<li><p><strong>cell_stride</strong> – Number of bytes between cells within a row in <cite>data</cite></p></li>
+<li><p><strong>fields</strong> – Fields in <cite>data</cite>. <cite>red</cite>, <cite>green</cite>, <cite>blue</cite>, and <cite>alpha</cite> are optional for customizing the grid’s color.</p></li>
+<li><p><strong>data</strong> – <p>Grid cell data, interpreted using <cite>fields</cite>, in depth-major, row-major (Z-Y-X) order.
+For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:</p>
+<ul>
+<li><p>z = i / slice_stride * cell_size.z</p></li>
+<li><p>y = (i % slice_stride) / row_stride * cell_size.y</p></li>
+<li><p>x = (i % row_stride) / cell_stride * cell_size.x</p></li>
+</ul>
+</p></li>
+</ul>
+</dd>
+</dl>
+<p>See <a class="reference external" href="https://docs.foxglove.dev/docs/visualization/message-schemas/voxel-grid">https://docs.foxglove.dev/docs/visualization/message-schemas/voxel-grid</a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.VoxelGrid.encode">
+<span class="sig-name descname"><span class="pre">encode</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.VoxelGrid.encode" title="Link to this definition">¶</a></dt>
+<dd><p>Encodes the VoxelGrid as protobuf.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="foxglove.schemas.VoxelGrid.get_schema">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_schema</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#foxglove.schemas.VoxelGrid.get_schema" title="Link to this definition">¶</a></dt>
+<dd><p>Returns the VoxelGrid schema.</p>
+</dd></dl>
+
+</dd></dl>
+
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">Foxglove SDK</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">API Reference</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="index.html#module-foxglove">foxglove</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="index.html#foxglove.Channel"><code class="docutils literal notranslate"><span class="pre">Channel</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="index.html#foxglove.ChannelDescriptor"><code class="docutils literal notranslate"><span class="pre">ChannelDescriptor</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="index.html#foxglove.Context"><code class="docutils literal notranslate"><span class="pre">Context</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="index.html#foxglove.Schema"><code class="docutils literal notranslate"><span class="pre">Schema</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="index.html#foxglove.SinkChannelFilter"><code class="docutils literal notranslate"><span class="pre">SinkChannelFilter</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="index.html#foxglove.log"><code class="docutils literal notranslate"><span class="pre">log()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="index.html#foxglove.open_mcap"><code class="docutils literal notranslate"><span class="pre">open_mcap()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="index.html#foxglove.set_log_level"><code class="docutils literal notranslate"><span class="pre">set_log_level()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="index.html#foxglove.start_server"><code class="docutils literal notranslate"><span class="pre">start_server()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="index.html#notebook-integration">Notebook Integration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="index.html#notebook-classes">Notebook Classes</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="index.html#schemas">Schemas</a></li>
+<li class="toctree-l3"><a class="reference internal" href="index.html#channels">Channels</a></li>
+<li class="toctree-l3"><a class="reference internal" href="index.html#parameters">Parameters</a></li>
+<li class="toctree-l3"><a class="reference internal" href="index.html#asset-handling">Asset handling</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#foxglove-mcap">foxglove.mcap</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#foxglove-websocket">foxglove.websocket</a></li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">API Reference</a><ul>
+      <li>Previous: <a href="index.html" title="previous chapter">API Reference</a></li>
+      <li>Next: <a href="channels.html" title="next chapter">&lt;no title&gt;</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025, Foxglove.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 7.4.7</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 0.7.16</a>
+      
+      |
+      <a href="../_sources/api/schemas.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

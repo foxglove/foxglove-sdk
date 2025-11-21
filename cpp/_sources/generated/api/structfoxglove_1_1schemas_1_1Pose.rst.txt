@@ -1,0 +1,17 @@
+.. _exhale_struct_structfoxglove_1_1schemas_1_1Pose:
+
+Struct Pose
+===========
+
+- Defined in :ref:`file_foxglove_include_foxglove_schemas.hpp`
+
+
+Struct Documentation
+--------------------
+
+
+.. doxygenstruct:: foxglove::schemas::Pose
+   :project: Foxglove SDK
+   :members:
+   :protected-members:
+   :undoc-members:

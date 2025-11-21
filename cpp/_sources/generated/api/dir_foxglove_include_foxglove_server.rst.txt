@@ -1,0 +1,24 @@
+.. _dir_foxglove_include_foxglove_server:
+
+
+Directory server
+================
+
+
+|exhale_lsh| :ref:`Parent directory <dir_foxglove_include_foxglove>` (``foxglove/include/foxglove``)
+
+.. |exhale_lsh| unicode:: U+021B0 .. UPWARDS ARROW WITH TIP LEFTWARDS
+
+
+*Directory path:* ``foxglove/include/foxglove/server``
+
+
+Files
+-----
+
+- :ref:`file_foxglove_include_foxglove_server_connection_graph.hpp`
+- :ref:`file_foxglove_include_foxglove_server_fetch_asset.hpp`
+- :ref:`file_foxglove_include_foxglove_server_parameter.hpp`
+- :ref:`file_foxglove_include_foxglove_server_service.hpp`
+
+

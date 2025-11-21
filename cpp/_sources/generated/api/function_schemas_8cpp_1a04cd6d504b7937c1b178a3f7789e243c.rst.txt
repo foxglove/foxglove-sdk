@@ -1,0 +1,14 @@
+.. _exhale_function_schemas_8cpp_1a04cd6d504b7937c1b178a3f7789e243c:
+
+Function foxglove::schemas::rawAudioToC
+=======================================
+
+- Defined in :ref:`file_foxglove_src_schemas.cpp`
+
+
+Function Documentation
+----------------------
+
+
+.. doxygenfunction:: foxglove::schemas::rawAudioToC(foxglove_raw_audio&, const RawAudio&, Arena&)
+   :project: Foxglove SDK

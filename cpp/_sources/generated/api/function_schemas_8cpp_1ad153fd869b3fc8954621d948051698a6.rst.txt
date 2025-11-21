@@ -1,0 +1,14 @@
+.. _exhale_function_schemas_8cpp_1ad153fd869b3fc8954621d948051698a6:
+
+Function foxglove::schemas::cameraCalibrationToC
+================================================
+
+- Defined in :ref:`file_foxglove_src_schemas.cpp`
+
+
+Function Documentation
+----------------------
+
+
+.. doxygenfunction:: foxglove::schemas::cameraCalibrationToC(foxglove_camera_calibration&, const CameraCalibration&, Arena&)
+   :project: Foxglove SDK
