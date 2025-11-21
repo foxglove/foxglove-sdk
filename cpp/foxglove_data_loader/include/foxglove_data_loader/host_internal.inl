@@ -22,11 +22,13 @@ __wasm_import_foxglove_loader_console_warn(uint8_t*, size_t);
 
 __attribute__((
   __import_module__("foxglove:loader/reader@0.1.0"), __import_name__("[method]reader.seek")
-)) extern int64_t __wasm_import_foxglove_loader_reader_method_reader_seek(int32_t, int64_t);
+)) extern int64_t
+__wasm_import_foxglove_loader_reader_method_reader_seek(int32_t, int64_t);
 
 __attribute__((
   __import_module__("foxglove:loader/reader@0.1.0"), __import_name__("[method]reader.position")
-)) extern int64_t __wasm_import_foxglove_loader_reader_method_reader_position(int32_t);
+)) extern int64_t
+__wasm_import_foxglove_loader_reader_method_reader_position(int32_t);
 
 __attribute__((
   __import_module__("foxglove:loader/reader@0.1.0"), __import_name__("[method]reader.read")
@@ -35,7 +37,8 @@ __wasm_import_foxglove_loader_reader_method_reader_read(int32_t, uint8_t*, size_
 
 __attribute__((
   __import_module__("foxglove:loader/reader@0.1.0"), __import_name__("[method]reader.size")
-)) extern int64_t __wasm_import_foxglove_loader_reader_method_reader_size(int32_t);
+)) extern int64_t
+__wasm_import_foxglove_loader_reader_method_reader_size(int32_t);
 
 __attribute__((__import_module__("foxglove:loader/reader@0.1.0"), __import_name__("open"))
 ) extern int32_t
@@ -48,12 +51,12 @@ __attribute__((
 )) void
 __wasm_export_exports_foxglove_loader_loader_method_message_iterator_next_post_return(uint8_t* arg0
 ) {
-  switch ((int32_t)(int32_t) * ((uint8_t*)(arg0 + 0))) {
+  switch ((int32_t)(int32_t)*((uint8_t*)(arg0 + 0))) {
     case 0: {
       break;
     }
     case 1: {
-      switch ((int32_t)(int32_t) * ((uint8_t*)(arg0 + 8))) {
+      switch ((int32_t)(int32_t)*((uint8_t*)(arg0 + 8))) {
         case 0: {
           // NOTE: the original generated `host.c` code calls free(ptr) on each message data
           // pointer, because the WIT component model ABI requires that all arguments and return
@@ -89,7 +92,7 @@ __attribute__((
 )) void
 __wasm_export_exports_foxglove_loader_loader_method_data_loader_initialize_post_return(uint8_t* arg0
 ) {
-  switch ((int32_t)(int32_t) * ((uint8_t*)(arg0 + 0))) {
+  switch ((int32_t)(int32_t)*((uint8_t*)(arg0 + 0))) {
     case 0: {
       size_t len = *((size_t*)(arg0 + (8 + 1 * sizeof(void*))));
       if (len > 0) {
@@ -139,7 +142,7 @@ __wasm_export_exports_foxglove_loader_loader_method_data_loader_initialize_post_
           if ((*((size_t*)(base + (2 * sizeof(void*))))) > 0) {
             free(*((uint8_t**)(base + sizeof(void*))));
           }
-          switch ((int32_t)(int32_t) * ((uint8_t*)(base + (3 * sizeof(void*))))) {
+          switch ((int32_t)(int32_t)*((uint8_t*)(base + (3 * sizeof(void*))))) {
             case 0: {
               break;
             }
@@ -171,7 +174,7 @@ __attribute__((
 __wasm_export_exports_foxglove_loader_loader_method_data_loader_create_iterator_post_return(
   uint8_t* arg0
 ) {
-  switch ((int32_t)(int32_t) * ((uint8_t*)(arg0 + 0))) {
+  switch ((int32_t)(int32_t)*((uint8_t*)(arg0 + 0))) {
     case 0: {
       break;
     }
@@ -191,7 +194,7 @@ __attribute__((
 __wasm_export_exports_foxglove_loader_loader_method_data_loader_get_backfill_post_return(
   uint8_t* arg0
 ) {
-  switch ((int32_t)(int32_t) * ((uint8_t*)(arg0 + 0))) {
+  switch ((int32_t)(int32_t)*((uint8_t*)(arg0 + 0))) {
     case 0: {
       size_t len0 = *((size_t*)(arg0 + (2 * sizeof(void*))));
       if (len0 > 0) {
@@ -418,12 +421,14 @@ void exports_foxglove_loader_loader_message_iterator_drop_own(
 __attribute__((
   __import_module__("[export]foxglove:loader/loader@0.1.0"),
   __import_name__("[resource-new]message-iterator")
-)) extern int32_t __wasm_import_exports_foxglove_loader_loader_message_iterator_new(int32_t);
+)) extern int32_t
+__wasm_import_exports_foxglove_loader_loader_message_iterator_new(int32_t);
 
 __attribute__((
   __import_module__("[export]foxglove:loader/loader@0.1.0"),
   __import_name__("[resource-rep]message-iterator")
-)) extern int32_t __wasm_import_exports_foxglove_loader_loader_message_iterator_rep(int32_t);
+)) extern int32_t
+__wasm_import_exports_foxglove_loader_loader_message_iterator_rep(int32_t);
 
 exports_foxglove_loader_loader_own_message_iterator_t
 exports_foxglove_loader_loader_message_iterator_new(
@@ -465,12 +470,14 @@ void exports_foxglove_loader_loader_data_loader_drop_own(
 __attribute__((
   __import_module__("[export]foxglove:loader/loader@0.1.0"),
   __import_name__("[resource-new]data-loader")
-)) extern int32_t __wasm_import_exports_foxglove_loader_loader_data_loader_new(int32_t);
+)) extern int32_t
+__wasm_import_exports_foxglove_loader_loader_data_loader_new(int32_t);
 
 __attribute__((
   __import_module__("[export]foxglove:loader/loader@0.1.0"),
   __import_name__("[resource-rep]data-loader")
-)) extern int32_t __wasm_import_exports_foxglove_loader_loader_data_loader_rep(int32_t);
+)) extern int32_t
+__wasm_import_exports_foxglove_loader_loader_data_loader_rep(int32_t);
 
 exports_foxglove_loader_loader_own_data_loader_t exports_foxglove_loader_loader_data_loader_new(
   exports_foxglove_loader_loader_data_loader_t* rep
