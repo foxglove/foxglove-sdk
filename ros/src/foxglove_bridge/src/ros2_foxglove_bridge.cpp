@@ -98,7 +98,7 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
   _disableLoanMessage = this->get_parameter(PARAM_DISABLE_LOAN_MESSAGE).as_bool();
   const auto ignoreUnresponsiveParamNodes =
     this->get_parameter(PARAM_IGN_UNRESPONSIVE_PARAM_NODES).as_bool();
-  const bool publishClientCount= this->get_parameter(PARAM_PUBLISH_CLIENT_COUNT).as_bool();
+  const bool publishClientCount = this->get_parameter(PARAM_PUBLISH_CLIENT_COUNT).as_bool();
 
   const bool debug = this->get_parameter(PARAM_DEBUG).as_bool();
   if (debug) {
@@ -141,14 +141,11 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
     sdkServerOptions.tls_identity->key = readFile(keyfile);
   }
 
-
   // Setup callbacks
   sdkServerOptions.callbacks.onConnectionGraphSubscribe =
     std::bind(&FoxgloveBridge::subscribeConnectionGraph, this, true);
   sdkServerOptions.callbacks.onSubscribe = std::bind(&FoxgloveBridge::subscribe, this, _1, _2);
   sdkServerOptions.callbacks.onUnsubscribe = std::bind(&FoxgloveBridge::unsubscribe, this, _1, _2);
-
-
 
   if (hasCapability(_capabilities, foxglove::WebSocketServerCapabilities::ClientPublish)) {
     sdkServerOptions.callbacks.onClientAdvertise =
@@ -182,8 +179,7 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
   }
 
   if (publishClientCount) {
-    sdkServerOptions.callbacks.onClientConnect =
-      std::bind(&FoxgloveBridge::onClientConnect, this);
+    sdkServerOptions.callbacks.onClientConnect = std::bind(&FoxgloveBridge::onClientConnect, this);
     sdkServerOptions.callbacks.onClientDisconnect =
       std::bind(&FoxgloveBridge::onClientDisconnect, this);
   }
