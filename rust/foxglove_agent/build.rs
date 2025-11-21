@@ -4,12 +4,15 @@ use std::path::PathBuf;
 fn main() {
     let project_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
 
+    // Get the target triple
+    let target = env::var("TARGET").unwrap();
+
     // Tell cargo to look for shared libraries in the specified directory
     println!("cargo:rustc-link-search=native={project_dir}");
 
     // Tell cargo to tell rustc to link the system bzip2
     // shared library.
-    println!("cargo:rustc-link-lib=static=agent_sdk");
+    println!("cargo:rustc-link-lib=static=foxglove_agent_sdk_{target}");
 
     // The bindgen::Builder is the main entry point
     // to bindgen, and lets you build up options for

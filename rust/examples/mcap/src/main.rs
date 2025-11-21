@@ -4,7 +4,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
 use clap::{Parser, ValueEnum};
-use foxglove::{LazyChannel, McapCompression, McapWriteOptions, McapWriter, StdoutSink};
+use foxglove::{LazyChannel, McapCompression, McapWriteOptions, McapWriter};
 use std::time::Duration;
 
 #[derive(Debug, Parser)]
@@ -93,15 +93,13 @@ fn main() {
         std::fs::remove_file(&args.path).expect("Failed to remove file");
     }
 
-    // let options = McapWriteOptions::new()
-    //     .chunk_size(Some(args.chunk_size))
-    //     .compression(args.compression.into());
+    let options = McapWriteOptions::new()
+        .chunk_size(Some(args.chunk_size))
+        .compression(args.compression.into());
 
-    // let writer = McapWriter::with_options(options)
-    //     .create_new_buffered_file(&args.path)
-    //     .expect("Failed to start mcap writer");
-
-    let sink = StdoutSink::new();
+    let writer = McapWriter::with_options(options)
+        .create_new_buffered_file(&args.path)
+        .expect("Failed to start mcap writer");
 
     // If you want to add some MCAP metadata: https://mcap.dev/spec#metadata-op0x0c
     let mut metadata = BTreeMap::new();
@@ -112,5 +110,5 @@ fn main() {
         .expect("Failed to write metadata");
 
     log_until(args.fps, done);
-    // writer.close().expect("Failed to flush mcap file");
+    writer.close().expect("Failed to flush mcap file");
 }

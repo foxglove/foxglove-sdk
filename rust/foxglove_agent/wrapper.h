@@ -1,1 +1,1 @@
-#include "include/foxglove_enterprise.h"
+#include "agent_sdk.h"
