@@ -107,8 +107,6 @@ private:
   std::atomic<bool> _shuttingDown = false;
   foxglove::Context _serverContext;
 
-  // Client count tracking
-  std::atomic<uint32_t> _clientCount = 0;
   rclcpp::Publisher<std_msgs::msg::UInt32>::SharedPtr _clientCountPublisher;
 
   void subscribeConnectionGraph(bool subscribe);
