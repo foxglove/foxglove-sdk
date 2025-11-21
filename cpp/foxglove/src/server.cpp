@@ -1,4 +1,5 @@
 #include <foxglove-c/foxglove-c.h>
+#include <foxglove/channel.hpp>
 #include <foxglove/context.hpp>
 #include <foxglove/error.hpp>
 #include <foxglove/server.hpp>
@@ -19,10 +20,11 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
     options.callbacks.onSetParameters || options.callbacks.onParametersSubscribe ||
     options.callbacks.onParametersUnsubscribe || options.callbacks.onConnectionGraphSubscribe ||
     options.callbacks.onConnectionGraphUnsubscribe || options.callbacks.onClientConnect ||
-    options.callbacks.onClientDisconnect;
+    options.callbacks.onClientDisconnect || options.callbacks.onConnectionGraphUnsubscribe || options.callbacks.onPlaybackControlRequest;
 
   std::unique_ptr<WebSocketServerCallbacks> callbacks;
   std::unique_ptr<FetchAssetHandler> fetch_asset;
+  std::unique_ptr<SinkChannelFilterFn> sink_channel_filter;
 
   foxglove_server_callbacks c_callbacks = {};
 
@@ -239,6 +241,36 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
           warn() << "onClientDisconnect callback failed: " << exc.what();
         }
       };
+    if (callbacks->onPlaybackControlRequest) {
+      c_callbacks.on_playback_control_request =
+        [](
+          const void* context,
+          const foxglove_playback_control_request* c_playback_control_request,
+          foxglove_playback_state* c_playback_state
+        ) {
+          if (c_playback_control_request == nullptr) {
+            return;
+          }
+
+          std::optional<PlaybackState> maybe_playback_state = std::nullopt;
+          try {
+            const auto* ctx = (static_cast<const WebSocketServerCallbacks*>(context));
+            maybe_playback_state =
+              ctx->onPlaybackControlRequest(PlaybackControlRequest::from(*c_playback_control_request
+              ));
+          } catch (const std::exception& exc) {
+            warn() << "onPlaybackControlRequest callback failed: " << exc.what();
+          }
+
+          if (!maybe_playback_state.has_value()) {
+            return;
+          }
+
+          const PlaybackState& playback_state = maybe_playback_state.value();
+          c_playback_state->status = static_cast<uint8_t>(playback_state.status);
+          c_playback_state->current_time = playback_state.current_time;
+          c_playback_state->playback_speed = playback_state.playback_speed;
+        };
     }
   }
 
@@ -276,6 +308,21 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
     };
   }
 
+  if (options.playback_time_range) {
+    c_options.playback_start_time = &options.playback_time_range->first;
+    c_options.playback_end_time = &options.playback_time_range->second;
+  }
+
+  std::vector<foxglove_key_value> server_info;
+  if (options.server_info) {
+    server_info.reserve(options.server_info->size());
+    for (auto const& [key, value] : *options.server_info) {
+      server_info.push_back({{key.data(), key.length()}, {value.data(), value.length()}});
+    }
+    c_options.server_info = server_info.data();
+    c_options.server_info_count = server_info.size();
+  }
+
   if (options.tls_identity) {
     c_options.tls_cert = reinterpret_cast<const uint8_t*>(options.tls_identity->cert.data());
     c_options.tls_cert_len = options.tls_identity->cert.size();
@@ -283,21 +330,44 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
     c_options.tls_key_len = options.tls_identity->key.size();
   }
 
+  if (options.sink_channel_filter) {
+    sink_channel_filter = std::make_unique<SinkChannelFilterFn>(options.sink_channel_filter);
+
+    c_options.sink_channel_filter_context = sink_channel_filter.get();
+    c_options.sink_channel_filter =
+      [](const void* context, const struct foxglove_channel_descriptor* channel) -> bool {
+      try {
+        if (!context) {
+          return true;  // Default to allowing if no filter
+        }
+        auto* filter_func = static_cast<const SinkChannelFilterFn*>(context);
+        auto cpp_channel = ChannelDescriptor(channel);
+        return (*filter_func)(std::move(cpp_channel));
+      } catch (const std::exception& exc) {
+        warn() << "Sink channel filter failed: " << exc.what();
+        return false;
+      }
+    };
+  }
   foxglove_websocket_server* server = nullptr;
   foxglove_error error = foxglove_server_start(&c_options, &server);
   if (error != foxglove_error::FOXGLOVE_ERROR_OK || server == nullptr) {
     return tl::unexpected(static_cast<FoxgloveError>(error));
   }
 
-  return WebSocketServer(server, std::move(callbacks), std::move(fetch_asset));
+  return WebSocketServer(
+    server, std::move(callbacks), std::move(fetch_asset), std::move(sink_channel_filter)
+  );
 }
 
 WebSocketServer::WebSocketServer(
   foxglove_websocket_server* server, std::unique_ptr<WebSocketServerCallbacks> callbacks,
-  std::unique_ptr<FetchAssetHandler> fetch_asset
+  std::unique_ptr<FetchAssetHandler> fetch_asset,
+  std::unique_ptr<SinkChannelFilterFn> sink_channel_filter
 )
     : callbacks_(std::move(callbacks))
     , fetch_asset_(std::move(fetch_asset))
+    , sink_channel_filter_(std::move(sink_channel_filter))
     , impl_(server, foxglove_server_stop) {}
 
 FoxgloveError WebSocketServer::stop() {
@@ -316,6 +386,23 @@ size_t WebSocketServer::clientCount() const {
 void WebSocketServer::broadcastTime(uint64_t timestamp_nanos) const noexcept {
   foxglove_server_broadcast_time(impl_.get(), timestamp_nanos);
 }
+
+/// @cond foxglove_internal
+void WebSocketServer::broadcastPlaybackState(const PlaybackState& playback_state) const noexcept {
+  foxglove_playback_state c_playback_state_ptr;
+  c_playback_state_ptr.status = static_cast<uint8_t>(playback_state.status);
+  c_playback_state_ptr.current_time = playback_state.current_time;
+  c_playback_state_ptr.playback_speed = playback_state.playback_speed;
+  if (!playback_state.request_id.has_value() || playback_state.request_id->empty()) {
+    c_playback_state_ptr.request_id = {nullptr, 0};
+  } else {
+    c_playback_state_ptr.request_id = {
+      playback_state.request_id->data(), playback_state.request_id->length()
+    };
+  }
+  foxglove_server_broadcast_playback_state(impl_.get(), &c_playback_state_ptr);
+}
+/// @endcond
 
 FoxgloveError WebSocketServer::clearSession(std::optional<std::string_view> session_id
 ) const noexcept {

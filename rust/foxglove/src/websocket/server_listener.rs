@@ -1,4 +1,6 @@
 use super::{ChannelView, Client, ClientChannel, Parameter};
+use crate::websocket::PlaybackControlRequest;
+use crate::websocket::PlaybackState;
 
 /// Provides a mechanism for registering callbacks for handling client message events.
 ///
@@ -65,4 +67,13 @@ pub trait ServerListener: Send + Sync {
     fn on_client_connect(&self, _client: Client) {}
     /// Callback invoked when a client disconnects from the server.
     fn on_client_disconnect(&self, _client: Client) {}
+    #[doc(hidden)]
+    /// Callback invoked when a client sends a player state message.
+    /// Requires [`Capability::RangedPlayback`][super::Capability::RangedPlayback].
+    fn on_playback_control_request(
+        &self,
+        _request: PlaybackControlRequest,
+    ) -> Option<PlaybackState> {
+        None
+    }
 }

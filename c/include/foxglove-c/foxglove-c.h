@@ -67,6 +67,15 @@
 #define FOXGLOVE_SERVER_CAPABILITY_ASSETS (1 << 5)
 #endif
 
+#if !defined(__wasm__)
+/**
+ * Indicates that the server is sending data within a fixed time range. This requires the
+ * server to specify the `data_start_time` and `data_end_time` fields in
+ * `foxglove_server_options`.
+ */
+#define FOXGLOVE_SERVER_CAPABILITY_RANGED_PLAYBACK (1 << 6)
+#endif
+
 enum foxglove_error
 #ifdef __cplusplus
   : uint8_t
@@ -341,6 +350,14 @@ typedef struct foxglove_channel foxglove_channel;
 #endif
 
 #if !defined(__wasm__)
+typedef struct foxglove_channel_descriptor foxglove_channel_descriptor;
+#endif
+
+#if !defined(__wasm__)
+typedef struct foxglove_cloud_sink foxglove_cloud_sink;
+#endif
+
+#if !defined(__wasm__)
 typedef struct foxglove_connection_graph foxglove_connection_graph;
 #endif
 
@@ -542,7 +559,7 @@ typedef struct foxglove_camera_calibration {
   /**
    * Name of distortion model
    *
-   * Supported parameters: `plumb_bob` (k1, k2, p1, p2, k3), `rational_polynomial` (k1, k2, p1, p2, k3, k4, k5, k6), and `kannala_brandt` (k1, k2, k3, k4). `plumb_bob` and `rational_polynomial` models are based on the pinhole model [OpenCV's](https://docs.opencv.org/4.11.0/d9/d0c/group__calib3d.html) [pinhole camera model](https://en.wikipedia.org/wiki/Distortion_%28optics%29#Software_correction). The `kannala_brandt` model matches the [OpenvCV fisheye](https://docs.opencv.org/4.11.0/db/d58/group__calib3d__fisheye.html) model.
+   * Supported parameters: `plumb_bob` (k1, k2, p1, p2, k3), `rational_polynomial` (k1, k2, p1, p2, k3, k4, k5, k6), and `kannala_brandt` (k1, k2, k3, k4), and `fisheye62` (k0, k1, k2, k3, p0, p1, crit_theta [optional]). `plumb_bob` and `rational_polynomial` models are based on the pinhole model [OpenCV's](https://docs.opencv.org/4.11.0/d9/d0c/group__calib3d.html) [pinhole camera model](https://en.wikipedia.org/wiki/Distortion_%28optics%29#Software_correction). The `kannala_brandt` model matches the [OpenvCV fisheye](https://docs.opencv.org/4.11.0/db/d58/group__calib3d__fisheye.html) model. The `fisheye62` model matches the [Project Aria's Fisheye62 Model](https://facebookresearch.github.io/projectaria_tools/docs/tech_insights/camera_intrinsic_models).
    */
   struct foxglove_string distortion_model;
   /**
@@ -880,14 +897,52 @@ typedef struct foxglove_grid {
   uint32_t cell_stride;
   /**
    * Fields in `data`. `red`, `green`, `blue`, and `alpha` are optional for customizing the grid's color.
+   * To enable RGB color visualization in the [3D panel](https://docs.foxglove.dev/docs/visualization/panels/3d#rgba-separate-fields-color-mode), include **all four** of these fields in your `fields` array:
+   *
+   * - `red` - Red channel value
+   * - `green` - Green channel value
+   * - `blue` - Blue channel value
+   * - `alpha` - Alpha/transparency channel value
+   *
+   * **note:** All four fields must be present with these exact names for RGB visualization to work. The order of fields doesn't matter, but the names must match exactly.
+   *
+   * Recommended type: `UINT8` (0-255 range) for standard 8-bit color channels.
+   *
+   * Example field definitions:
+   *
+   * **RGB color only:**
+   *
+   * ```javascript
+   * fields: [
+   *  { name: "red", offset: 0, type: NumericType.UINT8 },
+   *  { name: "green", offset: 1, type: NumericType.UINT8 },
+   *  { name: "blue", offset: 2, type: NumericType.UINT8 },
+   *  { name: "alpha", offset: 3, type: NumericType.UINT8 },
+   * ];
+   * ```
+   *
+   * **RGB color with elevation (for 3D terrain visualization):**
+   *
+   * ```javascript
+   * fields: [
+   *  { name: "red", offset: 0, type: NumericType.UINT8 },
+   *  { name: "green", offset: 1, type: NumericType.UINT8 },
+   *  { name: "blue", offset: 2, type: NumericType.UINT8 },
+   *  { name: "alpha", offset: 3, type: NumericType.UINT8 },
+   *  { name: "elevation", offset: 4, type: NumericType.FLOAT32 },
+   * ];
+   * ```
+   *
+   * When these fields are present, the 3D panel will offer additional "Color Mode" options including "RGBA (separate fields)" to visualize the RGB data directly. For elevation visualization, set the "Elevation field" to your elevation layer name.
    */
   const struct foxglove_packed_element_field *fields;
   size_t fields_count;
   /**
    * Grid cell data, interpreted using `fields`, in row-major (y-major) order.
-   *  For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
-   *  y = (i / cell_stride) % row_stride * cell_size.y
-   *  x = i % cell_stride * cell_size.x
+   * For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
+   *
+   * - y = i / row_stride * cell_size.y
+   * - x = (i % row_stride) / cell_stride * cell_size.x
    */
   const unsigned char *data;
   size_t data_len;
@@ -940,10 +995,11 @@ typedef struct foxglove_voxel_grid {
   size_t fields_count;
   /**
    * Grid cell data, interpreted using `fields`, in depth-major, row-major (Z-Y-X) order.
-   *  For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
-   *  z = i / slice_stride * cell_size.z
-   *  y = (i % slice_stride) / row_stride * cell_size.y
-   *  x = (i % row_stride) / cell_stride * cell_size.x
+   * For the data element starting at byte offset i, the coordinates of its corner closest to the origin will be:
+   *
+   * - z = i / slice_stride * cell_size.z
+   * - y = (i % slice_stride) / row_stride * cell_size.y
+   * - x = (i % row_stride) / cell_stride * cell_size.x
    */
   const unsigned char *data;
   size_t data_len;
@@ -1132,11 +1188,11 @@ typedef struct foxglove_line_primitive {
   const struct foxglove_point3 *points;
   size_t points_count;
   /**
-   * Solid color to use for the whole line. One of `color` or `colors` must be provided.
+   * Solid color to use for the whole line. Ignored if `colors` is non-empty.
    */
   const struct foxglove_color *color;
   /**
-   * Per-point colors (if specified, must have the same length as `points`). One of `color` or `colors` must be provided.
+   * Per-point colors (if non-empty, must have the same length as `points`).
    */
   const struct foxglove_color *colors;
   size_t colors_count;
@@ -1295,11 +1351,11 @@ typedef struct foxglove_triangle_list_primitive {
   const struct foxglove_point3 *points;
   size_t points_count;
   /**
-   * Solid color to use for the whole shape. One of `color` or `colors` must be provided.
+   * Solid color to use for the whole shape. Ignored if `colors` is non-empty.
    */
   const struct foxglove_color *color;
   /**
-   * Per-vertex colors (if specified, must have the same length as `points`). One of `color` or `colors` must be provided.
+   * Per-vertex colors (if specified, must have the same length as `points`).
    */
   const struct foxglove_color *colors;
   size_t colors_count;
@@ -1363,7 +1419,7 @@ typedef struct foxglove_model_primitive {
    */
   bool override_color;
   /**
-   * URL pointing to model file. One of `url` or `data` should be provided.
+   * URL pointing to model file. One of `url` or `data` should be non-empty.
    */
   struct foxglove_string url;
   /**
@@ -1371,7 +1427,7 @@ typedef struct foxglove_model_primitive {
    */
   struct foxglove_string media_type;
   /**
-   * Embedded model. One of `url` or `data` should be provided. If `data` is provided, `media_type` must be set to indicate the type of the data.
+   * Embedded model. One of `url` or `data` should be non-empty. If `data` is non-empty, `media_type` must be set to indicate the type of the data.
    */
   const unsigned char *data;
   size_t data_len;
@@ -1673,6 +1729,23 @@ typedef struct foxglove_mcap_options {
   bool emit_metadata_indexes;
   bool repeat_channels;
   bool repeat_schemas;
+  /**
+   * Context provided to the `sink_channel_filter` callback.
+   */
+  const void *sink_channel_filter_context;
+  /**
+   * A filter for channels that can be used to subscribe to or unsubscribe from channels.
+   *
+   * This can be used to omit one or more channels from a sink, but still log all channels to another
+   * sink in the same context. Return false to disable logging of this channel.
+   *
+   * This method is invoked from the client's main poll loop and must not block.
+   *
+   * # Safety
+   * - If provided, the handler callback must be a pointer to the filter callback function,
+   *   and must remain valid until the MCAP sink is dropped.
+   */
+  bool (*sink_channel_filter)(const void *context, const struct foxglove_channel_descriptor *channel);
 } foxglove_mcap_options;
 #endif
 
@@ -1718,6 +1791,89 @@ typedef struct foxglove_channel_metadata_iterator {
    */
   size_t index;
 } foxglove_channel_metadata_iterator;
+#endif
+
+#if !defined(__wasm__)
+/**
+ * An iterator over a channel descriptor's metadata key-value pairs.
+ */
+typedef struct foxglove_channel_descriptor_metadata_iterator {
+  const struct foxglove_channel_descriptor *channel;
+  size_t index;
+} foxglove_channel_descriptor_metadata_iterator;
+#endif
+
+#if !defined(__wasm__)
+typedef struct foxglove_client_metadata {
+  uint32_t id;
+  FoxgloveSinkId sink_id;
+} foxglove_client_metadata;
+#endif
+
+#if !defined(__wasm__)
+typedef struct foxglove_client_channel {
+  uint32_t id;
+  const char *topic;
+  const char *encoding;
+  const char *schema_name;
+  const char *schema_encoding;
+  const void *schema;
+  size_t schema_len;
+} foxglove_client_channel;
+#endif
+
+#if !defined(__wasm__)
+typedef struct foxglove_cloud_sink_callbacks {
+  /**
+   * A user-defined value that will be passed to callback functions
+   */
+  const void *context;
+  void (*on_subscribe)(const void *context,
+                       uint64_t channel_id,
+                       struct foxglove_client_metadata client);
+  void (*on_unsubscribe)(const void *context,
+                         uint64_t channel_id,
+                         struct foxglove_client_metadata client);
+  void (*on_client_advertise)(const void *context,
+                              uint32_t client_id,
+                              const struct foxglove_client_channel *channel);
+  void (*on_message_data)(const void *context,
+                          uint32_t client_id,
+                          uint32_t client_channel_id,
+                          const uint8_t *payload,
+                          size_t payload_len);
+  void (*on_client_unadvertise)(uint32_t client_id, uint32_t client_channel_id, const void *context);
+} foxglove_cloud_sink_callbacks;
+#endif
+
+#if !defined(__wasm__)
+typedef struct foxglove_cloud_sink_options {
+  /**
+   * `context` can be null, or a valid pointer to a context created via `foxglove_context_new`.
+   * If it's null, the server will be created with the default context.
+   */
+  const struct foxglove_context *context;
+  const struct foxglove_cloud_sink_callbacks *callbacks;
+  const struct foxglove_string *supported_encodings;
+  size_t supported_encodings_count;
+  /**
+   * Context provided to the `sink_channel_filter` callback.
+   */
+  const void *sink_channel_filter_context;
+  /**
+   * A filter for channels that can be used to subscribe to or unsubscribe from channels.
+   *
+   * This can be used to omit one or more channels from a sink, but still log all channels to another
+   * sink in the same context. Return false to disable logging of this channel.
+   *
+   * This method is invoked from the client's main poll loop and must not block.
+   *
+   * # Safety
+   * - If provided, the handler callback must be a pointer to the filter callback function,
+   *   and must remain valid until the server is stopped.
+   */
+  bool (*sink_channel_filter)(const void *context, const struct foxglove_channel_descriptor *channel);
+} foxglove_cloud_sink_options;
 #endif
 
 #if !defined(__wasm__)
@@ -1875,22 +2031,48 @@ typedef struct foxglove_parameter_array {
 #endif
 
 #if !defined(__wasm__)
-typedef struct foxglove_client_metadata {
-  uint32_t id;
-  FoxgloveSinkId sink_id;
-} foxglove_client_metadata;
+typedef struct foxglove_playback_control_request {
+  /**
+   * Playback command
+   */
+  uint8_t playback_command;
+  /**
+   * Playback speed
+   */
+  float playback_speed;
+  /**
+   * Seek playback time in nanoseconds (only set if a seek has been performed)
+   */
+  const uint64_t *seek_time;
+  /**
+   * Unique string identifier, used to indicate that a PlaybackState is in response to a particular request from the client.
+   * Should not be an empty string.
+   */
+  struct foxglove_string request_id;
+} foxglove_playback_control_request;
 #endif
 
 #if !defined(__wasm__)
-typedef struct foxglove_client_channel {
-  uint32_t id;
-  const char *topic;
-  const char *encoding;
-  const char *schema_name;
-  const char *schema_encoding;
-  const void *schema;
-  size_t schema_len;
-} foxglove_client_channel;
+typedef struct foxglove_playback_state {
+  /**
+   * The status of server data playback
+   */
+  uint8_t status;
+  /**
+   * The current time of playback, in absolute nanoseconds
+   */
+  uint64_t current_time;
+  /**
+   * The speed of playback, as a factor of realtime
+   */
+  float playback_speed;
+  /**
+   * If this message is being emitted in response to a PlaybackControlRequest message, the
+   * request_id from that message. Set this to an empty string if the state of playback has been changed
+   * by any other condition.
+   */
+  struct foxglove_string request_id;
+} foxglove_playback_state;
 #endif
 
 #if !defined(__wasm__)
@@ -1985,6 +2167,19 @@ typedef struct foxglove_server_callbacks {
   void (*on_connection_graph_unsubscribe)(const void *context);
   void (*on_client_connect)(const void *context);
   void (*on_client_disconnect)(const void *context);
+  /**
+   * Callback invoked when a client sends a playback control request message.
+   *
+   * Requires `FOXGLOVE_CAPABILITY_RANGED_PLAYBACK`.
+   *
+   * `playback_control_request` is an input parameter and guaranteed to be non-NULL.
+   * `playback_state` is a non-NULL output pointer to a struct that has already been allocated.
+   * The caller should fill its fields with the appropriate state of playback, in response to
+   * the input playback control request.
+   */
+  void (*on_playback_control_request)(const void *context,
+                                      const struct foxglove_playback_control_request *playback_control_request,
+                                      struct foxglove_playback_state *playback_state);
 } foxglove_server_callbacks;
 #endif
 
@@ -2006,6 +2201,15 @@ typedef struct foxglove_server_options {
   foxglove_server_capability capabilities;
   const struct foxglove_string *supported_encodings;
   size_t supported_encodings_count;
+  /**
+   * Optional information about the server, which is shared with clients.
+   *
+   * # Safety
+   * - If provided, the `server_info` must be a valid pointer to an array of valid
+   *   `FoxgloveKeyValue`s with `server_info_count` elements.
+   */
+  const struct foxglove_key_value *server_info;
+  size_t server_info_count;
   /**
    * Context provided to the `fetch_asset` callback.
    */
@@ -2049,6 +2253,33 @@ typedef struct foxglove_server_options {
    * TLS configuration: Length of key bytes
    */
   size_t tls_key_len;
+  /**
+   * Context provided to the `sink_channel_filter` callback.
+   */
+  const void *sink_channel_filter_context;
+  /**
+   * A filter for channels that can be used to subscribe to or unsubscribe from channels.
+   *
+   * This can be used to omit one or more channels from a sink, but still log all channels to another
+   * sink in the same context. Return false to disable logging of this channel.
+   *
+   * This method is invoked from the client's main poll loop and must not block.
+   *
+   * # Safety
+   * - If provided, the handler callback must be a pointer to the filter callback function,
+   *   and must remain valid until the server is stopped.
+   */
+  bool (*sink_channel_filter)(const void *context, const struct foxglove_channel_descriptor *channel);
+  /**
+   * If the server is sending data from a fixed time range, and has the RangedPlayback capability,
+   * the start time of the data range.
+   */
+  const uint64_t *playback_start_time;
+  /**
+   * If the server is sending data from a fixed time range, and has the RangedPlayback capability,
+   * the end time of the data range.
+   */
+  const uint64_t *playback_end_time;
 } foxglove_server_options;
 #endif
 
@@ -4047,6 +4278,26 @@ foxglove_error foxglove_mcap_close(struct foxglove_mcap_writer *writer);
 
 #if !defined(__wasm__)
 /**
+ * Write metadata to an MCAP file.
+ *
+ * Metadata consists of key-value string pairs associated with a name.
+ * If the metadata has no key-value pairs, this method does nothing.
+ *
+ * Returns 0 on success, or returns a FoxgloveError code on error.
+ *
+ * # Safety
+ * `writer` must be a valid pointer to a `FoxgloveMcapWriter` created via `foxglove_mcap_open`.
+ * `name` must be a valid UTF-8 string.
+ * `metadata` must be a valid pointer to an array of `foxglove_key_value` with length `metadata_len`.
+ */
+foxglove_error foxglove_mcap_write_metadata(struct foxglove_mcap_writer *writer,
+                                            const struct foxglove_string *FOXGLOVE_NONNULL name,
+                                            const struct foxglove_key_value *metadata,
+                                            size_t metadata_len);
+#endif
+
+#if !defined(__wasm__)
+/**
  * Create a new channel. The channel must later be freed with `foxglove_channel_free`.
  *
  * Returns 0 on success, or returns a FoxgloveError code on error.
@@ -4241,6 +4492,118 @@ const struct foxglove_context *foxglove_context_new(void);
  * `context` must be a valid pointer to a context created via `foxglove_context_new`.
  */
 void foxglove_context_free(const struct foxglove_context *context);
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Get the topic of a channel descriptor.
+ *
+ * # Safety
+ * `channel` must be a valid pointer to a `foxglove_channel_descriptor`.
+ *
+ * If the passed channel is null, an empty value is returned.
+ *
+ * The returned value is valid only for the lifetime of the channel, which is typically the
+ * duration of a callback where a descriptor is passed.
+ */
+struct foxglove_string foxglove_channel_descriptor_get_topic(const struct foxglove_channel_descriptor *channel);
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Get the message_encoding of a channel descriptor.
+ *
+ * # Safety
+ * `channel` must be a valid pointer to a `foxglove_channel_descriptor`.
+ *
+ * If the passed channel is null, an empty value is returned.
+ *
+ * The returned value is valid only for the lifetime of the channel, which is typically the
+ * duration of a callback where a descriptor is passed.
+ */
+struct foxglove_string foxglove_channel_descriptor_get_message_encoding(const struct foxglove_channel_descriptor *channel);
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Get the schema of a channel.
+ *
+ * If the passed channel is null or has no schema, returns `FoxgloveError::ValueError`.
+ *
+ * # Safety
+ * `channel` must be a valid pointer to a `foxglove_channel_descriptor`.
+ * `schema` must be a valid pointer to a `FoxgloveSchema` struct that will be filled in.
+ *
+ * The returned value is valid only for the lifetime of the channel, which is typically the
+ * duration of a callback where a descriptor is passed.
+ */
+foxglove_error foxglove_channel_descriptor_get_schema(const struct foxglove_channel_descriptor *channel,
+                                                      struct foxglove_schema *schema);
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Create an iterator over a channel descriptor's metadata.
+ *
+ * You must later free the iterator using foxglove_channel_descriptor_metadata_iter_free.
+ *
+ * Iterate items using foxglove_channel_descriptor_metadata_iter_next.
+ *
+ * # Safety
+ * `channel` must be a valid pointer to a `foxglove_channel_descriptor`.
+ * The channel descriptor must remain valid for the lifetime of the iterator.
+ */
+struct foxglove_channel_descriptor_metadata_iterator *foxglove_channel_descriptor_metadata_iter_create(const struct foxglove_channel_descriptor *channel);
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Get the next key-value pair from the metadata iterator.
+ *
+ * Returns true if a pair was found and stored in `key_value`, false if the iterator is exhausted.
+ *
+ * # Safety
+ * `iter` must be a valid pointer to a `foxglove_channel_descriptor_metadata_iterator` created via
+ * `foxglove_channel_descriptor_metadata_iter_create`.
+ * `key_value` must be a valid pointer to a `FoxgloveKeyValue` that will be filled in.
+ * The channel descriptor itself must still be valid.
+ */
+bool foxglove_channel_descriptor_metadata_iter_next(struct foxglove_channel_descriptor_metadata_iterator *iter,
+                                                    struct foxglove_key_value *key_value);
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Free a metadata iterator created via `foxglove_channel_descriptor_metadata_iter_create`.
+ *
+ * # Safety
+ * `iter` must be a valid pointer to a `foxglove_channel_descriptor_metadata_iterator` created via
+ * `foxglove_channel_descriptor_metadata_iter_create`.
+ */
+void foxglove_channel_descriptor_metadata_iter_free(struct foxglove_channel_descriptor_metadata_iterator *iter);
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Create and start a cloud sink.
+ *
+ * Resources must later be freed by calling `foxglove_cloud_sink_stop`.
+ *
+ * Returns 0 on success, or returns a FoxgloveError code on error.
+ *
+ * # Safety
+ * If `supported_encodings` is supplied in options, all `supported_encodings` must contain valid
+ * UTF8, and `supported_encodings` must have length equal to `supported_encodings_count`.
+ */
+foxglove_error foxglove_cloud_sink_start(const struct foxglove_cloud_sink_options *FOXGLOVE_NONNULL options,
+                                         struct foxglove_cloud_sink **server);
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Stop and shut down cloud `sink` and free the resources associated with it.
+ */
+foxglove_error foxglove_cloud_sink_stop(struct foxglove_cloud_sink *sink);
 #endif
 
 #if !defined(__wasm__)
@@ -4798,10 +5161,13 @@ void foxglove_parameter_value_dict_free(struct foxglove_parameter_value_dict *di
  * Returns 0 on success, or returns a FoxgloveError code on error.
  *
  * # Safety
- * If `name` is supplied in options, it must contain valid UTF8.
- * If `host` is supplied in options, it must contain valid UTF8.
- * If `supported_encodings` is supplied in options, all `supported_encodings` must contain valid
- * UTF8, and `supported_encodings` must have length equal to `supported_encodings_count`.
+ *
+ * - If `name` is supplied in options, it must contain valid UTF8.
+ * - If `host` is supplied in options, it must contain valid UTF8.
+ * - If `supported_encodings` is supplied in options, all `supported_encodings` must contain valid
+ *   UTF8, and `supported_encodings` must have length equal to `supported_encodings_count`.
+ * - If `server_info` is supplied in options, all `server_info` must contain valid UTF8, and
+ *   `server_info` must have length equal to `server_info_count`.
  */
 foxglove_error foxglove_server_start(const struct foxglove_server_options *FOXGLOVE_NONNULL options,
                                      struct foxglove_websocket_server **server);
@@ -4815,6 +5181,19 @@ foxglove_error foxglove_server_start(const struct foxglove_server_options *FOXGL
  */
 foxglove_error foxglove_server_broadcast_time(const struct foxglove_websocket_server *server,
                                               uint64_t timestamp_nanos);
+#endif
+
+#if !defined(__wasm__)
+/**
+ * Publishes the current playback state to all clients.
+ *
+ * Requires the `FOXGLOVE_CAPABILITY_RANGED_PLAYBACK` capability.
+ *
+ * # Safety
+ * - `playback_state` must be a valid pointer to a playback state that lives for the duration of the call.
+ */
+foxglove_error foxglove_server_broadcast_playback_state(const struct foxglove_websocket_server *server,
+                                                        const struct foxglove_playback_state *playback_state);
 #endif
 
 #if !defined(__wasm__)

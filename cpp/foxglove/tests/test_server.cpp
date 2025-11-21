@@ -2,6 +2,7 @@
 #include <foxglove/channel.hpp>
 #include <foxglove/context.hpp>
 #include <foxglove/error.hpp>
+#include <foxglove/playback_control_request.hpp>
 #include <foxglove/server.hpp>
 
 #include <catch2/catch_test_macros.hpp>
@@ -12,6 +13,8 @@
 #include <websocketpp/config/asio_no_tls_client.hpp>
 
 #include <type_traits>
+
+#include "foxglove/playback_state.hpp"
 
 using Catch::Matchers::ContainsSubstring;
 using Catch::Matchers::Equals;
@@ -171,6 +174,8 @@ private:
 };
 
 foxglove::WebSocketServer startServer(foxglove::WebSocketServerOptions&& options) {
+  // always select an available port
+  options.port = 0;
   auto result = foxglove::WebSocketServer::create(std::move(options));
   REQUIRE(result.has_value());
   auto server = std::move(result.value());
@@ -184,31 +189,23 @@ foxglove::WebSocketServer startServer(
   foxglove::WebSocketServerCallbacks&& callbacks = {},
   std::vector<std::string> supported_encodings = {}
 ) {
-  return startServer({
-    std::move(context),
-    "unit-test",
-    "127.0.0.1",
-    0,
-    std::move(callbacks),
-    capabilities,
-    std::move(supported_encodings),
-    {},
-  });
+  foxglove::WebSocketServerOptions options;
+  options.context = std::move(context);
+  options.name = "unit-test";
+  options.callbacks = std::move(callbacks);
+  options.capabilities = capabilities;
+  options.supported_encodings = std::move(supported_encodings);
+  return startServer(std::move(options));
 }
 
 foxglove::WebSocketServer startServer(
   foxglove::Context context, foxglove::FetchAssetHandler&& fetch_asset
 ) {
-  return startServer({
-    std::move(context),
-    "unit-test",
-    "127.0.0.1",
-    0,
-    {},
-    {},
-    {},
-    std::move(fetch_asset),
-  });
+  foxglove::WebSocketServerOptions options;
+  options.context = std::move(context);
+  options.name = "unit-test";
+  options.fetch_asset = std::move(fetch_asset);
+  return startServer(std::move(options));
 }
 
 }  // namespace
@@ -752,11 +749,19 @@ foxglove::ServiceSchema makeServiceSchema(std::string_view name) {
   };
 }
 
-void writeUint32LE(std::vector<std::byte>& buffer, uint32_t value) {
-  buffer.push_back(static_cast<std::byte>(value & 0xffU));
-  buffer.push_back(static_cast<std::byte>((value >> 8) & 0xffU));
-  buffer.push_back(static_cast<std::byte>((value >> 16) & 0xffU));
-  buffer.push_back(static_cast<std::byte>((value >> 24) & 0xffU));
+template<typename T>
+void writeIntLE(std::vector<std::byte>& buffer, T value) {
+  static_assert(std::is_integral<T>());
+  for (size_t shift = 0; shift < 8 * sizeof(T); shift += 8) {
+    buffer.push_back(static_cast<std::byte>((value >> shift) & 0xffU));
+  }
+}
+
+void writeFloatLE(std::vector<std::byte>& buffer, float value) {
+  // Put the bits into a temporary uint32_t
+  uint32_t tmp = 0;
+  memcpy(&tmp, &value, sizeof(tmp));
+  writeIntLE(buffer, tmp);
 }
 
 uint32_t readUint32LE(const std::vector<std::byte>& buffer, size_t offset) {
@@ -774,9 +779,9 @@ std::vector<std::byte> makeServiceRequest(
   std::vector<std::byte> buffer;
   buffer.reserve(1 + 4 + 4 + 4 + encoding.size() + payload.size());
   buffer.emplace_back(static_cast<std::byte>(2));  // Service call request opcode
-  writeUint32LE(buffer, service_id);
-  writeUint32LE(buffer, call_id);
-  writeUint32LE(buffer, static_cast<uint32_t>(encoding.size()));
+  writeIntLE(buffer, service_id);
+  writeIntLE(buffer, call_id);
+  writeIntLE(buffer, static_cast<uint32_t>(encoding.size()));
   for (char c : encoding) {
     buffer.emplace_back(static_cast<std::byte>(c));
   }
@@ -1378,4 +1383,337 @@ TEST_CASE("Log message to websocket sinks") {
 
     REQUIRE(clients_received_message == num_clients);
   }
+}
+
+TEST_CASE("Server channel filtering") {
+  auto context = foxglove::Context::create();
+  std::mutex mutex;
+  std::condition_variable cv;
+  // the following variable is protected by the mutex:
+  std::vector<uint64_t> subscribe_calls;
+  std::unique_lock lock{mutex};
+
+  foxglove::WebSocketServerCallbacks callbacks;
+  callbacks.onSubscribe =
+    [&](uint64_t channel_id, const foxglove::ClientMetadata& _ [[maybe_unused]]) {
+      std::scoped_lock lock{mutex};
+      std::cerr << "onSubscribe: " << channel_id << std::endl;
+      subscribe_calls.push_back(channel_id);
+      cv.notify_all();
+    };
+
+  foxglove::WebSocketServerOptions ws_options;
+  ws_options.context = context;
+  ws_options.callbacks = std::move(callbacks);
+  ws_options.sink_channel_filter = [](foxglove::ChannelDescriptor&& channel) -> bool {
+    return channel.topic() == "/1";
+  };
+
+  auto server = startServer(std::move(ws_options));
+
+  auto channel_result_1 = foxglove::RawChannel::create("/1", "json", std::nullopt, context);
+  REQUIRE(channel_result_1.has_value());
+  auto channel_1 = std::move(channel_result_1.value());
+
+  auto channel_result_2 = foxglove::RawChannel::create("/2", "json", std::nullopt, context);
+  REQUIRE(channel_result_2.has_value());
+  auto channel_2 = std::move(channel_result_2.value());
+
+  WebSocketClient client;
+  client.start(server.port());
+  client.waitForConnection();
+
+  auto payload = client.recv();
+  auto parsed = Json::parse(payload);
+  REQUIRE(parsed.contains("op"));
+  REQUIRE(parsed["op"] == "serverInfo");
+
+  payload = client.recv();
+  std::cerr << "payload: " << payload << std::endl;
+  parsed = Json::parse(payload);
+  REQUIRE(parsed.contains("op"));
+  REQUIRE(parsed["op"] == "advertise");
+  REQUIRE(parsed["channels"].size() == 1);
+  REQUIRE(parsed["channels"][0]["id"] == channel_1.id());
+
+  client.send(
+    R"({
+      "op": "subscribe",
+      "subscriptions": [
+        {
+          "id": 100, "channelId": )" +
+    std::to_string(channel_1.id()) + R"( }
+      ]
+    })"
+  );
+
+  // Channel 2 is filtered, unadvertised, and can't be subscribed to.
+  client.send(
+    R"({
+      "op": "subscribe",
+      "subscriptions": [
+        {
+          "id": 101, "channelId": )" +
+    std::to_string(channel_2.id()) + R"( }
+      ]
+    })"
+  );
+
+  cv.wait_for(lock, std::chrono::seconds(1), [&] {
+    return !subscribe_calls.empty();
+  });
+  REQUIRE_THAT(subscribe_calls, Equals(std::vector<uint64_t>{1}));
+
+  payload = client.recv();
+  parsed = Json::parse(payload);
+  REQUIRE(parsed.contains("op"));
+  REQUIRE(parsed["op"] == "status");
+  REQUIRE(parsed["message"] == "Unknown channel ID: " + std::to_string(channel_2.id()));
+
+  REQUIRE(server.stop() == foxglove::FoxgloveError::Ok);
+}
+
+TEST_CASE("Server info") {
+  auto context = foxglove::Context::create();
+
+  std::map<std::string, std::string> server_info = {{"key1", "value1"}};
+
+  foxglove::WebSocketServerOptions ws_options;
+  ws_options.context = context;
+  ws_options.server_info = server_info;
+
+  auto server = startServer(std::move(ws_options));
+
+  WebSocketClient client;
+  client.start(server.port());
+  client.waitForConnection();
+
+  auto payload = client.recv();
+  auto parsed = Json::parse(payload);
+  REQUIRE(parsed.contains("op"));
+  REQUIRE(parsed["op"] == "serverInfo");
+  auto metadata = parsed["metadata"];
+  auto iterator = metadata.find("key1");
+  REQUIRE(iterator != metadata.end());
+  REQUIRE(*iterator == "value1");
+
+  REQUIRE(server.stop() == foxglove::FoxgloveError::Ok);
+}
+
+std::vector<std::byte> playbackControlRequestToBinary(
+  const foxglove::PlaybackControlRequest& playback_control_request
+) {
+  size_t message_size = 1 + 4 + 1 + 8 + 4 + playback_control_request.request_id.size();
+  std::vector<std::byte> msg;
+  msg.reserve(message_size);
+
+  msg.emplace_back(std::byte{0x03});
+  msg.emplace_back(std::byte{static_cast<std::underlying_type_t<foxglove::PlaybackCommand>>(
+    playback_control_request.playback_command
+  )});
+
+  writeFloatLE(msg, playback_control_request.playback_speed);
+  msg.emplace_back(
+    playback_control_request.seek_time.has_value() ? std::byte{0x1} : std::byte{0x0}
+  );
+  writeIntLE(
+    msg, playback_control_request.seek_time.has_value() ? *playback_control_request.seek_time : 0x0
+  );
+  auto request_id_size = static_cast<uint32_t>(playback_control_request.request_id.size());
+  writeIntLE(msg, request_id_size);
+  for (char c : playback_control_request.request_id) {
+    msg.emplace_back(std::byte{static_cast<std::byte>(c)});
+  }
+
+  return msg;
+}
+
+std::optional<foxglove::PlaybackState> parseBinaryPlaybackState(const std::vector<std::byte>& msg) {
+  if (msg.size() < 1 + 1 + 8 + 4 + 4) {
+    return std::nullopt;
+  }
+
+  uint32_t offset = 0;
+
+  auto opcode = static_cast<uint8_t>(msg.at(offset));
+  offset += 1;
+  if (opcode != 0x05) {
+    return std::nullopt;
+  }
+
+  foxglove::PlaybackState playback_state;
+  playback_state.status = static_cast<foxglove::PlaybackStatus>(msg.at(offset));
+  offset += 1;
+  playback_state.playback_speed = static_cast<float>(readUint32LE(msg, offset));
+  offset += 4;
+  playback_state.current_time = readUint64LE(msg, offset);
+  offset += 8;
+
+  uint32_t request_id_length = readUint32LE(msg, offset);
+  offset += 4;
+
+  if (request_id_length == 0) {
+    playback_state.request_id = std::nullopt;
+  } else {
+    std::string request_id;
+    for (uint32_t i = 0; i < request_id_length; ++i) {
+      request_id += static_cast<char>(msg.at(offset + i));
+    }
+    playback_state.request_id = std::make_optional<std::string>(std::move(request_id));
+  }
+  return playback_state;
+}
+
+TEST_CASE("Playback control request callback") {
+  auto context = foxglove::Context::create();
+
+  std::optional<foxglove::PlaybackControlRequest> received_playback_control_request = std::nullopt;
+  std::mutex mutex;
+  std::condition_variable cv;
+
+  foxglove::WebSocketServerOptions ws_options;
+  ws_options.context = context;
+  ws_options.capabilities = foxglove::WebSocketServerCapabilities::RangedPlayback;
+  ws_options.playback_time_range = std::make_pair(0, 1000);
+  ws_options.callbacks.onPlaybackControlRequest =
+    [&]([[maybe_unused]] const foxglove::PlaybackControlRequest& playback_control_request
+    ) -> foxglove::PlaybackState {
+    {
+      std::unique_lock lock(mutex);
+      received_playback_control_request =
+        std::make_optional<foxglove::PlaybackControlRequest>(playback_control_request);
+    }
+    cv.notify_one();
+
+    // For the purposes of testing, the only field that matters here is the request_id. All other
+    // fields are set to dummy values since we're not playing back any actual data.
+    return foxglove::PlaybackState{
+      foxglove::PlaybackStatus::Paused,
+      0,
+      1.0,
+      std::make_optional<std::string>("i have my own pls don't change it")
+    };
+  };
+
+  auto server = startServer(std::move(ws_options));
+
+  WebSocketClient client;
+  client.start(server.port());
+  client.waitForConnection();
+
+  auto payload = client.recv();
+  auto parsed = Json::parse(payload);
+  REQUIRE(parsed.contains("op"));
+  REQUIRE(parsed["op"] == "serverInfo");
+
+  foxglove::PlaybackControlRequest playback_control_request{
+    foxglove::PlaybackCommand::Pause,
+    1.0,
+    42,
+    "a_request_id",
+  };
+  std::vector<std::byte> msg = playbackControlRequestToBinary(playback_control_request);
+  client.send(msg);
+
+  {
+    std::unique_lock lock{mutex};
+    auto wait_result = cv.wait_for(lock, std::chrono::seconds(1));
+    REQUIRE(wait_result != std::cv_status::timeout);
+    REQUIRE(received_playback_control_request.has_value());
+    REQUIRE(
+      received_playback_control_request->playback_command == foxglove::PlaybackCommand::Pause
+    );
+    REQUIRE(received_playback_control_request->playback_speed == 1.0);
+    REQUIRE(received_playback_control_request->seek_time.has_value());
+    REQUIRE(received_playback_control_request->seek_time.value() == 42);
+    REQUIRE(received_playback_control_request->request_id == "a_request_id");
+  }
+
+  std::vector<std::byte> received_binary_playback_state;
+  for (const unsigned char c : client.recv()) {
+    received_binary_playback_state.emplace_back(static_cast<std::byte>(c));
+  }
+  auto received_playback_state = parseBinaryPlaybackState(received_binary_playback_state);
+
+  REQUIRE(received_playback_state.has_value());
+  REQUIRE(received_playback_state->request_id.has_value());
+  REQUIRE(received_playback_state->request_id.value() == "a_request_id");
+  REQUIRE(server.stop() == foxglove::FoxgloveError::Ok);
+}
+
+TEST_CASE("Broadcast playback state") {
+  auto context = foxglove::Context::create();
+  foxglove::WebSocketServerOptions ws_options;
+  ws_options.context = context;
+  ws_options.capabilities = foxglove::WebSocketServerCapabilities::RangedPlayback;
+  ws_options.playback_time_range = std::make_pair(0, 1000);
+  auto server = startServer(std::move(ws_options));
+
+  WebSocketClient client;
+  client.start(server.port());
+  client.waitForConnection();
+
+  auto payload = client.recv();
+  auto parsed = Json::parse(payload);
+  REQUIRE(parsed.contains("op"));
+  REQUIRE(parsed["op"] == "serverInfo");
+
+  foxglove::PlaybackState playback_state{
+    foxglove::PlaybackStatus::Paused,
+    0,
+    1.0,
+    std::nullopt,
+  };
+
+  server.broadcastPlaybackState(playback_state);
+
+  std::vector<std::byte> received_binary_playback_state;
+  for (const unsigned char c : client.recv()) {
+    received_binary_playback_state.emplace_back(static_cast<std::byte>(c));
+  }
+  auto received_playback_state = parseBinaryPlaybackState(received_binary_playback_state);
+
+  REQUIRE(received_playback_state.has_value());
+  REQUIRE(received_playback_state->request_id == std::nullopt);
+  REQUIRE(server.stop() == foxglove::FoxgloveError::Ok);
+}
+
+TEST_CASE("RangedPlayback capability") {
+  auto context = foxglove::Context::create();
+
+  const uint64_t start_time = 100000000000ULL;
+  const uint64_t end_time = 105000000000ULL;
+
+  foxglove::WebSocketServerOptions opt;
+  opt.context = std::move(context);
+  opt.playback_time_range = std::make_optional<std::pair<uint64_t, uint64_t>>(start_time, end_time);
+  auto server = startServer(std::move(opt));
+
+  WebSocketClient client;
+  client.start(server.port());
+  client.waitForConnection();
+
+  auto payload = client.recv();
+  auto parsed = Json::parse(payload);
+  REQUIRE(parsed.contains("op"));
+  REQUIRE(parsed["op"] == "serverInfo");
+
+  // Ensure that the rangedPlayback capability is enabled, since opt.playback_time_range is
+  // specified
+  REQUIRE(parsed.contains("capabilities"));
+  const auto& capabilities = parsed["capabilities"];
+  REQUIRE(std::count_if(capabilities.begin(), capabilities.end(), [](const auto& capability) {
+            return capability == "rangedPlayback";
+          }) == 1);
+
+  REQUIRE(parsed.contains("dataStartTime"));
+  REQUIRE(parsed["dataStartTime"].contains("sec"));
+  REQUIRE(parsed["dataStartTime"].contains("nsec"));
+  REQUIRE(parsed["dataStartTime"]["sec"] == 100);
+  REQUIRE(parsed["dataStartTime"]["nsec"] == 0);
+  REQUIRE(parsed.contains("dataEndTime"));
+  REQUIRE(parsed["dataEndTime"].contains("sec"));
+  REQUIRE(parsed["dataEndTime"].contains("nsec"));
+  REQUIRE(parsed["dataEndTime"]["sec"] == 105);
+  REQUIRE(parsed["dataEndTime"]["nsec"] == 0);
 }

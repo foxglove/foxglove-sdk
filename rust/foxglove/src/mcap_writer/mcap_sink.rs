@@ -1,9 +1,9 @@
 //! [`Sink`] implementation for an MCAP writer.
-use crate::{ChannelId, FoxgloveError, Metadata, RawChannel, Sink, SinkId};
+use crate::{ChannelId, FoxgloveError, Metadata, RawChannel, Sink, SinkChannelFilter, SinkId};
 use mcap::WriteOptions;
 use parking_lot::Mutex;
 use std::collections::hash_map::Entry;
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::fmt::Debug;
 use std::io::{Seek, Write};
 use std::sync::Arc;
@@ -13,20 +13,26 @@ type McapChannelId = u16;
 struct WriterState<W: Write + Seek> {
     writer: mcap::Writer<W>,
     // ChannelId -> mcap file channel id.
+    //
+    // If the value is `None`, then we do not log to this channel; for example, if the channel is
+    // filtered out by the `SinkChannelFilter`.
+    //
     // Note that the underlying writer may re-use channel_ids based on the metadata of the channel,
     // so multiple `ChannelIds` may map to the same `McapChannelId`.
-    channel_map: HashMap<ChannelId, McapChannelId>,
+    channel_map: HashMap<ChannelId, Option<McapChannelId>>,
     // Current message sequence number for each channel.
     // Indexed by `McapChannelId` to ensure increasing sequence within each MCAP channel.
     channel_sequence: HashMap<McapChannelId, u32>,
+    channel_filter: Option<Arc<dyn SinkChannelFilter>>,
 }
 
 impl<W: Write + Seek> WriterState<W> {
-    fn new(writer: mcap::Writer<W>) -> Self {
+    fn new(writer: mcap::Writer<W>, channel_filter: Option<Arc<dyn SinkChannelFilter>>) -> Self {
         Self {
             writer,
             channel_map: HashMap::new(),
             channel_sequence: HashMap::new(),
+            channel_filter,
         }
     }
 
@@ -48,6 +54,13 @@ impl<W: Write + Seek> WriterState<W> {
         let mcap_channel_id = match self.channel_map.entry(channel_id) {
             Entry::Occupied(entry) => *entry.get(),
             Entry::Vacant(entry) => {
+                if let Some(filter) = self.channel_filter.as_ref() {
+                    if !filter.should_subscribe(channel.descriptor()) {
+                        entry.insert(None);
+                        return Ok(());
+                    }
+                }
+
                 let schema_id = if let Some(schema) = channel.schema() {
                     self.writer
                         .add_schema(&schema.name, &schema.encoding, &schema.data)
@@ -66,9 +79,14 @@ impl<W: Write + Seek> WriterState<W> {
                     )
                     .map_err(FoxgloveError::from)?;
 
-                entry.insert(mcap_channel_id);
-                mcap_channel_id
+                entry.insert(Some(mcap_channel_id));
+                Some(mcap_channel_id)
             }
+        };
+
+        // If there is no mcap_channel_id, then the channel is filtering this topic.
+        let Some(mcap_channel_id) = mcap_channel_id else {
+            return Ok(());
         };
 
         let sequence = self.next_sequence(mcap_channel_id);
@@ -102,11 +120,15 @@ impl<W: Write + Seek> Debug for McapSink<W> {
 
 impl<W: Write + Seek> McapSink<W> {
     /// Creates a new MCAP writer sink.
-    pub fn new(writer: W, options: WriteOptions) -> Result<Arc<McapSink<W>>, FoxgloveError> {
+    pub fn new(
+        writer: W,
+        options: WriteOptions,
+        channel_filter: Option<Arc<dyn SinkChannelFilter>>,
+    ) -> Result<Arc<McapSink<W>>, FoxgloveError> {
         let mcap_writer = options.create(writer).map_err(FoxgloveError::from)?;
         let writer = Arc::new(Self {
             sink_id: SinkId::next(),
-            inner: Mutex::new(Some(WriterState::new(mcap_writer))),
+            inner: Mutex::new(Some(WriterState::new(mcap_writer, channel_filter))),
         });
         Ok(writer)
     }
@@ -120,6 +142,40 @@ impl<W: Write + Seek> McapSink<W> {
         };
         writer.writer.finish()?;
         Ok(Some(writer.writer.into_inner()))
+    }
+
+    /// Writes MCAP metadata to the file.
+    ///
+    /// If the metadata map is empty, this method returns early without writing anything.
+    ///
+    /// # Arguments
+    /// * `name` - Name identifier for this metadata record
+    /// * `metadata` - Key-value pairs to store (empty map will be skipped)
+    ///
+    /// # Returns
+    /// * `Ok(())` if metadata was written successfully or skipped (empty metadata)
+    /// * `Err(FoxgloveError::SinkClosed)` if the writer has been closed
+    /// * `Err(FoxgloveError)` if there was an error writing to the file
+    pub fn write_metadata(
+        &self,
+        name: &str,
+        metadata: BTreeMap<String, String>,
+    ) -> Result<(), FoxgloveError> {
+        // Skip writing if metadata is empty (backwards compatibility)
+        if metadata.is_empty() {
+            return Ok(());
+        }
+
+        let mut guard = self.inner.lock();
+        let writer = guard.as_mut().ok_or(FoxgloveError::SinkClosed)?;
+
+        writer
+            .writer
+            .write_metadata(&mcap::records::Metadata {
+                name: name.into(),
+                metadata,
+            })
+            .map_err(FoxgloveError::from)
     }
 }
 
@@ -144,7 +200,10 @@ impl<W: Write + Seek + Send> Sink for McapSink<W> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{ChannelBuilder, Context, Metadata, Schema};
+    use crate::{
+        channel::ChannelDescriptor, testutil::read_summary, ChannelBuilder, Context, Metadata,
+        Schema,
+    };
     use mcap::McapError;
     use std::path::Path;
     use tempfile::NamedTempFile;
@@ -188,7 +247,6 @@ mod tests {
         let ch1 = new_test_channel(&ctx, "foo".to_string(), "foo_schema".to_string());
         let ch2 = new_test_channel(&ctx, "bar".to_string(), "bar_schema".to_string());
 
-        // Generate a temporary file path without creating the file
         let temp_file = NamedTempFile::new().expect("create tempfile");
         let temp_path = temp_file.path().to_owned();
 
@@ -200,8 +258,8 @@ mod tests {
         let mut ch2_meta_iter = ch2_meta.iter();
 
         // Log two messages to each channel, interleaved
-        let writer =
-            McapSink::new(&temp_file, WriteOptions::default()).expect("failed to create writer");
+        let writer = McapSink::new(&temp_file, WriteOptions::default(), None)
+            .expect("failed to create writer");
         writer
             .log(&ch1, b"msg1", &ch1_meta[0])
             .expect("failed to log to channel 1");
@@ -269,13 +327,12 @@ mod tests {
         let ch2 = new_test_channel(&ctx, "bar".to_string(), "bar_schema".to_string());
         let ch3 = new_test_channel(&ctx, "bar".to_string(), "bar_schema".to_string());
 
-        // Generate a temporary file path without creating the file
         let temp_file = NamedTempFile::new().expect("failed to create tempfile");
         let temp_path = temp_file.path().to_owned();
 
         let metadata = Metadata::default();
-        let writer =
-            McapSink::new(&temp_file, WriteOptions::default()).expect("failed to create writer");
+        let writer = McapSink::new(&temp_file, WriteOptions::default(), None)
+            .expect("failed to create writer");
 
         writer
             .log(&ch1, b"msg1", &metadata)
@@ -324,5 +381,209 @@ mod tests {
         assert_eq!(messages[2].sequence, 2);
         assert_eq!(messages[4].sequence, 3);
         assert_eq!(messages[5].sequence, 4);
+    }
+
+    fn foreach_mcap_metadata<F>(path: &Path, mut f: F) -> Result<(), McapError>
+    where
+        F: FnMut(&mcap::records::Metadata),
+    {
+        use mcap::read::LinearReader;
+        let contents = std::fs::read(path).map_err(McapError::Io)?;
+        for record in LinearReader::new(&contents)? {
+            if let mcap::records::Record::Metadata(metadata) = record? {
+                f(&metadata);
+            }
+        }
+        Ok(())
+    }
+
+    /// Helper function to verify metadata in MCAP file using HashMap comparison
+    fn verify_metadata_in_file(
+        path: &Path,
+        expected: &std::collections::HashMap<String, std::collections::BTreeMap<String, String>>,
+    ) {
+        let mut found_metadata: std::collections::HashMap<
+            String,
+            std::collections::BTreeMap<String, String>,
+        > = std::collections::HashMap::new();
+        let mut metadata_count = 0;
+
+        foreach_mcap_metadata(path, |meta| {
+            metadata_count += 1;
+            found_metadata.insert(meta.name.clone(), meta.metadata.clone());
+        })
+        .expect("failed to read MCAP metadata");
+
+        // Verify count
+        assert_eq!(
+            metadata_count,
+            expected.len(),
+            "Wrong number of metadata records"
+        );
+
+        // Verify each expected metadata exists with correct key-value pairs
+        for (name, expected_kv) in expected {
+            let actual = found_metadata
+                .get(name)
+                .unwrap_or_else(|| panic!("Metadata '{name}' not found"));
+
+            assert_eq!(
+                actual, expected_kv,
+                "Metadata '{name}' has wrong key-value pairs",
+            );
+        }
+    }
+
+    #[test]
+    fn test_write_metadata_basic() {
+        let temp_file = NamedTempFile::new().expect("create tempfile");
+        let temp_path = temp_file.path().to_owned();
+
+        let writer = McapSink::new(&temp_file, WriteOptions::default(), None)
+            .expect("failed to create writer");
+
+        let mut metadata = BTreeMap::new();
+        metadata.insert("key1".to_string(), "value1".to_string());
+        metadata.insert("key2".to_string(), "value2".to_string());
+
+        writer
+            .write_metadata("test_metadata", metadata.clone())
+            .expect("failed to write metadata");
+
+        writer.finish().expect("failed to finish recording");
+
+        // Define expected metadata and verify
+        let mut expected = std::collections::HashMap::new();
+        expected.insert("test_metadata".to_string(), metadata);
+
+        verify_metadata_in_file(&temp_path, &expected);
+    }
+
+    #[test]
+    fn test_write_metadata_empty_skipped() {
+        let temp_file = NamedTempFile::new().expect("create tempfile");
+        let temp_path = temp_file.path().to_owned();
+
+        let writer = McapSink::new(&temp_file, WriteOptions::default(), None)
+            .expect("failed to create writer");
+
+        let empty_metadata = BTreeMap::new();
+
+        // This should return Ok(()) but not write anything
+        writer
+            .write_metadata("empty_metadata", empty_metadata)
+            .expect("failed to write metadata");
+
+        writer.finish().expect("failed to finish recording");
+
+        // Verify no metadata was written
+        let expected = std::collections::HashMap::new();
+        verify_metadata_in_file(&temp_path, &expected);
+    }
+
+    #[test]
+    fn test_write_multiple_metadata_records() {
+        let temp_file = NamedTempFile::new().expect("create tempfile");
+        let temp_path = temp_file.path().to_owned();
+
+        let writer = McapSink::new(&temp_file, WriteOptions::default(), None)
+            .expect("failed to create writer");
+
+        let mut session = BTreeMap::new();
+        session.insert("session".to_string(), "test_session".to_string());
+
+        let mut operator = BTreeMap::new();
+        operator.insert("operator".to_string(), "Alice".to_string());
+
+        writer
+            .write_metadata("session_info", session.clone())
+            .expect("failed to write metadata 1");
+
+        writer
+            .write_metadata("operator_info", operator.clone())
+            .expect("failed to write metadata 2");
+
+        writer.finish().expect("failed to finish recording");
+
+        // Define expected metadata and verify
+        let mut expected = std::collections::HashMap::new();
+        expected.insert("session_info".to_string(), session);
+        expected.insert("operator_info".to_string(), operator);
+
+        verify_metadata_in_file(&temp_path, &expected);
+    }
+
+    #[test]
+    fn test_write_metadata_after_close() {
+        let temp_file = NamedTempFile::new().expect("create tempfile");
+
+        let writer = McapSink::new(&temp_file, WriteOptions::default(), None)
+            .expect("failed to create writer");
+
+        // Close the writer
+        writer.finish().expect("failed to finish recording");
+
+        let mut metadata = BTreeMap::new();
+        metadata.insert("key".to_string(), "value".to_string());
+
+        // This should fail because the writer is closed
+        let result = writer.write_metadata("test", metadata);
+        assert!(result.is_err(), "Should fail to write metadata after close");
+        assert!(matches!(result.unwrap_err(), FoxgloveError::SinkClosed));
+    }
+
+    #[test]
+    fn test_channel_filter() {
+        // Write messages to two topics, but filter out the first.
+        struct Ch1Filter;
+        impl SinkChannelFilter for Ch1Filter {
+            fn should_subscribe(&self, channel: &ChannelDescriptor) -> bool {
+                channel.topic() == "/2"
+            }
+        }
+
+        let ctx = Context::new();
+
+        let ch1 = ChannelBuilder::new("/1")
+            .context(&ctx)
+            .message_encoding("json")
+            .build_raw()
+            .unwrap();
+        let ch2 = ChannelBuilder::new("/2")
+            .context(&ctx)
+            .message_encoding("json")
+            .build_raw()
+            .unwrap();
+
+        let temp_file1 = NamedTempFile::new().expect("failed to create tempfile");
+        let temp_path1 = temp_file1.path().to_owned();
+        let writer1 = McapSink::new(
+            &temp_file1,
+            WriteOptions::default(),
+            Some(Arc::new(Ch1Filter)),
+        )
+        .expect("failed to create writer");
+
+        let temp_file2 = NamedTempFile::new().expect("failed to create tempfile");
+        let temp_path2 = temp_file2.path().to_owned();
+        let writer2 = McapSink::new(&temp_file2, WriteOptions::default(), None)
+            .expect("failed to create writer");
+
+        writer1.log(&ch1, b"{}", &Metadata::default()).unwrap();
+        writer2.log(&ch1, b"{}", &Metadata::default()).unwrap();
+        writer1.log(&ch2, b"{}", &Metadata::default()).unwrap();
+        writer2.log(&ch2, b"{}", &Metadata::default()).unwrap();
+
+        writer1.finish().expect("failed to finish recording");
+        writer2.finish().expect("failed to finish recording");
+
+        let summary = read_summary(&temp_path1);
+        assert_eq!(summary.channels.len(), 1);
+        assert_eq!(summary.channels.get(&1).unwrap().topic, "/2");
+        assert_eq!(summary.stats.unwrap().message_count, 1);
+
+        let summary = read_summary(&temp_path2);
+        assert_eq!(summary.channels.len(), 2);
+        assert_eq!(summary.stats.unwrap().message_count, 2);
     }
 }

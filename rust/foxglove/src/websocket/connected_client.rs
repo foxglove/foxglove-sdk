@@ -11,7 +11,9 @@ use tokio::sync::oneshot;
 use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::WebSocketStream;
 
+use crate::sink_channel_filter::SinkChannelFilter;
 use crate::websocket::streams::ServerStream;
+use crate::websocket::PlaybackControlRequest;
 use crate::{ChannelId, Context, FoxgloveError, Metadata, RawChannel, Sink, SinkId};
 
 use self::ws_protocol::server::{
@@ -57,6 +59,7 @@ pub(super) struct ConnectedClient {
     addr: SocketAddr,
     weak_self: Weak<Self>,
     sink_id: SinkId,
+    channel_filter: Option<Arc<dyn SinkChannelFilter>>,
     context: Weak<Context>,
     poller: parking_lot::Mutex<Option<Poller>>,
     /// A cache of channels for `on_subscribe` and `on_unsubscribe` callbacks.
@@ -105,7 +108,18 @@ impl Sink for ConnectedClient {
     }
 
     fn add_channels(&self, channels: &[&Arc<RawChannel>]) -> Option<Vec<ChannelId>> {
-        for channels in channels.chunks(ADVERTISE_CHANNEL_BATCH_SIZE) {
+        let filtered_channels = channels
+            .iter()
+            .filter(|channel| {
+                let Some(filter) = self.channel_filter.as_ref() else {
+                    return true;
+                };
+                filter.should_subscribe(channel.descriptor())
+            })
+            .copied()
+            .collect::<Vec<_>>();
+
+        for channels in filtered_channels.chunks(ADVERTISE_CHANNEL_BATCH_SIZE) {
             self.advertise_channels(channels);
         }
         // Clients subscribe asynchronously.
@@ -129,6 +143,7 @@ impl ConnectedClient {
         websocket: WebSocketStream<ServerStream<TcpStream>>,
         addr: SocketAddr,
         message_backlog_size: usize,
+        channel_filter: Option<Arc<dyn SinkChannelFilter>>,
     ) -> Arc<Self> {
         let (data_plane_tx, data_plane_rx) = flume::bounded(message_backlog_size);
         let (control_plane_tx, control_plane_rx) = flume::bounded(message_backlog_size);
@@ -139,6 +154,7 @@ impl ConnectedClient {
             weak_self: weak_self.clone(),
             sink_id: SinkId::next(),
             context: context.clone(),
+            channel_filter,
             poller: parking_lot::Mutex::new(Some(Poller::new(
                 websocket,
                 data_plane_rx.clone(),
@@ -247,6 +263,9 @@ impl ConnectedClient {
             ClientMessage::SubscribeConnectionGraph => self.on_connection_graph_subscribe(server),
             ClientMessage::UnsubscribeConnectionGraph => {
                 self.on_connection_graph_unsubscribe(server)
+            }
+            ClientMessage::PlaybackControlRequest(msg) => {
+                self.on_playback_control_request(server, msg)
             }
         }
     }
@@ -652,6 +671,40 @@ impl ConnectedClient {
             tracing::debug!(
                 "Client {} is already unsubscribed from connection graph updates",
                 self.addr
+            );
+        }
+    }
+
+    fn on_playback_control_request(&self, server: Arc<Server>, msg: PlaybackControlRequest) {
+        if !server.has_capability(Capability::RangedPlayback) {
+            self.send_error("Server does not support ranged playback capability".to_string());
+            return;
+        }
+
+        if let Some(handler) = server.listener() {
+            let request_id = msg.request_id.clone();
+            let Some(mut playback_state) = handler.on_playback_control_request(msg) else {
+                tracing::error!(
+                    "No playback state sent in response to playback control request ID {}",
+                    request_id
+                );
+                self.send_error(
+                    "Server did not send playback state in response to playback control request"
+                        .to_string(),
+                );
+                return;
+            };
+
+            // Force the request id in the playback state to match that of the request. Since this
+            // playback state is being instantiated in the request listener, it's the only valid
+            // value for this field, and it eases the burden on server implementors to not have to
+            // worry about explicitly setting this.
+            playback_state.request_id = Some(request_id);
+            server.broadcast_playback_state(playback_state);
+        } else {
+            self.send_error(
+                "Server advertised ranged playback capability but didn't provide a listener"
+                    .to_string(),
             );
         }
     }

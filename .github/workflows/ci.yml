@@ -120,7 +120,7 @@ jobs:
 
       - run: corepack enable
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: yarn
@@ -151,12 +151,11 @@ jobs:
       - run: yarn test
 
       # Install python dependencies required to prettify generated SDK files
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
-          python-version: "3.9"
-      - run: pipx install poetry
-      - run: poetry check --strict
-      - run: poetry install
+          python-version: "3.10"
+
+      - uses: astral-sh/setup-uv@v7
 
       - name: Ensure generated files are up to date
         run: |

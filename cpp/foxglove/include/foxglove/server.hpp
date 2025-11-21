@@ -1,7 +1,10 @@
 #pragma once
 
+#include <foxglove/channel.hpp>
 #include <foxglove/context.hpp>
 #include <foxglove/error.hpp>
+#include <foxglove/playback_control_request.hpp>
+#include <foxglove/playback_state.hpp>
 #include <foxglove/server/connection_graph.hpp>
 #include <foxglove/server/fetch_asset.hpp>
 #include <foxglove/server/parameter.hpp>
@@ -68,6 +71,11 @@ enum class WebSocketServerCapabilities : uint8_t {
   /// Allow clients to request assets. If you supply an asset handler to the
   /// server, this capability will be advertised automatically.
   Assets = 1 << 5,
+  /// @cond foxglove_internal
+  /// Indicates that the server is sending data within a fixed time range. This requires the
+  /// server to specify the `playback_time_range` field in its `WebSocketServerOptions`.
+  RangedPlayback = 1 << 6,
+  /// @endcond
 };
 
 /// @brief Level indicator for a server status message.
@@ -189,6 +197,21 @@ struct WebSocketServerCallbacks {
 
   /// @brief Callback invoked when a client disconnects from the server.
   std::function<void()> onClientDisconnect;
+  /// @cond foxglove_internal
+  /// @brief Callback invoked when a playback control request is sent from the client.
+  ///
+  /// Requires the capability WebSocketServerCapabilities::RangedPlayback
+  ///
+  /// @param playback_control_request The playback control request.
+  /// @return The playback state to send back to the client.
+  ///
+  /// @note Since this playback state is in response to a specific request from the client, the
+  /// `request_id` field in the returned `PlaybackState` will be overwritten to match the request_id
+  /// in `playback_control_request`.
+  std::function<std::optional<PlaybackState>(const PlaybackControlRequest& playback_control_request
+  )>
+    onPlaybackControlRequest;
+  /// @endcond
 };
 
 /// @cond foxglove_internal
@@ -221,10 +244,26 @@ struct WebSocketServerOptions {
   std::vector<std::string> supported_encodings;
   /// @brief A fetch asset handler callback.
   FetchAssetHandler fetch_asset;
+  /// @brief A sink channel filter callback.
+  SinkChannelFilterFn sink_channel_filter;
   /// @brief (internal) TLS configuration for the server.
   ///
   /// This option is under active development and may change.
   std::optional<TlsIdentity> tls_identity = std::nullopt;
+  /// @cond foxglove_internal
+  /// @brief (internal) Information about the server, which is shared with clients.
+  ///
+  /// This option is for internal use only and may change.
+  std::optional<std::map<std::string, std::string>> server_info = std::nullopt;
+  /// @endcond
+
+  /// @cond foxglove_internal
+  /// @brief The time range for playback. This applies if the server is playing back a fixed time
+  /// range of data.
+  ///
+  /// @note Setting this option imples the RangedPlayback capability
+  std::optional<std::pair<uint64_t, uint64_t>> playback_time_range = std::nullopt;
+  /// @endcond
 };
 
 /// @brief A WebSocket server for visualization in Foxglove.
@@ -256,6 +295,15 @@ public:
   ///
   /// @param timestamp_nanos An epoch offset in nanoseconds.
   void broadcastTime(uint64_t timestamp_nanos) const noexcept;
+
+  /// @cond foxglove_internal
+  /// @brief Publishes the current playback state to all clients.
+  ///
+  /// Requires the capability WebSocketServerCapabilities::RangedPlayback.
+  ///
+  /// @param playback_state The playback state to publish.
+  void broadcastPlaybackState(const PlaybackState& playback_state) const noexcept;
+  /// @endcond
 
   /// @brief Sets a new session ID and notifies all clients, causing them to
   /// reset their state.
@@ -333,11 +381,13 @@ public:
 private:
   WebSocketServer(
     foxglove_websocket_server* server, std::unique_ptr<WebSocketServerCallbacks> callbacks,
-    std::unique_ptr<FetchAssetHandler> fetch_asset
+    std::unique_ptr<FetchAssetHandler> fetch_asset,
+    std::unique_ptr<SinkChannelFilterFn> sink_channel_filter
   );
 
   std::unique_ptr<WebSocketServerCallbacks> callbacks_;
   std::unique_ptr<FetchAssetHandler> fetch_asset_;
+  std::unique_ptr<SinkChannelFilterFn> sink_channel_filter_;
   std::unique_ptr<foxglove_websocket_server, foxglove_error (*)(foxglove_websocket_server*)> impl_;
 };
 

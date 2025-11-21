@@ -1,13 +1,64 @@
-import { DataSource } from "@foxglove/embed";
-import { FoxgloveViewer } from "@foxglove/embed-react";
+import { PlayFilledAlt, DocumentDownload } from "@carbon/icons-react";
+import { DataSource, SelectLayoutParams } from "@foxglove/embed";
+import { FoxgloveViewer, FoxgloveViewerInterface } from "@foxglove/embed-react";
+import { Button, GlobalStyles, IconButton, Tooltip, Typography } from "@mui/material";
+import { Allotment } from "allotment";
 import { useCallback, useEffect, useRef, useState } from "react";
 import toast, { Toaster } from "react-hot-toast";
+import { tss } from "tss-react/mui";
 
 import { Editor, EditorInterface } from "./Editor";
 import { Runner } from "./Runner";
 import { getUrlState, setUrlState, UrlState } from "./urlState";
 
 import "./Playground.css";
+import "allotment/dist/style.css";
+
+const useStyles = tss.create(({ theme }) => ({
+  leftPane: {
+    display: "flex",
+    flexDirection: "column",
+  },
+  topBar: {
+    flex: "0 0 auto",
+    display: "flex",
+    // Match the height of the app bar in the Foxglove app
+    height: "44px",
+    padding: "0 8px 0 16px",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderBottom: `1px solid ${theme.palette.divider}`,
+    backgroundColor: theme.palette.background.paper,
+    color: theme.palette.text.primary,
+    container: "topBar / inline-size",
+  },
+  title: {
+    "@container topBar (width < 480px)": {
+      display: "none",
+    },
+  },
+  controls: {
+    display: "flex",
+    flexGrow: 1,
+    justifyContent: "flex-end",
+    gap: 8,
+  },
+  toast: {
+    fontSize: theme.typography.body1.fontSize,
+    backgroundColor: theme.palette.background.paper,
+    color: theme.palette.text.primary,
+    boxShadow: theme.shadows[4],
+  },
+  toastMonospace: {
+    maxWidth: "none",
+    fontFamily: theme.typography.fontMonospace,
+    overflow: "hidden",
+    div: {
+      whiteSpace: "pre-wrap",
+    },
+  },
+}));
 
 function setAndCopyUrlState(state: UrlState) {
   setUrlState(state);
@@ -18,9 +69,10 @@ function setAndCopyUrlState(state: UrlState) {
 }
 
 export function Playground(): React.JSX.Element {
-  const outputRef = useRef<HTMLPreElement>(null);
   const runnerRef = useRef<Runner>(undefined);
   const editorRef = useRef<EditorInterface>(null);
+  const viewerRef = useRef<FoxgloveViewerInterface>(null);
+  const { cx, classes } = useStyles();
 
   const [initialState] = useState(() => {
     try {
@@ -30,7 +82,19 @@ export function Playground(): React.JSX.Element {
       return undefined;
     }
   });
-  const [selectedLayout, setSelectedLayout] = useState(initialState?.layout);
+  const [selectedLayout, setSelectedLayout] = useState<SelectLayoutParams>(
+    initialState?.layout != undefined
+      ? {
+          storageKey: LAYOUT_STORAGE_KEY,
+          opaqueLayout: initialState.layout,
+          force: true,
+        }
+      : {
+          storageKey: LAYOUT_STORAGE_KEY,
+          opaqueLayout: DEFAULT_LAYOUT_DATA,
+          force: false,
+        },
+  );
   const [ready, setReady] = useState(false);
   const [mcapFilename, setMcapFilename] = useState<string | undefined>();
   const [dataSource, setDataSource] = useState<DataSource | undefined>();
@@ -38,9 +102,7 @@ export function Playground(): React.JSX.Element {
 
   useEffect(() => {
     setReady(false);
-    const runner = new Runner({
-      output: outputRef.current!,
-    });
+    const runner = new Runner();
     runner.on("ready", () => {
       setReady(true);
     });
@@ -62,19 +124,37 @@ export function Playground(): React.JSX.Element {
     try {
       await runner.run(editorRef.current?.getValue() ?? "");
 
-      const { name, data } = await runner.readFile();
-      setDataSource({ type: "file", file: new File([data], name) });
+      try {
+        const { name, data } = await runner.readFile();
+        setDataSource({ type: "file", file: new File([data], name) });
+      } catch (err) {
+        toast.error(`Run failed: ${String(err)}`);
+      }
     } catch (err) {
-      toast.error(`Run failed: ${String(err)}`);
+      toast.error(String(err), { className: cx(classes.toast, classes.toastMonospace) });
     }
-  }, []);
+  }, [classes, cx]);
 
   const share = useCallback(() => {
     const editor = editorRef.current;
     if (!editor) {
       return;
     }
-    setAndCopyUrlState({ code: editor.getValue(), layout: selectedLayout });
+    const viewer = viewerRef.current;
+    if (!viewer) {
+      return;
+    }
+    viewer
+      .getLayout()
+      .then((layout) => {
+        setAndCopyUrlState({
+          code: editor.getValue(),
+          layout: layout ?? selectedLayout.opaqueLayout,
+        });
+      })
+      .catch((err: unknown) => {
+        toast.error(`Sharing failed: ${String(err)}`);
+      });
   }, [selectedLayout]);
 
   const chooseLayout = useCallback(() => {
@@ -91,7 +171,11 @@ export function Playground(): React.JSX.Element {
       .then(JSON.parse)
       .then(
         (layout) => {
-          setSelectedLayout(layout);
+          setSelectedLayout({
+            storageKey: LAYOUT_STORAGE_KEY,
+            opaqueLayout: layout,
+            force: true,
+          });
           setAndCopyUrlState({ code: editorRef.current?.getValue() ?? "", layout });
         },
         (err: unknown) => {
@@ -125,77 +209,78 @@ export function Playground(): React.JSX.Element {
     }
   }, []);
 
-  return (
-    <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column" }}>
-      <Toaster />
-      <div
-        style={{
-          flex: "0 0 auto",
-          display: "flex",
-          padding: "8px 8px 8px 16px",
-          flexDirection: "row",
-          alignItems: "center",
-          justifyContent: "space-between",
-          backgroundColor: "#eee",
-        }}
-      >
-        <div>Foxglove SDK Playground</div>
-        <div style={{ display: "flex", gap: 8 }}>
-          <button onClick={() => void download()} disabled={!mcapFilename}>
-            Download {mcapFilename}
-          </button>
-          <button onClick={share}>Share</button>
-          <button onClick={chooseLayout}>Choose layout…</button>
-          <input
-            ref={layoutInputRef}
-            type="file"
-            accept=".json"
-            style={{ display: "none" }}
-            onChange={onLayoutSelected}
-          />
-          <button onClick={() => void run()} disabled={!ready}>
-            Run
-          </button>
-        </div>
-      </div>
-      <div style={{ display: "flex", gap: 16, flex: "1 1 0", minWidth: 0, minHeight: 0 }}>
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            flex: "1 1 0",
-            width: 0,
-          }}
-        >
-          <Editor
-            ref={editorRef}
-            initialValue={initialState?.code ?? DEFAULT_CODE}
-            onSave={share}
-            runner={runnerRef}
-          />
-          <pre
-            ref={outputRef}
-            style={{
-              flex: "0 1 100px",
-              minWidth: 0,
-              minHeight: 0,
-              border: "1px solid gray",
-              borderLeft: "none",
-              borderBottom: "none",
-              overflow: "auto",
-              margin: 0,
-            }}
-          ></pre>
-        </div>
+  const [isRunning, setIsRunning] = useState(false);
+  const onClickRun = useCallback(() => {
+    setIsRunning(true);
+    void run().finally(() => {
+      setIsRunning(false);
+    });
+  }, [run]);
 
-        <FoxgloveViewer
-          style={{ flex: "1 1 0", overflow: "hidden" }}
-          colorScheme="light"
-          data={dataSource}
-          layoutData={selectedLayout ?? DEFAULT_LAYOUT}
+  return (
+    <Allotment>
+      <Allotment.Pane minSize={400} className={classes.leftPane}>
+        <Toaster position="top-right" toastOptions={{ className: classes.toast }} />
+        <GlobalStyles
+          styles={(theme) => ({
+            ":root": {
+              // https://allotment.mulberryhousesoftware.com/docs/styling
+              "--separator-border": theme.palette.divider,
+              "--focus-border": theme.palette.divider,
+              "--sash-hover-transition-duration": "0s",
+            },
+          })}
         />
-      </div>
-    </div>
+        <div className={classes.topBar}>
+          <Typography className={classes.title} variant="body1">
+            Foxglove SDK Playground
+          </Typography>
+          <div className={classes.controls}>
+            {mcapFilename && (
+              <Tooltip title={`Download ${mcapFilename}`}>
+                <IconButton onClick={() => void download()}>
+                  <DocumentDownload />
+                </IconButton>
+              </Tooltip>
+            )}
+            <Button onClick={chooseLayout}>Upload layout</Button>
+            <input
+              ref={layoutInputRef}
+              type="file"
+              accept=".json"
+              style={{ display: "none" }}
+              onChange={onLayoutSelected}
+            />
+            <Button
+              variant="contained"
+              loading={!ready || isRunning}
+              loadingPosition="start"
+              onClick={onClickRun}
+              startIcon={<PlayFilledAlt />}
+            >
+              Run
+            </Button>
+            <Button variant="outlined" onClick={share}>
+              Share
+            </Button>
+          </div>
+        </div>
+        <Editor
+          ref={editorRef}
+          initialValue={initialState?.code ?? DEFAULT_CODE}
+          onSave={share}
+          runner={runnerRef}
+        />
+      </Allotment.Pane>
+      <Allotment.Pane minSize={200}>
+        <FoxgloveViewer
+          ref={viewerRef}
+          style={{ width: "100%", height: "100%", overflow: "hidden" }}
+          data={dataSource}
+          layout={selectedLayout}
+        />
+      </Allotment.Pane>
+    </Allotment>
   );
 }
 
@@ -211,11 +296,9 @@ from foxglove.schemas import (
   Vector3,
 )
 
-foxglove.set_log_level("DEBUG")
+scene_channel = SceneUpdateChannel("/scene")
 
-file_name = "quickstart-python.mcap"
-with foxglove.open_mcap(file_name) as writer:
-  scene_channel = SceneUpdateChannel("/scene")
+with foxglove.open_mcap("playground.mcap") as writer:
   for i in range(10):
     size = 1 + 0.2 * i
     scene_channel.log(
@@ -235,15 +318,10 @@ with foxglove.open_mcap(file_name) as writer:
     )
 `;
 
-const DEFAULT_LAYOUT = {
-  globalVariables: {},
-  userNodes: {},
-  playbackConfig: {
-    speed: 1,
-  },
-  layout: "3D!2xs2cbr",
+const LAYOUT_STORAGE_KEY = "playground-layout";
+const DEFAULT_LAYOUT_DATA = {
   configById: {
-    "3D!2xs2cbr": {
+    "3D!1ehnpb2": {
       cameraState: {
         distance: 20,
         perspective: true,
@@ -270,7 +348,7 @@ const DEFAULT_LAYOUT = {
           drawBehind: false,
           frameLocked: true,
           label: "Grid",
-          instanceId: "12bf7bad-7660-42b2-aec8-ac7f9ce200ba",
+          instanceId: "7cfdaa56-0cc3-4576-b763-5a8882575cd4",
           layerId: "foxglove.Grid",
           size: 10,
           divisions: 10,
@@ -291,5 +369,50 @@ const DEFAULT_LAYOUT = {
       },
       imageMode: {},
     },
+    "RawMessages!2zn7j4u": {
+      diffEnabled: false,
+      diffMethod: "custom",
+      diffTopicPath: "",
+      showFullMessageForDiff: false,
+      topicPath: "/scene",
+      fontSize: 12,
+    },
+    "Plot!30ea437": {
+      paths: [
+        {
+          value: "/scene.entities[:].cubes[0].size.x",
+          enabled: true,
+          timestampMethod: "receiveTime",
+          label: "Cube size",
+        },
+      ],
+      showXAxisLabels: true,
+      showYAxisLabels: true,
+      showLegend: true,
+      legendDisplay: "floating",
+      showPlotValuesInLegend: false,
+      isSynced: true,
+      xAxisVal: "timestamp",
+      sidebarDimension: 240,
+    },
+  },
+  globalVariables: {},
+  userNodes: {},
+  playbackConfig: {
+    speed: 1,
+  },
+  drawerConfig: {
+    tracks: [],
+  },
+  layout: {
+    first: "3D!1ehnpb2",
+    second: {
+      direction: "row",
+      second: "Plot!30ea437",
+      first: "RawMessages!2zn7j4u",
+      splitPercentage: 33,
+    },
+    direction: "column",
+    splitPercentage: 60.57971014492753,
   },
 };

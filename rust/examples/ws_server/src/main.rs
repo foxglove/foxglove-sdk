@@ -118,7 +118,7 @@ async fn main() {
     println!("View in desktop: {}", app_url.with_open_in_desktop());
 
     tokio::task::spawn(log_forever(args.fps));
-    tokio::signal::ctrl_c().await.ok();
+    _ = tokio::signal::ctrl_c().await;
     server.stop().wait().await;
 }
 

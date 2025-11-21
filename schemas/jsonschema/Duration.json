@@ -13,5 +13,9 @@
       "minimum": 0,
       "description": "The number of nanoseconds in the positive direction"
     }
-  }
+  },
+  "required": [
+    "sec",
+    "nsec"
+  ]
 }

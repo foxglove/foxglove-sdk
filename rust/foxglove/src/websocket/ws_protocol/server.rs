@@ -11,6 +11,8 @@ pub mod connection_graph_update;
 pub mod fetch_asset_response;
 mod message_data;
 mod parameter_values;
+#[doc(hidden)]
+pub mod playback_state;
 mod remove_status;
 pub mod server_info;
 mod service_call_failure;
@@ -26,6 +28,8 @@ pub use connection_graph_update::ConnectionGraphUpdate;
 pub use fetch_asset_response::FetchAssetResponse;
 pub use message_data::MessageData;
 pub use parameter_values::ParameterValues;
+#[doc(hidden)]
+pub use playback_state::PlaybackState;
 pub use remove_status::RemoveStatus;
 pub use server_info::ServerInfo;
 pub use service_call_failure::ServiceCallFailure;
@@ -53,6 +57,7 @@ pub enum ServerMessage<'a> {
     ConnectionGraphUpdate(ConnectionGraphUpdate),
     FetchAssetResponse(FetchAssetResponse<'a>),
     ServiceCallFailure(ServiceCallFailure),
+    PlaybackState(PlaybackState),
 }
 
 impl<'a> ServerMessage<'a> {
@@ -78,6 +83,9 @@ impl<'a> ServerMessage<'a> {
                 }
                 Some(BinaryOpcode::FetchAssetResponse) => {
                     FetchAssetResponse::parse_binary(data).map(ServerMessage::FetchAssetResponse)
+                }
+                Some(BinaryOpcode::PlaybackState) => {
+                    PlaybackState::parse_binary(data).map(ServerMessage::PlaybackState)
                 }
                 None => Err(ParseError::InvalidOpcode(opcode)),
             }
@@ -106,6 +114,7 @@ impl<'a> ServerMessage<'a> {
                 ServerMessage::FetchAssetResponse(m.into_owned())
             }
             ServerMessage::ServiceCallFailure(m) => ServerMessage::ServiceCallFailure(m),
+            ServerMessage::PlaybackState(m) => ServerMessage::PlaybackState(m),
         }
     }
 }
@@ -150,6 +159,7 @@ enum BinaryOpcode {
     Time = 2,
     ServiceCallResponse = 3,
     FetchAssetResponse = 4,
+    PlaybackState = 5,
 }
 impl BinaryOpcode {
     fn from_repr(value: u8) -> Option<Self> {
@@ -158,6 +168,7 @@ impl BinaryOpcode {
             2 => Some(Self::Time),
             3 => Some(Self::ServiceCallResponse),
             4 => Some(Self::FetchAssetResponse),
+            5 => Some(Self::PlaybackState),
             _ => None,
         }
     }

@@ -200,6 +200,9 @@ async function main({ clean }: { clean: boolean }) {
     }
   });
 
+  // Build the schemas package for easier documentation previews
+  await exec("yarn", ["workspace", "@foxglove/schemas", "clean-build"], { cwd: repoRoot });
+
   await logProgress("Generating OMG IDL definitions", async () => {
     await fs.mkdir(path.join(outDir, "omgidl", "foxglove"), { recursive: true });
     for (const schema of Object.values(foxgloveMessageSchemas)) {
@@ -287,8 +290,8 @@ async function main({ clean }: { clean: boolean }) {
       path.resolve(schemasStubModule),
       path.resolve(channelStubModule),
     ];
-    await exec("poetry", ["run", "black", ...pythonFiles], { cwd: repoRoot });
-    await exec("poetry", ["run", "isort", ...pythonFiles], { cwd: repoRoot });
+    await exec("uv", ["run", "black", ...pythonFiles], { cwd: repoRoot });
+    await exec("uv", ["run", "isort", ...pythonFiles], { cwd: repoRoot });
   });
 
   await logProgress("Generating C library types", async () => {

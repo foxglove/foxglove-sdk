@@ -1,14 +1,21 @@
+use crate::channel_descriptor::FoxgloveChannelDescriptor;
 use crate::connection_graph::FoxgloveConnectionGraph;
 use crate::fetch_asset::{FetchAssetHandler, FoxgloveFetchAssetResponder};
 use crate::service::FoxgloveService;
+use crate::sink_channel_filter::ChannelFilter;
 use bitflags::bitflags;
+use std::collections::HashMap;
 use std::ffi::{c_char, c_void, CString};
 use std::mem::ManuallyDrop;
 use std::sync::Arc;
 
 use crate::parameter::FoxgloveParameterArray;
+use crate::playback_control_request::FoxglovePlaybackControlRequest;
+use crate::playback_state::FoxglovePlaybackState;
 
-use crate::{result_to_c, FoxgloveContext, FoxgloveError, FoxgloveSinkId, FoxgloveString};
+use crate::{
+    result_to_c, FoxgloveContext, FoxgloveError, FoxgloveKeyValue, FoxgloveSinkId, FoxgloveString,
+};
 
 // Easier to get reasonable C output from cbindgen with constants rather than directly exporting the bitflags macro
 #[derive(Clone, Copy)]
@@ -33,6 +40,10 @@ pub const FOXGLOVE_SERVER_CAPABILITY_SERVICES: u8 = 1 << 4;
 /// Allow clients to request assets. If you supply an asset handler to the server, this capability
 /// will be advertised automatically.
 pub const FOXGLOVE_SERVER_CAPABILITY_ASSETS: u8 = 1 << 5;
+/// Indicates that the server is sending data within a fixed time range. This requires the
+/// server to specify the `data_start_time` and `data_end_time` fields in
+/// `foxglove_server_options`.
+pub const FOXGLOVE_SERVER_CAPABILITY_RANGED_PLAYBACK: u8 = 1 << 6;
 
 bitflags! {
     #[derive(Clone, Copy, PartialEq, Eq)]
@@ -43,6 +54,7 @@ bitflags! {
         const Time = FOXGLOVE_SERVER_CAPABILITY_TIME;
         const Services = FOXGLOVE_SERVER_CAPABILITY_SERVICES;
         const Assets = FOXGLOVE_SERVER_CAPABILITY_ASSETS;
+        const RangedPlayback = FOXGLOVE_SERVER_CAPABILITY_RANGED_PLAYBACK;
     }
 }
 
@@ -64,6 +76,9 @@ impl FoxgloveServerCapabilityBitFlags {
             }
             FoxgloveServerCapabilityBitFlags::Assets => {
                 Some(foxglove::websocket::Capability::Assets)
+            }
+            FoxgloveServerCapabilityBitFlags::RangedPlayback => {
+                Some(foxglove::websocket::Capability::RangedPlayback)
             }
             _ => None,
         })
@@ -88,6 +103,14 @@ pub struct FoxgloveServerOptions<'a> {
     pub capabilities: FoxgloveServerCapability,
     pub supported_encodings: *const FoxgloveString,
     pub supported_encodings_count: usize,
+
+    /// Optional information about the server, which is shared with clients.
+    ///
+    /// # Safety
+    /// - If provided, the `server_info` must be a valid pointer to an array of valid
+    ///   `FoxgloveKeyValue`s with `server_info_count` elements.
+    pub server_info: *const FoxgloveKeyValue,
+    pub server_info_count: usize,
 
     /// Context provided to the `fetch_asset` callback.
     pub fetch_asset_context: *const c_void,
@@ -126,6 +149,33 @@ pub struct FoxgloveServerOptions<'a> {
     pub tls_key: *const u8,
     /// TLS configuration: Length of key bytes
     pub tls_key_len: usize,
+
+    /// Context provided to the `sink_channel_filter` callback.
+    pub sink_channel_filter_context: *const c_void,
+
+    /// A filter for channels that can be used to subscribe to or unsubscribe from channels.
+    ///
+    /// This can be used to omit one or more channels from a sink, but still log all channels to another
+    /// sink in the same context. Return false to disable logging of this channel.
+    ///
+    /// This method is invoked from the client's main poll loop and must not block.
+    ///
+    /// # Safety
+    /// - If provided, the handler callback must be a pointer to the filter callback function,
+    ///   and must remain valid until the server is stopped.
+    pub sink_channel_filter: Option<
+        unsafe extern "C" fn(
+            context: *const c_void,
+            channel: *const FoxgloveChannelDescriptor,
+        ) -> bool,
+    >,
+
+    /// If the server is sending data from a fixed time range, and has the RangedPlayback capability,
+    /// the start time of the data range.
+    pub playback_start_time: Option<&'a u64>,
+    /// If the server is sending data from a fixed time range, and has the RangedPlayback capability,
+    /// the end time of the data range.
+    pub playback_end_time: Option<&'a u64>,
 }
 
 #[repr(C)]
@@ -262,6 +312,22 @@ pub struct FoxgloveServerCallbacks {
     pub on_connection_graph_unsubscribe: Option<unsafe extern "C" fn(context: *const c_void)>,
     pub on_client_connect: Option<unsafe extern "C" fn(context: *const c_void)>,
     pub on_client_disconnect: Option<unsafe extern "C" fn(context: *const c_void)>,
+
+    /// Callback invoked when a client sends a playback control request message.
+    ///
+    /// Requires `FOXGLOVE_CAPABILITY_RANGED_PLAYBACK`.
+    ///
+    /// `playback_control_request` is an input parameter and guaranteed to be non-NULL.
+    /// `playback_state` is a non-NULL output pointer to a struct that has already been allocated.
+    /// The caller should fill its fields with the appropriate state of playback, in response to
+    /// the input playback control request.
+    pub on_playback_control_request: Option<
+        unsafe extern "C" fn(
+            context: *const c_void,
+            playback_control_request: *const FoxglovePlaybackControlRequest,
+            playback_state: *mut FoxglovePlaybackState,
+        ),
+    >,
 }
 unsafe impl Send for FoxgloveServerCallbacks {}
 unsafe impl Sync for FoxgloveServerCallbacks {}
@@ -287,10 +353,13 @@ impl FoxgloveWebSocketServer {
 /// Returns 0 on success, or returns a FoxgloveError code on error.
 ///
 /// # Safety
-/// If `name` is supplied in options, it must contain valid UTF8.
-/// If `host` is supplied in options, it must contain valid UTF8.
-/// If `supported_encodings` is supplied in options, all `supported_encodings` must contain valid
-/// UTF8, and `supported_encodings` must have length equal to `supported_encodings_count`.
+///
+/// - If `name` is supplied in options, it must contain valid UTF8.
+/// - If `host` is supplied in options, it must contain valid UTF8.
+/// - If `supported_encodings` is supplied in options, all `supported_encodings` must contain valid
+///   UTF8, and `supported_encodings` must have length equal to `supported_encodings_count`.
+/// - If `server_info` is supplied in options, all `server_info` must contain valid UTF8, and
+///   `server_info` must have length equal to `server_info_count`.
 #[unsafe(no_mangle)]
 #[must_use]
 pub unsafe extern "C" fn foxglove_server_start(
@@ -356,6 +425,12 @@ unsafe fn do_foxglove_server_start(
             fetch_asset,
         )));
     }
+    if let Some(sink_channel_filter) = options.sink_channel_filter {
+        server = server.channel_filter(Arc::new(ChannelFilter::new(
+            options.sink_channel_filter_context,
+            sink_channel_filter,
+        )));
+    }
     if !options.context.is_null() {
         let context = ManuallyDrop::new(unsafe { Arc::from_raw(options.context) });
         server = server.context(&context);
@@ -379,6 +454,34 @@ unsafe fn do_foxglove_server_start(
         };
         server = server.tls(tls_identity);
     }
+    if options.server_info_count > 0 {
+        if options.server_info.is_null() {
+            return Err(foxglove::FoxgloveError::ValueError(
+                "server_info is null".to_string(),
+            ));
+        }
+        let opts_info = options.server_info;
+        let mut server_info = HashMap::new();
+        for i in 0..options.server_info_count {
+            let kv = unsafe { &*opts_info.add(i) };
+            if kv.key.data.is_null() || kv.value.data.is_null() {
+                return Err(foxglove::FoxgloveError::ValueError(
+                    "null key or value in server_info".to_string(),
+                ));
+            }
+            let key = unsafe { kv.key.as_utf8_str() }?;
+            let value = unsafe { kv.value.as_utf8_str() }?;
+            server_info.insert(key.to_string(), value.to_string());
+        }
+        server = server.server_info(server_info);
+    }
+
+    if let (Some(&playback_start_time), Some(&playback_end_time)) =
+        (options.playback_start_time, options.playback_end_time)
+    {
+        server = server.playback_time_range(playback_start_time, playback_end_time);
+    }
+
     let server = server.start_blocking()?;
     Ok(Box::into_raw(Box::new(FoxgloveWebSocketServer(Some(
         server,
@@ -401,6 +504,37 @@ pub extern "C" fn foxglove_server_broadcast_time(
     };
     server.broadcast_time(timestamp_nanos);
     FoxgloveError::Ok
+}
+
+/// Publishes the current playback state to all clients.
+///
+/// Requires the `FOXGLOVE_CAPABILITY_RANGED_PLAYBACK` capability.
+///
+/// # Safety
+/// - `playback_state` must be a valid pointer to a playback state that lives for the duration of the call.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn foxglove_server_broadcast_playback_state(
+    server: Option<&FoxgloveWebSocketServer>,
+    playback_state: Option<&FoxglovePlaybackState>,
+) -> FoxgloveError {
+    let Some(server) = server else {
+        return FoxgloveError::ValueError;
+    };
+    let Some(server) = server.as_ref() else {
+        return FoxgloveError::SinkClosed;
+    };
+
+    let Some(playback_state) = playback_state else {
+        return FoxgloveError::ValueError;
+    };
+
+    match unsafe { playback_state.to_native() } {
+        Ok(playback_state) => {
+            server.broadcast_playback_state(playback_state);
+            FoxgloveError::Ok
+        }
+        Err(e) => FoxgloveError::from(e),
+    }
 }
 
 /// Sets a new session ID and notifies all clients, causing them to reset their state.
@@ -882,5 +1016,35 @@ impl foxglove::websocket::ServerListener for FoxgloveServerCallbacks {
         if let Some(on_client_disconnect) = self.on_client_disconnect {
             unsafe { on_client_disconnect(self.context) };
         }
+    fn on_playback_control_request(
+        &self,
+        playback_control_request: foxglove::websocket::PlaybackControlRequest,
+    ) -> Option<foxglove::websocket::PlaybackState> {
+        let on_playback_control_request = self.on_playback_control_request?;
+
+        let c_playback_control_request = FoxglovePlaybackControlRequest {
+            playback_command: playback_control_request.playback_command as u8,
+            playback_speed: playback_control_request.playback_speed,
+            seek_time: playback_control_request.seek_time.as_ref(),
+            request_id: (&playback_control_request.request_id).into(),
+        };
+
+        let mut c_playback_state = FoxglovePlaybackState {
+            status: 0,
+            current_time: 0,
+            playback_speed: 0.0,
+            request_id: (&playback_control_request.request_id).into(),
+        };
+
+        unsafe {
+            on_playback_control_request(
+                self.context,
+                &raw const c_playback_control_request,
+                &raw mut c_playback_state,
+            );
+        };
+
+        // SAFETY: playback_control_request stays valid for the duration of this call
+        unsafe { c_playback_state.to_native().ok() }
     }
 }

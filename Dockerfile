@@ -25,10 +25,7 @@ RUN apt-get update \
 
 RUN corepack enable yarn
 
-ENV PATH=/usr/lib/llvm-19/bin:$PATH \
-    POETRY_NO_INTERACTION=1 \
-    POETRY_CACHE_DIR='/var/cache/pypoetry' \
-    POETRY_HOME='/usr/local' \
+ENV PATH=/usr/lib/llvm-19/bin:/root/.local/bin:$PATH \
     COREPACK_ENABLE_DOWNLOAD_PROMPT=0
 
-RUN curl -sSL https://install.python-poetry.org | python3 -
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh

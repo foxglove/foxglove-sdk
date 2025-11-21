@@ -13,6 +13,7 @@ use tokio_tungstenite::tungstenite::Message;
 use tokio_util::sync::CancellationToken;
 
 use crate::library_version::get_library_version;
+use crate::sink_channel_filter::SinkChannelFilter;
 use crate::websocket::connected_client::ShutdownReason;
 use crate::websocket::streams::{Acceptor, StreamConfiguration, TlsIdentity};
 use crate::{Context, FoxgloveError};
@@ -20,6 +21,7 @@ use crate::{Context, FoxgloveError};
 use super::connected_client::ConnectedClient;
 use super::cow_vec::CowVec;
 use super::service::{Service, ServiceId, ServiceMap};
+use super::ws_protocol::server::PlaybackState;
 use super::ws_protocol::server::{
     AdvertiseServices, RemoveStatus, ServerInfo, UnadvertiseServices,
 };
@@ -44,6 +46,9 @@ pub(crate) struct ServerOptions {
     pub runtime: Option<Handle>,
     pub fetch_asset_handler: Option<Box<dyn AssetHandler>>,
     pub tls_identity: Option<TlsIdentity>,
+    pub channel_filter: Option<Arc<dyn SinkChannelFilter>>,
+    pub server_info: Option<HashMap<String, String>>,
+    pub playback_time_range: Option<(u64, u64)>,
 }
 
 impl std::fmt::Debug for ServerOptions {
@@ -55,6 +60,7 @@ impl std::fmt::Debug for ServerOptions {
             .field("services", &self.services)
             .field("capabilities", &self.capabilities)
             .field("supported_encodings", &self.supported_encodings)
+            .field("server_info", &self.server_info)
             .finish()
     }
 }
@@ -135,6 +141,8 @@ pub(crate) struct Server {
     session_id: parking_lot::RwLock<String>,
     name: String,
     clients: CowVec<Arc<ConnectedClient>>,
+    /// Channel subscription filter
+    channel_filter: Option<Arc<dyn SinkChannelFilter>>,
     /// Callbacks for handling client messages, etc.
     listener: Option<Arc<dyn ServerListener>>,
     /// Capabilities advertised to clients
@@ -155,6 +163,12 @@ pub(crate) struct Server {
     tasks: parking_lot::Mutex<Option<JoinSet<()>>>,
     /// Configuration to support TLS streams when enabled.
     stream_config: StreamConfiguration,
+    /// Information about the server, which is shared with clients.
+    /// Keys prefixed with "fg-" are reserved for internal use.
+    server_info: HashMap<String, String>,
+    /// Time range of data being played back, in absolute nanoseconds.
+    /// Implies the [`RangedPlayback`](crate::websocket::Capability::RangedPlayback) capability if set.
+    playback_time_range: Option<(u64, u64)>,
 }
 
 impl Server {
@@ -187,6 +201,14 @@ impl Server {
             );
         }
 
+        if opts.playback_time_range.is_some() {
+            capabilities.insert(Capability::RangedPlayback);
+        } else if capabilities.contains(&Capability::RangedPlayback) {
+            // The RangedPlayback capability requires a time range to be set using
+            // ServerOptions::playback_time_range
+            panic!("Server declared the RangedPlayback capability but did not provide a playback time range");
+        }
+
         // If the server was declared with fetch asset handler, automatically add the "assets" capability
         if opts.fetch_asset_handler.is_some() {
             capabilities.insert(Capability::Assets);
@@ -199,6 +221,7 @@ impl Server {
                 .message_backlog_size
                 .unwrap_or(DEFAULT_MESSAGE_BACKLOG_SIZE) as u32,
             runtime: opts.runtime.unwrap_or_else(crate::get_runtime_handle),
+            channel_filter: opts.channel_filter.clone(),
             listener: opts.listener,
             session_id: parking_lot::RwLock::new(
                 opts.session_id.unwrap_or_else(Self::generate_session_id),
@@ -214,6 +237,8 @@ impl Server {
             fetch_asset_handler: opts.fetch_asset_handler,
             tasks: parking_lot::Mutex::default(),
             stream_config,
+            server_info: opts.server_info.unwrap_or_default(),
+            playback_time_range: opts.playback_time_range,
         }
     }
 
@@ -346,6 +371,19 @@ impl Server {
         }
     }
 
+    /// Publish the current playback state to all clients.
+    #[doc(hidden)]
+    pub fn broadcast_playback_state(&self, playback_state: PlaybackState) {
+        if !self.has_capability(Capability::RangedPlayback) {
+            tracing::error!("Server does not support the RangedPlayback capability");
+            return;
+        }
+
+        for client in self.clients.get().iter() {
+            client.send_control_msg(&playback_state);
+        }
+    }
+
     /// Adds client parameter subscriptions by parameter name.
     pub(super) fn subscribe_parameters(&self, client_id: ClientId, names: Vec<String>) {
         let mut subs = self.subscribed_parameters.write();
@@ -403,7 +441,7 @@ impl Server {
         let mut old_names = vec![];
         for (name, entry) in subs.iter_mut() {
             if entry.remove(&client_id) && entry.is_empty() {
-                old_names.push(name.to_string());
+                old_names.push(name.clone());
             }
         }
         for name in &old_names {
@@ -507,6 +545,12 @@ impl Server {
 
     /// Builds a server info message.
     fn server_info(&self) -> ServerInfo {
+        let mut metadata = self.server_info.clone();
+        if metadata.contains_key("fg-library") {
+            tracing::warn!("Overwriting reserved server_info key 'fg-library'");
+        }
+        metadata.insert("fg-library".into(), get_library_version());
+
         ServerInfo::new(&self.name)
             .with_capabilities(
                 self.capabilities
@@ -514,12 +558,10 @@ impl Server {
                     .flat_map(Capability::as_protocol_capabilities)
                     .copied(),
             )
-            .with_metadata(HashMap::from([(
-                "fg-library".into(),
-                get_library_version(),
-            )]))
+            .with_metadata(metadata)
             .with_supported_encodings(&self.supported_encodings)
             .with_session_id(self.session_id.read().clone())
+            .with_playback_time_range(self.playback_time_range)
     }
 
     /// Sets a new session ID and notifies all clients, causing them to reset their state.
@@ -568,6 +610,7 @@ impl Server {
             ws_stream,
             addr,
             self.message_backlog_size as usize,
+            self.channel_filter.clone(),
         );
         self.register_client_and_advertise(&client);
         client.run().await;

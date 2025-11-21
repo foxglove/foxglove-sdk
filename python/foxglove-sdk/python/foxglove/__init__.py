@@ -9,20 +9,34 @@ from __future__ import annotations
 
 import atexit
 import logging
+from typing import TYPE_CHECKING
 
 from . import _foxglove_py as _foxglove
 
 # Re-export these imports
-from ._foxglove_py import Context, Schema, open_mcap
+from ._foxglove_py import (
+    ChannelDescriptor,
+    Context,
+    Schema,
+    SinkChannelFilter,
+    open_mcap,
+)
 from .channel import Channel, log
 
 # Deprecated. Use foxglove.mcap.MCAPWriter instead.
 from .mcap import MCAPWriter
 
+if TYPE_CHECKING:
+    from .notebook.notebook_buffer import NotebookBuffer
+
 atexit.register(_foxglove.shutdown)
 
 
 try:
+    from ._foxglove_py.cloud import CloudSink
+
+    # from ._foxglove_py.cloud import start_cloud_sink as _start_cloud_sink
+    from .cloud import CloudSinkListener
     from .websocket import (
         AssetHandler,
         Capability,
@@ -43,6 +57,7 @@ try:
         asset_handler: AssetHandler | None = None,
         context: Context | None = None,
         session_id: str | None = None,
+        channel_filter: SinkChannelFilter | None = None,
     ) -> WebSocketServer:
         """
         Start a websocket server for live visualization.
@@ -61,6 +76,9 @@ try:
         :param session_id: An ID which allows the client to understand if the connection is a
             re-connection or a new server instance. If None, then an ID is generated based on the
             current time.
+        :param channel_filter: A `Callable` that determines whether a channel should be logged to.
+            Return `True` to log the channel, or `False` to skip it. By default, all channels
+            will be logged.
         """
         return _foxglove.start_server(
             name=name,
@@ -71,6 +89,35 @@ try:
             supported_encodings=supported_encodings,
             services=services,
             asset_handler=asset_handler,
+            context=context,
+            session_id=session_id,
+            channel_filter=channel_filter,
+        )
+
+    def start_cloud_sink(
+        *,
+        listener: CloudSinkListener | None = None,
+        supported_encodings: list[str] | None = None,
+        context: Context | None = None,
+        session_id: str | None = None,
+    ) -> CloudSink:
+        """
+        Connect to Foxglove Agent for live visualization and teleop.
+
+        Foxglove Agent must be running on the same host for this to work.
+
+        :param capabilities: A list of capabilities to advertise to the agent.
+        :param listener: A Python object that implements the
+            :py:class:`cloud.CloudSinkListener` protocol.
+        :param supported_encodings: A list of encodings to advertise to the agent.
+        :param context: The context to use for logging. If None, the global context is used.
+        :param session_id: An ID which allows the agent to understand if the connection is a
+            re-connection or a new connection instance. If None, then an ID is generated based on
+            the current time.
+        """
+        return _foxglove.start_cloud_sink(
+            listener=listener,
+            supported_encodings=supported_encodings,
             context=context,
             session_id=session_id,
         )
@@ -123,13 +170,72 @@ def _level_names() -> dict[str, int]:
     }
 
 
+def init_notebook_buffer(context: Context | None = None) -> NotebookBuffer:
+    """
+    Create a NotebookBuffer object to manage data buffering and visualization in Jupyter
+    notebooks.
+
+    The NotebookBuffer object will buffer all data logged to the provided context. When you
+    are ready to visualize the data, you can call the :meth:`show` method to display an embedded
+    Foxglove visualization widget. The widget provides a fully-featured Foxglove interface
+    directly within your Jupyter notebook, allowing you to explore multi-modal robotics data
+    including 3D scenes, plots, images, and more.
+
+    Args:
+        context: The Context used to log the messages. If no Context is provided, the global
+            context will be used. Logged messages will be buffered.
+
+    Returns:
+        NotebookBuffer: A NotebookBuffer object that can be used to manage the data buffering
+            and visualization.
+
+    Raises:
+        Exception: If the notebook extra package is not installed. Install it
+            with `pip install foxglove-sdk[notebook]`.
+
+    Note:
+        This function is only available when the `notebook` extra package
+        is installed. Install it with `pip install foxglove-sdk[notebook]`.
+
+    Example:
+        >>> import foxglove
+        >>>
+        >>> # Create a basic viewer using the default context
+        >>> nb_buffer = foxglove.init_notebook_buffer()
+        >>>
+        >>> # Or use a specific context
+        >>> nb_buffer = foxglove.init_notebook_buffer(context=my_ctx)
+        >>>
+        >>> # ... log data as usual ...
+        >>>
+        >>> # Display the widget in the notebook
+        >>> nb_buffer.show()
+    """
+    try:
+        from .notebook.notebook_buffer import NotebookBuffer
+
+    except ImportError:
+        raise Exception(
+            "NotebookBuffer is not installed. "
+            'Please install it with `pip install "foxglove-sdk[notebook]"`'
+        )
+
+    return NotebookBuffer(context=context)
+
+
 __all__ = [
     "Channel",
+    "ChannelDescriptor",
     "Context",
     "MCAPWriter",
     "Schema",
+    "SinkChannelFilter",
+    "CloudSink",
+    "CloudSinkListener",
+    "start_cloud_sink",
     "log",
     "open_mcap",
     "set_log_level",
     "start_server",
+    "init_notebook_buffer",
 ]
