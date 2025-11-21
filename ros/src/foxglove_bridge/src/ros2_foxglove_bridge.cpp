@@ -135,16 +135,26 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
     sdkServerOptions.tls_identity->key = readFile(keyfile);
   }
 
+
   // Setup callbacks
   sdkServerOptions.callbacks.onConnectionGraphSubscribe =
     std::bind(&FoxgloveBridge::subscribeConnectionGraph, this, true);
   sdkServerOptions.callbacks.onSubscribe = std::bind(&FoxgloveBridge::subscribe, this, _1, _2);
   sdkServerOptions.callbacks.onUnsubscribe = std::bind(&FoxgloveBridge::unsubscribe, this, _1, _2);
 
+
   if (publishClientCount) {
+    static const std::string CLIENT_COUNT_TOPIC = "/foxglove_bridge/client_count";
+    _clientCountPublisher = this->create_publisher<std_msgs::msg::UInt32>(
+      CLIENT_COUNT_TOPIC, rclcpp::QoS{rclcpp::KeepLast(1)}.transient_local());
+    auto init_msg = std_msgs::msg::UInt32();
+    init_msg.data = 0;
+    _clientCountPublisher->publish(init_msg);  // Initialize transient local topic to 0
+    _lastPublishedClientCount = init_msg.data;
+
     sdkServerOptions.callbacks.onClientConnect = std::bind(&FoxgloveBridge::onClientConnect, this);
     sdkServerOptions.callbacks.onClientDisconnect = std::bind(&FoxgloveBridge::onClientDisconnect, this);
-}
+  }
 
   if (hasCapability(_capabilities, foxglove::WebSocketServerCapabilities::ClientPublish)) {
     sdkServerOptions.callbacks.onClientAdvertise =
@@ -199,15 +209,6 @@ FoxgloveBridge::FoxgloveBridge(const rclcpp::NodeOptions& options)
     this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
   _servicesCallbackGroup = this->create_callback_group(rclcpp::CallbackGroupType::Reentrant);
 
-  if (publishClientCount) {
-  // Create publisher for client count
-  static const std::string CLIENT_COUNT_TOPIC = "/foxglove_bridge/client_count";
-  _clientCountPublisher = this->create_publisher<std_msgs::msg::UInt32>(
-    CLIENT_COUNT_TOPIC, rclcpp::QoS{rclcpp::KeepLast(1)}.transient_local());
-  auto init_msg = std_msgs::msg::UInt32();
-  init_msg.data = 0;
-  _clientCountPublisher->publish(init_msg);  // Initalize transient local topic to 0
-  }
   if (_useSimTime) {
     _clockSubscription = this->create_subscription<rosgraph_msgs::msg::Clock>(
       "/clock", rclcpp::QoS{rclcpp::KeepLast(1)}.best_effort(),
@@ -1089,17 +1090,24 @@ rclcpp::QoS FoxgloveBridge::determineQoS(const std::string& topic) {
 }
 
 void FoxgloveBridge::onClientConnect() {
+  RCLCPP_WARN(this->get_logger(), "Run on_connect!");
   publishClientCount();
 }
 
 void FoxgloveBridge::onClientDisconnect() {
+  RCLCPP_WARN(this->get_logger(), "Run on_disconnect!");
   publishClientCount();
 }
 
 void FoxgloveBridge::publishClientCount() {
+  if (!_clientCountPublisher) {
+    return;
+  }
+  const auto currentCount = _server->clientCount();
   auto msg = std_msgs::msg::UInt32{};
-  msg.data = _server->clientCount();
+  msg.data = currentCount;
   _clientCountPublisher->publish(msg);
+  _lastPublishedClientCount = currentCount;
 }
 
 }  // namespace foxglove_bridge
