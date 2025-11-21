@@ -1,4 +1,6 @@
 use std::{error::Error, fmt::Display};
+#[cfg(feature = "agent_unstable")]
+mod agent;
 #[cfg(feature = "live_visualization")]
 mod logging;
 mod schemas;
