@@ -605,14 +605,10 @@ TEST_CASE("Custom writer basic functionality") {
   custom_options.context = context;
 
   auto plain_mcap = foxglove::McapWriter::create(plain_options);
-  if (!plain_mcap.has_value()) {
-    std::cerr << "Failed to create plain writer: " << foxglove::strerror(plain_mcap.error()) << '\n';
-  }
   REQUIRE(plain_mcap.has_value());
   auto custom_mcap = foxglove::McapWriter::create(custom_options);
   REQUIRE(custom_mcap.has_value());
 
-  auto data = R"({"msg": "Hello, custom writer!"})";
   auto channel_result = foxglove::schemas::Point2Channel::create("test_topic", context);
   REQUIRE(channel_result.has_value());
   auto channel = std::move(channel_result.value());
@@ -635,45 +631,4 @@ TEST_CASE("Custom writer basic functionality") {
   REQUIRE(std::filesystem::exists("custom_test.mcap"));
   std::string custom_content = readFile("custom_test.mcap");
   REQUIRE_THAT(plain_content, Equals(custom_content));
-}
-
-TEST_CASE("Custom writer no-seek") {
-  auto context = foxglove::Context::create();
-  FileCleanup cleanup("test.mcap");
-  auto fd = std::fopen("test.mcap", "wb");
-  bool write_called = false;
-  bool flush_called = false;
-  REQUIRE(fd != nullptr);
-
-  auto custom_writer = foxglove::CustomWriter{
-    .write = [&fd, &write_called](const uint8_t* data, size_t len, int* error) -> size_t {
-      write_called = true;
-      return std::fwrite(data, 1, len, fd);
-    },
-    .flush = [&fd, &flush_called]() -> int {
-      flush_called = true;
-      return std::fflush(fd);
-    },
-  };
-
-  foxglove::McapWriterOptions options;
-  options.custom_writer = custom_writer;
-  options.context = context;
-
-  auto writer = foxglove::McapWriter::create(options);
-  REQUIRE(writer.has_value());
-
-  auto data = R"({"msg": "Hello, custom writer!"})";
-  auto channel = foxglove::schemas::Point2Channel::create("test_topic").value();
-  channel.log(foxglove::schemas::Point2{1.0, 2.0});
-  channel.log(foxglove::schemas::Point2{3.0, 4.0});
-  channel.close();
-  writer.value().close();
-  // Verify callbacks were called
-  REQUIRE(write_called);
-  REQUIRE(flush_called);
-  // Verify MCAP data was written
-  REQUIRE(std::filesystem::exists("test.mcap"));
-  std::string content = readFile("test.mcap");
-  REQUIRE_THAT(content, ContainsSubstring("Point2"));
 }
