@@ -6,17 +6,17 @@
 
 namespace foxglove {
 
-int custom_flush(void* fn) {
+static int custom_flush(void* fn) {
   auto* flush = static_cast<CustomFlushFunction*>(fn);
   return (*flush)();
 }
 
-int custom_seek(void* fn, int64_t pos, int whence, uint64_t* new_pos) {
+static int custom_seek(void* fn, int64_t pos, int whence, uint64_t* new_pos) {
   auto* seek = static_cast<CustomSeekFunction*>(fn);
   return (*seek)(pos, whence, new_pos);
 }
 
-size_t custom_write(void* fn, const uint8_t* data, size_t len, int32_t* error) {
+static size_t custom_write(void* fn, const uint8_t* data, size_t len, int32_t* error) {
   auto* write = static_cast<CustomWriteFunction*>(fn);
   return (*write)(data, len, error);
 }

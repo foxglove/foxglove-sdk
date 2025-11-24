@@ -573,25 +573,26 @@ TEST_CASE("Custom writer basic functionality") {
   bool flush_called = false;
   bool seek_called = false;
   REQUIRE(fd != nullptr);
-
-  auto custom_writer = foxglove::CustomWriter{
-    .write = [&fd, &write_called](const uint8_t* data, size_t len, int* error) -> size_t {
-      write_called = true;
-      return std::fwrite(data, 1, len, fd);
-    },
-    .flush = [&fd, &flush_called]() -> int {
-      flush_called = true;
-      return std::fflush(fd);
-    },
-    .seek = [&fd, &seek_called](int64_t pos, int whence, uint64_t* new_pos) -> int {
-      seek_called = true;
-      int seek_result = std::fseek(fd, pos, whence);
-      if (seek_result != 0) {
-        return seek_result;
-      }
-      *new_pos = ftell(fd);
-      return 0;
-    },
+  foxglove::CustomWriter custom_writer;
+  custom_writer.write = [&fd,
+                         &write_called](const uint8_t* data, size_t len, int* error) -> size_t {
+    write_called = true;
+    size_t written = std::fwrite(data, 1, len, fd);
+    *error = errno;
+    return written;
+  };
+  custom_writer.flush = [&fd, &flush_called]() -> int {
+    flush_called = true;
+    return std::fflush(fd);
+  };
+  custom_writer.seek = [&fd, &seek_called](int64_t pos, int whence, uint64_t* new_pos) -> int {
+    seek_called = true;
+    int seek_result = std::fseek(fd, pos, whence);
+    if (seek_result != 0) {
+      return seek_result;
+    }
+    *new_pos = ftell(fd);
+    return 0;
   };
 
   FileCleanup plain_cleanup("plain_test.mcap");
