@@ -6,6 +6,24 @@
 
 namespace foxglove {
 
+int custom_flush(void* fn) {
+  std::cout << "entered custom_flush" << std::endl;
+  auto* flush = static_cast<CustomFlushFunction*>(fn);
+  return (*flush)();
+}
+
+int custom_seek(void* fn, int64_t pos, int whence, uint64_t* new_pos) {
+  std::cout << "entered custom_seek" << std::endl;
+  auto* seek = static_cast<CustomSeekFunction*>(fn);
+  return (*seek)(pos, whence, new_pos);
+}
+
+size_t custom_write(void* fn, const uint8_t* data, size_t len, int32_t* error) {
+  std::cout << "entered custom_write" << std::endl;
+  auto* write = static_cast<CustomWriteFunction*>(fn);
+  return (*write)(data, len, error);
+}
+
 FoxgloveResult<McapWriter> McapWriter::create(const McapWriterOptions& options) {
   foxglove_internal_register_cpp_wrapper();
 
@@ -16,27 +34,18 @@ FoxgloveResult<McapWriter> McapWriter::create(const McapWriterOptions& options) 
 
   // Handle custom writer if provided
   std::unique_ptr<CustomWriter> custom_writer;
+  std::unique_ptr<FoxgloveCustomWriter> c_custom_writer;
   if (options.custom_writer.has_value()) {
     custom_writer = std::make_unique<CustomWriter>(options.custom_writer.value());
-    FoxgloveCustomWriter c_custom_writer = {};
+    c_custom_writer = std::make_unique<FoxgloveCustomWriter>();
 
-    c_custom_writer.write_context = &custom_writer->write;
-    c_custom_writer.write_fn =
-      [](void* fn, const uint8_t* data, size_t len, int32_t* error) -> size_t {
-      auto* write = static_cast<CustomWriteFunction*>(fn);
-      return (*write)(data, len, error);
-    };
-    c_custom_writer.flush_context = &custom_writer->flush;
-    c_custom_writer.flush_fn = [](void* fn) -> int32_t {
-      auto* flush = static_cast<CustomFlushFunction*>(fn);
-      return (*flush)();
-    };
-    c_custom_writer.seek_context = &custom_writer->seek;
-    c_custom_writer.seek_fn = [](void* fn, int64_t pos, int whence, uint64_t* new_pos) -> int32_t {
-      auto* seek = static_cast<CustomSeekFunction*>(fn);
-      return (*seek)(pos, whence, new_pos);
-    };
-    c_options.custom_writer = &c_custom_writer;
+    c_custom_writer->write_context = &(custom_writer.get()->write);
+    c_custom_writer->write_fn = &custom_write;
+    c_custom_writer->flush_context = &(custom_writer.get()->flush);
+    c_custom_writer->flush_fn = &custom_flush;
+    c_custom_writer->seek_context = &(custom_writer.get()->seek);
+    c_custom_writer->seek_fn = &custom_seek;
+    c_options.custom_writer = c_custom_writer.get();
   } else {
     c_options.custom_writer = nullptr;
   }
@@ -86,15 +95,16 @@ FoxgloveResult<McapWriter> McapWriter::create(const McapWriterOptions& options) 
     return tl::unexpected(static_cast<FoxgloveError>(error));
   }
 
-  return McapWriter(writer, std::move(sink_channel_filter), std::move(custom_writer));
+  return McapWriter(writer, std::move(sink_channel_filter), std::move(custom_writer), std::move(c_custom_writer));
 }
 
 McapWriter::McapWriter(
   foxglove_mcap_writer* writer, std::unique_ptr<SinkChannelFilterFn> sink_channel_filter,
-  std::unique_ptr<CustomWriter> custom_writer
+  std::unique_ptr<CustomWriter> custom_writer, std::unique_ptr<FoxgloveCustomWriter> c_custom_writer
 )
     : sink_channel_filter_(std::move(sink_channel_filter))
     , custom_writer_(std::move(custom_writer))
+    , c_custom_writer_(std::move(c_custom_writer))
     , impl_(writer, foxglove_mcap_close) {}
 
 FoxgloveError McapWriter::close() {

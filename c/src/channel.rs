@@ -58,12 +58,6 @@ struct CustomWriter {
     callbacks: FoxgloveCustomWriter,
 }
 
-impl CustomWriter {
-    unsafe fn new(callbacks: FoxgloveCustomWriter) -> Self {
-        Self { callbacks }
-    }
-}
-
 impl Write for CustomWriter {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
         let write_fn = self
@@ -293,7 +287,9 @@ unsafe fn do_foxglove_mcap_open(
                 "write_fn and flush_fn must be provided".to_string(),
             ));
         }
-        let custom_writer = unsafe { CustomWriter::new(custom_writer_callbacks) };
+        let custom_writer = CustomWriter {
+            callbacks: custom_writer_callbacks,
+        };
 
         let writer = builder.create(custom_writer)?;
 

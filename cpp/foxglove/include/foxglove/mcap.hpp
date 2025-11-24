@@ -159,11 +159,13 @@ private:
   explicit McapWriter(
     foxglove_mcap_writer* writer,
     std::unique_ptr<SinkChannelFilterFn> sink_channel_filter = nullptr,
-    std::unique_ptr<CustomWriter> custom_writer = nullptr
+    std::unique_ptr<CustomWriter> custom_writer = nullptr,
+    std::unique_ptr<FoxgloveCustomWriter> c_custom_writer = nullptr
   );
 
   std::unique_ptr<SinkChannelFilterFn> sink_channel_filter_;
   std::unique_ptr<CustomWriter> custom_writer_;
+  std::unique_ptr<FoxgloveCustomWriter> c_custom_writer_;
   std::unique_ptr<foxglove_mcap_writer, foxglove_error (*)(foxglove_mcap_writer*)> impl_;
 };
 

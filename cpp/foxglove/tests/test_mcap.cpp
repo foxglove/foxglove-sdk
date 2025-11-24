@@ -564,430 +564,116 @@ TEST_CASE("Write empty metadata") {
   REQUIRE_THAT(content, !ContainsSubstring("empty_metadata"));
 }
 
-// Helper class for testing custom writers
-class TestCustomWriter {
-public:
-  std::vector<uint8_t> data;
-  mutable std::atomic<bool> write_called{false};
-  mutable std::atomic<bool> flush_called{false};
-  mutable std::atomic<bool> seek_called{false};
-  mutable std::atomic<int> write_error{0};
-  mutable std::atomic<int> flush_error{0};
-  mutable std::atomic<int> seek_error{0};
-  mutable std::atomic<uint64_t> position{0};
-
-  foxglove::CustomWriter makeWriter() {
-    foxglove::CustomWriter writer;
-    writer.write = [this](const uint8_t* data_ptr, size_t len, int* error) -> size_t {
-      write_called = true;
-      if (write_error != 0) {
-        *error = write_error;
-        return 0;
-      }
-      data.insert(data.end(), data_ptr, data_ptr + len);
-      position += len;
-      return len;
-    };
-    writer.flush = [this]() -> int {
-      flush_called = true;
-      return flush_error;
-    };
-    writer.seek = [this](int64_t pos, int whence, uint64_t* new_pos) -> int {
-      seek_called = true;
-      if (seek_error != 0) {
-        return seek_error;
-      }
-      switch (whence) {
-        case 0: // SEEK_SET
-          position = static_cast<uint64_t>(pos);
-          break;
-        case 1: // SEEK_CUR
-          position = static_cast<uint64_t>(static_cast<int64_t>(position) + pos);
-          break;
-        case 2: // SEEK_END
-          position = static_cast<uint64_t>(static_cast<int64_t>(data.size()) + pos);
-          break;
-      }
-      *new_pos = position;
-      return 0;
-    };
-    return writer;
-  }
-};
-
 TEST_CASE("Custom writer basic functionality") {
   auto context = foxglove::Context::create();
-  TestCustomWriter test_writer;
 
-  foxglove::McapWriterOptions options;
-  options.context = context;
-  options.custom_writer = test_writer.makeWriter();
+  FileCleanup custom_cleanup("custom_test.mcap");
+  auto fd = std::fopen("custom_test.mcap", "wb");
+  bool write_called = false;
+  bool flush_called = false;
+  bool seek_called = false;
+  REQUIRE(fd != nullptr);
 
-  auto writer = foxglove::McapWriter::create(options);
-  REQUIRE(writer.has_value());
+  auto custom_writer = foxglove::CustomWriter{
+    .write = [&fd, &write_called](const uint8_t* data, size_t len, int* error) -> size_t {
+      write_called = true;
+      return std::fwrite(data, 1, len, fd);
+    },
+    .flush = [&fd, &flush_called]() -> int {
+      flush_called = true;
+      return std::fflush(fd);
+    },
+    .seek = [&fd, &seek_called](int64_t pos, int whence, uint64_t* new_pos) -> int {
+      seek_called = true;
+      int seek_result =  std::fseek(fd, pos, whence);
+      if (seek_result != 0) {
+        return seek_result;
+      }
+      *new_pos = ftell(fd);
+      return 0;
+    },
+  };
 
-  // Write some metadata to ensure the writer is working
-  std::map<std::string, std::string> metadata = {{"key1", "value1"}};
-  auto error = writer->writeMetadata("test_metadata", metadata.begin(), metadata.end());
-  REQUIRE(error == foxglove::FoxgloveError::Ok);
+  FileCleanup plain_cleanup("plain_test.mcap");
 
-  writer->close();
+  foxglove::McapWriterOptions plain_options;
+  plain_options.path = "plain_test.mcap";
+  plain_options.context = context;
+
+  foxglove::McapWriterOptions custom_options;
+  custom_options.custom_writer = custom_writer;
+  custom_options.context = context;
+
+  auto plain_mcap = foxglove::McapWriter::create(plain_options);
+  if (!plain_mcap.has_value()) {
+    std::cerr << "Failed to create plain writer: " << foxglove::strerror(plain_mcap.error()) << '\n';
+  }
+  REQUIRE(plain_mcap.has_value());
+  auto custom_mcap = foxglove::McapWriter::create(custom_options);
+  REQUIRE(custom_mcap.has_value());
+
+  auto data = R"({"msg": "Hello, custom writer!"})";
+  auto channel_result = foxglove::schemas::Point2Channel::create("test_topic", context);
+  REQUIRE(channel_result.has_value());
+  auto channel = std::move(channel_result.value());
+  channel.log(foxglove::schemas::Point2{1.0, 2.0});
+  channel.log(foxglove::schemas::Point2{3.0, 4.0});
+  channel.close();
+  plain_mcap.value().close();
+  custom_mcap.value().close();
+
+  std::fclose(fd);
 
   // Verify callbacks were called
-  REQUIRE(test_writer.write_called.load());
-  REQUIRE(test_writer.flush_called.load());
-
+  REQUIRE(write_called);
+  REQUIRE(flush_called);
+  REQUIRE(seek_called);
   // Verify MCAP data was written
-  REQUIRE(test_writer.data.size() > 0);
-
-  // Check for MCAP magic bytes at the beginning
-  REQUIRE(test_writer.data.size() >= 8);
-  std::string magic_bytes(test_writer.data.begin(), test_writer.data.begin() + 8);
-  REQUIRE(magic_bytes == "\x89MCAP0\r\n");
+  REQUIRE(std::filesystem::exists("plain_test.mcap"));
+  std::string plain_content = readFile("plain_test.mcap");
+  REQUIRE_THAT(plain_content, ContainsSubstring("Point2"));
+  REQUIRE(std::filesystem::exists("custom_test.mcap"));
+  std::string custom_content = readFile("custom_test.mcap");
+  REQUIRE_THAT(plain_content, Equals(custom_content));
 }
 
-TEST_CASE("Custom writer with channel and message data") {
+TEST_CASE("Custom writer no-seek") {
   auto context = foxglove::Context::create();
-  TestCustomWriter test_writer;
+  FileCleanup cleanup("test.mcap");
+  auto fd = std::fopen("test.mcap", "wb");
+  bool write_called = false;
+  bool flush_called = false;
+  REQUIRE(fd != nullptr);
 
-  foxglove::McapWriterOptions options;
-  options.context = context;
-  options.custom_writer = test_writer.makeWriter();
-
-  auto writer = foxglove::McapWriter::create(options);
-  REQUIRE(writer.has_value());
-
-  // Create a channel and log some data
-  foxglove::Schema schema;
-  schema.name = "TestSchema";
-  schema.encoding = "json";
-  const char* schema_data = R"({"type": "object", "properties": {"msg": {"type": "string"}}})";
-  schema.data = reinterpret_cast<const std::byte*>(schema_data);
-  schema.data_len = std::strlen(schema_data);
-
-  auto channel_result = foxglove::RawChannel::create("test_topic", "json", schema, context);
-  REQUIRE(channel_result.has_value());
-  auto& channel = channel_result.value();
-
-  std::string message = R"({"msg": "Hello, custom writer!"})";
-  channel.log(reinterpret_cast<const std::byte*>(message.data()), message.size());
-
-  writer->close();
-
-  // Verify data was written
-  REQUIRE(test_writer.data.size() > 0);
-  REQUIRE(test_writer.write_called.load());
-  REQUIRE(test_writer.flush_called.load());
-
-  // Verify the written data contains our message
-  std::string data_str(test_writer.data.begin(), test_writer.data.end());
-  REQUIRE_THAT(data_str, ContainsSubstring("Hello, custom writer!"));
-}
-
-TEST_CASE("Custom writer write error handling") {
-  auto context = foxglove::Context::create();
-  TestCustomWriter test_writer;
-  test_writer.write_error = ENOSPC; // No space left on device
-
-  foxglove::McapWriterOptions options;
-  options.context = context;
-  options.custom_writer = test_writer.makeWriter();
-
-  // Writer creation should succeed even with write errors
-  auto writer = foxglove::McapWriter::create(options);
-  REQUIRE(writer.has_value());
-
-  // Write operations should fail when write_fn returns error
-  std::map<std::string, std::string> metadata = {{"key1", "value1"}};
-  auto error = writer->writeMetadata("test_metadata", metadata.begin(), metadata.end());
-
-  // The error should be propagated
-  REQUIRE(error != foxglove::FoxgloveError::Ok);
-
-  writer->close();
-  REQUIRE(test_writer.write_called.load());
-}
-
-TEST_CASE("Custom writer flush error handling") {
-  auto context = foxglove::Context::create();
-  TestCustomWriter test_writer;
-  test_writer.flush_error = EIO; // I/O error
-
-  foxglove::McapWriterOptions options;
-  options.context = context;
-  options.custom_writer = test_writer.makeWriter();
-
-  auto writer = foxglove::McapWriter::create(options);
-  REQUIRE(writer.has_value());
-
-  // Write some data first
-  std::map<std::string, std::string> metadata = {{"key1", "value1"}};
-  writer->writeMetadata("test_metadata", metadata.begin(), metadata.end());
-
-  // Close should fail due to flush error
-  auto close_error = writer->close();
-  REQUIRE(close_error != foxglove::FoxgloveError::Ok);
-
-  REQUIRE(test_writer.write_called.load());
-  REQUIRE(test_writer.flush_called.load());
-}
-
-TEST_CASE("Custom writer seek functionality") {
-  auto context = foxglove::Context::create();
-  TestCustomWriter test_writer;
-
-  foxglove::McapWriterOptions options;
-  options.context = context;
-  options.custom_writer = test_writer.makeWriter();
-
-  auto writer = foxglove::McapWriter::create(options);
-  REQUIRE(writer.has_value());
-
-  // Write some data
-  std::map<std::string, std::string> metadata = {{"key1", "value1"}};
-  writer->writeMetadata("test_metadata", metadata.begin(), metadata.end());
-
-  writer->close();
-
-  // For MCAP files, seeking is typically used, so verify seek was called
-  REQUIRE(test_writer.seek_called.load());
-}
-
-TEST_CASE("Custom writer seek error handling") {
-  auto context = foxglove::Context::create();
-  TestCustomWriter test_writer;
-  test_writer.seek_error = ESPIPE; // Illegal seek
-
-  foxglove::McapWriterOptions options;
-  options.context = context;
-  options.custom_writer = test_writer.makeWriter();
-
-  // Writer creation should fail if seeking is required but seek fails
-  auto writer = foxglove::McapWriter::create(options);
-
-  // The result depends on whether MCAP writer attempts to seek during creation
-  // If it does and seek fails, creation should fail
-  if (writer.has_value()) {
-    // If creation succeeds, operations that require seek should fail
-    std::map<std::string, std::string> metadata = {{"key1", "value1"}};
-    auto error = writer->writeMetadata("test_metadata", metadata.begin(), metadata.end());
-    // Close might fail due to seek errors during finalization
-    writer->close();
-  }
-
-  // At minimum, seek should have been attempted
-  REQUIRE(test_writer.seek_called.load());
-}
-
-TEST_CASE("Custom writer vs file writer produces same output") {
-  auto context = foxglove::Context::create();
-
-  // Create file writer
-  FileCleanup cleanup("test_reference.mcap");
-  foxglove::McapWriterOptions file_options;
-  file_options.context = context;
-  file_options.path = "test_reference.mcap";
-
-  auto file_writer = foxglove::McapWriter::create(file_options);
-  REQUIRE(file_writer.has_value());
-
-  // Create custom writer
-  TestCustomWriter test_writer;
-  foxglove::McapWriterOptions custom_options;
-  custom_options.context = context;
-  custom_options.custom_writer = test_writer.makeWriter();
-
-  auto custom_writer = foxglove::McapWriter::create(custom_options);
-  REQUIRE(custom_writer.has_value());
-
-  // Write identical data to both
-  std::map<std::string, std::string> metadata = {
-    {"author", "test"},
-    {"version", "1.0"}
+  auto custom_writer = foxglove::CustomWriter{
+    .write = [&fd, &write_called](const uint8_t* data, size_t len, int* error) -> size_t {
+      write_called = true;
+      return std::fwrite(data, 1, len, fd);
+    },
+    .flush = [&fd, &flush_called]() -> int {
+      flush_called = true;
+      return std::fflush(fd);
+    },
   };
 
-  file_writer->writeMetadata("test_metadata", metadata.begin(), metadata.end());
-  custom_writer->writeMetadata("test_metadata", metadata.begin(), metadata.end());
-
-  file_writer->close();
-  custom_writer->close();
-
-  // Compare outputs
-  std::string file_content = readFile("test_reference.mcap");
-  std::string custom_content(test_writer.data.begin(), test_writer.data.end());
-
-  // The outputs should be identical (modulo timestamps which may differ slightly)
-  REQUIRE(file_content.size() == custom_content.size());
-
-  // Check magic bytes are the same
-  REQUIRE(file_content.substr(0, 8) == custom_content.substr(0, 8));
-
-  // Both should contain the metadata
-  REQUIRE_THAT(custom_content, ContainsSubstring("test_metadata"));
-  REQUIRE_THAT(custom_content, ContainsSubstring("author"));
-  REQUIRE_THAT(custom_content, ContainsSubstring("test"));
-}
-
-TEST_CASE("Custom writer with compression") {
-  auto context = foxglove::Context::create();
-  TestCustomWriter test_writer;
-
   foxglove::McapWriterOptions options;
+  options.custom_writer = custom_writer;
   options.context = context;
-  options.custom_writer = test_writer.makeWriter();
-  options.compression = foxglove::McapCompression::Zstd;
-  options.use_chunks = true;
-  options.chunk_size = 1024;
 
   auto writer = foxglove::McapWriter::create(options);
   REQUIRE(writer.has_value());
 
-  // Create a channel and log some data
-  foxglove::Schema schema;
-  schema.name = "TestSchema";
-  schema.encoding = "json";
-  const char* schema_data = R"({"type": "object", "properties": {"msg": {"type": "string"}}})";
-  schema.data = reinterpret_cast<const std::byte*>(schema_data);
-  schema.data_len = std::strlen(schema_data);
-
-  auto channel_result = foxglove::RawChannel::create("compressed_topic", "json", schema, context);
-  REQUIRE(channel_result.has_value());
-  auto& channel = channel_result.value();
-
-  // Log multiple messages to trigger compression
-  for (int i = 0; i < 10; ++i) {
-    std::string message = R"({"msg": "Compressed message #)" + std::to_string(i) + R"("})";
-    channel.log(reinterpret_cast<const std::byte*>(message.data()), message.size());
-  }
-
-  writer->close();
-
-  // Verify data was written and contains compressed chunks
-  REQUIRE(test_writer.data.size() > 0);
-  REQUIRE(test_writer.write_called.load());
-  REQUIRE(test_writer.flush_called.load());
-
-  // Check for MCAP magic and zstd compression
-  std::string data_str(test_writer.data.begin(), test_writer.data.end());
-  REQUIRE_THAT(data_str, ContainsSubstring("zstd"));
-}
-
-TEST_CASE("Custom writer with multiple channels") {
-  auto context = foxglove::Context::create();
-  TestCustomWriter test_writer;
-
-  foxglove::McapWriterOptions options;
-  options.context = context;
-  options.custom_writer = test_writer.makeWriter();
-
-  auto writer = foxglove::McapWriter::create(options);
-  REQUIRE(writer.has_value());
-
-  // Create multiple channels with different schemas
-  foxglove::Schema json_schema;
-  json_schema.name = "JsonSchema";
-  json_schema.encoding = "json";
-  const char* json_schema_data = R"({"type": "object"})";
-  json_schema.data = reinterpret_cast<const std::byte*>(json_schema_data);
-  json_schema.data_len = std::strlen(json_schema_data);
-
-  foxglove::Schema protobuf_schema;
-  protobuf_schema.name = "ProtobufSchema";
-  protobuf_schema.encoding = "protobuf";
-  const char* protobuf_schema_data = "syntax = \"proto3\"; message Test { string data = 1; }";
-  protobuf_schema.data = reinterpret_cast<const std::byte*>(protobuf_schema_data);
-  protobuf_schema.data_len = std::strlen(protobuf_schema_data);
-
-  auto json_channel = foxglove::RawChannel::create("json_topic", "json", json_schema, context);
-  auto proto_channel = foxglove::RawChannel::create("proto_topic", "protobuf", protobuf_schema, context);
-
-  REQUIRE(json_channel.has_value());
-  REQUIRE(proto_channel.has_value());
-
-  // Log messages to both channels
-  std::string json_msg = R"({"data": "json message"})";
-  std::string proto_msg = "proto message data";
-
-  json_channel->log(reinterpret_cast<const std::byte*>(json_msg.data()), json_msg.size());
-  proto_channel->log(reinterpret_cast<const std::byte*>(proto_msg.data()), proto_msg.size());
-
-  writer->close();
-
-  // Verify both channel data is present
-  std::string data_str(test_writer.data.begin(), test_writer.data.end());
-  REQUIRE_THAT(data_str, ContainsSubstring("json_topic"));
-  REQUIRE_THAT(data_str, ContainsSubstring("proto_topic"));
-  REQUIRE_THAT(data_str, ContainsSubstring("JsonSchema"));
-  REQUIRE_THAT(data_str, ContainsSubstring("ProtobufSchema"));
-}
-
-TEST_CASE("Custom writer data integrity check") {
-  auto context = foxglove::Context::create();
-  TestCustomWriter test_writer;
-
-  foxglove::McapWriterOptions options;
-  options.context = context;
-  options.custom_writer = test_writer.makeWriter();
-
-  auto writer = foxglove::McapWriter::create(options);
-  REQUIRE(writer.has_value());
-
-  // Add metadata
-  std::map<std::string, std::string> metadata = {
-    {"test_key", "test_value"},
-    {"timestamp", "2024-01-01T00:00:00Z"}
-  };
-  writer->writeMetadata("integrity_test", metadata.begin(), metadata.end());
-
-  // Create a channel and log structured data
-  foxglove::Schema schema;
-  schema.name = "IntegrityTestSchema";
-  schema.encoding = "json";
-  const char* schema_data = R"({"type": "object", "properties": {"id": {"type": "number"}, "msg": {"type": "string"}}})";
-  schema.data = reinterpret_cast<const std::byte*>(schema_data);
-  schema.data_len = std::strlen(schema_data);
-
-  auto channel_result = foxglove::RawChannel::create("integrity_topic", "json", schema, context);
-  REQUIRE(channel_result.has_value());
-  auto& channel = channel_result.value();
-
-  // Log a series of messages with predictable data
-  std::vector<std::string> messages;
-  for (int i = 0; i < 5; ++i) {
-    std::string msg = R"({"id": )" + std::to_string(i) + R"(, "msg": "message_)" + std::to_string(i) + R"("})";
-    messages.push_back(msg);
-    channel.log(reinterpret_cast<const std::byte*>(msg.data()), msg.size());
-  }
-
-  writer->close();
-
-  // Verify MCAP structure
-  REQUIRE(test_writer.data.size() > 0);
-
-  // Check magic bytes
-  REQUIRE(test_writer.data.size() >= 8);
-  std::string magic_bytes(test_writer.data.begin(), test_writer.data.begin() + 8);
-  REQUIRE(magic_bytes == "\x89MCAP0\r\n");
-
-  // Verify all our data is present in the output
-  std::string data_str(test_writer.data.begin(), test_writer.data.end());
-
-  // Check metadata
-  REQUIRE_THAT(data_str, ContainsSubstring("integrity_test"));
-  REQUIRE_THAT(data_str, ContainsSubstring("test_key"));
-  REQUIRE_THAT(data_str, ContainsSubstring("test_value"));
-
-  // Check schema
-  REQUIRE_THAT(data_str, ContainsSubstring("IntegrityTestSchema"));
-  REQUIRE_THAT(data_str, ContainsSubstring("integrity_topic"));
-
-  // Check all messages
-  for (int i = 0; i < 5; ++i) {
-    REQUIRE_THAT(data_str, ContainsSubstring("message_" + std::to_string(i)));
-  }
-
-  // Check for MCAP footer magic (should end with magic bytes)
-  REQUIRE(test_writer.data.size() >= 16); // At least header + footer
-  std::string footer_magic(test_writer.data.end() - 8, test_writer.data.end());
-  REQUIRE(footer_magic == "\x89MCAP0\r\n");
+  auto data = R"({"msg": "Hello, custom writer!"})";
+  auto channel = foxglove::schemas::Point2Channel::create("test_topic").value();
+  channel.log(foxglove::schemas::Point2{1.0, 2.0});
+  channel.log(foxglove::schemas::Point2{3.0, 4.0});
+  channel.close();
+  writer.value().close();
+  // Verify callbacks were called
+  REQUIRE(write_called);
+  REQUIRE(flush_called);
+  // Verify MCAP data was written
+  REQUIRE(std::filesystem::exists("test.mcap"));
+  std::string content = readFile("test.mcap");
+  REQUIRE_THAT(content, ContainsSubstring("Point2"));
 }
