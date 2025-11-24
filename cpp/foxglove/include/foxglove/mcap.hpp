@@ -30,17 +30,13 @@ namespace foxglove {
 class Context;
 
 /// @brief Function pointer type for writing data to a custom destination.
-using CustomWriteFunction =
-  std::function<size_t(const uint8_t* data, size_t len, int* error)>;
+using CustomWriteFunction = std::function<size_t(const uint8_t* data, size_t len, int* error)>;
 
 /// @brief Function pointer type for flushing a custom writer.
-using CustomFlushFunction =
-  std::function<int()>;
+using CustomFlushFunction = std::function<int()>;
 
 /// @brief Function pointer type for seeking a custom writer.
-using CustomSeekFunction =
-  std::function<int(int64_t pos, int whence, uint64_t* new_pos)>;
-
+using CustomSeekFunction = std::function<int(int64_t pos, int whence, uint64_t* new_pos)>;
 
 /// @brief Custom writer for writing MCAP data to arbitrary destinations.
 ///
@@ -161,7 +157,8 @@ public:
 
 private:
   explicit McapWriter(
-    foxglove_mcap_writer* writer, std::unique_ptr<SinkChannelFilterFn> sink_channel_filter = nullptr,
+    foxglove_mcap_writer* writer,
+    std::unique_ptr<SinkChannelFilterFn> sink_channel_filter = nullptr,
     std::unique_ptr<CustomWriter> custom_writer = nullptr
   );
 

@@ -21,7 +21,8 @@ FoxgloveResult<McapWriter> McapWriter::create(const McapWriterOptions& options) 
     FoxgloveCustomWriter c_custom_writer = {};
 
     c_custom_writer.write_context = &custom_writer->write;
-    c_custom_writer.write_fn = [](void* fn, const uint8_t* data, size_t len, int32_t* error) -> size_t {
+    c_custom_writer.write_fn =
+      [](void* fn, const uint8_t* data, size_t len, int32_t* error) -> size_t {
       auto* write = static_cast<CustomWriteFunction*>(fn);
       return (*write)(data, len, error);
     };
@@ -89,7 +90,8 @@ FoxgloveResult<McapWriter> McapWriter::create(const McapWriterOptions& options) 
 }
 
 McapWriter::McapWriter(
-  foxglove_mcap_writer* writer, std::unique_ptr<SinkChannelFilterFn> sink_channel_filter, std::unique_ptr<CustomWriter> custom_writer
+  foxglove_mcap_writer* writer, std::unique_ptr<SinkChannelFilterFn> sink_channel_filter,
+  std::unique_ptr<CustomWriter> custom_writer
 )
     : sink_channel_filter_(std::move(sink_channel_filter))
     , custom_writer_(std::move(custom_writer))
