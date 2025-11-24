@@ -92,7 +92,9 @@ FoxgloveResult<McapWriter> McapWriter::create(const McapWriterOptions& options) 
     return tl::unexpected(static_cast<FoxgloveError>(error));
   }
 
-  return McapWriter(writer, std::move(sink_channel_filter), std::move(custom_writer), std::move(c_custom_writer));
+  return McapWriter(
+    writer, std::move(sink_channel_filter), std::move(custom_writer), std::move(c_custom_writer)
+  );
 }
 
 McapWriter::McapWriter(

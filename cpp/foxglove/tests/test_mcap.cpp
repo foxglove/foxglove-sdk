@@ -9,11 +9,11 @@
 #include <catch2/matchers/catch_matchers_string.hpp>
 
 #include <array>
+#include <atomic>
+#include <cstring>
 #include <filesystem>
 #include <fstream>
-#include <atomic>
 #include <optional>
-#include <cstring>
 
 #include "common/file_cleanup.hpp"
 
@@ -585,7 +585,7 @@ TEST_CASE("Custom writer basic functionality") {
     },
     .seek = [&fd, &seek_called](int64_t pos, int whence, uint64_t* new_pos) -> int {
       seek_called = true;
-      int seek_result =  std::fseek(fd, pos, whence);
+      int seek_result = std::fseek(fd, pos, whence);
       if (seek_result != 0) {
         return seek_result;
       }
