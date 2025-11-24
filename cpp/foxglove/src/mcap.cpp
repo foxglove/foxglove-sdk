@@ -7,19 +7,16 @@
 namespace foxglove {
 
 int custom_flush(void* fn) {
-  std::cout << "entered custom_flush" << std::endl;
   auto* flush = static_cast<CustomFlushFunction*>(fn);
   return (*flush)();
 }
 
 int custom_seek(void* fn, int64_t pos, int whence, uint64_t* new_pos) {
-  std::cout << "entered custom_seek" << std::endl;
   auto* seek = static_cast<CustomSeekFunction*>(fn);
   return (*seek)(pos, whence, new_pos);
 }
 
 size_t custom_write(void* fn, const uint8_t* data, size_t len, int32_t* error) {
-  std::cout << "entered custom_write" << std::endl;
   auto* write = static_cast<CustomWriteFunction*>(fn);
   return (*write)(data, len, error);
 }
