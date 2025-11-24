@@ -1700,22 +1700,31 @@ typedef struct foxglove_raw_image {
  * Custom writer function pointers for MCAP writing.
  * write_fn and flush_fn must be non-null. Seek_fn may be null iff `disable_seeking` is set to true.
  * These function pointers may be called from multiple threads.
- * They will not be called concurrently with themselves or each-other.
+ * These functions are called synchronously with respect to each other within the SDK, but these
+ * calls are not synchronized with other SDK function calls.
  */
 typedef struct FoxgloveCustomWriter {
   /**
    * User-provided context pointer, passed to all callback functions
    */
-  void *user_data;
+  void *write_context;
   /**
    * Write function: write data to the custom destination
    * Returns number of bytes written, or sets error on failure
    */
   size_t (*write_fn)(void *user_data, const uint8_t *data, size_t len, int32_t *error);
   /**
+   * User-provided context pointer, passed to all callback functions
+   */
+  void *flush_context;
+  /**
    * Flush function: ensure all buffered data is written
    */
   int32_t (*flush_fn)(void *user_data);
+  /**
+   * User-provided context pointer, passed to seek function
+   */
+  void *seek_context;
   /**
    * Seek function: change the current position in the stream
    * whence: 0=SEEK_SET, 1=SEEK_CUR, 2=SEEK_END
@@ -4217,7 +4226,7 @@ foxglove_error foxglove_vector3_encode(const struct foxglove_vector3 *msg,
  * `path` and `profile` must contain valid UTF8. If `context` is non-null,
  * it must have been created by `foxglove_context_new`.
  * If `custom_writer` is non-null, its function pointers must be valid and
- * the `user_data` pointer must remain valid for the lifetime of the writer.
+ * all `context` pointers must remain valid for the lifetime of the writer.
  */
 foxglove_error foxglove_mcap_open(const struct foxglove_mcap_options *FOXGLOVE_NONNULL options,
                                   struct foxglove_mcap_writer **writer);

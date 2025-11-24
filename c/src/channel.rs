@@ -18,12 +18,13 @@ pub enum FoxgloveMcapCompression {
 /// Custom writer function pointers for MCAP writing.
 /// write_fn and flush_fn must be non-null. Seek_fn may be null iff `disable_seeking` is set to true.
 /// These function pointers may be called from multiple threads.
-/// They will not be called concurrently with themselves or each-other.
+/// These functions are called synchronously with respect to each other within the SDK, but these
+/// calls are not synchronized with other SDK function calls.
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct FoxgloveCustomWriter {
     /// User-provided context pointer, passed to all callback functions
-    pub user_data: *mut std::ffi::c_void,
+    pub write_context: *mut std::ffi::c_void,
     /// Write function: write data to the custom destination
     /// Returns number of bytes written, or sets error on failure
     pub write_fn: Option<
@@ -34,8 +35,13 @@ pub struct FoxgloveCustomWriter {
             error: *mut i32,
         ) -> usize,
     >,
+    /// User-provided context pointer, passed to all callback functions
+    pub flush_context: *mut std::ffi::c_void,
     /// Flush function: ensure all buffered data is written
     pub flush_fn: Option<unsafe extern "C" fn(user_data: *mut std::ffi::c_void) -> i32>,
+
+    /// User-provided context pointer, passed to seek function
+    pub seek_context: *mut std::ffi::c_void,
     /// Seek function: change the current position in the stream
     /// whence: 0=SEEK_SET, 1=SEEK_CUR, 2=SEEK_END
     pub seek_fn: Option<
@@ -68,7 +74,7 @@ impl Write for CustomWriter {
         let mut error = 0;
         let written = unsafe {
             write_fn(
-                self.callbacks.user_data,
+                self.callbacks.write_context,
                 buf.as_ptr(),
                 buf.len(),
                 &raw mut error,
@@ -88,7 +94,7 @@ impl Write for CustomWriter {
             .flush_fn
             .expect("flush_fn checked in do_foxglove_mcap_open");
 
-        let error = unsafe { flush_fn(self.callbacks.user_data) };
+        let error = unsafe { flush_fn(self.callbacks.flush_context) };
         if error != 0 {
             return Err(std::io::Error::from_raw_os_error(error));
         }
@@ -111,7 +117,14 @@ impl Seek for CustomWriter {
         };
 
         let mut new_pos = 0u64;
-        let error = unsafe { seek_fn(self.callbacks.user_data, offset, whence, &raw mut new_pos) };
+        let error = unsafe {
+            seek_fn(
+                self.callbacks.seek_context,
+                offset,
+                whence,
+                &raw mut new_pos,
+            )
+        };
 
         if error != 0 {
             return Err(std::io::Error::from_raw_os_error(error));
@@ -239,7 +252,7 @@ impl McapWriterVariant {
 /// `path` and `profile` must contain valid UTF8. If `context` is non-null,
 /// it must have been created by `foxglove_context_new`.
 /// If `custom_writer` is non-null, its function pointers must be valid and
-/// the `user_data` pointer must remain valid for the lifetime of the writer.
+/// all `context` pointers must remain valid for the lifetime of the writer.
 #[unsafe(no_mangle)]
 #[must_use]
 pub unsafe extern "C" fn foxglove_mcap_open(
@@ -312,10 +325,7 @@ unsafe fn do_foxglove_mcap_open(
                 sink_channel_filter,
             )));
         }
-        let writer = builder
-            .create(BufWriter::new(file))
-            .expect("Failed to create writer");
-
+        let writer = builder.create(BufWriter::new(file))?;
         McapWriterVariant::File(writer)
     };
 

@@ -6,25 +6,6 @@
 
 namespace foxglove {
 
-// C-style wrapper functions for custom writer callbacks
-// These adapt the C++ std::function calls to C function pointers
-namespace {
-size_t custom_write_wrapper(void* user_data, const uint8_t* data, size_t len, int32_t* error) {
-  auto* writer = static_cast<CustomWriter*>(user_data);
-  return writer->write_fn(writer->user_data, data, len, error);
-}
-
-int32_t custom_flush_wrapper(void* user_data) {
-  auto* writer = static_cast<CustomWriter*>(user_data);
-  return writer->flush_fn(writer->user_data);
-}
-
-int32_t custom_seek_wrapper(void* user_data, int64_t pos, int32_t whence, uint64_t* new_pos) {
-  auto* writer = static_cast<CustomWriter*>(user_data);
-  return writer->seek_fn(writer->user_data, pos, whence, new_pos);
-}
-}  // namespace
-
 FoxgloveResult<McapWriter> McapWriter::create(const McapWriterOptions& options) {
   foxglove_internal_register_cpp_wrapper();
 
@@ -34,14 +15,26 @@ FoxgloveResult<McapWriter> McapWriter::create(const McapWriterOptions& options) 
   c_options.profile = {options.profile.data(), options.profile.length()};
 
   // Handle custom writer if provided
-  FoxgloveCustomWriter c_custom_writer = {};
+  std::unique_ptr<CustomWriter> custom_writer;
   if (options.custom_writer.has_value()) {
-    const auto& custom_writer = options.custom_writer.value();
-    c_custom_writer.user_data =
-      const_cast<CustomWriter*>(&custom_writer);  // Safe: we control the lifetime
-    c_custom_writer.write_fn = custom_write_wrapper;
-    c_custom_writer.flush_fn = custom_flush_wrapper;
-    c_custom_writer.seek_fn = custom_seek_wrapper;
+    custom_writer = std::make_unique<CustomWriter>(options.custom_writer.value());
+    FoxgloveCustomWriter c_custom_writer = {};
+
+    c_custom_writer.write_context = &custom_writer->write;
+    c_custom_writer.write_fn = [](void* fn, const uint8_t* data, size_t len, int32_t* error) -> size_t {
+      auto* write = static_cast<CustomWriteFunction*>(fn);
+      return (*write)(data, len, error);
+    };
+    c_custom_writer.flush_context = &custom_writer->flush;
+    c_custom_writer.flush_fn = [](void* fn) -> int32_t {
+      auto* flush = static_cast<CustomFlushFunction*>(fn);
+      return (*flush)();
+    };
+    c_custom_writer.seek_context = &custom_writer->seek;
+    c_custom_writer.seek_fn = [](void* fn, int64_t pos, int whence, uint64_t* new_pos) -> int32_t {
+      auto* seek = static_cast<CustomSeekFunction*>(fn);
+      return (*seek)(pos, whence, new_pos);
+    };
     c_options.custom_writer = &c_custom_writer;
   } else {
     c_options.custom_writer = nullptr;
@@ -92,13 +85,14 @@ FoxgloveResult<McapWriter> McapWriter::create(const McapWriterOptions& options) 
     return tl::unexpected(static_cast<FoxgloveError>(error));
   }
 
-  return McapWriter(writer, std::move(sink_channel_filter));
+  return McapWriter(writer, std::move(sink_channel_filter), std::move(custom_writer));
 }
 
 McapWriter::McapWriter(
-  foxglove_mcap_writer* writer, std::unique_ptr<SinkChannelFilterFn> sink_channel_filter
+  foxglove_mcap_writer* writer, std::unique_ptr<SinkChannelFilterFn> sink_channel_filter, std::unique_ptr<CustomWriter> custom_writer
 )
     : sink_channel_filter_(std::move(sink_channel_filter))
+    , custom_writer_(std::move(custom_writer))
     , impl_(writer, foxglove_mcap_close) {}
 
 FoxgloveError McapWriter::close() {
