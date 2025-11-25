@@ -7,7 +7,7 @@ use parking_lot::RwLock;
 use smallvec::SmallVec;
 use tracing::warn;
 
-use crate::{ChannelBuilder, ChannelId, McapWriter, RawChannel, Sink, SinkId};
+use crate::{ChannelBuilder, ChannelId, McapWriteOptions, McapWriter, RawChannel, Sink, SinkId};
 
 mod lazy_context;
 mod subscriptions;
@@ -254,6 +254,12 @@ impl Context {
     /// Returns a builder for an MCAP writer in this context.
     pub fn mcap_writer(self: &Arc<Self>) -> McapWriter {
         McapWriter::new().context(self)
+    }
+
+    /// Returns a builder for an MCAP writer in this context with the provided
+    /// [`McapWriteOptions`].
+    pub fn mcap_writer_with_options(self: &Arc<Self>, options: McapWriteOptions) -> McapWriter {
+        McapWriter::with_options(options).context(self)
     }
 
     /// Returns a builder for a websocket server in this context.
