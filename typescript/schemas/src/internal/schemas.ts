@@ -1246,7 +1246,8 @@ const VoxelGrid: FoxgloveMessageSchema = {
     {
       name: "pose",
       type: { type: "nested", schema: Pose },
-      description: "Origin of grid's corner relative to frame of reference; grid is positioned in the x-y plane relative to this origin",
+      description:
+        "Origin of grid's corner relative to frame of reference; grid is positioned in the x-y plane relative to this origin",
     },
     {
       name: "row_count",
