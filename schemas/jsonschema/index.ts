@@ -1208,7 +1208,7 @@ export const VoxelGrid = {
     },
     "pose": {
       "title": "foxglove.Pose",
-      "description": "Origin of grid's corner relative to frame of reference",
+      "description": "Origin of grid's corner relative to frame of reference; grid is positioned in the x-y plane relative to this origin",
       "type": "object",
       "properties": {
         "position": {

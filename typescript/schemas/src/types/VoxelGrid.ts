@@ -14,7 +14,7 @@ export type VoxelGrid = {
   /** Frame of reference */
   frame_id: string;
 
-  /** Origin of grid's corner relative to frame of reference */
+  /** Origin of grid's corner relative to frame of reference; grid is positioned in the x-y plane relative to this origin */
   pose: Pose;
 
   /** Number of grid rows */

@@ -17,7 +17,7 @@ message VoxelGrid {
   // Frame of reference
   string frame_id = 2;
 
-  // Origin of grid's corner relative to frame of reference
+  // Origin of grid's corner relative to frame of reference; grid is positioned in the x-y plane relative to this origin
   foxglove.Pose pose = 3;
 
   // Number of grid rows

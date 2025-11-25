@@ -3357,7 +3357,7 @@ Frame of reference
 </td>
 <td>
 
-Origin of grid's corner relative to frame of reference
+Origin of grid's corner relative to frame of reference; grid is positioned in the x-y plane relative to this origin
 
 </td>
 </tr>

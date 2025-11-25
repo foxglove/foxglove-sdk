@@ -1269,7 +1269,7 @@ pub struct VoxelGrid {
     /// Frame of reference
     #[prost(string, tag = "2")]
     pub frame_id: ::prost::alloc::string::String,
-    /// Origin of grid's corner relative to frame of reference
+    /// Origin of grid's corner relative to frame of reference; grid is positioned in the x-y plane relative to this origin
     #[prost(message, optional, tag = "3")]
     pub pose: ::core::option::Option<Pose>,
     /// Number of grid rows

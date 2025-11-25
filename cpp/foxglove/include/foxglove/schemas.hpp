@@ -821,7 +821,8 @@ struct VoxelGrid {
   /// @brief Frame of reference
   std::string frame_id;
 
-  /// @brief Origin of grid's corner relative to frame of reference
+  /// @brief Origin of grid's corner relative to frame of reference; grid is positioned in the x-y
+  /// plane relative to this origin
   std::optional<Pose> pose;
 
   /// @brief Number of grid rows

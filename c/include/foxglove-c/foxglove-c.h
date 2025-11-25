@@ -961,7 +961,7 @@ typedef struct foxglove_voxel_grid {
    */
   struct foxglove_string frame_id;
   /**
-   * Origin of grid's corner relative to frame of reference
+   * Origin of grid's corner relative to frame of reference; grid is positioned in the x-y plane relative to this origin
    */
   const struct foxglove_pose *pose;
   /**

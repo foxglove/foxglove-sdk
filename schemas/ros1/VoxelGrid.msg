@@ -9,7 +9,7 @@ time timestamp
 # Frame of reference
 string frame_id
 
-# Origin of grid's corner relative to frame of reference
+# Origin of grid's corner relative to frame of reference; grid is positioned in the x-y plane relative to this origin
 geometry_msgs/Pose pose
 
 # Number of grid rows

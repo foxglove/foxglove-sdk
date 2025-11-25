@@ -2294,7 +2294,7 @@ pub struct VoxelGrid {
     /// Frame of reference
     pub frame_id: FoxgloveString,
 
-    /// Origin of grid's corner relative to frame of reference
+    /// Origin of grid's corner relative to frame of reference; grid is positioned in the x-y plane relative to this origin
     pub pose: *const Pose,
 
     /// Number of grid rows
