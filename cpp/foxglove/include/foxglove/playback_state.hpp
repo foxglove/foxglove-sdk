@@ -35,6 +35,8 @@ public:
   uint64_t current_time;
   /// @brief The speed of playback, as a factor of realtime
   float playback_speed;
+  /// @brief Whether a seek forward or backward in time triggered this message to be emitted
+  bool did_seek;
   /// @brief If this message is being emitted in response to a PlaybackControlRequest message, the
   /// request_id from that message. Set this to std::nullopt if the state of playback has been
   /// changed by any other condition.

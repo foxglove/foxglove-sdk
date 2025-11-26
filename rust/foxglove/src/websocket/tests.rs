@@ -1636,6 +1636,7 @@ impl RecordingPlaybackControlListener {
             status,
             current_time: request.seek_time.unwrap_or(0),
             playback_speed: request.playback_speed,
+            did_seek: false,
             request_id: Some(request.request_id.clone()),
         }
     }
@@ -1874,6 +1875,7 @@ async fn test_broadcast_playback_state() {
         status: PlaybackStatus::Playing,
         current_time: 250,
         playback_speed: 1.0,
+        did_seek: true,
         request_id: None,
     };
 
