@@ -2,12 +2,12 @@ use crate::{errors::PyFoxgloveError, PySchema};
 use crate::{PyContext, PySinkChannelFilter};
 use base64::prelude::*;
 use foxglove::websocket::{
-    AssetHandler, ChannelView, Client, ClientChannel, PlaybackControlRequest, PlaybackState,
-    ServerListener, Status, StatusLevel,
+    AssetHandler, ChannelView, Client, ClientChannel, PlaybackCommand, PlaybackControlRequest,
+    PlaybackState, PlaybackStatus, ServerListener, Status, StatusLevel,
 };
 use foxglove::{WebSocketServer, WebSocketServerHandle};
 use pyo3::exceptions::{PyTypeError, PyValueError};
-use pyo3::types::{PyDict, PyList};
+use pyo3::types::{PyDict, PyList, PyTuple};
 use pyo3::IntoPyObjectExt;
 use pyo3::{
     exceptions::PyIOError,
@@ -59,37 +59,99 @@ impl From<Client> for PyClient {
         }
     }
 }
-#[pyclass(name = "PlaybackState", module = "foxglove", eq, eq_int)]
+
+#[pyclass(name = "PlaybackStatus", module = "foxglove", eq, eq_int)]
 #[derive(Clone, PartialEq)]
 #[repr(u8)]
-pub enum PyPlaybackState {
+pub enum PyPlaybackStatus {
     Playing = 0,
     Paused = 1,
     Buffering = 2,
     Ended = 3,
 }
 
-impl From<PlaybackState> for PyPlaybackState {
-    fn from(value: PlaybackState) -> PyPlaybackState {
+impl From<PyPlaybackStatus> for PlaybackStatus {
+    fn from(value: PyPlaybackStatus) -> PlaybackStatus {
         match value {
-            PlaybackState::Playing => PyPlaybackState::Playing,
-            PlaybackState::Paused => PyPlaybackState::Paused,
-            PlaybackState::Buffering => PyPlaybackState::Buffering,
-            PlaybackState::Ended => PyPlaybackState::Ended,
+            PyPlaybackStatus::Playing => PlaybackStatus::Playing,
+            PyPlaybackStatus::Paused => PlaybackStatus::Paused,
+            PyPlaybackStatus::Buffering => PlaybackStatus::Buffering,
+            PyPlaybackStatus::Ended => PlaybackStatus::Ended,
+        }
+    }
+}
+
+#[pyclass(name = "PlaybackState", module = "foxglove", eq, get_all)]
+#[derive(Clone, PartialEq)]
+pub struct PyPlaybackState {
+    /// The status of server data playback
+    pub status: PyPlaybackStatus,
+    /// The current time of playback, in absolute nanoseconds
+    pub current_time: u64,
+    /// The speed of playback, as a factor of realtime
+    pub playback_speed: f32,
+    /// If this message is being emitted in response to a PlaybackControlRequest message, the
+    /// request_id from that message. Set this to None if the state of playback has been changed
+    /// by any other condition.
+    pub request_id: Option<String>,
+}
+
+#[pymethods]
+impl PyPlaybackState {
+    #[new]
+    fn new(
+        status: PyPlaybackStatus,
+        current_time: u64,
+        playback_speed: f32,
+        request_id: Option<String>,
+    ) -> Self {
+        PyPlaybackState {
+            status,
+            current_time,
+            playback_speed,
+            request_id,
+        }
+    }
+}
+
+impl From<PyPlaybackState> for PlaybackState {
+    fn from(value: PyPlaybackState) -> PlaybackState {
+        PlaybackState {
+            status: value.status.into(),
+            current_time: value.current_time,
+            playback_speed: value.playback_speed,
+            request_id: value.request_id,
+        }
+    }
+}
+
+#[pyclass(name = "PlaybackCommand", module = "foxglove", eq, eq_int)]
+#[derive(Clone, PartialEq)]
+#[repr(u8)]
+pub enum PyPlaybackCommand {
+    Play = 0,
+    Pause = 1,
+}
+
+impl From<PlaybackCommand> for PyPlaybackCommand {
+    fn from(value: PlaybackCommand) -> PyPlaybackCommand {
+        match value {
+            PlaybackCommand::Play => PyPlaybackCommand::Play,
+            PlaybackCommand::Pause => PyPlaybackCommand::Pause,
         }
     }
 }
 
 #[pyclass(name = "PlaybackControlRequest", module = "foxglove", get_all)]
 pub struct PyPlaybackControlRequest {
-    playback_state: PyPlaybackState,
+    playback_command: PyPlaybackCommand,
     playback_speed: f32,
     seek_time: Option<u64>,
 }
 impl From<PlaybackControlRequest> for PyPlaybackControlRequest {
     fn from(value: PlaybackControlRequest) -> PyPlaybackControlRequest {
         PyPlaybackControlRequest {
-            playback_state: value.playback_state.into(),
+            playback_command: value.playback_command.into(),
             playback_speed: value.playback_speed,
             seek_time: value.seek_time,
         }
@@ -335,20 +397,27 @@ impl ServerListener for PyServerListener {
         }
     }
 
-    fn on_playback_control_request(&self, playback_control_request: PlaybackControlRequest) {
+    fn on_playback_control_request(
+        &self,
+        playback_control_request: PlaybackControlRequest,
+    ) -> Option<PlaybackState> {
         let py_playback_control_request: PyPlaybackControlRequest = playback_control_request.into();
-        let result: PyResult<()> = Python::with_gil(|py| {
-            self.listener.bind(py).call_method(
+        let result: PyResult<PyPlaybackState> = Python::with_gil(|py| {
+            let result = self.listener.bind(py).call_method(
                 "on_playback_control_request",
                 (py_playback_control_request,),
                 None,
             )?;
 
-            Ok(())
+            result.extract::<PyPlaybackState>()
         });
 
-        if let Err(err) = result {
-            tracing::error!("Callback failed: {}", err.to_string());
+        match result {
+            Err(err) => {
+                tracing::error!("Callback failed: {}", err.to_string());
+                None
+            }
+            Ok(playback_state) => Some(playback_state.into()),
         }
     }
 }
@@ -414,7 +483,7 @@ impl foxglove::websocket::service::Handler for ServiceHandler {
 
 /// Start a new Foxglove WebSocket server.
 #[pyfunction]
-#[pyo3(signature = (*, name = None, host="127.0.0.1", port=8765, capabilities=None, server_listener=None, supported_encodings=None, services=None, asset_handler=None, context=None, session_id=None, channel_filter=None))]
+#[pyo3(signature = (*, name = None, host="127.0.0.1", port=8765, capabilities=None, server_listener=None, supported_encodings=None, services=None, asset_handler=None, context=None, session_id=None, channel_filter=None, playback_time_range = None))]
 #[allow(clippy::too_many_arguments)]
 pub fn start_server(
     py: Python<'_>,
@@ -429,6 +498,7 @@ pub fn start_server(
     context: Option<PyRef<PyContext>>,
     session_id: Option<String>,
     channel_filter: Option<Py<PyAny>>,
+    playback_time_range: Option<Py<PyTuple>>,
 ) -> PyResult<PyWebSocketServer> {
     let mut server = WebSocketServer::new().bind(host, port);
 
@@ -469,6 +539,18 @@ pub fn start_server(
         server = server.fetch_asset_handler(Box::new(CallbackAssetHandler {
             handler: Arc::new(asset_handler),
         }));
+    }
+
+    if let Some(playback_time_range) = playback_time_range {
+        let bound_time_range = playback_time_range.bind(py);
+        if bound_time_range.len() != 2 {
+            return Err(PyTypeError::new_err(
+                "playback_time_range must be a tuple of (start_time, end_time)",
+            ));
+        }
+        let start_time = bound_time_range.get_item(0)?.extract::<u64>()?;
+        let end_time = bound_time_range.get_item(1)?.extract::<u64>()?;
+        server = server.playback_time_range(start_time, end_time);
     }
 
     let handle = py
@@ -537,6 +619,16 @@ impl PyWebSocketServer {
     pub fn broadcast_time(&self, timestamp_nanos: u64) {
         if let Some(server) = &self.0 {
             server.broadcast_time(timestamp_nanos);
+        };
+    }
+
+    /// Publish the current playback state to all clients.
+    ///
+    /// :param playback_state: The playback state to broadcast.
+    #[pyo3(signature = (playback_state))]
+    pub fn broadcast_playback_state(&self, playback_state: PyPlaybackState) {
+        if let Some(server) = &self.0 {
+            server.broadcast_playback_state(playback_state.into());
         };
     }
 
@@ -664,6 +756,9 @@ pub enum PyCapability {
     Time,
     /// Allow clients to call services.
     Services,
+    /// Indicates that the server is sending data within a fixed time range. This requires the
+    /// server to specify the `data_start_time` and `data_end_time` fields in its `ServerInfo` message.
+    RangedPlayback,
 }
 
 impl From<PyCapability> for foxglove::websocket::Capability {
@@ -674,6 +769,7 @@ impl From<PyCapability> for foxglove::websocket::Capability {
             PyCapability::Parameters => foxglove::websocket::Capability::Parameters,
             PyCapability::Time => foxglove::websocket::Capability::Time,
             PyCapability::Services => foxglove::websocket::Capability::Services,
+            PyCapability::RangedPlayback => foxglove::websocket::Capability::RangedPlayback,
         }
     }
 }
@@ -1209,8 +1305,10 @@ pub fn register_submodule(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<PyParameter>()?;
     module.add_class::<PyParameterType>()?;
     module.add_class::<PyParameterValue>()?;
-    module.add_class::<PyPlaybackState>()?;
+    module.add_class::<PyPlaybackCommand>()?;
     module.add_class::<PyPlaybackControlRequest>()?;
+    module.add_class::<PyPlaybackStatus>()?;
+    module.add_class::<PyPlaybackState>()?;
     module.add_class::<PyStatusLevel>()?;
     module.add_class::<PyConnectionGraph>()?;
     // Services

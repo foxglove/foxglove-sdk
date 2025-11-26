@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Protocol, TypeAlias, Union
+from typing import Protocol, TypeAlias, Optional, Union
 
 from ._foxglove_py.websocket import (
     Capability,
@@ -13,8 +13,10 @@ from ._foxglove_py.websocket import (
     Parameter,
     ParameterType,
     ParameterValue,
+    PlaybackCommand,
     PlaybackControlRequest,
     PlaybackState,
+    PlaybackStatus,
     Service,
     ServiceRequest,
     ServiceSchema,
@@ -178,7 +180,7 @@ class ServerListener(Protocol):
 
     def on_playback_control_request(
         self, playback_control_request: PlaybackControlRequest
-    ) -> None:
+    ) -> Optional[PlaybackState]:
         """
         Called by the server when it receives an updated player state from the client.
 
@@ -203,8 +205,10 @@ __all__ = [
     "Parameter",
     "ParameterType",
     "ParameterValue",
-    "PlaybackState",
+    "PlaybackCommand",
     "PlaybackControlRequest",
+    "PlaybackState",
+    "PlaybackStatus",
     "ServerListener",
     "Service",
     "ServiceHandler",

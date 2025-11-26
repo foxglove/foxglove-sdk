@@ -27,6 +27,10 @@ class Capability(Enum):
     Time = ...
     """Inform clients about the latest server time."""
 
+    RangedPlayback = ...
+    """Indicates that the server is sending data within a fixed time range."""
+
+
 class Client:
     """
     A client that is connected to a running websocket server.
@@ -187,24 +191,59 @@ class ParameterValue:
 
         def __init__(self, value: dict[str, AnyParameterValue]) -> None: ...
 
+class PlaybackCommand:
+    """The command for playback requested by the client player"""
+
+    Play = ...
+    Pause = ...
+
 class PlaybackControlRequest:
     """
-    The state of the client player, used for controlling playback of fixed data ranges over WebSocket
+    A request to control playback from the client
 
-    :param playback_state: The state of the playback requested by the client player (e.g. `Playing`, `Paused`, ...)
-    :type playback_state: PlaybackState
+    :param playback_command: The command for playback requested by the client player
+    :type playback_command: PlaybackCommand
     :param playback_speed: The speed of playback requested by the client player
     :type playback_speed: float
     :param seek_time: The time the client player is requesting to seek to, in nanoseconds. None if no seek is requested.
     :type seek_time: int | None
+    :param request_id: Unique string identifier, used to indicate that a PlaybackState is in response to a particular request from the client.
+    :type request_id: str
     """
 
-    playback_state: PlaybackState
+    playback_command: PlaybackCommand
     playback_speed: float
     seek_time: int | None
+    request_id: str
 
-class PlaybackState(Enum):
-    """The state of the playback requested by the client player (e.g. `Playing`, `Paused`, ...)"""
+class PlaybackState:
+    """
+    The state of data playback on the server
+
+    :param status: The status of server data playback
+    :type status: PlaybackStatus
+    :param current_time: The current time of playback, in absolute nanoseconds
+    :type current_time: int
+    :param playback_speed: The speed of playback, as a factor of realtime
+    :type playback_speed: float
+    :param request_id: If this message is being emitted in response to a PlaybackControlRequest message, the request_id from that message. Set this to an empty string if the state of playback has been changed by any other condition.
+    :type request_id: str | None
+    """
+
+    status: PlaybackStatus
+    current_time: int
+    playback_speed: float
+    request_id: str | None
+
+    def __init__(self,
+                 status: PlaybackStatus,
+                 current_time: int,
+                 playback_speed: float,
+                 request_id: str | None
+                 ): ...
+
+class PlaybackStatus(Enum):
+    """The status of server data playback"""
 
     Playing = ...
     Paused = ...
@@ -299,6 +338,12 @@ class WebSocketServer:
         Sets a new session ID and notifies all clients, causing them to reset their state.
         If no session ID is provided, generates a new one based on the current timestamp.
         If the server has been stopped, this has no effect.
+        """
+        ...
+
+    def broadcast_playback_state(self, playback_state: PlaybackState) -> None:
+        """
+        Publish the current playback state to all clients.
         """
         ...
 
