@@ -1,13 +1,9 @@
 name: Update Layout API
 
 on:
-  workflow_dispatch:
-    inputs:
-      ref:
-        description: "The ref (branch or tag) in app from where the layout API definition will be copied"
-        # TODO: default should be main
-        default: "sebastian/ert-1099-create-api-spec-using-zod"
-        required: true
+  # TODO: remove pull_request trigger
+  pull_request:
+    types: [opened, reopened, synchronize, labeled]
 
 jobs:
   generate:
@@ -18,7 +14,7 @@ jobs:
         with:
           repository: foxglove/app
           token: ${{ secrets.FOXGLOVEBOT_GITHUB_TOKEN }}
-          ref: ${{ github.event.inputs.ref }}
+          ref: sebastian/ert-1099-create-api-spec-using-zod
           lfs: true
 
       - run: corepack enable
