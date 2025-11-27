@@ -24,29 +24,25 @@ pub enum FoxgloveMcapCompression {
 #[derive(Clone, Copy)]
 pub struct FoxgloveCustomWriter {
     /// User-provided context pointer, passed to all callback functions
-    pub write_context: *mut std::ffi::c_void,
+    pub context: *mut std::ffi::c_void,
     /// Write function: write data to the custom destination
     /// Returns number of bytes written, or sets error on failure
     pub write_fn: Option<
         unsafe extern "C" fn(
-            user_data: *mut std::ffi::c_void,
+            context: *mut std::ffi::c_void,
             data: *const u8,
             len: usize,
             error: *mut i32,
         ) -> usize,
     >,
-    /// User-provided context pointer, passed to all callback functions
-    pub flush_context: *mut std::ffi::c_void,
     /// Flush function: ensure all buffered data is written
-    pub flush_fn: Option<unsafe extern "C" fn(user_data: *mut std::ffi::c_void) -> i32>,
+    pub flush_fn: Option<unsafe extern "C" fn(context: *mut std::ffi::c_void) -> i32>,
 
-    /// User-provided context pointer, passed to seek function
-    pub seek_context: *mut std::ffi::c_void,
     /// Seek function: change the current position in the stream
     /// whence: 0=SEEK_SET, 1=SEEK_CUR, 2=SEEK_END
     pub seek_fn: Option<
         unsafe extern "C" fn(
-            user_data: *mut std::ffi::c_void,
+            context: *mut std::ffi::c_void,
             pos: i64,
             whence: std::ffi::c_int,
             new_pos: *mut u64,
@@ -68,7 +64,7 @@ impl Write for CustomWriter {
         let mut error = 0;
         let written = unsafe {
             write_fn(
-                self.callbacks.write_context,
+                self.callbacks.context,
                 buf.as_ptr(),
                 buf.len(),
                 &raw mut error,
@@ -88,7 +84,7 @@ impl Write for CustomWriter {
             .flush_fn
             .expect("flush_fn checked in do_foxglove_mcap_open");
 
-        let error = unsafe { flush_fn(self.callbacks.flush_context) };
+        let error = unsafe { flush_fn(self.callbacks.context) };
         if error != 0 {
             return Err(std::io::Error::from_raw_os_error(error));
         }
@@ -111,14 +107,7 @@ impl Seek for CustomWriter {
         };
 
         let mut new_pos = 0u64;
-        let error = unsafe {
-            seek_fn(
-                self.callbacks.seek_context,
-                offset,
-                whence,
-                &raw mut new_pos,
-            )
-        };
+        let error = unsafe { seek_fn(self.callbacks.context, offset, whence, &raw mut new_pos) };
 
         if error != 0 {
             return Err(std::io::Error::from_raw_os_error(error));

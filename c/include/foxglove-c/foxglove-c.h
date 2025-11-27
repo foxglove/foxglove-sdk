@@ -1707,29 +1707,21 @@ typedef struct FoxgloveCustomWriter {
   /**
    * User-provided context pointer, passed to all callback functions
    */
-  void *write_context;
+  void *context;
   /**
    * Write function: write data to the custom destination
    * Returns number of bytes written, or sets error on failure
    */
-  size_t (*write_fn)(void *user_data, const uint8_t *data, size_t len, int32_t *error);
-  /**
-   * User-provided context pointer, passed to all callback functions
-   */
-  void *flush_context;
+  size_t (*write_fn)(void *context, const uint8_t *data, size_t len, int32_t *error);
   /**
    * Flush function: ensure all buffered data is written
    */
-  int32_t (*flush_fn)(void *user_data);
-  /**
-   * User-provided context pointer, passed to seek function
-   */
-  void *seek_context;
+  int32_t (*flush_fn)(void *context);
   /**
    * Seek function: change the current position in the stream
    * whence: 0=SEEK_SET, 1=SEEK_CUR, 2=SEEK_END
    */
-  int32_t (*seek_fn)(void *user_data, int64_t pos, int whence, uint64_t *new_pos);
+  int32_t (*seek_fn)(void *context, int64_t pos, int whence, uint64_t *new_pos);
 } FoxgloveCustomWriter;
 #endif
 

@@ -29,15 +29,6 @@ namespace foxglove {
 
 class Context;
 
-/// @brief Function pointer type for writing data to a custom destination.
-using CustomWriteFunction = std::function<size_t(const uint8_t* data, size_t len, int* error)>;
-
-/// @brief Function pointer type for flushing a custom writer.
-using CustomFlushFunction = std::function<int()>;
-
-/// @brief Function pointer type for seeking a custom writer.
-using CustomSeekFunction = std::function<int(int64_t pos, int whence, uint64_t* new_pos)>;
-
 /// @brief Custom writer for writing MCAP data to arbitrary destinations.
 ///
 /// This provides a simple function pointer interface that matches the C API.
@@ -49,18 +40,18 @@ struct CustomWriter {
   /// @param len Number of bytes to write
   /// @param error Pointer to error code (set to an error number defined in errno.h if write fails)
   /// @return Number of bytes actually written
-  CustomWriteFunction write;
+  std::function<size_t(const uint8_t* data, size_t len, int* error)> write;
 
   /// @brief Flush function: ensure all buffered data is written
   /// @return 0 on success, an error number defined in errno.h if flush fails
-  CustomFlushFunction flush;
+  std::function<int()> flush;
 
   /// @brief Seek function: change the current position in the stream
   /// @param pos Position offset
   /// @param whence Seek origin (0=SEEK_SET, 1=SEEK_CUR, 2=SEEK_END)
   /// @param new_pos Pointer to store the new absolute position
   /// @return 0 on success, an error number defined in errno.h if seek fails
-  CustomSeekFunction seek;
+  std::function<int(int64_t pos, int whence, uint64_t* new_pos)> seek;
 };
 
 /// @brief The compression algorithm to use for an MCAP file.
@@ -159,13 +150,11 @@ private:
   explicit McapWriter(
     foxglove_mcap_writer* writer,
     std::unique_ptr<SinkChannelFilterFn> sink_channel_filter = nullptr,
-    std::unique_ptr<CustomWriter> custom_writer = nullptr,
-    std::unique_ptr<FoxgloveCustomWriter> c_custom_writer = nullptr
+    std::unique_ptr<CustomWriter> custom_writer = nullptr
   );
 
   std::unique_ptr<SinkChannelFilterFn> sink_channel_filter_;
   std::unique_ptr<CustomWriter> custom_writer_;
-  std::unique_ptr<FoxgloveCustomWriter> c_custom_writer_;
   std::unique_ptr<foxglove_mcap_writer, foxglove_error (*)(foxglove_mcap_writer*)> impl_;
 };
 
