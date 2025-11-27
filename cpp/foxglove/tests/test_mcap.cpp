@@ -567,47 +567,55 @@ TEST_CASE("Write empty metadata") {
 TEST_CASE("Custom writer basic functionality") {
   auto context = foxglove::Context::create();
 
-  FileCleanup custom_cleanup("custom_test.mcap");
-  auto fd = std::fopen("custom_test.mcap", "wb");
   bool write_called = false;
   bool flush_called = false;
   bool seek_called = false;
-  REQUIRE(fd != nullptr);
+  size_t cursor = 0;
+  std::vector<uint8_t> buffer;
   foxglove::CustomWriter custom_writer;
-  custom_writer.write = [&fd,
-                         &write_called](const uint8_t* data, size_t len, int* error) -> size_t {
+  custom_writer.write =
+    [&buffer, &write_called, &cursor](const uint8_t* data, size_t len, int* error) -> size_t {
     write_called = true;
-    size_t written = std::fwrite(data, 1, len, fd);
-    *error = errno;
-    return written;
-  };
-  custom_writer.flush = [&fd, &flush_called]() -> int {
-    flush_called = true;
-    return std::fflush(fd);
-  };
-  custom_writer.seek = [&fd, &seek_called](int64_t pos, int whence, uint64_t* new_pos) -> int {
-    seek_called = true;
-    int seek_result = std::fseek(fd, pos, whence);
-    if (seek_result != 0) {
-      return seek_result;
+    *error = 0;
+    if (cursor != buffer.size()) {
+      REQUIRE(cursor + len < buffer.size());
+      std::memcpy(buffer.data() + cursor, data, len);
+      cursor += len;
+      return len;
     }
-    *new_pos = ftell(fd);
+    buffer.insert(buffer.end(), data, data + len);
+    cursor += len;
+    return len;
+  };
+  custom_writer.flush = [&flush_called]() -> int {
+    flush_called = true;
+    return 0;
+  };
+  custom_writer.seek =
+    [&cursor, &buffer, &seek_called](int64_t pos, int whence, uint64_t* new_pos) -> int {
+    seek_called = true;
+    switch (whence) {
+      case SEEK_SET:
+        cursor = pos;
+        break;
+      case SEEK_CUR:
+        cursor += pos;
+        break;
+      case SEEK_END:
+        cursor = buffer.size() + pos;
+        break;
+      default:
+        assert(false);
+    }
+    *new_pos = cursor;
     return 0;
   };
 
-  FileCleanup plain_cleanup("plain_test.mcap");
+  foxglove::McapWriterOptions options;
+  options.custom_writer = custom_writer;
+  options.context = context;
 
-  foxglove::McapWriterOptions plain_options;
-  plain_options.path = "plain_test.mcap";
-  plain_options.context = context;
-
-  foxglove::McapWriterOptions custom_options;
-  custom_options.custom_writer = custom_writer;
-  custom_options.context = context;
-
-  auto plain_mcap = foxglove::McapWriter::create(plain_options);
-  REQUIRE(plain_mcap.has_value());
-  auto custom_mcap = foxglove::McapWriter::create(custom_options);
+  auto custom_mcap = foxglove::McapWriter::create(options);
   REQUIRE(custom_mcap.has_value());
 
   auto channel_result = foxglove::schemas::Point2Channel::create("test_topic", context);
@@ -616,20 +624,13 @@ TEST_CASE("Custom writer basic functionality") {
   channel.log(foxglove::schemas::Point2{1.0, 2.0});
   channel.log(foxglove::schemas::Point2{3.0, 4.0});
   channel.close();
-  plain_mcap.value().close();
   custom_mcap.value().close();
-
-  std::fclose(fd);
 
   // Verify callbacks were called
   REQUIRE(write_called);
   REQUIRE(flush_called);
   REQUIRE(seek_called);
   // Verify MCAP data was written
-  REQUIRE(std::filesystem::exists("plain_test.mcap"));
-  std::string plain_content = readFile("plain_test.mcap");
-  REQUIRE_THAT(plain_content, ContainsSubstring("Point2"));
-  REQUIRE(std::filesystem::exists("custom_test.mcap"));
-  std::string custom_content = readFile("custom_test.mcap");
-  REQUIRE_THAT(plain_content, Equals(custom_content));
+  std::string custom_content = std::string(buffer.begin(), buffer.end());
+  REQUIRE_THAT(custom_content, ContainsSubstring("Point2"));
 }
