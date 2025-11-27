@@ -1,13 +1,7 @@
 from __future__ import annotations
 
-import sys
 from collections.abc import Callable
-from typing import Protocol, Union
-
-if sys.version_info >= (3, 10):
-    from typing import TypeAlias
-else:
-    from typing import Any as TypeAlias
+from typing import Protocol, TypeAlias, Union
 
 from ._foxglove_py.websocket import (
     Capability,

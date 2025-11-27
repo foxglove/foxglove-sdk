@@ -13,6 +13,7 @@ use tokio_tungstenite::WebSocketStream;
 
 use crate::sink_channel_filter::SinkChannelFilter;
 use crate::websocket::streams::ServerStream;
+use crate::websocket::PlaybackControlRequest;
 use crate::{ChannelId, Context, FoxgloveError, Metadata, RawChannel, Sink, SinkId};
 
 use self::ws_protocol::server::{
@@ -263,8 +264,9 @@ impl ConnectedClient {
             ClientMessage::UnsubscribeConnectionGraph => {
                 self.on_connection_graph_unsubscribe(server)
             }
-            #[cfg(feature = "unstable")]
-            ClientMessage::PlaybackControlRequest(_msg) => todo!(),
+            ClientMessage::PlaybackControlRequest(msg) => {
+                self.on_playback_control_request(server, msg)
+            }
         }
     }
 
@@ -669,6 +671,40 @@ impl ConnectedClient {
             tracing::debug!(
                 "Client {} is already unsubscribed from connection graph updates",
                 self.addr
+            );
+        }
+    }
+
+    fn on_playback_control_request(&self, server: Arc<Server>, msg: PlaybackControlRequest) {
+        if !server.has_capability(Capability::RangedPlayback) {
+            self.send_error("Server does not support ranged playback capability".to_string());
+            return;
+        }
+
+        if let Some(handler) = server.listener() {
+            let request_id = msg.request_id.clone();
+            let Some(mut playback_state) = handler.on_playback_control_request(msg) else {
+                tracing::error!(
+                    "No playback state sent in response to playback control request ID {}",
+                    request_id
+                );
+                self.send_error(
+                    "Server did not send playback state in response to playback control request"
+                        .to_string(),
+                );
+                return;
+            };
+
+            // Force the request id in the playback state to match that of the request. Since this
+            // playback state is being instantiated in the request listener, it's the only valid
+            // value for this field, and it eases the burden on server implementors to not have to
+            // worry about explicitly setting this.
+            playback_state.request_id = Some(request_id);
+            server.broadcast_playback_state(playback_state);
+        } else {
+            self.send_error(
+                "Server advertised ranged playback capability but didn't provide a listener"
+                    .to_string(),
             );
         }
     }

@@ -6,6 +6,25 @@ use serde::{Deserialize, Serialize};
 
 use crate::websocket::ws_protocol::JsonMessage;
 
+/// Type for serializing timestamps in the server info message.
+///
+/// This exists to allow for sending timestamps that are represented as
+/// u64 in memory over JSON without loss of precision.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SerializedTimestamp {
+    pub sec: u32,
+    pub nsec: u32,
+}
+
+impl SerializedTimestamp {
+    fn from_nsecs(timestamp: u64) -> Self {
+        SerializedTimestamp {
+            sec: u32::try_from(timestamp / 1e9 as u64).unwrap_or(u32::MAX),
+            nsec: (timestamp % 1e9 as u64) as u32,
+        }
+    }
+}
+
 /// Server info message.
 ///
 /// Spec: <https://github.com/foxglove/ws-protocol/blob/main/docs/spec.md#server-info>
@@ -26,6 +45,12 @@ pub struct ServerInfo {
     /// Optional string.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub session_id: Option<String>,
+    /// Optional timestamp, in absolute nanoseconds, indicating the start of the data range.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub data_start_time: Option<SerializedTimestamp>,
+    /// Optional timestamp, in absolute nanoseconds, indicating the end of the data range.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub data_end_time: Option<SerializedTimestamp>,
 }
 impl ServerInfo {
     /// Creates a new server info message.
@@ -36,6 +61,8 @@ impl ServerInfo {
             supported_encodings: vec![],
             metadata: HashMap::default(),
             session_id: None,
+            data_start_time: None,
+            data_end_time: None,
         }
     }
 
@@ -69,6 +96,18 @@ impl ServerInfo {
         self.session_id = Some(session_id.into());
         self
     }
+
+    #[must_use]
+    pub fn with_playback_time_range(mut self, time_range: Option<(u64, u64)>) -> Self {
+        if let Some((start_time, end_time)) = time_range {
+            self.data_start_time = Some(SerializedTimestamp::from_nsecs(start_time));
+            self.data_end_time = Some(SerializedTimestamp::from_nsecs(end_time));
+        } else {
+            self.data_start_time = None;
+            self.data_end_time = None;
+        }
+        self
+    }
 }
 
 impl JsonMessage for ServerInfo {}
@@ -91,6 +130,10 @@ pub enum Capability {
     ConnectionGraph,
     /// Allow clients to fetch assets.
     Assets,
+    /// Indicates that the server is sending data within a fixed time range. This requires the
+    /// server to specify the `data_start_time` and `data_end_time` fields in its `ServerInfo` message.
+    /// Playback control requests are only accepted when this capability is enabled.
+    RangedPlayback,
 }
 
 #[cfg(test)]
@@ -105,12 +148,17 @@ mod tests {
 
     fn message_full() -> ServerInfo {
         message()
-            .with_capabilities([Capability::ClientPublish, Capability::Time])
+            .with_capabilities([
+                Capability::ClientPublish,
+                Capability::Time,
+                Capability::RangedPlayback,
+            ])
             .with_supported_encodings(["json"])
             .with_metadata(maplit::hashmap! {
                 "key".into() => "value".into(),
             })
             .with_session_id("1675789422160")
+            .with_playback_time_range(Some((1000000, 1000005)))
     }
 
     #[test]

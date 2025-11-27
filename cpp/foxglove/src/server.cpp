@@ -19,7 +19,7 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
     options.callbacks.onClientUnadvertise || options.callbacks.onGetParameters ||
     options.callbacks.onSetParameters || options.callbacks.onParametersSubscribe ||
     options.callbacks.onParametersUnsubscribe || options.callbacks.onConnectionGraphSubscribe ||
-    options.callbacks.onConnectionGraphUnsubscribe;
+    options.callbacks.onConnectionGraphUnsubscribe || options.callbacks.onPlaybackControlRequest;
 
   std::unique_ptr<WebSocketServerCallbacks> callbacks;
   std::unique_ptr<FetchAssetHandler> fetch_asset;
@@ -223,6 +223,37 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
         }
       };
     }
+    if (callbacks->onPlaybackControlRequest) {
+      c_callbacks.on_playback_control_request =
+        [](
+          const void* context,
+          const foxglove_playback_control_request* c_playback_control_request,
+          foxglove_playback_state* c_playback_state
+        ) {
+          if (c_playback_control_request == nullptr) {
+            return;
+          }
+
+          std::optional<PlaybackState> maybe_playback_state = std::nullopt;
+          try {
+            const auto* ctx = (static_cast<const WebSocketServerCallbacks*>(context));
+            maybe_playback_state =
+              ctx->onPlaybackControlRequest(PlaybackControlRequest::from(*c_playback_control_request
+              ));
+          } catch (const std::exception& exc) {
+            warn() << "onPlaybackControlRequest callback failed: " << exc.what();
+          }
+
+          if (!maybe_playback_state.has_value()) {
+            return;
+          }
+
+          const PlaybackState& playback_state = maybe_playback_state.value();
+          c_playback_state->status = static_cast<uint8_t>(playback_state.status);
+          c_playback_state->current_time = playback_state.current_time;
+          c_playback_state->playback_speed = playback_state.playback_speed;
+        };
+    }
   }
 
   foxglove_server_options c_options = {};
@@ -257,6 +288,11 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
         warn() << "Fetch asset callback failed: " << exc.what();
       }
     };
+  }
+
+  if (options.playback_time_range) {
+    c_options.playback_start_time = &options.playback_time_range->first;
+    c_options.playback_end_time = &options.playback_time_range->second;
   }
 
   std::vector<foxglove_key_value> server_info;
@@ -295,7 +331,6 @@ FoxgloveResult<WebSocketServer> WebSocketServer::create(
       }
     };
   }
-
   foxglove_websocket_server* server = nullptr;
   foxglove_error error = foxglove_server_start(&c_options, &server);
   if (error != foxglove_error::FOXGLOVE_ERROR_OK || server == nullptr) {
@@ -329,6 +364,23 @@ uint16_t WebSocketServer::port() const {
 void WebSocketServer::broadcastTime(uint64_t timestamp_nanos) const noexcept {
   foxglove_server_broadcast_time(impl_.get(), timestamp_nanos);
 }
+
+/// @cond foxglove_internal
+void WebSocketServer::broadcastPlaybackState(const PlaybackState& playback_state) const noexcept {
+  foxglove_playback_state c_playback_state_ptr;
+  c_playback_state_ptr.status = static_cast<uint8_t>(playback_state.status);
+  c_playback_state_ptr.current_time = playback_state.current_time;
+  c_playback_state_ptr.playback_speed = playback_state.playback_speed;
+  if (!playback_state.request_id.has_value() || playback_state.request_id->empty()) {
+    c_playback_state_ptr.request_id = {nullptr, 0};
+  } else {
+    c_playback_state_ptr.request_id = {
+      playback_state.request_id->data(), playback_state.request_id->length()
+    };
+  }
+  foxglove_server_broadcast_playback_state(impl_.get(), &c_playback_state_ptr);
+}
+/// @endcond
 
 FoxgloveError WebSocketServer::clearSession(std::optional<std::string_view> session_id
 ) const noexcept {

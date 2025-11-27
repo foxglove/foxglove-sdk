@@ -58,7 +58,6 @@ impl From<&client::ServiceCallRequest<'_>> for Message {
     }
 }
 
-#[cfg(feature = "unstable")]
 impl From<&client::PlaybackControlRequest> for Message {
     fn from(value: &client::PlaybackControlRequest) -> Self {
         Message::Binary(value.to_bytes().into())
@@ -146,6 +145,12 @@ impl From<&server::MessageData<'_>> for Message {
 impl From<&server::ParameterValues> for Message {
     fn from(value: &server::ParameterValues) -> Self {
         Message::Text(value.to_string().into())
+    }
+}
+
+impl From<&server::PlaybackState> for Message {
+    fn from(value: &server::PlaybackState) -> Self {
+        Message::Binary(value.to_bytes().into())
     }
 }
 
