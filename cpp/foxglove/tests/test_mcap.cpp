@@ -9,8 +9,6 @@
 #include <catch2/matchers/catch_matchers_string.hpp>
 
 #include <array>
-#include <atomic>
-#include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <optional>
