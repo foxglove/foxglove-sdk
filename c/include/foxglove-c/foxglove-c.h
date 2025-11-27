@@ -1703,7 +1703,7 @@ typedef struct foxglove_raw_image {
  * These functions are called synchronously with respect to each other within the SDK, but these
  * calls are not synchronized with other SDK function calls.
  */
-typedef struct FoxgloveCustomWriter {
+typedef struct foxglove_custom_writer {
   /**
    * User-provided context pointer, passed to all callback functions
    */
@@ -1722,7 +1722,7 @@ typedef struct FoxgloveCustomWriter {
    * whence: 0=SEEK_SET, 1=SEEK_CUR, 2=SEEK_END
    */
   int32_t (*seek_fn)(void *context, int64_t pos, int whence, uint64_t *new_pos);
-} FoxgloveCustomWriter;
+} foxglove_custom_writer;
 #endif
 
 #if !defined(__wasm__)
@@ -1737,7 +1737,7 @@ typedef struct foxglove_mcap_options {
   /**
    * Custom writer for arbitrary destinations. If non-null, `path` is ignored.
    */
-  const struct FoxgloveCustomWriter *custom_writer;
+  const struct foxglove_custom_writer *custom_writer;
   foxglove_mcap_compression compression;
   struct foxglove_string profile;
   /**

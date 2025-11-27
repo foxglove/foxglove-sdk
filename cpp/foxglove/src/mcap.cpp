@@ -31,7 +31,7 @@ FoxgloveResult<McapWriter> McapWriter::create(const McapWriterOptions& options) 
 
   // Handle custom writer if provided
   std::unique_ptr<CustomWriter> custom_writer;
-  FoxgloveCustomWriter c_custom_writer;
+  foxglove_custom_writer c_custom_writer;
   if (options.custom_writer.has_value()) {
     custom_writer = std::make_unique<CustomWriter>(options.custom_writer.value());
     c_custom_writer.context = custom_writer.get();
