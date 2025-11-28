@@ -926,6 +926,7 @@ dependencies = [
  "delegate",
  "flume",
  "foxglove_derive 0.16.1",
+ "futures",
  "futures-util",
  "insta",
  "maplit",
