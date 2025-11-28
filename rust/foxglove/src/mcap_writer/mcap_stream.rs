@@ -152,7 +152,7 @@ impl McapStreamHandle {
 
     /// Get the current size of the buffer.
     ///
-    /// This can be used in conjunction with [`McapWriterHandle::flush`] to ensure the buffer does
+    /// This can be used in conjunction with [`McapStreamHandle::flush`] to ensure the buffer does
     /// not grow unbounded.
     pub fn buffer_size(&mut self) -> usize {
         self.buffer.0.lock().buffer.len()
