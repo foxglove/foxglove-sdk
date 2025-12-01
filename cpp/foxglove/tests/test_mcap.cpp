@@ -561,3 +561,74 @@ TEST_CASE("Write empty metadata") {
   std::string content = readFile("test.mcap");
   REQUIRE_THAT(content, !ContainsSubstring("empty_metadata"));
 }
+
+TEST_CASE("Custom writer basic functionality") {
+  auto context = foxglove::Context::create();
+
+  bool write_called = false;
+  bool flush_called = false;
+  bool seek_called = false;
+  size_t cursor = 0;
+  std::vector<uint8_t> buffer;
+  foxglove::CustomWriter custom_writer;
+  custom_writer.write =
+    [&buffer, &write_called, &cursor](const uint8_t* data, size_t len, int* error) -> size_t {
+    write_called = true;
+    *error = 0;
+    if (cursor != buffer.size()) {
+      REQUIRE(cursor + len < buffer.size());
+      std::memcpy(buffer.data() + cursor, data, len);
+      cursor += len;
+      return len;
+    }
+    buffer.insert(buffer.end(), data, data + len);
+    cursor += len;
+    return len;
+  };
+  custom_writer.flush = [&flush_called]() -> int {
+    flush_called = true;
+    return 0;
+  };
+  custom_writer.seek =
+    [&cursor, &buffer, &seek_called](int64_t pos, int whence, uint64_t* new_pos) -> int {
+    seek_called = true;
+    switch (whence) {
+      case SEEK_SET:
+        cursor = pos;
+        break;
+      case SEEK_CUR:
+        cursor += pos;
+        break;
+      case SEEK_END:
+        cursor = buffer.size() + pos;
+        break;
+      default:
+        assert(false);
+    }
+    *new_pos = cursor;
+    return 0;
+  };
+
+  foxglove::McapWriterOptions options;
+  options.custom_writer = custom_writer;
+  options.context = context;
+
+  auto custom_mcap = foxglove::McapWriter::create(options);
+  REQUIRE(custom_mcap.has_value());
+
+  auto channel_result = foxglove::schemas::Point2Channel::create("test_topic", context);
+  REQUIRE(channel_result.has_value());
+  auto channel = std::move(channel_result.value());
+  channel.log(foxglove::schemas::Point2{1.0, 2.0});
+  channel.log(foxglove::schemas::Point2{3.0, 4.0});
+  channel.close();
+  custom_mcap.value().close();
+
+  // Verify callbacks were called
+  REQUIRE(write_called);
+  REQUIRE(flush_called);
+  REQUIRE(seek_called);
+  // Verify MCAP data was written
+  std::string custom_content = std::string(buffer.begin(), buffer.end());
+  REQUIRE_THAT(custom_content, ContainsSubstring("Point2"));
+}
