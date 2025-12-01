@@ -47,11 +47,14 @@ def test_server_interface() -> None:
 
     server.publish_status("test message", StatusLevel.Info, "some-id")
     server.broadcast_time(time.time_ns())
-    server.broadcast_playback_state(PlaybackState(
-        status=PlaybackStatus.Paused,
-        playback_speed=1.0,
-        current_time=time.time_ns(),
-        request_id=None))
+    server.broadcast_playback_state(
+        PlaybackState(
+            status=PlaybackStatus.Paused,
+            playback_speed=1.0,
+            current_time=time.time_ns(),
+            request_id=None,
+        )
+    )
     server.remove_status(["some-id"])
     server.clear_session("new-session")
     server.stop()

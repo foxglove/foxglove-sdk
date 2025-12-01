@@ -83,6 +83,7 @@ impl From<PyPlaybackStatus> for PlaybackStatus {
 
 #[pyclass(name = "PlaybackState", module = "foxglove", eq, get_all)]
 #[derive(Clone, PartialEq)]
+/// The status playback of data that the server is providing
 pub struct PyPlaybackState {
     /// The status of server data playback
     pub status: PyPlaybackStatus,
@@ -143,6 +144,7 @@ impl From<PlaybackCommand> for PyPlaybackCommand {
 }
 
 #[pyclass(name = "PlaybackControlRequest", module = "foxglove", get_all)]
+/// A request to control playback from the Foxglove app
 pub struct PyPlaybackControlRequest {
     playback_command: PyPlaybackCommand,
     playback_speed: f32,

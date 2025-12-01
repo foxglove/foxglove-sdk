@@ -30,7 +30,6 @@ class Capability(Enum):
     RangedPlayback = ...
     """Indicates that the server is sending data within a fixed time range."""
 
-
 class Client:
     """
     A client that is connected to a running websocket server.
@@ -235,12 +234,13 @@ class PlaybackState:
     playback_speed: float
     request_id: str | None
 
-    def __init__(self,
-                 status: PlaybackStatus,
-                 current_time: int,
-                 playback_speed: float,
-                 request_id: str | None
-                 ): ...
+    def __init__(
+        self,
+        status: PlaybackStatus,
+        current_time: int,
+        playback_speed: float,
+        request_id: str | None,
+    ): ...
 
 class PlaybackStatus(Enum):
     """The status of server data playback"""
