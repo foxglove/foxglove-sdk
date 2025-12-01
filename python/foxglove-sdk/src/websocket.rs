@@ -627,6 +627,7 @@ impl PyWebSocketServer {
     /// Publish the current playback state to all clients.
     ///
     /// :param playback_state: The playback state to broadcast.
+    /// :meta private:
     #[pyo3(signature = (playback_state))]
     pub fn broadcast_playback_state(&self, playback_state: PyPlaybackState) {
         if let Some(server) = &self.0 {
