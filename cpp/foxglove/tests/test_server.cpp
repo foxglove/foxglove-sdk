@@ -78,6 +78,7 @@ public:
   void start(uint16_t port) {
     std::error_code ec;
     connection_ = client_.get_connection("ws://127.0.0.1:" + std::to_string(port), ec);
+    connection_->add_subprotocol("foxglove.sdk.v2");
     connection_->add_subprotocol("foxglove.sdk.v1");
     UNSCOPED_INFO(ec.message());
     REQUIRE(!ec);
@@ -309,7 +310,7 @@ TEST_CASE("Subscribe and unsubscribe callbacks") {
       "op": "subscribe",
       "subscriptions": [
         {
-          "id": 100, "channelId": )" +
+          "channelId": )" +
     std::to_string(channel.id()) + R"( }
       ]
     })"
@@ -322,7 +323,8 @@ TEST_CASE("Subscribe and unsubscribe callbacks") {
   client.send(
     R"({
       "op": "unsubscribe",
-      "subscriptionIds": [100]
+      "channelIds": [)" +
+    std::to_string(channel.id()) + R"(]
     })"
   );
   cv.wait_for(lock, std::chrono::seconds(1), [&] {
