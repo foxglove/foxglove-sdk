@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Protocol, TypeAlias, Optional, Union
+from typing import Optional, Protocol, TypeAlias, Union
 
 from ._foxglove_py.websocket import (
     Capability,
