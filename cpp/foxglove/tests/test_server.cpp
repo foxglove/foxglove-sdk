@@ -1679,7 +1679,7 @@ TEST_CASE("Broadcast playback state") {
 
   REQUIRE(received_playback_state.has_value());
   REQUIRE(received_playback_state->request_id == std::nullopt);
-  REQUIRE(received_playback_state->did_seek == true);
+  REQUIRE(received_playback_state->did_seek);
   REQUIRE(server.stop() == foxglove::FoxgloveError::Ok);
 }
 
