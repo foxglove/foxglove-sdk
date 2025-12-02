@@ -52,6 +52,7 @@ def test_server_interface() -> None:
             status=PlaybackStatus.Paused,
             playback_speed=1.0,
             current_time=time.time_ns(),
+            did_seek=False,
             request_id=None,
         )
     )

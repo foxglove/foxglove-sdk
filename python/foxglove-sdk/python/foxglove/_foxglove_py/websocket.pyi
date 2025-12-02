@@ -225,6 +225,8 @@ class PlaybackState:
     :type current_time: int
     :param playback_speed: The speed of playback, as a factor of realtime
     :type playback_speed: float
+    :param did_seek: Whether a seek forward or backward in time triggered this message to be emitted
+    :type did_seek: bool
     :param request_id: If this message is being emitted in response to a PlaybackControlRequest message, the request_id from that message. Set this to an empty string if the state of playback has been changed by any other condition.
     :type request_id: str | None
     """
@@ -232,6 +234,7 @@ class PlaybackState:
     status: PlaybackStatus
     current_time: int
     playback_speed: float
+    did_seek: bool
     request_id: str | None
 
     def __init__(
@@ -239,6 +242,7 @@ class PlaybackState:
         status: PlaybackStatus,
         current_time: int,
         playback_speed: float,
+        did_seek: bool,
         request_id: str | None,
     ): ...
 
