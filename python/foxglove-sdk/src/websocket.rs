@@ -154,6 +154,7 @@ pub struct PyPlaybackControlRequest {
     playback_command: PyPlaybackCommand,
     playback_speed: f32,
     seek_time: Option<u64>,
+    request_id: String,
 }
 impl From<PlaybackControlRequest> for PyPlaybackControlRequest {
     fn from(value: PlaybackControlRequest) -> PyPlaybackControlRequest {
@@ -161,6 +162,7 @@ impl From<PlaybackControlRequest> for PyPlaybackControlRequest {
             playback_command: value.playback_command.into(),
             playback_speed: value.playback_speed,
             seek_time: value.seek_time,
+            request_id: value.request_id,
         }
     }
 }
@@ -409,14 +411,14 @@ impl ServerListener for PyServerListener {
         playback_control_request: PlaybackControlRequest,
     ) -> Option<PlaybackState> {
         let py_playback_control_request: PyPlaybackControlRequest = playback_control_request.into();
-        let result: PyResult<PyPlaybackState> = Python::with_gil(|py| {
+        let result: PyResult<Option<PyPlaybackState>> = Python::with_gil(|py| {
             let result = self.listener.bind(py).call_method(
                 "on_playback_control_request",
                 (py_playback_control_request,),
                 None,
             )?;
 
-            result.extract::<PyPlaybackState>()
+            result.extract::<Option<PyPlaybackState>>()
         });
 
         match result {
@@ -424,7 +426,8 @@ impl ServerListener for PyServerListener {
                 tracing::error!("Callback failed: {}", err.to_string());
                 None
             }
-            Ok(playback_state) => Some(playback_state.into()),
+            Ok(None) => None,
+            Ok(Some(playback_state)) => Some(playback_state.into()),
         }
     }
 }

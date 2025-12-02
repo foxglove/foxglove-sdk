@@ -128,11 +128,14 @@ def test_server_with_invalid_playback_time_range() -> None:
         # Tuple of a single element
         start_server(port=0, playback_time_range=(123,))
 
+    with pytest.raises(TypeError):
         # Tuple with invalid types
         start_server(port=0, playback_time_range=("not-a-time", None))
 
+    with pytest.raises(TypeError):
         # Not a tuple
         start_server(port=0, playback_time_range=23443)
 
+    with pytest.raises(TypeError):
         # Tuple with too many elements
         start_server(port=0, playback_time_range=(123, 456, 789))
