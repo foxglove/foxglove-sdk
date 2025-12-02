@@ -119,3 +119,18 @@ def test_context_can_be_attached_to_server() -> None:
 
     server1.stop()
     server2.stop()
+
+
+def test_server_with_invalid_playback_time_range() -> None:
+    with pytest.raises(TypeError):
+        # Tuple of a single element
+        start_server(port=0, playback_time_range=(123,))
+
+        # Tuple with invalid types
+        start_server(port=0, playback_time_range=("not-a-time", None))
+
+        # Not a tuple
+        start_server(port=0, playback_time_range=23443)
+
+        # Tuple with too many elements
+        start_server(port=0, playback_time_range=(123, 456, 789))

@@ -190,7 +190,7 @@ class ParameterValue:
 
         def __init__(self, value: dict[str, AnyParameterValue]) -> None: ...
 
-class PlaybackCommand:
+class PlaybackCommand(Enum):
     """The command for playback requested by the client player"""
 
     Play = ...
