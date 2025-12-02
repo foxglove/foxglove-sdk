@@ -2101,6 +2101,10 @@ typedef struct foxglove_playback_state {
    */
   float playback_speed;
   /**
+   * Whether a seek forward or backward in time triggered this message to be emitted
+   */
+  bool did_seek;
+  /**
    * If this message is being emitted in response to a PlaybackControlRequest message, the
    * request_id from that message. Set this to an empty string if the state of playback has been changed
    * by any other condition.

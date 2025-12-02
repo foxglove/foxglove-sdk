@@ -8,6 +8,8 @@ pub struct FoxglovePlaybackState {
     pub current_time: u64,
     /// The speed of playback, as a factor of realtime
     pub playback_speed: f32,
+    /// Whether a seek forward or backward in time triggered this message to be emitted
+    pub did_seek: bool,
     /// If this message is being emitted in response to a PlaybackControlRequest message, the
     /// request_id from that message. Set this to an empty string if the state of playback has been changed
     /// by any other condition.
@@ -37,6 +39,7 @@ impl FoxglovePlaybackState {
             status,
             playback_speed: self.playback_speed,
             current_time: self.current_time,
+            did_seek: self.did_seek,
             request_id,
         })
     }

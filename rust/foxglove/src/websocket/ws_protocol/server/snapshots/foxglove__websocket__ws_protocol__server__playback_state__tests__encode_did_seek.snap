@@ -17,7 +17,7 @@ expression: "format!(\"{:#04x?}\", message.to_bytes())"
     0x00,
     0x80,
     0x3f,
-    0x00,
+    0x01,
     0x00,
     0x00,
     0x00,
