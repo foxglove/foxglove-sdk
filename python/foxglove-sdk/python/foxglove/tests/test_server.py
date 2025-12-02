@@ -1,4 +1,5 @@
 import time
+import typing
 from urllib.parse import parse_qs, urlparse
 
 import pytest
@@ -121,6 +122,7 @@ def test_context_can_be_attached_to_server() -> None:
     server2.stop()
 
 
+@typing.no_type_check
 def test_server_with_invalid_playback_time_range() -> None:
     with pytest.raises(TypeError):
         # Tuple of a single element
