@@ -107,11 +107,11 @@ impl<W: Write + Seek> WriterState<W> {
     }
 }
 
-pub struct McapSink<W: Write + Seek> {
+pub struct McapSink<W: Write + Seek + Send> {
     sink_id: SinkId,
     inner: Mutex<Option<WriterState<W>>>,
 }
-impl<W: Write + Seek> Debug for McapSink<W> {
+impl<W: Write + Seek + Send> Debug for McapSink<W> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("McapSink")
             .field("sink_id", &self.sink_id)
@@ -119,7 +119,7 @@ impl<W: Write + Seek> Debug for McapSink<W> {
     }
 }
 
-impl<W: Write + Seek> McapSink<W> {
+impl<W: Write + Seek + Send> McapSink<W> {
     /// Creates a new MCAP writer sink.
     pub fn new(
         writer: W,
