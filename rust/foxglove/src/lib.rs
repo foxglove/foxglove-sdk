@@ -343,6 +343,8 @@ pub use context::{Context, LazyContext};
 pub use decode::Decode;
 pub use encode::Encode;
 pub use mcap_writer::{McapCompression, McapWriteOptions, McapWriter, McapWriterHandle};
+#[cfg(feature = "stream")]
+pub use mcap_writer::{McapStream, McapStreamBuilder, McapStreamHandle};
 pub use metadata::{Metadata, PartialMetadata, ToUnixNanos};
 pub use schema::Schema;
 pub use sink::{Sink, SinkId};
