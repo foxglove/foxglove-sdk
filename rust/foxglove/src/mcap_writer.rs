@@ -15,9 +15,11 @@ pub use mcap::Compression as McapCompression;
 /// Options for use with an [`McapWriter`][crate::McapWriter].
 pub use mcap::WriteOptions as McapWriteOptions;
 
+#[cfg(feature = "live_visualization")]
 mod async_mcap_sink;
 mod mcap_sink;
 
+#[cfg(feature = "live_visualization")]
 use async_mcap_sink::AsyncMcapSink;
 use mcap_sink::McapSink;
 
@@ -27,8 +29,9 @@ use mcap_sink::McapSink;
 ///
 /// - [`create`](McapWriter::create) - Synchronous. Writes directly, may block on disk I/O.
 /// - [`create_async`](McapWriter::create_async) - Asynchronous. Queues writes to a background task, never blocks.
+///   Requires the `live_visualization` feature.
 /// - [`create_new_buffered_file`](McapWriter::create_new_buffered_file) - Synchronous.
-///      Writes to a BufWriter, may block on disk I/O.
+///   Writes to a BufWriter, may block on disk I/O.
 ///
 /// When the handle is dropped, buffered writes are flushed and the file is closed.
 #[must_use]
@@ -127,6 +130,7 @@ impl McapWriter {
     /// The `log()` method returns immediately without blocking on disk I/O.
     ///
     /// **Note:** If the queue fills up, new messages are dropped.
+    #[cfg(feature = "live_visualization")]
     pub fn create_async<W>(self, writer: W) -> Result<McapWriterHandle<W>, FoxgloveError>
     where
         W: Write + Seek + Send + 'static,
@@ -162,6 +166,7 @@ impl McapWriter {
 /// The kind of sink (sync or async) backing the writer handle.
 enum SinkKind<W: Write + Seek + Send + 'static> {
     Sync(Arc<McapSink<W>>),
+    #[cfg(feature = "live_visualization")]
     Async(Arc<AsyncMcapSink<W>>),
 }
 
@@ -169,6 +174,7 @@ impl<W: Write + Seek + Send + 'static> SinkKind<W> {
     fn id(&self) -> SinkId {
         match self {
             SinkKind::Sync(sink) => sink.id(),
+            #[cfg(feature = "live_visualization")]
             SinkKind::Async(sink) => sink.id(),
         }
     }
@@ -198,6 +204,7 @@ impl<W: Write + Seek + Send + 'static> McapWriterHandle<W> {
         self.remove_from_context();
         match &self.sink {
             SinkKind::Sync(sink) => sink.finish().map(|w| w.expect("not finished")),
+            #[cfg(feature = "live_visualization")]
             SinkKind::Async(sink) => sink.finish_blocking(),
         }
     }
@@ -217,6 +224,7 @@ impl<W: Write + Seek + Send + 'static> McapWriterHandle<W> {
     ) -> Result<(), FoxgloveError> {
         match &self.sink {
             SinkKind::Sync(sink) => sink.write_metadata(name, metadata),
+            #[cfg(feature = "live_visualization")]
             SinkKind::Async(sink) => sink.write_metadata(name, metadata),
         }
     }

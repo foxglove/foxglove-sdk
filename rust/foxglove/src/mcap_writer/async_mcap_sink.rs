@@ -131,6 +131,7 @@ impl<W: Write + Seek + Send + 'static> AsyncMcapSink<W> {
     }
 
     /// Waits for all queued writes to complete, closes the file, and returns the writer.
+    /// This is the async version - use `finish_blocking()` in sync contexts.
     pub async fn finish(&self) -> Result<W, FoxgloveError> {
         if self.finished.swap(true, Ordering::SeqCst) {
             return Err(FoxgloveError::SinkClosed);

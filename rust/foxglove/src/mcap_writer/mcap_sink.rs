@@ -198,6 +198,14 @@ impl<W: Write + Seek + Send> Sink for McapSink<W> {
     }
 }
 
+impl<W: Write + Seek + Send> Drop for McapSink<W> {
+    fn drop(&mut self) {
+        if let Err(e) = self.finish() {
+            tracing::warn!("Error finishing MCAP file on drop: {e}");
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
