@@ -992,7 +992,7 @@ impl From<Grid> for foxglove::schemas::Grid {
 ///
 /// :param timestamp: Timestamp of grid
 /// :param frame_id: Frame of reference
-/// :param pose: Origin of grid's corner relative to frame of reference
+/// :param pose: Origin of grid's corner relative to frame of reference; grid is positioned in the x-y plane relative to this origin
 /// :param row_count: Number of grid rows
 /// :param column_count: Number of grid columns
 /// :param cell_size: Size of single grid cell along x, y, and z axes, relative to `pose`

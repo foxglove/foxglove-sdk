@@ -15,7 +15,7 @@ table VoxelGrid {
   /// Frame of reference
   frame_id:string (id: 1);
 
-  /// Origin of grid's corner relative to frame of reference
+  /// Origin of grid's corner relative to frame of reference; grid is positioned in the x-y plane relative to this origin
   pose:foxglove.Pose (id: 2);
 
   /// Number of grid rows
