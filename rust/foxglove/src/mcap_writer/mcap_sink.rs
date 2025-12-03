@@ -1,4 +1,5 @@
-//! [`Sink`] implementation for an MCAP writer.
+//! Synchronous [`Sink`] implementation for an MCAP writer.
+
 use crate::{ChannelId, FoxgloveError, Metadata, RawChannel, Sink, SinkChannelFilter, SinkId};
 use mcap::WriteOptions;
 use parking_lot::Mutex;
