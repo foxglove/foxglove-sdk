@@ -27,7 +27,7 @@ impl TryFrom<u8> for PlaybackCommand {
 /// A request to control playback from the client
 #[derive(Debug, Clone, PartialEq)]
 pub struct PlaybackControlRequest {
-    /// Playback state
+    /// Playback command
     pub playback_command: PlaybackCommand,
     /// Playback speed
     pub playback_speed: f32,

@@ -58,6 +58,7 @@ try:
         context: Context | None = None,
         session_id: str | None = None,
         channel_filter: SinkChannelFilter | None = None,
+        playback_time_range: tuple[int, int] | None = None,
     ) -> WebSocketServer:
         """
         Start a websocket server for live visualization.
@@ -79,6 +80,8 @@ try:
         :param channel_filter: A `Callable` that determines whether a channel should be logged to.
             Return `True` to log the channel, or `False` to skip it. By default, all channels
             will be logged.
+        :param playback_time_range: Time range of data being played back, in absolute nanoseconds.
+            Implies `Capability.RangedPlayback` if set.
         """
         return _foxglove.start_server(
             name=name,
@@ -92,6 +95,7 @@ try:
             context=context,
             session_id=session_id,
             channel_filter=channel_filter,
+            playback_time_range=playback_time_range,
         )
 
     def start_cloud_sink(

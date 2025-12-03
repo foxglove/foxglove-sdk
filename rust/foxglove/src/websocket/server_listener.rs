@@ -64,7 +64,7 @@ pub trait ServerListener: Send + Sync {
     /// [`Capability::ConnectionGraph`][super::Capability::ConnectionGraph].
     fn on_connection_graph_unsubscribe(&self) {}
     #[doc(hidden)]
-    /// Callback invoked when a client sends a player state message.
+    /// Callback invoked when a client sends a playback control request.
     /// Requires [`Capability::RangedPlayback`][super::Capability::RangedPlayback].
     fn on_playback_control_request(
         &self,
